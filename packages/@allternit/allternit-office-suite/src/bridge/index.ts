@@ -35,5 +35,12 @@ export {
   getActiveDocument,
   useActiveDocument,
   createAllternitAssistantExtension,
+  requestAssistantPreset,
+  AllternitBrandMark,
 } from '../extensions';
-export type { OfficeAiSlotProps, ActiveDocumentInfo } from '../extensions';
+export type {
+  OfficeAiSlotProps,
+  ActiveDocumentInfo,
+  AssistantPresetDetail,
+  AllternitBrandMarkProps,
+} from '../extensions';

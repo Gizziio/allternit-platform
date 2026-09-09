@@ -86,7 +86,6 @@ export function RailControls({
 
   if (isRailCollapsed) {
     return (
-      <>
         <div
           data-testid="shell-rail-controls"
           className="fixed top-0 left-0 z-[150] pointer-events-none"
@@ -117,6 +116,18 @@ export function RailControls({
             >
               <SidebarSimple size={15} weight="bold" />
             </TitleBarButton>
+            {/* Agents mascot — kept inside the 44px title strip: canvas views
+                (office ribbons et al.) drop their top row to y=44 when the
+                rail collapses, so the old second row at top-[52px] landed on
+                their tab row. */}
+            <button
+              type="button"
+              onClick={onToggleRail}
+              title="Expand sidebar — Agents"
+              className="flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-lg border-none bg-transparent cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)]"
+            >
+              <GizziMascot size={20} emotion="curious" />
+            </button>
             {collapsedHovered && (
               <>
                 <div className="w-px h-4 bg-[var(--shell-divider)]" />
@@ -160,22 +171,6 @@ export function RailControls({
           </div>
         </div>
       </div>
-
-      {/* Collapsed Agents mascot pill */}
-      <div
-        className="fixed top-[52px] left-0 z-[150] pointer-events-none"
-        style={{ marginLeft: trafficLightClearance }}
-      >
-        <button
-          type="button"
-          onClick={onToggleRail}
-          title="Expand sidebar — Agents"
-          className="pointer-events-auto flex items-center justify-center w-9 h-10 rounded-r-xl border border-l-0 border-solid border-[var(--border-subtle)] bg-[var(--shell-control-bg)] text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] transition-colors cursor-pointer [WebkitAppRegion:no-drag]"
-        >
-          <GizziMascot size={22} emotion="curious" />
-        </button>
-      </div>
-      </>
     );
   }
 

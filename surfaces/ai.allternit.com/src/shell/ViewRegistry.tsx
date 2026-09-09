@@ -56,6 +56,7 @@ const NativeAgentView      = lazy(() => import('../views/NativeAgentView').then(
 const BrowserCapsuleEnhanced = lazy(() => import('../capsules/browser/BrowserCapsuleEnhanced').then(m => ({ default: m.BrowserCapsuleEnhanced })));
 const AciMiniAppsView = lazy(() => import('../views/aci/AciMiniAppsView').then(m => ({ default: m.AciMiniAppsView })));
 const MiniAppReviewConsoleView = lazy(() => import('../views/aci/MiniAppReviewConsoleView').then(m => ({ default: m.MiniAppReviewConsoleView })));
+const AciRecordingTimelineView = lazy(() => import('../views/aci/AciRecordingTimelineView').then(m => ({ default: m.AciRecordingTimelineView })));
 const AciMiniAppFrameView = lazy(() => import('../views/aci/AciMiniAppFrameView').then(m => ({ default: m.AciMiniAppFrameView })));
 const AciAddinView = lazy(() => import('../views/aci/AciAddinView').then(m => ({ default: m.AciAddinView })));
 const ProjectView          = lazy(() => import('../views/ProjectView').then(m => ({ default: m.ProjectView })));
@@ -303,6 +304,11 @@ export function getShellViewRegistry(handlers: {
     'mini-app-review': () => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Mini-app review" />}>
         <MiniAppReviewConsoleView />
+      </ErrorBoundary>
+    ),
+    'aci-recordings': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Recording timeline" />}>
+        <AciRecordingTimelineView />
       </ErrorBoundary>
     ),
     'mini-app': ({ context }: { context?: ViewContext }) => {
@@ -559,11 +565,6 @@ export function getShellViewRegistry(handlers: {
     "design-view-video": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Video Editor</div>}>
         <DesignModeView openView={open} initialTab="video" />
-      </ErrorBoundary>
-    ),
-    "design-view-docs": ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<div>Failed to load Documents View</div>}>
-        <DesignModeView openView={open} initialTab="docs" />
       </ErrorBoundary>
     ),
     "design-view-handoff": ({ context }: { context?: ViewContext }) => (

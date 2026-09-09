@@ -47,7 +47,12 @@ def client():
     return TestClient(app)
 
 
-def _write_recording(root: Path, recording_id: str = "rec-test123", with_gif: bool = False) -> str:
+def _write_recording(
+    root: Path,
+    recording_id: str = "rec-test123",
+    with_gif: bool = False,
+    with_video: bool = False,
+) -> str:
     """Seed a JSONL recording (manifest line + two frame lines), return raw text."""
     manifest = {
         "_type": "manifest",
@@ -62,6 +67,8 @@ def _write_recording(root: Path, recording_id: str = "rec-test123", with_gif: bo
         "total_steps": 2,
         "status": "completed",
         "gif_path": None,
+        "video_path": None,
+        "video_start_epoch": None,
     }
     frame1 = {
         "recording_id": recording_id,
@@ -98,7 +105,13 @@ def _write_recording(root: Path, recording_id: str = "rec-test123", with_gif: bo
     (root / f"{recording_id}.jsonl").write_text(text, encoding="utf-8")
     if with_gif:
         (root / f"{recording_id}.gif").write_bytes(GIF_BYTES)
+    if with_video:
+        (root / f"{recording_id}.webm").write_bytes(WEBM_BYTES)
     return text
+
+
+# Minimal WebM header bytes — content is irrelevant to the route tests.
+WEBM_BYTES = b"\x1a\x45\xdf\xa3" + b"\x00" * 64
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +140,7 @@ def test_detail_happy_path(client, recordings_dir):
     assert steps[0] == {
         "step": 1,
         "timestamp": "2026-09-09T00:00:10+00:00",
+        "kind": "action",
         "action_type": "click",
         "action_target": "#menu",
         "action_params": {"x": 1},
@@ -200,6 +214,56 @@ def test_gif_unknown_id_404(client, recordings_dir):
 
 
 # ---------------------------------------------------------------------------
+# Video route
+# ---------------------------------------------------------------------------
+
+def test_detail_includes_video_url_when_video_present(client, recordings_dir):
+    _write_recording(recordings_dir, with_video=True)
+    resp = client.get("/v1/computer-use/recordings/rec-test123")
+    assert resp.status_code == 200
+    assert resp.json()["video_url"] == "/v1/computer-use/recordings/rec-test123/video"
+
+
+def test_detail_manifest_carries_video_metadata(client, recordings_dir):
+    _write_recording(recordings_dir, with_video=True)
+    # Stamp the manifest with chrome-stream provider metadata (as POST /record
+    # does when a video artifact is supplied at start/stop).
+    path = recordings_dir / "rec-test123.jsonl"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    manifest = json.loads(lines[0])
+    manifest["video_path"] = str(recordings_dir / "rec-test123.webm")
+    manifest["video_start_epoch"] = 1_757_395_200_000
+    lines[0] = json.dumps(manifest)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    resp = client.get("/v1/computer-use/recordings/rec-test123")
+    body = resp.json()
+    assert body["manifest"]["video_path"].endswith("rec-test123.webm")
+    assert body["manifest"]["video_start_epoch"] == 1_757_395_200_000
+    assert body["video_url"] == "/v1/computer-use/recordings/rec-test123/video"
+
+
+def test_video_200_when_present(client, recordings_dir):
+    _write_recording(recordings_dir, with_video=True)
+    resp = client.get("/v1/computer-use/recordings/rec-test123/video")
+    assert resp.status_code == 200
+    assert resp.content == WEBM_BYTES
+    assert resp.headers["content-type"].startswith("video/webm")
+
+
+def test_video_404_when_absent(client, recordings_dir):
+    _write_recording(recordings_dir, with_video=False)
+    resp = client.get("/v1/computer-use/recordings/rec-test123/video")
+    assert resp.status_code == 404
+    assert "detail" in resp.json()
+
+
+def test_video_unknown_id_404(client, recordings_dir):
+    resp = client.get("/v1/computer-use/recordings/rec-nope/video")
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # Security: path traversal ids must never touch disk outside the root
 # ---------------------------------------------------------------------------
 
@@ -211,7 +275,7 @@ def test_traversal_ids_rejected(client, recordings_dir, bad_id):
     passwd = outside / "passwd"
     passwd.write_text("root:x:0:0:root:/root:/bin/sh\n", encoding="utf-8")
 
-    for suffix in ("", "/file", "/gif"):
+    for suffix in ("", "/file", "/gif", "/video"):
         resp = client.get(f"/v1/computer-use/recordings/{bad_id}{suffix}")
         assert resp.status_code in (400, 404), f"{bad_id}{suffix} → {resp.status_code}"
         if resp.headers["content-type"].startswith("application/json"):

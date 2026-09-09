@@ -21,6 +21,12 @@ except ImportError:
     pass
 
 try:
+    from .browser.webmcp import WebMcpAdapter
+    ADAPTER_REGISTRY["browser.webmcp"] = WebMcpAdapter
+except ImportError:
+    pass
+
+try:
     from .desktop.pyautogui.pyautogui_adapter import PyAutoGUIAdapter
     ADAPTER_REGISTRY["desktop.pyautogui"] = PyAutoGUIAdapter
 except ImportError:

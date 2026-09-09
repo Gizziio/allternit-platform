@@ -5,7 +5,6 @@ import {
   Question,
   DeviceMobile,
   VideoCamera,
-  FileText,
   Layout,
   TreeStructure,
   GitBranch,
@@ -70,12 +69,6 @@ export const DESIGN_RAIL_CONFIG: RailConfigSection[] = [
         label: 'Video',
         icon: VideoCamera,
         payload: 'design-view-video',
-      },
-      {
-        id: 'ds-view-docs',
-        label: 'Documents',
-        icon: FileText,
-        payload: 'design-view-docs',
       },
       {
         id: 'ds-view-handoff',

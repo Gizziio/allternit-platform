@@ -147,4 +147,31 @@ describe('BrowserRunController', () => {
       },
     })).rejects.toThrow('has expired');
   });
+
+  it('emits artifact.created on the run event stream with video metadata', () => {
+    const controller = new BrowserRunController({ providers: [provider] });
+    const { run } = controller.startRun({
+      accountId: 'acct-1',
+      conversationId: 'conv-1',
+      objective: 'Record a session',
+      provider: 'local-playwright',
+      startedBy: 'api',
+      runId: 'run-artifact',
+      sessionId: 'session-artifact',
+    });
+    const event = controller.recordArtifact(run.runId, {
+      kind: 'video',
+      path: '/home/u/.allternit/recordings/run-artifact.webm',
+      startedAtEpoch: 1_700_000_000_000,
+      sizeBytes: 12_345,
+    });
+    expect(event.type).toBe('artifact.created');
+    expect(event.runId).toBe(run.runId);
+    expect(event.sessionId).toBe(run.sessionId);
+    expect(event.payload.artifact).toMatchObject({
+      kind: 'video',
+      startedAtEpoch: 1_700_000_000_000,
+    });
+    expect(controller.eventsAfter(run.runId).map((e) => e.type)).toContain('artifact.created');
+  });
 });

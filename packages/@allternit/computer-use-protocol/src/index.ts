@@ -241,6 +241,66 @@ export const ReceiptSchema = z.object({
   issuedAt: z.string().datetime(),
 });
 
+/**
+ * WebMCP-aligned site tool descriptor. The shape mirrors the WebMCP tool
+ * format (name / description / inputSchema as JSON Schema) so descriptors can
+ * be handed to a model or a native WebMCP surface without translation, but
+ * nothing in the protocol depends on native WebMCP browser support.
+ */
+export const SiteToolInputSchemaSchema = z
+  .object({
+    type: z.literal('object').default('object'),
+    properties: z.record(z.string(), z.unknown()).default({}),
+    required: z.array(z.string()).default([]),
+    additionalProperties: z.boolean().default(false),
+  })
+  .passthrough();
+
+export const SiteToolDescriptorSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1),
+  inputSchema: SiteToolInputSchemaSchema,
+});
+
+/**
+ * One invocation of a site tool during a run. Recorded into the run event
+ * stream ('tool.called') and, optionally, into the run's trajectory as a
+ * tool_call step.
+ */
+export const SiteToolCallSchema = z.object({
+  schemaVersion: z.literal(COMPUTER_USE_PROTOCOL_VERSION),
+  toolCallId: z.string().min(1),
+  runId: z.string().min(1),
+  sessionId: z.string().min(1),
+  toolName: z.string().min(1),
+  args: z.record(z.string(), z.unknown()).default({}),
+  resultSummary: z.string().optional(),
+  latencyMs: z.number().nonnegative().optional(),
+  error: z.string().optional(),
+  redacted: z.boolean().default(false),
+  invokedAt: z.string().datetime(),
+});
+
+/**
+ * A computer-use plugin manifest (domains/computer-use/core/plugins/<id>/plugin.json).
+ * Declared here so browser-side tool adapters can validate the real manifests
+ * against the canonical protocol schema.
+ */
+export const SitePluginManifestSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  version: z.string().min(1),
+  description: z.string().min(1),
+  policy_profile: z.object({
+    max_destructive_actions: z.number().int().nonnegative(),
+    requires_approval: z.boolean(),
+    allowed_domains: z.array(z.string().min(1)).min(1),
+    blocked_actions: z.array(z.string().min(1)).default([]),
+  }),
+  cookbooks: z.array(z.string().min(1)).default([]),
+  production_status: z.string().optional(),
+});
+
 export const BrowserEventSchema = z.object({
   schemaVersion: z.literal(COMPUTER_USE_PROTOCOL_VERSION),
   eventId: z.string().min(1),
@@ -257,6 +317,7 @@ export const BrowserEventSchema = z.object({
     "run.failed",
     "run.cancelled",
     "action.state_changed",
+    "tool.called",
     "observation.created",
     "approval.required",
     "approval.resolved",
@@ -268,7 +329,8 @@ export const BrowserEventSchema = z.object({
   payload: z.record(z.string(), z.unknown()).default({}),
 });
 
-export const BrowserTrajectoryStepSchema = z.object({
+export const BrowserActionTrajectoryStepSchema = z.object({
+  kind: z.literal('action').default('action'),
   stepId: z.string().min(1),
   action: ActionIntentSchema,
   observationId: z.string().min(1).optional(),
@@ -276,6 +338,19 @@ export const BrowserTrajectoryStepSchema = z.object({
   status: z.enum(["committed", "failed", "skipped"]),
   note: z.string().optional(),
 });
+
+export const BrowserToolCallTrajectoryStepSchema = z.object({
+  kind: z.literal('tool_call'),
+  stepId: z.string().min(1),
+  toolCall: SiteToolCallSchema,
+  status: z.enum(["committed", "failed", "skipped"]),
+  note: z.string().optional(),
+});
+
+export const BrowserTrajectoryStepSchema = z.union([
+  BrowserActionTrajectoryStepSchema,
+  BrowserToolCallTrajectoryStepSchema,
+]);
 
 export const BrowserTrajectorySchema = z.object({
   schemaVersion: z.literal(COMPUTER_USE_PROTOCOL_VERSION),
@@ -360,6 +435,12 @@ export type PolicyDecision = z.infer<typeof PolicyDecisionSchema>;
 export type ApprovalRequest = z.infer<typeof ApprovalRequestSchema>;
 export type Receipt = z.infer<typeof ReceiptSchema>;
 export type BrowserEvent = z.infer<typeof BrowserEventSchema>;
+export type SiteToolInputSchema = z.infer<typeof SiteToolInputSchemaSchema>;
+export type SiteToolDescriptor = z.infer<typeof SiteToolDescriptorSchema>;
+export type SiteToolCall = z.infer<typeof SiteToolCallSchema>;
+export type SitePluginManifest = z.infer<typeof SitePluginManifestSchema>;
+export type BrowserActionTrajectoryStep = z.infer<typeof BrowserActionTrajectoryStepSchema>;
+export type BrowserToolCallTrajectoryStep = z.infer<typeof BrowserToolCallTrajectoryStepSchema>;
 export type BrowserTrajectoryStep = z.infer<typeof BrowserTrajectoryStepSchema>;
 export type BrowserTrajectory = z.infer<typeof BrowserTrajectorySchema>;
 export type BrowserWorkflowInput = z.infer<typeof BrowserWorkflowInputSchema>;

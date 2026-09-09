@@ -60,7 +60,6 @@ import { createModuleLogger } from '@/lib/logger';
 const logger = createModuleLogger('DesignModeView');
 
 const VideoEditorView = lazy(() => import("./video/VideoEditorView").then((m) => ({ default: m.VideoEditorView })));
-const OfficeLauncherView = lazy(() => import("../office/OfficeLauncherView").then((m) => ({ default: m.OfficeLauncherView })));
 const MobilePreviewView = lazy(() => import("./mobile/MobilePreviewView").then((m) => ({ default: m.MobilePreviewView })));
 const DesignRegistryView = lazy(() => import("./DesignRegistryView").then((m) => ({ default: m.DesignRegistryView })));
 const BrandKitEditor = lazy(() => import("./office/BrandKitEditor").then((m) => ({ default: m.BrandKitEditor })));
@@ -83,7 +82,7 @@ type ProjectType =
   | 'content-engine'
   | 'template'
   | 'other';
-type CanvasTab = 'files' | 'system' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit' | 'hyperframes' | 'critique';
+type CanvasTab = 'files' | 'system' | 'questions' | 'sketch' | 'mobile' | 'video' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit' | 'hyperframes' | 'critique';
 type Specialist = 'architect' | 'growth' | 'purist' | 'creative';
 
 interface Project {
@@ -118,7 +117,6 @@ function buildDirectProject(initialTab: CanvasTab): Project {
       { id: 'questions', label: 'Discovery', type: 'questions' },
       { id: 'mobile', label: 'Mobile View', type: 'mobile' },
       { id: 'video', label: 'Video Editor', type: 'video' },
-      { id: 'docs', label: 'Documents', type: 'docs' },
       ...(isContent
         ? [
             { id: 'graph', label: 'Skill Graph', type: 'graph' as CanvasTab },
@@ -429,7 +427,6 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       { id: 'system',    label: 'Design System',  type: 'system'    as CanvasTab },
       { id: 'mobile',    label: 'Mobile',         type: 'mobile'    as CanvasTab },
       { id: 'video',     label: 'Video',          type: 'video'     as CanvasTab },
-      { id: 'docs',      label: 'Documents',      type: 'docs'      as CanvasTab },
       ...(isContent ? [
         { id: 'graph',    label: 'Skill Graph', type: 'graph'    as CanvasTab },
         { id: 'pipeline', label: 'Pipeline',    type: 'pipeline' as CanvasTab },
@@ -655,13 +652,6 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                       </Suspense>
                     </div>
                   )}
-                  {activeTab === 'docs' && (
-                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <Suspense fallback={<TabLoadingState label="Loading documents…" />}>
-                        <OfficeLauncherView openView={openView} />
-                      </Suspense>
-                    </div>
-                  )}
                   {activeTab === 'market' && (
                     <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
                       <Suspense fallback={<TabLoadingState label="Loading marketplace…" />}>
@@ -722,7 +712,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   )}
                   </ErrorBoundary>
                   {/* Padded tabs */}
-                  {!['sketch', 'system', 'handoff', 'mobile', 'video', 'docs', 'market', 'brand', 'graph', 'pipeline', 'live', 'orbit', 'hyperframes', 'critique'].includes(activeTab) && (
+                  {!['sketch', 'system', 'handoff', 'mobile', 'video', 'market', 'brand', 'graph', 'pipeline', 'live', 'orbit', 'hyperframes', 'critique'].includes(activeTab) && (
                     <div style={{ flex: 1, overflowY: 'auto', padding: '40px' }}>
                       {activeTab === 'team' && <DesignTeamWorkspace projectName={activeProject?.name} />}
                       {activeTab === 'questions' && (

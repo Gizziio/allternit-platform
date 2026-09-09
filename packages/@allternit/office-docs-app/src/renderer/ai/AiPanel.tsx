@@ -5,8 +5,8 @@ import type { Block } from '@allternit/office-docx-engine'
 import type { AiSettings } from '../../shared/ipc'
 import { type NumIds } from './protocol'
 import { useI18n } from '../i18n/locale'
-import { GensparkMark, IconNewChat, IconSidebarCollapse } from '../components/icons'
-import { useOfficeAi, type OfficeAgentLoop } from '@allternit/office-suite/bridge'
+import { IconNewChat, IconSidebarCollapse } from '../components/icons'
+import { useOfficeAi, AllternitBrandMark, type OfficeAgentLoop } from '@allternit/office-suite/bridge'
 import { type OfficeModelOption } from '@allternit/office-suite/ai'
 
 const PANEL_WIDTH_KEY = 'docs-ai-panel-width'
@@ -204,8 +204,8 @@ export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
-          <GensparkMark size={18} />
-          Allternit AI
+          <AllternitBrandMark size={16} />
+          Allternit Office Agent
         </span>
         <div className="ai-panel-header-actions">
           <ModelPicker

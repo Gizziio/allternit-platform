@@ -1,4 +1,5 @@
-/* OfficeAiSlot — tab strip + panes occupying an app's AI chat section.
+/* OfficeAiSlot — agent panes occupying an app's AI chat section (no tab
+ * strip: a single agent pane's own header identifies it).
  * Tokens come from the suite theme (packages/@allternit/allternit-office-suite
  * theme/allternit-office-suite.css) and are overridden by the platform shell. */
 
@@ -12,52 +13,6 @@
   background: var(--color-bg-page, #ffffff);
   color: var(--color-text-primary, #232425);
   font-family: var(--gs-font-sans, Arial, sans-serif);
-}
-
-.office-ext-tabs {
-  flex-shrink: 0;
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-  padding: 4px 6px 0;
-  border-bottom: 1px solid var(--color-border-default, #eaeaea);
-  background: var(--color-bg-subtle, #f5f5f5);
-  overflow-x: auto;
-}
-
-.office-ext-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  margin-bottom: -1px;
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
-  background: transparent;
-  color: var(--color-text-secondary, #606366);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.office-ext-tab:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: var(--color-text-primary, #232425);
-}
-
-.office-ext-tab-active,
-.office-ext-tab-active:hover {
-  background: var(--color-bg-page, #ffffff);
-  border-color: var(--color-border-default, #eaeaea);
-  color: var(--color-text-primary, #232425);
-}
-
-.office-ext-tab-icon {
-  font-size: 12px;
-  line-height: 1;
 }
 
 .office-ext-body {
@@ -82,4 +37,39 @@
 
 .office-ext-pane[hidden] {
   display: none !important;
+}
+
+/* Collapsed dock: the slot renders its own slim branded rail (the vendored
+ * apps' 34px .ai-dock.collapsed width is set app-side). */
+.office-ai-slot-collapsed {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-items: center;
+  background: var(--color-bg-subtle, #f5f5f5);
+  border-right: 1px solid var(--color-border-default, #eaeaea);
+}
+
+.office-ext-rail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #606366);
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.office-ext-rail:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--color-text-primary, #232425);
+}
+
+.office-ext-rail:disabled {
+  cursor: default;
 }

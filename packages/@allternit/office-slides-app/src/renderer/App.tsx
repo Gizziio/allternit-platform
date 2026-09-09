@@ -51,10 +51,10 @@ import { AnimPreviewOverlay } from './components/AnimatedSlide'
 import { EquationDialog, HeaderFooterDialog, LinkDialog } from './components/InsertDialogs'
 import { CutoutDialog } from './components/CutoutDialog'
 import type { ChartPresetDef, IconDef, SmartArtDef, WordArtPreset } from './insert-presets'
-import { AllternitMark, IconAiBeautify, IconAiFactCheck, IconAiImage } from './components/icons'
+import { IconAiBeautify, IconAiFactCheck, IconAiImage } from './components/icons'
 import { t, useI18n } from './i18n/locale'
 import { AiPanel } from './ai/AiPanel'
-import { OfficeAiSlot } from '@allternit/office-suite/bridge'
+import { OfficeAiSlot, AllternitBrandMark, requestAssistantPreset } from '@allternit/office-suite/bridge'
 import { ChartDataDialog } from './components/ChartDataDialog'
 import type { BrushFormat } from './format-brush'
 import { isTextUndoTarget, shouldRouteUndoToDeck } from './undo-routing'
@@ -788,6 +788,9 @@ export function App() {
         localStorage.setItem('ai-slides-show-ai', '1')
         return true
       })
+      // Hosted surfaces: route the preset into the Allternit Office Agent
+      // pane (the only chat surface when extensions are registered).
+      requestAssistantPreset('slides', text)
       setAiPreset({
         text,
         nonce: Date.now(),
@@ -2351,6 +2354,9 @@ export function App() {
                 <OfficeAiSlot
                   appKey="slides"
                   collapsed={!showAi}
+                  expand={() => {
+                    if (!showAi) toggleAi()
+                  }}
                   close={toggleAi}
                   fallback={
                     <AiPanel
@@ -2379,7 +2385,7 @@ export function App() {
                 />
               ) : (
                 <button className="ai-rail" onClick={toggleAi} title={t('appAiRailExpand')}>
-                  <AllternitMark size={22} />
+                  <AllternitBrandMark size={18} />
                 </button>
               )}
             </div>
@@ -2538,8 +2544,8 @@ export function App() {
                       title={t('aiOpenAssistant')}
                       onClick={toggleAi}
                     >
-                      <AllternitMark size={14} />
-                      <span>Allternit AI</span>
+                      <AllternitBrandMark size={14} />
+                      <span>Allternit Office Agent</span>
                     </button>
                     {/* Same one-click presets as the Home tab; hidden instead of
                         disabled while the deck has no real content */}

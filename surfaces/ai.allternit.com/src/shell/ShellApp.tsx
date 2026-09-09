@@ -88,6 +88,7 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'browser',
   'browserview',
   'mini-apps-store',
+  'aci-recordings',
   'browser-extensions',
   'site-apis',
   'mini-app',

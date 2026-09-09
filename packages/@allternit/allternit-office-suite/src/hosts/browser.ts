@@ -26,7 +26,7 @@ export interface BrowserHostOptions {
   getLanguage?: () => string;
   /** Override the default AI client. Defaults to the platform-style office-ai layer. */
   ai?: OfficeAiClient;
-  /** Extensions that occupy the per-app AI chat section (e.g. the Allternit Assistant). */
+  /** Extensions that occupy the per-app AI chat section (e.g. the Allternit Office Agent). */
   extensions?: OfficeExtensionDescriptor[];
 }
 

@@ -50,20 +50,12 @@ test('Office & Extensions opens an editor as an in-shell view', async ({ page })
   await expect(page).not.toHaveURL(/\/sheets$/);
 });
 
-test('design mode Documents tab shows the same Allternit Office suite', async ({ page }) => {
+test('design mode no longer embeds a Documents launcher tab', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('allternit-platform-mode', 'chat');
     window.localStorage.setItem('allternit-design-onboarded', '1');
   });
 
-  // Starting a project fires the opener agent-chat stream. The test env has
-  // no model backend; if a local gateway happens to be listening it accepts
-  // the stream and never finishes, leaving the "Manifesting high-fidelity
-  // UI…" streaming overlay (position: absolute, zIndex 10 over the whole tab
-  // area) up forever, where it intercepts the Create-new click. Complete the
-  // stream deterministically instead. (The client posts to /api/agent-chat
-  // same-origin, or <gateway>/api/v1/agent-chat when a gateway origin is
-  // configured — cover both.)
   const completeAgentChat = async (route: import('@playwright/test').Route) => {
     await route.fulfill({
       status: 200,
@@ -77,22 +69,11 @@ test('design mode Documents tab shows the same Allternit Office suite', async ({
   // Design Studio runs as its own route/window (openDesignWindow → /design).
   await page.goto('/design');
 
-  // Start a project (the tab bar only exists inside one; setActiveProject
-  // fires before any backend call, so this works offline).
+  // Start a project (the tab bar only exists inside one).
   await page.locator('.ad-composer textarea').fill('Test office project');
   await page.getByLabel('Create project').click();
-  await page.getByRole('button', { name: 'Documents', exact: true }).click();
 
-  // Same suite, same cards as the Office & Extensions shell view.
-  const launcher = page.getByTestId('office-launcher');
-  await expect(launcher).toBeVisible({ timeout: 30000 });
-  await expect(launcher.getByTestId('office-card-docs')).toBeVisible();
-  await expect(launcher.getByTestId('office-card-sheets')).toBeVisible();
-  await expect(launcher.getByTestId('office-card-slides')).toBeVisible();
-  await expect(launcher.getByTestId('office-card-pdf')).toBeVisible();
-
-  // Standalone route: no shell openView, so Create new navigates to the editor route.
-  await launcher.getByTestId('office-card-docs').getByRole('button', { name: 'Create new' }).click();
-  await expect(page).toHaveURL(/\/docs$/, { timeout: 15000 });
-  await expect(page.locator('.ribbon')).toBeVisible({ timeout: 30000 });
+  // The launcher embed was retired: no Documents tab, no office cards.
+  await expect(page.getByRole('button', { name: 'Documents', exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('office-card-docs')).toHaveCount(0);
 });
