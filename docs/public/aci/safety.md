@@ -219,6 +219,8 @@ Rust safety enforcement:
 cargo test -p allternit-api aci_   # aci_safety, aci_approvals, aci_credentials
 ```
 
-As of this writing the Python suites above pass in full, and the six graded
-rows in `adapter_grades.json` were reproduced by running the measurement
-commands on 2026-09-09.
+As of this writing the Python suites above pass in full, the Rust `aci_`
+tests pass (40/40), and the six graded rows in `adapter_grades.json` were
+reproduced on 2026-09-09 by executing the conformance suites — the full
+measurement where the runtimes were available, and the CDP suite directly
+against a headless Chrome listening on the CDP port.
