@@ -1,15 +1,17 @@
 # Checkpoint — cu20-eval-doc
 
 ## Goal
-Publish measured eval/safety numbers as docs/public/aci/safety.md (packaging Gap 4). Every number traceable to repo files; nothing invented.
+Publish measured eval/safety numbers as docs/public/aci/safety.md (packaging Gap 4).
 
 ## Just did
-- Mined all sources: adapter_grades.json (6 graded entries + 2 honest unmeasured), suites.py (A/B/C/D/DX/E/F/V/PL), aci_safety.rs (taxonomy, masking, circuit breaker, host policy), aci_approvals.rs (SHA-256 hash-bound single-use 120s-TTL grants), aci_credentials.rs (AES-256-GCM vault, sandbox_env-only, TOTP), monitor.py (heuristic + VLM), test_cost_accounting.py.
-- Confirmed: no llms.txt exists under docs/public/ — will note that.
+- Verified numbers live: test_measured_conformance.py 10/10; test_monitor.py + test_cost_accounting.py 40/40; conformance.measured --network → mock 8/8, hybrid 3/3, playwright 8/8, crawler 5/5, routing 6/6; CDP suite A run directly against headless Chrome on :9222 → 8/8.
+- Wrote docs/public/aci/safety.md; linked from index.md. Committed 9ef3893af and pushed.
+- Confirmed PR #177 = aci_credentials.rs vault (merged 2026-09-09).
+- No llms.txt under docs/public/ — nothing to link there.
+- Changelog.md is scoped to tool-contract versions only — deliberately NOT adding an off-format entry.
 
 ## Next
-- Verify numbers by running pytest suites + conformance.measured --network + cargo test aci_.
-- Write docs/public/aci/safety.md, link from index.md, add changelog entry.
+- Wait for cargo test -p allternit-api aci_ (build in progress), then finalize PR.
 
 ## Open questions
-- Whether live-network suite runs (playwright/cdp/crawler) pass in this env right now; will only cite what passes.
+- Pre-existing: guide.md says grant TTL default 300s; aci_approvals.rs says 120s. Doc cites code (120s). Flag in PR, not fixing here.
