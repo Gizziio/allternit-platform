@@ -10,33 +10,26 @@ plus one additive engine patch (PTY-tee transcripts). Spec: Allternit Brain
 engine diff). Engine runs as named session `ao`.
 
 ## Just did
-- Read spec + parity memo + all six contract scripts (byte-level contract captured).
-- Deep-surveyed the vendored crate via 3 explore agents: PTY output flow (hook: on_read closure
-  in pane.rs:2343 / PtyIoActorConfig), CLI dispatch (hand-rolled in cli.rs, add src/cli/ao.rs),
-  full RPC schema reference. Key finding: `events.wait` does NOT support pane_exited matches
-  (only pane_agent_status_changed) — spec decision #5's events.wait arm is disproven by source;
-  probe-based liveness survives. No liveness field anywhere; exited panes keep stale shell_pid
-  in process_info (spike must confirm against running server).
-- Found P0 commit is unbuildable from a fresh checkout: repo .gitignore `build/` swallowed
-  `vendor/libghostty-vt/src/build/` (+ gtk/build) at commit time. Restored both from upstream
-  ghostty@c5a21edfc (verified the only vendor diffs vs that commit are the two documented herdr
-  patches), added .gitignore negations.
+- P1 implementation complete and verified: PTY-tee transcript patch (`src/ao/`, wired through
+  `spawn_command_builder` in pane.rs); `src/cli/ao.rs` six subcommands with verbatim
+  contract messages/exit codes; registry at `~/.agent-orchestrator/state.json` as the
+  remain-on-exit analog; dispatch in cli.rs/main.rs/spec.rs.
+- Golden parity test rerun: 62 passed, 0 failed (byte-identical across worlds, burst
+  transcripts identical).
+- `cargo test -p herdr`: 2164 ok, dies on pre-existing upstream SIGPIPE (same as P0).
+  9 detect::manifest FAILED under parallel run all pass in isolation (59/59) — pre-existing
+  upstream parallelism artifact, untouched by this diff.
+- Spike findings + deviations recorded in `docs/ALLTERNIT_RUNTIME_P1_NOTES.md`
+  (status: done). Evidence copied to `~/.agent-orchestrator/evidence/ao-engine-parity/`.
+- Smoke-test leftovers cleaned: dev engine stopped, registry emptied, no stray ao-gold*
+  sessions.
 
 ## Next
-1. Commit vendor repair (fix(ao-engine)), push; then build the engine and boot it as session ao.
-2. Run the 3-item spike (post-exit pane.get/read/process_info; placeholder-tab side effects;
-   read-after-exit) + exercise worktree.create/remove churn; record findings in P1 NOTES.
-3. Implement the PTY-tee patch, then src/cli/ao.rs six subcommands, then the golden parity test.
+1. Commit, push, `gh pr create` + `gh pr merge --merge`; record PR/SHA.
+2. Shared-checkout ritual: pull --ff-only, ledger attestation summary + LEDGER.md entry,
+   commit on main with STEER_GUARD_OFF=1, push.
+3. Brain update as draft (no confirm). Then worktree/branch cleanup.
 
 ## Open questions
-- events.wait pane_exited unsupported at v0.9.0 (source-verified) → watch/status liveness will be
-  probe-based (process_info shell_pid + kill(pid,0)) per memo fallback; will record as a
-  spike-settled deviation if the running engine confirms.
-- layout.apply rejects tab_id+workspace_id together (invalid_target) → spike must confirm the
-  correct invocation shape (tab_id only).
-- Decision #3 (engine worktree.create/remove) vs git-subprocess parity: will exercise in spike
-  and record; git subprocess may win on byte-parity grounds.
-
----
-
-<!-- previous checkpoints below -->
+- None for P1. P2-P5 (TUI rebrand, machine/fabric/harness/peer surfaces) remain per plan;
+  bash script deprecation waits for human sign-off.

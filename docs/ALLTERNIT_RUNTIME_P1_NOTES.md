@@ -1,7 +1,7 @@
 # ALLTERNIT_RUNTIME_P1_NOTES — ao v3 engine + contract parity (P1)
 
 ```yaml
-status: in_progress
+status: done
 files_changed:
   - infrastructure/executor/ao-engine/src/ao/            # NEW: additive ao module (transcript tee) — the one allowed engine diff
   - infrastructure/executor/ao-engine/src/cli/ao.rs      # NEW: ao spawn|send|watch|status|kill|doctor
@@ -10,7 +10,6 @@ files_changed:
   - infrastructure/executor/ao-engine/src/main.rs        # mod ao; help text
   - infrastructure/executor/ao-engine/src/cli/spec.rs    # clap help/completion mirror
   - infrastructure/executor/ao-engine/tests/ao_parity/   # golden side-by-side test (committed, rerunnable)
-  - .gitignore                                           # un-ignore vendored src/build dirs (P0 repair, separate commit)
 deviations:
   - "events.wait does not support pane_exited at v0.9.0 (only pane_agent_status_changed) — decision #5's events.wait arm replaced by presence probe (workspace/pane existence), which the engine makes lossless because PaneDied removes the pane+workspace from state (dead = pane_not_found, verified by spike)."
   - "Decision #3 (engine worktree.create/remove) reversed after spike: engine silently REUSES an existing branch where the script's 'git worktree add -b' fatals; worktree.remove also left a surprise 'wtrepo' workspace behind. ao-core shells out to git with the script's exact commands instead — byte-parity including failure modes. Engine worktree.* remains available for later phases."
@@ -79,6 +78,18 @@ Supporting findings:
 | ao-status | workspace.list filtered `ao-*` (+ registry for DEAD) / pane.get cwd; with slug: pane.read {recent, N} |
 | ao-kill | pane.get cwd capture → workspace.close → registry cleanup; --rm-worktree: script-identical git subprocess + suffix guard |
 | ao-doctor | socket connect + ping (Pong.protocol/version) + tmux/script/git + 4 executor probes (verbatim logic) |
+
+## Verification results (2026-09-09)
+
+- Golden parity test (`tests/ao_parity/run.sh`), rerun for stability: **62 passed, 0 failed**
+  — byte-identical outputs across script and ao worlds, including the 184KB burst
+  transcript and the instant-exit tail path.
+- `cargo test -p herdr`: 2164 ok before the harness dies on the **pre-existing upstream
+  SIGPIPE** (documented at P0; identical failure mode, no regression). Nine
+  `detect::manifest` tests show FAILED under the default parallel run but **all pass in
+  isolation** (`--bin ao detect::manifest -- --test-threads=1`: 59 passed, 0 failed) —
+  a pre-existing upstream parallelism artifact; the parity diff touches nothing in
+  `detect`.
 
 ## How to verify
 
