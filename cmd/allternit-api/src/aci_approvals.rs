@@ -22,10 +22,33 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 /// Default grant TTL when `ALLTERNIT_ACI_GRANT_TTL_SECS` is unset.
-const DEFAULT_GRANT_TTL_SECS: u64 = 300;
+///
+/// Aligned with the ACU planning loop's approval timeout
+/// (`_DIRECT_APPROVAL_TIMEOUT_SECONDS = 120` in
+/// `domains/computer-use/core/gateway/computer_use_router.py`): a Rust grant
+/// must never outlive the Python `approval_future` it authorizes, so the
+/// unified TTL for the product is 120 seconds. Override via env only when the
+/// ACU side changes in lockstep.
+const DEFAULT_GRANT_TTL_SECS: u64 = 120;
 
 /// Cap retained receipts so the in-memory audit log cannot grow without bound.
 const MAX_RETAINED_RECEIPTS: usize = 10_000;
+
+/// Root directory for computer-use gateway state that must survive restarts:
+/// approval receipts (JSONL), per-run event-buffer snapshots, and the VM pool
+/// state file. Override with `ALLTERNIT_COMPUTER_USE_DIR` (used by tests);
+/// defaults to `~/.allternit/computer-use`.
+pub fn computer_use_dir() -> std::path::PathBuf {
+    if let Ok(dir) = std::env::var("ALLTERNIT_COMPUTER_USE_DIR") {
+        if !dir.is_empty() {
+            return std::path::PathBuf::from(dir);
+        }
+    }
+    dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(".allternit")
+        .join("computer-use")
+}
 
 /// Serialize `value` with object keys sorted recursively so the same logical
 /// payload always hashes identically, regardless of how the caller built the
@@ -139,13 +162,77 @@ pub struct RedemptionReceipt {
     pub redeemed_at: String,
 }
 
-/// In-memory store for action grants and their redemption receipts. Global to
-/// the gateway process (like `aci_routes::ACI_RUN_EVENTS`) so enforcement
-/// works without threading new state through `AppState`.
+/// One user-facing approval status, regardless of where the approval lives.
+/// This is the vocabulary of `GET /api/aci/approvals/{id}`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UnifiedApprovalStatus {
+    /// A human decision has not been recorded yet (or the ACU run is still in
+    /// `awaiting_approval`).
+    Pending,
+    /// Approved and still redeemable / actionable.
+    Approved,
+    /// Denied by the approver.
+    Denied,
+    /// The decision window lapsed (grant TTL, or the Python approval_future
+    /// timed out after 120 s).
+    Expired,
+    /// Approved and already redeemed (hash grants are single-use).
+    Consumed,
+}
+
+impl UnifiedApprovalStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Approved => "approved",
+            Self::Denied => "denied",
+            Self::Expired => "expired",
+            Self::Consumed => "consumed",
+        }
+    }
+}
+
+/// Derive the unified status for a hash grant. Expiry dominates for pending
+/// and approved grants: a grant past `expires_at` is reported `expired`, and
+/// redeem will deny it the same way.
+pub fn unified_status(grant: &ActionGrant, now_millis: i64) -> UnifiedApprovalStatus {
+    let expired = now_millis > grant.expires_at;
+    match grant.status {
+        GrantStatus::Consumed => UnifiedApprovalStatus::Consumed,
+        GrantStatus::Denied => UnifiedApprovalStatus::Denied,
+        GrantStatus::Pending => {
+            if expired {
+                UnifiedApprovalStatus::Expired
+            } else {
+                UnifiedApprovalStatus::Pending
+            }
+        }
+        GrantStatus::Approved => {
+            if expired {
+                UnifiedApprovalStatus::Expired
+            } else {
+                UnifiedApprovalStatus::Approved
+            }
+        }
+    }
+}
+
+/// In-memory store for action grants and their redemption receipts, with an
+/// optional append-only JSONL audit trail on disk. Global to the gateway
+/// process (like `aci_routes::ACI_RUN_EVENTS`) so enforcement works without
+/// threading new state through `AppState`.
+///
+/// When `receipts_path` is set, every receipt is appended to the JSONL file
+/// and the file is (re)loaded at construction, so the audit trail survives a
+/// gateway restart. Grants themselves stay in-memory: they are short-lived
+/// (TTL ≤ the unified 120 s) and their backing Python `approval_future` dies
+/// with the ACU process anyway.
 #[derive(Debug, Default)]
 pub struct ActionGrantStore {
     grants: Mutex<HashMap<String, ActionGrant>>,
     receipts: Mutex<Vec<RedemptionReceipt>>,
+    receipts_path: Option<std::path::PathBuf>,
 }
 
 /// Grant TTL from `ALLTERNIT_ACI_GRANT_TTL_SECS` (default 300 s).
@@ -160,6 +247,72 @@ pub fn grant_ttl_secs() -> u64 {
 impl ActionGrantStore {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// A store that persists every receipt as a JSON line appended to
+    /// `receipts_path`, reloading any previously recorded receipts from that
+    /// file. The parent directory is created if needed.
+    pub fn new_persisted(receipts_path: std::path::PathBuf) -> Self {
+        let store = Self {
+            grants: Mutex::new(HashMap::new()),
+            receipts: Mutex::new(Vec::new()),
+            receipts_path: Some(receipts_path),
+        };
+        store.load_receipts();
+        store
+    }
+
+    /// Read the JSONL audit trail back into memory (boot-time restore).
+    fn load_receipts(&self) {
+        let Some(path) = &self.receipts_path else {
+            return;
+        };
+        let Ok(text) = std::fs::read_to_string(path) else {
+            return; // missing or unreadable file == empty trail
+        };
+        let mut receipts = self.receipts.lock().expect("receipt lock");
+        for line in text.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            match serde_json::from_str::<RedemptionReceipt>(line) {
+                Ok(receipt) => receipts.push(receipt),
+                // The audit trail must never take the gateway down; skip
+                // corrupt lines but keep the rest.
+                Err(e) => tracing::warn!("receipts reload: skipping unparseable line: {e}"),
+            }
+        }
+        let overflow = receipts.len().saturating_sub(MAX_RETAINED_RECEIPTS);
+        if overflow > 0 {
+            receipts.drain(0..overflow);
+        }
+    }
+
+    /// Append one receipt to the JSONL audit trail. Best-effort: an I/O
+    /// failure is logged, never propagated — the in-memory record is
+    /// authoritative for enforcement, the file is the audit trail.
+    fn persist_receipt(&self, receipt: &RedemptionReceipt) {
+        let Some(path) = &self.receipts_path else {
+            return;
+        };
+        let Ok(line) = serde_json::to_string(receipt) else {
+            return;
+        };
+        if let Some(parent) = path.parent() {
+            if std::fs::create_dir_all(parent).is_err() {
+                return;
+            }
+        }
+        use std::io::Write as _;
+        match std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            Ok(mut file) => {
+                if let Err(e) = writeln!(file, "{line}") {
+                    tracing::warn!("receipts persist: write failed: {e}");
+                }
+            }
+            Err(e) => tracing::warn!("receipts persist: open failed: {e}"),
+        }
     }
 
     /// Issue a fresh pending grant and return its id.
@@ -258,6 +411,8 @@ impl ActionGrantStore {
             receipts.drain(0..drop);
         }
         receipts.push(receipt.clone());
+        drop(receipts);
+        self.persist_receipt(&receipt);
 
         match denial {
             None => Ok(receipt),
@@ -271,8 +426,12 @@ impl ActionGrantStore {
     }
 }
 
-/// Process-wide grant store shared by every computer-use entry route.
-pub static GRANTS: Lazy<ActionGrantStore> = Lazy::new(ActionGrantStore::new);
+/// Process-wide grant store shared by every computer-use entry route. The
+/// JSONL receipt trail lives at `<computer_use_dir>/receipts/receipts.jsonl`
+/// and is reloaded here at process boot.
+pub static GRANTS: Lazy<ActionGrantStore> = Lazy::new(|| {
+    ActionGrantStore::new_persisted(computer_use_dir().join("receipts").join("receipts.jsonl"))
+});
 
 #[cfg(test)]
 mod tests {
@@ -372,5 +531,82 @@ mod tests {
             .as_deref()
             .unwrap()
             .contains("single-use"));
+    }
+
+    #[test]
+    fn unified_status_maps_grant_lifecycle() {
+        let store = ActionGrantStore::new();
+        let hash = hash_action_payload(&json!({"a": 1}));
+        let id = store.issue("user-1", &hash);
+        let now = chrono::Utc::now().timestamp_millis();
+
+        let pending = store.get(&id).unwrap();
+        assert_eq!(
+            unified_status(&pending, now),
+            UnifiedApprovalStatus::Pending
+        );
+        // Future "now" past expiry: pending becomes expired.
+        assert_eq!(
+            unified_status(&pending, now + 200_000),
+            UnifiedApprovalStatus::Expired
+        );
+
+        assert!(store.approve(&id));
+        let approved = store.get(&id).unwrap();
+        assert_eq!(
+            unified_status(&approved, now),
+            UnifiedApprovalStatus::Approved
+        );
+        assert_eq!(
+            unified_status(&approved, now + 200_000),
+            UnifiedApprovalStatus::Expired
+        );
+
+        assert!(store.redeem("user-1", &id, &hash).is_ok());
+        let consumed = store.get(&id).unwrap();
+        // Consumed stays consumed even past TTL — the audit fact outlives it.
+        assert_eq!(
+            unified_status(&consumed, now + 200_000),
+            UnifiedApprovalStatus::Consumed
+        );
+
+        let id2 = store.issue("user-1", &hash);
+        assert!(store.deny(&id2));
+        let denied = store.get(&id2).unwrap();
+        assert_eq!(unified_status(&denied, now), UnifiedApprovalStatus::Denied);
+    }
+
+    #[test]
+    fn receipts_persist_to_jsonl_and_reload_on_boot() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("receipts.jsonl");
+
+        // Generation 1: issue, approve, redeem (one allowed + one denied
+        // attempt) against a persisted store.
+        let store = ActionGrantStore::new_persisted(path.clone());
+        let hash = hash_action_payload(&json!({"a": 1}));
+        let id = store.issue("user-1", &hash);
+        assert!(store.approve(&id));
+        assert!(store.redeem("user-1", &id, &hash).is_ok());
+        let _ = store.redeem("user-1", &id, &hash); // denied: already consumed
+
+        // The audit trail is on disk, one JSON object per line.
+        let text = std::fs::read_to_string(&path).expect("receipts file written");
+        let lines: Vec<_> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+        assert_eq!(lines.len(), 2);
+        let parsed: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
+        assert_eq!(parsed["outcome"], "allowed");
+
+        // Generation 2 (simulated restart): a fresh store over the same file
+        // reloads the audit trail, and new receipts append to it.
+        let store2 = ActionGrantStore::new_persisted(path.clone());
+        assert_eq!(store2.receipts().len(), 2);
+        assert_eq!(store2.receipts()[0].outcome, "allowed");
+
+        let id2 = store2.issue("user-2", &hash);
+        assert!(store2.deny(&id2));
+        let _ = store2.redeem("user-2", &id2, &hash);
+        assert_eq!(store2.receipts().len(), 3);
+        assert_eq!(std::fs::read_to_string(&path).unwrap().lines().count(), 3);
     }
 }
