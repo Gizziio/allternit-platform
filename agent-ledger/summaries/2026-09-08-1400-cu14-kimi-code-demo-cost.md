@@ -1,0 +1,2 @@
+# cu14 — one-command demo + cost observability (PR #174 → 58fc430ba)
+demo.py one-liner boots gateway + self-contained /demo UI (canned run, live SSE, cost pills), no Docker. cost_accounting.py: per-run token counts + est_cost_usd on runs.sqlite3 (guarded migration), GET /runs/{id}/cost + /cost/summary (success rate, avg cost/task), honest zeros when unavailable, wired through all 4 execution paths. Verified: +22 tests, live smoke :8991. Deferrals: monitor stage unwired; launcher script not packaged console entry.
