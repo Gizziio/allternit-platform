@@ -6,9 +6,18 @@ import { ChatTeardropText, DotsThree, PencilSimple, Copy, Trash } from "@phospho
 import type { Agent } from "@/lib/agents/agent.types";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { getBotAccentColor, getBotDisplayName, getBotTagline, BOT_CATEGORIES } from "@/lib/bots/bot-profile";
+import { BOT_COMPUTER_STATUS_LABEL, useBotComputer } from "@/lib/bots/useBotComputer";
 import { BotAvatar } from "@/views/bots/BotAvatar";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { cn } from "@/lib/utils";
+
+const COMPUTER_STATUS_DOT: Record<string, string> = {
+  provisioning: "var(--status-warning, #f59e0b)",
+  running: "var(--status-success, #10b981)",
+  stopped: "var(--text-tertiary, #71717a)",
+  error: "var(--status-error, #ef4444)",
+  none: "var(--text-tertiary, #71717a)",
+};
 
 interface BotHubCardProps {
   bot: Agent;
@@ -27,6 +36,8 @@ export function BotHubCard({ bot, sessionCount = 0, onClick, index = 0 }: BotHub
   const accentColor = getBotAccentColor(bot) ?? "var(--accent-primary)";
   const category = bot.botProfile?.botCategory;
   const categoryLabel = category ? BOT_CATEGORIES[category]?.label : undefined;
+  const computer = useBotComputer(bot);
+  const showComputer = bot.vmOperator?.enabled === true;
 
   const handleDuplicate = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -109,6 +120,21 @@ export function BotHubCard({ bot, sessionCount = 0, onClick, index = 0 }: BotHub
         </div>
 
         <div className="mt-4 flex items-center gap-2">
+          {showComputer && (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-medium"
+              style={{ background: "var(--surface-hover)", color: "var(--text-secondary)" }}
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  computer.status === "provisioning" && "animate-pulse"
+                )}
+                style={{ background: COMPUTER_STATUS_DOT[computer.status] }}
+              />
+              {BOT_COMPUTER_STATUS_LABEL[computer.status]}
+            </span>
+          )}
           {categoryLabel && (
             <span
               className="rounded-md px-2 py-0.5 text-[10px] font-medium capitalize"
