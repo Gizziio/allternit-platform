@@ -114,7 +114,7 @@ async function transcribeViaSidecar(
     const body = new FormData()
     body.append(
       'audio',
-      new Blob([wav], { type: 'audio/wav' }),
+      new Blob([new Uint8Array(wav)], { type: 'audio/wav' }),
       'utterance.wav',
     )
     body.append('language', language)
