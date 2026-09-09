@@ -6,7 +6,7 @@ import { forwardRef } from 'react'
 import type { ReactNode, TextareaHTMLAttributes } from 'react'
 
 export function Markdown({ text }: { text: string }) {
-  // Plain-text rendering: safe and sufficient until the Allternit AI panel
+  // Plain-text rendering: safe and sufficient until the Allternit Office Agent panel
   // replaces the vendored one.
   return <div className="ai-markdown" style={{ whiteSpace: 'pre-wrap' }}>{text}</div>
 }

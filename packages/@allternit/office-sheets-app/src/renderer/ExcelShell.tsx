@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 
 import {
   CaretIcon,
-  GensparkMark,
   RIBBON_GLYPH_ICONS,
   RedoIcon,
   SaveIcon,
@@ -20,7 +19,7 @@ import type { ChartSeriesVisualState } from '@allternit/office-suite/xlsx'
 import type { ChangePlan } from '@allternit/office-suite/xlsx'
 import type { AttachmentMeta } from '@allternit/office-suite/xlsx'
 import { AiChatPanel, type AiChatMessage } from './ai/AiChatPanel'
-import { OfficeAiSlot } from '@allternit/office-suite/bridge'
+import { OfficeAiSlot, AllternitBrandMark, requestAssistantPreset } from '@allternit/office-suite/bridge'
 import {
   PivotDialog,
   type PivotEditSeed,
@@ -416,6 +415,9 @@ export function ExcelShell({
           }}
           onAiRun={(nextPrompt) => {
             setIsCopilotOpen(true)
+            // Hosted surfaces: route the run into the Allternit Office Agent
+            // pane (the only chat surface when extensions are registered).
+            requestAssistantPreset('sheets', nextPrompt)
             onSend(nextPrompt)
           }}
           aiOpen={isCopilotOpen}
@@ -428,6 +430,7 @@ export function ExcelShell({
         <OfficeAiSlot
           appKey="sheets"
           collapsed={!isCopilotOpen}
+          expand={() => setIsCopilotOpen(true)}
           close={() => setIsCopilotOpen(false)}
           fallback={
             <AiChatPanel
@@ -2076,10 +2079,10 @@ function Ribbon({
           onClick={onAiToggle}
         >
           <span className="tool-icon-row">
-            <GensparkMark size={26} />
+            <AllternitBrandMark size={22} />
           </span>
           <span>
-            <strong>Allternit AI</strong>
+            <strong>Allternit Office Agent</strong>
           </span>
         </button>
         <button
@@ -2543,7 +2546,7 @@ function Ribbon({
         title={t('aiOpenAssistant')}
         onClick={() => onCommand('ai-toggle-panel')}
       >
-        <GensparkMark size={28} />
+        <AllternitBrandMark size={20} />
         <span>Allternit</span>
       </button>
     </div>

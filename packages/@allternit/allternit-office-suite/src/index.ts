@@ -38,8 +38,12 @@ export {
   getActiveDocument,
   useActiveDocument,
   createAllternitAssistantExtension,
+  requestAssistantPreset,
 } from './extensions';
 export type { OfficeAiSlotProps, ActiveDocumentInfo } from './extensions';
+
+// Brand
+export { AllternitBrandMark, type AllternitBrandMarkProps } from './components/AllternitBrandMark';
 
 // AI configuration
 export type { OfficeAiConfig } from './ai/types';

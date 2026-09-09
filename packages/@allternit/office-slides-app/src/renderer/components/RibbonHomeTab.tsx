@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { saveEditSelection } from '../TextEditOverlay'
 import { armColorInput } from '../color-input'
 import { displayFontFamily } from '../konva-adapter'
+import { AllternitBrandMark } from '@allternit/office-suite/bridge'
 import {
-  AllternitMark,
   IconAiBeautify,
   IconAiFactCheck,
   IconAiImage,
@@ -133,16 +133,16 @@ export function RibbonHomeTab({ rb }: { rb: RibbonTabCtx }) {
   }
   return (
     <>
-      <Group label="Allternit AI">
+      <Group label="Allternit Office Agent">
         <button
           className={`rb-big ai-entry${aiOpen ? ' active' : ''}`}
           title={t('aiOpenAssistant')}
           onClick={onToggleAi}
         >
           <span className="rb-big-icon">
-            <AllternitMark size={26} />
+            <AllternitBrandMark size={22} />
           </span>
-          <span>Allternit AI</span>
+          <span>Allternit Office Agent</span>
         </button>
         <button
           className="rb-big ai-entry"

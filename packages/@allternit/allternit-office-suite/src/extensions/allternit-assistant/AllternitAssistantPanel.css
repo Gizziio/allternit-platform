@@ -1,4 +1,4 @@
-/* Allternit Assistant extension panel. Tokens come from the suite theme and
+/* Allternit Office Agent extension panel. Tokens come from the suite theme and
  * are overridden by the platform shell; the layout mirrors the vendored
  * apps' .ai-panel language (header / chat / composer). */
 
@@ -28,6 +28,9 @@
 }
 
 .aos-assistant-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

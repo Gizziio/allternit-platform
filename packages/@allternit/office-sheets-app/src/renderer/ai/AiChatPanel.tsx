@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useOfficeAi } from '@allternit/office-suite/bridge'
 import { type OfficeModelOption } from '@allternit/office-suite/ai'
 import { AiComposer, AiTypingIndicator } from './ui-stubs'
-import { GensparkMark } from '../ribbon-icons'
+import { AllternitBrandMark } from '@allternit/office-suite/bridge'
 import type { ChangePlan } from '@allternit/office-suite/xlsx'
 import type { AttachmentMeta } from '@allternit/office-suite/xlsx'
 import { useI18n, type TFunc } from '../i18n/locale'
@@ -207,7 +207,7 @@ export function AiChatPanel({
     return (
       <aside className="copilot collapsed">
         <button className="expand-copilot" onClick={onExpand} title={t('aiOpenAssistant')}>
-          <GensparkMark size={22} />
+          <AllternitBrandMark size={18} />
         </button>
       </aside>
     )
@@ -268,12 +268,12 @@ export function AiChatPanel({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label="Allternit AI"
+        aria-label="Allternit Office Agent"
       />
       <header className="ai-panel-header">
         <span className="ai-panel-title">
-          <GensparkMark size={22} />
-          Allternit AI
+          <AllternitBrandMark size={16} />
+          Allternit Office Agent
         </span>
         <div className="ai-panel-header-actions">
           <ModelPicker value={modelId} onChange={onModelChange} />
