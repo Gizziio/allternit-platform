@@ -25,6 +25,34 @@ In the Allternit platform we use **Agent** as the execution primitive and **Bot*
 **One-line rule:**  
 > Every Bot is an Agent; not every Agent is a Bot.
 
+## Atomic create rule (bot-identity-computer, Phase 1)
+
+A Bot is created as **one atomic object** — Identity + Instructions + Computer + Tools in a
+single submit. Creating a bot never produces a bare agent that needs a second, manual
+provisioning pass:
+
+1. **Identity** — `botProfile.displayName` in `Name — Role` form (e.g. `Quinn — Chief of Staff`),
+   accent, avatar; `agent.name` remains the `@` handle.
+2. **Instructions** — `systemPrompt` (a plain JOB statement: what the bot does, what it does
+   not). Written on the create payload, not patched in later.
+3. **Tools** — `allowedTools` chosen from the real native tool registry
+   (`bot-tool-registry.ts`), never free-typed theater.
+4. **Computer** — `vmOperator` persisted on the agent with `enabled: true`,
+   `persistence: 'persistent'`, `computerKind: 'cloud_desktop'`, default resources
+   (2 vCPU / 4 GB / 100 GB), and `autoStart: false`. On create, the client calls
+   `ensureBotComputer(botId, config)`, which binds the newest non-deleted Computer Cloud
+   desktop by `bot_id` or provisions one through `POST /api/v1/computers`. Create returns
+   immediately — the Bots rail streams provisioning / running / stopped / error from
+   `GET /api/v1/computers?bot_id=…`.
+
+Opening a bot **reuses the same computer id** (`getSandboxForAgent` / find-by-`bot_id`); it
+never spins up a replacement ephemeral sandbox. Session start may only create a sandbox when
+`autoStart !== false` — the bot default is `false` because Create Bot already provisioned the
+desktop. Non-bot Agents keep `vmOperator` optional/off.
+
+Theater (RPG stats, Big Five sliders, forge animations) has no runtime effect and is not part
+of the Create Bot path; the canonical Create Bot flow (`CreateBotForm`) ships without it.
+
 ## Why this matters
 
 The previous UI had **7 hard-coded bots** that were not backed by real agents. That violated the contract: a bot must be a packaged agent, not a template or a marketing card. This contract lets us:
