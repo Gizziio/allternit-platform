@@ -47,6 +47,12 @@ try:
     from core.computer_use_executor import get_executor as _get_executor
     from gateway.canonical_router import history_preflight_for_task
     from core.cost_accounting import cost_dict_from_planning_result, zero_run_cost
+    from core.sandbox_env import (
+        sandbox_env_context,
+        scrub_secrets,
+        secret_values,
+        validate_sandbox_env,
+    )
     _planning_available = True
 except ImportError:
     PlanningLoop = None  # type: ignore[assignment,misc]
@@ -73,6 +79,20 @@ except ImportError:
 
     def cost_dict_from_planning_result(result: Any, provider: Any = None) -> Dict[str, Any]:  # type: ignore[misc]
         return zero_run_cost()
+
+    # Identity fallbacks: only reached when the core package itself is
+    # unimportable (the planning path is dead in that state too). The
+    # sandbox_env field is ignored, exactly as before this feature existed.
+    def validate_sandbox_env(env: Dict[str, str]) -> Dict[str, str]:  # type: ignore[misc]
+        return dict(env)
+
+    def secret_values(env: Dict[str, str]) -> List[str]:  # type: ignore[misc]
+        return []
+
+    def scrub_secrets(value: Any, secrets: Any) -> Any:  # type: ignore[misc]
+        return value
+
+    from contextlib import nullcontext as sandbox_env_context  # type: ignore[misc]
 
 # Playwright-based adapter (inline stub that delegates to session_manager)
 try:
@@ -129,12 +149,17 @@ class RunState:
         session_id: str,
         mode: str,
         target_scope: str,
+        sandbox_secrets: Optional[List[str]] = None,
     ) -> None:
         self.run_id = run_id
         self.session_id = session_id
         self.status: str = "pending"
         self.mode = mode
         self.target_scope = target_scope
+        # Plaintext credential values held ONLY for scrubbing run output
+        # (events, results, errors) before it reaches queues, receipts,
+        # persistence, or clients. Never serialized, never logged.
+        self.sandbox_secrets: List[str] = list(sandbox_secrets or [])
         self.created_at: str = _utcnow()
         self.updated_at: str = _utcnow()
         self.result: Optional[Dict[str, Any]] = None
@@ -185,8 +210,15 @@ class RunStore:
         except Exception as exc:
             logger.warning("Run history reconciliation failed: %s", exc)
 
-    def create(self, run_id: str, session_id: str, mode: str, target_scope: str) -> RunState:
-        state = RunState(run_id, session_id, mode, target_scope)
+    def create(
+        self,
+        run_id: str,
+        session_id: str,
+        mode: str,
+        target_scope: str,
+        sandbox_secrets: Optional[List[str]] = None,
+    ) -> RunState:
+        state = RunState(run_id, session_id, mode, target_scope, sandbox_secrets=sandbox_secrets)
         self.runs[run_id] = state
         self.event_queues[run_id] = asyncio.Queue()
         self._persist(state)
@@ -219,6 +251,11 @@ class RunStore:
     async def push_event(self, run_id: str, event: Dict[str, Any]) -> None:
         q = self.event_queues.get(run_id)
         if q:
+            state = self.runs.get(run_id)
+            if state is not None and state.sandbox_secrets:
+                # A child process that echoes its own environment must not
+                # leak credential values into stream frames.
+                event = scrub_secrets(event, state.sandbox_secrets)
             await q.put(event)
 
     async def push_sentinel(self, run_id: str) -> None:
@@ -363,6 +400,20 @@ class ExecuteBody(BaseModel):
     target_scope: Literal["browser", "desktop", "hybrid", "auto"] = "browser"
     options: Dict[str, Any] = Field(default_factory=dict)
     context: Dict[str, Any] = Field(default_factory=dict)
+    # Credential-injection channel (ACI server-side vault, aci_credentials.rs):
+    # plaintext values for the run's sandbox environment only. Top-level —
+    # deliberately NOT part of task/options — so the model context never
+    # carries them. Consumed exclusively via sandbox_env_context/scrub_secrets.
+    sandbox_env: Dict[str, str] = Field(default_factory=dict)
+
+    def __repr__(self) -> str:
+        # Defensive: a wholesale `repr(body)` / f-string log of the request
+        # must never print credential values — variable names only.
+        fields = self.model_dump()
+        fields["sandbox_env"] = {key: "***" for key in self.sandbox_env}
+        return f"ExecuteBody({fields!r})"
+
+    __str__ = __repr__
 
     @model_validator(mode="after")
     def _require_task_or_actions(self) -> "ExecuteBody":
@@ -577,7 +628,7 @@ async def _execute_non_claude_path(
                 gif_path=str(gif_path) if gif_path else None,
             )
         run_state.status = result.status
-        run_state.result = result.to_dict()
+        run_state.result = scrub_secrets(result.to_dict(), run_state.sandbox_secrets)
         _emit_canonical(
             "run.completed" if result.status == "completed" else "run.failed",
             session_id=body.session_id, run_id=body.run_id,
@@ -585,11 +636,14 @@ async def _execute_non_claude_path(
                      "steps": len(result.steps), "stop_reason": result.stop_reason.value},
         )
     except Exception as exc:
-        logger.exception("Planning loop raised exception: %s", exc)
+        logger.exception(
+            "Planning loop raised exception: %s",
+            scrub_secrets(str(exc), run_state.sandbox_secrets),
+        )
         run_state.status = "failed"
-        run_state.error = str(exc)
+        run_state.error = scrub_secrets(str(exc), run_state.sandbox_secrets)
         _emit_canonical("run.failed", session_id=body.session_id, run_id=body.run_id,
-                        payload={"mode": "intent", "error": str(exc)})
+                        payload={"mode": "intent", "error": run_state.error})
         if recorder is not None:
             try:
                 await recorder.stop()
@@ -716,9 +770,13 @@ async def _execute_direct_path(
                 entry["result"] = await _run_direct_action(adapter, body, action)
                 ok_count += 1
             except Exception as exc:
-                logger.warning("Direct action %s (%s) failed: %s", index, action.kind, exc)
+                logger.warning(
+                    "Direct action %s (%s) failed: %s",
+                    index, action.kind,
+                    scrub_secrets(str(exc), run_state.sandbox_secrets),
+                )
                 entry["status"] = "error"
-                entry["error"] = str(exc)
+                entry["error"] = scrub_secrets(str(exc), run_state.sandbox_secrets)
             actions_out.append(entry)
             await _run_store.push_event(run_state.run_id, {
                 "event_type": "action.completed",
@@ -738,7 +796,7 @@ async def _execute_direct_path(
             try:
                 from core.replay_engine import capture_screenshot
 
-                png = await capture_screenshot(adapter, body.session_id)
+                png = await capture_screenshot(adapter, body.session_id, run_state.sandbox_secrets)
                 if png:
                     import base64 as _b64
 
@@ -748,7 +806,7 @@ async def _execute_direct_path(
 
         total = len(actions_out)
         run_state.status = "completed" if (not cancelled and ok_count == total and total > 0) else "failed"
-        run_state.result = {
+        run_state.result = scrub_secrets({
             "task": body.task,
             "status": run_state.status,
             "stop_reason": "done" if run_state.status == "completed" else "error",
@@ -760,7 +818,7 @@ async def _execute_direct_path(
                 f"Executed {ok_count}/{total} actions"
                 + (" (cancelled)" if cancelled else "")
             ),
-        }
+        }, run_state.sandbox_secrets)
         if screenshot_b64:
             run_state.result["artifacts"] = [{
                 "type": "screenshot",
@@ -768,11 +826,14 @@ async def _execute_direct_path(
                 "content": screenshot_b64,
             }]
     except Exception as exc:
-        logger.exception("Direct execution raised exception: %s", exc)
+        logger.exception(
+            "Direct execution raised exception: %s",
+            scrub_secrets(str(exc), run_state.sandbox_secrets),
+        )
         run_state.status = "failed"
-        run_state.error = str(exc)
+        run_state.error = scrub_secrets(str(exc), run_state.sandbox_secrets)
         _emit_canonical("run.failed", session_id=body.session_id, run_id=run_state.run_id,
-                        payload={"mode": "direct", "error": str(exc)})
+                        payload={"mode": "direct", "error": run_state.error})
     finally:
         run_state.updated_at = _utcnow()
         _run_store.finalize(run_state.run_id)
@@ -816,20 +877,42 @@ async def execute(
     mode='direct' executes the explicit actions list through the adapter
     layer with no planning loop; any other mode runs the planning loop on
     `task`.
+
+    sandbox_env (top-level) is the credential-injection channel from the
+    ACI server-side vault: values are validated, held only in memory for
+    output scrubbing, and exposed to the run's child processes through the
+    process environment for the duration of the run. They are never part
+    of the model context, logs, stream frames, receipts, or responses.
     """
+    # Validate before creating the run so a bad variable name fails the
+    # request without leaving a run record behind. Error text names only
+    # the offending variable — never the value.
+    try:
+        sandbox_env = validate_sandbox_env(body.sandbox_env)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     _run_store.purge_expired()
     run_state = _run_store.create(
         run_id=body.run_id,
         session_id=body.session_id,
         mode=body.mode,
         target_scope=body.target_scope,
+        sandbox_secrets=secret_values(sandbox_env),
     )
 
     run_impl = _execute_direct_path if body.mode == "direct" else _execute_non_claude_path
 
+    async def run_with_sandbox_env() -> None:
+        # Child processes launched by the adapters (Playwright browser
+        # processes, desktop subprocesses) inherit these variables for the
+        # duration of the run; prior values are restored afterwards.
+        with sandbox_env_context(sandbox_env):
+            await run_impl(body, run_state)
+
     if stream:
         # SSE path: launch background task, stream events
-        asyncio.create_task(run_impl(body, run_state))
+        asyncio.create_task(run_with_sandbox_env())
 
         async def event_generator():
             q = _run_store.event_queues[body.run_id]
@@ -854,7 +937,7 @@ async def execute(
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     # Non-streaming path: wait for completion
-    await run_impl(body, run_state)
+    await run_with_sandbox_env()
 
     return ExecutionResult(
         run_id=run_state.run_id,
