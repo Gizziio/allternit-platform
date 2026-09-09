@@ -257,7 +257,7 @@ pub(crate) fn create_remote_ssh_config_dir(_control_socket_name: &str) -> std::i
     }
     Err(std::io::Error::new(
         std::io::ErrorKind::AlreadyExists,
-        "failed to create private herdr ssh config directory",
+        "failed to create private ao ssh config directory",
     ))
 }
 
@@ -2145,7 +2145,7 @@ fn show_desktop_notification_on_thread(
     ready_tx: std::sync::mpsc::SyncSender<std::io::Result<bool>>,
 ) {
     let class_name = wide_null("STATIC");
-    let window_name = wide_null("Herdr notifications");
+    let window_name = wide_null("ao notifications");
     let hwnd = unsafe {
         CreateWindowExW(
             0,
@@ -2176,11 +2176,11 @@ fn show_desktop_notification_on_thread(
     if !notification.hIcon.is_null() {
         notification.uFlags |= NIF_ICON;
     }
-    copy_wide_truncated(&mut notification.szTip, "Herdr");
+    copy_wide_truncated(&mut notification.szTip, "ao");
 
     if unsafe { Shell_NotifyIconW(NIM_ADD, &notification) } == 0 {
         let _ = ready_tx.send(Err(std::io::Error::other(
-            "failed to add Herdr notification-area icon",
+            "failed to add ao notification-area icon",
         )));
         unsafe {
             DestroyWindow(hwnd);
@@ -2198,7 +2198,7 @@ fn show_desktop_notification_on_thread(
             DestroyWindow(hwnd);
         }
         let _ = ready_tx.send(Err(std::io::Error::other(
-            "failed to show Herdr desktop notification",
+            "failed to show ao desktop notification",
         )));
         return;
     }

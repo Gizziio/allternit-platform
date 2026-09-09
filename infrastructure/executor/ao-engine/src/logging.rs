@@ -33,7 +33,7 @@ pub(crate) fn init_file_logging(file_name: &str) {
 pub(crate) fn help_log_paths_summary() -> String {
     let dir = crate::session::data_dir();
     format!(
-        "{} (plus herdr-client.log, herdr-server.log)",
+        "{} (plus ao-client.log, ao-server.log)",
         dir.join("herdr.log").display()
     )
 }
@@ -44,7 +44,7 @@ pub(crate) fn startup(role: &'static str) {
         subsystem = role,
         outcome = "started",
         pid = std::process::id(),
-        "herdr starting"
+        "ao starting"
     );
 }
 
@@ -54,7 +54,7 @@ pub(crate) fn shutdown(role: &'static str) {
         subsystem = role,
         outcome = "completed",
         pid = std::process::id(),
-        "herdr exiting"
+        "ao exiting"
     );
 }
 

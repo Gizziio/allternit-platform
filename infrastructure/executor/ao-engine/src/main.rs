@@ -6,8 +6,8 @@ const NESTED_HERDR_MESSAGES: [&str; 6] = [
     "inception detected. we need to go deeper... said no one ever.",
     "recursion is a pathway to many abilities some consider to be... unnatural.",
     "you were so preoccupied with whether you could, you didn't stop to think if you should. — dr. malcolm",
-    "recursive herdring is disabled. somewhere, a call stack breathes a sigh of relief.",
-    "recursive descent denied. there is, in fact, such a thing as too much herdr.",
+    "recursive ao nesting is disabled. somewhere, a call stack breathes a sigh of relief.",
+    "recursive descent denied. there is, in fact, such a thing as too much ao.",
     "recursion detected. base case not found. aborting.",
 ];
 
@@ -61,8 +61,8 @@ mod update;
 mod workspace;
 mod worktree;
 
-const DEFAULT_CONFIG: &str = r##"# herdr configuration
-# Place this file at ~/.config/herdr/config.toml
+const DEFAULT_CONFIG: &str = r##"# ao configuration
+# Place this file at ~/.config/ao/config.toml
 
 # Show first-run notification setup on startup.
 # Missing also shows onboarding; set false after you've chosen.
@@ -72,9 +72,9 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # Built-in themes: catppuccin, terminal, tokyo-night, dracula, nord,
 #                  gruvbox, one-dark, solarized, kanagawa, rose-pine,
 #                  vesper
-# name = "catppuccin"
+name = "catppuccin"
 
-# Follow host terminal light/dark appearance and switch Herdr UI themes.
+# Follow host terminal light/dark appearance and switch ao UI themes.
 # Existing manual behavior is unchanged unless this is true.
 # auto_switch = false
 # dark_name = "catppuccin"
@@ -82,14 +82,28 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 
 # Override individual color tokens on top of the base theme.
 # Accepts: hex (#rrggbb), named colors, rgb(r,g,b), or panel_bg = "reset"
-# [theme.custom]
-# sidebar_bg = "#181825"
-# active_row_bg = "#1e1e2e"
-# selection_bg = "#313244"
-# panel_bg = "reset"
-# accent = "#f5c2e7"
-# red = "#ff6188"
-# green = "#a6e3a1"
+
+# Allternit palette (dark family + product-blue accent).
+[theme.custom]
+accent = "#3b82f6"
+panel_bg = "#111113"
+sidebar_bg = "#0e0e10"
+active_row_bg = "#1c1c21"
+selection_bg = "#26314a"
+surface0 = "#16161a"
+surface1 = "#1c1c21"
+surface_dim = "#121214"
+overlay0 = "#26262c"
+overlay1 = "#2e2e36"
+text = "#e5e5e5"
+subtext0 = "#a1a1aa"
+mauve = "#8b5cf6"
+green = "#22c55e"
+yellow = "#eab308"
+red = "#ef4444"
+blue = "#3b82f6"
+teal = "#14b8a6"
+peach = "#f59e0b"
 
 # Layer appearance-specific overrides on top when auto_switch is enabled.
 # [theme.custom.light]
@@ -111,7 +125,7 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 
 # CWD policy for new panes, tabs, and workspaces when no explicit --cwd is provided.
 # Use "follow" to inherit the source pane/workspace, "home" for $HOME,
-# "current" for Herdr's process directory, or a fixed path such as "~/Projects".
+# "current" for ao's process directory, or a fixed path such as "~/Projects".
 # new_cwd = "follow"
 
 # Render pane images in Kitty graphics-compatible outer terminals.
@@ -119,7 +133,7 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 
 [update]
 # ao P0: the self-updater and background checks that used these keys were
-# removed (no herdr.dev phone-home). The keys remain parseable for config
+# removed (no update-manifest phone-home). The keys remain parseable for config
 # compatibility but have no effect.
 # channel = "stable"
 # version_check = true
@@ -155,7 +169,7 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # previous_agent = ""     # optional, unset by default
 # next_agent = ""         # optional, unset by default
 # focus_agent = ""        # optional indexed binding, e.g. "prefix+alt+1..9"
-# remote_image_paste = "ctrl+v" # only active in herdr --remote; empty disables raw-key image paste
+# remote_image_paste = "ctrl+v" # only active in ao --remote; empty disables raw-key image paste
 # new_tab = "prefix+c"
 # rename_tab = "prefix+shift+t"
 # previous_tab = "prefix+p"
@@ -221,7 +235,7 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # headless_rows = 40
 
 # [worktrees]
-# directory = "~/.herdr/worktrees"
+# directory = "~/.ao/worktrees"
 
 [ui]
 # Sidebar width (auto-scaled based on workspace names, this sets the default)
@@ -239,11 +253,11 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # Collapsed sidebar presentation: "compact" keeps the narrow status rail, "hidden" uses zero width.
 # sidebar_collapsed_mode = "compact"
 
-# Terminal width at or below which Herdr uses the mobile single-column layout.
+# Terminal width at or below which ao uses the mobile single-column layout.
 # Increase this for foldables, tablets, or wide phone terminals.
 # mobile_width_threshold = 64
 
-# Capture mouse input for Herdr's mouse UI.
+# Capture mouse input for ao's mouse UI.
 # Set false to let the terminal handle normal clicks, such as Cmd-clicking URLs.
 # Pane apps like lazygit and btop can still receive mouse when they request it.
 # mouse_capture = true
@@ -254,16 +268,16 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # copy_on_select = true
 
 # Host cursor policy: "auto", "native", or "drawn".
-# "auto" draws Herdr's own cursor on native Windows builds and WSL to avoid ConPTY cursor flicker, and uses the native terminal cursor elsewhere.
-# "native" always uses the outer terminal cursor. "drawn" always draws Herdr's cursor as terminal cell content.
+# "auto" draws ao's own cursor on native Windows builds and WSL to avoid ConPTY cursor flicker, and uses the native terminal cursor elsewhere.
+# "native" always uses the outer terminal cursor. "drawn" always draws ao's cursor as terminal cell content.
 # host_cursor = "auto"
 
-# Optional modifier that forwards right-click hold/drag gestures to pane apps instead of opening Herdr's pane menu.
+# Optional modifier that forwards right-click hold/drag gestures to pane apps instead of opening ao's pane menu.
 # Empty/off disables this. Shift is intentionally unsupported because terminals commonly reserve Shift+mouse.
 # right_click_passthrough_modifier = ""
 
 # Force a full redraw when the outer terminal regains focus.
-# Set false to reduce visible flashing when switching back to Herdr.
+# Set false to reduce visible flashing when switching back to ao.
 # Trade-off: rare host terminal surface corruption may persist until the next full redraw.
 # redraw_on_focus_gained = true
 
@@ -309,17 +323,17 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 
 # Ordered status entries at the right edge of the desktop tab bar.
 # Supported types: zoom, hostname, datetime, text, and command.
-# Hostname, datetime, and command entries resolve on the Herdr server.
+# Hostname, datetime, and command entries resolve on the ao server.
 # tab_bar_right = []
 # tab_bar_right_separator = " "
 
-# Title Herdr writes to the terminal it runs in, which is what window managers
+# Title ao writes to the terminal it runs in, which is what window managers
 # show in title, tab, and group bars. Tokens are {hostname}, {workspace}, {tab},
 # {pane}, and {terminal_title}; {{ and }} are literal braces.
-# The title renders on the Herdr server, so {hostname} names the host the panes
+# The title renders on the ao server, so {hostname} names the host the panes
 # run on even when attaching from a remote client.
 # Set to "" to leave the outer terminal title alone.
-# window_title = "{hostname}: {workspace}"
+window_title = "{hostname}: {workspace}"
 
 # Agent panel ordering: "spaces" (grouped by space) or "priority" (attention queue).
 # "workspaces" is accepted as an alias for "spaces".
@@ -385,22 +399,22 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 
 [session]
 # Resume supported AI-agent panes into their native conversation sessions after
-# a Herdr server restart. Requires official integrations that report session refs.
+# an ao server restart. Requires official integrations that report session refs.
 # resume_agents_on_restore = true
 
 [remote]
-# Whether herdr manages the ssh config used for `herdr --remote`.
-# When true (default), herdr runs remote ssh through a generated config that
+# Whether ao manages the ssh config used for `ao --remote`.
+# When true (default), ao runs remote ssh through a generated config that
 # includes your ~/.ssh/config first and adds ServerAliveInterval/
 # ServerAliveCountMax as fallbacks (so any keepalive values you set yourself
-# still win) to survive idle network/NAT timeouts. Herdr also uses a private
+# still win) to survive idle network/NAT timeouts. ao also uses a private
 # per-attach OpenSSH control socket to reuse the first authenticated connection.
 # Set false to run plain ssh against your ssh config unchanged — this does not
-# force keepalive or multiplexing off, it only stops herdr from adding its own.
+# force keepalive or multiplexing off, it only stops ao from adding its own.
 # manage_ssh_config = true
 
 [experimental]
-# Allow launching herdr from inside a herdr-managed pane.
+# Allow launching ao from inside an ao-managed pane.
 # allow_nested = false
 # Save recent pane screen history across full server restarts.
 pane_history = false
@@ -457,7 +471,7 @@ fn random_nested_message() -> &'static str {
 
 fn exit_if_nested_disabled(config: &config::Config) {
     if should_block_nested(config) {
-        eprintln!("\x1b[1merror:\x1b[0m nested herdr is disabled by default.");
+        eprintln!("\x1b[1merror:\x1b[0m nested ao is disabled by default.");
         eprintln!("see configuration if you want to enable it.");
         eprintln!();
         eprintln!("\x1b[2m\"{}\"\x1b[0m", random_nested_message());
@@ -483,7 +497,7 @@ fn main() -> io::Result<()> {
         Ok(args) => args,
         Err(err) => {
             eprintln!("error: {err}");
-            eprintln!("run 'herdr --help' for usage");
+            eprintln!("run 'ao --help' for usage");
             std::process::exit(2);
         }
     };
@@ -491,7 +505,7 @@ fn main() -> io::Result<()> {
         Ok(args) => args,
         Err(err) => {
             eprintln!("error: {err}");
-            eprintln!("run 'herdr --help' for usage");
+            eprintln!("run 'ao --help' for usage");
             std::process::exit(2);
         }
     };
@@ -499,7 +513,7 @@ fn main() -> io::Result<()> {
         Ok(parsed) => parsed,
         Err(err) => {
             eprintln!("error: {err}");
-            eprintln!("run 'herdr --help' for usage");
+            eprintln!("run 'ao --help' for usage");
             std::process::exit(2);
         }
     };
@@ -514,7 +528,7 @@ fn main() -> io::Result<()> {
         })
     {
         eprintln!("error: --remote can only be used with the default launch command");
-        eprintln!("run 'herdr --help' for usage");
+        eprintln!("run 'ao --help' for usage");
         std::process::exit(2);
     }
 
@@ -551,86 +565,86 @@ fn main() -> io::Result<()> {
 
     if args.iter().any(|a| a == "--help" || a == "-h") {
         platform::begin_cli_output();
-        println!("herdr — terminal workspace manager for AI coding agents");
+        println!("ao — terminal workspace manager for AI coding agents");
         println!();
-        println!("Usage: herdr [options]");
-        println!("       herdr --session <name> [options]");
-        println!("       herdr --remote <ssh-target> [--session <name>]");
-        println!("       herdr session attach <name>");
-        println!("       herdr completion zsh");
+        println!("Usage: ao [options]");
+        println!("       ao --session <name> [options]");
+        println!("       ao --remote <ssh-target> [--session <name>]");
+        println!("       ao session attach <name>");
+        println!("       ao completion zsh");
         println!("       ao spawn [--worktree] <slug> <repo-dir> <agent-cmd...>");
         println!("       ao send <slug> <prompt...> | ao send <slug> -f <file>");
         println!("       ao watch <slug> <sentinel-file> [timeout] [interval]");
         println!("       ao status [slug] [lines=25]");
         println!("       ao kill <slug> [--rm-worktree]");
         println!("       ao doctor");
-        println!("       herdr machine <subcommand> ...");
-        println!("       herdr server stop");
-        println!("       herdr server reload-config");
-        println!("       herdr api <subcommand> ...");
-        println!("       herdr completion <shell>");
-        println!("       herdr config <subcommand> ...");
-        println!("       herdr workspace <subcommand> ...");
-        println!("       herdr worktree <subcommand> ...");
-        println!("       herdr tab <subcommand> ...");
-        println!("       herdr notification <subcommand> ...");
-        println!("       herdr agent <subcommand> ...");
-        println!("       herdr pane <subcommand> ...");
-        println!("       herdr session <subcommand> ...");
-        println!("       herdr integration <subcommand> ...");
+        println!("       ao machine <subcommand> ...");
+        println!("       ao server stop");
+        println!("       ao server reload-config");
+        println!("       ao api <subcommand> ...");
+        println!("       ao completion <shell>");
+        println!("       ao config <subcommand> ...");
+        println!("       ao workspace <subcommand> ...");
+        println!("       ao worktree <subcommand> ...");
+        println!("       ao tab <subcommand> ...");
+        println!("       ao notification <subcommand> ...");
+        println!("       ao agent <subcommand> ...");
+        println!("       ao pane <subcommand> ...");
+        println!("       ao session <subcommand> ...");
+        println!("       ao integration <subcommand> ...");
         println!();
         println!("Common commands:");
         for (command, description) in [
-            ("herdr", "Launch or attach to the persistent session"),
+            ("ao", "Launch or attach to the persistent session"),
             (
-                "herdr status [server|client]",
+                "ao status [server|client]",
                 "Show local client and running server status",
             ),
-            ("herdr completion zsh", "Generate shell completions for zsh"),
+            ("ao completion zsh", "Generate shell completions for zsh"),
             (
-                "herdr server stop",
+                "ao server stop",
                 "Stop the running server via the API socket",
             ),
             (
-                "herdr server reload-config",
+                "ao server reload-config",
                 "Reload config.toml in the running server",
             ),
             (
-                "herdr config reset-keys",
+                "ao config reset-keys",
                 "Back up config.toml and remove custom keybindings",
             ),
-            ("herdr machine <subcommand>", "Manage saved SSH machines"),
+            ("ao machine <subcommand>", "Manage saved SSH machines"),
             (
-                "herdr api <subcommand>",
+                "ao api <subcommand>",
                 "Inspect socket API metadata and live runtime state",
             ),
             (
-                "herdr workspace <subcommand>",
+                "ao workspace <subcommand>",
                 "Workspace helpers over the socket API",
             ),
             (
-                "herdr worktree <subcommand>",
+                "ao worktree <subcommand>",
                 "Git worktree helpers over the socket API",
             ),
-            ("herdr tab <subcommand>", "Tab helpers over the socket API"),
+            ("ao tab <subcommand>", "Tab helpers over the socket API"),
             (
-                "herdr notification <subcommand>",
+                "ao notification <subcommand>",
                 "Notification helpers over the socket API",
             ),
             (
-                "herdr agent <subcommand>",
+                "ao agent <subcommand>",
                 "Agent/terminal helpers over the socket API",
             ),
             (
-                "herdr pane <subcommand>",
+                "ao pane <subcommand>",
                 "Pane control helpers over the socket API",
             ),
             (
-                "herdr session <subcommand>",
+                "ao session <subcommand>",
                 "Manage named persistent sessions",
             ),
             (
-                "herdr integration <subcommand>",
+                "ao integration <subcommand>",
                 "Manage built-in agent integrations",
             ),
         ] {
@@ -638,11 +652,11 @@ fn main() -> io::Result<()> {
         }
         println!();
         println!("Advanced commands:");
-        println!("  {:<32} Run as headless server", "herdr server");
+        println!("  {:<32} Run as headless server", "ao server");
         println!();
         println!("Options:");
         println!("  --session <name>    Use or create a named persistent session");
-        println!("  --remote <target>   Attach through SSH to a remote Herdr server");
+        println!("  --remote <target>   Attach through SSH to a remote ao server");
         println!("  --remote-keybindings <local|server>");
         println!("                      Keybindings for --remote app attach (default: local)");
         println!("  --handoff           Opt into live handoff for update or remote attach");
@@ -662,7 +676,7 @@ fn main() -> io::Result<()> {
 
     if args.iter().any(|a| a == "--version" || a == "-V") {
         platform::begin_cli_output();
-        println!("herdr {}", crate::build_info::version());
+        println!("ao {}", crate::build_info::version());
         return Ok(());
     }
 
@@ -694,7 +708,7 @@ fn main() -> io::Result<()> {
         let arg_name = arg.split_once('=').map(|(name, _)| name).unwrap_or(arg);
         if arg.starts_with('-') && !known_flags.contains(&arg_name) {
             eprintln!("unknown option: {arg}");
-            eprintln!("run 'herdr --help' for usage");
+            eprintln!("run 'ao --help' for usage");
             std::process::exit(2);
         }
         if !arg.starts_with('-')
@@ -719,7 +733,7 @@ fn main() -> io::Result<()> {
             .contains(&arg.as_str())
         {
             eprintln!("unknown command: {arg}");
-            eprintln!("run 'herdr --help' for usage");
+            eprintln!("run 'ao --help' for usage");
             std::process::exit(2);
         }
     }
@@ -740,7 +754,7 @@ fn main() -> io::Result<()> {
     let saved_federation =
         client::endpoint::EndpointCatalog::load().is_ok_and(|catalog| catalog.has_enabled_ssh());
     if let Err(err) = server::autodetect::auto_detect_launch(saved_federation) {
-        eprintln!("herdr: {err}");
+        eprintln!("ao: {err}");
         std::process::exit(1);
     }
     Ok(())

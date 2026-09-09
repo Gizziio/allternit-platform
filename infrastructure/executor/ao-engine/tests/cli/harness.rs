@@ -146,9 +146,9 @@ pub(super) fn spawn_herdr_with_pane_history(
 
 pub(super) fn app_dir_name() -> &'static str {
     if cfg!(debug_assertions) {
-        "herdr-dev"
+        "ao-dev"
     } else {
-        "herdr"
+        "ao"
     }
 }
 
