@@ -30,6 +30,66 @@ except ImportError:
 
 DEFAULT_RECORDINGS_DIR = Path.home() / ".allternit" / "recordings"
 
+try:
+    from core.trajectory_export import SENSITIVE_KEY as _SENSITIVE_KEY
+except ImportError:
+    try:
+        from trajectory_export import SENSITIVE_KEY as _SENSITIVE_KEY
+    except ImportError:
+        import re as _re
+        _SENSITIVE_KEY = _re.compile(
+            r"(authorization|cookie|token|secret|password|api[_-]?key|clipboard)", _re.I
+        )
+
+
+def redact_tool_args(args: Dict[str, Any]) -> tuple[Dict[str, Any], bool]:
+    """Redact sensitive keys in a site tool call's args.
+
+    Uses the same SENSITIVE_KEY policy as core.trajectory_export's canonical
+    export. Returns (redacted_args, changed).
+    """
+    def _redact(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                str(key): "[REDACTED]" if _SENSITIVE_KEY.search(str(key)) else _redact(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, (list, tuple)):
+            return [_redact(item) for item in value]
+        return value
+
+    redacted = _redact(args)
+    changed = json.dumps(redacted, sort_keys=True, default=str) != json.dumps(args, sort_keys=True, default=str)
+    return redacted, changed
+
+
+@dataclass
+class ToolCallFrame:
+    """One site tool call — written as a single JSONL line (_type: tool_call)."""
+    recording_id: str
+    step: int
+    tool_name: str
+    args: Dict[str, Any] = field(default_factory=dict)
+    result_summary: str = ""
+    latency_ms: Optional[int] = None
+    error: Optional[str] = None
+    redacted: bool = False
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+    def to_dict(self) -> Dict:
+        return {
+            "_type": "tool_call",
+            "recording_id": self.recording_id,
+            "step": self.step,
+            "tool_name": self.tool_name,
+            "args": self.args,
+            "result_summary": self.result_summary,
+            "latency_ms": self.latency_ms,
+            "error": self.error,
+            "redacted": self.redacted,
+            "timestamp": self.timestamp,
+        }
+
 
 @dataclass
 class RecordedFrame:
@@ -180,6 +240,39 @@ class ActionRecorder:
         self._frame_count += 1
         await self._write_line(frame.to_dict())
 
+    async def record_tool_call(
+        self,
+        tool_name: str,
+        args: Optional[Dict[str, Any]] = None,
+        result_summary: Optional[str] = None,
+        latency_ms: Optional[int] = None,
+        error: Optional[str] = None,
+        redacted: Optional[bool] = None,
+    ) -> ToolCallFrame:
+        """Append a site tool call to the recording as a tool_call frame.
+
+        Args are redacted with the trajectory_export SENSITIVE_KEY policy;
+        ``redacted`` defaults to whether any value was replaced.
+        """
+        if self._file is None:
+            await self.start()
+        cleaned_args, changed = redact_tool_args(dict(args or {}))
+        if redacted is None:
+            redacted = changed
+        self._frame_count += 1
+        frame = ToolCallFrame(
+            recording_id=self.recording_id,
+            step=self._frame_count,
+            tool_name=tool_name,
+            args=cleaned_args,
+            result_summary=result_summary or "",
+            latency_ms=latency_ms,
+            error=error,
+            redacted=redacted,
+        )
+        await self._write_line(frame.to_dict())
+        return frame
+
     def feed_gif_frame(self, frame: RecordedFrame) -> None:
         """Feed a frame's screenshot into the GIF recorder (no-op without one)."""
         if self._gif_recorder is not None and self._gif_recorder.is_running():
@@ -246,8 +339,13 @@ class ActionRecorder:
                 self._file.flush()
 
     @staticmethod
-    def load(recording_path: Path) -> tuple[RecordingManifest, List[RecordedFrame]]:
-        """Load a recording from disk."""
+    def load(recording_path: Path) -> tuple[RecordingManifest, List[Any]]:
+        """Load a recording from disk.
+
+        Frames with ``_type == "tool_call"`` deserialize to ToolCallFrame;
+        all other lines deserialize to RecordedFrame, so recordings written
+        before tool_call frames existed still load unchanged.
+        """
         lines = recording_path.read_text(encoding="utf-8").splitlines()
         if not lines:
             raise ValueError(f"Empty recording: {recording_path}")
@@ -270,6 +368,19 @@ class ActionRecorder:
             if not line.strip():
                 continue
             d = json.loads(line)
+            if d.get("_type") == "tool_call":
+                frames.append(ToolCallFrame(
+                    recording_id=d.get("recording_id", ""),
+                    step=d.get("step", 0),
+                    tool_name=d.get("tool_name", ""),
+                    args=d.get("args", {}),
+                    result_summary=d.get("result_summary", ""),
+                    latency_ms=d.get("latency_ms"),
+                    error=d.get("error"),
+                    redacted=d.get("redacted", False),
+                    timestamp=d.get("timestamp", ""),
+                ))
+                continue
             frames.append(RecordedFrame(
                 recording_id=d.get("recording_id", ""),
                 step=d.get("step", 0),
