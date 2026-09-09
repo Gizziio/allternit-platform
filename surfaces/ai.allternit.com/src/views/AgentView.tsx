@@ -5,6 +5,7 @@ import { useAgentStore } from "@/lib/agents/agent.store";
 import type { CreateAgentInput } from "@/lib/agents/agent.types";
 import { AgentDetailView } from "./agent-view/components/AgentDetailView";
 import { CreateAgentForm } from "./agent-view/components/CreateAgentForm";
+import { CreateBotForm } from "./agent-view/components/CreateBotForm";
 import { EmptyAgentState } from "./agent-view/components/EmptyAgentState";
 import { EditAgentForm } from "./agent-view/components/EditAgentForm";
 import { AgentGalleryGrid } from "./agent-view/main/AgentGalleryGrid";
@@ -270,18 +271,23 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
 }
 
 function CreateAgentFlow({ onClose }: { onClose: () => void }) {
-  const { clearDraftAgent } = useAgentStore();
+  const { clearDraftAgent, draftAgent } = useAgentStore();
+  const close = () => {
+    clearDraftAgent();
+    onClose();
+  };
+
+  // Bots are created only through the atomic CreateBotForm
+  // (spec bot-identity-computer); this wizard is agent-only. Bot drafts
+  // (studio "Create Bot", bot templates, duplicates) route there.
+  if (draftAgent?.isBot) {
+    return <CreateBotForm isOpen draft={draftAgent} onClose={close} />;
+  }
 
   return (
     <CreateAgentForm
-      onClose={() => {
-        clearDraftAgent();
-        onClose();
-      }}
-      onSuccess={() => {
-        clearDraftAgent();
-        onClose();
-      }}
+      onClose={close}
+      onSuccess={close}
     />
   );
 }

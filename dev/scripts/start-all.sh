@@ -160,36 +160,13 @@ start_terminal_server() {
     return 1
 }
 
-# Start Voice Service (Chatterbox TTS)
+# Start Voice Service (Rust + whisper.cpp)
 start_voice_service() {
-    print_status "Starting Voice Service (Chatterbox TTS)..."
+    print_status "Starting Voice Service (whisper.cpp)..."
 
-    VOICE_DIR="$PROJECT_ROOT/4-services/ml-ai-services/voice-service"
-    VENV_DIR="$VOICE_DIR/.venv"
-
-    # Check if venv exists
-    if [ ! -d "$VENV_DIR" ]; then
-        print_warning "Voice service venv not found. Creating..."
-        python3.11 -m venv "$VENV_DIR"
-        source "$VENV_DIR/bin/activate"
-        pip install --upgrade pip
-        if ! install_voice_dependencies "$PROJECT_ROOT/wheelhouse"; then
-            print_warning "Voice service dependencies could not be installed. Please ensure connectivity or provide a wheelhouse."
-        fi
-        deactivate
-    else
-        source "$VENV_DIR/bin/activate"
-        if ! install_voice_dependencies "$PROJECT_ROOT/wheelhouse"; then
-            print_warning "Voice service dependencies could not be installed (offline mode)."
-        fi
-        deactivate
-    fi
-
-    # Start the service
     (
-        cd "$VOICE_DIR"
-        source "$VENV_DIR/bin/activate"
-        python api/main.py > "$LOG_DIR/voice-service.log" 2>&1
+        cd "$PROJECT_ROOT"
+        cargo run -p voice-service > "$LOG_DIR/voice-service.log" 2>&1
     ) &
 
     VOICE_PID=$!
