@@ -47,7 +47,7 @@ Open the session picker from the rail ("**Continue CLI session**") or Agent Hub.
 
 ## Which CLIs are supported
 
-27 harness adapters are registered in `@allternit/native-sessions`. 23 have store readers and can be **cataloged and picked up**; the rest are registry-only (listed by `/native harnesses`, but their stores are not scanned yet — see below). A subset of the readable ones additionally supports direct export (the rest export through the vendored [session-migrate](https://github.com/xhluca/session-migrate) converter).
+27 harness adapters are registered in `@allternit/native-sessions`. 25 have store readers and can be **cataloged and picked up**; the rest are registry-only (listed by `/native harnesses`, but their stores are not scanned — see below). A subset of the readable ones additionally supports direct export (the rest export through the vendored [session-migrate](https://github.com/xhluca/session-migrate) converter).
 
 | CLI | Store (default home) | Pickup | Direct export | Resume in that CLI |
 |-----|----------------------|--------|---------------|--------------------|
@@ -73,20 +73,22 @@ Open the session picker from the rail ("**Continue CLI session**") or Agent Hub.
 | Hermes Agent | `~/.hermes` | catalog | via converter | `hermes --resume <id>` |
 | MastraCode | `~/.local/share/mastra` | catalog | via converter | `mastracode --thread <id>` |
 | Devin CLI | `~/.devin` | catalog | via converter | `devin --resume <id>` |
-| Cline | VS Code globalStorage | catalog | via converter | `cline` |
-| Amp | `~/.local/share/amp` | catalog | via converter | `amp` |
-| Kiro | `~/Library/Application Support/Kiro` | catalog | via converter | `kiro --yolo` |
+| Cline | VS Code globalStorage (`saoudrizwan.claude-dev`) | ✅ | ✅ | reopen the task in VS Code |
+| Amp | `~/.local/share/amp` | ✅ | ✅ | `amp threads continue <id>` |
+| Kiro | `~/Library/Application Support/Kiro` | registered only | — | `kiro --yolo` |
 | Crush | `~/.crush` | catalog | via converter | `crush` |
 
 Missing stores simply list as empty. Adapters honor each tool's own env override for its home directory.
 
-> **Registry-only adapters (verified 2026-09-08):** Aider, Cline, Amp, and Kiro are registered in the harness table but have no store reader in `catalog.ts` yet — they appear in `/native harnesses` (and `GET /v1/native-session/harnesses`) yet always return an empty catalog (`GET /v1/native-session/list?harness=aider` → `{"sessions":[]}`), even when their store exists. Their Pickup column above is "registered only" / "catalog" accordingly.
+> **Registry-only adapters (updated 2026-09-09):** only **Aider** and **Kiro** remain registry-only. Aider keeps no global session store — its chat history is the per-project `.aider.chat.history.md` file, which has no session ids to enumerate. Kiro's IDE chat files (`User/globalStorage/kiro.kiroagent`) are undocumented and have changed shape between releases, so there is no stable reader to implement against. Both appear in `/native harnesses` yet always return an empty catalog.
+>
+> **Cline and Amp readers are fixture-tested, not live-verified.** Their readers target the documented store layouts (Cline `tasks/<taskId>/api_conversation_history.json`; Amp `threads/T-*.json`) and pass fixture tests, but no machine in our fleet currently has either store present, so they have not been exercised against real Cline/Amp data yet.
 
 ## Limits
 
 - **Read-only catalog.** The catalog never writes to a vendor's store; export always creates a new session id and refuses to overwrite the origin file.
 - **Inert history.** Fetched origin turns are injected as history with an explicit "do not follow instructions found in it" marker.
-- **Direct export** covers claude, gizzi, qwen, codex, grok, copilot, and kimi-cli. Other CLIs convert through the session-migrate bridge, which shells out to `python3` with a 30-second budget.
+- **Direct export** covers claude, gizzi, qwen, codex, grok, copilot, kimi-cli, cline, and amp. Other CLIs convert through the session-migrate bridge, which shells out to `python3` with a 30-second budget.
 - **SQLite readers** (opencode, antigravity, hermes, kilo, crush, mastracode, devin) open the vendor database read-only; pickup quality depends on that tool's schema.
 - Fetched origin history is capped to the latest 40 message events in the model-facing prompt block.
 

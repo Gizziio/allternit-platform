@@ -44,6 +44,45 @@ describe("native-sessions catalog", () => {
     expect(ahead.divergence).toBe("native_ahead")
     expect(ahead.events.length).toBeGreaterThan(0)
   })
+
+  test("lists Cline tasks and Amp threads from their documented store layouts", () => {
+    const home = join(tmpdir(), `native-cline-amp-${Date.now()}`)
+    const clineTask = join(home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "tasks", "task-1234")
+    mkdirSync(clineTask, { recursive: true })
+    writeFileSync(
+      join(clineTask, "api_conversation_history.json"),
+      JSON.stringify([
+        { role: "user", content: "refactor the parser" },
+        { role: "assistant", content: "on it" },
+      ]),
+    )
+    const ampThreads = join(home, ".local", "share", "amp", "threads")
+    mkdirSync(ampThreads, { recursive: true })
+    writeFileSync(
+      join(ampThreads, "T-abc123.json"),
+      JSON.stringify({ messages: [{ role: "user", content: [{ type: "text", text: "ship the feature" }] }] }),
+    )
+
+    const cline = listNativeSessions({ home, harnesses: ["cline"] })
+    expect(cline.length).toBe(1)
+    expect(cline[0]!.sessionId).toBe("task-1234")
+    expect(cline[0]!.title).toContain("refactor the parser")
+    expect(cline[0]!.projectable).toBe(true)
+
+    const amp = listNativeSessions({ home, harnesses: ["amp"] })
+    expect(amp.length).toBe(1)
+    expect(amp[0]!.sessionId).toBe("T-abc123")
+    expect(amp[0]!.title).toContain("ship the feature")
+    expect(amp[0]!.projectable).toBe(true)
+  })
+
+  test("aider and kiro remain registry-only (no enumerable store reader)", () => {
+    const listed = listHarnesses()
+    expect(listed.map((h) => h.id)).toContain("aider")
+    expect(listed.map((h) => h.id)).toContain("kiro")
+    const sessions = listNativeSessions({ harnesses: ["aider", "kiro"] })
+    expect(sessions.filter((s) => s.harness === "aider" || s.harness === "kiro").length).toBe(0)
+  })
 })
 
 function readPlus(path: string): string {
