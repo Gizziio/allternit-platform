@@ -1,0 +1,58 @@
+# Allternit
+
+> Allternit is an AI-native operations platform: an agent runtime with a native
+> tool belt, MCP connectors, computer-use automation (ACI), SDKs, CLI, and
+> self-hosting options. This file lists the public documentation set for LLM
+> crawlers and AI assistants.
+
+## Computer use (ACI)
+
+- [ACI overview](docs/public/aci/index.md): What the Allternit Computer Interface is, and how self-hosted ACI compares to managed cloud sandboxes.
+- [ACI quickstart](docs/public/aci/quickstart.md): Run your first browser automation in one API call; stream run events over SSE.
+- [ACI guide](docs/public/aci/guide.md): Integration modes (intent-driven runs, direct computer control, capability path), action space and tool versions (20250124/20251124), approvals and server-side enforcement, environments and the VM driver, recording and replay, monitoring.
+- [ACI recipes](docs/public/aci/recipes.md): Copy-paste flows — drive a browser, replay a run's event history, approve a risky action.
+- [ACI tool contract changelog](docs/public/aci/changelog.md): Version history for the Allternit Computer Use tool contract.
+
+## Tools and MCP
+
+- [Native Tool Belt](docs/public/tools/tool-belt.md): Built-in tools — web_search, web_fetch, bash, code_execution, memory, str_replace_editor, computer.
+- [MCP](docs/public/tools/mcp.md): Attaching MCP servers, server-side execution, bundled/remote directory pattern, tunnel security.
+- [Strict tool use](docs/public/tools/strict-tool-use.md): JSON Schema validation and grammar-constrained tool inputs.
+
+## SDK
+
+- [TypeScript quickstart](docs/public/sdk/typescript-quickstart.md)
+- [Python quickstart](docs/public/sdk/python-quickstart.md)
+
+## API
+
+- [API reference](docs/public/api/reference.md)
+- [Sessions](docs/public/api/sessions.md), [events](docs/public/api/events.md), [deployments](docs/public/api/deployments.md), [work queue](docs/public/api/work-queue.md), [memory stores](docs/public/api/memory-stores.md)
+- [Kimi API overview](docs/public/api/kimi-api-overview.md), [JSON mode](docs/public/api/kimi-json-mode.md), [reasoning](docs/public/api/kimi-reasoning.md), [tool calling](docs/public/api/kimi-tool-calling.md)
+
+## Guides
+
+- [Build a tool](docs/public/guides/build-a-tool.md): Step-by-step guide for registering custom tools.
+- [Agent lifecycle](docs/public/guides/agent-lifecycle.md)
+- [Idempotency and retries](docs/public/guides/idempotency-and-retries.md)
+- [Model migration](docs/public/guides/model-migration.md), [migration from Anthropic](docs/public/guides/migration-from-anthropic.md), [migration from OpenAI](docs/public/guides/migration-from-openai.md), [migration guides](docs/public/guides/migration-guides.md)
+- [Token, turn, and tool budgets](docs/public/guides/token-turn-tool-budgets.md)
+- [Use-case playbooks](docs/public/guides/use-case-playbooks.md)
+
+## CLI
+
+- [CLI docs directory](docs/public/cli/): Authentication, configuration, permissions, observability, plugins, skills, cloud environments, and more.
+
+## Security and admin
+
+- [Security model](docs/public/security/security-model.md), [audit](docs/public/security/audit.md), [compliance](docs/public/security/compliance.md), [SCIM](docs/public/security/scim.md), [vault](docs/public/security/vault.md)
+- [Admin docs directory](docs/public/admin/): RBAC, workspaces, external keys, work admin FAQ.
+- [Self-hosting / BYOC](docs/public/self-hosting/byoc.md)
+
+## Reference
+
+- [Glossary](docs/public/glossary.md)
+- [Release notes](docs/public/release-notes.md)
+- [Providers parity matrix](docs/public/providers/parity-matrix.md), [provider registry](docs/public/providers/provider-registry.md)
+- [Multilingual support](docs/public/multilingual-support.md)
+- [Resources overview](docs/public/resources-overview.md)
