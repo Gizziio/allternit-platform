@@ -1,16 +1,10 @@
 /**
- * Unified Voice Service - Backend Required
+ * Unified Voice Service — local sidecar at 127.0.0.1:8001
  *
- * Connects to Chatterbox TTS backend at localhost:8001
- * NO FALLBACK - Backend must be running
+ * STT is the Rust voice-service (whisper.cpp). Start it with:
+ *   cargo run -p voice-service
  *
- * To start backend:
- *   cd 4-services/ml-ai-services/voice-service && python3 launch.py
- *
- * Or with Docker:
- *   docker-compose up voice-service
- *
- * To disable voice service (suppress health check errors):
+ * To disable (suppress health check errors):
  *   Set VITE_ENABLE_VOICE_SERVICE=false in .env
  */
 
