@@ -6,6 +6,8 @@ describe('buildAssistantContext', () => {
   beforeEach(() => {
     registerActiveDocument('docs', null);
     reportActiveDocument('docs', null);
+    registerActiveDocument('pdf', null);
+    reportActiveDocument('pdf', null);
   });
 
   it('reports when no document is open', () => {
@@ -54,5 +56,40 @@ describe('buildAssistantContext', () => {
     expect(buildAssistantContext('docs', 'Docs')).toBe(
       'The user currently has "Broken.docx" open in Allternit Docs.',
     );
+  });
+
+  it('includes extracted PDF text in the pdf context', () => {
+    // The pdf renderer reports its open file with the extracted text so the
+    // agent can answer questions about the document (PR #188 registry).
+    reportActiveDocument('pdf', {
+      name: 'report.pdf',
+      content: () => 'Hello Allternit PDF',
+    });
+    const context = buildAssistantContext('pdf', 'PDF');
+    expect(context).toContain('"report.pdf" open in Allternit PDF');
+    expect(context).toContain('Current document content:');
+    expect(context).toContain('Hello Allternit PDF');
+  });
+
+  it('allows a larger excerpt cap for PDFs', () => {
+    // PDFs are read-only and page-oriented: 6000 chars fits under the 8000
+    // pdf cap but over the 4000 default — docs would truncate, pdf must not.
+    const body = `${'x'.repeat(6000)}TAILMARKER`;
+    reportActiveDocument('pdf', { name: 'big.pdf', content: () => body });
+    const pdfContext = buildAssistantContext('pdf', 'PDF');
+    expect(pdfContext).toContain('TAILMARKER');
+    expect(pdfContext).not.toContain('truncated');
+
+    reportActiveDocument('docs', { name: 'big.docx', content: () => body });
+    const docsContext = buildAssistantContext('docs', 'Docs');
+    expect(docsContext).not.toContain('TAILMARKER');
+    expect(docsContext).toContain('truncated');
+  });
+
+  it('still truncates PDFs beyond the larger cap', () => {
+    reportActiveDocument('pdf', { name: 'huge.pdf', content: () => 'x'.repeat(20_000) });
+    const context = buildAssistantContext('pdf', 'PDF');
+    expect(context).toContain('truncated');
+    expect(context.length).toBeLessThan(8_600);
   });
 });
