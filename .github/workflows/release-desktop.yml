@@ -71,7 +71,7 @@ jobs:
         run: npm install -g pnpm@10.28.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.91.0
+        uses: dtolnay/rust-toolchain@1.94.1
         with:
           targets: x86_64-apple-darwin,aarch64-apple-darwin
 
@@ -86,6 +86,10 @@ jobs:
         working-directory: surfaces/ai.allternit.com
 
       - name: Build platform static export for desktop
+        env:
+          # The platform bundle is multi-GB of chunks; default node heap can
+          # OOM on runners (observed as the Linux build failure).
+          NODE_OPTIONS: --max-old-space-size=8192
         run: |
           pnpm install --frozen-lockfile
           pnpm build:cloudflare
@@ -136,6 +140,10 @@ jobs:
           lipo -info surfaces/allternit-desktop/resources/bin/gizzi-code
 
       # ── Step 3: Build Rust allternit-api for both architectures ─────────────
+      - name: Install protobuf compiler
+        # prost-build (allternit-agent-system-rails) shells out to protoc.
+        run: brew install protobuf
+
       - name: Build allternit-api (x86_64)
         run: cargo build --release --target x86_64-apple-darwin --manifest-path cmd/allternit-api/Cargo.toml
 
@@ -198,7 +206,9 @@ jobs:
 
       # ── Step 5: Build and package Electron app ────────────────────────────────
       - name: Install desktop dependencies
-        run: npm install
+        # Deps are already installed by the earlier workspace-wide pnpm
+        # install; npm postinstalls (husky via update-electron-app) fail on CI.
+        run: npm install --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript
@@ -226,6 +236,9 @@ jobs:
   build-windows:
     name: Build Windows
     needs: unit-tests
+    # windows-latest ships only VS2026 (major 18), which node-gyp 11.x cannot
+    # detect; windows-2019 is no longer provisioned. Install the VS2022 C++
+    # build tools so native modules (better-sqlite3) can compile.
     runs-on: windows-latest
     permissions:
       contents: read
@@ -239,11 +252,21 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install VS2022 C++ build tools (node-gyp)
+        # windows-latest images no longer include a node-gyp-detectable Visual
+        # Studio (only VS2026, which node-gyp 11.x reports as "unknown version
+        # 18"); native modules like better-sqlite3 fail to compile without it.
+        shell: pwsh
+        run: |
+          choco install visualstudio2022buildtools --yes --no-progress `
+            --params "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+          choco install protoc --yes --no-progress
+
       - name: Install pnpm
         run: npm install -g pnpm@10.28.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.91.0
+        uses: dtolnay/rust-toolchain@1.94.1
         with:
           targets: x86_64-pc-windows-msvc
 
@@ -272,14 +295,14 @@ jobs:
           pnpm --filter "@allternit/gizzi-sdk" run build
 
       - name: Build gizzi-code (Windows x64)
-        run: bun run script/build-production.js --target=windows-x64
+        run: bun run script/build-production.js --target=win32-x64
         working-directory: cmd/gizzi-code
 
       - name: Copy gizzi-code binary
         shell: bash
         run: |
           mkdir -p surfaces/allternit-desktop/resources/bin
-          cp cmd/gizzi-code/dist/gizzi-code.exe surfaces/allternit-desktop/resources/bin/gizzi-code.exe
+          cp cmd/gizzi-code/dist/gizzi-code-win32-x64.exe surfaces/allternit-desktop/resources/bin/gizzi-code.exe
 
       - name: Install platform dependencies
         run: pnpm install --frozen-lockfile
@@ -287,6 +310,10 @@ jobs:
 
       - name: Build platform static export for desktop
         shell: bash
+        env:
+          # The platform bundle is multi-GB of chunks; default node heap can
+          # OOM on runners (observed as the Linux build failure).
+          NODE_OPTIONS: --max-old-space-size=8192
         run: |
           pnpm install --frozen-lockfile
           pnpm build:cloudflare
@@ -326,7 +353,9 @@ jobs:
         working-directory: surfaces/allternit-desktop
 
       - name: Install desktop dependencies
-        run: npm install
+        # Deps are already installed by the earlier workspace-wide pnpm
+        # install; npm postinstalls (husky via update-electron-app) fail on CI.
+        run: npm install --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript
@@ -371,7 +400,7 @@ jobs:
         run: npm install -g pnpm@10.28.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.91.0
+        uses: dtolnay/rust-toolchain@1.94.1
         with:
           targets: x86_64-unknown-linux-gnu
 
@@ -414,6 +443,10 @@ jobs:
         working-directory: surfaces/ai.allternit.com
 
       - name: Build platform static export for desktop
+        env:
+          # The platform bundle is multi-GB of chunks; default node heap can
+          # OOM on runners (observed as the Linux build failure).
+          NODE_OPTIONS: --max-old-space-size=8192
         run: |
           pnpm install --frozen-lockfile
           pnpm build:cloudflare
@@ -425,6 +458,11 @@ jobs:
           rm -rf "$DEST"
           mkdir -p "$DEST"
           cp -r surfaces/ai.allternit.com/dist/. "$DEST/"
+
+      - name: Install protobuf compiler
+        # prost-build (transitive dep of allternit-api) shells out to protoc;
+        # ubuntu runners don't ship it.
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Build allternit-api (Linux)
         run: cargo build --release --target x86_64-unknown-linux-gnu --manifest-path cmd/allternit-api/Cargo.toml
@@ -452,7 +490,9 @@ jobs:
         working-directory: surfaces/allternit-desktop
 
       - name: Install desktop dependencies
-        run: npm install
+        # Deps are already installed by the earlier workspace-wide pnpm
+        # install; npm postinstalls (husky via update-electron-app) fail on CI.
+        run: npm install --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Stage Cua Driver

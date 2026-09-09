@@ -2517,6 +2517,14 @@ async def startup_event():
     init_observability()
     await _register_startup_adapters()
     try:
+        from run_persistence import RunPersistence
+        from computer_use_router import _run_store
+
+        _run_store.attach_persistence(RunPersistence())
+        logger.info("Run persistence attached (%s)", _run_store._persistence.path)
+    except Exception as exc:
+        logger.warning("Run persistence unavailable, runs will not survive restart: %s", exc)
+    try:
         import ApplicationServices
         opts = {"AXTrustedCheckOptionPrompt": False}
         _ax_permission_granted = ApplicationServices.AXIsProcessTrustedWithOptions(opts)
@@ -2609,6 +2617,8 @@ async def shutdown_event():
 
 from computer_use_router import router as computer_use_router
 app.include_router(computer_use_router)
+from browser_skills_router import router as browser_skills_router
+app.include_router(browser_skills_router)
 from canonical_router import router as canonical_computer_router
 app.include_router(canonical_computer_router)
 from cloud_credentials_router import router as cloud_credentials_router

@@ -1,11 +1,12 @@
 //! Allternit Skill Portability
 //!
 //! This crate provides skill portability across different LLM tools,
-//! including Claude Code, OpenAI Codex, and Kimi.
+//! including Claude Code, OpenAI Codex, Kimi, Antigravity, Grok, Cursor,
+//! and Gizzi Code.
 //!
 //! # Features
 //!
-//! - **Multi-LLM Support**: Sync skills to Claude, Codex, and Kimi
+//! - **Multi-LLM Support**: Sync skills to Claude, Codex, Kimi, Antigravity, Grok, Cursor, and Gizzi Code
 //! - **Unified API**: Single interface for all LLM tools
 //! - **Flexible Scoping**: Install skills globally or per-workspace
 //! - **Async/Await**: Fully asynchronous for high performance
