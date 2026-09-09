@@ -47,7 +47,7 @@ Open the session picker from the rail ("**Continue CLI session**") or Agent Hub.
 
 ## Which CLIs are supported
 
-27 harness adapters ship in `@allternit/native-sessions`. Every harness can be **cataloged and picked up**; a subset additionally supports direct export (the rest export through the vendored [session-migrate](https://github.com/xhluca/session-migrate) converter).
+27 harness adapters are registered in `@allternit/native-sessions`. 23 have store readers and can be **cataloged and picked up**; the rest are registry-only (listed by `/native harnesses`, but their stores are not scanned yet — see below). A subset of the readable ones additionally supports direct export (the rest export through the vendored [session-migrate](https://github.com/xhluca/session-migrate) converter).
 
 | CLI | Store (default home) | Pickup | Direct export | Resume in that CLI |
 |-----|----------------------|--------|---------------|--------------------|
@@ -66,7 +66,7 @@ Open the session picker from the rail ("**Continue CLI session**") or Agent Hub.
 | Muse Code | `~/.local/share/muse` | ✅ | via converter | `muse` |
 | OpenHands | `~/.openhands/conversations` | ✅ | via converter | `openhands` |
 | Gemini CLI | `~/.gemini` | ✅ | via converter | `gemini` |
-| Aider | `~/.aider` | ✅ | via converter | `aider` |
+| Aider | `~/.aider` | registered only | — | `aider` |
 | Factory Droid | `~/.factory` | ✅ | via converter | `droid --resume <id>` |
 | Antigravity | `~/.gemini/antigravity-cli` | catalog | via converter | `agy --conversation <id>` |
 | Kilo Code | `~/.local/share/kilo` | catalog | via converter | `kilo --session <id>` |
@@ -79,6 +79,8 @@ Open the session picker from the rail ("**Continue CLI session**") or Agent Hub.
 | Crush | `~/.crush` | catalog | via converter | `crush` |
 
 Missing stores simply list as empty. Adapters honor each tool's own env override for its home directory.
+
+> **Registry-only adapters (verified 2026-09-08):** Aider, Cline, Amp, and Kiro are registered in the harness table but have no store reader in `catalog.ts` yet — they appear in `/native harnesses` (and `GET /v1/native-session/harnesses`) yet always return an empty catalog (`GET /v1/native-session/list?harness=aider` → `{"sessions":[]}`), even when their store exists. Their Pickup column above is "registered only" / "catalog" accordingly.
 
 ## Limits
 

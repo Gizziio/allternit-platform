@@ -95,6 +95,7 @@ Adapters probe default homes, each honoring the tool's env override (`harnessHom
 | antigravity | `~/.gemini/antigravity-cli` | sqlite | `conversations/*.db` |
 | hermes / kilo / crush / mastracode / devin | `~/.hermes`, `~/.local/share/{kilo,mastra}`, `~/.crush`, `~/.devin` | sqlite | generic `sessions`/`session`/`thread` table inventory |
 | cline / amp / kiro | VS Code globalStorage, `~/.local/share/amp`, `~/Library/Application Support/Kiro` | directory | catalog-only (`projectable: false`) |
+| aider | `~/.aider` | — | **registered only, no reader yet** — appears in `/harnesses`, never in `/list` (verified 2026-09-08) |
 
 `cwd` filter matches decoded cwd or the claude-style encoded path segment (`encodeClaudeCwd`: non-alphanumerics → `-`).
 
@@ -120,3 +121,4 @@ Evidence: `/tmp/nsdocs-verify/` (this session), `/tmp/native-picker-e2e/` (sessi
 - **Desktop v1.1.1 release build failed** (run 34279647474): `x86_64-apple-darwin` rust target missing on the runner → no fixed DMG was produced as of 2026-09-09. The desktop-v1.1.1 tag exists; re-run `release-desktop` after `rustup target add x86_64-apple-darwin` on the runner.
 - **`/native` is interactive-TUI only.** `gizzi exec "/native …"` sends the text to the model instead of running the local command (observed on 2.0.7; the command is registered with `supportsNonInteractive: true`, so exec-mode routing looks like a gap — reported, not fixed here).
 - Picked-up sessions live in the gizzi runtime store, not the Rust api's `agent_sessions` sqlite; live message fetch works, but pickup persistence across a gizzi store reset is unverified.
+- **Four adapters are registry-only** (aider, cline, amp, kiro): present in the `HARNESSES` registry and the `/harnesses` endpoint but with no `catalog.ts` reader, so they never appear in `/list` — verified live against gizzi 2.0.7 (`list?harness=aider|cline|amp|kiro` → 0 sessions). "27 harnesses" means 27 registered adapters, 23 store readers.
