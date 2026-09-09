@@ -317,7 +317,7 @@ async fn fetch_computer_for_control(
             "SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id, \
              c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb, \
              c.region, c.host, c.native_id, c.template_id, c.billing_source, \
-             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id \
+             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id, c.role \
              FROM computers c \
              LEFT JOIN agents a ON a.id = c.bot_id \
              WHERE c.id = ?1 AND (c.owner_id = ?2 OR (c.kind = 'cloud_desktop' AND a.user_id = ?2)) AND c.status != 'deleted'"
@@ -353,6 +353,9 @@ async fn fetch_computer_for_control(
                 idle_timeout_secs: row.get(20)?,
                 last_activity_at: row.get(21)?,
                 group_id: row.get(22)?,
+                role: row
+                    .get::<_, Option<String>>(23)?
+                    .unwrap_or_else(|| "user".to_string()),
             })
         });
         match row {

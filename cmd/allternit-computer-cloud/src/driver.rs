@@ -728,6 +728,68 @@ impl ExecutionDriver for IncusDriver {
         Ok(cloned)
     }
 
+    async fn clone_from_snapshot(
+        &self,
+        handle: &ExecutionHandle,
+        snapshot_id: &str,
+        new_native_id: &str,
+        resources: Option<&ResourceSpec>,
+        env: &HashMap<String, String>,
+    ) -> Result<ExecutionHandle, DriverError> {
+        let source = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        // The create-from-snapshot call takes instance config inline: limits
+        // requested by the caller override the snapshot's inherited ones, and
+        // env vars land as `environment.*` keys (container guests pick these
+        // up instance-wide, replacing identity vars baked into the golden
+        // image). Disk size is inherited — resizing needs a device patch.
+        let mut config = serde_json::Map::new();
+        if let Some(resources) = resources {
+            if resources.cpu_millis > 0 {
+                config.insert(
+                    "limits.cpu".into(),
+                    (resources.cpu_millis / 1000).to_string().into(),
+                );
+            }
+            if resources.memory_mib > 0 {
+                config.insert(
+                    "limits.memory".into(),
+                    format!("{}MiB", resources.memory_mib).into(),
+                );
+            }
+        }
+        for (key, value) in env {
+            config.insert(format!("environment.{key}"), value.clone().into());
+        }
+        substrate
+            .clone_from_snapshot(source, snapshot_id, new_native_id, config.into())
+            .await
+            .map_err(map_error)?;
+        // A copied proxy retains the source listen port. Replace it before starting.
+        let vnc_port = match self.expose_vnc(&substrate, new_native_id).await {
+            Ok(port) => port,
+            Err(error) => {
+                if let Err(cleanup) = substrate.delete(new_native_id).await {
+                    warn!(%cleanup, new_native_id, "failed to clean up clone after proxy failure");
+                }
+                return Err(error);
+            }
+        };
+        if let Err(error) = substrate.start(new_native_id).await {
+            let _ = substrate.delete(new_native_id).await;
+            return Err(map_error(error));
+        }
+        let mut cloned = handle.clone();
+        cloned.id = ExecutionId::new();
+        cloned
+            .driver_info
+            .insert("native_id".into(), new_native_id.into());
+        cloned
+            .driver_info
+            .insert("vnc_port".into(), vnc_port.to_string());
+        Ok(cloned)
+    }
+
     async fn create_snapshot(
         &self,
         handle: &ExecutionHandle,
