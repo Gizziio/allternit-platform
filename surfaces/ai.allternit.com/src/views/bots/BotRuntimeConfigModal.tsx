@@ -1065,7 +1065,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                           (mailflare) mailbox when the mailflare rail is configured, otherwise the
                           legacy CommRails mint. The backend generates the address and credentials;
                           click Connect to allocate one. Outbound sends are approval-gated and appear
-                          as review cards in Agent Activity.
+                          as review cards in Bot Activity.
                         </p>
                       </div>
                     )}

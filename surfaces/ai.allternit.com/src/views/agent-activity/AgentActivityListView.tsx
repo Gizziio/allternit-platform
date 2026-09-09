@@ -6,8 +6,10 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/time";
 import { useMonitorThreads, externalEmailThreadKind, type AgentActivityThreadSummary } from "@/views/mail-monitor/monitor.helpers";
+import { BotInboxContent, useInboxBadgeCount } from "@/lib/bots/BotInboxContent";
 
 export type AgentActivityTab = "all" | "review" | "archived";
+export type AgentActivityPanelSection = "activity" | "inbox";
 type ThreadStatus = "review" | "active" | "archived";
 
 const STATUS_LABEL: Record<ThreadStatus, string> = {
@@ -30,14 +32,21 @@ export interface AgentActivityListViewProps {
   /** Controlled tab state — lets AgentActivityPanel keep its keyboard-nav filtered list in sync with what's rendered. Uncontrolled (internal state) when omitted. */
   activeTab?: AgentActivityTab;
   onTabChange?: (tab: AgentActivityTab) => void;
+  /** Panel-variant top-level section (Activity | Inbox). Uncontrolled (internal state) when omitted. */
+  activeSection?: AgentActivityPanelSection;
+  onSectionChange?: (section: AgentActivityPanelSection) => void;
 }
 
-export function AgentActivityListView({ variant, onNavigateThread, activeTab, onTabChange }: AgentActivityListViewProps) {
+export function AgentActivityListView({ variant, onNavigateThread, activeTab, onTabChange, activeSection, onSectionChange }: AgentActivityListViewProps) {
   const navigate = useNavigate();
   const { threads, loading, error, reviewCount } = useMonitorThreads();
   const [internalTab, setInternalTab] = useState<AgentActivityTab>("all");
   const tab = activeTab ?? internalTab;
   const setTab = onTabChange ?? setInternalTab;
+  const [internalSection, setInternalSection] = useState<AgentActivityPanelSection>("activity");
+  const section = activeSection ?? internalSection;
+  const setSection = onSectionChange ?? setInternalSection;
+  const inboxBadge = useInboxBadgeCount();
 
   const visible = useMemo(() => {
     if (tab === "archived") return threads.filter((t) => t.archived);
@@ -65,33 +74,55 @@ export function AgentActivityListView({ variant, onNavigateThread, activeTab, on
             className={cn("font-semibold m-0 truncate", isPage ? "text-2xl" : "text-[13px]")}
             style={isPage ? { fontFamily: "var(--font-serif)" } : undefined}
           >
-            Agent Activity
+            Bot Activity
           </h1>
           {isPage && (
             <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">
-              Threads across every agent — review requests, guarded work, and routine updates.
+              Bot work — review requests, guarded work, and routine updates.
             </p>
           )}
         </div>
-        <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-elevated)] border border-solid border-[var(--border-default)] p-0.5 shrink-0">
-          {(["all", "review", "archived"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={cn(
-                "px-2.5 py-1 rounded-md text-[11px] font-semibold cursor-pointer border-none transition-colors",
-                tab === t
-                  ? "bg-[var(--text-primary)] text-[var(--bg-elevated)]"
-                  : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--border-subtle)]"
-              )}
-            >
-              {t === "all" ? "All" : t === "review" ? `Review${reviewCount ? ` ${reviewCount}` : ""}` : "Archived"}
-            </button>
-          ))}
-        </div>
+        {isPage ? (
+          <ActivitySegmentedControl tab={tab} onChange={setTab} reviewCount={reviewCount} />
+        ) : (
+          <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-elevated)] border border-solid border-[var(--border-default)] p-0.5 shrink-0">
+            {(["activity", "inbox"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSection(s)}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold cursor-pointer border-none transition-colors",
+                  section === s
+                    ? "bg-[var(--text-primary)] text-[var(--bg-elevated)]"
+                    : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--border-subtle)]"
+                )}
+              >
+                {s === "activity" ? "Activity" : "Inbox"}
+                {s === "inbox" && inboxBadge > 0 && (
+                  <span className="min-w-[14px] h-[14px] px-[3px] rounded-full text-[9px] font-bold leading-[14px] text-center"
+                    style={{ background: "var(--status-error)", color: "#fff" }}
+                  >
+                    {inboxBadge > 99 ? "99+" : inboxBadge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
+      {!isPage && section === "activity" && (
+        <div className="px-4 pt-2 shrink-0">
+          <ActivitySegmentedControl tab={tab} onChange={setTab} reviewCount={reviewCount} />
+        </div>
+      )}
+
+      {!isPage && section === "inbox" ? (
+        <div className="flex-1 min-h-0">
+          <BotInboxContent />
+        </div>
+      ) : (
       <div className={cn("flex-1 overflow-y-auto min-h-0", isPage && "w-full max-w-4xl mx-auto")}>
         {loading && threads.length === 0 ? (
           <div className="p-6 text-sm text-[var(--text-secondary)]">Loading agent activity…</div>
@@ -111,6 +142,33 @@ export function AgentActivityListView({ variant, onNavigateThread, activeTab, on
           </ul>
         )}
       </div>
+      )}
+    </div>
+  );
+}
+
+function ActivitySegmentedControl({ tab, onChange, reviewCount }: {
+  tab: AgentActivityTab;
+  onChange: (tab: AgentActivityTab) => void;
+  reviewCount: number;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-elevated)] border border-solid border-[var(--border-default)] p-0.5 shrink-0">
+      {(["all", "review", "archived"] as const).map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          className={cn(
+            "px-2.5 py-1 rounded-md text-[11px] font-semibold cursor-pointer border-none transition-colors",
+            tab === t
+              ? "bg-[var(--text-primary)] text-[var(--bg-elevated)]"
+              : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--border-subtle)]"
+          )}
+        >
+          {t === "all" ? "All" : t === "review" ? `Review${reviewCount ? ` ${reviewCount}` : ""}` : "Archived"}
+        </button>
+      ))}
     </div>
   );
 }

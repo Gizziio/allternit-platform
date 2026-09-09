@@ -1,25 +1,28 @@
-# Checkpoint — session/pdf-surface
+# Steering checkpoint — session/shell-rail-home-cleanup
 
-Goal: Make the Allternit PDF surface earn its place — agent can read the open
-PDF (activeDocument registry content like docs, cap 8000), working AI presets
-via the assistantPreset bus, hub card improvements (Recent PDFs from artifacts
-— PDFs ARE persisted via Sign + pdf-viewer/binary), report viewer gaps.
+Goal: Home-mode shell rail cleanup in the Allternit desktop surface
+(`surfaces/ai.allternit.com`): remove collapsed-rail mascot pill, move Groups
+to a bot-mode-only tab, fold Inbox into the (renamed) Bot Activity widget, move
+Remote peers into the Fabric Transport view, inline the New button with the
+tabs, move "Continue CLI session" into Recents (home + code), sticky tab
+highlights, rename Agent Activity → Bot Activity everywhere user-visible.
 
-Just did: implementation complete. Vendored pdf app reports {name, extracted
-text} to the registry (reuses buildSearchIndex, cached per doc, invalidated on
-file change), ribbon Summarize/Key-points presets via assistantPreset bus
-(disabled until text extraction completes), suite panel gives pdf an 8000-char
-context cap (docs stays 4000) + 3 new vitest cases, hub pdf card copy + Recent
-PDFs strip (client-side artifact filter, opens via shell view or /pdf/:id),
-PdfView now also decodes Sign-style `kind: 'pdf'` data-url sections, platform
-e2e: new office-agent pdf test (banner, POST body contains extracted text,
-preset posts with context) + pdf-artifact data-url test.
+Just did: re-applied the full edit set on top of newer origin/main
+(2c7d3c990) after an outside process checked out origin/main in this worktree
+and wiped the first (never-committed) pass. Reconciled with upstream
+effe862b5 (mascot pill had been folded into the 44px collapsed-controls row —
+removed from there) and kept upstream's `aci-recordings` browser view type.
+Verification: typecheck:fast clean except the pre-existing unrelated error set
+(office-* asset declarations, UnifiedTerminal xterm css); 31/31 targeted
+vitest pass. A packaged build of the first pass exists at
+`surfaces/allternit-desktop/release/Allternit-Desktop-1.1.0-arm64.dmg`
+(unsigned, arm64) and was bundle-verified.
 
-Next: pnpm install (background), then typecheck suite+pdf app+platform,
-suite vitest, playwright smoke (chromium-1234 recipe, port 3013), PR, ledger,
-cleanup.
+Next: commit on `session/shell-rail-home-cleanup`; user decides on PR/merge.
+Packaged binary from the first pass predates the rebase but is functionally
+identical (re-application verified equivalent); rebuild after merge if wanted.
 
-Open questions: none. Gaps to note in PR: viewer HAS thumbnails + full-text
-search; missing: AI context not refreshed after in-session page delete/reorder
-until reload; search index built lazily (first search on huge docs pays the
-full pass); no persisted recent-files in the standalone/desktop shell.
+Open questions: whether to PR/merge per the normal ritual (user said
+edits + binary only so far). Note: the vite.config.ts PREVIEW-ONLY univerjs
+patch from the earlier preview session did not survive the checkout — the
+build of this branch may need that path fix re-staged locally.
