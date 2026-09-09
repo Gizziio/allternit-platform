@@ -46,10 +46,34 @@ jobs:
         # Playwright e2e specs in tests/ are NOT run here.
         run: pnpm --filter @allternit/desktop test
 
+  # Preflight: catch packaging/configuration errors (missing sidecar build
+  # steps, wrong toolchain pins, missing script paths, notarize hard-fail)
+  # BEFORE the 40-60 minute per-platform builds start. See
+  # scripts/release-preflight.mjs for the check list and the desktop-v1.1.1
+  # incident it guards against.
+  release-preflight:
+    name: Release preflight
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run release preflight checks
+        run: node scripts/release-preflight.mjs
+
   # Build macOS .dmg (arm64 + x64, universal)
   build-macos:
     name: Build macOS
-    needs: unit-tests
+    needs: [unit-tests, release-preflight]
     runs-on: macos-latest
     permissions:
       contents: read
@@ -279,7 +303,7 @@ jobs:
   # Build Windows NSIS installer
   build-windows:
     name: Build Windows
-    needs: unit-tests
+    needs: [unit-tests, release-preflight]
     # windows-latest ships only VS2026 (major 18), which node-gyp 11.x cannot
     # detect; windows-2019 is no longer provisioned. Install the VS2022 C++
     # build tools so native modules (better-sqlite3) can compile.
@@ -455,7 +479,7 @@ jobs:
   # artifacts are NOT attached to the GitHub release)
   build-linux:
     name: Build Linux
-    needs: unit-tests
+    needs: [unit-tests, release-preflight]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -600,7 +624,7 @@ jobs:
   # Publish GitHub Release
   release:
     name: Create GitHub Release
-    needs: [build-macos, build-windows, build-linux]
+    needs: [release-preflight, build-macos, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write

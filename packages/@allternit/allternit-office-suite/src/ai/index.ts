@@ -11,6 +11,7 @@ export {
   OfficeAgentLoop,
   resolvePlatformModelId,
   resolvePlatformModelName,
+  stripProviderPrefix,
   getOfficeModelOverride,
   setOfficeModelOverride,
   resolveOfficeModelId,

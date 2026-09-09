@@ -24,7 +24,7 @@ import {
 import type { AiSettings, OpenFileResult } from '../shared/ipc'
 import { AI_PROVIDERS } from '../shared/ipc'
 import { AiPanel } from './ai/AiPanel'
-import { OfficeAiSlot } from '@allternit/office-suite/bridge'
+import { OfficeAiSlot, reportActiveDocument } from '@allternit/office-suite/bridge'
 import { asianCharCount, countWords, nonAsianWordCount } from './word-count'
 import { toRoman } from './note-format'
 import { CommentsPanel } from './components/CommentsPanel'
@@ -637,6 +637,25 @@ export function App() {
   useEffect(() => {
     document.title = doc ? doc.fileName : 'Allternit Docs'
   }, [doc])
+
+  // Report the real open document to the office suite's active-document
+  // registry. The host `document` prop is undefined for documents created
+  // in-app (blank "Untitled.docx" later autosaved under a derived name), so
+  // the suite adapter alone cannot see them — without this the assistant
+  // claims no document is open. Content is read lazily from the live editor
+  // so runs see current text, not a mount-time snapshot.
+  useEffect(() => {
+    if (!doc) return
+    reportActiveDocument('docs', {
+      name: doc.fileName,
+      content: () => {
+        const current = editor?.state.doc
+        if (!current) return null
+        return current.textBetween(0, current.content.size, '\n\n', ' ')
+      },
+    })
+    return () => reportActiveDocument('docs', null)
+  }, [doc, editor])
 
   useEffect(() => window.desktop.onTeardown?.(() => setTornDown(true)), [])
 

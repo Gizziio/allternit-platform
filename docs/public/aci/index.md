@@ -43,4 +43,5 @@ ACI is designed for users who want agentic browser automation on infrastructure 
 | [Quickstart](./quickstart.md) | Run your first browser automation in one command |
 | [Guide](./guide.md) | Integration modes, action space and tool versions, approvals and server-side enforcement, environments and the VM driver, recording and replay, monitoring |
 | [Recipes](./recipes.md) | Copy-paste flows for common tasks |
+| [Safety & Evaluations](./safety.md) | Measured conformance grades, approval/safety architecture, known limits, how to reproduce the numbers |
 | [Changelog](./changelog.md) | Tool contract versions (`computerToolVersion`) |

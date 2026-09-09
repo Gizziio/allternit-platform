@@ -22,3 +22,4 @@ Ship Phase 1 of spec `bot-identity-computer` (Allternit Brain Research/specs/bot
 - Incus Linux default: provider 'cloud-desktop' → backend default Incus; no Tart path added.
 - Bots default persistent on, non-bot agents unchanged: implemented.
 - Theater: Create Bot path is CreateBotForm, which has no RPG/Big Five/forge steps (theater lives only in the separate CreateAgentForm agent wizard — left untouched, out of Phase 1 scope; documented in contract).
+=======
