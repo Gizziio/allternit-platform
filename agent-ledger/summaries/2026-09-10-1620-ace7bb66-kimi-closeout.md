@@ -1,0 +1,20 @@
+# Session attestation — session/ace7bb66 (kimi) — rq-20260909-004 close-out (final)
+
+Date: 2026-09-10 ~16:20 UTC. Final close-out of spec rq-20260909-004 after the phase 4/5 swarm (see `2026-09-10-1450-ace7bb66-kimi-phase45-swarm.md`). Three last items, two via agents + parent ritual.
+
+## Merged this round
+
+- **PR #254 (agent)** — embed widget live smoke FOUND AND FIXED 2 real bugs that mock tests couldn't see: (1) `RfbClient` sent its RFB version on ws-open (noVNC style) which deadlocks the frozen `VncAuthInterceptor` (it buffers pre-greeting client bytes, never re-drains — RFB is server-speaks-first; fixed to reply only after parsing the greeting); (2) the FBU parser consumed the 4-byte header before the full message was buffered, desyncing on any rect spanning ws frames (fixed: compute full message length up front, consume atomically; old "fragmented delivery" test was a false positive). Regression tests fail pre-fix/pass post-fix; 15/15, tsc clean. Live proof vs VPS Incus computer through the read-only embed proxy: ServerInit 1280x720 → 1 rect, 3,686,400 pixel bytes over 296 frames, client sent zero input messages. Evidence: ~/.agent-orchestrator/evidence/cloud-computer-orgo-smokes/embed-widget-live-smoke-2026-09-10.md.
+- **PR #255 (agent)** — Tart guest-VNC forward, the last fixable substrate gap: per-VM supervised `sshpass ssh -N -L` in tart-host, advertised as `vnc_port` in `GET /v1/vms/:name` — the exact field the #231 fail-closed Tart driver already consumes, so ZERO api/driver changes. Health-gated: emitted only while a real RFB greeting reads through the forward; guest VNC dead → field omitted → honest close (#231 semantics preserved). Rejected the WS-relay design (endpoint.token already = guest VNC password for VncAuthInterceptor; ssh -L keeps guest auth end-to-end). Live smoke on scratch ports: local computer → no VNC → vnc_port absent → apt-installed x11vnc+Xvfb in guest → vnc_port:15900 → full RFB 3.8 handshake + real FramebufferUpdate **through the embed ws proxy** → pkill x11vnc → advertisement withdrawn → delete → 0 lingering sockets (the #243 lesson holds). 108/108 computer-cloud tests. Fresh binary at /tmp/tartvnc-smoke/allternit-tart-host-vncforward for the manual swap (standing launchd service untouched; its binary verified identical to pre-PR source).
+
+## Desktop rebuild (AGENTS.md step 8, agent-executed)
+`Allternit-Desktop-1.1.1-b1818-arm64.dmg` (457MB, unsigned local, from origin/main fb1d9f260). release-preflight **35/0** (script grew past the old 26-check figure — 0 failures is the criterion). allternit-api + voice-service fresh-built (all prior binaries predated #242; old binary provably lacked VNC-auth markers); gizzi-code/mesh-node/whisper-cli/local-engine copied with git-diff justification. Bundle verified: strings shows PR #242 markers; bundled api booted /health ready. DMG + blockmap moved to the shared checkout `surfaces/allternit-desktop/release/`. Wizard-e2e harness app untouched. Gotcha: electron-builder must run under `pnpm run build:electron:dmg`, not `npm run`. Old pre-#242 DMGs listed for pruning in the agent report (none deleted — user's call).
+
+## Final state of the spec's deferrals
+- ws proxy conn leak: FIXED (#243). Note: the embed smoke still observed a server-side linger on one close path — suspect the Incus proxy-device leg, not our socket; flagged for whoever touches that code next.
+- create_computer id mismatch: FIXED (#248).
+- Desktop rebuild: DONE (b1818).
+- Tart guest-VNC: FIXED in code (#255); **deploy = manual binary swap** (`cp /tmp/tartvnc-smoke/allternit-tart-host-vncforward /usr/local/bin/allternit-tart-host` + `launchctl kickstart -k gui/$(id -u)/com.allternit.tart-host`) — left to the owner per review gates.
+- Tart snapshots: standing substrate limitation (golden = Incus, fully working).
+
+Cleanup: embed-smoke/tartvnc/desktopbuild worktrees removed after DMG relocation; branches session/embed-smoke, session/tart-vnc-forward, session/desktop-rebuild deleted local+remote.
