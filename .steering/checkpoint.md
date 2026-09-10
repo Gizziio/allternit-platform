@@ -7,24 +7,16 @@ kimi/claude/codex drivers; hard gates: uhp-conformance core green,
 stream/cancel/resume across backends, HR pytest advisory; NOTES sentinel.
 
 ## Just did
-- Pulled latest main (P7 landed). Verified prior-session scaffold compiles,
-  32/32 crate tests pass.
-- Added `ao serve` verb (src/ao/serve.rs) mounting uhp-gateway in-process;
-  engine auto-start parity with ao contract commands; `ao serve health`.
-- Fixed live-boot bugs: Discovery capabilities all-false (D-05), axum 0.7
-  `:id` path syntax (all parameterized routes 404'd), PTY screen wrapping
-  broke NDJSON parsing → turn watcher now reads the transcript tee file
-  incrementally, stale tab id on session resume, kimi driver real wire shape
-  (role-keyed JSON, no type field; drop non-JSON noise; -S not -c).
-- Smoke over HTTP on kimi: blocking turn, SSE stream, background+cancel,
-  previous_response_id resume (same session, correct recall), idempotency
-  replay. claude (OAuth expired) + codex (usage limit) environmentally blocked.
-- Gate 1 (uhp-conformance --class core --harness-id chrn_kimi) running.
+- ALL TODOS DONE. Gate 1 GREEN (uhp-conformance core 40/40 CONFORMANT over
+  HTTP vs `ao serve`, kimi harness). Gate 2: stream/cancel/resume
+  protocol-identical across kimi/claude/codex — kimi turns green, claude
+  (OAuth expired) + codex (usage limit) turns environmentally red, recorded
+  honestly. Gate 3 advisory: HR runner pytest 268+47 pass, drift report.
+- NOTES sentinel docs/AO_UHP_GATEWAY_NOTES.md written; 3 commits on
+  ao/uhp-gateway (vendor / feat crate+serve / NOTES), pushed to origin.
+- Evidence in ~/.agent-orchestrator/evidence/ao-uhp-gateway/.
 
 ## Next
-- Gates 2 (stream/cancel/resume per backend; kimi green, claude/codex
-  environmental reds) and 3 (HR pytest advisory), commit, NOTES sentinel.
-
-## Open questions
-- claude OAuth expired machine-wide; codex usage-limited until Sep 16 — both
-  are user-account states outside executor control; will report red honestly.
+- Orchestrator/human: PR + merge per repo ritual; ledger attestation on land.
+- User action needed to turn Gate 2 fully green: `claude` re-login (OAuth
+  expired machine-wide); codex usage limit resets 2026-09-16.
