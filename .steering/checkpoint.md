@@ -1,22 +1,39 @@
-# Checkpoint — ao/uhp-gateway (P6a executor)
+# Checkpoint — fabric-pwa-bot-mode-ui (Phase 1A executor)
 
 ## Goal
-Land P6a: UHP 2026-08-11 core-class gateway as new workspace crate
-`infrastructure/executor/uhp-gateway/`, in-process under `ao serve`, with
-kimi/claude/codex drivers; hard gates: uhp-conformance core green,
-stream/cancel/resume across backends, HR pytest advisory; NOTES sentinel.
+Execute `docs/FABRIC_PWA_BOT_MODE_PHASE_1A_TASK.md` exactly: bot-chat
+foundation under `surfaces/ai.allternit.com/src/components/bot-chat/`
+(types, transcript fold, SSE cursor client, presentational primitives, 3
+vitest suites). No 1B/1C work; no edits to existing source files; no git
+operations (orchestrator owns git). Verification = vitest run + tsc --noEmit
+from the surface; NOTES sentinel at the end.
 
 ## Just did
-- ALL TODOS DONE. Gate 1 GREEN (uhp-conformance core 40/40 CONFORMANT over
-  HTTP vs `ao serve`, kimi harness). Gate 2: stream/cancel/resume
-  protocol-identical across kimi/claude/codex — kimi turns green, claude
-  (OAuth expired) + codex (usage limit) turns environmentally red, recorded
-  honestly. Gate 3 advisory: HR runner pytest 268+47 pass, drift report.
-- NOTES sentinel docs/AO_UHP_GATEWAY_NOTES.md written; 3 commits on
-  ao/uhp-gateway (vendor / feat crate+serve / NOTES), pushed to origin.
-- Evidence in ~/.agent-orchestrator/evidence/ao-uhp-gateway/.
+- Wrote `types.ts` (BotChatMessage/ToolCall/ToolResult/ApprovalRequest/
+  TranscriptRow/ToolRunGroup/ActiveTurn), `transcript.ts` (pure fold:
+  rungs, tool-run folding with error-break split, gap timestamps,
+  formatGap with injectable now, deriveRung), `sse-cursor.ts` (fetch-based
+  SSE, `<streamId>:<seq>` cursor, Last-Event-ID reconnect, backoff ≤15s,
+  no retry on abort), 9 presentational primitives, and 3 colocated test
+  suites (transcript, run-folding, sse-cursor).
+- Design calls: `typing` rung opens on `message.user` (turn start);
+  message.delta/thinking.delta adopt the assistant id. Gap rows block
+  folding (30+ min apart = not consecutive). Error result splits a
+  previewed run: run closes before it, error renders standalone.
+- `pnpm install` running in background (fresh worktree had no
+  node_modules) — required before vitest/tsc.
 
 ## Next
-- Orchestrator/human: PR + merge per repo ritual; ledger attestation on land.
-- User action needed to turn Gate 2 fully green: `claude` re-login (OAuth
-  expired machine-wide); codex usage limit resets 2026-09-16.
+- DONE: vitest 31/31 green; `tsc --noEmit` 0 errors (no pre-existing
+  failures on this branch).
+- DONE: NOTES sentinel docs/FABRIC_PWA_BOT_MODE_PHASE_1A_NOTES.md written;
+  milestone notes appended to .allternit/shared-context.md; evidence in
+  ~/.agent-orchestrator/evidence/fabric-pwa-bot-mode-ui/.
+- Orchestrator: review + merge per repo ritual; Phase 1B picks up from the
+  fold event grammar documented in NOTES.
+
+## Open questions
+- None blocking. `Markdown` reused from `@/components/ai-elements/markdown`
+  (Streamdown, presentational, no view state) — qualifies under the spec's
+  reuse clause; flagged in NOTES for 1C review re: bundle weight in the
+  desktop static build.
