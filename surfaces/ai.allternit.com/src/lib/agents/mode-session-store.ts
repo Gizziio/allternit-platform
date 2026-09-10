@@ -32,8 +32,7 @@ import {
 } from './native-agent-api';
 import { useAgentStore } from './agent.store';
 import type { Agent, HarnessConfig } from './agent.types';
-import { subscribeSSE, type SSESubscriptionOptions } from '../sse/global-sse-manager';
-import { createCloudApiEventSource } from '@/lib/cloud-api';
+import { originSurfaceOf, parseAgentSessionSyncEvent } from './agent-session-sync';
 import { createModuleLogger } from '@/lib/logger';
 import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
@@ -2283,118 +2282,106 @@ export function createModeSessionStore(config: StoreConfig) {
             const MAX_RETRY_DELAY = 30000;
             let cancelled = false;
             let unsubscribe: (() => void) | null = null;
+            let lastEventId = '';
 
 	            const connect = () => {
 	              if (cancelled) return;
 
-	              const syncUrl = '/api/v1/agent-sessions/sync';
 	              void sessionApi.listSessions()
 	                .then(() => {
 	                  if (cancelled) return;
-	                  const syncOptions: SSESubscriptionOptions = {
-	                onOpen: () => {
-	                  set({ isSyncConnected: true, syncError: null });
-	                  retryDelay = 1000; // Reset retry delay on successful connection
-                },
-                onMessage: (data) => {
-                  try {
-                    if (typeof data !== 'object' || data === null) return;
-                    const event = data as Record<string, unknown>;
-
-                    switch (event.type) {
-                      case 'session.created': {
-                        const backendSession = (event.payload as Record<string, unknown>)?.session;
-                        if (backendSession) {
-                          const metadata = (backendSession as Record<string, unknown>).metadata as ModeSession['metadata'] | undefined;
-                          if (metadata?.originSurface === config.originSurface) {
-                            const session = mapBackendSession(backendSession as BackendSession);
-                            set((state) => ({
-                              sessions: [session, ...state.sessions.filter(s => s.id !== session.id)],
-                            }));
-                          }
-                        }
-                        break;
-                      }
-                      case 'session.updated': {
-                        const backendSession = (event.payload as Record<string, unknown>)?.session;
-                        if (backendSession) {
-                          const metadata = (backendSession as Record<string, unknown>).metadata as ModeSession['metadata'] | undefined;
-                          if (metadata?.originSurface === config.originSurface) {
-                            const session = mapBackendSession(backendSession as BackendSession);
-                            set((state) => ({
-                              sessions: state.sessions.map((s) =>
-                                s.id === session.id ? { ...s, ...session } : s
-                              ),
-                            }));
-                          }
-                        }
-                        break;
-                      }
-                      case 'session.deleted': {
-                        const sessionId = (event.payload as Record<string, unknown>)?.sessionId as string | undefined;
-                        if (sessionId) {
-                          set((state) => ({
-                            sessions: state.sessions.filter((s) => s.id !== sessionId),
-                            activeSessionId: state.activeSessionId === sessionId ? null : state.activeSessionId,
-                          }));
-                        }
-                        break;
-                      }
-                      case 'message.added': {
-                        const sessionId = (event.payload as Record<string, unknown>)?.sessionId as string | undefined;
-                        const message = (event.payload as Record<string, unknown>)?.message;
-                        if (sessionId && message) {
-                          const mappedMsg = mapBackendMessage(message as BackendMessage);
-                          set((state) => {
-                            const isActive = state.activeSessionId === sessionId;
-                            const newUnreadCounts = isActive
-                              ? state.unreadCounts
-                              : { ...state.unreadCounts, [sessionId]: (state.unreadCounts[sessionId] || 0) + 1 };
-                            return {
-                              sessions: state.sessions.map((s) =>
-                                s.id === sessionId
-                                  ? { ...s, messages: [...s.messages, mappedMsg] }
-                                  : s
-                              ),
-                              unreadCounts: newUnreadCounts,
-                            };
-                          });
-                        }
-                        break;
-                      }
-                    }
-                  } catch (err) {
-                    // Ignore parse errors
-                  }
-                },
-	                    onError: () => {
-	                      unsubscribe?.();
-	                      unsubscribe = null;
-	                      set({ isSyncConnected: false, syncError: 'Sync disconnected — retrying…' });
-	                      if (!cancelled) {
-	                        setTimeout(() => {
-	                          retryDelay = Math.min(retryDelay * 1.5, MAX_RETRY_DELAY);
-	                          connect();
-	                        }, retryDelay);
-	                      }
-	                    },
+	                  const source = sessionApi.createSyncSource(lastEventId || undefined);
+	                  source.onopen = () => {
+	                    set({ isSyncConnected: true, syncError: null });
+	                    retryDelay = 1000;
 	                  };
-	                  if (isAgentSessionsApiEnabled()) {
-	                    // Cloud control plane: authenticated fetch streaming —
-	                    // cloud-api accepts Bearer only, no session cookie, so a
-	                    // plain EventSource cannot authenticate.
-	                    const source = createCloudApiEventSource(syncUrl);
-	                    source.onopen = () => syncOptions.onOpen?.();
-	                    source.onmessage = (event) => {
-	                      let data: unknown;
-	                      try { data = JSON.parse(event.data); } catch { data = event.data; }
-	                      syncOptions.onMessage?.(data, event);
-	                    };
-	                    source.onerror = (event) => syncOptions.onError?.(event);
-	                    unsubscribe = () => source.close();
-	                  } else {
-	                    unsubscribe = subscribeSSE(syncUrl, syncOptions);
-	                  }
+	                  source.onmessage = (event) => {
+	                    if (event.lastEventId) lastEventId = event.lastEventId;
+	                    let data: unknown;
+	                    try {
+	                      data = JSON.parse(event.data);
+	                    } catch {
+	                      return;
+	                    }
+	                    const parsed = parseAgentSessionSyncEvent(data);
+	                    if (!parsed) return;
+	                    switch (parsed.kind) {
+	                      case 'created': {
+	                        if (originSurfaceOf(parsed.session.metadata) !== config.originSurface) break;
+	                        const session = mapBackendSession(parsed.session);
+	                        set((state) => ({
+	                          sessions: [session, ...state.sessions.filter((s) => s.id !== session.id)],
+	                        }));
+	                        break;
+	                      }
+	                      case 'updated': {
+	                        if (
+	                          parsed.patch.metadata &&
+	                          originSurfaceOf(parsed.patch.metadata) &&
+	                          originSurfaceOf(parsed.patch.metadata) !== config.originSurface
+	                        ) {
+	                          break;
+	                        }
+	                        set((state) => ({
+	                          sessions: state.sessions.map((s) => {
+	                            if (s.id !== parsed.sessionId) return s;
+	                            return {
+	                              ...s,
+	                              name: parsed.patch.name ?? s.name,
+	                              description: parsed.patch.description ?? s.description,
+	                              metadata: {
+	                                ...s.metadata,
+	                                ...definedEntries(parsed.patch.metadata),
+	                                originSurface: s.metadata.originSurface,
+	                              },
+	                            };
+	                          }),
+	                        }));
+	                        break;
+	                      }
+	                      case 'deleted': {
+	                        const sessionId = parsed.sessionId;
+	                        set((state) => ({
+	                          sessions: state.sessions.filter((s) => s.id !== sessionId),
+	                          activeSessionId: state.activeSessionId === sessionId ? null : state.activeSessionId,
+	                        }));
+	                        break;
+	                      }
+	                      case 'message_added': {
+	                        const sessionId = parsed.sessionId;
+	                        const mappedMsg = mapBackendMessage(parsed.message);
+	                        set((state) => {
+	                          const isActive = state.activeSessionId === sessionId;
+	                          const newUnreadCounts = isActive
+	                            ? state.unreadCounts
+	                            : { ...state.unreadCounts, [sessionId]: (state.unreadCounts[sessionId] || 0) + 1 };
+	                          return {
+	                            sessions: state.sessions.map((s) =>
+	                              s.id === sessionId
+	                                ? { ...s, messages: [...s.messages, mappedMsg], messageCount: s.messageCount + 1 }
+	                                : s
+	                            ),
+	                            unreadCounts: newUnreadCounts,
+	                          };
+	                        });
+	                        break;
+	                      }
+	                      default:
+	                        break;
+	                    }
+	                  };
+	                  source.onerror = () => {
+	                    unsubscribe?.();
+	                    unsubscribe = null;
+	                    set({ isSyncConnected: false, syncError: 'Sync disconnected — retrying…' });
+	                    if (!cancelled) {
+	                      setTimeout(() => {
+	                        retryDelay = Math.min(retryDelay * 1.5, MAX_RETRY_DELAY);
+	                        connect();
+	                      }, retryDelay);
+	                    }
+	                  };
+	                  unsubscribe = () => source.close();
 	                })
 	                .catch((error) => {
 	                  unsubscribe?.();

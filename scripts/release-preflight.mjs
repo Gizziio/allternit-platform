@@ -38,7 +38,7 @@
  *      → connector check: every electron-builder job must run
  *        prepare-connector-sidecar.cjs; the desktop build chains must keep
  *        prepare:connector-sidecar; verify-packaged-resources.cjs must keep
- *        its hard @hono/node-server gate.
+ *        its hard connector-bundle gate (server.mjs + runtime markers).
  *      Same check guards the voice sidecar against shipping the pre-cleanup
  *      PyInstaller binary again (verify gate scanning for _MEIPASS/pyi_rth
  *      markers must stay in place).
@@ -396,17 +396,16 @@ function checkWindowsPnpmShim() {
   }
 }
 
-/* ── Check 6: sidecar staleness guards (connector deps + voice binary) ── */
+/* ── Check 6: sidecar staleness guards (connector bundle + voice binary) ── */
 
 function checkSidecarGuards(jobs) {
   // Connector: services/open-connector is a standalone npm project,
-  // deliberately excluded from the pnpm workspace, so no workspace install
-  // ever creates its node_modules. Every job that invokes electron-builder
-  // must run prepare-connector-sidecar.cjs (npm ci into
-  // services/open-connector) before packaging — otherwise the extraFiles
-  // copy silently produces an empty connector-sidecar/node_modules and the
-  // sidecar crash-loops at runtime with "Cannot find package
-  // '@hono/node-server'" (observed on the desktop-v1.1.1 build).
+  // deliberately excluded from the pnpm workspace. It ships inside the app
+  // as a single esbuild bundle built by prepare-connector-sidecar.cjs —
+  // not as src/ + node_modules (that copy silently produced the empty
+  // connector-sidecar/node_modules crash loop on desktop-v1.1.1, fixed in
+  // PR #244, and replaced by the bundle in the follow-up). Every job that
+  // invokes electron-builder must run the prepare step before packaging.
   const preparePath = 'surfaces/allternit-desktop/scripts/prepare-connector-sidecar.cjs';
   if (!fs.existsSync(path.join(repoRoot, preparePath))) {
     fail(`connector: ${preparePath} is missing — the workflow references it but the script does not exist.`);
@@ -417,13 +416,13 @@ function checkSidecarGuards(jobs) {
   );
   for (const [jobName, text] of platformJobs) {
     if (/prepare-connector-sidecar/.test(text)) {
-      pass(`connector: job \`${jobName}\` installs open-connector sidecar deps before packaging`);
+      pass(`connector: job \`${jobName}\` builds the open-connector sidecar bundle before packaging`);
     } else {
       fail(
-        `connector: job \`${jobName}\` packages with electron-builder but never installs the ` +
-          `open-connector sidecar's npm dependencies (services/open-connector is excluded from the ` +
-          `pnpm workspace, so the workspace install does not cover it). The packaged connector-sidecar ` +
-          `would crash-loop with "Cannot find package '@hono/node-server'". Add a step running ` +
+        `connector: job \`${jobName}\` packages with electron-builder but never builds the ` +
+          `open-connector sidecar bundle (services/open-connector is excluded from the pnpm ` +
+          `workspace and nothing else produces resources/connector-sidecar/dist/server.mjs). ` +
+          `The packaged app would ship without connectors. Add a step running ` +
           `\`node scripts/prepare-connector-sidecar.cjs\` (working-directory: surfaces/allternit-desktop).`
       );
     }
@@ -439,21 +438,22 @@ function checkSidecarGuards(jobs) {
     } else {
       fail(
         `connector: package.json script \`${chain}\` dropped prepare:connector-sidecar — ` +
-          'packaged builds silently lose connector-sidecar/node_modules again.'
+          'packaged builds silently ship without the connector sidecar bundle.'
       );
     }
   }
 
   // verify-packaged-resources.cjs is the last line of defence at packaging
-  // time: it must keep BOTH hard gates (connector deps resolvable; staged
-  // voice binary is not the pre-cleanup PyInstaller bootloader).
+  // time: it must keep BOTH hard gates (connector bundle present with its
+  // runtime markers; staged voice binary is not the pre-cleanup PyInstaller
+  // bootloader).
   const verifySource = read('surfaces/allternit-desktop/scripts/verify-packaged-resources.cjs');
-  if (/@hono[\\/]node-server/.test(verifySource)) {
-    pass('connector: verify-packaged-resources.cjs hard-fails when connector deps are missing');
+  if (/allternitAnnounce/.test(verifySource) && /server\.mjs/.test(verifySource)) {
+    pass('connector: verify-packaged-resources.cjs hard-fails when the connector bundle is missing/stale');
   } else {
     fail(
-      'connector: verify-packaged-resources.cjs lost the @hono/node-server gate — ' +
-        'a build missing connector deps would ship and crash-loop at runtime.'
+      'connector: verify-packaged-resources.cjs lost the bundle gate — ' +
+        'a build missing the connector bundle would ship and run without connectors.'
     );
   }
   if (/_MEIPASS/.test(verifySource) && /pyi_rth/.test(verifySource)) {

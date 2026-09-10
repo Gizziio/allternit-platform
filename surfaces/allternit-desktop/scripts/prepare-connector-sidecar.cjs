@@ -1,21 +1,30 @@
 #!/usr/bin/env node
 /**
- * Install the open-connector sidecar's runtime dependencies so
- * electron-builder can copy services/open-connector/node_modules into
- * resources/connector-sidecar/node_modules.
+ * Build the open-connector sidecar into a single bundled file that
+ * electron-builder copies into the app (resources/connector-sidecar/dist/
+ * via extraResources in package.json).
  *
- * services/open-connector is a plain npm project (own package-lock.json,
- * deliberately excluded from the pnpm workspace — see its PROVENANCE.md and
- * pnpm-workspace.yaml), so a root `pnpm install` never produces its
- * node_modules. Without this step the extraFiles copy in package.json finds
- * nothing, electron-builder logs a one-line warning, and the sidecar
- * crash-loops at runtime with "Cannot find package '@hono/node-server'".
+ * Why a bundle instead of shipping src/ + node_modules/:
+ *   - services/open-connector is a standalone npm project, deliberately
+ *     excluded from the pnpm workspace, so nothing but this script installs
+ *     its deps — shipping its node_modules verbatim is what silently
+ *     produced the empty connector-sidecar/node_modules crash loop fixed
+ *     in PR #244.
+ *   - A single hashable artifact is verifiable (see the marker checks
+ *     below and verify-packaged-resources.cjs) and removes the runtime
+ *     dependence on Node >= 23 type stripping — the bundle is plain JS.
+ *   - Deps are pure JS (no native modules), so one bundle serves macOS,
+ *     Windows, and Linux.
  *
- * Idempotent: `npm ci` only runs when node_modules is missing or older than
- * the lockfile, so repeat local builds are cheap.
+ * Steps: install connector deps if missing/stale (the catalog generator
+ * imports provider definitions, which need zod etc.), regenerate the
+ * registry/catalog, esbuild-bundle src/server/index.ts to an ESM file
+ * (the server uses top-level await, which CJS output cannot express), and
+ * sanity-check the artifact.
  */
 
 const { execFileSync } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -25,6 +34,8 @@ const connectorDir = path.join(repoRoot, 'services', 'open-connector');
 const lockfile = path.join(connectorDir, 'package-lock.json');
 const nodeModules = path.join(connectorDir, 'node_modules');
 const installedLockfile = path.join(nodeModules, '.package-lock.json');
+const outDir = path.join(desktopDir, 'resources', 'connector-sidecar', 'dist');
+const outFile = path.join(outDir, 'server.mjs');
 
 function log(message) {
   process.stdout.write(`[prepare-connector-sidecar] ${message}\n`);
@@ -60,11 +71,71 @@ if (needsInstall()) {
   log('open-connector node_modules is up to date — skipping npm ci');
 }
 
-// Hard requirement, not a warning: without the hono server the sidecar
-// cannot bind :8014 and every connector-backed source stays unavailable.
-const honoServerPkg = path.join(nodeModules, '@hono', 'node-server', 'package.json');
-if (!fs.existsSync(honoServerPkg)) {
-  fail('npm ci finished but @hono/node-server is not resolvable in node_modules');
+// Registry/catalog freshness: provider definitions and the generated
+// registry are both committed, but a dirty checkout should bundle what is
+// on disk, not what was last committed.
+log('Regenerating provider registry + catalog…');
+execFileSync(process.execPath, ['scripts/ensure-generated.ts'], {
+  cwd: connectorDir,
+  stdio: 'inherit',
+});
+
+// esbuild is a devDependency of the desktop package (added alongside this
+// script); resolve it from the desktop install, not from the connector's
+// own node_modules, so the connector's dep tree stays minimal.
+let esbuild;
+try {
+  esbuild = require(require.resolve('esbuild', { paths: [desktopDir] }));
+} catch {
+  fail(
+    'esbuild is not resolvable from surfaces/allternit-desktop — run pnpm install ' +
+      '(esbuild is a devDependency of @allternit/desktop)'
+  );
 }
 
-log('✓ open-connector sidecar dependencies ready');
+log('Bundling src/server/index.ts → ' + path.relative(desktopDir, outFile));
+fs.mkdirSync(outDir, { recursive: true });
+esbuild
+  .buildSync({
+    entryPoints: [path.join(connectorDir, 'src', 'server', 'index.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    // The server top-level-awaits catalog/DB setup; ESM is the only output
+    // format that supports it. Node >= 20 (and Electron's bundled runtime)
+    // run plain-JS ESM without flags.
+    target: 'node20',
+    outfile: outFile,
+    // Dynamic import() of the 1065 lazy executor modules is preserved as
+    // lazy Promise-wrapped requires inside the single file.
+    splitting: false,
+    sourcemap: false,
+    minify: false,
+    logLevel: 'warning',
+    banner: {
+      // ESM output + CJS dependencies (pino et al.) call require() at
+      // runtime; esbuild's default shim throws. A createRequire bridge is
+      // the standard interop fix.
+      js:
+        '// Generated by scripts/prepare-connector-sidecar.cjs — do not edit.\n' +
+        "import { createRequire as __allternitCreateRequire } from 'node:module';\n" +
+        'const require = __allternitCreateRequire(import.meta.url);',
+    },
+  });
+
+if (!fs.existsSync(outFile)) {
+  fail(`esbuild reported success but ${outFile} does not exist`);
+}
+const size = fs.statSync(outFile).size;
+if (size < 1024 * 1024) {
+  fail(`bundle is suspiciously small (${size} bytes) — expected >1MB with all providers inlined`);
+}
+const head = fs.readFileSync(outFile, 'utf8').slice(0, 64 * 1024 * 1024);
+for (const marker of ['allternitAnnounce', 'connect server listening', 'node:sqlite']) {
+  if (!head.includes(marker)) {
+    fail(`bundle is missing the "${marker}" marker — the entry point likely changed; update this script`);
+  }
+}
+
+const hash = crypto.createHash('sha256').update(fs.readFileSync(outFile)).digest('hex');
+log(`✓ connector sidecar bundle ready: ${(size / 1024 / 1024).toFixed(1)} MB, sha256 ${hash.slice(0, 16)}…`);

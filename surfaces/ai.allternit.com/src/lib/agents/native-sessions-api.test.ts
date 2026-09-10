@@ -1,13 +1,22 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-// Mock the auth/runtime modules authFetch depends on so no network or
-// window state is needed.
+const envMocks = vi.hoisted(() => ({
+  isAgentSessionsApiEnabled: vi.fn(() => true),
+  isDesktopOperatorShell: vi.fn(() => false),
+  getCloudApiBaseUrl: vi.fn(() => "https://api.example.test"),
+}));
+
 vi.mock("@/lib/agents/api-config", () => ({
-  buildAuthHeaders: async () => ({}),
+  buildAuthHeaders: async () => ({ Authorization: "Bearer test" }),
 }));
 vi.mock("@/lib/runtime-target", () => ({
   getActiveRuntimeId: () => undefined,
   getRuntimeExecutionTarget: () => "local",
+}));
+vi.mock("@/lib/env", () => ({
+  isAgentSessionsApiEnabled: () => envMocks.isAgentSessionsApiEnabled(),
+  isDesktopOperatorShell: () => envMocks.isDesktopOperatorShell(),
+  getCloudApiBaseUrl: () => envMocks.getCloudApiBaseUrl(),
 }));
 
 import { nativeSessionsApi } from "./native-sessions-api";
@@ -19,9 +28,12 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-describe("nativeSessionsApi stale-backend guard", () => {
+describe("nativeSessionsApi control-plane routing", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
+    envMocks.isAgentSessionsApiEnabled.mockReturnValue(true);
+    envMocks.isDesktopOperatorShell.mockReturnValue(false);
+    envMocks.getCloudApiBaseUrl.mockReturnValue("https://api.example.test");
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -56,5 +68,43 @@ describe("nativeSessionsApi stale-backend guard", () => {
   it("passes through HTTP error statuses unchanged", async () => {
     vi.mocked(fetch).mockResolvedValue(new Response("boom", { status: 502 }));
     await expect(nativeSessionsApi.list()).rejects.toThrow(/native catalog failed: 502/);
+  });
+
+  it("lists against cloud-api when the agent-sessions flag is on", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ sessions: [] }));
+    await nativeSessionsApi.list({ harness: "kimi" });
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      "https://api.example.test/api/v1/native-sessions?harness=kimi",
+    );
+  });
+
+  it("fails closed on web when the agent-sessions flag is off", async () => {
+    envMocks.isAgentSessionsApiEnabled.mockReturnValue(false);
+    await expect(nativeSessionsApi.list()).rejects.toThrow(/disabled in this deployment/i);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("maps pickup surface bot to chat before hitting the node", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ session: { id: "ses_1" }, source: { harness: "kimi", sessionId: "abc" }, warnings: [], eventCount: 0 }),
+    );
+    await nativeSessionsApi.pickup({ harness: "kimi", sessionId: "abc", surface: "bot" });
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("https://api.example.test/api/v1/native-sessions/pickup");
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      harness: "kimi",
+      sessionId: "abc",
+      surface: "chat",
+    });
+  });
+
+  it("routes export-native through the agent-sessions control-plane base", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ harness: "kimi", sessionId: "n1", path: "/tmp", resumeHint: "kimi", at: 1 }),
+    );
+    await nativeSessionsApi.exportNative("ses_1", "kimi");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      "https://api.example.test/api/v1/agent-sessions/ses_1/export-native",
+    );
   });
 });

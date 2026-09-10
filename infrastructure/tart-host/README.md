@@ -6,7 +6,23 @@ around the Tart CLI plus scripts to build and verify an Ubuntu desktop image.
 ## Files
 
 - `tart-host.rs` / `deploy.sh` — HTTP wrapper that exposes VM lifecycle,
-  exec, file, and screenshot endpoints over Tailscale.
+  exec, file, and screenshot endpoints over Tailscale. Also runs a per-VM
+  guest-VNC forward: a supervised `ssh -N -L <bind>:<port>:127.0.0.1:5900`
+  into each running VM, reported as `vnc_port` in `GET /v1/vms/:name` only
+  while the guest VNC server actually answers an RFB greeting through the
+  forward (the control plane fails closed when the field is absent).
+
+## Guest-VNC forward environment
+
+- `TART_VNC_BIND` — IP the forwards bind (default: the IP of
+  `TART_HOST_BIND`, else `127.0.0.1`). Keep it at least as private as the
+  control API: whatever can reach this wrapper can reach the guest VNC
+  server's own password prompt.
+- `TART_VNC_PORT_BASE` — first allocated forward port (default 15900).
+- `TART_VNC_GUEST_PORT` — guest-side VNC port (default 5900).
+- `TART_SSH_USER` / `TART_SSH_PASSWORD` — guest SSH credentials used for the
+  forward (same ones the exec SSH fallback uses).
+
 - `build-image.sh` — Builds the `allternit-desktop-tart` image with XFCE,
   Xvfb, x11vnc, scrot, and xdotool.
 - `verify-e2e.sh` — Provisions a VM from the image and verifies screenshot,

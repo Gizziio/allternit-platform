@@ -1,42 +1,21 @@
-# Steering Checkpoint — rq-20260909-004 deferral closure (VNC data plane)
+# Steering Checkpoint — native-sessions catalog caller (P5)
 
 ## Goal
-Close the two registered substrate deferrals from the cloud-computer live
-smokes using the VPS (45.84.138.187, Incus): (1) golden snapshot build +
-fast-boot clone — DONE earlier (#240 wait-loop, #241 stateless snapshot,
-template ready, clone 201). (2) VNC data plane through the authenticated ws
-proxy — IN PROGRESS.
+Point `/api/v1/native-sessions` list/pickup/show at the same control-plane
+relay agent-sessions uses. The catalog contract lives on the node (8013 →
+gizzi `/v1/native-session/*`); cloud-api is a verbatim relay. Do not hit the
+SPA origin.
 
 ## Just did
-- Diagnosed the VNC stall: guest x11vnc runs `-passwd allternit` (driver-shared
-  password, `BOT_DESKTOP_VNC_PASSWORD`), so the server offers ONLY RFB security
-  type 2 (VNC password auth). The ws proxy was a blind pipe and never used
-  `endpoint.token` → anonymous embed viewers could never complete a handshake.
-- Restarted guest x11vnc cleanly on the clone sandbox
-  (allternit-user-local-dev-user-0c7d417c…, host port 30006 → guest 5900,
-  reachable from the Mac; ufw inactive).
-- Implemented `cmd/allternit-api/src/vnc_auth.rs`: `VncAuthInterceptor` —
-  RFB 3.3/3.8 handshake state machine that rewrites the server's security
-  offer to None-auth for the viewer, chooses type 2 upstream, answers the
-  16-byte DES challenge server-side (bit-reversed-password DES-ECB, `des` +
-  `cipher` crates), then goes transparent. Wired into `handle_vnc_socket`
-  (both forwarders; tcp_write half shared via tokio Mutex so injected bytes
-  flush immediately — queueing them on the next client message deadlocks the
-  handshake).
-- Unit tests: OpenSSL cross-checked DES vector, 3.8 injection, 3.3 injection,
-  passthrough-when-None, key derivation. 6/6 pass; computer_ws 18/18,
-  vnc_readonly 9/9 unaffected.
+- Created worktree `allternit-session-43d9456-ns` on `session/43d9456-ns`
+  from `origin/main` (`3e12d7188`).
+- Root cause: `native-sessions-api.ts` always uses `getGatewayOrigin()`
+  (empty on web → relative `/api/v1/native-sessions` → SPA HTML). Agent-
+  sessions already targets `getCloudApiBaseUrl()` when the flag is on.
+  Pickup also forwards `surface: "bot"`, which gizzi's enum rejects.
 
 ## Next
-1. Release build → restart smoke API → live RFB handshake through
-   `/ws/computers/:id/vnc` with an embed token: expect None-auth offered,
-   SecurityResult 0, ServerInit, real FramebufferUpdate, read-only KeyEvent
-   swallowed.
-2. PR + merge, ledger attestation, brain draft (no confirm), cleanup
-   (worktree, branches, VPS containers I created, smoke API).
+- PR + merge. Ledger attestation after merge.
 
 ## Open questions
-- Tart desktops set endpoint.token=None → transparent pipe (unchanged). If
-  Tart guests ever gain a VNC password, injection kicks in automatically.
-- Non-read-only KeyEvent guest-side effect is not verified (proxy-level
-  passthrough only) — same limitation as earlier smokes.
+- None. `todo.updated` on /sync stays deferred.

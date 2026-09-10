@@ -1,0 +1,27 @@
+# Curated system template: the stock Allternit Linux desktop, golden-built.
+# Resolved at API startup into the desktop_templates table under
+# user_id='system', public=1, ref='system/base-desktop'. Build it once, then
+# every computer created from this template boots from the golden snapshot.
+apiVersion: allternit.ai/v1
+kind: ComputerTemplate
+metadata:
+  name: base-desktop
+  description: Curated base Linux desktop (stock allternit-desktop image plus everyday tooling).
+  tags: [system, linux, desktop]
+os:
+  name: linux
+  image: ""
+hardware:
+  cpu_cores: 2
+  memory_mb: 4096
+  disk_mb: 20480
+  resolution: [1920, 1080]
+packages:
+  - curl
+  - jq
+  - htop
+services: []
+secrets: []
+hooks:
+  postCreate:
+    - echo allternit base-desktop ready > /etc/allternit-template-ready

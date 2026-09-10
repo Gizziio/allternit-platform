@@ -69,9 +69,18 @@ pub struct DesktopTemplate {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateTemplateRequest {
+    /// Instantiate a private copy of a curated `system/...` catalog entry
+    /// instead of specifying fields inline. When set, all other fields are
+    /// ignored (the catalog spec doc is the source of truth).
+    #[serde(default)]
+    pub catalog_ref: Option<String>,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub description: Option<String>,
+    #[serde(default)]
     pub os: String,
+    #[serde(default)]
     pub image: String,
     #[serde(default = "default_cpu")]
     pub cpu_millis: u32,
@@ -224,7 +233,85 @@ async fn create_template(
     Extension(user): Extension<AuthUser>,
     Json(req): Json<CreateTemplateRequest>,
 ) -> impl IntoResponse {
+    // Catalog-ref path: instantiate a caller-owned copy of a curated
+    // `system/...` entry. The spec doc is the source of truth.
+    if let Some(reference) = req.catalog_ref.as_deref() {
+        let Some(entry) = crate::template_catalog::get_catalog_entry(reference) else {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": format!("unknown catalog ref {reference:?}")})),
+            )
+                .into_response();
+        };
+        let spec_yaml = match entry.spec.to_yaml() {
+            Ok(y) => y,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": e})),
+                )
+                    .into_response()
+            }
+        };
+        let db = state.db.clone();
+        let org_id = user.organization_id.clone();
+        let user_id = user.user_id.clone();
+        let user_id_for_log = user_id.clone();
+        let name = entry.spec.metadata.name.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            let conn = db.connect()?;
+            let outcome = upsert_template_from_spec(
+                &conn,
+                org_id.as_deref(),
+                &user_id,
+                &entry.spec,
+                &spec_yaml,
+            )?;
+            conn.query_row(
+                &format!("SELECT {TEMPLATE_COLUMNS} FROM desktop_templates WHERE id = ?1"),
+                rusqlite::params![outcome.id],
+                row_to_template,
+            )
+            .map(|t| (outcome, t))
+        })
+        .await;
+        return match result {
+            Ok(Ok((outcome, template))) => {
+                info!(template_id = %outcome.id, user_id = %user_id_for_log, name = %name, catalog_ref = %reference, "created desktop template from catalog");
+                let status = if outcome.changed {
+                    StatusCode::CREATED
+                } else {
+                    StatusCode::OK
+                };
+                (status, Json(json!(template))).into_response()
+            }
+            Ok(Err(e)) => {
+                warn!(error = %e, "failed to create desktop template from catalog");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": format!("database error: {}", e)})),
+                )
+                    .into_response()
+            }
+            Err(e) => {
+                warn!(error = %e, "task panicked creating desktop template from catalog");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "internal error"})),
+                )
+                    .into_response()
+            }
+        };
+    }
+
     let id = format!("dtpl-{}", uuid::Uuid::new_v4().simple());
+    if req.name.trim().is_empty() || req.os.trim().is_empty() {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({"error": "name and os must be non-empty"})),
+        )
+            .into_response();
+    }
     let db = state.db.clone();
     let org_id = user.organization_id.clone();
     let user_id = user.user_id.clone();
@@ -436,6 +523,10 @@ pub struct TemplateSecret {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct TemplateHooks {
+    /// Run inside the build guest BEFORE package installation.
+    #[serde(default, rename = "preBuild")]
+    pub pre_build: Vec<String>,
+    /// Run inside the build guest AFTER packages/services (post-build).
     #[serde(default, rename = "postCreate")]
     pub post_create: Vec<String>,
 }
@@ -453,6 +544,10 @@ pub struct ComputerTemplateSpec {
     pub hardware: TemplateHardware,
     #[serde(default)]
     pub packages: Vec<String>,
+    /// Arbitrary install scripts (shell) run as root after apt packages and
+    /// before services/hooks during the golden build.
+    #[serde(default, rename = "installScripts")]
+    pub install_scripts: Vec<String>,
     #[serde(default)]
     pub services: Vec<TemplateService>,
     #[serde(default)]
@@ -497,6 +592,15 @@ fn valid_unit_name(name: &str) -> bool {
         && name
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+}
+
+/// High-signal detector for pasted credential material (PEM/private-key
+/// blocks) in template files. Template docs carry vault refs by name only;
+/// anything that looks like an actual secret value is rejected at the gate.
+/// Deliberately conservative — one unambiguous marker — to avoid false
+/// positives on ordinary env values and shell commands.
+fn looks_like_literal_secret(value: &str) -> bool {
+    value.contains("-----BEGIN")
 }
 
 impl ComputerTemplateSpec {
@@ -556,6 +660,18 @@ impl ComputerTemplateSpec {
                 return Err(format!("invalid package name {package:?}"));
             }
         }
+        for script in &self.install_scripts {
+            if script.trim().is_empty() {
+                return Err("installScripts entries must be non-empty".to_string());
+            }
+            if looks_like_literal_secret(script) {
+                return Err(
+                    "installScripts entry looks like it contains a literal secret \
+                     (PEM/private-key material); use a vault://org/... secret ref instead"
+                        .to_string(),
+                );
+            }
+        }
         for service in &self.services {
             if !valid_unit_name(&service.name) {
                 return Err(format!("invalid service name {:?}", service.name));
@@ -568,6 +684,15 @@ impl ComputerTemplateSpec {
                     return Err(format!("invalid env var name {key:?} on service {:?}", service.name));
                 }
             }
+            for (key, value) in &service.env {
+                if looks_like_literal_secret(value) {
+                    return Err(format!(
+                        "service {:?} env {key:?} looks like a literal secret (PEM/private-key \
+                         material); use a vault://org/... secret ref instead",
+                        service.name
+                    ));
+                }
+            }
         }
         for secret in &self.secrets {
             if !valid_env_name(&secret.name) {
@@ -575,9 +700,21 @@ impl ComputerTemplateSpec {
             }
             parse_vault_secret_ref(&secret.ref_)?;
         }
-        for hook in &self.hooks.post_create {
+        for hook in self
+            .hooks
+            .pre_build
+            .iter()
+            .chain(self.hooks.post_create.iter())
+        {
             if hook.trim().is_empty() {
-                return Err("hooks.postCreate entries must be non-empty".to_string());
+                return Err("hooks entries must be non-empty".to_string());
+            }
+            if looks_like_literal_secret(hook) {
+                return Err(
+                    "hook looks like it contains a literal secret (PEM/private-key material); \
+                     use a vault://org/... secret ref instead"
+                        .to_string(),
+                );
             }
         }
         Ok(())
@@ -649,6 +786,7 @@ pub fn spec_doc_from_template(t: &DesktopTemplate) -> ComputerTemplateSpec {
             resolution,
         },
         packages: t.packages.clone(),
+        install_scripts: vec![],
         services: vec![],
         secrets: vec![],
         hooks: TemplateHooks::default(),
@@ -789,20 +927,27 @@ async fn import_template(
     let name = spec.metadata.name.clone();
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let id = upsert_template_from_spec(&conn, org_id.as_deref(), &user_id, &spec, &spec_yaml)?;
+        let outcome = upsert_template_from_spec(&conn, org_id.as_deref(), &user_id, &spec, &spec_yaml)?;
         conn.query_row(
             &format!("SELECT {TEMPLATE_COLUMNS} FROM desktop_templates WHERE id = ?1"),
-            rusqlite::params![id],
+            rusqlite::params![outcome.id],
             row_to_template,
         )
-        .map(|t| (id, t))
+        .map(|t| (outcome, t))
     })
     .await;
 
     match result {
-        Ok(Ok((id, template))) => {
-            info!(template_id = %id, user_id = %user_id_for_log, name = %name, "imported desktop template");
-            (StatusCode::OK, Json(json!(template))).into_response()
+        Ok(Ok((outcome, template))) => {
+            info!(template_id = %outcome.id, user_id = %user_id_for_log, name = %name, changed = outcome.changed, "imported desktop template");
+            // Flatten the row and add the idempotency flag: existing clients
+            // read the same top-level fields; `unchanged: true` means the doc
+            // matched the stored one and no write (or build-state reset) ran.
+            let mut body = serde_json::to_value(&template).unwrap_or_else(|_| json!({}));
+            if let Some(obj) = body.as_object_mut() {
+                obj.insert("unchanged".to_string(), json!(!outcome.changed));
+            }
+            (StatusCode::OK, Json(body)).into_response()
         }
         Ok(Err(e)) => {
             warn!(error = %e, "failed to import desktop template");
@@ -1049,9 +1194,14 @@ fn find_golden_holder(
     golden_snapshot_id: Option<&str>,
     build_status: Option<&str>,
 ) -> Option<GoldenSource> {
-    match select_provision_source(build_status, golden_snapshot_id, None) {
-        ProvisionSource::Image => return None,
-        ProvisionSource::Golden(_) => {}
+    // Gate on the recorded build state only. The holder row is what we are
+    // about to look up — passing `None` into `select_provision_source` here
+    // always yields `ProvisionSource::Image`, which made this function return
+    // None unconditionally and every provision fell back to a base-image
+    // spawn (live-smoke defect, rq-20260909-004: build ready, golden snapshot
+    // present, and computers still booted the stock image).
+    if build_status != Some(BUILD_STATUS_READY) || golden_snapshot_id.is_none() {
+        return None;
     }
     let holder = conn
         .query_row(
@@ -1072,12 +1222,23 @@ fn find_golden_holder(
         .flatten()?;
     let (native_id, provider, os) = holder;
     let snapshot_id = golden_snapshot_id?.to_string();
-    Some(GoldenSource {
+    let source = GoldenSource {
         snapshot_id,
         holder_native_id: native_id?,
         holder_provider: provider,
         holder_os: os.unwrap_or_else(|| "linux".to_string()),
-    })
+    };
+    // Final selection through the pure state machine: ready + snapshot id +
+    // holder must all hold, otherwise the honest image-spawn fallback.
+    let snapshot_id_for_check = source.snapshot_id.clone();
+    match select_provision_source(
+        Some(BUILD_STATUS_READY),
+        Some(&snapshot_id_for_check),
+        Some(source),
+    ) {
+        ProvisionSource::Golden(g) => Some(g),
+        ProvisionSource::Image => None,
+    }
 }
 
 /// Resolve the final provisioning spec from a raw request and optional template.
@@ -1231,28 +1392,44 @@ pub async fn resolve_template_by_ref(
     .flatten()
 }
 
-/// Persist (create or replace-by-name for this owner) a validated template doc.
-/// `spec_yaml` must be the canonical serialization of `spec`. Replaces reset
-/// any previous golden build — the doc is the source of truth and it changed.
+/// Outcome of an upsert: which row, and whether anything was written.
+/// `changed: false` means the stored canonical doc already matched the new
+/// one — a no-op that preserves any existing golden build state.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpsertOutcome {
+    pub id: String,
+    pub changed: bool,
+}
+
+/// Persist (create or replace-by-name for this owner) a validated template
+/// doc. `spec_yaml` must be the canonical serialization of `spec`. Replaces
+/// reset any previous golden build — the doc is the source of truth and it
+/// changed. Re-importing an unchanged doc is a no-op: nothing is written and
+/// build state (e.g. a ready golden) is preserved.
 pub fn upsert_template_from_spec(
     conn: &rusqlite::Connection,
     org_id: Option<&str>,
     user_id: &str,
     spec: &ComputerTemplateSpec,
     spec_yaml: &str,
-) -> Result<String, rusqlite::Error> {
+) -> Result<UpsertOutcome, rusqlite::Error> {
     let view = spec.effective_view();
     let env_json = serde_json::to_string(&view.env).unwrap_or_default();
     let packages_json = serde_json::to_string(&view.packages).unwrap_or_default();
     let tags_json = serde_json::to_string(&view.tags).unwrap_or_default();
-    let existing: Option<String> = conn
+    let existing: Option<(String, Option<String>)> = conn
         .query_row(
-            "SELECT id FROM desktop_templates WHERE name = ?1 AND user_id = ?2 AND org_id IS ?3",
+            "SELECT id, spec_yaml FROM desktop_templates WHERE name = ?1 AND user_id = ?2 AND org_id IS ?3",
             rusqlite::params![view.name, user_id, org_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .optional()?;
-    if let Some(id) = existing {
+    if let Some((id, stored_yaml)) = existing {
+        // Idempotent re-import: identical canonical doc → skip every write so
+        // an unchanged file never invalidates a ready golden.
+        if stored_yaml.as_deref() == Some(spec_yaml) {
+            return Ok(UpsertOutcome { id, changed: false });
+        }
         // The v1 doc has no network/public fields: on replace, reset them to
         // import semantics (network on, caller-private). public stays
         // user-controlled via the legacy endpoint afterwards.
@@ -1278,7 +1455,7 @@ pub fn upsert_template_from_spec(
                 spec_yaml,
             ],
         )?;
-        return Ok(id);
+        return Ok(UpsertOutcome { id, changed: true });
     }
     let id = format!("dtpl-{}", uuid::Uuid::new_v4().simple());
     conn.execute(
@@ -1303,7 +1480,7 @@ pub fn upsert_template_from_spec(
             spec_yaml,
         ],
     )?;
-    Ok(id)
+    Ok(UpsertOutcome { id, changed: true })
 }
 
 #[cfg(test)]
@@ -1357,6 +1534,7 @@ mod tests {
         let db = test_db();
         let user = test_user("owner-1", None);
         let req = CreateTemplateRequest {
+            catalog_ref: None,
             name: "My Dev Desktop".to_string(),
             description: None,
             os: "linux".to_string(),
@@ -1680,7 +1858,9 @@ hooks:
 
         let id = {
             let conn = db.connect().unwrap();
-            upsert_template_from_spec(&conn, Some("org-1"), "owner-1", &spec, &yaml).unwrap()
+            upsert_template_from_spec(&conn, Some("org-1"), "owner-1", &spec, &yaml)
+                .unwrap()
+                .id
         };
         let resolved = resolve_template(&db, &user, &id).await.unwrap();
         assert_eq!(resolved.name, "node-20-builder");
@@ -1711,6 +1891,7 @@ hooks:
                 &spec2.to_yaml().unwrap(),
             )
             .unwrap()
+            .id
         };
         assert_eq!(id, id2, "replace-by-name keeps the id");
         let re = resolve_template(&db, &user, &id).await.unwrap();
@@ -1723,6 +1904,167 @@ hooks:
         assert_eq!(re.golden_snapshot_id, None);
         assert!(re.network_enabled, "network reset to the doc-default on replace");
         assert!(!re.public, "import is caller-private unless set via the legacy endpoint");
+    }
+
+    /// Re-importing an unchanged doc must be a no-op: no write, and any
+    /// ready golden build state survives (idempotent rebuild story).
+    #[tokio::test]
+    async fn reimport_of_unchanged_doc_preserves_build_state() {
+        let db = test_db();
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(GOOD_DOC).unwrap();
+        let yaml = spec.to_yaml().unwrap();
+        let id = {
+            let conn = db.connect().unwrap();
+            upsert_template_from_spec(&conn, Some("org-1"), "owner-1", &spec, &yaml)
+                .unwrap()
+                .id
+        };
+        {
+            let conn = db.connect().unwrap();
+            conn.execute(
+                "UPDATE desktop_templates SET build_status = 'ready', \
+                 golden_snapshot_id = 'golden', built_at = '2026-09-10 00:00:00' WHERE id = ?1",
+                rusqlite::params![id],
+            )
+            .unwrap();
+        }
+        let outcome = {
+            let conn = db.connect().unwrap();
+            upsert_template_from_spec(&conn, Some("org-1"), "owner-1", &spec, &yaml).unwrap()
+        };
+        assert_eq!(outcome.id, id);
+        assert!(!outcome.changed, "identical doc must be a no-op");
+        let (status, golden): (Option<String>, Option<String>) = {
+            let conn = db.connect().unwrap();
+            conn.query_row(
+                "SELECT build_status, golden_snapshot_id FROM desktop_templates WHERE id = ?1",
+                rusqlite::params![id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap()
+        };
+        assert_eq!(status.as_deref(), Some("ready"), "ready golden survives re-import");
+        assert_eq!(golden.as_deref(), Some("golden"));
+    }
+
+    #[test]
+    fn prebuild_and_install_scripts_validate() {
+        let doc = GOOD_DOC.replace(
+            "hooks:\n  postCreate:",
+            "installScripts:\n  - ./configure && make install\nhooks:\n  preBuild:\n    - apt-get update\n  postCreate:",
+        );
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        spec.validate().expect("doc with preBuild + installScripts validates");
+        assert_eq!(spec.install_scripts.len(), 1);
+        assert_eq!(spec.hooks.pre_build, vec!["apt-get update"]);
+
+        // empty entries rejected
+        let doc = GOOD_DOC.replace(
+            "packages: [nodejs, npm]",
+            "installScripts:\n  - \"\"\npackages: [nodejs, npm]",
+        );
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).unwrap();
+        assert!(spec.validate().unwrap_err().contains("installScripts"));
+    }
+
+    /// Tier C gate: pasted credential material (PEM blocks) in a template
+    /// file is rejected — secrets are vault refs by name only.
+    #[test]
+    fn literal_secret_material_is_rejected() {
+        // The PEM below is deliberately truncated FAKE key material; the Tier C
+        // gate test asserts template validation rejects it.
+        let pem = "-----BEGIN PRIVATE KEY-----\\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7\\n-----END PRIVATE KEY-----"; // gitleaks:allow (fake fixture)
+
+        let doc = GOOD_DOC.replace(
+            "env:\n      PORT: \"8080\"",
+            &format!("env:\n      PORT: \"8080\"\n      API_KEY: \"{pem}\""),
+        );
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        let err = spec.validate().unwrap_err();
+        assert!(err.contains("literal secret"), "unexpected error: {err}");
+
+        let doc = GOOD_DOC.replace(
+            "- npm ci --prefix /opt/app",
+            &format!("- printf '%s' '{pem}' > /etc/app.key"),
+        );
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        assert!(spec.validate().unwrap_err().contains("literal secret"));
+
+        let doc = GOOD_DOC.replace(
+            "packages: [nodejs, npm]",
+            &format!("installScripts:\n  - echo {pem}\npackages: [nodejs, npm]"),
+        );
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        assert!(spec.validate().unwrap_err().contains("literal secret"));
+    }
+
+    #[tokio::test]
+    async fn create_from_catalog_ref_instantiates_caller_owned_copy() {
+        let entry = crate::template_catalog::get_catalog_entry("system/base-desktop")
+            .expect("catalog entry exists");
+        let db = test_db();
+        let user = test_user("owner-1", Some("org-1"));
+        let yaml = entry.spec.to_yaml().unwrap();
+        let outcome = {
+            let conn = db.connect().unwrap();
+            upsert_template_from_spec(&conn, Some("org-1"), &user.user_id, &entry.spec, &yaml)
+                .unwrap()
+        };
+        assert!(outcome.changed);
+        let resolved = resolve_template(&db, &user, &outcome.id).await.unwrap();
+        assert_eq!(resolved.name, "base-desktop");
+        assert_eq!(resolved.ref_, None, "caller copy is not the curated ref");
+        assert!(!resolved.public);
+        assert_eq!(resolved.user_id, "owner-1");
+    }
+
+    /// Regression (live-smoke defect, rq-20260909-004): provisioning from a
+    /// ready golden never happened — `find_golden_holder` passed `None` into
+    /// `select_provision_source`, which always answered Image, so every
+    /// computer fell back to a stock-image spawn despite a ready golden.
+    #[tokio::test]
+    async fn find_golden_holder_resolves_when_build_ready() {
+        let db = test_db();
+        let tid = "dtpl-golden-regression";
+        {
+            let conn = db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO desktop_templates \
+                 (id, org_id, user_id, name, description, os, image, cpu_millis, memory_mib, disk_mib, \
+                  network_enabled, env_json, packages_json, tags_json, public, build_status, golden_snapshot_id) \
+                 VALUES (?1, NULL, 'owner-1', 'golden-regression', '', 'linux', '', 2000, 4096, 20480, 1, '{}', '[]', '[]', 0, 'ready', 'golden')",
+                rusqlite::params![tid],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, name, \
+                 native_id, os, template_id, role) \
+                 VALUES ('comp-golden-1', 'cloud_desktop', 'incus', 'stopped', 'user', 'owner-1', \
+                 'tpl-golden-x', 'native-holder-1', 'linux', ?1, 'golden')",
+                rusqlite::params![tid],
+            )
+            .unwrap();
+        }
+        let found = {
+            let conn = db.connect().unwrap();
+            find_golden_holder(&conn, tid, Some("golden"), Some("ready"))
+        };
+        let src = found.expect("ready build with holder row must resolve to the golden");
+        assert_eq!(src.snapshot_id, "golden");
+        assert_eq!(src.holder_native_id, "native-holder-1");
+        assert_eq!(src.holder_provider, "incus");
+
+        // Not ready → no golden source (honest fallback).
+        let not_ready = {
+            let conn = db.connect().unwrap();
+            find_golden_holder(&conn, tid, Some("golden"), Some("building"))
+        };
+        assert!(not_ready.is_none());
+        let never_built = {
+            let conn = db.connect().unwrap();
+            find_golden_holder(&conn, tid, None, None)
+        };
+        assert!(never_built.is_none());
     }
 }
 

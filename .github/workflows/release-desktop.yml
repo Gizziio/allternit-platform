@@ -275,11 +275,12 @@ jobs:
           sed -i '' "s|'aarch64-macos':  *''|'aarch64-macos':  '${ARM64_SHA}'|g" "$MANIFEST"
 
       # ── Step 5: Build and package Electron app ────────────────────────────────
-      - name: Install open-connector sidecar dependencies
+      - name: Build open-connector sidecar bundle
         # services/open-connector is a plain npm project excluded from the
-        # pnpm workspace, so the workspace-wide pnpm install never creates
-        # its node_modules. Without this the packaged connector-sidecar
-        # crash-loops with "Cannot find package '@hono/node-server'".
+        # pnpm workspace. This step builds its single-file bundle
+        # (resources/connector-sidecar/dist/server.mjs), which is what ships
+        # inside the app — without it the packaged app has no connector
+        # sidecar at all.
         run: node scripts/prepare-connector-sidecar.cjs
         working-directory: surfaces/allternit-desktop
 
@@ -474,11 +475,12 @@ jobs:
           Copy-Item $bin.FullName surfaces\allternit-desktop\resources\bin\whisper-cli.exe
           Get-Item surfaces\allternit-desktop\resources\bin\whisper-cli.exe | Select-Object Name,Length
 
-      - name: Install open-connector sidecar dependencies
+      - name: Build open-connector sidecar bundle
         # services/open-connector is a plain npm project excluded from the
-        # pnpm workspace, so the workspace-wide pnpm install never creates
-        # its node_modules. Without this the packaged connector-sidecar
-        # crash-loops with "Cannot find package '@hono/node-server'".
+        # pnpm workspace. This step builds its single-file bundle
+        # (resources/connector-sidecar/dist/server.mjs), which is what ships
+        # inside the app — without it the packaged app has no connector
+        # sidecar at all.
         run: node scripts/prepare-connector-sidecar.cjs
         working-directory: surfaces/allternit-desktop
 
@@ -628,11 +630,12 @@ jobs:
         run: node scripts/prepare-mesh-node.cjs
         working-directory: surfaces/allternit-desktop
 
-      - name: Install open-connector sidecar dependencies
+      - name: Build open-connector sidecar bundle
         # services/open-connector is a plain npm project excluded from the
-        # pnpm workspace, so the workspace-wide pnpm install never creates
-        # its node_modules. Without this the packaged connector-sidecar
-        # crash-loops with "Cannot find package '@hono/node-server'".
+        # pnpm workspace. This step builds its single-file bundle
+        # (resources/connector-sidecar/dist/server.mjs), which is what ships
+        # inside the app — without it the packaged app has no connector
+        # sidecar at all.
         run: node scripts/prepare-connector-sidecar.cjs
         working-directory: surfaces/allternit-desktop
 

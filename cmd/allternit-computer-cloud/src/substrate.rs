@@ -684,7 +684,13 @@ impl IncusSubstrate {
         name: &str,
         config: serde_json::Value,
     ) -> Result<(), SubstrateError> {
-        let body = serde_json::json!({"name": name, "source": {"type": "snapshot", "name": format!("{source}/{snapshot}")}, "config": config});
+        // Incus 6.0's copy handler reads the source instance from the
+        // `source` field, which may carry an "instance/snapshot" path
+        // (instances_post.go: IsSnapshot(req.Source.Source)). `name` inside
+        // `source` is NOT the source selector — sending it there is rejected
+        // with "Must specify a source instance" (live-smoke defect,
+        // rq-20260909-004).
+        let body = serde_json::json!({"name": name, "source": {"type": "copy", "source": format!("{source}/{snapshot}")}, "config": config});
         let (status, json) = self
             .client
             .request(reqwest::Method::POST, "/1.0/instances", Some(body))
