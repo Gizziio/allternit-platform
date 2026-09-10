@@ -246,6 +246,38 @@ const DISPATCH: Record<McpToolName, (ctx: DispatchContext) => Promise<CallToolRe
   },
 };
 
+/**
+ * Execute one tool call against the given client. Shared by the MCP request
+ * handler and unit tests (which mock `fetch` and assert the recorded HTTP
+ * calls — this is the tool-schema ↔ route-parameter mapping contract).
+ */
+export async function executeToolCall(
+  client: ComputersApiClient,
+  name: string,
+  args: ToolArgs,
+): Promise<CallToolResult> {
+  const handler = DISPATCH[name as McpToolName];
+  if (!handler) {
+    return {
+      isError: true,
+      content: [{ type: 'text', text: `Unknown tool: ${name}` }],
+    };
+  }
+  try {
+    return await handler({ client, args });
+  } catch (error) {
+    // Surface API denials (confirmation_required / approval_denied) and HTTP
+    // errors verbatim so the caller sees the server's own message.
+    const text =
+      error instanceof ApiError
+        ? error.body
+        : error instanceof Error
+          ? error.message
+          : String(error);
+    return { isError: true, content: [{ type: 'text', text }] };
+  }
+}
+
 export function createComputersMcpServer(client: ComputersApiClient = new ComputersApiClient(configFromEnv())): Server {
   const server = new Server(
     { name: 'allternit-computers', version: '0.1.0' },
@@ -260,29 +292,13 @@ export function createComputersMcpServer(client: ComputersApiClient = new Comput
     })),
   }));
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const name = request.params.name as McpToolName;
-    const handler = DISPATCH[name];
-    if (!handler) {
-      return {
-        isError: true,
-        content: [{ type: 'text', text: `Unknown tool: ${name}` }],
-      };
-    }
-    try {
-      return await handler({ client, args: (request.params.arguments as ToolArgs) ?? {} });
-    } catch (error) {
-      // Surface API denials (confirmation_required / approval_denied) and HTTP
-      // errors verbatim so the caller sees the server's own message.
-      const text =
-        error instanceof ApiError
-          ? error.body
-          : error instanceof Error
-            ? error.message
-            : String(error);
-      return { isError: true, content: [{ type: 'text', text }] };
-    }
-  });
+  server.setRequestHandler(CallToolRequestSchema, async (request) =>
+    executeToolCall(
+      client,
+      request.params.name,
+      (request.params.arguments as ToolArgs) ?? {},
+    ),
+  );
 
   return server;
 }

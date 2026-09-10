@@ -91,7 +91,7 @@ export class ComputersApiClient {
     const response = await fetch(`${this.config.baseUrl}${url}`, {
       method: 'POST',
       headers: this.headers({ 'content-type': 'application/octet-stream' }),
-      body: new Blob([bytes as unknown as BlobPart]),
+      body: bytes as unknown as NonNullable<RequestInit['body']>,
     });
     const text = await response.text();
     if (!response.ok) {

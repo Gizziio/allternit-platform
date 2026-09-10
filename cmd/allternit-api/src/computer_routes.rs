@@ -829,7 +829,7 @@ async fn create_standalone_desktop(
             "local computers require Tart; configured driver selected another substrate",
         );
     }
-    let response = json!({"id": id, "sandbox_id": spawned.sandbox_id, "status": "running", "provider": spawned.provider, "host": spawned.host,
+    let response = json!({"id": spawned.computer_id, "sandbox_id": spawned.sandbox_id, "status": "running", "provider": spawned.provider, "host": spawned.host,
         "owner_type": owner.0, "owner_id": owner.1, "cpu_cores": spec.cpu_millis / 1000, "memory_mb": spec.memory_mib,
         "disk_mb": spec.disk_mib, "resolution": req.resolution, "persistence": persistence});
     (StatusCode::CREATED, Json(response)).into_response()

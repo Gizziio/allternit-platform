@@ -89,5 +89,6 @@ handoff endpoints (`/api/aci/handoff/:id/*`).
 
 ```bash
 pnpm --filter @allternit/computers-server build
+pnpm --filter @allternit/computers-server test   # vitest: client + tool↔route mapping, mocked fetch
 pnpm --filter @allternit/computers-server smoke
 ```
