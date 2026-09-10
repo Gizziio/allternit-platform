@@ -1241,6 +1241,25 @@ fn find_golden_holder(
     }
 }
 
+/// Default desktop OS when the caller does not specify one. Match the
+/// substrate that is actually configured: on a Tart-only host the old
+/// implicit "linux" default routed to a missing Incus substrate and failed
+/// with a dead "Feature not supported" error.
+fn pick_default_os(incus_configured: bool, tart_configured: bool) -> &'static str {
+    if !incus_configured && tart_configured {
+        "macos"
+    } else {
+        "linux"
+    }
+}
+
+fn default_provision_os() -> String {
+    let set = |name: &str| std::env::var(name).map(|v| !v.is_empty()).unwrap_or(false);
+    let incus_configured = set("INCUS_URL") || set("INCUS_URLS");
+    let tart_configured = set("TART_HOST_URL") || set("TART_HOST_URLS");
+    pick_default_os(incus_configured, tart_configured).to_string()
+}
+
 /// Resolve the final provisioning spec from a raw request and optional template.
 pub async fn resolve_provision_spec(
     state: &Arc<AppState>,
@@ -1249,7 +1268,11 @@ pub async fn resolve_provision_spec(
 ) -> Result<ProvisionSpec, (StatusCode, Json<serde_json::Value>)> {
     validate_provision_request(req)
         .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({"error": e}))))?;
-    let mut os = req.os.as_deref().unwrap_or("linux").to_lowercase();
+    let mut os = req
+        .os
+        .as_deref()
+        .map(str::to_lowercase)
+        .unwrap_or_else(default_provision_os);
     let mut image = std::env::var("BOT_DESKTOP_IMAGE")
         .ok()
         .filter(|s| !s.is_empty())
@@ -2108,5 +2131,16 @@ mod computer_spec_tests {
             );
         }
         assert!(validate_provision_request(&ProvisionRequest::default()).is_ok());
+    }
+
+    #[test]
+    fn default_os_matches_configured_substrate() {
+        // Tart-only hosts must not default to linux (dead Incus route).
+        assert_eq!(pick_default_os(false, true), "macos");
+        // Incus present (alone or alongside Tart) keeps the linux default.
+        assert_eq!(pick_default_os(true, false), "linux");
+        assert_eq!(pick_default_os(true, true), "linux");
+        // Neither configured: keep the historical default.
+        assert_eq!(pick_default_os(false, false), "linux");
     }
 }
