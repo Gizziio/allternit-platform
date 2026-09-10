@@ -42,13 +42,12 @@ main rebuilds `dist/` from latest main and wrangler-uploads it to project
 
 ## Incidents / honest deferrals
 
-- **Post-deploy Clerk smoke job is red and pre-existing:** it fails with
-  `CLERK_TEST_PASSWORD is required` — `CLERK_TEST_EMAIL` / `CLERK_TEST_PASSWORD` /
-  secondary-account secrets are empty in repo settings. Every run today died at
-  verify-ai before reaching it, so there is no recent green baseline. It does NOT
-  block the deploy (deploy job completed first). Needs a human to either populate
-  the Clerk test-account secrets in GitHub repo settings or mark the job
-  `continue-on-error`. Left as-is — secrets are a human decision per review gates.
+- **Post-deploy Clerk smoke — RESOLVED same day:** it failed with
+  `CLERK_TEST_PASSWORD is required` because `CLERK_TEST_EMAIL` /
+  `CLERK_TEST_PASSWORD` were empty in repo settings (no recent green baseline —
+  every run that day died at verify-ai first; deploy was never blocked). Owner
+  populated the secrets; `gh run rerun 34521788900 --failed` → smoke job and
+  full run conclusion **success**. No code or workflow changes needed.
 - The shared main checkout had pre-existing uncommitted edits to
   `platform-auth-client.tsx` / `vite.config.ts` (another session's in-flight work);
   left untouched per worktree-ownership rules. `git pull --ff-only` merged cleanly
