@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 15:10 — kimi — P7 ao harness install lands (rq-20260908-028)
+
+- **Session ID / Branch:** `ao/harness-install` (worktree `allternit-ao-harness-install`, orchestrated executor)
+- **Agent:** kimi (executor in tmux `ao-harness-install` + orchestrator review/land)
+- **Summary:** Merged PR #260 (40e18cc5e) — `ao harness install <tool>`: version-pinned installs as manifest data (16 tools, license tags with evidence URLs), license hard gate with `--accept-terms` + per-pin re-flagging, managed dir `~/.ao/harness/` (PATH only in ao-spawned subprocesses), `ao doctor` harness section (exit 3 new). Brain `Ops/harness.json` byte-identical copy.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/260 · 40e18cc5ea8330318c721b57355211734090d247
+- **How it works:** `InstallBackend` trait (npm/venv-pip) behind all network; FakeBackend in unit tests. Orchestrator re-verified on committed state: harness 50/50, ao:: 93/93, ao_parity 62/0, live claude gate refusal pre-fetch. Executor hard gate v3 PASS (clean-HOME kimi+codex → doctor green → sync → native listing; evidence `~/.agent-orchestrator/evidence/ao-harness-install/`). Steering commit-gate consult backend hangs on this machine; unglued per gate fail-open design (`.steering/off` kill switch used for final commit, removed after). Honest deferrals: venv-pip fixture-tested only, 8 tools unsupported. Summary: `agent-ledger/summaries/2026-09-10-1510-p7-harness-install-kimi.md`.
+
 ### 2026-09-10 12:45 — kimi — P3 fabric last-hop fix: relay forwards to serve shim port (rq-20260908-028)
 
 - **Session ID / Branch:** `ao/fabric-gateway-port` (worktree `allternit-ao-fabric-gateway-port`)
