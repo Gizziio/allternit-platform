@@ -92,7 +92,7 @@ pub fn public_router() -> Router<Arc<AppState>> {
     }
     Router::new()
         .route("/embed/computers/:id", get(embed_viewer_page))
-        .route("/embed/assets/{*path}", get(serve_novnc_asset))
+        .route("/embed/assets/*path", get(serve_novnc_asset))
 }
 
 // ── A. Viewer status ─────────────────────────────────────────────────────────
