@@ -32,6 +32,16 @@
  *   6. notarize.cjs hard-failed with no Apple secrets in the repo
  *      → secrets/notarize: notarize.cjs must contain the loud-skip path
  *        for missing APPLE_* env vars.
+ *   7. Packaged connector sidecar crash-looped ("Cannot find package
+ *      '@hono/node-server'") because services/open-connector is excluded
+ *      from the pnpm workspace and nothing installed its node_modules
+ *      → connector check: every electron-builder job must run
+ *        prepare-connector-sidecar.cjs; the desktop build chains must keep
+ *        prepare:connector-sidecar; verify-packaged-resources.cjs must keep
+ *        its hard @hono/node-server gate.
+ *      Same check guards the voice sidecar against shipping the pre-cleanup
+ *      PyInstaller binary again (verify gate scanning for _MEIPASS/pyi_rth
+ *      markers must stay in place).
  *
  * Zero dependencies; runs in seconds against the checked-out repo.
  * Exits non-zero with an actionable message per failure.
@@ -386,6 +396,76 @@ function checkWindowsPnpmShim() {
   }
 }
 
+/* ── Check 6: sidecar staleness guards (connector deps + voice binary) ── */
+
+function checkSidecarGuards(jobs) {
+  // Connector: services/open-connector is a standalone npm project,
+  // deliberately excluded from the pnpm workspace, so no workspace install
+  // ever creates its node_modules. Every job that invokes electron-builder
+  // must run prepare-connector-sidecar.cjs (npm ci into
+  // services/open-connector) before packaging — otherwise the extraFiles
+  // copy silently produces an empty connector-sidecar/node_modules and the
+  // sidecar crash-loops at runtime with "Cannot find package
+  // '@hono/node-server'" (observed on the desktop-v1.1.1 build).
+  const preparePath = 'surfaces/allternit-desktop/scripts/prepare-connector-sidecar.cjs';
+  if (!fs.existsSync(path.join(repoRoot, preparePath))) {
+    fail(`connector: ${preparePath} is missing — the workflow references it but the script does not exist.`);
+  }
+
+  const platformJobs = Object.entries(jobs).filter(
+    ([, text]) => /electron-builder/.test(text) && /runs-on:/.test(text)
+  );
+  for (const [jobName, text] of platformJobs) {
+    if (/prepare-connector-sidecar/.test(text)) {
+      pass(`connector: job \`${jobName}\` installs open-connector sidecar deps before packaging`);
+    } else {
+      fail(
+        `connector: job \`${jobName}\` packages with electron-builder but never installs the ` +
+          `open-connector sidecar's npm dependencies (services/open-connector is excluded from the ` +
+          `pnpm workspace, so the workspace install does not cover it). The packaged connector-sidecar ` +
+          `would crash-loop with "Cannot find package '@hono/node-server'". Add a step running ` +
+          `\`node scripts/prepare-connector-sidecar.cjs\` (working-directory: surfaces/allternit-desktop).`
+      );
+    }
+  }
+
+  // The desktop build chains must keep the prepare step — it is what makes
+  // local pack/dist/build:electron builds correct too.
+  const pkg = JSON.parse(read('surfaces/allternit-desktop/package.json'));
+  for (const chain of ['build:electron', 'build:electron:dmg', 'pack', 'dist']) {
+    const script = (pkg.scripts && pkg.scripts[chain]) || '';
+    if (script.includes('prepare:connector-sidecar')) {
+      pass(`connector: package.json \`${chain}\` runs prepare:connector-sidecar`);
+    } else {
+      fail(
+        `connector: package.json script \`${chain}\` dropped prepare:connector-sidecar — ` +
+          'packaged builds silently lose connector-sidecar/node_modules again.'
+      );
+    }
+  }
+
+  // verify-packaged-resources.cjs is the last line of defence at packaging
+  // time: it must keep BOTH hard gates (connector deps resolvable; staged
+  // voice binary is not the pre-cleanup PyInstaller bootloader).
+  const verifySource = read('surfaces/allternit-desktop/scripts/verify-packaged-resources.cjs');
+  if (/@hono[\\/]node-server/.test(verifySource)) {
+    pass('connector: verify-packaged-resources.cjs hard-fails when connector deps are missing');
+  } else {
+    fail(
+      'connector: verify-packaged-resources.cjs lost the @hono/node-server gate — ' +
+        'a build missing connector deps would ship and crash-loop at runtime.'
+    );
+  }
+  if (/_MEIPASS/.test(verifySource) && /pyi_rth/.test(verifySource)) {
+    pass('voice: verify-packaged-resources.cjs hard-fails on the stale PyInstaller voice binary');
+  } else {
+    fail(
+      'voice: verify-packaged-resources.cjs lost the PyInstaller-bootloader gate — a stale ' +
+        'pre-cleanup Python voice binary could be packaged again (crashes at boot on older macOS).'
+    );
+  }
+}
+
 /* ── Main ── */
 
 function main() {
@@ -401,6 +481,7 @@ function main() {
   checkPackagingDryRun(jobs);
   checkNotarize(jobs);
   checkWindowsPnpmShim();
+  checkSidecarGuards(jobs);
 
   console.log('release-preflight: release-desktop.yml checks\n');
   for (const p of passes) console.log(`  ✓ ${p}`);

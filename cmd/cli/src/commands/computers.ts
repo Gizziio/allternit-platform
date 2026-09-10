@@ -352,30 +352,81 @@ export function createComputersCommand(): Command {
     });
 
   const drive = new Command('drive')
-    .description('Drive a computer: one-shot shell, file upload, file download')
+    .description('Drive a computer: one-shot screenshot/click/type, shell, file upload/download')
+    .addCommand(createScreenshotCommand(
+      'screenshot',
+      'Capture the guest screen with optional click/type one-shots (alias of `computers screenshot`)',
+    ))
     .addCommand(driveShell)
     .addCommand(driveUpload)
     .addCommand(driveDownload);
 
-  const screenshot = new Command('screenshot')
-    .description('Capture the guest screen (PNG bytes) to a file or stdout')
+type ScreenshotOptions = {
+  click?: string;
+  doubleClick?: string;
+  rightClick?: string;
+  type?: string;
+  key?: string;
+  approvalId?: string;
+};
+
+async function screenshotAction(
+  command: Command,
+  id: string,
+  localPath: string | undefined,
+  options: ScreenshotOptions,
+): Promise<void> {
+  try {
+    const response = await raw(command, 'GET', `/api/v1/computers/${encodeURIComponent(id)}/screenshot`);
+    const png = Buffer.from(await response.arrayBuffer());
+    if (localPath) {
+      await writeFile(localPath, png);
+      process.stdout.write(`${png.byteLength} bytes -> ${localPath}\n`);
+    } else {
+      process.stdout.write(png);
+    }
+    const oneShots: Array<{ action: string; x?: number; y?: number; text?: string; key?: string }> = [];
+    const parseXY = (value: string): { x: number; y: number } => {
+      const [x, y] = value.split(',').map((part) => Number(part.trim()));
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        throw new Error(`invalid coordinate "${value}" (expected x,y)`);
+      }
+      return { x, y };
+    };
+    if (options.click) oneShots.push({ action: 'click', ...parseXY(options.click) });
+    if (options.doubleClick) oneShots.push({ action: 'doubleclick', ...parseXY(options.doubleClick) });
+    if (options.rightClick) oneShots.push({ action: 'rightclick', ...parseXY(options.rightClick) });
+    if (options.type) oneShots.push({ action: 'type', text: options.type });
+    if (options.key) oneShots.push({ action: 'key', key: options.key });
+    for (const oneShot of oneShots) {
+      const isKeyboard = oneShot.action === 'type' || oneShot.action === 'key';
+      await client(command).request(
+        'POST',
+        `/api/v1/computers/${encodeURIComponent(id)}/${isKeyboard ? 'keyboard' : 'mouse'}${approvalQuery(options.approvalId)}`,
+        oneShot,
+      );
+    }
+  } catch (error) {
+    process.stderr.write(`allternit: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
+}
+
+function createScreenshotCommand(name: string, description: string): Command {
+  return new Command(name)
+    .description(description)
     .argument('<id>', 'computer id')
     .argument('[local-path]', 'destination file (omit to write PNG bytes to stdout)')
-    .action(async function (this: Command, id: string, localPath?: string) {
-      try {
-        const response = await raw(this, 'GET', `/api/v1/computers/${encodeURIComponent(id)}/screenshot`);
-        const png = Buffer.from(await response.arrayBuffer());
-        if (localPath) {
-          await writeFile(localPath, png);
-          process.stdout.write(`${png.byteLength} bytes -> ${localPath}\n`);
-        } else {
-          process.stdout.write(png);
-        }
-      } catch (error) {
-        process.stderr.write(`allternit: ${error instanceof Error ? error.message : String(error)}\n`);
-        process.exitCode = 1;
-      }
+    .option('--click <x,y>', 'after capture, left-click at x,y (one-shot drive)')
+    .option('--double-click <x,y>', 'after capture, double-click at x,y')
+    .option('--right-click <x,y>', 'after capture, right-click at x,y')
+    .option('--type <text>', 'after capture, type text into the focused widget')
+    .option('--key <key>', 'after capture, press one keysym (e.g. Return, Control_L)')
+    .option('--approval-id <id>', 'action-hash approval grant for the gated one-shot input')
+    .action(function (this: Command, id: string, localPath: string | undefined, options: ScreenshotOptions) {
+      return screenshotAction(this, id, localPath, options);
     });
+}
 
   return new Command('computers')
     .description('Manage Allternit computers (cloud desktops, local VMs, and deferred kinds)')
@@ -390,7 +441,10 @@ export function createComputersCommand(): Command {
     .addCommand(clone)
     .addCommand(sshCommand)
     .addCommand(drive)
-    .addCommand(screenshot);
+    .addCommand(createScreenshotCommand(
+      'screenshot',
+      'Capture the guest screen (PNG bytes) to a file or stdout, with optional click/type one-shots',
+    ));
 }
 
 export const computersCommand = createComputersCommand();

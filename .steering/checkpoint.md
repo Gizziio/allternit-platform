@@ -1,34 +1,42 @@
-# Steering Checkpoint — session/3a37a822-p4 (desktop boot time)
+# Steering Checkpoint — rq-20260909-004 deferral closure (VNC data plane)
 
 ## Goal
-Owner: "we need to fix all of this" — the ~60s desktop boot. Measured breakdown
-from real log timestamps (01:42:21 → API ready 01:43:14):
-- gizzi-code: ~2s (fine)
-- ACU gateway: 20s DEAD WAIT — python launch.py crashes in 35ms (no uvicorn),
-  but the exit handler nulls `this.child` before `waitForHealth` checks
-  `child.exitCode`, so the early-exit check never fires and it polls the full
-  HEALTH_TIMEOUT_MS. Fix: `childDied` flag set in the exit handler before
-  nulling; waitForHealth checks the flag. + test (gives up <2s).
-- BackendManager reuse probe: 30s DEAD WAIT — `ensureBackend` probes :8013 for
-  an existing API with waitForUrl, which swallows ECONNREFUSED and polls the
-  full 30s on every cold boot. Fix: extracted `probeExistingBackend()` with a
-  1-shot fast probe; ECONNREFUSED → 'none' immediately; ambiguous errors keep
-  the patient probe; healthy-but-no-platform → 'misbehaving' (terminate path
-  preserved). + tests (4 cases).
-- Clerk 20s wait: INVESTIGATED, DROPPED — it is `recoverAccountEmail()`, fired
-  void/parallel only when the paired identity has a synthetic email; not on
-  the boot critical path. Left alone (auth behavior, not boot time).
-
-Expected boot after fixes: ~2-5s to API listening (was ~52s).
+Close the two registered substrate deferrals from the cloud-computer live
+smokes using the VPS (45.84.138.187, Incus): (1) golden snapshot build +
+fast-boot clone — DONE earlier (#240 wait-loop, #241 stateless snapshot,
+template ready, clone 201). (2) VNC data plane through the authenticated ws
+proxy — IN PROGRESS.
 
 ## Just did
-- Fixes + tests written in surfaces/allternit-desktop/src/main/
-  (backend-manager.ts/.test.ts new, acu-gateway-manager.ts/.test.ts extended;
-  AcuGatewayManager class exported for testability).
-- pnpm install running in the fresh p4 worktree (needed before vitest/tsc).
+- Diagnosed the VNC stall: guest x11vnc runs `-passwd allternit` (driver-shared
+  password, `BOT_DESKTOP_VNC_PASSWORD`), so the server offers ONLY RFB security
+  type 2 (VNC password auth). The ws proxy was a blind pipe and never used
+  `endpoint.token` → anonymous embed viewers could never complete a handshake.
+- Restarted guest x11vnc cleanly on the clone sandbox
+  (allternit-user-local-dev-user-0c7d417c…, host port 30006 → guest 5900,
+  reachable from the Mac; ufw inactive).
+- Implemented `cmd/allternit-api/src/vnc_auth.rs`: `VncAuthInterceptor` —
+  RFB 3.3/3.8 handshake state machine that rewrites the server's security
+  offer to None-auth for the viewer, chooses type 2 upstream, answers the
+  16-byte DES challenge server-side (bit-reversed-password DES-ECB, `des` +
+  `cipher` crates), then goes transparent. Wired into `handle_vnc_socket`
+  (both forwarders; tcp_write half shared via tokio Mutex so injected bytes
+  flush immediately — queueing them on the next client message deadlocks the
+  handshake).
+- Unit tests: OpenSSL cross-checked DES vector, 3.8 injection, 3.3 injection,
+  passthrough-when-None, key derivation. 6/6 pass; computer_ws 18/18,
+  vnc_readonly 9/9 unaffected.
 
 ## Next
-Typecheck + run the two test files → full desktop vitest suite → release-preflight
-26/0 (release-path change, release lock applies) → commit/push/PR/merge →
-attestation → rebuild desktop main (asar only, no Rust) → reinstall → measure
-real boot time.
+1. Release build → restart smoke API → live RFB handshake through
+   `/ws/computers/:id/vnc` with an embed token: expect None-auth offered,
+   SecurityResult 0, ServerInit, real FramebufferUpdate, read-only KeyEvent
+   swallowed.
+2. PR + merge, ledger attestation, brain draft (no confirm), cleanup
+   (worktree, branches, VPS containers I created, smoke API).
+
+## Open questions
+- Tart desktops set endpoint.token=None → transparent pipe (unchanged). If
+  Tart guests ever gain a VNC password, injection kicks in automatically.
+- Non-read-only KeyEvent guest-side effect is not verified (proxy-level
+  passthrough only) — same limitation as earlier smokes.

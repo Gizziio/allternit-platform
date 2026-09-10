@@ -7,6 +7,7 @@
  */
 
 import { Command } from 'commander';
+import { normalizeApiAlias } from './argv.js';
 import { runCommand } from './commands/run.js';
 import { replCommand } from './commands/repl.js';
 import { shellCommand } from './commands/shell.js';
@@ -29,9 +30,13 @@ program
   .name('allternit')
   .description('Allternit - AI-native runtime environment')
   .version(version)
-  .option('--api-url <url>', 'Allternit API base URL', process.env.ALLTERNIT_API_URL ?? 'http://127.0.0.1:8013')
+  .option('--api-url <url>', 'Allternit API base URL (alias: --api)', process.env.ALLTERNIT_API_URL ?? 'http://127.0.0.1:8013')
   .option('--token <token>', 'Clerk bearer token', process.env.ALLTERNIT_TOKEN)
   .option('--json', 'emit machine-readable JSON');
+
+// `--api` is accepted as a short alias for `--api-url` (commander derives the
+// option attribute from the last long flag, so a comma alias would rename it).
+process.argv = normalizeApiAlias(process.argv);
 
 // Register all commands
 program.addCommand(runCommand);

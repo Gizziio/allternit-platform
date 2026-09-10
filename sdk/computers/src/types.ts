@@ -121,6 +121,12 @@ export interface ResizeComputerResponse {
   disk_mb: number | null;
 }
 
+/** PATCH /api/v1/computers/:id body; today only the idle auto-stop timer is mutable. */
+export interface UpdateComputerInput {
+  /** Idle seconds before auto-stop, or null to clear the timer. */
+  idle_timeout_secs: number | null;
+}
+
 export type ComputerMouseInput =
   | { action: 'move' | 'click' | 'rightclick' | 'doubleclick' | 'mousedown' | 'mouseup'; x?: number; y?: number; button?: 'left' | 'middle' | 'right' }
   | { action: 'drag'; x: number; y: number; end_x: number; end_y: number }

@@ -54,6 +54,8 @@ through.
 | `resizeComputer(id, input, approvalId?)` | `PATCH /api/v1/computers/:id/resize` | ✅ |
 | `cloneComputer(id, name?, approvalId?)` | `POST /api/v1/computers/:id/clone` | ✅ |
 | `deleteComputer(id, approvalId?)` | `POST /api/v1/computers/:id/delete` | ✅ |
+| `updateComputer(id, input)` | `PATCH /api/v1/computers/:id` (`idle_timeout_secs`, or `null` to clear) | — |
+| `sessionEnd(id, approvalId?)` | `POST /api/v1/computers/:id/session-end` (apply persistence policy) | ✅ |
 
 ### Desktop control
 
@@ -80,6 +82,7 @@ through.
 | Method | Route | Approval |
 |---|---|---|
 | `listTemplates({ os?, tag? }?)` | `GET /api/v1/desktop-templates` | — |
+| `getTemplate(id)` | `GET /api/v1/desktop-templates/:id` | — |
 | `importTemplate(doc)` | `POST /api/v1/desktop-templates/import` (canonical `apiVersion: allternit.ai/v1` `ComputerTemplate` doc, JSON or YAML string) | — |
 | `buildTemplate(id, approvalId?)` | `POST /api/v1/desktop-templates/:id/build` (202; poll `build_status`) | ✅ |
 
@@ -113,6 +116,8 @@ detail per language is in each README's Methods section; the rows are 1:1.
 | Resize | `PATCH /api/v1/computers/:id/resize` | `resizeComputer(id, input, approvalId?)` | `resize_computer(computer_id, request, approval_id=...)` | ✅ |
 | Clone | `POST /api/v1/computers/:id/clone` | `cloneComputer(id, name?, approvalId?)` | `clone_computer(computer_id, name=..., approval_id=...)` | ✅ |
 | Delete | `POST /api/v1/computers/:id/delete` | `deleteComputer(id, approvalId?)` | `delete_computer(computer_id, approval_id=...)` | ✅ |
+| Update | `PATCH /api/v1/computers/:id` (`idle_timeout_secs`) | `updateComputer(id, input)` | `update_computer(computer_id, request)` | — |
+| Session end | `POST /api/v1/computers/:id/session-end` | `sessionEnd(id, approvalId?)` | `session_end(computer_id, approval_id=...)` | ✅ |
 | **Control** |
 | Screenshot | `GET /api/v1/computers/:id/screenshot` → PNG | `screenshot(id)` → `Blob` | `screenshot(computer_id)` → `bytes` | — |
 | Mouse | `POST /api/v1/computers/:id/mouse` | `sendMouse(id, input, approvalId?)` | `mouse(computer_id, request, approval_id=...)` | ✅ |
@@ -127,6 +132,7 @@ detail per language is in each README's Methods section; the rows are 1:1.
 | Delete | `DELETE /api/v1/computers/:id/snapshots/:sid` | `deleteSnapshot(id, snapshotId)` | `delete_snapshot(computer_id, snapshot_id)` | — |
 | **Templates (Phase 4)** |
 | List | `GET /api/v1/desktop-templates?os=&tag=` | `listTemplates({ os?, tag? }?)` | `list_templates(os=, tag=)` | — |
+| Get | `GET /api/v1/desktop-templates/:id` | `getTemplate(id)` | `get_template(template_id)` | — |
 | Import | `POST /api/v1/desktop-templates/import` (canonical `ComputerTemplate` doc; JSON is parsed as YAML) | `importTemplate(doc)` | `import_template(doc)` | — |
 | Build | `POST /api/v1/desktop-templates/:id/build` (202; poll `build_status`) | `buildTemplate(id, approvalId?)` | `build_template(template_id, approval_id=...)` | ✅ |
 | **Phase 5 additions** (routes landing concurrently; response shapes not frozen) |

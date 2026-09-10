@@ -275,6 +275,14 @@ jobs:
           sed -i '' "s|'aarch64-macos':  *''|'aarch64-macos':  '${ARM64_SHA}'|g" "$MANIFEST"
 
       # ── Step 5: Build and package Electron app ────────────────────────────────
+      - name: Install open-connector sidecar dependencies
+        # services/open-connector is a plain npm project excluded from the
+        # pnpm workspace, so the workspace-wide pnpm install never creates
+        # its node_modules. Without this the packaged connector-sidecar
+        # crash-loops with "Cannot find package '@hono/node-server'".
+        run: node scripts/prepare-connector-sidecar.cjs
+        working-directory: surfaces/allternit-desktop
+
       - name: Install desktop dependencies
         # Deps are already installed by the earlier workspace-wide pnpm
         # install. Use pnpm (not npm): npm reifies over pnpm's symlinked
@@ -466,6 +474,14 @@ jobs:
           Copy-Item $bin.FullName surfaces\allternit-desktop\resources\bin\whisper-cli.exe
           Get-Item surfaces\allternit-desktop\resources\bin\whisper-cli.exe | Select-Object Name,Length
 
+      - name: Install open-connector sidecar dependencies
+        # services/open-connector is a plain npm project excluded from the
+        # pnpm workspace, so the workspace-wide pnpm install never creates
+        # its node_modules. Without this the packaged connector-sidecar
+        # crash-loops with "Cannot find package '@hono/node-server'".
+        run: node scripts/prepare-connector-sidecar.cjs
+        working-directory: surfaces/allternit-desktop
+
       - name: Install desktop dependencies
         # Deps are already installed by the earlier workspace-wide pnpm
         # install. Use pnpm (not npm): npm reifies over pnpm's symlinked
@@ -610,6 +626,14 @@ jobs:
         # Stages resources/bin/mesh-node ahead of electron-builder's
         # extraResources packing (src/main/mesh-manager.ts resolves it).
         run: node scripts/prepare-mesh-node.cjs
+        working-directory: surfaces/allternit-desktop
+
+      - name: Install open-connector sidecar dependencies
+        # services/open-connector is a plain npm project excluded from the
+        # pnpm workspace, so the workspace-wide pnpm install never creates
+        # its node_modules. Without this the packaged connector-sidecar
+        # crash-loops with "Cannot find package '@hono/node-server'".
+        run: node scripts/prepare-connector-sidecar.cjs
         working-directory: surfaces/allternit-desktop
 
       - name: Install desktop dependencies
