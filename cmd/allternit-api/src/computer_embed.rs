@@ -384,7 +384,7 @@ fn resolve_asset_path(root: &std::path::Path, path: &str) -> Option<std::path::P
     Some(out)
 }
 
-/// GET /embed/assets/{*path} — serve vendored noVNC files from disk
+/// GET /embed/assets/*path — serve vendored noVNC files from disk
 /// (`cmd/allternit-api/assets/novnc`, resolved via `CARGO_MANIFEST_DIR`).
 /// See the module doc for the disk-layout limitation.
 async fn serve_novnc_asset(Path(path): Path<String>) -> Response {
