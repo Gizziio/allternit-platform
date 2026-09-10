@@ -1,0 +1,219 @@
+# UHP conformance suite
+
+**Passing this suite is what "UHP conformant" means.** Not implementing the endpoints, not a
+self-assessment, not passing most of it. The suite is in this repository, it runs against any server
+over HTTP, and anyone can run it against anyone's implementation.
+
+## Running it
+
+```bash
+pip install -e protocol/conformance
+
+uhp-conformance \
+  --base-url https://your-uhp-server \
+  --api-key "$UHP_API_KEY" \
+  --class full \
+  --json report.json
+```
+
+| Option | Meaning |
+|---|---|
+| `--base-url` | Server root. The suite appends `/v1/...` itself. |
+| `--api-key` | Bearer token, or set `UHP_API_KEY`. |
+| `--class` | `core`, `extended` or `full`. Cumulative — `full` runs everything. |
+| `--harness-id` | Run tasks against a specific harness instead of the first one listed. |
+| `--model` | Run tasks with a specific model. |
+| `--task-timeout` | Seconds to allow one agent task. Default 300. |
+| `--only` | Comma-separated check ids, for iterating on one failure. |
+| `--json` | Write a machine-readable report. |
+| `--plain` | No ANSI colour, for CI logs. |
+
+Exit code is `0` when nothing failed and `1` otherwise, so it drops into CI unchanged.
+
+**The suite runs real agent tasks.** It sends about six of them, which costs real model tokens and a
+few minutes. That is deliberate: the defects worth catching — a stream that never flushes, a
+cancellation that never terminates, an artifact that cannot be downloaded — are invisible to
+anything that only inspects a schema.
+
+## What it checks
+
+64 checks across three classes.
+
+| Class | Checks | Covers |
+|---|---|---|
+| **Core** | 40 | Discovery, version negotiation, authentication, the error envelope, harnesses, models, task execution (streaming and not), the event stream, sessions, cancellation, reserved request fields |
+| **Extended** | +8 | Session listing and inspection, file input, artifacts, download headers, path-traversal probes |
+| **Full** | +15 | Harness create / update / delete, refusal of an unsupported base, skill-folder round trip, MCP and disabled-tool persistence, session sharing |
+
+Every check names the section of the specification it enforces, so a failure points at the sentence
+it violates rather than at a test name.
+
+A few of them are worth calling out, because they catch things a schema check never will:
+
+- **S-04** — `sequence_number` is gapless and monotonic. Without it a client cannot tell a dropped
+  event from a server that simply skips numbers.
+- **S-09** — the stream is progressive. It measures the spread of event arrival times and fails a
+  server that buffers everything and flushes at the end. That is the single most common UHP
+  deployment error, it is usually a proxy setting, and it is indistinguishable from a slow agent
+  unless something measures it.
+- **C-03** — a running task really stops. It starts long work, cancels it, and waits for a terminal
+  state. A cancel endpoint that returns `200` and leaves the agent running passes every other kind
+  of test.
+- **X-07** — artifacts download with `X-Content-Type-Options: nosniff`. Artifacts are
+  attacker-influenceable content; served without it, an artifact is stored XSS against the client's
+  own origin.
+- **X-08** — artifact ids do not traverse out of their container. Probes for `../` and its
+  percent-encoded form.
+- **T-08/T-09/T-10** — the reserved fields `tools` and `include` are accepted, and reported as
+  ignored. Both halves matter: before these, the suite sent neither field, so a server that
+  rejected them outright and a server that silently acted on them scored the same as a correct
+  one. T-10 covers the third mistake, a server that reports fields the request never sent.
+- **R-01…R-08** — session sharing, which is mostly a set of refusals. Sessions §5 requires that a
+  shared view be read-only, revocable, and free of credentials, and a check that merely opens a
+  link and reads the conversation passes against a server that also lets that link continue the
+  task, cancel the run, or upload into the working directory. §5 makes sharing optional, so these
+  skip rather than fail on a server that does not implement it. Since §5 named the share object's
+  `url` and `DELETE` on the mint endpoint, `R-01`, `R-02` and `R-06` assert both rather than
+  discovering them — they used to skip with the missing sentence as the reason.
+  `tests/test_session_sharing_checks.py` runs the series against a deliberately wrong server, one
+  defect at a time, so each of them is known to fail on the mistake it describes.
+- **R-08** — a bodyless `POST` publishes. The series mints through a helper that retries a 400/422
+  with `{"enabled": true}`, because a server speaking only that dialect would otherwise skip all
+  seven of the checks above — so the retry is what makes the series portable, and it is also what
+  hides this sentence: a toggle-only server passes `R-01`…`R-07` on the strength of a request §5
+  does not require anyone to accept, while refusing the one it does. `R-08` is the one check that
+  does not retry. Its stub defect, `bodyless_rejected`, is what the reference implementation was
+  before this series existed.
+- **F-03/F-04** — a skill is a folder, and it survives an unrelated edit. A server that stores only
+  `SKILL.md`, or that empties a bundle when the harness is renamed, passes every other check: the
+  config still looks right, and the loss only shows up later as an agent behaving oddly.
+
+## Outcomes
+
+| Outcome | Meaning |
+|---|---|
+| **PASS** | The required behaviour was observed. |
+| **FAIL** | The behaviour was observed to be wrong. A conformance defect. |
+| **SKIP** | The check could not run, with the reason recorded. |
+| **ERROR** | The check itself broke — a bug in the suite. |
+
+**A skip is never a pass.** The report states skips separately and repeats that they were not
+verified, because a suite that hides unrun checks behind a green summary is how a suite starts
+lying about the thing it exists to establish.
+
+The JSON report holds itself to the same rule, because it is the artifact published as evidence
+for a conformance claim and its reader is frequently not the person who ran it:
+
+- `conformant` is `true` only when every check ran and none failed or errored. A single skip
+  makes it `false`.
+- `conformant_with_skips` is `true` when nothing failed or errored — the checks that ran are
+  clean, and the ones that didn't are enumerated in `skipped_not_verified` by id, so the report
+  says exactly what it did not establish.
+- `suite_version` and `generated_at` (UTC) tie the report to the suite revision and the moment
+  that produced it. A report without these fields predates suite `2026.8.11.post1`; the
+  checked-in reports from earlier runs are of that older shape.
+
+## Reference implementation results
+
+<!-- conformance-recorded-run:start — regenerated by .github/workflows/conformance-remeasure.yml; do not edit by hand -->
+HarnessRouter Community Edition, the reference implementation in this repository, run against a
+live instance on 2026-09-04 (suite 2026.8.11.post1):
+
+```
+  Summary
+    64/64 passed · 0 failed · 0 skipped · 0 errored
+    CONFORMANT — UHP 2026-08-11 (full)
+```
+<!-- conformance-recorded-run:end -->
+
+Both new series were measured against the reference implementation directly, live on a
+self-hosted instance, and both measured a real defect before passing:
+
+- `R-01`…`R-07` all pass. Against the reference as it stood, all seven skipped (its share
+  dialect wanted `{"enabled": true}` and published no view URL), and behind those skips sat a
+  real Sessions §6 violation: a session's share link kept serving the full conversation after
+  `DELETE /v1/traces/{id}`, verified live before the fix.
+- `T-08`–`T-10` pass, with `T-09` failing against the reference as it stood: `tools` fed the
+  idempotency hash and nothing reported it ignored — the silent drop §1.1 now forbids.
+
+A suite that had shipped happy-path checks would have called that server conformant both times.
+
+`R-08` was added afterwards, from a gap the PR that closed those two named in its own body rather
+than left to be found: *"a body is OPTIONAL; no body means publish" has no dedicated check yet.*
+It passes against the reference and against an independent Go implementation (63/63 `full`, zero
+skipped, on the latter). Neither server can currently fail it — which is the argument for the
+check, not against it: two implementations agreeing by coincidence is what a specification
+sentence is supposed to stop being true by, and nothing in either tree would have noticed one of
+them stopping.
+
+The suite is developed against that implementation, which is exactly why the specification says
+conformance is defined by the suite and not by the implementation: anything the reference does that
+the suite does not require is a HarnessRouter behaviour, not a UHP requirement, and another
+implementation is free to do it differently.
+
+Writing and running the suite found four real defects, three in the reference implementation and one
+in the suite itself:
+
+1. No capability discovery at all — a client had to guess or learn from a `404`.
+2. No protocol version on the wire.
+3. Failures returned a bare human string, so a client had to match on prose to decide whether to
+   retry.
+4. `POST /v1/harnesses` accepted a base the server could not run, deferring the failure to the first
+   task — after the client had committed to it. Caught by **F-02** on the first full run.
+
+Testing the tool and skill surface against live agents found three more, none of which any
+config-level check would have seen:
+
+5. **Hermes could not use HTTP MCP servers at all.** The image installed an unpinned `mcp` SDK,
+   which resolved to a version that removed the symbol Hermes gates HTTP transport on. Every remote
+   MCP server configured for that backend was silently dropped, and the agent replied "I can't
+   access that tool" — indistinguishable from a model refusal. The SDK is now pinned, verified on
+   start-up, and repaired in place on volumes that already have the broken version.
+6. **Hermes ignored `disabledTools` entirely.** Claude enforces them with a hard flag and Codex
+   receives them as an instruction; Hermes had neither branch, so an operator who disabled a tool
+   got no enforcement and no warning.
+7. **The MCP URL policy was advisory.** It ran only on the console's "Test connection" button, so
+   the console refused a URL that a turn then connected to anyway. It is now one function applied at
+   both config time and run time.
+8. **Claude's hard block was a no-op, and the product claimed it was hard.** Disabled tools were
+   passed as `--disallowedTools`, which belongs to the permission-prompt system — and autonomous
+   runs pass `--dangerously-skip-permissions`, which turns that system off. The flag was accepted
+   and ignored, so an operator who disabled `Bash` watched the agent run `Bash`. The restriction is
+   now written into the runtime's settings file as a deny rule, which the skip-permissions flag does
+   not override. Proven both ways against a live agent: with the tool enabled it ran the command;
+   with it disabled the agent reported having no such tool and did not run it.
+
+### What these checks do not establish
+
+The suite verifies that `disabledTools` **persists**, not that it is **enforced**. Enforcement is
+deliberately not checked, because §4.3 permits instruction-level enforcement, and an agent that
+obeys an instruction is indistinguishable over HTTP from a runtime that blocks the tool — so a
+behavioural check would pass a server whose block does nothing whenever the model happened to
+comply. Defect 8 was a no-op block that a behavioural check would have called conformant on most
+runs. Enforcement is verified against the runtime, by disabling a tool and asserting the agent never
+invokes it, and it belongs in an implementation's own test suite rather than here.
+
+## Adding a check
+
+A check is a function that asserts one requirement:
+
+```python
+@check("T-08", "Tasks reject an empty input", "core", f"{SPEC}/tasks.md#2-input")
+def t08(ctx):
+    r = ctx.client.post("/v1/responses", body={"input": ""})
+    assert r.status == 400, f"empty input returned HTTP {r.status}, expected 400"
+```
+
+Rules for a good check:
+
+- **Assert what the specification says, not what the reference implementation does.** Where the
+  specification allows latitude, the check must allow it too — otherwise the suite enforces one
+  implementation's preferences and every other implementation fails for being different rather than
+  for being wrong.
+- **Fail with the evidence.** The message should say what was expected, what happened, and why it
+  matters. `assert r.status == 200` tells a maintainer nothing.
+- **Skip loudly, never silently.** If a precondition is missing, `raise Skip("reason")`.
+- **Clean up.** A check that creates a harness deletes it, including when it fails.
+
+Per [GOVERNANCE.md](../GOVERNANCE.md), a specification change is not complete until a check enforces
+it — a rule nothing tests is a wish.
