@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A quiet week of hardening — Allternit Blog</title>
+<meta name="description" content="This was a light week for merged work — one pull request landed — but it sits on top of a release that went out the day before this log&#39;s window opened, so it&#39;s worth covering both.">
+<meta name="generator" content="Allternit publications pipeline">
+<link rel="canonical" href="https://ai.allternit.com/editions/builders-notebook-2026-w37.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400;1,6..72,700&amp;display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: #F5F3EF;
+    color: #1A1A1A;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 19px;
+    line-height: 1.62;
+    padding-bottom: 96px; /* clear the fixed action bar */
+  }
+  article.edition {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 48px 40px 64px;
+  }
+
+  /* Masthead — publication name in black serif, edition line, hairline */
+  .masthead-row {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+  }
+  .masthead-tick {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    transform: translateY(1px);
+  }
+  .nameplate {
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1A1A1A;
+  }
+  .edition-line {
+    margin-left: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6B6B6B;
+  }
+  .hairline {
+    position: relative;
+    border-top: 1px solid #1A1A1A;
+    margin: 14px 0 0;
+  }
+  .hairline .lead {
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 168px;
+    border-top: 3px solid var(--accent);
+  }
+
+  /* Cover banner */
+  figure.cover {
+    margin: 36px 0 0;
+    break-inside: avoid;
+  }
+  figure.cover svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(26, 26, 26, 0.22);
+  }
+
+  /* Title block */
+  .titleblock { margin: 44px 0 0; }
+  .kicker {
+    margin: 0 0 14px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1.display {
+    margin: 0;
+    font-size: clamp(42px, 6.4vw, 76px);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+  }
+  .deck {
+    margin: 22px 0 0;
+    max-width: 46em;
+    font-style: italic;
+    font-size: 23px;
+    line-height: 1.45;
+    color: #1A1A1A;
+  }
+  .byline, .dateline {
+    margin: 26px 0 0;
+    font-variant-caps: small-caps;
+    letter-spacing: 0.08em;
+    font-size: 17px;
+  }
+  .byline { color: #1A1A1A; }
+  .dateline { margin-top: 6px; color: #6B6B6B; }
+
+  /* Body — justified multi-column with hairline rules */
+  .columns {
+    margin-top: 40px;
+    column-width: 320px;
+    column-gap: 44px;
+    column-rule: 1px solid rgba(26, 26, 26, 0.18);
+    text-align: justify;
+    hyphens: auto;
+  }
+  .columns p { margin: 0 0 1em; break-inside: avoid; }
+  .columns h2, .columns h3, .columns h4 {
+    break-after: avoid;
+    line-height: 1.2;
+  }
+  .columns h2 {
+    margin: 1.1em 0 0.55em;
+    font-size: 27px;
+    font-weight: 700;
+  }
+  .columns h2::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 10px;
+    background: var(--accent);
+  }
+  .columns h2.department { margin-top: 1.3em; }
+  .columns h2.department::before { content: none; }
+  .columns h2 .chip {
+    display: inline-block;
+    padding: 6px 14px 7px;
+    border: 1px solid #1A1A1A;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1A1A1A;
+    background: transparent;
+  }
+  .columns h3 { margin: 1.1em 0 0.4em; font-size: 21px; font-weight: 700; }
+  .columns h4 { margin: 1em 0 0.4em; font-size: 18px; font-weight: 700; }
+  .columns ul, .columns ol { margin: 0 0 1em; padding-left: 1.25em; }
+  .columns li { margin-bottom: 0.45em; }
+  .columns a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .columns code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.86em;
+    background: rgba(26, 26, 26, 0.06);
+    padding: 0.08em 0.3em;
+  }
+
+  /* Blockquotes → oversized serif pull quotes with hairline rules */
+  .columns blockquote {
+    margin: 1.6em 0;
+    padding: 20px 4px;
+    border-top: 1px solid #1A1A1A;
+    border-bottom: 1px solid #1A1A1A;
+    break-inside: avoid;
+  }
+  .columns blockquote p {
+    margin: 0;
+    font-size: 27px;
+    line-height: 1.35;
+    text-align: left;
+  }
+  .columns blockquote p::before {
+    content: '\201C';
+    color: var(--accent);
+    margin-right: 2px;
+  }
+
+  hr.rule {
+    border: none;
+    border-top: 1px solid rgba(26, 26, 26, 0.35);
+    margin: 1.8em 0;
+  }
+
+  /* Footer / colophon */
+  footer.colophon { margin-top: 56px; }
+  footer.colophon .hairline { margin-bottom: 22px; }
+  footer.colophon p {
+    margin: 0 0 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6B6B6B;
+  }
+  footer.colophon a { color: var(--accent); }
+
+  /* Fixed action bar — the only JS on the page */
+  .action-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #1A1A1A;
+    color: #F5F3EF;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    box-shadow: 0 6px 24px rgba(26, 26, 26, 0.28);
+    z-index: 10;
+  }
+  .action-bar .bar-title {
+    padding-right: 6px;
+    border-right: 1px solid rgba(245, 243, 239, 0.35);
+    text-transform: uppercase;
+  }
+  .action-bar button {
+    appearance: none;
+    border: 1px solid #F5F3EF;
+    background: transparent;
+    color: #F5F3EF;
+    font: inherit;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .action-bar button:hover, .action-bar button:focus-visible {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1A1A1A;
+    outline: none;
+  }
+
+  @media (max-width: 640px) {
+    article.edition { padding: 32px 20px 56px; }
+    .nameplate { font-size: 22px; }
+    .masthead-row { flex-wrap: wrap; }
+    .edition-line { margin-left: 0; width: 100%; }
+  }
+
+  @media print {
+    @page { margin: 18mm 16mm; }
+    body { padding-bottom: 0; }
+    .action-bar { display: none !important; }
+    figure.cover, .columns blockquote { break-inside: avoid; }
+    /* Each ## department heading starts a fresh page — except the first
+       block of the body, which would leave the title page blank. */
+    .columns > h2 { break-before: page; }
+    .columns > h2:first-child { break-before: auto; }
+    a { color: #1A1A1A; }
+  }
+</style>
+</head>
+<body>
+<article class="edition" style="--accent: #059669;">
+  <header class="masthead">
+    <div class="masthead-row">
+      <span class="masthead-tick" aria-hidden="true"></span>
+      <span class="nameplate">Allternit Blog</span>
+      <span class="edition-line">Edition 2026-W37</span>
+    </div>
+    <div class="hairline" aria-hidden="true"><span class="lead"></span></div>
+  </header>
+
+  <figure class="cover">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<title>A quiet week of hardening</title>
+<rect width="1200" height="630" fill="#F5F3EF"/>
+<rect x="0" y="0" width="12" height="630" fill="#059669"/>
+<rect x="80" y="62" width="16" height="16" fill="#059669"/>
+<text x="108" y="77" font-family="'Courier New', Courier, monospace" font-size="21" letter-spacing="5" fill="#1A1A1A">ALLTERNIT BLOG</text>
+<text x="1120" y="77" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="17" letter-spacing="2" fill="#6B6B6B">EDITION 2026-W37</text>
+<line x1="80" y1="96" x2="1120" y2="96" stroke="#1A1A1A" stroke-width="1"/>
+<line x1="80" y1="96" x2="248" y2="96" stroke="#059669" stroke-width="3"/>
+<text x="80" y="326" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">A quiet week of hardening</text>
+<line x1="80" y1="580" x2="1120" y2="580" stroke="#1A1A1A" stroke-width="1"/>
+<text x="80" y="608" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">AI.ALLTERNIT.COM · DISCOVERY</text>
+<text x="1120" y="608" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">4 MIN READ</text>
+</svg>
+  </figure>
+
+  <header class="titleblock">
+    <p class="kicker">Builder&#39;s Notebook</p>
+    <h1 class="display">A quiet week of hardening</h1>
+    <p class="deck">Allternit Blog · Builder&#39;s Notebook · September 10, 2026</p>
+    <p class="byline">By Allternit Blog · research desk</p>
+    <p class="dateline">September 10, 2026 · 4 min read</p>
+    <div class="hairline" aria-hidden="true"></div>
+  </header>
+
+  <div class="columns">
+<h2>What shipped</h2>
+<p>This was a light week for merged work — one pull request landed — but it sits on top of a release that went out the day before this log&#39;s window opened, so it&#39;s worth covering both.</p>
+<p><strong>Desktop v1.1.1 is out</strong></p>
+<p>On September 9 we published <a href="https://github.com/Gizziio/allternit/releases/tag/desktop-v1.1.1">Allternit Desktop v1.1.1</a>. This is the fully bundled build: the platform UI (a Next.js static export), the Rust API backend (local on <code>:8013</code>), and the Gizzi AI runtime (Bun, local on <code>:4096</code>) all ship inside the installer. Once it&#39;s installed, nothing needs the network.</p>
+<ul><li>macOS builds for both arm64 and x64, plus a Windows installer</li><li>Auto-updates enabled, so existing installs will get prompted when the next build lands</li></ul>
+<p><strong>Service worker cache guard</strong></p>
+<p>The only merge this week was PR #247 (<code>fix/sw-cache-guard</code>). The name is terse, but the shape of the fix is clear: a guard around the service worker&#39;s cache behavior. Service workers sit between the app and the network and decide what gets served from local cache versus fetched fresh — without a guard in the right place, a stale cached response can be served when a fresh one was expected, or the cache can interfere with content that should never have been cached at all.</p>
+<p>Given that the desktop app serves a static UI that loads <code>https://ai.allternit.com</code>, cache correctness matters twice over: a stale service worker cache in the desktop shell could pin a user to an old version of the interface even after the API and runtime underneath it have moved forward.</p>
+<h2>Why it matters</h2>
+<p>Most of this week&#39;s value is in the release, and the release is about a single property: the app works without the internet. That&#39;s not a convenience feature for our user base — engineers running local models, people on unreliable connections, anyone who wants the AI runtime on their own machine without a dependency on a hosted service. Bundling all three components (UI, Rust API, Bun runtime) into one installer means the &quot;local&quot; in &quot;local AI&quot; is actually true end to end. The UI talks to a backend on <code>localhost:8013</code>, the runtime on <code>:4096</code>, and nothing leaves the machine unless you tell it to.</p>
+<p>The cache guard fits the same theme. Local-first software has a specific failure mode that hosted software doesn&#39;t: because everything is expected to work offline and from local resources, stale state is harder to notice and harder to clear. A user on a hosted app refreshes and gets the new build. A user with a desktop app and an aggressive service worker cache might keep running last month&#39;s UI against this week&#39;s runtime — and the symptoms of that mismatch (subtle, hard to reproduce, &quot;works on my machine&quot; in the worst way) are exactly the kind of bug report that eats an afternoon. Putting a guard around the cache path is cheap insurance against that class of problem.</p>
+<p>One honest note: with a single merge in seven days, there&#39;s not much more we can responsibly say about this week&#39;s code changes. We&#39;d rather ship a short, accurate log than pad it with speculation about what a terse commit message might mean. If you want the full detail, the diff in PR #247 is small and readable.</p>
+<h2>What&#39;s next</h2>
+<p>Nothing in this week&#39;s activity points to larger in-flight work, so we&#39;re not going to invent a roadmap section. What we can say: with v1.1.1 freshly out and auto-updates enabled, the feedback loop on the bundled build is now open. If you&#39;re running the desktop app and see anything odd — especially around the UI version you&#39;re being served versus what&#39;s current — that&#39;s exactly the failure mode the cache guard is meant to address, and a report with your app version and install date is genuinely useful.</p>
+<p>We&#39;ll be back next week with whatever the repository gives us.</p>
+  </div>
+
+  <footer class="colophon">
+    <div class="hairline" aria-hidden="true"><span class="lead"></span></div>
+    <p>Canonical: <a href="https://allternit.com/blog">allternit.com/blog</a></p>
+    <p>Generated by the Allternit publications pipeline</p>
+  </footer>
+</article>
+
+<div class="action-bar" role="toolbar" aria-label="Edition actions" style="--accent: #059669;">
+  <span class="bar-title">Allternit Blog</span>
+  <button type="button" id="save-pdf">Save as PDF</button>
+  <button type="button" id="download-html">Download HTML</button>
+</div>
+<script>(function () {
+  var slug = "builders-notebook-2026-w37";
+  document.getElementById('save-pdf').addEventListener('click', function () {
+    window.print();
+  });
+  document.getElementById('download-html').addEventListener('click', function () {
+    var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    var a = document.createElement('a');
+    a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    a.download = slug + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+})();</script>
+</body>
+</html>

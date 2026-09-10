@@ -1,5 +1,54 @@
 [
   {
+    "id": "blog-2026-w37",
+    "slug": "builders-notebook-2026-w37",
+    "type": "blog",
+    "contentType": "blog",
+    "status": "published",
+    "title": "A quiet week of hardening",
+    "subtitle": "Allternit Blog · Builder's Notebook · September 10, 2026",
+    "abstract": "This was a light week for merged work — one pull request landed — but it sits on top of a release that went out the day before this log's window opened, so it's worth covering both.",
+    "authors": [
+      "Allternit Blog"
+    ],
+    "teams": [
+      "research"
+    ],
+    "tags": [
+      "builders-notebook",
+      "engineering",
+      "weekly-recap"
+    ],
+    "keywords": [
+      "changelog",
+      "engineering",
+      "notebook",
+      "release-notes"
+    ],
+    "createdAt": "2026-09-10T13:15:34.781Z",
+    "updatedAt": "2026-09-10T13:15:34.781Z",
+    "publishedAt": "2026-09-10T13:15:34.781Z",
+    "content": {
+      "markdown": "# A quiet week of hardening\n\n## What shipped\n\nThis was a light week for merged work — one pull request landed — but it sits on top of a release that went out the day before this log's window opened, so it's worth covering both.\n\n**Desktop v1.1.1 is out**\n\nOn September 9 we published [Allternit Desktop v1.1.1](https://github.com/Gizziio/allternit/releases/tag/desktop-v1.1.1). This is the fully bundled build: the platform UI (a Next.js static export), the Rust API backend (local on `:8013`), and the Gizzi AI runtime (Bun, local on `:4096`) all ship inside the installer. Once it's installed, nothing needs the network.\n\n- macOS builds for both arm64 and x64, plus a Windows installer\n- Auto-updates enabled, so existing installs will get prompted when the next build lands\n\n**Service worker cache guard**\n\nThe only merge this week was PR #247 (`fix/sw-cache-guard`). The name is terse, but the shape of the fix is clear: a guard around the service worker's cache behavior. Service workers sit between the app and the network and decide what gets served from local cache versus fetched fresh — without a guard in the right place, a stale cached response can be served when a fresh one was expected, or the cache can interfere with content that should never have been cached at all.\n\nGiven that the desktop app serves a static UI that loads `https://ai.allternit.com`, cache correctness matters twice over: a stale service worker cache in the desktop shell could pin a user to an old version of the interface even after the API and runtime underneath it have moved forward.\n\n## Why it matters\n\nMost of this week's value is in the release, and the release is about a single property: the app works without the internet. That's not a convenience feature for our user base — engineers running local models, people on unreliable connections, anyone who wants the AI runtime on their own machine without a dependency on a hosted service. Bundling all three components (UI, Rust API, Bun runtime) into one installer means the \"local\" in \"local AI\" is actually true end to end. The UI talks to a backend on `localhost:8013`, the runtime on `:4096`, and nothing leaves the machine unless you tell it to.\n\nThe cache guard fits the same theme. Local-first software has a specific failure mode that hosted software doesn't: because everything is expected to work offline and from local resources, stale state is harder to notice and harder to clear. A user on a hosted app refreshes and gets the new build. A user with a desktop app and an aggressive service worker cache might keep running last month's UI against this week's runtime — and the symptoms of that mismatch (subtle, hard to reproduce, \"works on my machine\" in the worst way) are exactly the kind of bug report that eats an afternoon. Putting a guard around the cache path is cheap insurance against that class of problem.\n\nOne honest note: with a single merge in seven days, there's not much more we can responsibly say about this week's code changes. We'd rather ship a short, accurate log than pad it with speculation about what a terse commit message might mean. If you want the full detail, the diff in PR #247 is small and readable.\n\n## What's next\n\nNothing in this week's activity points to larger in-flight work, so we're not going to invent a roadmap section. What we can say: with v1.1.1 freshly out and auto-updates enabled, the feedback loop on the bundled build is now open. If you're running the desktop app and see anything odd — especially around the UI version you're being served versus what's current — that's exactly the failure mode the cache guard is meant to address, and a report with your app version and install date is genuinely useful.\n\nWe'll be back next week with whatever the repository gives us.",
+      "sources": []
+    },
+    "readingTime": 4,
+    "featured": false,
+    "series": "Allternit Blog",
+    "issueNumber": "2026-W37",
+    "metrics": {
+      "views": 0,
+      "uniqueVisitors": 0,
+      "downloads": 0,
+      "citationCount": 0
+    },
+    "license": "CC BY 4.0",
+    "accessLevel": "public",
+    "imageUrl": "https://ai.allternit.com/images/discovery/builders-notebook-2026-w37.svg",
+    "artifactUrl": "https://ai.allternit.com/editions/builders-notebook-2026-w37.html",
+    "pdfUrl": "https://ai.allternit.com/editions/builders-notebook-2026-w37.pdf"
+  },
+  {
     "id": "feature-2026-w37",
     "slug": "weekly-feature-2026-w37",
     "type": "blog",
