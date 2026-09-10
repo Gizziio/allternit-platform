@@ -60,6 +60,7 @@
     "concurrently": "^8.2.2",
     "electron": "^41.10.3",
     "electron-builder": "^26.15.3",
+    "esbuild": "^0.25.0",
     "typescript": "^5.4.0",
     "vite": "^5.4.0",
     "vitest": "^1.6.1",
@@ -149,24 +150,16 @@
         "to": "allternit.yaml"
       },
       {
-        "from": "../../services/open-connector",
-        "to": "connector-sidecar",
-        "filter": [
-          "src/**/*",
-          "catalog/**/*",
-          "migrations/**/*",
-          "package.json",
-          "!**/*.test.ts",
-          "!data/**"
-        ]
+        "from": "../../services/open-connector/catalog",
+        "to": "connector-sidecar/catalog"
       },
       {
-        "from": "../../services/open-connector/node_modules",
-        "to": "connector-sidecar/node_modules",
-        "filter": [
-          "**/*",
-          "!.bin"
-        ]
+        "from": "../../services/open-connector/migrations",
+        "to": "connector-sidecar/migrations"
+      },
+      {
+        "from": "resources/connector-sidecar/dist",
+        "to": "connector-sidecar/dist"
       },
       {
         "from": "../allternit-extensions/allternit-office-addin/manifests/",

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openClerkOAuthPopup } from './clerk-oauth-popup.js';
 import { PORTS } from './config.js';
+import { connectorSidecarManager } from './connector-sidecar-manager.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 import {
@@ -348,7 +349,11 @@ export class DesktopAuthManager {
       fs.writeFileSync(this.connectorSidecarTokensPath, this.encodeSecret(JSON.stringify(tokens)), { mode: 0o600 });
     }
     return {
-      ALLTERNIT_CONNECTOR_SIDECAR_URL: `http://127.0.0.1:${PORTS.CONNECTOR_SIDECAR}`,
+      // The sidecar binds an ephemeral port and announces it at start; ask
+      // the manager for the live URL (falls back to the default loopback
+      // URL before the sidecar has started, which callers treat as
+      // "connector unavailable" anyway).
+      ALLTERNIT_CONNECTOR_SIDECAR_URL: connectorSidecarManager.getUrl(),
       ALLTERNIT_CONNECTOR_SIDECAR_ADMIN_TOKEN: tokens.admin,
       ALLTERNIT_CONNECTOR_SIDECAR_RUNTIME_TOKEN: tokens.runtime,
     };

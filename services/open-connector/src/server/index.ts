@@ -30,7 +30,7 @@ const actionPolicy = new ActionPolicyService({
 const builtRoot = join(process.cwd(), "dist/web");
 const staticRoot = await resolveStaticRoot(builtRoot);
 await mkdir(dataDir, { recursive: true });
-const catalog = await loadCatalog(undefined, {
+const catalog = await loadCatalog(process.env.OOMOL_CONNECT_CATALOG_DIR || undefined, {
   executableActionIds: Object.values(executableActionIds).flat(),
 });
 const providerLoader = new ProviderLoader();
@@ -74,6 +74,12 @@ serve(
     hostname,
   },
   (info) => {
+    // Launchers that supervise this server as a sidecar (the Allternit
+    // desktop app) bind an ephemeral port and learn the real one from this
+    // line instead of racing a fixed-port health probe.
+    if (process.env.OOMOL_CONNECT_ANNOUNCE_PORT === "1") {
+      process.stdout.write(`${JSON.stringify({ allternitAnnounce: "listening", port: info.port })}\n`);
+    }
     logger.info({ url: `http://${hostname}:${info.port}` }, "connect server listening");
     logger.info({ dataDir }, "runtime data directory");
     if (!adminToken) {

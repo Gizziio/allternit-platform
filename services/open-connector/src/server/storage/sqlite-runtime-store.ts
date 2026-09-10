@@ -9,12 +9,23 @@ import type { IRuntimeTokenStore, RuntimeTokenRecord } from "./runtime-token-ser
 
 import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 import { PlainTextSecretCodec } from "../secrets/secret-codec-core.ts";
 import { decodeRunLogCursor, encodeRunLogCursor } from "./runtime-store.ts";
 
 type RuntimeRow = Record<string, unknown>;
 type SecretJsonTable = "oauth_client_configs";
-const migrationDirectory = new URL("../../../migrations/", import.meta.url);
+
+// Packaged builds (desktop app) run this module from a bundled single file,
+// where import.meta.url no longer sits next to the SQL migrations — the
+// launcher passes the directory explicitly.
+const migrationDirectory = process.env.OOMOL_CONNECT_MIGRATIONS_DIR
+  ? pathToFileURL(
+      process.env.OOMOL_CONNECT_MIGRATIONS_DIR.endsWith("/")
+        ? process.env.OOMOL_CONNECT_MIGRATIONS_DIR
+        : `${process.env.OOMOL_CONNECT_MIGRATIONS_DIR}/`,
+    )
+  : new URL("../../../migrations/", import.meta.url);
 
 export interface SqliteRuntimeDatabaseOptions {
   runLimit?: number;

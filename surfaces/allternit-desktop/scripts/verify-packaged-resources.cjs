@@ -16,7 +16,6 @@ const desktopDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(desktopDir, '..', '..');
 const resourcesDir = path.join(desktopDir, 'resources');
 const connectorCatalogDir = path.join(repoRoot, 'services', 'open-connector', 'catalog', 'apps');
-const connectorNodeModulesDir = path.join(repoRoot, 'services', 'open-connector', 'node_modules');
 
 function log(message) {
   process.stdout.write(`[verify-packaged-resources] ${message}\n`);
@@ -155,19 +154,35 @@ if (fs.existsSync(voicePath) && isPyInstallerBootloader(voicePath)) {
   log(`✓ Voice service binary is not a PyInstaller bootloader (${voicePath})`);
 }
 
-// The connector sidecar's runtime deps must actually be installed — they are
-// NOT covered by the root pnpm install (open-connector is a standalone npm
-// project, excluded from the workspace on purpose).
-const honoServerPkg = path.join(connectorNodeModulesDir, '@hono', 'node-server', 'package.json');
-if (!fs.existsSync(honoServerPkg)) {
+// The connector sidecar ships as a single esbuild bundle — no src/ tree, no
+// node_modules copy (that silently-empty copy is what crash-looped the
+// sidecar before the bundle existed). The bundle must exist and carry the
+// runtime markers prepare-connector-sidecar.cjs checks for.
+const connectorBundlePath = path.join(
+  resourcesDir, 'connector-sidecar', 'dist', 'server.mjs'
+);
+const connectorBundleMarkers = ['allternitAnnounce', 'connect server listening', 'node:sqlite'];
+if (!fs.existsSync(connectorBundlePath)) {
   failed = true;
   process.stderr.write(
-    `[verify-packaged-resources] ✗ Connector sidecar dependencies missing (@hono/node-server not resolvable)\n` +
-    `    Expected at: ${honoServerPkg}\n` +
+    `[verify-packaged-resources] ✗ Connector sidecar bundle missing\n` +
+    `    Expected at: ${connectorBundlePath}\n` +
     '    Build it with: npm run prepare:connector-sidecar\n'
   );
 } else {
-  log(`✓ Connector sidecar dependencies installed (${connectorNodeModulesDir})`);
+  const bundleText = fs.readFileSync(connectorBundlePath, 'utf8');
+  const missingMarkers = connectorBundleMarkers.filter((m) => !bundleText.includes(m));
+  if (missingMarkers.length > 0) {
+    failed = true;
+    process.stderr.write(
+      `[verify-packaged-resources] ✗ Connector sidecar bundle is missing runtime markers: ${missingMarkers.join(', ')}\n` +
+      `    The bundle is stale or was built from the wrong entry point.\n` +
+      '    Rebuild it with: npm run prepare:connector-sidecar\n'
+    );
+  } else {
+    const mb = (fs.statSync(connectorBundlePath).size / 1024 / 1024).toFixed(1);
+    log(`✓ Connector sidecar bundle (${mb} MB, markers ok) (${connectorBundlePath})`);
+  }
 }
 
 if (failed) {
