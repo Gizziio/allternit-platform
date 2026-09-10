@@ -1168,9 +1168,9 @@ mod phase_two_http_tests {
         assert_eq!(calls[3].1, "/1.0/instances");
         let create = calls[3].2.as_ref().unwrap();
         assert_eq!(create["name"], "copy");
-        assert_eq!(create["source"]["type"], "snapshot");
+        assert_eq!(create["source"]["type"], "copy");
         assert_eq!(
-            create["source"]["name"],
+            create["source"]["source"],
             format!("source/{}", snapshot["name"].as_str().unwrap())
         );
         assert_eq!(

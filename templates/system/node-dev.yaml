@@ -1,0 +1,37 @@
+# Curated system template: a Node.js 20 development desktop, golden-built.
+# Resolved at API startup into the desktop_templates table under
+# user_id='system', public=1, ref='system/node-dev'. Secrets are vault refs
+# only — never paste literal values into this file.
+apiVersion: allternit.ai/v1
+kind: ComputerTemplate
+metadata:
+  name: node-dev
+  description: Node.js 20 development desktop with git and build tooling.
+  tags: [system, linux, node, dev]
+os:
+  name: linux
+  image: ""
+hardware:
+  cpu_cores: 4
+  memory_mb: 8192
+  disk_mb: 40960
+  resolution: [1920, 1080]
+packages:
+  - curl
+  - git
+  - build-essential
+installScripts:
+  - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  - apt-get install -y nodejs
+services:
+  - name: node-idle
+    command: /usr/bin/node -e "setInterval(() => {}, 60000)"
+    env:
+      NODE_ENV: production
+    autostart: true
+secrets: []
+hooks:
+  preBuild:
+    - apt-get update
+  postCreate:
+    - node --version | tee /etc/allternit-node-version

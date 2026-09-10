@@ -1,10 +1,11 @@
 //! Golden-template build pipeline (Phase 4, "templates as code").
 //!
 //! A build turns a validated `ComputerTemplate` spec doc into a golden
-//! snapshot: spawn a golden-holder VM as `role='golden'`, install packages,
-//! write long-running services as systemd units, run `postCreate` hooks with
-//! vault-resolved secrets injected as env (values never persisted anywhere),
-//! then snapshot the holder statefully as `golden` and stop it. Provisioning
+//! snapshot: spawn a golden-holder VM as `role='golden'`, run `preBuild`
+//! hooks, install packages, run `installScripts`, write long-running services
+//! as systemd units, run `postCreate` hooks — hooks and scripts get
+//! vault-resolved secrets injected as env (values never persisted anywhere) —
+//! then snapshot the holder statelessly as `golden` and stop it. Provisioning
 //! from a ready template clones that snapshot (see `bot_desktop_templates` and
 //! `computer_routes`).
 //!
@@ -27,6 +28,8 @@ use allternit_driver_interface::CommandSpec;
 
 pub const KIND_BUILD_START: &str = "template_build_start";
 pub const KIND_BUILD_SERVICE: &str = "template_build_service";
+pub const KIND_BUILD_HOOK: &str = "template_build_hook";
+pub const KIND_BUILD_SCRIPT: &str = "template_build_script";
 pub const KIND_BUILD_READY: &str = "template_build_ready";
 pub const KIND_BUILD_FAILED: &str = "template_build_failed";
 pub const KIND_SECRET_RESOLVE: &str = "template_secret_resolve";
@@ -454,36 +457,79 @@ async fn build_in_guest(
     let mut apt_env = HashMap::new();
     apt_env.insert("DEBIAN_FRONTEND".to_string(), "noninteractive".to_string());
 
+    // preBuild hooks run first (with vault-resolved secrets injected), before
+    // any package work.
+    for hook in &spec.hooks.pre_build {
+        exec_guest_checked(
+            driver,
+            handle,
+            &format!("preBuild hook: {hook}"),
+            vec!["sh".into(), "-lc".into(), hook.clone()],
+            secrets,
+        )
+        .await?;
+        audit(
+            &state.db,
+            holder_computer_id,
+            &user.user_id,
+            KIND_BUILD_HOOK,
+            format!("preBuild hook ran on golden holder (template {template_id})"),
+        );
+    }
+
+    // Incus exec runs as root; Tart exec runs as the VM's default user
+    // (passwordless sudo on the base images). Detect once and elevate the
+    // apt/install-script steps only when needed — running bare `apt-get` as a
+    // non-root guest user fails at lock acquisition (live-smoke defect,
+    // rq-20260909-004).
+    let privileged: Vec<String> = {
+        let who = exec_guest(
+            driver,
+            handle,
+            vec!["id".into(), "-u".into()],
+            &HashMap::new(),
+        )
+        .await?;
+        let stdout = String::from_utf8_lossy(who.stdout.as_deref().unwrap_or(&[]));
+        if who.exit_code == 0 && stdout.trim() == "0" {
+            vec![]
+        } else {
+            vec!["sudo".into(), "-n".into()]
+        }
+    };
+
     if !spec.packages.is_empty() {
-        // Incus exec runs as root; Tart exec runs as the VM's default user
-        // (passwordless sudo on the base images). Detect once and elevate the
-        // apt steps only when needed — running bare `apt-get` as a non-root
-        // guest user fails at lock acquisition (live-smoke defect,
-        // rq-20260909-004).
-        let privileged: Vec<String> = {
-            let who = exec_guest(
-                driver,
-                handle,
-                vec!["id".into(), "-u".into()],
-                &HashMap::new(),
-            )
-            .await?;
-            let stdout = String::from_utf8_lossy(who.stdout.as_deref().unwrap_or(&[]));
-            if who.exit_code == 0 && stdout.trim() == "0" {
-                vec![]
-            } else {
-                vec!["sudo".into(), "-n".into()]
-            }
-        };
         let mut update = privileged.clone();
         update.extend(["apt-get".into(), "update".into()]);
         exec_guest_checked(driver, handle, "apt-get update", update, &apt_env).await?;
-        let mut install = privileged;
+        let mut install = privileged.clone();
         install.extend(
             ["apt-get".into(), "install".into(), "-y".into(), "--no-install-recommends".into()],
         );
         install.extend(spec.packages.iter().cloned());
         exec_guest_checked(driver, handle, "apt-get install", install, &apt_env).await?;
+    }
+
+    for script in &spec.install_scripts {
+        exec_guest_checked(
+            driver,
+            handle,
+            &format!("install script: {}", tail(&Some(script.clone().into_bytes()), 120)),
+            {
+                let mut cmd = privileged.clone();
+                cmd.extend(["sh".into(), "-lc".into(), script.clone()]);
+                cmd
+            },
+            secrets,
+        )
+        .await?;
+        audit(
+            &state.db,
+            holder_computer_id,
+            &user.user_id,
+            KIND_BUILD_SCRIPT,
+            format!("install script ran on golden holder (template {template_id})"),
+        );
     }
 
     for service in &spec.services {
@@ -506,6 +552,13 @@ async fn build_in_guest(
             secrets,
         )
         .await?;
+        audit(
+            &state.db,
+            holder_computer_id,
+            &user.user_id,
+            KIND_BUILD_HOOK,
+            format!("postCreate hook ran on golden holder (template {template_id})"),
+        );
     }
     Ok(())
 }

@@ -228,6 +228,18 @@ async fn main() {
         tracing::warn!("Failed to seed Fabric model catalog: {e}");
     }
 
+    // Sync the curated `system/...` desktop-template catalog (templates/system/*.yaml)
+    // into the desktop_templates table. Idempotent; a changed catalog doc
+    // resets that entry's build state so a new golden gets built on demand.
+    match allternit_api::template_catalog::sync_catalog_to_db(&db).await {
+        Ok((inserted, updated)) => {
+            if inserted > 0 || updated > 0 {
+                info!("Template catalog synced: {inserted} inserted, {updated} updated");
+            }
+        }
+        Err(e) => tracing::warn!("Failed to sync template catalog: {e}"),
+    }
+
     // Initialize the Private Fabric node provider pool.
     let fabric_node_pool = Arc::new(
         allternit_computer_cloud::providers::fabric_node::FabricNodePool::new(),
