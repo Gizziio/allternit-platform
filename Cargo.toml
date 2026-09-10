@@ -32,6 +32,7 @@ members = [
     "infrastructure/executor/ao-engine",
     "infrastructure/executor/cowork/cowork/allternit-cowork-runtime",
     "infrastructure/executor/cowork/cowork/allternit-cowork-scheduler",
+    "infrastructure/executor/uhp-gateway",
     "infrastructure/providers/hetzner",
     "services/orchestration/control-plane/allternit-agent-orchestration/workflows",
     "services/orchestration/policy-service",

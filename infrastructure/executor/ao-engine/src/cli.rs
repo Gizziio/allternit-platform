@@ -111,6 +111,7 @@ pub fn maybe_run(args: &[String]) -> std::io::Result<CommandOutcome> {
         "spawn" | "send" | "watch" | "status" | "kill" | "doctor" => ao::run_ao_command(&args[1..])?,
         "fabric" => crate::ao::fabric::cli::run(&args[2..])?,
         "harness" => crate::ao::harness::run(&args[2..])?,
+        "serve" => crate::ao::serve::run(&args[2..])?,
         "peer" => crate::ao::peers::run(&args[2..])?,
         "visibility" => visibility::run_visibility_command(&args[2..])?,
         "server" => {
