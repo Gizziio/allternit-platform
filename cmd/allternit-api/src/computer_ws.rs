@@ -233,10 +233,11 @@ pub fn computer_ws_router() -> Router<Arc<AppState>> {
 
 /// PUBLIC VNC route, mounted at `/ws/computers` WITHOUT the auth middleware:
 /// the HMAC computer token IS the credential. Purpose "embed" tokens are
-/// minted for anonymous iframe viewers (no Clerk session exists there), so
-/// this route must not require one; purpose "vnc" tokens still require an
-/// authenticated user whose id matches the token (see
-/// `validate_vnc_ws_request`). Purpose "embed" is always forced read-only.
+/// minted for anonymous iframe viewers (no Clerk session exists there), and
+/// purpose "vnc" tokens verify the same way — signed, computer-bound,
+/// user-bound, expiring — with the claim's user enforced against any AuthUser
+/// when one happens to be present (see `validate_vnc_ws_request`). Purpose
+/// "embed" is always forced read-only.
 pub fn computer_vnc_public_router() -> Router<Arc<AppState>> {
     Router::new().route("/:id/vnc", get(computer_vnc_ws_handler))
 }
@@ -361,14 +362,20 @@ fn resolve_vnc_access(
 /// router (see `computer_vnc_public_router`) — no Clerk session is required
 /// to reach this function. Authorization is purpose-split:
 ///
-/// - purpose "vnc" (honors the claim's read_only flag): the caller MUST be an
-///   authenticated user whose id matches the token, and the computer fetch is
-///   owner-scoped exactly like the pty/events planes.
-/// - purpose "embed" (always forced read-only): the HMAC token IS the
-///   credential — it was minted owner-scoped and is handed to anonymous
-///   iframe viewers who have no AuthUser at all. The computer is fetched
-///   without ownership scoping; possessing a valid, unexpired, computer-bound
-///   embed token is the authorization.
+/// - purpose "vnc" (honors the claim's read_only flag): the HMAC token is
+///   the credential. It is server-signed, computer-bound (checked above),
+///   user-bound, short-lived, and minting requires an authenticated,
+///   owner-scoped call — but the route is mounted outside the Clerk
+///   middleware (anonymous embed viewers share it), so an AuthUser extension
+///   may be absent even for legitimate session clients (browsers and CLIs
+///   included). When a session IS present its user id must match the token's;
+///   when absent the verified claims stand alone. Requiring a session here
+///   made every purpose-"vnc" token unusable (the gate could never pass on
+///   the public mount) — that was the pre-fix state.
+/// - purpose "embed" (always forced read-only): same token-as-credential
+///   model, handed to anonymous iframe viewers who have no AuthUser at all.
+///   The computer is fetched without ownership scoping; possessing a valid,
+///   unexpired, computer-bound embed token is the authorization.
 ///
 /// Both purposes still require a running computer and a configured driver.
 async fn validate_vnc_ws_request(
@@ -400,20 +407,20 @@ async fn validate_vnc_ws_request(
     }
     let computer = match claims.purpose.as_deref() {
         Some("vnc") => {
-            let user = user.ok_or_else(|| {
-                warn!(computer_id = %id, "vnc token presented without an authenticated user");
-                crate::computer_routes::error_response(
-                    StatusCode::FORBIDDEN,
-                    "authentication required for vnc tokens",
-                )
-            })?;
-            if claims.user_id != user.user_id {
-                return Err(crate::computer_routes::error_response(
-                    StatusCode::FORBIDDEN,
-                    "token mismatch",
-                ));
+            // Session is opportunistic on this public mount: when an AuthUser
+            // IS attached (e.g. a same-origin browser request that also
+            // carries a Clerk session through a routed copy of this route),
+            // it must match the token's user. When absent, the verified token
+            // claims are the entire credential (see fn-level docs).
+            if let Some(user) = user {
+                if claims.user_id != user.user_id {
+                    return Err(crate::computer_routes::error_response(
+                        StatusCode::FORBIDDEN,
+                        "token mismatch",
+                    ));
+                }
             }
-            fetch_computer(state, user, id).await?
+            crate::computer_routes::fetch_computer_any_owner(state, id).await?
         }
         // "embed": token is the credential; fetch without ownership scoping.
         _ => crate::computer_routes::fetch_computer_any_owner(state, id).await?,
@@ -1920,19 +1927,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn vnc_full_control_token_requires_auth_user() {
-        // Purpose "vnc" tokens are minted for a specific authenticated user;
-        // without an AuthUser the request must be rejected even with a valid
-        // token.
+    async fn vnc_full_control_token_validates_without_session() {
+        // Purpose "vnc" tokens are minted owner-scoped behind auth, but the
+        // vnc route is mounted on the PUBLIC router (embed viewers share it),
+        // so no AuthUser is ever attached. The verified token — signed,
+        // computer-bound, user-bound, expiring — is the credential. Before
+        // this fix the session requirement made every vnc token 403.
         handler_test_secret();
-        let state = state_with_computer(None).await;
+        let state = state_with_computer(Some(Arc::new(StubDriver))).await;
         let token = crate::bot_desktop_stream::sign_computer_token(
-            TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "vnc", true,
+            TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "vnc", false,
         );
-        let err = validate_vnc_ws_request(&state, None, "computer-1", &token)
-            .await
-            .expect_err("vnc token without a user must be rejected");
-        assert_eq!(err.status(), StatusCode::FORBIDDEN);
+        let (computer, read_only) =
+            validate_vnc_ws_request(&state, None, "computer-1", &token)
+                .await
+                .expect("vnc token validates without a session on the public mount");
+        assert_eq!(computer.id, "computer-1");
+        assert!(!read_only, "read_only=false claim must be honored for vnc tokens");
     }
 
     #[tokio::test]

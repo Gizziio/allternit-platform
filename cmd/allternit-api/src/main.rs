@@ -866,9 +866,10 @@ async fn main() {
         // Public VNC desktop stream (Phase 5): like the embed viewer page,
         // the HMAC computer token IS the credential — purpose "embed" tokens
         // are minted for anonymous iframe viewers with no Clerk session, and
-        // purpose "vnc" tokens self-gate on an authenticated user matching
-        // the token (see `validate_vnc_ws_request`). Mounted here, OUTSIDE
-        // the auth middleware; only the single `/:id/vnc` route is exposed.
+        // purpose "vnc" tokens verify the same way (session, when present,
+        // must match the token's user — see `validate_vnc_ws_request`).
+        // Mounted here, OUTSIDE the auth middleware; only the single
+        // `/:id/vnc` route is exposed.
         .nest(
             "/ws/computers",
             allternit_api::computer_ws::computer_vnc_public_router(),
