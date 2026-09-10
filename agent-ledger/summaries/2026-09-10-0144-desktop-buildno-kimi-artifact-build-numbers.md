@@ -59,3 +59,10 @@ number. No sidecar or workflow-build changes (commandment 3 n/a).
 - `surfaces/allternit-desktop/package.json` (4 scripts + 4 artifactName templates)
 - `surfaces/allternit-desktop/BUILD.md`
 - `.github/workflows/release-desktop.yml` (env pin)
+
+## Post-merge live check (confirmed)
+
+Rebuild in `allternit-desktop-preview` from merged main (`aaf126903`): the
+wrapper produced `release/Allternit-Desktop-1.1.1-b1741-arm64.dmg` (git height
+1741), all six sidecars verified staged, `latest-mac.yml` references the
+suffixed name. Prior unsuffixed 1.1.1 DMG retired after verification.
