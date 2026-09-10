@@ -386,12 +386,22 @@ async fn async_serve(identity: NodeIdentity, port: u16) -> i32 {
         relay_label: Arc::clone(&relay_label),
     });
 
+    // The relay must forward to THIS serve's shim port — not blindly to the
+    // default port, which may be held by an unrelated service (Desktop's
+    // connector sidecar owns 8014 and 401s foreign `/v1/*` traffic).
+    let local_gateway = super::resolve_local_gateway(
+        port,
+        std::env::var("ALLTERNIT_AO_GATEWAY_URL").ok(),
+    );
+    println!("[ao-fabric] relay forwarding to {local_gateway}");
+
     let relay_task = tokio::spawn(super::relay::run(
         Arc::clone(&identity),
         CloudClient::new().expect("http client"),
         reconnect_rx,
         shutdown_rx,
         Arc::clone(&relay_label),
+        local_gateway,
     ));
 
     let lifecycle_shutdown = shutdown_tx.clone();
