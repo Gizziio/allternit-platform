@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 09:59 — grok — native-sessions catalog through the data-plane relay
+
+- **Session ID / Branch:** `session/43d9456-ns` (worktree `allternit-session-43d9456-ns`)
+- **Agent:** grok
+- **Summary:** Web list/pickup hit the SPA origin (`getGatewayOrigin()` empty) and parsed HTML. Client now uses the same cloud-api split as agent-sessions. Pickup maps `bot` → `chat` and 8013 stamps origin_surface.
+- **Commit:** PR #252, merge commit `fa43c5778` on `main`
+- **How it works:** `native-sessions-api.ts` targets `getCloudApiBaseUrl()/api/v1/native-sessions` when the agent-sessions flag is on (desktop stays on local :8013). 8013 pickup normalizes surface for Gizzi and writes `session_origin_surface`.
+- **Outstanding work:** `todo.updated` still not on the /sync feed; desktop DMG not rebuilt; live picker re-test not run this session.
+- **Summary file:** [./summaries/2026-09-10-0959-43d9456-ns-grok-native-sessions-catalog.md](./summaries/2026-09-10-0959-43d9456-ns-grok-native-sessions-catalog.md)
+
 ### 2026-09-10 09:40 — grok — agent-sessions /sync caller matches data-plane contract
 
 - **Session ID / Branch:** `session/43d9456` (worktree `allternit-session-43d9456`)
