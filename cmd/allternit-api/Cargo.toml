@@ -30,6 +30,10 @@ tokio-util = { workspace = true }
 http-body-util = { workspace = true }
 bytes = { workspace = true }
 regex = { workspace = true }
+# VNC "VNC authentication" (DES) challenge-response for the ws proxy's
+# server-side password injection (guest x11vnc password never reaches the browser)
+des = "0.8"
+cipher = "0.4"
 
 # Internal crates - Rails & Cowork
 allternit-agent-system-rails = { path = "../../rails" }
