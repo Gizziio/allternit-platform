@@ -329,7 +329,7 @@ async fn create_pairing(
     .await?;
 
     let platform_url = std::env::var("ALLTERNIT_PLATFORM_URL")
-        .unwrap_or_else(|_| "https://platform.allternit.com".to_string());
+        .unwrap_or_else(|_| "https://ai.allternit.com".to_string());
     let verification_url = format!(
         "{}/pair?code={}",
         platform_url.trim_end_matches('/'),
