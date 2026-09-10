@@ -46,7 +46,11 @@ step() { echo; echo "── $* ──"; }
 
 step "1/6 Sync sources to ${SERVER}:${BUILD_TREE}"
 for d in src tests migrations_pg migrations; do
-  run rsync -a --partial --timeout=60 "${REPO_ROOT}/${PKG}/${d}/" "${SERVER}:${BUILD_TREE}/${PKG}/${d}/"
+  # `migrations/` (legacy SQLite) was removed from the tree in 84f1d21f0; only
+  # sync it when present so the script works on current and older checkouts.
+  if [[ -d "${REPO_ROOT}/${PKG}/${d}" ]]; then
+    run rsync -a --partial --timeout=60 "${REPO_ROOT}/${PKG}/${d}/" "${SERVER}:${BUILD_TREE}/${PKG}/${d}/"
+  fi
 done
 
 step "2/6 Touch changed files (rsync -a preserves mtimes; cargo skips otherwise)"
