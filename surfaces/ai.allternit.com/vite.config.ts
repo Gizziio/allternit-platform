@@ -257,6 +257,20 @@ export default defineConfig({
         target: 'http://127.0.0.1:4096',
         changeOrigin: true,
       },
+      // Clerk same-origin proxy (getProxyUrl() in platform-auth-client.tsx
+      // always points Clerk at <origin>/__clerk). Production serves this via
+      // Cloudflare; without a dev equivalent ClerkJS cannot load and seeded
+      // sign-in never starts.
+      '/__clerk': {
+        target: 'https://clerk.allternit.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/__clerk/, ''),
+        // Clerk validates Origin against the requesting host; through a proxy
+        // the browser origin is the dev server, not clerk.allternit.com. Align
+        // the header so sign-in works in dev. (Production uses the Cloudflare
+        // worker, which forwards headers differently.)
+        headers: { origin: 'https://ai.allternit.com' },
+      },
       '/api': {
         target: 'http://127.0.0.1:8013',
         changeOrigin: true,
