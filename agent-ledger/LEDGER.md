@@ -21,6 +21,15 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 17:05 — kimi — P6a UHP core gateway + `ao serve` lands (rq-20260908-028)
+
+- **Session ID / Branch:** `ao/uhp-gateway` (worktree `allternit-ao-uhp-gateway`, orchestrator direct)
+- **Agent:** kimi-interactive
+- **Summary:** Merged PR #265 (6b21256cb) — UHP (Universal Harness Protocol, spec 2026-08-11) core gateway vendored as `infrastructure/executor/uhp-gateway/` + new `ao serve` subcommand. Conformance 40/40 CONFORMANT (`--class core`); `uhp-gateway` crate 32/32; herdr diff additive-only (`ao/serve.rs` + one cli.rs match arm + help line + path dep).
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/265 · 6b21256cb23f98ecb37d3c7131cb35a00226faa8
+- **How it works:** Orchestrator did not trust executor evidence — booted `ao serve` independently (port 8421, mktemp data dir), re-ran conformance 40/40; gate 2 kimi green with real SSE stream/cancel/resume transcripts (sequence numbers). Incident: GitHub Actions never created PR-event check suites for #265 (161k-line vendor diff oversized the payload); per merge rule (real checks green, Vercel rate-limit + Pages ignorable) checks were substituted locally; push-to-main then fired gitleaks/test/typography all success. One vendored fixture (synthetic test key) gitleaks-flagged → fingerprint in `.gitleaksignore` (ef232f828), local scan clean. Push-to-main deploy check is the tracked rsync-mtime follow-up.
+- **Outstanding work:** Gate 2 claude/codex live turns deferred — environmental (claude OAuth expired, codex usage limit resets 2026-09-16), both reproduced CLI-direct; one-command re-run per `docs/AO_UHP_GATEWAY_NOTES.md`. Summary: `agent-ledger/summaries/2026-09-10-1650-p6a-uhp-gateway-kimi.md`.
+
 ### 2026-09-10 15:10 — kimi — P7 ao harness install lands (rq-20260908-028)
 
 - **Session ID / Branch:** `ao/harness-install` (worktree `allternit-ao-harness-install`, orchestrated executor)
