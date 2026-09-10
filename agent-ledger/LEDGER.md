@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 08:50 — kimi — Desktop sidecar production fixes (connector crash loop + stale voice binary)
+
+- **Session ID / Branch:** `session/3a37a822-p5` (worktree `allternit-session-3a37a822-p5`)
+- **Agent:** kimi
+- **Summary:** Packaged desktop connector sidecar crash-looped (`Cannot find package '@hono/node-server'`) because `services/open-connector` is excluded from the pnpm workspace and nothing installed its node_modules; separately, the bundled voice binary could be the pre-cleanup PyInstaller build that crashes at boot on older macOS. Both fixed for CI and local builds, with hard gates so they cannot regress silently.
+- **Commit:** PR #244, merge commit `a36a9e25cd` on `main`
+- **How it works:** New `prepare-connector-sidecar.cjs` runs idempotent `npm ci` in `services/open-connector` and is wired into all four desktop build chains plus an explicit step in every release-desktop.yml packaging job; `verify-packaged-resources.cjs` now hard-fails on missing connector deps and on a PyInstaller-marker scan of the staged voice binary; `release-preflight.mjs` gained a sidecar-guards check (35 passed / 0 failed).
+- **Outstanding work:** Installed-app repair (voice binary swap + connector node_modules copy) tracked in the session closeout; app still needs the owner's "Get started" re-pairing from an earlier unrelated wizard-e2e credential quarantine; next CI-tagged release will produce the first artifact with these fixes baked in.
+- **Summary file:** [./summaries/2026-09-10-1248-3a37a822-kimi-sidecar-production-fixes.md](./summaries/2026-09-10-1248-3a37a822-kimi-sidecar-production-fixes.md)
+
 ### 2026-09-10 08:05 — kimi — Pairing verification URL default → ai.allternit.com
 
 - **Session ID / Branch:** `fix/pair-url-default` (worktree `allternit-cloud-api-pair-url`)
