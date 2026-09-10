@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 12:45 — kimi — P3 fabric last-hop fix: relay forwards to serve shim port (rq-20260908-028)
+
+- **Session ID / Branch:** `ao/fabric-gateway-port` (worktree `allternit-ao-fabric-gateway-port`)
+- **Agent:** kimi-interactive (orchestrator direct)
+- **Summary:** Merged PR #258 (a4bfbc527) — `ao fabric serve --port N` now points the relay at its own shim port instead of the 8014 default; the port skew had tunneled PWA `/proxy` traffic into Desktop's open-connector sidecar, which 401'd every request (`A valid local bearer token is required.`). New `resolve_local_gateway(port, env)`; `ALLTERNIT_AO_GATEWAY_URL` still wins; serve prints the gateway.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/258 · a4bfbc5277f26c1b10725d22797c84b80bef2b62
+- **How it works:** `relay::run` takes `local_gateway` as a parameter; `serve` resolves env-override-or-serve-port and passes it. 2 new unit tests; `cargo test -p herdr ao::` 76/76. Live-verified: the exact failing PWA proxy call now returns 200 end-to-end (evidence `~/.agent-orchestrator/evidence/ao-fabric-verify/proxy-fixed.json`). Deferred: `ao fabric status` still probes the default port (cosmetic).
+
 ### 2026-09-10 17:05 — kimi — P5 visibility + peers panel lands (ao v3 runtime plan)
 
 - **Session ID / Branch:** `ao/visibility-peers` (worktree `allternit-ao-visibility-peers`)
