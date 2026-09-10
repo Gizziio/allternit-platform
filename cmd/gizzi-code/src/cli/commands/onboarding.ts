@@ -47,6 +47,13 @@ export type OnboardingDeps = {
   listBrains: () => Promise<BrainCatalog>
   /** Persist a first-run default; stays auto so a later sub can take over. */
   setBrain: (model: string) => Promise<void>
+  /** True when this machine already has a valid Allternit runtime pairing. */
+  pairingComplete: () => Promise<boolean>
+  /**
+   * Run the device-pairing flow (prints the code/URL itself and opens the
+   * browser). Returns a human-readable summary. Throws on failure.
+   */
+  pairMachine: () => Promise<string>
 }
 
 export async function defaultOnboardingDeps(): Promise<OnboardingDeps> {
@@ -89,6 +96,25 @@ export async function defaultOnboardingDeps(): Promise<OnboardingDeps> {
       const { Config } = await import("@/runtime/context/config/config")
       await Config.updateGlobal({ model, model_auto: true })
     },
+    pairingComplete: async () => {
+      try {
+        const { Pairing } = await import("@/runtime/services/pairing/pairing")
+        return (await Pairing.status()).paired
+      } catch {
+        return false
+      }
+    },
+    pairMachine: async () => {
+      const { Pairing } = await import("@/runtime/services/pairing/pairing")
+      const stored = await Pairing.pair({
+        onCreated: (pairing) => {
+          process.stdout.write(`Pairing code: ${pairing.userCode}\n`)
+          process.stdout.write(`Approve this device at: ${pairing.verificationUrl}\n`)
+          process.stdout.write("Waiting for approval…\n")
+        },
+      })
+      return `paired as ${stored.name}${stored.userEmail ? ` (${stored.userEmail})` : ""}`
+    },
   }
 }
 
@@ -118,6 +144,37 @@ export async function markOnboardingComplete(
 }
 
 export type OnboardingResult = "completed" | "cancelled" | "skipped"
+
+/**
+ * End-of-wizard device pairing. Offered once, after the marker is decided but
+ * before the summary. Skipped entirely when GIZZI_NO_AUTO_PAIR is set, when
+ * already paired, on any prompt cancel (treated as "no"), and when the pair
+ * call itself fails — pairing must never block onboarding completion.
+ * `confirm` is injected so tests can drive the prompt without clack.
+ */
+export async function runPairingStep(
+  deps: Pick<OnboardingDeps, "pairingComplete" | "pairMachine">,
+  confirm: () => Promise<unknown>,
+): Promise<string> {
+  if (process.env.GIZZI_NO_AUTO_PAIR) return "skipped (GIZZI_NO_AUTO_PAIR set)"
+  try {
+    if (await deps.pairingComplete()) return "already paired"
+  } catch {
+    // Status check is best-effort; a broken check must not skip the offer.
+  }
+  let answer: unknown
+  try {
+    answer = await confirm()
+  } catch {
+    return "skipped (run `gizzi pair` anytime)"
+  }
+  if (answer !== true) return "skipped (run `gizzi pair` anytime)"
+  try {
+    return await deps.pairMachine()
+  } catch (e) {
+    return `pairing failed (${e instanceof Error ? e.message : String(e)}) — run \`gizzi pair\` later`
+  }
+}
 
 /**
  * Interactive first-run wizard: welcome → telemetry consent → auth setup →
@@ -222,6 +279,17 @@ export async function runOnboardingWizard(
     // block onboarding.
   }
 
+  // ── Device pairing ──
+  // Last step before the marker: a machine that finishes onboarding should
+  // be a paired Allternit runtime, not one that discovers `gizzi pair` months
+  // later. Optional by design — decline/failure/cancel never blocks completion.
+  const pairingSummary = await runPairingStep(d, () =>
+    prompts.confirm({
+      message: "Pair this machine with Allternit?",
+      initialValue: true,
+    }),
+  )
+
   await markOnboardingComplete(d)
 
   // ── Summary ──
@@ -229,6 +297,7 @@ export async function runOnboardingWizard(
   prompts.log.info(`Auth: ${authSummary}`)
   prompts.log.info(`Brain: ${brainSummary}`)
   prompts.log.info(`Theme: ${themeSummary}`)
+  prompts.log.info(`Pairing: ${pairingSummary}`)
   prompts.outro("All set — docs: https://docs.gizziio.com · get started by just typing `gizzi`")
 
   return "completed"

@@ -8,6 +8,7 @@ import {
   pickBrain,
   runOnboardingDefaults,
   runOnboardingWizard,
+  runPairingStep,
   shouldOfferFirstRunOnboarding,
   type OnboardingDeps,
 } from "../../src/cli/commands/onboarding"
@@ -41,6 +42,8 @@ function wizardDeps(tmp: string, overrides: Partial<OnboardingDeps> = {}): Onboa
     },
     listBrains: async () => ({ plan: null, providers: [] }),
     setBrain: async () => {},
+    pairingComplete: async () => false,
+    pairMachine: async () => "paired as test-device",
     ...overrides,
   }
 }
@@ -220,5 +223,110 @@ describe("pickBrain", () => {
     const summary = await pickBrain({ plan: null, providers: [] }, async () => void called++)
     expect(called).toBe(0)
     expect(summary).toContain("none yet")
+  })
+})
+
+describe("runPairingStep", () => {
+  const stepDeps = (overrides: Partial<Pick<OnboardingDeps, "pairingComplete" | "pairMachine">> = {}) => ({
+    pairingComplete: overrides.pairingComplete ?? (async () => false),
+    pairMachine: overrides.pairMachine ?? (async () => "paired as test-device (test@example.com)"),
+  })
+  const countingPair = (n: { count: number }, summary = "unused") => async () => {
+    n.count++
+    return summary
+  }
+
+  test("pairs when confirmed and not already paired", async () => {
+    const paired = { count: 0 }
+    const summary = await runPairingStep(stepDeps({ pairMachine: countingPair(paired, "paired as test-device") }), async () => true)
+    expect(paired.count).toBe(1)
+    expect(summary).toBe("paired as test-device")
+  })
+
+  test("does not offer when already paired", async () => {
+    const confirmed = { count: 0 }
+    const paired = { count: 0 }
+    const summary = await runPairingStep(
+      stepDeps({ pairingComplete: async () => true, pairMachine: countingPair(paired) }),
+      async () => {
+        confirmed.count++
+        return true
+      },
+    )
+    expect(summary).toBe("already paired")
+    expect(confirmed.count).toBe(0)
+    expect(paired.count).toBe(0)
+  })
+
+  test("skipped answer does not pair", async () => {
+    const paired = { count: 0 }
+    const summary = await runPairingStep(stepDeps({ pairMachine: countingPair(paired) }), async () => false)
+    expect(summary).toContain("skipped")
+    expect(paired.count).toBe(0)
+  })
+
+  test("prompt cancel is treated as skip, not wizard cancel", async () => {
+    const paired = { count: 0 }
+    const summary = await runPairingStep(
+      stepDeps({ pairMachine: countingPair(paired) }),
+      async () => Symbol("cancel") as unknown,
+    )
+    expect(summary).toContain("skipped")
+    expect(paired.count).toBe(0)
+  })
+
+  test("prompt rejection (thrown) is treated as skip", async () => {
+    const paired = { count: 0 }
+    const summary = await runPairingStep(stepDeps({ pairMachine: countingPair(paired) }), async () => {
+      throw new Error("no tty")
+    })
+    expect(summary).toContain("skipped")
+    expect(paired.count).toBe(0)
+  })
+
+  test("pair failure degrades to a summary note, never throws", async () => {
+    const summary = await runPairingStep(
+      stepDeps({
+        pairMachine: async () => {
+          throw new Error("network down")
+        },
+      }),
+      async () => true,
+    )
+    expect(summary).toContain("pairing failed (network down)")
+  })
+
+  test("GIZZI_NO_AUTO_PAIR skips without prompting or pairing", async () => {
+    const prev = process.env.GIZZI_NO_AUTO_PAIR
+    process.env.GIZZI_NO_AUTO_PAIR = "1"
+    try {
+      const confirmed = { count: 0 }
+      const paired = { count: 0 }
+      const summary = await runPairingStep(stepDeps({ pairMachine: countingPair(paired) }), async () => {
+        confirmed.count++
+        return true
+      })
+      expect(summary).toBe("skipped (GIZZI_NO_AUTO_PAIR set)")
+      expect(confirmed.count).toBe(0)
+      expect(paired.count).toBe(0)
+    } finally {
+      if (prev === undefined) delete process.env.GIZZI_NO_AUTO_PAIR
+      else process.env.GIZZI_NO_AUTO_PAIR = prev
+    }
+  })
+
+  test("broken pairing-status check still offers pairing", async () => {
+    const paired = { count: 0 }
+    const summary = await runPairingStep(
+      stepDeps({
+        pairingComplete: async () => {
+          throw new Error("corrupt identity")
+        },
+        pairMachine: countingPair(paired, "paired as test-device"),
+      }),
+      async () => true,
+    )
+    expect(paired.count).toBe(1)
+    expect(summary).toBe("paired as test-device")
   })
 })
