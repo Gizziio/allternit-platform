@@ -4,9 +4,9 @@
 
 **Just did:** Server enum PR #220 open (ao/runtime-type-ao-enum). Fabric modules implemented + committed (gate-approved 6a5777398) + keep-alive pooling fix (c9aa10578): live pairing proved create works but the first exchange poll died on a reused dead keep-alive connection — `pool_max_idle_per_host(0)` fixed it; poller now runs the full 10-min window. Build clean, 16/16 fabric unit tests, detect::manifest parallel flakes confirmed as the documented pre-existing class (59/59 serial).
 
-**Next:** Live pair awaiting Eoj's browser approval (code RTX6-JNQ6) → `ao fabric serve` → PWA hard gate. Then AO_FABRIC_NODE_NOTES.md + node PR + ledger.
+**Next:** Live pair code NNGP-4CE9 (expires 05:30:38Z 2026-09-10) awaiting Eoj's browser approval at https://ai.allternit.com/pair?code=NNGP-4CE9 (NOT the CLI-printed platform.allternit.com URL — that page 404s; root cause of 6 expired pairings). Live ao session `ao-hardgate-demo` spawned + alive for the hard gate. After approval: `ao fabric serve` → shim curl verify → relay connect → PWA hard gate. Then AO_FABRIC_NODE_NOTES.md + node PR + ledger.
 
-**Open questions:** Three pairings expired unapproved — if the approve page errors, Eoj to say what it shows. runtimeType "ao" needs PR #220 deployed; until then pair with --runtime-type desktop (D2 fallback).
+**Open questions:** runtimeType "ao" needs PR #220 deployed; until then pair with --runtime-type desktop (D2 fallback).
 
 ---
 
