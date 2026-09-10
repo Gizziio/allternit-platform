@@ -25,7 +25,7 @@ export interface Computer {
   kind: ComputerKind;
   provider: string;
   status: ComputerStatus;
-  owner_type: 'user' | 'org' | 'bot';
+  owner_type: 'user' | 'org' | 'bot' | 'session';
   owner_id: string;
   bot_id?: string | null;
   session_id?: string | null;
@@ -73,7 +73,7 @@ export interface CreateComputerInput {
 }
 
 export interface CreateComputerResponse {
-  owner_type?: 'user' | 'org' | 'bot';
+  owner_type?: 'user' | 'org' | 'bot' | 'session';
   owner_id?: string;
   cpu_cores?: number;
   memory_mb?: number;
@@ -146,6 +146,10 @@ export async function stopComputer(id: string): Promise<ComputerLifecycleRespons
 
 export async function deleteComputer(id: string): Promise<void> {
   await computerRaw(computerPath(id, 'delete'), { method: 'POST' });
+}
+
+export async function sessionEndComputer(id: string, approvalId?: string): Promise<ComputerLifecycleResponse> {
+  return api.post<ComputerLifecycleResponse>(computerPath(id, 'session-end', approvalId));
 }
 
 export async function getDesktopUsageSummary(): Promise<DesktopUsageSummary> {
