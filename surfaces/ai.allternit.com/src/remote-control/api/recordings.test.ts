@@ -143,6 +143,7 @@ describe("getRecordingDetail", () => {
         manifest: { recording_id: "rec-1", task: "t", total_steps: 1, status: "completed" },
         steps: [{ step: 1, action_type: "click", action_target: "b" }],
         gif_url: "http://gateway/v1/computer-use/recordings/rec-1/gif",
+        video_url: "http://gateway/v1/computer-use/recordings/rec-1/video",
       }),
     );
 
@@ -150,7 +151,8 @@ describe("getRecordingDetail", () => {
     expect(detail.steps).toHaveLength(1);
     expect(detail.steps[0].action_type).toBe("click");
     expect(detail.gifUrl).toBe("http://gateway/v1/computer-use/recordings/rec-1/gif");
-    // No GIF probe: gif_url came straight from the detail payload.
+    expect(detail.videoUrl).toBe("http://gateway/v1/computer-use/recordings/rec-1/video");
+    // No GIF/video probe: both URLs came straight from the detail payload.
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
