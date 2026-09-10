@@ -270,6 +270,23 @@ export default defineConfig({
         // the header so sign-in works in dev. (Production uses the Cloudflare
         // worker, which forwards headers differently.)
         headers: { origin: 'https://ai.allternit.com' },
+        // FAPI scopes its session cookies to the shim origin's parent domain
+        // (Set-Cookie ...; Domain=allternit.com; Secure). A browser on
+        // http://localhost rejects Domain cookies from another registrable
+        // domain, so __client never persists and every request mints a fresh
+        // client — seeded sign-in completes (200) but the session reads as
+        // signed_out. Strip the Domain attribute so the cookies become
+        // host-only for the dev origin.
+        configure: (proxy) => {
+          proxy.on('proxyRes', (res) => {
+            const cookies = res.headers['set-cookie'];
+            if (cookies) {
+              res.headers['set-cookie'] = cookies.map((c) =>
+                c.replace(/;\s*Domain=allternit\.com/i, ''),
+              );
+            }
+          });
+        },
       },
       '/api': {
         target: 'http://127.0.0.1:8013',
