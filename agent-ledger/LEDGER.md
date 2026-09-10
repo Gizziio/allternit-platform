@@ -21,6 +21,26 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 08:05 — kimi — Pairing verification URL default → ai.allternit.com
+
+- **Session ID / Branch:** `fix/pair-url-default` (worktree `allternit-cloud-api-pair-url`)
+- **Agent:** kimi
+- **Summary:** cloud-api built the device-approval link as `platform.allternit.com/pair?code=…` by default; the approval page lives at ai.allternit.com/pair. Default corrected (env override unchanged).
+- **Commit:** PR #239
+- **How it works:** `runtime_pairing.rs` `ALLTERNIT_PLATFORM_URL` fallback now `https://ai.allternit.com`; no deploy config sets the var, so the default is what production serves.
+- **Outstanding work:** cloud-api redeploy needed for production effect (human-approved per harness rules).
+- **Summary file:** [./summaries/2026-09-10-0805-fix-pair-url-default-kimi-pair-url.md](./summaries/2026-09-10-0805-fix-pair-url-default-kimi-pair-url.md)
+
+### 2026-09-10 08:00 — kimi — gizzi-code onboarding now offers device pairing
+
+- **Session ID / Branch:** `gizzi/onboarding-pair` (worktree `allternit-gizzi-onboarding-pair`)
+- **Agent:** kimi
+- **Summary:** The first-run wizard never invoked the pairing flow — machines finished onboarding unpaired (user-flagged). Wizard now offers pairing (default yes) as its last step via new `OnboardingDeps` seams + exported `runPairingStep`.
+- **Commit:** PR #238, merge commit `dbaedf2697` on `main`
+- **How it works:** `runPairingStep` skips when `GIZZI_NO_AUTO_PAIR` is set, when already paired, on decline/cancel, and degrades pair failures to a summary note — onboarding completion is never blocked. Non-interactive paths untouched.
+- **Outstanding work:** Interactive end-to-end (real clack + browser approval) not exercised; pair path itself is the live-proven `gizzi pair` code. Ships in the next desktop/gizzi release — not user-visible until then.
+- **Summary file:** [./summaries/2026-09-10-0800-gizzi-onboarding-pair-kimi-auto-pair.md](./summaries/2026-09-10-0800-gizzi-onboarding-pair-kimi-auto-pair.md)
+
 ### 2026-09-10 07:20 — kimi — P3 Fabric Transport node (ao fabric pair|serve|status)
 
 - **Session ID / Branch:** `ao/fabric-node` (worktree `allternit-ao-fabric-node`)
