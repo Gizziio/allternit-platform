@@ -1,238 +1,244 @@
 # Sessions API
 
-Managed, durable agent sessions. A session is a scoped context for a single agent run or a child thread of an existing run. All routes are nested under `/api/v1/beta/sessions` and require a Clerk JWT session.
+Cloud Agent sessions. A session is a scoped context for one agent: it binds
+an agent (by id or inline definition), a computer kind, and an event history
+you can stream or page through. All routes are nested under `/api/v1` and
+require a Clerk JWT session or API key.
 
-> Base URL: `http://localhost:8013/api/v1`  
+> Base URL: `http://localhost:8013/api/v1`
 > Auth: `Authorization: Bearer <clerk_jwt>`
+> No `OpenAI-Beta` header is required.
+
+The older `/api/v1/beta/sessions` routes remain available as an alias over
+the same sessions table. New integrations should use the routes documented
+here. Beta routes keep their original request/response shapes and stored
+event vocabulary; this surface translates to Allternit names on read.
 
 ---
 
 ## Create a session
 
-`POST /beta/sessions`
-
-Starts a new managed session. The caller may bind it to an existing agent with `agent_id`, give it a `name`, and link it to a parent session via `parent_thread_id` to create a child thread. Budget limits are stored at the session level and enforced when run events are appended.
+`POST /sessions`
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `agent_id` | string | no | Agent to run in this session. |
-| `name` | string | no | Human-readable session name. |
-| `parent_thread_id` | string | no | Existing session UUID to treat as the parent thread. Must belong to the same user. |
+| `agent` | string \| object | no | Existing agent id, `{ "id", "version" }` reference, or an inline agent: `{ "model", "instructions"?, "tools"?, "name"? }`. Inline agents create an `agents` row (`instructions` becomes its system prompt); the default name is `cloud-agent`. |
+| `computer` | object | no | `{ "kind": "none" \| "sandbox" \| "local" }`. Default `none`. |
+| `input` | string \| object | no | Initial user message: a plain string or `{ "type": "user.message", "content": "…" }`. Enqueues a run, like sending `user.message` after create. |
+| `stream` | boolean | no | If true, the response is an SSE stream of the session's events (same as `GET /sessions/:id/events/stream`), starting with `session.created`, instead of a JSON session body. |
+| `vault_ids` | string[] | no | Vaults to make available to the run. Recorded on session metadata. |
+| `budget` | object | no | `{ "max_tokens"?, "max_turns"?, "max_tool_calls"? }`. |
 | `metadata` | object | no | Arbitrary key/value object. Defaults to `{}`. |
-| `budget` | object | no | Limits for this session. See Budget object below. |
+| `brain_id` | string \| null | no | Brain attachment for the run. Recorded on session metadata. |
 
-**Budget object**
+Computer kinds:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `max_tokens` | integer | Maximum cumulative tokens. |
-| `max_turns` | integer | Maximum cumulative turns. |
-| `max_tool_calls` | integer | Maximum cumulative tool calls. |
+- `none` — no computer. The session is valid; a `computer.ready` event is
+  recorded immediately.
+- `sandbox` — hosted sandbox. Returns `400` unless the account has a hosted
+  computer entitlement wired; it never silently becomes `none`.
+- `local` — descriptor only in this release. The session records the intent
+  (`computer.pending`) and accepts events, but no worker is attached and
+  nothing is awaited.
 
 ### Example
 
 ```bash
-curl -X POST http://localhost:8013/api/v1/beta/sessions \
+curl -X POST http://localhost:8013/api/v1/sessions \
   -H "Authorization: Bearer $CLERK_JWT" \
   -H "Content-Type: application/json" \
   -d '{
-    "agent_id": "agent_01J3X8X8X8X8X8X8X8X8X8X8",
-    "name": "support-thread-7",
-    "budget": {
-      "max_tokens": 10000,
-      "max_turns": 20,
-      "max_tool_calls": 50
-    },
-    "metadata": {"ticket_id": "T-1234"}
+    "agent": { "model": "kimi-k2", "instructions": "Be terse." },
+    "computer": { "kind": "none" },
+    "input": "Summarize the repo layout."
   }'
 ```
 
-### Response
+### Response `201`
 
 ```json
 {
   "session": {
-    "id": "sess_01J3X8X8X8X8X8X8X8X8X8X8",
-    "agent_id": "agent_01J3X8X8X8X8X8X8X8X8X8X8",
-    "name": "support-thread-7",
-    "parent_thread_id": null,
-    "status": "active",
-    "metadata": {"ticket_id": "T-1234"},
+    "id": "9f1c2a…",
+    "agent_id": "3c8e…",
+    "name": null,
+    "status": "running",
+    "metadata": {},
     "budget": {
-      "max_tokens": 10000,
-      "max_turns": 20,
-      "max_tool_calls": 50,
-      "tokens_used": 0,
-      "turns_used": 0,
-      "tool_calls_used": 0
+      "max_tokens": null, "max_turns": null, "max_tool_calls": null,
+      "tokens_used": 0, "turns_used": 0, "tool_calls_used": 0
     },
-    "created_at": "2026-08-09T09:30:00Z",
-    "updated_at": "2026-08-09T09:30:00Z",
+    "computer": { "kind": "none", "id": null },
+    "created_at": "2026-09-10 12:00:00",
+    "updated_at": "2026-09-10 12:00:00",
     "archived_at": null
-  },
-  "id": "sess_01J3X8X8X8X8X8X8X8X8X8X8"
+  }
 }
 ```
 
-Creating a session also seeds two system events: `session_created` and `budget_updated`.
+`status` is `running` while the initial input's run is queued. With no input
+it is `idle`.
 
 ---
 
 ## List sessions
 
-`GET /beta/sessions[?status=active|archived][&parent_thread_id=<id>]`
+`GET /sessions`
 
-Returns the caller's sessions, newest first. Filter by `status` or `parent_thread_id` to list child threads.
+Returns the caller's sessions, newest first, with public status names.
 
-### Example
-
-```bash
-curl "http://localhost:8013/api/v1/beta/sessions?status=active" \
-  -H "Authorization: Bearer $CLERK_JWT"
-```
-
-### Response
+### Response `200`
 
 ```json
-{
-  "sessions": [
-    {
-      "id": "sess_01J3X8X8X8X8X8X8X8X8X8X8",
-      "agent_id": "agent_01J3X8X8X8X8X8X8X8X8X8X8",
-      "name": "support-thread-7",
-      "parent_thread_id": null,
-      "status": "active",
-      "metadata": {"ticket_id": "T-1234"},
-      "budget": {
-        "max_tokens": 10000,
-        "max_turns": 20,
-        "max_tool_calls": 50,
-        "tokens_used": 0,
-        "turns_used": 0,
-        "tool_calls_used": 0
-      },
-      "created_at": "2026-08-09T09:30:00Z",
-      "updated_at": "2026-08-09T09:30:00Z",
-      "archived_at": null
-    }
-  ]
-}
+{ "sessions": [ { "id": "…", "status": "idle", "computer": { "kind": "none", "id": null } } ] }
 ```
 
 ---
 
 ## Get a session
 
-`GET /beta/sessions/:id`
+`GET /sessions/:id`
 
-### Example
+### Response `200`
 
-```bash
-curl http://localhost:8013/api/v1/beta/sessions/sess_01J3X8X8X8X8X8X8X8X8X8X8 \
-  -H "Authorization: Bearer $CLERK_JWT"
+```json
+{ "session": { "id": "…", "status": "idle", … } }
 ```
 
----
+### Status values
 
-## Update a session
-
-`PATCH /beta/sessions/:id`
-
-Only the fields provided are updated. Updating `budget` overwrites the stored limits and emits a new `budget_updated` event.
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | no | New session name. |
-| `metadata` | object | no | Replaces the existing metadata object. |
-| `budget` | object | no | Replaces the existing budget limits. |
-
-### Example
-
-```bash
-curl -X PATCH http://localhost:8013/api/v1/beta/sessions/sess_01J3X8X8X8X8X8X8X8X8X8X8 \
-  -H "Authorization: Bearer $CLERK_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "support-thread-7-renamed",
-    "budget": {"max_tokens": 20000, "max_turns": 40, "max_tool_calls": 100}
-  }'
-```
+| Status | Meaning |
+|--------|---------|
+| `idle` | No run in flight. |
+| `running` | A run is queued or executing. |
+| `waiting` | Reserved for runs blocked on input. |
+| `failed` | The session failed. |
+| `archived` | Terminal. Further event sends fail. |
 
 ---
 
 ## Archive a session
 
-`DELETE /beta/sessions/:id`
+`POST /sessions/:id/archive`
 
-Archives the session (status becomes `archived` and `archived_at` is set). Archived sessions cannot receive new events or be interrupted. This is a soft delete; the record and event history remain available.
+Archiving is one-way. Subsequent `POST /sessions/:id/events` calls return
+`400`.
 
-### Example
-
-```bash
-curl -X DELETE http://localhost:8013/api/v1/beta/sessions/sess_01J3X8X8X8X8X8X8X8X8X8X8 \
-  -H "Authorization: Bearer $CLERK_JWT"
-```
-
-### Response
+### Response `200`
 
 ```json
-{"archived": true}
+{ "archived": true }
 ```
 
 ---
 
-## Session resources
+## Send events
 
-Credentials and references can be attached to a session so the agent can use them without embedding secrets in prompts.
+`POST /sessions/:id/events`
 
-Supported resource kinds:
+Accepts user events. `user.message` enqueues a run exactly like the beta
+surface's `POST /run`; `user.interrupt` cancels queued work and returns the
+session to `idle`; `user.tool_result` is accepted and recorded.
 
-| Kind | Storage |
-|------|---------|
-| `github_token` | Encrypted at rest. |
-| `vault_credential` | Stored as a reference (`ref`). |
-| `api_key` | Encrypted at rest. |
+### Request body
 
-See the full resource endpoints below.
-
-### Attach a resource
-
-`POST /beta/sessions/:id/resources`
-
-Provide exactly one of `value` (encrypted) or `ref` (external reference).
-
-```bash
-curl -X POST http://localhost:8013/api/v1/beta/sessions/sess_01J3X8X8X8X8X8X8X8X8X8X8/resources \
-  -H "Authorization: Bearer $CLERK_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "github",
-    "kind": "github_token",
-    "value": "ghp_..."
-  }'
+```json
+{
+  "events": [
+    { "type": "user.message", "content": "Keep going." },
+    { "type": "user.interrupt" },
+    { "type": "user.tool_result", "data": { "tool_call_id": "…", "output": "…" } }
+  ]
+}
 ```
 
-### List resources
+### Response `200`
 
-`GET /beta/sessions/:id/resources`
-
-### Delete a resource
-
-`DELETE /beta/sessions/:id/resources/:resource_id`
+```json
+{ "accepted": true }
+```
 
 ---
+
+## List events
+
+`GET /sessions/:id/events`
+
+Returns the session's full event history, oldest first, with Allternit type
+names.
+
+### Response `200`
+
+```json
+{
+  "events": [
+    {
+      "id": "7b…",
+      "sequence": 1,
+      "type": "session.created",
+      "session_id": "9f1c…",
+      "created_at": "2026-09-10 12:00:00",
+      "data": {}
+    }
+  ]
+}
+```
+
+### Event types
+
+**Lifecycle** — `session.created`, `session.running`, `session.idle`,
+`session.waiting`, `session.failed`
+
+**Computer** — `computer.pending`, `computer.ready`, `computer.failed`
+
+**Turns** — `turn.started`, `turn.completed`, `turn.failed`
+
+**Agent output** — `agent.message`, `agent.tool_use`, `agent.tool_result`
+
+**User input** (send only) — `user.message`, `user.interrupt`,
+`user.tool_result`
+
+Each event is `{ "id", "type", "session_id", "created_at", "data" }` plus a
+monotonic `sequence` for ordering.
+
+---
+
+## Stream events
+
+`GET /sessions/:id/events/stream`
+
+Server-sent events stream of the same public events. On connect, stored
+history is replayed from the beginning (or from `?after=<sequence>`), then
+live events follow. Each SSE frame's `data` is one event JSON and its
+`event` field is the event type.
+
+---
+
+## Agents
+
+`POST /agents/:id/archive` archives an agent (`status: "archived"`,
+`archived_at` stamped). There is no unarchive. Agent JSON includes a
+`version` integer (default `1`) that increments on every config-changing
+update; pass `{ "id", "version" }` as the session's `agent` reference to
+have mismatches rejected with `400`.
+
+---
+
+## Beta alias
+
+`/api/v1/beta/sessions` (create/list/get/update/archive, `/run`, `/events`,
+`/events/list`, `/events/ws`, `/interrupt`, resources, files, context)
+continues to work unchanged on the same table. Beta responses keep the
+stored event vocabulary (`session_created`, `run_requested`, …); the public
+surface above is the one that translates to Allternit names.
 
 ## Status codes
 
-| Status | Meaning |
-|--------|---------|
-| 201 | Session or resource created. |
-| 200 | List/get/update succeeded. |
-| 204 | Resource deleted. |
-| 400 | Missing/invalid field, or `parent_thread_id` does not exist. |
-| 404 | Session or resource not found, or not owned by the caller. |
-| 409 | Duplicate resource name for the session. |
+| Code | When |
+|------|------|
+| `201` | Session created. |
+| `200` | Retrieve, list, archive, send, list events. |
+| `400` | Archived session, unknown event type, `computer.kind: "sandbox"` without entitlement, version mismatch. |
+| `404` | Unknown session id. |
