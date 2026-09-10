@@ -648,15 +648,27 @@ export const sessionApi = {
    * Open the session sync SSE channel.
    * GET /api/v1/agent-sessions/sync
    *
+   * Event JSON is the data-plane contract (`transform_bus_event` on :8013 /
+   * gizzi agent-compat). Cloud-api relays it verbatim.
+   *
    * When the control-plane flag is on this streams from cloud-api with
    * authenticated fetch (cloud-api accepts Bearer only, no session cookie, so
    * a plain EventSource cannot authenticate).
+   *
+   * `lastEventId` is the SSE `id:` cursor: sent as `Last-Event-ID` on the
+   * cloud fetch path, and as `?since=` on the local EventSource path so a
+   * closed-and-recreated source can replay the gap.
    */
-  createSyncSource(): EventSource {
+  createSyncSource(lastEventId?: string): EventSource {
+    const since = lastEventId?.trim();
     if (isAgentSessionsApiEnabled()) {
-      return createCloudApiEventSource("/api/v1/agent-sessions/sync");
+      return createCloudApiEventSource("/api/v1/agent-sessions/sync", {
+        lastEventId: since,
+      });
     }
-    return new EventSource(`${getAgentSessionBase()}/sync`);
+    const base = `${getAgentSessionBase()}/sync`;
+    const url = since ? `${base}?since=${encodeURIComponent(since)}` : base;
+    return new EventSource(url);
   },
 };
 

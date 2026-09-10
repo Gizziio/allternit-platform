@@ -141,6 +141,11 @@ export async function cloudApiFetch(
  * their own retry loops from `onerror`, which keeps reconnect policy in one
  * place per consumer.
  */
+export interface CloudApiEventSourceOptions {
+  /** SSE cursor from a previous connection; sent as Last-Event-ID. */
+  lastEventId?: string;
+}
+
 export class CloudApiEventSource extends EventTarget {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
@@ -151,6 +156,7 @@ export class CloudApiEventSource extends EventTarget {
   readonly url: string;
   readonly withCredentials = false;
   readyState = CloudApiEventSource.CONNECTING;
+  lastEventId = "";
   onopen: ((this: EventSource, event: Event) => unknown) | null = null;
   onmessage: ((this: EventSource, event: MessageEvent) => unknown) | null = null;
   onerror: ((this: EventSource, event: Event) => unknown) | null = null;
@@ -158,9 +164,10 @@ export class CloudApiEventSource extends EventTarget {
   private controller: AbortController | null = null;
   private closed = false;
 
-  constructor(path: string) {
+  constructor(path: string, options: CloudApiEventSourceOptions = {}) {
     super();
     this.url = cloudApiUrl(path);
+    if (options.lastEventId) this.lastEventId = options.lastEventId;
     void this.connect();
   }
 
@@ -186,7 +193,11 @@ export class CloudApiEventSource extends EventTarget {
   }
 
   private emitMessage(type: string, data: string): void {
-    const event = new MessageEvent(type, { data, origin: this.url });
+    const event = new MessageEvent(type, {
+      data,
+      origin: this.url,
+      lastEventId: this.lastEventId,
+    });
     if (type === 'message') {
       this.onmessage?.call(this as unknown as EventSource, event);
     }
@@ -204,6 +215,7 @@ export class CloudApiEventSource extends EventTarget {
       if (value.startsWith(' ')) value = value.slice(1);
       if (field === 'data') data.push(value);
       else if (field === 'event' && value) eventType = value;
+      else if (field === 'id' && value) this.lastEventId = value;
     }
     if (data.length) this.emitMessage(eventType, data.join('\n'));
   }
@@ -216,6 +228,7 @@ export class CloudApiEventSource extends EventTarget {
         headers: {
           Accept: 'text/event-stream',
           ...authHeaders,
+          ...(this.lastEventId ? { 'Last-Event-ID': this.lastEventId } : {}),
         },
         credentials: 'omit',
         cache: 'no-store',
@@ -258,6 +271,9 @@ export class CloudApiEventSource extends EventTarget {
 }
 
 /** Create an authenticated SSE source for a cloud-api route. */
-export function createCloudApiEventSource(path: string): EventSource {
-  return new CloudApiEventSource(path) as unknown as EventSource;
+export function createCloudApiEventSource(
+  path: string,
+  options?: CloudApiEventSourceOptions,
+): EventSource {
+  return new CloudApiEventSource(path, options) as unknown as EventSource;
 }

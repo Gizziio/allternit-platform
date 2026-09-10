@@ -128,6 +128,7 @@ export function useSessionComposerState(
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
   const esRef = useRef<EventSource | null>(null);
+  const lastEventIdRef = useRef('');
   const destroyedRef = useRef(false);
 
   const connect = useCallback(() => {
@@ -148,11 +149,13 @@ export function useSessionComposerState(
     // sessionApi.createSyncSource() picks the transport: authenticated fetch
     // streaming against the cloud-api control plane when the agent-sessions
     // flag is on (cloud-api accepts Bearer only — a plain EventSource cannot
-    // authenticate), or the platform EventSource otherwise.
-    const es = sessionApi.createSyncSource();
+    // authenticate), or the platform EventSource otherwise. lastEventId is
+    // the data-plane SSE cursor (Last-Event-ID / ?since=).
+    const es = sessionApi.createSyncSource(lastEventIdRef.current || undefined);
     esRef.current = es;
 
     es.onmessage = (e: MessageEvent<string>) => {
+      if (e.lastEventId) lastEventIdRef.current = e.lastEventId;
       retryCountRef.current = 0;
       let parsed: { type: string; properties?: Record<string, unknown>; session_id?: string; request_id?: string };
       try {
