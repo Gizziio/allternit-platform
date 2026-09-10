@@ -6,7 +6,9 @@
     "mcpServer": {
       "name": "allternit-ops",
       "command": "node",
-      "args": ["/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"]
+      "args": [
+        "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"
+      ]
     }
   },
   "tools": {
@@ -14,22 +16,64 @@
       "skillsDir": "~/.claude/skills",
       "rulesFile": "~/.claude/CLAUDE.md",
       "rulesFrontmatter": null,
-      "mcp": { "kind": "json", "path": "~/.claude/settings.json", "serversKey": "mcpServers" },
-      "_convention": "skills ~/.claude/skills + rules ~/.claude/CLAUDE.md per teamai-cli toolPaths; MCP via ~/.claude/settings.json mcpServers, live-verified on this machine (teamai uses ~/.claude.json — also valid). confidence: teamai + verified-live"
+      "mcp": {
+        "kind": "json",
+        "path": "~/.claude/settings.json",
+        "serversKey": "mcpServers"
+      },
+      "license": "proprietary-terms",
+      "install": {
+        "method": "npm",
+        "pinnedVersion": "2.1.267",
+        "installArgs": [
+          "@anthropic-ai/claude-code@2.1.267"
+        ],
+        "verifyCmd": "claude --version"
+      },
+      "_convention": "skills ~/.claude/skills + rules ~/.claude/CLAUDE.md per teamai-cli toolPaths; MCP via ~/.claude/settings.json mcpServers, live-verified on this machine (teamai uses ~/.claude.json — also valid). confidence: teamai + verified-live",
+      "_licenseNote": "Anthropic Commercial Terms (https://www.anthropic.com/legal/commercial-terms); npm metadata says 'SEE LICENSE IN README.md', not an SPDX id. Installs only with --accept-terms claude (plan section 8 gate). Pin verified on npm registry 2026-09-10."
     },
     "codex": {
       "skillsDir": "~/.codex/skills",
       "rulesFile": "~/.codex/AGENTS.md",
       "rulesFrontmatter": null,
-      "mcp": { "kind": "toml-block", "path": "~/.codex/config.toml", "section": "mcp_servers.allternit-ops" },
-      "_convention": "skills ~/.codex/skills per teamai-cli toolPaths; MCP [mcp_servers.<name>] TOML block in ~/.codex/config.toml per teamai-cli mcp-format renderCodexBlock. confidence: teamai + verified-live"
+      "mcp": {
+        "kind": "toml-block",
+        "path": "~/.codex/config.toml",
+        "section": "mcp_servers.allternit-ops"
+      },
+      "license": "apache",
+      "install": {
+        "method": "npm",
+        "pinnedVersion": "0.154.0",
+        "installArgs": [
+          "@openai/codex@0.154.0"
+        ],
+        "verifyCmd": "codex --version"
+      },
+      "_convention": "skills ~/.codex/skills per teamai-cli toolPaths; MCP [mcp_servers.<name>] TOML block in ~/.codex/config.toml per teamai-cli mcp-format renderCodexBlock. confidence: teamai + verified-live",
+      "_licenseNote": "Apache-2.0 (https://github.com/openai/codex/blob/main/LICENSE, also npm metadata). Pin 0.154.0 verified on npm registry 2026-09-10."
     },
     "kimi": {
       "skillsDir": "~/.kimi-code/skills",
       "rulesFile": "~/.kimi-code/AGENTS.md",
       "rulesFrontmatter": null,
-      "mcp": { "kind": "json", "path": "~/.kimi-code/mcp.json", "serversKey": "mcpServers" },
-      "_convention": "Kimi Code CLI conventions, verified live on this machine (not in teamai matrix). confidence: verified-live"
+      "mcp": {
+        "kind": "json",
+        "path": "~/.kimi-code/mcp.json",
+        "serversKey": "mcpServers"
+      },
+      "license": "mit",
+      "install": {
+        "method": "npm",
+        "pinnedVersion": "0.42.0",
+        "installArgs": [
+          "@moonshot-ai/kimi-code@0.42.0"
+        ],
+        "verifyCmd": "kimi --version"
+      },
+      "_convention": "Kimi Code CLI conventions, verified live on this machine (not in teamai matrix). confidence: verified-live",
+      "_licenseNote": "MIT per the published npm tarball LICENSE (https://www.npmjs.com/package/@moonshot-ai/kimi-code, verified 2026-09-10). GitHub repo MoonshotAI/kimi-cli metadata says Apache-2.0 — free-class either way; tarball is what ao installs. Binary channel code.kimi.com/kimi-code (manifest+sha256 per platform) exists as an alternate method."
     },
     "grok": {
       "skillsDir": "~/.grok/skills",
@@ -37,26 +81,72 @@
       "mcp": {
         "kind": "cli",
         "bin": "grok",
-        "addArgs": ["mcp", "add", "allternit-ops", "-s", "user", "--", "node", "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"],
-        "removeArgs": ["mcp", "remove", "allternit-ops"],
+        "addArgs": [
+          "mcp",
+          "add",
+          "allternit-ops",
+          "-s",
+          "user",
+          "--",
+          "node",
+          "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"
+        ],
+        "removeArgs": [
+          "mcp",
+          "remove",
+          "allternit-ops"
+        ],
         "configPath": "~/.grok/config.toml",
         "section": "mcp_servers.allternit-ops"
       },
-      "_convention": "Grok CLI native `grok mcp add`, verified live on this machine (not in teamai matrix). confidence: verified-live"
+      "license": "apache",
+      "install": {
+        "method": "unsupported",
+        "pinnedVersion": null,
+        "installArgs": [],
+        "verifyCmd": "grok --version"
+      },
+      "_convention": "Grok CLI native `grok mcp add`, verified live on this machine (not in teamai matrix). confidence: verified-live",
+      "_licenseNote": "Apache-2.0 per the installed CLI's own README License section (https://github.com/x-ai-org/grok-cli). No verified version-pinned install channel: npm 'grok-cli' is NOT the xAI package (unrelated 1.0.5, verified 2026-09-10) — do not add an npm method for grok without an upstream-pinned channel."
     },
     "cursor": {
       "skillsDir": "~/.cursor/skills",
       "rulesFile": "~/.cursor/rules/allternit.mdc",
       "rulesFrontmatter": "description: Allternit ops harness rules\nglobs: \nalwaysApply: true",
       "syncWhenAbsent": true,
-      "mcp": { "kind": "json", "path": "~/.cursor/mcp.json", "serversKey": "mcpServers" },
-      "_convention": "skills ~/.cursor/skills + MCP ~/.cursor/mcp.json (mcpServers, stdio {command,args}) per teamai-cli toolPaths/mcp-format. syncWhenAbsent: true — config-only install on this machine, so config is written even while the app dir is absent. confidence: teamai + verified-live"
+      "mcp": {
+        "kind": "json",
+        "path": "~/.cursor/mcp.json",
+        "serversKey": "mcpServers"
+      },
+      "license": "proprietary-terms",
+      "install": {
+        "method": "unsupported",
+        "pinnedVersion": null,
+        "installArgs": [],
+        "verifyCmd": "cursor-agent --version"
+      },
+      "_convention": "skills ~/.cursor/skills + MCP ~/.cursor/mcp.json (mcpServers, stdio {command,args}) per teamai-cli toolPaths/mcp-format. syncWhenAbsent: true — config-only install on this machine, so config is written even while the app dir is absent. confidence: teamai + verified-live",
+      "_licenseNote": "Proprietary — Cursor Terms of Service (https://cursor.com/terms). GUI app; cursor-agent ships inside it. No CLI-installable pinned channel, so method unsupported (manifest sync itself works via syncWhenAbsent)."
     },
     "gizzi": {
       "skillsDir": "~/.gizzi/skills",
       "rulesFile": null,
-      "mcp": { "kind": "json", "path": "~/.config/gizzi-code/gizzi.json", "serversKey": "mcp", "commandArray": true },
-      "_convention": "Gizzi Code conventions, verified live on this machine (not in teamai matrix). MCP entry shape {type:local, command:[...]} verified from gizzi source. confidence: verified-live"
+      "mcp": {
+        "kind": "json",
+        "path": "~/.config/gizzi-code/gizzi.json",
+        "serversKey": "mcp",
+        "commandArray": true
+      },
+      "license": "mit",
+      "install": {
+        "method": "unsupported",
+        "pinnedVersion": null,
+        "installArgs": [],
+        "verifyCmd": "gizzi --version"
+      },
+      "_convention": "Gizzi Code conventions, verified live on this machine (not in teamai matrix). MCP entry shape {type:local, command:[...]} verified from gizzi source. confidence: verified-live",
+      "_licenseNote": "MIT for Allternit-original contributions (cmd/gizzi-code/LICENSE); portions derived from Anthropic's Claude Code are described in NOTICE and are NOT relicensed by that grant. Not distributed on npm — built from source / bundled with Allternit Desktop — so method unsupported."
     },
     "agy": {
       "skillsDir": null,
@@ -64,13 +154,31 @@
       "mcp": {
         "kind": "cli",
         "bin": "agy",
-        "addArgs": ["mcp", "add", "allternit-ops", "node", "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"],
-        "removeArgs": ["mcp", "remove", "allternit-ops"],
+        "addArgs": [
+          "mcp",
+          "add",
+          "allternit-ops",
+          "node",
+          "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"
+        ],
+        "removeArgs": [
+          "mcp",
+          "remove",
+          "allternit-ops"
+        ],
         "configPath": "~/.gemini/config/mcp_config.json",
         "configFormat": "json",
         "serversKey": "mcpServers"
       },
-      "_convention": "MCP config file verified live: `agy mcp add` writes ~/.gemini/config/mcp_config.json (agy is gemini-heritage). No skills convention found (plugins only) — skills not synced. Not in teamai matrix. confidence: verified-live"
+      "license": "undeclared",
+      "install": {
+        "method": "unsupported",
+        "pinnedVersion": null,
+        "installArgs": [],
+        "verifyCmd": "agy --version"
+      },
+      "_convention": "MCP config file verified live: `agy mcp add` writes ~/.gemini/config/mcp_config.json (agy is gemini-heritage). No skills convention found (plugins only) — skills not synced. Not in teamai matrix. confidence: verified-live",
+      "_licenseNote": "No upstream license evidence found (gemini-heritage fork per this manifest's _convention; Apache-2.0 of upstream gemini-cli does not automatically cover a fork). Stays undeclared until upstream evidence — installs (if ever) only with --accept-terms agy."
     },
     "opencode": {
       "skillsDir": "~/.config/opencode/skills",
@@ -78,20 +186,45 @@
       "mcp": {
         "kind": "cli",
         "bin": "opencode",
-        "addArgs": ["mcp", "add", "allternit-ops", "--", "node", "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"],
+        "addArgs": [
+          "mcp",
+          "add",
+          "allternit-ops",
+          "--",
+          "node",
+          "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"
+        ],
         "removeArgs": null,
         "configPath": "~/.config/opencode/opencode.jsonc",
         "configFormat": "json",
         "serversKey": "mcp",
         "commandArray": true
       },
-      "_convention": "User-scope skills at ~/.config/opencode/skills (dir-per-skill) per teamai-cli toolPaths userScope AND opencode v1.18 docs — NOT flat <name>.md as once assumed. `opencode mcp add` requires `--` before the command; CLI has no mcp remove, so uninstall edits opencode.jsonc directly. confidence: teamai + verified-live"
+      "license": "mit",
+      "install": {
+        "method": "npm",
+        "pinnedVersion": "1.18.30",
+        "installArgs": [
+          "opencode-ai@1.18.30"
+        ],
+        "verifyCmd": "opencode --version"
+      },
+      "_convention": "User-scope skills at ~/.config/opencode/skills (dir-per-skill) per teamai-cli toolPaths userScope AND opencode v1.18 docs — NOT flat <name>.md as once assumed. `opencode mcp add` requires `--` before the command; CLI has no mcp remove, so uninstall edits opencode.jsonc directly. confidence: teamai + verified-live",
+      "_licenseNote": "MIT (https://github.com/anomalyco/opencode, also npm metadata). HarnessRouter CE installs the GitHub release binary instead because the vendor script hardcodes its install dir; the npm package is a versioned wrapper around the same binary and is the pinned channel ao uses. Pin verified on npm registry 2026-09-10."
     },
     "antigravity": {
       "skillsDir": "~/.gemini/antigravity/skills",
       "rulesFile": null,
       "mcp": null,
-      "_convention": "MCP skipped — Antigravity IDE configures MCP in the IDE UI, not a stable file. Skills dir per platform crate convention; created on sync. Not in teamai matrix. confidence: inferred (platform crate)"
+      "license": "proprietary-terms",
+      "install": {
+        "method": "unsupported",
+        "pinnedVersion": null,
+        "installArgs": [],
+        "verifyCmd": "antigravity --version"
+      },
+      "_convention": "MCP skipped — Antigravity IDE configures MCP in the IDE UI, not a stable file. Skills dir per platform crate convention; created on sync. Not in teamai matrix. confidence: inferred (platform crate)",
+      "_licenseNote": "Proprietary — Google Terms of Service (https://policies.google.com/terms). IDE-only installer (Google's own download), no CLI-pinned channel: method unsupported."
     },
     "qwen": {
       "skillsDir": "~/.qwen/skills",
@@ -99,56 +232,153 @@
       "mcp": {
         "kind": "cli",
         "bin": "qwen",
-        "addArgs": ["mcp", "add", "allternit-ops", "node", "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js", "-s", "user"],
-        "removeArgs": ["mcp", "remove", "allternit-ops", "-s", "user"],
+        "addArgs": [
+          "mcp",
+          "add",
+          "allternit-ops",
+          "node",
+          "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js",
+          "-s",
+          "user"
+        ],
+        "removeArgs": [
+          "mcp",
+          "remove",
+          "allternit-ops",
+          "-s",
+          "user"
+        ],
         "configPath": "~/.qwen/settings.json",
         "configFormat": "json",
         "serversKey": "mcpServers"
       },
-      "_convention": "skills ~/.qwen/skills per teamai-cli KNOWN_AGENTS AND qwen-code docs (personal skills, dir-per-skill); qwen mcp add -s user writes mcpServers to ~/.qwen/settings.json, verified live. confidence: teamai + verified-live"
+      "license": "apache",
+      "install": {
+        "method": "npm",
+        "pinnedVersion": "0.23.3",
+        "installArgs": [
+          "@qwen-code/qwen-code@0.23.3"
+        ],
+        "verifyCmd": "qwen --version"
+      },
+      "_convention": "skills ~/.qwen/skills per teamai-cli KNOWN_AGENTS AND qwen-code docs (personal skills, dir-per-skill); qwen mcp add -s user writes mcpServers to ~/.qwen/settings.json, verified live. confidence: teamai + verified-live",
+      "_licenseNote": "Apache-2.0 (https://github.com/QwenLM/qwen-code/blob/main/LICENSE, also npm metadata). HarnessRouter CE installs the same package unpinned; ao pins (0.23.3 verified on npm registry 2026-09-10)."
     },
     "codebuddy": {
       "skillsDir": "~/.codebuddy/skills",
       "rulesFile": "~/.codebuddy/CODEBUDDY.md",
       "rulesFrontmatter": null,
-      "mcp": { "kind": "json", "path": "~/.codebuddy/mcp.json", "serversKey": "mcpServers" },
-      "_convention": "skills ~/.codebuddy/skills, rules ~/.codebuddy/CODEBUDDY.md, MCP ~/.codebuddy/mcp.json per teamai-cli toolPaths (claudemd = where teamai writes rules content). MCP stdio shape {command, args} under mcpServers per teamai-cli mcp-format renderBuddy — schema verified from teamai source, NOT live-tested (tool not installed here). confidence: teamai"
+      "mcp": {
+        "kind": "json",
+        "path": "~/.codebuddy/mcp.json",
+        "serversKey": "mcpServers"
+      },
+      "license": "proprietary-terms",
+      "install": {
+        "method": "unsupported",
+        "pinnedVersion": null,
+        "installArgs": [],
+        "verifyCmd": "codebuddy --version"
+      },
+      "_convention": "skills ~/.codebuddy/skills, rules ~/.codebuddy/CODEBUDDY.md, MCP ~/.codebuddy/mcp.json per teamai-cli toolPaths (claudemd = where teamai writes rules content). MCP stdio shape {command, args} under mcpServers per teamai-cli mcp-format renderBuddy — schema verified from teamai source, NOT live-tested (tool not installed here). confidence: teamai",
+      "_licenseNote": "Proprietary — Tencent CodeBuddy vendor terms (https://www.codebuddy.ai); no SPDX license published. No verified version-pinned public install channel (npm 'codebuddy' 1.0.0 MIT is a name squatter, verified 2026-09-10): method unsupported."
     },
     "workbuddy": {
       "skillsDir": "~/.workbuddy/skills",
       "rulesFile": null,
-      "mcp": { "kind": "json", "path": "~/.workbuddy/mcp.json", "serversKey": "mcpServers" },
-      "_convention": "skills ~/.workbuddy/skills + MCP ~/.workbuddy/mcp.json per teamai-cli toolPaths; buddy-family stdio shape {command, args} per mcp-format renderBuddy. teamai lists claudemd 'AGENTS.md' (workspace-relative, not a user-scope dotfile) — no user-scope rules file, so rulesFile null. MCP schema from teamai source, not live-tested. confidence: teamai"
+      "mcp": {
+        "kind": "json",
+        "path": "~/.workbuddy/mcp.json",
+        "serversKey": "mcpServers"
+      },
+      "license": "proprietary-terms",
+      "install": {
+        "method": "unsupported",
+        "pinnedVersion": null,
+        "installArgs": [],
+        "verifyCmd": "workbuddy --version"
+      },
+      "_convention": "skills ~/.workbuddy/skills + MCP ~/.workbuddy/mcp.json per teamai-cli toolPaths; buddy-family stdio shape {command, args} per mcp-format renderBuddy. teamai lists claudemd 'AGENTS.md' (workspace-relative, not a user-scope dotfile) — no user-scope rules file, so rulesFile null. MCP schema from teamai source, not live-tested. confidence: teamai",
+      "_licenseNote": "Proprietary — Tencent WorkBuddy vendor terms; no SPDX license published, no verified version-pinned public install channel (no npm package under this name, verified 2026-09-10): method unsupported."
     },
     "openclaw": {
       "skillsDir": "~/.openclaw/skills",
       "rulesFile": "~/.openclaw/workspace/AGENTS.md",
       "rulesFrontmatter": null,
       "mcp": null,
-      "_convention": "skills ~/.openclaw/skills + rules ~/.openclaw/workspace/AGENTS.md per teamai-cli toolPaths (claudemd). No MCP path in teamai source (OpenClaw MCP is not a stable file) — mcp null. confidence: teamai"
+      "license": "mit",
+      "install": {
+        "method": "npm",
+        "pinnedVersion": "2026.9.3",
+        "installArgs": [
+          "openclaw@2026.9.3"
+        ],
+        "verifyCmd": "openclaw --version"
+      },
+      "_convention": "skills ~/.openclaw/skills + rules ~/.openclaw/workspace/AGENTS.md per teamai-cli toolPaths (claudemd). No MCP path in teamai source (OpenClaw MCP is not a stable file) — mcp null. confidence: teamai",
+      "_licenseNote": "MIT per npm metadata (calver package, https://www.npmjs.com/package/openclaw). Not live-verified on this machine — first real install should confirm the binary + session layout; class stays free regardless."
     },
     "hermes": {
       "skillsDir": "~/.hermes/skills",
       "rulesFile": null,
       "mcp": null,
-      "_convention": "skills ~/.hermes/skills per teamai-cli toolPaths. teamai lists claudemd 'AGENTS.md' (workspace-relative) — no user-scope rules file. No MCP path in teamai source — mcp null. confidence: teamai"
+      "license": "undeclared",
+      "install": {
+        "method": "venv-pip",
+        "pinnedVersion": "0.19.0",
+        "installArgs": [
+          "hermes-agent==0.19.0",
+          "anthropic",
+          "boto3",
+          "mcp>=1.9,<2"
+        ],
+        "verifyCmd": "hermes --version"
+      },
+      "_convention": "skills ~/.hermes/skills per teamai-cli toolPaths. teamai lists claudemd 'AGENTS.md' (workspace-relative) — no user-scope rules file. No MCP path in teamai source — mcp null. confidence: teamai",
+      "_licenseNote": "Undeclared upstream — HarnessRouter CE's own entrypoint says 'check its upstream license before use' and installs into an isolated venv with lazy installs sealed (HERMES_DISABLE_LAZY_INSTALLS=1). Ported faithfully: venv-pip method, exact HR pins (hermes-agent 0.19.0; mcp>=1.9,<2 because 2.0 removed the transport hermes imports). Installs only with --accept-terms hermes."
     },
     "dsh": {
       "skillsDir": "~/.dsh/skills",
       "rulesFile": null,
       "mcp": null,
-      "_convention": "DeepSeek Harness: skills ~/.dsh/skills per teamai-cli toolPaths — dsh's skill-filesystem provider scans it as user root (rank 400) and discovers both dir bundles (<name>/SKILL.md) and flat .md. No MCP or rules path in teamai source — both null. confidence: teamai"
+      "license": "undeclared",
+      "install": {
+        "method": "venv-pip",
+        "pinnedVersion": "0.1.2rc1",
+        "installArgs": [
+          "deepseek-harness-sdk==0.1.2rc1",
+          "deepseek-harness-runtime-bin==0.1.2rc1",
+          "pyyaml"
+        ],
+        "verifyCmd": "dsh --version"
+      },
+      "_convention": "DeepSeek Harness: skills ~/.dsh/skills per teamai-cli toolPaths — dsh's skill-filesystem provider scans it as user root (rank 400) and discovers both dir bundles (<name>/SKILL.md) and flat .md. No MCP or rules path in teamai source — both null. confidence: teamai",
+      "_licenseNote": "DeepSeek Harness developer preview. HarnessRouter CE annotates it 'MIT, developer preview' but that is secondhand — per the P7 spec binding, dsh stays undeclared until independent upstream evidence. Pins + own-venv + import-check-before-ready pattern ported verbatim from HR CE entrypoint (0.1.0rc7 -> 0.1.2rc1 is where HR learned pin-bump must rebuild the venv). Installs only with --accept-terms dsh."
     },
     "qoder": {
       "skillsDir": "~/.qoder/skills",
       "rulesFile": null,
-      "mcp": { "kind": "json", "path": "~/.qoder/settings.json", "serversKey": "mcpServers", "entryType": "stdio" },
-      "_convention": "skills ~/.qoder/skills per teamai-cli toolPaths. MCP ~/.qoder/settings.json mcpServers per teamai toolPaths; qoder renders with the claude-family shape, so the entry carries \"type\": \"stdio\" (engine entryType option). teamai's rules path .qoder/rules is a rules DIRECTORY (not a single instruction file) — our marker-block rulesFile doesn't apply, rulesFile null. MCP schema from teamai source, not live-tested. confidence: teamai"
+      "mcp": {
+        "kind": "json",
+        "path": "~/.qoder/settings.json",
+        "serversKey": "mcpServers",
+        "entryType": "stdio"
+      },
+      "license": "proprietary-terms",
+      "install": {
+        "method": "unsupported",
+        "pinnedVersion": null,
+        "installArgs": [],
+        "verifyCmd": "qoder --version"
+      },
+      "_convention": "skills ~/.qoder/skills per teamai-cli toolPaths. MCP ~/.qoder/settings.json mcpServers per teamai toolPaths; qoder renders with the claude-family shape, so the entry carries \"type\": \"stdio\" (engine entryType option). teamai's rules path .qoder/rules is a rules DIRECTORY (not a single instruction file) — our marker-block rulesFile doesn't apply, rulesFile null. MCP schema from teamai source, not live-tested. confidence: teamai",
+      "_licenseNote": "Proprietary — Alibaba Qoder vendor terms (https://qoder.com); no SPDX license published. No verified version-pinned public install channel (npm '@qoder-ai/*' names do not exist, verified 2026-09-10): method unsupported."
     }
   },
   "_notes": {
     "registry": "Registry covers the full teamai-class agent universe (Tencent/teamai-cli supported matrix + this machine's own agents), not just installed CLIs. Agents absent from the machine show installed=no in status and are skipped by sync unless syncWhenAbsent is set (only cursor, config-only install). Installing one of them later is picked up automatically on the next sync.",
-    "skillsFormat": "Engine supports skillsFormat 'flat' (one <name>.md per skill) in addition to default 'dir'; no current tool needs flat."
+    "skillsFormat": "Engine supports skillsFormat 'flat' (one <name>.md per skill) in addition to default 'dir'; no current tool needs flat.",
+    "licenseAndInstall": "P7 (ao harness install): every tool carries `license` (apache|mit|bsd|proprietary-terms|undeclared — class assignment cites its evidence URL in the tool's _licenseNote, verified 2026-09-10) and `install` ({method, pinnedVersion, installArgs, verifyCmd}). method npm = npm install -g --prefix <managed> (HR CE entrypoint form); venv-pip = isolated venv + pinned pip (HR CE form); unsupported = no verified version-pinned channel — ao harness install refuses with guidance. Gate (plan section 8): only apache/mit/bsd install without --accept-terms <tool>; proprietary-terms + undeclared record acceptance in the managed dir and are re-flagged on pin change. Pins are static data — bump = manifest edit + re-run install."
   },
   "_skipped": {
     "aider": "aider appears in teamai-cli's KNOWN_AGENTS (~/.aider/skills heuristic) but aider has no real skills or file-based MCP concept (config is .aider.conf.yml flags) — nothing meaningful for harness-sync to fan out."

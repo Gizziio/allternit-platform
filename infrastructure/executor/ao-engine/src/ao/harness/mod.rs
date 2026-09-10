@@ -25,6 +25,8 @@ mod mcp_toml;
 mod rules;
 mod skills;
 
+pub(crate) mod install;
+
 use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -79,6 +81,56 @@ pub(crate) struct ToolCfg {
     pub(crate) sync_when_absent: bool,
     #[serde(default)]
     pub(crate) mcp: Option<McpCfg>,
+    // P7 (ao harness install): per-tool license class + install recipe. Both
+    // verified ABSENT before P7 (spec binding 2); `_licenseNote` in the
+    // manifest carries the evidence URL for each class assignment.
+    #[serde(default)]
+    pub(crate) license: Option<LicenseClass>,
+    #[serde(default)]
+    pub(crate) install: Option<InstallBlock>,
+}
+
+/// License classes (plan §8 gate). `apache`/`mit`/`bsd` install without
+/// ceremony; `proprietary-terms` and `undeclared` require `--accept-terms`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum LicenseClass {
+    Apache,
+    Mit,
+    Bsd,
+    #[serde(rename = "proprietary-terms")]
+    ProprietaryTerms,
+    Undeclared,
+}
+
+impl LicenseClass {
+    pub(crate) fn requires_acceptance(self) -> bool {
+        matches!(self, LicenseClass::ProprietaryTerms | LicenseClass::Undeclared)
+    }
+
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            LicenseClass::Apache => "apache",
+            LicenseClass::Mit => "mit",
+            LicenseClass::Bsd => "bsd",
+            LicenseClass::ProprietaryTerms => "proprietary-terms",
+            LicenseClass::Undeclared => "undeclared",
+        }
+    }
+}
+
+/// `{method, pinnedVersion, installArgs, verifyCmd}` — the install recipe
+/// (spec binding 1). serde permissive like the rest of the manifest.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct InstallBlock {
+    pub(crate) method: String,
+    #[serde(default)]
+    pub(crate) pinned_version: Option<String>,
+    #[serde(default)]
+    pub(crate) install_args: Vec<String>,
+    #[serde(default)]
+    pub(crate) verify_cmd: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -120,6 +172,19 @@ fn load_manifest() -> std::io::Result<Manifest> {
     };
     serde_json::from_str(&text)
         .map_err(|err| std::io::Error::new(ErrorKind::InvalidData, format!("invalid harness manifest: {err}")))
+}
+
+/// Doctor entry point (cli/ao.rs): load the manifest for the harness section.
+pub(crate) fn load_manifest_for_doctor() -> std::io::Result<Manifest> {
+    load_manifest()
+}
+
+/// Doctor entry point (cli/ao.rs): run the install doctor against the
+/// ambient probe context (managed bin already joined — see FsCtx::from_env).
+pub(crate) fn doctor_for_cli(manifest: &Manifest) -> install::HarnessDoctor {
+    let root = install::managed_root();
+    let ctx = FsCtx::from_env();
+    install::doctor(manifest, &root, &ctx)
 }
 
 // ---------------------------------------------------------------------------
@@ -177,11 +242,22 @@ pub(crate) struct FsCtx {
 
 impl FsCtx {
     fn from_env() -> Self {
+        // P7: a managed-dir install (AO_HARNESS_HOME or ~/.ao/harness) must be
+        // visible to the installed() probes so `ao harness sync` reaches tools
+        // ao itself installed — the managed bin dir joins PATH exactly the way
+        // HR CE puts $TOOLS/bin on PATH for its entrypoint (spec binding 5:
+        // executor registration is P4 machinery; P7 just feeds it a reachable
+        // binary). The user's own shell rc is never touched.
+        let mut path_dirs: Vec<PathBuf> = std::env::var_os("PATH")
+            .map(|paths| std::env::split_paths(&paths).collect())
+            .unwrap_or_default();
+        let managed_bin = install::managed_bin_dir();
+        if managed_bin.is_dir() && !path_dirs.iter().any(|d| d == &managed_bin) {
+            path_dirs.insert(0, managed_bin);
+        }
         FsCtx {
             home: std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/")),
-            path_dirs: std::env::var_os("PATH")
-                .map(|paths| std::env::split_paths(&paths).collect())
-                .unwrap_or_default(),
+            path_dirs,
             app_root: PathBuf::from("/"),
         }
     }
@@ -458,12 +534,37 @@ fn mcp_remove(m: &McpCfg, server: &McpServer, dry_run: bool) -> std::io::Result<
 
 pub(crate) fn run(args: &[String]) -> std::io::Result<i32> {
     // harness-sync.js argument model: first non--- token is the command
-    // (default status); flags may appear in any order.
-    let command = args
+    // (default status); flags may appear in any order. P7 adds `install`,
+    // whose tool names are positional tokens after the command, plus
+    // `--accept-terms <tool>` (value option — its value must not be mistaken
+    // for a positional).
+    let mut accepts_terms: Vec<String> = Vec::new();
+    let mut positionals: Vec<String> = Vec::new();
+    let mut iter = args.iter().peekable();
+    while let Some(arg) = iter.next() {
+        if let Some(tool) = arg.strip_prefix("--accept-terms=") {
+            accepts_terms.push(tool.to_string());
+        } else if arg == "--accept-terms" {
+            match iter.next() {
+                Some(tool) => accepts_terms.push(tool.clone()),
+                None => {
+                    eprintln!("--accept-terms requires a tool name");
+                    return Ok(2);
+                }
+            }
+        } else if !arg.starts_with("--") {
+            positionals.push(arg.clone());
+        }
+    }
+    let command = positionals.first().map(String::as_str).unwrap_or("status");
+    // `positionals.get(1..)` — a bare `ao harness` (no positional at all)
+    // must not slice-panic on an empty vec.
+    let install_tools: Vec<&str> = positionals
+        .get(1..)
+        .unwrap_or(&[])
         .iter()
-        .find(|arg| !arg.starts_with("--"))
         .map(String::as_str)
-        .unwrap_or("status");
+        .collect();
     let dry_run = args.iter().any(|arg| arg == "--dry-run");
     let tools_filter: Vec<&str> = args
         .iter()
@@ -482,7 +583,10 @@ pub(crate) fn run(args: &[String]) -> std::io::Result<i32> {
         "status" => cmd_status(&manifest, &tools_filter, &ctx),
         "sync" => cmd_sync(&manifest, &tools_filter, dry_run, &ctx),
         "uninstall" => cmd_uninstall(&manifest, &tools_filter, dry_run),
+        "install" => install::cmd_install(&manifest, &install_tools, &accepts_terms, dry_run),
         other => {
+            // Byte-parity: the JS harness-sync prints exactly this list; the
+            // parity harness diffs the error line (ao_harness_parity/run.sh).
             eprintln!("Unknown command: {other} (expected status | sync | uninstall)");
             Ok(1)
         }
@@ -683,6 +787,49 @@ mod tests {
             assert!(manifest.tools.contains_key(driver.key), "manifest missing tool {}", driver.key);
         }
         assert_eq!(DRIVERS.len(), 16);
+    }
+
+    #[test]
+    fn every_tool_carries_license_and_install_blocks() {
+        // P7 conformance gate (spec verify plan #2): all 16 tools carry a
+        // license class + install recipe; the parity harness keeps the
+        // embedded copy byte-identical to Ops/harness.json.
+        let manifest: Manifest = serde_json::from_str(EMBEDDED_MANIFEST).expect("embedded manifest parses");
+        for (key, cfg) in &manifest.tools {
+            let class = cfg
+                .license
+                .unwrap_or_else(|| panic!("{key} missing license tag"));
+            let block = cfg.install.as_ref().unwrap_or_else(|| panic!("{key} missing install block"));
+            match block.method.as_str() {
+                "npm" | "venv-pip" => {
+                    assert!(
+                        block.pinned_version.as_deref().is_some_and(|p| !p.is_empty()),
+                        "{key}: {method} method must carry a pinnedVersion",
+                        method = block.method
+                    );
+                    assert!(!block.install_args.is_empty(), "{key}: installArgs empty");
+                    assert!(
+                        block.verify_cmd.as_deref().is_some_and(|c| !c.is_empty()),
+                        "{key}: verifyCmd required"
+                    );
+                }
+                "unsupported" => {}
+                other => panic!("{key}: unknown install method {other}"),
+            }
+            if class.requires_acceptance() {
+                assert!(
+                    matches!(block.method.as_str(), "npm" | "venv-pip" | "unsupported"),
+                    "{key}: gated class with unexpected method"
+                );
+            }
+        }
+        // Spot-check the spec-named gate assignments.
+        let class_of = |key: &str| manifest.tools[key].license.unwrap();
+        assert_eq!(class_of("claude"), LicenseClass::ProprietaryTerms);
+        assert_eq!(class_of("hermes"), LicenseClass::Undeclared);
+        assert_eq!(class_of("dsh"), LicenseClass::Undeclared);
+        assert_eq!(class_of("kimi"), LicenseClass::Mit);
+        assert_eq!(class_of("codex"), LicenseClass::Apache);
     }
 
     #[test]

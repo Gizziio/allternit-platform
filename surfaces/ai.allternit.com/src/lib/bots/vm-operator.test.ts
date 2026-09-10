@@ -400,7 +400,7 @@ describe('vm-operator', () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/v1/health'));
   });
 
-  it('creates a snapshot through the bot desktop API', async () => {
+  it('creates a snapshot through the computers API', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -414,12 +414,12 @@ describe('vm-operator', () => {
     expect(result.data?.id).toBe('snap-1');
     expect(result.data?.label).toBe('before-upgrade');
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/bots/agent-1/desktop/snapshots'),
+      expect.stringContaining('/api/v1/computers/sb-1/snapshots'),
       expect.objectContaining({ method: 'POST' }),
     );
   });
 
-  it('restores a snapshot through the bot desktop API', async () => {
+  it('restores a snapshot through the computers API', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ success: true }),

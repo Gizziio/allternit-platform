@@ -14,7 +14,7 @@ describe('fabricSessionKind', () => {
   it('maps drive tabs to create-session surfaces', () => {
     expect(fabricKindSurface('code')).toBe('code');
     expect(fabricKindSurface('aci')).toBe('browser');
-    expect(fabricKindSurface('bot')).toBe('cowork');
+    expect(fabricKindSurface('bot')).toBe('bot');
     expect(fabricKindSurface('chat')).toBe('chat');
   });
 });

@@ -25,7 +25,6 @@ use tokio_tungstenite::{connect_async, tungstenite};
 
 use super::cloud::CloudClient;
 use super::identity::NodeIdentity;
-use super::local_gateway_url;
 use super::wire::{CloudMessage, NodeMessage};
 
 const INITIAL_RETRY: Duration = Duration::from_secs(1);
@@ -111,6 +110,7 @@ pub(crate) async fn run(
     mut reconnect: tokio::sync::watch::Receiver<u64>,
     mut shutdown: tokio::sync::watch::Receiver<bool>,
     label: Arc<tokio::sync::RwLock<String>>,
+    local_gateway: String,
 ) {
     let state = Arc::new(RelayState {
         identity,
@@ -121,7 +121,7 @@ pub(crate) async fn run(
                 return;
             }
         },
-        local_gateway: local_gateway_url(),
+        local_gateway,
         local_sockets: Mutex::new(HashMap::new()),
     });
 
