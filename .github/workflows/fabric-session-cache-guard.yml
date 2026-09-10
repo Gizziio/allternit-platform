@@ -16,5 +16,5 @@ jobs:
       - name: Verify CACHE_NAME bump when fabric-session assets change
         run: node scripts/check-sw-cache-bump.mjs
         env:
-          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          GITHUB_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          GITHUB_BASE_REF: origin/${{ github.event.pull_request.base.ref }}
+          GITHUB_HEAD_REF: origin/${{ github.event.pull_request.head.ref }}

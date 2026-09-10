@@ -19,6 +19,22 @@ function sh(cmd) {
   return execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
+// The actions/checkout checkout has no local branch refs (only origin/*), so
+// retry a ref that doesn't exist locally with an origin/ prefix.
+function resolveRef(ref) {
+  try {
+    sh(`git rev-parse --verify --quiet ${ref}`);
+    return ref;
+  } catch {
+    try {
+      sh(`git rev-parse --verify --quiet origin/${ref}`);
+      return `origin/${ref}`;
+    } catch {
+      return ref; // let the downstream git call fail with its own error
+    }
+  }
+}
+
 function cacheNameAt(ref) {
   try {
     const body = sh(`git show ${ref}:${SW_PATH}`);
@@ -30,8 +46,8 @@ function cacheNameAt(ref) {
 }
 
 const args = process.argv.slice(2);
-const base = args[args.indexOf('--base') + 1] || process.env.GITHUB_BASE_REF;
-const head = args[args.indexOf('--head') + 1] || process.env.GITHUB_HEAD_REF || 'HEAD';
+const base = resolveRef(args[args.indexOf('--base') + 1] || process.env.GITHUB_BASE_REF);
+const head = resolveRef(args[args.indexOf('--head') + 1] || process.env.GITHUB_HEAD_REF || 'HEAD');
 if (!base) {
   console.error('check-sw-cache-bump: no base ref (pass --base <ref> or set GITHUB_BASE_REF)');
   process.exit(2);
