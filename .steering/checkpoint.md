@@ -1,5 +1,9 @@
 # Steering checkpoint — session/botmode-0910 (update 1)
 
+> Merge note (2026-09-10): both session/botmode-0910 and session/desktop-clerk-proxy-20260910
+> updated this file; both histories are preserved below (botmode first, clerk-proxy after
+> the `---` separator).
+
 Goal: Prove bot mode works on all four surfaces against LIVE api.allternit.com, full depth.
 
 Just did:
@@ -103,3 +107,31 @@ Just did:
 Next: commit + push worktree (harness scripts + probe + summary + checkpoint), gh pr create + merge, ledger attestation + LEDGER.md in shared checkout, cleanup (isolated API on :18013, /tmp/botmode-*, ~/.gizzi/bots/e2e-smoke, scratch .cjs in shared root, worktree+branch after merge).
 
 Open questions for owner: (1) bugs 6-8 — code-fix as follow-up vs leave documented; (2) restore .env.local from .env.local.bak-botmode-0910? (3) desktop rebuild timing (deferred while other session is in that area).
+
+---
+
+# Checkpoint — session/desktop-clerk-proxy-20260910
+
+## Goal
+Fix desktop Clerk GitHub OAuth (authorization_invalid → Vercel 404) and land via merge.
+
+## Just did
+- Root cause proven by controlled experiments (E2/E3): Clerk's /v1/oauth_callback
+  exchange only succeeds as a real browser navigation carrying the attempt-bound
+  __client cookie; the old flow loaded the callback in the protocol-handled auth
+  window where partition cookies are stripped from real navigations.
+- Rewrote src/main/clerk-oauth-popup.ts: default-session popup, copy attempt
+  __client from auth partition pre-flight, webRequest pre-dispatch detection of
+  success (redirect to accounts.allternit.com/__desktop_auth__ — note: FAPI does
+  NOT append created_session_id for clerk-js-created attempts) and failure
+  (err_code), signed-in cookies handed back into the auth partition, auth window
+  reloads so TokenBridge completes pairing.
+- Live smoke PASSED: GitHub authorize → exchange → Clerk token → pairing
+  lookup/approve/exchange 200 → identity saved → relay connected.
+- typecheck ✓ build:main ✓ release-preflight 35/0 ✓
+
+## Next
+- Commit + push + PR + merge; sync main; ledger attestation; rebuild desktop preview; cleanup.
+
+## Open questions
+- Instance-proxy config (option 2, company.json clerkProxyUrl) rides along as approved.

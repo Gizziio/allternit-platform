@@ -224,8 +224,14 @@ compare_spawn_exit() {
 }
 compare_spawn_exit
 
-# doctor: ao world carries one extra transport line; verify the rest is identical
+# doctor: ao world carries one extra transport line; verify the rest is identical.
+# P7 adds an `ao-doctor: harness` section (managed-dir/install health) — additive
+# surface outside the P1 parity contract; strip it (to the next ao-doctor
+# section header or EOF), like the ao-engine line.
 grep -v 'ao-engine:' "$TDIR/ao/doctor.out" > "$TDIR/ao/doctor.stripped"
+awk '/^ao-doctor: harness$/{skip=1;next} /^ao-doctor: /{skip=0} !skip' \
+  "$TDIR/ao/doctor.stripped" > "$TDIR/ao/doctor.stripped2" \
+  && mv "$TDIR/ao/doctor.stripped2" "$TDIR/ao/doctor.stripped"
 if cmp -s <(normalize "$TDIR/script/doctor.out") <(normalize "$TDIR/ao/doctor.stripped") \
    && [ "$(cat "$TDIR/script/doctor.code")" = "$(cat "$TDIR/ao/doctor.code")" ]; then
   PASS=$((PASS+1)); echo "  ok: doctor (engine line stripped)"
