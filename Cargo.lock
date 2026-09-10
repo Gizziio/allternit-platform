@@ -262,6 +262,8 @@ dependencies = [
  "base64 0.22.1",
  "bytes 1.12.0",
  "chrono",
+ "cipher 0.4.4",
+ "des",
  "dirs 5.0.1",
  "ed25519-dalek 2.2.0",
  "futures 0.3.32",
@@ -5132,6 +5134,15 @@ dependencies = [
  "rustc_version 0.4.1",
  "syn 2.0.118",
  "unicode-xid",
+]
+
+[[package]]
+name = "des"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffdd80ce8ce993de27e9f063a444a4d53ce8e8db4c1f00cc03af5ad5a9867a1e"
+dependencies = [
+ "cipher 0.4.4",
 ]
 
 [[package]]
