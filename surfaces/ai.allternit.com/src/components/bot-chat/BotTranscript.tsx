@@ -10,13 +10,13 @@
  * Tapping the transcript dismisses the keyboard through the optional
  * `onDismissKeyboard` prop.
  *
- * Approval rows render as a quiet placeholder in 1A — the approval card and
- * pill land in 1B.
+ * Approval rows render as `ApprovalCard`. Answers/grants pass through to the
+ * parent (1C owns the wire).
  *
  * @module bot-chat/BotTranscript
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import type { BotChatTranscript, TranscriptRow } from "./types";
 import { deriveRung } from "./transcript";
 import { SettledBubble } from "./SettledBubble";
@@ -27,6 +27,7 @@ import { ToolReceiptChip } from "./ToolReceiptChip";
 import { ToolRunCapsule } from "./ToolRunCapsule";
 import { GapTimestamp } from "./GapTimestamp";
 import { ErrorRow } from "./ErrorRow";
+import { ApprovalCard } from "./ApprovalCard";
 
 const FOLLOW_THRESHOLD_PX = 80;
 
@@ -47,7 +48,15 @@ function rowChars(row: TranscriptRow): number {
   }
 }
 
-function TranscriptRowView({ row }: { row: TranscriptRow }) {
+function TranscriptRowView({
+  row,
+  onApprovalAnswer,
+  onApprovalGrant,
+}: {
+  row: TranscriptRow;
+  onApprovalAnswer?: (approvalId: string, optionId: string) => void;
+  onApprovalGrant?: (approvalId: string, grantKey: string) => void;
+}) {
   switch (row.kind) {
     case "message":
       return (
@@ -65,25 +74,14 @@ function TranscriptRowView({ row }: { row: TranscriptRow }) {
       return <GapTimestamp from={row.from} to={row.to} />;
     case "error":
       return <ErrorRow text={row.text} />;
-    case "approval": {
-      // 1A placeholder: the approval card lands in 1B. Quiet, factual row.
-      const statusLabel =
-        row.approval.status === "pending"
-          ? "Needs your call"
-          : row.approval.status === "approved"
-            ? "Approved"
-            : row.approval.status === "denied"
-              ? "Denied"
-              : "Expired";
+    case "approval":
       return (
-        <div className="w-full rounded-lg border border-[var(--bg-elevated)] bg-[var(--bg-elevated)]/30 px-3 py-2.5">
-          <div className="text-xs font-medium text-[var(--text-secondary,#a1a1aa)]">
-            {row.approval.title}
-          </div>
-          <div className="mt-0.5 text-[11px] text-[var(--text-tertiary)]">{statusLabel}</div>
-        </div>
+        <ApprovalCard
+          approval={row.approval}
+          onAnswer={(optionId) => onApprovalAnswer?.(row.approval.id, optionId)}
+          onGrant={(grantKey) => onApprovalGrant?.(row.approval.id, grantKey)}
+        />
       );
-    }
   }
 }
 
@@ -91,9 +89,21 @@ export interface BotTranscriptProps {
   transcript: BotChatTranscript;
   className?: string;
   onDismissKeyboard?: () => void;
+  /**
+   * Approval answers pass straight through to the owner of the wire adapter
+   * (1C); the fold does not change on answer — the resolved event does.
+   */
+  onApprovalAnswer?: (approvalId: string, optionId: string) => void;
+  onApprovalGrant?: (approvalId: string, grantKey: string) => void;
 }
 
-export function BotTranscript({ transcript, className, onDismissKeyboard }: BotTranscriptProps) {
+export function BotTranscript({
+  transcript,
+  className,
+  onDismissKeyboard,
+  onApprovalAnswer,
+  onApprovalGrant,
+}: BotTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rung = deriveRung(transcript);
   const turn = transcript.activeTurn;
@@ -127,7 +137,12 @@ export function BotTranscript({ transcript, className, onDismissKeyboard }: BotT
     >
       <div className="flex flex-col gap-2 px-3 py-2">
         {transcript.rows.map((row) => (
-          <TranscriptRowView key={row.id} row={row} />
+          <TranscriptRowView
+            key={row.id}
+            row={row}
+            onApprovalAnswer={onApprovalAnswer}
+            onApprovalGrant={onApprovalGrant}
+          />
         ))}
 
         {turn && rung === "thinking" && (
