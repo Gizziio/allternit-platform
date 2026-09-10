@@ -202,6 +202,12 @@ const appAPI = {
     platform: string;
     isPackaged: boolean;
     manifest: unknown;
+    buildInfo?: {
+      version?: string;
+      buildVersion?: string;
+      buildSuffix?: string;
+      builtAt?: string;
+    } | null;
   }> => ipcRenderer.invoke('app:get-info'),
   isFirstLaunch: (): Promise<boolean> => ipcRenderer.invoke('app:is-first-launch'),
   completeOnboarding: (): Promise<boolean> => ipcRenderer.invoke('app:complete-onboarding'),

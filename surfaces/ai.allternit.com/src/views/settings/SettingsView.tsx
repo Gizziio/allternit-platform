@@ -748,6 +748,45 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [fullManagerTab, setFullManagerTab] = useState<FullManagerTabId | null>(null);
   const onOpenFullManager = (tab: string) => setFullManagerTab(tab as FullManagerTabId);
 
+  // Desktop shell identity for the About panel: version + build number (the
+  // build number comes from resources/build-info.json, written by the local
+  // build wrapper; absent on CI/release builds and on the web).
+  const [desktopInfo, setDesktopInfo] = useState<{
+    version: string;
+    buildSuffix?: string;
+    buildVersion?: string;
+  } | null>(null);
+  useEffect(() => {
+    const bridge = (
+      window as unknown as {
+        allternit?: {
+          app?: {
+            getInfo(): Promise<{
+              version: string;
+              buildInfo?: { buildSuffix?: string; buildVersion?: string } | null;
+            }>;
+          };
+        };
+      }
+    ).allternit?.app;
+    if (!bridge?.getInfo) return;
+    let cancelled = false;
+    void bridge
+      .getInfo()
+      .then((info) => {
+        if (cancelled) return;
+        setDesktopInfo({
+          version: info.version,
+          buildSuffix: info.buildInfo?.buildSuffix ?? '',
+          buildVersion: info.buildInfo?.buildVersion,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Inline state adjustment for initialSection change
   const [prevInitialSection, setPrevInitialSection] = useState(safeInitialSection);
   if (safeInitialSection !== prevInitialSection) {
@@ -882,7 +921,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
         <h1 className="text-3xl font-semibold m-0 mb-2 text-[var(--ui-text-primary)] tracking-tight">Allternit & <span className="text-[var(--accent-primary)]">Coffee</span></h1>
-        <p className="text-[13px] text-[var(--ui-text-muted)] font-mono">v0.9.1-beta</p>
+        {desktopInfo ? (
+          <p className="text-[13px] text-[var(--ui-text-muted)] font-mono">
+            Allternit Desktop {desktopInfo.version}
+            {desktopInfo.buildSuffix}
+            {desktopInfo.buildVersion ? ` · build ${desktopInfo.buildVersion}` : ''}
+          </p>
+        ) : (
+          <p className="text-[13px] text-[var(--ui-text-muted)] font-mono">Allternit (web)</p>
+        )}
         <div className="mt-10 flex justify-center gap-6">
           <button type="button" onClick={() => window.open('https://allternit.com/terms', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Terms</button>
           <button type="button" onClick={() => window.open('https://allternit.com/privacy', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Privacy</button>
