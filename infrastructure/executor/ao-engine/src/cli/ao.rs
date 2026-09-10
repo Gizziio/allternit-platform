@@ -431,6 +431,8 @@ fn spawn(args: &[String]) -> std::io::Result<i32> {
             .parent()
             .map(|parent| parent.join(format!("{}-ao-{slug}", root_path.file_name().unwrap_or_default().to_string_lossy())))
             .unwrap_or_else(|| PathBuf::from(format!("{root}-ao-{slug}")));
+        // stderr discarded to match the golden script's `>/dev/null 2>&1`
+        // (the script stopped forwarding git's worktree noise 2026-09-09).
         let status = Command::new("git")
             .arg("-C")
             .arg(&root)
@@ -440,7 +442,7 @@ fn spawn(args: &[String]) -> std::io::Result<i32> {
             .arg("-b")
             .arg(format!("ao/{slug}"))
             .stdout(Stdio::null())
-            .stderr(Stdio::inherit())
+            .stderr(Stdio::null())
             .status()?;
         if !status.success() {
             return Ok(status.code().unwrap_or(1));
@@ -974,16 +976,52 @@ fn doctor(_args: &[String]) -> std::io::Result<i32> {
     );
     probe_executor("agy", "agy", &["--dangerously-skip-permissions"], None, "", &mut usable);
 
+    // P7 harness section (spec binding 7): managed-dir health, per-tool
+    // binary+pin match, license acceptance state, sync reachability. The
+    // ao_parity harness strips everything from this header to the next
+    // `ao-doctor: ` section (or EOF) — it is additive surface, not part of
+    // the P1 parity contract. Exit codes are unchanged when the section is
+    // green, including the "nothing installed yet" case.
+    let harness = harness_doctor_section();
+
     if !transport_ok {
         println!("ao-doctor: TRANSPORT BROKEN");
         return Ok(2);
     }
     if usable {
+        if !harness {
+            println!("ao-doctor: HARNESS PROBLEMS");
+            return Ok(3);
+        }
         println!("ao-doctor: OK — at least one executor is usable");
         return Ok(0);
     }
     println!("ao-doctor: NO USABLE EXECUTORS");
     Ok(1)
+}
+
+/// Print the `ao-doctor: harness` section; true when green. Loading the
+/// manifest can fail (corrupt AO_HARNESS_MANIFEST override) — reported as a
+/// problem rather than panicking inside doctor.
+fn harness_doctor_section() -> bool {
+    println!("ao-doctor: harness");
+    let manifest = match crate::ao::harness::load_manifest_for_doctor() {
+        Ok(manifest) => manifest,
+        Err(err) => {
+            println!("  manifest: UNREADABLE ({err})");
+            return false;
+        }
+    };
+    let report = crate::ao::harness::doctor_for_cli(&manifest);
+    println!("  managed dir: {} [{}]", report.root.display(), if report.root.exists() { "exists" } else { "absent" });
+    for row in &report.rows {
+        if row.detail.is_empty() {
+            println!("  {}: {}", row.tool, row.status);
+        } else {
+            println!("  {}: {} — {}", row.tool, row.status, row.detail);
+        }
+    }
+    report.ok
 }
 
 fn engine_status_line() -> Result<String, String> {
