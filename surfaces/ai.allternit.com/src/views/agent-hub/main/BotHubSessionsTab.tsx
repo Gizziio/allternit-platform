@@ -137,8 +137,7 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
     window.dispatchEvent(
       new CustomEvent("allternit:open-view", {
         detail: {
-          // Bot sessions render inside the unified chat view.
-          viewType: isGroupChat ? "chat-group-session" : "chat",
+          viewType: isGroupChat ? "chat-group-session" : "bot-chat-session",
           context: { sessionId: session.id, botId, originView: "chat" },
         },
       })

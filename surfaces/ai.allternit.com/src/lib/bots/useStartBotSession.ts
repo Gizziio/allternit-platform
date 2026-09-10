@@ -21,8 +21,9 @@ export interface UseStartBotSessionReturn {
  *
  * If the bot has a VM operator configured with autoStart, this creates a
  * sandbox before opening the session and injects VM instructions into the
- * system prompt. The resulting sessionId renders in the standard chat
- * surface (`viewType: 'chat'`) as the canonical conversation.
+ * system prompt. The resulting sessionId is passed to
+ * `open('bot-chat-session', { sessionId, botId })` so the bot chat surface
+ * renders the canonical conversation plus the computer pane.
  *
  * The session-start core lives in `./start-bot-session` so non-React callers
  * (rail rows, toasts, bot home) can start sessions without mounting a hook.

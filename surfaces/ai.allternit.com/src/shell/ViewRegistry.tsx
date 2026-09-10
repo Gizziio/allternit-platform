@@ -35,9 +35,14 @@ const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeMode
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
+const BotChatSessionView = lazy(() => import('../views/bots/BotChatSessionView').then(m => ({ default: m.BotChatSessionView })));
 const BotLaunchpadView = lazy(() => import('../views/bots/BotLaunchpadView').then(m => ({ default: m.BotLaunchpadView })));
 import { GroupChatView } from '../views/bots/GroupChatView';
 import { GroupsListView } from '../views/bots/GroupsListView';
+import { useChatSessionStore } from '../views/chat/ChatSessionStore';
+import { useGroupChatStore } from '@/lib/bots/group-chat.store';
+import { useUnifiedRoster } from '@/lib/bots/use-unified-roster';
+import type { GroupChatMember } from '@/lib/bots/group-chat.types';
 
 const GroupChatSessionView = lazy(() => import('../views/bots/GroupChatSessionView').then(m => ({ default: m.GroupChatSessionView })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
@@ -150,6 +155,106 @@ const PdfView                = lazy(() => import('../views/pdf/PdfView').then(m 
 const MarkdownPreviewView    = lazy(() => import('../views/office/MarkdownPreviewView').then(m => ({ default: m.MarkdownPreviewView })));
 const ApiCaptureView         = lazy(() => import('../views/api-capture/ApiCaptureView').then(m => ({ default: m.ApiCaptureView })));
 const NativeSigningView      = lazy(() => import('../views/office/NativeSigningView').then(m => ({ default: m.NativeSigningView })));
+
+interface ChatAgentSessionRouterProps {
+  sessionId?: string;
+  botId?: string;
+  originView?: ViewType;
+  onBack?: () => void;
+}
+
+function ChatAgentSessionRouter({ sessionId, botId, onBack }: ChatAgentSessionRouterProps) {
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const session = React.useMemo(
+    () => sessions.find((s) => s.id === sessionId) ?? null,
+    [sessions, sessionId]
+  );
+
+  const agentIds = React.useMemo(() => {
+    const ids: string[] = [];
+    if (session?.metadata?.agentIds && Array.isArray(session.metadata.agentIds)) {
+      ids.push(...(session.metadata.agentIds as string[]));
+    } else if (session?.metadata?.agentId) {
+      ids.push(session.metadata.agentId as string);
+    }
+    if (botId && !ids.includes(botId)) {
+      ids.push(botId);
+    }
+    return ids;
+  }, [session, botId]);
+
+  if (agentIds.length > 1) {
+    return <MultiBotGroupChatSession agentIds={agentIds} onBack={onBack} />;
+  }
+
+  return (
+    <BotChatSessionView
+      sessionId={sessionId}
+      botId={botId ?? agentIds[0]}
+      onBack={onBack}
+    />
+  );
+}
+
+function MultiBotGroupChatSession({
+  agentIds,
+  onBack,
+}: {
+  agentIds: string[];
+  onBack?: () => void;
+}) {
+  const roster = useUnifiedRoster();
+  const groups = useGroupChatStore((s) => s.groups);
+  const createGroup = useGroupChatStore((s) => s.createGroup);
+  const [groupId, setGroupId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const idSet = new Set(agentIds);
+    const existing = Object.values(groups).find((g) => {
+      const memberIds = new Set(g.members.map((m) => m.botId));
+      if (memberIds.size !== idSet.size) return false;
+      for (const id of idSet) {
+        if (!memberIds.has(id)) return false;
+      }
+      return true;
+    });
+
+    if (existing) {
+      setGroupId(existing.id);
+      return;
+    }
+
+    const members = agentIds
+      .map((id) => {
+        const bot = roster.find((b) => b.id === id);
+        if (!bot) return null;
+        return {
+          botId: bot.id,
+          displayName: bot.displayName,
+          handle: bot.handle,
+          source: bot.source,
+          providerId: bot.providerId,
+        } as GroupChatMember;
+      })
+      .filter((m): m is GroupChatMember => Boolean(m));
+
+    if (members.length >= 2) {
+      const name = members.map((m) => m.displayName).join(', ');
+      const id = createGroup(name, members);
+      setGroupId(id);
+    }
+  }, [agentIds, groups, roster, createGroup]);
+
+  if (!groupId) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-[var(--text-secondary)]">
+        Creating group chat…
+      </div>
+    );
+  }
+
+  return <GroupChatView groupId={groupId} onBack={onBack} />;
+}
 
 export function getShellViewRegistry(handlers: {
   handleOpenAgentSession: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
@@ -327,7 +432,7 @@ export function getShellViewRegistry(handlers: {
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Hub" />}>
-        <AgentHub onSessionStarted={() => open('chat')} />
+        <AgentHub onSessionStarted={(sessionId, botId) => open('bot-chat-session', { sessionId, botId })} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -362,6 +467,18 @@ export function getShellViewRegistry(handlers: {
         <GroupsListView onOpenGroup={(groupId) => open('group-chat', { groupId })} />
       </ErrorBoundary>
     ),
+    'bot-chat-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; botId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Chat Session" />}>
+          <BotChatSessionView
+            sessionId={ctx?.sessionId}
+            botId={ctx?.botId ?? context?.viewId}
+            onBack={() => open(ctx?.originView ?? 'agent-hub')}
+          />
+        </ErrorBoundary>
+      );
+    },
     "native-agent": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Native Agent" />}>
         <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />
