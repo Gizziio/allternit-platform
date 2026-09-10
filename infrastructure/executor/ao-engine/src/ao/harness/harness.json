@@ -1,0 +1,156 @@
+{
+  "version": 2,
+  "source": {
+    "skillsDir": "/Users/joe/Desktop/Allternit/.claude/skills",
+    "rulesFile": "/Users/joe/Desktop/Allternit/CLAUDE.md",
+    "mcpServer": {
+      "name": "allternit-ops",
+      "command": "node",
+      "args": ["/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"]
+    }
+  },
+  "tools": {
+    "claude": {
+      "skillsDir": "~/.claude/skills",
+      "rulesFile": "~/.claude/CLAUDE.md",
+      "rulesFrontmatter": null,
+      "mcp": { "kind": "json", "path": "~/.claude/settings.json", "serversKey": "mcpServers" },
+      "_convention": "skills ~/.claude/skills + rules ~/.claude/CLAUDE.md per teamai-cli toolPaths; MCP via ~/.claude/settings.json mcpServers, live-verified on this machine (teamai uses ~/.claude.json — also valid). confidence: teamai + verified-live"
+    },
+    "codex": {
+      "skillsDir": "~/.codex/skills",
+      "rulesFile": "~/.codex/AGENTS.md",
+      "rulesFrontmatter": null,
+      "mcp": { "kind": "toml-block", "path": "~/.codex/config.toml", "section": "mcp_servers.allternit-ops" },
+      "_convention": "skills ~/.codex/skills per teamai-cli toolPaths; MCP [mcp_servers.<name>] TOML block in ~/.codex/config.toml per teamai-cli mcp-format renderCodexBlock. confidence: teamai + verified-live"
+    },
+    "kimi": {
+      "skillsDir": "~/.kimi-code/skills",
+      "rulesFile": "~/.kimi-code/AGENTS.md",
+      "rulesFrontmatter": null,
+      "mcp": { "kind": "json", "path": "~/.kimi-code/mcp.json", "serversKey": "mcpServers" },
+      "_convention": "Kimi Code CLI conventions, verified live on this machine (not in teamai matrix). confidence: verified-live"
+    },
+    "grok": {
+      "skillsDir": "~/.grok/skills",
+      "rulesFile": null,
+      "mcp": {
+        "kind": "cli",
+        "bin": "grok",
+        "addArgs": ["mcp", "add", "allternit-ops", "-s", "user", "--", "node", "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"],
+        "removeArgs": ["mcp", "remove", "allternit-ops"],
+        "configPath": "~/.grok/config.toml",
+        "section": "mcp_servers.allternit-ops"
+      },
+      "_convention": "Grok CLI native `grok mcp add`, verified live on this machine (not in teamai matrix). confidence: verified-live"
+    },
+    "cursor": {
+      "skillsDir": "~/.cursor/skills",
+      "rulesFile": "~/.cursor/rules/allternit.mdc",
+      "rulesFrontmatter": "description: Allternit ops harness rules\nglobs: \nalwaysApply: true",
+      "syncWhenAbsent": true,
+      "mcp": { "kind": "json", "path": "~/.cursor/mcp.json", "serversKey": "mcpServers" },
+      "_convention": "skills ~/.cursor/skills + MCP ~/.cursor/mcp.json (mcpServers, stdio {command,args}) per teamai-cli toolPaths/mcp-format. syncWhenAbsent: true — config-only install on this machine, so config is written even while the app dir is absent. confidence: teamai + verified-live"
+    },
+    "gizzi": {
+      "skillsDir": "~/.gizzi/skills",
+      "rulesFile": null,
+      "mcp": { "kind": "json", "path": "~/.config/gizzi-code/gizzi.json", "serversKey": "mcp", "commandArray": true },
+      "_convention": "Gizzi Code conventions, verified live on this machine (not in teamai matrix). MCP entry shape {type:local, command:[...]} verified from gizzi source. confidence: verified-live"
+    },
+    "agy": {
+      "skillsDir": null,
+      "rulesFile": null,
+      "mcp": {
+        "kind": "cli",
+        "bin": "agy",
+        "addArgs": ["mcp", "add", "allternit-ops", "node", "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"],
+        "removeArgs": ["mcp", "remove", "allternit-ops"],
+        "configPath": "~/.gemini/config/mcp_config.json",
+        "configFormat": "json",
+        "serversKey": "mcpServers"
+      },
+      "_convention": "MCP config file verified live: `agy mcp add` writes ~/.gemini/config/mcp_config.json (agy is gemini-heritage). No skills convention found (plugins only) — skills not synced. Not in teamai matrix. confidence: verified-live"
+    },
+    "opencode": {
+      "skillsDir": "~/.config/opencode/skills",
+      "rulesFile": null,
+      "mcp": {
+        "kind": "cli",
+        "bin": "opencode",
+        "addArgs": ["mcp", "add", "allternit-ops", "--", "node", "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"],
+        "removeArgs": null,
+        "configPath": "~/.config/opencode/opencode.jsonc",
+        "configFormat": "json",
+        "serversKey": "mcp",
+        "commandArray": true
+      },
+      "_convention": "User-scope skills at ~/.config/opencode/skills (dir-per-skill) per teamai-cli toolPaths userScope AND opencode v1.18 docs — NOT flat <name>.md as once assumed. `opencode mcp add` requires `--` before the command; CLI has no mcp remove, so uninstall edits opencode.jsonc directly. confidence: teamai + verified-live"
+    },
+    "antigravity": {
+      "skillsDir": "~/.gemini/antigravity/skills",
+      "rulesFile": null,
+      "mcp": null,
+      "_convention": "MCP skipped — Antigravity IDE configures MCP in the IDE UI, not a stable file. Skills dir per platform crate convention; created on sync. Not in teamai matrix. confidence: inferred (platform crate)"
+    },
+    "qwen": {
+      "skillsDir": "~/.qwen/skills",
+      "rulesFile": null,
+      "mcp": {
+        "kind": "cli",
+        "bin": "qwen",
+        "addArgs": ["mcp", "add", "allternit-ops", "node", "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js", "-s", "user"],
+        "removeArgs": ["mcp", "remove", "allternit-ops", "-s", "user"],
+        "configPath": "~/.qwen/settings.json",
+        "configFormat": "json",
+        "serversKey": "mcpServers"
+      },
+      "_convention": "skills ~/.qwen/skills per teamai-cli KNOWN_AGENTS AND qwen-code docs (personal skills, dir-per-skill); qwen mcp add -s user writes mcpServers to ~/.qwen/settings.json, verified live. confidence: teamai + verified-live"
+    },
+    "codebuddy": {
+      "skillsDir": "~/.codebuddy/skills",
+      "rulesFile": "~/.codebuddy/CODEBUDDY.md",
+      "rulesFrontmatter": null,
+      "mcp": { "kind": "json", "path": "~/.codebuddy/mcp.json", "serversKey": "mcpServers" },
+      "_convention": "skills ~/.codebuddy/skills, rules ~/.codebuddy/CODEBUDDY.md, MCP ~/.codebuddy/mcp.json per teamai-cli toolPaths (claudemd = where teamai writes rules content). MCP stdio shape {command, args} under mcpServers per teamai-cli mcp-format renderBuddy — schema verified from teamai source, NOT live-tested (tool not installed here). confidence: teamai"
+    },
+    "workbuddy": {
+      "skillsDir": "~/.workbuddy/skills",
+      "rulesFile": null,
+      "mcp": { "kind": "json", "path": "~/.workbuddy/mcp.json", "serversKey": "mcpServers" },
+      "_convention": "skills ~/.workbuddy/skills + MCP ~/.workbuddy/mcp.json per teamai-cli toolPaths; buddy-family stdio shape {command, args} per mcp-format renderBuddy. teamai lists claudemd 'AGENTS.md' (workspace-relative, not a user-scope dotfile) — no user-scope rules file, so rulesFile null. MCP schema from teamai source, not live-tested. confidence: teamai"
+    },
+    "openclaw": {
+      "skillsDir": "~/.openclaw/skills",
+      "rulesFile": "~/.openclaw/workspace/AGENTS.md",
+      "rulesFrontmatter": null,
+      "mcp": null,
+      "_convention": "skills ~/.openclaw/skills + rules ~/.openclaw/workspace/AGENTS.md per teamai-cli toolPaths (claudemd). No MCP path in teamai source (OpenClaw MCP is not a stable file) — mcp null. confidence: teamai"
+    },
+    "hermes": {
+      "skillsDir": "~/.hermes/skills",
+      "rulesFile": null,
+      "mcp": null,
+      "_convention": "skills ~/.hermes/skills per teamai-cli toolPaths. teamai lists claudemd 'AGENTS.md' (workspace-relative) — no user-scope rules file. No MCP path in teamai source — mcp null. confidence: teamai"
+    },
+    "dsh": {
+      "skillsDir": "~/.dsh/skills",
+      "rulesFile": null,
+      "mcp": null,
+      "_convention": "DeepSeek Harness: skills ~/.dsh/skills per teamai-cli toolPaths — dsh's skill-filesystem provider scans it as user root (rank 400) and discovers both dir bundles (<name>/SKILL.md) and flat .md. No MCP or rules path in teamai source — both null. confidence: teamai"
+    },
+    "qoder": {
+      "skillsDir": "~/.qoder/skills",
+      "rulesFile": null,
+      "mcp": { "kind": "json", "path": "~/.qoder/settings.json", "serversKey": "mcpServers", "entryType": "stdio" },
+      "_convention": "skills ~/.qoder/skills per teamai-cli toolPaths. MCP ~/.qoder/settings.json mcpServers per teamai toolPaths; qoder renders with the claude-family shape, so the entry carries \"type\": \"stdio\" (engine entryType option). teamai's rules path .qoder/rules is a rules DIRECTORY (not a single instruction file) — our marker-block rulesFile doesn't apply, rulesFile null. MCP schema from teamai source, not live-tested. confidence: teamai"
+    }
+  },
+  "_notes": {
+    "registry": "Registry covers the full teamai-class agent universe (Tencent/teamai-cli supported matrix + this machine's own agents), not just installed CLIs. Agents absent from the machine show installed=no in status and are skipped by sync unless syncWhenAbsent is set (only cursor, config-only install). Installing one of them later is picked up automatically on the next sync.",
+    "skillsFormat": "Engine supports skillsFormat 'flat' (one <name>.md per skill) in addition to default 'dir'; no current tool needs flat."
+  },
+  "_skipped": {
+    "aider": "aider appears in teamai-cli's KNOWN_AGENTS (~/.aider/skills heuristic) but aider has no real skills or file-based MCP concept (config is .aider.conf.yml flags) — nothing meaningful for harness-sync to fan out."
+  }
+}
