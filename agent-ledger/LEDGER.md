@@ -21,6 +21,25 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 18:52 — grok — OpenBot policy gateway + bot-mode audit UI (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-policy-gateway` (worktree `allternit-ao-openbot-policy-gateway`; pickup of kimi `session_497f0582`)
+- **Agent:** grok (Task A: kimi executor; Task B: grok after kimi/claude/codex blocked)
+- **Summary:** Merged PR #275 (8b64e1805) — fail-closed declarative policy on `allternit-api` (audit-before-act JSONL, seats on `aci.run` + computer tools) plus bot-session verdict chips / audit list / policy editor. No new nav. Editor save is copy-to-`ALLTERNIT_ACI_POLICY_FILE`.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/275 · 8b64e18051c225de5c86a8ac92ec68fc5a319b42
+- **How it works:** Extends existing `permission_policy.rs` (deny > ask > allow > implicit deny). Loader refuses startup on a malformed `ALLTERNIT_ACI_POLICY_FILE`. Audit write failure refuses the action. UI gated on `sessionMode=agent` / `isBot`. GitHub Actions green; Vercel + Cloudflare Pages Git previews ignored (red on #267–#274 too).
+- **Outstanding work:** Phase 2 UX cluster (avatars, @mentions, group chat, long-running session chrome). Seat B `bot_id` unset at the computer-tool gate (Task A deviation).
+- **Summary file:** [2026-09-10-2352-openbot-policy-gateway-grok.md](./summaries/2026-09-10-2352-openbot-policy-gateway-grok.md)
+
+### 2026-09-10 17:05 — kimi — P6a UHP core gateway + `ao serve` lands (rq-20260908-028)
+
+- **Session ID / Branch:** `ao/uhp-gateway` (worktree `allternit-ao-uhp-gateway`, orchestrator direct)
+- **Agent:** kimi-interactive
+- **Summary:** Merged PR #265 (6b21256cb) — UHP (Universal Harness Protocol, spec 2026-08-11) core gateway vendored as `infrastructure/executor/uhp-gateway/` + new `ao serve` subcommand. Conformance 40/40 CONFORMANT (`--class core`); `uhp-gateway` crate 32/32; herdr diff additive-only (`ao/serve.rs` + one cli.rs match arm + help line + path dep).
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/265 · 6b21256cb23f98ecb37d3c7131cb35a00226faa8
+- **How it works:** Orchestrator did not trust executor evidence — booted `ao serve` independently (port 8421, mktemp data dir), re-ran conformance 40/40; gate 2 kimi green with real SSE stream/cancel/resume transcripts (sequence numbers). Incident: GitHub Actions never created PR-event check suites for #265 (161k-line vendor diff oversized the payload); per merge rule (real checks green, Vercel rate-limit + Pages ignorable) checks were substituted locally; push-to-main then fired gitleaks/test/typography all success. One vendored fixture (synthetic test key) gitleaks-flagged → fingerprint in `.gitleaksignore` (ef232f828), local scan clean. Push-to-main deploy check is the tracked rsync-mtime follow-up.
+- **Outstanding work:** Gate 2 claude/codex live turns deferred — environmental (claude OAuth expired, codex usage limit resets 2026-09-16), both reproduced CLI-direct; one-command re-run per `docs/AO_UHP_GATEWAY_NOTES.md`. Summary: `agent-ledger/summaries/2026-09-10-1650-p6a-uhp-gateway-kimi.md`.
+
 ### 2026-09-10 15:10 — kimi — P7 ao harness install lands (rq-20260908-028)
 
 - **Session ID / Branch:** `ao/harness-install` (worktree `allternit-ao-harness-install`, orchestrated executor)
@@ -561,3 +580,4 @@ Cross-compiled gizzi-code-win32-x64 from macOS (`bun build --target=win32-x64` �
 - 2026-09-10 15:52 — session/botmode-0910 (kimi-code): bot-mode prove-it-works sweep, partial by directive. PR #262 → dbcb9bf36: 5 bugs fixed (vite dev /__clerk proxy missing, clerkJSUrl forced https, seed sign-in ordering, SeedAuth 3×-per-load multi-fire → 429 multiplier, gizzi headless `bot chat` bootstrap). gizzi bot suites 144/0 + live CLI smoke PASS; web seed sign-in 200 on /api/v1/agents against live cloud API. Tart substrate probe end-to-end: provision 200 (real VM ~3s), deprovision 204, cleanup clean; live VNC BLOCKED — golden image `allternit-desktop` is bare Ubuntu 22.04 with no desktop agent/VNC (confirmed by exec into golden + clone). 5 harness scripts landed at repo root. Bugs 6-9 (default Incus route, query-vs-body provision params, required sandbox_id, OAuth-through-dev-proxy 403) documented as follow-ups. Clerk-gated phases (web flows, PWA, desktop-UI, CLI chat turn) PARKED per owner — deferred to desktop-clerk-proxy session, not failed. [summary](agent-ledger/summaries/2026-09-10-1548-botmode-0910-kimi-bot-mode-prove-it-works.md)
 - 2026-09-10 16:03 — session/desktop-icon-20260910 (kimi-code): macOS-convention desktop app icon (squircle + padded A glyph, icns/ico regenerated). PR #263. [summary](agent-ledger/summaries/2026-09-10-1603-desktop-icon-20260910-kimi-code-macos-app-icon.md)
 - 2026-09-10 16:12 — session/desktop-icon-brand-20260910 (kimi-code): desktop icon now the official Allternit brand asset (dark grid + orange accent), squircle-masked; supersedes PR #263. PR #264. [summary](agent-ledger/summaries/2026-09-10-1612-desktop-icon-brand-20260910-kimi-code-official-brand-icon.md)
+- 2026-09-10 17:10 — session/botmode-api-0910 (kimi-code): bot-desktop API ergonomics, PR #267 → f40a898a. Bug 6: bare provision no longer dead-ends on Tart-only hosts (default OS matches configured substrate; NotSupported errors carry an explicit hint). Bug 7: provision accepts an optional JSON body (query wins) — body-only callers hit validation instead of being silently ignored. Bug 8: sandbox_id optional on all desktop routes with persisted-record fallback. 7 new tests; bot_desktop suites 72/0; release build green; preflight 35/0; live-proven against the real Tart host (bare provision → provider=tart os=macos, JSON body validated, bare status resolves persisted sandbox, clean teardown). Full --lib suite 830 pass / 4 fail — the 4 agent_cloud real-control-plane failures are pre-existing on clean main (env issue, unrelated). Desktop rebuild deferred per owner until all bot-mode work is done. [summary](agent-ledger/summaries/2026-09-10-1705-botmode-api-0910-kimi-bot-desktop-api-ergonomics.md)

@@ -65,6 +65,11 @@ pub(crate) async fn run_desktop_mux(
             .into_response();
     }
 
+    let sandbox_id = match crate::bot_desktop_routes::resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let driver = match &state.vm_driver {
         Some(d) => d.clone(),
         None => {
@@ -116,7 +121,7 @@ python3 -c 'import json,sys; print(json.dumps({{"session_id":sys.argv[1],"pane_i
         command_b64 = command_b64,
     );
 
-    let handle = build_handle(&query.sandbox_id, None, None);
+    let handle = build_handle(&sandbox_id, None, None);
     let mut env_vars = std::collections::HashMap::new();
     env_vars.insert("DISPLAY".to_string(), ":0".to_string());
     let cmd_spec = CommandSpec {
@@ -155,7 +160,7 @@ python3 -c 'import json,sys; print(json.dumps({{"session_id":sys.argv[1],"pane_i
                 )
                     .into_response(),
                 Err(e) => {
-                    warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, stdout = %stdout, "Mux run produced invalid JSON");
+                    warn!(bot_id, sandbox_id = %sandbox_id, error = %e, stdout = %stdout, "Mux run produced invalid JSON");
                     (
                         StatusCode::SERVICE_UNAVAILABLE,
                         Json(json!({
@@ -168,7 +173,7 @@ python3 -c 'import json,sys; print(json.dumps({{"session_id":sys.argv[1],"pane_i
             }
         }
         Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to run desktop mux");
+            warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to run desktop mux");
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({"error": format!("failed to run mux: {}", e)})),

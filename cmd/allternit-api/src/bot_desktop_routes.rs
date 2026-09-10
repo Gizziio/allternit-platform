@@ -122,7 +122,37 @@ pub fn bot_desktop_router() -> Router<Arc<AppState>> {
 #[derive(Debug, Deserialize)]
 pub(crate) struct DesktopQuery {
     /// Computer Cloud sandbox / native id for the bot's persistent virtual computer.
-    pub(crate) sandbox_id: String,
+    /// Optional: when omitted, the bot's persisted sandbox record is used.
+    pub(crate) sandbox_id: Option<String>,
+}
+
+/// Effective sandbox id for a desktop request: an explicit `?sandbox_id=`
+/// always wins; when omitted we fall back to the bot's persisted sandbox so
+/// simple callers can hit `/desktop` bare. Only errors when neither exists.
+pub(crate) async fn resolve_sandbox_id(
+    state: &AppState,
+    bot_id: &str,
+    query: &DesktopQuery,
+) -> Result<String, axum::response::Response> {
+    if let Some(id) = query.sandbox_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        return Ok(id.to_string());
+    }
+    match read_bot_sandbox(&state.db, bot_id) {
+        Ok(Some(r)) => Ok(r.sandbox_id),
+        Ok(None) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "sandbox_id is required (bot has no persisted desktop sandbox)"})),
+        )
+            .into_response()),
+        Err(e) => {
+            warn!(bot_id, error = %e, "Failed to read bot sandbox");
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "failed to read sandbox record"})),
+            )
+                .into_response())
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -181,10 +211,15 @@ async fn get_desktop_status(
             .into_response();
     }
 
-    let control_state = read_control_state(&state, &bot_id, &query.sandbox_id).await;
+    let sandbox_id = match resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
+    let control_state = read_control_state(&state, &bot_id, &sandbox_id).await;
 
     let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) if r.sandbox_id == query.sandbox_id => Some(r),
+        Ok(Some(r)) if r.sandbox_id == sandbox_id => Some(r),
         _ => None,
     };
 
@@ -192,11 +227,11 @@ async fn get_desktop_status(
     // it says running do we try to resolve a live desktop endpoint.
     let (status, endpoint, last_error) = match record.as_ref().map(|r| r.status.as_str()) {
         Some("running") | Some("creating") => {
-            match resolve_desktop_endpoint(&state, &bot_id, &query.sandbox_id).await {
+            match resolve_desktop_endpoint(&state, &bot_id, &sandbox_id).await {
                 Ok(Some(ep)) => ("running".to_string(), Some(ep), None),
                 Ok(None) => ("off".to_string(), None, Some("Desktop endpoint is not reachable".to_string())),
                 Err(e) => {
-                    warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to resolve desktop endpoint");
+                    warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to resolve desktop endpoint");
                     ("error".to_string(), None, Some(e.to_string()))
                 }
             }
@@ -212,7 +247,7 @@ async fn get_desktop_status(
             // HTTP noVNC viewers are opened directly at the guest URL and should
             // not be tunnelled through the platform API.
             let ws_url = if matches!(ep.protocol, DesktopProtocol::Vnc) {
-                Some(build_ws_url(&state, &bot_id, &query.sandbox_id, &user.user_id))
+                Some(build_ws_url(&state, &bot_id, &sandbox_id, &user.user_id))
             } else {
                 None
             };
@@ -228,7 +263,7 @@ async fn get_desktop_status(
 
     let session = {
         let sessions = state.bot_desktop_sessions.read().await;
-        sessions.get(&bot_id).filter(|s| s.sandbox_id == query.sandbox_id).cloned()
+        sessions.get(&bot_id).filter(|s| s.sandbox_id == sandbox_id).cloned()
     };
 
     let response = DesktopStatusResponse {
@@ -241,7 +276,7 @@ async fn get_desktop_status(
                 DesktopProtocol::NoVncHttp => "novnc".to_string(),
             })
             .unwrap_or_else(|| "none".to_string()),
-        sandbox_id: query.sandbox_id,
+        sandbox_id,
         provider: record.as_ref().map(|r| r.provider.clone()),
         host: record.as_ref().and_then(|r| r.host.clone()),
         viewer_url,
@@ -267,6 +302,11 @@ async fn get_desktop_screenshot(
             .into_response();
     }
 
+    let sandbox_id = match resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let driver = match &state.vm_driver {
         Some(d) => d.clone(),
         None => {
@@ -279,8 +319,8 @@ async fn get_desktop_screenshot(
     };
 
     let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) => r,
-        Ok(None) => {
+        Ok(Some(r)) if r.sandbox_id == sandbox_id => r,
+        Ok(_) => {
             return (
                 StatusCode::NOT_FOUND,
                 Json(json!({"error": "bot has no desktop sandbox"})),
@@ -321,7 +361,7 @@ async fn get_desktop_screenshot(
     let exec_result = match driver.exec(&handle, capture_cmd).await {
         Ok(r) => r,
         Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to capture desktop screenshot");
+            warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to capture desktop screenshot");
             return (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({"error": format!("failed to capture screenshot: {}", e)})),
@@ -349,7 +389,7 @@ async fn get_desktop_screenshot(
     let png = match BASE64_STANDARD.decode(stdout_trimmed) {
         Ok(bytes) => bytes,
         Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Screenshot output was not valid base64");
+            warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Screenshot output was not valid base64");
             return (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({"error": format!("invalid screenshot output: {}", e)})),
@@ -376,6 +416,57 @@ pub(crate) struct ProvisionDesktopQuery {
     pub resolution: Option<String>,
     /// Force a specific substrate provider, e.g. "incus" or "tart".
     pub provider: Option<String>,
+}
+
+/// JSON-body twin of [`ProvisionDesktopQuery`]. Provision accepts the
+/// parameters either as query params or as a JSON body; when both are
+/// present, explicit query params win.
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct ProvisionDesktopBody {
+    pub os: Option<String>,
+    pub template_id: Option<String>,
+    pub cpu_cores: Option<i64>,
+    pub memory_mb: Option<i64>,
+    pub disk_mb: Option<i64>,
+    pub resolution: Option<String>,
+    pub provider: Option<String>,
+}
+
+impl ProvisionDesktopQuery {
+    /// Fill gaps from a JSON body. Query params (already set) always win so
+    /// URL semantics stay predictable.
+    fn merge_body(&mut self, body: ProvisionDesktopBody) {
+        let ProvisionDesktopBody {
+            os,
+            template_id,
+            cpu_cores,
+            memory_mb,
+            disk_mb,
+            resolution,
+            provider,
+        } = body;
+        if self.os.is_none() {
+            self.os = os;
+        }
+        if self.template_id.is_none() {
+            self.template_id = template_id;
+        }
+        if self.cpu_cores.is_none() {
+            self.cpu_cores = cpu_cores;
+        }
+        if self.memory_mb.is_none() {
+            self.memory_mb = memory_mb;
+        }
+        if self.disk_mb.is_none() {
+            self.disk_mb = disk_mb;
+        }
+        if self.resolution.is_none() {
+            self.resolution = resolution;
+        }
+        if self.provider.is_none() {
+            self.provider = provider;
+        }
+    }
 }
 
 /// Internal provision path used both by the HTTP handler and the capacity-driven
@@ -605,9 +696,16 @@ pub(crate) async fn provision_desktop_internal(
         Ok(h) => h,
         Err(e) => {
             warn!(bot_id, error = %e, "Failed to spawn bot desktop sandbox");
+            let hint = if matches!(e, DriverError::NotSupported { .. }) {
+                " No substrate accepted the request: pass os/provider explicitly \
+                 (e.g. ?os=macos&provider=tart) or configure the missing substrate \
+                 (INCUS_URL / TART_HOST_URL)."
+            } else {
+                ""
+            };
             return Err((
                 StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({"error": format!("failed to provision desktop sandbox: {}", e)})),
+                Json(json!({"error": format!("failed to provision desktop sandbox: {e}.{hint}")})),
             )
                 .into_response());
         }
@@ -687,8 +785,13 @@ async fn provision_desktop(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(bot_id): Path<String>,
-    Query(query): Query<ProvisionDesktopQuery>,
+    Query(mut query): Query<ProvisionDesktopQuery>,
+    body: Option<Json<ProvisionDesktopBody>>,
 ) -> impl IntoResponse {
+    if let Some(Json(body)) = body {
+        query.merge_body(body);
+    }
+
     if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
         return (
             StatusCode::FORBIDDEN,
@@ -836,6 +939,11 @@ async fn observe_desktop(
             .into_response();
     }
 
+    let sandbox_id = match resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let now = chrono::Utc::now();
     {
         let mut sessions = state.bot_desktop_sessions.write().await;
@@ -843,7 +951,7 @@ async fn observe_desktop(
             bot_id.clone(),
             BotDesktopSession {
                 bot_id: bot_id.clone(),
-                sandbox_id: query.sandbox_id.clone(),
+                sandbox_id: sandbox_id.clone(),
                 control_state: BotDesktopControlState::HumanObserving,
                 taken_over_by_user_id: Some(user.user_id.clone()),
                 taken_over_at: Some(now),
@@ -856,7 +964,7 @@ async fn observe_desktop(
 
     Json(json!({
         "control_state": "human_observing",
-        "sandbox_id": query.sandbox_id,
+        "sandbox_id": sandbox_id,
     }))
     .into_response()
 }
@@ -875,6 +983,11 @@ async fn take_over_desktop(
             .into_response();
     }
 
+    let sandbox_id = match resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let now = chrono::Utc::now();
     {
         let mut sessions = state.bot_desktop_sessions.write().await;
@@ -882,7 +995,7 @@ async fn take_over_desktop(
             bot_id.clone(),
             BotDesktopSession {
                 bot_id: bot_id.clone(),
-                sandbox_id: query.sandbox_id.clone(),
+                sandbox_id: sandbox_id.clone(),
                 control_state: BotDesktopControlState::HumanControls,
                 taken_over_by_user_id: Some(user.user_id.clone()),
                 taken_over_at: Some(now),
@@ -895,7 +1008,7 @@ async fn take_over_desktop(
 
     Json(json!({
         "control_state": "human_controls",
-        "sandbox_id": query.sandbox_id,
+        "sandbox_id": sandbox_id,
     }))
     .into_response()
 }
@@ -914,6 +1027,11 @@ async fn hand_back_desktop(
             .into_response();
     }
 
+    let sandbox_id = match resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let now = chrono::Utc::now();
     {
         let mut sessions = state.bot_desktop_sessions.write().await;
@@ -921,7 +1039,7 @@ async fn hand_back_desktop(
             bot_id.clone(),
             BotDesktopSession {
                 bot_id: bot_id.clone(),
-                sandbox_id: query.sandbox_id.clone(),
+                sandbox_id: sandbox_id.clone(),
                 control_state: BotDesktopControlState::BotControls,
                 taken_over_by_user_id: None,
                 taken_over_at: None,
@@ -934,7 +1052,7 @@ async fn hand_back_desktop(
 
     Json(json!({
         "control_state": "bot_controls",
-        "sandbox_id": query.sandbox_id,
+        "sandbox_id": sandbox_id,
     }))
     .into_response()
 }
@@ -953,8 +1071,13 @@ async fn start_desktop(
             .into_response();
     }
 
+    let sandbox_id = match resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) if r.sandbox_id == query.sandbox_id => r,
+        Ok(Some(r)) if r.sandbox_id == sandbox_id => r,
         _ => {
             return (
                 StatusCode::NOT_FOUND,
@@ -967,7 +1090,7 @@ async fn start_desktop(
     if let Some(driver) = state.vm_driver.as_ref() {
         let handle = build_handle_from_record(&record, &bot_id);
         if let Err(e) = driver.resume_vm(&handle).await {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to resume desktop sandbox");
+            warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to resume desktop sandbox");
         }
     }
 
@@ -980,12 +1103,12 @@ async fn start_desktop(
         "running",
         &record.os,
     ) {
-        warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to update desktop sandbox status");
+        warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to update desktop sandbox status");
     }
 
     publish_desktop_event(&state, &bot_id, "bot.desktop.started", &user.user_id).await;
 
-    Json(json!({ "status": "running", "sandbox_id": query.sandbox_id })).into_response()
+    Json(json!({ "status": "running", "sandbox_id": sandbox_id })).into_response()
 }
 
 async fn stop_desktop(
@@ -1002,8 +1125,13 @@ async fn stop_desktop(
             .into_response();
     }
 
+    let sandbox_id = match resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) if r.sandbox_id == query.sandbox_id => r,
+        Ok(Some(r)) if r.sandbox_id == sandbox_id => r,
         _ => {
             return (
                 StatusCode::NOT_FOUND,
@@ -1016,7 +1144,7 @@ async fn stop_desktop(
     if let Some(driver) = state.vm_driver.as_ref() {
         let handle = build_handle_from_record(&record, &bot_id);
         if let Err(e) = driver.pause_vm(&handle).await {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to pause desktop sandbox");
+            warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to pause desktop sandbox");
         }
     }
 
@@ -1029,12 +1157,12 @@ async fn stop_desktop(
         "stopped",
         &record.os,
     ) {
-        warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to update desktop sandbox status");
+        warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to update desktop sandbox status");
     }
 
     publish_desktop_event(&state, &bot_id, "bot.desktop.stopped", &user.user_id).await;
 
-    Json(json!({ "status": "stopped", "sandbox_id": query.sandbox_id })).into_response()
+    Json(json!({ "status": "stopped", "sandbox_id": sandbox_id })).into_response()
 }
 
 async fn pause_desktop(
@@ -1072,8 +1200,13 @@ async fn destroy_desktop(
             .into_response();
     }
 
+    let sandbox_id = match resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) if r.sandbox_id == query.sandbox_id => Some(r),
+        Ok(Some(r)) if r.sandbox_id == sandbox_id => Some(r),
         _ => None,
     };
 
@@ -1081,13 +1214,13 @@ async fn destroy_desktop(
         if let Some(driver) = state.vm_driver.as_ref() {
             let handle = build_handle_from_record(&record, &bot_id);
             if let Err(e) = driver.destroy(&handle).await {
-                warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to destroy desktop sandbox");
+                warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to destroy desktop sandbox");
             }
         }
     }
 
     if let Err(e) = delete_bot_sandbox(&state.db, &bot_id) {
-        warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to delete desktop sandbox record");
+        warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to delete desktop sandbox record");
     }
 
     {
@@ -1401,6 +1534,7 @@ mod tests {
     struct MockExecutionDriver {
         calls: Arc<Mutex<Vec<String>>>,
         exec_result: Arc<Mutex<Option<std::result::Result<allternit_driver_interface::ExecResult, DriverError>>>>,
+        supports_desktop: bool,
     }
 
     impl MockExecutionDriver {
@@ -1408,6 +1542,14 @@ mod tests {
             Self {
                 calls: Arc::new(Mutex::new(Vec::new())),
                 exec_result: Arc::new(Mutex::new(None)),
+                supports_desktop: false,
+            }
+        }
+
+        fn with_desktop_support() -> Self {
+            Self {
+                supports_desktop: true,
+                ..Self::new()
             }
         }
 
@@ -1425,6 +1567,10 @@ mod tests {
 
     #[async_trait]
     impl allternit_driver_interface::ExecutionDriver for MockExecutionDriver {
+        fn supports_desktop(&self) -> bool {
+            self.supports_desktop
+        }
+
         fn capabilities(&self) -> allternit_driver_interface::DriverCapabilities {
             allternit_driver_interface::DriverCapabilities {
                 resize: false,
@@ -1793,5 +1939,190 @@ mod tests {
         let body = resp.into_body().collect().await.unwrap().to_bytes();
         assert!(!body.is_empty());
         assert!(driver.recorded().contains(&"exec:sandbox-abc".to_string()));
+    }
+
+    #[tokio::test]
+    async fn status_without_sandbox_id_falls_back_to_persisted_record() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        let state = test_app_state(&temp, driver).await;
+        let app = bot_desktop_router().with_state(state);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/bots/bot-1/desktop")
+                    .extension(test_user("user-1"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["sandbox_id"], "sandbox-abc");
+        // Status depends on the mock driver endpoint resolution; the point of
+        // this test is that the bare route resolved the persisted sandbox.
+        assert!(body["status"].is_string());
+    }
+
+    #[tokio::test]
+    async fn status_without_sandbox_id_errors_when_no_persisted_sandbox() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        let state = crate::test_helpers::app_state_with_driver(temp.as_path(), Some(driver)).await;
+        let conn = state.db.connect().expect("test db conn");
+        conn.execute(
+            "INSERT OR IGNORE INTO agents (id, user_id, name, type, model, provider)
+             VALUES (?1, ?2, 'Test Bot', 'worker', 'gpt-4', 'openai')",
+            rusqlite::params!["bot-empty", "user-1"],
+        )
+        .unwrap();
+        drop(conn);
+        let app = bot_desktop_router().with_state(state);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/bots/bot-empty/desktop")
+                    .extension(test_user("user-1"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn start_without_sandbox_id_uses_persisted_record() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        let state = test_app_state(&temp, driver.clone()).await;
+        let app = bot_desktop_router().with_state(state.clone());
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/bots/bot-1/desktop/start")
+                    .extension(test_user("user-1"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["sandbox_id"], "sandbox-abc");
+        assert_eq!(body["status"], "running");
+        assert!(driver.recorded().contains(&"resume_vm:sandbox-abc".to_string()));
+    }
+
+    #[tokio::test]
+    async fn observe_without_sandbox_id_uses_persisted_record() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        let state = test_app_state(&temp, driver).await;
+        let app = bot_desktop_router().with_state(state.clone());
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/bots/bot-1/desktop/observe")
+                    .extension(test_user("user-1"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["sandbox_id"], "sandbox-abc");
+        assert_eq!(body["control_state"], "human_observing");
+    }
+
+    /// A bot with no persisted sandbox, so provision reaches validation/spawn.
+    async fn test_app_state_unprovisioned(temp: &Path, driver: Arc<MockExecutionDriver>) -> Arc<AppState> {
+        let state = crate::test_helpers::app_state_with_driver(temp, Some(driver)).await;
+        let conn = state.db.connect().expect("test db conn");
+        conn.execute(
+            "INSERT OR IGNORE INTO agents (id, user_id, name, type, model, provider)
+             VALUES ('bot-2', 'user-1', 'Test Bot', 'worker', 'gpt-4', 'openai')",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+        state
+    }
+
+    #[tokio::test]
+    async fn provision_validates_json_body_params() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::with_desktop_support());
+        let state = test_app_state_unprovisioned(&temp, driver).await;
+        let app = bot_desktop_router().with_state(state);
+
+        // An invalid resolution only reaches validation if the JSON body is
+        // actually parsed (pre-fix, body-only callers were silently ignored).
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/bots/bot-2/desktop/provision")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-1"))
+                    .body(Body::from(
+                        serde_json::json!({"resolution": "9999x9999"}).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let body = body_json(resp.into_body()).await;
+        assert!(
+            body["error"]
+                .as_str()
+                .unwrap_or("")
+                .contains("resolution must be one of"),
+            "unexpected error body: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn provision_query_params_win_over_json_body() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::with_desktop_support());
+        let state = test_app_state_unprovisioned(&temp, driver).await;
+        let app = bot_desktop_router().with_state(state);
+
+        // The query param is valid, the body value is not: if query wins, the
+        // request passes validation and fails later at the (mock) spawn step
+        // with 503 — never with the 400 validation error.
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/bots/bot-2/desktop/provision?resolution=1280x720")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-1"))
+                    .body(Body::from(
+                        serde_json::json!({"resolution": "9999x9999"}).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
     }
 }
