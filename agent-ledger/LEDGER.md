@@ -21,6 +21,26 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 09:05 — kimi — P4 harness sync port: `ao harness` with JS byte-parity
+
+- **Session ID / Branch:** `ao/harness-port` (worktree `allternit-ao-harness-port`, tmux `ao-harness-port`)
+- **Agent:** kimi
+- **Summary:** Ported the ops harness-sync JS into the ao binary (`ao harness status|sync|uninstall|describe`), all 16 manifest tools; byte-parity harness runs the real JS vs the Rust port on cloned scratch HOMEs — 21/21 checks green, re-verified by the orchestrator on the merged tree.
+- **Commit:** PR #250, merge commit `847331b12f` on `main`
+- **How it works:** additive `src/ao/harness/` module + embedded verbatim manifest (AO_HARNESS_MANIFEST override for fixtures); hand-rolled order-preserving JSON with JS-exact stringify; engine internals untouched. 33 new unit tests. harness-sync.js retired (docs/status only, files kept).
+- **Outstanding work:** pre-existing SIGPIPE full-suite flake unchanged; three documented no-manifest-coverage deviations; gizzi/desktop JS call-site cleanup is a follow-up before any file removal.
+- **Summary file:** [./summaries/2026-09-10-0905-ao-harness-port-kimi-ao-p4.md](./summaries/2026-09-10-0905-ao-harness-port-kimi-ao-p4.md)
+
+### 2026-09-10 08:40 — kimi — CI guard: fabric-session CACHE_NAME must bump with PWA asset changes
+
+- **Session ID / Branch:** `fix/sw-cache-guard` (worktree `allternit-sw-cache-guard`)
+- **Agent:** kimi
+- **Summary:** New `scripts/check-sw-cache-bump.mjs` + PR workflow fail any PR that changes fabric-session PWA assets without bumping the service worker CACHE_NAME — the miss that stranded users on a stale blank PWA after a deploy.
+- **Commit:** PR #247, merge commit `36336f24f7` on `main`
+- **How it works:** diffs base...head, extracts CACHE_NAME at both refs, exits 1 with an actionable message. Verified in disposable clones (positive + negative + SW-only variants); one CI iteration needed (bare branch names → origin/ prefix + resolveRef retry), guard green after.
+- **Outstanding work:** guard covers PRs only; does not retroactively unstrand old caches (bounded: navigations are network-first in v20).
+- **Summary file:** [./summaries/2026-09-10-0840-fix-sw-cache-guard-kimi-sw-cache-guard.md](./summaries/2026-09-10-0840-fix-sw-cache-guard-kimi-sw-cache-guard.md)
+
 ### 2026-09-10 08:50 — kimi — Desktop sidecar production fixes (connector crash loop + stale voice binary)
 
 - **Session ID / Branch:** `session/3a37a822-p5` (worktree `allternit-session-3a37a822-p5`)
