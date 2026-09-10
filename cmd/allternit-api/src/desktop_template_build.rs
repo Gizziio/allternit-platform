@@ -323,6 +323,17 @@ async fn run_build(
             format!("failed to resolve provision spec ({status}): {}", body.0)
         })?;
     let holder_name = format!("tpl-golden-{template_id}");
+    // Provider hint: on hosts with an Incus substrate the router's default
+    // (linux -> Incus) is right. On Tart-only hosts (self-hosted desktop) a
+    // Linux golden holder must be pinned to Tart — otherwise
+    // `choose_spawn_driver` routes to the absent Incus substrate and every
+    // build dies at holder spawn with "Feature not supported: Incus
+    // substrate" (live-smoke defect, rq-20260909-004).
+    let provider_hint = if state.incus_driver.is_some() {
+        None
+    } else {
+        Some("tart")
+    };
     let spawned = crate::computer_routes::spawn_desktop_for_owner(
         state,
         user,
@@ -335,7 +346,7 @@ async fn run_build(
         None,
         Some(&template_id),
         None,
-        None,
+        provider_hint,
         "free",
         crate::computer_routes::Persistence::Persistent,
     )

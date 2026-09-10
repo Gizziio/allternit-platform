@@ -923,6 +923,10 @@ pub(crate) async fn spawn_desktop_for_owner(
     {
         Ok(h) => h,
         Err(e) => {
+            // Log the driver error server-side too: the response body carries
+            // it to the client, but async build pipelines (golden holder
+            // spawn) only record the status, losing the cause.
+            warn!(error = %e, "failed to provision desktop sandbox");
             return Err(error_response(
                 StatusCode::SERVICE_UNAVAILABLE,
                 format!("failed to provision desktop sandbox: {e}"),
