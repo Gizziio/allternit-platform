@@ -374,12 +374,15 @@ async fn run_build(
 
     match result {
         Ok(()) => {
-            // Snapshot while the guest is still running: Incus stateful
-            // snapshots capture live memory state and require a running
-            // instance. The holder is stopped right after, so the golden
-            // snapshot IS the stopped holder's state plus live-service memory.
+            // Stateless snapshot while the guest is still running: the golden
+            // image only needs the filesystem state, and the holder is paused
+            // right after. Stateful snapshots would also try to CRIU-checkpoint
+            // live memory, which hangs (or crawls for minutes) on hosts without
+            // working CRIU — every golden build then dies at the snapshot step
+            // on the wait deadline (live-smoke defect, rq-20260909-004 Incus
+            // deferral).
             if let Err(e) = driver
-                .create_snapshot(&spawned.handle, GOLDEN_SNAPSHOT_NAME, true)
+                .create_snapshot(&spawned.handle, GOLDEN_SNAPSHOT_NAME, false)
                 .await
             {
                 let _ = driver.destroy(&spawned.handle).await;
