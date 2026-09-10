@@ -751,10 +751,16 @@ async fn computer_vnc_ws_handler(
 /// can hold the desktop), so there is no takeover gate here — the owner
 /// always controls their own computer, and any viewer they admit is either
 /// full-control (purpose "vnc", read_only=false claim) or view-only
-/// (`read_only`). When `read_only` is set the client->TCP direction is
-/// suppressed entirely: read-only viewers cannot inject input, while the
-/// screen (TCP->browser) still flows. Approval/ACI gating on the control
-/// surfaces is untouched — this route is view-or-control streaming only.
+/// (`read_only`). When `read_only` is set the client->TCP direction passes
+/// through an RFB-aware filter (`crate::vnc_readonly`): the handshake and
+/// display-related messages still reach the server so the viewer can connect
+/// and receive frames, but input messages (KeyEvent, PointerEvent,
+/// ClientCutText) are consumed without forwarding. If the client picks a
+/// security mechanism the filter does not understand, the filter degrades to
+/// unfiltered passthrough (flagged via `RfbReadOnlyFilter::unfilterable` and
+/// logged) since read-only can no longer be enforced there. Approval/ACI
+/// gating on the control surfaces is untouched — this route is
+/// view-or-control streaming only.
 async fn handle_vnc_socket(
     socket: WebSocket,
     state: Arc<AppState>,
@@ -823,6 +829,7 @@ async fn handle_vnc_socket(
     // Channel for messages that need to go to the browser.
     let (ws_tx, mut ws_rx) = mpsc::channel::<Message>(128);
     let ws_tx2 = ws_tx.clone();
+    let computer_id_for_filter = computer.id.clone();
 
     // Forward channel -> WebSocket sender.
     let forward_to_ws = tokio::spawn(async move {
@@ -833,15 +840,32 @@ async fn handle_vnc_socket(
         }
     });
 
-    // Forward WebSocket receiver -> TCP. In read-only mode binary (input)
-    // frames are dropped instead of forwarded — the viewer can watch but
-    // cannot inject keyboard/mouse/paste. Control frames (ping/pong/close)
-    // are still honored so the connection stays healthy.
+    // Forward WebSocket receiver -> TCP. In read-only mode binary frames pass
+    // through an RFB-aware filter: the handshake and display-related messages
+    // (SetPixelFormat, SetEncodings, FramebufferUpdateRequest, ...) are
+    // forwarded so the viewer can actually connect, while input messages
+    // (KeyEvent, PointerEvent, ClientCutText) are consumed without forwarding.
+    // Control frames (ping/pong/close) are still honored so the connection
+    // stays healthy.
+    let mut ro_filter = crate::vnc_readonly::RfbReadOnlyFilter::new();
+    let mut unfilterable_warned = false;
     let ws_to_tcp = tokio::spawn(async move {
         while let Some(msg) = ws_receiver.next().await {
             match msg {
                 Ok(Message::Binary(data)) => {
-                    if !read_only && tcp_write.write_all(&data).await.is_err() {
+                    if read_only {
+                        let filtered = ro_filter.feed(&data);
+                        if ro_filter.unfilterable() && !unfilterable_warned {
+                            unfilterable_warned = true;
+                            warn!(
+                                computer_id = %computer_id_for_filter,
+                                "read-only degraded to unfiltered passthrough: unknown VNC security/version bytes; input can no longer be blocked"
+                            );
+                        }
+                        if !filtered.is_empty() && tcp_write.write_all(&filtered).await.is_err() {
+                            break;
+                        }
+                    } else if tcp_write.write_all(&data).await.is_err() {
                         break;
                     }
                 }
