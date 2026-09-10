@@ -95,6 +95,27 @@ From gizzi-code, the runtime exposes `allternit_list_agents` and `allternit_send
 
 Executor lifecycle events are still mirrored into Rails mail thread `wih:executor-<slug>` via `runtime/server/rails-bridge.ts`, and artifacts can be shared with `POST /api/rails/mail/share`.
 
+## Dispatch semantics (registry, mailbox, ownership, recovery)
+
+The ao engine adds durable dispatch semantics on top of the tmux/rails flow. Additive: the `ao-*` bash scripts and `ao spawn/send/watch/status/kill/doctor` keep their exact behavior.
+
+**Dispatch registry.** `~/.agent-orchestrator/state.json` — `{"sessions": {"ao-<slug>": {...}}}`. Legacy keys `cwd`/`log`/`dead` are unchanged (old readers ignore the rest). Added keys: `runner` (`logs/ao-<slug>.cmd.sh`), `worktree`, `branch`, `sentinel` (armed by `ao watch`), `lead`, `lifecycle` (running|dead|finished), `world` (engine|tmux), `queued`. Written by the engine spawn/kill paths and by the bash `ao-spawn`/`ao-kill` shims via `ao-registry-sync`.
+
+**Bus mailbox — queue-not-drop.** Busy/unverifiable sends go to the durable Rails Bus (`.allternit/bus/queue.db`, server-free) addressed to `peer:ao-<slug>` with transport `mailbox`:
+
+- `ao queue <slug> "msg"` — enqueue; `ao queue <slug>` — list pending.
+- `ao send --queue <slug> "msg"` — try the verified immediate send; on busy/unverifiable, enqueue instead of dropping. Plain `ao send` is unchanged.
+- `ao drain <slug> [--all]` — inject the oldest pending row through the verified ao-send paste path; settle (`mark_delivered`) only after verified delivery. Failed paste leaves the row `pending`.
+- `ao watch` auto-drains the oldest pending row per tick once the pane reads idle.
+
+Never use `GET /api/rails/peers/:name/inbox` for drain (it marks delivered on read). Exactly one drainer per recipient, owned by ao-engine. Mailbox root: `--root` > `AO_PEERS_ROOT` > cwd.
+
+**Fail-closed ownership.** Spawn records the lead (`--lead` / `AO_LEAD` / user / `human`). `queue`/`drain`/`send --queue`/`recover` require that lead or `--as-human`. Unknown owner → refuse.
+
+**Recovery pass.** `ao recover [slug]` reconciles registry vs live tmux + engine. Dead-but-unfinished sessions get a respawn plan from `.cmd.sh`, upgraded to harness resume argv when the runner line is resumable. Dry-run default; `--apply` respawns and re-arms the sentinel watcher.
+
+**Validation boundary.** Unit tests + `infrastructure/executor/ao-engine/tests/dispatch_demo/run.sh`. Not claimed: multi-day autonomous runs, cross-machine leads, atomic claim under concurrent drainers.
+
 ## Pitfalls learned the hard way
 
 - kimi `-p` refuses `--yolo`/`--auto` — TUI + `ao-send` is the only autonomous kimi path.

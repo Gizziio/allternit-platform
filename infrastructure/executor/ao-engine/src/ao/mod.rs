@@ -12,6 +12,8 @@ pub(crate) mod fabric;
 
 pub(crate) mod harness;
 
+pub(crate) mod mailbox;
+
 pub(crate) mod native;
 
 pub(crate) mod peers;
