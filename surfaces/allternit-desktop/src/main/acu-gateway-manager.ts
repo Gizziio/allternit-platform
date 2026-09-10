@@ -121,10 +121,13 @@ export function resolveAcuGatewaySpawn(context: AcuGatewaySpawnContext): AcuGate
   return null;
 }
 
-class AcuGatewayManager {
+export class AcuGatewayManager {
   private child: ChildProcess | null = null;
   private mode: AcuGatewayMode | null = null;
   private stopping = false;
+  /** Set by the child exit handler BEFORE `child` is nulled, so waitForHealth
+   * can see the crash even after the reference is gone. */
+  private childDied = false;
   private fetchImpl: typeof fetch = fetch;
   spawnContextOverride?: Partial<AcuGatewaySpawnContext>;
 
@@ -148,6 +151,7 @@ class AcuGatewayManager {
       return null;
     }
     this.stopping = false;
+    this.childDied = false;
     log.info(`[AcuGateway] Starting ${spec.command} ${spec.args.join(' ')} (cwd ${spec.cwd})`);
     this.child = spawn(spec.command, spec.args, {
       cwd: spec.cwd,
@@ -159,6 +163,11 @@ class AcuGatewayManager {
     this.child.stderr?.on('data', (data: Buffer) => log.warn('[AcuGateway]', data.toString().trim()));
     this.child.on('exit', (code) => {
       log.warn(`[AcuGateway] exited (code ${code})`);
+      // Record the death BEFORE clearing the reference — waitForHealth polls
+      // this flag to give up immediately instead of waiting out the full
+      // HEALTH_TIMEOUT_MS for a process that already crashed (e.g. the
+      // packaged python missing uvicorn).
+      this.childDied = true;
       this.child = null;
       if (this.mode === 'spawned') this.mode = null;
     });
@@ -196,6 +205,7 @@ class AcuGatewayManager {
   private async waitForHealth(): Promise<boolean> {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS;
     while (Date.now() < deadline) {
+      if (this.childDied) return false;
       if (this.child?.exitCode !== null && this.child?.exitCode !== undefined) return false;
       if (await this.isHealthy()) return true;
       await new Promise((resolve) => setTimeout(resolve, HEALTH_INTERVAL_MS));
