@@ -332,6 +332,51 @@ mod tests {
         assert_eq!(des_key_from_password(b"ab"), [0x86, 0x46, 0, 0, 0, 0, 0, 0]);
     }
 
+    /// Regression: the read-only filter must observe EVERY byte the VNC server
+    /// receives — including the proxy-injected type-2 choice and DES response,
+    /// which are produced from the server-side task — or its handshake state
+    /// desynchronizes and it eats the client's post-handshake messages. This
+    /// simulates the exact interleaving the ws proxy produces.
+    #[test]
+    fn chained_with_readonly_filter_clientinit_survives() {
+        let mut auth = VncAuthInterceptor::new("allternit");
+        let mut filter = crate::vnc_readonly::RfbReadOnlyFilter::new();
+
+        // Server greeting first (the client waits for it before speaking).
+        let p = auth.server_bytes(b"RFB 003.008\n").unwrap();
+        assert_eq!(p.to_client, b"RFB 003.008\n");
+
+        // Client version -> filter.
+        let p = auth.client_bytes(b"RFB 003.008\n").unwrap();
+        assert_eq!(filter.feed(&p.to_server), b"RFB 003.008\n");
+
+        // Server offers type 2 -> client sees rewritten None offer.
+        let p = auth.server_bytes(&[1, 2]).unwrap();
+        assert_eq!(p.to_client, vec![1, 1]);
+
+        // Client picks None -> proxy injects type 2 -> filter must see it.
+        let p = auth.client_bytes(&[1]).unwrap();
+        assert_eq!(filter.feed(&p.to_server), vec![2]);
+
+        // Challenge -> proxy injects DES response -> filter must see it too.
+        let p = auth.server_bytes(&[0x11; 16]).unwrap();
+        assert!(p.to_client.is_empty());
+        assert_eq!(filter.feed(&p.to_server).len(), 16);
+
+        // SecurityResult forwarded to the client.
+        let p = auth.server_bytes(&[0, 0, 0, 0]).unwrap();
+        assert_eq!(p.to_client, vec![0, 0, 0, 0]);
+
+        // The client's ClientInit must pass the filter (previously eaten as a
+        // phantom auth-response byte), and post-handshake a KeyEvent must not.
+        let p = auth.client_bytes(&[1]).unwrap();
+        assert_eq!(filter.feed(&p.to_server), vec![1]);
+        let key = [4u8, 0, 0, 0, 0, 0x61, 0, 1];
+        let p = auth.client_bytes(&key).unwrap();
+        assert!(filter.feed(&p.to_server).is_empty());
+        assert!(!filter.unfilterable());
+    }
+
     fn hex(s: &str) -> Vec<u8> {
         (0..s.len())
             .step_by(2)

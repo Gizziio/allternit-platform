@@ -828,10 +828,23 @@ async fn handle_vnc_socket(
     // during the RFB handshake the proxy answers the DES challenge itself and
     // presents only None-auth to the viewer. Tart desktops leave token as None
     // and get a fully transparent pipe.
+    //
+    // The interceptor and the read-only filter live in ONE mutex: the filter's
+    // client->server state machine must observe every byte the server
+    // receives, including proxy-injected ones (the upstream type-2 choice and
+    // the DES response are written from the tcp->ws task), or its handshake
+    // states desynchronize and it starts eating real client messages.
     let vnc_password = endpoint.token.clone().filter(|t| !t.is_empty());
-    let auth = vnc_password.map(|pw| {
-        std::sync::Arc::new(std::sync::Mutex::new(crate::vnc_auth::VncAuthInterceptor::new(&pw)))
-    });
+    struct VncCodec {
+        auth: Option<crate::vnc_auth::VncAuthInterceptor>,
+        ro_filter: Option<crate::vnc_readonly::RfbReadOnlyFilter>,
+    }
+    let codec = std::sync::Arc::new(std::sync::Mutex::new(VncCodec {
+        auth: vnc_password
+            .as_deref()
+            .map(crate::vnc_auth::VncAuthInterceptor::new),
+        ro_filter: read_only.then(crate::vnc_readonly::RfbReadOnlyFilter::new),
+    }));
 
     let (mut ws_sender, mut ws_receiver) = socket.split();
     let (mut tcp_read, tcp_write) = tokio::io::split(tcp);
@@ -861,49 +874,47 @@ async fn handle_vnc_socket(
     // (KeyEvent, PointerEvent, ClientCutText) are consumed without forwarding.
     // Control frames (ping/pong/close) are still honored so the connection
     // stays healthy.
-    let mut ro_filter = crate::vnc_readonly::RfbReadOnlyFilter::new();
     let mut unfilterable_warned = false;
-    let auth_ws_to_tcp = auth.clone();
+    let codec_ws_to_tcp = codec.clone();
     let tcp_write_ws_to_tcp = tcp_write.clone();
     let ws_to_tcp = tokio::spawn(async move {
         while let Some(msg) = ws_receiver.next().await {
             match msg {
                 Ok(Message::Binary(data)) => {
-                    let server_payload = match auth_ws_to_tcp.as_ref() {
-                        Some(a) => match a.lock().unwrap().client_bytes(&data) {
-                            Ok(p) => p.to_server,
-                            Err(e) => {
-                                warn!(error = %e, "VNC auth interception failed (client->server)");
-                                break;
+                    let write_result = {
+                        let mut codec = codec_ws_to_tcp.lock().unwrap();
+                        let after_auth = match codec.auth.as_mut() {
+                            Some(a) => match a.client_bytes(&data) {
+                                Ok(p) => p.to_server,
+                                Err(e) => {
+                                    warn!(error = %e, "VNC auth interception failed (client->server)");
+                                    break;
+                                }
+                            },
+                            None => data.to_vec(),
+                        };
+                        match codec.ro_filter.as_mut() {
+                            Some(f) => {
+                                let filtered = f.feed(&after_auth);
+                                if f.unfilterable() && !unfilterable_warned {
+                                    unfilterable_warned = true;
+                                    warn!(
+                                        computer_id = %computer_id_for_filter,
+                                        "read-only degraded to unfiltered passthrough: unknown VNC security/version bytes; input can no longer be blocked"
+                                    );
+                                }
+                                filtered
                             }
-                        },
-                        None => data.to_vec(),
+                            None => after_auth,
+                        }
                     };
-                    if read_only {
-                        let filtered = ro_filter.feed(&server_payload);
-                        if ro_filter.unfilterable() && !unfilterable_warned {
-                            unfilterable_warned = true;
-                            warn!(
-                                computer_id = %computer_id_for_filter,
-                                "read-only degraded to unfiltered passthrough: unknown VNC security/version bytes; input can no longer be blocked"
-                            );
-                        }
-                        if !filtered.is_empty()
-                            && tcp_write_ws_to_tcp
-                                .lock()
-                                .await
-                                .write_all(&filtered)
-                                .await
-                                .is_err()
-                        {
-                            break;
-                        }
-                    } else if tcp_write_ws_to_tcp
-                        .lock()
-                        .await
-                        .write_all(&server_payload)
-                        .await
-                        .is_err()
+                    if !write_result.is_empty()
+                        && tcp_write_ws_to_tcp
+                            .lock()
+                            .await
+                            .write_all(&write_result)
+                            .await
+                            .is_err()
                     {
                         break;
                     }
@@ -929,31 +940,42 @@ async fn handle_vnc_socket(
             match tcp_read.read(&mut buf).await {
                 Ok(0) => break,
                 Ok(n) => {
-                    let pipe = match auth.as_ref() {
-                        Some(a) => match a.lock().unwrap().server_bytes(&buf[..n]) {
-                            Ok(p) => p,
-                            Err(e) => {
-                                warn!(error = %e, "VNC auth interception failed (server->client)");
-                                break;
-                            }
-                        },
-                        None => crate::vnc_auth::VncPipe {
-                            to_client: buf[..n].to_vec(),
-                            to_server: Vec::new(),
-                        },
+                    let (to_server, to_client) = {
+                        let mut codec = codec.lock().unwrap();
+                        let pipe = match codec.auth.as_mut() {
+                            Some(a) => match a.server_bytes(&buf[..n]) {
+                                Ok(p) => p,
+                                Err(e) => {
+                                    warn!(error = %e, "VNC auth interception failed (server->client)");
+                                    break;
+                                }
+                            },
+                            None => crate::vnc_auth::VncPipe {
+                                to_client: buf[..n].to_vec(),
+                                to_server: Vec::new(),
+                            },
+                        };
+                        // The read-only filter tracks every byte the server
+                        // receives, injected or client-originated, so its
+                        // handshake state stays aligned with the server.
+                        let to_server = match codec.ro_filter.as_mut() {
+                            Some(f) => f.feed(&pipe.to_server),
+                            None => pipe.to_server,
+                        };
+                        (to_server, pipe.to_client)
                     };
-                    if !pipe.to_server.is_empty()
+                    if !to_server.is_empty()
                         && tcp_write
                             .lock()
                             .await
-                            .write_all(&pipe.to_server)
+                            .write_all(&to_server)
                             .await
                             .is_err()
                     {
                         break;
                     }
-                    if !pipe.to_client.is_empty()
-                        && ws_tx.send(Message::Binary(pipe.to_client)).await.is_err()
+                    if !to_client.is_empty()
+                        && ws_tx.send(Message::Binary(to_client)).await.is_err()
                     {
                         break;
                     }
