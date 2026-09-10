@@ -163,6 +163,8 @@ pub mod onboarding_routes;
 pub mod open_connector_proxy;
 pub mod orchestrator_routes;
 pub mod permission_policy;
+pub mod policy_audit;
+pub mod policy_config;
 pub mod allternit_bus_routes;
 pub mod platform_static;
 pub mod playground_routes;

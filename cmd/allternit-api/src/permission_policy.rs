@@ -4,6 +4,16 @@
 //! `allow`, `deny`, or `ask`. When a request matches an `ask` rule, the API
 //! records a pending approval and returns its id so the caller can approve or
 //! deny the request via `/beta/approvals/:id/{approve,deny}`.
+//!
+//! Two evaluation modes share the one rule engine:
+//!
+//! * Legacy config policies ([`evaluate`]) — first match wins, default allow.
+//! * The declarative ACI policy document ([`evaluate_policy`], loaded from
+//!   `ALLTERNIT_ACI_POLICY_FILE` by `policy_config`) — deny before allow,
+//!   `ask` passes through to the grant flow, and any action no rule allows
+//!   is denied. A document that parses to zero rules denies every action
+//!   (fail-closed). When the env var is unset the engine is off entirely and
+//!   legacy behavior is unchanged.
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -24,12 +34,47 @@ pub enum PermissionAction {
 
 /// A single rule in a permission policy. A rule matches when every field that
 /// is present matches the request. Fields are optional so a rule can be broad
-/// (e.g. only `tool`) or narrow (e.g. `tool` + `file_path`).
+/// (e.g. only `tool`) or narrow (e.g. `tool` + `filePath`).
+///
+/// The declarative ACI policy document (`ALLTERNIT_ACI_POLICY_FILE`, see
+/// `policy_config`) extends this same rule shape with `id`, `intent`,
+/// `botId`, `sessionId`, and `mcpTool`; there is no second schema.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct PermissionRule {
-    /// Tool name or glob (e.g. `file.read`, `http.*`).
+    /// Optional stable identifier, carried into audit rows and load errors.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    /// Tool name or glob (e.g. `file.read`, `http.*`). Required in the
+    /// declarative policy document; optional here for legacy config policies.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool: Option<String>,
+    /// Free-text intent summary matched against the action's intent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent: Option<String>,
+    /// Bot identifier matched against the action's bot id.
+    #[serde(
+        default,
+        rename = "botId",
+        alias = "bot_id",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub bot_id: Option<String>,
+    /// Session identifier matched against the action's session id.
+    #[serde(
+        default,
+        rename = "sessionId",
+        alias = "session_id",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub session_id: Option<String>,
+    /// MCP tool name matched against the action's MCP tool.
+    #[serde(
+        default,
+        rename = "mcpTool",
+        alias = "mcp_tool",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub mcp_tool: Option<String>,
     /// File path, path prefix, or glob matched against the request's file path.
     #[serde(
         default,
@@ -115,6 +160,129 @@ pub fn evaluate(
         }
     }
     PermissionAction::Allow
+}
+
+/// Borrowed action descriptor for policy evaluation. Every field the caller
+/// does not set acts as a wildcard: a rule only matches when every field it
+/// specifies matches the corresponding descriptor field.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PolicyRequest<'a> {
+    pub tool: &'a str,
+    pub intent: Option<&'a str>,
+    pub bot_id: Option<&'a str>,
+    pub session_id: Option<&'a str>,
+    pub mcp_tool: Option<&'a str>,
+    pub network_host: Option<&'a str>,
+    pub file_path: Option<&'a str>,
+}
+
+/// True when every field present on `rule` matches the descriptor; absent
+/// rule fields are wildcards, and a present field never matches a missing
+/// descriptor value.
+fn rule_matches(rule: &PermissionRule, req: &PolicyRequest<'_>) -> bool {
+    let tool_ok = rule
+        .tool
+        .as_ref()
+        .map(|p| matches_pattern(p, req.tool))
+        .unwrap_or(true);
+    let intent_ok = rule
+        .intent
+        .as_ref()
+        .map(|p| req.intent.map(|v| matches_pattern(p, v)).unwrap_or(false))
+        .unwrap_or(true);
+    let bot_ok = rule
+        .bot_id
+        .as_ref()
+        .map(|p| req.bot_id.map(|v| matches_pattern(p, v)).unwrap_or(false))
+        .unwrap_or(true);
+    let session_ok = rule
+        .session_id
+        .as_ref()
+        .map(|p| req.session_id.map(|v| matches_pattern(p, v)).unwrap_or(false))
+        .unwrap_or(true);
+    let mcp_ok = rule
+        .mcp_tool
+        .as_ref()
+        .map(|p| req.mcp_tool.map(|v| matches_pattern(p, v)).unwrap_or(false))
+        .unwrap_or(true);
+    let host_ok = rule
+        .network_host
+        .as_ref()
+        .map(|p| req.network_host.map(|v| matches_pattern(p, v)).unwrap_or(false))
+        .unwrap_or(true);
+    let path_ok = rule
+        .file_path
+        .as_ref()
+        .map(|p| req.file_path.map(|v| matches_pattern(p, v)).unwrap_or(false))
+        .unwrap_or(true);
+    tool_ok && intent_ok && bot_ok && session_ok && mcp_ok && host_ok && path_ok
+}
+
+/// Outcome of evaluating the declarative policy document: the action plus the
+/// id of the rule that decided it (for audit rows and refusal messages).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PolicyVerdict {
+    pub action: PermissionAction,
+    pub rule_id: Option<String>,
+}
+
+/// Evaluate the declarative policy document against an action descriptor.
+///
+/// Unlike the legacy first-match `evaluate` (config-file policies, default
+/// allow), this evaluator is fail-closed and precedence-ordered:
+///
+/// 1. Any matching `deny` rule wins over everything else.
+/// 2. Otherwise any matching `ask` rule passes through to the existing
+///    grant/approval flow.
+/// 3. Otherwise any matching `allow` rule permits the action.
+/// 4. Otherwise — the document has rules but none speak for this action —
+///    the action is denied.
+///
+/// A document that parses to zero rules therefore denies every action.
+pub fn evaluate_policy(policy: &PermissionPolicy, req: &PolicyRequest<'_>) -> PolicyVerdict {
+    let mut allow_match: Option<&PermissionRule> = None;
+    let mut ask_match: Option<&PermissionRule> = None;
+    for rule in &policy.rules {
+        if !rule_matches(rule, req) {
+            continue;
+        }
+        match rule.action {
+            // Deny always wins, wherever it sits in the document — the whole
+            // list is scanned before any ask/allow can return.
+            PermissionAction::Deny => {
+                return PolicyVerdict {
+                    action: PermissionAction::Deny,
+                    rule_id: rule.id.clone(),
+                }
+            }
+            PermissionAction::Allow => {
+                if allow_match.is_none() {
+                    allow_match = Some(rule);
+                }
+            }
+            PermissionAction::Ask => {
+                if ask_match.is_none() {
+                    ask_match = Some(rule);
+                }
+            }
+        }
+    }
+    if let Some(rule) = ask_match {
+        PolicyVerdict {
+            action: PermissionAction::Ask,
+            rule_id: rule.id.clone(),
+        }
+    } else if let Some(rule) = allow_match {
+        PolicyVerdict {
+            action: PermissionAction::Allow,
+            rule_id: rule.id.clone(),
+        }
+    } else {
+        PolicyVerdict {
+            action: PermissionAction::Deny,
+            rule_id: None,
+        }
+    }
 }
 
 /// Current state of an approval request.
@@ -303,5 +471,115 @@ mod tests {
         let id2 = store.create("user-2", "file.write", &json!({}));
         assert!(store.deny(&id2));
         assert_eq!(store.get(&id2).unwrap().status, ApprovalStatus::Denied);
+    }
+
+    // ── Declarative policy evaluation (evaluate_policy) ─────────────────
+    //
+    // Fail-closed, precedence-ordered: deny > ask > allow > implicit deny.
+    // These tests pin the semantics the ACI policy seats rely on.
+
+    fn req(tool: &str) -> PolicyRequest<'_> {
+        PolicyRequest {
+            tool,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn policy_deny_beats_allow_regardless_of_order() {
+        let p = policy(vec![
+            PermissionRule {
+                id: Some("allow-all".to_string()),
+                tool: Some("*".to_string()),
+                action: PermissionAction::Allow,
+                ..Default::default()
+            },
+            PermissionRule {
+                id: Some("deny-bash".to_string()),
+                tool: Some("bash".to_string()),
+                action: PermissionAction::Deny,
+                ..Default::default()
+            },
+        ]);
+        let verdict = evaluate_policy(&p, &req("bash"));
+        assert_eq!(verdict.action, PermissionAction::Deny);
+        assert_eq!(verdict.rule_id.as_deref(), Some("deny-bash"));
+        assert_eq!(evaluate_policy(&p, &req("echo")).action, PermissionAction::Allow);
+    }
+
+    #[test]
+    fn policy_fields_match_with_and_semantics() {
+        let p = policy(vec![PermissionRule {
+            id: Some("bot-a-shell".to_string()),
+            tool: Some("computer.shell".to_string()),
+            bot_id: Some("bot-a".to_string()),
+            action: PermissionAction::Allow,
+            ..Default::default()
+        }]);
+        // botId matches.
+        let mut r = req("computer.shell");
+        r.bot_id = Some("bot-a");
+        assert_eq!(evaluate_policy(&p, &r).action, PermissionAction::Allow);
+        // botId mismatch → rule does not match → fail-closed deny.
+        let mut r = req("computer.shell");
+        r.bot_id = Some("bot-b");
+        assert_eq!(evaluate_policy(&p, &r).action, PermissionAction::Deny);
+        // Missing descriptor botId never satisfies a present rule field.
+        assert_eq!(evaluate_policy(&p, &req("computer.shell")).action, PermissionAction::Deny);
+    }
+
+    #[test]
+    fn policy_ask_falls_through_between_deny_and_allow() {
+        let p = policy(vec![
+            PermissionRule {
+                id: Some("ask-file".to_string()),
+                tool: Some("file.*".to_string()),
+                action: PermissionAction::Ask,
+                ..Default::default()
+            },
+            PermissionRule {
+                id: Some("allow-rest".to_string()),
+                tool: Some("*".to_string()),
+                action: PermissionAction::Allow,
+                ..Default::default()
+            },
+        ]);
+        assert_eq!(evaluate_policy(&p, &req("file.read")).action, PermissionAction::Ask);
+        assert_eq!(evaluate_policy(&p, &req("bash")).action, PermissionAction::Allow);
+    }
+
+    #[test]
+    fn policy_zero_rules_denies_everything() {
+        let p = policy(vec![]);
+        assert_eq!(evaluate_policy(&p, &req("anything")).action, PermissionAction::Deny);
+    }
+
+    #[test]
+    fn policy_descriptor_fields_participate_in_matching() {
+        let p = policy(vec![
+            PermissionRule {
+                id: Some("intent-secret".to_string()),
+                intent: Some("*secret*".to_string()),
+                action: PermissionAction::Deny,
+                ..Default::default()
+            },
+            PermissionRule {
+                id: Some("host-ok".to_string()),
+                tool: Some("aci.run".to_string()),
+                network_host: Some("example.com".to_string()),
+                action: PermissionAction::Allow,
+                ..Default::default()
+            },
+        ]);
+        let mut r = req("aci.run");
+        r.intent = Some("exfiltrate secrets");
+        assert_eq!(evaluate_policy(&p, &r).action, PermissionAction::Deny);
+        let mut r = req("aci.run");
+        r.network_host = Some("example.com");
+        assert_eq!(evaluate_policy(&p, &r).action, PermissionAction::Allow);
+        // Host mismatch: the allow rule's host field fails → implicit deny.
+        let mut r = req("aci.run");
+        r.network_host = Some("evil.example");
+        assert_eq!(evaluate_policy(&p, &r).action, PermissionAction::Deny);
     }
 }
