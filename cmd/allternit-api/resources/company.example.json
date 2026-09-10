@@ -1,6 +1,7 @@
 {
   "$schema": "./company.schema.json",
   "clerkPublishableKey": "pk_live_YOUR_COMPANY_KEY_HERE",
+  "clerkProxyUrl": "https://your-proxy-domain/__clerk",
   "clerkJwksUrl": "https://clerk.your-company.com/.well-known/jwks.json",
   "clerkIssuer": "https://clerk.your-company.com",
   "clerkWebhookSecret": "whsec_YOUR_WEBHOOK_SECRET_HERE",

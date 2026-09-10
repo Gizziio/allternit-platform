@@ -37,8 +37,28 @@ function resolveClerkKey() {
   return { key: '', source: 'none' };
 }
 
+/**
+ * The Clerk Frontend API proxy URL for this instance, if one is configured.
+ * Unproxied (self-hosted) builds return '' and the auth renderer omits the
+ * proxyUrl field entirely, preserving the direct frontendApi behavior.
+ */
+function resolveClerkProxyUrl(selfHosted) {
+  if (selfHosted) return '';
+  const envProxy = process.env.NEXT_PUBLIC_CLERK_PROXY_URL?.trim();
+  if (envProxy) return envProxy;
+
+  try {
+    const company = JSON.parse(fs.readFileSync(companyConfigPath, 'utf8'));
+    return company.clerkProxyUrl?.trim() ?? '';
+  } catch (err) {
+    console.warn('[build-auth-renderer] Could not read company.json:', err.message);
+    return '';
+  }
+}
+
 async function main() {
   const { key, source, selfHosted } = resolveClerkKey();
+  const proxyUrl = resolveClerkProxyUrl(Boolean(selfHosted));
 
   if (!key && !selfHosted) {
     console.error(
@@ -50,6 +70,7 @@ async function main() {
   }
 
   console.log(`[build-auth-renderer] Clerk key source: ${source}`);
+  if (proxyUrl) console.log(`[build-auth-renderer] Clerk proxy URL: ${proxyUrl}`);
 
   // Build the renderer via Vite.
   await build({
@@ -63,6 +84,7 @@ async function main() {
     JSON.stringify(
       {
         publishableKey: key,
+        ...(proxyUrl ? { proxyUrl } : {}),
         signInUrl: '/',
         signUpUrl: '/',
       },

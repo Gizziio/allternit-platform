@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, safeStorage, session, shell } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { openClerkOAuthPopup } from './clerk-oauth-popup.js';
+import { openClerkOAuthPopup, setCookieOnSession } from './clerk-oauth-popup.js';
 import { PORTS } from './config.js';
 import { connectorSidecarManager } from './connector-sidecar-manager.js';
 
@@ -632,11 +632,21 @@ export class DesktopAuthManager {
         }
         this.oauthPopupInFlight = true;
         log.info('[Auth] Opening OAuth popup for:', url);
-        void openClerkOAuthPopup(url)
-          .then((callbackUrl) => {
-            if (!window.isDestroyed()) {
-              window.loadURL(callbackUrl).catch((err) => {
-                log.error('[Auth] Failed to load OAuth callback:', err);
+        void openClerkOAuthPopup(url, {
+          clerkSession: authSession,
+          redirectOrigin: `https://${servingDomain}`,
+          redirectPathPrefix: AUTH_WINDOW_PATH_PREFIX,
+        })
+          .then(async (result) => {
+            // The exchange completed in the popup's real cookie jar; move the
+            // signed-in Clerk client into the auth partition and reload the
+            // renderer so clerk-js (and TokenBridge) see the session.
+            for (const cookie of result.cookies) {
+              await setCookieOnSession(authSession, cookie);
+            }
+            if (!window.isDestroyed() && this.authWindowBaseUrl) {
+              window.loadURL(this.authWindowBaseUrl).catch((err) => {
+                log.error('[Auth] Failed to reload auth renderer after OAuth:', err);
               });
             }
           })
@@ -794,18 +804,20 @@ export class DesktopAuthManager {
         );
       }
     }
+    const body = request.method !== 'GET' && request.method !== 'HEAD'
+      ? await request.arrayBuffer()
+      : null;
+
     const init: RequestInit & { bypassCustomProtocolHandlers: boolean } = {
       method: request.method,
       headers,
       bypassCustomProtocolHandlers: true,
     };
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      const body = await request.arrayBuffer();
-      if (body.byteLength > 0) {
-        init.body = body;
-      }
+    if (body && body.byteLength > 0) {
+      init.body = body;
     }
-    return authSession.fetch(request.url, init);
+    const response = await authSession.fetch(request.url, init);
+    return response;
   }
 
   private serveAuthFile(authDir: string, requestPath: string): Response {
