@@ -16,6 +16,7 @@ const desktopDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(desktopDir, '..', '..');
 const resourcesDir = path.join(desktopDir, 'resources');
 const connectorCatalogDir = path.join(repoRoot, 'services', 'open-connector', 'catalog', 'apps');
+const connectorNodeModulesDir = path.join(repoRoot, 'services', 'open-connector', 'node_modules');
 
 function log(message) {
   process.stdout.write(`[verify-packaged-resources] ${message}\n`);
@@ -118,6 +119,55 @@ if (catalogFiles.length === 0) {
   );
 } else {
   log(`✓ Connector sidecar catalog: ${catalogFiles.length} providers (${connectorCatalogDir})`);
+}
+
+// The voice sidecar must be the Rust binary, not the PyInstaller-packaged
+// Python tree that predates the voice-cleanup. Stale copies of the old
+// bootloader can survive in resources/bin (copied from an old checkout) —
+// it crashes at boot on older macOS (pyexpat built for a newer SDK) and
+// Voice Mode silently dies.
+function isPyInstallerBootloader(filePath) {
+  // One-file PyInstaller bootchains embed these marker strings; the Rust
+  // binary never does. Scan the first 64 MB — markers live in the early
+  // LOAD segments.
+  const handle = fs.openSync(filePath, 'r');
+  try {
+    const size = Math.min(fs.fstatSync(handle).size, 64 * 1024 * 1024);
+    const buf = Buffer.alloc(size);
+    fs.readSync(handle, buf, 0, size, 0);
+    const text = buf.toString('latin1');
+    return text.includes('_MEIPASS') || text.includes('pyi_rth') || text.includes('PyInstaller');
+  } finally {
+    fs.closeSync(handle);
+  }
+}
+
+const voicePath = path.join(resourcesDir, 'bin', voiceName);
+if (fs.existsSync(voicePath) && isPyInstallerBootloader(voicePath)) {
+  failed = true;
+  process.stderr.write(
+    `[verify-packaged-resources] ✗ ${voicePath} is the PRE-CLEANUP PyInstaller voice binary, not the Rust voice-service.\n` +
+    `    It crashes at boot (pyexpat SDK mismatch) and Voice Mode will not start.\n` +
+    '    Rebuild it with: cargo build --release -p voice-service && cp target/release/voice-service ' +
+    path.join('surfaces', 'allternit-desktop', 'resources', 'bin', voiceName) + '\n'
+  );
+} else if (fs.existsSync(voicePath)) {
+  log(`✓ Voice service binary is not a PyInstaller bootloader (${voicePath})`);
+}
+
+// The connector sidecar's runtime deps must actually be installed — they are
+// NOT covered by the root pnpm install (open-connector is a standalone npm
+// project, excluded from the workspace on purpose).
+const honoServerPkg = path.join(connectorNodeModulesDir, '@hono', 'node-server', 'package.json');
+if (!fs.existsSync(honoServerPkg)) {
+  failed = true;
+  process.stderr.write(
+    `[verify-packaged-resources] ✗ Connector sidecar dependencies missing (@hono/node-server not resolvable)\n` +
+    `    Expected at: ${honoServerPkg}\n` +
+    '    Build it with: npm run prepare:connector-sidecar\n'
+  );
+} else {
+  log(`✓ Connector sidecar dependencies installed (${connectorNodeModulesDir})`);
 }
 
 if (failed) {
