@@ -172,11 +172,54 @@ async function fetchAgentsAuthed(page) {
     //    by whoever was signed in — true only for the owner's account.
     log('Ensuring verification bots exist for this user...');
     const findBot = (agents, name) => (agents || []).find((a) => a.name === name);
+    const botPrimitives = (s) => ({
+      is_bot: true,
+      bot_profile: {
+        displayName: s.name,
+        tagline: s.description,
+        groupChatEnabled: true,
+        botCategory: 'custom',
+        lifecycle: 'active',
+      },
+    });
+    let anyFlagged = false;
     for (const spec of BOT_SPECS) {
-      if (findBot(agentsData.agents, spec.name)) continue;
+      const existing = findBot(agentsData.agents, spec.name);
+      if (existing) {
+        // Rows created before is_bot existed (or by other tooling) are
+        // invisible to Bot Hub, which filters on isBot + botProfile.
+        if (existing.is_bot !== true) {
+          log(`  Flagging ${spec.name} as a bot via PUT /api/v1/agents/${existing.id}...`);
+          anyFlagged = true;
+          const patched = await page.evaluate(async ({ id, p }) => {
+            const token = localStorage.getItem('allternit_token');
+            const res = await fetch(`/api/v1/agents/${id}`, {
+              method: 'PUT',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(p),
+            });
+            const body = await res.json().catch(() => ({}));
+            return { status: res.status, body };
+          }, { id: existing.id, p: botPrimitives(spec) });
+          if (patched.status !== 200) {
+            throw new Error(`Failed to flag ${spec.name} as bot: HTTP ${patched.status} ${JSON.stringify(patched.body).slice(0, 200)}`);
+          }
+        }
+        continue;
+      }
       log(`  Creating ${spec.name} via POST /api/v1/agents...`);
       const created = await page.evaluate(async (s) => {
         const token = localStorage.getItem('allternit_token');
+        const p = {
+          is_bot: true,
+          bot_profile: {
+            displayName: s.name,
+            tagline: s.description,
+            groupChatEnabled: true,
+            botCategory: 'custom',
+            lifecycle: 'active',
+          },
+        };
         const res = await fetch('/api/v1/agents', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -192,6 +235,7 @@ async function fetchAgentsAuthed(page) {
             trust_tier: 'standard',
             harness_config: { mode: 'cloud' },
             enabled_modes: ['chat'],
+            ...p,
           }),
         });
         const body = await res.json().catch(() => ({}));
@@ -212,6 +256,23 @@ async function fetchAgentsAuthed(page) {
     RESULT.botIds.alpha = alpha.id;
     RESULT.botIds.beta = beta.id;
     log(`  alpha=${alpha.id}, beta=${beta.id}`);
+
+    if (anyFlagged) {
+      // The app's agent store fetched before the PUTs above; a reload is the
+      // only reliable way to make it re-list with the new bot flags.
+      log('Reloading app so the agent store picks up the bot flags...');
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+      const reloadDeadline = Date.now() + 120000;
+      while (Date.now() < reloadDeadline) {
+        const token = await page.evaluate(() => localStorage.getItem('allternit_token'));
+        if (token) {
+          const attempt = await fetchAgentsAuthed(page);
+          if (attempt && attempt.status === 200 && attempt.agents) break;
+        }
+        await page.waitForTimeout(2000);
+      }
+      await page.waitForTimeout(3000);
+    }
 
     // 3. Navigate to Bot Hub. Prefer the rail nav button (present on every
     //    landing view); fall back to the Products discovery tile for older
