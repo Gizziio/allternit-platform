@@ -33,6 +33,7 @@ mod shell_runtime;
 mod startup;
 mod state;
 mod terminal_geometry;
+mod visibility_feed;
 mod terminal_sessions;
 mod terminal_setup;
 mod timer;
@@ -559,6 +560,7 @@ async fn run_client_loop(
     let mut pending_catalog: Option<Result<Vec<endpoint::SavedSshEndpoint>, String>> = None;
     if state.shell.is_some() && !is_remote_client && state.attach_escape.is_none() {
         catalog_reload::watch_profiles(event_tx.clone(), should_quit.clone());
+        visibility_feed::watch_visibility(event_tx.clone(), should_quit.clone());
     }
 
     // This (foreground) client owns the prefix ASCII input-source switch
@@ -718,6 +720,19 @@ async fn run_client_loop(
 
         match event {
             ClientLoopEvent::EndpointCatalog(reload) => pending_catalog = Some(reload),
+            ClientLoopEvent::VisibilityFeed(sample) => {
+                if let Some(shell) = state.shell.as_mut() {
+                    let sample = match Arc::try_unwrap(sample) {
+                        Ok(sample) => sample,
+                        Err(shared) => crate::ao::visibility::FeedSample {
+                            engine: shared.engine.clone(),
+                            native: shared.native.clone(),
+                            peers: shared.peers.clone(),
+                        },
+                    };
+                    shell.apply_visibility_sample(sample);
+                }
+            }
             #[cfg(unix)]
             ClientLoopEvent::StdinInput(data) => {
                 let image_bridge_active = endpoint_accepts_local_images(

@@ -39,6 +39,7 @@ mod spec;
 #[allow(dead_code)] // engine status is shadowed by the ao contract (P1); kept for a P2+ rehome
 mod status;
 mod tab;
+mod visibility;
 mod workspace;
 mod worktree;
 
@@ -110,6 +111,8 @@ pub fn maybe_run(args: &[String]) -> std::io::Result<CommandOutcome> {
         "spawn" | "send" | "watch" | "status" | "kill" | "doctor" => ao::run_ao_command(&args[1..])?,
         "fabric" => crate::ao::fabric::cli::run(&args[2..])?,
         "harness" => crate::ao::harness::run(&args[2..])?,
+        "peer" => crate::ao::peers::run(&args[2..])?,
+        "visibility" => visibility::run_visibility_command(&args[2..])?,
         "server" => {
             let Some(exit_code) = server::run_server_command(&args[2..])? else {
                 return Ok(CommandOutcome::NotCli);
