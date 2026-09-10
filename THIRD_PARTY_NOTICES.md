@@ -200,6 +200,19 @@ This file contains notices for open-source software incorporated into this produ
 
 ---
 
+## HarnessRouter Community Edition
+**License:** Apache-2.0
+
+**Copyright:** HarnessRouter contributors (no explicit copyright line in LICENSE; standard Apache-2.0 text with upstream `NOTICE` file)
+
+**Source:** https://github.com/HarnessRouter/harnessrouter (default-branch HEAD, commit `60c9a4556a4dd9e04dff28ad8404b006747c2204`, vendored 2026-09-10)
+
+**Used in:** `vendor/harnessrouter-ce/`
+
+**Reference + test-oracle material ONLY for the UHP (Unified Harness Protocol) Rust server work: protocol spec markdown, JSON Schema + OpenAPI documents, the `uhp-conformance` check suite, and pytest layouts. No code from this tree is shipped, compiled, or executed by this repo; it is not part of the cargo workspace. Full `LICENSE` preserved at `vendor/harnessrouter-ce/LICENSE`. Inventory: `docs/UHP_VENDOR_INVENTORY.md`.**
+
+---
+
 ## Scratch / Original (Allternit)
 The following were written from scratch for this product:
 - `domains/cowork/connectors/slack/`
