@@ -144,6 +144,19 @@ class AllternitComputersClient:
         self._request("POST", self._with_approval(
             f"{_COMPUTERS_PREFIX}/{self._quote(computer_id)}/delete", approval_id))
 
+    def update_computer(self, computer_id: str, request: Dict[str, Any]) -> Dict[str, Any]:
+        """PATCH /api/v1/computers/:id — today only ``idle_timeout_secs``
+        (integer seconds, or None to clear) is mutable. Returns the updated
+        computer row; creating/deleted computers are rejected with 409."""
+        return self._request("PATCH", f"{_COMPUTERS_PREFIX}/{self._quote(computer_id)}", request)
+
+    def session_end(self, computer_id: str, *,
+                    approval_id: Optional[str] = None) -> Dict[str, Any]:
+        """POST /api/v1/computers/:id/session-end — apply the computer's
+        persistence policy when the owning session ends (approval-gated)."""
+        return self._request("POST", self._with_approval(
+            f"{_COMPUTERS_PREFIX}/{self._quote(computer_id)}/session-end", approval_id))
+
     # ── Phase 5 additions: status + embed token ────────────────────────────
     # These routes are being added to the server concurrently with this SDK;
     # response payloads are not yet frozen.
@@ -227,6 +240,11 @@ class AllternitComputersClient:
         query = f"?{'&'.join(params)}" if params else ""
         result = self._request("GET", f"{_TEMPLATES_PREFIX}{query}")
         return result.get("templates", [])
+
+    def get_template(self, template_id: str) -> Dict[str, Any]:
+        """GET /api/v1/desktop-templates/:id — one template row (resolved
+        view fields plus golden-build status)."""
+        return self._request("GET", f"{_TEMPLATES_PREFIX}/{self._quote(template_id)}")
 
     def import_template(self, doc: Dict[str, Any]) -> Dict[str, Any]:
         """POST /api/v1/desktop-templates/import (canonical ComputerTemplate doc).

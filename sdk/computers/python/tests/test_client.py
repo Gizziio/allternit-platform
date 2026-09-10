@@ -238,6 +238,42 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(calls[1]["method"], "POST")
         self.assertEqual(calls[1]["url"], "http://gw:8013/api/v1/computers/c-1/embed-token")
 
+    def test_update_computer_patches_idle_timeout(self) -> None:
+        calls: list = []
+        response = FakeResponse(json.dumps({"id": "c-1", "idle_timeout_secs": 300}).encode())
+        with mock.patch("urllib.request.urlopen", fake_urlopen(response, calls)):
+            result = self.client.update_computer("c-1", {"idle_timeout_secs": 300})
+        self.assertEqual(result["idle_timeout_secs"], 300)
+        self.assertEqual(calls[0]["method"], "PATCH")
+        self.assertEqual(calls[0]["url"], "http://gw:8013/api/v1/computers/c-1")
+        self.assertEqual(json.loads(calls[0]["body"].decode()), {"idle_timeout_secs": 300})
+
+    def test_update_computer_clears_timeout_with_null(self) -> None:
+        calls: list = []
+        response = FakeResponse(b"{}")
+        with mock.patch("urllib.request.urlopen", fake_urlopen(response, calls)):
+            self.client.update_computer("c-1", {"idle_timeout_secs": None})
+        self.assertEqual(json.loads(calls[0]["body"].decode()), {"idle_timeout_secs": None})
+
+    def test_session_end_threads_approval(self) -> None:
+        calls: list = []
+        response = FakeResponse(json.dumps({"id": "c-1", "status": "stopped"}).encode())
+        with mock.patch("urllib.request.urlopen", fake_urlopen(response, calls)):
+            result = self.client.session_end("c-1", approval_id="appr-4")
+        self.assertEqual(result["status"], "stopped")
+        self.assertEqual(calls[0]["method"], "POST")
+        self.assertEqual(calls[0]["url"],
+                         "http://gw:8013/api/v1/computers/c-1/session-end?approval_id=appr-4")
+
+    def test_get_template_quotes_path(self) -> None:
+        calls: list = []
+        response = FakeResponse(json.dumps({"id": "t-1", "build_status": "ready"}).encode())
+        with mock.patch("urllib.request.urlopen", fake_urlopen(response, calls)):
+            result = self.client.get_template("a/b")
+        self.assertEqual(result["build_status"], "ready")
+        self.assertEqual(calls[0]["method"], "GET")
+        self.assertEqual(calls[0]["url"], "http://gw:8013/api/v1/desktop-templates/a%2Fb")
+
     def test_http_error_raises_with_status_and_payload(self) -> None:
         def _urlopen(request: urllib.request.Request, timeout: float = 0) -> FakeResponse:
             raise urllib.error.HTTPError(

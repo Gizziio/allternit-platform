@@ -319,6 +319,47 @@ describe('ComputersClient', () => {
     expect(calls[1]?.url).toBe('http://gw/api/v1/computers/c-1/embed-token');
   });
 
+  it('updates idle_timeout_secs via PATCH /computers/:id', async () => {
+    const calls = mockFetch(() => jsonResponse({ id: 'c-1', idle_timeout_secs: 300 }));
+    const client = new ComputersClient({ baseUrl: 'http://gw' });
+    const updated = await client.updateComputer('c-1', { idle_timeout_secs: 300 });
+    expect(updated.idle_timeout_secs).toBe(300);
+    expect(calls[0]?.method).toBe('PATCH');
+    expect(calls[0]?.url).toBe('http://gw/api/v1/computers/c-1');
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ idle_timeout_secs: 300 });
+  });
+
+  it('clears the idle timeout with null', async () => {
+    const calls = mockFetch(() => jsonResponse({ id: 'c-1', idle_timeout_secs: null }));
+    const client = new ComputersClient({ baseUrl: 'http://gw' });
+    await client.updateComputer('c-1', { idle_timeout_secs: null });
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ idle_timeout_secs: null });
+  });
+
+  it('posts session-end with approval_id', async () => {
+    const calls = mockFetch(() => jsonResponse({ id: 'c-1', status: 'stopped' }));
+    const client = new ComputersClient({ baseUrl: 'http://gw' });
+    await client.sessionEnd('c-1', 'appr-4');
+    expect(calls[0]?.method).toBe('POST');
+    expect(calls[0]?.url).toBe('http://gw/api/v1/computers/c-1/session-end?approval_id=appr-4');
+  });
+
+  it('gets a template by id', async () => {
+    const calls = mockFetch(() => jsonResponse({ id: 't-1', name: 'base', build_status: 'ready' }));
+    const client = new ComputersClient({ baseUrl: 'http://gw' });
+    const template = await client.getTemplate('t-1');
+    expect(template.build_status).toBe('ready');
+    expect(calls[0]?.method).toBe('GET');
+    expect(calls[0]?.url).toBe('http://gw/api/v1/desktop-templates/t-1');
+  });
+
+  it('gets a template by id with path encoding', async () => {
+    const calls = mockFetch(() => jsonResponse({ id: 'a/b' }));
+    const client = new ComputersClient({ baseUrl: 'http://gw' });
+    await client.getTemplate('a/b');
+    expect(calls[0]?.url).toBe('http://gw/api/v1/desktop-templates/a%2Fb');
+  });
+
   it('throws ComputersApiError with status and body on failure', async () => {
     mockFetch(() => jsonResponse({ error: 'computer not found' }, 404));
     const client = new ComputersClient({ baseUrl: 'http://gw' });

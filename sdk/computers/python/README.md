@@ -54,6 +54,8 @@ grant from the ACI approvals flow first and pass it through.
 | Resize | `PATCH /api/v1/computers/:id/resize` | `resizeComputer(id, input, approvalId?)` | `resize_computer(computer_id, request, approval_id=...)` | ✅ |
 | Clone | `POST /api/v1/computers/:id/clone` | `cloneComputer(id, name?, approvalId?)` | `clone_computer(computer_id, name=..., approval_id=...)` | ✅ |
 | Delete | `POST /api/v1/computers/:id/delete` | `deleteComputer(id, approvalId?)` | `delete_computer(computer_id, approval_id=...)` | ✅ |
+| Update | `PATCH /api/v1/computers/:id` (`idle_timeout_secs`) | `updateComputer(id, input)` | `update_computer(computer_id, request)` | — |
+| Session end | `POST /api/v1/computers/:id/session-end` | `sessionEnd(id, approvalId?)` | `session_end(computer_id, approval_id=...)` | ✅ |
 | **Control** |
 | Screenshot | `GET /api/v1/computers/:id/screenshot` → PNG | `screenshot(id)` → `Blob` | `screenshot(computer_id)` → `bytes` | — |
 | Mouse | `POST /api/v1/computers/:id/mouse` | `sendMouse(id, input, approvalId?)` | `mouse(computer_id, request, approval_id=...)` | ✅ |
@@ -68,6 +70,7 @@ grant from the ACI approvals flow first and pass it through.
 | Delete | `DELETE /api/v1/computers/:id/snapshots/:sid` | `deleteSnapshot(id, snapshotId)` | `delete_snapshot(computer_id, snapshot_id)` | — |
 | **Templates (Phase 4)** |
 | List | `GET /api/v1/desktop-templates?os=&tag=` | `listTemplates({ os?, tag? }?)` | `list_templates(os=, tag=)` | — |
+| Get | `GET /api/v1/desktop-templates/:id` | `getTemplate(id)` | `get_template(template_id)` | — |
 | Import | `POST /api/v1/desktop-templates/import` (canonical `ComputerTemplate` doc; JSON is parsed as YAML) | `importTemplate(doc)` | `import_template(doc)` | — |
 | Build | `POST /api/v1/desktop-templates/:id/build` (202; poll `build_status`) | `buildTemplate(id, approvalId?)` | `build_template(template_id, approval_id=...)` | ✅ |
 | **Phase 5 additions** (routes landing concurrently; response shapes not frozen) |
