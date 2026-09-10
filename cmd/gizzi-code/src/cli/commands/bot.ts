@@ -52,6 +52,7 @@ async function guard(fn: () => Promise<void>): Promise<void> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     UI.println(UI.Style.TEXT_ERROR + `❌ ${message}` + UI.Style.RESET)
+    if (process.env.GIZZI_BOT_DEBUG) console.error(e)
     process.exit(1)
   }
 }
@@ -431,21 +432,29 @@ export const BotChatCommand = cmd({
       // Errors that reject the handler (bootstrap/prompt failures) are caught
       // and annotated below.
       let reasonPrinted = false
-      const unsubscribe = Bus.subscribe(Session.Event.Error, (event) => {
-        if (event.properties.sessionID !== opened.sessionId || reasonPrinted) return
-        reasonPrinted = true
-        UI.error(`[reason: ${classifyFailure(event.properties.error)}]`)
-      })
+      let unsubscribe: () => void = () => {}
       try {
-        await (RunCommand.handler as any)?.({
-          _: ["run"],
-          message: [message],
-          session: opened.sessionId,
-          model: bot.model ?? undefined,
-          print: true,
-          outputFormat: "text",
-          permissionMode: "dontAsk",
-          "$0": "gizzi",
+        // The failure-reason subscription and the headless run must both run
+        // inside an Instance context: subscribing replays queued bus events,
+        // and Session state (touched by subscribers) initializes lazily via
+        // Instance.directory — outside a bootstrap() that throws
+        // "No context found for instance" (B4 headless path).
+        await bootstrap(projectPath, async () => {
+          unsubscribe = Bus.subscribe(Session.Event.Error, (event) => {
+            if (event.properties.sessionID !== opened.sessionId || reasonPrinted) return
+            reasonPrinted = true
+            UI.error(`[reason: ${classifyFailure(event.properties.error)}]`)
+          })
+          await (RunCommand.handler as any)?.({
+            _: ["run"],
+            message: [message],
+            session: opened.sessionId,
+            model: bot.model ?? undefined,
+            print: true,
+            outputFormat: "text",
+            permissionMode: "dontAsk",
+            "$0": "gizzi",
+          })
         })
       } catch (e) {
         if (!reasonPrinted) {

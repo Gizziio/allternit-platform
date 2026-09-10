@@ -333,6 +333,16 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       signInFallbackRedirectUrl={pwaHost ? stayUrl : "/shell"}
       signUpFallbackRedirectUrl={pwaHost ? stayUrl : "/shell"}
       proxyUrl={getProxyUrl()}
+      // The Clerk loader hardcodes https:// when building the clerk-js URL from
+      // a proxy (clerkJsScriptUrl strips the scheme), which breaks http dev
+      // origins. Point the loader at the same-origin proxy explicitly; in
+      // production this resolves to the identical https URL the loader would
+      // build anyway.
+      clerkJSUrl={
+        typeof window !== "undefined"
+          ? `${window.location.origin}/__clerk/npm/@clerk/clerk-js@5/dist/clerk.browser.js`
+          : undefined
+      }
       allowedRedirectOrigins={getAllowedRedirectOrigins()}
     >
       <ClerkPlatformAuthBridge>{children}</ClerkPlatformAuthBridge>
@@ -550,6 +560,11 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
   const clerkAuth = useAuth()
   const clerkOrganization = useOrganization()
   const clerk = useClerkReact()
+  // The effect below lists `clerk`/`signIn`/`setActive` as deps, and Clerk's
+  // objects can change identity across renders — without this guard one page
+  // load fires several signIn.create calls, which both burns attempts against
+  // Clerk's sign-in rate limit and, during a 429 lockout, re-trips it.
+  const seedAttemptedRef = React.useRef(false)
   const { signIn, setActive } = useSignIn()
   const [sessions, setSessions] = useState<any[]>([])
 
@@ -570,6 +585,8 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
     if (!import.meta.env.DEV) return
     if (!clerkAuth.isLoaded || clerkAuth.isSignedIn) return
     if (!signIn || !setActive || !clerk) return
+    if (seedAttemptedRef.current) return
+    seedAttemptedRef.current = true
     const email = import.meta.env.VITE_CLERK_SEED_EMAIL as string | undefined
     const password = import.meta.env.VITE_CLERK_SEED_PASSWORD as string | undefined
     if (!email || !password) return
@@ -579,6 +596,11 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
         const result = await signIn.create({ identifier: email, password })
         if (!active) return
         if (result.status === "complete" && result.createdSessionId) {
+          // Activate the session BEFORE touching organizations — Clerk
+          // rejects org reads/writes ("You are signed out") until a session
+          // is active, and a seeded account with no memberships otherwise
+          // ends up stuck in a pending session.
+          await clerk.setActive({ session: result.createdSessionId })
           const memberships = clerk.user?.organizationMemberships
           let orgId: string | undefined = memberships?.[0]?.organization.id
           if (!orgId) {
@@ -589,7 +611,7 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
               console.warn("[SeedAuth] Failed to create seed organization:", orgErr)
             }
           }
-          await clerk.setActive({ session: result.createdSessionId, organization: orgId })
+          if (orgId) await clerk.setActive({ organization: orgId })
         } else {
           console.warn("[SeedAuth] Clerk sign-in requires extra steps:", result.status)
         }
