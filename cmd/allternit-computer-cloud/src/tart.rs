@@ -437,8 +437,20 @@ impl ExecutionDriver for TartDriver {
                         message: e.to_string(),
                     })?;
                     if info.status == "running" {
+                        // Only advertise a VNC endpoint when tart-host has set
+                        // up a per-VM guest-VNC forward. Blindly pointing at
+                        // `<vnc_host>:5900` connects to whatever happens to
+                        // hold that port on the host (on macOS that is the
+                        // host's own Screen Sharing daemon — the viewer would
+                        // silently stream the wrong screen). No forward
+                        // reported -> no endpoint; the ws route closes with an
+                        // honest "no desktop endpoint found".
+                        let port = match info.vnc_port {
+                            Some(p) if p > 0 => p,
+                            _ => continue,
+                        };
                         return Ok(Some(DesktopEndpoint {
-                            url: format!("tcp://{}:5900", host.vnc_host),
+                            url: format!("tcp://{}:{}", host.vnc_host, port),
                             protocol: DesktopProtocol::Vnc,
                             token: None,
                         }));
@@ -538,4 +550,35 @@ struct ExecResponse {
 #[derive(Debug, Deserialize)]
 struct VmInfo {
     status: String,
+    /// Host port tart-host has bound a guest-VNC forward to (Phase 3 data
+    /// plane). Absent when the sidecar has no forward for this VM.
+    #[serde(default)]
+    vnc_port: Option<u16>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vminfo_without_vnc_port_defaults_to_none() {
+        // tart-host builds predating the guest-VNC data plane send no
+        // vnc_port; the driver must fail closed (no endpoint), not fall back
+        // to host:5900.
+        let info: VmInfo = serde_json::from_str(r#"{"status":"running"}"#).unwrap();
+        assert_eq!(info.status, "running");
+        assert_eq!(info.vnc_port, None);
+    }
+
+    #[test]
+    fn vminfo_with_vnc_port_parses() {
+        let info: VmInfo = serde_json::from_str(r#"{"status":"running","vnc_port":15901}"#).unwrap();
+        assert_eq!(info.vnc_port, Some(15901));
+    }
+
+    #[test]
+    fn vminfo_with_zero_vnc_port_is_ignored_by_endpoint_gate() {
+        let info: VmInfo = serde_json::from_str(r#"{"status":"running","vnc_port":0}"#).unwrap();
+        assert!(!matches!(info.vnc_port, Some(p) if p > 0));
+    }
 }
