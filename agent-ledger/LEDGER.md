@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 17:05 — kimi — P5 visibility + peers panel lands (ao v3 runtime plan)
+
+- **Session ID / Branch:** `ao/visibility-peers` (worktree `allternit-ao-visibility-peers`)
+- **Agent:** kimi (orchestrated executor + orchestrator review/land)
+- **Summary:** Merged PR #256 (c197fba5ad5) — the "who needs you" panel: merged engine-agent/native-session/Rails-peer feeds in the ao client shell, persistent waiting-on-you list, native catalog list-half port with fingerprint parity, `ao visibility|peer list|send`. Default bind `prefix+shift+v`.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/256 · c197fba5ad5b5ec38de213e5927b7cd6be2937de
+- **How it works:** client shell overlay polls `agent.list` (2 s) and diffs Blocked transitions into a persistent waiting list; native feed walks 27 harness session dirs and correlates to engine agents via `AgentInfo.agent_session`; peers read `PeerRegistry` read-only. Hard gate PASSED: two panes/one server blocked-flow demo + bare-kimi external row, evidence in `~/.agent-orchestrator/evidence/ao-visibility-peers/`.
+- **Outstanding work:** orchestrator review caught a real regression the executor's NOTES missed (visibility bind `prefix+v` collided with `split_vertical`, breaking 12 `reload_config_*` tests) — fixed to `prefix+shift+v` pre-merge; full-suite SIGPIPE + `detect::manifest*` flake pre-existing on main; P3 PWA session pickup still blocked on proxy-auth semantics (see queue `rq-20260908-028` history).
+- **Summary file:** [2026-09-10-1705-p5-visibility-peers-land.md](./summaries/2026-09-10-1705-p5-visibility-peers-land.md)
+
 ### 2026-09-10 09:15 — kimi — open-connector ships as a bundled, ephemeral-port sidecar
 
 - **Session ID / Branch:** `session/3a37a822-p6` (worktree `allternit-session-3a37a822-p6`)
