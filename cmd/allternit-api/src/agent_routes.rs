@@ -44,6 +44,7 @@ pub fn agent_router() -> Router<Arc<AppState>> {
             "/agents/:id",
             get(get_agent).put(update_agent).delete(delete_agent),
         )
+        .route("/agents/:id/archive", post(archive_agent))
         .route("/agents/:id/runs", post(run_agent).get(list_agent_runs))
         .route("/agents/:id/events", get(stream_agent_events))
         .route(
@@ -176,6 +177,7 @@ struct AgentRow {
     mode: String,
     is_primary: bool,
     delegates: Option<serde_json::Value>,
+    version: i64,
 }
 
 fn parse_json_column(value: Option<String>) -> Option<serde_json::Value> {
@@ -209,7 +211,7 @@ async fn list_agents(
                     status, workspace_id, avatar, identity_key, trust_tier, harness_config,
                     enabled_modes, character_json, allowed_skills, allowed_tools, category, tags,
                     data_classification, write_scope, created_at, updated_at, last_run_at,
-                    mode, is_primary, delegates
+                    mode, is_primary, delegates, version
              FROM agents WHERE user_id = ?1",
         );
         let mut params_vec: Vec<String> = vec![user_id];
@@ -271,6 +273,7 @@ async fn list_agents(
                     mode: row.get(31)?,
                     is_primary: row.get::<_, i64>(32)? != 0,
                     delegates: parse_json_column(row.get(33)?),
+                    version: row.get(34)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -1231,7 +1234,7 @@ async fn get_agent(
                     status, workspace_id, avatar, identity_key, trust_tier, harness_config,
                     enabled_modes, character_json, allowed_skills, allowed_tools, category, tags,
                     data_classification, write_scope, created_at, updated_at, last_run_at,
-                    mode, is_primary, delegates
+                    mode, is_primary, delegates, version
              FROM agents WHERE id = ?1 AND user_id = ?2",
         )?;
         let row = stmt.query_row(params![id, user_id], |row| {
@@ -1271,6 +1274,7 @@ async fn get_agent(
                 mode: row.get(31)?,
                 is_primary: row.get::<_, i64>(32)? != 0,
                 delegates: parse_json_column(row.get(33)?),
+                version: row.get(34)?,
             })
         })?;
         Ok::<_, rusqlite::Error>(row)
@@ -1465,6 +1469,7 @@ async fn update_agent(
                 tags = COALESCE(?24, tags),
                 data_classification = COALESCE(?25, data_classification),
                 write_scope = COALESCE(?26, write_scope),
+                version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
              WHERE id = ?27 AND user_id = ?28",
             params![
@@ -1508,6 +1513,58 @@ async fn update_agent(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error updating agent: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ─── Archive agent ────────────────────────────────────────────────────────────
+
+/// `POST /agents/:id/archive` — one-way archive: the agent's status becomes
+/// `archived` and `archived_at` is stamped. There is intentionally no
+/// unarchive in this release.
+async fn archive_agent(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let affected = conn.execute(
+            "UPDATE agents SET status = 'archived', archived_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP WHERE id = ?1 AND user_id = ?2",
+            params![id, user_id],
+        )?;
+        if affected == 0 {
+            return Err(rusqlite::Error::QueryReturnedNoRows);
+        }
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(())) => Json(json!({"archived": true})).into_response(),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
+            (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response()
+        }
+        Ok(Err(e)) => {
+            warn!("DB error archiving agent: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": e.to_string()})),
