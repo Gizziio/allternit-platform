@@ -1,0 +1,20 @@
+name: Fabric Session SW Cache Guard
+
+on:
+  pull_request:
+
+jobs:
+  check-sw-cache-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Verify CACHE_NAME bump when fabric-session assets change
+        run: node scripts/check-sw-cache-bump.mjs
+        env:
+          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          GITHUB_HEAD_REF: ${{ github.event.pull_request.head.ref }}
