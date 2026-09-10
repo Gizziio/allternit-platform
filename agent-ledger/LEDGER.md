@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 07:20 — kimi — P3 Fabric Transport node (ao fabric pair|serve|status)
+
+- **Session ID / Branch:** `ao/fabric-node` (worktree `allternit-ao-fabric-node`)
+- **Agent:** kimi
+- **Summary:** ao is now a Fabric Transport node: Ed25519 identity, pairing lifecycle, faithful Rust port of the agent-daemon relay, loopback shim serving the Fabric `/v1/*` surface from the engine socket API, `ao fabric pair|serve|status` CLI.
+- **Commit:** PR #229, merge commit `503d99223e` on `main`
+- **How it works:** `ao fabric serve` runs an axum shim on a loopback port translating Fabric remote-control calls (`/v1/remote-control/sessions`, messages/abort/events) into engine socket API calls; sessions come from `~/.agent-orchestrator/state.json` ∩ engine workspaces. Paired live as runtime `rt_af9d675b04b2` ("ao-dev-mac"); PWA shows node 3/3 online; shim serves the live `ao-hardgate-demo` session.
+- **Outstanding work:** Hard gate PARTIAL — three platform-side follow-ups block full PWA session pickup (PWA `/api/v1/sessions` base 404; runtime-devices proxy 401 with Clerk token; ao has no caller for the existing `/api/v1/agent-sessions/sync` route). Server enum PR #220 (`runtimeType "ao"`) still open; pairs as `desktop` until it ships. Paired under seed@ account per user's call.
+- **Summary file:** [./summaries/2026-09-10-0720-ao-fabric-node-kimi-ao-p3.md](./summaries/2026-09-10-0720-ao-fabric-node-kimi-ao-p3.md)
+
 ### 2026-09-09 02:15 — grok — TTS product spec (draft, not implemented)
 
 - **Session ID / Branch:** `session/tts-spec` (worktree `allternit-session-tts-spec`)
