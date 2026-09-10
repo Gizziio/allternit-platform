@@ -16,4 +16,6 @@ pub(crate) mod native;
 
 pub(crate) mod peers;
 
+pub(crate) mod serve;
+
 pub(crate) mod visibility;

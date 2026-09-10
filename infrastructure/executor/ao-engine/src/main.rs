@@ -578,6 +578,7 @@ fn main() -> io::Result<()> {
         println!("       ao status [slug] [lines=25]");
         println!("       ao kill <slug> [--rm-worktree]");
         println!("       ao doctor");
+        println!("       ao serve [--addr ADDR] [--token TOKEN]  (UHP surface, P6a)");
         println!("       ao machine <subcommand> ...");
         println!("       ao server stop");
         println!("       ao server reload-config");

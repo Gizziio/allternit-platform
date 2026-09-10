@@ -70,6 +70,10 @@ futures-util = "0.3"
 # links the workspace rails crate for Peer/PeerEnvelope/send_envelope parity.
 allternit-agent-system-rails = { workspace = true }
 
+# P6a UHP gateway (src/ao/serve.rs): `ao serve` mounts the UHP HTTP surface
+# in-process (not a sidecar); the gateway drives the engine over the socket API.
+uhp-gateway = { path = "../uhp-gateway" }
+
 # NOTE: cargo only honors [patch] in the WORKSPACE ROOT manifest. The
 # portable-pty patch was ported to the workspace root Cargo.toml
 # ([patch.crates-io] portable-pty = { path = "infrastructure/executor/ao-engine/vendor/portable-pty" }).
