@@ -88,20 +88,18 @@ export class BackendManager {
       return this.getUrl();
     }
 
-    try {
-      await this.waitForUrl(`${this.getUrl()}/health`, 'existing allternit-api');
-      if (await this.servesPlatformStatic()) {
-        log.info(`[BackendManager] Reusing existing allternit-api at ${this.getUrl()}`);
-        return this.getUrl();
-      }
+    const existing = await this.probeExistingBackend();
+    if (existing === 'usable') {
+      log.info(`[BackendManager] Reusing existing allternit-api at ${this.getUrl()}`);
+      return this.getUrl();
+    }
+    if (existing === 'misbehaving') {
       log.warn(
         '[BackendManager] Existing allternit-api is healthy but is not serving the platform UI ' +
           '(GET / is not HTML). Replacing it so the shell does not boot onto a 501 JSON stub.',
       );
       this.terminateListenerOnPort();
       await new Promise((r) => setTimeout(r, 400));
-    } catch {
-      // No existing backend on the target port; continue with normal startup.
     }
 
     let binaryPath = this.resolveBinaryPath();
@@ -305,6 +303,37 @@ export class BackendManager {
       }
     } catch {
       // lsof missing or nothing listening
+    }
+  }
+
+  /**
+   * Classify whatever is on the API port before we spawn a backend.
+   * - 'usable': an existing allternit-api is up and serving the platform UI —
+   *   reuse it.
+   * - 'misbehaving': something answers /health but serves no platform UI —
+   *   caller replaces it.
+   * - 'none': nothing usable on the port — caller spawns normally.
+   *
+   * Fast path: a single probe that fails with ECONNREFUSED means nothing is
+   * (or will be) listening, so we return 'none' immediately instead of
+   * burning the full HEALTH_TIMEOUT_MS polling a closed port on every cold
+   * boot. Other probe failures (timeouts, resets) may be a backend mid-start,
+   * so those fall through to the patient probe.
+   */
+  async probeExistingBackend(): Promise<'usable' | 'misbehaving' | 'none'> {
+    try {
+      await fetch(`${this.getUrl()}/health`, { signal: AbortSignal.timeout(1_000) });
+      return (await this.servesPlatformStatic()) ? 'usable' : 'misbehaving';
+    } catch (probeErr) {
+      if ((probeErr as { cause?: { code?: string } })?.cause?.code === 'ECONNREFUSED') {
+        return 'none';
+      }
+    }
+    try {
+      await this.waitForUrl(`${this.getUrl()}/health`, 'existing allternit-api');
+      return (await this.servesPlatformStatic()) ? 'usable' : 'misbehaving';
+    } catch {
+      return 'none';
     }
   }
 

@@ -1,8 +1,15 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { resolveAcuGatewaySpawn, resolveAcuPython } from './acu-gateway-manager.js';
+import { describe, expect, it, vi } from 'vitest';
+import { resolveAcuGatewaySpawn, resolveAcuPython, AcuGatewayManager } from './acu-gateway-manager.js';
+
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  // Only spawn is stubbed — execFileSync stays real so the resolve* helpers
+  // behave exactly as they do outside tests.
+  return { ...actual, spawn: vi.fn() };
+});
 
 function checkoutWithLaunch(): string {
   const repoRoot = mkdtempSync(join(tmpdir(), 'allternit-acu-'));
@@ -52,5 +59,41 @@ describe('resolveAcuPython', () => {
     expect(
       resolveAcuPython({ packaged: false, repoRoot: '/tmp', pythonPath: '/opt/custom/python' }),
     ).toBe('/opt/custom/python');
+  });
+});
+
+describe('AcuGatewayManager.start', () => {
+  it('gives up immediately when the spawned child crashes (missing uvicorn)', async () => {
+    const { EventEmitter } = await import('node:events');
+    const { spawn } = await import('node:child_process');
+    const fakeChild = new EventEmitter() as import('node:child_process').ChildProcess;
+    (fakeChild as { stdout: InstanceType<typeof EventEmitter> }).stdout = new EventEmitter();
+    (fakeChild as { stderr: InstanceType<typeof EventEmitter> }).stderr = new EventEmitter();
+    (fakeChild as { kill: () => boolean }).kill = () => true;
+    (fakeChild as { killed: boolean }).killed = false;
+    vi.mocked(spawn).mockReturnValue(fakeChild);
+
+    const manager = new AcuGatewayManager();
+    manager.spawnContextOverride = {
+      packaged: false,
+      repoRoot: checkoutWithLaunch(),
+      pythonPath: '/opt/custom/python',
+    };
+    // Nothing already listening on the ACU port.
+    (manager as unknown as { fetchImpl: typeof fetch }).fetchImpl = (async () => {
+      throw new Error('not up');
+    }) as unknown as typeof fetch;
+
+    const startedAt = Date.now();
+    const resultPromise = manager.start();
+    // The python interpreter dies right after spawn, the way the packaged
+    // launch.py does when uvicorn is not importable.
+    setTimeout(() => fakeChild.emit('exit', 1), 10);
+    const result = await resultPromise;
+
+    expect(result).toBeNull();
+    // Regression guard: without the childDied fast-fail this burns the full
+    // 20s HEALTH_TIMEOUT_MS on every boot.
+    expect(Date.now() - startedAt).toBeLessThan(2_000);
   });
 });
