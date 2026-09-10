@@ -65,6 +65,7 @@ tokio-tungstenite = { workspace = true, features = ["rustls-tls-webpki-roots"] }
 ed25519-dalek = { workspace = true }
 rand = "0.8"
 futures-util = "0.3"
+tokio-stream = { version = "0.1", features = ["sync"] }
 
 # NOTE: cargo only honors [patch] in the WORKSPACE ROOT manifest. The
 # portable-pty patch was ported to the workspace root Cargo.toml

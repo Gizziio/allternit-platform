@@ -6499,6 +6499,7 @@ dependencies = [
  "sha2 0.10.9",
  "time",
  "tokio",
+ "tokio-stream",
  "tokio-tungstenite 0.21.0",
  "toml 0.8.23",
  "tracing",

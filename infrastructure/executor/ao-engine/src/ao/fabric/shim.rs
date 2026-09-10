@@ -12,11 +12,13 @@ use std::time::{Duration, UNIX_EPOCH};
 use axum::extract::ws::{Message as WsMessage, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path as AxumPath, State};
 use axum::http::StatusCode;
+use axum::response::sse::{Event as SseEvent, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::api::client::ApiClient;
 use crate::api::schema::{
@@ -469,6 +471,308 @@ async fn session_events(mut socket: WebSocket, id: String) {
 }
 
 // ---------------------------------------------------------------------------
+// Capability-native harness surface (FabricSessionClient)
+// ---------------------------------------------------------------------------
+//
+// The live Fabric PWA (`fabric-session` App, FabricSessionPanel) lists and
+// drives sessions through the capability-native session-worker contract
+// (sdk/allternit-sdk `FabricSessionClient`): POST /api/v1/fabric/leases mints
+// a lease, POST /api/v1/session-worker/invoke dispatches `harness.session*`
+// capabilities, and GET /api/v1/session-worker/sessions/:id/events streams
+// RemoteControlEvent frames over SSE. Leases are self-issued and opaque —
+// the loopback shim is the only consumer of the signature, so there is
+// nothing to verify against.
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LeaseBody {
+    capability_id: String,
+    #[serde(default)]
+    grantee: Option<String>,
+    #[serde(default)]
+    ttl_seconds: Option<u64>,
+}
+
+fn random_id(prefix: &str) -> String {
+    use rand::Rng as _;
+    let mut bytes = [0u8; 12];
+    rand::thread_rng().fill(&mut bytes);
+    let suffix: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+    format!("{prefix}_{suffix}")
+}
+
+async fn issue_lease(Json(body): Json<LeaseBody>) -> Response {
+    let ttl = body.ttl_seconds.unwrap_or(300).clamp(1, 86400);
+    let now = std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let issued_at = humantime_or_epoch(now);
+    let expires_at = humantime_or_epoch(now + ttl);
+    Json(json!({
+        "id": random_id("lease"),
+        "capabilityId": body.capability_id,
+        "grantee": body.grantee.unwrap_or_else(|| "web-client".to_string()),
+        "issuedAt": issued_at,
+        "expiresAt": expires_at,
+        "status": "active",
+        "signature": random_id("sig"),
+    }))
+    .into_response()
+}
+
+fn humantime_or_epoch(secs: u64) -> String {
+    // RFC 3339 without chrono: the PWA only round-trips these strings.
+    let days = secs / 86400;
+    let seconds_in_day = secs % 86400;
+    let (year, day_of_year) = epoch_to_ymd(days);
+    let (month, day) = day_of_year_to_month_day(year, day_of_year);
+    let h = seconds_in_day / 3600;
+    let m = (seconds_in_day % 3600) / 60;
+    let s = seconds_in_day % 60;
+    format!("{year:04}-{month:02}-{day:02}T{h:02}:{m:02}:{s:02}Z")
+}
+
+fn epoch_to_ymd(days_since_epoch: u64) -> (u64, u64) {
+    // Days since epoch → (civil year, day-of-year). Gregorian calendar.
+    let mut year = 1970u64;
+    let mut remaining = days_since_epoch;
+    loop {
+        let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+        let year_days = if leap { 366 } else { 365 };
+        if remaining < year_days {
+            break;
+        }
+        remaining -= year_days;
+        year += 1;
+    }
+    (year, remaining)
+}
+
+fn day_of_year_to_month_day(year: u64, day_of_year: u64) -> (u64, u64) {
+    const COMMON: [u64; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    let mut day = day_of_year;
+    for (index, &len) in COMMON.iter().enumerate() {
+        let len = if index == 1 && leap { 29 } else { len };
+        if day < len {
+            return ((index as u64) + 1, day + 1);
+        }
+        day -= len;
+    }
+    (12, 31)
+}
+
+#[derive(Deserialize)]
+struct InvokeBody {
+    capability: String,
+    #[serde(default)]
+    inputs: Option<Value>,
+    #[serde(default)]
+    lease: Option<Value>,
+}
+
+async fn invoke_capability(Json(body): Json<InvokeBody>) -> Response {
+    let inputs = body.inputs.unwrap_or(json!({}));
+    let _ = body.lease; // self-issued leases are opaque; nothing to verify
+    let session_id = inputs["sessionID"].as_str().unwrap_or_default();
+
+    match body.capability.as_str() {
+        "harness.session" => match list_sessions().await {
+            Ok(sessions) => Json(json!({ "result": sessions })).into_response(),
+            Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "runtime_proxy_error", "message": err })),
+            )
+                .into_response(),
+        },
+        "harness.session.get" => match session_detail(session_id).await {
+            Ok(Some(detail)) => Json(json!({ "result": detail })).into_response(),
+            Ok(None) => (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "not_found", "message": format!("no session {session_id}") })),
+            )
+                .into_response(),
+            Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "runtime_proxy_error", "message": err })),
+            )
+                .into_response(),
+        },
+        "harness.session.message" => {
+            let text = inputs["text"].as_str().unwrap_or_default().to_string();
+            if text.trim().is_empty() {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({ "error": "bad_request", "message": "text must not be empty" })),
+                )
+                    .into_response();
+            }
+            match session_workspace_and_pane(session_id).await {
+                Ok(Some((_workspace, pane))) => {
+                    let pane_id = pane["pane_id"].as_str().unwrap_or_default().to_string();
+                    match engine_call(Method::PaneSendInput(PaneSendInputParams {
+                        pane_id,
+                        text,
+                        keys: vec!["enter".to_string()],
+                    }))
+                    .await
+                    {
+                        Ok(_) => {
+                            Json(json!({ "result": { "accepted": true, "sessionID": session_id } }))
+                                .into_response()
+                        }
+                        Err(err) => (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(json!({ "error": "runtime_proxy_error", "message": err })),
+                        )
+                            .into_response(),
+                    }
+                }
+                Ok(None) => (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({ "error": "not_found", "message": format!("no session {session_id}") })),
+                )
+                    .into_response(),
+                Err(err) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": "runtime_proxy_error", "message": err })),
+                )
+                    .into_response(),
+            }
+        }
+        "harness.session.abort" => match session_workspace_and_pane(session_id).await {
+            Ok(Some((_workspace, pane))) => {
+                let pane_id = pane["pane_id"].as_str().unwrap_or_default().to_string();
+                match engine_call(Method::PaneSendInput(PaneSendInputParams {
+                    pane_id,
+                    text: String::new(),
+                    keys: vec!["ctrl+c".to_string()],
+                }))
+                .await
+                {
+                    Ok(_) => Json(json!({ "result": true })).into_response(),
+                    Err(err) => (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(json!({ "error": "runtime_proxy_error", "message": err })),
+                    )
+                        .into_response(),
+                }
+            }
+            Ok(None) => Json(json!({ "result": false })).into_response(),
+            Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "runtime_proxy_error", "message": err })),
+            )
+                .into_response(),
+        },
+        "harness.session.create" => (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({
+                "error": "not_implemented",
+                "message": "ao sessions are created with `ao spawn <slug> <repo-dir> <agent-cmd…>` on the node"
+            })),
+        )
+            .into_response(),
+        "harness.session.permissions.list" | "harness.session.questions.list" => {
+            Json(json!({ "result": [] })).into_response()
+        }
+        "harness.session.permissions.reply"
+        | "harness.session.questions.reply"
+        | "harness.session.questions.reject" => Json(json!({ "result": true })).into_response(),
+        other => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "unknown_capability", "message": format!("unknown capability {other}") })),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /api/v1/session-worker/sessions/:id/events — SSE stream of
+/// RemoteControlEvent frames (remote-control.ts:150-221 semantics over SSE
+/// instead of WS: remote.connected first, then message.part.updated on pane
+/// revision changes, session.status on transitions, 10 s heartbeat).
+async fn harness_session_events(AxumPath(id): AxumPath<String>) -> Response {
+    let workspace = match find_workspace(&id).await {
+        Ok(Some(workspace)) => workspace,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "not_found", "message": format!("no session {id}") })),
+            )
+                .into_response();
+        }
+        Err(err) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "runtime_proxy_error", "message": err })),
+            )
+                .into_response();
+        }
+    };
+    let status = status_for_workspace(&workspace);
+
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Result<SseEvent, std::convert::Infallible>>();
+    let connected = json!({ "type": "remote.connected", "properties": { "sessionID": id, "status": status } });
+    let _ = tx.send(Ok(
+        SseEvent::default().event("remote.connected").data(connected.to_string()),
+    ));
+
+    tokio::spawn(async move {
+        let send = |event: Value| {
+            let _ = tx.send(Ok(SseEvent::default()
+                .event(event["type"].as_str().unwrap_or("message"))
+                .data(event.to_string())));
+        };
+        let mut last_revision = 0u64;
+        let mut last_status = status;
+        let mut heartbeat = tokio::time::interval(Duration::from_secs(10));
+        heartbeat.tick().await; // first tick is immediate
+        loop {
+            tokio::select! {
+                _ = heartbeat.tick() => {
+                    send(json!({ "type": "remote.heartbeat", "properties": { "sessionID": id } }));
+                }
+                _ = tokio::time::sleep(Duration::from_secs(1)) => {
+                    let (workspace, pane) = match session_workspace_and_pane(&id).await {
+                        Ok(Some(pair)) => pair,
+                        _ => break, // workspace gone — session ended
+                    };
+                    let status = status_for_workspace(&workspace);
+                    if status != last_status {
+                        last_status = status.clone();
+                        send(json!({ "type": "session.status", "properties": { "sessionID": id, "status": status } }));
+                    }
+                    let pane_id = pane["pane_id"].as_str().unwrap_or_default().to_string();
+                    if let Ok(read) = pane_read(&pane_id, 400).await {
+                        if read.revision != last_revision {
+                            last_revision = read.revision;
+                            send(json!({
+                                "type": "message.part.updated",
+                                "properties": {
+                                    "part": {
+                                        "id": format!("part-{id}"),
+                                        "messageID": format!("msg-{id}"),
+                                        "sessionID": id,
+                                        "type": "text",
+                                        "text": read.text
+                                    }
+                                }
+                            }));
+                        }
+                    }
+                }
+            }
+        }
+        // Channel drops when this task ends, closing the SSE stream.
+    });
+
+    Sse::new(UnboundedReceiverStream::new(rx))
+        .keep_alive(axum::response::sse::KeepAlive::default())
+        .into_response()
+}
+
+// ---------------------------------------------------------------------------
 // Server
 // ---------------------------------------------------------------------------
 
@@ -499,6 +803,12 @@ pub(crate) async fn serve(port: u16, state: Arc<ShimState>) -> Result<(), String
         .route("/v1/question/:id/reply", post(reply_ok))
         .route("/v1/question/:id/reject", post(reply_ok))
         .route("/v1/session", post(create_session))
+        .route("/api/v1/fabric/leases", post(issue_lease))
+        .route("/api/v1/session-worker/invoke", post(invoke_capability))
+        .route(
+            "/api/v1/session-worker/sessions/:id/events",
+            get(harness_session_events),
+        )
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
