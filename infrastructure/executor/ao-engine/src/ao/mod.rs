@@ -11,3 +11,9 @@ pub(crate) mod transcript;
 pub(crate) mod fabric;
 
 pub(crate) mod harness;
+
+pub(crate) mod native;
+
+pub(crate) mod peers;
+
+pub(crate) mod visibility;

@@ -60,6 +60,7 @@ pub(crate) fn render_client_overlay(
         ClientShellOverlay::Rename(v) => render_rename_overlay(b, v, p),
         ClientShellOverlay::ConfirmClose(v) => render_confirm_close_overlay(b, v, p),
         ClientShellOverlay::Help(v) => render_help_overlay(b, v, k, p),
+        ClientShellOverlay::Visibility(v) => render_visibility_overlay(b, v, p),
         ClientShellOverlay::Navigator(v) => {
             render_navigator_overlay(b, v, endpoints, active_endpoint_id, p)
         }
@@ -1171,4 +1172,205 @@ fn render_confirm_close_overlay(
         cursor: None,
         ..OverlayRender::default()
     })
+}
+
+/// P5 "who needs you" visibility panel (engine agents + native sessions +
+/// Rails peers, blocked-first, with the persistent waiting-on-you list).
+fn render_visibility_overlay(
+    b: &mut Buffer,
+    v: &ClientVisibilityOverlay,
+    p: &Palette,
+) -> Option<OverlayRender> {
+    let q = popup(b.area, 92, 30)?;
+    let i = panel(b, q, p.accent, p.panel_bg)?;
+    if i.width < 24 || i.height < 8 {
+        return None;
+    }
+    put_text(
+        b,
+        i.x,
+        i.y,
+        i.width,
+        "who needs you",
+        Style::default()
+            .fg(p.text)
+            .bg(p.panel_bg)
+            .add_modifier(Modifier::BOLD),
+    );
+    let close = Rect::new(i.right().saturating_sub(13), i.y, 13, 1);
+    button(
+        b,
+        close,
+        " esc close ",
+        Style::default()
+            .fg(contrast(p))
+            .bg(p.accent)
+            .add_modifier(Modifier::BOLD),
+    );
+
+    // Build the row list: (text, style, is_section_header).
+    let mut rows: Vec<(String, Style)> = Vec::new();
+    let section = |rows: &mut Vec<(String, Style)>, title: &str| {
+        if !rows.is_empty() {
+            rows.push((String::new(), Style::default().fg(p.overlay0).bg(p.panel_bg)));
+        }
+        rows.push((
+            title.to_string(),
+            Style::default()
+                .fg(p.accent)
+                .bg(p.panel_bg)
+                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        ));
+    };
+    let plain = Style::default().fg(p.text).bg(p.panel_bg);
+    let dim = Style::default().fg(p.overlay0).bg(p.panel_bg);
+
+    match &v.snapshot {
+        None => {
+            rows.push((
+                "waiting for the first feed sample…".to_string(),
+                dim,
+            ));
+        }
+        Some(snapshot) => {
+            if let Some(error) = &snapshot.engine.error {
+                rows.push((format!("engine feed unavailable: {error}"), dim));
+            }
+
+            section(&mut rows, "waiting on you");
+            if snapshot.waiting_on_you.is_empty() {
+                rows.push(("nobody is blocked on you right now".to_string(), dim));
+            } else {
+                for entry in &snapshot.waiting_on_you {
+                    let name = entry
+                        .name
+                        .clone()
+                        .or_else(|| entry.agent.clone())
+                        .unwrap_or_else(|| entry.pane_id.clone());
+                    let agent = entry.agent.clone().unwrap_or_else(|| "agent".to_string());
+                    let title = entry.title.clone().unwrap_or_default();
+                    rows.push((
+                        format!("× {name} ({agent}){suffix}", suffix = if title.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" — {title}")
+                        }),
+                        Style::default().fg(p.red).bg(p.panel_bg),
+                    ));
+                }
+            }
+
+            section(&mut rows, "engine agents");
+            if snapshot.engine.agents.is_empty() {
+                rows.push(("no agents in this engine server".to_string(), dim));
+            }
+            for agent in &snapshot.engine.agents {
+                let status_style = Style::default()
+                    .fg(status_color(agent.status, p))
+                    .bg(p.panel_bg);
+                let dot = status_dot(agent.status);
+                let name = agent
+                    .name
+                    .clone()
+                    .or_else(|| agent.agent.clone())
+                    .unwrap_or_else(|| agent.pane_id.clone());
+                let joined = agent
+                    .joined_native
+                    .as_ref()
+                    .map(|key| format!("  ⇄ {key}"))
+                    .unwrap_or_default();
+                rows.push((
+                    format!(
+                        "{dot} {name} — {status}{joined}",
+                        status = status_text(agent.status),
+                    ),
+                    status_style,
+                ));
+                if let Some(title) = &agent.title {
+                    if !title.is_empty() {
+                        rows.push((format!("    {title}"), dim));
+                    }
+                }
+            }
+
+            section(&mut rows, "native sessions");
+            if snapshot.native.is_empty() {
+                rows.push(("no native CLI sessions found".to_string(), dim));
+            }
+            for row in snapshot.native.iter().take(12) {
+                let live = match &row.live {
+                    Some(live_ref) => format!(
+                        "  ⇄ pane {} ({})",
+                        live_ref.pane_id,
+                        status_text(live_ref.status)
+                    ),
+                    None => "  · external".to_string(),
+                };
+                let cwd = row
+                    .session
+                    .cwd
+                    .as_ref()
+                    .map(|c| format!("  {c}"))
+                    .unwrap_or_default();
+                rows.push((
+                    format!(
+                        "{}  {}{}  · {}{}",
+                        row.session.harness,
+                        row.session.session_id.chars().take(14).collect::<String>(),
+                        cwd,
+                        age(snapshot.generated_at_ms, row.session.updated_at),
+                        live,
+                    ),
+                    plain,
+                ));
+            }
+            if snapshot.native.len() > 12 {
+                rows.push((format!("… and {} more", snapshot.native.len() - 12), dim));
+            }
+
+            section(&mut rows, "rails peers");
+            if snapshot.peers.is_empty() {
+                rows.push(("no peers registered under this workspace root".to_string(), dim));
+            }
+            for peer in &snapshot.peers {
+                rows.push((
+                    format!(
+                        "{}  ({})  · {}  {}",
+                        peer.peer.name,
+                        peer.peer.vendor,
+                        format!("{:?}", peer.peer.status).to_lowercase(),
+                        peer.peer.cwd.display(),
+                    ),
+                    plain,
+                ));
+            }
+        }
+    }
+
+    let body = Rect::new(i.x, i.y + 2, i.width, i.height.saturating_sub(3));
+    let viewport_rows = usize::from(body.height.max(1));
+    let max_scroll = rows.len().saturating_sub(viewport_rows);
+    let scroll = v.scroll.min(max_scroll);
+    for (offset, (text, style)) in rows.iter().skip(scroll).enumerate() {
+        let y = body.y + offset as u16;
+        if y >= body.bottom() {
+            break;
+        }
+        put_text(b, body.x, y, body.width, text, *style);
+    }
+    Some(OverlayRender::default())
+}
+
+/// Compact age label for catalog timestamps.
+fn age(now_ms: u64, then_ms: u64) -> String {
+    let secs = now_ms.saturating_sub(then_ms) / 1000;
+    if secs < 60 {
+        "just now".to_string()
+    } else if secs < 3600 {
+        format!("{}m ago", secs / 60)
+    } else if secs < 86_400 {
+        format!("{}h ago", secs / 3600)
+    } else {
+        format!("{}d ago", secs / 86_400)
+    }
 }

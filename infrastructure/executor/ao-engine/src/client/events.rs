@@ -23,6 +23,9 @@ pub(super) enum ClientLoopEvent {
     },
     EndpointSupervisor(endpoint::EndpointSupervisorEvent),
     EndpointCatalog(Result<Vec<endpoint::SavedSshEndpoint>, String>),
+    /// P5 visibility panel feed sample (engine agents + native sessions +
+    /// Rails peers), produced by `visibility_feed::watch_visibility`.
+    VisibilityFeed(Arc<crate::ao::visibility::FeedSample>),
     ActivateEndpoint {
         endpoint_id: endpoint::ClientEndpointId,
         target: Option<shell::ClientEndpointFocusTarget>,

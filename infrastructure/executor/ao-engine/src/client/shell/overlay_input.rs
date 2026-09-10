@@ -190,7 +190,27 @@ impl ClientShellState {
         self.select_settings_section(ClientSettingsSection::Integrations, outcome);
     }
 
+    /// Merge one visibility feed sample: update the persistent waiting list,
+    /// rebuild the panel snapshot, and refresh an open panel overlay.
+    pub(crate) fn apply_visibility_sample(
+        &mut self,
+        sample: crate::ao::visibility::FeedSample,
+    ) {
+        self.visibility.apply_sample(sample);
+        if let Some(ClientShellOverlay::Visibility(overlay)) = self.overlay.as_mut() {
+            overlay.snapshot = self.visibility.snapshot.clone();
+        }
+    }
+
+    pub(super) fn open_visibility_overlay(&mut self) {
+        self.overlay = Some(ClientShellOverlay::Visibility(ClientVisibilityOverlay {
+            scroll: 0,
+            snapshot: self.visibility.snapshot.clone(),
+        }));
+    }
+
     pub(super) fn open_navigator_overlay(&mut self) {
+
         let expanded_workspaces =
             super::aggregate_navigation::cached_endpoint_snapshots(&self.endpoints)
                 .flat_map(|endpoint| {
@@ -777,6 +797,35 @@ impl ClientShellState {
                 outcome.repaint = true;
                 return;
             }
+            return;
+        }
+
+        if matches!(self.overlay, Some(ClientShellOverlay::Visibility(_))) {
+            let scroll_by = |overlay: &mut Option<ClientShellOverlay>, delta: isize| {
+                if let Some(ClientShellOverlay::Visibility(visibility)) = overlay.as_mut() {
+                    visibility.scroll = if delta.is_negative() {
+                        visibility.scroll.saturating_sub(delta.unsigned_abs())
+                    } else {
+                        visibility.scroll.saturating_add(delta as usize)
+                    };
+                }
+            };
+            match key.code {
+                KeyCode::Esc => self.overlay = None,
+                KeyCode::Up | KeyCode::Char('k') => scroll_by(&mut self.overlay, -1),
+                KeyCode::Down | KeyCode::Char('j') => scroll_by(&mut self.overlay, 1),
+                KeyCode::PageUp => scroll_by(&mut self.overlay, -10),
+                KeyCode::PageDown => scroll_by(&mut self.overlay, 10),
+                KeyCode::Home => {
+                    if let Some(ClientShellOverlay::Visibility(visibility)) =
+                        self.overlay.as_mut()
+                    {
+                        visibility.scroll = 0;
+                    }
+                }
+                _ => {}
+            }
+            outcome.repaint = true;
             return;
         }
 

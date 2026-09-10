@@ -336,6 +336,7 @@ pub(super) enum ClientShellOverlayKind {
     ConfirmClose,
     Help,
     Navigator,
+    Visibility,
     WorktreeCreate,
     WorktreeOpen,
     WorktreeRemove,
@@ -422,6 +423,49 @@ pub(super) struct ClientNavigatorOverlay {
     pub(super) scroll: usize,
     pub(super) filter: Option<ClientNavigatorFilter>,
     pub(super) expanded_workspaces: HashSet<(ClientEndpointId, String)>,
+}
+
+/// P5 "who needs you" visibility panel overlay. `snapshot` is refreshed from
+/// [`ClientVisibilityState`] whenever a new feed sample lands while the
+/// overlay is open, so rendering never blocks on the feed.
+#[derive(Debug)]
+pub(super) struct ClientVisibilityOverlay {
+    pub(super) scroll: usize,
+    pub(super) snapshot: Option<std::sync::Arc<crate::ao::visibility::PanelSnapshot>>,
+}
+
+/// Persistent visibility-panel state (survives overlay open/close). The
+/// waiting-on-you list lives here — it is client-session state, not a
+/// transient toast (spec binding decision 6).
+#[derive(Debug)]
+pub(super) struct ClientVisibilityState {
+    pub(super) snapshot: Option<std::sync::Arc<crate::ao::visibility::PanelSnapshot>>,
+    pub(super) waiting: crate::ao::visibility::WaitingList,
+}
+
+impl ClientVisibilityState {
+    pub(super) fn new() -> Self {
+        Self {
+            snapshot: None,
+            waiting: crate::ao::visibility::WaitingList::new(),
+        }
+    }
+
+    /// Observe one feed sample: diff the waiting-on-you list, rebuild the
+    /// merged snapshot, and refresh an open overlay's copy.
+    pub(super) fn apply_sample(&mut self, sample: crate::ao::visibility::FeedSample) {
+        let now = crate::ao::visibility::now_ms();
+        if let Ok(agents) = sample.engine.as_ref() {
+            self.waiting.observe(agents, now);
+        }
+        let panel = crate::ao::visibility::build_panel(
+            sample,
+            &self.waiting,
+            Vec::new(),
+            now,
+        );
+        self.snapshot = Some(std::sync::Arc::new(panel));
+    }
 }
 
 #[derive(Debug)]
@@ -634,6 +678,7 @@ pub(super) enum ClientShellOverlay {
     ConfirmClose(ClientConfirmCloseOverlay),
     Help(ClientHelpOverlay),
     Navigator(ClientNavigatorOverlay),
+    Visibility(ClientVisibilityOverlay),
     WorktreeCreate(ClientWorktreeCreateOverlay),
     WorktreeOpen(ClientWorktreeOpenOverlay),
     WorktreeRemove(ClientWorktreeRemoveOverlay),
@@ -652,6 +697,7 @@ impl ClientShellOverlay {
             Self::ConfirmClose(_) => ClientShellOverlayKind::ConfirmClose,
             Self::Help(_) => ClientShellOverlayKind::Help,
             Self::Navigator(_) => ClientShellOverlayKind::Navigator,
+            Self::Visibility(_) => ClientShellOverlayKind::Visibility,
             Self::WorktreeCreate(_) => ClientShellOverlayKind::WorktreeCreate,
             Self::WorktreeOpen(_) => ClientShellOverlayKind::WorktreeOpen,
             Self::WorktreeRemove(_) => ClientShellOverlayKind::WorktreeRemove,
@@ -928,6 +974,7 @@ pub(crate) struct ClientShellState {
     pub(super) mode: ClientShellMode,
     pub(super) navigate_workspace_id: Option<String>,
     pub(super) overlay: Option<ClientShellOverlay>,
+    pub(super) visibility: ClientVisibilityState,
     pub(super) previous_pane_id: Option<String>,
     pub(super) pane_mouse_gesture: Option<ClientPaneMouseGesture>,
     pub(super) url_click_consumes_until_up: bool,
@@ -1071,6 +1118,7 @@ impl ClientShellState {
             mode: ClientShellMode::Terminal,
             navigate_workspace_id: None,
             overlay,
+            visibility: ClientVisibilityState::new(),
             previous_pane_id: None,
             pane_mouse_gesture: None,
             url_click_consumes_until_up: false,

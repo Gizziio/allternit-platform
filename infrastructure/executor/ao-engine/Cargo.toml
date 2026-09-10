@@ -66,6 +66,10 @@ ed25519-dalek = { workspace = true }
 rand = "0.8"
 futures-util = "0.3"
 
+# P5 visibility panel (src/ao/peers/*, src/ao/visibility/*): Rails peer feed
+# links the workspace rails crate for Peer/PeerEnvelope/send_envelope parity.
+allternit-agent-system-rails = { workspace = true }
+
 # NOTE: cargo only honors [patch] in the WORKSPACE ROOT manifest. The
 # portable-pty patch was ported to the workspace root Cargo.toml
 # ([patch.crates-io] portable-pty = { path = "infrastructure/executor/ao-engine/vendor/portable-pty" }).
@@ -97,3 +101,7 @@ windows-sys = { version = "0.61.2", features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+[dev-dependencies]
+# P5 visibility panel tests (src/ao/native, src/ao/visibility): fixture dirs.
+tempfile = { workspace = true }
