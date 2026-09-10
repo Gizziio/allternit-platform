@@ -38,9 +38,11 @@ use crate::config::AppConfig;
 /// (5173) / Next.js (3000) dev servers, this API's own UI (8013), the
 /// packaged desktop launcher UI (`http://127.0.0.1:3456`, see
 /// `cmd/launcher/src/main.rs`), the desktop shell dev server (3014,
-/// `devUiUrl` when the Electron app runs the UI from Vite in dev mode), and
-/// the hosted Microsoft Office add-in task panes (Word/Excel/PowerPoint),
-/// which deploy to Cloudflare Pages at `allternit-office-addins.pages.dev`
+/// `devUiUrl` when the Electron app runs the UI from Vite in dev mode), the
+/// ai.allternit.com web surface dev server (3013, see
+/// `surfaces/ai.allternit.com/vite.config.ts`), and the hosted Microsoft
+/// Office add-in task panes (Word/Excel/PowerPoint), which deploy to
+/// Cloudflare Pages at `allternit-office-addins.pages.dev`
 /// and will move to the `office-addins.allternit.com` custom domain.
 pub const DEFAULT_ALLOWED_ORIGINS: &[&str] = &[
     "https://platform.allternit.com",
@@ -57,6 +59,8 @@ pub const DEFAULT_ALLOWED_ORIGINS: &[&str] = &[
     "http://127.0.0.1:3456",
     "http://localhost:3014",
     "http://127.0.0.1:3014",
+    "http://localhost:3013",
+    "http://127.0.0.1:3013",
 ];
 
 /// Parse a comma-separated origin list (as stored in `ALLTERNIT_CORS_ORIGINS`)
@@ -214,6 +218,15 @@ mod tests {
             "https://allternit-office-addins.pages.dev",
             "https://office-addins.allternit.com",
         ] {
+            assert!(values.contains(&required), "missing {required}");
+        }
+    }
+
+    #[test]
+    fn default_allowlist_includes_web_surface_dev_origins() {
+        let origins = parse_allowed_origins(None);
+        let values: Vec<&str> = origins.iter().map(|v| v.to_str().unwrap()).collect();
+        for required in ["http://localhost:3013", "http://127.0.0.1:3013"] {
             assert!(values.contains(&required), "missing {required}");
         }
     }
