@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 09:15 — kimi — open-connector ships as a bundled, ephemeral-port sidecar
+
+- **Session ID / Branch:** `session/3a37a822-p6` (worktree `allternit-session-3a37a822-p6`)
+- **Agent:** kimi
+- **Summary:** Replaced the connector's dev-server pattern (loose TS source + copied node_modules + fixed port 8014 + infinite respawn) with the production shape: a single esbuild bundle, an ephemeral port announced over stdout, bounded crash supervision with a surfaced degraded state, boot reorder so gizzi/API get the real URL, and env path overrides for the bundle context.
+- **Commit:** PR #253, merge commit `3f4dd36fc` on `main`
+- **How it works:** `prepare:connector-sidecar` bundles services/open-connector into `resources/connector-sidecar/dist/server.mjs` (22.8MB, marker-verified); the manager binds PORT=0, reads the announced port, health-probes, and after 5 backoff restarts goes `degraded` (visible on the splash); catalog/migrations dirs come from explicit env vars; verify gate + preflight + CI enforce the bundle.
+- **Outstanding work:** no manual "restart connector" UI button yet (manager `restart()` is exposed for a future IPC); 22.8MB bundle size is accepted (lazy executor modules); installed-app update for this change tracked in the session closeout.
+- **Summary file:** [./summaries/2026-09-10-1315-3a37a822-kimi-connector-bundle-sidecar.md](./summaries/2026-09-10-1315-3a37a822-kimi-connector-bundle-sidecar.md)
+
 ### 2026-09-10 09:59 — grok — native-sessions catalog through the data-plane relay
 
 - **Session ID / Branch:** `session/43d9456-ns` (worktree `allternit-session-43d9456-ns`)
