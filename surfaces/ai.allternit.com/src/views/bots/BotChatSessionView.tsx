@@ -25,6 +25,7 @@ import { ModelSelectionProvider, useModelSelection } from "@/providers/model-sel
 import type { ModelSelection } from "@/components/model-picker";
 import { getProviderMeta } from "@/lib/providers/provider-registry";
 import { BotComputerViewport } from "./BotComputerViewport";
+import { PolicyGovernance } from "./PolicyGovernance";
 import { useBotActiveVm } from "./useBotActiveVm";
 import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
 
@@ -345,6 +346,12 @@ function BotChatSessionContent({
           </Button>
         )}
       </div>
+
+      <PolicyGovernance
+        botId={botId}
+        sessionMode={session?.metadata?.sessionMode}
+        isBot={session?.metadata?.isBot === true}
+      />
 
       <div className="flex min-h-0 flex-1">
       {/* Messages */}

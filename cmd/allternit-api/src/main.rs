@@ -164,6 +164,23 @@ async fn main() {
     let app_config = allternit_api::init_app_config();
     info!("Configuration loaded");
 
+    // Declarative ACI policy engine. Env unset → engine off (legacy
+    // behavior); env set → the document must load cleanly or the gateway
+    // refuses to start (fail-closed — a missing or malformed policy must
+    // never mean an unguarded gateway).
+    match allternit_api::policy_config::load_from_env() {
+        Ok(policy) => {
+            let enabled = policy.is_some();
+            let rule_count = policy.as_ref().map(|p| p.rules.len()).unwrap_or(0);
+            allternit_api::policy_config::install(policy);
+            info!(enabled, rule_count, "ACI policy engine initialized");
+        }
+        Err(e) => {
+            tracing::error!("refusing to start: failed to load ACI policy document: {e}");
+            std::process::exit(1);
+        }
+    }
+
     // Data directory for local state
     let data_dir = std::env::var("ALLTERNIT_DATA_DIR")
         .ok()
