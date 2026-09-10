@@ -2,7 +2,7 @@
 
 > **STATUS:** Production-ready. 10 courses, 65 modules, 0 audit issues.
 >
-> **LAST UPDATED:** 2026-09-09
+> **LAST UPDATED:** 2026-09-10
 
 ## Commandment: desktop-v1.1.1 release lock
 
@@ -13,11 +13,13 @@
 3. **Sidecars are hard requirements, not extras.** `prepare-platform-static.cjs` requires `allternit-api`, `gizzi-code`, `allternit-voice-service`, `whisper-cli`, and `mesh-node` in `resources/bin/` per platform. If you change how one is built (or delete its source tree, as the voice-cleanup did), you must update the producing workflow step AND `scripts/release-preflight.mjs` in the same PR. A workflow that references a nonexistent file is a release failure even if unit tests pass.
 4. **New features must compile in the production configurations, not just dev.** gizzi-code is bundled by `bun run script/build-production.js` (Bun.build — which does NOT apply tsconfig `paths` to dynamic imports; optional native packages are resolved via `bundlePlugin.onResolve` stubs). Rust sidecars are built per-target in CI (`x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`) — verify `cargo build --release` for your crate locally before merging.
 5. **Windows-specific gotchas are load-bearing:** node-gyp needs `GYP_MSVS_VERSION=2022` (the runner's VS18 is invisible to it), pnpm spawns need `shell: true` (.cmd shims), and NSIS hard-fails on any missing `extraFiles`/`license` path. Do not "clean up" these without a green Windows run.
-6. If a merge to main breaks the release workflow, **the fix is mandatory before any further release work** — repoint the latest `desktop-v*` tag only after the run is green, never to dodge a failure.
+6. If a merge to main breaks the release workflow, **the fix is mandatory before the next desktop release is cut** — open a tracked blocker (issue or `agent-ledger` entry naming the failing run) immediately, and repoint the latest `desktop-v*` tag only after the run is green, never to dodge a failure. While the workflow is red, **release-path work is paused; all other repo work continues** — this rule must not gate unrelated sessions.
 
 ## Session worktrees (default for ALL repo work)
 
 Every agent session in this repo works in its OWN linked worktree — never in the shared main checkout. On your first prompt (or SessionStart), a hook injects the ritual: create-or-reuse `<repo>-session-<id>` on branch `session/<id>` and `cd` into it. A PreToolUse guard blocks `git commit/checkout/switch/merge/push/rebase/reset` and `branch -d` in the shared checkout (escape for human/orchestrator merges: `STEER_GUARD_OFF=1`). Rationale: concurrent sessions sharing one HEAD collide on branches, commits, and dirty files. gizzi-code additionally has native `--worktree` support (`src/shared/utils/worktree.ts`); making it default-on is tracked as phase W2. Linked worktrees pass all guards automatically (detected via the git dir path).
+
+**Worktree ownership is absolute.** A worktree belongs to the session that created it (or, for long-lived non-session worktrees like `allternit-desktop-preview`, to the machine/owner). Never run `git checkout`/`switch`/`reset`/`merge`/`rebase` in a worktree you did not create. To consume newer main in a worktree you don't own, move **forward only**: `git fetch origin && git checkout --detach origin/main` (or `git pull --ff-only` if it tracks main) — never sideways to another branch, never backwards to an older commit. Wiping a sibling session's uncommitted work by re-pointing its checkout is how the 2026-09-09 shell-rail session lost a full edit pass. If you believe a worktree needs a different state, write your findings in `.steering/checkpoint.md` and leave the checkout alone.
 
 ## Session lifecycle — the full repo process (do ALL of it, every session)
 
