@@ -148,3 +148,28 @@ AO_BIN=$PWD/target/debug/ao
 "$AO_BIN" fabric serve          # shim on 127.0.0.1:8014 + relay WSS
 "$AO_BIN" fabric status         # fingerprint, pairing state, token expiry, relay state
 ```
+
+## Addendum 2026-09-10 (orchestrator) — pairing completed, gate PARTIAL
+
+The human gate cleared 2026-09-10 ~01:28 CDT: `ao fabric pair` approved in the
+PWA (paired as seed@allternit.dev, runtime rt_af9d675b04b24bf88b8de119e9a2b650,
+token valid to 2026-12-09). Verified live: loopback shim serves
+`/v1/remote-control/sessions` with `ao-hardgate-demo` listed; "Secure runtime
+relay connected"; Fabric PWA shows ao-dev-mac 3/3 online with fresh heartbeat
+(screenshot: ~/.agent-orchestrator/evidence/ao-fabric-node/pwa-node-online.png).
+
+**Hard gate: PARTIAL, blocked by two platform-side wiring bugs (NOT ao-side):**
+1. PWA session list calls `GET /api/v1/sessions` same-origin → 404. The
+   fabric-session service exists and returns 200 at
+   `https://ai.allternit.com/api/v1/sessions` — the fabrictransport PWA's API
+   base is miswired for this deploy.
+2. `GET /api/v1/runtime-devices/<rt>/proxy/v1/remote-control/sessions` with a
+   Clerk session token returns 401 "Invalid or expired token" even though the
+   PWA's own runtime-list calls succeed — proxy auth wiring differs (unresolved,
+   platform side).
+Plus a design gap: ao has no caller for the platform's
+`/api/v1/agent-sessions/sync` (cloud-api route exists), so pre-existing ao
+sessions never reach the platform session catalog.
+
+All ao-side P3 scope is proven end-to-end. Full detail:
+~/.agent-orchestrator/evidence/ao-fabric-node/P3_GATE_PROGRESS.md
