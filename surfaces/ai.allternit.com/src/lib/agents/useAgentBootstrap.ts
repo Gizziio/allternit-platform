@@ -55,16 +55,22 @@ const GIZZI_SEED: AgentDefinition = {
 
 const VENDOR_SEEDS: AgentDefinition[] = [
   {
+    // Client-stable ids make the (now idempotent) API create return the
+    // existing row instead of minting a duplicate whenever bootstrap runs
+    // before the agent store has hydrated.
+    id: 'vendor-deep-research',
     name: 'Deep Research',
     description: 'Get in-depth answers grounded in web research. Gathers and analyzes information from multiple sources to create a single, coherent summary.',
     capabilities: ['research', 'web-search', 'citations'],
   },
   {
+    id: 'vendor-code-assistant',
     name: 'Code Assistant',
     description: 'Generate, review, and refactor code across any language. Understands context and suggests improvements.',
     capabilities: ['code', 'review', 'refactor'],
   },
   {
+    id: 'vendor-data-analyst',
     name: 'Data Analyst',
     description: 'Upload CSV or Excel files and get automatic charts, insights, and SQL queries.',
     capabilities: ['data', 'charts', 'sql'],
@@ -73,16 +79,30 @@ const VENDOR_SEEDS: AgentDefinition[] = [
 
 const ORG_SEEDS: AgentDefinition[] = [
   {
+    id: 'org-data-catalyst',
     name: 'Data Catalyst',
     description: 'Analyze complex datasets to surface actionable business insights.',
     capabilities: ['analytics', 'reporting', 'forecasting'],
   },
   {
+    id: 'org-architect',
     name: 'Architect',
     description: 'Design and build complex system architectures with best practices.',
     capabilities: ['architecture', 'design', 'documentation'],
   },
 ].map((seed) => ({ ...seed, type: 'specialist' as const, temperature: 0.4, source: 'organization' as const, character: { primaryColor: '#8b5cf6' } }));
+
+// Every name the bootstrap owns. Maps lowercase name → the client-stable id
+// of the row that should survive dedupe. Rows under these names were seeded
+// by the platform, so duplicates left by earlier races are safe to delete.
+const SEED_CANONICAL_IDS: Record<string, string> = {
+  gizzi: 'gizzi-packaged-assistant',
+  'deep research': 'vendor-deep-research',
+  'code assistant': 'vendor-code-assistant',
+  'data analyst': 'vendor-data-analyst',
+  'data catalyst': 'org-data-catalyst',
+  'architect': 'org-architect',
+};
 
 interface UseAgentBootstrapOptions {
   enabled?: boolean;
@@ -103,20 +123,22 @@ export function useAgentBootstrap({ enabled = true }: UseAgentBootstrapOptions =
       await fetchAgents();
       let currentAgents = useAgentStore.getState().agents;
 
-      // Ensure exactly one canonical Gizzi packaged bot exists. Keep a single
-      // lowercase packaged bot if it already exists; remove all other variants
-      // (capitalized names, legacy non-bot rows, etc.) that cause duplicates.
-      const canonicalGizzi = currentAgents.find(
-        (a) => a.name === 'gizzi' && a.isBot === true,
-      );
-      const gizziVariants = currentAgents.filter(
-        (a) => a.name.toLowerCase() === 'gizzi' && a.id !== canonicalGizzi?.id,
-      );
-      if (gizziVariants.length > 0) {
+      // Dedupe every platform-seeded name. Cold-start races (store fetch
+      // timeout → empty list) used to create a second row per seed on the
+      // next boot; earlier versions also matched case-variant names. Keep the
+      // row with the client-stable seed id when present, delete the rest.
+      let deduped = false;
+      for (const [seedName, canonicalId] of Object.entries(SEED_CANONICAL_IDS)) {
+        const matches = currentAgents.filter((a) => a.name.toLowerCase() === seedName);
+        if (matches.length <= 1) continue;
+        const keeper = matches.find((a) => a.id === canonicalId) ?? matches[0];
         const { deleteAgent } = useAgentStore.getState();
-        for (const variant of gizziVariants) {
-          try { await deleteAgent(variant.id); } catch {}
+        for (const dup of matches.filter((a) => a.id !== keeper.id)) {
+          try { await deleteAgent(dup.id); } catch {}
         }
+        deduped = true;
+      }
+      if (deduped) {
         await fetchAgents();
         currentAgents = useAgentStore.getState().agents;
       }
