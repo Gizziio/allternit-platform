@@ -924,13 +924,18 @@ async fn build_template(
     let row_template_id = template_id.clone();
     let set = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let current: Option<String> = conn
+        // `optional()` wraps ROW-ABSENCE as None; the NULL build_status of a
+        // never-built template must be handled by the column getter itself
+        // (`Option<String>`), otherwise a fresh template 500s on
+        // `Invalid column type Null` and can never start its first build.
+        let current: Option<Option<String>> = conn
             .query_row(
                 "SELECT build_status FROM desktop_templates WHERE id = ?1",
                 rusqlite::params![row_template_id],
-                |row| row.get(0),
+                |row| row.get::<_, Option<String>>(0),
             )
             .optional()?;
+        let current = current.flatten();
         if !build_transition_allowed(current.as_deref(), BUILD_STATUS_BUILDING) {
             return Ok::<bool, rusqlite::Error>(false);
         }
@@ -1405,6 +1410,43 @@ mod tests {
 
         let other = test_user("other-user", None);
         assert!(resolve_template(&db, &other, &id).await.is_none());
+    }
+
+    /// Regression (live-smoke defect, rq-20260909-004): a never-built
+    /// template has `build_status NULL`; the build-start gate must read that
+    /// as None, not blow up with `Invalid column type Null`.
+    #[tokio::test]
+    async fn null_build_status_reads_as_none_for_build_gate() {
+        let db = test_db();
+        let id = format!("dtpl-{}", uuid::Uuid::new_v4().simple());
+        let inserted = tokio::task::spawn_blocking({
+            let db = db.clone();
+            let id = id.clone();
+            move || {
+                let conn = db.connect()?;
+                conn.execute(
+                    "INSERT INTO desktop_templates \
+                     (id, org_id, user_id, name, description, os, image, cpu_millis, memory_mib, disk_mib, \
+                      network_enabled, env_json, packages_json, tags_json, public) \
+                     VALUES (?1, NULL, 'owner-1', 'fresh', '', 'linux', '', 2000, 4096, 20480, 1, '{}', '[]', '[]', 0)",
+                    rusqlite::params![&id],
+                )?;
+                // The exact query shape used by build_template's gate.
+                let current: Option<Option<String>> = conn
+                    .query_row(
+                        "SELECT build_status FROM desktop_templates WHERE id = ?1",
+                        rusqlite::params![&id],
+                        |row| row.get::<_, Option<String>>(0),
+                    )
+                    .optional()?;
+                Ok::<_, rusqlite::Error>(current.flatten())
+            }
+        })
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(inserted, None, "NULL build_status must read as None");
+        assert!(build_transition_allowed(None, BUILD_STATUS_BUILDING));
     }
 }
 
