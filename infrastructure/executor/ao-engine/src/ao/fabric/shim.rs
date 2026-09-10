@@ -193,7 +193,8 @@ async fn session_detail(id: &str) -> Result<Option<Value>, String> {
     let status = status_for_workspace(&workspace);
 
     let mut messages = Vec::new();
-    if let Some(pane) = first_pane(id).await? {
+    let workspace_id = workspace["workspace_id"].as_str().unwrap_or_default().to_string();
+    if let Some(pane) = first_pane(&workspace_id).await? {
         if let Ok(read) = pane_read(pane["pane_id"].as_str().unwrap_or_default(), 400).await {
             if !read.text.trim().is_empty() {
                 messages.push(json!({
