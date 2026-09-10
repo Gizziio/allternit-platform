@@ -452,15 +452,33 @@ async fn build_in_guest(
     apt_env.insert("DEBIAN_FRONTEND".to_string(), "noninteractive".to_string());
 
     if !spec.packages.is_empty() {
-        exec_guest_checked(
-            driver,
-            handle,
-            "apt-get update",
-            vec!["apt-get".into(), "update".into()],
-            &apt_env,
-        )
-        .await?;
-        let mut install = vec!["apt-get".into(), "install".into(), "-y".into(), "--no-install-recommends".into()];
+        // Incus exec runs as root; Tart exec runs as the VM's default user
+        // (passwordless sudo on the base images). Detect once and elevate the
+        // apt steps only when needed — running bare `apt-get` as a non-root
+        // guest user fails at lock acquisition (live-smoke defect,
+        // rq-20260909-004).
+        let privileged: Vec<String> = {
+            let who = exec_guest(
+                driver,
+                handle,
+                vec!["id".into(), "-u".into()],
+                &HashMap::new(),
+            )
+            .await?;
+            let stdout = String::from_utf8_lossy(who.stdout.as_deref().unwrap_or(&[]));
+            if who.exit_code == 0 && stdout.trim() == "0" {
+                vec![]
+            } else {
+                vec!["sudo".into(), "-n".into()]
+            }
+        };
+        let mut update = privileged.clone();
+        update.extend(["apt-get".into(), "update".into()]);
+        exec_guest_checked(driver, handle, "apt-get update", update, &apt_env).await?;
+        let mut install = privileged;
+        install.extend(
+            ["apt-get".into(), "install".into(), "-y".into(), "--no-install-recommends".into()],
+        );
         install.extend(spec.packages.iter().cloned());
         exec_guest_checked(driver, handle, "apt-get install", install, &apt_env).await?;
     }
