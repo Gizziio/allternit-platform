@@ -670,7 +670,10 @@ export const agentSchema = z.object({
   type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
-  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
+  // 'allternit' is the platform's own gateway provider (models like
+  // allternit/kimi-k3); the API stores and returns it, so the schema must
+  // accept it or every such agent is silently dropped by safeValidate.
+  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom', 'allternit']),
   capabilities: z.array(z.string()),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()),
@@ -861,7 +864,7 @@ const createAgentInputSchema = z.object({
   type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']).optional(),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
-  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
+  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom', 'allternit']),
   capabilities: z.array(z.string()).optional(),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()).optional(),
