@@ -213,9 +213,16 @@ async function fetchAgentsAuthed(page) {
     RESULT.botIds.beta = beta.id;
     log(`  alpha=${alpha.id}, beta=${beta.id}`);
 
-    // 3. Navigate to Bot Hub.
+    // 3. Navigate to Bot Hub. Prefer the rail nav button (present on every
+    //    landing view); fall back to the Products discovery tile for older
+    //    builds that land on the discovery grid.
     log('Opening Bot Hub...');
-    await page.getByText('Agent | Bot Hub').first().click();
+    const botHubNav = page.getByRole('button', { name: 'Bot Hub' }).first();
+    if (await botHubNav.count()) {
+      await botHubNav.click();
+    } else {
+      await page.getByText('Agent | Bot Hub').first().click();
+    }
     await waitForText(page, 'Your bots');
     await waitForText(page, BOT_A);
     await waitForText(page, BOT_B);
