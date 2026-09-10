@@ -67,3 +67,16 @@ allowed format.
 - `surfaces/allternit-desktop/src/preload/index.ts` (getInfo type)
 - `surfaces/ai.allternit.com/src/views/settings/SettingsView.tsx` (About panel)
 - `surfaces/allternit-desktop/BUILD.md`
+
+## Post-merge live check (confirmed)
+
+Rebuild in the long-lived preview worktree on merge `5f8bd7218` (2026-09-10):
+
+- DMG: `release/Allternit-Desktop-1.1.1-b1765-arm64.dmg` (+ blockmap)
+- `Info.plist`: `CFBundleVersion = 1.1.1.1765` (four-component stamp),
+  `CFBundleShortVersionString = 1.1.1` unchanged
+- `Contents/Resources/build-info.json`:
+  `{ "version": "1.1.1", "buildVersion": "1.1.1.1765", "buildSuffix": "-b1765", "builtAt": "2026-09-10T07:32:55.657Z" }`
+- Superseded `Allternit-Desktop-1.1.1-b1741-arm64.dmg` (+ blockmap) removed.
+- About panel string ("Allternit Desktop 1.1.1-b1765 · build 1.1.1.1765")
+  is data-driven from the verified getInfo path; visual confirmation manual.
