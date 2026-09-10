@@ -108,6 +108,7 @@ pub fn maybe_run(args: &[String]) -> std::io::Result<CommandOutcome> {
         // ao contract commands take priority over the engine's own words
         // (notably `status`); see src/cli/ao.rs.
         "spawn" | "send" | "watch" | "status" | "kill" | "doctor" => ao::run_ao_command(&args[1..])?,
+        "fabric" => crate::ao::fabric::cli::run(&args[2..])?,
         "server" => {
             let Some(exit_code) = server::run_server_command(&args[2..])? else {
                 return Ok(CommandOutcome::NotCli);
