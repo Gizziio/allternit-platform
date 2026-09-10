@@ -1197,9 +1197,17 @@ async fn transform_bus_event(
     }
 }
 
+#[derive(Debug, Default, Deserialize)]
+struct SyncSessionsQuery {
+    /// Replay cursor. gizzi agent-compat honors `?since=` the same way;
+    /// a recreated EventSource cannot set Last-Event-ID on the first GET.
+    since: Option<String>,
+}
+
 async fn sync_sessions(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
+    Query(query): Query<SyncSessionsQuery>,
 ) -> Result<
     Sse<impl Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>,
     Response,
@@ -1207,13 +1215,14 @@ async fn sync_sessions(
     let client = gizzi_client(&headers);
 
     // A browser EventSource that dropped and auto-reconnected sends back the
-    // last `id:` it saw via Last-Event-ID. Forward it upstream so Gizzi can
-    // replay the events published during the gap instead of the client
-    // silently missing them (see Bus.historySince in gizzi-code).
+    // last `id:` it saw via Last-Event-ID. A closed-and-recreated source
+    // (the web store's retry loop) sends the same cursor as `?since=`.
+    // Forward either upstream so Gizzi can replay the gap (Bus.historySince).
     let last_event_id = headers
         .get("last-event-id")
         .and_then(|value| value.to_str().ok())
-        .map(str::to_string);
+        .map(str::to_string)
+        .or(query.since);
 
     let mut request = client
         .get(format!("{}/v1/event", gizzi_base()))
