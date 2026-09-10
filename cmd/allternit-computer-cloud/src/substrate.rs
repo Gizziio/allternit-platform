@@ -864,25 +864,45 @@ async fn wait_operation(
         .unwrap_or_else(|| url.to_string());
     let wait_path = format!("{}/wait?timeout=60", path.trim_end_matches('/'));
 
-    let (status, json) = client
-        .request(reqwest::Method::GET, &wait_path, None)
-        .await?;
-    if is_success(status) {
-        if operation_status(&json) == Some("Failure") {
-            let err = operation_error(&json).unwrap_or_else(|| "operation failed".to_string());
-            return Err(SubstrateError::Api {
-                status: 500,
-                message: err,
-            });
+    // `/wait?timeout=60` returns after 60 seconds even when the operation is
+    // still RUNNING (Incus server-side cap), so long execs (e.g. the first
+    // `apt-get update` on a fresh desktop, which can exceed 60s) must re-wait
+    // instead of being misread as "no return code" (-1, empty output —
+    // live-smoke defect, rq-20260909-004 Incus deferral). Loop until a
+    // terminal status or the overall deadline; each individual request stays
+    // well under the 180s client timeout.
+    for _attempt in 0..5 {
+        let (status, json) = client
+            .request(reqwest::Method::GET, &wait_path, None)
+            .await?;
+        if is_success(status) {
+            match operation_status(&json) {
+                Some("Failure") => {
+                    let err =
+                        operation_error(&json).unwrap_or_else(|| "operation failed".to_string());
+                    return Err(SubstrateError::Api {
+                        status: 500,
+                        message: err,
+                    });
+                }
+                // Terminal success — or a shape with no status at all (treat
+                // as final, as before).
+                Some("Success") | None => return Ok(json),
+                // Still Running/Pending: fall through and re-wait.
+                Some(_) => continue,
+            }
         }
-        return Ok(json);
+        if status == 404 {
+            // Operation finished and was removed; the original response is the
+            // best information we have.
+            return Ok(resp.clone());
+        }
+        return Err(SubstrateError::from_status(status, json.to_string()));
     }
-    if status == 404 {
-        // Operation finished and was removed; the original response is the
-        // best information we have.
-        return Ok(resp.clone());
-    }
-    Err(SubstrateError::from_status(status, json.to_string()))
+    Err(SubstrateError::Api {
+        status: 500,
+        message: "operation did not reach a terminal status before the wait deadline".to_string(),
+    })
 }
 
 fn response_payload(value: &serde_json::Value) -> &serde_json::Value {
@@ -1108,5 +1128,97 @@ mod tests {
         assert_eq!(result.exit_code, 0);
         assert_eq!(result.stdout, "hello stdout");
         assert_eq!(result.stderr, "hello stderr");
+    }
+}
+
+#[cfg(test)]
+mod wait_operation_tests {
+    use super::*;
+    use async_trait::async_trait;
+    use std::sync::Mutex;
+
+    struct QueuedClient {
+        responses: Mutex<Vec<(u16, serde_json::Value)>>,
+    }
+
+    #[async_trait]
+    impl HttpClient for QueuedClient {
+        async fn request(
+            &self,
+            _method: reqwest::Method,
+            _path: &str,
+            _body: Option<serde_json::Value>,
+        ) -> Result<(u16, serde_json::Value), SubstrateError> {
+            let mut responses = self.responses.lock().unwrap();
+            if responses.is_empty() {
+                // Keep answering "Running" forever if the queue drains.
+                return Ok((200, serde_json::json!({"metadata": {"status": "Running"}})));
+            }
+            Ok(responses.remove(0))
+        }
+        async fn request_bytes(
+            &self,
+            _method: reqwest::Method,
+            _path: &str,
+            _body: Option<serde_json::Value>,
+        ) -> Result<(u16, Vec<u8>), SubstrateError> {
+            Ok((200, Vec::new()))
+        }
+        async fn request_bytes_with_body(
+            &self,
+            _method: reqwest::Method,
+            _path: &str,
+            _body: Vec<u8>,
+        ) -> Result<(u16, Vec<u8>), SubstrateError> {
+            Ok((200, Vec::new()))
+        }
+    }
+
+    fn op_resp(statuses: Vec<(&str, serde_json::Value)>) -> (u16, serde_json::Value) {
+        (200, serde_json::json!({"operation": "/1.0/operations/op-1", "statuses": statuses}))
+    }
+
+    #[tokio::test]
+    async fn rewaits_when_operation_still_running() {
+        let client = QueuedClient {
+            responses: Mutex::new(vec![
+                // First /wait returns after the 60s server timeout with the
+                // operation still Running and no return metadata (the
+                // live-smoke defect shape).
+                (200, serde_json::json!({"metadata": {"id": "op-1", "status": "Running"}})),
+                // Second /wait observes completion.
+                (200, serde_json::json!({"metadata": {"id": "op-1", "status": "Success",
+                    "metadata": {"return": 0, "output": {"1": "/tmp/x.stdout"}}}})),
+            ]),
+        };
+        let resp = op_resp(vec![]).1;
+        let op = wait_operation(&client, &resp).await.expect("wait should resolve after re-wait");
+        let payload = response_payload(&op);
+        let inner = response_payload(payload);
+        assert_eq!(find_i64(inner, "return"), Some(0));
+    }
+
+    #[tokio::test]
+    async fn surfaces_operation_failure() {
+        let client = QueuedClient {
+            responses: Mutex::new(vec![
+                (200, serde_json::json!({"metadata": {"id": "op-1", "status": "Running"}})),
+                (200, serde_json::json!({"metadata": {"id": "op-1", "status": "Failure",
+                    "err": "Instance is not running"}})),
+            ]),
+        };
+        let resp = op_resp(vec![]).1;
+        let err = wait_operation(&client, &resp).await.expect_err("failure must surface");
+        assert!(err.to_string().contains("Instance is not running"), "got: {err}");
+    }
+
+    #[tokio::test]
+    async fn gives_up_after_deadline() {
+        // Every response says Running; the loop must exhaust its attempts
+        // rather than hang.
+        let client = QueuedClient { responses: Mutex::new(Vec::new()) };
+        let resp = op_resp(vec![]).1;
+        let err = wait_operation(&client, &resp).await.expect_err("must time out");
+        assert!(err.to_string().contains("terminal status"), "got: {err}");
     }
 }
