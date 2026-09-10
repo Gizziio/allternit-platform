@@ -81,6 +81,11 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      # Release artifacts keep clean version-only names; the local build
+      # wrapper (scripts/build-local.cjs) is what stamps -b<rev-count> and it
+      # skips CI. Setting this explicitly keeps the artifactName env macro
+      # deterministic on jobs that invoke electron-builder directly.
+      ALLTERNIT_BUILD_SUFFIX: ""
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
