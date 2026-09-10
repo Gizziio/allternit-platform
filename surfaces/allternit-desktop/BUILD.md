@@ -91,6 +91,15 @@ npm run build:electron:dmg
 npm run dist
 ```
 
+Local builds are stamped with a build number so consecutive builds of the
+same version are distinguishable: the `build:electron*`, `pack`, and `dist`
+scripts run through `scripts/build-local.cjs`, which sets
+`ALLTERNIT_BUILD_SUFFIX=-b<git rev-list count>` and electron-builder expands
+it into the artifact name (e.g. `Allternit-Desktop-1.1.1-b4177-arm64.dmg`).
+CI/release builds keep clean version-only names (the wrapper skips CI and the
+workflow pins the suffix to empty). Override with
+`ALLTERNIT_BUILD_SUFFIX="-custom"` (or `=""` for clean names locally).
+
 ### Step 4: Verify Build
 
 Check the output:
