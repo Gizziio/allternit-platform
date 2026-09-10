@@ -78,6 +78,8 @@ pub mod computer_idle;
 pub mod computer_screens;
 pub mod computer_audit;
 pub mod computer_ws;
+pub mod vnc_readonly;
+pub mod computer_embed;
 pub mod desktop_template_build;
 pub mod bot_group_routes;
 pub mod data_residency_routes;

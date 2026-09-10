@@ -4,9 +4,9 @@
 //! Tools can be local (filesystem, shell, browser) or proxied to MCP servers.
 
 use axum::{
-    extract::{Path, State},
+    extract::{Extension, Path, Query, State},
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
@@ -299,7 +299,7 @@ async fn deny_tool_execution(
 /// so the same tool set is reachable both as a plain REST call and as an
 /// MCP server tool — one registry, two front doors, same auth gate.
 pub(crate) async fn execute_tool_internal(
-    state: &AppState,
+    state: &Arc<AppState>,
     request: &ExecuteToolRequest,
     user_id: &str,
     tenant_id: Option<&str>,
@@ -369,6 +369,14 @@ pub(crate) async fn execute_tool_internal(
         "computer_shell" => computer_shell_tool(state, user_id, &request.args).await,
         "computer_file_read" => computer_file_read_tool(state, user_id, &request.args).await,
         "computer_file_write" => computer_file_write_tool(state, user_id, &request.args).await,
+
+        // ── Computer lifecycle (route-handler parity, Phase 5) ───────────────
+        "computer_create" => computer_create_tool(state, user_id, tenant_id, &request.args).await,
+        "computer_list" => computer_list_tool(state, user_id, tenant_id, &request.args).await,
+        "computer_start" => computer_start_tool(state, user_id, tenant_id, &request.args).await,
+        "computer_stop" => computer_stop_tool(state, user_id, tenant_id, &request.args).await,
+        "computer_resize" => computer_resize_tool(state, user_id, tenant_id, &request.args).await,
+        "computer_clone" => computer_clone_tool(state, user_id, tenant_id, &request.args).await,
 
         // ── Unknown ──────────────────────────────────────────────────────────
         _ => {
@@ -531,6 +539,219 @@ async fn computer_file_write_tool(
     )
     .await
     .map_err(|(status, body)| format!("computer_file_write failed ({}): {}", status, body))
+}
+
+// ── Computer lifecycle tools (Phase 5 catalog parity) ───────────────────────
+//
+// These tools call the same route handlers that serve `/api/v1/computers*` —
+// one implementation, two front doors. Risky lifecycle actions are gated with
+// the same ACI confirmation enforcement as the control tools (the REST
+// lifecycle routes currently perform no ACI check; the tool surface fails
+// closed instead, so the tool path is never weaker than any other entry
+// point). `approval_id` is threaded exactly like the control tools thread it.
+
+/// Build the AuthUser the route handlers expect from the tool-call identity.
+/// `tenant_id` carries the caller's org id (see `execute_tool`).
+fn tool_auth_user(user_id: &str, tenant_id: Option<&str>) -> AuthUser {
+    AuthUser {
+        user_id: user_id.to_string(),
+        organization_id: tenant_id.map(|s| s.to_string()),
+        tenant_id: None,
+        email: None,
+        name: None,
+        avatar_url: None,
+        organization_role: None,
+        organization_slug: None,
+    }
+}
+
+/// ACI gate for risky lifecycle actions, reusing `aci_safety::enforce_confirmation`
+/// with the same taxonomy as the control routes. The denial payload (including
+/// the fresh `approval_id` / `action_hash` for the handoff endpoints) is
+/// surfaced verbatim in the tool error.
+fn enforce_lifecycle_confirmation(
+    state: &AppState,
+    user_id: &str,
+    route: &str,
+    descriptor: &Value,
+    approval_id: Option<&str>,
+) -> Result<(), String> {
+    crate::aci_safety::enforce_confirmation(
+        &state.approval_store,
+        user_id,
+        route,
+        crate::aci_safety::ConfirmationClass::Risky,
+        descriptor,
+        approval_id,
+    )
+    .map_err(|denial| format!("{} denied ({}): {}", route, denial.status, denial.body))
+}
+
+/// Map a route-handler Response into the tool Result shape: success → parsed
+/// JSON body; failure → `status + body` error string.
+async fn computer_route_result(tool: &str, response: Response) -> Result<Value, String> {
+    let status = response.status();
+    let (_parts, body) = response.into_parts();
+    let bytes = axum::body::to_bytes(body, 16 * 1024 * 1024)
+        .await
+        .map_err(|e| format!("{} failed to read response body: {}", tool, e))?;
+    let text = String::from_utf8_lossy(&bytes);
+    let value: Value = if text.trim().is_empty() {
+        Value::Null
+    } else {
+        serde_json::from_str(&text).unwrap_or_else(|_| json!({ "raw": text }))
+    };
+    if status.is_success() {
+        Ok(value)
+    } else {
+        Err(format!("{} failed ({}): {}", tool, status, value))
+    }
+}
+
+/// Arguments minus the approval-grant keys, as a deterministic descriptor
+/// payload (serde_json maps are key-sorted).
+fn approval_free_args(args: &Value) -> Value {
+    let mut descriptor = args.clone();
+    if let Some(map) = descriptor.as_object_mut() {
+        map.remove("approval_id");
+        map.remove("approvalId");
+    }
+    descriptor
+}
+
+async fn computer_create_tool(
+    state: &Arc<AppState>,
+    user_id: &str,
+    tenant_id: Option<&str>,
+    args: &Value,
+) -> Result<Value, String> {
+    let req: crate::computer_routes::CreateComputerRequest =
+        serde_json::from_value(args.clone()).map_err(|e| format!("invalid create arguments: {}", e))?;
+    let descriptor = json!({
+        "tool": "computer_create",
+        "request": approval_free_args(args),
+    });
+    enforce_lifecycle_confirmation(state, user_id, "computers.create", &descriptor, request_approval_id(args).as_deref())?;
+    let user = tool_auth_user(user_id, tenant_id);
+    let response = crate::computer_routes::create_computer(
+        State(state.clone()),
+        Extension(user),
+        Json(req),
+    )
+    .await
+    .into_response();
+    computer_route_result("computer_create", response).await
+}
+
+async fn computer_list_tool(
+    state: &Arc<AppState>,
+    user_id: &str,
+    tenant_id: Option<&str>,
+    args: &Value,
+) -> Result<Value, String> {
+    let query: crate::computer_routes::ListComputersQuery =
+        serde_json::from_value(args.clone()).map_err(|e| format!("invalid list arguments: {}", e))?;
+    let user = tool_auth_user(user_id, tenant_id);
+    let response = crate::computer_routes::list_computers(
+        State(state.clone()),
+        Extension(user),
+        Query(query),
+    )
+    .await
+    .into_response();
+    computer_route_result("computer_list", response).await
+}
+
+async fn computer_start_tool(
+    state: &Arc<AppState>,
+    user_id: &str,
+    tenant_id: Option<&str>,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let descriptor = json!({ "tool": "computer_start", "computer_id": computer_id });
+    enforce_lifecycle_confirmation(state, user_id, "computers.start", &descriptor, request_approval_id(args).as_deref())?;
+    let user = tool_auth_user(user_id, tenant_id);
+    let response = crate::computer_routes::start_computer(
+        State(state.clone()),
+        Extension(user),
+        Path(computer_id),
+    )
+    .await
+    .into_response();
+    computer_route_result("computer_start", response).await
+}
+
+async fn computer_stop_tool(
+    state: &Arc<AppState>,
+    user_id: &str,
+    tenant_id: Option<&str>,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let descriptor = json!({ "tool": "computer_stop", "computer_id": computer_id });
+    enforce_lifecycle_confirmation(state, user_id, "computers.stop", &descriptor, request_approval_id(args).as_deref())?;
+    let user = tool_auth_user(user_id, tenant_id);
+    let response = crate::computer_routes::stop_computer(
+        State(state.clone()),
+        Extension(user),
+        Path(computer_id),
+    )
+    .await
+    .into_response();
+    computer_route_result("computer_stop", response).await
+}
+
+async fn computer_resize_tool(
+    state: &Arc<AppState>,
+    user_id: &str,
+    tenant_id: Option<&str>,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let req: crate::computer_routes::ResizeComputerRequest =
+        serde_json::from_value(args.clone()).map_err(|e| format!("invalid resize arguments: {}", e))?;
+    let descriptor = json!({
+        "tool": "computer_resize",
+        "computer_id": computer_id,
+        "request": approval_free_args(args),
+    });
+    enforce_lifecycle_confirmation(state, user_id, "computers.resize", &descriptor, request_approval_id(args).as_deref())?;
+    let user = tool_auth_user(user_id, tenant_id);
+    let response = crate::computer_routes::resize_computer(
+        State(state.clone()),
+        Extension(user),
+        Path(computer_id),
+        Json(req),
+    )
+    .await;
+    computer_route_result("computer_resize", response).await
+}
+
+async fn computer_clone_tool(
+    state: &Arc<AppState>,
+    user_id: &str,
+    tenant_id: Option<&str>,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let req: crate::computer_routes::CloneComputerRequest =
+        serde_json::from_value(args.clone()).map_err(|e| format!("invalid clone arguments: {}", e))?;
+    let descriptor = json!({
+        "tool": "computer_clone",
+        "computer_id": computer_id,
+        "request": approval_free_args(args),
+    });
+    enforce_lifecycle_confirmation(state, user_id, "computers.clone", &descriptor, request_approval_id(args).as_deref())?;
+    let user = tool_auth_user(user_id, tenant_id);
+    let response = crate::computer_routes::clone_computer(
+        State(state.clone()),
+        Extension(user),
+        Path(computer_id),
+        Json(req),
+    )
+    .await;
+    computer_route_result("computer_clone", response).await
 }
 
 // ── Shell ───────────────────────────────────────────────────────────────────
@@ -1334,6 +1555,103 @@ async fn list_tools() -> impl IntoResponse {
                     "content": { "type": "string", "description": "Base64-encoded file content" }
                 },
                 "required": ["computer_id", "path", "content"]
+            }
+        }),
+        json!({
+            "id": "computer_create",
+            "name": "Computer Create",
+            "description": "Create a standalone cloud_desktop or local computer (ACI-approval-gated; pass approval_id from the confirmation handoff).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "kind": { "type": "string", "enum": ["cloud_desktop", "local"], "description": "Computer kind" },
+                    "owner_type": { "type": "string", "enum": ["user", "org", "bot", "session"], "description": "Owner kind (default: bot, or session when session_id is set without bot_id)" },
+                    "owner_id": { "type": "string", "description": "Must match the authenticated owner" },
+                    "bot_id": { "type": "string", "description": "Required for bot-owned cloud_desktops" },
+                    "session_id": { "type": "string", "description": "Bind the computer to a session" },
+                    "name": { "type": "string" },
+                    "os": { "type": "string", "description": "e.g. linux, windows, macos" },
+                    "cpu_cores": { "type": "integer", "enum": [2, 4, 8] },
+                    "memory_mb": { "type": "integer", "enum": [4096, 8192, 16384, 32768, 65536] },
+                    "disk_mb": { "type": "integer", "enum": [20480, 40960, 81920] },
+                    "resolution": { "type": "string", "enum": ["1280x720", "1920x1080", "2560x1440"] },
+                    "template_id": { "type": "string", "description": "Desktop template id (exactly one of template_id/template_ref)" },
+                    "template_ref": { "type": "string", "description": "Curated system/… template ref" },
+                    "persistence": { "type": "string", "enum": ["ephemeral", "session", "persistent"] },
+                    "provider": { "type": "string", "description": "Substrate hint: incus or tart" },
+                    "approval_id": { "type": "string", "description": "Optional action-hash grant (ACI approval id) for this risky action" }
+                },
+                "required": ["kind"]
+            }
+        }),
+        json!({
+            "id": "computer_list",
+            "name": "Computer List",
+            "description": "List computers visible to the caller (read-only).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "bot_id": { "type": "string", "description": "Filter by owning bot" },
+                    "kind": { "type": "string", "enum": ["local", "byo_vps", "managed", "byoc", "cloud_desktop"] },
+                    "group_id": { "type": "string", "description": "Filter by computer group" },
+                    "include_roles": { "type": "string", "description": "Truthy values include non-user roles (golden template-build holders)" }
+                }
+            }
+        }),
+        json!({
+            "id": "computer_start",
+            "name": "Computer Start",
+            "description": "Start (resume) a stopped cloud_desktop or local computer (ACI-approval-gated).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to start" },
+                    "approval_id": { "type": "string", "description": "Optional action-hash grant (ACI approval id) for this risky action" }
+                },
+                "required": ["computer_id"]
+            }
+        }),
+        json!({
+            "id": "computer_stop",
+            "name": "Computer Stop",
+            "description": "Stop (pause) a cloud_desktop or local computer (ACI-approval-gated).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to stop" },
+                    "approval_id": { "type": "string", "description": "Optional action-hash grant (ACI approval id) for this risky action" }
+                },
+                "required": ["computer_id"]
+            }
+        }),
+        json!({
+            "id": "computer_resize",
+            "name": "Computer Resize",
+            "description": "Resize CPU/memory/disk of a cloud_desktop computer (ACI-approval-gated; disk resize requires a stopped computer).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer" },
+                    "cpu_cores": { "type": "integer", "enum": [2, 4, 8] },
+                    "memory_mb": { "type": "integer", "enum": [4096, 8192, 16384, 32768, 65536] },
+                    "disk_mb": { "type": "integer", "enum": [20480, 40960, 81920] },
+                    "approval_id": { "type": "string", "description": "Optional action-hash grant (ACI approval id) for this risky action" }
+                },
+                "required": ["computer_id"]
+            }
+        }),
+        json!({
+            "id": "computer_clone",
+            "name": "Computer Clone",
+            "description": "Clone a running or stopped cloud_desktop into a new computer (ACI-approval-gated).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to clone" },
+                    "name": { "type": "string", "description": "Name for the clone (default: \"<source> (copy)\")" },
+                    "approval_id": { "type": "string", "description": "Optional action-hash grant (ACI approval id) for this risky action" }
+                },
+                "required": ["computer_id"]
             }
         }),
     ];

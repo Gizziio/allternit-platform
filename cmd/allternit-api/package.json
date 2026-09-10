@@ -1,0 +1,12 @@
+{
+  "name": "@allternit/allternit-api-assets",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Asset vendoring for allternit-api (noVNC for the embeddable computer viewer). This package exists only so the pnpm workspace (`cmd/*`) provides @novnc/novnc for scripts/vendor-novnc.mjs; it is never published or built.",
+  "scripts": {
+    "vendor-novnc": "node scripts/vendor-novnc.mjs"
+  },
+  "devDependencies": {
+    "@novnc/novnc": "^1.7.0"
+  }
+}

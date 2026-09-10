@@ -26,14 +26,14 @@
     "build:preload": "tsc -p src/preload/tsconfig.json",
     "download:lima": "node scripts/download-lima.cjs",
     "config:company": "cd ../.. && pnpm run config:company:write",
-    "build:electron": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && electron-builder --mac",
-    "build:electron:dmg": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && electron-builder --mac dmg",
+    "build:electron": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && node scripts/build-local.cjs --mac",
+    "build:electron:dmg": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && node scripts/build-local.cjs --mac dmg",
     "start": "electron .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p src/main/tsconfig.json && tsc --noEmit -p src/preload/tsconfig.json",
     "test:e2e": "pnpm run build && playwright test",
-    "pack": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run verify:packaged-resources && electron-builder --dir",
-    "dist": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && electron-builder",
+    "pack": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run verify:packaged-resources && node scripts/build-local.cjs --dir",
+    "dist": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && node scripts/build-local.cjs",
     "verify:packaged-resources": "node scripts/verify-packaged-resources.cjs",
     "stage:api-binary": "node scripts/stage-api-binary.cjs",
     "stage:local-engine": "node scripts/stage-local-engine-binary.cjs"
@@ -296,7 +296,7 @@
     },
     "dmg": {
       "sign": true,
-      "artifactName": "Allternit-Desktop-${version}-${arch}.dmg",
+      "artifactName": "Allternit-Desktop-${version}${env.ALLTERNIT_BUILD_SUFFIX}-${arch}.dmg",
       "title": "Allternit ${version}",
       "icon": "build/icon.icns",
       "background": "build/dmg-background.png",
@@ -374,7 +374,7 @@
       ]
     },
     "appImage": {
-      "artifactName": "Allternit-${version}.AppImage"
+      "artifactName": "Allternit-${version}${env.ALLTERNIT_BUILD_SUFFIX}.AppImage"
     },
     "deb": {
       "packageCategory": "utils",
@@ -444,7 +444,7 @@
       "createStartMenuShortcut": true,
       "deleteAppDataOnUninstall": false,
       "differentialPackage": true,
-      "artifactName": "Allternit-Setup-${version}.exe",
+      "artifactName": "Allternit-Setup-${version}${env.ALLTERNIT_BUILD_SUFFIX}.exe",
       "license": "build/LICENSE.txt"
     },
     "publish": [
@@ -456,6 +456,6 @@
       }
     ],
     "afterSign": "scripts/notarize.cjs",
-    "artifactName": "Allternit-Desktop-${version}-${arch}.${ext}"
+    "artifactName": "Allternit-Desktop-${version}${env.ALLTERNIT_BUILD_SUFFIX}-${arch}.${ext}"
   }
 }

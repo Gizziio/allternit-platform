@@ -223,10 +223,22 @@ if __name__ == "__main__":
 // ── Routers ──────────────────────────────────────────────────────────────────
 
 /// WebSocket routes, mounted at `/ws/computers` next to the VNC ws route.
+/// Interactive planes (pty/events) stay behind Clerk auth: the ws token only
+/// authorizes the stream, the session authorizes the user.
 pub fn computer_ws_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/:id/pty", get(computer_pty_ws_handler))
         .route("/:id/events", get(computer_events_ws_handler))
+}
+
+/// PUBLIC VNC route, mounted at `/ws/computers` WITHOUT the auth middleware:
+/// the HMAC computer token IS the credential. Purpose "embed" tokens are
+/// minted for anonymous iframe viewers (no Clerk session exists there), so
+/// this route must not require one; purpose "vnc" tokens still require an
+/// authenticated user whose id matches the token (see
+/// `validate_vnc_ws_request`). Purpose "embed" is always forced read-only.
+pub fn computer_vnc_public_router() -> Router<Arc<AppState>> {
+    Router::new().route("/:id/vnc", get(computer_vnc_ws_handler))
 }
 
 /// REST routes, merged under `/api/v1`.
@@ -328,6 +340,93 @@ async fn validate_ws_request(
     }
     require_driver(state)?;
     Ok(computer)
+}
+
+/// Decide VNC proxy access from token claims. Purpose "vnc" honors the
+/// claim's `read_only` flag (full control by default, view-only when the
+/// token says so); purpose "embed" is ALWAYS read-only — embed viewers can
+/// never inject input. Any other purpose is rejected. Returns the effective
+/// `read_only` flag.
+fn resolve_vnc_access(
+    claims: &crate::bot_desktop_stream::DesktopTokenClaims,
+) -> Result<bool, crate::bot_desktop_stream::DesktopTokenError> {
+    match claims.purpose.as_deref() {
+        Some("vnc") => Ok(claims.read_only),
+        Some("embed") => Ok(true),
+        _ => Err(crate::bot_desktop_stream::DesktopTokenError::PurposeMismatch),
+    }
+}
+
+/// Pre-upgrade validation for the VNC ws handler, mounted on the PUBLIC
+/// router (see `computer_vnc_public_router`) — no Clerk session is required
+/// to reach this function. Authorization is purpose-split:
+///
+/// - purpose "vnc" (honors the claim's read_only flag): the caller MUST be an
+///   authenticated user whose id matches the token, and the computer fetch is
+///   owner-scoped exactly like the pty/events planes.
+/// - purpose "embed" (always forced read-only): the HMAC token IS the
+///   credential — it was minted owner-scoped and is handed to anonymous
+///   iframe viewers who have no AuthUser at all. The computer is fetched
+///   without ownership scoping; possessing a valid, unexpired, computer-bound
+///   embed token is the authorization.
+///
+/// Both purposes still require a running computer and a configured driver.
+async fn validate_vnc_ws_request(
+    state: &Arc<AppState>,
+    user: Option<&AuthUser>,
+    id: &str,
+    token: &str,
+) -> Result<(ComputerResponse, bool), Response> {
+    let secret = crate::bot_desktop_stream::desktop_ws_secret(state).ok_or_else(|| {
+        warn!("desktop ws secret not configured");
+        crate::computer_routes::error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "desktop ws not configured",
+        )
+    })?;
+    let claims = crate::bot_desktop_stream::verify_desktop_token(&secret, token).map_err(|e| {
+        warn!(error = %e, computer_id = id, "invalid computer websocket token");
+        crate::computer_routes::error_response(StatusCode::FORBIDDEN, "invalid token")
+    })?;
+    let read_only = resolve_vnc_access(&claims).map_err(|_| {
+        warn!(computer_id = id, purpose = ?claims.purpose, "token purpose does not allow vnc access");
+        crate::computer_routes::error_response(StatusCode::FORBIDDEN, "invalid token")
+    })?;
+    if claims.computer_id.as_deref() != Some(id) {
+        return Err(crate::computer_routes::error_response(
+            StatusCode::FORBIDDEN,
+            "token mismatch",
+        ));
+    }
+    let computer = match claims.purpose.as_deref() {
+        Some("vnc") => {
+            let user = user.ok_or_else(|| {
+                warn!(computer_id = %id, "vnc token presented without an authenticated user");
+                crate::computer_routes::error_response(
+                    StatusCode::FORBIDDEN,
+                    "authentication required for vnc tokens",
+                )
+            })?;
+            if claims.user_id != user.user_id {
+                return Err(crate::computer_routes::error_response(
+                    StatusCode::FORBIDDEN,
+                    "token mismatch",
+                ));
+            }
+            fetch_computer(state, user, id).await?
+        }
+        // "embed": token is the credential; fetch without ownership scoping.
+        _ => crate::computer_routes::fetch_computer_any_owner(state, id).await?,
+    }
+    .ok_or_else(|| crate::computer_routes::error_response(StatusCode::NOT_FOUND, "computer not found"))?;
+    if computer.status != ComputerStatus::Running {
+        return Err(crate::computer_routes::error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "computer is not running",
+        ));
+    }
+    require_driver(state)?;
+    Ok((computer, read_only))
 }
 
 /// Map a driver error for the proxy surface: unsupported substrate → 501,
@@ -629,7 +728,190 @@ fn parse_resize_message(text: &str) -> Option<(u16, u16)> {
     Some((cols as u16, rows as u16))
 }
 
-// ── B. Guest event stream ────────────────────────────────────────────────────
+// ── C. VNC desktop stream (binary WS proxy) ──────────────────────────────────
+
+async fn computer_vnc_ws_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+    user: Option<Extension<AuthUser>>,
+    Path(id): Path<String>,
+    Query(query): Query<ComputerWsQuery>,
+) -> impl IntoResponse {
+    match validate_vnc_ws_request(&state, user.as_ref().map(|e| &e.0), &id, &query.token).await {
+        Ok((computer, read_only)) => {
+            ws.on_upgrade(move |socket| handle_vnc_socket(socket, state, computer, read_only))
+        }
+        Err(response) => response.into_response(),
+    }
+}
+
+/// Binary WS <-> TCP pump to the guest VNC endpoint, mirroring
+/// `handle_bot_desktop_socket` in `bot_desktop_stream.rs`. Standalone
+/// computers have no bot-style `BotDesktopControlState` arbitration (no bot
+/// can hold the desktop), so there is no takeover gate here — the owner
+/// always controls their own computer, and any viewer they admit is either
+/// full-control (purpose "vnc", read_only=false claim) or view-only
+/// (`read_only`). When `read_only` is set the client->TCP direction passes
+/// through an RFB-aware filter (`crate::vnc_readonly`): the handshake and
+/// display-related messages still reach the server so the viewer can connect
+/// and receive frames, but input messages (KeyEvent, PointerEvent,
+/// ClientCutText) are consumed without forwarding. If the client picks a
+/// security mechanism the filter does not understand, the filter degrades to
+/// unfiltered passthrough (flagged via `RfbReadOnlyFilter::unfilterable` and
+/// logged) since read-only can no longer be enforced there. Approval/ACI
+/// gating on the control surfaces is untouched — this route is
+/// view-or-control streaming only.
+async fn handle_vnc_socket(
+    socket: WebSocket,
+    state: Arc<AppState>,
+    computer: ComputerResponse,
+    read_only: bool,
+) {
+    let driver = match require_driver(&state) {
+        Ok(d) => d,
+        Err(_) => {
+            let _ = socket.close().await;
+            return;
+        }
+    };
+    let sandbox_id = computer
+        .native_id
+        .clone()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| computer.id.clone());
+
+    let endpoint = match driver.get_desktop_endpoint_by_native_id(&sandbox_id).await {
+        Ok(Some(ep)) => ep,
+        Ok(None) => {
+            warn!(computer_id = %computer.id, %sandbox_id, "no desktop endpoint found");
+            let _ = socket.close().await;
+            return;
+        }
+        Err(e) => {
+            error!(error = %e, computer_id = %computer.id, %sandbox_id, "failed to resolve desktop endpoint");
+            let _ = socket.close().await;
+            return;
+        }
+    };
+
+    if !matches!(
+        endpoint.protocol,
+        allternit_driver_interface::DesktopProtocol::Vnc
+    ) {
+        warn!(protocol = ?endpoint.protocol, "only raw VNC over TCP is supported for WebSocket proxy");
+        let _ = socket.close().await;
+        return;
+    }
+
+    let tcp_addr = match crate::bot_desktop_stream::parse_tcp_addr(&endpoint.url) {
+        Some(addr) => addr,
+        None => {
+            error!(url = %endpoint.url, "could not parse VNC URL as TCP address");
+            let _ = socket.close().await;
+            return;
+        }
+    };
+
+    info!(computer_id = %computer.id, %tcp_addr, read_only, "Opening VNC WebSocket proxy");
+
+    let tcp = match TcpStream::connect(&tcp_addr).await {
+        Ok(stream) => stream,
+        Err(e) => {
+            error!(error = %e, %tcp_addr, "failed to connect to VNC endpoint");
+            let _ = socket.close().await;
+            return;
+        }
+    };
+
+    let (mut ws_sender, mut ws_receiver) = socket.split();
+    let (mut tcp_read, mut tcp_write) = tokio::io::split(tcp);
+
+    // Channel for messages that need to go to the browser.
+    let (ws_tx, mut ws_rx) = mpsc::channel::<Message>(128);
+    let ws_tx2 = ws_tx.clone();
+    let computer_id_for_filter = computer.id.clone();
+
+    // Forward channel -> WebSocket sender.
+    let forward_to_ws = tokio::spawn(async move {
+        while let Some(msg) = ws_rx.recv().await {
+            if ws_sender.send(msg).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // Forward WebSocket receiver -> TCP. In read-only mode binary frames pass
+    // through an RFB-aware filter: the handshake and display-related messages
+    // (SetPixelFormat, SetEncodings, FramebufferUpdateRequest, ...) are
+    // forwarded so the viewer can actually connect, while input messages
+    // (KeyEvent, PointerEvent, ClientCutText) are consumed without forwarding.
+    // Control frames (ping/pong/close) are still honored so the connection
+    // stays healthy.
+    let mut ro_filter = crate::vnc_readonly::RfbReadOnlyFilter::new();
+    let mut unfilterable_warned = false;
+    let ws_to_tcp = tokio::spawn(async move {
+        while let Some(msg) = ws_receiver.next().await {
+            match msg {
+                Ok(Message::Binary(data)) => {
+                    if read_only {
+                        let filtered = ro_filter.feed(&data);
+                        if ro_filter.unfilterable() && !unfilterable_warned {
+                            unfilterable_warned = true;
+                            warn!(
+                                computer_id = %computer_id_for_filter,
+                                "read-only degraded to unfiltered passthrough: unknown VNC security/version bytes; input can no longer be blocked"
+                            );
+                        }
+                        if !filtered.is_empty() && tcp_write.write_all(&filtered).await.is_err() {
+                            break;
+                        }
+                    } else if tcp_write.write_all(&data).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(Message::Close(_)) => break,
+                Ok(Message::Ping(data)) => {
+                    let _ = ws_tx2.send(Message::Pong(data)).await;
+                }
+                Ok(Message::Pong(_)) => {}
+                Err(e) => {
+                    debug!(error = %e, "VNC WebSocket receive error");
+                    break;
+                }
+                _ => {}
+            }
+        }
+    });
+
+    // Forward TCP -> WebSocket channel.
+    let tcp_to_ws = tokio::spawn(async move {
+        let mut buf = vec![0u8; 16384];
+        loop {
+            match tcp_read.read(&mut buf).await {
+                Ok(0) => break,
+                Ok(n) => {
+                    if ws_tx.send(Message::Binary(buf[..n].to_vec())).await.is_err() {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    debug!(error = %e, "VNC TCP read error");
+                    break;
+                }
+            }
+        }
+    });
+
+    tokio::select! {
+        _ = forward_to_ws => {},
+        _ = ws_to_tcp => {},
+        _ = tcp_to_ws => {},
+    }
+
+    info!(computer_id = %computer.id, "VNC WebSocket proxy closed");
+}
+
+// ── D. Guest event stream ────────────────────────────────────────────────────
 
 async fn computer_events_ws_handler(
     ws: WebSocketUpgrade,
@@ -838,6 +1120,12 @@ async fn computer_events_history(
 #[derive(Debug, Deserialize)]
 pub struct IssueWsTokenRequest {
     purpose: String,
+    /// VNC only: mint the token view-only. Defaults to TRUE — a full-control
+    /// VNC token (read_only=false) can inject keyboard/mouse into the guest,
+    /// so it requires an ACI confirmation grant like the other control
+    /// surfaces. Ignored for pty/events (always full-control interactive).
+    #[serde(default)]
+    read_only: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -847,17 +1135,25 @@ pub struct IssueWsTokenResponse {
 }
 
 /// POST /api/v1/computers/:id/ws-token — mint a short-lived computer-scoped
-/// ws token for the pty or events stream.
+/// ws token for the pty, events, or vnc stream.
+///
+/// Purpose "vnc" defaults to read-only. Minting a FULL-CONTROL vnc token
+/// (`read_only: false`) is an approval-gated action: the pty/events purposes
+/// have no mint gate (an interactive shell is reachable through the pty
+/// anyway), but a read_only=false VNC token hands over the graphical desktop,
+/// so it goes through the same `enforce_confirmation` grant machinery as the
+/// control routes — pass `?approval_id=` from the confirmation handoff.
 async fn issue_ws_token(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
+    Query(approval): Query<ApprovalQuery>,
     Json(body): Json<IssueWsTokenRequest>,
 ) -> impl IntoResponse {
-    if body.purpose != "pty" && body.purpose != "events" {
+    if body.purpose != "pty" && body.purpose != "events" && body.purpose != "vnc" {
         return crate::computer_routes::error_response(
             StatusCode::BAD_REQUEST,
-            "purpose must be \"pty\" or \"events\"",
+            "purpose must be \"pty\", \"events\", or \"vnc\"",
         );
     }
     let computer = match fetch_computer(&state, &user, &id).await {
@@ -865,6 +1161,28 @@ async fn issue_ws_token(
         Ok(None) => return crate::computer_routes::error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(response) => return response,
     };
+    let read_only = match body.purpose.as_str() {
+        "vnc" => body.read_only.unwrap_or(true),
+        // pty/events are inherently interactive; read_only is not applicable.
+        _ => false,
+    };
+    if body.purpose == "vnc" && !read_only {
+        let descriptor = json!({
+            "computer_id": computer.id,
+            "purpose": "vnc",
+            "read_only": false,
+        });
+        if let Err(denial) = crate::aci_safety::enforce_confirmation(
+            &state.approval_store,
+            &user.user_id,
+            "computers.ws_token",
+            crate::aci_safety::ConfirmationClass::Risky,
+            &descriptor,
+            approval.approval_id.as_deref(),
+        ) {
+            return (denial.status, Json(denial.body)).into_response();
+        }
+    }
     let secret = match crate::bot_desktop_stream::desktop_ws_secret(&state) {
         Some(s) => s,
         None => {
@@ -885,13 +1203,14 @@ async fn issue_ws_token(
         &user.user_id,
         WS_TOKEN_TTL_SECONDS,
         &body.purpose,
+        read_only,
     );
     crate::computer_audit::log_computer_access(
         &state.db,
         &computer.id,
         &user.user_id,
         crate::computer_audit::KIND_WS_TOKEN,
-        &format!("purpose={}", body.purpose),
+        &format!("purpose={} read_only={read_only}", body.purpose),
     );
     Json(IssueWsTokenResponse {
         token,
@@ -1289,6 +1608,418 @@ async fn proxy_forward(
 mod tests {
     use super::*;
     use axum::http::HeaderValue;
+
+    const TEST_SECRET: &str = "test-ws-secret-for-unit-tests";
+
+    #[test]
+    fn vnc_access_resolution() {
+        use crate::bot_desktop_stream::{sign_computer_token, verify_desktop_token, DesktopTokenError};
+
+        // Purpose "vnc" honors the claim's read_only flag.
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "s", "user-1", 60, "vnc", false);
+        let claims = verify_desktop_token(TEST_SECRET, &token).unwrap();
+        assert_eq!(resolve_vnc_access(&claims), Ok(false));
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "s", "user-1", 60, "vnc", true);
+        let claims = verify_desktop_token(TEST_SECRET, &token).unwrap();
+        assert_eq!(resolve_vnc_access(&claims), Ok(true));
+
+        // Purpose "embed" is ALWAYS read-only, even if the claim says false.
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "s", "user-1", 60, "embed", false);
+        let claims = verify_desktop_token(TEST_SECRET, &token).unwrap();
+        assert_eq!(resolve_vnc_access(&claims), Ok(true));
+
+        // Other purposes are rejected on the VNC surface.
+        for purpose in ["pty", "events"] {
+            let token = sign_computer_token(TEST_SECRET, "computer-1", "s", "user-1", 60, purpose, false);
+            let claims = verify_desktop_token(TEST_SECRET, &token).unwrap();
+            assert!(matches!(
+                resolve_vnc_access(&claims),
+                Err(DesktopTokenError::PurposeMismatch)
+            ));
+        }
+
+        // Bot-shaped tokens (no purpose) are rejected too.
+        let bot_token = crate::bot_desktop_stream::sign_desktop_token(TEST_SECRET, "bot-1", "s", "user-1", 60);
+        let claims = verify_desktop_token(TEST_SECRET, &bot_token).unwrap();
+        assert!(matches!(
+            resolve_vnc_access(&claims),
+            Err(DesktopTokenError::PurposeMismatch)
+        ));
+    }
+
+    /// Insert a running owner-scoped computer for handler-level tests.
+    async fn state_with_computer(
+        vm_driver: Option<Arc<dyn ExecutionDriver>>,
+    ) -> Arc<AppState> {
+        let temp = tempfile::tempdir().unwrap();
+        let state = crate::test_helpers::app_state_with_driver(temp.path(), vm_driver).await;
+        // Keep the tempdir alive for the duration of the test.
+        std::mem::forget(temp);
+        state
+            .db
+            .connect()
+            .unwrap()
+            .execute(
+                "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, name, os, native_id, billing_source)
+                 VALUES ('computer-1', 'cloud_desktop', 'incus', 'running', 'user', 'user-1', 'Builder Box', 'ubuntu-24.04', 'sandbox-1', 'credits')",
+                [],
+            )
+            .unwrap();
+        state
+    }
+
+    /// Presence-only driver stub: `validate_vnc_ws_request` checks that a
+    /// driver is configured but never calls it on the success path.
+    #[derive(Debug)]
+    struct StubDriver;
+
+    #[async_trait::async_trait]
+    impl ExecutionDriver for StubDriver {
+        fn capabilities(&self) -> allternit_driver_interface::DriverCapabilities {
+            use allternit_driver_interface::{
+                DriverCapabilities, DriverFeatures, DriverType, EnvSpecType, IsolationLevel,
+                ResourceSpec,
+            };
+            DriverCapabilities {
+                resize: false,
+                clone: false,
+                driver_type: DriverType::Container,
+                isolation: IsolationLevel::Standard,
+                max_resources: ResourceSpec {
+                    cpu_millis: 2000,
+                    memory_mib: 4096,
+                    disk_mib: Some(20480),
+                    network_egress_kib: None,
+                    gpu_count: None,
+                },
+                supported_env_specs: vec![EnvSpecType::Oci],
+                features: DriverFeatures {
+                    snapshot: false,
+                    live_restore: false,
+                    gpu: false,
+                    prewarm: false,
+                },
+            }
+        }
+
+        async fn spawn(
+            &self,
+            _spec: allternit_driver_interface::SpawnSpec,
+        ) -> std::result::Result<ExecutionHandle, allternit_driver_interface::DriverError> {
+            Err(allternit_driver_interface::DriverError::NotSupported {
+                feature: "spawn".to_string(),
+            })
+        }
+
+        async fn pause_vm(
+            &self,
+            _handle: &ExecutionHandle,
+        ) -> std::result::Result<(), allternit_driver_interface::DriverError> {
+            Ok(())
+        }
+
+        async fn resume_vm(
+            &self,
+            _handle: &ExecutionHandle,
+        ) -> std::result::Result<(), allternit_driver_interface::DriverError> {
+            Ok(())
+        }
+
+        async fn exec(
+            &self,
+            _handle: &ExecutionHandle,
+            _cmd: CommandSpec,
+        ) -> std::result::Result<allternit_driver_interface::ExecResult, allternit_driver_interface::DriverError>
+        {
+            Err(allternit_driver_interface::DriverError::NotSupported {
+                feature: "exec".to_string(),
+            })
+        }
+
+        async fn stream_logs(
+            &self,
+            _handle: &ExecutionHandle,
+        ) -> std::result::Result<Vec<allternit_driver_interface::LogEntry>, allternit_driver_interface::DriverError>
+        {
+            Ok(Vec::new())
+        }
+
+        async fn get_artifacts(
+            &self,
+            _handle: &ExecutionHandle,
+        ) -> std::result::Result<Vec<allternit_driver_interface::Artifact>, allternit_driver_interface::DriverError>
+        {
+            Ok(Vec::new())
+        }
+
+        async fn destroy(
+            &self,
+            _handle: &ExecutionHandle,
+        ) -> std::result::Result<(), allternit_driver_interface::DriverError> {
+            Ok(())
+        }
+
+        async fn get_consumption(
+            &self,
+            _handle: &ExecutionHandle,
+        ) -> std::result::Result<allternit_driver_interface::ResourceConsumption, allternit_driver_interface::DriverError>
+        {
+            Err(allternit_driver_interface::DriverError::NotSupported {
+                feature: "consumption".to_string(),
+            })
+        }
+
+        async fn get_receipt(
+            &self,
+            _handle: &ExecutionHandle,
+        ) -> std::result::Result<Option<allternit_driver_interface::Receipt>, allternit_driver_interface::DriverError>
+        {
+            Ok(None)
+        }
+
+        async fn health_check(&self) -> std::result::Result<allternit_driver_interface::DriverHealth, allternit_driver_interface::DriverError> {
+            Ok(allternit_driver_interface::DriverHealth {
+                healthy: true,
+                ..Default::default()
+            })
+        }
+    }
+
+    fn handler_test_secret() {
+        // validate/issue paths read the secret from env on every call.
+        std::env::set_var("ALLTERNIT_DESKTOP_WS_SECRET", TEST_SECRET);
+    }
+
+    fn auth_user(user_id: &str) -> AuthUser {
+        AuthUser {
+            user_id: user_id.to_string(),
+            organization_id: Some("org-1".into()),
+            tenant_id: None,
+            email: None,
+            name: None,
+            avatar_url: None,
+            organization_role: None,
+            organization_slug: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn vnc_embed_token_needs_no_auth_user() {
+        // The public VNC route exists for anonymous iframe viewers: an embed
+        // token (HMAC, computer-bound, expiring, forced read-only) is the
+        // entire credential — None user must validate fine.
+        handler_test_secret();
+        let state = state_with_computer(Some(Arc::new(StubDriver))).await;
+        let token = crate::bot_desktop_stream::sign_computer_token(
+            TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "embed", true,
+        );
+        let (computer, read_only) =
+            validate_vnc_ws_request(&state, None, "computer-1", &token)
+                .await
+                .expect("embed token validates without an AuthUser");
+        assert_eq!(computer.id, "computer-1");
+        assert!(read_only, "embed is always read-only");
+    }
+
+    #[tokio::test]
+    async fn vnc_full_control_token_requires_auth_user() {
+        // Purpose "vnc" tokens are minted for a specific authenticated user;
+        // without an AuthUser the request must be rejected even with a valid
+        // token.
+        handler_test_secret();
+        let state = state_with_computer(None).await;
+        let token = crate::bot_desktop_stream::sign_computer_token(
+            TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "vnc", true,
+        );
+        let err = validate_vnc_ws_request(&state, None, "computer-1", &token)
+            .await
+            .expect_err("vnc token without a user must be rejected");
+        assert_eq!(err.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn vnc_token_rejects_mismatched_user() {
+        handler_test_secret();
+        let state = state_with_computer(None).await;
+        let token = crate::bot_desktop_stream::sign_computer_token(
+            TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "vnc", true,
+        );
+        let err = validate_vnc_ws_request(&state, Some(&auth_user("user-2")), "computer-1", &token)
+            .await
+            .expect_err("vnc token minted for user-1 must not authorize user-2");
+        assert_eq!(err.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn vnc_embed_token_is_computer_bound() {
+        handler_test_secret();
+        let state = state_with_computer(None).await;
+        let token = crate::bot_desktop_stream::sign_computer_token(
+            TEST_SECRET, "computer-a", "sandbox-a", "user-1", 60, "embed", true,
+        );
+        let err = validate_vnc_ws_request(&state, None, "computer-1", &token)
+            .await
+            .expect_err("embed token for another computer must be rejected");
+        assert_eq!(err.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn vnc_public_route_is_not_behind_auth_middleware() {
+        // Router-mount level: a request with NO Authorization header and no
+        // Clerk session must get past any auth gate. In-process oneshot has no
+        // connection upgrade state, so axum's WebSocketUpgrade extractor
+        // rejects with 426 ConnectionNotUpgradable — that is the proof: the
+        // request reached the route's own extractor instead of the auth
+        // middleware's 401 MissingToken.
+        handler_test_secret();
+        let temp = tempfile::tempdir().unwrap();
+        let state = crate::test_helpers::app_state(temp.path()).await;
+        std::mem::forget(temp);
+        let request = axum::http::Request::builder()
+            .uri("/computer-1/vnc?token=not-a-real-token")
+            .header("connection", "upgrade")
+            .header("upgrade", "websocket")
+            .header("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ==")
+            .header("sec-websocket-version", "13")
+            .body(axum::body::Body::empty())
+            .unwrap();
+        let response = tower::ServiceExt::oneshot(
+            computer_vnc_public_router().with_state(state),
+            request,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            response.status(),
+            StatusCode::UPGRADE_REQUIRED,
+            "request must reach the route's own ws extractor (426), not the auth middleware (401)"
+        );
+    }
+
+    #[tokio::test]
+    async fn ws_token_mints_vnc_read_only_by_default() {
+        handler_test_secret();
+        let state = state_with_computer(None).await;
+        let response = issue_ws_token(
+            State(state.clone()),
+            Extension(auth_user("user-1")),
+            Path("computer-1".to_string()),
+            Query(crate::computer_routes::ApprovalQuery { approval_id: None }),
+            Json(IssueWsTokenRequest { purpose: "vnc".into(), read_only: None }),
+        )
+        .await
+        .into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let claims = crate::bot_desktop_stream::verify_desktop_token(
+            TEST_SECRET,
+            value["token"].as_str().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(claims.purpose.as_deref(), Some("vnc"));
+        assert!(claims.read_only, "vnc ws tokens must default to read-only");
+    }
+
+    #[tokio::test]
+    async fn ws_token_full_control_vnc_requires_approval() {
+        handler_test_secret();
+        let state = state_with_computer(None).await;
+        let response = issue_ws_token(
+            State(state.clone()),
+            Extension(auth_user("user-1")),
+            Path("computer-1".to_string()),
+            Query(crate::computer_routes::ApprovalQuery { approval_id: None }),
+            Json(IssueWsTokenRequest { purpose: "vnc".into(), read_only: Some(false) }),
+        )
+        .await
+        .into_response();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body = axum::body::to_bytes(response.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(value["error"], "confirmation_required");
+    }
+
+    #[tokio::test]
+    async fn ws_token_full_control_vnc_redeems_approval_grant() {
+        handler_test_secret();
+        let state = state_with_computer(None).await;
+        // Mirror the REST control-surface pattern: the denial payload carries
+        // a fresh approval_id; the human handoff approves it
+        // (`GRANTS.approve`), and presenting the approved grant back satisfies
+        // the gate. A Pending (unapproved) grant must NOT redeem.
+        let denied = issue_ws_token(
+            State(state.clone()),
+            Extension(auth_user("user-1")),
+            Path("computer-1".to_string()),
+            Query(crate::computer_routes::ApprovalQuery { approval_id: None }),
+            Json(IssueWsTokenRequest { purpose: "vnc".into(), read_only: Some(false) }),
+        )
+        .await
+        .into_response();
+        let body = axum::body::to_bytes(denied.into_body(), 1 << 20)
+            .await
+            .unwrap();
+        let denial: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let approval_id = denial["approval_id"].as_str().unwrap().to_string();
+
+        // Pending grant: not yet approved → still denied.
+        let pending = issue_ws_token(
+            State(state.clone()),
+            Extension(auth_user("user-1")),
+            Path("computer-1".to_string()),
+            Query(crate::computer_routes::ApprovalQuery { approval_id: Some(approval_id.clone()) }),
+            Json(IssueWsTokenRequest { purpose: "vnc".into(), read_only: Some(false) }),
+        )
+        .await
+        .into_response();
+        assert_eq!(pending.status(), StatusCode::FORBIDDEN);
+
+        // Human approval through the handoff, then the grant redeems once.
+        assert!(crate::aci_approvals::GRANTS.approve(&approval_id));
+        let allowed = issue_ws_token(
+            State(state.clone()),
+            Extension(auth_user("user-1")),
+            Path("computer-1".to_string()),
+            Query(crate::computer_routes::ApprovalQuery { approval_id: Some(approval_id.clone()) }),
+            Json(IssueWsTokenRequest { purpose: "vnc".into(), read_only: Some(false) }),
+        )
+        .await
+        .into_response();
+        assert_eq!(allowed.status(), StatusCode::OK);
+
+        // Grants are single-use: the second attempt is denied.
+        let reused = issue_ws_token(
+            State(state.clone()),
+            Extension(auth_user("user-1")),
+            Path("computer-1".to_string()),
+            Query(crate::computer_routes::ApprovalQuery { approval_id: Some(approval_id) }),
+            Json(IssueWsTokenRequest { purpose: "vnc".into(), read_only: Some(false) }),
+        )
+        .await
+        .into_response();
+        assert_eq!(reused.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn ws_token_rejects_unknown_purpose() {
+        handler_test_secret();
+        let state = state_with_computer(None).await;
+        let response = issue_ws_token(
+            State(state.clone()),
+            Extension(auth_user("user-1")),
+            Path("computer-1".to_string()),
+            Query(crate::computer_routes::ApprovalQuery { approval_id: None }),
+            Json(IssueWsTokenRequest { purpose: "bogus".into(), read_only: None }),
+        )
+        .await
+        .into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
 
     #[test]
     fn resize_message_parsing() {

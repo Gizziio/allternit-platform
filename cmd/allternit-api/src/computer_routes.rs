@@ -268,7 +268,7 @@ pub(crate) fn computer_visibility_clause(user_param: usize, org_param: Option<us
     format!("(c.owner_id = ?{user_param} OR (c.kind = 'cloud_desktop' AND a.user_id = ?{user_param}){org})")
 }
 
-async fn list_computers(
+pub(crate) async fn list_computers(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Query(query): Query<ListComputersQuery>,
@@ -379,6 +379,54 @@ pub(crate) async fn fetch_computer(
         .filter(|c| c.status != ComputerStatus::Deleted))
 }
 
+/// Fetch a computer by id with NO ownership scoping. Only for callers whose
+/// authorization already comes from elsewhere (the HMAC computer ws token on
+/// the public VNC route) — the token, not the request identity, proves access.
+pub(crate) async fn fetch_computer_any_owner(
+    state: &Arc<AppState>,
+    id: &str,
+) -> Result<Option<ComputerResponse>, Response> {
+    let db = state.db.clone();
+    let id_owned = id.to_string();
+    let id_for_error = id.to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id, \
+             c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb, \
+             c.region, c.host, c.native_id, c.template_id, c.billing_source, \
+             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id, c.role \
+             FROM computers c \
+             WHERE c.id = ?1",
+        )?;
+        let row = stmt.query_row(rusqlite::params![id_owned], computer_from_row);
+        match row {
+            Ok(c) => Ok(Some(c)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e),
+        }
+    })
+    .await;
+
+    match result {
+        Ok(Ok(computer)) => Ok(computer),
+        Ok(Err(e)) => {
+            warn!(computer_id = %id_for_error, error = %e, "failed to fetch computer");
+            Err(error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("database error: {}", e),
+            ))
+        }
+        Err(e) => {
+            warn!(computer_id = %id_for_error, error = %e, "task panicked fetching computer");
+            Err(error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal error",
+            ))
+        }
+    }
+}
+
 pub(crate) async fn fetch_computer_including_deleted(
     state: &Arc<AppState>,
     user: &AuthUser,
@@ -439,7 +487,7 @@ pub(crate) async fn fetch_computer_including_deleted(
     }
 }
 
-async fn create_computer(
+pub(crate) async fn create_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Json(mut req): Json<CreateComputerRequest>,
@@ -1462,7 +1510,7 @@ async fn restart_computer(
     start_cloud_desktop(&state, &computer).await
 }
 
-async fn start_computer(
+pub(crate) async fn start_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -1529,7 +1577,7 @@ async fn start_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse)
     }
 }
 
-async fn stop_computer(
+pub(crate) async fn stop_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2318,10 +2366,10 @@ fn touch_activity_row(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result
 }
 
 #[derive(Debug, Deserialize)]
-struct ResizeComputerRequest {
-    cpu_cores: Option<i64>,
-    memory_mb: Option<i64>,
-    disk_mb: Option<i64>,
+pub(crate) struct ResizeComputerRequest {
+    pub cpu_cores: Option<i64>,
+    pub memory_mb: Option<i64>,
+    pub disk_mb: Option<i64>,
 }
 
 fn validate_resize(
@@ -2381,7 +2429,7 @@ fn lifecycle_driver_error(
     }
 }
 
-async fn resize_computer(
+pub(crate) async fn resize_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2485,9 +2533,9 @@ async fn update_computer(
     }
 }
 
-#[derive(Deserialize)]
-struct CloneComputerRequest {
-    name: Option<String>,
+#[derive(Debug, Deserialize)]
+pub(crate) struct CloneComputerRequest {
+    pub name: Option<String>,
 }
 
 /// Copy domain rows atomically, resetting transient takeover/connection state for the new instance.
@@ -2510,7 +2558,7 @@ fn insert_computer_clone(
     tx.commit()
 }
 
-async fn clone_computer(
+pub(crate) async fn clone_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,

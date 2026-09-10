@@ -20,6 +20,7 @@ import { agentCommand } from './commands/agent.js';
 import { adminCommand } from './commands/admin.js';
 import { cloudCommand } from './commands/cloud.js';
 import { fabricCommand } from './commands/fabric.js';
+import { computersCommand } from './commands/computers.js';
 import { version } from '../package.json' assert { type: 'json' };
 
 const program = new Command();
@@ -46,6 +47,7 @@ program.addCommand(agentCommand);
 program.addCommand(adminCommand);
 program.addCommand(cloudCommand);
 program.addCommand(fabricCommand);
+program.addCommand(computersCommand);
 
 // Parse and execute
 program.parse();
