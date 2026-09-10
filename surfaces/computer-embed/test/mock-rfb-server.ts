@@ -10,6 +10,11 @@ export interface MockRfbServerOptions {
   width?: number;
   height?: number;
   name?: string;
+  /** Hold the greeting until `sendGreeting()` is called (ordering tests). */
+  holdGreeting?: boolean;
+  /** Split every outbound server message into chunks of this many bytes, sent
+   * as separate ws frames — exercises client reassembly over real framing. */
+  frameSplit?: number;
   /** Observe every client→server message (type byte + full payload). */
   onClientMessage?: (type: number, bytes: Uint8Array) => void;
 }
@@ -17,7 +22,11 @@ export interface MockRfbServerOptions {
 export interface MockRfbServer {
   port: number;
   receivedTypes: number[];
+  /** Total client→server bytes observed (any phase). */
+  bytesReceived: number;
   close(): Promise<void>;
+  /** Send the greeting when the server was started with `holdGreeting`. */
+  sendGreeting(): void;
 }
 
 /** Deterministic BGRX pattern the mock paints: r=x, g=y, b=128. */
@@ -30,21 +39,45 @@ export async function startMockRfbServer(options: MockRfbServerOptions = {}): Pr
   const height = options.height ?? 48;
   const name = options.name ?? "mock-rfb";
   const receivedTypes: number[] = [];
+  let bytesReceived = 0;
+  const frameSplit = options.frameSplit && options.frameSplit > 0 ? options.frameSplit : 0;
 
   const wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
   await new Promise<void>((resolve) => wss.once("listening", resolve));
+
+  const sendChunked = (socket: WsSocket, data: Buffer | Uint8Array) => {
+    const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (!frameSplit || buf.length <= frameSplit) {
+      socket.send(buf);
+      return;
+    }
+    for (let off = 0; off < buf.length; off += frameSplit) {
+      socket.send(buf.subarray(off, Math.min(off + frameSplit, buf.length)));
+    }
+  };
+
+  let heldSocket: WsSocket | null = null;
+  const sendGreeting = () => {
+    if (heldSocket) {
+      heldSocket.send(Buffer.from("RFB 003.008\n", "ascii"));
+      heldSocket = null;
+    }
+  };
 
   wss.on("connection", (socket: WsSocket) => {
     let phase: "version" | "choice" | "init" | "normal" = "version";
     let firstFullRequestSeen = false;
 
+    const reply = (data: Buffer) => sendChunked(socket, data);
+
     socket.on("message", (raw: Buffer) => {
+      bytesReceived += raw.byteLength;
       const data = new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength);
       if (phase === "version") {
         // Client version string received; advertise security types (None only),
         // mirroring the proxy's rewritten [1] offer.
         phase = "choice";
-        socket.send(Buffer.from([1, 1]));
+        reply(Buffer.from([1, 1]));
         return;
       }
       if (phase === "choice") {
@@ -53,12 +86,12 @@ export async function startMockRfbServer(options: MockRfbServerOptions = {}): Pr
           return;
         }
         phase = "init";
-        socket.send(Buffer.from([0, 0, 0, 0])); // SecurityResult: OK
+        reply(Buffer.from([0, 0, 0, 0])); // SecurityResult: OK
         return;
       }
       if (phase === "init") {
         phase = "normal";
-        socket.send(serverInit(width, height, name));
+        reply(serverInit(width, height, name));
         return;
       }
       // Normal phase: parse one typed client message.
@@ -70,14 +103,18 @@ export async function startMockRfbServer(options: MockRfbServerOptions = {}): Pr
         const incremental = data[1]! === 1;
         if (!incremental && !firstFullRequestSeen) {
           firstFullRequestSeen = true;
-          socket.send(firstUpdate(width, height));
+          reply(firstUpdate(width, height));
         } else {
-          socket.send(incrementalUpdate());
+          reply(incrementalUpdate());
         }
       }
     });
 
-    socket.send(Buffer.from("RFB 003.008\n", "ascii"));
+    if (options.holdGreeting) {
+      heldSocket = socket;
+    } else {
+      socket.send(Buffer.from("RFB 003.008\n", "ascii"));
+    }
   });
 
   const address = wss.address();
@@ -86,6 +123,10 @@ export async function startMockRfbServer(options: MockRfbServerOptions = {}): Pr
   return {
     port: address.port,
     receivedTypes,
+    get bytesReceived() {
+      return bytesReceived;
+    },
+    sendGreeting,
     close: () =>
       new Promise((resolve) => {
         for (const client of wss.clients) client.terminate();

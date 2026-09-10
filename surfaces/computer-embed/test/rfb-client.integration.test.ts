@@ -47,6 +47,32 @@ describe("RfbClient against mock RFB (None-auth) server", () => {
     expect(surface.resizeCalls).toContainEqual({ width: 64, height: 48 });
   });
 
+  it("sends nothing until the server greeting arrives (server-speaks-first)", async () => {
+    // Regression: the client used to fire its version string on ws open,
+    // before the greeting. The real Allternit ws proxy buffers client bytes
+    // that arrive before the greeting and never re-drains them, so the
+    // handshake deadlocked (verified live 2026-09-10). RFB is
+    // server-speaks-first; the client must stay silent until greeted.
+    await server.close();
+    server = await startMockRfbServer({ holdGreeting: true });
+    const surface = new MemorySurface();
+    const ws = new WebSocket(`ws://127.0.0.1:${server.port}`);
+    client = new RfbClient({
+      ws: adaptNodeWebSocket(ws as never),
+      surface,
+      onStatus: (status) => statuses.push(status),
+      onError: (message) => errors.push(message),
+    });
+    await new Promise((r) => setTimeout(r, 400));
+    expect(server.bytesReceived).toBe(0);
+    expect(statuses).not.toContain("connected");
+
+    server.sendGreeting();
+    await waitFor(() => statuses.includes("connected"), "client to connect");
+    expect(server.bytesReceived).toBeGreaterThan(0);
+    expect(errors).toEqual([]);
+  });
+
   it("renders a raw FramebufferUpdate to the surface", async () => {
     const surface = new MemorySurface();
     await connect(surface);
@@ -98,29 +124,38 @@ describe("RfbClient against mock RFB (None-auth) server", () => {
   });
 
   it("survives fragmented message delivery", async () => {
-    // Re-wrap the ws so every frame is delivered in 7-byte chunks.
+    // REAL fragmentation this time: the mock splits every server message into
+    // 7-byte ws frames, so the 12KB raw rect of the first update arrives
+    // mid-rect across many frames. (The previous version of this test sliced
+    // messages through a captured null handler and never fragmented anything.)
+    await server.close();
+    server = await startMockRfbServer({ width: 64, height: 48, name: "mock-rfb", frameSplit: 7 });
     const surface = new MemorySurface();
-    const ws = new WebSocket(`ws://127.0.0.1:${server.port}`);
-    const adapted = adaptNodeWebSocket(ws as never);
-    const originalOnMessage = adapted.onmessage;
-    adapted.onmessage = null;
-    ws.on("message", (data: ArrayBuffer | Uint8Array) => {
-      const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
-      for (let off = 0; off < bytes.length; off += 7) {
-        const slice = bytes.subarray(off, Math.min(off + 7, bytes.length));
-        originalOnMessage?.({ data: slice });
-      }
-    });
-    client = new RfbClient({
-      ws: adapted,
-      surface,
-      onStatus: (status) => statuses.push(status),
-      onError: (message) => errors.push(message),
-    });
-    await waitFor(() => statuses.includes("connected"), "client to connect");
+    await connect(surface);
     await waitFor(() => surface.commitCount >= 1, "first framebuffer update");
     expect(surface.pixelAt(10, 5)).toEqual([10, 5, 128, 255]);
     expect(errors).toEqual([]);
+  });
+
+  it("never sends input messages (KeyEvent/PointerEvent/ClientCutText) — fragmented too", async () => {
+    await server.close();
+    server = await startMockRfbServer({ width: 64, height: 48, name: "mock-rfb", frameSplit: 7 });
+    const surface = new MemorySurface();
+    await connect(surface);
+    await waitFor(() => surface.commitCount >= 1, "first framebuffer update");
+
+    // Allowed client→server types: 0 (SetPixelFormat), 2 (SetEncodings),
+    // 3 (FramebufferUpdateRequest). Input is 4, 5, 6 — must never appear.
+    expect(server.receivedTypes.length).toBeGreaterThan(0);
+    for (const type of server.receivedTypes) {
+      expect([0, 2, 3]).toContain(type);
+    }
+    expect(server.receivedTypes).toContain(0);
+    expect(server.receivedTypes).toContain(2);
+    expect(server.receivedTypes).toContain(3);
+    expect(server.receivedTypes).not.toContain(4);
+    expect(server.receivedTypes).not.toContain(5);
+    expect(server.receivedTypes).not.toContain(6);
   });
 });
 
