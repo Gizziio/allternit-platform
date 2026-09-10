@@ -5,6 +5,9 @@ release/
 # Staged office-engine sidecar bundle (prepare:office-engine)
 resources/office-engine/
 
+# Staged open-connector sidecar bundle (prepare:connector-sidecar)
+resources/connector-sidecar/dist/
+
 # Staged Cua Driver binary (prepare:cua-driver downloads this at build time)
 resources/computer-use/cua-driver
 

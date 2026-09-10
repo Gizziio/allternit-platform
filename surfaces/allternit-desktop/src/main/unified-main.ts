@@ -259,6 +259,7 @@ let serviceState = {
   api: { status: 'pending', detail: 'Starting…' },
   gateway: { status: 'pending', detail: 'Starting…' },
   gizzi: { status: 'pending', detail: 'Starting…' },
+  connector: { status: 'pending', detail: 'Waiting…' },
   platform: { status: 'pending', detail: 'Waiting…' },
   research: { status: 'pending', detail: 'Waiting…' },
 };
@@ -844,6 +845,7 @@ async function initializeBundledMode(): Promise<void> {
     api: { status: 'pending', detail: 'Starting…' },
     gateway: { status: 'pending', detail: 'Starting…' },
     gizzi: { status: 'pending', detail: 'Starting…' },
+    connector: { status: 'pending', detail: 'Waiting…' },
     platform: { status: 'pending', detail: 'Waiting…' },
     research: { status: 'pending', detail: 'Waiting…' },
   };
@@ -854,7 +856,34 @@ async function initializeBundledMode(): Promise<void> {
   
   try {
     log.info('[Main] Starting initialization sequence...');
-    // Step 1 — gizzi-code (AI runtime, port ${PORTS.GIZZI})
+    // Step 1 — connector sidecar (open-connector, ephemeral loopback port).
+    // allternit-api's connector routes proxy to this and gizzi-code's Lens
+    // vault connectors call it directly — it must be up BEFORE both so
+    // their env gets the real announced URL. Non-fatal if it fails
+    // (connector-backed sources stay unavailable).
+    {
+      connectorSidecarManager.onDegraded(() => {
+        serviceState.connector = { status: 'down', detail: 'Connector unavailable — restart the app' };
+        pushServiceState();
+      });
+      const sidecarEnv = authManager.getConnectorSidecarEnvironment();
+      try {
+        const connectorUrl = await connectorSidecarManager.start({
+          encryptionKey: authManager.getPlatformEncryptionEnvironment().ALLTERNIT_ENCRYPTION_KEY,
+          adminToken: sidecarEnv.ALLTERNIT_CONNECTOR_SIDECAR_ADMIN_TOKEN,
+          runtimeToken: sidecarEnv.ALLTERNIT_CONNECTOR_SIDECAR_RUNTIME_TOKEN,
+        });
+        log.info('[Main] Connector sidecar started successfully');
+        serviceState.connector = { status: 'up', detail: `Connected on ${connectorUrl}` };
+        pushServiceState();
+      } catch (sidecarErr) {
+        log.warn('[Main] Connector sidecar failed to start, continuing without it:', sidecarErr);
+        serviceState.connector = { status: 'down', detail: 'Connector unavailable' };
+        pushServiceState();
+      }
+    }
+
+    // Step 1.5 — gizzi-code (AI runtime, port ${PORTS.GIZZI})
     // All agent sessions, conversations, tool calls and provider routing go through here.
     updateSplash('Starting AI runtime…', 10);
     let gizziUrl: string | null = null;
@@ -874,24 +903,6 @@ async function initializeBundledMode(): Promise<void> {
       pushServiceState();
       updateSplash('AI runtime unavailable, continuing…', 15);
       await new Promise(r => setTimeout(r, 1000));
-    }
-
-    // Step 1.5 — connector sidecar (open-connector, port ${PORTS.CONNECTOR_SIDECAR}).
-    // allternit-api's connector routes proxy to this; non-fatal if it fails
-    // to start (connector-backed sources just stay unavailable, same as
-    // gizzi-code above).
-    {
-      const sidecarEnv = authManager.getConnectorSidecarEnvironment();
-      try {
-        await connectorSidecarManager.start({
-          encryptionKey: authManager.getPlatformEncryptionEnvironment().ALLTERNIT_ENCRYPTION_KEY,
-          adminToken: sidecarEnv.ALLTERNIT_CONNECTOR_SIDECAR_ADMIN_TOKEN,
-          runtimeToken: sidecarEnv.ALLTERNIT_CONNECTOR_SIDECAR_RUNTIME_TOKEN,
-        });
-        log.info('[Main] Connector sidecar started successfully');
-      } catch (sidecarErr) {
-        log.warn('[Main] Connector sidecar failed to start, continuing without it:', sidecarErr);
-      }
     }
 
     // Step 1.6 — office-engine sidecar (services/office-engine, port 8099).
