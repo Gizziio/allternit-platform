@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 09:40 — grok — agent-sessions /sync caller matches data-plane contract
+
+- **Session ID / Branch:** `session/43d9456` (worktree `allternit-session-43d9456`)
+- **Agent:** grok
+- **Summary:** Web `/sync` caller was listening for `session.created` + nested `payload.session`; the node emits `created`/`updated`/`deleted`/`message_added` at top level. Parser + store + Last-Event-ID/`?since=` reconnect now follow `transform_bus_event`. Cloud-api stays a verbatim relay.
+- **Commit:** PR #249, merge commit `763a4f0484` on `main`
+- **How it works:** `agent-session-sync.ts` is the contract module; `mode-session-store` and session-composer reconnect through `createSyncSource(lastEventId)`; 8013 honors `?since=` like gizzi agent-compat.
+- **Outstanding work:** `todo.updated` still not on the node feed; native-sessions catalog `/list`/`pickup` not this slice; desktop DMG not rebuilt (unrelated dirty files on shared `main`).
+- **Summary file:** [./summaries/2026-09-10-0940-43d9456-grok-agent-sessions-sync-contract.md](./summaries/2026-09-10-0940-43d9456-grok-agent-sessions-sync-contract.md)
+
 ### 2026-09-10 09:05 — kimi — P4 harness sync port: `ao harness` with JS byte-parity
 
 - **Session ID / Branch:** `ao/harness-port` (worktree `allternit-ao-harness-port`, tmux `ao-harness-port`)
