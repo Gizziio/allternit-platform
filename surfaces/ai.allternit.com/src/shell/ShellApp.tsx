@@ -120,6 +120,7 @@ const BOT_MODE_VIEW_TYPES = new Set<ViewType>([
   'bot-launchpad',
   'bot-home',
   'bot-inbox',
+  'bot-chat-session',
   'groups-list',
   'group-chat',
 ]);
@@ -140,9 +141,9 @@ function ShellAppInner(): React.ReactNode {
   const active = selectActiveView(nav)!;
 
   const { startSession: startBotSession } = useStartBotSession(
-    useCallback(() => {
-      dispatch({ type: 'OPEN_VIEW', viewType: 'chat' });
-    }, [])
+    useCallback((sessionId: string, botId: string) => {
+      dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
+    }, [active.viewType])
   );
   useStackProviders();
   useRoutineTimer();

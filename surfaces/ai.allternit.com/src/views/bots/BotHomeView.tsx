@@ -54,7 +54,7 @@ import {
   type BotRoutine,
   type BotRoutineFrequency,
 } from "@/lib/bots/bot-routine.service";
-import { openChatView } from "@/lib/bots/bot-canonical-chat.service";
+import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { getConnectorLogoUrl } from "@/lib/design/connector-logo";
 import { listWebhookTriggers, type WebhookTrigger } from "@/lib/webhook-api";
 import { cn } from "@/lib/utils";
@@ -135,8 +135,8 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     isStarting: isStartingBot,
     error: botSessionError,
   } = useStartBotSession(
-    useCallback(() => {
-      openChatView();
+    useCallback((sessionId: string, startedBotId: string) => {
+      openBotChatView(sessionId, startedBotId, "bot-home");
     }, [])
   );
 
@@ -236,7 +236,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
       });
       if (!sessionId) return;
       setActiveChatSession(sessionId);
-      openChatView();
+      openBotChatView(sessionId, bot.id, "bot-home");
     },
     [bot, createChatSession, setActiveChatSession]
   );
@@ -255,7 +255,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
 
   const handleOpenSession = useCallback((sessionId: string) => {
     setActiveChatSession(sessionId);
-    openChatView();
+    openBotChatView(sessionId, botId, "bot-home");
   }, [setActiveChatSession]);
 
   const handleBackToHub = useCallback(() => {

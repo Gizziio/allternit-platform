@@ -12,7 +12,6 @@
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { useBotRosterStore } from './bot-roster.store';
-import { prepareBotSession } from './start-bot-session';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('BotCanonicalChat');
@@ -135,46 +134,16 @@ export async function openBotCanonicalChat(
   return sessionId;
 }
 
-/**
- * Single entry point for "open this bot's chat": starts (or reuses) the
- * bot's canonical session via the same core the home Bots grid uses and
- * lands it in the standard in-chat surface (`viewType: 'chat'`). This is
- * the only bot-session surface; the legacy dedicated `bot-chat-session`
- * view is no longer routed to anywhere.
- *
- * Safe to call from event handlers outside React. Returns the session id,
- * or null when the bot doesn't exist or session creation failed outright.
- */
-export async function openBotSessionInChat(
-  botId: string,
-  options?: { modeId?: string; modelOverride?: string },
-): Promise<string | null> {
-  if (typeof window === 'undefined') return null;
-  const agent = useAgentStore.getState().agents.find((a) => a.id === botId);
-  if (!agent) {
-    logger.warn({ botId }, 'openBotSessionInChat: bot not found in agent store');
-    return null;
-  }
-
-  const result = await prepareBotSession(agent, options);
-  if (!result) return null;
-
-  useChatSessionStore.getState().setActiveSession(result.sessionId);
-  window.dispatchEvent(
-    new CustomEvent('allternit:open-view', { detail: { viewType: 'chat' } }),
-  );
-  return result.sessionId;
-}
-
-/**
- * Navigate to the standard chat surface. For callers that already started
- * the bot session (the hook sets it active); `openBotSessionInChat` is the
- * full cold-start path for everything else.
- */
-export function openChatView(): void {
+/** Open the canonical 1:1 bot chat view (not Cowork). */
+export function openBotChatView(sessionId: string, botId: string, originView = 'chat'): void {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(
-    new CustomEvent('allternit:open-view', { detail: { viewType: 'chat' } }),
+    new CustomEvent('allternit:open-view', {
+      detail: {
+        viewType: 'bot-chat-session',
+        context: { sessionId, botId, originView },
+      },
+    }),
   );
 }
 
