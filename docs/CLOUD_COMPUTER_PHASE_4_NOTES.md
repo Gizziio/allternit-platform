@@ -86,3 +86,91 @@ build), `computers-api.ts` (`template_ref`, `include_roles`, `role`).
 
 Opened by the orchestrator after fixes; merge by orchestrator per repo escape
 (steering gate stalled in prior phases; worktree guards pass).
+
+
+---
+
+# Phase 4b addendum — catalog, hooks/scripts, idempotent import, golden-clone fixes (2026-09-10)
+
+Session `p4-templates` (branch `session/p4-templates`). Closes the remaining
+gaps from the Phase 4 goal + the owed live Incus smoke.
+
+## What was added
+
+- **In-repo curated catalog** (matrix row #17): `templates/system/base-desktop.yaml`
+  and `templates/system/node-dev.yaml`, embedded via `include_str!` in the new
+  `cmd/allternit-api/src/template_catalog.rs`. At API startup
+  `sync_catalog_to_db` upserts them as public, system-owned rows keyed by
+  their `system/...` ref (idempotent: unchanged entry = zero writes; changed
+  doc = resolved view replaced + build state reset). `POST /api/v1/desktop-templates`
+  accepts `catalog_ref` to instantiate a caller-owned private copy (the curated
+  `ref` itself stays system-owned and non-user-writable).
+- **Format additions** (`ComputerTemplateSpec`, additive, still `allternit.ai/v1`):
+  top-level `installScripts` (shell, run as root after apt packages, before
+  services) and `hooks.preBuild` (run before package installation;
+  `hooks.postCreate` remains the post-build hooks).
+- **Tier C literal-secret gate**: validation rejects PEM/private-key material
+  (`-----BEGIN`) in service env values, install scripts, and hooks — template
+  files carry vault refs by name only.
+- **Idempotent import**: `upsert_template_from_spec` returns `UpsertOutcome`;
+  re-importing a byte-identical canonical doc writes nothing and preserves
+  build state (a ready golden survives). The import response now flattens the
+  row plus `unchanged: true|false` (existing top-level fields unchanged for
+  current clients).
+
+## Smoke-found defects fixed (live Incus smoke, VPS 45.84.138.187)
+
+1. **Golden provisioning never triggered** (`bot_desktop_templates.rs`):
+   `find_golden_holder` gated on `select_provision_source(.., None)`, which
+   always answers `Image` for a `None` holder — so `spec.golden` was never set
+   and every computer from a ready template silently fell back to a stock-image
+   spawn. The owed live smoke caught this: build `ready`, snapshot present,
+   guest had NONE of the template packages. Fixed by gating on
+   `build_status == ready && golden_snapshot_id.is_some()` and running the
+   constructed `GoldenSource` back through `select_provision_source` as the
+   final check. Regression test: `find_golden_holder_resolves_when_build_ready`.
+2. **Incus clone body malformed** (`allternit-computer-cloud/src/substrate.rs`):
+   `clone_from_snapshot` sent `source: {type: "snapshot", name: "inst/snap"}`;
+   Incus 6.0 rejects both the type ("Unknown source type snapshot") and the
+   field (its copy handler reads `source.source`, which may carry an
+   `instance/snapshot` path — instances_post.go `IsSnapshot(req.Source.Source)`).
+   Now sends `source: {type: "copy", source: "<holder>/<snap>"}`. HTTP-level
+   test updated accordingly.
+
+## Live smoke evidence (all on the VPS Incus substrate)
+
+Template file (3 apt packages + trivial service + preBuild/installScripts/
+postCreate hooks) → import 200 (`unchanged: false`) → identical re-import
+`unchanged: true` (no-op) → catalog_ref create → build ACI-gate 403 →
+approve → 202 → **build ready in ~2 min** (holder
+`allternit-user-local-dev-user-3e3f…`, stateless `golden` snapshot visible via
+`incus snapshot list`) → `POST /computers` with `template_id` → clone of the
+golden (`allternit-tpl-c2be77…`) **running immediately** → in-guest ground
+truth via `incus exec`: `dpkg -l` shows jq 1.7.1 / htop 3.3.0 / cowsay 3.03
+installed at golden-build time (13:12), `/etc/p4-smoke-install` and
+`/etc/p4-smoke-postcreate` markers present, `p4-smoke-svc.service` written to
+`/etc/systemd/system/` and **active**. Cleanup: both smoke computers deleted
+via API (instances destroyed), golden holder deleted, template rows deleted,
+API stopped; `incus list` verified back to the exact 8 pre-existing
+containers; golden image `86552d91ffc0` untouched.
+
+## Verification
+
+- `cargo test -p allternit-api --lib template*` — 29/29 (incl. new: catalog
+  sync insert/no-op/doc-change-reset, reimport preserves ready golden,
+  preBuild/installScripts validation, literal-secret rejection ×3,
+  catalog_ref create, find_golden_holder regression).
+- `cargo test -p allternit-computer-cloud --lib` — 102/102.
+- Full `allternit-api --lib` suite — see PR body (4 pre-existing
+  environment-dependent `agent_cloud_routes` failures requiring a real
+  AllternitOS control plane, unchanged from main).
+
+## Deviations / notes
+
+- `POST /desktop-templates` legacy fields (`name`/`os`/`image`) gained
+  `#[serde(default)]` so `catalog_ref`-only bodies parse; empty name/os now
+  422 instead of a serde 400 — same rejection class, better message.
+- Build-route file content was NOT added: build runs from the stored canonical
+  doc (import-then-build), per the locked Phase 4 task decisions.
+- Rebuild semantics: `POST /:id/build` still rebuilds from any terminal state
+  (deliberate); the no-op story lives at import (unchanged file → no reset).
