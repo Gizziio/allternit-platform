@@ -643,7 +643,7 @@ async fn handle_pty_socket(socket: WebSocket, state: Arc<AppState>, computer: Co
     let ws_tx3 = ws_tx.clone();
 
     // Channel -> WebSocket sender.
-    let forward_to_ws = tokio::spawn(async move {
+    let mut forward_to_ws = tokio::spawn(async move {
         while let Some(msg) = ws_rx.recv().await {
             if ws_sender.send(msg).await.is_err() {
                 break;
@@ -655,7 +655,7 @@ async fn handle_pty_socket(socket: WebSocket, state: Arc<AppState>, computer: Co
     // may carry a resize control message (`{"cols":N,"rows":M}`) which is
     // relayed to the bridge as a one-line JSON control prefix. Malformed text
     // is ignored.
-    let ws_to_tcp = tokio::spawn(async move {
+    let mut ws_to_tcp = tokio::spawn(async move {
         while let Some(msg) = ws_receiver.next().await {
             match msg {
                 Ok(Message::Binary(data)) => {
@@ -685,7 +685,7 @@ async fn handle_pty_socket(socket: WebSocket, state: Arc<AppState>, computer: Co
     });
 
     // TCP -> WebSocket channel.
-    let tcp_to_ws = tokio::spawn(async move {
+    let mut tcp_to_ws = tokio::spawn(async move {
         let mut buf = vec![0u8; 16384];
         loop {
             match tcp_read.read(&mut buf).await {
@@ -703,11 +703,17 @@ async fn handle_pty_socket(socket: WebSocket, state: Arc<AppState>, computer: Co
         }
     });
 
+    // Whichever forwarder finishes first ends the proxy; abort the survivors
+    // or a task still polling the TCP read half holds the split stream open,
+    // leaking the server-side socket as a lingering ESTABLISHED connection.
     tokio::select! {
-        _ = forward_to_ws => {},
-        _ = ws_to_tcp => {},
-        _ = tcp_to_ws => {},
+        _ = &mut forward_to_ws => {},
+        _ = &mut ws_to_tcp => {},
+        _ = &mut tcp_to_ws => {},
     }
+    forward_to_ws.abort();
+    ws_to_tcp.abort();
+    tcp_to_ws.abort();
 
     drop(ws_tx3);
     info!(computer_id = %computer.id, "PTY WebSocket proxy closed");
@@ -859,7 +865,7 @@ async fn handle_vnc_socket(
     let computer_id_for_filter = computer.id.clone();
 
     // Forward channel -> WebSocket sender.
-    let forward_to_ws = tokio::spawn(async move {
+    let mut forward_to_ws = tokio::spawn(async move {
         while let Some(msg) = ws_rx.recv().await {
             if ws_sender.send(msg).await.is_err() {
                 break;
@@ -877,7 +883,7 @@ async fn handle_vnc_socket(
     let mut unfilterable_warned = false;
     let codec_ws_to_tcp = codec.clone();
     let tcp_write_ws_to_tcp = tcp_write.clone();
-    let ws_to_tcp = tokio::spawn(async move {
+    let mut ws_to_tcp = tokio::spawn(async move {
         while let Some(msg) = ws_receiver.next().await {
             match msg {
                 Ok(Message::Binary(data)) => {
@@ -934,7 +940,7 @@ async fn handle_vnc_socket(
     });
 
     // Forward TCP -> WebSocket channel.
-    let tcp_to_ws = tokio::spawn(async move {
+    let mut tcp_to_ws = tokio::spawn(async move {
         let mut buf = vec![0u8; 16384];
         loop {
             match tcp_read.read(&mut buf).await {
@@ -988,11 +994,17 @@ async fn handle_vnc_socket(
         }
     });
 
+    // Whichever forwarder finishes first ends the proxy; abort the survivors
+    // or a task still polling the TCP read half holds the split stream open,
+    // leaking the server-side socket as a lingering ESTABLISHED connection.
     tokio::select! {
-        _ = forward_to_ws => {},
-        _ = ws_to_tcp => {},
-        _ = tcp_to_ws => {},
+        _ = &mut forward_to_ws => {},
+        _ = &mut ws_to_tcp => {},
+        _ = &mut tcp_to_ws => {},
     }
+    forward_to_ws.abort();
+    ws_to_tcp.abort();
+    tcp_to_ws.abort();
 
     info!(computer_id = %computer.id, "VNC WebSocket proxy closed");
 }
