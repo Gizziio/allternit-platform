@@ -1,5 +1,6 @@
 import { buildAuthHeaders } from "@/lib/agents/api-config";
 import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
+import { getCloudApiBaseUrl, isAgentSessionsApiEnabled, isDesktopOperatorShell } from "@/lib/env";
 
 function getGatewayOrigin(): string {
   if (typeof window === "undefined") return "";
@@ -10,10 +11,48 @@ function getGatewayOrigin(): string {
   return "";
 }
 
-const getBase = () => `${getGatewayOrigin()}/api/v1/native-sessions`;
+/**
+ * Same control-plane split as `native-agent-api.getAgentSessionBase`:
+ * web with the agent-sessions flag talks to cloud-api (Clerk → node relay);
+ * the desktop operator shell talks to local :8013. The catalog contract is
+ * 8013 → gizzi `/v1/native-session/*`; cloud-api does not reshape it.
+ */
+function getNativeSessionsBase(): string {
+  if (isAgentSessionsApiEnabled() && !isDesktopOperatorShell()) {
+    return `${getCloudApiBaseUrl()}/api/v1/native-sessions`;
+  }
+  return `${getGatewayOrigin()}/api/v1/native-sessions`;
+}
+
+function getAgentSessionsBase(): string {
+  if (isAgentSessionsApiEnabled() && !isDesktopOperatorShell()) {
+    return `${getCloudApiBaseUrl()}/api/v1/agent-sessions`;
+  }
+  return `${getGatewayOrigin()}/api/v1/agent-sessions`;
+}
+
+const getBase = () => getNativeSessionsBase();
 
 const STALE_BACKEND_MESSAGE =
   "Native sessions aren't supported by this backend yet. Update Allternit Desktop (or the backend) to a version that includes the native-sessions API.";
+
+const DISABLED_MESSAGE =
+  "Native session catalog is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1 where the control plane is reachable).";
+
+/** Gizzi Session.Info.surface is a fixed enum; `bot` is a frontend origin. */
+function gizziPickupSurface(
+  surface?: "chat" | "cowork" | "bot" | "code" | "browser" | "design",
+): "chat" | "cowork" | "code" | "browser" | "design" | undefined {
+  if (!surface) return undefined;
+  if (surface === "bot") return "chat";
+  return surface;
+}
+
+function assertCatalogEnabled(): void {
+  if (!isAgentSessionsApiEnabled() && !isDesktopOperatorShell()) {
+    throw new Error(DISABLED_MESSAGE);
+  }
+}
 
 async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const authHeaders = await buildAuthHeaders();
@@ -88,6 +127,7 @@ export interface FetchOriginResult {
 
 export const nativeSessionsApi = {
   async listHarnesses(): Promise<NativeHarnessInfo[]> {
+    assertCatalogEnabled();
     const res = await authFetch(`${getBase()}/harnesses`);
     if (!res.ok) throw new Error(`native harnesses failed: ${res.status}`);
     const data = await readJson<{ harnesses: NativeHarnessInfo[] }>(res, "native harnesses");
@@ -95,6 +135,7 @@ export const nativeSessionsApi = {
   },
 
   async list(opts: { cwd?: string; harness?: string } = {}): Promise<NativeCatalogSession[]> {
+    assertCatalogEnabled();
     const params = new URLSearchParams();
     if (opts.cwd) params.set("cwd", opts.cwd);
     if (opts.harness) params.set("harness", opts.harness);
@@ -106,6 +147,7 @@ export const nativeSessionsApi = {
   },
 
   async show(harness: string, id: string, cwd?: string) {
+    assertCatalogEnabled();
     const params = new URLSearchParams();
     if (cwd) params.set("cwd", cwd);
     const qs = params.toString();
@@ -120,10 +162,16 @@ export const nativeSessionsApi = {
     surface?: "chat" | "cowork" | "bot" | "code" | "browser" | "design";
     cwd?: string;
   }): Promise<PickupResult> {
+    assertCatalogEnabled();
     const res = await authFetch(`${getBase()}/pickup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        harness: input.harness,
+        sessionId: input.sessionId,
+        surface: gizziPickupSurface(input.surface),
+        cwd: input.cwd,
+      }),
     });
     if (!res.ok) {
       const body = await res.text();
@@ -139,7 +187,8 @@ export const nativeSessionsApi = {
     resumeHint: string
     at: number
   }> {
-    const res = await authFetch(`/api/v1/agent-sessions/${encodeURIComponent(sessionId)}/export-native`, {
+    assertCatalogEnabled();
+    const res = await authFetch(`${getAgentSessionsBase()}/${encodeURIComponent(sessionId)}/export-native`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ harness }),
@@ -152,7 +201,8 @@ export const nativeSessionsApi = {
   },
 
   async fetchOrigin(sessionId: string): Promise<FetchOriginResult> {
-    const res = await authFetch(`/api/v1/agent-sessions/${encodeURIComponent(sessionId)}/fetch-origin`, {
+    assertCatalogEnabled();
+    const res = await authFetch(`${getAgentSessionsBase()}/${encodeURIComponent(sessionId)}/fetch-origin`, {
       method: "POST",
     });
     if (!res.ok) throw new Error(`fetch-origin failed: ${res.status}`);

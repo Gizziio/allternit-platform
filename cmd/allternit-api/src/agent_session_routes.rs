@@ -442,6 +442,8 @@ fn transform_message(message: GizziMessage) -> serde_json::Value {
 fn normalize_surface_for_gizzi(surface: &str) -> &str {
     match surface {
         "design" => "chat",
+        // Frontend AppMode includes `bot`; Gizzi Session.Info.surface does not.
+        "bot" => "chat",
         other => other,
     }
 }
@@ -1383,20 +1385,45 @@ struct PickupBody {
     cwd: Option<String>,
 }
 
-async fn pickup_native_session(headers: HeaderMap, Json(body): Json<PickupBody>) -> Response {
+async fn pickup_native_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<PickupBody>,
+) -> Response {
     let client = gizzi_client(&headers);
-    proxy_gizzi(
+    let mut payload = serde_json::Map::new();
+    payload.insert("harness".to_string(), json!(body.harness));
+    payload.insert("sessionId".to_string(), json!(body.session_id));
+    if let Some(ref surface) = body.surface {
+        payload.insert(
+            "surface".to_string(),
+            json!(normalize_surface_for_gizzi(surface)),
+        );
+    }
+    if let Some(ref cwd) = body.cwd {
+        payload.insert("cwd".to_string(), json!(cwd));
+    }
+    let result = match gizzi_json::<serde_json::Value>(
         &client,
         reqwest::Method::POST,
         "/v1/native-session/pickup",
-        Some(json!({
-            "harness": body.harness,
-            "sessionId": body.session_id,
-            "surface": body.surface,
-            "cwd": body.cwd,
-        })),
+        Some(serde_json::Value::Object(payload)),
     )
     .await
+    {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    if let (Some(origin), Some(id)) = (
+        body.surface.as_deref(),
+        result
+            .get("session")
+            .and_then(|session| session.get("id"))
+            .and_then(|id| id.as_str()),
+    ) {
+        let _ = state.db.set_session_origin_surface(id, origin);
+    }
+    Json(result).into_response()
 }
 
 async fn export_native_session(
@@ -1434,4 +1461,17 @@ async fn get_native_origin(headers: HeaderMap, Path(id): Path<String>) -> Respon
         None,
     )
     .await
+}
+
+#[cfg(test)]
+mod surface_normalize_tests {
+    use super::normalize_surface_for_gizzi;
+
+    #[test]
+    fn bot_and_design_map_to_chat_for_gizzi() {
+        assert_eq!(normalize_surface_for_gizzi("bot"), "chat");
+        assert_eq!(normalize_surface_for_gizzi("design"), "chat");
+        assert_eq!(normalize_surface_for_gizzi("code"), "code");
+        assert_eq!(normalize_surface_for_gizzi("cowork"), "cowork");
+    }
 }
