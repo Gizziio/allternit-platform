@@ -9,3 +9,5 @@
 pub(crate) mod transcript;
 
 pub(crate) mod fabric;
+
+pub(crate) mod harness;
