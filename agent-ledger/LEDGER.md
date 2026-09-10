@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 18:52 — grok — OpenBot policy gateway + bot-mode audit UI (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-policy-gateway` (worktree `allternit-ao-openbot-policy-gateway`; pickup of kimi `session_497f0582`)
+- **Agent:** grok (Task A: kimi executor; Task B: grok after kimi/claude/codex blocked)
+- **Summary:** Merged PR #275 (8b64e1805) — fail-closed declarative policy on `allternit-api` (audit-before-act JSONL, seats on `aci.run` + computer tools) plus bot-session verdict chips / audit list / policy editor. No new nav. Editor save is copy-to-`ALLTERNIT_ACI_POLICY_FILE`.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/275 · 8b64e18051c225de5c86a8ac92ec68fc5a319b42
+- **How it works:** Extends existing `permission_policy.rs` (deny > ask > allow > implicit deny). Loader refuses startup on a malformed `ALLTERNIT_ACI_POLICY_FILE`. Audit write failure refuses the action. UI gated on `sessionMode=agent` / `isBot`. GitHub Actions green; Vercel + Cloudflare Pages Git previews ignored (red on #267–#274 too).
+- **Outstanding work:** Phase 2 UX cluster (avatars, @mentions, group chat, long-running session chrome). Seat B `bot_id` unset at the computer-tool gate (Task A deviation).
+- **Summary file:** [2026-09-10-2352-openbot-policy-gateway-grok.md](./summaries/2026-09-10-2352-openbot-policy-gateway-grok.md)
+
 ### 2026-09-10 17:05 — kimi — P6a UHP core gateway + `ao serve` lands (rq-20260908-028)
 
 - **Session ID / Branch:** `ao/uhp-gateway` (worktree `allternit-ao-uhp-gateway`, orchestrator direct)
