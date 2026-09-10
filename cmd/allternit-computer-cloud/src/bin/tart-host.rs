@@ -20,11 +20,16 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::process::Stdio;
+use std::sync::atomic::{AtomicU16, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::io::AsyncReadExt;
 use tokio::process::Command;
-use tracing::{info, warn};
+use tokio::sync::oneshot;
+use tracing::{error, info, warn};
 
 #[derive(Clone)]
 struct AppState {
@@ -32,6 +37,7 @@ struct AppState {
     ssh_user: String,
     ssh_password: String,
     token: Option<String>,
+    vnc: VncForwardManager,
 }
 
 #[tokio::main]
@@ -69,6 +75,7 @@ async fn main() {
         ssh_user: std::env::var("TART_SSH_USER").unwrap_or_else(|_| "admin".to_string()),
         ssh_password: std::env::var("TART_SSH_PASSWORD").unwrap_or_else(|_| "admin".to_string()),
         token,
+        vnc: VncForwardManager::new(),
     };
 
     let state_arc = Arc::new(state);
@@ -121,6 +128,358 @@ async fn auth_middleware(
 
 async fn health() -> impl IntoResponse {
     Json(json!({"status": "ok", "service": "tart-host"}))
+}
+
+// ── Guest-VNC forward (per-VM ssh -L supervisor, health-gated) ──────────────
+//
+// The control-plane Tart driver fails closed: it only advertises a VNC
+// endpoint when this wrapper reports a per-VM `vnc_port` in `/v1/vms/:name`.
+// Each forward is a supervised `ssh -N -L <bind>:<port>:127.0.0.1:<guest>`
+// into the running VM, so the advertised port pipes to the guest's own VNC
+// server (x11vnc / vncserver / Screen Sharing) with its own auth intact.
+// `vnc_port` is reported ONLY when an RFB greeting is actually read through
+// the forward — an ssh listener whose guest port is dead advertises nothing.
+
+const DEFAULT_VNC_PORT_BASE: u16 = 15900;
+const VNC_GUEST_PORT: u16 = 5900;
+const HEALTH_TTL: Duration = Duration::from_secs(5);
+const HEALTH_NEG_TTL: Duration = Duration::from_secs(2);
+const PROBE_CONNECT_TIMEOUT: Duration = Duration::from_millis(700);
+const PROBE_READ_TIMEOUT: Duration = Duration::from_millis(1500);
+const FIRST_PROBE_TIMEOUT: Duration = Duration::from_secs(10);
+const MAX_SSH_BACKOFF: Duration = Duration::from_secs(5);
+
+#[derive(Clone)]
+struct VncForwardManager {
+    inner: Arc<std::sync::Mutex<HashMap<String, ForwardEntry>>>,
+    next_port: Arc<AtomicU16>,
+    generation: Arc<AtomicU64>,
+    bind_ip: String,
+    guest_port: u16,
+    ssh_user: String,
+    ssh_password: String,
+    tart_bin: String,
+}
+
+struct ForwardEntry {
+    port: u16,
+    generation: u64,
+    stop: Option<oneshot::Sender<()>>,
+    /// Last probe result, cached so status polls don't hammer the guest VNC
+    /// server: (when probed, reachable).
+    health: Option<(Instant, bool)>,
+}
+
+impl VncForwardManager {
+    fn new() -> Self {
+        let port_base = std::env::var("TART_VNC_PORT_BASE")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(DEFAULT_VNC_PORT_BASE);
+        // The forward should be reachable from wherever the API reaches this
+        // wrapper, so default the bind IP to the wrapper's own bind IP (the
+        // same exposure surface as the control API); loopback otherwise.
+        let bind_ip = std::env::var("TART_VNC_BIND")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| {
+                std::env::var("TART_HOST_BIND")
+                    .ok()
+                    .and_then(|s| s.parse::<SocketAddr>().ok())
+                    .map(|a| a.ip().to_string())
+            })
+            .unwrap_or_else(|| "127.0.0.1".to_string());
+        let guest_port = std::env::var("TART_VNC_GUEST_PORT")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(VNC_GUEST_PORT);
+        Self {
+            inner: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            next_port: Arc::new(AtomicU16::new(port_base)),
+            generation: Arc::new(AtomicU64::new(0)),
+            bind_ip,
+            guest_port,
+            ssh_user: std::env::var("TART_SSH_USER").unwrap_or_else(|_| "admin".to_string()),
+            ssh_password: std::env::var("TART_SSH_PASSWORD").unwrap_or_else(|_| "admin".to_string()),
+            tart_bin: std::env::var("TART_BIN").unwrap_or_else(|_| "tart".to_string()),
+        }
+    }
+
+    /// Test-only constructor with explicit credentials (env-independent).
+    #[cfg(test)]
+    fn for_test(port_base: u16, bind_ip: &str, ssh_user: &str, ssh_password: &str) -> Self {
+        Self {
+            inner: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            next_port: Arc::new(AtomicU16::new(port_base)),
+            generation: Arc::new(AtomicU64::new(0)),
+            bind_ip: bind_ip.to_string(),
+            guest_port: VNC_GUEST_PORT,
+            ssh_user: ssh_user.to_string(),
+            ssh_password: ssh_password.to_string(),
+            tart_bin: "tart".to_string(),
+        }
+    }
+
+    fn alloc_port(&self) -> u16 {
+        // Monotonic allocation from the base; skips nothing, so collisions
+        // with a dead forward's still-bound port are resolved by the
+        // supervisor re-allocating on bind failure.
+        self.next_port.fetch_add(1, Ordering::Relaxed)
+    }
+
+    fn probe_addr(&self, port: u16) -> String {
+        let ip = if self.bind_ip == "0.0.0.0" || self.bind_ip == "::" {
+            "127.0.0.1"
+        } else {
+            self.bind_ip.as_str()
+        };
+        format!("{}:{}", ip, port)
+    }
+
+    /// Ensure a forward exists for `name` and return its host port once the
+    /// guest VNC server answers through it. Spawns the supervisor on first
+    /// use and waits (bounded) for the tunnel to come up; afterwards answers
+    /// from a short health-probe cache. Returns None whenever the guest VNC
+    /// server is not reachable — the driver then advertises no endpoint.
+    async fn ensure_healthy_port<F>(
+        &self,
+        name: &str,
+        vm_ip: &str,
+        ssh_command: Arc<F>,
+    ) -> Option<u16>
+    where
+        F: Fn(&VncForwardManager, &str, u16, &str) -> Command + Send + Sync + 'static,
+    {
+        let existing = {
+            let map = self.inner.lock().unwrap();
+            map.get(name).map(|e| (e.port, e.health))
+        };
+        if let Some((port, health)) = existing {
+            let cached = health.filter(|(at, ok)| {
+                at.elapsed() < if *ok { HEALTH_TTL } else { HEALTH_NEG_TTL }
+            });
+            if let Some((_, ok)) = cached {
+                return ok.then_some(port);
+            }
+            let ok = probe_rfb(&self.probe_addr(port)).await;
+            let mut map = self.inner.lock().unwrap();
+            if let Some(entry) = map.get_mut(name) {
+                entry.health = Some((Instant::now(), ok));
+                entry.port = port;
+            }
+            return ok.then_some(port);
+        }
+
+        // First sighting: allocate, install, supervise.
+        let port = self.alloc_port();
+        let generation = self.generation.fetch_add(1, Ordering::Relaxed);
+        let (stop_tx, stop_rx) = oneshot::channel();
+        self.inner.lock().unwrap().insert(
+            name.to_string(),
+            ForwardEntry {
+                port,
+                generation,
+                stop: Some(stop_tx),
+                health: None,
+            },
+        );
+        let manager = self.clone();
+        let name_owned = name.to_string();
+        let vm_ip_owned = vm_ip.to_string();
+        tokio::spawn(async move {
+            manager
+                .supervise(name_owned, vm_ip_owned, port, generation, stop_rx, &*ssh_command)
+                .await;
+        });
+
+        // Wait (bounded) for the tunnel to come up, then report honestly.
+        let deadline = Instant::now() + FIRST_PROBE_TIMEOUT;
+        let mut ok = false;
+        while Instant::now() < deadline {
+            if probe_rfb(&self.probe_addr(port)).await {
+                ok = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(250)).await;
+        }
+        let mut map = self.inner.lock().unwrap();
+        if let Some(entry) = map.get_mut(name) {
+            entry.health = Some((Instant::now(), ok));
+        }
+        ok.then_some(port)
+    }
+
+    /// Stop and forget the forward for `name`, killing the ssh child. Used on
+    /// stop/delete so no orphan `ssh -N` survives its VM.
+    async fn drop_forward(&self, name: &str) {
+        let removed = self.inner.lock().unwrap().remove(name);
+        if let Some(entry) = removed {
+            if let Some(stop) = entry.stop {
+                let _ = stop.send(());
+            }
+        }
+    }
+
+    async fn supervise<F>(
+        &self,
+        name: String,
+        vm_ip: String,
+        mut port: u16,
+        generation: u64,
+        mut stop: oneshot::Receiver<()>,
+        ssh_command: &F,
+    ) where
+        F: Fn(&VncForwardManager, &str, u16, &str) -> Command + Send + Sync + 'static,
+    {
+        let mut backoff = Duration::from_millis(500);
+        loop {
+            // (Re)resolve the guest IP each attempt: the VM's NAT IP can
+            // change across reboots while the forward entry lives on.
+            let ip = self.resolve_vm_ip(&name).await.unwrap_or_else(|| vm_ip.clone());
+            if ip.is_empty() {
+                warn!(vm = %name, "no VM IP for VNC forward; retrying");
+                if self.wait_or_stopped(&mut stop, backoff).await {
+                    return;
+                }
+                backoff = (backoff * 2).min(MAX_SSH_BACKOFF);
+                continue;
+            }
+            if !port_is_free(&self.bind_ip, port).await {
+                let new_port = self.alloc_port();
+                warn!(vm = %name, old = port, new = new_port, "VNC forward port taken; reallocating");
+                port = new_port;
+                let mut map = self.inner.lock().unwrap();
+                if let Some(entry) = map.get_mut(&name) {
+                    if entry.generation == generation {
+                        entry.port = port;
+                        entry.health = None;
+                    }
+                }
+                drop(map);
+            }
+            let mut child = match ssh_command(self, &ip, port, &name).spawn() {
+                Ok(child) => child,
+                Err(e) => {
+                    error!(vm = %name, error = %e, "failed to spawn VNC forward ssh");
+                    if self.wait_or_stopped(&mut stop, backoff).await {
+                        return;
+                    }
+                    backoff = (backoff * 2).min(MAX_SSH_BACKOFF);
+                    continue;
+                }
+            };
+            tokio::select! {
+                _ = &mut stop => {
+                    // Explicit stop (VM stopped/deleted): kill the ssh child
+                    // — dropping a tokio Child does NOT reap the process.
+                    let _ = child.kill().await;
+                    info!(vm = %name, %port, "VNC forward stopped");
+                    return;
+                }
+                status = child.wait() => {
+                    match status {
+                        Ok(s) => warn!(vm = %name, %port, status = %s, "VNC forward ssh exited; restarting"),
+                        Err(e) => error!(vm = %name, %port, error = %e, "VNC forward ssh wait failed; restarting"),
+                    }
+                    // If the VM is gone entirely, stop supervising.
+                    if self.resolve_vm_ip(&name).await.is_none() {
+                        warn!(vm = %name, "VM gone; dropping VNC forward");
+                        let mut map = self.inner.lock().unwrap();
+                        if map.get(&name).map(|e| e.generation) == Some(generation) {
+                            map.remove(&name);
+                        }
+                        return;
+                    }
+                    if self.wait_or_stopped(&mut stop, backoff).await {
+                        let _ = child.kill().await;
+                        return;
+                    }
+                    backoff = (backoff * 2).min(MAX_SSH_BACKOFF);
+                }
+            }
+        }
+    }
+
+    /// true when the stop signal arrived during the wait.
+    async fn wait_or_stopped(&self, stop: &mut oneshot::Receiver<()>, d: Duration) -> bool {
+        tokio::select! {
+            _ = stop => true,
+            _ = tokio::time::sleep(d) => false,
+        }
+    }
+
+    async fn resolve_vm_ip(&self, name: &str) -> Option<String> {
+        let out = Command::new(&self.tart_bin)
+            .args(["ip", name])
+            .output()
+            .await
+            .ok()?;
+        if !out.status.success() {
+            return None;
+        }
+        let ip = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if ip.is_empty() {
+            None
+        } else {
+            Some(ip)
+        }
+    }
+}
+
+fn build_vnc_ssh_command(
+    mgr: &VncForwardManager,
+    vm_ip: &str,
+    port: u16,
+    name: &str,
+) -> Command {
+    let mut cmd = Command::new("sshpass");
+    cmd.arg("-p")
+        .arg(&mgr.ssh_password)
+        .arg("ssh")
+        .arg("-N")
+        .arg("-L")
+        .arg(format!("{}:{}:127.0.0.1:{}", mgr.bind_ip, port, mgr.guest_port))
+        .arg("-o")
+        .arg("StrictHostKeyChecking=no")
+        .arg("-o")
+        .arg("UserKnownHostsFile=/dev/null")
+        .arg("-o")
+        .arg("LogLevel=ERROR")
+        .arg("-o")
+        .arg("ExitOnForwardFailure=yes")
+        .arg("-o")
+        .arg("ServerAliveInterval=10")
+        .arg("-o")
+        .arg("ServerAliveCountMax=3")
+        .arg(format!("{}@{}", mgr.ssh_user, vm_ip))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    // Keep the VM name visible in ps without affecting ssh.
+    cmd.env("ALLTERNIT_VNC_FORWARD_FOR", name);
+    cmd
+}
+
+async fn port_is_free(bind_ip: &str, port: u16) -> bool {
+    tokio::net::TcpListener::bind(format!("{}:{}", bind_ip, port))
+        .await
+        .is_ok()
+}
+
+/// Read the RFB greeting through a forward. Anything else — refused, silent,
+/// non-RFB bytes — means the guest VNC server is not (yet) reachable and the
+/// forward must not be advertised.
+async fn probe_rfb(addr: &str) -> bool {
+    let stream = match tokio::time::timeout(PROBE_CONNECT_TIMEOUT, tokio::net::TcpStream::connect(addr)).await {
+        Ok(Ok(stream)) => stream,
+        _ => return false,
+    };
+    let mut stream = stream;
+    let mut buf = [0u8; 12];
+    match tokio::time::timeout(PROBE_READ_TIMEOUT, stream.read_exact(&mut buf)).await {
+        Ok(Ok(_)) => buf.starts_with(b"RFB "),
+        _ => false,
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -177,7 +536,9 @@ async fn start_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) 
 }
 
 async fn stop_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
-    match run_tart(&state, &["stop", &name]).await {
+    let result = run_tart(&state, &["stop", &name]).await;
+    state.vnc.drop_forward(&name).await;
+    match result {
         Ok(_) => Json(json!({"name": name, "status": "stopped"})).into_response(),
         Err(e) => e.into_response(),
     }
@@ -186,6 +547,7 @@ async fn stop_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) -
 async fn delete_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
     // Tart refuses to delete a running VM; stop it first (ignore already-stopped).
     let _ = run_tart(&state, &["stop", &name, "--timeout", "5"]).await;
+    state.vnc.drop_forward(&name).await;
     match run_tart(&state, &["delete", &name]).await {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
@@ -197,6 +559,12 @@ struct VmInfo {
     name: String,
     status: String,
     ip: Option<String>,
+    /// Host port this wrapper has bound a guest-VNC forward to (ssh -L into
+    /// the VM's 5900). Present ONLY when the guest VNC server actually
+    /// answered an RFB greeting through the forward right now — the control
+    /// plane fails closed when this is absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    vnc_port: Option<u16>,
 }
 
 async fn get_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
@@ -232,6 +600,7 @@ async fn vm_list(state: &AppState) -> Result<Vec<VmInfo>, TartError> {
             name,
             status: if running { "running".to_string() } else { "stopped".to_string() },
             ip: None,
+            vnc_port: None,
         });
     }
     Ok(out)
@@ -263,10 +632,23 @@ async fn vm_status(state: &AppState, name: &str) -> Result<VmInfo, TartError> {
     } else {
         None
     };
+    // Advertise a VNC endpoint only when the guest VNC server is actually
+    // reachable through this wrapper's per-VM forward. Absent/unreachable →
+    // vnc_port omitted → the control plane fails closed (PR #231 semantics).
+    let vnc_port = match (running, ip.as_deref()) {
+        (true, Some(ip)) => {
+            state
+                .vnc
+                .ensure_healthy_port(name, ip, Arc::new(build_vnc_ssh_command))
+                .await
+        }
+        _ => None,
+    };
     Ok(VmInfo {
         name: name.to_string(),
         status: if running { "running".to_string() } else { "stopped".to_string() },
         ip,
+        vnc_port,
     })
 }
 
@@ -528,4 +910,202 @@ async fn run_tart_output(
         return Err(TartError::CommandFailed(stderr.to_string()));
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::AsyncWriteExt;
+
+    /// Fake "ssh -N -L" for tests: binds the given port and answers every
+    /// connection with an RFB greeting, like a real guest VNC server behind
+    /// an ssh forward. Writes its pid to a file so tests can prove the
+    /// supervisor reaped it on stop.
+    const FAKE_SSH_SERVER: &str = r#"
+import os, socket, sys
+pidfile, bind_ip, port = sys.argv[1], sys.argv[2], int(sys.argv[3])
+with open(pidfile, "w") as f:
+    f.write(str(os.getpid()))
+srv = socket.socket()
+srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+srv.bind((bind_ip, port))
+srv.listen(8)
+while True:
+    conn, _ = srv.accept()
+    try:
+        conn.sendall(b"RFB 003.008\n")
+    finally:
+        conn.close()
+"#;
+
+    fn fake_ssh_factory(pidfile: &str) -> Arc<impl Fn(&VncForwardManager, &str, u16, &str) -> Command> {
+        let pidfile = pidfile.to_string();
+        Arc::new(
+            move |_mgr: &VncForwardManager, _ip: &str, port: u16, _name: &str| {
+                let mut cmd = Command::new("python3");
+                cmd.arg("-c")
+                    .arg(FAKE_SSH_SERVER)
+                    .arg(pidfile.clone())
+                    .arg("127.0.0.1")
+                    .arg(port.to_string())
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null());
+                cmd
+            },
+        )
+    }
+
+    fn pid_alive(pid: &str) -> bool {
+        std::process::Command::new("kill")
+            .arg("-0")
+            .arg(pid)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+
+    #[tokio::test]
+    async fn probe_rfb_accepts_real_greeting() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+        tokio::spawn(async move {
+            let (mut conn, _) = listener.accept().await.unwrap();
+            conn.write_all(b"RFB 003.008\n").await.unwrap();
+        });
+        assert!(probe_rfb(&addr).await);
+    }
+
+    #[tokio::test]
+    async fn probe_rfb_rejects_garbage_and_closed_port() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+        tokio::spawn(async move {
+            let (mut conn, _) = listener.accept().await.unwrap();
+            conn.write_all(b"HTTP/1.1 200 OK\r\n\r\n").await.unwrap();
+        });
+        assert!(!probe_rfb(&addr).await, "non-RFB bytes must not count as healthy");
+
+        let closed = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let closed_addr = closed.local_addr().unwrap().to_string();
+        drop(closed);
+        assert!(!probe_rfb(&closed_addr).await, "refused port must not count as healthy");
+    }
+
+    #[tokio::test]
+    async fn port_allocator_is_monotonic() {
+        let mgr = VncForwardManager::for_test(27900, "127.0.0.1", "u", "p");
+        assert_eq!(mgr.alloc_port(), 27900);
+        assert_eq!(mgr.alloc_port(), 27901);
+        assert_eq!(mgr.alloc_port(), 27902);
+    }
+
+    #[tokio::test]
+    async fn vminfo_vnc_port_serialization_shape() {
+        let with = VmInfo {
+            name: "vm".into(),
+            status: "running".into(),
+            ip: Some("192.168.64.2".into()),
+            vnc_port: Some(15901),
+        };
+        let v = serde_json::to_value(&with).unwrap();
+        assert_eq!(v["vnc_port"], serde_json::json!(15901));
+
+        let without = VmInfo {
+            name: "vm".into(),
+            status: "running".into(),
+            ip: None,
+            vnc_port: None,
+        };
+        let v = serde_json::to_value(&without).unwrap();
+        assert!(v.get("vnc_port").is_none(), "absent forward must omit the field");
+    }
+
+    #[tokio::test]
+    async fn ensure_reports_port_only_once_guest_vnc_answers() {
+        let dir = std::env::temp_dir().join(format!("tartvnc-test-{}", uuid::Uuid::new_v4().simple()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let pidfile = dir.join("fake-ssh.pid").to_string_lossy().to_string();
+
+        let mgr = VncForwardManager::for_test(27910, "127.0.0.1", "u", "p");
+        let port = mgr
+            .ensure_healthy_port("vm-test-ensure", "192.0.2.1", fake_ssh_factory(&pidfile))
+            .await;
+        let port = port.expect("fake guest VNC answers RFB; port must be advertised");
+        assert_eq!(port, 27910);
+        {
+            let map = mgr.inner.lock().unwrap();
+            let entry = map.get("vm-test-ensure").expect("forward entry must exist");
+            assert_eq!(entry.port, 27910);
+            assert_eq!(entry.health.map(|(_, ok)| ok), Some(true));
+        }
+
+        // Cached path: immediate re-query returns the same port.
+        let again = mgr
+            .ensure_healthy_port("vm-test-ensure", "192.0.2.1", fake_ssh_factory(&pidfile))
+            .await;
+        assert_eq!(again, Some(27910));
+
+        mgr.drop_forward("vm-test-ensure").await;
+        tokio::time::sleep(Duration::from_millis(700)).await;
+        assert!(!mgr.inner.lock().unwrap().contains_key("vm-test-ensure"));
+        let pid = std::fs::read_to_string(&pidfile).unwrap();
+        assert!(!pid_alive(pid.trim()), "supervisor must reap the ssh child on stop");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn ensure_honestly_reports_none_when_guest_vnc_silent() {
+        // Fake ssh that binds the port but never speaks RFB — the forward
+        // exists but the guest VNC server is not reachable: no advertisement.
+        let dir = std::env::temp_dir().join(format!("tartvnc-test-{}", uuid::Uuid::new_v4().simple()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let pidfile = dir.join("silent-ssh.pid").to_string_lossy().to_string();
+        let silent_pidfile = pidfile.clone();
+        let factory = Arc::new(
+            move |_mgr: &VncForwardManager, _ip: &str, port: u16, _name: &str| {
+                let mut cmd = Command::new("python3");
+                cmd.arg("-c")
+                    .arg(
+                        "import os,socket,sys\n\
+                         open(sys.argv[1],'w').write(str(os.getpid()))\n\
+                         s=socket.socket()\n\
+                         s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)\n\
+                         s.bind(('127.0.0.1',int(sys.argv[2])))\n\
+                         s.listen(4)\n\
+                         import time\n\
+                         time.sleep(60)\n",
+                    )
+                    .arg(silent_pidfile.clone())
+                    .arg(port.to_string())
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null());
+                cmd
+            },
+        );
+        let mgr = VncForwardManager::for_test(27920, "127.0.0.1", "u", "p");
+        let port = mgr
+            .ensure_healthy_port("vm-test-silent", "192.0.2.1", factory)
+            .await;
+        assert_eq!(port, None, "silent guest must not be advertised");
+        assert!(
+            !port_is_free("127.0.0.1", 27920).await,
+            "forward listener must be bound even while the guest VNC is silent"
+        );
+
+        // Close semantics: dropping the forward reaps the child (no orphan
+        // ssh -N and no lingering listener after its VM is gone).
+        mgr.drop_forward("vm-test-silent").await;
+        tokio::time::sleep(Duration::from_millis(700)).await;
+        let pid = std::fs::read_to_string(&pidfile).unwrap();
+        assert!(!pid_alive(pid.trim()));
+        assert!(
+            port_is_free("127.0.0.1", 27920).await,
+            "port must be released after the forward is dropped"
+        );
+        std::fs::remove_dir_all(&dir).ok();
+    }
 }
