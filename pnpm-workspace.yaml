@@ -65,6 +65,11 @@ packages:
   # OpenNext/Cloudflare build. Managed via plain npm, not pnpm.
   - '!services/mailflare'
   - '!services/mailflare/**'
+  # Embeddable live-computer widget (Phase 5) — dependency-light static
+  # package served as-is; own npm lockfile (typescript/vitest/ws devDeps).
+  # See surfaces/computer-embed/README.md.
+  - '!surfaces/computer-embed'
+  - '!surfaces/computer-embed/**'
 
 # pnpm 10 reads overrides from this file, not from package.json.
 overrides:

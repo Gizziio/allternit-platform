@@ -1,0 +1,5 @@
+node_modules/
+# dist/ is GENERATED (`npm run build`) but committed on purpose: this package
+# is served as static files, and embed.html must work without a build step.
+# This negation overrides the repo-root `dist/` ignore for this package only.
+!dist/
