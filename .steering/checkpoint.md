@@ -1,40 +1,9 @@
-# Steering Checkpoint — session/3a37a822-p2 (phase 3)
+# Steering checkpoint — session/vnc-readonly-rfb-filter (VNC read-only RFB filter)
 
-## Goal
-Owner feedback on the shipped desktop build: PR #223's consolidation of bot
-sessions onto the generic `chat` view was the WRONG surface — starting any bot
-(incl. gizzi) opens the chat start screen instead of a real bot session. Owner
-wants the dedicated `bot-chat-session` view (BotChatSessionView) restored —
-"the other one you removed". Keep #223's real fixes (temp-session send failure,
-session-start core refactor in start-bot-session.ts, ChatView Back bar as a
-safety net).
+**Goal:** Fix confirmed live-smoke defect: the VNC-over-WebSocket proxy's read-only mode (`handle_vnc_socket` `ws_to_tcp` in `cmd/allternit-api/src/computer_ws.rs`) dropped ALL client→TCP binary frames, so a read-only noVNC viewer (embed tokens are always read-only) could never complete the RFB handshake ("RFB 003.889\n" greeting never answered) and the embed viewer showed nothing.
 
-## Just did
-- Restored pre-#223 versions of the 14 view-routing files (nav.types,
-  nav.policy, ViewRegistry, ShellApp, ShellRail, handoff, bot-canonical-chat
-  service, BotInboxContent, BotHomeView, BotLaunchpadView, BotPickerSheet,
-  BotTopDeck, BotHubSessionsTab, SearchView) — verified no later main commits
-  touched them before checkout.
-- bot-activity-toasts.ts: replaced openBotSessionInChat (dead after revert)
-  with openBotCanonicalChat + openBotChatView (bot-chat-session surface);
-  updated its test mock.
-- useStartBotSession doc comment corrected (session renders in
-  bot-chat-session, not chat).
-- Kept: ChatView bot Back bar, start-bot-session.ts core, all Rust/api fixes.
-- Verification: `npx tsc --noEmit` clean; vitest lib/bots + lib/agents + nav
-  600/601 — the 1 failure (vm-operator snapshot test) is pre-existing on main
-  (verified by running same test in the shared main checkout).
+**Just did:** Branched `session/vnc-readonly-rfb-filter` from origin/main. Added `cmd/allternit-api/src/vnc_readonly.rs` with `RfbReadOnlyFilter` (Version → SecurityChoice → AuthResponse → ClientInit → Normal state machine; forwards SetPixelFormat/SetEncodings/FramebufferUpdateRequest/EnableContinuousUpdates + unknown-type single byte; drops KeyEvent/PointerEvent/ClientCutText; partial-message buffering across feeds; unknown security type or non-RFB bytes degrade to Passthrough with `unfilterable` flag). Wired into `ws_to_tcp` (read_only → filter; full-control unchanged passthrough; warns once on unfilterable). Updated stale doc comments. 9 new unit tests pass; all 18 existing `computer_ws` tests pass; `cargo check` shows no new warnings.
 
-## Next
-Commit + push + PR + merge; rebuild platform UI only (no Rust changes),
-repack app bundle + DMG, reinstall to ~/Desktop/Allternit-Desktop-fresh.app,
-dedupe the gizzi DB rows again (packaged renderer re-seeded
-gizzi-packaged-assistant next to the old uuid row), verify UI via screenshot,
-ledger attestation, cleanup.
+**Next:** Commit + push branch, open PR (no merge), report to parent agent.
 
-## Open questions
-- Why the packaged app's renderer bootstrap dedupe (#224) didn't delete the
-  old gizzi row on boot — code fix stays, but DB may need one more manual pass
-  after this reinstall.
-- Pre-existing vm-operator.test.ts snapshot failure on main — left alone per
-  ritual (note as pre-existing, don't silently fix unrelated files).
+**Open questions:** Two spec deviations vs the task brief, both toward real-protocol correctness: SetEncodings parsed as 4+4n bytes (RFC 6143: each encoding is a 32-bit value; brief said 4+2n) and EnableContinuousUpdates as 4 bytes (type+enable+u16 pad; brief said 3). Flagged in PR body.
