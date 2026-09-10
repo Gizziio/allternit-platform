@@ -2100,11 +2100,21 @@ handleGuarded('store:set', (_event, key: keyof StoreSchema, value: unknown) => {
 });
 
 // App info
+function readBuildInfo(): Record<string, unknown> | null {
+  try {
+    const raw = fs.readFileSync(join(process.resourcesPath, 'build-info.json'), 'utf8');
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 ipcMain.handle('app:get-info', () => ({
   version: app.getVersion(),
   platform: process.platform,
   isPackaged: app.isPackaged,
   manifest: PLATFORM_MANIFEST,
+  buildInfo: readBuildInfo(),
 }));
 
 // Auto-update control plane (renderer observes status via app:update-status)

@@ -108,6 +108,10 @@
         ]
       },
       {
+        "from": "resources/build-info.json",
+        "to": "build-info.json"
+      },
+      {
         "from": "native/dictation-helper/",
         "to": "native/dictation-helper/",
         "filter": [

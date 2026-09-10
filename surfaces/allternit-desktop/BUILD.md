@@ -96,9 +96,15 @@ same version are distinguishable: the `build:electron*`, `pack`, and `dist`
 scripts run through `scripts/build-local.cjs`, which sets
 `ALLTERNIT_BUILD_SUFFIX=-b<git rev-list count>` and electron-builder expands
 it into the artifact name (e.g. `Allternit-Desktop-1.1.1-b4177-arm64.dmg`).
-CI/release builds keep clean version-only names (the wrapper skips CI and the
-workflow pins the suffix to empty). Override with
-`ALLTERNIT_BUILD_SUFFIX="-custom"` (or `=""` for clean names locally).
+The wrapper also passes `-c.buildVersion=<version>.<height>` (CFBundleVersion /
+Windows FileVersion) and writes `resources/build-info.json`, which is packed
+next to the sidecars and surfaced in-app: Settings → About shows
+"Allternit Desktop 1.1.1-b4177 · build 1.1.1.4177" via `app:get-info`.
+CI/release builds keep clean version-only names and report no buildInfo (the
+wrapper skips CI and the workflow pins the suffix to empty; the
+`resources/build-info.json` extraResource is simply absent there). Override
+with `ALLTERNIT_BUILD_SUFFIX="-custom"` (or `=""` for clean names locally)
+and `ALLTERNIT_BUILD_VERSION` for the buildVersion string.
 
 ### Step 4: Verify Build
 
