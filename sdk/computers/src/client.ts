@@ -35,6 +35,7 @@ import type {
   ListDesktopTemplatesFilters,
   ResizeComputerInput,
   ResizeComputerResponse,
+  UpdateComputerInput,
 } from './types.js';
 
 export interface ComputersClientOptions {
@@ -129,6 +130,24 @@ export class ComputersClient {
     await this.request('POST', computerPath(id, 'delete', approvalId), undefined, {
       allowEmpty: true,
     });
+  }
+
+  /**
+   * PATCH /api/v1/computers/:id — update mutable computer fields. Today the
+   * server accepts `idle_timeout_secs` (integer seconds, or null to clear)
+   * and re-fetches the computer; rejects creating/deleted computers with 409.
+   */
+  async updateComputer(id: string, input: UpdateComputerInput): Promise<Computer> {
+    return this.request('PATCH', computerPath(id), input);
+  }
+
+  /**
+   * POST /api/v1/computers/:id/session-end — session-persistence hook: apply
+   * the computer's persistence policy (ephemeral/session/persistent) when the
+   * owning session ends. Approval-gated like other lifecycle mutations.
+   */
+  async sessionEnd(id: string, approvalId?: string): Promise<ComputerLifecycleResponse> {
+    return this.request('POST', computerPath(id, 'session-end', approvalId));
   }
 
   // ── Phase 5 additions: status + embed token ─────────────────────────────
@@ -254,6 +273,14 @@ export class ComputersClient {
       `${TEMPLATES_PREFIX}${query ? `?${query}` : ''}`,
     );
     return result.templates ?? [];
+  }
+
+  /**
+   * GET /api/v1/desktop-templates/:id — fetch one template row (including its
+   * resolved view fields and golden-build status).
+   */
+  async getTemplate(id: string): Promise<DesktopTemplate> {
+    return this.request('GET', `${TEMPLATES_PREFIX}/${encodeURIComponent(id)}`);
   }
 
   /**
