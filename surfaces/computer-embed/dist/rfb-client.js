@@ -50,12 +50,12 @@ export class RfbClient {
         this.onError = options.onError;
         this.ws.binaryType = "arraybuffer";
         this.ws.onopen = () => {
-            this.setStatus("connecting", "version exchange");
-            // Send our highest supported version immediately, like noVNC does. The
-            // server greeting arrives right after; we parse it but do NOT reply —
-            // the version string was already sent, and echoing would inject a
-            // second version string into the proxied stream.
-            this.sendBytes(encodeAscii(RFB_VERSION_3_8));
+            this.setStatus("connecting", "awaiting server greeting");
+            // Nothing is sent here: RFB is server-speaks-first. The version reply
+            // goes out only after the greeting is parsed (see drainHandshake) —
+            // sending it early would strand the bytes in the API proxy's handshake
+            // interceptor, which does not re-drain client bytes that arrive before
+            // the server's greeting (verified live against the real ws proxy).
         };
         this.ws.onmessage = (event) => {
             const data = normalizeMessageData(event.data);
@@ -167,11 +167,13 @@ export class RfbClient {
                     if (greetingText.slice(0, 4) !== "RFB ") {
                         throw new Error("server did not send an RFB greeting");
                     }
-                    // The version reply was already sent on open; here we only parse
-                    // the server's version to decide 3.8 vs 3.3 framing.
+                    // Parse the server's version to decide 3.8 vs 3.3 framing, then
+                    // reply with our version (RFB is server-speaks-first).
                     const minor = Number.parseInt(greetingText.slice(8, 11), 10);
                     this.serverMinorVersion = Number.isFinite(minor) ? minor : 8;
                     this.phase = this.serverMinorVersion >= 8 ? "security-types" : "security-type-33";
+                    // The server spoke first; now reply with our highest version.
+                    this.sendBytes(encodeAscii(RFB_VERSION_3_8));
                     break;
                 }
                 case "security-types": {
@@ -263,13 +265,42 @@ export class RfbClient {
                 return;
             switch (head[0]) {
                 case SMSG_FRAMEBUFFER_UPDATE: {
-                    const header = this.take(4);
-                    if (!header)
+                    // A FramebufferUpdate must be consumed atomically: every advertised
+                    // encoding is fixed-size (raw = w*h*4, copyrect = 4, desktop-size =
+                    // 0), so the whole message length is computable from the rect
+                    // headers. Wait for ALL of it before taking anything — consuming
+                    // the 4-byte header and then bailing on an incomplete rect would
+                    // desync the stream (verified live: mid-rect ws fragmentation of a
+                    // full-screen raw update killed the parse on the next byte).
+                    if (!this.peek(4))
                         return;
-                    const rectCount = dv(header).getUint16(2, false);
+                    const rectCount = dv(this.buf.subarray(0, 4)).getUint16(2, false);
+                    let off = 4;
                     for (let i = 0; i < rectCount; i++) {
-                        if (!this.drainRect())
+                        const rectHeader = this.peek(off + 12);
+                        if (!rectHeader)
                             return;
+                        const rv = dv(rectHeader.subarray(off, off + 12));
+                        const w = rv.getUint16(4, false);
+                        const h = rv.getUint16(6, false);
+                        const encoding = rv.getInt32(8, false);
+                        const payload = encoding === ENC_RAW
+                            ? w * h * 4
+                            : encoding === ENC_COPYRECT
+                                ? 4
+                                : encoding === ENC_DESKTOP_SIZE
+                                    ? 0
+                                    : -1;
+                        if (payload < 0) {
+                            throw new Error(`unsupported encoding ${encoding} — the client only advertises raw/copyrect/desktop-size`);
+                        }
+                        off += 12 + payload;
+                    }
+                    if (this.buf.length < off)
+                        return;
+                    this.take(4);
+                    for (let i = 0; i < rectCount; i++) {
+                        this.drainRect();
                     }
                     this.surface.commit();
                     this.sendFramebufferUpdateRequest(true);
