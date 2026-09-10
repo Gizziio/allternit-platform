@@ -1,9 +1,40 @@
-# Steering checkpoint — session/3a37a822-p2 (seed dedupe + desktop rebuild)
+# Steering Checkpoint — session/3a37a822-p2 (phase 3)
 
-**Goal:** (a) Fix the pre-existing duplicate seeded agents in the API agents table (Deep Research ×2, Code Assistant ×2, Data Analyst ×2, Data Catalyst ×2, Architect ×2 — all created in the same second 2026-09-07 13:19:37 by a cold-start race: bootstrap's `exists` check reads an empty/timed-out store and re-seeds). (b) Build a fresh desktop binary from current main+fix so yesterday's bot-session UI fixes (PR #223) actually ship into the installed app.
+## Goal
+Owner feedback on the shipped desktop build: PR #223's consolidation of bot
+sessions onto the generic `chat` view was the WRONG surface — starting any bot
+(incl. gizzi) opens the chat start screen instead of a real bot session. Owner
+wants the dedicated `bot-chat-session` view (BotChatSessionView) restored —
+"the other one you removed". Keep #223's real fixes (temp-session send failure,
+session-start core refactor in start-bot-session.ts, ChatView Back bar as a
+safety net).
 
-**Just did:** Root cause confirmed in `useAgentBootstrap.ts` — renderer bootstrap seeds VENDOR/ORG agents once per browser origin when localStorage BOOTSTRAP_KEY is unset, and the `exists` name check is race-prone when fetchAgents returns empty; the now-idempotent API create (PR #223) makes stable client ids the correct fix. Changes: all five seeds (plus existing gizzi) carry client-stable ids (`vendor-deep-research`, `vendor-code-assistant`, `vendor-data-analyst`, `org-data-catalyst`, `org-architect`, `gizzi-packaged-assistant`) via SEED_CANONICAL_IDS; the gizzi-only variant cleanup generalized to a per-seed-name dedupe that runs on EVERY boot (keeps the stable-id row when present, deletes the rest via deleteAgent) — so existing duplicate rows in the user's DB self-heal on next launch, no manual DB surgery. Typecheck clean; agents vitest 166/166. Live data-healing verification will happen against the real DB when the new desktop build launches (P2-3).
+## Just did
+- Restored pre-#223 versions of the 14 view-routing files (nav.types,
+  nav.policy, ViewRegistry, ShellApp, ShellRail, handoff, bot-canonical-chat
+  service, BotInboxContent, BotHomeView, BotLaunchpadView, BotPickerSheet,
+  BotTopDeck, BotHubSessionsTab, SearchView) — verified no later main commits
+  touched them before checkout.
+- bot-activity-toasts.ts: replaced openBotSessionInChat (dead after revert)
+  with openBotCanonicalChat + openBotChatView (bot-chat-session surface);
+  updated its test mock.
+- useStartBotSession doc comment corrected (session renders in
+  bot-chat-session, not chat).
+- Kept: ChatView bot Back bar, start-bot-session.ts core, all Rust/api fixes.
+- Verification: `npx tsc --noEmit` clean; vitest lib/bots + lib/agents + nav
+  600/601 — the 1 failure (vm-operator snapshot test) is pre-existing on main
+  (verified by running same test in the shared main checkout).
 
-**Next:** Commit + PR + merge the dedupe fix; finish the release builds already running (cargo release: allternit-api/voice-service/allternit-mux from root workspace + allternit-local-engine from its own workspace; gizzi-code bun production build; whisper-cli done; platform vite build done) then run the electron packaging (prepare scripts + electron-builder DMG) in this worktree; install the DMG over Allternit-Desktop-fresh.app; verify one-row-per-bot in the real DB + nav fixes live; attestation; cleanup.
+## Next
+Commit + push + PR + merge; rebuild platform UI only (no Rust changes),
+repack app bundle + DMG, reinstall to ~/Desktop/Allternit-Desktop-fresh.app,
+dedupe the gizzi DB rows again (packaged renderer re-seeded
+gizzi-packaged-assistant next to the old uuid row), verify UI via screenshot,
+ledger attestation, cleanup.
 
-**Open questions:** User's installed .app must be quit before replacing (will do at install time). Notarize will skip loudly without APPLE_* secrets — expected for a local unsigned build (same as previous local builds).
+## Open questions
+- Why the packaged app's renderer bootstrap dedupe (#224) didn't delete the
+  old gizzi row on boot — code fix stays, but DB may need one more manual pass
+  after this reinstall.
+- Pre-existing vm-operator.test.ts snapshot failure on main — left alone per
+  ritual (note as pre-existing, don't silently fix unrelated files).

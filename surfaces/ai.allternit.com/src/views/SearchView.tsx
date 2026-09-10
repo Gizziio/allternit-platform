@@ -96,7 +96,7 @@ function navigateToSession(sessionId: string, surface: 'chat' | 'cowork' | 'bot'
   const defaultView = SURFACE_TO_VIEW[surface] ?? 'chat';
   const isAgent = isAgentSession(sessionId, surface);
   const viewType = surface === 'bot'
-    ? 'chat'
+    ? 'bot-chat-session'
     : isAgent ? `${surface}-agent-session` : defaultView;
   window.dispatchEvent(
     new CustomEvent('allternit:open-view', {
