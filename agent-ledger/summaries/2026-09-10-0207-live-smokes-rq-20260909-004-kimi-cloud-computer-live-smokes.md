@@ -76,6 +76,23 @@ integration lane would have caught #225/#231/#233/#234/#235 before merge.
 
 ## Infra restored
 
-Smoke API (:18013) and tart-host (:8020) stopped; test Tart VMs stopped;
+Smoke API (:18013) and tart-host (:8020) stopped; test Tart VMs deleted;
 session worktrees (`allternit-session-embedfix`) and merged session branches
-deleted; both Desktop apps relaunched (they supervise :8013).
+deleted; both Desktop apps replaced with a fresh build from merged main
+(`Allternit-Desktop-1.1.1-b1750-arm64.dmg`, unsigned) and relaunched.
+
+### Incident: shared dev DB migrated past the stale bundled binary
+
+The smoke API ran with the default app-data DB path, so it applied current
+main's migrations (V133+) to the same `~/Library/Application Support/
+@allternit/desktop` database the installed Desktop app boots against. The
+installed app's bundled allternit-api predated V133 and panicked at boot:
+`migration V133__llm_provider_routing_policies is missing from the
+filesystem`. Remediated per the repo ritual (AGENTS.md step 8 — the session
+touched code the desktop bundles): `cargo build --release -p allternit-api`
+from main, `build:electron:dmg` (release-preflight 26/0), installed over
+both app copies, verified boot in the app log (`Database ready`, `Server
+listening on 0.0.0.0:8013`, `BackendManager Ready`) — migration panic gone.
+Pre-existing, unrelated: the bundled voice sidecar fails with a pyexpat
+binary `built for macOS 26.0 which is newer than running OS` (Voice Mode
+unavailable; needs a voice-sidecar rebuild on this OS — not touched here).
