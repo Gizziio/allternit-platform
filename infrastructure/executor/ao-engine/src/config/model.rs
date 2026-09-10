@@ -353,7 +353,7 @@ pub struct KeysConfig {
     pub workspace_picker: BindingConfig,
     /// Open the session navigator. Default: "prefix+g"
     pub goto: BindingConfig,
-    /// Open the visibility panel ("who needs you"). Default: "prefix+v"
+    /// Open the visibility panel ("who needs you"). Default: "prefix+shift+v"
     pub visibility: BindingConfig,
     /// Move workspace selection up in navigate mode. Default: "up".
     pub navigate_workspace_up: BindingConfig,
@@ -1098,7 +1098,7 @@ impl Default for KeysConfig {
             close_workspace: BindingConfig::one("prefix+shift+d"),
             workspace_picker: BindingConfig::one("prefix+w"),
             goto: BindingConfig::one("prefix+g"),
-            visibility: BindingConfig::one("prefix+v"),
+            visibility: BindingConfig::one("prefix+shift+v"),
             navigate_workspace_up: BindingConfig::one("up"),
             navigate_workspace_down: BindingConfig::one("down"),
             navigate_pane_left: BindingConfig::one("h"),
