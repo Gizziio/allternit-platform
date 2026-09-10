@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createComputersCommand, ptyWsUrl } from './computers.js';
+import { normalizeApiAlias } from '../argv.js';
 
 function buildProgram(commands: Command[]): Command {
   const program = new Command();
@@ -277,6 +278,100 @@ test('computers screenshot saves PNG bytes', async (t) => {
   assert.equal(seen[0]?.method, 'GET');
   assert.equal(seen[0]?.url, 'https://api.example/api/v1/computers/c-1/screenshot');
   assert.deepEqual(await readFile(localPath), png);
+});
+
+test('computers drive screenshot runs click/type one-shots after capture', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'allternit-cli-test-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const localPath = join(dir, 'screen.png');
+  const png = Buffer.from([0x89, 0x50]);
+  const seen = await withMockedFetch((request) => {
+    if (request.url.endsWith('/screenshot')) {
+      return new Response(png, { status: 200, headers: { 'content-type': 'image/png' } });
+    }
+    return jsonOk({ success: true });
+  }, async () => {
+    await buildProgram([createComputersCommand()]).parseAsync([
+      'node', 'allternit', 'computers', 'drive', 'screenshot', 'c-1', localPath,
+      '--click', '10,20',
+      '--double-click', '30,40',
+      '--right-click', '50,60',
+      '--type', 'hello',
+      '--key', 'Return',
+      '--approval-id', 'grant-9',
+    ]);
+  });
+  assert.equal(seen.length, 6);
+  assert.equal(seen[0]?.method, 'GET');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/computers/c-1/screenshot');
+  const expected = [
+    ['mouse', { action: 'click', x: 10, y: 20 }],
+    ['mouse', { action: 'doubleclick', x: 30, y: 40 }],
+    ['mouse', { action: 'rightclick', x: 50, y: 60 }],
+    ['keyboard', { action: 'type', text: 'hello' }],
+    ['keyboard', { action: 'key', key: 'Return' }],
+  ] as const;
+  for (let i = 0; i < expected.length; i += 1) {
+    const [plane, body] = expected[i];
+    assert.equal(seen[i + 1]?.method, 'POST', plane);
+    assert.equal(seen[i + 1]?.url, `https://api.example/api/v1/computers/c-1/${plane}?approval_id=grant-9`, plane);
+    assert.deepEqual(await seen[i + 1]?.json(), body, plane);
+  }
+  assert.deepEqual(await readFile(localPath), png);
+});
+
+test('computers screenshot rejects malformed click coordinates', async () => {
+  const originalWrite = process.stderr.write.bind(process.stderr);
+  let stderr = '';
+  process.stderr.write = ((chunk: unknown) => { stderr += String(chunk); return true; }) as typeof process.stderr.write;
+  try {
+    await withMockedFetch(
+      () => new Response(Buffer.from([0x89]), { status: 200 }),
+      async () => {
+        await buildProgram([createComputersCommand()]).parseAsync([
+          'node', 'allternit', 'computers', 'screenshot', 'c-1', '--click', 'not-a-coordinate',
+        ]);
+      },
+    );
+  } finally {
+    process.stderr.write = originalWrite;
+    process.exitCode = undefined;
+  }
+  assert.match(stderr, /invalid coordinate/);
+});
+
+test('global --api flag is an alias for --api-url', async () => {
+  const seen = await withMockedFetch(
+    () => jsonOk({ computers: [] }),
+    async () => {
+      const program = new Command();
+      program
+        .exitOverride()
+        .option('--api-url <url>', 'Allternit API base URL', 'https://default.example')
+        .addCommand(createComputersCommand());
+      await program.parseAsync(normalizeApiAlias(
+        ['node', 'allternit', '--api', 'https://api-alias.example', 'computers', 'list'],
+      ));
+    },
+  );
+  assert.equal(seen[0]?.url, 'https://api-alias.example/api/v1/computers');
+});
+
+test('global --api=value form is an alias for --api-url', async () => {
+  const seen = await withMockedFetch(
+    () => jsonOk({ computers: [] }),
+    async () => {
+      const program = new Command();
+      program
+        .exitOverride()
+        .option('--api-url <url>', 'Allternit API base URL', 'https://default.example')
+        .addCommand(createComputersCommand());
+      await program.parseAsync(normalizeApiAlias(
+        ['node', 'allternit', '--api=https://api-eq.example', 'computers', 'list'],
+      ));
+    },
+  );
+  assert.equal(seen[0]?.url, 'https://api-eq.example/api/v1/computers');
 });
 
 // ── ssh ──────────────────────────────────────────────────────────────────────
