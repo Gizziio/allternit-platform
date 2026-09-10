@@ -73,6 +73,7 @@ function main() {
     cronDaemonUrl: getEnv('ALLTERNIT_CRON_DAEMON_URL', existing.cronDaemonUrl ?? 'http://127.0.0.1:4096/cron'),
     vmDir: getEnv('ALLTERNIT_VM_DIR', existing.vmDir ?? ''),
     clerkPublishableKey: getEnv('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', existing.clerkPublishableKey ?? ''),
+    clerkProxyUrl: getEnv('NEXT_PUBLIC_CLERK_PROXY_URL', existing.clerkProxyUrl ?? ''),
     clerkJwksUrl: getEnv('CLERK_JWKS_URL', existing.clerkJwksUrl ?? ''),
     clerkIssuer: getEnv('CLERK_ISSUER', existing.clerkIssuer ?? ''),
     clerkWebhookSecret: getEnv('CLERK_WEBHOOK_SECRET', existing.clerkWebhookSecret ?? ''),

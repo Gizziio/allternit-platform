@@ -1,21 +1,25 @@
-# Steering Checkpoint — native-sessions catalog caller (P5)
+# Checkpoint — session/desktop-clerk-proxy-20260910
 
 ## Goal
-Point `/api/v1/native-sessions` list/pickup/show at the same control-plane
-relay agent-sessions uses. The catalog contract lives on the node (8013 →
-gizzi `/v1/native-session/*`); cloud-api is a verbatim relay. Do not hit the
-SPA origin.
+Fix desktop Clerk GitHub OAuth (authorization_invalid → Vercel 404) and land via merge.
 
 ## Just did
-- Created worktree `allternit-session-43d9456-ns` on `session/43d9456-ns`
-  from `origin/main` (`3e12d7188`).
-- Root cause: `native-sessions-api.ts` always uses `getGatewayOrigin()`
-  (empty on web → relative `/api/v1/native-sessions` → SPA HTML). Agent-
-  sessions already targets `getCloudApiBaseUrl()` when the flag is on.
-  Pickup also forwards `surface: "bot"`, which gizzi's enum rejects.
+- Root cause proven by controlled experiments (E2/E3): Clerk's /v1/oauth_callback
+  exchange only succeeds as a real browser navigation carrying the attempt-bound
+  __client cookie; the old flow loaded the callback in the protocol-handled auth
+  window where partition cookies are stripped from real navigations.
+- Rewrote src/main/clerk-oauth-popup.ts: default-session popup, copy attempt
+  __client from auth partition pre-flight, webRequest pre-dispatch detection of
+  success (redirect to accounts.allternit.com/__desktop_auth__ — note: FAPI does
+  NOT append created_session_id for clerk-js-created attempts) and failure
+  (err_code), signed-in cookies handed back into the auth partition, auth window
+  reloads so TokenBridge completes pairing.
+- Live smoke PASSED: GitHub authorize → exchange → Clerk token → pairing
+  lookup/approve/exchange 200 → identity saved → relay connected.
+- typecheck ✓ build:main ✓ release-preflight 35/0 ✓
 
 ## Next
-- PR + merge. Ledger attestation after merge.
+- Commit + push + PR + merge; sync main; ledger attestation; rebuild desktop preview; cleanup.
 
 ## Open questions
-- None. `todo.updated` on /sync stays deferred.
+- Instance-proxy config (option 2, company.json clerkProxyUrl) rides along as approved.

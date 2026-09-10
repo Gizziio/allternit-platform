@@ -430,6 +430,7 @@ export default function AuthApp() {
   return (
     <ClerkProvider
       publishableKey={config.publishableKey}
+      proxyUrl={config.proxyUrl}
       appearance={clerkAppearance}
       localization={clerkLocalization}
       signInForceRedirectUrl={selfRedirectUrl}
