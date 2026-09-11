@@ -1251,6 +1251,7 @@ export class DesktopAuthManager {
       '/terminal', '/mcp', '/platform', '/metrics', '/alabs', '/cowork',
       '/webhooks', '/status', '/health',
       '/ws', '/panes',
+      '/v1/',
     ];
     if (!allowedPrefixes.some((prefix) => requestPath.startsWith(prefix))) return;
 
@@ -1268,7 +1269,21 @@ export class DesktopAuthManager {
         : message.body_encoding === 'base64'
           ? Buffer.from(message.body, 'base64')
           : Buffer.from(message.body, 'utf8');
-      const response = await fetch(`${URLS.API}${requestPath}`, { method, headers, body });
+
+      const fabricPayload = this.fabricRelayPayload(method, requestPath, body);
+      if (fabricPayload) {
+        this.sendRelayJson(socket, requestId, 200, fabricPayload);
+        return;
+      }
+      if (requestPath === '/api/v1/session-worker/invoke' && method === 'POST') {
+        const payload = JSON.parse(body?.toString('utf8') || '{}') as { capability?: string; inputs?: Record<string, unknown> };
+        const result = await this.invokeNodeHarness(payload.capability || '', payload.inputs || {});
+        this.sendRelayJson(socket, requestId, 200, { result });
+        return;
+      }
+
+      const localUrl = this.relayLocalUrl(requestPath);
+      const response = await fetch(localUrl, { method, headers, body });
       const responseHeaders: Record<string, string> = {};
       for (const name of ['content-type', 'cache-control', 'content-disposition', 'etag', 'last-modified', 'x-request-id']) {
         const value = response.headers.get(name);
@@ -1313,6 +1328,156 @@ export class DesktopAuthManager {
     }
   }
 
+  private sendRelayJson(socket: any, requestId: string, status: number, payload: unknown): void {
+    const body = Buffer.from(JSON.stringify(payload));
+    socket.send(JSON.stringify({
+      type: 'response_start',
+      request_id: requestId,
+      status,
+      headers: { 'content-type': 'application/json' },
+    }));
+    socket.send(JSON.stringify({
+      type: 'response_chunk',
+      request_id: requestId,
+      body: body.toString('base64'),
+      body_encoding: 'base64',
+    }));
+    socket.send(JSON.stringify({ type: 'response_end', request_id: requestId }));
+  }
+
+  private localFabricPeer(): Record<string, unknown> {
+    const hostname = os.hostname() || 'Allternit Desktop';
+    return {
+      id: 'local-desktop',
+      nodeId: 'local-desktop',
+      name: hostname,
+      hostname,
+      status: 'online',
+      runtimeType: 'desktop',
+      platform: process.platform,
+      endpoints: [{ transport: 'loopback', url: URLS.GIZZI, priority: 0 }],
+      capabilities: [
+        'harness.session',
+        'harness.session.get',
+        'harness.session.create',
+        'harness.session.message',
+        'harness.session.abort',
+        'runtime:connect',
+        'runtime:remote_control',
+      ],
+      resources: [],
+    };
+  }
+
+  private fabricRelayPayload(method: string, requestPath: string, body?: Buffer): unknown | null {
+    const pathOnly = requestPath.split('?')[0];
+    if (pathOnly === '/api/v1/fabric/leases' && method === 'POST') {
+      const payload = JSON.parse(body?.toString('utf8') || '{}') as { capabilityId?: string; grantee?: string; ttlSeconds?: number };
+      return {
+        id: 'lease-desktop-local',
+        capabilityId: payload.capabilityId ?? 'harness.session',
+        grantee: payload.grantee ?? 'web-client',
+        ttlSeconds: payload.ttlSeconds ?? 300,
+        status: 'active',
+        signature: 'desktop-local',
+        issuedAt: new Date().toISOString(),
+      };
+    }
+    if (method !== 'GET') return null;
+    const peer = this.localFabricPeer();
+    if (pathOnly === '/api/v1/fabric/peers/local') return peer;
+    if (pathOnly === '/api/v1/fabric/peers') return [peer];
+    if (pathOnly === '/api/v1/fabric/directory') return { local: peer, peers: [peer] };
+    if (pathOnly === '/api/v1/fabric/workers/self') {
+      return {
+        name: 'desktop-session-worker',
+        version: app.getVersion(),
+        capabilities: peer.capabilities,
+      };
+    }
+    return null;
+  }
+
+  private relayLocalUrl(requestPath: string): string {
+    const desktopPrefix = '/v1/remote-control/desktop';
+    if (requestPath.startsWith(desktopPrefix)) {
+      return `http://127.0.0.1:8477${requestPath.slice(desktopPrefix.length) || '/'}`;
+    }
+    if (requestPath.startsWith('/api/v1/remote-control/')) {
+      return `${URLS.GIZZI}${requestPath.replace('/api/v1/remote-control/', '/v1/remote-control/')}`;
+    }
+    if (requestPath.startsWith('/v1/remote-control/')) return `${URLS.GIZZI}${requestPath}`;
+    if (requestPath.startsWith('/api/v1/providers')) return `${URLS.GIZZI}/v1/provider`;
+    if (requestPath.startsWith('/api/v1/agents')) return `${URLS.GIZZI}/v1/agent/list`;
+    if (
+      requestPath.startsWith('/v1/provider')
+      || requestPath.startsWith('/v1/agent')
+      || requestPath.startsWith('/v1/permission')
+      || requestPath.startsWith('/v1/question')
+      || requestPath === '/v1/session'
+      || requestPath.startsWith('/v1/session/')
+    ) {
+      return `${URLS.GIZZI}${requestPath}`;
+    }
+    return `${URLS.API}${requestPath}`;
+  }
+
+  private async invokeNodeHarness(capability: string, inputs: Record<string, unknown>): Promise<unknown> {
+    const gizzi = URLS.GIZZI;
+    const sessionId = typeof inputs.sessionID === 'string' ? inputs.sessionID : '';
+    const getJson = async (path: string, init?: RequestInit) => {
+      const res = await fetch(`${gizzi}${path}`, init);
+      const text = await res.text();
+      if (!res.ok) throw new Error(`${res.status} ${path}: ${text.slice(0, 240)}`);
+      return text ? JSON.parse(text) : null;
+    };
+    switch (capability) {
+      case 'harness.session':
+        return getJson('/v1/remote-control/sessions');
+      case 'harness.session.get':
+        return getJson(`/v1/remote-control/sessions/${encodeURIComponent(sessionId)}`);
+      case 'harness.session.message':
+        return getJson(`/v1/remote-control/sessions/${encodeURIComponent(sessionId)}/messages`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            text: inputs.text,
+            attachments: inputs.attachments,
+            agent: inputs.agent,
+            model: inputs.model,
+          }),
+        });
+      case 'harness.session.abort':
+        return getJson(`/v1/remote-control/sessions/${encodeURIComponent(sessionId)}/abort`, { method: 'POST' });
+      case 'harness.session.create':
+        return getJson('/v1/session', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(inputs),
+        });
+      case 'harness.session.permissions.list':
+        return getJson('/v1/permission');
+      case 'harness.session.questions.list':
+        return getJson('/v1/question');
+      case 'harness.session.permissions.reply':
+        return getJson(`/v1/permission/${encodeURIComponent(String(inputs.requestID))}/reply`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ reply: inputs.reply, message: inputs.message }),
+        });
+      case 'harness.session.questions.reply':
+        return getJson(`/v1/question/${encodeURIComponent(String(inputs.requestID))}/reply`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ answers: inputs.answers }),
+        });
+      case 'harness.session.questions.reject':
+        return getJson(`/v1/question/${encodeURIComponent(String(inputs.requestID))}/reject`, { method: 'POST' });
+      default:
+        throw new Error(`unsupported harness capability ${capability}`);
+    }
+  }
+
   private handleRelaySocketOpen(relay: WebSocket, message: any): void {
     const socketId = typeof message.socket_id === 'string' ? message.socket_id : '';
     const requestPath = typeof message.path === 'string' ? message.path : '';
@@ -1320,6 +1485,7 @@ export class DesktopAuthManager {
       '/api/', '/viz', '/sandbox', '/vm-session', '/rails', '/stream',
       '/terminal', '/mcp', '/platform', '/metrics', '/alabs', '/cowork',
       '/webhooks', '/ws', '/panes', '/status', '/health',
+      '/v1/',
     ];
     if (!socketId || !requestPath.startsWith('/') || requestPath.includes('..')
       || requestPath.includes('://') || !allowedPrefixes.some((prefix) => requestPath.startsWith(prefix))) return;
