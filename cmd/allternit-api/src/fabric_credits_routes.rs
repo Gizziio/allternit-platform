@@ -1,4 +1,6 @@
-//! Fabric credits routes — buy credits and view balance/history.
+//! Fabric credits routes — balance/history, org credits grants, and the
+//! purchase endpoint (redirects to platform billing when cloud billing is
+//! configured; admin-only manual settlements when self-hosted).
 //!
 //! Merged into the `/api/v1` chain in `main.rs`, so public paths land at
 //! `/api/v1/credits/*` and admin paths at `/api/v1/admin/credits/*`.
@@ -184,12 +186,50 @@ struct PurchaseRequest {
     reference_id: Option<String>,
 }
 
+enum PurchaseMode {
+    /// Cloud billing is configured: purchases go through the Stripe-backed
+    /// platform wallet, and this route must never mint unbacked balance.
+    Hosted { platform_url: String },
+    /// Self-hosted: no payment provider is wired; purchases are admin-only
+    /// manual settlements (off-platform payments confirmed by the operator).
+    SelfHosted,
+}
+
+fn purchase_mode(config: &crate::config::AppConfig) -> PurchaseMode {
+    if config.cloud_api_url().is_some() {
+        let platform_url = std::env::var("ALLTERNIT_PLATFORM_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "https://platform.allternit.com".to_string());
+        PurchaseMode::Hosted { platform_url }
+    } else {
+        PurchaseMode::SelfHosted
+    }
+}
+
 async fn purchase_credits(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Json(req): Json<PurchaseRequest>,
 ) -> Result<Json<Value>, ApiError> {
-    let org = require_org(&user)?;
+    if let PurchaseMode::Hosted { platform_url } = purchase_mode(&state.config) {
+        return Err(ApiError::new(
+            StatusCode::CONFLICT,
+            "billing_redirect",
+            format!(
+                "Credit purchases go through platform billing. Complete checkout at {platform_url}/billing, then transfer credits to this organization."
+            ),
+        ));
+    }
+
+    let db = state.db.clone();
+    let user_for_admin = user.clone();
+    let org = tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(internal)?;
+        require_org_admin(&conn, &user_for_admin)
+    })
+    .await
+    .map_err(internal)??;
 
     let (transaction_type, reference_type) = match req.method.as_str() {
         "stripe" => (TransactionType::Purchase, Some("stripe")),
@@ -214,7 +254,7 @@ async fn purchase_credits(
             &org_for_ledger,
             amount_cents,
             transaction_type,
-            Some("credit purchase"),
+            Some("manual settlement (self-hosted, operator-confirmed)"),
             reference_type,
             reference_id.as_deref(),
             None,
@@ -376,6 +416,57 @@ mod tests {
         assert_eq!(body["balance_cents"], 5000);
         assert_eq!(body["transaction"]["transaction_type"], "purchase");
         assert_eq!(body["transaction"]["reference_id"], "pi_test_123");
+    }
+
+    #[tokio::test]
+    async fn purchase_requires_admin_role_self_hosted() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        seed_org_user(&conn, "org-1", "member-1", "member");
+        drop(conn);
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                "/credits/purchase",
+                auth_user(Some("org-1"), "member-1"),
+                Some(json!({"amount_cents": 5000, "method": "stripe"})),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        let ledger = CreditsLedger::new(state.db.clone());
+        assert_eq!(ledger.balance_cents("org-1").unwrap(), 0);
+    }
+
+    #[test]
+    fn purchase_mode_self_hosted_by_default() {
+        let config = crate::config::AppConfig {
+            company: crate::config::CompanyConfig::default(),
+            user: crate::config::UserConfig::default(),
+        };
+        assert!(matches!(purchase_mode(&config), PurchaseMode::SelfHosted));
+    }
+
+    #[test]
+    fn purchase_mode_hosted_when_cloud_billing_configured() {
+        let config = crate::config::AppConfig {
+            company: crate::config::CompanyConfig {
+                cloud_api_url: Some("https://api.allternit.com".to_string()),
+                ..Default::default()
+            },
+            user: crate::config::UserConfig::default(),
+        };
+        match purchase_mode(&config) {
+            PurchaseMode::Hosted { platform_url } => {
+                assert!(platform_url.ends_with("allternit.com"));
+            }
+            PurchaseMode::SelfHosted => panic!("expected hosted mode"),
+        }
     }
 
     #[tokio::test]

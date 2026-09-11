@@ -349,6 +349,37 @@ impl CreditsLedger {
                 required: amount_cents,
             });
         }
+        self.insert_charge(organization_id, amount_cents, description, reference_type, reference_id)
+    }
+
+    /// Charge credits even when the balance cannot cover the full amount.
+    ///
+    /// Used for metered usage that has already been consumed: the charge is
+    /// recorded regardless, so the balance goes negative (debt) instead of the
+    /// cost silently disappearing. New provisioning is still blocked by
+    /// `available_cents` until the org tops up.
+    pub fn charge_overdraft(
+        &self,
+        organization_id: &str,
+        amount_cents: i64,
+        description: &str,
+        reference_type: Option<&str>,
+        reference_id: Option<&str>,
+    ) -> Result<CreditLedgerEntry, CreditsError> {
+        if amount_cents <= 0 {
+            return Err(CreditsError::InvalidAmount(amount_cents));
+        }
+        self.insert_charge(organization_id, amount_cents, description, reference_type, reference_id)
+    }
+
+    fn insert_charge(
+        &self,
+        organization_id: &str,
+        amount_cents: i64,
+        description: &str,
+        reference_type: Option<&str>,
+        reference_id: Option<&str>,
+    ) -> Result<CreditLedgerEntry, CreditsError> {
         let id = Uuid::new_v4().to_string();
         let balance_after = self.balance_cents(organization_id)? - amount_cents;
         let conn = self.db.connect()?;
@@ -684,6 +715,22 @@ mod tests {
             .unwrap();
         let err = ledger.charge(org, 200, "compute usage", None, None).unwrap_err();
         assert!(matches!(err, CreditsError::InsufficientCredits { .. }));
+    }
+
+    #[test]
+    fn charge_overdraft_records_debt() {
+        let ledger = test_ledger();
+        let org = "org-1";
+        ledger
+            .credit(org, 100, TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+        let entry = ledger
+            .charge_overdraft(org, 250, "metered usage", Some("usage"), Some("u-1"))
+            .unwrap();
+        assert_eq!(entry.amount_cents, -250);
+        assert_eq!(ledger.balance_cents(org).unwrap(), -150);
+        // The debt is visible in the ledger, not dropped.
+        assert_eq!(ledger.list(org, 10).unwrap().len(), 2);
     }
 
     #[test]
