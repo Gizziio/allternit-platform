@@ -11,6 +11,22 @@
 //! an LLM loop here; when no worker is connected the task stays `queued`
 //! and the response says so. A `run_requested` event is appended to the
 //! session so the SSE/WebSocket event streams and `events/list` reflect it.
+//!
+//! Permission-mode enforcement (Phase 2, G5): enforcement is
+//! payload-and-flag based, with the boundary explicitly at two points:
+//!
+//! * External workers receive the session's `effective_permissions` map
+//!   (agent per-tool permissions merged with the session permission mode,
+//!   computed at session create) in the leased work payload — the worker
+//!   enforces it in its own process; the API cannot gate what it cannot
+//!   see.
+//! * In-process gating happens here, at event-write time: a `tool_calls`
+//!   event whose calls require approval (effective permission `ask`) is
+//!   stored with `requires_approval: true` and a pending request is
+//!   enqueued in the shared `permission_policy::ApprovalStore` (the same
+//!   store the approvals UI reads) — no second approval store is built.
+//!   Event-write time is the integration point; the approvals system has
+//!   no tool-call-specific enqueue hook beyond this store.
 
 use axum::{
     extract::{
@@ -43,6 +59,72 @@ const RESOURCE_KINDS: &[&str] = &["github_token", "vault_credential", "api_key"]
 
 fn empty_object() -> Value {
     json!({})
+}
+
+/// Stamp approval requirements onto one tool-call object: when the tool's
+/// effective permission is `ask`, a pending approval is enqueued in the
+/// shared [`crate::permission_policy::ApprovalStore`] and the call is
+/// marked `requires_approval: true` with the approval id. Returns whether
+/// the call required approval.
+fn gate_tool_call(
+    call: &mut Value,
+    effective_permissions: &Value,
+    approval_store: &crate::permission_policy::ApprovalStore,
+    user_id: &str,
+) -> bool {
+    let name = call
+        .get("name")
+        .or_else(|| call.get("tool"))
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let Some(name) = name else {
+        return false;
+    };
+    if effective_permissions.get(&name).and_then(Value::as_str) != Some("ask") {
+        return false;
+    }
+    let approval_id = approval_store.create(user_id, &name, call);
+    call["requires_approval"] = json!(true);
+    call["approval_id"] = json!(approval_id);
+    true
+}
+
+/// In-process permission gating for `tool_calls` events (see the module
+/// doc for the enforcement boundary). Walks the recognizable call shapes
+/// (`tool_calls`/`calls` arrays, a bare array, or a single call object) and
+/// stamps top-level `requires_approval: true` when any call was flagged.
+fn gate_tool_calls_by_permission(
+    data: &mut Value,
+    effective_permissions: &Value,
+    approval_store: &crate::permission_policy::ApprovalStore,
+    user_id: &str,
+) -> bool {
+    let mut flagged = false;
+    match data {
+        Value::Array(calls) => {
+            for call in calls {
+                flagged |= gate_tool_call(call, effective_permissions, approval_store, user_id);
+            }
+        }
+        Value::Object(_) => {
+            for key in ["tool_calls", "calls"] {
+                if let Some(Value::Array(calls)) = data.get_mut(key) {
+                    for call in calls {
+                        flagged |=
+                            gate_tool_call(call, effective_permissions, approval_store, user_id);
+                    }
+                }
+            }
+            if !flagged && (data.get("name").is_some() || data.get("tool").is_some()) {
+                flagged = gate_tool_call(data, effective_permissions, approval_store, user_id);
+            }
+        }
+        _ => {}
+    }
+    if flagged {
+        data["requires_approval"] = json!(true);
+    }
+    flagged
 }
 
 pub fn beta_session_router() -> Router<Arc<AppState>> {
@@ -493,19 +575,24 @@ async fn append_event(
     }
     let db = state.db.clone();
     let session_id = id.clone();
+    let approval_store = state.approval_store.clone();
     let result =
         tokio::task::spawn_blocking(move || {
             let mut conn = db.connect()?;
             let tx = conn.transaction()?;
-            let budget = tx.query_row(
+            let (budget, session_metadata) = tx.query_row(
             "SELECT max_tokens, max_turns, max_tool_calls, context_window, truncation_strategy,
-             tokens_used, turns_used, tool_calls_used
+             tokens_used, turns_used, tool_calls_used, metadata
              FROM beta_sessions WHERE id = ?1 AND user_id = ?2 AND status = 'active'",
             params![session_id, user.user_id],
-            |row| Ok(BudgetState {
-                max_tokens: row.get(0)?, max_turns: row.get(1)?, max_tool_calls: row.get(2)?,
-                context_window: row.get(3)?, truncation_strategy: row.get(4)?,
-                tokens_used: row.get(5)?, turns_used: row.get(6)?, tool_calls_used: row.get(7)? }),
+            |row| {
+                let budget = BudgetState {
+                    max_tokens: row.get(0)?, max_turns: row.get(1)?, max_tool_calls: row.get(2)?,
+                    context_window: row.get(3)?, truncation_strategy: row.get(4)?,
+                    tokens_used: row.get(5)?, turns_used: row.get(6)?, tool_calls_used: row.get(7)?,
+                };
+                Ok((budget, row.get::<_, Option<String>>(8)?))
+            },
         )?;
             let projected = UsageDelta {
                 tokens: budget.tokens_used.saturating_add(body.usage.tokens),
@@ -541,7 +628,25 @@ async fn append_event(
              tool_calls_used = tool_calls_used + ?3, updated_at = CURRENT_TIMESTAMP WHERE id = ?4",
             params![body.usage.tokens, body.usage.turns, body.usage.tool_calls, session_id],
         )?;
-            let event = insert_event(&tx, &session_id, &body.event_type, &body.data)?;
+            let mut data = body.data.clone();
+            if body.event_type == "tool_calls" {
+                // In-process gating: calls whose effective permission is
+                // `ask` are flagged and enqueued in the shared approval
+                // store (see the module doc's enforcement boundary).
+                if let Some(raw) = session_metadata {
+                    if let Ok(metadata) = serde_json::from_str::<Value>(&raw) {
+                        if let Some(perms) = metadata.get("effective_permissions") {
+                            gate_tool_calls_by_permission(
+                                &mut data,
+                                perms,
+                                &approval_store,
+                                &user.user_id,
+                            );
+                        }
+                    }
+                }
+            }
+            let event = insert_event(&tx, &session_id, &body.event_type, &data)?;
             tx.commit()?;
             Ok::<_, rusqlite::Error>((true, event))
         })
