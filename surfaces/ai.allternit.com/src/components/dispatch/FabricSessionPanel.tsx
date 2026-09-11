@@ -472,7 +472,7 @@ export function FabricSessionPanel({
                   )}
                 >
                   <FabricKindIcon kind={tab.id} size={13} />
-                  <span className="hidden xl:inline">{tab.label}</span>
+                  <span className="truncate">{tab.label}</span>
                 </button>
               );
             })}
