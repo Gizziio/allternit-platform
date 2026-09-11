@@ -1,24 +1,27 @@
-# Checkpoint — session/dmp1-0911
+# Steering checkpoint — session/742d251e (kimi-code)
 
 ## Goal
-Execute the LOCKED Design Mode P0 + P1 plan from the 2026-09-11 gap analysis
-(fake penpot tool, orphan import-url route, A:// Design System default + brand
-gate, quick wins). Plan: `.steering/plans/plan-dmp1-0911.md` (all 16 items done).
+Fix the Allternit Desktop rail "+" (New Session) menu to match the Anthropic/ChatGPT
+creation-menu pattern: one canonical `+` entry point (expanded + collapsed rail),
+compact icon + single-line rows, and an overlay consistent with the shell's other
+menus (tokens, shadow, z-index, entrance animation, keyboard support).
 
 ## Just did
-- All P0/P1/P2 items implemented in-worktree (two parallel streams: Rust API +
-  TS design surface). Verification: `cargo check -p allternit-api` clean;
-  8/8 new import-url unit tests pass; `vitest run src/lib/design` 13/13;
-  `vitest run src/shell` 20/20; `pnpm typecheck` zero new errors (11
-  pre-existing). 5 failing Rust lib tests are pre-existing on pristine HEAD
-  (agent_cloud_routes external-CLI spawns + 1 rails test), verified unrelated.
-- Import-url: no live-server smoke yet (route covered by unit tests; needs a
-  running :8013 + real URL to exercise end-to-end).
-- Spot-checked diff: penpot tool honest, lint feedback loop + save gate wired.
+- Gap analysis of `ui/shell/FloatingWidgets.tsx:193-221` create menu vs sibling
+  menus (`ProjectRailSection.tsx`, `SettingsDrilldown.tsx`) and vs Anthropic's
+  pattern (research: claude.ai sidebar + = compact New chat/New project rows;
+  Claude desktop = Chat/Cowork/Code session-type entries; composer + = icon rows).
+- Created session worktree `allternit-session-742d251e` on `session/742d251e`
+  from `origin/main` (1e52b9ea7).
+- Implemented: shared `ShellMenu` primitive + rewired create menu (Plus button,
+  icon + single-line items, collapsed-rail support). Typecheck clean on touched
+  files; FloatingWidgets vitest 6/6. Committed, pushed, PR #335.
+- Merged origin/main (checkpoint.md conflict with session/dmp1-0911's stale
+  checkpoint resolved in favor of this session — dmp1's work is merged + attested).
 
 ## Next
-- Commit (2 logical commits), push, PR, merge; ledger attestation; desktop
-  rebuild; cleanup.
+- Merge PR #335; sync main; ledger attestation; desktop preview rebuild; cleanup.
 
 ## Open questions
-- None.
+- Whether to add a "New Project" row (Anthropic lists projects): deferred — the
+  shell has no existing create-project handler to wire; noted for a future pass.
