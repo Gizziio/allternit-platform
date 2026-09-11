@@ -64,13 +64,16 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
   const xfRef = useRef(xf);
   xfRef.current = xf;
   const gesture = useRef<null | {
-    mode: 'pan' | 'pinch' | 'trackpad';
+    mode: 'pan' | 'two' | 'trackpad';
     startX: number;
     startY: number;
     lastX: number;
     lastY: number;
     orig: { scale: number; x: number; y: number };
     dist: number;
+    pinch: boolean;
+    scrollX: number;
+    scrollY: number;
     moved: boolean;
     startT: number;
   }>(null);
@@ -235,13 +238,16 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
     if (e.touches.length >= 2) {
       const mid = pinchMid(e);
       gesture.current = {
-        mode: 'pinch',
+        mode: 'two',
         startX: mid.x,
         startY: mid.y,
         lastX: mid.x,
         lastY: mid.y,
         orig: { ...xfRef.current },
         dist: pinchDist(e),
+        pinch: false,
+        scrollX: 0,
+        scrollY: 0,
         moved: false,
         startT: performance.now(),
       };
@@ -256,6 +262,9 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
         lastY: t.clientY,
         orig: { ...xfRef.current },
         dist: 0,
+        pinch: false,
+        scrollX: 0,
+        scrollY: 0,
         moved: false,
         startT: performance.now(),
       };
@@ -269,6 +278,9 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
       lastY: t.clientY,
       orig: { ...xfRef.current },
       dist: 0,
+      pinch: false,
+      scrollX: 0,
+      scrollY: 0,
       moved: false,
       startT: performance.now(),
     };
@@ -278,23 +290,39 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
     e.preventDefault();
     const g = gesture.current;
     if (!g) return;
-    if (e.touches.length >= 2 && g.mode === 'pinch') {
+    if (e.touches.length >= 2 && g.mode === 'two') {
       const mid = pinchMid(e);
       const dist = pinchDist(e);
       const ratio = dist / (g.dist || dist);
-      const stage = stageRef.current;
-      if (!stage) return;
-      const rect = stage.getBoundingClientRect();
-      const px = mid.x - rect.left;
-      const py = mid.y - rect.top;
-      const nextScale = clamp(g.orig.scale * ratio, 0.2, 8);
-      const cx = (px - g.orig.x) / g.orig.scale;
-      const cy = (py - g.orig.y) / g.orig.scale;
-      setXf({
-        scale: nextScale,
-        x: px - cx * nextScale,
-        y: py - cy * nextScale,
-      });
+      if (!g.pinch && (ratio > 1.12 || ratio < 0.89)) g.pinch = true;
+      if (g.pinch) {
+        const stage = stageRef.current;
+        if (!stage) return;
+        const rect = stage.getBoundingClientRect();
+        const px = mid.x - rect.left;
+        const py = mid.y - rect.top;
+        const nextScale = clamp(g.orig.scale * ratio, 0.2, 8);
+        const cx = (px - g.orig.x) / g.orig.scale;
+        const cy = (py - g.orig.y) / g.orig.scale;
+        setXf({
+          scale: nextScale,
+          x: px - cx * nextScale,
+          y: py - cy * nextScale,
+        });
+      } else {
+        g.scrollX += mid.x - g.lastX;
+        g.scrollY += mid.y - g.lastY;
+        const step = 18;
+        const dx = Math.trunc(g.scrollX / step);
+        const dy = Math.trunc(g.scrollY / step);
+        if (dx || dy) {
+          void sendInput({ type: 'scroll', dx, dy });
+          g.scrollX -= dx * step;
+          g.scrollY -= dy * step;
+        }
+      }
+      g.lastX = mid.x;
+      g.lastY = mid.y;
       g.moved = true;
       return;
     }
@@ -346,13 +374,19 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
+        onWheel={(e) => {
+          e.preventDefault();
+          const dx = Math.trunc(e.deltaX / 40);
+          const dy = Math.trunc(e.deltaY / 40);
+          if (dx || dy) void sendInput({ type: 'scroll', dx, dy });
+        }}
       >
         <div className="absolute top-0 inset-x-0 z-10 pointer-events-none flex items-center gap-2 px-3 py-2 text-[11px] text-white/70">
           <span className={cn('size-2 rounded-full', status === 'live' ? 'bg-[#22c55e]' : status === 'connecting' ? 'bg-[#febc2e]' : 'bg-[#ef4444]')} />
           <span className="truncate">{message}</span>
-          {portrait ? (
-            <span className="ml-auto text-white/45">Turn sideways for a larger desktop</span>
-          ) : null}
+          <span className="ml-auto text-white/45">
+            {portrait ? 'Turn sideways · ' : ''}2 fingers scroll · pinch zoom
+          </span>
           {status === 'connecting' ? <Spinner size={12} className="animate-spin ml-auto" /> : null}
         </div>
         {status === 'live' || status === 'locked' ? (
