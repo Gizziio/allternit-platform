@@ -101,13 +101,15 @@
       },
       "license": "apache",
       "install": {
-        "method": "unsupported",
-        "pinnedVersion": null,
-        "installArgs": [],
+        "method": "npm",
+        "pinnedVersion": "1.0.25",
+        "installArgs": [
+          "@xai-official/grok@1.0.25"
+        ],
         "verifyCmd": "grok --version"
       },
       "_convention": "Grok CLI native `grok mcp add`, verified live on this machine (not in teamai matrix). confidence: verified-live",
-      "_licenseNote": "Apache-2.0 per the installed CLI's own README License section (https://github.com/x-ai-org/grok-cli). No verified version-pinned install channel: npm 'grok-cli' is NOT the xAI package (unrelated 1.0.5, verified 2026-09-10) — do not add an npm method for grok without an upstream-pinned channel."
+      "_licenseNote": "Apache-2.0. Official npm @xai-official/grok (1.0.25 verified 2026-09-11); alternate channel curl -fsSL https://x.ai/cli/install.sh | bash. Do not use npm 'grok-cli' (unrelated 1.0.5)."
     },
     "cursor": {
       "skillsDir": "~/.cursor/skills",
@@ -121,13 +123,15 @@
       },
       "license": "proprietary-terms",
       "install": {
-        "method": "unsupported",
-        "pinnedVersion": null,
-        "installArgs": [],
+        "method": "script",
+        "pinnedVersion": "2026.09.10",
+        "installArgs": [
+          "https://cursor.com/install"
+        ],
         "verifyCmd": "cursor-agent --version"
       },
       "_convention": "skills ~/.cursor/skills + MCP ~/.cursor/mcp.json (mcpServers, stdio {command,args}) per teamai-cli toolPaths/mcp-format. syncWhenAbsent: true — config-only install on this machine, so config is written even while the app dir is absent. confidence: teamai + verified-live",
-      "_licenseNote": "Proprietary — Cursor Terms of Service (https://cursor.com/terms). GUI app; cursor-agent ships inside it. No CLI-installable pinned channel, so method unsupported (manifest sync itself works via syncWhenAbsent)."
+      "_licenseNote": "Proprietary — Cursor Terms (https://cursor.com/terms). Official CLI installer: curl https://cursor.com/install -fsS | bash (binary cursor-agent / agent under ~/.local/bin). npm 'cursor-agent' is a third-party squatter (zalab-inc) — not used. Installs only with --accept-terms cursor."
     },
     "gizzi": {
       "skillsDir": "~/.gizzi/skills",
@@ -140,16 +144,18 @@
       },
       "license": "mit",
       "install": {
-        "method": "unsupported",
-        "pinnedVersion": null,
-        "installArgs": [],
+        "method": "npm",
+        "pinnedVersion": "2.0.7",
+        "installArgs": [
+          "@allternit/gizzi-code@2.0.7"
+        ],
         "verifyCmd": "gizzi --version"
       },
       "_convention": "Gizzi Code conventions, verified live on this machine (not in teamai matrix). MCP entry shape {type:local, command:[...]} verified from gizzi source. confidence: verified-live",
-      "_licenseNote": "MIT for Allternit-original contributions (cmd/gizzi-code/LICENSE); portions derived from Anthropic's Claude Code are described in NOTICE and are NOT relicensed by that grant. Not distributed on npm — built from source / bundled with Allternit Desktop — so method unsupported."
+      "_licenseNote": "MIT on npm @allternit/gizzi-code (2.0.7 verified 2026-09-11, bin gizzi). Allternit-original contributions MIT; Anthropic-derived portions per NOTICE are not relicensed."
     },
     "agy": {
-      "skillsDir": null,
+      "skillsDir": "~/.gemini/antigravity/skills",
       "rulesFile": null,
       "mcp": {
         "kind": "cli",
@@ -170,15 +176,19 @@
         "configFormat": "json",
         "serversKey": "mcpServers"
       },
-      "license": "undeclared",
+      "license": "proprietary-terms",
       "install": {
-        "method": "unsupported",
-        "pinnedVersion": null,
-        "installArgs": [],
+        "method": "script",
+        "pinnedVersion": "1.2.0",
+        "installArgs": [
+          "https://antigravity.google/cli/install.sh",
+          "--dir",
+          "{bin}"
+        ],
         "verifyCmd": "agy --version"
       },
-      "_convention": "MCP config file verified live: `agy mcp add` writes ~/.gemini/config/mcp_config.json (agy is gemini-heritage). No skills convention found (plugins only) — skills not synced. Not in teamai matrix. confidence: verified-live",
-      "_licenseNote": "No upstream license evidence found (gemini-heritage fork per this manifest's _convention; Apache-2.0 of upstream gemini-cli does not automatically cover a fork). Stays undeclared until upstream evidence — installs (if ever) only with --accept-terms agy."
+      "_convention": "Antigravity CLI binary is `agy` (https://antigravity.google/docs/cli/install). Installs to ~/.local/bin/agy; config ~/.gemini/antigravity-cli/settings.json; MCP via `agy mcp add` writes ~/.gemini/config/mcp_config.json. The previous 'antigravity' manifest key was a duplicate of this CLI. confidence: verified-live",
+      "_licenseNote": "Google Antigravity CLI (agy). Official installer curl -fsSL https://antigravity.google/cli/install.sh | bash (supports --dir for a custom bin). Google Terms. Installs only with --accept-terms agy."
     },
     "opencode": {
       "skillsDir": "~/.config/opencode/skills",
@@ -211,20 +221,6 @@
       },
       "_convention": "User-scope skills at ~/.config/opencode/skills (dir-per-skill) per teamai-cli toolPaths userScope AND opencode v1.18 docs — NOT flat <name>.md as once assumed. `opencode mcp add` requires `--` before the command; CLI has no mcp remove, so uninstall edits opencode.jsonc directly. confidence: teamai + verified-live",
       "_licenseNote": "MIT (https://github.com/anomalyco/opencode, also npm metadata). HarnessRouter CE installs the GitHub release binary instead because the vendor script hardcodes its install dir; the npm package is a versioned wrapper around the same binary and is the pinned channel ao uses. Pin verified on npm registry 2026-09-10."
-    },
-    "antigravity": {
-      "skillsDir": "~/.gemini/antigravity/skills",
-      "rulesFile": null,
-      "mcp": null,
-      "license": "proprietary-terms",
-      "install": {
-        "method": "unsupported",
-        "pinnedVersion": null,
-        "installArgs": [],
-        "verifyCmd": "antigravity --version"
-      },
-      "_convention": "MCP skipped — Antigravity IDE configures MCP in the IDE UI, not a stable file. Skills dir per platform crate convention; created on sync. Not in teamai matrix. confidence: inferred (platform crate)",
-      "_licenseNote": "Proprietary — Google Terms of Service (https://policies.google.com/terms). IDE-only installer (Google's own download), no CLI-pinned channel: method unsupported."
     },
     "qwen": {
       "skillsDir": "~/.qwen/skills",
@@ -275,13 +271,15 @@
       },
       "license": "proprietary-terms",
       "install": {
-        "method": "unsupported",
-        "pinnedVersion": null,
-        "installArgs": [],
+        "method": "npm",
+        "pinnedVersion": "2.148.0",
+        "installArgs": [
+          "@tencent-ai/codebuddy-code@2.148.0"
+        ],
         "verifyCmd": "codebuddy --version"
       },
       "_convention": "skills ~/.codebuddy/skills, rules ~/.codebuddy/CODEBUDDY.md, MCP ~/.codebuddy/mcp.json per teamai-cli toolPaths (claudemd = where teamai writes rules content). MCP stdio shape {command, args} under mcpServers per teamai-cli mcp-format renderBuddy — schema verified from teamai source, NOT live-tested (tool not installed here). confidence: teamai",
-      "_licenseNote": "Proprietary — Tencent CodeBuddy vendor terms (https://www.codebuddy.ai); no SPDX license published. No verified version-pinned public install channel (npm 'codebuddy' 1.0.0 MIT is a name squatter, verified 2026-09-10): method unsupported."
+      "_licenseNote": "Proprietary — Tencent CodeBuddy terms (https://www.codebuddy.ai). Official npm @tencent-ai/codebuddy-code (2.148.0 verified 2026-09-11). Also curl -fsSL https://www.codebuddy.cn/cli/install.sh | bash. Installs only with --accept-terms codebuddy."
     },
     "workbuddy": {
       "skillsDir": "~/.workbuddy/skills",
@@ -293,13 +291,15 @@
       },
       "license": "proprietary-terms",
       "install": {
-        "method": "unsupported",
-        "pinnedVersion": null,
-        "installArgs": [],
+        "method": "npm",
+        "pinnedVersion": "1.0.3",
+        "installArgs": [
+          "@workbuddy/cli@1.0.3"
+        ],
         "verifyCmd": "workbuddy --version"
       },
       "_convention": "skills ~/.workbuddy/skills + MCP ~/.workbuddy/mcp.json per teamai-cli toolPaths; buddy-family stdio shape {command, args} per mcp-format renderBuddy. teamai lists claudemd 'AGENTS.md' (workspace-relative, not a user-scope dotfile) — no user-scope rules file, so rulesFile null. MCP schema from teamai source, not live-tested. confidence: teamai",
-      "_licenseNote": "Proprietary — Tencent WorkBuddy vendor terms; no SPDX license published, no verified version-pinned public install channel (no npm package under this name, verified 2026-09-10): method unsupported."
+      "_licenseNote": "MIT on npm @workbuddy/cli (1.0.3 verified 2026-09-11, bins workbuddy/wb). Tencent WorkBuddy desktop is a separate GUI installer; this is the CLI package. Some Tencent docs install the CodeBuddy CLI (@tencent-ai/codebuddy-code) for the same workflow."
     },
     "openclaw": {
       "skillsDir": "~/.openclaw/skills",
@@ -383,13 +383,15 @@
       },
       "license": "proprietary-terms",
       "install": {
-        "method": "unsupported",
-        "pinnedVersion": null,
-        "installArgs": [],
+        "method": "npm",
+        "pinnedVersion": "1.1.49",
+        "installArgs": [
+          "@qoder-ai/qodercli@1.1.49"
+        ],
         "verifyCmd": "qoder --version"
       },
       "_convention": "skills ~/.qoder/skills per teamai-cli toolPaths. MCP ~/.qoder/settings.json mcpServers per teamai toolPaths; qoder renders with the claude-family shape, so the entry carries \"type\": \"stdio\" (engine entryType option). teamai's rules path .qoder/rules is a rules DIRECTORY (not a single instruction file) — our marker-block rulesFile doesn't apply, rulesFile null. MCP schema from teamai source, not live-tested. confidence: teamai",
-      "_licenseNote": "Proprietary — Alibaba Qoder vendor terms (https://qoder.com); no SPDX license published. No verified version-pinned public install channel (npm '@qoder-ai/*' names do not exist, verified 2026-09-10): method unsupported."
+      "_licenseNote": "Alibaba Qoder vendor terms (https://qoder.com). Official npm @qoder-ai/qodercli (1.1.49 verified 2026-09-11, bins qoder/qodercli). Alternate: curl -fsSL https://qoder.com/install | bash. Installs only with --accept-terms qoder."
     }
   },
   "_notes": {
