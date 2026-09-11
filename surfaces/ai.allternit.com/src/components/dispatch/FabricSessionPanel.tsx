@@ -20,7 +20,8 @@ import {
   type PushSubscriptionJSON,
 } from '@/lib/dispatch/fabric-session-client';
 import { FABRIC_DRIVE_KINDS, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
-import { extractAciScreenshot, FabricAciDrive, FabricBotDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive, mergeNodeBots } from '@/components/dispatch/FabricSessionDriveViews';
+import { extractAciScreenshot, FabricAciDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive } from '@/components/dispatch/FabricSessionDriveViews';
+import { FabricBotModeCanvas, FabricBotModeRail } from '@/components/dispatch/FabricBotMode';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
 
 export interface FabricSessionPanelProps {
@@ -527,9 +528,10 @@ export function FabricSessionPanel({
               );
             })}
           </div>
+          {driveKind !== 'bot' ? (
           <div className="flex items-center justify-between mt-3 px-1">
             <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--shell-item-muted)]">
-              {driveKind === 'bot' ? 'Bots' : `${sessionTabs.find((tab) => tab.id === driveKind)?.label ?? 'Chat'} sessions`}
+              {`${sessionTabs.find((tab) => tab.id === driveKind)?.label ?? 'Chat'} sessions`}
             </div>
             <div className="flex items-center gap-0.5">
               {pushSupported && (
@@ -552,43 +554,18 @@ export function FabricSessionPanel({
                 <Plus size={14} weight="bold" />
               </button>
             </div>
-          </div>
+          ) : null}
         </div>
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {driveKind === 'bot' ? (
-            <FabricBotDrive
-              bots={mergeNodeBots(bots, brains)}
-              sessions={sessions}
-              selectedSessionId={selectedSessionId}
+            <FabricBotModeRail
               selectedBotId={selectedBotId}
-              onSelectBot={setSelectedBotId}
-              onSelectSession={pickSession}
-              onOpenBot={(bot) => {
-                setSelectedBotId(bot.id);
-                void (async () => {
-                  try {
-                    const brainModel = bot.provider && bot.model
-                      ? { providerID: bot.provider, modelID: bot.model }
-                      : selectedBrain ?? undefined;
-                    const created = await fabricClient.createSession({
-                      title: `${bot.name} session`,
-                      surface: bot.provider ? 'chat' : 'cowork',
-                      agentID: bot.provider ? undefined : bot.id,
-                      defaultModel: brainModel,
-                    });
-                    if (brainModel) setSelectedBrain(brainModel);
-                    await fetchSessions();
-                    const sessionId = (created as { id?: string })?.id;
-                    if (sessionId) pickSession(sessionId);
-                  } catch (error) {
-                    addToast({
-                      title: 'Error',
-                      description: error instanceof Error ? error.message : 'Failed to open bot',
-                      type: 'error',
-                    });
-                  }
-                })();
+              hubOpen={!selectedBotId}
+              onSelectBot={(id) => {
+                setSelectedBotId(id);
+                if (isMobile && !railCollapsed) toggleRail();
               }}
+              onOpenHub={() => setSelectedBotId(null)}
             />
           ) : kindSessions.length === 0 ? (
             <div className="px-2 py-6 text-center">
@@ -665,7 +642,16 @@ export function FabricSessionPanel({
       ) : null}
 
       <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-[var(--shell-view-bg)]">
-        {!selectedSession ? (
+        {driveKind === 'bot' ? (
+          <FabricBotModeCanvas
+            selectedBotId={selectedBotId}
+            onSelectBot={(id) => {
+              setSelectedBotId(id);
+              if (isMobile && !railCollapsed) toggleRail();
+            }}
+            onBack={() => setSelectedBotId(null)}
+          />
+        ) : !selectedSession ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
               <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
