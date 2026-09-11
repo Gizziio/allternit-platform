@@ -65,8 +65,9 @@ alias of `/api/v1/beta/vaults`. `GET /agents/:id/toolset` returns the agent's
 tools, allowed_tools, and allowed_skills (`tool_search` and MCP are not
 bound on this surface yet). `/api/v1/schedules` aliases `/beta/deployments`.
 There is no public `/runtimes` resource; the computer binding lives on the
-session. `computer.kind` `sandbox`, `fabric`, and `desktop` return `400`
-until provision is entitled.
+session. `computer.kind` `sandbox`, `desktop`, and `fabric` provision a Computer
+Cloud desktop (Cloud Desktop / Incus / Tart), not Fly. `sandbox` is
+ephemeral; `desktop` and `fabric` are session-lived.
 
 ## SDK
 
