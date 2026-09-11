@@ -16,12 +16,6 @@ export default defineConfig((env) =>
     typeof baseConfig === 'function' ? baseConfig(env) : baseConfig,
     {
       publicDir: false,
-      resolve: {
-        alias: {
-          tldraw: path.resolve(__dirname, 'src/fabric-session/stubs/tldraw.ts'),
-          '@tldraw/tlschema': path.resolve(__dirname, 'src/fabric-session/stubs/tldraw.ts'),
-        },
-      },
       build: {
         outDir: 'dist-fabric-session',
         emptyOutDir: true,

@@ -4,11 +4,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Bell,
   BellSlash,
+  CaretLeft,
   DesktopTower,
   DownloadSimple,
   Moon,
   Sun,
 } from "@phosphor-icons/react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { FabricDesktopDrive } from "@/components/dispatch/FabricDesktopDrive";
 import {
   FabricAppHeader,
   FabricHeaderControl,
@@ -159,6 +162,7 @@ export function DashboardPage({
     });
   }, [auth.isSignedIn]);
 
+  const isPhone = useMediaQuery("(max-width: 768px), (pointer: coarse)");
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
@@ -322,7 +326,7 @@ export function DashboardPage({
   if (!auth.isSignedIn) {
     return (
       <div
-        className="min-h-screen w-full flex items-center justify-center px-5 bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]"
+        className="min-h-[100dvh] w-full flex items-center justify-center px-5 overflow-y-auto bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]"
       >
         <div className="max-w-md w-full p-8 text-center rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]">
           <DesktopTower size={48} style={{ opacity: 0.6 }} className="mx-auto mb-4" color="var(--accent-primary)" />
@@ -365,8 +369,34 @@ export function DashboardPage({
   );
 
   if (sessionOpen && selected) {
+    if (isPhone) {
+      return (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-[#0b0b0a] text-white"
+          style={{ height: "100dvh" }}
+        >
+          <div
+            className="shrink-0 flex items-center gap-2 px-3 pb-2"
+            style={{ paddingTop: "max(10px, env(safe-area-inset-top))" }}
+          >
+            <button
+              type="button"
+              onClick={closeSession}
+              className="inline-flex items-center gap-1 rounded-lg border-none bg-white/10 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
+            >
+              <CaretLeft size={16} weight="bold" />
+              Machines
+            </button>
+            <div className="min-w-0 flex-1 truncate text-[14px] font-semibold">{selected.name}</div>
+          </div>
+          <div className="flex-1 min-h-0">
+            <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
+      <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
         <FabricAppHeader title={selected.name} onBack={closeSession}>
           {headerActions}
         </FabricAppHeader>
@@ -384,7 +414,7 @@ export function DashboardPage({
   }
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
+    <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
       <FabricAppHeader>{headerActions}</FabricAppHeader>
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto px-8 pt-10 pb-12">
