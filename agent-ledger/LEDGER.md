@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:30 — grok — UHP/harness remaining work (rq-20260908-028)
+
+- **Session ID / Branch:** follow-up backlog (no branch yet)
+- **Agent:** grok
+- **Summary:** Recorded unfinished work after P6b (#280), docs (#281), and harness install channels (#291). Not started.
+- **Commit:** none — tracking only
+- **How it works:** Six follow-ups stay on the ledger until a later session picks them: (1) engine PATH for `~/.ao/harness/bin` so managed installs spawn from `ao serve`; (2) OpenCode UHP turn in an engine pane; (3) dsh PyPI pin that exists; (4) Gate 2 claude/codex after re-auth / 2026-09-16; (5) CI job for `uhp-conformance --class full`; (6) session artifact download (X-07).
+- **Outstanding work:** all six items above. Do not treat P6b as having delivered them.
+- **Summary file:** [2026-09-10-2130-uhp-p6b-followups-grok.md](./summaries/2026-09-10-2130-uhp-p6b-followups-grok.md)
+
 ### 2026-09-10 21:26 — grok — bot-mode live e2e (web/PWA) + gizzi 2.0.8
 
 - **Session ID / Branch:** `session/botmode-group-e2e-0910` (worktree `allternit-session-botmode-clerk-0910`; pickup of Kimi `session_6f5d4729`)
