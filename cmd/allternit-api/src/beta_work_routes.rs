@@ -20,6 +20,12 @@
 //! Tasks are scoped to the authenticated caller's `user_id`, the same as
 //! `beta_sessions` and `beta_deployments` — a self-hosted worker polls with
 //! the owning user's own API credentials.
+//!
+//! Permission-mode enforcement (Phase 2): when a leased task is tied to a
+//! session, the session's `effective_permissions` map (built at session
+//! create, see `cloud_agents_routes`) is injected into the leased task's
+//! payload as an optional field. External workers enforce it themselves —
+//! workers that predate the field simply ignore it.
 
 use axum::{
     extract::{Extension, Path, Query, State},
@@ -255,7 +261,28 @@ async fn lease_task(
              lease_expires_at = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?3",
             params![worker_id, lease_expires_at.to_rfc3339(), id],
         )?;
-        let task = tx.query_row(&format!("{TASK_SELECT} WHERE id = ?1"), params![id], read_task)?;
+        let mut task = tx.query_row(&format!("{TASK_SELECT} WHERE id = ?1"), params![id], read_task)?;
+        // Ship the session's effective permission map to the worker as an
+        // optional payload field (absent for tasks without a session or a
+        // pre-Phase-2 session, so older workers are unaffected).
+        if let Some(ref session_id) = task.session_id {
+            let metadata: Option<String> = tx
+                .query_row(
+                    "SELECT metadata FROM beta_sessions WHERE id = ?1",
+                    params![session_id],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            if let Some(metadata) = metadata {
+                if let Ok(metadata) = serde_json::from_str::<Value>(&metadata) {
+                    if let Some(perms) = metadata.get("effective_permissions") {
+                        if let Some(payload) = task.payload.as_object_mut() {
+                            payload.insert("effective_permissions".to_string(), perms.clone());
+                        }
+                    }
+                }
+            }
+        }
         tx.commit()?;
         Ok(Some(task))
     })
