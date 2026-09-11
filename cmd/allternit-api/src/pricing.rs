@@ -17,6 +17,9 @@ const BASE_MEMORY_MIB: f64 = 4096.0;
 /// Do not treat these as final pricing.
 fn default_rates() -> HashMap<&'static str, f64> {
     let mut m = HashMap::new();
+    // Blended LLM placeholder (~$2 / million tokens). Telemetry only —
+    // Cloud Agents do not charge this. Override with ALLTERNIT_PRICE_LLM_TOKENS_TOKENS.
+    m.insert("llm_tokens:tokens", 0.0002);
     m.insert("sandbox_runtime:seconds", 0.02);
     m.insert("vcpu_seconds:seconds", 0.01);
     m.insert("gpu_seconds:seconds", 0.5);
@@ -103,6 +106,11 @@ pub fn estimate_hourly_cost_cents(memory_mib: Option<i64>, os: Option<&str>) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn llm_tokens_telemetry_rate_is_nonzero() {
+        assert_eq!(compute_cost_cents("llm_tokens", "tokens", 1_000_000.0), 200);
+    }
 
     #[test]
     fn linux_4gb_60min_cost() {
