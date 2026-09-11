@@ -1,28 +1,40 @@
 import React, { useEffect, useState } from 'react';
 
 /**
- * AProtocolWordmark — the pixel-A brand mark followed by the full A://TERNIT
- * wordmark (the :// stands in for the "ll" of Allternit). Office surface copy
- * adds an optional pixel-letter `suffix` (e.g. "OFFICE") rendered on the same
- * grid so product names match the wordmark style.
- *
- * The mark itself is the canonical cream squircle PNG
- * (public/brand/a-only-cream-squircle.png) — the same asset used for favicons
- * and app icons. Only the TERNIT/suffix letters are still drawn as pixel
- * blocks: 10-unit cells, 8.5 blocks, rx 1.5, running at pitch 6.
+ * AProtocolWordmark — the pixel A:// protocol mark followed by the full
+ * A://TERNIT wordmark (the :// stands in for the "ll" of Allternit), with an
+ * optional pixel-letter `suffix` (e.g. "OFFICE", "DESIGN") on the same grid
+ * so product names match the wordmark style. Identical geometry to the
+ * office.allternit.com surface copy: the A:// mark is drawn as pixel blocks
+ * (cols 0–14), letters run at pitch 6 from col 16; 10-unit cells, 8.5
+ * blocks, rx 1.5; the A core block renders in Allternit coral (#D97757).
  *
  * Behavior mirrors the Anthropic logotype → logomark collapse: pass
  * `collapsed` (e.g. from `useScrollCollapse`) and the letters cascade away
- * letter-by-letter while the container clips down to the mark.
+ * letter-by-letter while the container clips down to the A:// mark.
  */
 
 const CELL = 10;
 const BLOCK = 8.5;
 const OFF = (CELL - BLOCK) / 2; // 0.75
+const MARK_COLS = 15;
 const TERNIT_START = 16;
 const PITCH = 6;
 const SPACE_COLS = 3;
 const ROWS = 5;
+
+// A:// mark — apex, shoulders, crossbar row, legs; colon; two staircase slashes.
+const MARK_CELLS: ReadonlyArray<readonly [number, number]> = [
+  [2, 0],
+  [1, 1], [3, 1],
+  [0, 2], [1, 2], [3, 2], [4, 2],
+  [0, 3], [4, 3],
+  [0, 4], [4, 4],
+  [6, 1], [6, 3],
+  [8, 3], [8, 4], [9, 2], [10, 0], [10, 1],
+  [12, 3], [12, 4], [13, 2], [14, 0], [14, 1],
+];
+const CORE_CELL: readonly [number, number] = [2, 2];
 
 // Pixel letterforms, 5x5 cell maps (x, y) relative to each letter's origin col.
 const GLYPHS: Record<string, ReadonlyArray<readonly [number, number]>> = {
@@ -46,10 +58,6 @@ const GLYPHS: Record<string, ReadonlyArray<readonly [number, number]>> = {
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 const EXPAND_STAGGER = 45; // ms per letter when revealing
 const COLLAPSE_STAGGER = 30; // ms per letter when hiding (reverse order)
-
-// Mark asset and the gap that used to sit between the A:// mark and TERNIT.
-const MARK_SRC = '/brand/a-only-cream-squircle.png';
-const MARK_GAP_COLS = TERNIT_START - 15; // one empty column after the mark
 
 interface LetterSpec {
   cells: ReadonlyArray<readonly [number, number]>;
@@ -80,11 +88,14 @@ export interface AProtocolWordmarkProps {
   suffix?: string;
   /** ink = dark letters on light bg, light = cream letters on dark bg,
    *  mono = currentColor letters, adaptive = currentColor ink (follows the
-   *  host theme). The mark image is a fixed cream squircle in all themes. */
+   *  host theme). The pixel A:// mark follows the same ink rules. */
   theme?: 'ink' | 'light' | 'mono' | 'adaptive';
-  /** 'current' renders the A:// mark in currentColor (CSS-masked over the
-   *  squircle shape) instead of the fixed cream image — for chrome surfaces
-   *  that want the mark to follow the theme like the letters do. */
+  /**
+   * @deprecated No-op — the PNG mark variants were removed when the mark
+   * became pixel blocks (office-parity geometry). Kept so existing callers
+   * compile; the pixel mark already follows `theme` (currentColor under
+   * adaptive/mono).
+   */
   markVariant?: 'cream' | 'current';
   className?: string;
 }
@@ -94,27 +105,25 @@ export function AProtocolWordmark({
   height = 20,
   suffix = '',
   theme = 'ink',
-  markVariant = 'cream',
+  markVariant: _markVariant,
   className,
 }: AProtocolWordmarkProps) {
   const ink = theme === 'light' ? '#F0EEE6'
     : theme === 'mono' || theme === 'adaptive' ? 'currentColor'
     : '#141413';
+  const core = theme === 'mono' ? 'currentColor' : '#D97757';
 
   const { letters, totalCols } = layout(`TERNIT ${suffix}`.trimEnd());
-  const letterCols = totalCols - TERNIT_START;
-  const lettersW = (height * letterCols) / ROWS;
-  const gap = (height * MARK_GAP_COLS) / ROWS;
-  // The mark is a 1:1 squircle, so it is sized by height like the old SVG mark.
-  const markW = height;
-  const fullW = markW + gap + lettersW;
+  const fullW = (height * totalCols) / ROWS;
+  const markW = (height * MARK_COLS) / ROWS;
 
   return (
     <span
       className={className}
+      aria-label={`Allternit ${suffix}`.trim()}
+      role="img"
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
+        display: 'inline-block',
         overflow: 'hidden',
         height,
         width: collapsed ? markW : fullW,
@@ -122,38 +131,34 @@ export function AProtocolWordmark({
         verticalAlign: 'middle',
       }}
     >
-      {markVariant === 'current' ? (
-        <span
-          role="img"
-          aria-label="Allternit"
-          style={{
-            display: 'block',
-            width: height,
-            height,
-            borderRadius: '22%',
-            flexShrink: 0,
-            background: 'currentColor',
-            WebkitMask: `url(${MARK_SRC}) center / contain no-repeat`,
-            mask: `url(${MARK_SRC}) center / contain no-repeat`,
-          }}
-        />
-      ) : (
-        <img
-          src={MARK_SRC}
-          alt="Allternit"
-          width={height}
-          height={height}
-          style={{ display: 'block', borderRadius: '22%' }}
-        />
-      )}
       <svg
-        viewBox={`${TERNIT_START * CELL} 0 ${letterCols * CELL} ${ROWS * CELL}`}
-        width={lettersW}
+        viewBox={`0 0 ${totalCols * CELL} ${ROWS * CELL}`}
+        width={fullW}
         height={height}
-        style={{ display: 'block', marginLeft: gap, flexShrink: 0 }}
+        style={{ display: 'block' }}
         shapeRendering="geometricPrecision"
-        aria-hidden="true"
       >
+        {/* A:// protocol mark — always visible */}
+        <g fill={ink}>
+          {MARK_CELLS.map(([cx, cy]) => (
+            <rect
+              key={`m-${cx}-${cy}`}
+              x={cx * CELL + OFF}
+              y={cy * CELL + OFF}
+              width={BLOCK}
+              height={BLOCK}
+              rx={1.5}
+            />
+          ))}
+        </g>
+        <rect
+          x={CORE_CELL[0] * CELL + OFF}
+          y={CORE_CELL[1] * CELL + OFF}
+          width={BLOCK}
+          height={BLOCK}
+          rx={1.5}
+          fill={core}
+        />
         {/* Letters — cascade in left-to-right on expand, out right-to-left on collapse */}
         {letters.map((letter, i) => (
           <g

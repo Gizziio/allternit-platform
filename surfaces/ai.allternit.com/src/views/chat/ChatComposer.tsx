@@ -91,7 +91,7 @@ import { TaskBar } from './components/TaskBar';
 import { ModeDock } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
-import { ComposerPlusSheet, type ToolAccessLevel, type ResponseStyle } from './components/ComposerPlusSheet';
+import { ComposerPlusSheet } from './components/ComposerPlusSheet';
 import { ConnectorMarketplaceDialog } from './components/ConnectorMarketplaceDialog';
 import { MiroFishPanel } from './panels/MiroFishPanel';
 import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
@@ -425,8 +425,6 @@ export function ChatComposer({
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [researchEnabled, setResearchEnabled] = useState(false);
-  const [toolAccess, setToolAccess] = useState<ToolAccessLevel>('all');
-  const [activeStyle, setActiveStyle] = useState<ResponseStyle | null>(null);
   const chatProjects = useChatStore((s) => s.projects);
   const chatActiveProjectId = useChatStore((s) => s.activeProjectId);
   const chatSetActiveProject = useChatStore((s) => s.setActiveProject);
@@ -983,12 +981,8 @@ export function ChatComposer({
     const parts: string[] = [];
     if (webSearchEnabled) parts.push('[web_search_enabled]');
     if (researchEnabled) parts.push('[research_enabled]');
-    if (toolAccess !== 'all') parts.push(`[tool_access:${toolAccess}]`);
-    const stylePrefix = activeStyle
-      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
-      : '';
-    return `${parts.join(' ')}${parts.length > 0 ? ' ' : ''}${stylePrefix}${baseInput}`.trim();
-  }, [activeStyle, researchEnabled, toolAccess, webSearchEnabled]);
+    return `${parts.join(' ')}${parts.length > 0 ? ' ' : ''}${baseInput}`.trim();
+  }, [researchEnabled, webSearchEnabled]);
 
   const enterVoiceMode = useCallback(async () => {
     clearVoiceTranscript();
@@ -2289,20 +2283,15 @@ export function ChatComposer({
                 setWebSearchEnabled={setWebSearchEnabled}
                 researchEnabled={researchEnabled}
                 setResearchEnabled={setResearchEnabled}
-                activeStyle={activeStyle}
-                setActiveStyle={setActiveStyle}
-                toolAccess={toolAccess}
-                setToolAccess={setToolAccess}
                 projects={chatProjects.map((p) => ({ id: p.id, title: p.title }))}
                 activeProjectId={chatActiveProjectId}
                 setActiveProjectId={(id) => chatSetActiveProject(id)}
                 onCreateProject={() => { void chatCreateProject('New Project'); }}
                 onOpenConnectors={() => setShowConnectorMarketplace(true)}
-                onOpenFormSurfaces={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'form-surfaces' } }))}
                 onOpenBrainCapture={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'brain' } }))}
-                onOpenCoworkTasks={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'cowork-tasks' } }))}
-                onOpenAgentActivity={() => window.dispatchEvent(new CustomEvent('allternit:open-agent-activity'))}
                 onOpenPermissions={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'permissions' } }))}
+                onOpenPlugins={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'apps-extensions' } }))}
+                onOpenSkills={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'skills' } }))}
               />
 
               <ConnectorMarketplaceDialog
@@ -2316,13 +2305,6 @@ export function ChatComposer({
                 <button type="button" onClick={() => setWebSearchEnabled(false)} title="Web search on — click to remove" className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-accent/12 border border-accent/35 text-accent text-xs font-semibold cursor-pointer whitespace-nowrap transition-all">
                   <Globe size={11} />
                   Web
-                  <X size={10} className="opacity-60" />
-                </button>
-              )}
-              {activeStyle && (
-                <button type="button" onClick={() => setActiveStyle(null)} title="Style active — click to remove" className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-accent/12 border border-accent/35 text-accent text-xs font-semibold cursor-pointer whitespace-nowrap transition-all">
-                  <PenTool size={11} />
-                  {activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}
                   <X size={10} className="opacity-60" />
                 </button>
               )}

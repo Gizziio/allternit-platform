@@ -360,15 +360,11 @@ async fn create_resource_via_os(
         return Err(scheduler_error(e));
     }
 
-    let charge_cents = placement
-        .retail_price_per_hour
-        .as_ref()
-        .map(|m| m.minor_units as i64)
-        .unwrap_or(estimated_cents)
-        .min(estimated_cents);
-    if let Err(e) = ledger.charge_hold(&hold.id, charge_cents, "fabric provisioning", Some("placement"), Some(resource_id)) {
-        warn!(resource_id = %resource_id, hold_id = %hold.id, error = %e, "failed to charge hold after os placement");
-    }
+    // The hold stays open for the resource's lifetime (reduces
+    // available_cents, blocking new provisioning) and is released on
+    // terminate. Metered usage via the usage worker is the sole balance
+    // charge — charging the provisioning estimate here would double-bill.
+    info!(resource_id = %resource_id, hold_id = %hold.id, "hold open for resource lifetime; metered usage charges apply");
 
     let scheduled = ScheduledResource {
         resource_id: resource_id.to_string(),
@@ -535,6 +531,31 @@ async fn terminate_resource(
     tokio::task::spawn_blocking(move || {
         let manager = ResourceManager::new(db);
         manager.terminate(&id_for_terminate, "user_request")
+    })
+    .await
+    .map_err(internal)?
+    .map_err(internal)?;
+
+    // Release any credit holds still open for this resource. Metered usage
+    // charges remain on the ledger; the hold only reserved availability.
+    let db = state.db.clone();
+    let id_for_holds = id.clone();
+    let id_for_hold_warn = id.clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let ledger = CreditsLedger::new(db);
+        let mut stmt = conn.prepare(
+            "SELECT id FROM fabric_credit_holds WHERE resource_id = ?1 AND status = 'held'",
+        )?;
+        let hold_ids: Vec<String> = stmt
+            .query_map(rusqlite::params![id_for_holds], |row| row.get(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        for hold_id in hold_ids {
+            if let Err(e) = ledger.release_hold(&hold_id) {
+                warn!(resource_id = %id_for_hold_warn, hold_id = %hold_id, error = %e, "failed to release hold on terminate");
+            }
+        }
+        Ok::<_, rusqlite::Error>(())
     })
     .await
     .map_err(internal)?
@@ -947,6 +968,12 @@ mod tests {
         assert_eq!(resource.status, "terminated");
         let placement = manager.latest_placement(resource_id).unwrap().expect("placement exists");
         assert!(placement.ended_at.is_some());
+
+        // Terminate must release the provisioning hold so available credits
+        // are restored without charging the balance.
+        assert_eq!(ledger.held_cents("org-1").unwrap(), 0);
+        assert_eq!(ledger.balance_cents("org-1").unwrap(), 10_000);
+        assert_eq!(ledger.available_cents("org-1").unwrap(), 10_000);
     }
 
     #[tokio::test]

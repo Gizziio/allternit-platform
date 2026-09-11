@@ -277,6 +277,22 @@ pub trait CostService: Send + Sync {
         amount_usd: f64,
         rollover_cap_usd: f64,
     ) -> Result<f64, ApiError>;
+
+    /// Debit credits for an explicit wallet transfer (e.g. moving balance to
+    /// an organization's fabric compute ledger).
+    ///
+    /// Atomic and idempotent: `transaction_id` keys the ledger row (ON
+    /// CONFLICT DO NOTHING — a replayed transfer is a no-op). Unlike usage
+    /// deductions this does NOT clamp at zero: the transfer is refused with
+    /// `PaymentRequired` when the balance cannot cover it, so money is never
+    /// created or destroyed by the bridge. Returns the resulting balance.
+    async fn debit_credits_for_transfer(
+        &self,
+        user_id: &str,
+        amount_usd: f64,
+        transaction_id: &str,
+        source: &str,
+    ) -> Result<f64, ApiError>;
 }
 
 /// Implementation of CostService using SQLite
@@ -1203,6 +1219,81 @@ impl CostService for CostServiceImpl {
         );
         Ok(new_balance)
     }
+
+    async fn debit_credits_for_transfer(
+        &self,
+        user_id: &str,
+        amount_usd: f64,
+        transaction_id: &str,
+        source: &str,
+    ) -> Result<f64, ApiError> {
+        if amount_usd <= 0.0 {
+            return Err(ApiError::BadRequest(
+                "Credit amount must be positive.".to_string(),
+            ));
+        }
+
+        let mut tx = self.db.begin().await.map_err(ApiError::DatabaseError)?;
+
+        // Idempotency: a replayed transfer conflicts and touches nothing.
+        let ledger = sqlx::query(
+            r#"
+            INSERT INTO credit_transactions (id, user_id, amount_usd, transaction_id, source, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (transaction_id) DO NOTHING
+            "#,
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(user_id)
+        .bind(-amount_usd)
+        .bind(transaction_id)
+        .bind(source)
+        .bind(Utc::now())
+        .execute(&mut *tx)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+
+        if ledger.rows_affected() == 0 {
+            tx.commit().await.map_err(ApiError::DatabaseError)?;
+            return self.get_credit_balance(user_id).await;
+        }
+
+        // Refuse — never clamp — when the balance cannot cover the transfer:
+        // the caller credits a remote ledger from this debit, so a clamped
+        // partial transfer would mint unbacked money there.
+        sqlx::query(
+            "INSERT INTO user_credits (user_id, balance_usd) VALUES ($1, 0) ON CONFLICT (user_id) DO NOTHING",
+        )
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+        let updated = sqlx::query(
+            "UPDATE user_credits SET balance_usd = balance_usd - $1 WHERE user_id = $2 AND balance_usd >= $1",
+        )
+        .bind(amount_usd)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+        if updated.rows_affected() == 0 {
+            tx.rollback().await.map_err(ApiError::DatabaseError)?;
+            let current = self.get_credit_balance(user_id).await?;
+            return Err(ApiError::PaymentRequired(format!(
+                "Insufficient credits for transfer: ${:.2} available, ${:.2} required.",
+                current, amount_usd
+            )));
+        }
+
+        tx.commit().await.map_err(ApiError::DatabaseError)?;
+
+        let new_balance = self.get_credit_balance(user_id).await?;
+        info!(
+            "Transferred ${:.2} out of user {} wallet ({} / {}); new balance ${:.2}",
+            amount_usd, user_id, source, transaction_id, new_balance
+        );
+        Ok(new_balance)
+    }
 }
 
 /// Start the background cost tracking task
@@ -1569,5 +1660,89 @@ mod tests {
         .unwrap();
         assert_eq!(transaction_id, "hosted-session-sess_9", "session ref id shape preserved");
         assert_eq!(source, "hosted_runtime_usage", "session source preserved");
+    }
+
+    #[tokio::test]
+    async fn transfer_debit_reduces_balance_and_ledgers() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+        service
+            .add_credits("user_1", 25.0, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        let balance = service
+            .debit_credits_for_transfer("user_1", 10.0, "fabric-tx-1", "fabric_transfer")
+            .await
+            .unwrap();
+        assert!((balance - 15.0).abs() < 1e-9);
+
+        let (amount, source): (f64, String) = sqlx::query_as(
+            "SELECT amount_usd, source FROM credit_transactions WHERE transaction_id = 'fabric-tx-1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!((amount + 10.0).abs() < 1e-9, "the transfer is a negative ledger row");
+        assert_eq!(source, "fabric_transfer");
+    }
+
+    #[tokio::test]
+    async fn transfer_debit_replay_is_noop() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+        service
+            .add_credits("user_1", 25.0, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        service
+            .debit_credits_for_transfer("user_1", 10.0, "fabric-tx-1", "fabric_transfer")
+            .await
+            .unwrap();
+        let balance = service
+            .debit_credits_for_transfer("user_1", 10.0, "fabric-tx-1", "fabric_transfer")
+            .await
+            .unwrap();
+        assert!((balance - 15.0).abs() < 1e-9, "a replayed transfer debits once");
+        let rows: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM credit_transactions WHERE transaction_id = 'fabric-tx-1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(rows, 1);
+    }
+
+    #[tokio::test]
+    async fn transfer_debit_refuses_insufficient_without_partial_clamp() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+        service
+            .add_credits("user_1", 5.0, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        let err = service
+            .debit_credits_for_transfer("user_1", 12.0, "fabric-tx-big", "fabric_transfer")
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, ApiError::PaymentRequired(_)),
+            "insufficient transfer must be refused, not clamped: {err}"
+        );
+
+        let stored: f64 =
+            sqlx::query_scalar("SELECT balance_usd FROM user_credits WHERE user_id = 'user_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(stored, 5.0, "a refused transfer leaves the balance untouched");
+        let rows: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM credit_transactions WHERE transaction_id = 'fabric-tx-big'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(rows, 0, "a refused transfer writes no ledger row");
     }
 }

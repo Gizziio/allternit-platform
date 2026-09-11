@@ -97,7 +97,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text-primary)" }}>{agent.isBot ? '@' : ''}{getBotDisplayName(agent)}</span>
             {isSwarm && (
-              <span style={{ fontSize: 12, padding: "1px 5px", borderRadius: 4, background: "#8b5cf620", color: "#8b5cf6", fontWeight: 600 }}>
+              <span style={{ fontSize: 12, padding: "1px 5px", borderRadius: 4, background: "#B08D6E20", color: "#B08D6E", fontWeight: 600 }}>
                 SWARM
               </span>
             )}
@@ -167,7 +167,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ui-text-primary)" }}>{agent.isBot ? '@' : ''}{getBotDisplayName(agent)}</span>
             {isSwarm && (
-              <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, background: "#8b5cf620", color: "#8b5cf6", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, background: "#B08D6E20", color: "#B08D6E", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                 <Users size={10} />
                 SWARM
               </span>

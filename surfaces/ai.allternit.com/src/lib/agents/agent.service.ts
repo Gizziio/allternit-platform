@@ -201,7 +201,7 @@ export function normalizeCreateAgentInput(input: CreateAgentInput): CreateAgentI
       avatar: {
         type: 'mascot' as const,
         mascot: { template: 'bot' as const },
-        style: { primaryColor: '#6366f1', accentColor: '#1e1c1a' },
+        style: { primaryColor: '#B08D6E', accentColor: '#1e1c1a' },
       },
     },
   };

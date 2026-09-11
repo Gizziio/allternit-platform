@@ -23,7 +23,7 @@ export interface BotIconProps {
 // A:// Oracle — Stylized eye with radiating knowledge lines
 // ============================================================================
 
-export function ALOracleIcon({ size = 24, color = '#6366f1', className }: BotIconProps) {
+export function ALOracleIcon({ size = 24, color = '#B08D6E', className }: BotIconProps) {
   return (
     <svg
       width={size}
@@ -62,7 +62,7 @@ export function ALOracleIcon({ size = 24, color = '#6366f1', className }: BotIco
 // Deep Researcher — Stacked documents with magnifying lens
 // ============================================================================
 
-export function DeepResearcherIcon({ size = 24, color = '#8b5cf6', className }: BotIconProps) {
+export function DeepResearcherIcon({ size = 24, color = '#B08D6E', className }: BotIconProps) {
   return (
     <svg
       width={size}

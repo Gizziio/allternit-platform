@@ -607,7 +607,6 @@ async fn provision_harness(
             harness_session_capability,
             &["create".to_string()],
             "agent cloud harness provisioning",
-            "harness runtime capacity",
         )
         .await?
     } else {
@@ -686,14 +685,13 @@ async fn provision_runtime_via_os(
         "agent.run",
         &["run".to_string()],
         "agent cloud runtime provisioning",
-        "agent runtime capacity",
     )
     .await
 }
 
 /// Issue a canonical OS lease for a resource, record the placement in the Cloud
-/// ledger, and place/charge a credit hold. This is the shared OS-scheduling
-/// path used by agent runtimes and managed harness runtimes.
+/// ledger, and place a credit hold (released on terminate; metered usage is the
+/// sole balance charge). Shared by agent runtimes and managed harness runtimes.
 async fn provision_resource_via_os(
     state: Arc<AppState>,
     org: &str,
@@ -707,7 +705,6 @@ async fn provision_resource_via_os(
     capability: &str,
     actions: &[String],
     purpose: &str,
-    usage_description: &str,
 ) -> Result<ScheduledResource, ApiError> {
     let ledger = CreditsLedger::new(state.db.clone());
     let recorder = PlacementRecorder::new(state.db.clone());
@@ -787,15 +784,11 @@ async fn provision_resource_via_os(
         return Err(scheduler_error(e));
     }
 
-    let charge_cents = placement
-        .retail_price_per_hour
-        .as_ref()
-        .map(|m| m.minor_units as i64)
-        .unwrap_or(estimated_cents)
-        .min(estimated_cents);
-    if let Err(e) = ledger.charge_hold(&hold.id, charge_cents, usage_description, Some("placement"), Some(resource_id)) {
-        warn!(resource_id = %resource_id, hold_id = %hold.id, error = %e, "failed to charge hold after os placement");
-    }
+    // The hold stays open for the resource's lifetime (reduces
+    // available_cents, blocking new provisioning) and is released on
+    // terminate. Metered usage is the sole balance charge — charging the
+    // provisioning estimate here would double-bill.
+    info!(resource_id = %resource_id, hold_id = %hold.id, "hold open for resource lifetime; metered usage charges apply");
 
     Ok(ScheduledResource {
         resource_id: resource_id.to_string(),
@@ -1482,9 +1475,11 @@ mod tests {
             .unwrap();
         ingestor.process_event(&event_id, &ledger).unwrap();
 
-        // Provisioning consumed an 8-cent hold; the harness request consumed 5 cents.
-        // 10_000 - 8 - 5 = 9_987.
-        assert_eq!(ledger.balance_cents("org-1").unwrap(), 9_987);
+        // Provisioning only opens a hold (no balance charge); the harness
+        // request consumed 5 cents of metered usage.
+        // 10_000 - 5 = 9_995, and the hold remains open.
+        assert_eq!(ledger.balance_cents("org-1").unwrap(), 9_995);
+        assert!(ledger.held_cents("org-1").unwrap() > 0);
 
         // The usage event should be marked processed and linked to a cost event.
         let conn = state.db.connect().unwrap();

@@ -232,6 +232,10 @@ async fn main() {
     // B5: seed published benchmark scores for LLM routing (idempotent).
     allternit_api::llm_gateway::benchmarks::sync_at_startup(&db);
 
+    // Fold legacy organization_credits (V102) balances into the fabric
+    // credits ledger. Idempotent — safe to run on every boot.
+    allternit_api::credits::migrate_v102_balances(&db);
+
     // Seed and load the Fabric SKU / capability-class catalog.
     if let Err(e) = allternit_api::fabric::sku::ResourceClassCatalog::seed_builtin(&db) {
         tracing::warn!("Failed to seed Fabric resource classes: {e}");

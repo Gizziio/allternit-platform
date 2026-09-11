@@ -21,6 +21,8 @@ import {
 } from '@/lib/dispatch/fabric-session-client';
 import { FABRIC_DRIVE_KINDS, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
 import { extractAciScreenshot, FabricAciDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive } from '@/components/dispatch/FabricSessionDriveViews';
+import { ACIComputerUseView } from '@/capsules/browser/ACIComputerUseView';
+import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { FabricBotModeCanvas, FabricBotModeRail, type FabricBotView } from '@/components/dispatch/FabricBotMode';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
 
@@ -210,6 +212,14 @@ export function FabricSessionPanel({
     setAciScreenshot(null);
     setAciRunId(null);
     setAciOpening(false);
+    useBrowserAgentStore.setState({
+      screenshot: null,
+      status: 'Idle',
+      currentAction: null,
+      lastEventMessage: null,
+      currentAdapterId: null,
+      currentLayer: null,
+    });
   }, [selectedSessionId]);
 
   useEffect(() => {
@@ -257,6 +267,13 @@ export function FabricSessionPanel({
 
   const openComputer = useCallback(async (goal: string) => {
     setAciOpening(true);
+    useBrowserAgentStore.setState({
+      goal,
+      status: 'Running',
+      currentAction: null,
+      screenshot: null,
+      lastEventMessage: null,
+    });
     try {
       const run = await fabricClient.startAci({
         goal,
@@ -288,6 +305,7 @@ export function FabricSessionPanel({
       try {
         for await (const frame of fabricClient.streamAci(runId)) {
           if (!active) break;
+          useBrowserAgentStore.getState().ingestAciStreamEvent(frame);
           const shot = extractAciScreenshot(frame);
           if (shot) {
             setAciScreenshot(shot);
@@ -759,6 +777,7 @@ export function FabricSessionPanel({
                   onOpenComputer={() => void openComputer('Open the desktop so I can see the screen.')}
                   watching={aciWatching}
                   onToggleWatch={toggleAciWatch}
+                  liveView={<ACIComputerUseView agentBarHeight={0} />}
                 />
               ) : null}
               {driveKind !== 'aci' && !(driveKind === 'code' && codePane === 'terminal') && detailLoading && (

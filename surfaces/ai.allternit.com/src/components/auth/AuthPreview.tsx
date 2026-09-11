@@ -23,7 +23,7 @@ const SLIDES: Slide[] = [
     id: 'chat',
     label: 'A:// chat',
     desc: 'Talk to any AI model. One clean interface, every conversation.',
-    accent: '#6366f1',
+    accent: '#B08D6E',
     promoKicker: 'Allternit Platform',
     promoTitle: 'One operating layer for every model your team uses.',
     promoCopy: 'Run conversations, artifacts, and agent workflows in a single branded environment instead of scattering work across disconnected tabs and vendor silos.',
@@ -105,7 +105,7 @@ function ChatMockup({ accent }: { accent: string }) {
             <div className="mb-1 font-semibold">Here&apos;s the structured summary:</div>
             <div style={{ color: accent }}>→ <span className="text-ui-text-secondary">Key finding: methodology validated</span></div>
             <div className="text-[var(--status-success)]">→ <span className="text-ui-text-secondary">Results: 94% accuracy across trials</span></div>
-            <div className="text-[#6366f1]">→ <span className="text-ui-text-secondary">Next: expand to larger dataset</span></div>
+            <div className="text-[#B08D6E]">→ <span className="text-ui-text-secondary">Next: expand to larger dataset</span></div>
           </div>
         </div>
 
@@ -198,10 +198,10 @@ function CodeMockup({ accent }: { accent: string }) {
 
       {/* Code */}
       <div className="flex-1 p-[14px_16px] font-mono text-[12px] leading-loose overflow-hidden">
-        <div><span className="text-ui-text-muted">1 </span><span className="text-[#6366f1]">async function</span> <span style={{ color: accent }}>createAgent</span><span className="text-ui-text-secondary">(config: AgentConfig) {'{'}</span></div>
-        <div><span className="text-ui-text-muted">2 </span><span className="text-ui-text-secondary">  </span><span className="text-[#6366f1]">const</span><span className="text-ui-text-secondary"> agent = </span><span className="text-[#6366f1]">await</span><span className="text-ui-text-secondary"> Gizzi.spawn(config)</span></div>
-        <div><span className="text-ui-text-muted">3 </span><span className="text-ui-text-secondary">  </span><span className="text-[#6366f1]">await</span><span className="text-ui-text-secondary"> agent.run()</span></div>
-        <div><span className="text-ui-text-muted">4 </span><span className="text-ui-text-secondary">  </span><span className="text-[#6366f1]">return</span><span className="text-ui-text-secondary"> agent.result</span></div>
+        <div><span className="text-ui-text-muted">1 </span><span className="text-[#B08D6E]">async function</span> <span style={{ color: accent }}>createAgent</span><span className="text-ui-text-secondary">(config: AgentConfig) {'{'}</span></div>
+        <div><span className="text-ui-text-muted">2 </span><span className="text-ui-text-secondary">  </span><span className="text-[#B08D6E]">const</span><span className="text-ui-text-secondary"> agent = </span><span className="text-[#B08D6E]">await</span><span className="text-ui-text-secondary"> Gizzi.spawn(config)</span></div>
+        <div><span className="text-ui-text-muted">3 </span><span className="text-ui-text-secondary">  </span><span className="text-[#B08D6E]">await</span><span className="text-ui-text-secondary"> agent.run()</span></div>
+        <div><span className="text-ui-text-muted">4 </span><span className="text-ui-text-secondary">  </span><span className="text-[#B08D6E]">return</span><span className="text-ui-text-secondary"> agent.result</span></div>
         <div><span className="text-ui-text-muted">5 </span><span className="text-ui-text-secondary">{'}'}</span></div>
       </div>
 

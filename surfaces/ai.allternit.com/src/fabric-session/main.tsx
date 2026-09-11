@@ -11,6 +11,7 @@ import { FabricSessionApp } from './App'
 import { VoiceProvider } from '@/providers/voice-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { GlobalDropzoneProvider } from '@/components/GlobalDropzone'
+import { ModeProvider } from '@/providers/mode-provider'
 
 import '@/design/theme.css'
 import '@/styles/fonts.css'
@@ -41,7 +42,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <TooltipProvider>
                   <VoiceProvider>
                     <GlobalDropzoneProvider>
-                      <FabricSessionApp />
+                      <ModeProvider defaultMode="chat">
+                        <FabricSessionApp />
+                      </ModeProvider>
                     </GlobalDropzoneProvider>
                   </VoiceProvider>
                 </TooltipProvider>

@@ -363,7 +363,7 @@ export function ResearchTab() {
                 else if (e.key === 'Escape') setNewNotebookTitle(null);
               }}
               placeholder="Notebook name…"
-              className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#6366f1)]"
+              className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#B08D6E)]"
             />
             <button type="button" onClick={() => handleCreateNotebook(newNotebookTitle)} className="research-btn-primary text-sm px-3 py-1.5">Create</button>
             <button type="button" onClick={() => setNewNotebookTitle(null)} className="research-btn-secondary text-sm px-3 py-1.5">Cancel</button>
@@ -456,7 +456,7 @@ export function ResearchTab() {
                     else if (e.key === 'Escape') setNewNotebookTitle(null);
                   }}
                   placeholder="Notebook name…"
-                  className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-2 py-0.5 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#6366f1)]"
+                  className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-2 py-0.5 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#B08D6E)]"
                 />
                 <button type="button" onClick={() => handleCreateNotebook(newNotebookTitle)} className="research-btn-primary text-[11px] px-2 py-0.5">Create</button>
                 <button type="button" onClick={() => setNewNotebookTitle(null)} className="research-btn-secondary text-[11px] px-2 py-0.5">✕</button>

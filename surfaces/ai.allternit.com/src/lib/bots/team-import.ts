@@ -989,7 +989,7 @@ function mapColorToHex(color?: string): string | undefined {
     blue: '#3b82f6',
     red: '#ef4444',
     orange: '#f97316',
-    purple: '#8b5cf6',
+    purple: '#d946ef', // closest lawful hue for imported user data (purple label)
     cyan: '#06b6d4',
     pink: '#ec4899',
     yellow: '#eab308',

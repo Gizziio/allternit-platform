@@ -257,8 +257,8 @@ Format as JSON:
   ],
   "theme": {
     "name": "${theme}",
-    "primaryColor": "#6366f1",
-    "secondaryColor": "#8b5cf6",
+    "primaryColor": "#B08D6E",
+    "secondaryColor": "#C4A684",
     "font": "Allternit Sans"
   }
 }`,
@@ -286,8 +286,8 @@ Format as JSON:
       ],
       theme: {
         name: theme,
-        primaryColor: '#6366f1',
-        secondaryColor: '#8b5cf6',
+        primaryColor: '#B08D6E',
+        secondaryColor: '#C4A684',
         font: 'Allternit Sans',
       },
     };

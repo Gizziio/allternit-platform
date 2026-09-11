@@ -24,6 +24,7 @@ import { DESIGN_SYSTEMS_LIBRARY, type DesignSystemEntry } from '../../lib/design
 import type { SkillRecord } from '../../lib/design/skill-registry';
 import { useDesignProjectStore, type DesignProject } from '@/views/project/design/design-project.store';
 import { AProtocolWordmark } from '@/components/AProtocolWordmark';
+import { isElectronShell } from '@/lib/platform';
 import './new-project-screen.css';
 
 const CREATION_TYPES = [
@@ -112,7 +113,9 @@ export function NewProjectScreen({
 
   return (
     <div className="ad-launch">
-      <header className="ad-launch__header">
+      {/* Frameless Electron design window: keep the brand clear of the macOS
+          traffic lights (72px), matching OfficePageChrome's clearance. */}
+      <header className="ad-launch__header" style={{ paddingLeft: isElectronShell() ? 72 : undefined }}>
         <div className="ad-launch__brand">
           <AProtocolWordmark theme="adaptive" height={13} suffix="DESIGN" />
           <span className="ad-launch__beta">BETA</span>
