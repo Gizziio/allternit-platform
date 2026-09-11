@@ -1408,6 +1408,37 @@ pub(crate) fn insert_event(
     )
 }
 
+/// Cloud Agents Phase 2: when a work task finishes, append the stored
+/// `turn_*` + `session_idle` events so the public facade can translate them.
+/// No-op if the session is missing or already archived. Does not rewrite
+/// `beta_sessions.status` (CHECK remains `active|archived`).
+pub(crate) fn emit_turn_terminal(
+    conn: &rusqlite::Connection,
+    session_id: &str,
+    outcome: &str,
+    data: &Value,
+) -> rusqlite::Result<()> {
+    let status: Option<String> = conn
+        .query_row(
+            "SELECT status FROM beta_sessions WHERE id = ?1",
+            params![session_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match status.as_deref() {
+        Some("archived") | None => return Ok(()),
+        _ => {}
+    }
+    let turn_ty = match outcome {
+        "completed" => "turn_completed",
+        "failed" => "turn_failed",
+        _ => return Ok(()),
+    };
+    insert_event(conn, session_id, turn_ty, data)?;
+    insert_event(conn, session_id, "session_idle", data)?;
+    Ok(())
+}
+
 fn exceeded_budget(state: BudgetState, delta: UsageDelta) -> Option<&'static str> {
     if state
         .max_tokens

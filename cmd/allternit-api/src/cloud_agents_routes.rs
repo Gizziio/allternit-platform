@@ -46,6 +46,7 @@ pub fn cloud_agents_router() -> Router<Arc<AppState>> {
             get(list_cloud_events).post(send_cloud_events),
         )
         .route("/sessions/:id/events/stream", get(stream_cloud_events))
+        .route("/sessions/:id/turns", get(list_cloud_turns))
 }
 
 // ─── Request bodies ──────────────────────────────────────────────────────────
@@ -214,8 +215,50 @@ fn translate_event(
         ],
         "user_interrupt" => vec![base("user.interrupt", data, event_id.to_string())],
         "tool_calls" => vec![base("agent.tool_use", data, event_id.to_string())],
+        "turn_completed" => vec![base("turn.completed", data, event_id.to_string())],
+        "turn_failed" => vec![base("turn.failed", data, event_id.to_string())],
+        "session_idle" => vec![base("session.idle", data, event_id.to_string())],
+        "session_failed" => vec![base("session.failed", data, event_id.to_string())],
         _ => vec![],
     }
+}
+
+fn turns_from_events(events: &[Value]) -> Vec<Value> {
+    let mut open: Option<Value> = None;
+    let mut turns = Vec::new();
+    for event in events {
+        let ty = event.get("type").and_then(Value::as_str).unwrap_or("");
+        match ty {
+            "turn.started" => {
+                if let Some(previous) = open.take() {
+                    turns.push(previous);
+                }
+                open = Some(json!({
+                    "id": event.get("id"),
+                    "status": "running",
+                    "started_at": event.get("created_at"),
+                    "completed_at": Value::Null,
+                }));
+            }
+            "turn.completed" | "turn.failed" => {
+                let status = if ty == "turn.completed" {
+                    "completed"
+                } else {
+                    "failed"
+                };
+                if let Some(mut turn) = open.take() {
+                    turn["status"] = json!(status);
+                    turn["completed_at"] = event.get("created_at").cloned().unwrap_or(Value::Null);
+                    turns.push(turn);
+                }
+            }
+            _ => {}
+        }
+    }
+    if let Some(turn) = open {
+        turns.push(turn);
+    }
+    turns
 }
 
 fn parse_public_events(
@@ -794,6 +837,44 @@ async fn stream_cloud_events(
     Ok(public_event_stream(state, id, query.after.unwrap_or(0)))
 }
 
+async fn list_cloud_turns(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    beta::load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let session_id = id.clone();
+    let rows = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT e.sequence, e.id, e.event_type, e.data, e.created_at
+             FROM beta_session_events e
+             JOIN beta_sessions s ON s.id = e.session_id
+             WHERE e.session_id = ?1 AND s.user_id = ?2
+             ORDER BY e.sequence ASC",
+        )?;
+        let rows = stmt
+            .query_map(params![session_id, user_id], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok::<Vec<(i64, String, String, String, String)>, rusqlite::Error>(rows)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::DbError(e.to_string()))?;
+    let events = parse_public_events(&id, rows);
+    Ok(Json(json!({ "turns": turns_from_events(&events) })))
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -1088,5 +1169,119 @@ mod tests {
         assert_eq!(status, StatusCode::OK);
         assert_eq!(payload["session"]["status"], "idle");
         assert_eq!(payload["session"]["name"], "legacy");
+    }
+
+    #[tokio::test]
+    async fn ack_work_task_emits_turn_completed_and_session_goes_idle() {
+        let temp = beta_test::temp_dir("cloud-ack");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router()
+            .merge(crate::beta_work_routes::beta_work_router())
+            .with_state(state.clone());
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "input": "hello"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        assert_eq!(payload["session"]["status"], "running");
+        let session_id = payload["session"]["id"].as_str().unwrap().to_string();
+
+        let conn = state.db.connect().unwrap();
+        let task_id: String = conn
+            .query_row(
+                "SELECT id FROM beta_work_tasks WHERE session_id = ?1",
+                params![session_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        drop(conn);
+
+        let (status, payload) = get_json(
+            &router,
+            "/beta/work/queue?worker_id=worker-a",
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(payload["task"]["id"], task_id);
+
+        let (status, _) = post_json(
+            &router,
+            &format!("/beta/work/{task_id}/ack"),
+            &json!({"worker_id": "worker-a", "result": {"ok": true}}),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+
+        let (status, payload) = get_json(&router, &format!("/sessions/{session_id}"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(payload["session"]["status"], "idle");
+
+        let (status, events_payload) =
+            get_json(&router, &format!("/sessions/{session_id}/events"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        let types: Vec<&str> = events_payload["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|event| event["type"].as_str().unwrap())
+            .collect();
+        assert!(types.contains(&"turn.completed"), "{types:?}");
+        assert!(types.contains(&"session.idle"), "{types:?}");
+
+        let (status, turns_payload) =
+            get_json(&router, &format!("/sessions/{session_id}/turns"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        let turns = turns_payload["turns"].as_array().unwrap();
+        assert_eq!(turns.len(), 1);
+        assert_eq!(turns[0]["status"], "completed");
+        assert!(turns[0]["id"].as_str().unwrap().contains("turn.started"));
+    }
+
+    #[tokio::test]
+    async fn stored_turn_completed_translates_to_public_name() {
+        let temp = beta_test::temp_dir("cloud-turn-translate");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state.clone());
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"}
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        let id = payload["session"]["id"].as_str().unwrap().to_string();
+
+        let conn = state.db.connect().unwrap();
+        beta::emit_turn_terminal(&conn, &id, "completed", &json!({"task_id": "t1"})).unwrap();
+        drop(conn);
+
+        let (status, events_payload) =
+            get_json(&router, &format!("/sessions/{id}/events"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        let types: Vec<&str> = events_payload["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|event| event["type"].as_str().unwrap())
+            .collect();
+        assert!(types.contains(&"turn.completed"), "{types:?}");
+        assert!(types.contains(&"session.idle"), "{types:?}");
+        assert!(!types.contains(&"turn_completed"));
+        assert!(!types.contains(&"session_idle"));
     }
 }

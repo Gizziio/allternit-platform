@@ -58,7 +58,8 @@ curl -X POST http://localhost:8013/api/v1/sessions \
 
 Sessions use Allternit event type names (`session.created`, `turn.started`,
 `agent.message`, …) and Allternit status names (`idle`, `running`,
-`waiting`, `failed`, `archived`). There is no public `/runtimes` resource;
+`waiting`, `failed`, `archived`). Turns are listed at
+`GET /api/v1/sessions/:id/turns`. There is no public `/runtimes` resource;
 the computer binding lives on the session.
 
 ## SDK

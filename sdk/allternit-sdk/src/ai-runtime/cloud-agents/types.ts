@@ -83,6 +83,13 @@ export type CloudSessionEventType =
   | "agent.tool_use"
   | "agent.tool_result";
 
+export interface CloudTurn {
+  id: string;
+  status: "running" | "completed" | "failed";
+  started_at: string;
+  completed_at?: string | null;
+}
+
 export interface CloudSessionEvent {
   id: string;
   sequence?: number;
