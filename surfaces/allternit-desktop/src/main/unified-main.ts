@@ -240,6 +240,7 @@ const isMac = process.platform === 'darwin';
 
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
+let officeWindow: BrowserWindow | null = null;
 let hudWindow: BrowserWindow | null = null;
 let annotationWindow: BrowserWindow | null = null;
 let remoteControlWindow: BrowserWindow | null = null;
@@ -1605,9 +1606,8 @@ async function updateTrayMenu(): Promise<void> {
     ...(permItem ? [permItem, { type: 'separator' as const }] : []),
     { label: 'Show Window', click: () => mainWindow?.show() },
     {
-      // The standalone office launcher is gone — the single office surface is
-      // the shell's ACI "Office & Extensions" hub. This menu opens it in the
-      // main window.
+      // Opens the popped-out Allternit Office window (the ACI rail's bottom
+      // tab) — the renderer routes the 'launcher' target there.
       label: 'Allternit Office',
       click: () => openOfficeTarget('launcher'),
     },
@@ -2178,6 +2178,45 @@ ipcMain.handle('shell:open-design', () => {
   designWindow.once('ready-to-show', () => designWindow?.show());
   designWindow.on('closed', () => { designWindow = null; });
   void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
+});
+
+// The Allternit Office window — the ACI rail's bottom-tab surface. Same
+// window profile as Design above (the popped-out office suite host).
+ipcMain.handle('shell:open-office-window', () => {
+  if (officeWindow && !officeWindow.isDestroyed()) {
+    void officeWindow.loadURL(new URL('/office', activePlatformUrl).toString());
+    officeWindow.show();
+    officeWindow.focus();
+    return;
+  }
+
+  officeWindow = new BrowserWindow({
+    width: 1440,
+    height: 960,
+    minWidth: 960,
+    minHeight: 640,
+    title: 'Allternit Office',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  installWillNavigateGuard(officeWindow.webContents);
+
+  officeWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void openExternalAllowlisted(url);
+    return { action: 'deny' };
+  });
+  officeWindow.once('ready-to-show', () => officeWindow?.show());
+  officeWindow.on('closed', () => { officeWindow = null; });
+  void officeWindow.loadURL(new URL('/office', activePlatformUrl).toString());
 });
 
 // HUD mode defaults — a chrome-free floating panel anchored near the bottom

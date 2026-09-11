@@ -3,6 +3,7 @@ import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { useSettingsValue } from '@/hooks/useSettingsState';
+import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import type { AppMode } from './ShellHeader';
 import {
   CaretDown,
@@ -221,6 +222,8 @@ interface ShellRailProps {
   onSidecarToggle?: () => void;
   sidecarOpen?: boolean;
   onOpenCustomize?: (tab?: string) => void;
+  /** ACI mode only: open the popped-out Allternit Office window (replaces the footer Design button). */
+  onOpenOfficeWindow?: () => void;
   sessionOnlyId?: string;
 }
 
@@ -232,6 +235,7 @@ export function ShellRail({
   isCollapsed,
   onModeChange,
   onOpenCustomize,
+  onOpenOfficeWindow,
   sessionOnlyId,
 }: ShellRailProps): React.ReactNode | null {
   // Determine current surface for agent mode glow
@@ -1007,7 +1011,7 @@ export function ShellRail({
             {browserRailTabs['browser-extensions'] && (
               <RailItem
                 icon={PuzzlePiece}
-                label="Office & Extensions"
+                label="ACI Extensions"
                 isActive={browserSticky.isTabActive('browser-extensions')}
                 onClick={() => {
                   browserSticky.selectTab('browser-extensions');
@@ -1029,12 +1033,21 @@ export function ShellRail({
             <MoreDropdown
               tabs={[
                 { id: 'mini-apps-store', label: 'Mini-apps Store', icon: AppWindow, visible: browserRailTabs['mini-apps-store'] },
-                { id: 'browser-extensions', label: 'Office & Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
+                { id: 'browser-extensions', label: 'ACI Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
                 { id: 'site-apis', label: 'Teach', icon: Record, visible: browserRailTabs['site-apis'] },
               ]}
               onToggle={toggleBrowserRailTab}
               onCustomize={() => onOpenCustomize?.()}
-              onOpenDesign={() => onModeChange?.('design')}
+              onOpenDesign={() => {
+                if (onOpenOfficeWindow) onOpenOfficeWindow();
+                else onModeChange?.('design');
+              }}
+              designLabel="Allternit Office"
+              designIcon={(
+                <span className="inline-flex items-center">
+                  <AProtocolWordmark suffix="OFFICE" height={9} theme="adaptive" />
+                </span>
+              )}
               onOpenAppsExtensions={() => onOpen?.('apps-extensions')}
             />
           </div>
@@ -1891,6 +1904,27 @@ export function ShellRail({
 
       {/* FOOTER */}
       <div className="flex flex-col border-t border-solid border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] shrink-0">
+        {mode === 'browser' ? (
+          <button
+            type="button"
+            data-testid="rail-open-office"
+            onClick={() => {
+              onOpenOfficeWindow?.();
+            }}
+            title="Allternit Office"
+            className="w-full flex items-center gap-2.5 p-[10px_16px] text-[var(--shell-item-fg)] cursor-pointer hover:bg-[var(--shell-item-hover)] border-none bg-transparent font-semibold text-[13px] text-left transition-colors"
+          >
+            {showSidebarLabels ? (
+              <span className="text-[var(--shell-item-muted)]" data-testid="rail-office-wordmark">
+                <AProtocolWordmark suffix="OFFICE" height={10} theme="adaptive" />
+              </span>
+            ) : (
+              <span className="text-[var(--shell-item-muted)] inline-flex" data-testid="rail-office-mark">
+                <AProtocolWordmark collapsed height={16} theme="adaptive" />
+              </span>
+            )}
+          </button>
+        ) : (
         <button
           type="button"
           onClick={() => {
@@ -1901,6 +1935,7 @@ export function ShellRail({
           <Palette size={18} weight="bold" className="text-[var(--shell-item-muted)]" />
           <span>Design</span>
         </button>
+        )}
 
         <div className="h-px bg-[var(--shell-divider)] w-full" />
 
@@ -2692,12 +2727,17 @@ function MoreDropdown({
   onCustomize,
   onOpenDesign,
   onOpenAppsExtensions,
+  designLabel = 'Design',
+  designIcon,
 }: {
   tabs: MoreDropdownTab[];
   onToggle: (id: string) => void;
   onCustomize: () => void;
   onOpenDesign: () => void;
   onOpenAppsExtensions: () => void;
+  /** ACI mode swaps this item to the popped-out office window. */
+  designLabel?: string;
+  designIcon?: React.ReactNode;
 }): React.ReactNode {
   const [open, setOpen] = useState(false);
   const anyHidden = tabs.some((t) => !t.visible);
@@ -2781,8 +2821,8 @@ function MoreDropdown({
             onClick={() => { setOpen(false); onOpenDesign(); }}
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border-none bg-transparent cursor-pointer text-left text-[12px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] transition-colors"
           >
-            <Palette size={14} />
-            <span>Design</span>
+            {designIcon ?? <Palette size={14} />}
+            <span>{designLabel}</span>
           </button>
           <button
             type="button"

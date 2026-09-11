@@ -25,7 +25,7 @@ The **Allternit Office Suite** is a family of document surfaces built on the `@a
   </Card>
 </CardGroup>
 
-All surfaces are reachable from the shell's **Office & Extensions** hub (the `browser-extensions` ACI view), the single office entry point since the standalone `/office` launcher page was retired — `/office` now redirects to the shell home so old bookmarks keep working.
+All surfaces are reachable from the **Allternit Office** window — the popped-out desktop window the ACI rail's bottom tab opens (route `/office`, same window pattern as `/design`). The ACI **Extensions** tab (`browser-extensions` view) hosts only the extensions manager; the suite itself was extracted from it into the office window.
 
 ## Routes and shell view types
 
@@ -36,7 +36,7 @@ All surfaces are reachable from the shell's **Office & Extensions** hub (the `br
 | **Allternit Slides** | `/slides/:artifactId?` | `slides` | Blank deck, artifact ID, or file handoff |
 | **Allternit PDF** | `/pdf/:artifactId?` | `pdf` | Artifact ID or file handoff (viewer only) |
 | **Allternit Sign** | `/sign` | `sign` | Upload a PDF or receive a handoff from the PDF viewer |
-| **Office & Extensions hub** | `/` (ACI → Office & Extensions) | `browser-extensions` | Create-new cards and "Open a file" for any supported format (the retired `/office` path redirects home) |
+| **Allternit Office window** | `/office` | — (popped-out window) | Create-new cards and "Open a file" for any supported format — the ACI rail's bottom tab (replaces the Design button in ACI mode) |
 
 Each route is optional-`artifactId`, so `/docs` opens a blank document and `/docs/art_018f3a7c...` loads that artifact directly.
 
@@ -58,7 +58,7 @@ Every editor persists (or reads) the same artifact payload, regardless of whethe
 
 ## Desktop integration
 
-On the Electron desktop app (`surfaces/allternit-desktop`), the suite follows a **shell-first, single-window** model. Docs, Sheets, Slides, and PDF always open as ACI shell views in the app's main window, using the same `docs`/`sheets`/`slides`/`pdf` view types as the web platform. The shell's **Office & Extensions** hub — and the cowork/design embeds — reuse a single `OfficeSuiteSection` component that calls the registry's `open` to launch in-shell editors.
+On the Electron desktop app (`surfaces/allternit-desktop`), the suite follows a **shell-first, single-window** model. Docs, Sheets, Slides, and PDF always open as ACI shell views in the app's main window, using the same `docs`/`sheets`/`slides`/`pdf` view types as the web platform. The suite launcher itself lives in the popped-out **Allternit Office** window — the ACI rail's bottom tab (it replaces the Design button in ACI mode) — which reuses the single `OfficeSuiteSection` component to launch in-shell editors.
 
 **"Open with Allternit"** file associations route into the same main window — there are no separate per-program office windows. The desktop registers `fileAssociations` for `.docx`, `.xlsx`, `.pptx`, and `.pdf`; macOS `open-file`, Windows `second-instance`, cold-start argv, the app menu, and `shell:open-office` IPC are all routed through the main window over the `office:open-file` / `office:open-target` preload channels (queued until the window has loaded). The platform's `desktop-bridge.ts` stashes file bytes in the one-shot file handoff and opens the editor as an in-shell view, falling back to the editor route when the shell isn't mounted.
 
@@ -127,7 +127,7 @@ navigate('/sheets', { state: { handoffId } });
 ```
 
 <Note>
-  The retired `/office` launcher path redirects to `/` (the shell home) — use the **Office & Extensions** hub as the office entry point instead.
+  `/office` is the popped-out Allternit Office window's content route (the ACI rail's bottom tab) — on the desktop, open it via the rail entry or the app menu's **Allternit Office** item rather than navigating directly.
 </Note>
 
 ## Related pages

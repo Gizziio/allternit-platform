@@ -79,23 +79,18 @@ test('shell:open-office delivers each editor to the main window (no separate off
   }
 });
 
-test('shell:open-office launcher target opens the Office & Extensions hub in the main window', async () => {
+test('shell:open-office launcher target opens the Allternit Office window', async () => {
   const app = await launchApp();
 
   try {
-    const mainPage = await mainWindowPage(app);
-
     await expect
       .poll(
         async () => {
           await app.evaluate(({ ipcMain }) => {
             ipcMain.emit('shell:open-office', {}, 'launcher');
           });
-          const launcherWindow = app.windows().find((w) => w.url().includes('/office'));
-          return (
-            !launcherWindow &&
-            (await mainPage.getByTestId('office-suite-block').isVisible())
-          );
+          const officeWindow = app.windows().find((w) => w.url().includes('/office'));
+          return officeWindow !== undefined;
         },
         { timeout: 60000, intervals: [1000, 2000, 3000] },
       )

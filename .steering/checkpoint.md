@@ -1,30 +1,14 @@
-# Checkpoint — cream-squircle icon swap across AI product surfaces
+# Steering checkpoint — session/bbf3793b
 
 ## Goal
-Swap every Allternit AI-product web surface to the new master icon
-`/Users/joe/Desktop/icon-candidates-v7/01-a-only-cream-squircle.png`.
+Extract Allternit Office from the ACI "Office & Extensions" tab (renamed "ACI Extensions") into a dedicated Electron window (mirroring the Design window UX) with the A://TERNIT OFFICE wordmark as header logo; ACI-mode bottom rail Design button becomes "Allternit Office" (other modes unchanged).
 
 ## Just did
-- Generated all derived assets (favicon.png 256, icons 192/512, fabric-session
-  icons + splash, brand/a-only-cream-squircle.png, console/office/phone-remote/
-  computer-embed icons, desktop icon.png/icns/ico from master).
-- Swapped all favicon.svg references to favicon.png; deleted every
-  favicon.svg; bumped fabric-session SW CACHE_NAME v28→v29 (cache guard).
-- Re-authored AProtocolWordmark to render the cream squircle PNG mark +
-  kept TERNIT pixel letters (props API preserved).
-- Removed dead remote-control surface (html/webmanifest/SW/icons/splash/
-  vite config/deploy workflow) + legacy desktop refs. Kept the
-  shell:open-remote-control IPC (fabric-session opener used by ai renderer).
-- Fixed pre-existing breakage: fabric-session-icon-192/512.png recreated
-  (referenced but missing on main); removed dead remote-control rollup
-  input from vite.config.ts.
-- Verified: ai/office/platform-console builds green, typecheck green,
-  fabric PWA prepare green, release-preflight 35/0.
+- Phases 1-5 implemented in session worktree: office suite extracted from BrowserExtensionsView (now extensions-only "ACI Extensions"), new /office route + OfficeDesktopView + OfficePage with wordmark header (56px design-matched bar), shell:open-office-window IPC + preload openOfficeWindow + lib/open-office-window, ACI-only footer rail tab (small wordmark / collapsed mark when labels off; More-dropdown item swapped too), desktop-bridge launcher retargeted to the office window, DocumentsView pointer updated, docs + comments swept, tests reworked (office-hub helper → office-surface; office-extensions-view.spec → aci-extensions-view.spec with rail/window/popup tests; desktop office-windows.spec launcher test updated).
+- pnpm install running in the fresh worktree (needed before typecheck).
 
 ## Next
-- Commit, push, PR, merge (CI deploys ai-allternit, allternit-platform,
-  allternit-office). Then manual fabrictransport deploy (needs Eoj go-ahead).
+- Verify: platform typecheck:fast + vitest shell/office, desktop typecheck + vitest, release-preflight, then commit/PR per ritual.
 
 ## Open questions
-- None blocking. Deferred: docs.allternit.com gets a different icon later;
-  platform/shell removal is handled elsewhere (sync export already retired).
+- Rail icon: full small wordmark (labels on) vs collapsed A:// mark (labels off) — chose this for rail width; owner can tune height.

@@ -73,6 +73,7 @@ import { useInboxBadgeCount } from '@/lib/bots/BotInboxContent';
 
 import { createModuleLogger } from '@/lib/logger';
 import { openDesignWindow } from '@/lib/open-design-window';
+import { openOfficeWindow } from '@/lib/open-office-window';
 import {
   buildModeSystemPrompt,
   getAgentModeContract,
@@ -105,8 +106,9 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'brain',
   'vault-viewer',
   'oh-my-pi',
-  // Allternit Office editors are surfaced from the ACI "Office & Extensions"
-  // launcher and should stay in browser mode so the rail remains expanded.
+  // Allternit Office editors open as in-shell views from the popped-out
+  // Allternit Office window and should stay in browser mode so the rail
+  // remains expanded.
   'docs',
   'sheets',
   'slides',
@@ -822,6 +824,7 @@ function ShellAppInner(): React.ReactNode {
                 setPluginManagerTab(tab);
                 setPluginManagerOpen(true);
               }}
+              onOpenOfficeWindow={() => openOfficeWindow()}
               sessionOnlyId={isDetachedCodeSession ? detachedSessionId ?? undefined : undefined}
             />
           }
