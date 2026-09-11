@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:45 — grok — Fabric PWA leftover approvals/watch + desktop rebuild
+
+- **Session ID / Branch:** `ao/fabric-pwa-bot-mode-deferred`
+- **Agent:** grok
+- **Summary:** Merged PR #294 (a421d0da2) — approval replies hit the server; PWA Watch computer pulls bot screenshots; 390×844 Bots smoke; rebuilt unsigned arm64 DMG `1.1.1-b1960`.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/294 · a421d0da261a5435aa239eb53ecae0f822d4f264
+- **How it works:** `replyBotApproval` uses permission-store/cowork. PWA chat mounts `BotWatchStrip` while watching. Packaged SW cache is v24.
+- **Outstanding work:** Paired-node ACI `streamAci` still requires the machine drive to be mounted; this watch path is the bot desktop. DMG unsigned.
+- **Summary file:** [2026-09-10-2145-fabric-pwa-deferred-grok.md](./summaries/2026-09-10-2145-fabric-pwa-deferred-grok.md)
+
 ### 2026-09-10 21:33 — grok — persist bot.brain execution bind (BA-3)
 
 - **Session ID / Branch:** `ao/ba-3-brain-bind` (worktree `allternit-ao-ba-3-brain-bind`)
