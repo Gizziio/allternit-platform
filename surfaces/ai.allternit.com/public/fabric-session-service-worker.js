@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Allternit Remote Control PWA service worker
 
-const CACHE_NAME = 'allternit-fabric-session-v28';
+const CACHE_NAME = 'allternit-fabric-session-v29';
 const DEDICATED_HOSTS = [
   'fabrictransport.allternit.com',
   'fabric-session.allternit.com',

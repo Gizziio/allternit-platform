@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow, CaretLeft } from '@phosphor-icons/react';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow, SidebarSimple } from '@phosphor-icons/react';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type { RuntimeViewModel } from '@/components/dispatch/useRuntimes';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -56,6 +57,35 @@ export function FabricSessionPanel({
   const [driveKind, setDriveKind] = useState<FabricDriveKind>('chat');
   const [codePane, setCodePane] = useState<'terminal' | 'chat'>('terminal');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [railCollapsed, setRailCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    if (window.matchMedia('(max-width: 768px)').matches) return true;
+    try {
+      return window.localStorage.getItem('fabric-session:rail-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const toggleRail = useCallback(() => {
+    setRailCollapsed((current) => {
+      const next = !current;
+      if (typeof window !== 'undefined' && !window.matchMedia('(max-width: 768px)').matches) {
+        try {
+          window.localStorage.setItem('fabric-session:rail-collapsed', String(next));
+        } catch {
+          /* ignore */
+        }
+      }
+      return next;
+    });
+  }, []);
+  const pickSession = useCallback((id: string | null) => {
+    setSelectedSessionId(id);
+    if (id && typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+      setRailCollapsed(true);
+    }
+  }, []);
   const [detail, setDetail] = useState<FabricSessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -440,22 +470,39 @@ export function FabricSessionPanel({
     );
   }
 
-  const showDetail = Boolean(selectedSession);
   const sessionTabs = FABRIC_DRIVE_KINDS.filter((tab) => tab.id !== 'desktop');
 
   return (
     <div
-      className="h-full min-h-0 overflow-hidden flex flex-col md:grid md:grid-cols-[268px_minmax(0,1fr)]"
+      className="relative h-full min-h-0 overflow-hidden flex"
       style={{ background: 'var(--shell-frame-bg)', color: 'var(--shell-item-fg)' }}
     >
+      {isMobile && !railCollapsed ? (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          className="absolute inset-0 z-30 border-none bg-black/50 cursor-pointer"
+          onClick={toggleRail}
+        />
+      ) : null}
+      {!railCollapsed ? (
       <aside
         className={cn(
-          'flex flex-1 min-h-0 flex-col bg-[var(--shell-rail-bg)] border-r border-solid border-[var(--border-subtle)] md:rounded-tr-2xl md:rounded-br-2xl',
-          showDetail && 'hidden md:flex',
+          'flex w-[268px] min-h-0 flex-col bg-[var(--shell-rail-bg)] border-r border-solid border-[var(--border-subtle)] md:rounded-tr-2xl md:rounded-br-2xl',
+          isMobile && 'fixed inset-y-0 left-0 z-40 shadow-[var(--shadow-lg)]',
         )}
       >
         <div className="px-3 pt-3 pb-2 shrink-0">
-          <div className="hidden md:flex p-0.5 bg-[var(--surface-hover)] rounded-xl gap-0.5 border border-solid border-[var(--border-subtle)]">
+          <div className="flex items-center gap-1 mb-2">
+            <button
+              type="button"
+              title="Collapse sidebar"
+              onClick={toggleRail}
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer"
+            >
+              <SidebarSimple size={18} weight="bold" />
+            </button>
+            <div className="flex flex-1 p-0.5 bg-[var(--surface-hover)] rounded-xl gap-0.5 border border-solid border-[var(--border-subtle)]">
             {sessionTabs.map((tab) => {
               const active = driveKind === tab.id;
               return (
@@ -476,6 +523,7 @@ export function FabricSessionPanel({
                 </button>
               );
             })}
+          </div>
           </div>
           <div className="flex items-center justify-between mt-3 px-1">
             <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--shell-item-muted)]">
@@ -512,7 +560,7 @@ export function FabricSessionPanel({
               selectedSessionId={selectedSessionId}
               selectedBotId={selectedBotId}
               onSelectBot={setSelectedBotId}
-              onSelectSession={setSelectedSessionId}
+              onSelectSession={pickSession}
               onOpenBot={(bot) => {
                 setSelectedBotId(bot.id);
                 void (async () => {
@@ -529,7 +577,7 @@ export function FabricSessionPanel({
                     if (brainModel) setSelectedBrain(brainModel);
                     await fetchSessions();
                     const sessionId = (created as { id?: string })?.id;
-                    if (sessionId) setSelectedSessionId(sessionId);
+                    if (sessionId) pickSession(sessionId);
                   } catch (error) {
                     addToast({
                       title: 'Error',
@@ -562,7 +610,7 @@ export function FabricSessionPanel({
               <button
                 key={session.id}
                 type="button"
-                onClick={() => setSelectedSessionId(session.id)}
+                onClick={() => pickSession(session.id)}
                 className={cn(
                   'w-full text-left rounded-xl border-none px-3 py-2.5 mb-1 cursor-pointer transition-colors',
                   active
@@ -612,23 +660,43 @@ export function FabricSessionPanel({
           </div>
         )}
       </aside>
+      ) : null}
 
-      <div
-        className={cn(
-          'flex flex-1 min-h-0 min-w-0 flex-col bg-[var(--shell-view-bg)]',
-          !showDetail && 'hidden md:flex',
-        )}
-      >
-        <button
-          type="button"
-          className="md:hidden shrink-0 h-10 px-3 flex items-center gap-2 border-b border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] text-[13px] font-semibold text-[var(--shell-item-fg)] cursor-pointer border-x-0 border-t-0"
-          onClick={() => {
-            setSelectedSessionId(null);
-          }}
-        >
-          <CaretLeft size={16} weight="bold" />
-          Sessions
-        </button>
+      <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-[var(--shell-view-bg)]">
+        {railCollapsed ? (
+          <div className="flex h-11 shrink-0 items-center gap-0.5 px-2 border-b border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]">
+            <button
+              type="button"
+              title="Expand sidebar"
+              onClick={toggleRail}
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer"
+            >
+              <SidebarSimple size={18} weight="bold" />
+            </button>
+            {sessionTabs.map((tab) => {
+              const active = driveKind === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  title={tab.hint}
+                  onClick={() => {
+                    setDriveKind(tab.id);
+                    setSelectedSessionId(null);
+                    setRailCollapsed(false);
+                  }}
+                  className={cn(
+                    'flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border-none cursor-pointer sm:min-h-8 sm:min-w-8 sm:flex-none sm:flex-row sm:px-2',
+                    active ? 'bg-[var(--accent-primary)] text-[var(--bg-primary)]' : 'bg-transparent text-[var(--shell-item-muted)]',
+                  )}
+                >
+                  <FabricKindIcon kind={tab.id} size={16} />
+                  <span className="text-[10px] font-semibold leading-none sm:sr-only">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         {!selectedSession ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
@@ -813,33 +881,6 @@ export function FabricSessionPanel({
           </>
         )}
       </div>
-      <nav
-        className="md:hidden shrink-0 grid grid-cols-4 border-t border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]"
-        style={{ paddingBottom: 'max(6px, env(safe-area-inset-bottom))' }}
-        aria-label="Session kinds"
-      >
-        {sessionTabs.map((tab) => {
-          const active = driveKind === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              title={tab.hint}
-              onClick={() => {
-                setDriveKind(tab.id);
-                setSelectedSessionId(null);
-              }}
-              className={cn(
-                'flex min-h-[44px] flex-col items-center justify-center gap-0.5 border-none bg-transparent cursor-pointer',
-                active ? 'text-[var(--accent-primary)]' : 'text-[var(--shell-item-muted)]',
-              )}
-            >
-              <FabricKindIcon kind={tab.id} size={20} />
-              <span className="text-[10px] font-semibold leading-none">{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
     </div>
   );
 }
