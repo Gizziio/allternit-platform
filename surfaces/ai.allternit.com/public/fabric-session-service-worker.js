@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Allternit Remote Control PWA service worker
+// Allternit Fabric Session PWA service worker
 
 const CACHE_NAME = 'allternit-fabric-session-v30';
 const DEDICATED_HOSTS = [
@@ -7,7 +7,7 @@ const DEDICATED_HOSTS = [
   'fabric-session.allternit.com',
 ];
 const PRECACHE_ASSETS = [
-  '/favicon.svg',
+  '/favicon.png',
   '/fabric-session-icon-192.png',
   '/fabric-session-icon-512.png',
   '/manifest.webmanifest',

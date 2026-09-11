@@ -28,31 +28,6 @@ const univerCore = path.dirname(path.dirname(path.dirname(univerCoreEntry)))
  * (e.g. /api/v1/dispatch/claim and /api/v1/dispatch/status backed by Redis/SQLite).
  */
 /**
- * Dev-only: Vite's MPA server matches `/remote-control` to `remote-control.html`
- * because of the rollup input key. The platform route `/remote-control` must
- * serve `index.html` (the SPA shell) so the hub page renders, while
- * `/remote-control.html` continues to serve the standalone dashboard entry.
- */
-function remoteControlRoutePlugin(): Plugin {
-  return {
-    name: 'allternit-remote-control-route',
-    configureServer(server) {
-      server.middlewares.use('/remote-control', (req, res, next) => {
-        if (req.method !== 'GET') return next();
-        const url = req.url ?? '/';
-        // Only rewrite the exact hub path (with optional query string), not
-        // static assets under /remote-control/ or the standalone entrypoint.
-        if (url !== '/' && !url.startsWith('?')) return next();
-        // Rewrite to the platform SPA shell so Vite injects the React refresh
-        // preamble and processes the HTML transform pipeline.
-        req.url = '/index.html' + (url.startsWith('?') ? url : '');
-        next();
-      });
-    },
-  };
-}
-
-/**
  * Dev: `/fabric-session` loads the platform SPA so the in-shell Fabric
  * Transport view works. Build: copy the PWA to `dist/fabric-session/index.html`
  * so Cloudflare Pages pretty-URLs can serve `/fabric-session/` without a
@@ -154,7 +129,6 @@ function dispatchHandoffPlugin(): Plugin {
 export default defineConfig({
   plugins: [
     react(),
-    remoteControlRoutePlugin(),
     fabricSessionRoutePlugin(),
     dispatchHandoffPlugin(),
     designSkillsPlugin(),
@@ -218,7 +192,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        'remote-control': path.resolve(__dirname, 'remote-control.html'),
         'fabric-session': path.resolve(__dirname, 'fabric-session.html'),
       },
       external: [

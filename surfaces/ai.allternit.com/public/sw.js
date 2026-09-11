@@ -2,11 +2,11 @@
  * Allternit Platform Service Worker
  *
  * Enables installability as a PWA and handles background push notifications
- * for remote-control approvals and session events.
+ * for remote approval requests and session events.
  */
 
 const CACHE_NAME = 'allternit-platform-v1';
-const PRECACHE_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.svg', '/icons/icon-192x192.png', '/icons/icon-512x512.png'];
+const PRECACHE_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.png', '/icons/icon-192x192.png', '/icons/icon-512x512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
