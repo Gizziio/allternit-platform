@@ -450,7 +450,7 @@ export function FabricSessionPanel({
     >
       <aside
         className={cn(
-          'flex flex-col min-h-0 bg-[var(--shell-rail-bg)] border-r border-solid border-[var(--border-subtle)] rounded-tr-2xl rounded-br-2xl',
+          'flex flex-1 min-h-0 flex-col bg-[var(--shell-rail-bg)] border-r border-solid border-[var(--border-subtle)] md:rounded-tr-2xl md:rounded-br-2xl',
           showDetail && 'hidden md:flex',
         )}
       >
@@ -601,7 +601,7 @@ export function FabricSessionPanel({
               </div>
             )}
             {runtime.capabilities.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
+              <div className="mt-2 hidden md:flex flex-wrap gap-1">
                 {runtime.capabilities.slice(0, 6).map((cap) => (
                   <span key={cap} className="text-[9px] px-1.5 py-0.5 rounded-md bg-[var(--surface-hover)] text-[var(--shell-item-muted)]">
                     {cap.replace(/^runtime:/, '')}
@@ -615,7 +615,7 @@ export function FabricSessionPanel({
 
       <div
         className={cn(
-          'flex flex-col min-w-0 min-h-0 bg-[var(--shell-view-bg)]',
+          'flex flex-1 min-h-0 min-w-0 flex-col bg-[var(--shell-view-bg)]',
           !showDetail && 'hidden md:flex',
         )}
       >
