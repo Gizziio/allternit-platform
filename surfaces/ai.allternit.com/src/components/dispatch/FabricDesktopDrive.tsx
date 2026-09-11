@@ -47,6 +47,30 @@ function devicePortrait() {
   return window.innerHeight >= window.innerWidth;
 }
 
+/** Safari moves this when the URL bar or keyboard comes in. Use it as the phone shell. */
+export function useVisualViewportRect() {
+  const [rect, setRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  useEffect(() => {
+    const apply = () => {
+      const v = window.visualViewport;
+      if (v) setRect({ top: v.offsetTop, left: v.offsetLeft, width: v.width, height: v.height });
+      else setRect({ top: 0, left: 0, width: window.innerWidth, height: window.innerHeight });
+    };
+    apply();
+    window.visualViewport?.addEventListener('resize', apply);
+    window.visualViewport?.addEventListener('scroll', apply);
+    window.addEventListener('orientationchange', apply);
+    window.addEventListener('resize', apply);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', apply);
+      window.visualViewport?.removeEventListener('scroll', apply);
+      window.removeEventListener('orientationchange', apply);
+      window.removeEventListener('resize', apply);
+    };
+  }, []);
+  return rect;
+}
+
 export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesktopDriveProps) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -57,7 +81,9 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
   const [inputMode, setInputMode] = useState<InputMode>('touch');
   const [viewMode, setViewMode] = useState<ViewMode>('fit');
   const [kbdOpen, setKbdOpen] = useState(false);
+  const [draft, setDraft] = useState('');
   const [portrait, setPortrait] = useState(devicePortrait);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const imgSize = useRef({ w: 0, h: 0 });
   const cursor = useRef({ x: 0, y: 0 });
   const [xf, setXf] = useState({ scale: 1, x: 0, y: 0 });
@@ -86,6 +112,13 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
     },
     [getToken, runtimeId],
   );
+
+  const sendDraft = useCallback(async () => {
+    const text = draft;
+    if (!text.trim()) return;
+    await sendInput({ type: 'text', text });
+    setDraft('');
+  }, [draft, sendInput]);
 
   const layout = useCallback((mode: ViewMode) => {
     const stage = stageRef.current;
@@ -381,14 +414,13 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
           if (dx || dy) void sendInput({ type: 'scroll', dx, dy });
         }}
       >
-        <div className="absolute top-0 inset-x-0 z-10 pointer-events-none flex items-center gap-2 px-3 py-2 text-[11px] text-white/70">
-          <span className={cn('size-2 rounded-full', status === 'live' ? 'bg-[#22c55e]' : status === 'connecting' ? 'bg-[#febc2e]' : 'bg-[#ef4444]')} />
-          <span className="truncate">{message}</span>
-          <span className="ml-auto text-white/45">
-            {portrait ? 'Turn sideways · ' : ''}2 fingers scroll · pinch zoom
-          </span>
-          {status === 'connecting' ? <Spinner size={12} className="animate-spin ml-auto" /> : null}
-        </div>
+        {status !== 'live' ? (
+          <div className="absolute top-2 left-2 z-10 pointer-events-none flex items-center gap-2 text-[11px] text-white/70">
+            <span className={cn('size-2 rounded-full', status === 'connecting' ? 'bg-[#febc2e]' : 'bg-[#ef4444]')} />
+            <span className="truncate">{message}</span>
+            {status === 'connecting' ? <Spinner size={12} className="animate-spin" /> : null}
+          </div>
+        ) : null}
         {status === 'live' || status === 'locked' ? (
           <div
             style={{
@@ -417,51 +449,63 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
       </div>
 
       <div
-        className="shrink-0 z-20 flex flex-wrap items-center gap-1.5 px-2 pt-2 bg-[#0b0b0a] border-t border-solid border-white/10"
-        style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}
+        className="shrink-0 z-20 flex flex-nowrap items-center gap-1 px-2 pt-1.5 bg-[#0b0b0a]"
+        style={{ paddingBottom: kbdOpen ? 4 : 'max(8px, env(safe-area-inset-bottom))' }}
       >
-        <button type="button" onClick={() => setInputMode('touch')} className={cn('px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'touch' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Touch</button>
-        <button type="button" onClick={() => setInputMode('trackpad')} className={cn('px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'trackpad' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Trackpad</button>
-        <button type="button" onClick={() => { setViewMode('fit'); layout('fit'); }} className={cn('px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'fit' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Fit</button>
-        <button type="button" onClick={() => { setViewMode('actual'); layout('actual'); }} className={cn('px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'actual' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Actual</button>
+        <span className={cn('shrink-0 size-2 rounded-full', status === 'live' ? 'bg-[#22c55e]' : status === 'connecting' ? 'bg-[#febc2e]' : 'bg-[#ef4444]')} />
+        <button type="button" onClick={() => setInputMode('touch')} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'touch' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Touch</button>
+        <button type="button" onClick={() => setInputMode('trackpad')} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'trackpad' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Trackpad</button>
+        <button type="button" onClick={() => { setViewMode('fit'); layout('fit'); }} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'fit' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Fit</button>
+        <button type="button" onClick={() => { setViewMode('actual'); layout('actual'); }} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'actual' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Actual</button>
         <button
           type="button"
           onClick={() => {
-            const orient = window.screen?.orientation as ScreenOrientation & { lock?: (m: string) => Promise<void> };
-            const want = devicePortrait() ? 'landscape' : 'portrait';
-            void orient?.lock?.(want).catch(() => {});
-            layout(viewMode);
+            setKbdOpen((open) => {
+              const next = !open;
+              if (next) setTimeout(() => composerRef.current?.focus(), 50);
+              return next;
+            });
           }}
-          className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer bg-white/10 text-white/80"
+          className={cn('ml-auto px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer inline-flex items-center gap-1', kbdOpen ? 'bg-white text-black' : 'bg-white/10 text-white/80')}
         >
-          {portrait ? 'Landscape' : 'Portrait'}
-        </button>
-        <button type="button" onClick={() => setKbdOpen((v) => !v)} className={cn('ml-auto px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer inline-flex items-center gap-1', kbdOpen ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>
           <Keyboard size={13} /> Keyboard
         </button>
       </div>
       {kbdOpen ? (
-        <textarea
-          className="shrink-0 z-20 w-full min-h-[44px] border-none bg-[#161616] text-[16px] px-3 py-2 text-white"
-          placeholder="Type here — it goes to the remote machine"
-          autoCapitalize="off"
-          autoCorrect="off"
-          onInput={(e) => {
-            const el = e.currentTarget;
-            if (el.value) {
-              void sendInput({ type: 'text', text: el.value });
-              el.value = '';
-            }
-          }}
-          onKeyDown={(e) => {
-            const named: Record<string, string> = { Backspace: 'delete', Enter: 'return', Escape: 'esc', Tab: 'tab', ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-            const key = named[e.key];
-            if (key) {
-              e.preventDefault();
-              void sendInput({ type: 'key', key });
-            }
-          }}
-        />
+        <div className="shrink-0 z-20 flex items-end gap-2 px-2 pb-2 bg-[#0b0b0a]">
+          <textarea
+            ref={composerRef}
+            value={draft}
+            rows={1}
+            className="flex-1 min-h-[40px] max-h-[88px] rounded-xl border-none bg-[#1c1c1c] text-[16px] px-3 py-2 text-white"
+            placeholder="Type or dictate — Send to the Mac"
+            autoCapitalize="off"
+            autoCorrect="off"
+            enterKeyHint="send"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void sendDraft();
+                return;
+              }
+              if (draft) return;
+              const named: Record<string, string> = { Backspace: 'delete', Escape: 'esc', Tab: 'tab', ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+              const key = named[e.key];
+              if (key) {
+                e.preventDefault();
+                void sendInput({ type: 'key', key });
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => void sendDraft()}
+            className="shrink-0 rounded-xl border-none bg-white text-black text-[13px] font-bold px-3 py-2 cursor-pointer"
+          >
+            Send
+          </button>
+        </div>
       ) : null}
     </div>
   );
