@@ -28,7 +28,7 @@ Append newest entries to the top of the `## Entries` section.
 - **Summary:** Merged PR #295 (8788dd6b5) — threads, outputs, schedules alias, toolset, permission field; sandbox/desktop provision Computer Cloud Cloud Desktop, not Fly. 503 without VM driver. fabric still 400.
 - **Commit:** https://github.com/Gizziio/allternit-platform/pull/295 · 8788dd6b5d319bfb33cfb778f99452793fbbb18a
 - **How it works:** Session create calls existing Computer Cloud standalone desktop spawn (ephemeral vs session persistence). GitHub Actions green; Vercel + Pages Git ignored.
-- **Outstanding work:** Map fabric → Computer Cloud; live Incus/Tart driver; dollar budget parked; Bot Agents BA-*.
+- **Outstanding work:** Live Incus/Tart driver (503 in unit tests). Dollar budget parked. Bot Agents BA-*. Fabric mapped to Computer Cloud in PR #298 (`567386860`).
 - **Summary file:** [2026-09-11-allternit-runtime-api-p4-grok.md](./summaries/2026-09-11-allternit-runtime-api-p4-grok.md)
 
 ### 2026-09-10 21:59 — grok — ao visibility HTTP + SDK client.bots (BA-8)
