@@ -674,7 +674,7 @@ export function FabricSessionPanel({
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
               <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
               <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">
-                {driveKind === 'bot' ? 'Select a bot' : `Select a ${sessionTabs.find((tab) => tab.id === driveKind)?.label ?? 'chat'} session`}
+                {`Select a ${sessionTabs.find((tab) => tab.id === driveKind)?.label ?? 'chat'} session`}
               </p>
               <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
                 {sessionTabs.find((tab) => tab.id === driveKind)?.hint ?? 'Regular agent sessions'}
