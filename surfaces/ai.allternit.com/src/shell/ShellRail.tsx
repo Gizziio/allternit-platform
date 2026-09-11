@@ -172,11 +172,7 @@ function useStickyTab(currentView: string | undefined, tabViews: string[]): {
   const isTabActive = useCallback(
     (view: string) => {
       if (currentView === view) return true;
-      return (
-        lastSelected === view &&
-        currentView != null &&
-        !tabViews.includes(currentView)
-      );
+      return lastSelected === view && currentView != null;
     },
     [currentView, lastSelected, tabViews],
   );
@@ -795,6 +791,12 @@ export function ShellRail({
 
   // Shared "New" behavior for the rail button and the RECENTS header "+".
   const handleNewSession = useCallback(() => {
+    // Clear the active mode's sticky tab so "New" doesn't highlight alongside
+    // a stale tab selection.
+    if (mode === 'browser') browserSticky.selectTab('');
+    else if (mode === 'code') codeSticky.selectTab('');
+    else if (mode === 'bot') botSticky.selectTab('');
+    else homeSticky.selectTab('');
     if (mode === 'browser') {
       onModeChange?.('browser');
       onOpen?.('browser');
@@ -824,7 +826,7 @@ export function ShellRail({
       useChatSessionStore.getState().setActiveSession(null);
       onOpen?.('chat');
     }
-  }, [mode, chatStore, onModeChange, onOpen]);
+  }, [mode, chatStore, onModeChange, onOpen, homeSticky, codeSticky, browserSticky, botSticky]);
 
   // Same navigation as clicking a recent row — used by row clicks, the
   // context-menu "Open" item, and PINNED rows.
@@ -1083,7 +1085,7 @@ export function ShellRail({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-56 p-3 bg-[var(--surface-panel)] border-[var(--border-subtle)] shadow-[var(--shadow-lg)] z-[200]"
+                  className="w-56 p-3 bg-[var(--surface-panel)] border-[var(--border-subtle)] shadow-[var(--shadow-lg)] z-[200] max-h-[60vh] overflow-y-auto"
                   side="bottom"
                   align="end"
                   sideOffset={6}
@@ -1360,7 +1362,7 @@ export function ShellRail({
             <RailItem
               icon={FolderOpen}
               label="Projects"
-              isActive={homeSticky.isTabActive('project') && !chatStore.activeProjectId}
+              isActive={homeSticky.isTabActive('project')}
               onClick={() => {
                 homeSticky.selectTab('project');
                 useChatStore.getState().setActiveProject(null);
@@ -1457,6 +1459,8 @@ export function ShellRail({
             onOpenAll={() => onOpen?.('recents')}
             onAdd={handleNewSession}
             addTitle="New session"
+            resumeTitle="Continue CLI session"
+            onResumeCli={() => openNativeSessionPicker(mode === 'cowork' ? 'cowork' : 'chat')}
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -1469,7 +1473,7 @@ export function ShellRail({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-56 p-3 bg-[var(--surface-panel)] border-[var(--border-subtle)] shadow-[var(--shadow-lg)] z-[200]"
+                  className="w-56 p-3 bg-[var(--surface-panel)] border-[var(--border-subtle)] shadow-[var(--shadow-lg)] z-[200] max-h-[60vh] overflow-y-auto"
                   side="bottom"
                   align="end"
                   sideOffset={6}
@@ -1591,14 +1595,6 @@ export function ShellRail({
                 <span className="text-[12px]">Show less</span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => openNativeSessionPicker(mode === 'cowork' ? 'cowork' : 'chat')}
-              className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none bg-transparent cursor-pointer text-left transition-colors text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
-            >
-              <TerminalWindow size={13} />
-              <span className="text-[12px]">Continue CLI session…</span>
-            </button>
           </RecentsPanel>
         </>
       ) : (
@@ -1667,6 +1663,8 @@ export function ShellRail({
             onOpenAll={() => onOpen?.('code-threads')}
             onAdd={handleNewSession}
             addTitle="New Thread"
+            resumeTitle="Continue CLI session"
+            onResumeCli={() => openNativeSessionPicker('code')}
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -1679,7 +1677,7 @@ export function ShellRail({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-56 p-3 bg-[var(--surface-panel)] border-[var(--border-subtle)] shadow-[var(--shadow-lg)] z-[200]"
+                  className="w-56 p-3 bg-[var(--surface-panel)] border-[var(--border-subtle)] shadow-[var(--shadow-lg)] z-[200] max-h-[60vh] overflow-y-auto"
                   side="bottom"
                   align="end"
                   sideOffset={6}
@@ -1875,14 +1873,6 @@ export function ShellRail({
                 ) : null
               )
             )}
-            <button
-              type="button"
-              onClick={() => openNativeSessionPicker('code')}
-              className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none bg-transparent cursor-pointer text-left transition-colors text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
-            >
-              <TerminalWindow size={13} />
-              <span className="text-[12px]">Continue CLI session…</span>
-            </button>
           </RecentsPanel>
         </>
       )}
@@ -2396,6 +2386,8 @@ function RecentsPanel({
   onAdd,
   addTitle,
   shrink,
+  resumeTitle,
+  onResumeCli,
 }: {
   expanded: boolean;
   onToggle: () => void;
@@ -2407,6 +2399,8 @@ function RecentsPanel({
   onAdd?: () => void;
   addTitle?: string;
   shrink?: boolean;
+  resumeTitle?: string;
+  onResumeCli?: () => void;
 }): React.ReactNode {
   return (
     <div className={cn("flex flex-col px-2", shrink ? "shrink-0" : "flex-1 min-h-0")}>
@@ -2447,6 +2441,16 @@ function RecentsPanel({
             </button>
           )}
           {filter}
+          {onResumeCli && (
+            <button
+              type="button"
+              onClick={onResumeCli}
+              className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+              title={resumeTitle}
+            >
+              <TerminalWindow size={13} />
+            </button>
+          )}
           <button
             type="button"
             onClick={onToggle}
