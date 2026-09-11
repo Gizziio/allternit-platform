@@ -17,6 +17,7 @@ import { RunsPage } from "@/pages/RunsPage";
 import { SchedulesPage } from "@/pages/SchedulesPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { FabricPage } from "@/pages/FabricPage";
+import { AgentsPage } from "@/pages/AgentsPage";
 import { PortalLandingPage } from "@/pages/PortalLandingPage";
 import { ModelsPage } from "@/pages/ModelsPage";
 import { PlansPage } from "@/pages/PlansPage";
@@ -118,6 +119,14 @@ export default function App() {
         element={
           <ConsoleRoute>
             <ComputePage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/agents/*"
+        element={
+          <ConsoleRoute>
+            <AgentsPage />
           </ConsoleRoute>
         }
       />

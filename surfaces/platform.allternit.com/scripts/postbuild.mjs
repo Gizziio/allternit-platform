@@ -9,6 +9,7 @@ const routes = [
   'dashboard',
   'organizations',
   'compute',
+  'agents',
   'devices',
   'runs',
   'schedules',
