@@ -530,6 +530,84 @@ async fn desktop_input(body: Bytes) -> Response {
     desktop_forward(reqwest::Method::POST, "/input", Some(body)).await
 }
 
+fn phone_remote_dir() -> Option<std::path::PathBuf> {
+    if let Ok(p) = std::env::var("ALLTERNIT_PHONE_REMOTE") {
+        return Some(std::path::PathBuf::from(p));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        // target/{debug,release}/ao → repo root
+        if let Some(root) = exe
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+        {
+            let candidate = root.join("surfaces/phone-remote");
+            if candidate.join("server/index.mjs").is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    let home = std::env::var_os("HOME").map(std::path::PathBuf::from)?;
+    let fallback = home.join("Desktop/allternit-workspace/allternit/surfaces/phone-remote");
+    if fallback.join("server/index.mjs").is_file() {
+        return Some(fallback);
+    }
+    None
+}
+
+async fn desktop_start() -> Response {
+    let probe = desktop_forward(reqwest::Method::GET, "/healthz", None).await;
+    if probe.status().is_success() {
+        return (
+            StatusCode::OK,
+            [("content-type", "application/json")],
+            r#"{"ok":true,"already":true}"#,
+        )
+            .into_response();
+    }
+    let Some(dir) = phone_remote_dir() else {
+        return (
+            StatusCode::NOT_FOUND,
+            "phone-remote is not installed on this node (set ALLTERNIT_PHONE_REMOTE)",
+        )
+            .into_response();
+    };
+    let log = dir.join("phone-remote.fabric.log");
+    let result = tokio::task::spawn_blocking(move || {
+        let mut cmd = std::process::Command::new("node");
+        cmd.arg("server/index.mjs")
+            .arg("--bind")
+            .arg("127.0.0.1")
+            .current_dir(&dir)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::fs::File::create(&log).map(std::process::Stdio::from).unwrap_or(std::process::Stdio::null()));
+        cmd.spawn().map(|c| c.id())
+    })
+    .await;
+    match result {
+        Ok(Ok(pid)) => {
+            tokio::time::sleep(Duration::from_millis(800)).await;
+            (
+                StatusCode::OK,
+                [("content-type", "application/json")],
+                format!(r#"{{"ok":true,"pid":{pid}}}"#),
+            )
+                .into_response()
+        }
+        Ok(Err(err)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to start phone-remote: {err}"),
+        )
+            .into_response(),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to start phone-remote: {err}"),
+        )
+            .into_response(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Server
 // ---------------------------------------------------------------------------
@@ -564,6 +642,7 @@ pub(crate) async fn serve(port: u16, state: Arc<ShimState>) -> Result<(), String
         .route("/v1/remote-control/desktop/hello", get(desktop_hello))
         .route("/v1/remote-control/desktop/frame", get(desktop_frame))
         .route("/v1/remote-control/desktop/input", post(desktop_input))
+        .route("/v1/remote-control/desktop/start", post(desktop_start))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))

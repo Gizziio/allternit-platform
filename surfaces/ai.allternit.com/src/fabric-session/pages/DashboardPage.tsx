@@ -4,11 +4,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Bell,
   BellSlash,
+  CaretLeft,
   DesktopTower,
   DownloadSimple,
   Moon,
   Sun,
 } from "@phosphor-icons/react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { FabricDesktopDrive, useVisualViewportRect } from "@/components/dispatch/FabricDesktopDrive";
 import {
   FabricAppHeader,
   FabricHeaderControl,
@@ -159,6 +162,9 @@ export function DashboardPage({
     });
   }, [auth.isSignedIn]);
 
+  const isPhone = useMediaQuery("(max-width: 768px), (pointer: coarse)");
+  const isLandscape = useMediaQuery("(orientation: landscape) and (pointer: coarse)");
+  const vv = useVisualViewportRect();
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
@@ -322,7 +328,7 @@ export function DashboardPage({
   if (!auth.isSignedIn) {
     return (
       <div
-        className="min-h-screen w-full flex items-center justify-center px-5 bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]"
+        className="min-h-[100dvh] w-full flex items-center justify-center px-5 overflow-y-auto bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]"
       >
         <div className="max-w-md w-full p-8 text-center rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]">
           <DesktopTower size={48} style={{ opacity: 0.6 }} className="mx-auto mb-4" color="var(--accent-primary)" />
@@ -365,8 +371,34 @@ export function DashboardPage({
   );
 
   if (sessionOpen && selected) {
+    if (isPhone) {
+      return (
+        <div
+          className="z-50 bg-[#0b0b0a] text-white overflow-hidden"
+          style={{
+            position: "fixed",
+            top: vv.height ? vv.top : 0,
+            left: vv.height ? vv.left : 0,
+            width: vv.height ? vv.width : "100%",
+            height: vv.height ? vv.height : "100%",
+          }}
+        >
+          <button
+            type="button"
+            onClick={closeSession}
+            className="absolute z-30 left-2 inline-flex items-center gap-1 rounded-full border-none bg-black/55 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
+            style={{ top: "max(8px, env(safe-area-inset-top))" }}
+            title="Back to machines"
+          >
+            <CaretLeft size={16} weight="bold" />
+            {!isLandscape ? "Machines" : null}
+          </button>
+          <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
+        </div>
+      );
+    }
     return (
-      <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
+      <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
         <FabricAppHeader title={selected.name} onBack={closeSession}>
           {headerActions}
         </FabricAppHeader>
@@ -384,7 +416,7 @@ export function DashboardPage({
   }
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
+    <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
       <FabricAppHeader>{headerActions}</FabricAppHeader>
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto px-8 pt-10 pb-12">

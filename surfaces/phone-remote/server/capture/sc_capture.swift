@@ -17,11 +17,15 @@ import Foundation
 import ScreenCaptureKit
 import CoreGraphics
 import AppKit
+import VideoToolbox
+import CoreMedia
+import CoreVideo
 
 struct Config {
     var fps: Int = 10
     var quality: CGFloat = 0.6
     var scale: CGFloat = 0.5
+    var codec: String = "jpeg" // jpeg | h264
 }
 
 func parseArgs() -> Config? {
@@ -38,6 +42,9 @@ func parseArgs() -> Config? {
         case "--scale":
             guard let v = it.next(), let s = Double(v), s > 0, s <= 1 else { return nil }
             cfg.scale = CGFloat(s)
+        case "--codec":
+            guard let v = it.next(), v == "jpeg" || v == "h264" else { return nil }
+            cfg.codec = v
         default:
             return nil
         }
@@ -72,6 +79,67 @@ guard CGPreflightScreenCaptureAccess() else {
 
 let out = FileHandle.standardOutput
 
+func writePrefixed(_ data: Data) {
+    var len = UInt32(data.count).bigEndian
+    out.write(Data(bytes: &len, count: 4))
+    out.write(data)
+}
+
+final class H264Writer: NSObject, SCStreamOutput {
+    var session: VTCompressionSession?
+    var wroteDisplayInfo = false
+    let fps: Int
+    var frameCount: Int = 0
+
+    init(width: Int, height: Int, fps: Int) {
+        self.fps = fps
+        super.init()
+        var sess: VTCompressionSession?
+        let status = VTCompressionSessionCreate(
+            allocator: kCFAllocatorDefault,
+            width: Int32(width),
+            height: Int32(height),
+            codecType: kCMVideoCodecType_H264,
+            encoderSpecification: nil,
+            imageBufferAttributes: nil,
+            compressedDataAllocator: nil,
+            outputCallback: nil,
+            refcon: nil,
+            compressionSessionOut: &sess
+        )
+        guard status == noErr, let sess else { return }
+        VTSessionSetProperty(sess, key: kVTCompressionPropertyKey_RealTime, value: kCFBooleanTrue)
+        VTSessionSetProperty(sess, key: kVTCompressionPropertyKey_ProfileLevel, value: kVTProfileLevel_H264_Main_AutoLevel)
+        VTSessionSetProperty(sess, key: kVTCompressionPropertyKey_MaxKeyFrameInterval, value: fps * 2 as CFNumber)
+        VTCompressionSessionPrepareToEncodeFrames(sess)
+        self.session = sess
+    }
+
+    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
+        guard type == .screen,
+              let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer),
+              let session else { return }
+        if !wroteDisplayInfo {
+            wroteDisplayInfo = true
+            status(["type": "display", "width": CVPixelBufferGetWidth(pixelBuffer),
+                    "height": CVPixelBufferGetHeight(pixelBuffer), "codec": "h264"])
+        }
+        frameCount += 1
+        var flags = VTEncodeInfoFlags()
+        let pts = CMTime(value: CMTimeValue(frameCount), timescale: CMTimeScale(fps))
+        VTCompressionSessionEncodeFrame(session, imageBuffer: pixelBuffer, presentationTimeStamp: pts, duration: .invalid, frameProperties: nil, infoFlagsOut: &flags) { _, _, encoded in
+            guard let encoded else { return }
+            guard let dataBuffer = CMSampleBufferGetDataBuffer(encoded) else { return }
+            var length = 0
+            var dataPointer: UnsafeMutablePointer<Int8>?
+            CMBlockBufferGetDataPointer(dataBuffer, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &length, dataPointerOut: &dataPointer)
+            if let dataPointer, length > 0 {
+                writePrefixed(Data(bytes: dataPointer, count: length))
+            }
+        }
+    }
+}
+
 final class FrameWriter: NSObject, SCStreamOutput {
     let quality: CGFloat
     var wroteDisplayInfo = false
@@ -88,9 +156,7 @@ final class FrameWriter: NSObject, SCStreamOutput {
             wroteDisplayInfo = true
             status(["type": "display", "width": rep.pixelsWide, "height": rep.pixelsHigh])
         }
-        var len = UInt32(jpeg.count).bigEndian
-        out.write(Data(bytes: &len, count: 4))
-        out.write(jpeg)
+        writePrefixed(jpeg)
     }
 }
 
@@ -100,6 +166,7 @@ let semaphore = DispatchSemaphore(value: 0)
 // stream fails silently (zero frames) — keep both alive for process lifetime.
 var gStream: SCStream?
 var gWriter: FrameWriter?
+var gH264: H264Writer?
 
 Task {
     do {
@@ -117,14 +184,20 @@ Task {
         sc.showsCursor = true
         sc.queueDepth = 3
 
-        let writer = FrameWriter(quality: cfg.quality)
         let stream = SCStream(filter: filter, configuration: sc, delegate: nil)
-        try stream.addStreamOutput(writer, type: .screen, sampleHandlerQueue: DispatchQueue(label: "sc_capture.frames"))
-        gWriter = writer
+        if cfg.codec == "h264" {
+            let writer = H264Writer(width: sc.width, height: sc.height, fps: cfg.fps)
+            try stream.addStreamOutput(writer, type: .screen, sampleHandlerQueue: DispatchQueue(label: "sc_capture.frames"))
+            gH264 = writer
+        } else {
+            let writer = FrameWriter(quality: cfg.quality)
+            try stream.addStreamOutput(writer, type: .screen, sampleHandlerQueue: DispatchQueue(label: "sc_capture.frames"))
+            gWriter = writer
+        }
         gStream = stream
         try await stream.startCapture()
         status(["type": "started", "fps": cfg.fps, "scale": Double(cfg.scale),
-                "captureWidth": sc.width, "captureHeight": sc.height])
+                "codec": cfg.codec, "captureWidth": sc.width, "captureHeight": sc.height])
     } catch {
         status(["type": "error", "error": String(describing: error)])
         exit(5)

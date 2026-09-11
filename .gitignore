@@ -12,6 +12,8 @@ rails/reference/beads/
 *.log
 *.png
 !surfaces/ai.allternit.com/public/remote-control-*.png
+!surfaces/ai.allternit.com/public/fabric-session-icon-*.png
+!surfaces/ai.allternit.com/public/apple-touch-icon*.png
 !surfaces/platform.allternit.com/public/billing/*.png
 *.mov
 *.zip

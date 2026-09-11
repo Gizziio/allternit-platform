@@ -42,8 +42,8 @@ function parseArgs(argv) {
     token: null,
     capture: 'sckit', // sckit | screencapture | none
     fps: 10,
-    scale: 0.75,
-    quality: 0.72,
+    scale: 1,
+    quality: 0.8,
     input: true,
     inputDryRun: false,
   };
@@ -81,6 +81,20 @@ function tailscaleIPv4() {
     return execFileSync('tailscale', ['ip', '-4'], { encoding: 'utf8' }).trim().split('\n')[0];
   } catch {
     return null;
+  }
+}
+
+function screenLocked() {
+  if (process.platform !== 'darwin') return false;
+  try {
+    const out = execFileSync('python3', ['-c',
+      'import Quartz\n'
+      + 'd=Quartz.CGSessionCopyCurrentDictionary() or {}\n'
+      + 'print("1" if d.get("CGSSessionScreenIsLocked") else "0")',
+    ], { timeout: 2000, encoding: 'utf8' });
+    return out.trim() === '1';
+  } catch {
+    return false;
   }
 }
 
@@ -180,7 +194,12 @@ async function main() {
     conn.on('text', (t) => onViewerMessage(conn, t));
     conn.on('close', () => {
       console.error('[server] viewer disconnected');
-      if (viewer === conn) viewer = null;
+      if (viewer === conn) {
+        viewer = null;
+        cfg.token = randomBytes(24).toString('base64url');
+        const next = `http://${cfg.bind}:${cfg.port}/?t=${cfg.token}`;
+        console.log(`  token rotated after viewer disconnect\n    ${next}\n`);
+      }
     });
     conn.on('error', () => {});
   }
@@ -223,6 +242,7 @@ async function main() {
         input: input ? { enabled: true, dryRun: cfg.inputDryRun, accessibilityTrusted: input.ready?.accessibilityTrusted ?? null } : { enabled: false },
         display: input?.display ?? null,
         hasFrame: Boolean(capture?.lastFrame),
+        locked: screenLocked(),
       }));
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'content-length': body.length });
       return res.end(body);
@@ -235,6 +255,14 @@ async function main() {
       if (!jpeg) { res.writeHead(503, { 'content-type': 'text/plain' }); return res.end('no frame\n'); }
       res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': jpeg.length });
       return res.end(jpeg);
+    }
+    if (url.pathname === '/start' && req.method === 'POST') {
+      if (!trustedLocal && !tokenMatches(cfg, presentedToken(req, url))) {
+        res.writeHead(403, { 'content-type': 'text/plain' }); return res.end('403\n');
+      }
+      const body = Buffer.from(JSON.stringify({ ok: true, already: true, pid: process.pid }));
+      res.writeHead(200, { 'content-type': 'application/json', 'content-length': body.length });
+      return res.end(body);
     }
     if (url.pathname === '/input' && req.method === 'POST') {
       if (!trustedLocal && !tokenMatches(cfg, presentedToken(req, url))) {

@@ -1251,6 +1251,7 @@ export class DesktopAuthManager {
       '/terminal', '/mcp', '/platform', '/metrics', '/alabs', '/cowork',
       '/webhooks', '/status', '/health',
       '/ws', '/panes',
+      '/v1/',
     ];
     if (!allowedPrefixes.some((prefix) => requestPath.startsWith(prefix))) return;
 
@@ -1268,7 +1269,12 @@ export class DesktopAuthManager {
         : message.body_encoding === 'base64'
           ? Buffer.from(message.body, 'base64')
           : Buffer.from(message.body, 'utf8');
-      const response = await fetch(`${URLS.API}${requestPath}`, { method, headers, body });
+      // Fabric Desktop: live capture is phone-remote on loopback, not allternit-api.
+      const desktopPrefix = '/v1/remote-control/desktop';
+      const localUrl = requestPath.startsWith(desktopPrefix)
+        ? `http://127.0.0.1:8477${requestPath.slice(desktopPrefix.length) || '/'}`
+        : `${URLS.API}${requestPath}`;
+      const response = await fetch(localUrl, { method, headers, body });
       const responseHeaders: Record<string, string> = {};
       for (const name of ['content-type', 'cache-control', 'content-disposition', 'etag', 'last-modified', 'x-request-id']) {
         const value = response.headers.get(name);
@@ -1320,6 +1326,7 @@ export class DesktopAuthManager {
       '/api/', '/viz', '/sandbox', '/vm-session', '/rails', '/stream',
       '/terminal', '/mcp', '/platform', '/metrics', '/alabs', '/cowork',
       '/webhooks', '/ws', '/panes', '/status', '/health',
+      '/v1/',
     ];
     if (!socketId || !requestPath.startsWith('/') || requestPath.includes('..')
       || requestPath.includes('://') || !allowedPrefixes.some((prefix) => requestPath.startsWith(prefix))) return;

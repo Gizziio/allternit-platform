@@ -22,7 +22,7 @@ export function MachinesPanel({
   selectedId,
   onSelect,
   action,
-  emptyMessage = 'No machines paired yet. Pair a machine from the Allternit desktop app to get started.',
+  emptyMessage = 'No machines paired to this Allternit account. On the Mac run: ao fabric pair --re-pair',
   compact = false,
   attention,
 }: MachinesPanelProps): React.ReactNode {

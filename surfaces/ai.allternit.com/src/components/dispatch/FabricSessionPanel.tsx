@@ -54,7 +54,7 @@ export function FabricSessionPanel({
   );
 
   const [sessions, setSessions] = useState<FabricSessionWithStatus[]>([]);
-  const [driveKind, setDriveKind] = useState<FabricDriveKind>('chat');
+  const [driveKind, setDriveKind] = useState<FabricDriveKind>('desktop');
   const [codePane, setCodePane] = useState<'terminal' | 'chat'>('terminal');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<FabricSessionDetail | null>(null);
@@ -426,11 +426,19 @@ export function FabricSessionPanel({
     }
   }
 
-  if (loading) {
+  if (loading && driveKind !== 'desktop') {
     return (
       <div className="flex items-center justify-center h-full text-[var(--shell-item-muted)] bg-[var(--shell-view-bg)]">
         <Spinner className="animate-spin mr-2" size={20} />
         Loading sessions…
+      </div>
+    );
+  }
+
+  if (driveKind === 'desktop') {
+    return (
+      <div className="h-full min-h-0 flex flex-col bg-[#0b0b0a]" style={{ height: '100%' }}>
+        <FabricDesktopDrive runtimeId={runtimeId} getToken={getToken} hostName={runtime?.name || runtime?.host} />
       </div>
     );
   }

@@ -29,6 +29,10 @@ pub fn remote_control_router() -> Router<Arc<AppState>> {
         )
         .route("/remote-control/sessions/:id/abort", post(abort_session))
         .route("/remote-control/sessions/:id/events", get(stream_events))
+        .route("/remote-control/desktop/hello", get(desktop_hello))
+        .route("/remote-control/desktop/frame", get(desktop_frame))
+        .route("/remote-control/desktop/input", post(desktop_input))
+        .route("/remote-control/desktop/start", post(desktop_start))
 }
 
 fn upstream_url(path: &str) -> String {
@@ -80,6 +84,80 @@ async fn proxy_json(
         HeaderValue::from_static("application/json"),
     );
     response
+}
+
+async fn proxy_bytes(
+    headers: &HeaderMap,
+    method: reqwest::Method,
+    path: &str,
+    body: Option<Vec<u8>>,
+) -> Response {
+    let client = gizzi_client(headers);
+    let mut request = client.request(method, upstream_url(path));
+    if let Some(payload) = body {
+        request = request
+            .header("content-type", "application/json")
+            .body(payload);
+    }
+    let upstream = match request.send().await {
+        Ok(r) => r,
+        Err(error) => {
+            warn!("desktop upstream request failed: {}", error);
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": format!("Upstream request failed: {}", error) })),
+            )
+                .into_response();
+        }
+    };
+    let status =
+        StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    let ct = upstream
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream")
+        .to_string();
+    let bytes = match upstream.bytes().await {
+        Ok(b) => b,
+        Err(error) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": format!("Upstream body read failed: {}", error) })),
+            )
+                .into_response();
+        }
+    };
+    let mut response = Response::new(Body::from(bytes));
+    *response.status_mut() = status;
+    if let Ok(val) = HeaderValue::from_str(&ct) {
+        response
+            .headers_mut()
+            .insert(axum::http::header::CONTENT_TYPE, val);
+    }
+    response
+}
+
+async fn desktop_hello(headers: HeaderMap) -> impl IntoResponse {
+    proxy_bytes(&headers, reqwest::Method::GET, "/v1/remote-control/desktop/hello", None).await
+}
+
+async fn desktop_frame(headers: HeaderMap) -> impl IntoResponse {
+    proxy_bytes(&headers, reqwest::Method::GET, "/v1/remote-control/desktop/frame", None).await
+}
+
+async fn desktop_input(headers: HeaderMap, body: axum::body::Bytes) -> impl IntoResponse {
+    proxy_bytes(
+        &headers,
+        reqwest::Method::POST,
+        "/v1/remote-control/desktop/input",
+        Some(body.to_vec()),
+    )
+    .await
+}
+
+async fn desktop_start(headers: HeaderMap) -> impl IntoResponse {
+    proxy_bytes(&headers, reqwest::Method::POST, "/v1/remote-control/desktop/start", None).await
 }
 
 async fn list_sessions(headers: HeaderMap) -> impl IntoResponse {
