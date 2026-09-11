@@ -146,6 +146,8 @@ export function FabricAciDrive({
   screenshot,
   opening,
   onOpenComputer,
+  watching = false,
+  onToggleWatch,
 }: {
   session: FabricSessionWithStatus;
   detail: FabricSessionDetail | null;
@@ -154,10 +156,12 @@ export function FabricAciDrive({
   screenshot?: string | null;
   opening?: boolean;
   onOpenComputer?: () => void;
+  watching?: boolean;
+  onToggleWatch?: () => void;
 }) {
   const frame = screenshot || latestComputerFrame(detail, events);
   const host = hostName || session.session.title || 'paired node';
-  const live = Boolean(frame) || events.some((event) => event.type && !isFabricKeepalive(event.type));
+  const live = watching && (Boolean(frame) || events.some((event) => event.type && !isFabricKeepalive(event.type)));
 
   return (
     <div className="flex flex-col min-h-0 h-full gap-0">
@@ -170,26 +174,28 @@ export function FabricAciDrive({
             Computer · {host}
           </span>
           <span className="ml-auto text-[10px] uppercase tracking-[0.08em] text-white/40">
-            {opening ? 'Opening' : live ? 'Live' : session.status.type}
+            {opening ? 'Opening' : watching ? (live ? 'Live' : 'Watching') : 'Not watching'}
           </span>
         </div>
         <div className="relative flex-1 min-h-0 bg-[#0b0b0a] flex items-center justify-center overflow-hidden">
           {frame ? (
-            <img src={frame} alt="Live computer" className="max-w-full max-h-full object-contain" />
+            <img src={frame} alt={watching ? "Computer screen" : "Last computer screen"} className="max-w-full max-h-full object-contain" />
           ) : (
             <div className="flex flex-col items-center gap-3 px-6 text-center">
               <Browser size={36} className="text-white/35" />
               <div className="text-[13px] font-semibold text-white/80">
-                {opening ? 'Opening the computer' : 'Computer is closed'}
+                {opening ? 'Opening the computer' : watching ? 'Waiting for a frame' : 'Not watching'}
               </div>
               <div className="text-[12px] text-white/45 max-w-sm">
-                This is the live display on {host}. Open it to see the screen — that starts computer-use once, it does not heartbeat the agent.
+                {watching
+                  ? `Pulling the screen on ${host}. Frames stop if you leave this page.`
+                  : `The computer on ${host} is idle until you watch it.`}
               </div>
               {onOpenComputer && !opening ? (
                 <button
                   type="button"
                   onClick={onOpenComputer}
-                  className="mt-1 rounded-full border-none bg-white/12 px-3.5 py-1.5 text-[12px] font-semibold text-white cursor-pointer"
+                  className="mt-1 min-h-[44px] rounded-full border-none bg-white/12 px-3.5 py-1.5 text-[12px] font-semibold text-white cursor-pointer"
                 >
                   Open computer
                 </button>
@@ -197,6 +203,17 @@ export function FabricAciDrive({
             </div>
           )}
         </div>
+        {onToggleWatch ? (
+          <div className="shrink-0 flex items-center justify-center px-3 py-2 border-t border-solid border-white/10">
+            <button
+              type="button"
+              onClick={onToggleWatch}
+              className="min-h-[44px] rounded-full border-none bg-white/12 px-4 text-[12px] font-semibold text-white cursor-pointer"
+            >
+              {watching ? 'Stop watching' : 'Watch computer'}
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="shrink-0 pt-2">
         <FabricLiveEventLog events={events} />

@@ -29,9 +29,20 @@ export interface FabricSessionPanelProps {
   baseUrl?: string;
   direct?: boolean;
   runtime?: RuntimeViewModel | null;
+  /** Controlled ACI watch flag. Default (uncontrolled) is off. */
+  watching?: boolean;
+  onToggleWatch?: () => void;
 }
 
-export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runtime }: FabricSessionPanelProps) {
+export function FabricSessionPanel({
+  runtimeId,
+  getToken,
+  baseUrl,
+  direct,
+  runtime,
+  watching: watchingProp,
+  onToggleWatch,
+}: FabricSessionPanelProps) {
   const { addToast } = useToast();
   const fabricClient = useMemo(
     () => createFabricSessionClient({ runtimeId, getToken, baseUrl, direct }),
@@ -59,6 +70,12 @@ export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runti
   const [aciRunId, setAciRunId] = useState<string | null>(null);
   const [aciScreenshot, setAciScreenshot] = useState<string | null>(null);
   const [aciOpening, setAciOpening] = useState(false);
+  const [localWatching, setLocalWatching] = useState(false);
+  const aciWatching = watchingProp ?? localWatching;
+  const toggleAciWatch = onToggleWatch ?? (() => setLocalWatching((v) => !v));
+  const [pageVisible, setPageVisible] = useState(
+    () => typeof document === "undefined" || document.visibilityState === "visible",
+  );
   const [events, setEvents] = useState<FabricSessionEvent[]>([]);
   const [pendingPermissions, setPendingPermissions] = useState<FabricPermissionRequest[]>([]);
   const [pendingQuestions, setPendingQuestions] = useState<FabricQuestionRequest[]>([]);
@@ -198,7 +215,13 @@ export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runti
   }, [addToast, fabricClient, selectedBrain]);
 
   useEffect(() => {
-    if (driveKind !== 'aci') return;
+    const onVis = () => setPageVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  useEffect(() => {
+    if (driveKind !== 'aci' || !aciWatching || !pageVisible) return;
     const runId = aciRunId || selectedSessionId;
     if (!runId) return;
     let active = true;
@@ -220,7 +243,7 @@ export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runti
     return () => {
       active = false;
     };
-  }, [aciRunId, driveKind, fabricClient, selectedSessionId]);
+  }, [aciRunId, aciWatching, driveKind, fabricClient, pageVisible, selectedSessionId]);
 
   const selectedSession = useMemo(
     () => sessions.find((s) => s.session.id === selectedSessionId),
@@ -674,6 +697,8 @@ export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runti
                   screenshot={aciScreenshot}
                   opening={aciOpening}
                   onOpenComputer={() => void openComputer('Open the desktop so I can see the screen.')}
+                  watching={aciWatching}
+                  onToggleWatch={toggleAciWatch}
                 />
               ) : null}
               {driveKind !== 'aci' && !(driveKind === 'code' && codePane === 'terminal') && detailLoading && (

@@ -7,14 +7,15 @@ Fabric Desktop: PWA at fabrictransport.allternit.com, Termius-shaped machine lis
 - v0 tailnet PWA accepted (view + type from physical iPhone).
 - Desktop drive in Fabric Session + Remote Control dashboard.
 - Linux/VPS path: Xvfb+XFCE installer, x11 grab, xdotool input.
-- computer-embed stays read-only.
+- Deployed fabric-session PWA to allternit-remote-control (HTTPS).
+- Merged main (bot-mode UI PR #285, SW was v22 → this branch v23).
 
 ## Next
-- Deploy fabric-session PWA to allternit-remote-control (fabrictransport.allternit.com).
+- Redeploy PWA after SW v23 bump so installed clients pick up Desktop + bot-mode.
 - Virtual desktop on headless VPS boxes (`install-headless-desktop.sh`).
 
 ---
 
-# Prior session (landed) — ao/openbot-policy-gateway
+# Prior (landed) — fabric-pwa-bot-mode-ui / openbot-policy-gateway
 
-OpenBot-style policy gateway + bot-mode governance UI. PR #275 merged.
+Bot-mode PWA phases 1A–1C merged (#285). OpenBot policy gateway #275 on main.
