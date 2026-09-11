@@ -103,6 +103,8 @@ async fn stream_agent_events(
                         .filter(|e| {
                             e.payload.get("agent_id").and_then(|v| v.as_str())
                                 == Some(agent_id.as_str())
+                                || e.payload.get("parent_agent_id").and_then(|v| v.as_str())
+                                    == Some(agent_id.as_str())
                         })
                         .filter(|e| !sent.contains(&e.event_id))
                         .collect();
@@ -1011,7 +1013,22 @@ async fn create_subagent(
     .await;
 
     match result {
-        Ok(Ok(true)) => (StatusCode::CREATED, Json(json!({ "agent": { "id": id, "parent_agent_id": parent_for_response, "mode": "subagent" } }))).into_response(),
+        Ok(Ok(true)) => {
+            append_run_ledger_event(
+                &state,
+                &user_id,
+                &id,
+                "subagent.spawned",
+                json!({
+                    "agent_id": id,
+                    "parent_agent_id": parent_for_response,
+                    "status": "working",
+                    "name": "subagent",
+                }),
+            )
+            .await;
+            (StatusCode::CREATED, Json(json!({ "agent": { "id": id, "parent_agent_id": parent_for_response, "mode": "subagent" } }))).into_response()
+        }
         Ok(Ok(false)) => (StatusCode::NOT_FOUND, Json(json!({"error": "parent_not_found"}))).into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating subagent: {}", e);

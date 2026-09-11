@@ -17,7 +17,7 @@ import {
   observeBotDesktop,
 } from "@/lib/bots/vm-operator";
 import { activityCounts, formatActivityLines } from "@/lib/bots/bot-activity-rows";
-import { treeFromTranscript } from "@/lib/bots/bot-subagent-tree";
+import { fetchSubagentFeed, liveActivityTree, type SubagentRow } from "@/lib/bots/bot-subagent-feed";
 import type { BotChatTranscript } from "@/components/bot-chat/types";
 import { BotSubagentTree } from "./BotSubagentTree";
 import { fetchPolicyAudit, type PolicyAuditRow } from "./policy-audit";
@@ -51,6 +51,7 @@ export function BotWatchStrip({
 }: BotWatchStripProps) {
   const [png, setPng] = useState<string | null>(null);
   const [screenError, setScreenError] = useState(false);
+  const [subagents, setSubagents] = useState<SubagentRow[]>([]);
   const [live, setLive] = useState(false);
   const [rows, setRows] = useState<PolicyAuditRow[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -138,12 +139,30 @@ export function BotWatchStrip({
     return () => window.clearInterval(id);
   }, [loadAudit]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const rows = await fetchSubagentFeed(botId);
+        if (!cancelled) setSubagents(rows);
+      } catch {
+        if (!cancelled) setSubagents([]);
+      }
+    };
+    void load();
+    const id = window.setInterval(() => void load(), AUDIT_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [botId]);
+
   const lines = formatActivityLines(rows);
   const counts = activityCounts(rows);
-  const tree = transcript ? treeFromTranscript(transcript, parentName) : null;
+  const tree = liveActivityTree(transcript, subagents, parentName);
   const showScreen = Boolean(sandboxId) && !computerOpen;
 
-  if (!showScreen && lines.length === 0 && !(tree && tree.nodes.length > 0)) {
+  if (!showScreen && lines.length === 0 && tree.children.length === 0 && tree.parentSteps.length === 0) {
     return null;
   }
 
@@ -181,7 +200,7 @@ export function BotWatchStrip({
       )}
 
       <div className="min-w-0 flex-1">
-        {tree && (tree.children.length > 0 || tree.parentSteps.length > 0) ? (
+        {tree.children.length > 0 || tree.parentSteps.length > 0 ? (
           <BotSubagentTree tree={tree} />
         ) : (
           <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">

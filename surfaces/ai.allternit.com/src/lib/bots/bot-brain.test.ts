@@ -176,74 +176,48 @@ describe('bot-brain', () => {
     ).rejects.toMatchObject({ code: 'session_missing' });
   });
 
-  it('binds the only catalog session of the same harness when creating', async () => {
+  it('spawns a native CLI session when pickup of the tracked id fails', async () => {
+    const spawn = vi.fn(async () => ({ harness: 'codex', sessionId: 'spawned-1', spawned: true }));
     const ports = port({
       pickup: vi.fn(async ({ sessionId }) => {
         if (sessionId === 'bot-agent-1-codex') throw new Error('not on disk');
         return pickupResult(sessionId);
       }),
-      list: vi.fn(async () => [
-        {
-          harness: 'codex',
-          sessionId: 'only-codex',
-          path: '/tmp/only',
-          updatedAt: 1,
-          fingerprint: 'f',
-          installed: true,
-          reader: 'codex',
-          projectable: true,
-        },
-      ]),
+      spawn,
     });
     const result = await resumeOrCreateBotBrain(
       { mode: 'native_harness', harness: 'codex' },
       'agent-1',
       ports,
     );
-    expect(result.nativeSessionId).toBe('only-codex');
-    expect(result.harness).toBe('codex');
+    expect(spawn).toHaveBeenCalledWith({ harness: 'codex', sessionId: 'bot-agent-1-codex' });
+    expect(result.nativeSessionId).toBe('spawned-1');
   });
 
-  it('refuses to guess among multiple catalog sessions', async () => {
+  it('does not steal catalog sessions when spawn is missing', async () => {
     const ports = port({
       pickup: vi.fn(async () => {
         throw new Error('not on disk');
       }),
-      list: vi.fn(async () => [
-        {
-          harness: 'codex',
-          sessionId: 'a',
-          path: '/a',
-          updatedAt: 1,
-          fingerprint: 'f',
-          installed: true,
-          reader: 'codex',
-          projectable: true,
-        },
-        {
-          harness: 'codex',
-          sessionId: 'b',
-          path: '/b',
-          updatedAt: 1,
-          fingerprint: 'f',
-          installed: true,
-          reader: 'codex',
-          projectable: true,
-        },
-      ]),
     });
     await expect(
       resumeOrCreateBotBrain({ mode: 'native_harness', harness: 'codex' }, 'bot-1', ports),
     ).rejects.toMatchObject({ code: 'session_missing' });
   });
 
-  it('requires uhpHarnessId and does not fall back', async () => {
+  it('requires uhpHarnessId and spawns the UHP harness', async () => {
     await expect(
       resumeOrCreateBotBrain({ mode: 'uhp_harness' }, 'bot-1', port()),
     ).rejects.toMatchObject({ code: 'uhp_missing' });
+    const uhp = { spawn: vi.fn(async () => ({ sessionId: 'uhp-ses' })) };
     await expect(
-      resumeOrCreateBotBrain({ mode: 'uhp_harness', uhpHarnessId: 'uhp-1' }, 'bot-1', port()),
-    ).resolves.toEqual({ mode: 'uhp_harness', uhpHarnessId: 'uhp-1' });
+      resumeOrCreateBotBrain({ mode: 'uhp_harness', uhpHarnessId: 'chrn_kimi' }, 'bot-1', port(), uhp),
+    ).resolves.toEqual({
+      mode: 'uhp_harness',
+      uhpHarnessId: 'chrn_kimi',
+      nativeSessionId: 'uhp-ses',
+    });
+    expect(uhp.spawn).toHaveBeenCalledWith('chrn_kimi');
   });
 
   it('passes allternit_cloud through without calling native sessions', async () => {

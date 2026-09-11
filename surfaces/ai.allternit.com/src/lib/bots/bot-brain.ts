@@ -66,6 +66,14 @@ export interface NativeSessionsPort {
     sessionId: string;
     surface?: 'bot';
   }) => Promise<PickupResult>;
+  spawn?: (input: {
+    harness: string;
+    sessionId?: string;
+  }) => Promise<{ harness: string; sessionId: string; spawned: boolean }>;
+}
+
+export interface UhpPort {
+  spawn: (harnessId: string) => Promise<{ sessionId?: string }>;
 }
 
 export function defaultBotBrain(modelRef?: BotBrainModelRef): BotBrainBinding {
@@ -169,6 +177,7 @@ export async function resumeOrCreateBotBrain(
   brain: BotBrainBinding,
   botId: string,
   ports: NativeSessionsPort,
+  uhp?: UhpPort,
 ): Promise<BotBrainBinding> {
   if (brain.mode === 'allternit_cloud') {
     return brain;
@@ -181,7 +190,24 @@ export async function resumeOrCreateBotBrain(
         'uhp_missing',
       );
     }
-    return brain;
+    if (!uhp) {
+      throw new BotBrainBindError(
+        'UHP spawn is not wired. This bot will not switch to Allternit cloud.',
+        'uhp_missing',
+      );
+    }
+    try {
+      const spawned = await uhp.spawn(brain.uhpHarnessId.trim());
+      return {
+        ...brain,
+        nativeSessionId: spawned.sessionId || brain.nativeSessionId,
+      };
+    } catch {
+      throw new BotBrainBindError(
+        `Could not spawn UHP harness ${brain.uhpHarnessId}. This bot will not switch to Allternit cloud.`,
+        'uhp_missing',
+      );
+    }
   }
 
   const harness = brain.harness?.trim();
@@ -237,42 +263,35 @@ export async function resumeOrCreateBotBrain(
     const sessionId = picked.source?.sessionId || picked.session?.id || trackedId;
     return { ...brain, harness, nativeSessionId: sessionId };
   } catch {
-    // Tracked id is not on disk yet — bind the only catalog session of this
-    // harness if there is exactly one. Multiple sessions: refuse to guess.
-    let catalog: NativeCatalogSession[] = [];
-    try {
-      catalog = await ports.list({ harness });
-    } catch {
-      catalog = [];
-    }
-    const sameHarness = catalog.filter((s) => s.harness === harness);
-    if (sameHarness.length === 1) {
-      const only = sameHarness[0];
-      try {
-        const picked = await ports.pickup({
-          harness,
-          sessionId: only.sessionId,
-          surface: 'bot',
-        });
-        const sessionId = picked.source?.sessionId || picked.session?.id || only.sessionId;
-        return { ...brain, harness, nativeSessionId: sessionId };
-      } catch {
-        throw new BotBrainBindError(
-          `Could not bind the ${nativeHarnessLabel(harness)} session. This bot will not switch to a different brain.`,
-          'session_missing',
-        );
-      }
-    }
-    if (sameHarness.length > 1) {
+    if (!ports.spawn) {
       throw new BotBrainBindError(
-        `Multiple ${nativeHarnessLabel(harness)} sessions exist. Pick one, then retry. This bot will not switch to a different brain.`,
+        `No ${nativeHarnessLabel(harness)} session to resume. Spawn is not wired. This bot will not switch to Allternit cloud.`,
         'session_missing',
       );
     }
-    throw new BotBrainBindError(
-      `No ${nativeHarnessLabel(harness)} session to resume. Start ${nativeHarnessLabel(harness)}, then retry. This bot will not switch to Allternit cloud.`,
-      'session_missing',
-    );
+    let spawnedId = trackedId;
+    try {
+      const spawned = await ports.spawn({ harness, sessionId: trackedId });
+      spawnedId = spawned.sessionId || trackedId;
+    } catch {
+      throw new BotBrainBindError(
+        `Could not spawn a ${nativeHarnessLabel(harness)} session. This bot will not switch to a different brain.`,
+        'session_missing',
+      );
+    }
+    try {
+      const picked = await ports.pickup({
+        harness,
+        sessionId: spawnedId,
+        surface: 'bot',
+      });
+      const sessionId = picked.source?.sessionId || picked.session?.id || spawnedId;
+      return { ...brain, harness, nativeSessionId: sessionId };
+    } catch {
+      // Spawn succeeded; persist the tracked id even if pickup is still racing
+      // the catalog. Next start resumes this same id.
+      return { ...brain, harness, nativeSessionId: spawnedId };
+    }
   }
 }
 

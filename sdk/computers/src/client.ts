@@ -184,6 +184,14 @@ export class ComputersClient {
     return this.request('POST', computerPath(id, 'mouse', approvalId), input);
   }
 
+  async sendDrag(
+    id: string,
+    input: { x: number; y: number; end_x: number; end_y: number },
+    approvalId?: string,
+  ): Promise<{ success: boolean }> {
+    return this.sendMouse(id, { action: 'drag', ...input }, approvalId);
+  }
+
   async sendKeyboard(
     id: string,
     input: ComputerKeyboardInput,

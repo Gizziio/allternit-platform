@@ -19,6 +19,7 @@ import {
   resolveAgentBrain,
   resumeOrCreateBotBrain,
 } from './bot-brain';
+import { spawnUhpHarness } from './bot-uhp';
 import {
   createSandbox,
   getSandboxForAgent,
@@ -148,7 +149,9 @@ async function bindExecutionBrain(agent: Agent): Promise<Agent> {
     return { ...agent, brain: current };
   }
 
-  const bound = await resumeOrCreateBotBrain(current, agent.id, nativeSessionsApi);
+  const bound = await resumeOrCreateBotBrain(current, agent.id, nativeSessionsApi, {
+    spawn: spawnUhpHarness,
+  });
   if (
     bound.nativeSessionId !== current.nativeSessionId ||
     bound.uhpHarnessId !== current.uhpHarnessId

@@ -17,7 +17,7 @@ use reqwest::Client;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tracing::warn;
 
 use crate::config::{read_gizzi_default_harness, AppConfig};
@@ -136,6 +136,7 @@ pub fn agent_session_router() -> Router<Arc<AppState>> {
         .route("/native-sessions/harnesses", get(list_native_harnesses))
         .route("/native-sessions", get(list_native_sessions))
         .route("/native-sessions/pickup", post(pickup_native_session))
+        .route("/native-sessions/spawn", post(spawn_native_session))
         .route("/native-sessions/:harness/:id", get(show_native_session))
         .route("/agent-sessions/:id/fetch-origin", post(fetch_native_origin))
         .route("/agent-sessions/:id/origin", get(get_native_origin))
@@ -1383,6 +1384,100 @@ struct PickupBody {
     session_id: String,
     surface: Option<String>,
     cwd: Option<String>,
+}
+
+fn native_spawn_argv(harness: &str) -> Result<Vec<String>, &'static str> {
+    match harness {
+        "codex" => Ok(vec![
+            "codex".into(),
+            "exec".into(),
+            "Allternit bot session".into(),
+        ]),
+        "claude" => Ok(vec![
+            "claude".into(),
+            "-p".into(),
+            "Allternit bot session".into(),
+            "--dangerously-skip-permissions".into(),
+        ]),
+        "kimi" => Err("kimi has no headless spawn; start Kimi, then retry"),
+        _ => Err("unsupported native harness"),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct SpawnNativeBody {
+    harness: String,
+    #[serde(rename = "sessionId")]
+    session_id: Option<String>,
+}
+
+/// Spawn a local CLI harness so a Bot can bind a *new* native session
+/// instead of stealing an unrelated catalog row.
+async fn spawn_native_session(Json(body): Json<SpawnNativeBody>) -> Response {
+    let harness = body.harness.trim().to_string();
+    let argv = match native_spawn_argv(&harness) {
+        Ok(v) => v,
+        Err(msg) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": msg })),
+            )
+                .into_response();
+        }
+    };
+    let session_id = body
+        .session_id
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| format!("bot-spawn-{}", uuid::Uuid::new_v4().simple()));
+    let bin = argv[0].clone();
+    let args = argv[1..].to_vec();
+    let output = tokio::time::timeout(
+        Duration::from_secs(25),
+        tokio::process::Command::new(&bin).args(&args).output(),
+    )
+    .await;
+    match output {
+        Ok(Ok(out)) if out.status.success() => (
+            StatusCode::CREATED,
+            Json(json!({
+                "harness": harness,
+                "sessionId": session_id,
+                "spawned": true,
+            })),
+        )
+            .into_response(),
+        Ok(Ok(out)) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({
+                "error": format!("{bin} exited {}", out.status),
+                "stderr": String::from_utf8_lossy(&out.stderr),
+            })),
+        )
+            .into_response(),
+        Ok(Err(err)) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": format!("failed to spawn {bin}: {err}") })),
+        )
+            .into_response(),
+        Err(_) => (
+            StatusCode::GATEWAY_TIMEOUT,
+            Json(json!({ "error": format!("{bin} spawn timed out") })),
+        )
+            .into_response(),
+    }
+}
+
+#[cfg(test)]
+mod native_spawn_tests {
+    use super::native_spawn_argv;
+
+    #[test]
+    fn codex_and_claude_have_headless_argv() {
+        assert_eq!(native_spawn_argv("codex").unwrap()[1], "exec");
+        assert!(native_spawn_argv("claude").unwrap().contains(&"-p".into()));
+        assert!(native_spawn_argv("kimi").is_err());
+        assert!(native_spawn_argv("openai").is_err());
+    }
 }
 
 async fn pickup_native_session(
