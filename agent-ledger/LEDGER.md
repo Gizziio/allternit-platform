@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 18:58 — grok — Cloud Agents Phase 1 public sessions (rq-20260910-002)
+
+- **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`; Phase 2 still in this worktree)
+- **Agent:** grok orchestrator + kimi executor (`ao-allternit-runtime-api`)
+- **Summary:** Merged PR #274 (20b101ebb) — Allternit Agents / Cloud Agents Phase 1: `/api/v1/sessions` facade over `beta_sessions`, Allternit event names, inline agent, computer.kind none/local/sandbox-400, TS+Python `Allternit` clients, V140. Completions/Responses untouched. Beta alias kept.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/274 · 20b101ebb79c41a15c7e7c064b9f7e82b2148635
+- **How it works:** Public status is derived from in-flight `beta_work_tasks`; stored session status stays `active|archived`. Review fixed computer event projection, SDK emit path, two Rust move errors. GitHub Actions green; Vercel + Pages Git previews ignored (same as #267–#275).
+- **Outstanding work:** Phase 2 executing (`ao-allternit-runtime-api-p2`, agy): turn.completed/session.idle on work ack + GET /turns. Sandbox entitlement, vaults, brains, schedules, Bot Agents BA-* deferred. Worktree kept.
+- **Summary file:** [2026-09-10-1858-allternit-runtime-api-p1-grok.md](./summaries/2026-09-10-1858-allternit-runtime-api-p1-grok.md)
+
 ### 2026-09-10 18:52 — grok — OpenBot policy gateway + bot-mode audit UI (rq-20260910-001)
 
 - **Session ID / Branch:** `ao/openbot-policy-gateway` (worktree `allternit-ao-openbot-policy-gateway`; pickup of kimi `session_497f0582`)
