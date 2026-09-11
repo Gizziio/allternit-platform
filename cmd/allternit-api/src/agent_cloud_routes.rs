@@ -960,6 +960,9 @@ mod tests {
             fabric_price_cache,
             os_control_plane: None,
             dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
+            deployment_scheduler: Arc::new(
+                crate::deployment_scheduler::DeploymentSchedulerState::new(),
+            ),
         })
     }
 

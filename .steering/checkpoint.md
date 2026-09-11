@@ -1,19 +1,36 @@
-# Steering checkpoint — session/console-be-p2
+# Steering checkpoint — session/console-be-p3
 
 ## Goal
-Backend build-out Phase 2: agents hardening (G4–G5) — PATCH /agents/:id, first-class is_bot column + backfill, agent_versions snapshot table, toolset mutation endpoints with per-tool permissions (always_allow|always_ask|auto), and enforcement of session permission modes through the work-task enqueue/lease path (integrate with the existing approvals flow, never a second one).
+Backend build-out Phase 3 (G6): deployment scheduler daemon in allternit-api — poll beta_deployments where next_run_at <= now, restart-safe claim, enqueue work task + insert beta_deployment_runs row, recompute next_run_at. Scheduler only creates runs; terminal status still via existing worker PATCH. Overdue policy: fire-once (documented).
 
 ## Just did
-- V143__agent_hardening.sql: agents.is_bot/tool_permissions/mcp_connector_ids columns, agent_versions table, json_extract backfill of is_bot from config blob (isBot + is_bot spellings).
-- agent_routes.rs: shared AGENT_SELECT/read_agent_row/load_agent_row/snapshot_agent_version; AgentRow gains is_bot/tool_permissions/mcp_connector_ids; list ?is_bot filter; create writes column + echoes is_bot; update_agent refactored to shared apply_agent_update (writes is_bot column + config blob, snapshots); new PATCH handler (404 on unknown/unowned); toolset GET returns tool_permissions map (default auto) + mcp_connector_ids; new PUT toolset with validation (400 on bad permission value / unknown tool / unknown mcp connector) + snapshot.
-- cloud_agents_routes.rs: compute_effective_permissions (always_allow→all allow, always_ask→all ask, auto→per-tool map, unset=allow) stored in beta_sessions.metadata at create; echoed as session.effective_permissions.
-- beta_work_routes.rs: lease payload gains optional effective_permissions from session metadata.
-- beta_session_routes.rs: tool_calls events gated at write time — requires_approval flag + per-call approval_id, enqueued in the existing permission_policy::ApprovalStore; module docs state the enforcement boundary (payload+flag for external workers, in-process gating at event write).
-- Tests: 9 new in agent_routes (patch/snapshot/is_bot filter/toolset 400s/V143 backfill against real SQL), 5 new in cloud_agents_routes (effective permissions modes, lease payload, event gating).
+- G6 complete: V144 migration (triggered_by), shared insert_deployment_run_tx
+  (run + deployment-tied work task) used by trigger_run (manual) and the new
+  deployment_scheduler daemon; scheduler module with restart-safe claim,
+  fire-once overdue policy, next-occurrence anchored to the DUE time;
+  AppState.deployment_scheduler wired through all 21 constructors;
+  monitor/system exposes {last_tick_at, runs_fired_total}.
+- Verified: cargo test -p allternit-api → 918 passed, 5 failed (exactly the
+  known pre-existing agent_cloud×4 + rails gate×1). Live smoke on scratch
+  port 18099: cron */1 fired at the minute boundary, run row
+  (triggered_by=scheduler) + queued work task created, next_run_at advanced
+  to the next minute (due-anchored), fire-once confirmed, monitor fields
+  present. release-preflight 35/0.
 
 ## Next
-- PR + attest + cleanup per session lifecycle (verification complete: full suite 910 passed / only the 5 known pre-existing env failures; live smoke green; release-preflight 35/0).
+- Parent review; commit/PR/attest/cleanup per repo ritual (not done here —
+  session scoped to implementation + verification only).
 
 ## Open questions
-- Resolved: per-tool permissions stored as JSON column `agents.tool_permissions` (matches tools/allowed_tools shape; map is small, read whole, never queried by key).
-- Resolved: approvals integration point is flag + ApprovalStore enqueue at event-write time; no tool-call-specific enqueue hook exists in the approvals system.
+- (resolved during impl) trigger_run did NOT enqueue a work task today and
+  beta_deployment_runs had no triggered_by column. Followed the task's
+  shared-function instruction: both paths now insert run + work task;
+  triggered_by added via V144. Manual trigger response shape unchanged
+  apart from the additive triggered_by field.
+- Interval env: DEPLOYMENT_SCHEDULER_INTERVAL_SECS, default 15s.
+- Overdue reconciliation: next computed after the DUE time (no per-tick
+  drift); if that next is still <= now (multiple missed occurrences), fall
+  back to next after now so catch-up still fires exactly once.
+- Work-task payload for deployment runs: {"deployment_run_id", "agent_id",
+  "messages": [], "tools": null} — mirrors the session-run convention;
+  messages empty because a scheduled run carries no prompt.
