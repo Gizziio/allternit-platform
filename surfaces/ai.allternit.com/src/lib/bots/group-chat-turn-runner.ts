@@ -19,7 +19,8 @@ import { useGroupChatStore } from './group-chat.store';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { sessionApi, chatApi } from '@/lib/agents/native-agent-api';
 import { isAgentSessionsApiEnabled } from '@/lib/env';
-import { buildBotRuntimeEnv, resolveModelRef } from './bot-runtime-env';
+import { buildBotRuntimeEnv } from './bot-runtime-env';
+import { resolveAgentChatRuntimeModelId } from '@/lib/agents/runtime-model';
 import { getBotDisplayName } from './bot-profile';
 import { createModuleLogger } from '@/lib/logger';
 import {
@@ -142,7 +143,7 @@ export async function streamNativeBotReply(options: {
     agentId: bot.id,
     characterLayer: bot.characterLayer,
   });
-  const modelId = await resolveModelRef(bot);
+  const modelId = await resolveAgentChatRuntimeModelId(bot);
 
   let ephemeralSessionId: string | null = null;
   try {

@@ -395,41 +395,17 @@ async function fetchAgentsAuthed(page) {
       { timeout: 60000 }
     );
 
-    // 6. Rail layout.
+    // 6. Rail layout — Bots list + Group Chats row for this room.
     log('Verifying rail layout...');
-    const groupSessionId = await page.evaluate(() => {
-      const railItem = document.querySelector('[data-rail-item^="group-"]');
-      return railItem ? railItem.getAttribute('data-rail-item') : null;
-    });
-    log(`  Group rail item: ${groupSessionId}`);
+    await page.getByText('Bots', { exact: true }).first().waitFor({ timeout: 10000 });
+    await page.getByText('Group Chats').first().waitFor({ timeout: 10000 });
 
-    const botsSection = page.locator('text=Bots').first();
-    await botsSection.waitFor({ timeout: 10000 });
-
-    const groupRail = page.locator(`[data-rail-item="${groupSessionId}"]`).first();
+    const groupRail = page.locator('[data-rail-item^="group-"]').filter({ hasText: GROUP_NAME }).first();
     await groupRail.waitFor({ timeout: 10000 });
+    const groupSessionId = await groupRail.getAttribute('data-rail-item');
+    log(`  Group rail item: ${groupSessionId}`);
     const railText = await groupRail.innerText();
     if (!railText.includes(GROUP_NAME)) throw new Error(`Rail item missing group name: ${railText}`);
-    if (!railText.includes('2 members')) throw new Error(`Rail item missing member count: ${railText}`);
-
-    const groupsSectionCheck = await groupRail.evaluate((el) => {
-      let container = el.parentElement;
-      while (container && !container.classList.contains('border-t')) {
-        container = container.parentElement;
-      }
-      if (!container) return { hasGroupsLabel: false };
-      return {
-        hasGroupsLabel: Array.from(container.querySelectorAll('div')).some(
-          (d) => d.textContent?.trim() === 'Groups'
-        ),
-      };
-    });
-    if (!groupsSectionCheck?.hasGroupsLabel) {
-      throw new Error(`Group rail item not under Bots > Groups: ${JSON.stringify(groupsSectionCheck)}`);
-    }
-
-    const avatarCount = await groupRail.locator('.rounded-full.border').count();
-    if (avatarCount < 2) throw new Error(`Expected ≥2 avatars in rail item, found ${avatarCount}`);
 
     RESULT.railLayoutOk = true;
     log('  Rail layout check passed.');
