@@ -20,4 +20,5 @@ workbuddy	WorkBuddy	which:workbuddy	exists:~/.workbuddy
 openclaw	OpenClaw	which:openclaw	exists:~/.openclaw
 hermes	Hermes	which:hermes	exists:~/.hermes
 dsh	DeepSeek Harness	which:dsh	exists:~/.dsh
+pi	Pi	which:pi	exists:~/.pi
 qoder	Qoder	which:qoder	exists:~/.qoder

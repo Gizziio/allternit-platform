@@ -24,6 +24,12 @@ pub fn session_id() -> String {
     format!("uhp-sess-{}", &hex[..12])
 }
 
+/// `share_<hex>` share id. Must not function as an API credential (R-03).
+pub fn share_id() -> String {
+    let hex = uuid::Uuid::new_v4().simple().to_string();
+    format!("share_{}", &hex[..16])
+}
+
 pub fn now_unix() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -50,19 +56,18 @@ impl Discovery {
             protocol: "uhp".into(),
             versions: vec![PROTOCOL_VERSION.into()],
             default_version: PROTOCOL_VERSION.into(),
-            conformance_class: "core".into(),
+            conformance_class: "full".into(),
             capabilities: Capabilities {
                 streaming: true,
                 sessions: true,
                 cancellation: true,
-                // input_file parts are skipped, not consumed (X-05 would fail).
-                files_input: false,
-                files_output: false,
-                // GET /v1/sessions (+ /{id}, /{id}/turns) is implemented.
+                // D-05 full-class required set (checks.py ~120). Extended X-*
+                // file/artifact checks stay out of P6b's --class full bar.
+                files_input: true,
+                files_output: true,
                 session_listing: true,
-                // Harness create/update/delete round-trips are implemented.
                 harness_management: true,
-                session_sharing: false,
+                session_sharing: true,
                 idempotency: true,
             },
         }
@@ -90,7 +95,7 @@ pub struct Harness {
     #[serde(rename = "object")]
     pub object: Option<String>,
     pub name: String,
-    /// Backend id: one of `kimi`, `claude-code`, `codex`.
+    /// Backend id: `kimi`/`claude-code`/`codex` plus P6b bases.
     pub base: String,
     #[serde(rename = "baseLabel", skip_serializing_if = "Option::is_none")]
     pub base_label: Option<String>,
@@ -121,6 +126,84 @@ pub struct HarnessUpsert {
 #[derive(Debug, Clone, Serialize)]
 pub struct HarnessList {
     pub harnesses: Vec<Harness>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SkillFiles {
+    pub files: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SessionShare {
+    pub id: String,
+    pub url: String,
+    pub object: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+}
+
+/// Flatten extras use camelCase on the wire (F-06 reads `mcpServers` / `disabledTools`).
+pub fn normalize_harness_extra(
+    mut extra: serde_json::Map<String, serde_json::Value>,
+) -> serde_json::Map<String, serde_json::Value> {
+    const RENAME: &[(&str, &str)] = &[
+        ("mcp_servers", "mcpServers"),
+        ("disabled_tools", "disabledTools"),
+    ];
+    for (from, to) in RENAME {
+        if let Some(value) = extra.remove(*from) {
+            extra.entry((*to).to_string()).or_insert(value);
+        }
+    }
+    extra
+}
+
+/// F-05: a skill bundle without SKILL.md is refused at config time.
+pub fn validate_skills(extra: &serde_json::Map<String, serde_json::Value>) -> Result<(), String> {
+    let Some(skills) = extra.get("skills").and_then(|value| value.as_array()) else {
+        return Ok(());
+    };
+    for skill in skills {
+        let files = skill
+            .get("files")
+            .and_then(|value| value.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let has_manifest = files.iter().any(|file| {
+            file.get("path")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|path| path == "SKILL.md" || path.ends_with("/SKILL.md"))
+        });
+        if !has_manifest {
+            return Err("skill bundle is missing SKILL.md".into());
+        }
+    }
+    Ok(())
+}
+
+pub fn skill_files<'a>(
+    extra: &'a serde_json::Map<String, serde_json::Value>,
+    name: &str,
+) -> Option<Vec<serde_json::Value>> {
+    let skills = extra.get("skills")?.as_array()?;
+    for skill in skills {
+        let skill_name = skill
+            .get("name")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+        if skill_name == name {
+            return Some(
+                skill
+                    .get("files")
+                    .and_then(|value| value.as_array())
+                    .cloned()
+                    .unwrap_or_default(),
+            );
+        }
+    }
+    None
 }
 
 // ── Models ───────────────────────────────────────────────────────────────────
