@@ -4,14 +4,11 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Bell,
   BellSlash,
-  CaretLeft,
   DesktopTower,
   DownloadSimple,
   Moon,
   Sun,
 } from "@phosphor-icons/react";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { FabricDesktopDrive, useVisualViewportRect } from "@/components/dispatch/FabricDesktopDrive";
 import {
   FabricAppHeader,
   FabricHeaderControl,
@@ -162,9 +159,6 @@ export function DashboardPage({
     });
   }, [auth.isSignedIn]);
 
-  const isPhone = useMediaQuery("(max-width: 768px), (pointer: coarse)");
-  const isLandscape = useMediaQuery("(orientation: landscape) and (pointer: coarse)");
-  const vv = useVisualViewportRect();
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
@@ -371,32 +365,6 @@ export function DashboardPage({
   );
 
   if (sessionOpen && selected) {
-    if (isPhone) {
-      return (
-        <div
-          className="z-50 bg-[#0b0b0a] text-white overflow-hidden"
-          style={{
-            position: "fixed",
-            top: vv.height ? vv.top : 0,
-            left: vv.height ? vv.left : 0,
-            width: vv.height ? vv.width : "100%",
-            height: vv.height ? vv.height : "100%",
-          }}
-        >
-          <button
-            type="button"
-            onClick={closeSession}
-            className="absolute z-30 left-2 inline-flex items-center gap-1 rounded-full border-none bg-black/55 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
-            style={{ top: "max(8px, env(safe-area-inset-top))" }}
-            title="Back to machines"
-          >
-            <CaretLeft size={16} weight="bold" />
-            {!isLandscape ? "Machines" : null}
-          </button>
-          <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
-        </div>
-      );
-    }
     return (
       <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
         <FabricAppHeader title={selected.name} onBack={closeSession}>
@@ -423,12 +391,11 @@ export function DashboardPage({
           <div className="mb-8">
             <FabricViewTitle
               title="Fabric Transport"
-              subtitle={
-                signedInAs
-                  ? `Signed in as ${signedInAs}. Paired nodes, approvals, and what needs you — click a machine to drive it.`
-                  : "Paired nodes, approvals, and what needs you — click a machine to drive it."
-              }
+              subtitle="Open a machine to see its sessions. Bots and live desktop are in that view."
             />
+            {signedInAs ? (
+              <p className="m-0 mt-2 text-[12px] text-[var(--shell-item-muted)] truncate">{signedInAs}</p>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
