@@ -29,4 +29,21 @@ describe('AProtocolWordmark glyphs', () => {
     };
     expect(lastLetterX(unknownSvg)).toBe(lastLetterX(knownSvg));
   });
+
+  // G and S differ by exactly one block: the G's left stem continues below
+  // the middle bar. A G that duplicates S renders "DESIGN" as "DESISN".
+  it('G and S are distinct letterforms', () => {
+    const rectsOf = (suffix: string) => {
+      const { container } = render(<AProtocolWordmark suffix={suffix} height={20} />);
+      // TERNIT + suffix → the last letter group holds the letter under test.
+      const groups = container.querySelectorAll('svg g');
+      const last = groups[groups.length - 1]!;
+      return [...last.querySelectorAll('rect')].map((r) =>
+        `${r.getAttribute('x')},${r.getAttribute('y')}`);
+    };
+    const g = rectsOf('G');
+    const s = rectsOf('S');
+    expect(g.length).toBe(s.length + 1);
+    expect(new Set(g).size).toBe(g.length);
+  });
 });

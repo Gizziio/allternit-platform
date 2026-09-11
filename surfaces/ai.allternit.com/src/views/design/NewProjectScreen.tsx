@@ -117,7 +117,7 @@ export function NewProjectScreen({
           traffic lights (72px), matching OfficePageChrome's clearance. */}
       <header className="ad-launch__header" style={{ paddingLeft: isElectronShell() ? 72 : undefined }}>
         <div className="ad-launch__brand">
-          <AProtocolWordmark theme="adaptive" height={13} suffix="DESIGN" />
+          <AProtocolWordmark theme="adaptive" height={12} suffix="DESIGN" />
           <span className="ad-launch__beta">BETA</span>
         </div>
         <button type="button" className="ad-launch__quiet">What’s new</button>
