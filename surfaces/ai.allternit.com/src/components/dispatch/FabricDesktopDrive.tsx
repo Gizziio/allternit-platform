@@ -39,8 +39,10 @@ async function proxy(
 export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesktopDriveProps) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const frameUrl = useRef<string | null>(null);
-  const [status, setStatus] = useState<'connecting' | 'live' | 'offline'>('connecting');
+  const [status, setStatus] = useState<'connecting' | 'live' | 'offline' | 'locked'>('connecting');
   const [message, setMessage] = useState('Opening the live display…');
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
   const [inputMode, setInputMode] = useState<InputMode>('touch');
   const [viewMode, setViewMode] = useState<ViewMode>('fit');
   const [kbdOpen, setKbdOpen] = useState(false);
@@ -67,13 +69,21 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
         const res = await proxy(runtimeId, token, 'GET', '/v1/remote-control/desktop/frame');
         if (cancelled) return;
         if (!res.ok) {
+          if (res.status === 503 && !startingRef.current) {
+            startingRef.current = true;
+            setStarting(true);
+            setMessage('Starting desktop capture on this machine…');
+            await proxy(runtimeId, token, 'POST', '/v1/remote-control/desktop/start').catch(() => {});
+            timer = window.setTimeout(tick, 1200);
+            return;
+          }
           setStatus('offline');
           setMessage(
             res.status === 503
-              ? 'This machine is paired, but desktop capture is not running. On the Mac: cd surfaces/phone-remote && node server/index.mjs'
+              ? 'This machine is paired, but capture did not start. On the node: install phone-remote (or the VPS virtual desktop) and keep ao fabric serve running.'
               : `Desktop relay ${res.status}`,
           );
-          timer = window.setTimeout(tick, 2000);
+          timer = window.setTimeout(tick, 2500);
           return;
         }
         const blob = await res.blob();
@@ -83,8 +93,18 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
         frameUrl.current = url;
         const img = imgRef.current;
         if (img) img.src = url;
-        setStatus('live');
-        setMessage(hostName ? hostName : 'Live');
+        startingRef.current = false;
+        setStarting(false);
+        const hello = await proxy(runtimeId, token, 'GET', '/v1/remote-control/desktop/hello');
+        let locked = false;
+        if (hello.ok) {
+          try {
+            const info = await hello.json();
+            locked = Boolean(info.locked);
+          } catch { /* ignore */ }
+        }
+        setStatus(locked ? 'locked' : 'live');
+        setMessage(locked ? 'Screen is locked — unlock the Mac, then this view continues' : (hostName ? hostName : 'Live'));
       } catch {
         if (!cancelled) {
           setStatus('offline');

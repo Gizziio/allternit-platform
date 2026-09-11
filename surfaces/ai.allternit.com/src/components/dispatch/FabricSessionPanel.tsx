@@ -54,7 +54,7 @@ export function FabricSessionPanel({
   );
 
   const [sessions, setSessions] = useState<FabricSessionWithStatus[]>([]);
-  const [driveKind, setDriveKind] = useState<FabricDriveKind>('chat');
+  const [driveKind, setDriveKind] = useState<FabricDriveKind>('desktop');
   const [codePane, setCodePane] = useState<'terminal' | 'chat'>('terminal');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<FabricSessionDetail | null>(null);
