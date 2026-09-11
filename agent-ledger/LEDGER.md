@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-11 10:16 — grok — native/UHP spawn, subagent feed, computer drag
+
+- **Session ID / Branch:** `ao/ba-open` (worktree `allternit-ao-ba-open`)
+- **Agent:** grok (implemented + merged)
+- **Summary:** Merged PR #300 (e8377268a) — native CLI spawn, UHP `/v1/responses` spawn, live `/agents/:id/subagents` feed into BotSubagentTree, drag helper.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/300 · e8377268aaea6866fa31edb14f8eddd8e13fed55
+- **How it works:** Create path spawn then pickup (no catalog steal). UHP fail-closed. Watch strip merges API children with transcript spawn tools. `dragComputer` wraps mouse drag.
+- **Outstanding work:** Kimi headless spawn; live Tart/Incus driver; UHP needs `ao serve`.
+- **Summary file:** [2026-09-11-1016-ba-open-spawn-feed-grok.md](./summaries/2026-09-11-1016-ba-open-spawn-feed-grok.md)
+
 ### 2026-09-11 05:13 — grok — parent→child subagent tree (rq-20260910-001)
 
 - **Session ID / Branch:** `ao/openbot-subagent-tree` (worktree `allternit-ao-openbot-policy-gateway`)
