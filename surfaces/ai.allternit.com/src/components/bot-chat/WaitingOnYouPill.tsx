@@ -10,6 +10,7 @@
  * @module bot-chat/WaitingOnYouPill
  */
 
+import React from "react";
 import { Hand } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
@@ -24,12 +25,13 @@ export function WaitingOnYouPill({
   onClick,
   className,
 }: WaitingOnYouPillProps) {
+  const Tag = onClick ? "button" : "span";
   return (
-    <button
-      type="button"
+    <Tag
+      type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "flex min-h-[44px] items-center gap-1.5 rounded-full px-3 text-xs font-semibold",
+        "inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3 text-xs font-semibold",
         className,
       )}
       style={{
@@ -39,6 +41,6 @@ export function WaitingOnYouPill({
     >
       <Hand className="size-3.5" aria-hidden="true" />
       Waiting on you
-    </button>
+    </Tag>
   );
 }

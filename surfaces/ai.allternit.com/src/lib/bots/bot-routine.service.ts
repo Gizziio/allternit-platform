@@ -116,7 +116,8 @@ function calculateNextRun(frequency: BotRoutineFrequency, from: number = Date.no
   }
 }
 
-function routinePrompt(botName: string, title: string, instruction: string): string {
+/** Builds the canonical routine prompt: `[bot:<name>] <title>\n\n<instruction>`. */
+export function routinePrompt(botName: string, title: string, instruction: string): string {
   return `[bot:${botName}] ${title}\n\n${instruction}`;
 }
 

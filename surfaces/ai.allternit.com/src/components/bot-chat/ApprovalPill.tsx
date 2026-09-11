@@ -14,7 +14,7 @@
  * @module bot-chat/ApprovalPill
  */
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { CaretUp, Hand, X } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { ApprovalRequest } from "./types";

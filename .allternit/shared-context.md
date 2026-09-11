@@ -14,3 +14,6 @@ Phase 1A done (branch session worktree, 15 new files under surfaces/ai.allternit
 
 ### fabric-pwa-bot-mode-ui 2026-09-10T23:45:37Z
 Phase 1B remaining done (tests + sentinel; prior executor wrote the implementation then quota-died). Added approval-card.test.tsx / composer.test.tsx / haptics.test.ts. Smallest implementation fixes only: React import on ApprovalCard + BotComposer (vitest classic JSX), ApprovalCard settled-label narrowing (TS7053). Verification: vitest 43/43, tsc --noEmit 0 errors. NOTES at docs/FABRIC_PWA_BOT_MODE_PHASE_1B_NOTES.md status: done. NOT started: 1C.
+
+### fabric-pwa-bot-mode-ui 2026-09-11T00:09:27Z
+Phase 1C done. Fold adapter (chat-stream-adapter + 7 tests), PWA dashboard|chat switch + Bots section + BotsChatPage, BotChatSessionView adopts BotTranscript/BotComposer, ACI watch-to-pull (default off, abort on hidden), GIZZI spec PWA section, bot-e2e-pwa-fabric.cjs. Verification: vitest 53/53, tsc 0, release-preflight 35/0. PWA 390×844 smoke SKIP: this worktree Vite has no Clerk; :3013 is a sibling worktree. NOTES status: done. Nothing past 1C started.
