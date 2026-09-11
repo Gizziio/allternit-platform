@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-11 06:43 — grok — machine select opens sessions, not VNC
+
+- **Session ID / Branch:** `ao/fabric-machine-sessions-first`
+- **Agent:** grok
+- **Summary:** Merged PR #309 (a6e52d1d9) — picking a machine lands on the node session list. Live desktop is an opt-in tab.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/309 · a6e52d1d9e8bbf3ffa2a7c615341a80677d971b0
+- **How it works:** Drive kind resets to chat per runtime. No auto-open first session. Phone list-first. Remote-control default tab is Sessions.
+- **Outstanding work:** Fabric Transport home/chat still need a phone redesign (header, stacked stat cards, “click” copy, padding). DMG not rebuilt.
+- **Summary file:** [2026-09-11-0643-fabric-machine-sessions-first-grok.md](./summaries/2026-09-11-0643-fabric-machine-sessions-first-grok.md)
+
 ### 2026-09-11 10:20 — grok — Bot Agents remaining opens closed (environmental leftovers listed)
 
 - **Session ID / Branch:** main (follow-up to `ao/ba-open` / PR #300)
