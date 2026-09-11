@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 20:50 — grok — watch strip in chat (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-screen-in-chat` (worktree `allternit-ao-openbot-policy-gateway`)
+- **Agent:** grok
+- **Summary:** Merged PR #283 (0fa6782db) — live desktop screenshot + compact audit tool rows in the bot session column; per-thread mute. Not injected into message bubbles.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/283 · 0fa6782db32101c64d8ce91c6b4801a47147baec
+- **How it works:** `BotWatchStrip` polls `getBotDesktopScreenshot` and `GET /api/aci/policy/audit`. Click opens existing computer pane. Mute is local. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Herald subagent tree (no event feed on this path yet).
+- **Summary file:** [2026-09-10-2050-openbot-screen-in-chat-grok.md](./summaries/2026-09-10-2050-openbot-screen-in-chat-grok.md)
+
 ### 2026-09-10 19:27 — grok — pet avatars + long-running bot session chrome (rq-20260910-001)
 
 - **Session ID / Branch:** `ao/openbot-session-chrome` (worktree `allternit-ao-openbot-policy-gateway`)
