@@ -669,9 +669,11 @@ export function FabricSessionPanel({
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
               <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
-              <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">Select a session</p>
+              <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">
+                {driveKind === 'bot' ? 'Select a bot' : `Select a ${sessionTabs.find((tab) => tab.id === driveKind)?.label ?? 'chat'} session`}
+              </p>
               <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
-                Choose an active session from the list, or start a new one on this desktop.
+                {sessionTabs.find((tab) => tab.id === driveKind)?.hint ?? 'Regular agent sessions'}
               </p>
               <button
                 type="button"

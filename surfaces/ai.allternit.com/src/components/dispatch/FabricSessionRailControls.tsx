@@ -66,8 +66,13 @@ export function FabricSessionRailControls({
                   type="button"
                   title={tab.label}
                   data-testid={`fabric-rail-mode-${tab.id}`}
-                  onClick={() => onDriveKindChange(tab.id)}
-                  onMouseEnter={() => onDriveKindChange(tab.id)}
+                  onClick={() => {
+                    onDriveKindChange(tab.id);
+                    if (railCollapsed) onToggleRail();
+                  }}
+                  onMouseEnter={() => {
+                    if (!isCoarse) onDriveKindChange(tab.id);
+                  }}
                   className="flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-lg border-none cursor-pointer transition-all duration-150 shrink-0"
                   style={{
                     background: active ? accent : 'transparent',
