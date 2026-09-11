@@ -372,7 +372,11 @@ export function DashboardPage({
           <DownloadSimple size={16} weight="bold" />
         </FabricHeaderControl>
       )}
-      <FabricHeaderControl href={`${PLATFORM_HUB_URL}/shell`} title="Open Allternit Shell">
+      <FabricHeaderControl
+        href={`${PLATFORM_HUB_URL}/shell`}
+        title="Open Allternit Shell"
+        className="hidden sm:inline-flex"
+      >
         Shell
       </FabricHeaderControl>
     </FabricStatusCluster>
