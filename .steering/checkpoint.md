@@ -1,13 +1,15 @@
-# Checkpoint — fabric machine sessions first
+# Checkpoint — fabric PWA phone polish (home)
 
 ## Goal
-Selecting a machine on Fabric Transport opens the node session dashboard, not live desktop/VNC. Desktop remains an opt-in tab.
+Make Fabric Transport read as a phone app. First slice: home dashboard.
 
 ## Just did
-- Stop auto-opening the first session.
-- Reset driveKind to chat on runtime change.
-- Mobile: session list is the landing view; Desktop/VNC is behind a tab + back.
-- Remote-control PWA: default tab is Sessions, not Desktop.
+- Header: one "n/n online" on phone; hide perms/questions/Shell until sm.
+- Drop stacked stat cards on phone (duplicate of header).
+- Tighter padding. Title 2xl. Subtitle: open a machine for sessions.
+- Machines first, then Bots.
+- Session tabs show labels (not icon-only). SW v26.
 
 ## Next
-- Commit, PR, bump caches (v25 / remote-control v3).
+- Chat page chrome, empty machines, machine cards, composer.
+- PR.

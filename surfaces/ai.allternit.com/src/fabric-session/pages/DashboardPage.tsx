@@ -358,7 +358,11 @@ export function DashboardPage({
           <DownloadSimple size={16} weight="bold" />
         </FabricHeaderControl>
       )}
-      <FabricHeaderControl href={`${PLATFORM_HUB_URL}/shell`} title="Open Allternit Shell">
+      <FabricHeaderControl
+        href={`${PLATFORM_HUB_URL}/shell`}
+        title="Open Allternit Shell"
+        className="hidden sm:inline-flex"
+      >
         Shell
       </FabricHeaderControl>
     </FabricStatusCluster>
@@ -387,19 +391,20 @@ export function DashboardPage({
     <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
       <FabricAppHeader>{headerActions}</FabricAppHeader>
       <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="w-full max-w-6xl mx-auto px-8 pt-10 pb-12">
-          <div className="mb-8">
+        <div className="w-full max-w-6xl mx-auto px-4 pt-6 pb-10 sm:px-8 sm:pt-10 sm:pb-12">
+          <div className="mb-6 sm:mb-8">
             <FabricViewTitle
               title="Fabric Transport"
-              subtitle={
-                signedInAs
-                  ? `Signed in as ${signedInAs}. Paired nodes, approvals, and what needs you — click a machine to drive it.`
-                  : "Paired nodes, approvals, and what needs you — click a machine to drive it."
-              }
+              subtitle="Open a machine to see its sessions. Bots and live desktop are in that view."
             />
+            {signedInAs ? (
+              <p className="m-0 mt-2 text-[12px] text-[var(--shell-item-muted)] truncate">
+                {signedInAs}
+              </p>
+            ) : null}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
             <button
               type="button"
               onClick={() => {
@@ -467,12 +472,6 @@ export function DashboardPage({
             </section>
           )}
 
-          <BotsRosterSection
-            bots={roster}
-            pendingByBot={pendingByBot}
-            onSelectBot={(id) => onSelectBot?.(id)}
-          />
-
           <h2 className="text-[15px] font-semibold m-0 mb-3">Machines</h2>
           <MachinesPanel
             runtimes={runtimes}
@@ -484,6 +483,13 @@ export function DashboardPage({
             action={pushAction}
             attention={(rt) => byRuntime[rt.id]}
             emptyMessage="Open Allternit Desktop or a hosted node while signed in to this account."
+          />
+
+          <BotsRosterSection
+            bots={roster}
+            pendingByBot={pendingByBot}
+            onSelectBot={(id) => onSelectBot?.(id)}
+            className="mt-8"
           />
 
           <FabricOperatorKeys getToken={auth.getToken} />
