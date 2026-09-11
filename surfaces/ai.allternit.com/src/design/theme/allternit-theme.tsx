@@ -46,11 +46,11 @@ const defaultTheme: AllternitTheme = {
     idle: "#666666",
     connecting: "#f59e0b",
     hydrating: "#3b82f6",
-    planning: "#8b5cf6",
+    planning: "#C4A684",
     web: "#10b981",
     executing: "#f59e0b",
     responding: "#3b82f6",
-    compacting: "#8b5cf6",
+    compacting: "#C4A684",
   },
   
   glyph: {

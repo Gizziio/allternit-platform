@@ -12,7 +12,7 @@ interface H5iContextPanelProps {
 
 const typeConfig: Record<H5iContextEntry['type'], { icon: React.ReactNode; color: string; bg: string }> = {
   OBSERVE: { icon: <Eye size={14} />, color: 'var(--status-info)', bg: 'rgba(59,130,246,0.08)' },
-  THINK: { icon: <Brain size={14} />, color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
+  THINK: { icon: <Brain size={14} />, color: '#B08D6E', bg: 'rgba(176,141,110,0.08)' },
   ACT: { icon: <Lightning size={14} />, color: 'var(--status-success)', bg: 'rgba(16,185,129,0.08)' },
   NOTE: { icon: <Note size={14} />, color: 'var(--status-warning)', bg: 'rgba(245,158,11,0.08)' },
 };
@@ -77,7 +77,7 @@ export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContex
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Brain size={18} color="#8b5cf6" />
+          <Brain size={18} color="#B08D6E" />
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
             Session Context Trace
           </span>

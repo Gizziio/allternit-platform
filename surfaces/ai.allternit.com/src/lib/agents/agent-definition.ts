@@ -89,7 +89,7 @@ export function buildCharacterLayer(spec: CharacterLayerSpec = {}): CharacterLay
     avatar: {
       type: 'mascot',
       mascot: { template: spec.mascot ?? 'bot' },
-      style: { primaryColor: spec.primaryColor ?? '#6366f1', accentColor: '#1e1c1a' },
+      style: { primaryColor: spec.primaryColor ?? '#B08D6E', accentColor: '#1e1c1a' },
     },
   };
 }

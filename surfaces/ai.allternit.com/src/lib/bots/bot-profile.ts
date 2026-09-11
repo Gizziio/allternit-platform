@@ -370,7 +370,7 @@ export function validateBotProfile(profile: Partial<BotProfile>): {
   }
 
   if (profile.accentColor && !/^#[0-9A-F]{6}$/i.test(profile.accentColor)) {
-    errors.push('Accent color must be a valid hex color (e.g., #8b5cf6)');
+    errors.push('Accent color must be a valid hex color (e.g., #B08D6E)');
   }
 
   if (profile.starterPrompts && profile.starterPrompts.length > 5) {

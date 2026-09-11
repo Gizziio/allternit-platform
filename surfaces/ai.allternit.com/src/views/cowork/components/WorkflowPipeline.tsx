@@ -47,7 +47,7 @@ const AGENT_COLORS: Record<AgentType, { bg: string; text: string; border: string
   developer_agent: { bg: "#d1fae5", text: "#065f46", border: "#10b981" },
   browser_agent: { bg: "#dbeafe", text: "#1e40af", border: "#3b82f6" },
   document_agent: { bg: "#fef9c3", text: "#854d0e", border: "#eab308" },
-  research_agent: { bg: "#ede9fe", text: "#5b21b6", border: "#8b5cf6" },
+  research_agent: { bg: "#F5EDE3", text: "#4A3826", border: "#B08D6E" },
   multi_modal_agent: { bg: "#fae8ff", text: "#86198f", border: "#d946ef" },
 };
 

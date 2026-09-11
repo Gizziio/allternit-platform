@@ -215,7 +215,7 @@ const DECK_SKELETON_HTML = `<!DOCTYPE html>
     --border: rgba(255,255,255,0.08);
     --text: #e8e0d8;
     --muted: rgba(232,224,216,0.5);
-    --accent: #6366f1;
+    --accent: #B08D6E;
     --slide-w: 1920px;
     --slide-h: 1080px;
   }

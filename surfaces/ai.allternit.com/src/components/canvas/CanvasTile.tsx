@@ -269,7 +269,7 @@ export function CanvasTile({
                           : tile.type === 'knowledge'
                             ? 'var(--accent-primary)'
                             : tile.type === 'knowledge-graph'
-                              ? '#8b5cf6'
+                              ? 'var(--accent-primary)'
                               : tile.type === 'executor'
                                 ? 'var(--status-info)'
                                 : 'var(--text-muted)',

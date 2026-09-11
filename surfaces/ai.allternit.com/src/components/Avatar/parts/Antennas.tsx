@@ -197,7 +197,7 @@ export const Antennas: React.FC<AntennasProps> = ({
             {/* Antenna stem */}
             <path
               d={style.path}
-              stroke={colors?.secondary ?? '#8b5cf6'}
+              stroke={colors?.secondary ?? '#C4A684'}
               strokeWidth={2 * scale}
               strokeLinecap="round"
               fill="none"
@@ -207,7 +207,7 @@ export const Antennas: React.FC<AntennasProps> = ({
             {tipDecoration.render(
               style.tipX,
               style.tipY,
-              colors?.glow ?? '#6366f1'
+              colors?.glow ?? '#B08D6E'
             )}
           </g>
         );

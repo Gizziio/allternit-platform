@@ -46,7 +46,7 @@ export const ALLTERNIT_DESIGN_SYSTEM: DesignSystem = {
 
 Rules:
 - One accent — amber \`#B08D6E\` — used at most twice per screen.
-- **NEVER purple or indigo** in any form: no violet/fuchsia/indigo Tailwind classes, no \`#8b5cf6\`, \`#B08D6E\`, \`#6366f1\`, no purple→blue "trust" gradients.
+- **NEVER purple or indigo** in any form: no violet/fuchsia/indigo Tailwind classes, no purple-family hex values (the legacy violet scale is dead — see DESIGN.md v2.1), no purple→blue "trust" gradients.
 - **NEVER coral** (\`#e27c59\`, \`#d97757\`) — coral is reserved for Allternit platform UI chrome only; never in generated artifacts.
 - Body text must meet WCAG AA: ≥ 4.5:1 against its background.
 

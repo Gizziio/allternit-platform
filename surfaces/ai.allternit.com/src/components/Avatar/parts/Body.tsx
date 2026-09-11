@@ -111,10 +111,10 @@ export const Body: React.FC<BodyProps> = ({
   
   // Base style
   const baseStyle: React.CSSProperties = renderForClipPath ? {} : {
-    fill: colors?.primary ?? '#6366f1',
-    stroke: colors?.outline ?? '#1e1b4b',
+    fill: colors?.primary ?? '#B08D6E',
+    stroke: colors?.outline ?? '#4A3826',
     strokeWidth: 2,
-    filter: `drop-shadow(0 2px 4px ${colors?.glow ?? '#6366f1'}40)`,
+    filter: `drop-shadow(0 2px 4px ${colors?.glow ?? '#B08D6E'}40)`,
   };
   
   // Transform for emotion
@@ -142,7 +142,7 @@ export const Body: React.FC<BodyProps> = ({
           d={shapeDef.path}
           style={{
             fill: 'none',
-            stroke: colors?.secondary ?? '#8b5cf6',
+            stroke: colors?.secondary ?? '#C4A684',
             strokeWidth: 1,
             opacity: 0.3,
           }}
@@ -154,26 +154,26 @@ export const Body: React.FC<BodyProps> = ({
       {shape === 'hex' && !renderForClipPath && (
         // Circuit pattern for coding/tech feel
         <>
-          <circle cx="50" cy="35" r="3" fill={colors?.secondary ?? '#8b5cf6'} opacity="0.5" />
-          <circle cx="35" cy="50" r="2" fill={colors?.secondary ?? '#8b5cf6'} opacity="0.4" />
-          <circle cx="65" cy="50" r="2" fill={colors?.secondary ?? '#8b5cf6'} opacity="0.4" />
-          <line x1="50" y1="38" x2="50" y2="45" stroke={colors?.secondary ?? '#8b5cf6'} strokeWidth="1" opacity="0.3" />
+          <circle cx="50" cy="35" r="3" fill={colors?.secondary ?? '#C4A684'} opacity="0.5" />
+          <circle cx="35" cy="50" r="2" fill={colors?.secondary ?? '#C4A684'} opacity="0.4" />
+          <circle cx="65" cy="50" r="2" fill={colors?.secondary ?? '#C4A684'} opacity="0.4" />
+          <line x1="50" y1="38" x2="50" y2="45" stroke={colors?.secondary ?? '#C4A684'} strokeWidth="1" opacity="0.3" />
         </>
       )}
       
       {shape === 'square' && !renderForClipPath && (
         // Armor plates for operations
         <>
-          <rect x="30" y="60" width="15" height="15" rx="2" fill={colors?.secondary ?? '#8b5cf6'} opacity="0.2" />
-          <rect x="55" y="60" width="15" height="15" rx="2" fill={colors?.secondary ?? '#8b5cf6'} opacity="0.2" />
+          <rect x="30" y="60" width="15" height="15" rx="2" fill={colors?.secondary ?? '#C4A684'} opacity="0.2" />
+          <rect x="55" y="60" width="15" height="15" rx="2" fill={colors?.secondary ?? '#C4A684'} opacity="0.2" />
         </>
       )}
       
       {shape === 'diamond' && !renderForClipPath && (
         // Facet lines for research/scholar
         <>
-          <line x1="50" y1="5" x2="50" y2="95" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="0.5" opacity="0.3" />
-          <line x1="10" y1="50" x2="90" y2="50" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="0.5" opacity="0.3" />
+          <line x1="50" y1="5" x2="50" y2="95" stroke={colors?.outline ?? '#4A3826'} strokeWidth="0.5" opacity="0.3" />
+          <line x1="10" y1="50" x2="90" y2="50" stroke={colors?.outline ?? '#4A3826'} strokeWidth="0.5" opacity="0.3" />
         </>
       )}
       
@@ -184,7 +184,7 @@ export const Body: React.FC<BodyProps> = ({
           cy="60"
           rx="25"
           ry="15"
-          fill={colors?.secondary ?? '#8b5cf6'}
+          fill={colors?.secondary ?? '#C4A684'}
           opacity="0.15"
         />
       )}

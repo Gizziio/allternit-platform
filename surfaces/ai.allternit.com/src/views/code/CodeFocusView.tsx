@@ -65,7 +65,7 @@ export function CodeFocusView({ tile, workspace, onExit, onClose }: CodeFocusVie
                           : tile.type === 'knowledge'
                             ? 'var(--accent-primary)'
                             : tile.type === 'knowledge-graph'
-                              ? '#8b5cf6'
+                              ? 'var(--accent-primary)'
                               : 'var(--ui-text-muted)',
             }}
           />
