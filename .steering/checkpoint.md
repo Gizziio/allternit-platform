@@ -1,25 +1,29 @@
-# Checkpoint — session/designwordmark-0911
+# Checkpoint — ao/fabric-bot-followup-0911 (MERGED, awaiting deploy go-ahead)
 
 ## Goal
-Emulate the office wordmark for the Design surface: render A://TERNIT DESIGN
-via the existing `suffix` prop on the shared AProtocolWordmark component, in
-the two owner-approved spots (design launch header + shell rail footer
-Design button).
+Fabric Transport bot-mode follow-up: verify v34 bot rail vs desktop parity,
+polish divergences. Done.
 
 ## Just did
-- Created worktree `allternit-session-designwordmark-0911` on branch
-  `session/designwordmark-0911` from origin/main (2aed1d3f6).
-- Scoped with owner: rail target = ShellRail footer Design button; header
-  target = NewProjectScreen launch header. No new rail in /design window.
-- Wrote plan file `.steering/plan-designwordmark-0911.md`.
-- Edited both spots to use `<AProtocolWordmark suffix="DESIGN" />`
-  (height 13 launch header keeping BETA; height 12 rail footer button).
-- Verified: `pnpm typecheck` — zero errors in touched files (6 pre-existing
-  fabric-session errors on main, untouched); `pnpm vitest run src/shell`
-  4 files / 20 tests passed.
+- PR #330 merged (168012ca5): rail bot rows open BotChatSessionView
+  (session-started callback → openBotChatView, desktop parity), ErrorBoundary
+  on all bot canvas branches, SW v34→v35, FabricBotMode rail purity +
+  navigation regression tests, stale BotsRosterSection test fixed.
+- Ledger attestation 24704c5fa on main. Worktree now on main (deploy-ready).
+- CI: all code checks pass; Vercel/CF Pages failures identical on PR #329
+  (pre-existing infra).
 
 ## Next
-- Commit, push, PR, merge; sync main; ledger attestation; cleanup.
+- AWAITING EOJ GO-AHEAD for deploy from this worktree:
+  cd surfaces/ai.allternit.com
+  pnpm exec vite build --config vite.fabric-session.config.ts
+  node scripts/prepare-fabric-session-pwa.mjs
+  pnpm exec wrangler pages deploy tmp/fabric-session-pwa \
+    --project-name=allternit-remote-control --branch=main \
+    --commit-hash=168012ca5 --commit-dirty=true
+- After deploy: Eoj hard-refresh/clears site data (SW v35); phone runtime
+  check of rail → bot chat; then worktree/branch cleanup + desktop rebuild
+  follow-up.
 
 ## Open questions
 - None.
