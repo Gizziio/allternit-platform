@@ -38,7 +38,7 @@ interface OrchestratorHeaderProps {
   onShowValidation: () => void;
   canEdit: boolean;
   canExecute: boolean;
-  modeColors: (typeof MODE_COLORS)['chat'];
+  modeColors: (typeof MODE_COLORS)['design'];
 }
 
 export function OrchestratorHeader({

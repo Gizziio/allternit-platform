@@ -26,13 +26,14 @@ interface ArchivedSession {
 }
 
 /**
- * Mode color indicators
+ * Mode indicators — amber-only law (2026-09-11): modes no longer carry their
+ * own accent colors; only the bot surface keeps its token.
  */
 const MODE_COLORS = {
-  chat: 'var(--status-info)',
-  cowork: 'var(--accent-cowork)',
+  chat: 'var(--accent-primary)',
+  cowork: 'var(--accent-primary)',
   bot: 'var(--accent-bot, #2DD4BF)',
-  code: 'var(--status-success)',
+  code: 'var(--accent-primary)',
 } as const;
 
 

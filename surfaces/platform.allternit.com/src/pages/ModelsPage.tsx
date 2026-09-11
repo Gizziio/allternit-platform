@@ -141,7 +141,7 @@ export function ModelsPage() {
                         className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
                           model.provider === "local"
                             ? "bg-[var(--status-success)]/10 text-[var(--status-success)]"
-                            : "bg-[var(--accent-secondary)]/10 text-[var(--accent-secondary)]"
+                            : "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
                         }`}
                       >
                         {model.provider}

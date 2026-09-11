@@ -264,7 +264,7 @@ function getRoleColor(role: string): string {
   switch (role) {
     case 'orchestrator': return '#c17817';
     case 'worker': return STATUS.info;
-    case 'specialist': return '#a78bfa';
+    case 'specialist': return '#B08D6E';
     case 'reviewer': return STATUS.success;
     default: return '#888888';
   }

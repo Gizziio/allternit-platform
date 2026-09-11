@@ -36,7 +36,7 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
 
 function ToolConfirmation({
   sessionId,
-  accentColor = "#D4956A",
+  accentColor = "#B08D6E",
 }: ToolConfirmationProps) {
   const { confirmations, confirmTool, denyTool, hasPending } =
     usePendingToolConfirmations(sessionId);
@@ -243,7 +243,7 @@ function InlineToolConfirmation({
   confirmation,
   onConfirm,
   onDeny,
-  accentColor = "#D4956A",
+  accentColor = "#B08D6E",
 }: {
   confirmation: PendingToolConfirmation;
   onConfirm: () => void;

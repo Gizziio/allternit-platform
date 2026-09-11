@@ -88,8 +88,15 @@ export interface AProtocolWordmarkProps {
   suffix?: string;
   /** ink = dark letters on light bg, light = cream letters on dark bg,
    *  mono = currentColor letters, adaptive = currentColor ink (follows the
-   *  host theme). The mark image is a fixed cream squircle in all themes. */
+   *  host theme). The pixel A:// mark follows the same ink rules. */
   theme?: 'ink' | 'light' | 'mono' | 'adaptive';
+  /**
+   * @deprecated No-op — the PNG mark variants were removed when the mark
+   * became pixel blocks (office-parity geometry). Kept so existing callers
+   * compile; the pixel mark already follows `theme` (currentColor under
+   * adaptive/mono).
+   */
+  markVariant?: 'cream' | 'current';
   className?: string;
 }
 
@@ -98,6 +105,7 @@ export function AProtocolWordmark({
   height = 20,
   suffix = '',
   theme = 'ink',
+  markVariant: _markVariant,
   className,
 }: AProtocolWordmarkProps) {
   const ink = theme === 'light' ? '#F0EEE6'

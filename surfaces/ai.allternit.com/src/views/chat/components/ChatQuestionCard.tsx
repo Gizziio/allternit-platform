@@ -120,7 +120,7 @@ export const ChatQuestionCard = memo(function ChatQuestionCard({
     <GlassSurface
       className={cn(
         "w-full max-w-2xl mx-auto overflow-hidden",
-        "border-l-4 border-l-[var(--accent-chat)]",
+        "border-l-4 border-l-[var(--accent-primary)]",
         className
       )}
       variant="default"
@@ -130,11 +130,11 @@ export const ChatQuestionCard = memo(function ChatQuestionCard({
       rounded="xl"
       padding="none"
     >
-      <div className="px-4 py-3 border-b border-white/5 bg-[var(--accent-chat)]/8">
+      <div className="px-4 py-3 border-b border-white/5 bg-[var(--accent-primary)]/8">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="size-7 rounded-lg bg-[var(--accent-chat)]/15 flex items-center justify-center shrink-0">
-              <Question size={16} className="text-[var(--accent-chat)]" weight="fill" />
+            <div className="size-7 rounded-lg bg-[var(--accent-primary)]/15 flex items-center justify-center shrink-0">
+              <Question size={16} className="text-[var(--accent-primary)]" weight="fill" />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-[var(--ui-text-primary)] truncate">

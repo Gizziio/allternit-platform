@@ -71,11 +71,11 @@ const lightTheme: AllternitTheme = {
     idle: "#888888",
     connecting: "#d97706",
     hydrating: "#2563eb",
-    planning: "#7c3aed",
+    planning: "#B08D6E",
     web: "#059669",
     executing: "#d97706",
     responding: "#2563eb",
-    compacting: "#7c3aed",
+    compacting: "#B08D6E",
   },
   
   glyph: {

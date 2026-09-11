@@ -766,7 +766,7 @@ export function AgentOpsPanel() {
           return [
             { label: 'Tasks Completed', value: String(completed), color: 'var(--accent-primary)' },
             { label: 'Approval Rate', value: approvalRate, color: 'var(--status-success)' },
-            { label: 'Active Tasks', value: String(active), color: 'var(--accent-cowork)' },
+            { label: 'Active Tasks', value: String(active), color: 'var(--accent-primary)' },
           ];
         })().map((stat, i) => (
           <div key={`agentops-i-${i}`} className="p-5 bg-[var(--surface-panel)] rounded-xl border border-solid border-transparent hover:border-[var(--ui-border-muted)] text-center transition-colors">

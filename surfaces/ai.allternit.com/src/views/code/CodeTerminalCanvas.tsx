@@ -358,8 +358,8 @@ export function CodeTerminalCanvas({
               placeItems: 'center',
               borderRadius: 6,
               background:
-                'linear-gradient(135deg, var(--accent-code), color-mix(in srgb, var(--accent-code) 55%, #000))',
-              boxShadow: '0 0 12px color-mix(in srgb, var(--accent-code) 45%, transparent)',
+                'linear-gradient(135deg, var(--accent-primary), color-mix(in srgb, var(--accent-primary) 55%, #000))',
+              boxShadow: '0 0 12px color-mix(in srgb, var(--accent-primary) 45%, transparent)',
             }}
           >
             <TerminalIcon size={13} weight="fill" color="#fff" />
@@ -395,7 +395,7 @@ export function CodeTerminalCanvas({
               borderRadius: 999,
               border: '1px solid var(--border-subtle)',
               background: 'var(--surface-panel-muted)',
-              color: 'var(--accent-code)',
+              color: 'var(--accent-primary)',
               fontSize: 11,
               fontWeight: 600,
               cursor: isLoading || tiles.length >= MAX_TILES ? 'not-allowed' : 'pointer',
@@ -493,7 +493,7 @@ export function CodeTerminalCanvas({
                 onClick={() => handleTileClick(tile.id)}
                 style={{
                   borderRadius: 14,
-                  border: `1px solid ${overlayTileId === tile.id ? 'var(--accent-code)' : 'var(--border-subtle)'}`,
+                  border: `1px solid ${overlayTileId === tile.id ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
                   background: 'var(--surface-panel)',
                   display: 'flex',
                   flexDirection: 'column',
@@ -501,7 +501,7 @@ export function CodeTerminalCanvas({
                   minHeight: 180,
                   boxShadow:
                     overlayTileId === tile.id
-                      ? '0 0 0 1px color-mix(in srgb, var(--accent-code) 24%, transparent), var(--shadow-lg)'
+                      ? '0 0 0 1px color-mix(in srgb, var(--accent-primary) 24%, transparent), var(--shadow-lg)'
                       : 'var(--shadow-sm)',
                   cursor: 'pointer',
                   transition: 'border-color 120ms ease, box-shadow 120ms ease',
@@ -606,7 +606,7 @@ export function CodeTerminalCanvas({
                 gap: 12,
                 padding: '0 12px 0 16px',
                 borderBottom: '1px solid var(--border-subtle)',
-                background: 'color-mix(in srgb, var(--accent-code) 8%, transparent)',
+                background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)',
               }}
             >
               <div
@@ -773,7 +773,7 @@ function EmptyState({
             borderRadius: 999,
             border: '1px solid var(--border-subtle)',
             background: 'var(--surface-panel)',
-            color: 'var(--accent-code)',
+            color: 'var(--accent-primary)',
             fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',

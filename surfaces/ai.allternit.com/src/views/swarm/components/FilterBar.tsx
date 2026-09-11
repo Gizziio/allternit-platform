@@ -19,7 +19,7 @@ const TEXT_COLOR = 'var(--ui-text-primary)';
 const roleOptions: { value: AgentRole; label: string; color: string }[] = [
   { value: 'orchestrator', label: 'Orch', color: ACCENT },
   { value: 'worker', label: 'Work', color: STATUS.info },
-  { value: 'specialist', label: 'Spec', color: '#a78bfa' },
+  { value: 'specialist', label: 'Spec', color: '#B08D6E' },
   { value: 'reviewer', label: 'Rev', color: STATUS.success },
 ];
 

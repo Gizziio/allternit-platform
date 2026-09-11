@@ -22,7 +22,7 @@ export const CoworkRunTimeline: React.FC<CoworkRunTimelineProps> = ({ jobs }) =>
       case 'cancelled':
         return <XCircle size={18} style={{ color: 'var(--status-error)' }} weight="fill" />;
       case 'running':
-        return <PlayCircle size={18} className="animate-spin-slow" style={{ color: 'var(--accent-cowork)' }} weight="fill" />;
+        return <PlayCircle size={18} className="animate-spin-slow" style={{ color: 'var(--accent-primary)' }} weight="fill" />;
       default:
         return <Clock size={18} style={{ color: 'var(--text-tertiary)' }} />;
     }
@@ -36,7 +36,7 @@ export const CoworkRunTimeline: React.FC<CoworkRunTimelineProps> = ({ jobs }) =>
       case 'cancelled':
         return 'rgba(239, 68, 68, 0.1)';
       case 'running':
-        return 'rgba(167, 139, 250, 0.15)';
+        return 'rgba(176,141,110, 0.15)';
       default:
         return 'var(--bg-secondary)';
     }

@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 const PALETTES = [
   { name: 'Zinc',    shades: ['#fafafa','#f4f4f5','#e4e4e7','#a1a1aa','#71717a','#52525b','#3f3f46','#27272a','#18181b','#09090b'] },
-  { name: 'Violet',  shades: ['#f5f3ff','#ede9fe','#ddd6fe','#c4b5fd','#a78bfa','#8b5cf6','#7c3aed','#6d28d9','#5b21b6','#4c1d95'] },
+  { name: 'Violet',  shades: ['#f5f3ff','#ede9fe','#ddd6fe','#c4b5fd','#B08D6E','#8b5cf6','#B08D6E','#6d28d9','#5b21b6','#4c1d95'] },
   { name: 'Sky',     shades: ['#f0f9ff','#e0f2fe','#bae6fd','#7dd3fc','#38bdf8','#0ea5e9','#0284c7','#0369a1','#075985','#0c4a6e'] },
   { name: 'Emerald', shades: ['#ecfdf5','#d1fae5','#a7f3d0','#6ee7b7','#34d399','#10b981','#059669','#047857','#065f46','#064e3b'] },
   { name: 'Rose',    shades: ['#fff1f2','#ffe4e6','#fecdd3','#fda4af','#fb7185','#f43f5e','#e11d48','#be123c','#9f1239','#881337'] },

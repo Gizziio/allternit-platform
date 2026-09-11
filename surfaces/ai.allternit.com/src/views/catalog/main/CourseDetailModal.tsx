@@ -147,7 +147,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
                 onClose();
               }}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-none text-white font-bold text-[14px] cursor-pointer transition-all hover:opacity-90"
-              style={{ background: isCurated ? 'var(--status-success)' : 'var(--accent,#7c3aed)' }}
+              style={{ background: isCurated ? 'var(--status-success)' : 'var(--accent,#B08D6E)' }}
             >
               {isCurated ? <Check size={16} /> : <Plus size={16} />}
               {isCurated ? 'Curated for A://Labs' : 'Add to A://Labs'}

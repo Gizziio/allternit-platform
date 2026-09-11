@@ -97,7 +97,7 @@ export function ToolsPanel({
         {/* Podcast */}
         <div className="rounded-lg p-2.5" style={{ backgroundColor: 'var(--bg-tertiary, #18181b)' }}>
           <div className="flex items-center gap-2 mb-2">
-            <Volume2 size={14} color="#a78bfa" />
+            <Volume2 size={14} color="#B08D6E" />
             <span className="text-xs font-medium text-[var(--text-primary,#e5e5e5)]">Audio Overview</span>
           </div>
           {podcastUrl ? (
@@ -108,9 +108,9 @@ export function ToolsPanel({
               disabled={podcastLoading}
               className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs cursor-pointer"
               style={{
-                backgroundColor: 'rgba(167, 139, 250, 0.1)',
-                border: '1px solid rgba(167, 139, 250, 0.2)',
-                color: '#a78bfa',
+                backgroundColor: 'rgba(176,141,110, 0.1)',
+                border: '1px solid rgba(176,141,110, 0.2)',
+                color: '#B08D6E',
               }}
             >
               {podcastLoading && <Loader2 size={12} className="animate-spin" />}

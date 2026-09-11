@@ -77,7 +77,7 @@ export function CodeTranscriptPane({ sessionId }: CodeTranscriptPaneProps): Reac
             return (
               <div key={message.id} className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-semibold ${isUser ? 'text-[var(--accent-code)]' : 'text-[var(--text-secondary)]'}`}>
+                  <span className={`text-[10px] font-semibold ${isUser ? 'text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'}`}>
                     {isUser ? 'You' : message.role === 'assistant' ? 'Assistant' : message.role}
                   </span>
                   <span className="text-[10px] text-[var(--text-tertiary)]">{time}</span>

@@ -163,7 +163,7 @@ export function PromptInput({
         <motion.div
           layout
           className={cn(
-            "flex flex-col bg-[var(--glass-bg-thick)] border border-[var(--border-strong)] rounded-[24px] shadow-2xl transition-shadow focus-within:ring-1 focus-within:ring-[var(--accent-chat)] overflow-hidden",
+            "flex flex-col bg-[var(--glass-bg-thick)] border border-[var(--border-strong)] rounded-[24px] shadow-2xl transition-shadow focus-within:ring-1 focus-within:ring-[var(--accent-primary)] overflow-hidden",
             disabled && "opacity-60 pointer-events-none",
             isRecording && "ring-2 ring-red-500",
             className
@@ -305,7 +305,7 @@ export function PromptInputActions({
               onClick={onSubmit}
               disabled={!value.trim()}
               aria-label="Send message"
-              className="flex items-center justify-center size-8 rounded-full bg-[var(--accent-chat)] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-sm"
+              className="flex items-center justify-center size-8 rounded-full bg-[var(--accent-primary)] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-sm"
             >
               <ArrowUp size={18} weight="bold" />
             </motion.button>
@@ -343,7 +343,7 @@ function PromptInputAction({
             onClick?.();
         }}
       >
-        <div className={cn("transition-colors", active && "text-[var(--accent-chat)]")}>
+        <div className={cn("transition-colors", active && "text-[var(--accent-primary)]")}>
             {children}
         </div>
       </TooltipTrigger>

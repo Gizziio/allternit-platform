@@ -88,7 +88,7 @@ function parseTodoSteps(text: string): TodoStep[] | null {
 // ─── Step icon ────────────────────────────────────────────────────────────────
 
 function StepIcon({ state }: { state: TodoStep["state"] }) {
-  if (state === "running") return <InlineSpinner size={13} color="var(--accent-cowork)" />;
+  if (state === "running") return <InlineSpinner size={13} color="var(--accent-primary)" />;
   if (state === "done")    return <CheckCircle size={13} style={{ color: "rgba(74,222,128,0.7)", flexShrink: 0 }} />;
   if (state === "error")   return <Warning size={13} style={{ color: "rgba(248,113,113,0.7)", flexShrink: 0 }} />;
   return <Circle size={13} style={{ color: "var(--text-secondary)", flexShrink: 0 }} />;
@@ -111,7 +111,7 @@ export const TodoWidget = memo(function TodoWidget({
   const summaryColor = allDone
     ? "rgba(74,222,128,0.6)"
     : runningCount > 0
-    ? "var(--accent-cowork)"
+    ? "var(--accent-primary)"
     : errorCount > 0
     ? "rgba(248,113,113,0.65)"
     : "var(--text-secondary)";
@@ -141,7 +141,7 @@ export const TodoWidget = memo(function TodoWidget({
       >
         {/* Status indicator */}
         {runningCount > 0 ? (
-          <InlineSpinner size={12} color="var(--accent-cowork)" />
+          <InlineSpinner size={12} color="var(--accent-primary)" />
         ) : allDone ? (
           <CheckCircle size={12} style={{ color: "rgba(74,222,128,0.55)", flexShrink: 0 }} />
         ) : (

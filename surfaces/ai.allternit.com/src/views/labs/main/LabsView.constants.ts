@@ -125,8 +125,8 @@ export const L = {
   textPrimary: 'var(--ui-text-primary)',
   textSec:     'var(--ui-text-secondary)',
   textTer:     'var(--ui-text-muted)',
-  accent:      '#a78bfa',
-  accentDim:   'rgba(167,139,250,0.10)',
-  accentBorder:'rgba(167,139,250,0.20)',
+  accent:      '#B08D6E',
+  accentDim:   'rgba(176,141,110,0.10)',
+  accentBorder:'rgba(176,141,110,0.20)',
   gold:        'var(--status-warning)',
 } as const;

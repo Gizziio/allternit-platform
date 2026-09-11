@@ -72,8 +72,8 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
 
       {/* No-provider banner — shown when nothing is connected */}
       {!modelSelection && !isAgentSessionEmbedded && (
-        <div className="w-full mb-6 p-[14px_18px] rounded-2xl flex items-center gap-3.5 border border-solid border-[color-mix(in_srgb,var(--accent-chat)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent-chat)_6%,var(--surface-panel,var(--bg-secondary)))]">
-          <div className="size-9 rounded-[10px] shrink-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--accent-chat)_12%,transparent)] text-[var(--accent-chat)]">
+        <div className="w-full mb-6 p-[14px_18px] rounded-2xl flex items-center gap-3.5 border border-solid border-[color-mix(in_srgb,var(--accent-primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent-primary)_6%,var(--surface-panel,var(--bg-secondary)))]">
+          <div className="size-9 rounded-[10px] shrink-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-[var(--accent-primary)]">
             <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
               <path d="M248,124a56.11,56.11,0,0,0-32-50.61V72a48,48,0,0,0-88-26.49A48,48,0,0,0,40,72v1.39A56,56,0,0,0,72,180.27V184a24,24,0,0,0,24,24h64a24,24,0,0,0,24-24v-3.73A56.09,56.09,0,0,0,248,124ZM96,200a8,8,0,0,1-8-8v-4h32v12Zm72,0H152V188h32v4A8,8,0,0,1,168,200Zm8-28H80a40,40,0,0,1-8-79.22V72a32,32,0,0,1,64,0v8h16V72a32,32,0,0,1,64,0v20.78A40,40,0,0,1,176,172Z"/>
             </svg>
@@ -90,7 +90,7 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
           </div>
           <button type="button"
             onClick={startSelection}
-            className="shrink-0 px-3.5 py-1.5 rounded-lg bg-[var(--accent-chat)] text-white border-none cursor-pointer text-[12px] font-bold"
+            className="shrink-0 px-3.5 py-1.5 rounded-lg bg-[var(--accent-primary)] text-white border-none cursor-pointer text-[12px] font-bold"
           >
             Connect
           </button>
