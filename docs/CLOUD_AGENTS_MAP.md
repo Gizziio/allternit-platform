@@ -1,24 +1,27 @@
-# Cloud Agents — Phase 4 (remaining leftovers)
+# Allternit Agents — shipped surface (2026-09-11)
 
-Orchestrator-owned. Phases 1–3 are on main.
+Living map. Product name is **Allternit Agents**, not Runtime. Queue `rq-20260910-002` landed.
 
-## In this phase
+## Cloud Agents
 
-| Leftover | What we ship |
-|---|---|
-| Threads | `GET /sessions/:id/threads` = child sessions (`parent_thread_id`). Create accepts `parent_thread_id`. |
-| Outputs | `GET /sessions/:id/outputs` lists `session_files` (there is no `/workspace/outputs` route). |
-| Schedules | `/api/v1/schedules` aliases `/beta/deployments` CRUD + runs. |
-| Toolset | `GET /agents/:id/toolset` from existing agent columns. `tool_search`/`mcp` are `false`/`[]` until a later bind. |
-| Permission | Session create `permission`: `always_allow` \| `always_ask` \| `auto`. Stored in metadata, returned on public JSON. Not enforced (ACI is Bot). |
-| desktop / sandbox | Computer Cloud Cloud Desktop (Incus/Tart), not Fly. `desktop` = session persistence, `sandbox` = ephemeral. `503` if no VM driver. Never silent `none`. |
-| fabric | Same Computer Cloud desktop as `desktop` (session-lived). Not Fly. |
+`/api/v1/sessions` over `beta_sessions`. Completions/Responses at `/api/agents/v1/*` unchanged.
 
-## Done vs not this product
+- Create/get/archive; events list/send/SSE
+- Turns, threads, outputs (session files)
+- `computer.kind`: `none` | `local` | `sandbox` (ephemeral Computer Cloud) | `desktop` | `fabric` (session-lived Computer Cloud). Bind `computer.id`.
+- No VM driver → `503` `computer_unavailable` (fail-closed). Incus/Tart live on the VPS.
+- `brain_id`, `vault_ids`, `bot_id`, `permission`, `parent_thread_id`
+- `/api/v1/vaults`, `/api/v1/schedules`, `GET /agents/:id/toolset`
+- Budget: caps + USD **telemetry** (`charged: false`)
 
-- Session budget includes USD **telemetry** (`estimated_cost_usd`, `charged: false`). Not a charge.
-- `503` + `code: computer_unavailable` is error handling when Computer Cloud has no VM driver.
-- Bot Agents BA-* is a different specialty (named BA-* gate).
-- OpenAI/Anthropic compat shims are a spec non-goal.
-- Bot Agents BA-*
-- OpenAI/Anthropic compat shims
+SDK: `@allternit/sdk/cloud-agents` `Allternit`. Python `allternit.Allternit`.
+
+## Bot Agents
+
+Same `agents` table (`is_bot`). `Allternit.bots` + session `bot_id`. Persistent Computer Cloud desktop. CommRails, ao, ACI policy, `bot.brain`.
+
+## Not this product
+
+- OpenAI/Anthropic drop-in shims (`new OpenAI({ baseURL })`)
+- Charging the USD telemetry (Stripe)
+- Unit-test Incus/Tart (those run on the Computer Cloud VPS)
