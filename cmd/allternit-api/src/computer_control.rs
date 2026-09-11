@@ -113,8 +113,8 @@ pub(crate) fn classify_control_action(action: &ComputerControlAction) -> crate::
 // ---------------------------------------------------------------------------
 
 /// Canonical policy-seat descriptor for a control action: the tool name and
-/// the file path where one applies. Bot id is not resolvable at the seat —
-/// ownership checks happen later in this function — so it stays unset.
+/// the file path where one applies. `bot_id` is filled in by the seat after a
+/// read-only computer lookup (not guest dispatch).
 fn control_policy_descriptor(action: &ComputerControlAction) -> crate::policy_config::PolicyDescriptor {
     use ComputerControlAction::*;
     let (tool, path): (&str, Option<String>) = match action {
@@ -147,12 +147,25 @@ pub(crate) async fn execute_computer_tool(
     action: ComputerControlAction,
     approval_id: Option<&str>,
 ) -> Result<Value, (StatusCode, Value)> {
+    // Read-only computer lookup so bot_id can ride on the policy descriptor.
+    // This is not guest dispatch. Policy still audits before confirmation or
+    // any guest exec.
+    let computer = match fetch_computer_for_control(state, user_id, computer_id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return Err((StatusCode::NOT_FOUND, json!({"error": "computer not found"}))),
+        Err(resp) => {
+            return Err((resp.status(), json!({"error": "failed to load computer"})));
+        }
+    };
+
     // Declarative policy gate (env-configured; entirely absent when
     // ALLTERNIT_ACI_POLICY_FILE is unset). Policy verdict first,
     // confirmation enforcement and guest dispatch second — a denial here
     // never reaches the guest. The audit row is fsynced before either
     // outcome (audit-before-act).
-    let policy_desc = control_policy_descriptor(&action);
+    let mut policy_desc = control_policy_descriptor(&action);
+    policy_desc.bot_id = computer.bot_id.clone();
+    policy_desc.session_id = computer.session_id.clone();
     if let Some(verdict) = crate::policy_config::evaluate_descriptor(&policy_desc) {
         if let Err(e) =
             crate::policy_config::record_decision(&policy_desc, &verdict, Some(user_id), None)
@@ -187,14 +200,6 @@ pub(crate) async fn execute_computer_tool(
     ) {
         return Err((denial.status, denial.body));
     }
-
-    let computer = match fetch_computer_for_control(state, user_id, computer_id).await {
-        Ok(Some(c)) => c,
-        Ok(None) => return Err((StatusCode::NOT_FOUND, json!({"error": "computer not found"}))),
-        Err(resp) => {
-            return Err((resp.status(), json!({"error": "failed to load computer"})));
-        }
-    };
 
     if computer.kind != ComputerKind::CloudDesktop {
         return Err((
@@ -1157,15 +1162,15 @@ mod tests {
             .expect("allowed audit row");
         assert_eq!(row["decision"], "allowed");
         assert_eq!(row["rule_id"], "allow-all");
+        assert_eq!(row["bot_id"], "bot-1");
     }
 
     #[tokio::test]
-    async fn policy_bot_scoped_rule_does_not_match_unresolvable_bot() {
+    async fn policy_bot_scoped_rule_does_not_match_other_bot() {
         let _guard = policy_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
-        // Only a rule scoped to a different bot: the seat cannot resolve a
-        // bot id yet, so the rule must not match — and fail-closed denies.
+        // Rule is scoped to a different bot than computer-1's bot-1.
         let _policy = ControlPolicyGuard::install(vec![crate::permission_policy::PermissionRule {
             id: Some("other-bot-only".to_string()),
             tool: Some("computer.screenshot".to_string()),
@@ -1190,5 +1195,52 @@ mod tests {
         assert_eq!(status, StatusCode::FORBIDDEN);
         assert_eq!(body["error"], "policy_denied");
         assert!(driver.recorded().is_empty());
+    }
+
+    #[tokio::test]
+    async fn policy_bot_scoped_allow_matches_computer_bot_id() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        let _policy = ControlPolicyGuard::install(vec![crate::permission_policy::PermissionRule {
+            id: Some("this-bot-shell".to_string()),
+            tool: Some("computer.shell".to_string()),
+            bot_id: Some("bot-1".to_string()),
+            action: crate::permission_policy::PermissionAction::Allow,
+            ..Default::default()
+        }]);
+
+        let driver = Arc::new(MockExecutionDriver::new());
+        driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
+            exit_code: 0,
+            stdout: Some(b"ok".to_vec()),
+            stderr: None,
+            duration_ms: 1,
+            resource_usage: ResourceConsumption::default(),
+        }));
+        let state = test_state(&temp, driver.clone()).await;
+
+        let result = execute_computer_tool(
+            &state,
+            "user-1",
+            "computer-1",
+            ComputerControlAction::Shell(ShellInput {
+                command: vec!["ls".to_string()],
+                env: HashMap::new(),
+                timeout: None,
+            }),
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result["stdout"], "ok");
+        let row = audit_lines_for_test()
+            .into_iter()
+            .find(|row| row["tool"] == "computer.shell")
+            .expect("allowed audit row");
+        assert_eq!(row["decision"], "allowed");
+        assert_eq!(row["bot_id"], "bot-1");
+        assert_eq!(row["rule_id"], "this-bot-shell");
     }
 }

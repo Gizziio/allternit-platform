@@ -54,11 +54,17 @@ import { PolicyGovernance } from "./PolicyGovernance";
 import { BotWatchStrip } from "./BotWatchStrip";
 import { useBotActiveVm } from "./useBotActiveVm";
 import {
-  isBotThreadMuted,
-  setBotThreadMuted,
+  cycleBotThreadNotifyMode,
+  getBotThreadNotifyMode,
+  notifyModeLabel,
+  type BotThreadNotifyMode,
 } from "@/lib/bots/bot-thread-notify";
 import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
-import { botSessionStatus } from "@/lib/bots/bot-session-chrome";
+import {
+  botSessionStatus,
+  splitCompactMessages,
+  summarizeOlderMessages,
+} from "@/lib/bots/bot-session-chrome";
 
 export interface BotChatSessionViewProps {
   sessionId?: string;
@@ -196,11 +202,20 @@ function BotChatSessionContent({
   const [transcript, setTranscript] = useState<BotChatTranscript>(() => initTranscript());
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const { older: olderMessages, recent: recentMessages } = useMemo(
+    () => splitCompactMessages(messages),
+    [messages]
+  );
+  const olderSummary = useMemo(
+    () => summarizeOlderMessages(olderMessages),
+    [olderMessages]
+  );
+
   useEffect(() => {
-    setTranscript(messagesToTranscript(messages));
-    // Rebuild on session identity only — live turns go through stream callbacks.
+    setTranscript(messagesToTranscript(showOlder ? messages : recentMessages));
+    // Rebuild on session identity / compact toggle — live turns go through stream callbacks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, [sessionId, showOlder]);
 
   const applyFold = useCallback((event: Parameters<typeof applyEvent>[1]) => {
     setTranscript((t) => applyEvent(t, event));
@@ -212,13 +227,15 @@ function BotChatSessionContent({
   const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const [computerOpen, setComputerOpen] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [notifyMuted, setNotifyMuted] = useState(() =>
-    isBotThreadMuted(session?.id)
+  const [notifyMode, setNotifyMode] = useState<BotThreadNotifyMode>(() =>
+    getBotThreadNotifyMode(session?.id)
   );
+  const [showOlder, setShowOlder] = useState(false);
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
 
   useEffect(() => {
-    setNotifyMuted(isBotThreadMuted(session?.id));
+    setNotifyMode(getBotThreadNotifyMode(session?.id));
+    setShowOlder(false);
   }, [session?.id]);
 
   // The computer pane is user-driven only: it opens via the top-right
@@ -455,15 +472,12 @@ function BotChatSessionContent({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label={notifyMuted ? "Unmute this thread" : "Mute this thread"}
-              aria-pressed={notifyMuted}
-              onClick={() => {
-                const next = !notifyMuted;
-                setBotThreadMuted(sessionId, next);
-                setNotifyMuted(next);
-              }}
+              aria-label={notifyModeLabel(notifyMode)}
+              title={notifyModeLabel(notifyMode)}
+              aria-pressed={notifyMode !== "all"}
+              onClick={() => setNotifyMode(cycleBotThreadNotifyMode(sessionId))}
             >
-              {notifyMuted ? <BellSlash size={16} /> : <Bell size={16} />}
+              {notifyMode === "muted" ? <BellSlash size={16} /> : <Bell size={16} />}
             </Button>
           )}
           <Button
@@ -513,6 +527,7 @@ function BotChatSessionContent({
           sandboxId={activeVM?.status === "running" ? activeVM.id : undefined}
           computerOpen={computerOpen}
           onOpenComputer={() => setComputerOpen(true)}
+          transcript={transcript}
         />
       )}
 
@@ -528,6 +543,15 @@ function BotChatSessionContent({
           if (name) setSendError(`Attached ${name}. Sending files is not wired yet.`);
         }}
       />
+      {olderSummary && !showOlder && (
+        <button
+          type="button"
+          onClick={() => setShowOlder(true)}
+          className="mx-4 mt-2 self-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+        >
+          {olderSummary}
+        </button>
+      )}
       {transcript.rows.length === 0 && !transcript.activeTurn ? (
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center text-center">

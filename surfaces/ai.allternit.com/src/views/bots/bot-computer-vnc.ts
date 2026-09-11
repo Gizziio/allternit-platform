@@ -5,12 +5,13 @@
  * screenshot poll instead.
  */
 
-export type BotComputerLayout = "page" | "pane" | "aci";
+export type BotComputerLayout = "page" | "pane" | "aci" | "strip";
 
 const PRIORITY: Record<BotComputerLayout, number> = {
   aci: 3,
   pane: 2,
   page: 1,
+  strip: 0,
 };
 
 type Owner = { sandboxId: string; layout: BotComputerLayout };

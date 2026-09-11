@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  cycleBotThreadNotifyMode,
+  getBotThreadNotifyMode,
   isBotThreadMuted,
   resetBotThreadNotify,
   setBotThreadMuted,
@@ -23,5 +25,12 @@ describe("bot-thread-notify", () => {
     expect(isBotThreadMuted("sess-2")).toBe(false);
     setBotThreadMuted("sess-1", false);
     expect(isBotThreadMuted("sess-1")).toBe(false);
+  });
+
+  it("cycles all → mentions → muted → all", () => {
+    expect(getBotThreadNotifyMode("sess-1")).toBe("all");
+    expect(cycleBotThreadNotifyMode("sess-1")).toBe("mentions");
+    expect(cycleBotThreadNotifyMode("sess-1")).toBe("muted");
+    expect(cycleBotThreadNotifyMode("sess-1")).toBe("all");
   });
 });
