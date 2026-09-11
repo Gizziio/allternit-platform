@@ -36,58 +36,13 @@ const NUDE = {
 } as const;
 
 // ============================================================================
-// Mode-Specific Color Palettes
+// Mode Color Palette
 // ============================================================================
+// LOCKED 2026-09-11 (Eoj): amber is the only accent. The four per-mode accent
+// palettes (chat, cowork, code, browser) were removed entirely. The identity
+// palette below is the single accent source for every surface.
 
 export const MODE_COLORS = {
-  chat: {
-    accent: '#D4956A',           // Warm terracotta orange
-    glow: 'rgba(212,149,106,0.28)',
-    soft: 'rgba(212,149,106,0.14)',
-    border: 'rgba(212,149,106,0.14)',
-    wash: 'rgba(212,149,106,0.18)',
-    fog: 'rgba(147,94,53,0.18)',
-    edge: 'rgba(212,149,106,0.14)',
-    panelTint: 'rgba(212,149,106,0.08)',
-    shadow: 'rgba(83,51,24,0.12)',
-    base: '#2B2520',
-  },
-  cowork: {
-    accent: '#A78BFA',           // Soft violet purple
-    glow: 'rgba(167,139,250,0.28)',
-    soft: 'rgba(167,139,250,0.14)',
-    border: 'rgba(167,139,250,0.16)',
-    wash: 'rgba(167,139,250,0.18)',
-    fog: 'rgba(93,74,166,0.2)',
-    edge: 'rgba(167,139,250,0.16)',
-    panelTint: 'rgba(167,139,250,0.08)',
-    shadow: 'rgba(58,42,113,0.14)',
-    base: '#25222B',
-  },
-  code: {
-    accent: '#79C47C',           // Soft mint green
-    glow: 'rgba(121,196,124,0.28)',
-    soft: 'rgba(121,196,124,0.14)',
-    border: 'rgba(121,196,124,0.16)',
-    wash: 'rgba(121,196,124,0.18)',
-    fog: 'rgba(67,129,71,0.2)',
-    edge: 'rgba(121,196,124,0.16)',
-    panelTint: 'rgba(121,196,124,0.08)',
-    shadow: 'rgba(34,78,37,0.14)',
-    base: '#202B22',
-  },
-  browser: {
-    accent: '#69A8C8',           // Steel blue
-    glow: 'rgba(105,168,200,0.26)',
-    soft: 'rgba(105,168,200,0.14)',
-    border: 'rgba(105,168,200,0.16)',
-    wash: 'rgba(105,168,200,0.18)',
-    fog: 'rgba(61,106,138,0.2)',
-    edge: 'rgba(105,168,200,0.16)',
-    panelTint: 'rgba(105,168,200,0.08)',
-    shadow: 'rgba(29,62,80,0.14)',
-    base: '#20262B',
-  },
   design: {
     accent: '#D4B08C',           // Identity Sand
     glow: 'rgba(212,176,140,0.28)',
@@ -102,7 +57,12 @@ export const MODE_COLORS = {
   },
 } as const;
 
-export type AgentMode = keyof typeof MODE_COLORS;
+/**
+ * @deprecated 2026-09-11 amber-only law: the per-mode palettes are gone, so the
+ * mode label no longer selects colors — every value resolves to the identity
+ * (amber) palette. The union is kept so existing call sites keep compiling.
+ */
+export type AgentMode = 'chat' | 'cowork' | 'bot' | 'code' | 'browser' | 'design';
 
 // ============================================================================
 // Background Colors (Obsidian System)
@@ -281,7 +241,7 @@ export const ANIMATION = {
 // ============================================================================
 
 function getModeColors(mode: AgentMode) {
-  return MODE_COLORS[mode];
+  return MODE_COLORS.design;
 }
 
 export function createGlassStyle(intensity: keyof typeof GLASS) {

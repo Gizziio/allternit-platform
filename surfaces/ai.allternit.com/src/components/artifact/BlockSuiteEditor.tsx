@@ -81,7 +81,7 @@ const BlockSuiteEditor: React.FC<BlockSuiteEditorProps> = ({
         const style = document.createElement('style');
         style.textContent = `
           :host {
-            --affine-brand-color: var(--accent-cowork, #af52de);
+            --affine-brand-color: var(--accent-primary, #af52de);
             --affine-background-primary-color: var(--bg-secondary, #0f0f0f);
             --affine-background-secondary-color: var(--surface-panel, #1a1a1a);
             --affine-text-primary-color: var(--text-primary, #e8e8e8);

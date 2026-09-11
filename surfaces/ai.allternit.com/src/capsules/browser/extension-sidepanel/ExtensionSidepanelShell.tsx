@@ -555,7 +555,7 @@ function StatusDot({ status }: { status: ExtensionSidepanelAdapter["status"] }) 
 
   const dotColor = {
     idle: "hsl(0 0% 43.9%)",
-    running: "#69A8C8",
+    running: "#B08D6E",
     completed: "#4ade80",
     error: "hsl(0 46.8% 39.6%)",
   }[status];
@@ -851,7 +851,7 @@ function RawSection({ rawRequest, rawResponse }: { rawRequest?: unknown; rawResp
 function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent, { type: "step" }> }) {
   return (
     <div className="rounded-lg border border-border bg-muted/40 p-2.5 relative overflow-hidden">
-      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#69A8C8]/50" />
+      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#B08D6E]/50" />
       <div className="mb-2 text-[12px] font-semibold tracking-wide text-foreground">
         Step #{(event.stepIndex ?? 0) + 1}
       </div>
@@ -862,7 +862,7 @@ function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent,
         <div>
           <div className="mb-1 text-[12px] font-semibold tracking-wide text-foreground">Actions</div>
           <div className="flex items-start gap-2">
-            <span style={{ color: '#69A8C8' }}>
+            <span style={{ color: '#B08D6E' }}>
               <ActionIcon
                 name={event.action.name}
                 className="mt-0.5 size-3.5 shrink-0"

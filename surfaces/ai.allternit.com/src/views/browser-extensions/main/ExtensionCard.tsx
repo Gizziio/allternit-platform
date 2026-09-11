@@ -66,7 +66,7 @@ export const ExtensionCard: React.FC<ExtensionCardProps> = ({
                 title={extension.isEnabled ? "Disable extension" : "Enable extension"}
               >
                 {extension.isEnabled ? (
-                  <ToggleRight size={28} weight="fill" className="text-[var(--accent-browser)]" />
+                  <ToggleRight size={28} weight="fill" className="text-[var(--accent-primary)]" />
                 ) : (
                   <ToggleLeft size={28} weight="fill" />
                 )}

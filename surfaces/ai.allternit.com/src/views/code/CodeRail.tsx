@@ -120,7 +120,7 @@ function SessionRow({
       data-testid={`code-session-${session.session_id}`}
       style={{
         width: '100%',
-        border: `1px solid ${isActive ? 'var(--accent-chat)' : 'var(--border-subtle)'}`,
+        border: `1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
         background: isActive ? 'rgba(86, 169, 255, 0.12)' : 'var(--surface-hover)',
         borderRadius: 10,
         padding: 10,

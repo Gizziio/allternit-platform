@@ -114,8 +114,8 @@ export const CourseCard = ({
         <div className="flex gap-2">
           <button type="button"
             onClick={() => onToggleCurated(course)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md bg-[var(--accent,#7c3aed)] text-[var(--ui-text-primary)] font-semibold text-[13px] border-none cursor-pointer transition-all hover:opacity-90"
-            style={{ background: isCurated ? 'var(--status-success)' : 'var(--accent,#7c3aed)' }}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md bg-[var(--accent,#B08D6E)] text-[var(--ui-text-primary)] font-semibold text-[13px] border-none cursor-pointer transition-all hover:opacity-90"
+            style={{ background: isCurated ? 'var(--status-success)' : 'var(--accent,#B08D6E)' }}
           >
             {isCurated ? <Check size={14} /> : <Plus size={14} />}
             {isCurated ? 'Curated' : 'Add to A://Labs'}

@@ -27,7 +27,7 @@ const THEME = {
   textPrimary: "var(--ui-text-primary, #ECECEC)",
   textSecondary: "var(--ui-text-secondary, #9B9B9B)",
   textMuted: "var(--ui-text-muted, #6E6E6E)",
-  accent: "var(--accent-chat, #D4B08C)",
+  accent: "var(--accent-primary, #D4B08C)",
   hoverBg: "var(--chat-composer-hover, rgba(212, 176, 140, 0.08))",
 };
 

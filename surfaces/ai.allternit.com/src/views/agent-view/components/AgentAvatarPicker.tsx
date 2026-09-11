@@ -162,12 +162,12 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
                 borderRadius: "8px",
                 border: `1px solid ${
                   config.shape === shape
-                    ? "rgba(212,149,106,0.4)"
+                    ? "rgba(176,141,110,0.4)"
                     : "var(--ui-border-muted)"
                 }`,
                 background:
                   config.shape === shape
-                    ? "rgba(212,149,106,0.08)"
+                    ? "rgba(176,141,110,0.08)"
                     : "var(--surface-hover)",
                 color: STUDIO_THEME.textSecondary,
                 fontSize: "12px",

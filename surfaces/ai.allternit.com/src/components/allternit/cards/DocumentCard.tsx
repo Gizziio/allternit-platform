@@ -88,8 +88,8 @@ export function DocumentCard({
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#333] bg-[#1e1e1e] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="size-8  rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-            <FileText className="size-4  text-[#D4956A]" />
+          <div className="size-8  rounded-lg bg-[#B08D6E]/10 flex items-center justify-center">
+            <FileText className="size-4  text-[#B08D6E]" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
@@ -105,7 +105,7 @@ export function DocumentCard({
           <div className="flex items-center gap-2">
             <div className="w-24 h-1.5 bg-[#333] rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-[#D4956A]"
+                className="h-full bg-[#B08D6E]"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.3 }}
@@ -189,7 +189,7 @@ export function DocumentCard({
                 href={citation.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#242424] border border-[#333] text-xs text-[#888] hover:text-[#D4956A] hover:border-[#D4956A]/30 transition-colors"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#242424] border border-[#333] text-xs text-[#888] hover:text-[#B08D6E] hover:border-[#B08D6E]/30 transition-colors"
               >
                 <span>[{citation.id}]</span>
                 <span className="truncate max-w-[120px]">{citation.source}</span>

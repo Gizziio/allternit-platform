@@ -139,10 +139,10 @@ function AgentCard({
       animate={{ opacity: 1, y: 0 }}
       style={{
         background: isActive
-          ? 'rgba(212,149,106,0.07)'
+          ? 'rgba(176,141,110,0.07)'
           : 'var(--surface-hover)',
         border: isActive
-          ? '1px solid rgba(212,149,106,0.25)'
+          ? '1px solid rgba(176,141,110,0.25)'
           : '1px solid var(--ui-border-muted)',
         borderRadius: 12,
         padding: '14px 16px',
@@ -159,8 +159,8 @@ function AgentCard({
             display: 'flex',
             alignItems: 'center',
             gap: 5,
-            background: 'rgba(212,149,106,0.15)',
-            border: '1px solid rgba(212,149,106,0.3)',
+            background: 'rgba(176,141,110,0.15)',
+            border: '1px solid rgba(176,141,110,0.3)',
             borderRadius: 20,
             padding: '3px 9px',
             fontSize: 12,
@@ -180,7 +180,7 @@ function AgentCard({
             width: 40,
             height: 40,
             borderRadius: 10,
-            background: isActive ? 'rgba(212,149,106,0.18)' : 'var(--ui-border-muted)',
+            background: isActive ? 'rgba(176,141,110,0.18)' : 'var(--ui-border-muted)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -218,7 +218,7 @@ function AgentCard({
             disabled={activating}
             style={{
               background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-              border: '1px solid rgba(212,149,106,0.25)',
+              border: '1px solid rgba(176,141,110,0.25)',
               borderRadius: 7,
               padding: '5px 12px',
               fontSize: 12,
@@ -265,8 +265,8 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
   return (
     <div
       style={{
-        background: 'rgba(212,149,106,0.06)',
-        border: '1px solid rgba(212,149,106,0.2)',
+        background: 'rgba(176,141,110,0.06)',
+        border: '1px solid rgba(176,141,110,0.2)',
         borderRadius: 12,
         padding: '16px 20px',
         marginBottom: 24,
@@ -282,7 +282,7 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
               width: 44,
               height: 44,
               borderRadius: 10,
-              background: 'rgba(212,149,106,0.15)',
+              background: 'rgba(176,141,110,0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -305,7 +305,7 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
               style={{
                 fontSize: 12,
                 background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-                border: '1px solid rgba(212,149,106,0.2)',
+                border: '1px solid rgba(176,141,110,0.2)',
                 borderRadius: 20,
                 padding: '2px 8px',
                 color: 'var(--accent-primary)',

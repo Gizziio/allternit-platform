@@ -53,7 +53,7 @@ interface ProgressItem {
 const MISSION_BG = 'var(--surface-canvas)';
 const MISSION_SURFACE = 'var(--surface-panel)';
 const AMBER = 'var(--accent-mission, var(--status-warning))';
-const CYAN = 'var(--accent-code, var(--status-info))';
+const CYAN = 'var(--accent-primary, var(--status-info))';
 const TEXT_PRIMARY = 'var(--text-primary)';
 const TEXT_SECONDARY = 'var(--text-secondary)';
 const TEXT_TERTIARY = 'var(--text-tertiary)';

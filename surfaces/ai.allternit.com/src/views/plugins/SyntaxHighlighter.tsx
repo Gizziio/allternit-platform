@@ -19,7 +19,7 @@ const THEME = {
   operator: 'var(--status-error)',
   punctuation: '#9ca3af',
   tag: '#f472b6',
-  attr: '#a78bfa',
+  attr: '#B08D6E',
   lineNumber: '#4b5563',
   border: 'rgba(212, 176, 140, 0.1)',
 };

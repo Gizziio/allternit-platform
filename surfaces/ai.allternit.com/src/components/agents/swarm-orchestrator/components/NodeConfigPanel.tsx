@@ -26,7 +26,7 @@ interface NodeConfigPanelProps {
   onUpdate: (updates: Partial<SwarmAgent>) => void;
   onDuplicate: () => void;
   onRemove: () => void;
-  modeColors: (typeof MODE_COLORS)['chat'];
+  modeColors: (typeof MODE_COLORS)['design'];
 }
 
 export function NodeConfigPanel({

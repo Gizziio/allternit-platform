@@ -521,7 +521,7 @@ export function NodeTerminal({
           {!isConnected && !isReconnecting && (
             <button type="button"
               onClick={handleManualReconnect}
-              className="text-xs px-2 py-1 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-code)]/90 transition-colors"
+              className="text-xs px-2 py-1 bg-[var(--accent-primary)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-primary)]/90 transition-colors"
             >
               Reconnect
             </button>
@@ -558,7 +558,7 @@ export function NodeTerminal({
           </div>
           <button type="button"
             onClick={handleKeepAlive}
-            className="text-xs px-3 py-1 bg-[var(--accent-code)] hover:bg-[var(--accent-code)]/90 text-[var(--text-inverse)] rounded transition-colors font-medium"
+            className="text-xs px-3 py-1 bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90 text-[var(--text-inverse)] rounded transition-colors font-medium"
           >
             Keep Alive
           </button>
@@ -582,7 +582,7 @@ export function NodeTerminal({
           ref={dropZoneRef}
           className={cn(
             "flex-1 relative bg-[var(--surface-canvas)]",
-            isDragging && "ring-2 ring-[var(--accent-code)] ring-inset"
+            isDragging && "ring-2 ring-[var(--accent-primary)] ring-inset"
           )}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
@@ -593,7 +593,7 @@ export function NodeTerminal({
           
           {/* Drag overlay */}
           {isDragging && (
-            <div className="absolute inset-0 bg-[var(--accent-code)]/10 flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 bg-[var(--accent-primary)]/10 flex items-center justify-center pointer-events-none">
               <div className="bg-[var(--surface-floating)]/90 px-6 py-4 rounded-lg shadow-lg text-center">
                 <UploadSimple className="size-8  mx-auto mb-2 text-primary" />
                 <p className="font-medium">Drop files to upload</p>
@@ -611,13 +611,13 @@ export function NodeTerminal({
                       setError(null);
                       handleManualReconnect();
                     }}
-                    className="text-xs px-3 py-1 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-code)]/90 transition-colors"
+                    className="text-xs px-3 py-1 bg-[var(--accent-primary)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-primary)]/90 transition-colors"
                   >
                     Retry
                   </button>
                   <button type="button"
                     onClick={() => setError(null)}
-                    className="text-xs text-[var(--accent-code)] hover:underline"
+                    className="text-xs text-[var(--accent-primary)] hover:underline"
                   >
                     Dismiss
                   </button>
@@ -648,7 +648,7 @@ export function NodeTerminal({
                 <p className="text-[var(--text-secondary)] mb-3">Disconnected from terminal</p>
                 <button type="button"
                   onClick={handleManualReconnect}
-                  className="text-xs px-4 py-2 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-code)]/90 transition-colors"
+                  className="text-xs px-4 py-2 bg-[var(--accent-primary)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-primary)]/90 transition-colors"
                 >
                   Reconnect Now
                 </button>
@@ -692,7 +692,7 @@ export function NodeTerminal({
                     <div className="mt-2">
                       <div className="h-1 bg-[var(--surface-panel)] rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-[var(--accent-code)] transition-all duration-300"
+                          className="h-full bg-[var(--accent-primary)] transition-all duration-300"
                           style={{ width: `${transfer.progress}%` }}
                         />
                       </div>

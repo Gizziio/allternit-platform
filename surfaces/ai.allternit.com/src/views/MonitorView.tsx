@@ -78,7 +78,7 @@ function buildSystemMetrics(d: MonitorSystemPayload): SystemMetric[] {
   });
   return [
     card('Uptime', uptime, '', 'var(--accent-primary)'),
-    card('DB Size', mb, 'MB', 'var(--accent-chat)'),
+    card('DB Size', mb, 'MB', 'var(--accent-primary)'),
     card('Agents', String(d.table_counts['agents'] ?? 0), 'rows', 'var(--status-success)'),
     card('Sessions', String(d.table_counts['beta_sessions'] ?? 0), 'rows', 'var(--accent-primary)'),
     card('Session Events', String(d.table_counts['beta_session_events'] ?? 0), 'rows', 'var(--text-secondary)'),
@@ -235,7 +235,7 @@ export function MonitorView() {
           { icon: Robot,      label: `${agents.length} total agents`,    color: 'text-[var(--text-secondary)]' },
           { icon: CheckCircle,label: `${activeCount} active`,            color: 'text-[var(--status-success)]' },
           { icon: Warning,    label: `${errorCount} with errors`,        color: 'text-[var(--status-error)]' },
-          { icon: Cpu,        label: `Avg ${avgLatency}ms latency`,      color: 'text-[var(--accent-chat)]' },
+          { icon: Cpu,        label: `Avg ${avgLatency}ms latency`,      color: 'text-[var(--accent-primary)]' },
           { icon: ChartLine,  label: `${(totalTokens/1000).toFixed(0)}K tokens (sessions)`, color: 'text-[var(--accent-primary)]' },
         ].map(({ icon: Icon, label, color }) => (
           <div key={label} className={`flex items-center gap-1.5 p-1.5 px-3.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[13px] font-medium ${color}`}>
@@ -277,7 +277,7 @@ export function MonitorView() {
             onClick={() => setActiveTab(tab.id)}
             className={`p-2.5 px-5 bg-transparent border-none cursor-pointer transition-all text-sm ${
               activeTab === tab.id 
-                ? 'border-b-2 border-solid border-[var(--accent-chat)] text-[var(--text-primary)] font-bold' 
+                ? 'border-b-2 border-solid border-[var(--accent-primary)] text-[var(--text-primary)] font-bold' 
                 : 'border-b-2 border-solid border-transparent text-[var(--text-tertiary)] font-normal hover:text-[var(--text-secondary)]'
             }`}
           >
@@ -395,7 +395,7 @@ export function MonitorView() {
                 onClick={() => setLogFilter(level)}
                 className={`p-1.5 px-4 rounded-full border border-solid text-[12px] font-semibold cursor-pointer uppercase tracking-wider transition-all ${
                   logFilter === level 
-                    ? 'bg-[var(--accent-chat)] border-transparent text-[var(--ui-text-inverse)]' 
+                    ? 'bg-[var(--accent-primary)] border-transparent text-[var(--ui-text-inverse)]' 
                     : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]'
                 }`}
               >

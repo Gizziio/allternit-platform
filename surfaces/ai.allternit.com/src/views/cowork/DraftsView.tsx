@@ -20,7 +20,7 @@ const getIcon = (type: Draft['type']) => {
     case 'document':
       return <FileText size={20} color="var(--status-info)" />;
     case 'table':
-      return <Table2 size={20} color="var(--accent-cowork)" />;
+      return <Table2 size={20} color="var(--accent-primary)" />;
     case 'code':
       return <Code size={20} color="var(--status-success)" />;
     default:
@@ -127,12 +127,12 @@ export const DraftsView: React.FC = () => {
                   borderRadius: '6px',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: editingId === draft.id ? 'var(--accent-cowork)' : 'var(--text-secondary)',
+                  color: editingId === draft.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
                   fontSize: '13px',
                   fontWeight: 500,
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  borderBottom: editingId === draft.id ? '2px solid var(--accent-cowork)' : '2px solid transparent',
+                  borderBottom: editingId === draft.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
                 }}
               >
                 Continue editing

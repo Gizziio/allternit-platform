@@ -98,7 +98,7 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
           flexShrink: 0,
         }}
       >
-        <PaneIcon size={16} weight="duotone" style={{ color: 'var(--accent-code)' }} />
+        <PaneIcon size={16} weight="duotone" style={{ color: 'var(--accent-primary)' }} />
         <span style={{ fontSize: 12, fontWeight: 650, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{paneMeta.label}</span>
         {activeTab === 'terminal' ? (
           <button

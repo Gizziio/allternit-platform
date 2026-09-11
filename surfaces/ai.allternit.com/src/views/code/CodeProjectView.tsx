@@ -203,7 +203,7 @@ export function CodeProjectView({ workspaceId, onBack: externalOnBack }: CodePro
           <button
             type="button"
             onClick={handleBack}
-            className="mt-4 px-4 py-2 rounded-lg bg-[var(--accent-code)] text-white cursor-pointer"
+            className="mt-4 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white cursor-pointer"
           >
             Back
           </button>

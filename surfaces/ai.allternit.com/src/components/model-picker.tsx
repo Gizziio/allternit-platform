@@ -263,7 +263,7 @@ function ProviderRow({
       onClick={handleRowClick}
       onKeyDown={handleRowKeyDown}
       className={cn(
-        "group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-chat)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--shell-view-bg)]",
+        "group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--shell-view-bg)]",
         expanded
           ? "bg-[var(--surface-hover)]"
           : "hover:bg-[var(--surface-hover)]",
@@ -278,7 +278,7 @@ function ProviderRow({
           <Checkbox
             checked={selected}
             onCheckedChange={onToggleSelect}
-            className="border-[var(--ui-border-default)] data-[state=checked]:bg-[var(--accent-chat)] data-[state=checked]:border-[var(--accent-chat)]"
+            className="border-[var(--ui-border-default)] data-[state=checked]:bg-[var(--accent-primary)] data-[state=checked]:border-[var(--accent-primary)]"
             aria-label={`Select ${providerName}`}
           />
         </div>
@@ -983,7 +983,7 @@ export function ModelPickerUI({
                             <Check
                               size={16}
                               weight="bold"
-                              className="text-[var(--accent-chat)] shrink-0"
+                              className="text-[var(--accent-primary)] shrink-0"
                             />
                           )}
                         </Command.Item>
@@ -1240,7 +1240,7 @@ export function ModelPickerUI({
                         <div className="flex items-center gap-2 flex-wrap">
                           <Sparkle
                             size={14}
-                            className="text-[var(--accent-chat)]"
+                            className="text-[var(--accent-primary)]"
                           />
                           <Label className="text-[var(--ui-text-secondary)] text-[var(--text-sm)] font-medium">
                             Runtime
@@ -1343,7 +1343,7 @@ export function ModelPickerUI({
                           onClick={handleConfirmCustom}
                           disabled={!validationResult?.valid || validationLoading}
                           style={{
-                            background: "var(--accent-chat)",
+                            background: "var(--accent-primary)",
                             color: "var(--ui-text-inverse)",
                           }}
                           className="w-full hover:opacity-90 text-[var(--text-sm)]"
@@ -1404,7 +1404,7 @@ export function ModelPickerUI({
                     disabled={selectedProviderIds.size === 0}
                     onClick={handleUseSelected}
                     style={{
-                      background: "var(--accent-chat)",
+                      background: "var(--accent-primary)",
                       color: "var(--ui-text-inverse)",
                     }}
                     className="hover:opacity-90 text-[var(--text-sm)]"

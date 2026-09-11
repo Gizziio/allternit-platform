@@ -155,7 +155,7 @@ export function buildCreateBotPayload({ formData, avatar }: BuildPayloadArgs): C
     botProfile.tagline?.trim() ||
     formData.description?.trim() ||
     `${displayName} is a custom Allternit bot.`;
-  const accentColor = botProfile.accentColor || "#D4956A";
+  const accentColor = botProfile.accentColor || "#B08D6E";
 
   return {
     ...formData,

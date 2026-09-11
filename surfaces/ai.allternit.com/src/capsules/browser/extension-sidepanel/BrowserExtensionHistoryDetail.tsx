@@ -14,7 +14,7 @@ import {
   TYPOGRAPHY,
 } from "@/design/allternit.tokens";
 
-const browser = MODE_COLORS.browser;
+const browser = MODE_COLORS.design;
 
 function ReflectionGrid({
   reflection,

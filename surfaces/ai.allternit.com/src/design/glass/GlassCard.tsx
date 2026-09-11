@@ -164,7 +164,7 @@ export function GlassCard({
   // Compute focus styles
   const focusStyles = isFocused ? {
     outline: 'none',
-    boxShadow: `0 0 0 2px var(--accent-chat), 0 0 0 4px ${darkMode ? 'rgba(212, 176, 140, 0.2)' : 'rgba(176, 141, 110, 0.2)'}`,
+    boxShadow: `0 0 0 2px var(--accent-primary), 0 0 0 4px ${darkMode ? 'rgba(212, 176, 140, 0.2)' : 'rgba(176, 141, 110, 0.2)'}`,
   } : {};
 
   // Animation styles

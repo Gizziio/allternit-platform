@@ -40,7 +40,7 @@ export function VoiceCallMode({
   open,
   onClose,
   agentName = "Assistant",
-  accentColor = "var(--accent-chat, #D4B08C)",
+  accentColor = "var(--accent-primary, #D4B08C)",
   onTranscript,
 }: VoiceCallModeProps) {
   const {

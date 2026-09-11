@@ -13,23 +13,23 @@
   
   /* Header */
   --ag-header-background-color: #1e1e1e;
-  --ag-header-foreground-color: #D4956A; /* Allternit accent */
+  --ag-header-foreground-color: #B08D6E; /* Allternit accent */
   --ag-header-cell-hover-background-color: #2a2a2a;
   
   /* Rows */
-  --ag-row-hover-color: rgba(212, 149, 106, 0.08);
-  --ag-selected-row-background-color: rgba(212, 149, 106, 0.15);
+  --ag-row-hover-color: rgba(176,141,110, 0.08);
+  --ag-selected-row-background-color: rgba(176,141,110, 0.15);
   --ag-odd-row-background-color: #1a1a1a;
   --ag-even-row-background-color: #1a1a1a;
   
   /* Cells */
   --ag-cell-horizontal-padding: 12px;
   --ag-cell-vertical-padding: 8px;
-  --ag-cell-focus-border: 1px solid #D4956A;
+  --ag-cell-focus-border: 1px solid #B08D6E;
   
   /* Inputs */
-  --ag-input-focus-border-color: #D4956A;
-  --ag-input-focus-box-shadow: 0 0 0 2px rgba(212, 149, 106, 0.2);
+  --ag-input-focus-border-color: #B08D6E;
+  --ag-input-focus-box-shadow: 0 0 0 2px rgba(176,141,110, 0.2);
   
   /* Scrollbars */
   --ag-scrollbar-background: transparent;
@@ -52,18 +52,18 @@
   --ag-row-group-indent-size: 16px;
   
   /* Checkbox */
-  --ag-checkbox-checked-color: #D4956A;
+  --ag-checkbox-checked-color: #B08D6E;
   --ag-checkbox-unchecked-color: #444;
   --ag-checkbox-background-color: transparent;
   --ag-checkbox-border-radius: 4px;
   
   /* Range selection */
-  --ag-range-selection-border-color: #D4956A;
-  --ag-range-selection-background-color: rgba(212, 149, 106, 0.15);
+  --ag-range-selection-border-color: #B08D6E;
+  --ag-range-selection-background-color: rgba(176,141,110, 0.15);
   
   /* Side panels */
-  --ag-side-button-selected-background-color: rgba(212, 149, 106, 0.15);
-  --ag-side-button-selected-border-color: #D4956A;
+  --ag-side-button-selected-background-color: rgba(176,141,110, 0.15);
+  --ag-side-button-selected-border-color: #B08D6E;
   
   /* Modal/popups */
   --ag-modal-overlay-background-color: rgba(0, 0, 0, 0.6);
@@ -159,7 +159,7 @@
 
 .ag-theme-allternit .ag-cell-inline-editing input {
   background: transparent;
-  border: 1px solid #D4956A;
+  border: 1px solid #B08D6E;
   color: #ECECEC;
   padding: 4px 8px;
   border-radius: 4px;
@@ -199,7 +199,7 @@
 
 /* ===== Sort Icons ===== */
 .ag-theme-allternit .ag-sort-indicator-icon {
-  color: #D4956A;
+  color: #B08D6E;
   opacity: 0.8;
 }
 
@@ -213,7 +213,7 @@
 }
 
 .ag-theme-allternit .ag-filter-active .ag-filter-icon {
-  color: #D4956A;
+  color: #B08D6E;
 }
 
 /* ===== Menu / Dropdowns ===== */
@@ -230,11 +230,11 @@
 }
 
 .ag-theme-allternit .ag-menu-option:hover {
-  background: rgba(212, 149, 106, 0.1);
+  background: rgba(176,141,110, 0.1);
 }
 
 .ag-theme-allternit .ag-menu-option-active {
-  background: rgba(212, 149, 106, 0.15) !important;
+  background: rgba(176,141,110, 0.15) !important;
 }
 
 .ag-theme-allternit .ag-menu-separator {
@@ -333,24 +333,24 @@
 
 /* ===== Range Selection ===== */
 .ag-theme-allternit .ag-cell-range-selected {
-  background: rgba(212, 149, 106, 0.2) !important;
-  border: 1px solid #D4956A !important;
+  background: rgba(176,141,110, 0.2) !important;
+  border: 1px solid #B08D6E !important;
 }
 
 .ag-theme-allternit .ag-cell-range-selected-1:not(.ag-cell-focus) {
-  background: rgba(212, 149, 106, 0.15);
+  background: rgba(176,141,110, 0.15);
 }
 
 .ag-theme-allternit .ag-cell-range-selected-2:not(.ag-cell-focus) {
-  background: rgba(212, 149, 106, 0.2);
+  background: rgba(176,141,110, 0.2);
 }
 
 .ag-theme-allternit .ag-cell-range-selected-3:not(.ag-cell-focus) {
-  background: rgba(212, 149, 106, 0.25);
+  background: rgba(176,141,110, 0.25);
 }
 
 .ag-theme-allternit .ag-cell-range-selected-4:not(.ag-cell-focus) {
-  background: rgba(212, 149, 106, 0.3);
+  background: rgba(176,141,110, 0.3);
 }
 
 /* ===== Floating Filter ===== */
@@ -369,7 +369,7 @@
 }
 
 .ag-theme-allternit .ag-floating-filter input:focus {
-  border-color: #D4956A;
+  border-color: #B08D6E;
   outline: none;
 }
 
@@ -378,7 +378,7 @@
 }
 
 .ag-theme-allternit .ag-floating-filter-button:hover {
-  color: #D4956A;
+  color: #B08D6E;
 }
 
 /* ===== Loading Overlay ===== */
@@ -425,7 +425,7 @@
 
 .ag-theme-allternit .ag-row-drag ghost {
   background: #242424;
-  border: 1px solid #D4956A;
+  border: 1px solid #B08D6E;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 

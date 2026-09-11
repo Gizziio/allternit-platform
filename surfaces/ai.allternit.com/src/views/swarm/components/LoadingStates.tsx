@@ -199,7 +199,7 @@ export function DetailLoading() {
 // ============================================================================
 
 export function InitialLoading() {
-  const modeColors = MODE_COLORS.code;
+  const modeColors = MODE_COLORS.design;
   
   return (
     <div
@@ -242,7 +242,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ type = 'no-agents', onRefresh, onClearFilters }: EmptyStateProps) {
-  const modeColors = MODE_COLORS.code;
+  const modeColors = MODE_COLORS.design;
 
   const configs = {
     'no-agents': {

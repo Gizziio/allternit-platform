@@ -131,7 +131,7 @@ export function CodeDiffPanel({ initialDiff = '', filePath, workingDir }: CodeDi
             borderRadius: 7,
             border: '1px solid var(--border-subtle)',
             background: 'var(--surface-panel)',
-            color: 'var(--accent-code)',
+            color: 'var(--accent-primary)',
           }}
         >
           <GitDiff size={14} weight="duotone" />

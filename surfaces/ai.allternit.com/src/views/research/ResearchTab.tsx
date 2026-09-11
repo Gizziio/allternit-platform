@@ -398,7 +398,7 @@ export function ResearchTab() {
                   color: 'var(--text-primary, #e5e5e5)',
                 }}
               >
-                <BookOpen size={14} color="#a78bfa" />
+                <BookOpen size={14} color="#B08D6E" />
                 {activeNotebook?.title || 'Select Notebook'}
                 <ChevronDown size={12} color="var(--text-muted, #a1a1aa)" style={{ transform: showNotebookDropdown ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
               </button>
@@ -430,14 +430,14 @@ export function ResearchTab() {
                       }}
                       className="w-full text-left px-3 py-2 text-[13px]"
                       style={{
-                        color: nb.id === activeNotebookId ? '#a78bfa' : 'var(--text-primary, #e5e5e5)',
-                        background: nb.id === activeNotebookId ? 'rgba(167,139,250,.1)' : 'transparent',
+                        color: nb.id === activeNotebookId ? '#B08D6E' : 'var(--text-primary, #e5e5e5)',
+                        background: nb.id === activeNotebookId ? 'rgba(176,141,110,.1)' : 'transparent',
                         border: 'none',
                         cursor: 'pointer',
                         transition: 'background .12s',
                       }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.06)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = nb.id === activeNotebookId ? 'rgba(167,139,250,.1)' : 'transparent'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = nb.id === activeNotebookId ? 'rgba(176,141,110,.1)' : 'transparent'; }}
                     >
                       {nb.title}
                     </button>
@@ -475,7 +475,7 @@ export function ResearchTab() {
                 onClick={() => setShowToolsOnMobile(!showToolsOnMobile)}
                 className="research-btn-secondary"
                 style={{
-                  backgroundColor: showToolsOnMobile ? 'rgba(167, 139, 250, 0.15)' : undefined,
+                  backgroundColor: showToolsOnMobile ? 'rgba(176,141,110, 0.15)' : undefined,
                 }}
               >
                 Tools
@@ -519,7 +519,7 @@ export function ResearchTab() {
                   className="research-btn-icon"
                   style={{
                     background: inputValue.trim() && activeNotebook
-                      ? 'linear-gradient(135deg, #7c3aed, #a78bfa)'
+                      ? 'linear-gradient(135deg, #B08D6E, #B08D6E)'
                       : 'var(--bg-tertiary, #18181b)',
                     opacity: inputValue.trim() && activeNotebook ? 1 : 0.5,
                     cursor: inputValue.trim() && activeNotebook ? 'pointer' : 'not-allowed',
@@ -588,7 +588,7 @@ export function ResearchTab() {
                     className="research-btn-icon"
                     style={{
                       background: inputValue.trim() && activeNotebook
-                        ? 'linear-gradient(135deg, #7c3aed, #a78bfa)'
+                        ? 'linear-gradient(135deg, #B08D6E, #B08D6E)'
                         : 'var(--bg-tertiary, #18181b)',
                       opacity: inputValue.trim() && activeNotebook ? 1 : 0.5,
                       cursor: inputValue.trim() && activeNotebook ? 'pointer' : 'not-allowed',

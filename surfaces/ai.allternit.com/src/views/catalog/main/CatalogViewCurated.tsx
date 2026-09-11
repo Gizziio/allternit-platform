@@ -36,7 +36,7 @@ export const CatalogViewCurated: React.FC<CatalogViewCuratedProps> = ({
             </span>
             <button type="button"
               onClick={() => showNotification('Export/Canvas upload coming soon!')}
-              className="px-4 py-2 bg-[var(--accent,#7c3aed)] border-none rounded-md text-white font-semibold text-[13px] cursor-pointer transition-all hover:opacity-90"
+              className="px-4 py-2 bg-[var(--accent,#B08D6E)] border-none rounded-md text-white font-semibold text-[13px] cursor-pointer transition-all hover:opacity-90"
             >
               Export to Canvas LMS
             </button>

@@ -50,7 +50,7 @@ const COLUMNS: KanbanColumn[] = [
   { id: 'backlog', title: 'Backlog', status: 'backlog', color: TEXT.tertiary },
   { id: 'ready', title: 'Ready', status: 'ready', color: STATUS.info },
   { id: 'in-progress', title: 'In Progress', status: 'in-progress', color: '#c17817' },
-  { id: 'review', title: 'Review', status: 'review', color: '#a78bfa' },
+  { id: 'review', title: 'Review', status: 'review', color: '#B08D6E' },
   { id: 'done', title: 'Done', status: 'done', color: STATUS.success },
 ];
 

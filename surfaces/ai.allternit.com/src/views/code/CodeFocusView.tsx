@@ -59,7 +59,7 @@ export function CodeFocusView({ tile, workspace, onExit, onClose }: CodeFocusVie
                     : tile.type === 'diff'
                       ? 'var(--status-warning)'
                       : tile.type === 'terminal'
-                        ? 'var(--accent-cowork)'
+                        ? 'var(--accent-primary)'
                         : tile.type === 'notes'
                           ? 'var(--accent-secondary)'
                           : tile.type === 'knowledge'

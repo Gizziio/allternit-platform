@@ -29,7 +29,7 @@ function McpServerCard({ tool, installed, onInstall }: McpServerCardProps) {
         transition: "all 0.15s ease",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "var(--accent-chat)";
+        e.currentTarget.style.borderColor = "var(--accent-primary)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = "var(--ui-border-muted)";
@@ -80,7 +80,7 @@ function McpServerCard({ tool, installed, onInstall }: McpServerCardProps) {
               gap: 4,
               padding: "6px 12px",
               borderRadius: 6,
-              background: "var(--accent-chat)",
+              background: "var(--accent-primary)",
               color: "#000",
               border: "none",
               fontSize: 12,
@@ -193,9 +193,9 @@ export function McpMarketplace({ onInstall }: McpMarketplaceProps) {
               padding: "6px 14px",
               borderRadius: 8,
               border: "1px solid",
-              borderColor: sourceFilter === source ? "var(--accent-chat)" : "var(--ui-border-muted)",
+              borderColor: sourceFilter === source ? "var(--accent-primary)" : "var(--ui-border-muted)",
               background: sourceFilter === source ? "var(--chat-composer-soft)" : "transparent",
-              color: sourceFilter === source ? "var(--accent-chat)" : "var(--ui-text-secondary)",
+              color: sourceFilter === source ? "var(--accent-primary)" : "var(--ui-text-secondary)",
               fontSize: 13,
               fontWeight: 600,
               cursor: "pointer",

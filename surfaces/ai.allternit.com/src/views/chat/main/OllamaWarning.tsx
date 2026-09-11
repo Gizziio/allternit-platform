@@ -19,14 +19,14 @@ export const OllamaWarning = ({
           <strong>Local Brain is offline.</strong> Make sure Ollama is running, then{' '}
           <button type="button"
             onClick={() => { window.dispatchEvent(new Event('focus')); }}
-            className="bg-transparent border-none cursor-pointer text-[var(--accent-chat)] text-[12px] font-semibold p-0 underline"
+            className="bg-transparent border-none cursor-pointer text-[var(--accent-primary)] text-[12px] font-semibold p-0 underline"
           >
             retry
           </button>
           {' '}or{' '}
           <button type="button"
             onClick={startSelection}
-            className="bg-transparent border-none cursor-pointer text-[var(--accent-chat)] text-[12px] font-semibold p-0 underline"
+            className="bg-transparent border-none cursor-pointer text-[var(--accent-primary)] text-[12px] font-semibold p-0 underline"
           >
             switch model
           </button>.

@@ -49,9 +49,9 @@ const SURFACE_ICON: Record<string, React.ElementType> = {
 
 const SURFACE_COLOR: Record<string, string> = {
   chat:   '#D97757',
-  cowork: '#A78BFA',
+  cowork: '#B08D6E',
   bot:    '#2DD4BF',
-  code:   '#79C47C',
+  code:   '#B08D6E',
 };
 
 const SURFACE_TO_VIEW: Record<string, string> = {
