@@ -32,6 +32,7 @@ event vocabulary; this surface translates to Allternit names on read.
 | `budget` | object | no | `{ "max_tokens"?, "max_turns"?, "max_tool_calls"? }`. |
 | `metadata` | object | no | Arbitrary key/value object. Defaults to `{}`. |
 | `brain_id` | string \| null | no | Brain to attach. Must exist for the caller or create returns `400`. Stored on the session row and returned as `brain_id`. |
+| `bot_id` | string | no | Bot Agent id (`is_bot` agent). If `agent` is omitted, this agent is used. Returned on the session. |
 
 Computer kinds:
 
