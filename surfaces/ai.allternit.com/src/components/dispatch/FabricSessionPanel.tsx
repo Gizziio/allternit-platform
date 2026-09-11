@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow } from '@phosphor-icons/react';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow, CaretLeft } from '@phosphor-icons/react';
 import type { RuntimeViewModel } from '@/components/dispatch/useRuntimes';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -256,8 +256,14 @@ export function FabricSessionPanel({
   );
 
   useEffect(() => {
-    if (selectedSessionId && kindSessions.some((entry) => entry.session.id === selectedSessionId)) return;
-    setSelectedSessionId(kindSessions[0]?.session.id ?? null);
+    setDriveKind('chat');
+    setSelectedSessionId(null);
+  }, [runtimeId]);
+
+  useEffect(() => {
+    if (!selectedSessionId) return;
+    if (kindSessions.some((entry) => entry.session.id === selectedSessionId)) return;
+    setSelectedSessionId(null);
   }, [driveKind, kindSessions, selectedSessionId]);
 
   useEffect(() => {
@@ -435,12 +441,19 @@ export function FabricSessionPanel({
     );
   }
 
+  const showDetail = driveKind === 'desktop' || Boolean(selectedSession);
+
   return (
     <div
-      className="h-full min-h-0 grid overflow-hidden"
-      style={{ gridTemplateColumns: '268px minmax(0, 1fr)', background: 'var(--shell-frame-bg)', color: 'var(--shell-item-fg)' }}
+      className="h-full min-h-0 overflow-hidden flex flex-col md:grid md:grid-cols-[268px_minmax(0,1fr)]"
+      style={{ background: 'var(--shell-frame-bg)', color: 'var(--shell-item-fg)' }}
     >
-      <aside className="flex flex-col min-h-0 bg-[var(--shell-rail-bg)] border-r border-solid border-[var(--border-subtle)] rounded-tr-2xl rounded-br-2xl">
+      <aside
+        className={cn(
+          'flex flex-col min-h-0 bg-[var(--shell-rail-bg)] border-r border-solid border-[var(--border-subtle)] rounded-tr-2xl rounded-br-2xl',
+          showDetail && 'hidden md:flex',
+        )}
+      >
         <div className="px-3 pt-3 pb-2 shrink-0">
           <div className="flex p-0.5 bg-[var(--surface-hover)] rounded-xl gap-0.5 border border-solid border-[var(--border-subtle)]">
             {FABRIC_DRIVE_KINDS.map((tab) => {
@@ -606,7 +619,23 @@ export function FabricSessionPanel({
         )}
       </aside>
 
-      <div className="flex flex-col min-w-0 min-h-0 bg-[var(--shell-view-bg)]">
+      <div
+        className={cn(
+          'flex flex-col min-w-0 min-h-0 bg-[var(--shell-view-bg)]',
+          !showDetail && 'hidden md:flex',
+        )}
+      >
+        <button
+          type="button"
+          className="md:hidden shrink-0 h-10 px-3 flex items-center gap-2 border-b border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] text-[13px] font-semibold text-[var(--shell-item-fg)] cursor-pointer border-x-0 border-t-0"
+          onClick={() => {
+            setSelectedSessionId(null);
+            if (driveKind === 'desktop') setDriveKind('chat');
+          }}
+        >
+          <CaretLeft size={16} weight="bold" />
+          Sessions
+        </button>
         {driveKind === 'desktop' ? (
           <div className="flex-1 min-h-0 p-3">
             <FabricDesktopDrive runtimeId={runtimeId} getToken={getToken} hostName={runtime?.name || runtime?.host} />
