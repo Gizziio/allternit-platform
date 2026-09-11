@@ -2,6 +2,7 @@ import React, { useEffect, useReducer } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CaretLeft, House } from '@phosphor-icons/react';
 import { isElectronShell } from '@/lib/platform';
+import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 
 /**
  * Chrome for the standalone office routes (/docs, /sheets, /slides, /pdf,
@@ -83,6 +84,12 @@ export function OfficePageChrome(): React.ReactNode {
           <House size={15} weight="bold" />
         </ChromeButton>
       </div>
+      <span
+        data-testid="office-chrome-wordmark"
+        className="inline-flex items-center shrink-0 [WebkitAppRegion:no-drag]"
+      >
+        <AProtocolWordmark suffix="OFFICE" height={12} theme="adaptive" />
+      </span>
       {/* Draggable title-bar area across the rest of the bar (frameless Electron) */}
       <div className="flex-1 h-full [WebkitAppRegion:drag]" />
     </div>

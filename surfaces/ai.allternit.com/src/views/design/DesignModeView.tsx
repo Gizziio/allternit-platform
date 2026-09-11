@@ -11,6 +11,8 @@ import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
 import { useDesignSessionStore, useDesignSessionActions, createDesignSession } from "./DesignSessionStore";
 import { NativeOriginBanner } from "@/components/native-sessions/NativeOriginBanner";
+import { AProtocolWordmark } from "@/components/AProtocolWordmark";
+import { isElectronShell } from "@/lib/platform";
 import { useDesignTabStore } from "../../stores/design-tab.store";
 import { useDesignProjectStore } from "@/views/project/design/design-project.store";
 import { NewProjectScreen } from './NewProjectScreen';
@@ -638,6 +640,12 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
         <Panel>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-secondary)" }}>
             <header style={{ height: "56px", borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-panel)", display: "flex", alignItems: "center", padding: "0 16px", flexShrink: 0 }}>
+               {/* A://TERNIT DESIGN wordmark — leftmost; in the frameless
+                   Electron design window the macOS traffic lights float over
+                   the top-left, so reserve their 72px there. */}
+               <span data-testid="design-wordmark" style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, marginRight: 12, marginLeft: isElectronShell() ? 72 : 0 }}>
+                 <AProtocolWordmark suffix="DESIGN" height={12} theme="adaptive" />
+               </span>
                {/* Scrollable tab strip */}
                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", overflowX: "auto", scrollbarWidth: "none", minWidth: 0 }}>
                  {activeProject.tabs.map(tab => (
