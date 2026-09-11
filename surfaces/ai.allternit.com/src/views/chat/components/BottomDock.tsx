@@ -52,7 +52,7 @@ function ChatCoworkToggle() {
             className={cn(
               'flex items-center gap-1 px-2 h-full border-none rounded-md transition-all duration-150 text-xs font-semibold',
               isActive
-                ? '-my-0.5 bg-composer-soft text-primary'
+                ? '-my-0.5 h-[calc(100%+0.25rem)] bg-composer-soft text-primary'
                 : 'bg-transparent text-muted hover:text-primary'
             )}
           >
