@@ -32,6 +32,29 @@ export interface DesignDirection {
 
 export const DESIGN_DIRECTIONS: DesignDirection[] = [
   {
+    id: 'allternit-brand',
+    label: 'A:// Design System — Allternit brand',
+    mood: "Allternit's canonical brand direction. Ivory paper surfaces (#FAF8F4) with graphite ink (#1F1B16) and a single amber accent (#B08D6E). Editorial serif display over quiet sans body; mono for kickers and data. Warm, confident, no purple, no coral, no ornament.",
+    references: ['Allternit brand', 'A:// Design System'],
+    displayFont: '"Allternit Serif", Newsreader, Georgia, serif',
+    bodyFont: '"Allternit Sans", Inter, ui-sans-serif, system-ui, sans-serif',
+    monoFont: '"Allternit Mono", "JetBrains Mono", ui-monospace, monospace',
+    palette: {
+      bg:      '#FAF8F4',
+      surface: '#F5F3EE',
+      fg:      '#1F1B16',
+      muted:   '#8F7A66',
+      border:  '#DDD8CD',
+      accent:  '#B08D6E',
+    },
+    posture: [
+      'amber accent #B08D6E used at most twice per screen — never purple/indigo, never coral',
+      'ivory backgrounds with hairline #DDD8CD borders instead of shadows',
+      'Newsreader display serif for headlines, Inter-bodied Allternit Sans for UI',
+      'inline SVG icons only — emoji reads as placeholder',
+    ],
+  },
+  {
     id: 'editorial-monocle',
     label: 'Editorial — Monocle / FT magazine',
     mood: 'Print-magazine feel. Generous whitespace, large serif headlines, restrained palette of off-white paper + ink + a single warm accent. Confident, quietly intelligent.',

@@ -13,14 +13,15 @@ menus (tokens, shadow, z-index, entrance animation, keyboard support).
   Claude desktop = Chat/Cowork/Code session-type entries; composer + = icon rows).
 - Created session worktree `allternit-session-742d251e` on `session/742d251e`
   from `origin/main` (1e52b9ea7).
+- Implemented: shared `ShellMenu` primitive + rewired create menu (Plus button,
+  icon + single-line items, collapsed-rail support). Typecheck clean on touched
+  files; FloatingWidgets vitest 6/6. Committed, pushed, PR #335.
+- Merged origin/main (checkpoint.md conflict with session/dmp1-0911's stale
+  checkpoint resolved in favor of this session — dmp1's work is merged + attested).
 
 ## Next
-1. Shared shell menu primitive (Escape/arrows/outside-click/focus return,
-   sibling-consistent tokens + submenuSlideIn animation).
-2. `+` (Plus) button in expanded AND collapsed rail; menu items become
-   icon + single-line: New Chat / New Agent Session / Continue CLI Session.
-3. Typecheck, commit, push, PR, merge, ledger attestation, desktop preview rebuild.
+- Merge PR #335; sync main; ledger attestation; desktop preview rebuild; cleanup.
 
 ## Open questions
-- Whether to add a "New Project" row (Anthropic lists projects): only if the shell
-  already exposes a create-project handler; otherwise out of scope for this pass.
+- Whether to add a "New Project" row (Anthropic lists projects): deferred — the
+  shell has no existing create-project handler to wire; noted for a future pass.

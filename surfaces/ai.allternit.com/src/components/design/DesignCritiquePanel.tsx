@@ -188,7 +188,7 @@ export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Sparkle size={20} weight="fill" style={{ color: 'var(--accent, #8b5cf6)' }} />
+            <Sparkle size={20} weight="fill" style={{ color: 'var(--accent, var(--accent-primary, #B08D6E))' }} />
             <div>
               <div style={{ fontSize: 16, fontWeight: 700 }}>Allternit Design Critique</div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -228,7 +228,7 @@ export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) 
                 padding: '7px 14px',
                 borderRadius: 8,
                 border: 'none',
-                background: !hasArtifact ? 'var(--surface-hover)' : 'var(--accent, #8b5cf6)',
+                background: !hasArtifact ? 'var(--surface-hover)' : 'var(--accent, var(--accent-primary, #B08D6E))',
                 color: '#fff',
                 fontSize: 12,
                 fontWeight: 700,
