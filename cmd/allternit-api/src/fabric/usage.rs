@@ -240,10 +240,11 @@ impl UsageIngestor {
 
         // Charge the customer outside the usage transaction so the two
         // operations do not deadlock on the same file-backed database.
-        // If the charge fails due to insufficient credits, the cost event is
-        // still recorded and the usage event remains marked processed; a
-        // separate reconciliation flow can handle the unpaid charge.
-        let charge_result = ledger.charge(
+        // Metered usage has already been consumed, so the charge is recorded
+        // even when the balance cannot cover it: the balance goes negative
+        // (debt) instead of the cost silently disappearing. New provisioning
+        // stays blocked via available_cents until the org tops up.
+        let charge_result = ledger.charge_overdraft(
             &organization_id,
             retail_cents,
             &format!("fabric usage: {} {} {}", event.event_type, event.quantity, event.unit),
@@ -251,22 +252,23 @@ impl UsageIngestor {
             Some(&event.id),
         );
         match charge_result {
-            Ok(_) => {
-                info!(
-                    event_id = %event.id,
-                    organization_id = %organization_id,
-                    retail_cents = retail_cents,
-                    "charged usage to ledger"
-                );
-            }
-            Err(CreditsError::InsufficientCredits { balance, required }) => {
-                warn!(
-                    event_id = %event.id,
-                    organization_id = %organization_id,
-                    balance = balance,
-                    required = required,
-                    "usage ledger charge failed due to insufficient credits"
-                );
+            Ok(entry) => {
+                if entry.balance_cents_after < 0 {
+                    warn!(
+                        event_id = %event.id,
+                        organization_id = %organization_id,
+                        retail_cents = retail_cents,
+                        balance_cents_after = entry.balance_cents_after,
+                        "usage charge recorded as overdraft debt"
+                    );
+                } else {
+                    info!(
+                        event_id = %event.id,
+                        organization_id = %organization_id,
+                        retail_cents = retail_cents,
+                        "charged usage to ledger"
+                    );
+                }
             }
             Err(e) => return Err(UsageError::Credits(e)),
         }
@@ -645,7 +647,7 @@ mod tests {
     }
 
     #[test]
-    fn process_event_insufficient_credits_records_cost_but_marks_processed() {
+    fn process_event_insufficient_credits_records_cost_and_debt() {
         let db = test_db("org-1");
         seed_resource_class(&db, "s", 3600);
         seed_resource(&db, "resource-1", "org-1", "s");
@@ -678,6 +680,13 @@ mod tests {
             )
             .unwrap();
         assert_eq!(cost_count, 1);
+
+        // The metered charge is recorded as debt (negative balance), not dropped.
+        assert_eq!(ledger.balance_cents("org-1").unwrap(), 10 - 3600);
+        let charges = ledger.list("org-1", 10).unwrap();
+        assert_eq!(charges.len(), 2); // seed grant + usage charge
+        assert_eq!(charges[0].transaction_type, TransactionType::Charge);
+        assert_eq!(charges[0].amount_cents, -3600);
 
         assert!(ingestor.list_unprocessed(10).unwrap().is_empty());
     }
