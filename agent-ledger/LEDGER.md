@@ -21,6 +21,26 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 20:54 — grok — Cloud Agents Phase 2 turn lifecycle (rq-20260910-002)
+
+- **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
+- **Agent:** grok (CLI executors quota-blocked)
+- **Summary:** Merged PR #286 (de9a497f1) — work-task ack/stop emit turn completed/failed + session.idle; `GET /sessions/:id/turns`; TS/Python turns clients. Completions/Responses untouched.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/286 · de9a497f1ef9e706abd8b1054e4b13007bbd75ff
+- **How it works:** `emit_turn_terminal` on `/beta/work` ack/stop when `session_id` is set and the session is not archived. Public status still derived from in-flight work. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Sandbox entitlement, vaults, brains, schedules, tool_search (new named approve). Dollar budget parked. Interrupt does not emit `turn.failed`. Bot Agents BA-* separate.
+- **Summary file:** [2026-09-10-2054-allternit-runtime-api-p2-grok.md](./summaries/2026-09-10-2054-allternit-runtime-api-p2-grok.md)
+
+### 2026-09-10 20:50 — grok — watch strip in chat (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-screen-in-chat` (worktree `allternit-ao-openbot-policy-gateway`)
+- **Agent:** grok
+- **Summary:** Merged PR #283 (0fa6782db) — live desktop screenshot + compact audit tool rows in the bot session column; per-thread mute. Not injected into message bubbles.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/283 · 0fa6782db32101c64d8ce91c6b4801a47147baec
+- **How it works:** `BotWatchStrip` polls `getBotDesktopScreenshot` and `GET /api/aci/policy/audit`. Click opens existing computer pane. Mute is local. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Herald subagent tree (no event feed on this path yet).
+- **Summary file:** [2026-09-10-2050-openbot-screen-in-chat-grok.md](./summaries/2026-09-10-2050-openbot-screen-in-chat-grok.md)
+
 ### 2026-09-10 19:27 — grok — pet avatars + long-running bot session chrome (rq-20260910-001)
 
 - **Session ID / Branch:** `ao/openbot-session-chrome` (worktree `allternit-ao-openbot-policy-gateway`)

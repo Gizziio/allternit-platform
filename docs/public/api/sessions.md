@@ -78,8 +78,10 @@ curl -X POST http://localhost:8013/api/v1/sessions \
 }
 ```
 
-`status` is `running` while the initial input's run is queued. With no input
-it is `idle`.
+`status` is `running` while the initial input's run is queued. When the
+work task is acked (`POST /beta/work/:id/ack`), the session returns to
+`idle` and the event list includes `turn.completed` then `session.idle`.
+With no input it is `idle`.
 
 ---
 
@@ -202,6 +204,36 @@ names.
 
 Each event is `{ "id", "type", "session_id", "created_at", "data" }` plus a
 monotonic `sequence` for ordering.
+
+---
+
+## List turns
+
+`GET /sessions/:id/turns`
+
+Turns are derived from the public event stream. A `turn.started` event
+opens a turn; `turn.completed` or `turn.failed` closes it. The turn `id`
+is the `turn.started` event id. Oldest first. No pagination in this
+release.
+
+### Response `200`
+
+```json
+{
+  "turns": [
+    {
+      "id": "7b…:turn.started",
+      "status": "completed",
+      "started_at": "2026-09-10 12:00:00",
+      "completed_at": "2026-09-10 12:00:05"
+    }
+  ]
+}
+```
+
+A turn still in flight has `status: "running"` and `completed_at: null`.
+`user.interrupt` returns the session to `idle` but does not require a
+`turn.failed` event; the open turn may still list as `running`.
 
 ---
 

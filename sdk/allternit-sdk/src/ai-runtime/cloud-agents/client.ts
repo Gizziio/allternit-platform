@@ -1,6 +1,7 @@
 import type {
   CloudSession,
   CloudSessionEvent,
+  CloudTurn,
   CreateCloudSessionOptions,
   SendCloudSessionEvent,
 } from "./types.js";
@@ -105,6 +106,19 @@ export class CloudSessionsResource {
   }
 
   readonly events = new CloudSessionEventsResource(this.client);
+  readonly turns = new CloudSessionTurnsResource(this.client);
+}
+
+export class CloudSessionTurnsResource {
+  constructor(private readonly client: Allternit) {}
+
+  /** List turns for a session, oldest first. */
+  async list(sessionId: string): Promise<CloudTurn[]> {
+    const body = await this.client.request<{ turns: CloudTurn[] }>(
+      `/api/v1/sessions/${encodeURIComponent(sessionId)}/turns`,
+    );
+    return body.turns;
+  }
 }
 
 export class CloudSessionEventsResource {

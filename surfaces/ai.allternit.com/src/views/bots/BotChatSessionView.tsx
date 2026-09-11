@@ -13,6 +13,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Bell,
+  BellSlash,
   Broadcast,
   Desktop,
   Paperclip,
@@ -49,7 +51,12 @@ import { ModelPicker, type ModelSelection } from "@/components/model-picker";
 import { getProviderMeta } from "@/lib/providers/provider-registry";
 import { BotComputerViewport } from "./BotComputerViewport";
 import { PolicyGovernance } from "./PolicyGovernance";
+import { BotWatchStrip } from "./BotWatchStrip";
 import { useBotActiveVm } from "./useBotActiveVm";
+import {
+  isBotThreadMuted,
+  setBotThreadMuted,
+} from "@/lib/bots/bot-thread-notify";
 import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
 import { botSessionStatus } from "@/lib/bots/bot-session-chrome";
 
@@ -205,7 +212,14 @@ function BotChatSessionContent({
   const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const [computerOpen, setComputerOpen] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [notifyMuted, setNotifyMuted] = useState(() =>
+    isBotThreadMuted(session?.id)
+  );
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
+
+  useEffect(() => {
+    setNotifyMuted(isBotThreadMuted(session?.id));
+  }, [session?.id]);
 
   // The computer pane is user-driven only: it opens via the top-right
   // "Computer" button, never on its own. Connect the bot to the global
@@ -436,6 +450,22 @@ function BotChatSessionContent({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {sessionId && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={notifyMuted ? "Unmute this thread" : "Mute this thread"}
+              aria-pressed={notifyMuted}
+              onClick={() => {
+                const next = !notifyMuted;
+                setBotThreadMuted(sessionId, next);
+                setNotifyMuted(next);
+              }}
+            >
+              {notifyMuted ? <BellSlash size={16} /> : <Bell size={16} />}
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -476,6 +506,15 @@ function BotChatSessionContent({
         sessionMode={session?.metadata?.sessionMode}
         isBot={session?.metadata?.isBot === true}
       />
+
+      {botId && (session?.metadata?.sessionMode === "agent" || session?.metadata?.isBot === true) && (
+        <BotWatchStrip
+          botId={botId}
+          sandboxId={activeVM?.status === "running" ? activeVM.id : undefined}
+          computerOpen={computerOpen}
+          onOpenComputer={() => setComputerOpen(true)}
+        />
+      )}
 
       <div className="flex min-h-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
