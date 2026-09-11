@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { Browser, Code, Robot, TerminalWindow } from '@phosphor-icons/react';
+import { Browser, Code, Monitor, Robot, TerminalWindow } from '@phosphor-icons/react';
 import type { FabricDriveKind } from '@/lib/fabric-session-kind';
 import type {
   FabricBot,
@@ -18,6 +18,7 @@ export function FabricKindIcon({ kind, size = 14 }: { kind: FabricDriveKind; siz
   if (kind === 'code') return <Code size={size} weight="bold" />;
   if (kind === 'aci') return <Browser size={size} weight="bold" />;
   if (kind === 'bot') return <Robot size={size} weight="bold" />;
+  if (kind === 'desktop') return <Monitor size={size} weight="bold" />;
   return <TerminalWindow size={size} weight="bold" />;
 }
 

@@ -1,0 +1,14 @@
+{
+  "name": "phone-remote",
+  "version": "0.1.0",
+  "private": true,
+  "description": "View and control this Mac's desktop from an iPhone over Tailscale — PWA, no iOS app, zero npm dependencies.",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "test": "node test/ws.test.mjs",
+    "smoke": "node test/smoke.mjs",
+    "build-capture": "swiftc -O -o server/capture/sc_capture server/capture/sc_capture.swift"
+  },
+  "engines": { "node": ">=22" }
+}

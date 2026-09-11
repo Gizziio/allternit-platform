@@ -1,17 +1,18 @@
 import type { FabricSession } from '@/lib/dispatch/fabric-session-client';
 
-export type FabricDriveKind = 'chat' | 'bot' | 'code' | 'aci';
+export type FabricDriveKind = 'chat' | 'bot' | 'code' | 'aci' | 'desktop';
 
 export const FABRIC_DRIVE_KINDS: Array<{
   id: FabricDriveKind;
   label: string;
   hint: string;
-  surface: 'chat' | 'cowork' | 'bot' | 'code' | 'browser';
+  surface: 'chat' | 'cowork' | 'bot' | 'code' | 'browser' | 'desktop';
 }> = [
   { id: 'chat', label: 'Chat', hint: 'Regular agent sessions', surface: 'chat' },
   { id: 'bot', label: 'Bots', hint: 'Named bots and cowork runs', surface: 'bot' },
   { id: 'code', label: 'Code', hint: 'Repo sessions with a live terminal', surface: 'code' },
   { id: 'aci', label: 'ACI', hint: 'Computer-use / browser-driven sessions', surface: 'browser' },
+  { id: 'desktop', label: 'Desktop', hint: 'Live display of this machine — view and control', surface: 'desktop' },
 ];
 
 export function fabricSessionKind(session: Pick<FabricSession, 'surface' | 'agentID' | 'title' | 'directory'>): FabricDriveKind {
@@ -54,6 +55,6 @@ export function fabricSessionKind(session: Pick<FabricSession, 'surface' | 'agen
   return 'chat';
 }
 
-export function fabricKindSurface(kind: FabricDriveKind): 'chat' | 'cowork' | 'bot' | 'code' | 'browser' {
+export function fabricKindSurface(kind: FabricDriveKind): 'chat' | 'cowork' | 'bot' | 'code' | 'browser' | 'desktop' {
   return FABRIC_DRIVE_KINDS.find((entry) => entry.id === kind)?.surface ?? 'chat';
 }
