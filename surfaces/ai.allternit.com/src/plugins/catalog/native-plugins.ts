@@ -407,18 +407,6 @@ export const NATIVE_PLUGIN_CATALOG: NativePluginCatalogEntry[] = [
     ]
   },
   {
-    "id": "codex-verceldeploy-plugin",
-    "name": "Vercel Deploy",
-    "description": "Deploy projects to Vercel instantly via API",
-    "version": "1.0.0",
-    "category": "automate",
-    "origin": "codex",
-    "tags": [
-      "codex",
-      "workflow"
-    ]
-  },
-  {
     "id": "allternit-alabs-course-pipeline",
     "name": "ALabs Course Pipeline",
     "description": "End-to-end A://Labs course creation pipeline. Creates Canvas courses, generates interactive HTML modules from Allternit packages, syncs quizzes, tracks…",

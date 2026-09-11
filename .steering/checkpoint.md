@@ -1,9 +1,30 @@
-# Checkpoint — session/fabricfix-0911
+# Checkpoint — session/rmvercel-0911
 
-**Goal:** Merge the verified fabric-session fixes (kernel /api/v1/fabric/* + /api/v1/session-worker/invoke local fallbacks in fabric_routes.rs; desktop auth-manager.ts relay intercepts) to main, then rebuild Desktop.app from merged main and redeploy the running app.
+## Goal
+Remove Vercel from the codebase: dead verceldeploy plugin wiring (hosting
+integration we don't use). The Vercel GitHub App that posts PR checks is a
+dashboard-side integration — removal steps reported to owner, not code.
 
-**Just did:** Copied the two changed files from the shared checkout (source of truth for the live fix) into a fresh worktree on origin/main. release-preflight 35/0 OK. cargo check running.
+## Just did
+- Worktree `allternit-session-rmvercel-0911` on `session/rmvercel-0911`
+  from origin/main (e6bea0466).
+- Removed dead `verceldeploy` MCP server from `.mcp.json` (pointed into
+  archive/ — already broken), `.vercel` lines from `.gitignore` /
+  `.dockerignore`, the stale `VERCEL_AGENT_PLUGIN_ADAPTER_PHASE_1_TASK.md`
+  next-batch doc (plugin archived), the `codex-verceldeploy-plugin` entry
+  from the native plugin catalog, the Phase 1 check + expected ids from
+  `scripts/validate-codex-plugins.ts`, and all vercel sections from
+  `docs/PLUGIN_AND_SERVICE_INTEGRATION.md`.
+- Deliberately left: archive/, agent-ledger history, the open-connector
+  vercel provider + icons (product connector catalog), the design-system
+  library's "vercel" preset + style mentions, the website plugin's
+  `deploymentTarget: 'vercel'` option, vendored + THIRD_PARTY files.
+- Verified: `.mcp.json` parses; ai typecheck 0 errors; vitest 1650 pass;
+  validator script runs (5p/3f — was 5p/4f on clean main; remaining
+  failures pre-existing, remotion/iosappbuild also archived).
 
-**Next:** commit → push → PR → merge --merge → attest ledger → rebuild desktop (npm run build + electron-builder --mac dmg, unsigned) → verify bundle → quit live app, replace release app + /Applications copy, relaunch, re-verify health + fabric probes.
+## Next
+- Commit, push, PR, merge; attest; cleanup.
 
-**Open questions:** none — change already battle-tested on the live app 2026-09-11 (kernel healthy, 4 fabric endpoints 200 JSON, provider pool healthy, asar durable across relaunch).
+## Open questions
+- None.
