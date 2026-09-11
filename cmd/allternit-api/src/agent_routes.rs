@@ -40,6 +40,7 @@ pub fn agent_router() -> Router<Arc<AppState>> {
         .route("/agents", get(list_agents).post(create_agent))
         .route("/agent-templates", get(list_templates))
         .route("/agents/from-template", post(instantiate_template))
+        .route("/agents/prototype", post(create_prototype_agent))
         .route(
             "/agents/:id",
             get(get_agent).put(update_agent).delete(delete_agent),
@@ -193,6 +194,10 @@ struct ListQuery {
     status: Option<String>,
     #[serde(rename = "type")]
     agent_type: Option<String>,
+    /// `?include=prototypes` opts in to prototype-status agents (Agent Studio
+    /// drafts). Every other caller keeps the pre-Studio behavior of seeing
+    /// only finished agents.
+    include: Option<String>,
 }
 
 // ─── List agents ──────────────────────────────────────────────────────────────
@@ -230,6 +235,9 @@ async fn list_agents(
         if let Some(tp) = &q.agent_type {
             sql.push_str(" AND type = ?");
             params_vec.push(tp.clone());
+        }
+        if q.include.as_deref() != Some("prototypes") {
+            sql.push_str(" AND status != 'prototype'");
         }
         sql.push_str(" ORDER BY updated_at DESC");
 
@@ -756,6 +764,222 @@ async fn create_agent(
         }
         Ok(Err(e)) => {
             warn!("DB error creating agent: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ─── Prototype agent (Agent Studio) ───────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct CreatePrototypeBody {
+    name: String,
+    description: Option<String>,
+    system_prompt: Option<String>,
+    model: String,
+    temperature: Option<f64>,
+    max_tokens: Option<i64>,
+    tools: Option<serde_json::Value>,
+    /// Accepted for forward compatibility with the studio run tab; a
+    /// prototype save never executes.
+    #[serde(default)]
+    messages: Option<serde_json::Value>,
+}
+
+/// Copyable request snippet for a freshly saved prototype, mirroring the
+/// console's `sessionCreateCurl` / `sessionCreateSdk` pair in
+/// `surfaces/ai.allternit.com/src/lib/agents-console-api.ts`.
+fn prototype_example(agent_id: &str) -> serde_json::Value {
+    let base = std::env::var("ALLTERNIT_API_BASE")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "http://127.0.0.1:8013".to_string());
+    let run_body = json!({ "input": "Your message here" });
+    let curl = [
+        format!("curl -X POST {base}/api/v1/agents/{agent_id}/runs \\"),
+        "  -H \"Authorization: Bearer $ALLTERNIT_API_KEY\" \\".to_string(),
+        "  -H \"Content-Type: application/json\" \\".to_string(),
+        format!("  -d '{}'", run_body),
+    ]
+    .join("\n");
+    let sdk = [
+        "import { Allternit } from \"@allternit/sdk/cloud-agents\";".to_string(),
+        "const allternit = new Allternit({ apiKey, baseURL });".to_string(),
+        format!(
+            "const run = await allternit.request(\"/api/v1/agents/{agent_id}/runs\", {{"
+        ),
+        "  method: \"POST\",".to_string(),
+        format!("  body: JSON.stringify({run_body}),"),
+        "});".to_string(),
+    ]
+    .join("\n");
+    json!({ "curl": curl, "sdk": sdk })
+}
+
+/// `POST /agents/prototype` — Agent Studio save. Persists (or updates, keyed
+/// by user + name) a real agents row with status `prototype`, so studio
+/// drafts are durable without polluting the main agent list.
+async fn create_prototype_agent(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Json(body): Json<CreatePrototypeBody>,
+) -> impl IntoResponse {
+    let name = body.name.trim().to_string();
+    if name.len() < 2 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "name must be at least 2 characters"})),
+        )
+            .into_response();
+    }
+    let model = body.model.trim().to_string();
+    if model.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "model is required"})),
+        )
+            .into_response();
+    }
+    let temperature = body.temperature.unwrap_or(0.7).clamp(0.0, 2.0);
+    let max_tokens = body.max_tokens.unwrap_or(4096);
+    if max_tokens < 1 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "max_tokens must be at least 1"})),
+        )
+            .into_response();
+    }
+    let tools = body.tools.clone().unwrap_or_else(|| json!([]));
+
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let user_id_for_db = user_id.clone();
+    let description = body.description.clone();
+    let system_prompt = body.system_prompt.clone();
+    let config = json!({ "maxTokens": max_tokens, "prototype": true });
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+
+        // Idempotent save: a studio draft with the same name updates in place.
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM agents WHERE user_id = ?1 AND name = ?2 AND status = 'prototype'",
+                params![user_id_for_db, name],
+                |row| row.get(0),
+            )
+            .ok();
+
+        let final_id = match existing {
+            Some(id) => {
+                conn.execute(
+                    "UPDATE agents SET description = ?1, system_prompt = ?2, model = ?3,
+                             temperature = ?4, tools = ?5, config = ?6, updated_at = CURRENT_TIMESTAMP
+                     WHERE id = ?7",
+                    params![
+                        description,
+                        system_prompt,
+                        model,
+                        temperature,
+                        tools.to_string(),
+                        config.to_string(),
+                        id
+                    ],
+                )?;
+                id
+            }
+            None => {
+                let body = CreateAgentBody {
+                    id: None,
+                    name: name.clone(),
+                    description,
+                    agent_type: Some("worker".to_string()),
+                    parent_agent_id: None,
+                    mode: Some("primary".to_string()),
+                    model,
+                    provider: "allternit".to_string(),
+                    capabilities: None,
+                    system_prompt,
+                    tools: Some(tools),
+                    max_iterations: Some(10),
+                    temperature: Some(temperature),
+                    config: Some(config),
+                    status: Some("prototype".to_string()),
+                    workspace_id: None,
+                    avatar: None,
+                    identity_key: None,
+                    trust_tier: Some("standard".to_string()),
+                    harness_config: None,
+                    enabled_modes: Some(json!(["chat"])),
+                    character_json: None,
+                    allowed_skills: None,
+                    allowed_tools: None,
+                    category: None,
+                    tags: None,
+                    data_classification: None,
+                    write_scope: None,
+                    is_bot: None,
+                    bot_profile: None,
+                    connector_bindings: None,
+                    secret_refs: None,
+                    messaging_config: None,
+                    identity_channels: None,
+                    vm_operator: None,
+                };
+                persist_agent(&conn, &user_id_for_db, body)?
+            }
+        };
+
+        let agent = conn.query_row(
+            "SELECT id, name, description, model, provider, system_prompt, tools, temperature,
+                    config, status, created_at, updated_at
+             FROM agents WHERE id = ?1",
+            params![final_id],
+            |row| {
+                Ok(json!({
+                    "id": row.get::<_, String>(0)?,
+                    "name": row.get::<_, String>(1)?,
+                    "description": row.get::<_, Option<String>>(2)?,
+                    "model": row.get::<_, String>(3)?,
+                    "provider": row.get::<_, String>(4)?,
+                    "system_prompt": row.get::<_, Option<String>>(5)?,
+                    "tools": parse_json_column(row.get::<_, Option<String>>(6)?),
+                    "temperature": row.get::<_, f64>(7)?,
+                    "config": parse_json_column(row.get::<_, Option<String>>(8)?),
+                    "status": row.get::<_, String>(9)?,
+                    "created_at": row.get::<_, String>(10)?,
+                    "updated_at": row.get::<_, String>(11)?,
+                }))
+            },
+        )?;
+        Ok::<_, rusqlite::Error>((final_id, agent))
+    })
+    .await;
+
+    match result {
+        Ok(Ok((id, agent))) => (
+            StatusCode::CREATED,
+            Json(json!({
+                "agent": agent,
+                "example": prototype_example(&id),
+            })),
+        )
+            .into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error saving prototype agent: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": e.to_string()})),
@@ -3627,5 +3851,192 @@ async fn rate_listing(
             warn!("DB task panicked: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
+
+    use crate::beta_session_routes::tests as beta_test;
+
+    fn request(path: &str, method: &str, body: &serde_json::Value, user: &str) -> Request<Body> {
+        Request::builder()
+            .method(method)
+            .uri(path)
+            .header("content-type", "application/json")
+            .extension(beta_test::test_user(user))
+            .body(Body::from(body.to_string()))
+            .unwrap()
+    }
+
+    async fn post_json(
+        router: &Router,
+        path: &str,
+        body: &serde_json::Value,
+        user: &str,
+    ) -> (StatusCode, serde_json::Value) {
+        let response = router
+            .clone()
+            .oneshot(request(path, "POST", body, user))
+            .await
+            .unwrap();
+        let status = response.status();
+        let payload: serde_json::Value = serde_json::from_slice(
+            &response.into_body().collect().await.unwrap().to_bytes(),
+        )
+        .unwrap_or_else(|_| json!({}));
+        (status, payload)
+    }
+
+    async fn get_json(
+        router: &Router,
+        path: &str,
+        user: &str,
+    ) -> (StatusCode, serde_json::Value) {
+        let response = router
+            .clone()
+            .oneshot(request(path, "GET", &json!({}), user))
+            .await
+            .unwrap();
+        let status = response.status();
+        let payload: serde_json::Value = serde_json::from_slice(
+            &response.into_body().collect().await.unwrap().to_bytes(),
+        )
+        .unwrap_or_else(|_| json!({}));
+        (status, payload)
+    }
+
+    fn prototype_body() -> serde_json::Value {
+        json!({
+            "name": "Studio Draft",
+            "description": "A test prototype",
+            "system_prompt": "Be helpful.",
+            "model": "allternit-fast",
+            "temperature": 0.5,
+            "max_tokens": 2048,
+            "tools": ["web_search", "bash"],
+        })
+    }
+
+    #[tokio::test]
+    async fn prototype_save_persists_real_row_with_example() {
+        let temp = beta_test::temp_dir("prototype-save");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = agent_router().with_state(state.clone());
+
+        let (status, payload) =
+            post_json(&router, "/agents/prototype", &prototype_body(), "user-a").await;
+        assert_eq!(status, StatusCode::CREATED);
+        assert_eq!(payload["agent"]["status"], "prototype");
+        assert_eq!(payload["agent"]["name"], "Studio Draft");
+        assert_eq!(payload["agent"]["model"], "allternit-fast");
+        assert_eq!(payload["agent"]["temperature"], 0.5);
+        assert_eq!(payload["agent"]["config"]["maxTokens"], 2048);
+        assert_eq!(payload["agent"]["tools"], json!(["web_search", "bash"]));
+        assert!(payload["example"]["curl"].as_str().unwrap().contains("/runs"));
+        assert!(payload["example"]["sdk"].as_str().unwrap().contains("Allternit"));
+
+        // A real row exists in the canonical table.
+        let conn = state.db.connect().unwrap();
+        let (db_status, system_prompt): (String, Option<String>) = conn
+            .query_row(
+                "SELECT status, system_prompt FROM agents WHERE id = ?1",
+                params![payload["agent"]["id"].as_str().unwrap()],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(db_status, "prototype");
+        assert_eq!(system_prompt.as_deref(), Some("Be helpful."));
+    }
+
+    #[tokio::test]
+    async fn prototype_save_is_idempotent_by_name() {
+        let temp = beta_test::temp_dir("prototype-upsert");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = agent_router().with_state(state.clone());
+
+        let (s1, p1) = post_json(&router, "/agents/prototype", &prototype_body(), "user-a").await;
+        assert_eq!(s1, StatusCode::CREATED);
+        let first_id = p1["agent"]["id"].as_str().unwrap().to_string();
+
+        // Second save with the same name updates the same row.
+        let mut updated = prototype_body();
+        updated["description"] = json!("Updated description");
+        let (s2, p2) = post_json(&router, "/agents/prototype", &updated, "user-a").await;
+        assert_eq!(s2, StatusCode::CREATED);
+        assert_eq!(p2["agent"]["id"], first_id);
+        assert_eq!(p2["agent"]["description"], "Updated description");
+
+        let conn = state.db.connect().unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM agents WHERE user_id = 'user-a' AND status = 'prototype'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn list_agents_excludes_prototypes_unless_requested() {
+        let temp = beta_test::temp_dir("prototype-list");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = agent_router().with_state(state);
+
+        post_json(&router, "/agents/prototype", &prototype_body(), "user-a").await;
+
+        let (status, payload) = get_json(&router, "/agents", "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(payload["agents"].as_array().unwrap().len(), 0);
+
+        let (status, payload) = get_json(&router, "/agents?include=prototypes", "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        let agents = payload["agents"].as_array().unwrap();
+        assert_eq!(agents.len(), 1);
+        assert_eq!(agents[0]["status"], "prototype");
+    }
+
+    #[tokio::test]
+    async fn get_agent_returns_prototype_by_id() {
+        let temp = beta_test::temp_dir("prototype-get");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = agent_router().with_state(state);
+
+        let (_, payload) = post_json(&router, "/agents/prototype", &prototype_body(), "user-a").await;
+        let id = payload["agent"]["id"].as_str().unwrap();
+
+        let (status, payload) = get_json(&router, &format!("/agents/{id}"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(payload["agent"]["status"], "prototype");
+    }
+
+    #[tokio::test]
+    async fn prototype_save_validates_input() {
+        let temp = beta_test::temp_dir("prototype-validate");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = agent_router().with_state(state);
+
+        let mut bad = prototype_body();
+        bad["name"] = json!("x");
+        let (status, payload) = post_json(&router, "/agents/prototype", &bad, "user-a").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(payload["error"].as_str().unwrap().contains("name"));
+
+        let mut bad = prototype_body();
+        bad["model"] = json!("");
+        let (status, _) = post_json(&router, "/agents/prototype", &bad, "user-a").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+
+        let mut bad = prototype_body();
+        bad["max_tokens"] = json!(0);
+        let (status, _) = post_json(&router, "/agents/prototype", &bad, "user-a").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
     }
 }
