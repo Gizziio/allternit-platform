@@ -377,7 +377,7 @@ export function RecentsView(): React.ReactNode {
               <div className="flex flex-col gap-3">
                 <FilterRow label="Type" value={typeFilter === 'all' ? 'All' : KIND_LABELS[typeFilter]}>
                   <div className="flex flex-col gap-0.5">
-                    {(['all', 'chat', 'task', 'agent', 'browser', 'code'] as const).map((k) => (
+                    {(['all', 'chat', 'cloud', 'task', 'agent', 'browser', 'code'] as const).map((k) => (
                       <button
                         key={k}
                         type="button"
