@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:33 — grok — persist bot.brain execution bind (BA-3)
+
+- **Session ID / Branch:** `ao/ba-3-brain-bind`
+- **Agent:** grok (merge after GH Actions green; implementation not this session)
+- **Summary:** Merged PR #293 (b6013f12d) — durable `bot.brain` execution bind; native harness fail-closed; Hub chip + CommRails session join.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/293 · b6013f12d1fc625933ead6e16e6cc7997321da97
+- **How it works:** Stored in `config.botBrain`. Missing harness does not fall through to Allternit cloud. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** BA follow-ups beyond Slice A (brain bind only).
+- **Summary file:** [2026-09-10-2133-ba-3-brain-bind-grok.md](./summaries/2026-09-10-2133-ba-3-brain-bind-grok.md)
+
 ### 2026-09-10 21:30 — grok — UHP/harness remaining work (rq-20260908-028)
 
 - **Session ID / Branch:** follow-up backlog (no branch yet)
