@@ -10,6 +10,7 @@ import { ToastProvider } from '@/components/ui/toast-provider'
 import { FabricSessionApp } from './App'
 import { VoiceProvider } from '@/providers/voice-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { GlobalDropzoneProvider } from '@/components/GlobalDropzone'
 
 import '@/design/theme.css'
 import '@/styles/fonts.css'
@@ -39,7 +40,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <ToastProvider>
                 <TooltipProvider>
                   <VoiceProvider>
-                    <FabricSessionApp />
+                    <GlobalDropzoneProvider>
+                      <FabricSessionApp />
+                    </GlobalDropzoneProvider>
                   </VoiceProvider>
                 </TooltipProvider>
               </ToastProvider>
