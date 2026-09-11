@@ -50,7 +50,6 @@ build/
 !infrastructure/executor/ao-engine/vendor/libghostty-vt/src/build/
 !infrastructure/executor/ao-engine/vendor/libghostty-vt/src/apprt/gtk/build/
 out/
-.vercel
 .next/
 *.tsbuildinfo
 !cmd/gizzi-code/packages/sdk/dist/
