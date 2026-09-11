@@ -17,6 +17,7 @@ import {
   usePlatformAuth,
 } from "@/lib/platform-auth-client";
 import { PlatformUsageDashboard } from "@/components/PlatformUsageDashboard";
+import { ModelCardsSection } from "@/components/console/ModelCardsSection";
 import { listRuntimeDevices, type RuntimeDevice } from "@/lib/devices";
 import { getHostedEntitlement, type HostedRuntimeEntitlement } from "@/lib/hosted-compute";
 
@@ -252,6 +253,9 @@ export function DashboardPage() {
 
       {/* Usage + breakdown */}
       <PlatformUsageDashboard />
+
+      {/* Models */}
+      <ModelCardsSection />
 
       {/* Recent activity */}
       <RecentActivity devices={devices} />
