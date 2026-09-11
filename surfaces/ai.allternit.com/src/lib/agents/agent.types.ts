@@ -60,6 +60,37 @@ export interface HarnessConfig {
   subprocess?: HarnessSubprocessConfig;
 }
 
+/**
+ * Bot Agents BA-3 execution brain. Distinct from `brainId` (Gizzi `/api/v1/brains`).
+ * Join key: `nativeSessionId` ↔ `AgentInfo.agent_session`.
+ */
+export type BotBrainMode = 'native_harness' | 'allternit_cloud' | 'uhp_harness';
+
+export interface BotBrainModelRef {
+  providerID: string;
+  modelID: string;
+}
+
+export interface BotBrainBinding {
+  mode: BotBrainMode;
+  /** Native CLI harness when mode is `native_harness` (`codex` | `claude` | `kimi` | …). */
+  harness?: string;
+  nativeSessionId?: string;
+  uhpHarnessId?: string;
+  modelRef?: BotBrainModelRef;
+}
+
+export const botBrainSchema = z.object({
+  mode: z.enum(['native_harness', 'allternit_cloud', 'uhp_harness']),
+  harness: z.string().min(1).optional(),
+  nativeSessionId: z.string().min(1).optional(),
+  uhpHarnessId: z.string().min(1).optional(),
+  modelRef: z.object({
+    providerID: z.string().min(1),
+    modelID: z.string().min(1),
+  }).optional(),
+});
+
 export const harnessConfigSchema = z.object({
   mode: z.enum(['byok', 'cloud', 'local', 'subprocess']),
   byok: z.object({
@@ -329,8 +360,10 @@ export interface Agent {
   isBot?: boolean;
   /** Bot-specific UX metadata (only present when isBot is true) */
   botProfile?: BotProfile;
-  /** Gizzi brain this bot routes through (chosen from /api/v1/brains) */
+  /** Gizzi knowledge brain (chosen from /api/v1/brains). Not the BA-3 execution bind. */
   brainId?: string;
+  /** Bot Agents BA-3 execution brain. Distinct from `brainId`. */
+  brain?: BotBrainBinding;
 
   // ── Autonomous Bot primitives ────────────────────────────────────────────
   /** Connectors bound to this agent for autonomous use */
@@ -739,6 +772,7 @@ export const agentSchema = z.object({
     avatar: z.any().optional(),
   }).optional(),
   brainId: z.string().optional(),
+  brain: botBrainSchema.optional(),
   connectorBindings: z.array(agentConnectorBindingSchema).optional(),
   secretRefs: z.array(agentSecretRefSchema).optional(),
   messagingConfig: agentMessagingConfigSchema.optional(),
@@ -837,8 +871,10 @@ export interface CreateAgentInput {
   isBot?: boolean;
   /** Bot-specific UX metadata (only present when isBot is true) */
   botProfile?: BotProfile;
-  /** Gizzi brain this bot routes through (chosen from /api/v1/brains) */
+  /** Gizzi knowledge brain (chosen from /api/v1/brains). Not the BA-3 execution bind. */
   brainId?: string;
+  /** Bot Agents BA-3 execution brain. Distinct from `brainId`. */
+  brain?: BotBrainBinding;
 
   // ── Autonomous Bot primitives ────────────────────────────────────────────
   /** Connectors bound to this agent for autonomous use */
@@ -896,6 +932,7 @@ const createAgentInputSchema = z.object({
     sectionId: z.string().optional(),
   }).optional(),
   brainId: z.string().optional(),
+  brain: botBrainSchema.optional(),
   connectorBindings: z.array(agentConnectorBindingSchema).optional(),
   secretRefs: z.array(agentSecretRefSchema).optional(),
   messagingConfig: agentMessagingConfigSchema.optional(),

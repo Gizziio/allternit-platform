@@ -106,6 +106,7 @@ function buildInitialFormData(draft?: Partial<CreateAgentInput>): Partial<Create
       botCategory: draft?.botProfile?.botCategory || "custom",
     },
     brainId: draft?.brainId || "",
+    brain: draft?.brain ?? { mode: "allternit_cloud" },
   };
 }
 

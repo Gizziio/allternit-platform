@@ -38,6 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WIZARD_COPY } from "../wizard-copy";
+import { BotBrainBindFields } from "@/lib/bots/BotBrainBindFields";
+import { defaultBotBrain, normalizeBotBrain } from "@/lib/bots/bot-brain";
 
 const HARNESS_MODES = [
   { id: "cloud", label: "Cloud", icon: Cloud },
@@ -230,10 +232,27 @@ export function ComputerRuntimeStep({
           </p>
         </div>
 
+        <div className="mb-5">
+          <BotBrainBindFields
+            value={formData.brain ?? defaultBotBrain()}
+            onChange={(brain) =>
+              setFormData((prev) => ({
+                ...prev,
+                brain: normalizeBotBrain(
+                  brain,
+                  prev.provider && prev.model
+                    ? { providerID: prev.provider, modelID: prev.model }
+                    : undefined,
+                ),
+              }))
+            }
+          />
+        </div>
+
         {brains.length > 0 ? (
           <div className="mb-5">
             <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
-              {copy.brainLabel}
+              {copy.knowledgeBrainLabel}
             </Label>
             {brainsLoading ? (
               <div className="h-10 rounded-lg bg-[var(--bg-primary)] animate-pulse" />

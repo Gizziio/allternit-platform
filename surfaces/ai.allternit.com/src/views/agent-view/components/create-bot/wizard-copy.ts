@@ -87,8 +87,9 @@ export const WIZARD_COPY = {
       intelligenceTitle: "Intelligence",
       intelligenceDescription:
         "Pre-selected with sensible defaults — change anything here, or leave it as is.",
+      knowledgeBrainLabel: "Gizzi knowledge",
+      noBrains: "No Gizzi knowledge brains found. Select a platform model below.",
       brainLabel: "Brain",
-      noBrains: "No gizzi brains found. Select a platform model below.",
       modelLabel: "Model",
       providerLabel: "Provider",
       harnessLabel: "Harness",
@@ -123,6 +124,7 @@ export const WIZARD_COPY = {
     summaryComputerOn: "Always-on desktop",
     summaryComputerOff: "No desktop",
     summaryModel: "Model",
+    summaryBrain: "Brain",
     untitledBot: "Untitled bot",
   },
   provisioning: {

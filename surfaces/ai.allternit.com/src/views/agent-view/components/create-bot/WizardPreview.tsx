@@ -6,6 +6,7 @@ import { BOT_CATEGORIES } from "@/lib/bots/bot-profile";
 import { describeDesktopResources } from "@/lib/bots/vm-operator";
 import { BotHubCard } from "@/views/agent-hub/main/BotHubCard";
 import { WIZARD_COPY } from "./wizard-copy";
+import { botBrainLabel, normalizeBotBrain } from "@/lib/bots/bot-brain";
 
 interface WizardPreviewProps {
   formData: Partial<CreateAgentInput>;
@@ -44,10 +45,11 @@ export function WizardPreview({ formData, avatar }: WizardPreviewProps) {
       // render exactly as they will after create.
       avatar,
       vmOperator: formData.vmOperator,
+      brain: formData.brain,
       status: "idle",
       category: formData.category ?? "general",
     } as Agent;
-  }, [avatar, botProfile, copy.untitledBot, formData.category, formData.description, formData.name, formData.vmOperator]);
+  }, [avatar, botProfile, copy.untitledBot, formData.brain, formData.category, formData.description, formData.name, formData.vmOperator]);
 
   const toolCount = formData.allowedTools?.length ?? 0;
   const computerOn = formData.vmOperator?.enabled === true;
@@ -78,6 +80,17 @@ export function WizardPreview({ formData, avatar }: WizardPreviewProps) {
               ? `${copy.summaryComputerOn} · ${describeDesktopResources(formData.vmOperator?.resources)}`
               : copy.summaryComputerOff
           }
+        />
+        <SummaryRow
+          label={copy.summaryBrain}
+          value={botBrainLabel(
+            normalizeBotBrain(
+              formData.brain,
+              formData.provider && formData.model
+                ? { providerID: formData.provider, modelID: formData.model }
+                : undefined,
+            ),
+          )}
         />
         <SummaryRow
           label={copy.summaryModel}

@@ -118,6 +118,32 @@ describe('wizard-state — payload building', () => {
     expect(checklist.isValid).toBe(true);
   });
 
+  it('persists bot.brain separately from Gizzi brainId', () => {
+    const form = baseFormData({
+      brainId: 'gizzi-brain-1',
+      brain: { mode: 'native_harness', harness: 'codex', nativeSessionId: 'codex-1' },
+    });
+    form.botProfile = { ...form.botProfile!, displayName: 'Quinn' };
+    const payload = buildCreateBotPayload({ formData: form, avatar: dummyAvatar });
+    expect(payload.brainId).toBe('gizzi-brain-1');
+    expect(payload.brain).toEqual({
+      mode: 'native_harness',
+      harness: 'codex',
+      nativeSessionId: 'codex-1',
+      modelRef: { providerID: 'anthropic', modelID: 'test-model' },
+    });
+    expect((payload.config as Record<string, unknown>).botBrain).toEqual(payload.brain);
+    expect((payload.config as Record<string, unknown>).brainId).toBe('gizzi-brain-1');
+  });
+
+  it('defaults execution brain to allternit_cloud', () => {
+    const form = baseFormData();
+    form.botProfile = { ...form.botProfile!, displayName: 'Quinn' };
+    const payload = buildCreateBotPayload({ formData: form, avatar: dummyAvatar });
+    expect(payload.brain?.mode).toBe('allternit_cloud');
+    expect(payload.brain?.modelRef).toEqual({ providerID: 'anthropic', modelID: 'test-model' });
+  });
+
   it('gates create on the real checklist (model missing → invalid)', () => {
     const form = baseFormData({ model: '' });
     form.botProfile = { ...form.botProfile!, displayName: 'Quinn' };
