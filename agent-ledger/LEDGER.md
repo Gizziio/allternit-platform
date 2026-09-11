@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-11 — grok — Cloud Agents Phase 4 leftovers + Computer Cloud (rq-20260910-002)
+
+- **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
+- **Agent:** grok
+- **Summary:** Merged PR #295 (8788dd6b5) — threads, outputs, schedules alias, toolset, permission field; sandbox/desktop provision Computer Cloud Cloud Desktop, not Fly. 503 without VM driver. fabric still 400.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/295 · 8788dd6b5d319bfb33cfb778f99452793fbbb18a
+- **How it works:** Session create calls existing Computer Cloud standalone desktop spawn (ephemeral vs session persistence). GitHub Actions green; Vercel + Pages Git ignored.
+- **Outstanding work:** Map fabric → Computer Cloud; live Incus/Tart driver; dollar budget parked; Bot Agents BA-*.
+- **Summary file:** [2026-09-11-allternit-runtime-api-p4-grok.md](./summaries/2026-09-11-allternit-runtime-api-p4-grok.md)
+
 ### 2026-09-10 21:59 — grok — ao visibility HTTP + SDK client.bots (BA-8)
 
 - **Session ID / Branch:** `ao/ba-remaining` (worktree `allternit-ao-ba-remaining`)
