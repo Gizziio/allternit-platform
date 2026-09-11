@@ -28,23 +28,32 @@ test('ACI Extensions shell view shows only the extensions manager', async ({ pag
   await expect(page.getByTestId('office-card-docs')).toHaveCount(0);
 });
 
-test('ACI mode footer swaps the Design button for Allternit Office', async ({ page }) => {
+test('footer rail shows Allternit Office above Design in every mode', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('allternit-platform-mode', 'chat');
   });
   await page.goto('/');
 
-  // Home mode keeps the Design footer button.
-  await expect(page.getByRole('button', { name: 'Design' })).toBeVisible({ timeout: 45000 });
-  await expect(page.getByTestId('rail-open-office')).toHaveCount(0);
+  // Home mode: both entries, office first.
+  const office = page.getByTestId('rail-open-office');
+  const design = page.getByTestId('rail-open-design');
+  await expect(office).toBeVisible({ timeout: 45000 });
+  await expect(design).toBeVisible();
+  await expect(page.getByTestId('rail-office-wordmark')).toBeVisible();
+  expect(await office.boundingBox().then((b) => b?.y ?? -1)).toBeLessThan(
+    await design.boundingBox().then((b) => b?.y ?? Infinity),
+  );
 
-  // ACI mode replaces it with the Allternit Office entry (wordmark + label).
+  // ACI mode: same pair, same order.
   await expect(async () => {
     await page.getByRole('button', { name: 'ACI', exact: true }).click();
     await expect(page.getByTestId('rail-open-office')).toBeVisible({ timeout: 3000 });
   }).toPass({ timeout: 45000 });
+  await expect(design).toBeVisible();
   await expect(page.getByTestId('rail-office-wordmark')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Design' })).toHaveCount(0);
+  expect(await office.boundingBox().then((b) => b?.y ?? -1)).toBeLessThan(
+    await design.boundingBox().then((b) => b?.y ?? Infinity),
+  );
 });
 
 test('ACI Allternit Office entry opens the office surface', async ({ page }) => {

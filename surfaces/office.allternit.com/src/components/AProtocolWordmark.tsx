@@ -53,6 +53,7 @@ const GLYPHS: Record<string, ReadonlyArray<readonly [number, number]>> = {
   B: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 0], [2, 0], [3, 0], [4, 1], [1, 2], [2, 2], [3, 2], [4, 3], [1, 4], [2, 4], [3, 4]],
   F: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [1, 2], [2, 2], [3, 2], [0, 3], [0, 4]],
   C: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
+  G: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [4, 3], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
 };
 
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
@@ -73,8 +74,7 @@ function layout(word: string): { letters: LetterSpec[]; totalCols: number } {
       continue;
     }
     const cells = GLYPHS[ch];
-    if (!cells) continue;
-    letters.push({ cells, col });
+    if (cells) letters.push({ cells, col });
     col += PITCH;
   }
   return { letters, totalCols: col - 1 };
