@@ -700,6 +700,8 @@ async fn main() {
         .merge(cowork_team_router())
         .merge(board_stream_router())
         .merge(runtime_backend_router())
+        .merge(allternit_api::runtime_settings_routes::runtime_settings_router())
+        .merge(allternit_api::monitor_routes::monitor_router())
         .merge(remote_control_router())
         .merge(fabric_router())
         .merge(agents_v1_router())

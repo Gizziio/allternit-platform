@@ -83,6 +83,7 @@ const TerminalClerkPage = lazy(() => import('./pages/TerminalClerkPage'))
 const OfficeAuthBridgePage = lazy(() => import('./pages/OfficeAuthBridgePage'))
 const DispatchJoinPage = lazy(() => import('./pages/DispatchJoinPage'))
 const DesignPage = lazy(() => import('./pages/DesignPage'))
+const OfficePage = lazy(() => import('./pages/OfficePage'))
 const DocsPage = lazy(() => import('./pages/DocsPage'))
 const SlidesPage = lazy(() => import('./pages/SlidesPage'))
 const SheetsPage = lazy(() => import('./pages/SheetsPage'))
@@ -163,11 +164,11 @@ export default function AppRoutes() {
         <Route path="/sheets/:artifactId?" element={<SheetsPage />} />
         <Route path="/pdf/:artifactId?" element={<PdfPage />} />
         <Route path="/markdown-preview" element={<MarkdownPreviewPage />} />
-        {/* The standalone office launcher was retired — the single office
-            surface is the shell's ACI "Office & Extensions" hub. Keep the
-            path alive as a redirect so old bookmarks/desktop shortcuts and
-            the desktop's openOffice('launcher') don't 404. */}
-        <Route path="/office" element={<Navigate to="/" replace />} />
+        {/* The office suite lives in the popped-out Allternit Office desktop
+            window (ACI rail tab) — this route is that window's content. It
+            also keeps old bookmarks/desktop shortcuts and the desktop's
+            openOffice('launcher') working. */}
+        <Route path="/office" element={<OfficePage />} />
         <Route path="/sign" element={<SignDocumentPage />} />
         <Route path="/hud" element={<HudPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

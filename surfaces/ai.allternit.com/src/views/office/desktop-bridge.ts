@@ -2,8 +2,8 @@
  * Office desktop bridge: receives office open requests from the Electron
  * preload (app menu / file associations / shell:open-office IPC, all
  * delivered to the main window by the desktop main process) and routes them
- * into the single office surface — the shell's ACI "Office & Extensions"
- * hub and its in-shell editor views.
+ * into the office surfaces — the popped-out Allternit Office window (the
+ * suite launcher) and the in-shell editor views.
  *
  * Routing: when the shell is mounted ("/" or "/shell") the editor opens as
  * an in-shell view via the `allternit:open-view` event ShellApp listens for;
@@ -13,6 +13,7 @@
  * Installed once from AppRoutes; a no-op in the browser (no preload API).
  */
 import { stashFile } from './file-handoff';
+import { openOfficeWindow } from '@/lib/open-office-window';
 
 interface OfficeDesktopApi {
   onOpenFile: (
@@ -103,11 +104,12 @@ export function installOfficeDesktopBridge(
   });
 
   // Target opens from the desktop main process (app menu, shell:open-office,
-  // ALLTERNIT_OPEN_DOCS_ON_START). 'launcher' is the retired standalone
-  // launcher: its replacement is the ACI "Office & Extensions" hub.
+  // ALLTERNIT_OPEN_DOCS_ON_START). 'launcher' opens the popped-out Allternit
+  // Office window (the suite host); on the web it falls back to the ACI
+  // Extensions hub tab.
   api.onOpenTarget?.(({ target, artifactId }) => {
     if (target === 'launcher') {
-      openInShellOrRoute('browser-extensions', undefined, () => navigate('/'));
+      openOfficeWindow();
       return;
     }
     const viewType = VIEW_BY_TARGET[target];

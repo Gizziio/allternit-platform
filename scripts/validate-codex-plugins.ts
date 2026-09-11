@@ -60,23 +60,6 @@ function assertSkillMd(filePath: string): string[] {
 // Repo root derived from this script's location (scripts/ is one level below root)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-// ─── Phase 1: Vercel Plugin ───
-check('Vercel Plugin (verceldeploy-plugin)', () => {
-  const base = path.join(ROOT, 'plugins/verceldeploy-plugin');
-  return [
-    ...assertFileExists(path.join(base, 'manifest.json')),
-    ...assertFileExists(path.join(base, 'package.json')),
-    ...assertFileExists(path.join(base, 'tsconfig.json')),
-    ...assertFileExists(path.join(base, 'src/index.ts')),
-    ...assertFileExists(path.join(base, 'adapters/cli.js')),
-    ...assertFileExists(path.join(base, 'adapters/http.js')),
-    ...assertFileExists(path.join(base, 'adapters/mcp.js')),
-    ...assertFileExists(path.join(base, 'README.md')),
-    ...assertValidJson(path.join(base, 'manifest.json')),
-    ...assertValidJson(path.join(base, 'package.json')),
-  ];
-});
-
 // ─── Phase 2: Docx Skill ───
 check('Docx Skill', () => {
   const base = path.join(ROOT, '.agents/skills/docx');
@@ -143,7 +126,7 @@ check('MCP Integration (.mcp.json)', () => {
   try {
     const content = JSON.parse(fs.readFileSync(mcpPath, 'utf8'));
     const servers = Object.keys(content.mcpServers || {});
-    const expected = ['verceldeploy', 'remotioncard', 'iosappbuild'];
+    const expected = ['remotioncard', 'iosappbuild'];
     for (const id of expected) {
       if (!servers.includes(id)) {
         // This is a WARN, not a FAIL — user may not want them auto-registered yet
@@ -184,7 +167,7 @@ check('Plugin Manager UI State', () => {
   try {
     const content = JSON.parse(fs.readFileSync(pmPath, 'utf8'));
     const localIds = (content.localPlugins || []).map((p: any) => p.id);
-    const expected = ['verceldeploy-plugin', 'remotioncard-plugin', 'iosappbuild-plugin'];
+    const expected = ['remotioncard-plugin', 'iosappbuild-plugin'];
     for (const id of expected) {
       if (!localIds.includes(id)) {
         // WARN — will be updated by integration step

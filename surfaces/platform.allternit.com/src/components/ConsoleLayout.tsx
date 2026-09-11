@@ -36,7 +36,7 @@ import {
   usePlatformAuth,
   useClerk,
 } from "@/lib/platform-auth-client";
-import { getCostSummary } from "@/lib/usage";
+import { getCreditsBalance, formatCreditsUsd } from "@/lib/credits";
 import { AllternitWordmark } from "@/components/AllternitWordmark";
 
 type IconData = typeof LayoutDashboardIcon;
@@ -100,10 +100,6 @@ function currentPageLabel(pathname: string): string {
     (item) => pathname === item.to || pathname.startsWith(`${item.to}/`)
   );
   return match?.label || "Console";
-}
-
-function formatSpend(value: number): string {
-  return `$${value.toFixed(2)}`;
 }
 
 function RailUserCard({ collapsed }: { collapsed: boolean }) {
@@ -189,23 +185,28 @@ function SidebarContent({
   const auth = usePlatformAuth();
   const [query, setQuery] = useState("");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const [spend, setSpend] = useState<string | null>(null);
+  const [creditsBalance, setCreditsBalance] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!auth.isSignedIn) return;
+    const controller = new AbortController();
     let active = true;
-    getCostSummary()
-      .then((summary) => {
-        if (active) setSpend(formatSpend(summary.current_month_cost));
-      })
-      .catch(() => {
-        // Spend stays hidden; the row still links to billing.
-      });
+    (async () => {
+      try {
+        const token = await auth.getToken();
+        if (!token || !active) return;
+        const balance = await getCreditsBalance(token, controller.signal);
+        if (active) setCreditsBalance(formatCreditsUsd(balance.balance_usd));
+      } catch {
+        // Balance stays hidden; the row still links to billing.
+      }
+    })();
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [auth.isSignedIn]);
+  }, [auth.isSignedIn, auth.getToken]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -431,9 +432,11 @@ function SidebarContent({
         >
           <span className="flex items-center gap-3">
             <HugeiconsIcon icon={Wallet01Icon} size={17} />
-            Spend
+            Credits
           </span>
-          <span className="text-[12px] text-[var(--text-tertiary)]">{spend ?? "—"}</span>
+          <span className="text-[12px] text-[var(--text-tertiary)]">
+            {creditsBalance ?? "—"}
+          </span>
         </NavLink>
         <RailUserCard collapsed={false} />
         <div className="mt-1 flex items-center gap-1 px-2.5">

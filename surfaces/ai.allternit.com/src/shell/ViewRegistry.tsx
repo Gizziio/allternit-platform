@@ -376,8 +376,8 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'browser-extensions': () => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Office & Extensions" />}>
-        <BrowserExtensionsView openView={open} />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="ACI Extensions" />}>
+        <BrowserExtensionsView />
       </ErrorBoundary>
     ),
     terminal: ({ context }: { context?: ViewContext }) => (

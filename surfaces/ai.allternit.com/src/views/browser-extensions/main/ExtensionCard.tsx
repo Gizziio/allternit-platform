@@ -22,7 +22,7 @@ interface ExtensionCardProps {
 
 /**
  * Extension card — same recipe as the Allternit Office suite cards (rounded-xl,
- * elevated surface, hover border) so the Office & Extensions page reads as one
+ * elevated surface, hover border) so the ACI Extensions page reads as one
  * coherent screen in light and dark themes.
  */
 export const ExtensionCard: React.FC<ExtensionCardProps> = ({
