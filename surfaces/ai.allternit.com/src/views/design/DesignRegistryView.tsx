@@ -288,7 +288,7 @@ export function DesignRegistryView({ onInstall, installedId: _installedId }: Des
               onClick={() => setActiveTag(tag.id)}
               className={cn(
                 "flex items-center justify-between p-[6px_10px] rounded-lg border-none text-[12px] font-semibold cursor-pointer text-left transition-all duration-150",
-                activeTag === tag.id ? "bg-[#e27c591f] text-[var(--accent-primary)]" : "bg-transparent text-[var(--text-secondary)]"
+                activeTag === tag.id ? "bg-[#B08D6E1f] text-[var(--accent-primary)]" : "bg-transparent text-[var(--text-secondary)]"
               )}
             >
               <span>{tag.label}</span>

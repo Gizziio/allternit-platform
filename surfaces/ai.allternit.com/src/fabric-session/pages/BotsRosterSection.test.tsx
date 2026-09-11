@@ -4,17 +4,14 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { BotsRosterSection } from "./BotsRosterSection";
 import type { Agent } from "@/lib/agents/agent.types";
 
-function bot(overrides: Partial<Agent> = {}): Agent {
+function agentBot(id: string, displayName: string, tagline?: string): Agent {
   return {
-    id: "bot-1",
-    name: "Gizzi",
+    id,
+    name: displayName,
+    description: tagline ?? "",
     isBot: true,
-    botProfile: {
-      displayName: "Gizzi",
-      tagline: "Local copilot",
-    },
-    ...overrides,
-  } as Agent;
+    botProfile: { displayName, tagline },
+  } as unknown as Agent;
 }
 
 describe("BotsRosterSection", () => {
@@ -29,8 +26,8 @@ describe("BotsRosterSection", () => {
     render(
       <BotsRosterSection
         bots={[
-          bot(),
-          bot({ id: "bot-2", name: "Ops", botProfile: { displayName: "Ops" } }),
+          agentBot("bot-1", "Gizzi", "Local copilot"),
+          agentBot("bot-2", "Ops"),
         ]}
         pendingByBot={{ "bot-1": true }}
         onSelectBot={onSelectBot}
