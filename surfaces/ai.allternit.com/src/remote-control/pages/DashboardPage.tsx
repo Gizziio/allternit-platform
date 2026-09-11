@@ -122,7 +122,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
-  const [machineTab, setMachineTab] = useState<"desktop" | "sessions">("desktop");
+  const [machineTab, setMachineTab] = useState<"desktop" | "sessions">("sessions");
   const onlineCount = runtimes.filter((r) => r.status === "online").length;
   const { permissions: pendingPermissions, questions: pendingQuestions } = useRemotePendingCounts(runtimes, auth.getToken);
 
@@ -376,7 +376,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         {selected && (
           <div className="mt-6 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden h-[600px] flex flex-col">
             <div className="shrink-0 flex gap-1 p-2 border-b border-solid border-[var(--border-subtle)]">
-              {(['desktop', 'sessions'] as const).map((tab) => (
+              {(['sessions', 'desktop'] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"

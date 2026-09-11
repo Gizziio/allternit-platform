@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Allternit Remote Control PWA service worker
 
-const CACHE_NAME = 'allternit-remote-control-v2';
+const CACHE_NAME = 'allternit-remote-control-v3';
 const PRECACHE_ASSETS = [
   '/remote-control.html',
   '/remote-control.webmanifest',
