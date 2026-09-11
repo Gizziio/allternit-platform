@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-11 05:13 — grok — parent→child subagent tree (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-subagent-tree` (worktree `allternit-ao-openbot-policy-gateway`)
+- **Agent:** grok
+- **Summary:** Merged PR #299 (3192884a9) — spawn tools nest as expandable child cards with step checklists in the bot session watch strip.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/299 · 3192884a9c67845ace4263c460eb9484d908398e
+- **How it works:** `onToolCall` already hits the transcript; `treeFromTranscript` nests Task/Agent/delegate_task as children. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** none from the OpenBot UX thread.
+- **Summary file:** [2026-09-11-0513-openbot-subagent-tree-grok.md](./summaries/2026-09-11-0513-openbot-subagent-tree-grok.md)
+
 ### 2026-09-11 — grok — Cloud Agents Phase 4 leftovers + Computer Cloud (rq-20260910-002)
 
 - **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
