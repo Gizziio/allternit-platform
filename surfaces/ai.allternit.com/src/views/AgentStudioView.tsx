@@ -131,6 +131,8 @@ export function AgentStudioView() {
   const [testMessage, setTestMessage] = useState("");
   const [runOutput, setRunOutput] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedAgentId, setSavedAgentId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((message: string, type: Toast["type"]) => {
@@ -156,10 +158,33 @@ export function AgentStudioView() {
     }));
   }, []);
 
-  const handleSave = useCallback(() => {
-    // Phase 1: simulate save. In Phase 2 this will POST to /api/v1/agents.
-    addToast(`Saved agent "${config.name}"`, "success");
-  }, [config.name, addToast]);
+  const savePrototype = useCallback(async (): Promise<string | null> => {
+    const res = await fetch("/api/v1/agents/prototype", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Save failed");
+    }
+    const agentId: string | null = data.agent?.id ?? null;
+    setSavedAgentId(agentId);
+    return agentId;
+  }, [config]);
+
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      await savePrototype();
+      addToast(`Saved agent "${config.name}"`, "success");
+    } catch (err) {
+      logger.error({ err }, "Agent studio save failed");
+      addToast(err instanceof Error ? err.message : "Save failed", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [config.name, savePrototype, addToast]);
 
   const handleRun = useCallback(async () => {
     if (!testMessage.trim()) {
@@ -169,33 +194,29 @@ export function AgentStudioView() {
     setIsRunning(true);
     setRunOutput(null);
     try {
-      const res = await fetch("/api/v1/agents/prototype", {
+      // Save (or update) the prototype first so the run is attributed to a
+      // real agent row.
+      const agentId = await savePrototype();
+      if (!agentId) throw new Error("Save did not return an agent id");
+      const res = await fetch(`/api/v1/agents/${agentId}/runs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...config,
-          messages: [{ role: "user", content: testMessage }],
-        }),
+        body: JSON.stringify({ input: testMessage }),
       });
-      if (!res.ok) throw new Error("Prototype run failed");
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Prototype run failed");
       setRunOutput(JSON.stringify(data, null, 2));
       addToast("Prototype run completed", "success");
     } catch (err) {
       logger.error({ err }, "Agent studio run failed");
-      // Phase 1 fallback: show the request payload so the surface works offline.
       setRunOutput(
-        `// Prototype endpoint not yet implemented. Request payload:\n${JSON.stringify(
-          { ...config, messages: [{ role: "user", content: testMessage }] },
-          null,
-          2
-        )}`
+        JSON.stringify({ error: err instanceof Error ? err.message : "Prototype run failed" }, null, 2)
       );
-      addToast("Prototype endpoint not available; showing payload", "info");
+      addToast("Prototype run failed", "error");
     } finally {
       setIsRunning(false);
     }
-  }, [config, testMessage, addToast]);
+  }, [testMessage, savePrototype, addToast]);
 
   return (
     <div className="flex flex-col h-full w-full bg-[var(--surface-canvas)] overflow-hidden">
@@ -215,11 +236,12 @@ export function AgentStudioView() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleSave}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-solid border-[var(--ui-border-muted)] bg-transparent text-[13px] font-semibold text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)] cursor-pointer"
+            onClick={() => void handleSave()}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-solid border-[var(--ui-border-muted)] bg-transparent text-[13px] font-semibold text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FloppyDisk size={14} />
-            Save
+            {isSaving ? "Saving…" : savedAgentId ? "Saved" : "Save"}
           </button>
           <button
             type="button"

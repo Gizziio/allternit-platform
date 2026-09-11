@@ -51,6 +51,43 @@ interface LogEntry {
   message: string;
 }
 
+// Honest monitor payload shapes from /api/v1/monitor/* (all rows aggregated
+// from real tables — no fabricated per-agent telemetry).
+interface MonitorSummary {
+  total_agents: number;
+  sessions: { active: number; archived: number };
+  work_tasks: { pending: number; in_flight: number };
+  deployments_due_24h: number;
+}
+
+interface MonitorSystemPayload {
+  uptime_seconds: number;
+  db_size_bytes: number;
+  table_counts: Record<string, number>;
+  work_queue: Record<string, number>;
+}
+
+function buildSystemMetrics(d: MonitorSystemPayload): SystemMetric[] {
+  const mb = (d.db_size_bytes / (1024 * 1024)).toFixed(1);
+  const uptime = d.uptime_seconds >= 3600
+    ? `${Math.floor(d.uptime_seconds / 3600)}h ${Math.floor((d.uptime_seconds % 3600) / 60)}m`
+    : `${Math.floor(d.uptime_seconds / 60)}m ${d.uptime_seconds % 60}s`;
+  const queueDepth = (d.work_queue['queued'] ?? 0) + (d.work_queue['leased'] ?? 0) + (d.work_queue['running'] ?? 0);
+  const card = (label: string, value: string, unit: string, color: string): SystemMetric => ({
+    label, value, unit, trend: 'stable', trendValue: 'live', color,
+  });
+  return [
+    card('Uptime', uptime, '', 'var(--accent-primary)'),
+    card('DB Size', mb, 'MB', 'var(--accent-chat)'),
+    card('Agents', String(d.table_counts['agents'] ?? 0), 'rows', 'var(--status-success)'),
+    card('Sessions', String(d.table_counts['beta_sessions'] ?? 0), 'rows', 'var(--accent-primary)'),
+    card('Session Events', String(d.table_counts['beta_session_events'] ?? 0), 'rows', 'var(--text-secondary)'),
+    card('LLM Events', String(d.table_counts['llm_usage_events'] ?? 0), 'rows', 'var(--text-secondary)'),
+    card('Work Tasks', String(d.table_counts['beta_work_tasks'] ?? 0), 'rows', 'var(--status-warning)'),
+    card('Queue Depth', String(queueDepth), 'active', 'var(--status-warning)'),
+  ];
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<AgentMetric['status'], { color: string; label: string; dotColor: string }> = {
@@ -103,7 +140,7 @@ function MetricCard({ metric }: { metric: SystemMetric }) {
         'text-[var(--text-tertiary)]'
       }`}>
         <TrendIcon size={12} weight="bold" />
-        {metric.trendValue} vs yesterday
+        {metric.trendValue}{metric.trend !== 'stable' ? ' vs yesterday' : ''}
       </div>
     </GlassCard>
   );
@@ -113,17 +150,32 @@ function MetricCard({ metric }: { metric: SystemMetric }) {
 
 export function MonitorView() {
   const [agents, setAgents] = useState<AgentMetric[]>([]);
+  const [summary, setSummary] = useState<MonitorSummary | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [systemMetrics, setSystemMetrics] = useState<SystemMetric[]>([]);
   const [activeTab, setActiveTab] = useState<'agents' | 'logs'>('agents');
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warn' | 'error'>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = () => {
-    fetch('/api/v1/monitor/agents').then(r => r.json()).then(setAgents).catch(() => {});
-    fetch('/api/v1/monitor/logs').then(r => r.json()).then(setLogs).catch(() => {});
-    fetch('/api/v1/monitor/system').then(r => r.json()).then(setSystemMetrics).catch(() => {});
+    setLoadError(null);
+    fetch('/api/v1/monitor/agents')
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`monitor/agents ${r.status}`)))
+      .then((d: { agents?: AgentMetric[]; summary?: MonitorSummary }) => {
+        setAgents(d.agents ?? []);
+        setSummary(d.summary ?? null);
+      })
+      .catch((err) => { setAgents([]); setLoadError(err instanceof Error ? err.message : 'monitor failed'); });
+    fetch('/api/v1/monitor/logs')
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`monitor/logs ${r.status}`)))
+      .then((d: { logs?: LogEntry[] }) => setLogs(d.logs ?? []))
+      .catch((err) => { setLogs([]); setLoadError(err instanceof Error ? err.message : 'monitor failed'); });
+    fetch('/api/v1/monitor/system')
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`monitor/system ${r.status}`)))
+      .then((d: MonitorSystemPayload) => setSystemMetrics(buildSystemMetrics(d)))
+      .catch((err) => { setSystemMetrics([]); setLoadError(err instanceof Error ? err.message : 'monitor failed'); });
   };
 
   useEffect(() => { loadData(); }, []);
@@ -184,7 +236,7 @@ export function MonitorView() {
           { icon: CheckCircle,label: `${activeCount} active`,            color: 'text-[var(--status-success)]' },
           { icon: Warning,    label: `${errorCount} with errors`,        color: 'text-[var(--status-error)]' },
           { icon: Cpu,        label: `Avg ${avgLatency}ms latency`,      color: 'text-[var(--accent-chat)]' },
-          { icon: ChartLine,  label: `${(totalTokens/1000).toFixed(0)}K tokens today`, color: 'text-[var(--accent-primary)]' },
+          { icon: ChartLine,  label: `${(totalTokens/1000).toFixed(0)}K tokens (sessions)`, color: 'text-[var(--accent-primary)]' },
         ].map(({ icon: Icon, label, color }) => (
           <div key={label} className={`flex items-center gap-1.5 p-1.5 px-3.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[13px] font-medium ${color}`}>
             <Icon size={14} weight="bold" />
@@ -192,6 +244,30 @@ export function MonitorView() {
           </div>
         ))}
       </div>
+
+      {/* ── Backend Summary (live counts from /monitor/agents) ── */}
+      {summary && (
+        <div className="flex gap-3 mb-7 flex-wrap">
+          {[
+            { label: 'Active sessions', value: summary.sessions.active },
+            { label: 'Archived sessions', value: summary.sessions.archived },
+            { label: 'Pending tasks', value: summary.work_tasks.pending },
+            { label: 'In-flight tasks', value: summary.work_tasks.in_flight },
+            { label: 'Deployments due 24h', value: summary.deployments_due_24h },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center gap-2 p-1.5 px-3.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[13px] font-medium text-[var(--text-secondary)]">
+              <Activity size={14} weight="bold" className="text-[var(--accent-primary)]" />
+              {value} {label}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {loadError && (
+        <div className="mb-7 p-3 px-4 rounded-[10px] bg-[var(--status-error-bg)] border border-[var(--status-error)] text-[13px] text-[var(--status-error)]">
+          Monitor API unavailable: {loadError}
+        </div>
+      )}
 
       {/* ── Tab Bar ── */}
       <div className="flex gap-0 mb-5 border-b border-[var(--border-subtle)]">
@@ -255,7 +331,7 @@ export function MonitorView() {
                   {/* Stats */}
                   <div className="flex gap-6 ml-auto">
                     {[
-                      { label: 'Tasks', value: agent.taskCount.toString() },
+                      { label: 'Sessions', value: agent.taskCount.toString() },
                       { label: 'Tokens', value: agent.tokensUsed >= 1000 ? `${(agent.tokensUsed/1000).toFixed(1)}K` : agent.tokensUsed.toString() },
                       { label: 'Latency', value: agent.latencyMs > 0 ? `${agent.latencyMs}ms` : '—' },
                       { label: 'Uptime', value: agent.uptime },
