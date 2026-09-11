@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-11 — grok — Agents Console on Cloud Console (rq-20260911-001)
+
+- **Branch:** `ao/allternit-agents-surfaces`
+- **Summary:** Merged PR #308 (92847aab) — Cloud Console → Agents tab is the Cloud Agents session runner. Hub chat composer unchanged.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/308 · 92847aabe8c865a4447f6bb5793c720fb86f3959
+- **Outstanding work:** Docs Pages production deploy (needs Eoj). Composer modes on Desktop were explicitly not wanted.
+- **Summary file:** [2026-09-11-agents-console-grok.md](./summaries/2026-09-11-agents-console-grok.md)
+
 ### 2026-09-11 06:43 — grok — machine select opens sessions, not VNC
 
 - **Session ID / Branch:** `ao/fabric-machine-sessions-first`
