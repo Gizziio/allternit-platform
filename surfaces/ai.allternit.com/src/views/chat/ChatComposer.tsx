@@ -970,8 +970,12 @@ export function ChatComposer({
     }
   }, [input]);
 
+  // The home (chat-surface) composer never requires agent/bot selection: bot
+  // sessions live only on the dedicated bot-chat-session view, so the home
+  // composer must not steer users into a bot-binding flow. Other agent
+  // surfaces (bot launchpad, cowork, code, …) keep the selection gate.
   const requiresAgentSelection = Boolean(
-    agentModeSurface && agentModeEnabled && !isCanonicalAgentMode(selectedModeId),
+    agentModeSurface && agentModeSurface !== 'chat' && agentModeEnabled && !isCanonicalAgentMode(selectedModeId),
   );
   const canSubmit = Boolean(input.trim()) && !isLoading && !isHandingOff && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
 

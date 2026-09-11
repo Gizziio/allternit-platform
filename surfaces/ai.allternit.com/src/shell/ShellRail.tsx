@@ -155,8 +155,8 @@ interface PinnedRailEntry {
   pinnedAt: number;
 }
 
-const HOME_TAB_VIEWS = ['agent-hub', 'project', 'library', 'model-lab', 'goals-list', 'cron', 'cowork-cron', 'fabric-session', 'remote-control'];
-const CODE_TAB_VIEWS = ['agent-hub', 'project', 'library', 'code-automations'];
+const HOME_TAB_VIEWS = ['project', 'library', 'model-lab', 'goals-list', 'cron', 'cowork-cron', 'fabric-session', 'remote-control'];
+const CODE_TAB_VIEWS = ['project', 'library', 'code-automations'];
 const BROWSER_TAB_VIEWS = ['mini-apps-store', 'browser-extensions', 'site-apis'];
 const BOT_TAB_VIEWS = ['agent-hub', 'groups-list', 'group-chat'];
 
@@ -383,7 +383,7 @@ export function ShellRail({
     }
   });
   const [codeRailTabs, setCodeRailTabs] = useState<Record<string, boolean>>(() => {
-    const defaults = { 'agent-hub': true, 'projects': true, 'artifacts-library': true, 'code-automations': true };
+    const defaults = { 'projects': true, 'artifacts-library': true, 'code-automations': true };
     if (typeof window === 'undefined') return defaults;
     try {
       const saved = JSON.parse(localStorage.getItem('allternit-code-rail-tabs') ?? '{}');
@@ -801,6 +801,11 @@ export function ShellRail({
     } else if (mode === 'code') {
       useCodeSessionStore.getState().setActiveSession(null);
       onOpen?.('code');
+    } else if (mode === 'bot') {
+      // Bot mode: "New" opens the bot picker sheet (globally hosted by
+      // BotPickerHost). Picking a bot starts a session on the dedicated
+      // bot-chat-session view. Never navigates away from bot mode.
+      window.dispatchEvent(new CustomEvent('allternit:open-bot-picker'));
     } else {
       // Canonical-chat guard (spec Phase 0): when the active session is a
       // bot's canonical chat, "New" must not spawn a blank non-bot session
@@ -1233,37 +1238,6 @@ export function ShellRail({
             </RecentsPanel>
           )}
 
-          {/* BOT LIST — all bots, pinned first, then by canonical chat activity */}
-          <RecentsPanel expanded onToggle={() => {}} title="Bots">
-            {sortedBots.length === 0 && (
-              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
-                No bots yet — create one in Bot Hub
-              </div>
-            )}
-            {sortedBots.map((bot) => (
-              <BotRailRow
-                key={bot.id}
-                bot={bot}
-                isActive={
-                  activeViewType === 'bot-chat-session' &&
-                  activeChatSessionId === canonicalChatIds[bot.id]
-                }
-                disabled={isBotSessionStarting}
-                onOpen={() => handleOpenBot(bot)}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/plain', bot.id);
-                  e.dataTransfer.effectAllowed = 'move';
-                  setDraggingBotId(bot.id);
-                }}
-                onDragEnd={() => {
-                  setDraggingBotId(null);
-                  setPinDropActive(false);
-                }}
-              />
-            ))}
-          </RecentsPanel>
-
           {/* GROUP CHATS — unread badge convention matches GroupsListView.
               Always rendered so the empty state and creation affordance stay discoverable */}
           <RecentsPanel shrink expanded onToggle={() => {}} title="Group Chats">
@@ -1293,6 +1267,37 @@ export function ShellRail({
               <Plus size={13} />
               <span>New group chat</span>
             </button>
+          </RecentsPanel>
+
+          {/* BOT LIST — all bots, pinned first, then by canonical chat activity */}
+          <RecentsPanel expanded onToggle={() => {}} title="Bots">
+            {sortedBots.length === 0 && (
+              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                No bots yet — create one in Bot Hub
+              </div>
+            )}
+            {sortedBots.map((bot) => (
+              <BotRailRow
+                key={bot.id}
+                bot={bot}
+                isActive={
+                  activeViewType === 'bot-chat-session' &&
+                  activeChatSessionId === canonicalChatIds[bot.id]
+                }
+                disabled={isBotSessionStarting}
+                onOpen={() => handleOpenBot(bot)}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', bot.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                  setDraggingBotId(bot.id);
+                }}
+                onDragEnd={() => {
+                  setDraggingBotId(null);
+                  setPinDropActive(false);
+                }}
+              />
+            ))}
           </RecentsPanel>
 
           <RecentsPanel
@@ -1351,15 +1356,6 @@ export function ShellRail({
               label="New"
               isActive={isNewActive}
               onClick={handleNewSession}
-            />
-            <RailItem
-              icon={Robot}
-              label="Bot Hub"
-              isActive={homeSticky.isTabActive('agent-hub')}
-              onClick={() => {
-                homeSticky.selectTab('agent-hub');
-                onOpen?.('agent-hub');
-              }}
             />
             <RailItem
               icon={FolderOpen}
@@ -1614,17 +1610,6 @@ export function ShellRail({
               isActive={isNewActive}
               onClick={handleNewSession}
             />
-            {codeRailTabs['agent-hub'] && (
-              <RailItem
-                icon={Robot}
-                label="Bot Hub"
-                isActive={codeSticky.isTabActive('agent-hub')}
-                onClick={() => {
-                  codeSticky.selectTab('agent-hub');
-                  onOpen?.('agent-hub');
-                }}
-              />
-            )}
             {codeRailTabs['projects'] && (
               <RailItem
                 icon={FolderOpen}
@@ -1662,7 +1647,6 @@ export function ShellRail({
             )}
             <MoreDropdown
               tabs={[
-                { id: 'agent-hub', label: 'Bot Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
                 { id: 'projects', label: 'Projects', icon: FolderOpen, visible: codeRailTabs['projects'] },
                 { id: 'artifacts-library', label: 'Artifacts Library', icon: FileText, visible: codeRailTabs['artifacts-library'] },
                 { id: 'code-automations', label: 'Automation Tasks', icon: Clock, visible: codeRailTabs['code-automations'] },
