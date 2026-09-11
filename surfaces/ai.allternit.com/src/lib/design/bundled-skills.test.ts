@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { BUNDLED_SKILLS } from './bundled-skills';
+import { BUNDLED_SKILLS, RAW_SKILLS } from './bundled-skills';
 import { GALLERY_CATEGORIES, getGalleryCategory } from './gallery-categories';
 
 const ALLOWED_MODES = [
@@ -54,6 +54,22 @@ describe('BUNDLED_SKILLS', () => {
       expect(ALLOWED_MODES).toContain(skill.mode);
       expect(skill.scenario).toBeDefined();
       expect(ALLOWED_SCENARIOS).toContain(skill.scenario);
+    }
+  });
+
+  it('every skill whose frontmatter declares od.inputs parses them (issue #368)', () => {
+    const declared = RAW_SKILLS.filter((raw) => /^\s+inputs:\s*$/m.test(raw.source));
+    expect(declared.length).toBeGreaterThan(0);
+    for (const raw of declared) {
+      const parsed = BUNDLED_SKILLS.find((skill) => skill.id === raw.id);
+      expect(parsed).toBeDefined();
+      expect(parsed!.inputs.length).toBeGreaterThan(0);
+    }
+    for (const skill of BUNDLED_SKILLS) {
+      for (const input of skill.inputs) {
+        expect(input.name.trim().length).toBeGreaterThan(0);
+        expect(['string', 'integer', 'boolean', 'enum', 'text']).toContain(input.type);
+      }
     }
   });
 });
