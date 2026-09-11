@@ -3,7 +3,6 @@ import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { useSettingsValue } from '@/hooks/useSettingsState';
-import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import type { AppMode } from './ShellHeader';
 import {
   CaretDown,
