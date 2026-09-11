@@ -123,6 +123,9 @@ const BOT_MODE_VIEW_TYPES = new Set<ViewType>([
   'bot-chat-session',
   'groups-list',
   'group-chat',
+  // Bot Hub lives only in the bot-mode rail; opening it (from anywhere)
+  // lands in bot mode instead of flipping to the home/chat rail.
+  'agent-hub',
 ]);
 
 // Inner app component that uses mode context
@@ -633,7 +636,16 @@ function ShellAppInner(): React.ReactNode {
 
     modeChangeSourceRef.current = 'user';
     setActiveMode(mode);
-    if (mode === 'chat') open('chat');
+    if (mode === 'chat') {
+      // Bot sessions live only in the dedicated bot session view. If one is the
+      // store-active chat session, clear it so landing on home shows a fresh
+      // chat instead of bouncing back into the bot view.
+      const chatState = useChatSessionStore.getState();
+      const activeId = chatState.activeSessionId;
+      const activeSession = activeId ? chatState.sessions.find((session) => session.id === activeId) : null;
+      if (activeSession?.metadata?.isBot) chatState.setActiveSession(null);
+      open('chat');
+    }
     if (mode === 'cowork') {
       // Always enter cowork on the session/chat screen — a persisted sub-mode
       // (Routines/Loops/etc.) from a previous visit must not take over the
