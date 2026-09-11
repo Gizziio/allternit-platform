@@ -131,6 +131,12 @@ class _SessionsResource:
         self._client = client
         self.events = _EventsResource(client)
 
+    def turns(self, session_id: str) -> List[Dict[str, Any]]:
+        payload = self._client._request(
+            "GET", f"/api/v1/sessions/{session_id}/turns"
+        )
+        return payload.get("turns", [])
+
     def create(
         self,
         agent: Optional[Union[str, Dict[str, Any]]] = None,

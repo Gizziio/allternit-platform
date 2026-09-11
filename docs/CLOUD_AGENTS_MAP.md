@@ -1,4 +1,4 @@
-# Cloud Agents Phase 1 — gap map
+# Cloud Agents — gap map (Phase 1 done, Phase 2 this handoff)
 
 Orchestrator-owned. Executor: do not invent product names or a second agent table.
 
@@ -6,136 +6,110 @@ Orchestrator-owned. Executor: do not invent product names or a second agent tabl
 
 **Allternit Agents** = one product, two specialties:
 
-- **Cloud Agents** (this phase): API sessions. `POST /api/v1/sessions`.
-- **Bot Agents**: existing Bot contract. Do not rebuild. Do not add `/runtimes` as a public resource.
+- **Cloud Agents** (this work): API sessions. `POST /api/v1/sessions`.
+- **Bot Agents**: existing Bot contract. Do not rebuild. Do not add `/runtimes`.
 
-Do **not** call the product “Allternit Runtime”. `hosted-runtime` is infra only.
+Do **not** call the product “Allternit Runtime”. Completions/Responses (`agents_v1_routes.rs`) stay Layer A — **do not change**.
 
-Layer A (do not touch except docs mention):
+SDK: `new Allternit({ apiKey, baseURL })` — class name **`Allternit`**.
 
-- Completions: `/api/agents/v1/chat/completions`
-- Responses: `/api/agents/v1/responses`
+## Phase 1 (already on this branch / PR #274)
 
-Layer C (this phase): Cloud Agents sessions.
+Public `/api/v1/sessions` facade over `beta_sessions`. Inline agent, `computer.kind` none/local/sandbox-400, Allternit event names, agent version+archive, TS+Python clients, V140.
 
-SDK: `new Allternit({ apiKey, baseURL })` — not `OpenAI`, not `beta.agents`.
+Known Phase 1 hole (this Phase 2): a session with `input` stays public `running` until `user.interrupt`, because nobody writes `turn.completed` / `session.idle` when the work task finishes.
 
-## What exists
+## Phase 2 target (this handoff only)
 
-| Piece | Path | Notes |
+Close the lifecycle. A Cloud Agent session whose work task is acked returns to `idle` and the public event list shows `turn.completed` then `session.idle`. Turns are listable.
+
+### Work-task → events
+
+Hook **existing** `/beta/work` completion. Do not invent a second worker protocol.
+
+| Worker call | Stored events (legacy snake_case, same as Phase 1) | Public types |
 |---|---|---|
-| Agent CRUD | `cmd/allternit-api/src/agent_routes.rs` mounted `/api/v1/agents` | SQLite `agents` table (`V1__baseline_schema.sql`). Columns: id, user_id, name, system_prompt, model, provider, tools, config, status (`idle` default). **No `version` column. No archive route.** |
-| Durable sessions | `cmd/allternit-api/src/beta_session_routes.rs` | `/api/v1/beta/sessions`. Table `beta_sessions`. Status today: `active` (implied default) and `archived`. Events: `session_created`, `budget_updated`, `session_archived`, `user_interrupt`, run events. SSE `/events`, WS `/events/ws`, POST `/run` enqueues `/beta/work`. |
-| Completions/Responses | `agents_v1_routes.rs` | **Do not change.** |
-| Computers | `computer_routes.rs` `/api/v1/computers` | Bot desktops. Do not collide. Phase 1 Cloud Agent `computer.kind` is stored on the **session**, not a new computers row, except `sandbox` may call existing hosted-runtime provision if entitlement exists. |
-| SDK | `sdk/allternit-sdk` | `AllternitHarness`, `AllternitAgent`, `RemoteAgentsClient` → `/api/agents/v1/*`. No Cloud Agents client. |
-| Python | `sdk/allternit-python` | `Harness` only. |
-| Docs | `docs/public/api/sessions.md` | Documents `/beta/sessions` only. |
-| Mount | `cmd/allternit-api/src/main.rs` ~638 | `v1_routes.merge(beta_session_router())` nested under `/api/v1`. |
+| `POST /beta/work/:id/ack` (success) | `turn_completed`, `session_idle` | `turn.completed`, `session.idle` |
+| `POST /beta/work/:id/stop` (cancel/fail) | `turn_failed`, `session_idle` | `turn.failed`, `session.idle` |
 
-## Target public API (Phase 1)
+Rules:
 
-All under `/api/v1` (already nested):
+- Only emit if the task has a `session_id`. Skip bare work-queue tasks.
+- Skip if the session is already `archived`.
+- After `user.interrupt` the tasks are already `cancelled`. If `stop`/`ack` then finds a cancelled/terminal row and does not update, emit nothing extra.
+- Do **not** write stored status `idle`/`failed` onto `beta_sessions` (CHECK is still `active|archived`). Public status stays derived: no in-flight work → `idle`.
+- Put a small helper next to `insert_event` in `beta_session_routes.rs` (e.g. `pub(crate) fn emit_turn_terminal(conn, session_id, outcome: &str, data: &Value)`). Call it from `ack_task` and `stop_task` in `beta_work_routes.rs` after a successful row update. Load `session_id` from the task row.
+- `outcome` is `"completed"` or `"failed"` only.
 
-| Method | Path | Behavior |
-|---|---|---|
-| POST/GET | `/sessions` | Create/list Cloud Agent sessions |
-| GET | `/sessions/:id` | Retrieve; public `status` mapped (below) |
-| POST | `/sessions/:id/archive` **and** keep DELETE/PATCH on beta | Archive. Spec allows POST archive. Also keep existing DELETE-or-whatever beta uses (`delete(archive_session)` on `/beta/sessions/:id`). Public: `POST /sessions/:id/archive`. |
-| GET | `/sessions/:id/events` | JSON list (paginated if list exists; otherwise full list like `/events/list`) |
-| POST | `/sessions/:id/events` | Body `{ "events": [ { "type": "user.message"\|"user.interrupt"\|"user.tool_result", ... } ] }` |
-| GET | `/sessions/:id/events/stream` | SSE of Allternit event types |
-| POST | `/agents/:id/archive` | Archive agent (status archived / archived_at). No unarchive. |
-| Agent version | `agents.version` integer | New column default 1; increment on config-changing PUT/POST update. Return `version` on agent JSON. |
-
-Keep `/api/v1/beta/sessions` **working as alias** (same table). Old event type strings may still be stored; **public list/stream must emit Allternit types**.
-
-### POST /sessions body
-
-```json
-{
-  "agent": "agent_id" | { "id": "...", "version": 1 } | { "model": "...", "instructions": "...", "tools": [], "name": "optional" },
-  "computer": { "kind": "none" | "sandbox" | "local" },
-  "input": "string" | { "type": "user.message", "content": "..." },
-  "stream": false,
-  "vault_ids": [],
-  "budget": { "max_tokens": 0, "max_turns": 0, "max_tool_calls": 0 },
-  "metadata": {},
-  "brain_id": null
-}
-```
-
-- Inline agent: create a row in `agents` (name default `cloud-agent`, system_prompt from `instructions`). Bind `agent_id`.
-- `computer.kind: none`: no sandbox. Session is valid. `computer.ready` event immediately (or omit computer events).
-- `computer.kind: sandbox`: if hosted-runtime provision path exists **and** user has entitlement, call it and emit `computer.pending` then `computer.ready` or `computer.failed`. If not entitled / not wired: **400** with a clear error. **Do not** silently fall back to `none`.
-- `computer.kind: local`: store kind on session; emit `computer.pending`. Do not wait for a worker in Phase 1. Session can still accept `user.message` (run queue). Document as “descriptor only this release”.
-- `input` present: after create, treat as `user.message` (enqueue run like `POST /run`).
-- `stream: true`: response is SSE of events from this session (same as GET stream), not a JSON session body. First events must include `session.created`.
-
-Auth: existing Clerk/API-key middleware. Do not require `OpenAI-Beta`. Ignore that header if present.
-
-### Public session status
-
-| DB / internal | Public `status` |
-|---|---|
-| archived | `archived` |
-| failed | `failed` |
-| waiting (new) | `waiting` |
-| active/running + in-flight work task | `running` |
-| active + no in-flight work | `idle` |
-
-Existing rows with `status='active'` must still list. Map them. New writes may use `idle|running|waiting|failed|archived`.
-
-`user.interrupt` → public `idle` (keep row usable). Archived cannot send.
-
-### Event types (public)
-
-**Send:** `user.message`, `user.interrupt`, `user.tool_result`
-
-**Persist/stream:** `session.created`, `session.running`, `session.idle`, `session.waiting`, `session.failed`, `computer.pending`, `computer.ready`, `computer.failed`, `turn.started`, `turn.completed`, `turn.failed`, `agent.message`, `agent.tool_use`, `agent.tool_result`
-
-Each event JSON: `{ "id", "type", "session_id", "created_at", "data" }` (keep extra fields if table has sequence).
-
-Translate stored legacy types on read:
+### Translate (add to `translate_event` in `cloud_agents_routes.rs`)
 
 | stored | public |
 |---|---|
-| `session_created` | `session.created` |
-| `session_archived` | (status archived; may omit or pass through as session.idle — prefer omit extra) |
-| `user_interrupt` | `user.interrupt` |
-| `run_requested` / similar | `turn.started` + `session.running` |
-| thinking/content deltas | `agent.message` (full) or skip deltas in Phase 1 JSON list; stream may emit `agent.message` when run completes |
+| `turn_completed` | `turn.completed` |
+| `turn_failed` | `turn.failed` |
+| `session_idle` | `session.idle` |
+| `session_failed` | `session.failed` (map it; Phase 2 does not have to write this stored type) |
 
-Do **not** emit `agent.session.created` or other OpenAI names as `type`.
+Keep existing Phase 1 mappings (`session_created`, `computer_*`, `run_requested`, `user_interrupt`, `tool_calls`). Dual `run_requested` public ids stay suffixed (`{id}:turn.started`, `{id}:session.running`).
 
-`user.message` handler: same as `POST /beta/sessions/:id/run` with `messages: [{role:user, content: text}]`. Set public status `running`, emit `session.running` + `turn.started`. When work task finishes (if you can observe it cheaply), emit `turn.completed` + `session.idle`. If the work queue stays `queued` with no worker, still emit `session.running` then allow interrupt back to `idle`. Do not hang the HTTP create.
+### `GET /sessions/:id/turns`
 
-## Files to add/change
+New route on `cloud_agents_router`. Auth same as other session routes (`load_session` first).
 
-- `cmd/allternit-api/src/cloud_agents_routes.rs` (new) — public `/sessions*` facade. Share DB helpers with beta (pub(crate) `load_session` / `insert_event` if needed; avoid copy-paste of the whole 2700-line file).
-- `cmd/allternit-api/src/lib.rs` — `pub mod cloud_agents_routes;`
-- `cmd/allternit-api/src/main.rs` — `.merge(cloud_agents_router())` on `v1_routes`
-- `cmd/allternit-api/src/agent_routes.rs` — `version` column + archive
-- New SQL migration next to existing `cmd/allternit-api/migrations/` — `agents.version INTEGER NOT NULL DEFAULT 1`, `agents.archived_at`, `beta_sessions.computer_kind`, `beta_sessions.computer_id` nullable. Follow existing migration numbering.
-- `sdk/allternit-sdk/src/ai-runtime/cloud-agents/client.ts` + export from package (`@allternit/sdk/cloud-agents`). Class name **`Allternit`**. Methods: `sessions.create`, `sessions.retrieve`, `sessions.archive`, `sessions.events.send`, `sessions.events.stream` (async iterator of events). Under `src/ai-runtime/` so existing `tsconfig.ai-runtime.json` emits `dist/cloud-agents/`.
-- `sdk/allternit-python/src/allternit/sessions.py` + export if it does not break `Harness`
-- `docs/public/api/agents.md` — overview (Completions, Responses, Cloud Agents, Bot Agents). Register 1. No guarantees. No “drop-in OpenAI”.
-- Graduate `docs/public/api/sessions.md` to document `/api/v1/sessions` and note `/beta/sessions` alias.
-- Tests: extend `beta_session_routes.rs` tests or add `cloud_agents_routes` tests in the same style (in-module `#[cfg(test)]`). At least: create with inline agent + `computer.kind=none` + input; archive blocks send; interrupt; event type translation; beta alias still 201/200.
+Build turns from the **public** event stream of that session, in order:
 
-## Do not
+- `turn.started` opens a turn (`status: "running"`, `started_at` from that event).
+- `turn.completed` closes it (`status: "completed"`, `completed_at`).
+- `turn.failed` closes it (`status: "failed"`, `completed_at`).
+- `id` of the turn = the `turn.started` event id (the public id, including the `:turn.started` suffix if present).
 
-- Wrap OpenAI/Anthropic hosted agent APIs
-- Change `/api/agents/v1/chat/completions` or `/responses`
-- Public `/runtimes` resource
-- Rebuild Bot Agents / Create Bot
-- Codex exec-server
-- New Stripe SKU
-- Docker
-- Git commits / pushes (orchestrator owns git)
-- cargo build / tsc as a required step (orchestrator may run later). You MAY add tests that compile with the existing test module pattern.
-- Phase 2: fabric/desktop worker, outputs, vaults facade, brains attach, schedules, tool_search on the public agent object
+Response: `{ "turns": [ { "id", "status", "started_at", "completed_at" } ] }` oldest-first. Empty list if none. No pagination this phase.
+
+### SDK
+
+- TS `Allternit.sessions.turns.list(sessionId)` → GET `/api/v1/sessions/:id/turns`.
+- Python `client.sessions.turns(session_id)` same. Do not break `Harness`.
+
+### Docs
+
+Update `docs/public/api/sessions.md`: a run ends when the work task is acked; public status becomes `idle`; `GET /sessions/:id/turns`. Register 1. No guarantees. No “drop-in OpenAI”.
+
+Do **not** rewrite `docs/public/api/agents.md` except a one-line pointer at turns if it already mentions events.
+
+## Files to change
+
+- `cmd/allternit-api/src/beta_session_routes.rs` — `emit_turn_terminal` helper next to `insert_event`
+- `cmd/allternit-api/src/beta_work_routes.rs` — call it from `ack_task` and `stop_task`
+- `cmd/allternit-api/src/cloud_agents_routes.rs` — translate + `GET /sessions/:id/turns` + tests
+- `sdk/allternit-sdk/src/ai-runtime/cloud-agents/client.ts` (+ types if needed)
+- `sdk/allternit-python/src/allternit/sessions.py`
+- `docs/public/api/sessions.md`
+
+No new migration unless you truly cannot read `session_id` off `beta_work_tasks` (you can; the column exists).
+
+## Tests (in-module, same style as Phase 1)
+
+At least:
+
+1. Create Cloud session with inline agent + `kind=none` + `input` → public `running`. Lease+ack the `beta_work_tasks` row via the beta work router (merge `beta_work_router()` in the test app). GET session → `idle`. GET events include `turn.completed` and `session.idle`. GET `/turns` → one turn `completed`.
+2. Create + input, then `user.interrupt` → `idle`; GET `/turns` may still show a running or failed turn depending on whether interrupt emits `turn.failed`. **Locked:** interrupt does **not** require a `turn.failed` event this phase (Phase 1 already records `user.interrupt` and cancels tasks). Turns list may show a still-`running` turn after interrupt; that is acceptable. Do not spend time inventing interrupt→turn.failed unless it falls out of the stop hook.
+3. Beta alias still 201/200 (keep the existing test working).
+4. Translation: stored `turn_completed` → public `turn.completed`.
+
+If lease+ack is too awkward in-process, you MAY call `emit_turn_terminal` from the test with a real DB connection after create (the helper is the contract). Prefer going through `ack_task` if the beta test fixtures make it easy.
+
+## Do not (Phase 2)
+
+- Sandbox entitlement / hosted-runtime provision / `computer.kind: fabric|desktop` workers
+- Vaults, brains column, schedules, tool_search, MCP, permission policies
+- Session dollar budget (money-adjacent — parked)
+- OpenAI/Anthropic wrap or public `/runtimes`
+- Completions/Responses edits
+- Bot Agents / CommRails / crate rename
+- Docker, Stripe, deploys, git commits/pushes
+- cargo/tsc as a required done step
+- Phase 3
 
 ## Voice (docs only)
 
-Plain, direct. No “revolutionary”, no “10x”, no guaranteed results. “Same kind of product as hosted agent sessions” is allowed. “Compatible with OpenAI Agents API” is not.
+Plain, direct. No hype, no guarantees, no “compatible with OpenAI Agents API”.
