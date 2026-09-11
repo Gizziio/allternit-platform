@@ -339,7 +339,8 @@ Selected workflows in `.github/workflows/`:
 - `deploy-cloud-api-contabo.yml` (live cloud API deploy; the fly/railway workflows were removed)
 - `deploy-cloudflare-pages.yml`, `deploy-office-cloudflare.yml`, `deploy-remote-control-cloudflare.yml`, `deploy-remote-control-push.yml`, `deploy-docs-cloudflare.yml`
 - `ci-desktop.yml`, `release-desktop.yml`, `publish-gizzi-code-npm.yml`, `release-gizzi-code.yml`
-- `publish-hosted-runtime.yml`, `sync-platform-export.yml`
+- `publish-hosted-runtime.yml`
+- ~~`sync-platform-export.yml`~~ — retired 2026-09-11 (see `docs/Operations/CLOUDFLARE_MAPPING.md`).
 - `visual-verification.yml`, `typography-validation.yml`, `ci-docs.yml`
 - `discovery-blog.yml`, `discovery-briefings.yml`, `discovery-features.yml`
 - `configure-clerk-organization.yml`, `build-office-addin.yml`
