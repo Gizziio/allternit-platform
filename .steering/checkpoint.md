@@ -1,27 +1,31 @@
-# Steering checkpoint — session/b569de1d (kimi-code)
+# Checkpoint — session/wordmarksize-0911
 
 ## Goal
-Restructure the chat composer "+" sheet (ComposerPlusSheet) per owner direction:
-remove unwired/dead controls and unused view rows, keep the endorsed rows, add
-Plugins and Skills.
+Owner screenshot: rail footer shows A://TERNIT OFFICE (height 10, added by a
+parallel session) next to A://TERNIT DESIGN (height 12) — different sizes;
+and DESIGN still "reads desisn".
+
+## Root causes
+- The G glyph added in #348 is cell-for-cell identical to S (both: top bar,
+  left stem rows 1–2, full middle bar, right stem row 3, bottom bar) — so
+  "DESIGN" rendered "DESISN". Fixed in all three copies: G = S + the left
+  stem continuing below the middle bar ([0,3]) — the one-block difference
+  that makes a G read as G.
+- Heights diverged across parallel sessions: rail OFFICE 10 / collapsed 16,
+  design launch header 13, /office launcher header 18.
 
 ## Just did
-- Removed: Style grid button + submenu + ResponseStyle plumbing; Tool access
-  segmented control + ToolAccessLevel plumbing (both only injected prompt-text
-  prefixes, never reached backend settings — owner directive); the composer
-  Style chip; duplicate Connectors list row; Form Surfaces / Cowork Tasks /
-  Bot Activity list rows (Form Surfaces and Cowork Tasks views had NO other
-  entry point — now orphaned by design; Bot Activity remains reachable via
-  /agent-activity routes, shell panel, and global event).
-- Kept: Files, GitHub (+URL panel), Web, Project submenu, grid Connectors,
-  Web search + Research toggles, Capture to brain, Permissions (value badge
-  removed with toolAccess).
-- Added: Plugins row → `allternit:open-view {viewType:'apps-extensions'}`;
-  Skills row → `allternit:open-settings {section:'skills'}`.
-- Verified: tsc typecheck project clean on touched files; vitest src/views/chat
-  45 passed / 1 skipped. Puzzle→PuzzlePiece icon fix for installed phosphor
-  version.
+- Worktree `allternit-session-wordmarksize-0911` on `session/wordmarksize-0911`
+  from origin/main (6b3548c7a).
+- Fixed G in platform + office-site + add-in copies.
+- Unified every product-suffixed wordmark (DESIGN/OFFICE) to height 12:
+  ShellRail OFFICE 10→12 + collapsed 16→12, NewProjectScreen 13→12,
+  OfficeDesktopView 18→12 (dropped the now-no-op markVariant prop at the
+  call site).
+- Added a G≠S regression test (G must be exactly one block heavier than S).
+
+## Verification
+- typecheck 0 err; wordmark+shell tests 25/25; full suite 1653 pass.
 
 ## Next
-Commit, push, PR, merge, ledger attestation, cleanup. Desktop preview rebuild
-deferred (note honestly in ledger) — source lands on main.
+- Commit, push, PR, merge; attest; rebuild dmg; swap; reopen the app.
