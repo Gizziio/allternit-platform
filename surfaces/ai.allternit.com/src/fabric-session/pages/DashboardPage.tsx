@@ -4,11 +4,15 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Bell,
   BellSlash,
+  CaretLeft,
   DesktopTower,
   DownloadSimple,
+  Monitor,
   Moon,
   Sun,
 } from "@phosphor-icons/react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { FabricDesktopDrive, useVisualViewportRect } from "@/components/dispatch/FabricDesktopDrive";
 import {
   FabricAppHeader,
   FabricHeaderControl,
@@ -159,6 +163,8 @@ export function DashboardPage({
     });
   }, [auth.isSignedIn]);
 
+  const isLandscape = useMediaQuery("(orientation: landscape) and (pointer: coarse)");
+  const vv = useVisualViewportRect();
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
@@ -166,15 +172,18 @@ export function DashboardPage({
     if (typeof window === "undefined") return false;
     return Boolean(new URLSearchParams(window.location.search).get("runtime"));
   });
+  const [desktopOpen, setDesktopOpen] = React.useState(false);
 
   const openSession = useCallback(
     (id: string) => {
+      setDesktopOpen(false);
       setSelectedId(id);
       setSessionOpen(true);
     },
     [setSelectedId],
   );
   const closeSession = useCallback(() => {
+    setDesktopOpen(false);
     setSessionOpen(false);
     setSelectedId(null);
   }, [setSelectedId]);
@@ -350,6 +359,11 @@ export function DashboardPage({
       pendingPermissions={pendingPermissions}
       pendingQuestions={pendingQuestions}
     >
+      {sessionOpen && selected ? (
+        <FabricHeaderControl onClick={() => setDesktopOpen(true)} title="Live desktop" active={desktopOpen}>
+          <Monitor size={16} weight="bold" />
+        </FabricHeaderControl>
+      ) : null}
       <FabricHeaderControl onClick={cycleTheme} title="Toggle theme">
         {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
       </FabricHeaderControl>
@@ -365,8 +379,34 @@ export function DashboardPage({
   );
 
   if (sessionOpen && selected) {
+    if (desktopOpen) {
+      return (
+        <div
+          className="z-50 bg-[#0b0b0a] text-white overflow-hidden"
+          style={{
+            position: "fixed",
+            top: vv.height ? vv.top : 0,
+            left: vv.height ? vv.left : 0,
+            width: vv.height ? vv.width : "100%",
+            height: vv.height ? vv.height : "100%",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setDesktopOpen(false)}
+            className="absolute z-30 left-2 inline-flex items-center gap-1 rounded-full border-none bg-black/55 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
+            style={{ top: "max(8px, env(safe-area-inset-top))" }}
+            title="Back to sessions"
+          >
+            <CaretLeft size={16} weight="bold" />
+            {!isLandscape ? "Sessions" : null}
+          </button>
+          <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
+        </div>
+      );
+    }
     return (
-      <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
+      <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
         <FabricAppHeader title={selected.name} onBack={closeSession}>
           {headerActions}
         </FabricAppHeader>

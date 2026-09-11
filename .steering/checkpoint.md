@@ -1,13 +1,14 @@
-# Checkpoint — fabric machine sessions first
+# Checkpoint — fabric desktop fullscreen from follow branch
 
 ## Goal
-Selecting a machine on Fabric Transport opens the node session dashboard, not live desktop/VNC. Desktop remains an opt-in tab.
+Restore the live `session/desktop-follow-0911` FabricDesktopDrive (full-screen
+viewer, pill toolbar). Open it from a top Monitor icon, not a rail tab.
+Keep machine-select → session list.
 
 ## Just did
-- Stop auto-opening the first session.
-- Reset driveKind to chat on runtime change.
-- Mobile: session list is the landing view; Desktop/VNC is behind a tab + back.
-- Remote-control PWA: default tab is Sessions, not Desktop.
+- Checked out FabricDesktopDrive.tsx from origin/session/desktop-follow-0911.
+- Dashboard: Monitor in the node header; same visualViewport fullscreen overlay.
+- Back from overlay returns to sessions. Desktop removed from the rail.
 
 ## Next
-- Commit, PR, bump caches (v25 / remote-control v3).
+- Commit, PR, deploy if asked.
