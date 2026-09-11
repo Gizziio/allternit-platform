@@ -180,6 +180,26 @@ export const nativeSessionsApi = {
     return readJson<PickupResult>(res, "pickup");
   },
 
+  async spawn(input: {
+    harness: string;
+    sessionId?: string;
+  }): Promise<{ harness: string; sessionId: string; spawned: boolean }> {
+    assertCatalogEnabled();
+    const res = await authFetch(`${getBase()}/spawn`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        harness: input.harness,
+        sessionId: input.sessionId,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(body || `spawn failed: ${res.status}`);
+    }
+    return readJson(res, "spawn");
+  },
+
   async exportNative(sessionId: string, harness?: string): Promise<{
     harness: string
     sessionId: string

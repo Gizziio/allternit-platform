@@ -210,6 +210,14 @@ export async function sendComputerMouse(id: string, input: ComputerMouseInput, a
   return api.post(computerPath(id, 'mouse', approvalId), input);
 }
 
+export async function dragComputer(
+  id: string,
+  input: { x: number; y: number; end_x: number; end_y: number },
+  approvalId?: string,
+): Promise<{ success: boolean }> {
+  return sendComputerMouse(id, { action: 'drag', ...input }, approvalId);
+}
+
 export async function sendComputerKeyboard(id: string, input: ComputerKeyboardInput, approvalId?: string): Promise<{ success: boolean }> {
   return api.post(computerPath(id, 'keyboard', approvalId), input);
 }
