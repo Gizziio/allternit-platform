@@ -80,13 +80,14 @@ import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
 import { useCommRailsMailStore } from '@/lib/bots/commrails-mail.store';
 import { useCommRailSections } from '@/lib/bots/use-commrail-sections';
-import { useBotStatus } from '@/lib/bots/bot-operational-state.store';
+
 import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import type { GroupChat } from '@/lib/bots/group-chat.types';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { BotAvatar } from '@/views/bots/BotAvatar';
-import { GroupChatAvatar } from '@/views/bots/GroupChatAvatar';
+
+import { BotGroupRailRow, BotRailRow } from '@/views/bots/BotRailRows';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
@@ -2674,99 +2675,6 @@ function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
           <PushPinSlash size={12} />
         </button>
       )}
-    </div>
-  );
-}
-
-function BotNeedsYouHint({ botId }: { botId: string }): React.ReactNode {
-  const { needsAttention, hasPendingApprovals } = useBotStatus(botId);
-  if (!needsAttention && !hasPendingApprovals) return null;
-  return (
-    <span className="shrink-0 text-[10px] font-medium text-[var(--accent-primary)]">
-      Needs you
-    </span>
-  );
-}
-
-function BotRailRow({ bot, isActive, disabled, onOpen, onUnpin, draggable, onDragStart, onDragEnd }: {
-  bot: Agent;
-  isActive?: boolean;
-  disabled?: boolean;
-  onOpen: () => void;
-  onUnpin?: () => void;
-  draggable?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragEnd?: (e: React.DragEvent) => void;
-}): React.ReactNode {
-  return (
-    <div
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      className={cn(
-        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
-        isActive
-          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
-          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-      )}
-    >
-      <button
-        type="button"
-        onClick={onOpen}
-        disabled={disabled}
-        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium disabled:opacity-60"
-      >
-        <BotAvatar bot={bot} size={22} />
-        <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
-          {getBotDisplayName(bot)}
-        </span>
-        <BotNeedsYouHint botId={bot.id} />
-      </button>
-      {onUnpin && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
-          title="Unpin from rail"
-          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 shrink-0 -ml-1 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
-        >
-          <PushPinSlash size={13} />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function BotGroupRailRow({ group, unread, isActive, onOpen }: {
-  group: GroupChat;
-  unread: number;
-  isActive?: boolean;
-  onOpen: () => void;
-}): React.ReactNode {
-  return (
-    <div
-      data-rail-item={`group-${group.id}`}
-      className={cn(
-        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
-        isActive
-          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
-          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-      )}
-    >
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
-      >
-        <GroupChatAvatar name={group.name} members={group.members} size={22} />
-        <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
-          {group.name}
-        </span>
-        {unread > 0 && (
-          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--accent-primary)] px-1.5 text-[11px] font-semibold text-[var(--ui-text-inverse)]">
-            {unread > 99 ? '99+' : unread}
-          </span>
-        )}
-      </button>
     </div>
   );
 }

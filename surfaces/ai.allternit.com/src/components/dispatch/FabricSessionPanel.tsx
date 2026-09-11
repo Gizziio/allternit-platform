@@ -21,7 +21,7 @@ import {
 } from '@/lib/dispatch/fabric-session-client';
 import { FABRIC_DRIVE_KINDS, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
 import { extractAciScreenshot, FabricAciDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive } from '@/components/dispatch/FabricSessionDriveViews';
-import { FabricBotModeCanvas, FabricBotModeRail } from '@/components/dispatch/FabricBotMode';
+import { FabricBotModeCanvas, FabricBotModeRail, type FabricBotView } from '@/components/dispatch/FabricBotMode';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
 
 export interface FabricSessionPanelProps {
@@ -108,7 +108,24 @@ export function FabricSessionPanel({
   const [brainsLoading, setBrainsLoading] = useState(true);
   const [selectedBrain, setSelectedBrain] = useState<FabricModelRef | null>(() => loadFabricBrain(runtimeId));
   const [bots, setBots] = useState<FabricBot[]>([]);
-  const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
+  const [botView, setBotView] = useState<FabricBotView>('hub');
+  const [botViewBotId, setBotViewBotId] = useState<string | null>(null);
+  const [botViewSessionId, setBotViewSessionId] = useState<string | null>(null);
+  const [botViewGroupId, setBotViewGroupId] = useState<string | null>(null);
+  const applyBotView = useCallback(
+    (next: {
+      view: FabricBotView;
+      botId?: string | null;
+      sessionId?: string | null;
+      groupId?: string | null;
+    }) => {
+      setBotView(next.view);
+      if ('botId' in next) setBotViewBotId(next.botId ?? null);
+      if ('sessionId' in next) setBotViewSessionId(next.sessionId ?? null);
+      if ('groupId' in next) setBotViewGroupId(next.groupId ?? null);
+    },
+    [],
+  );
   const [aciRunId, setAciRunId] = useState<string | null>(null);
   const [aciScreenshot, setAciScreenshot] = useState<string | null>(null);
   const [aciOpening, setAciOpening] = useState(false);
@@ -560,13 +577,14 @@ export function FabricSessionPanel({
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {driveKind === 'bot' ? (
             <FabricBotModeRail
-              selectedBotId={selectedBotId}
-              hubOpen={!selectedBotId}
-              onSelectBot={(id) => {
-                setSelectedBotId(id);
+              view={botView}
+              selectedBotId={botViewBotId}
+              selectedGroupId={botViewGroupId}
+              onOpenHub={() => applyBotView({ view: 'hub', botId: null, sessionId: null })}
+              onOpenGroups={() => applyBotView({ view: 'groups' })}
+              onCloseDrawer={() => {
                 if (isMobile && !railCollapsed) toggleRail();
               }}
-              onOpenHub={() => setSelectedBotId(null)}
             />
           ) : kindSessions.length === 0 ? (
             <div className="px-2 py-6 text-center">
@@ -645,12 +663,11 @@ export function FabricSessionPanel({
       <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-[var(--shell-view-bg)]">
         {driveKind === 'bot' ? (
           <FabricBotModeCanvas
-            selectedBotId={selectedBotId}
-            onSelectBot={(id) => {
-              setSelectedBotId(id);
-              if (isMobile && !railCollapsed) toggleRail();
-            }}
-            onBack={() => setSelectedBotId(null)}
+            view={botView}
+            botId={botViewBotId}
+            sessionId={botViewSessionId}
+            groupId={botViewGroupId}
+            onView={applyBotView}
           />
         ) : !selectedSession ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
