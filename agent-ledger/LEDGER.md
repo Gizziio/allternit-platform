@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:23 — grok — remaining OpenBot UX (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-remaining` (worktree `allternit-ao-openbot-policy-gateway`)
+- **Agent:** grok
+- **Summary:** Merged PR #290 (18ed1019b) — computer-tool policy `bot_id`, live VNC watch strip, transcript activity ladder, old-stretch summary, notify modes.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/290 · 18ed1019bac5a84ce0d7b8275a69eee9ee2b4c14
+- **How it works:** Read-only computer lookup before policy eval (not guest dispatch). Strip VNC is lowest-priority claim. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Spawned-child subagent tree still needs an event feed.
+- **Summary file:** [2026-09-10-2123-openbot-remaining-grok.md](./summaries/2026-09-10-2123-openbot-remaining-grok.md)
+
 ### 2026-09-10 21:23 — grok — Cloud Agents Phase 3 brain attach + vaults alias (rq-20260910-002)
 
 - **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
