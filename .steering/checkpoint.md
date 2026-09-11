@@ -1,25 +1,26 @@
-# Checkpoint — session/designwordmark-0911
+# Steering checkpoint — session/742d251e (kimi-code)
 
 ## Goal
-Emulate the office wordmark for the Design surface: render A://TERNIT DESIGN
-via the existing `suffix` prop on the shared AProtocolWordmark component, in
-the two owner-approved spots (design launch header + shell rail footer
-Design button).
+Fix the Allternit Desktop rail "+" (New Session) menu to match the Anthropic/ChatGPT
+creation-menu pattern: one canonical `+` entry point (expanded + collapsed rail),
+compact icon + single-line rows, and an overlay consistent with the shell's other
+menus (tokens, shadow, z-index, entrance animation, keyboard support).
 
 ## Just did
-- Created worktree `allternit-session-designwordmark-0911` on branch
-  `session/designwordmark-0911` from origin/main (2aed1d3f6).
-- Scoped with owner: rail target = ShellRail footer Design button; header
-  target = NewProjectScreen launch header. No new rail in /design window.
-- Wrote plan file `.steering/plan-designwordmark-0911.md`.
-- Edited both spots to use `<AProtocolWordmark suffix="DESIGN" />`
-  (height 13 launch header keeping BETA; height 12 rail footer button).
-- Verified: `pnpm typecheck` — zero errors in touched files (6 pre-existing
-  fabric-session errors on main, untouched); `pnpm vitest run src/shell`
-  4 files / 20 tests passed.
+- Gap analysis of `ui/shell/FloatingWidgets.tsx:193-221` create menu vs sibling
+  menus (`ProjectRailSection.tsx`, `SettingsDrilldown.tsx`) and vs Anthropic's
+  pattern (research: claude.ai sidebar + = compact New chat/New project rows;
+  Claude desktop = Chat/Cowork/Code session-type entries; composer + = icon rows).
+- Created session worktree `allternit-session-742d251e` on `session/742d251e`
+  from `origin/main` (1e52b9ea7).
 
 ## Next
-- Commit, push, PR, merge; sync main; ledger attestation; cleanup.
+1. Shared shell menu primitive (Escape/arrows/outside-click/focus return,
+   sibling-consistent tokens + submenuSlideIn animation).
+2. `+` (Plus) button in expanded AND collapsed rail; menu items become
+   icon + single-line: New Chat / New Agent Session / Continue CLI Session.
+3. Typecheck, commit, push, PR, merge, ledger attestation, desktop preview rebuild.
 
 ## Open questions
-- None.
+- Whether to add a "New Project" row (Anthropic lists projects): only if the shell
+  already exposes a create-project handler; otherwise out of scope for this pass.

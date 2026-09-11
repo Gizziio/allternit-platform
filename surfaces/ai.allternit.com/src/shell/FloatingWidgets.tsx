@@ -1,19 +1,22 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   SidebarSimple,
   CaretLeft,
   CaretRight,
-  NotePencil,
+  Plus,
   Bell,
   House,
   Robot,
+  Terminal,
   TerminalWindow,
   Globe,
+  ChatCircle,
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
 import { isElectronShell } from '../lib/platform';
 import { cn } from '@/lib/utils';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
+import { ShellMenu, ShellMenuItem } from './ShellMenu';
 
 interface RailControlsProps {
   mode: AppMode;
@@ -66,22 +69,11 @@ export function RailControls({
 }: RailControlsProps): React.ReactNode {
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [collapsedHovered, setCollapsedHovered] = useState(false);
-  const createMenuRef = useRef<HTMLDivElement | null>(null);
+  const createTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   // Tight leading offset for the frameless window's traffic-light controls
   // in the Electron desktop shell; on the web there's no traffic-light strip.
   const trafficLightClearance = isElectronShell() ? 72 : 4;
-
-  useEffect(() => {
-    if (!showCreateMenu) return;
-    const handlePointerDown = (event: MouseEvent): void => {
-      if (!createMenuRef.current?.contains(event.target as Node)) {
-        setShowCreateMenu(false);
-      }
-    };
-    window.addEventListener('mousedown', handlePointerDown);
-    return () => window.removeEventListener('mousedown', handlePointerDown);
-  }, [showCreateMenu]);
 
   if (isRailCollapsed) {
     return (
@@ -98,7 +90,7 @@ export function RailControls({
           <div
             className={cn(
               "flex items-center gap-0.5 rounded-lg transition-all duration-200",
-              collapsedHovered
+              collapsedHovered || showCreateMenu
                 ? "bg-[var(--shell-control-bg)] border border-solid border-[var(--border-subtle)] px-1 py-0.5"
                 : "bg-[var(--shell-control-bg)]/60 border border-solid border-transparent"
             )}
@@ -115,9 +107,45 @@ export function RailControls({
             >
               <SidebarSimple size={15} weight="bold" />
             </TitleBarButton>
-            {collapsedHovered && (
+            {(collapsedHovered || showCreateMenu) && (
               <>
                 <div className="w-px h-4 bg-[var(--shell-divider)]" />
+                <div className="relative">
+                  <TitleBarButton
+                    buttonRef={createTriggerRef}
+                    onClick={() => setShowCreateMenu((v) => !v)}
+                    title="New"
+                    ariaHaspopup
+                    ariaExpanded={showCreateMenu}
+                  >
+                    <Plus size={15} weight="bold" />
+                  </TitleBarButton>
+                  <ShellMenu
+                    open={showCreateMenu}
+                    onClose={() => setShowCreateMenu(false)}
+                    triggerRef={createTriggerRef}
+                    className="absolute left-[calc(100%+8px)] top-0 min-w-[196px]"
+                  >
+                    <ShellMenuItem
+                      icon={<ChatCircle size={16} weight="bold" />}
+                      label="New Chat"
+                      onClick={async () => { setShowCreateMenu(false); await onNewChat(); }}
+                    />
+                    <ShellMenuItem
+                      icon={<Robot size={16} weight="bold" />}
+                      label="New Agent Session"
+                      onClick={() => { setShowCreateMenu(false); onNewAgentSession(); }}
+                    />
+                    <ShellMenuItem
+                      icon={<Terminal size={16} weight="bold" />}
+                      label="Continue CLI Session"
+                      onClick={() => {
+                        setShowCreateMenu(false);
+                        openNativeSessionPicker(mode === 'browser' ? 'chat' : mode, 'regular');
+                      }}
+                    />
+                  </ShellMenu>
+                </div>
                 {MODE_BUTTONS.map((btn) => {
                   const isActive = mode === btn.id;
                   const IconComponent = btn.icon;
@@ -190,34 +218,41 @@ export function RailControls({
 
           <div className="w-px h-4 bg-[var(--shell-divider)] mx-1" />
 
-          <div ref={createMenuRef} className="relative">
-            <TitleBarButton onClick={() => setShowCreateMenu((v) => !v)} title="New Session">
-              <NotePencil size={15} weight="bold" />
+          <div className="relative">
+            <TitleBarButton
+              buttonRef={createTriggerRef}
+              onClick={() => setShowCreateMenu((v) => !v)}
+              title="New"
+              ariaHaspopup
+              ariaExpanded={showCreateMenu}
+            >
+              <Plus size={15} weight="bold" />
             </TitleBarButton>
-            {showCreateMenu && (
-              <div
-                className="absolute top-[calc(100%+8px)] left-0 min-w-[196px] p-1.5 rounded-xl border border-solid border-[var(--shell-menu-border)] bg-[var(--shell-menu-bg)] shadow-[var(--shadow-xl)] z-[152]"
-              >
-                <CreateMenuButton
-                  label="New Chat"
-                  description="Start a regular chat thread"
-                  onClick={async () => { setShowCreateMenu(false); await onNewChat(); }}
-                />
-                <CreateMenuButton
-                  label="New Agent Session"
-                  description="Start a durable operator session"
-                  onClick={() => { setShowCreateMenu(false); onNewAgentSession(); }}
-                />
-                <CreateMenuButton
-                  label="Continue CLI session"
-                  description="Pick up Claude, Codex, Grok, Kimi, …"
-                  onClick={() => {
-                    setShowCreateMenu(false);
-                    openNativeSessionPicker(mode === 'browser' ? 'chat' : mode, 'regular');
-                  }}
-                />
-              </div>
-            )}
+            <ShellMenu
+              open={showCreateMenu}
+              onClose={() => setShowCreateMenu(false)}
+              triggerRef={createTriggerRef}
+              className="absolute top-[calc(100%+8px)] left-0 min-w-[196px]"
+            >
+              <ShellMenuItem
+                icon={<ChatCircle size={16} weight="bold" />}
+                label="New Chat"
+                onClick={async () => { setShowCreateMenu(false); await onNewChat(); }}
+              />
+              <ShellMenuItem
+                icon={<Robot size={16} weight="bold" />}
+                label="New Agent Session"
+                onClick={() => { setShowCreateMenu(false); onNewAgentSession(); }}
+              />
+              <ShellMenuItem
+                icon={<Terminal size={16} weight="bold" />}
+                label="Continue CLI Session"
+                onClick={() => {
+                  setShowCreateMenu(false);
+                  openNativeSessionPicker(mode === 'browser' ? 'chat' : mode, 'regular');
+                }}
+              />
+            </ShellMenu>
           </div>
 
           <div className="relative">
@@ -247,41 +282,30 @@ function TitleBarButton({
   onClick,
   title,
   disabled,
+  buttonRef,
+  ariaHaspopup,
+  ariaExpanded,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   title?: string;
   disabled?: boolean;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+  ariaHaspopup?: boolean;
+  ariaExpanded?: boolean;
 }): React.ReactNode {
   return (
     <button type="button"
+      ref={buttonRef}
       onClick={onClick}
       onMouseDown={(e) => e.stopPropagation()}
       title={title}
       disabled={disabled}
+      aria-haspopup={ariaHaspopup ? 'menu' : undefined}
+      aria-expanded={ariaExpanded}
       className="bg-transparent border-none rounded-md w-11 h-11 md:w-7 md:h-7 flex items-center justify-center text-[var(--shell-item-muted)] cursor-pointer transition-all duration-150 shrink-0 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)] disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {children}
-    </button>
-  );
-}
-
-function CreateMenuButton({
-  label,
-  description,
-  onClick,
-}: {
-  label: string;
-  description: string;
-  onClick: () => void;
-}): React.ReactNode {
-  return (
-    <button type="button"
-      onClick={onClick}
-      className="w-full flex flex-col items-start gap-0.5 p-[9px_12px] border-none bg-transparent rounded-lg text-[var(--shell-item-fg)] cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
-    >
-      <span className="text-[13px] font-semibold">{label}</span>
-      <span className="text-[12px] text-[var(--shell-item-muted)] leading-tight">{description}</span>
     </button>
   );
 }
