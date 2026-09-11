@@ -87,6 +87,20 @@ Write the next phase's task spec, `ao-send` it to the SAME session, re-arm `ao-w
 
 `ao-*` sessions are discovered by the allternit app and shown as executor tiles on the code canvas (lifecycle → commrails mail thread `wih:executor-<slug>`; see ORCHESTRATOR.md "Platform integration"). In task specs, tell executors: append milestone notes to `.allternit/shared-context.md` when present (append-only, `### <slug> <ISO ts>`), and drop artifacts in `~/.agent-orchestrator/evidence/<slug>/`, announcing each via `curl -X POST http://127.0.0.1:8013/api/commrails/mail/share` with `{"thread":"wih:executor-<slug>","asset_ref":"<path>"}` — that's what makes progress and artifacts show up for humans in the app. (The old `/api/rails/mail/share` prefix remains as a one-release alias.)
 
+## Dispatch semantics (registry, mailbox, ownership, recovery)
+
+The ao engine adds durable dispatch semantics on top of the tmux flow. Additive: the `ao-*` bash scripts and `ao spawn/send/watch/status/kill/doctor` keep their exact behavior.
+
+**Dispatch registry.** `~/.agent-orchestrator/state.json`. Legacy keys `cwd`/`log`/`dead` stay. Added: `runner`, `worktree`, `branch`, `sentinel`, `lead`, `lifecycle`, `world`, `queued`. Bash `ao-spawn`/`ao-kill` update the same file via `ao-registry-sync`.
+
+**Bus mailbox.** `ao queue` / `ao send --queue` / `ao drain` / `ao watch` auto-drain. Settle only after verified paste. Never the HTTP inbox endpoint. Single drainer owned by ao-engine.
+
+**Ownership.** Fail-closed lead→runner. `--as-human` override.
+
+**Recovery.** `ao recover [slug]` (dry-run default; `--apply` respawns from `.cmd.sh` with harness resume argv).
+
+**Validation boundary.** `infrastructure/executor/ao-engine/tests/dispatch_demo/run.sh`. Not claimed: multi-day autonomous runs, cross-machine leads, concurrent drainers.
+
 ## Pitfalls learned the hard way
 
 - kimi `-p` refuses `--yolo`/`--auto` — TUI + `ao-send` is the only autonomous kimi path.

@@ -1,21 +1,20 @@
-# Session checkpoint — phoneremote-0910
+# Session checkpoint — session/dispatch-0910
 
 ## Goal
-Fabric Desktop: PWA at fabrictransport.allternit.com, Termius-shaped machine list, live desktop of any paired runtime. Capture stays on the node.
+Implement dispatch semantics for ao-engine per spec `Allternit Brain/Research/specs/dispatch-semantics.md`.
 
 ## Just did
-- v0 tailnet PWA accepted (view + type from physical iPhone).
-- Desktop drive in Fabric Session + Remote Control dashboard.
-- Linux/VPS path: Xvfb+XFCE installer, x11 grab, xdotool input.
-- Deployed fabric-session PWA to allternit-remote-control (HTTPS).
-- Merged main (bot-mode UI PR #285, SW was v22 → this branch v23).
+- A1–A5 committed, PR #277. dispatch_demo 23/23, 7 unit tests, ao doctor green.
+- Merging onto main after phone-remote #276 landed.
 
 ## Next
-- Redeploy PWA after SW v23 bump so installed clients pick up Desktop + bot-mode.
-- Virtual desktop on headless VPS boxes (`install-headless-desktop.sh`).
+- Merge PR #277.
+
+## Open questions
+- Bash ao-send stays immediate-only; engine owns queueing.
 
 ---
 
-# Prior (landed) — fabric-pwa-bot-mode-ui / openbot-policy-gateway
+# Prior (landed) — phoneremote-0910 / fabric-pwa-bot-mode-ui / openbot-policy-gateway
 
-Bot-mode PWA phases 1A–1C merged (#285). OpenBot policy gateway #275 on main.
+Phone-remote + Fabric Desktop PR #276 merged. Bot-mode PWA #285. OpenBot policy gateway #275.

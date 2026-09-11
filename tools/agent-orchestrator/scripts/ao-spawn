@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ao-spawn — thin shim over allternit-rails orchestrator spawn.
 # Legacy semantics: [--worktree] <slug> <repo-dir> <agent-cmd...>
+# Dispatch registry (A1): upserts ~/.agent-orchestrator/state.json after spawn.
 set -euo pipefail
 
 command -v allternit-rails >/dev/null 2>&1 || {
@@ -8,4 +9,29 @@ command -v allternit-rails >/dev/null 2>&1 || {
   exit 1
 }
 
-exec allternit-rails orchestrator spawn "$@"
+WORKTREE=0
+if [ "${1:-}" = "--worktree" ]; then WORKTREE=1; shift; fi
+SLUG=${1:-}
+DIR=${2:-}
+SESSION="ao-${SLUG:-unknown}"
+LOGDIR="$HOME/.agent-orchestrator/logs"
+mkdir -p "$LOGDIR"
+LOG="$LOGDIR/$SESSION-$(date +%Y%m%d-%H%M%S).log"
+RUNNER="$LOGDIR/$SESSION.cmd.sh"
+AO_SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+set +e
+if [ "$WORKTREE" = 1 ]; then
+  allternit-rails orchestrator spawn --worktree "$@"
+else
+  allternit-rails orchestrator spawn "$@"
+fi
+rc=$?
+set -e
+
+if [ -n "$SLUG" ]; then
+  life=running
+  [ $rc -eq 0 ] || life=dead
+  "$AO_SCRIPTS/ao-registry-sync" upsert "$SESSION" "${DIR:-}" "$LOG" "$RUNNER" "$WORKTREE" "$SLUG" "$life" 2>/dev/null || true
+fi
+exit $rc
