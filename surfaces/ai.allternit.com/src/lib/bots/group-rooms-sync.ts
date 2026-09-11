@@ -24,7 +24,7 @@
  *   surfaced in the Inbox pane.
  *
  * Everything is gated on the Rails/API env flag and fails closed, same as
- * comrails-mail.store.
+ * commrails-mail.store.
  *
  * @module group-rooms-sync
  */

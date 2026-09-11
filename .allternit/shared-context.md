@@ -27,3 +27,9 @@ Cloud Agents Phase 1: public /api/v1/sessions facade (cloud_agents_routes.rs) ov
 
 ### openbot-policy-gateway 2026-09-10T23:42:00Z
 Task B bot-mode UI landed in the same worktree: PolicyGovernance gated on sessionMode=agent / isBot, chips + audit list + editor in BotChatSessionView, save fallback is copy-JSON to ALLTERNIT_ACI_POLICY_FILE (no PUT endpoint). vitest 11/11. Sentinel docs/OPENBOT_POLICY_PHASE_B_NOTES.md. Phase 2 UX cluster (avatars, @mentions, group chat) still out of scope.
+
+### ba-0b-commrails 2026-09-10T00:00:00Z
+BA-0b done: rails/ renamed to commrails/ (package allternit-commrails, bins allternit-commrails/-service/commrails; old names are one-release shims). HTTP /api/commrails added with /api/rails alias; env reads ALLTERNIT_COMMRAILS_* first; compat crate keeps allternit-agent-system-rails linking. cargo test -p allternit-commrails 5/5 + doc-test pass. NOTES: docs/BA_0B_COMMRAILS_NOTES.md.
+
+### ba-1-commrails-rail 2026-09-10T19:20:00Z
+BA-1 live rail: seed bots dropped; GET /api/commrails/visibility (+ /api/rails alias) from PeerRegistry; Sessions + Needs you RecentsPanels in ShellRail. NOTES: docs/BA_1_COMMRAILS_RAIL_NOTES.md.

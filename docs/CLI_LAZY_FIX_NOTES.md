@@ -8,16 +8,16 @@ requirements:
   R2: done
   R3: done
 files_changed:
-  - rails/src/bin/allternit-rails.rs
+  - rails/src/bin/allternit-commrails.rs
   - rails/src/bus/mod.rs
-tests: cargo test -p allternit-agent-system-rails (82 lib + 5 invariants + 1 doc-test, 0 failed)
+tests: cargo test -p allternit-commrails (82 lib + 5 invariants + 1 doc-test, 0 failed)
 ---
 
 # CLI lazy startup fix — notes
 
 ## What was wrong
 
-`rails/src/bin/allternit-rails.rs` `main()` eagerly built Ledger, Leases,
+`rails/src/bin/allternit-commrails.rs` `main()` eagerly built Ledger, Leases,
 ReceiptStore, Index, Vault, Gate, Bus, and WorkOps for EVERY subcommand before
 dispatch. Leases/Index/Bus are sqlx SQLite stores, so any CLI invocation —
 including subcommands that never touch SQLite (`ticket ready`,
@@ -31,7 +31,7 @@ including subcommands that never touch SQLite (`ticket ready`,
 - `Mail` — `Mail::new` is a pure config holder (mail/mail.rs).
 
 Everything else lives behind a new `Stores` struct in
-`rails/src/bin/allternit-rails.rs` with `tokio::sync::OnceCell` accessors
+`rails/src/bin/allternit-commrails.rs` with `tokio::sync::OnceCell` accessors
 (tokio "full" already in the tree — no new crates). Each accessor builds its
 store on first use and caches it; dependent accessors compose
 (`gate()` pulls `leases()`/`receipts()`/`index()`/`vault()`). Subcommand arms
@@ -77,7 +77,7 @@ let pool = SqlitePoolOptions::new()
 Build:
 
 ```
-$ cargo build -p allternit-agent-system-rails --bin allternit-rails
+$ cargo build -p allternit-commrails --bin allternit-commrails
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 48.06s
 ```
 
@@ -85,7 +85,7 @@ Script (`/tmp/r3-check.sh`, runs each command in a fresh `mktemp -d` and
 asserts on exit code and directory (non-)existence):
 
 ```
-$ /tmp/r3-check.sh "$PWD/target/debug/allternit-rails"
+$ /tmp/r3-check.sh "$PWD/target/debug/allternit-commrails"
 PASS: ticket ready exit code
 PASS: ticket ready: no .allternit/leases
 PASS: ticket ready: no .allternit/index
@@ -131,7 +131,7 @@ ALL R3 CHECKS PASSED
 ## Test suite
 
 ```
-$ cargo test -p allternit-agent-system-rails
+$ cargo test -p allternit-commrails
 test result: ok. 82 passed; 0 failed  (lib unittests)
 test result: ok. 5 passed; 0 failed   (tests/invariants.rs)
 test result: ok. 1 passed; 0 failed   (doc-tests)

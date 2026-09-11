@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import { useCommRailsUnreadCount } from "@/lib/bots/comrails-mail.store";
+import { useCommRailsUnreadCount } from "@/lib/bots/commrails-mail.store";
 import { cn } from "@/lib/utils";
 import { X, Zap, Sparkles } from "lucide-react";
 import { AgentAvatar } from "@/components/Avatar/AgentAvatar";

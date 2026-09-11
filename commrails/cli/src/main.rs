@@ -13,27 +13,27 @@ use anyhow::{bail, Context, Result};
 use chrono::Utc;
 use clap::{Parser, Subcommand, ValueEnum};
 
-use allternit_agent_system_rails::batch::{BatchExecutor, BatchOp, BatchOpResult};
-use allternit_agent_system_rails::compact::Compactor;
-use allternit_agent_system_rails::dependencies::{DependencyEdge, DependencyGraph, DependencyKind};
-use allternit_agent_system_rails::echoes::{EchoKind, EchoStore, DEFAULT_ECHO_TTL_SECONDS};
-use allternit_agent_system_rails::memory::{MemoryStore, MemoryUpdate};
-use allternit_agent_system_rails::rails_id::{HierarchicalId, TicketId};
-use allternit_agent_system_rails::query::{Query, QueryEngine, QueryEntity, QueryResultItem};
-use allternit_agent_system_rails::setup::{AgentTarget, SetupRecipe};
-use allternit_agent_system_rails::sync::{build_provider, SyncDirection, SyncStore};
-use allternit_agent_system_rails::templates::{TemplateStep, TemplateStore};
-use allternit_agent_system_rails::killswitch::{KillSwitch, SloMetrics};
-use allternit_agent_system_rails::ledger::{Ledger, LedgerOptions};
-use allternit_agent_system_rails::mcp::McpServer;
-use allternit_agent_system_rails::merge_locks::{MergeLockStore, DEFAULT_LOCK_TTL_SECONDS};
-use allternit_agent_system_rails::policy::inject_policy;
-use allternit_agent_system_rails::wait_gates::{GateOutcome, WaitGateKind, WaitGateStore};
-use allternit_agent_system_rails::tickets::{
+use allternit_commrails::batch::{BatchExecutor, BatchOp, BatchOpResult};
+use allternit_commrails::compact::Compactor;
+use allternit_commrails::dependencies::{DependencyEdge, DependencyGraph, DependencyKind};
+use allternit_commrails::echoes::{EchoKind, EchoStore, DEFAULT_ECHO_TTL_SECONDS};
+use allternit_commrails::memory::{MemoryStore, MemoryUpdate};
+use allternit_commrails::rails_id::{HierarchicalId, TicketId};
+use allternit_commrails::query::{Query, QueryEngine, QueryEntity, QueryResultItem};
+use allternit_commrails::setup::{AgentTarget, SetupRecipe};
+use allternit_commrails::sync::{build_provider, SyncDirection, SyncStore};
+use allternit_commrails::templates::{TemplateStep, TemplateStore};
+use allternit_commrails::killswitch::{KillSwitch, SloMetrics};
+use allternit_commrails::ledger::{Ledger, LedgerOptions};
+use allternit_commrails::mcp::McpServer;
+use allternit_commrails::merge_locks::{MergeLockStore, DEFAULT_LOCK_TTL_SECONDS};
+use allternit_commrails::policy::inject_policy;
+use allternit_commrails::wait_gates::{GateOutcome, WaitGateKind, WaitGateStore};
+use allternit_commrails::tickets::{
     Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore, TicketUpdate,
 };
 #[cfg(feature = "dolt")]
-use allternit_agent_system_rails::dolt::{DoltConfig, DoltStorage};
+use allternit_commrails::dolt::{DoltConfig, DoltStorage};
 
 /// Default directory for Rails CLI state, relative to workspace root.
 const RAILS_DIR: &str = ".allternit/rails";
@@ -665,7 +665,7 @@ fn main() -> Result<()> {
 }
 
 fn check_kill_switch(root: &Path) -> Result<()> {
-    allternit_agent_system_rails::killswitch::KillSwitch::load(root)?.check()
+    allternit_commrails::killswitch::KillSwitch::load(root)?.check()
 }
 
 fn cmd_init(root: &Path) -> Result<()> {
@@ -959,7 +959,7 @@ fn cmd_ready(root: &Path, explain: bool, json: bool) -> Result<()> {
 
 fn cmd_doctor(root: &Path, json: bool) -> Result<()> {
     ensure_init(root)?;
-    let report = allternit_agent_system_rails::doctor::diagnose(root, 30)?;
+    let report = allternit_commrails::doctor::diagnose(root, 30)?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
@@ -1716,7 +1716,7 @@ fn load_graph(root: &Path) -> Result<DependencyGraph> {
 
 fn save_graph(root: &Path, graph: &DependencyGraph) -> Result<()> {
     let path = graph_path(root);
-    allternit_agent_system_rails::core::io::write_json_atomic(&path, graph)?;
+    allternit_commrails::core::io::write_json_atomic(&path, graph)?;
     Ok(())
 }
 

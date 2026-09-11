@@ -7,7 +7,7 @@ files_changed:
   - rails/src/mail/mod.rs
   - rails/src/lib.rs
   - rails/src/service.rs
-  - rails/src/bin/allternit-rails.rs
+  - rails/src/bin/allternit-commrails.rs
   - cmd/allternit-api/src/rails/mod.rs
   - .steering/checkpoint.md
   - docs/RAILS_MAIL_E2_NOTES.md
@@ -56,7 +56,7 @@ remaining: []
 
 ## Verification
 
-- `cargo test -p allternit-agent-system-rails` — **78 passed, 0 failed**
+- `cargo test -p allternit-commrails` — **78 passed, 0 failed**
   (6 new E2 tests: search by subject/body word + FTS-operator escaping;
   legacy/non-message events skipped; rebuild after db wipe restores
   identical results and is idempotent; digest append order; digest

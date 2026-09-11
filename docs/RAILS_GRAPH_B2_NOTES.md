@@ -7,7 +7,7 @@ files_changed:
   - rails/src/graph/mod.rs
   - rails/src/graph/algorithms.rs
   - rails/src/graph/tests.rs
-  - rails/src/bin/allternit-rails.rs
+  - rails/src/bin/allternit-commrails.rs
   - cmd/allternit-api/src/rails/mod.rs
 deviations:
   - "Shared GraphAnalytics lives in RailsState (`Arc<GraphAnalytics>` field, initialized in RailsState::new) rather than a OnceLock static: RailsState is only ever built via ::new (verified by grep), so a field keeps the content-hash cache per-process with no new crates and no global state."
@@ -49,7 +49,7 @@ remaining:
   the content-hash cache survives across requests. Unknown id -> 404,
   malformed id -> 400, both via the existing `ticket_error` /
   `parse_ticket_id` patterns.
-- **CLI** (`rails/src/bin/allternit-rails.rs`): `rails graph insights` /
+- **CLI** (`rails/src/bin/allternit-commrails.rs`): `rails graph insights` /
   `triage` / `impact <ticket_id>` (clap subcommand group, matching existing
   conventions) printing the same view structs via
   `serde_json::to_string_pretty`.
@@ -60,7 +60,7 @@ remaining:
 
 ## Verification
 
-- `cargo test -p allternit-agent-system-rails` — **passes**: 67 lib tests
+- `cargo test -p allternit-commrails` — **passes**: 67 lib tests
   (61 B1 + 6 new `graph::view_tests`), 5 `tests/invariants.rs`, 1 doc-test;
   0 failed.
   - diamond: A top keystone (impact 3), D most blocked, all metrics

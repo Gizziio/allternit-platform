@@ -8,7 +8,7 @@
  * @module agent-comm-tool
  */
 
-import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
+import { useCommRailsMailStore } from '@/lib/bots/commrails-mail.store';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { createModuleLogger } from '@/lib/logger';
 import type { ToolDefinition } from './index';

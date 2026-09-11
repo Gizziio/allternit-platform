@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use allternit_agent_system_rails::core::types::{AllternitEvent, Actor, ActorType, ReceiptRecord};
-use allternit_agent_system_rails::gate::gate::DagMutation as Mutation;
-use allternit_agent_system_rails::leases::leases::LeasesOptions;
-use allternit_agent_system_rails::ledger::ledger::LedgerOptions;
-use allternit_agent_system_rails::{
+use allternit_commrails::core::types::{AllternitEvent, Actor, ActorType, ReceiptRecord};
+use allternit_commrails::gate::gate::DagMutation as Mutation;
+use allternit_commrails::leases::leases::LeasesOptions;
+use allternit_commrails::ledger::ledger::LedgerOptions;
+use allternit_commrails::{
     Gate, GateOptions, Index, IndexOptions, Leases, Ledger, LedgerQuery, ReceiptStore,
     ReceiptStoreOptions, Vault, VaultOptions,
 };
@@ -74,7 +74,7 @@ async fn fresh_wih_writes_context_pack() {
             &dag_id,
             &node_id,
             "agent-1",
-            allternit_agent_system_rails::gate::gate::WihPickupOptions {
+            allternit_commrails::gate::gate::WihPickupOptions {
                 role: None,
                 fresh: true,
             },

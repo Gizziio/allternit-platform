@@ -25,7 +25,7 @@ use tracing::warn;
 use crate::auth::get_user;
 use crate::auth::AuthUser;
 use crate::AppState;
-use allternit_agent_system_rails::LedgerQuery;
+use allternit_commrails::LedgerQuery;
 
 fn unauthorized() -> axum::response::Response {
     (
@@ -718,14 +718,14 @@ async fn create_agent(
     match result {
         Ok(Ok(id)) => {
             // Append agent creation event to Rails ledger for audit/traceability
-            let ledger_event = allternit_agent_system_rails::AllternitEvent {
+            let ledger_event = allternit_commrails::AllternitEvent {
                 event_id: String::new(),
                 ts: String::new(),
-                actor: allternit_agent_system_rails::Actor {
-                    r#type: allternit_agent_system_rails::ActorType::User,
+                actor: allternit_commrails::Actor {
+                    r#type: allternit_commrails::ActorType::User,
                     id: user_id.clone(),
                 },
-                scope: Some(allternit_agent_system_rails::EventScope {
+                scope: Some(allternit_commrails::EventScope {
                     project_id: None,
                     dag_id: None,
                     node_id: None,
@@ -2677,14 +2677,14 @@ async fn append_run_ledger_event(
     event_type: &str,
     payload: serde_json::Value,
 ) {
-    let event = allternit_agent_system_rails::AllternitEvent {
+    let event = allternit_commrails::AllternitEvent {
         event_id: String::new(),
         ts: String::new(),
-        actor: allternit_agent_system_rails::Actor {
-            r#type: allternit_agent_system_rails::ActorType::User,
+        actor: allternit_commrails::Actor {
+            r#type: allternit_commrails::ActorType::User,
             id: user_id.to_string(),
         },
-        scope: Some(allternit_agent_system_rails::EventScope {
+        scope: Some(allternit_commrails::EventScope {
             project_id: None,
             dag_id: None,
             node_id: None,

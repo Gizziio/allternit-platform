@@ -48,6 +48,6 @@ registered in `rails/src/lib.rs`:
 
 ## Verification (required)
 
-- `cargo test -p allternit-agent-system-rails` passes (recorded in NOTES).
+- `cargo test -p allternit-commrails` passes (recorded in NOTES).
 - No HTTP/CLI work — that is Phase B2. Library only.
 - No new external crates (spec constraint).

@@ -38,7 +38,7 @@ NOTES + sentinel, then commit
 
 ## Constraints
 
-- `cargo test -p allternit-agent-system-rails` passes;
+- `cargo test -p allternit-commrails` passes;
   `cargo build -p allternit-api` compiles. Record in NOTES.
 - SQLite is a rebuildable index only — canonical state stays in the ledger/
   projections. No message content stored ONLY in the index.
