@@ -1,27 +1,36 @@
-# Steering checkpoint — session/b569de1d (kimi-code)
+# Steering checkpoint — session/console-be-p3
 
 ## Goal
-Restructure the chat composer "+" sheet (ComposerPlusSheet) per owner direction:
-remove unwired/dead controls and unused view rows, keep the endorsed rows, add
-Plugins and Skills.
+Backend build-out Phase 3 (G6): deployment scheduler daemon in allternit-api — poll beta_deployments where next_run_at <= now, restart-safe claim, enqueue work task + insert beta_deployment_runs row, recompute next_run_at. Scheduler only creates runs; terminal status still via existing worker PATCH. Overdue policy: fire-once (documented).
 
 ## Just did
-- Removed: Style grid button + submenu + ResponseStyle plumbing; Tool access
-  segmented control + ToolAccessLevel plumbing (both only injected prompt-text
-  prefixes, never reached backend settings — owner directive); the composer
-  Style chip; duplicate Connectors list row; Form Surfaces / Cowork Tasks /
-  Bot Activity list rows (Form Surfaces and Cowork Tasks views had NO other
-  entry point — now orphaned by design; Bot Activity remains reachable via
-  /agent-activity routes, shell panel, and global event).
-- Kept: Files, GitHub (+URL panel), Web, Project submenu, grid Connectors,
-  Web search + Research toggles, Capture to brain, Permissions (value badge
-  removed with toolAccess).
-- Added: Plugins row → `allternit:open-view {viewType:'apps-extensions'}`;
-  Skills row → `allternit:open-settings {section:'skills'}`.
-- Verified: tsc typecheck project clean on touched files; vitest src/views/chat
-  45 passed / 1 skipped. Puzzle→PuzzlePiece icon fix for installed phosphor
-  version.
+- G6 complete: V144 migration (triggered_by), shared insert_deployment_run_tx
+  (run + deployment-tied work task) used by trigger_run (manual) and the new
+  deployment_scheduler daemon; scheduler module with restart-safe claim,
+  fire-once overdue policy, next-occurrence anchored to the DUE time;
+  AppState.deployment_scheduler wired through all 21 constructors;
+  monitor/system exposes {last_tick_at, runs_fired_total}.
+- Verified: cargo test -p allternit-api → 918 passed, 5 failed (exactly the
+  known pre-existing agent_cloud×4 + rails gate×1). Live smoke on scratch
+  port 18099: cron */1 fired at the minute boundary, run row
+  (triggered_by=scheduler) + queued work task created, next_run_at advanced
+  to the next minute (due-anchored), fire-once confirmed, monitor fields
+  present. release-preflight 35/0.
 
 ## Next
-Commit, push, PR, merge, ledger attestation, cleanup. Desktop preview rebuild
-deferred (note honestly in ledger) — source lands on main.
+- Parent review; commit/PR/attest/cleanup per repo ritual (not done here —
+  session scoped to implementation + verification only).
+
+## Open questions
+- (resolved during impl) trigger_run did NOT enqueue a work task today and
+  beta_deployment_runs had no triggered_by column. Followed the task's
+  shared-function instruction: both paths now insert run + work task;
+  triggered_by added via V144. Manual trigger response shape unchanged
+  apart from the additive triggered_by field.
+- Interval env: DEPLOYMENT_SCHEDULER_INTERVAL_SECS, default 15s.
+- Overdue reconciliation: next computed after the DUE time (no per-tick
+  drift); if that next is still <= now (multiple missed occurrences), fall
+  back to next after now so catch-up still fires exactly once.
+- Work-task payload for deployment runs: {"deployment_run_id", "agent_id",
+  "messages": [], "tools": null} — mirrors the session-run convention;
+  messages empty because a scheduled run carries no prompt.
