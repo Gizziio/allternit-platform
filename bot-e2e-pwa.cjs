@@ -56,19 +56,44 @@ function log(...args) {
     viewport: { width: 1280, height: 900 },
     ...(fs.existsSync(STATE_PATH) ? { storageState: STATE_PATH } : {}),
   });
-  const page = await context.newPage();
-  // Installed-PWA emulation: the media query matches what a standalone window
-  // reports; the app has no install-specific branching today, so this proves
-  // bot mode is unaffected by standalone display mode.
-  await page.emulateMedia({
-    features: [{ name: 'display-mode', value: 'standalone' }],
+  // Installed-PWA emulation. Playwright's emulateMedia does not set
+  // display-mode, so stub matchMedia before any page script runs.
+  await context.addInitScript(() => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      if (String(query).includes('display-mode: standalone')) {
+        return {
+          matches: true,
+          media: query,
+          onchange: null,
+          addListener() {},
+          removeListener() {},
+          addEventListener() {},
+          removeEventListener() {},
+          dispatchEvent() { return false; },
+        };
+      }
+      return original(query);
+    };
   });
+  const page = await context.newPage();
 
   page.on('pageerror', (err) => RESULT.consoleErrors.push({ type: 'pageerror', text: err.message }));
 
   try {
     log('Opening app in emulated standalone mode...');
     await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const tokenDeadline = Date.now() + 90000;
+    while (Date.now() < tokenDeadline) {
+      const ready = await page.evaluate(async () => {
+        const token = localStorage.getItem('allternit_token');
+        if (!token) return false;
+        const res = await fetch('/api/v1/agents', { headers: { Authorization: `Bearer ${token}` } });
+        return res.status === 200;
+      });
+      if (ready) break;
+      await page.waitForTimeout(2000);
+    }
 
     const env = await page.evaluate(async () => {
       const standalone = matchMedia('(display-mode: standalone)').matches;
@@ -92,7 +117,13 @@ function log(...args) {
 
     // Bot Hub -> single bot chat -> identity reply.
     log('Opening Bot Hub...');
-    await page.getByText('Agent | Bot Hub').first().click();
+    const botHubNav = page.getByRole('button', { name: 'Bot Hub' }).first();
+    try {
+      await botHubNav.waitFor({ timeout: 20000 });
+      await botHubNav.click();
+    } catch {
+      await page.getByText('Agent | Bot Hub').first().click();
+    }
     await page.getByText('Your bots').first().waitFor({ timeout: 30000 });
     await page.getByText('Echo Alpha').first().waitFor({ timeout: 30000 });
     RESULT.botHubVisible = true;
@@ -100,9 +131,15 @@ function log(...args) {
     log('Starting single-bot chat...');
     await page.getByText('Echo Alpha').first().click();
     await page.getByText('Delegate work to Echo Alpha').first().waitFor({ timeout: 30000 });
-    await page.getByRole('button', { name: 'Chat' }).first().click();
+    await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button')).filter(
+        (b) => (b.textContent || '').trim() === 'Chat' && b.offsetParent !== null && !b.disabled,
+      );
+      if (!btns.length) throw new Error('no visible Chat button on bot home');
+      btns[0].click();
+    });
 
-    const composer = page.locator('textarea[placeholder*="Type your message"]').first();
+    const composer = page.locator('textarea[placeholder^="Message "], textarea[placeholder*="Type your message"]').first();
     await composer.waitFor({ timeout: 30000 });
     await composer.fill('What is your name?');
     await composer.press('Enter');

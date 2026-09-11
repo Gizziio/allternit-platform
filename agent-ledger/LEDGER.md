@@ -21,6 +21,46 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:33 — grok — persist bot.brain execution bind (BA-3)
+
+- **Session ID / Branch:** `ao/ba-3-brain-bind` (worktree `allternit-ao-ba-3-brain-bind`)
+- **Agent:** grok (implemented + merged)
+- **Summary:** Merged PR #293 (b6013f12d) — durable `bot.brain` execution bind; native harness fail-closed; Hub chip + CommRails session join.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/293 · b6013f12d1fc625933ead6e16e6cc7997321da97
+- **How it works:** Stored in `config.botBrain`, distinct from Gizzi `brainId`. Native start pickups the bound session and does not fall through to Allternit cloud.
+- **Outstanding work:** UHP persist-only (no spawn); native create is catalog pickup not CLI spawn; ao-engine visibility HTTP; desktop DMG; BA-5/6/8.
+- **Summary file:** [2026-09-10-2133-ba-3-brain-bind-grok.md](./summaries/2026-09-10-2133-ba-3-brain-bind-grok.md)
+
+### 2026-09-10 21:30 — grok — UHP/harness remaining work (rq-20260908-028)
+
+- **Session ID / Branch:** follow-up backlog (no branch yet)
+- **Agent:** grok
+- **Summary:** Recorded unfinished work after P6b (#280), docs (#281), and harness install channels (#291). Not started.
+- **Commit:** none — tracking only
+- **How it works:** Six follow-ups stay on the ledger until a later session picks them: (1) engine PATH for `~/.ao/harness/bin` so managed installs spawn from `ao serve`; (2) OpenCode UHP turn in an engine pane; (3) dsh PyPI pin that exists; (4) Gate 2 claude/codex after re-auth / 2026-09-16; (5) CI job for `uhp-conformance --class full`; (6) session artifact download (X-07).
+- **Outstanding work:** all six items above. Do not treat P6b as having delivered them.
+- **Summary file:** [2026-09-10-2130-uhp-p6b-followups-grok.md](./summaries/2026-09-10-2130-uhp-p6b-followups-grok.md)
+
+### 2026-09-10 21:26 — grok — bot-mode live e2e (web/PWA) + gizzi 2.0.8
+
+- **Session ID / Branch:** `session/botmode-group-e2e-0910` (worktree `allternit-session-botmode-clerk-0910`; pickup of Kimi `session_6f5d4729`)
+- **Agent:** grok
+- **Summary:** Merged PR #288 (3d0459f2f) — live web/PWA bot-mode e2e green; group replies via local `kimi-cli/kimi-k3`; packaged gizzi 2.0.8 includes `gizzi bot`.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/288 · 3d0459f2fb2284ac47721d5dacc752cc1f979708
+- **How it works:** Catalog `allternit/<model>` is not a gizzi provider. Agent-chat runtime model maps onto the local CLI brain. Vite `/api/agent-chat` goes through allternit-api (Clerk proxy issuer). Production build aliases `@allternit/gizzi-sdk`.
+- **Outstanding work:** Desktop-UI e2e + full desktop rebuild; `gizzi-code/v2.0.8` GitHub release + homebrew-tap bump.
+- **Summary file:** [2026-09-10-2126-botmode-group-e2e-0910-grok-bot-mode-live-e2e.md](./summaries/2026-09-10-2126-botmode-group-e2e-0910-grok-bot-mode-live-e2e.md)
+
+### 2026-09-10 21:24 — grok — harness install channels; fold agy/antigravity (rq-20260908-028)
+
+- **Session ID / Branch:** `ao/harness-install-channels` (worktree `allternit-harness-install-fix`)
+- **Agent:** grok
+- **Summary:** Merged PR #291 (d363492c0) — 16 tools, every one has an install recipe. agy is Antigravity CLI (duplicate key dropped). npm pins for grok/gizzi/codebuddy/qoder/workbuddy; `script` method for agy and cursor vendor installers.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/291 · d363492c0bc560f29679b58e44bf4071a73cc567
+- **How it works:** `ao harness install` now accepts `script` (curl|bash, `{bin}` interpolation, shim from `~/.local/bin` when the vendor hardcodes that path). Gated licenses still need `--accept-terms`.
+- **Outstanding work:** dsh PyPI pin `0.1.2rc1` still missing; cursor script pin is the vendor date stamp (installer fetches latest).
+- **Summary file:** [2026-09-10-2124-harness-install-channels-grok.md](./summaries/2026-09-10-2124-harness-install-channels-grok.md)
+
 ### 2026-09-10 21:23 — grok — remaining OpenBot UX (rq-20260910-001)
 
 - **Session ID / Branch:** `ao/openbot-remaining` (worktree `allternit-ao-openbot-policy-gateway`)

@@ -12,8 +12,13 @@ import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
 import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
 import { useAgentStore } from '@/lib/agents/agent.store';
-import { createAgent, getAgent } from '../agents/agent.service';
+import { createAgent, getAgent, updateAgent } from '../agents/agent.service';
 import type { Agent, CreateAgentInput } from '../agents/agent.types';
+import { nativeSessionsApi } from '../agents/native-sessions-api';
+import {
+  resolveAgentBrain,
+  resumeOrCreateBotBrain,
+} from './bot-brain';
 import {
   createSandbox,
   getSandboxForAgent,
@@ -38,6 +43,7 @@ export interface BotSessionStartResult {
   sandbox?: Sandbox;
   sandboxError?: string;
   notice?: string;
+  nativeSessionId?: string;
 }
 
 function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox?: Sandbox): string {
@@ -136,6 +142,26 @@ export async function ensureBotRegisteredWithApi(agent: Agent): Promise<boolean>
  * Prepare (create or reuse) a bot's canonical chat session. Pure store/API
  * work — no React state. Does NOT set the active session; callers decide.
  */
+async function bindExecutionBrain(agent: Agent): Promise<Agent> {
+  const current = resolveAgentBrain(agent);
+  if (current.mode === 'allternit_cloud') {
+    return { ...agent, brain: current };
+  }
+
+  const bound = await resumeOrCreateBotBrain(current, agent.id, nativeSessionsApi);
+  if (
+    bound.nativeSessionId !== current.nativeSessionId ||
+    bound.uhpHarnessId !== current.uhpHarnessId
+  ) {
+    try {
+      await updateAgent(agent.id, { brain: bound });
+    } catch (err) {
+      logger.warn({ err, botId: agent.id }, 'Persisting bot.brain after native bind failed');
+    }
+  }
+  return { ...agent, brain: bound };
+}
+
 export async function prepareBotSession(
   agent: Agent,
   options?: { modeId?: string; modelOverride?: string },
@@ -143,6 +169,10 @@ export async function prepareBotSession(
   const displayName = agent.botProfile?.displayName ?? agent.name;
   const store = useChatSessionStore.getState();
   const runtimeModelId = resolveBotRuntimeModelId(agent, options?.modelOverride);
+
+  const boundAgent = await bindExecutionBrain(agent);
+  const brain = resolveAgentBrain(boundAgent);
+  const nativeSessionId = brain.mode === 'native_harness' ? brain.nativeSessionId : undefined;
 
   // Capability epoch (spec AD-4): fingerprint the bot's whole capability
   // surface so persona/skill edits are never stranded in a stale session.
@@ -217,7 +247,16 @@ export async function prepareBotSession(
       }
     }
     useBotRosterStore.getState().setCanonicalChatId(agent.id, existingSession.id);
-    return { sessionId: existingSession.id };
+    if (nativeSessionId && existingSession.metadata?.agent_session !== nativeSessionId) {
+      await store.updateSession(existingSession.id, {
+        metadata: {
+          ...existingSession.metadata,
+          agent_session: nativeSessionId,
+          botBrain: brain,
+        },
+      });
+    }
+    return { sessionId: existingSession.id, nativeSessionId };
   }
 
   const [secretsResult, connectorsResult] = await Promise.all([
@@ -306,9 +345,11 @@ export async function prepareBotSession(
       vmComputerId: sandbox?.id,
       vmSandboxError: sandboxError,
       vmControlNotice: notice,
+      botBrain: brain,
+      agent_session: nativeSessionId,
     },
   });
 
   useBotRosterStore.getState().setCanonicalChatId(agent.id, sessionId);
-  return { sessionId, sandbox, sandboxError, notice };
+  return { sessionId, sandbox, sandboxError, notice, nativeSessionId };
 }

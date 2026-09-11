@@ -40,7 +40,12 @@ import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contr
 import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
 import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
-import { buildBotRuntimeEnv, resolveModelRef } from '@/lib/bots/bot-runtime-env';
+import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
+import {
+  isVirtualPlatformModelRef,
+  readComposerRuntimeModelId,
+  resolveAgentChatRuntimeModelId,
+} from '@/lib/agents/runtime-model';
 import { deleteComputer } from '@/lib/computers-api';
 import { memoryClient } from './memory-client';
 import { recallBotMemories } from '@/lib/bots/bot-memory-context';
@@ -575,67 +580,8 @@ async function sendMessageWithContext(
   });
 }
 
-/**
- * Resolve the provider/model string the kernel expects (`provider/modelId`).
- * Reads the composer's persisted model selection; falls back to the platform's
- * configured default brain, then to the first local Ollama model.
- */
-const MODEL_SELECTION_STORAGE_KEY = 'allternit:model-selection';
-
-function resolveRuntimeModelId(): string | null {
-  try {
-    const raw = typeof window !== 'undefined'
-      ? window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY)
-      : null;
-    if (raw) {
-      const parsed = JSON.parse(raw) as { providerId?: string; modelId?: string } | null;
-      if (parsed?.providerId && parsed?.modelId) {
-        // Some writers persist the full `provider/model` id as modelId; strip a
-        // leading provider prefix so the composed ref is never double-prefixed.
-        const prefix = `${parsed.providerId}/`;
-        const modelId = parsed.modelId.startsWith(prefix)
-          ? parsed.modelId.slice(prefix.length)
-          : parsed.modelId;
-        return `${parsed.providerId}/${modelId}`;
-      }
-    }
-  } catch { /* malformed or unavailable storage */ }
-  return null;
-}
-
 async function resolveFallbackRuntimeModelId(agent?: Agent): Promise<string | null> {
-  // Agent sessions: respect the agent's harness/provider/model selection.
-  // The brain stays harness-selected; cloud-desktop only changes the VM target.
-  const harnessRef = await resolveModelRef(agent);
-  if (harnessRef) {
-    return harnessRef;
-  }
-
-  // Non-agent sessions: prefer the backend's configured default model.
-  try {
-    const res = await fetch('/api/onboarding/config');
-    if (res.ok) {
-      const data = await res.json() as { user?: { defaultModel?: string } };
-      const defaultModel = data.user?.defaultModel;
-      if (defaultModel && defaultModel.includes('/')) {
-        return defaultModel;
-      }
-    }
-  } catch { /* onboarding config unavailable */ }
-
-  // Last resort for non-agent sessions: use a locally-pulled Ollama model.
-  try {
-    const res = await fetch('/api/local-brain');
-    if (!res.ok) return null;
-    const data = await res.json() as { ollamaRunning?: boolean; modelId?: string; pulledModels?: string[] };
-    if (data.ollamaRunning && data.modelId) {
-      return `ollama/${data.modelId}`;
-    }
-    if (data.ollamaRunning && data.pulledModels?.length) {
-      return `ollama/${data.pulledModels[0]}`;
-    }
-  } catch { /* local brain unavailable */ }
-  return null;
+  return (await resolveAgentChatRuntimeModelId(agent)) ?? null;
 }
 
 /**
@@ -655,8 +601,8 @@ async function streamMessageWithContext(
   const agent = session.metadata.agentId
     ? useAgentStore.getState().agents.find((a) => a.id === session.metadata.agentId)
     : undefined;
-  let modelId = options.modelId ?? resolveRuntimeModelId();
-  if (!modelId) {
+  let modelId = options.modelId ?? readComposerRuntimeModelId();
+  if (!modelId || isVirtualPlatformModelRef(modelId)) {
     modelId = await resolveFallbackRuntimeModelId(agent);
   }
 

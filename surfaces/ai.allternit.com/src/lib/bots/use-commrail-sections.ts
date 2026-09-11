@@ -21,6 +21,7 @@ import {
   paneStateToOperational,
   type VisibilityDto,
 } from './commrails-visibility';
+import { nativeSessionJoinKey, resolveAgentBrain } from './bot-brain';
 
 const NEEDS_YOU_STATUSES = new Set<BotOperationalStatus>([
   'waiting_approval',
@@ -84,10 +85,16 @@ export function useCommRailSections(): {
       items: groups,
     };
 
+    const nativeJoin = new Map<string, string>();
+    for (const bot of roster) {
+      const key = nativeSessionJoinKey(resolveAgentBrain(bot.agent));
+      if (key) nativeJoin.set(key, bot.displayName);
+    }
+
     const sessionItems: CommRailItem[] = visibility.aoRunning
       ? visibility.panes.map((pane) => ({
           id: pane.id,
-          label: pane.label,
+          label: nativeJoin.get(pane.id) ?? pane.label,
           payload: pane.id,
           status: paneStateToOperational(pane.state),
         }))

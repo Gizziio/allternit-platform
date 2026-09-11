@@ -19,7 +19,8 @@ import { useGroupChatStore } from './group-chat.store';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { sessionApi, chatApi } from '@/lib/agents/native-agent-api';
 import { isAgentSessionsApiEnabled } from '@/lib/env';
-import { buildBotRuntimeEnv, resolveModelRef } from './bot-runtime-env';
+import { buildBotRuntimeEnv } from './bot-runtime-env';
+import { resolveAgentChatRuntimeModelId } from '@/lib/agents/runtime-model';
 import { getBotDisplayName } from './bot-profile';
 import { createModuleLogger } from '@/lib/logger';
 import {
@@ -113,24 +114,28 @@ function buildMemberSystemPrompt(member: GroupChatMember): string {
   return `You are ${member.displayName}. You must ALWAYS identify yourself as ${member.displayName}. NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${member.displayName}.`;
 }
 
-async function runMemberTurn(
-  member: GroupChatMember,
-  userText: string,
-  group: GroupChat,
-  agents: Agent[],
-  historyMessages?: GroupChatMessage[],
-): Promise<{ text: string; botId: string; displayName: string } | null> {
-  const bot = agents.find((a) => a.id === member.botId);
-  if (!bot) {
-    logger.warn({ member: member.botId }, 'Member bot not found in agent store');
-    return null;
-  }
-
-  const displayName = getBotDisplayName(bot);
-  const prompt = buildMemberHistory(group, member, userText, historyMessages);
-  const systemPrompt = [buildMemberSystemPrompt(member), bot.systemPrompt ?? '']
+/**
+ * Stream one native-bot reply through an ephemeral agent-session.
+ * Used by the group-chat engine (and GroupChatView) so member turns do not
+ * depend on the 1:1 canonical chat store, which can resolve before the
+ * assistant placeholder is filled.
+ */
+export async function streamNativeBotReply(options: {
+  bot: Agent;
+  prompt: string;
+  systemPrompt?: string;
+  displayName?: string;
+}): Promise<string | undefined> {
+  const { bot, prompt } = options;
+  const displayName = options.displayName ?? getBotDisplayName(bot);
+  const systemPrompt = [options.systemPrompt, bot.systemPrompt ?? '']
     .filter(Boolean)
     .join('\n\n');
+
+  if (!isAgentSessionsApiEnabled()) {
+    logger.warn({ botId: bot.id }, 'Agent sessions backend disabled; skipping member turn');
+    return undefined;
+  }
 
   const runtimeEnv = buildBotRuntimeEnv({
     harness: bot.harness,
@@ -138,17 +143,9 @@ async function runMemberTurn(
     agentId: bot.id,
     characterLayer: bot.characterLayer,
   });
-
-  const modelId = await resolveModelRef(bot);
+  const modelId = await resolveAgentChatRuntimeModelId(bot);
 
   let ephemeralSessionId: string | null = null;
-  if (!isAgentSessionsApiEnabled()) {
-    // Member turns create ephemeral POST /api/v1/agent-sessions, served only
-    // by the Rust allternit-api (:8013). Fail closed — the member passes —
-    // instead of firing a request that 404s.
-    logger.warn({ member: member.botId }, 'Agent sessions backend disabled; skipping member turn');
-    return null;
-  }
   try {
     const backendSession = await sessionApi.createSession({
       name: displayName,
@@ -191,17 +188,13 @@ async function runMemberTurn(
     );
 
     const trimmed = replyText.trim();
-    if (!trimmed || isPassText(trimmed)) {
-      return null;
-    }
-
-    return { text: trimmed, botId: bot.id, displayName };
+    if (!trimmed || isPassText(trimmed)) return undefined;
+    return trimmed;
   } catch (err) {
-    logger.error({ err, member: member.botId }, 'Member turn failed');
-    return null;
+    logger.error({ err, botId: bot.id }, 'Native bot member turn failed');
+    return undefined;
   } finally {
     if (ephemeralSessionId) {
-      // Best-effort cleanup; ignore failures.
       try {
         await sessionApi.deleteSession(ephemeralSessionId);
       } catch {
@@ -209,6 +202,27 @@ async function runMemberTurn(
       }
     }
   }
+}
+
+async function runMemberTurn(
+  member: GroupChatMember,
+  userText: string,
+  group: GroupChat,
+  agents: Agent[],
+  historyMessages?: GroupChatMessage[],
+): Promise<{ text: string; botId: string; displayName: string } | null> {
+  const bot = agents.find((a) => a.id === member.botId);
+  if (!bot) {
+    logger.warn({ member: member.botId }, 'Member bot not found in agent store');
+    return null;
+  }
+
+  const displayName = getBotDisplayName(bot);
+  const prompt = buildMemberHistory(group, member, userText, historyMessages);
+  const systemPrompt = buildMemberSystemPrompt(member);
+  const text = await streamNativeBotReply({ bot, prompt, systemPrompt, displayName });
+  if (!text) return null;
+  return { text, botId: bot.id, displayName };
 }
 
 export async function runGroupChatTurn(sessionId: string, userText: string): Promise<void> {

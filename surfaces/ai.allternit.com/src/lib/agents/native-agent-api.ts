@@ -763,6 +763,12 @@ export const chatApi = {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let sawDone = false;
+    const markDone = () => {
+      if (sawDone) return;
+      sawDone = true;
+      callbacks.onDone?.();
+    };
 
     try {
       while (true) {
@@ -778,7 +784,7 @@ export const chatApi = {
 
           const data = line.slice(6);
           if (data === "[DONE]") {
-            callbacks.onDone?.();
+            markDone();
             continue;
           }
 
@@ -837,7 +843,7 @@ export const chatApi = {
                   });
                 }
               }
-              if (chunk.chunk_type === "done") callbacks.onDone?.();
+              if (chunk.chunk_type === "done") markDone();
               continue;
             }
 
@@ -880,7 +886,7 @@ export const chatApi = {
                 error: String(parsed.error ?? "Tool execution failed"),
               });
             } else if (parsed.type === "finish" || parsed.type === "message_stop") {
-              callbacks.onDone?.();
+              markDone();
             } else if (parsed.type === "error") {
               callbacks.onError?.(new Error((parsed.error as string) ?? "Stream error"));
             } else if (parsed.type === "artifact" || parsed.type === "artifact.created" || parsed.type === "artifact-created") {
@@ -908,6 +914,7 @@ export const chatApi = {
           }
         }
       }
+      markDone();
     } finally {
       reader.releaseLock();
     }

@@ -7,6 +7,7 @@ import type { Agent } from "@/lib/agents/agent.types";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { getBotAccentColor, getBotDisplayName, getBotTagline, BOT_CATEGORIES } from "@/lib/bots/bot-profile";
 import { BOT_COMPUTER_STATUS_LABEL, useBotComputer } from "@/lib/bots/useBotComputer";
+import { botBrainLabel, resolveAgentBrain } from "@/lib/bots/bot-brain";
 import { BotAvatar } from "@/views/bots/BotAvatar";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ export function BotHubCard({ bot, sessionCount = 0, onClick, index = 0 }: BotHub
   const categoryLabel = category ? BOT_CATEGORIES[category]?.label : undefined;
   const computer = useBotComputer(bot);
   const showComputer = bot.vmOperator?.enabled === true;
+  const brainChip = botBrainLabel(resolveAgentBrain(bot));
 
   const handleDuplicate = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -58,6 +60,8 @@ export function BotHubCard({ bot, sessionCount = 0, onClick, index = 0 }: BotHub
       botProfile: bot.botProfile
         ? { ...bot.botProfile, displayName: `${bot.botProfile.displayName} (Copy)` }
         : undefined,
+      brain: bot.brain,
+      brainId: bot.brainId,
     });
     setIsCreating(true);
   };
@@ -120,6 +124,13 @@ export function BotHubCard({ bot, sessionCount = 0, onClick, index = 0 }: BotHub
         </div>
 
         <div className="mt-4 flex items-center gap-2">
+          <span
+            className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-medium"
+            style={{ background: "var(--surface-hover)", color: "var(--text-secondary)" }}
+            title="Execution brain"
+          >
+            {brainChip}
+          </span>
           {showComputer && (
             <span
               className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-medium"

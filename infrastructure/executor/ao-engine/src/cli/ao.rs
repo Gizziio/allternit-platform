@@ -35,6 +35,12 @@ const USAGE_SEND: &str = "usage: ao send <slug> <prompt...> | ao send <slug> -f 
 const USAGE_WATCH: &str = "usage: ao watch <slug> <sentinel-file> [timeout] [interval]";
 const USAGE_STATUS: &str = "usage: ao status [slug] [lines=25]";
 const USAGE_KILL: &str = "usage: ao kill <slug> [--rm-worktree]";
+// Dispatch-semantics subcommands (additive; not part of the bash parity
+// contract — the ao_parity golden test compares only the six above).
+const USAGE_QUEUE: &str =
+    "usage: ao queue <slug> [prompt...] [--root <dir>] [--lead <id>] [--as-human]";
+const USAGE_DRAIN: &str = "usage: ao drain <slug> [--all] [--root <dir>] [--lead <id>] [--as-human]";
+const USAGE_RECOVER: &str = "usage: ao recover [slug] [--apply] [--lead <id>] [--as-human]";
 
 const AO_DIR: &str = ".agent-orchestrator";
 const LOGS_DIR: &str = "logs";
@@ -54,6 +60,9 @@ pub(super) fn run_ao_command(args: &[String]) -> std::io::Result<i32> {
         "status" => status(rest),
         "kill" => kill(rest),
         "doctor" => doctor(rest),
+        "queue" => queue(rest),
+        "drain" => drain(rest),
+        "recover" => recover(rest),
         "--help" | "-h" | "help" => {
             print_ao_help();
             Ok(0)
@@ -75,6 +84,22 @@ fn print_ao_help() {
          {USAGE_STATUS}\n\
          {USAGE_KILL}\n\
          usage: ao doctor\n\
+         {USAGE_QUEUE}\n\
+         {USAGE_DRAIN}\n\
+         {USAGE_RECOVER}\n\
+         \n\
+         Dispatch semantics (additive to the parity contract):\n\
+         - spawn records a dispatch-registry entry in ~/.agent-orchestrator/state.json\n\
+           (runner command, worktree, branch, sentinel, owning lead, lifecycle,\n\
+           mailbox depth). --lead <id> or AO_LEAD sets the owner.\n\
+         - queue enqueues to the Rails Bus mailbox peer:ao-<slug> (queue-not-drop);\n\
+           drain injects the oldest pending row through the verified ao-send paste\n\
+           path and settles only after verified delivery. Single drainer per\n\
+           recipient, owned by ao-engine. watch auto-drains when the pane is idle.\n\
+         - queue/drain/send --queue/recover are fail-closed on ownership: the\n\
+           caller must be the recorded lead, or pass --as-human.\n\
+         - recover reconciles the registry against live tmux/engine sessions and\n\
+           respawns dead-but-unfinished runners (dry-run default; --apply acts).\n\
          \n\
          Contract-compatible with the ao-* bash scripts; byte-level parity is\n\
          proven by tests/ao_parity/run.sh (golden side-by-side test)."
@@ -228,7 +253,13 @@ fn ensure_engine_running() -> std::io::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// Registry (tmux remain-on-exit analog — keeps DEAD sessions observable)
+// Dispatch registry (tmux remain-on-exit analog + dispatch spine)
+//
+// state.json shape: {"sessions": {"ao-<slug>": {...}}}. The first three
+// fields (cwd/log/dead) are the original remain-on-exit analog; everything
+// else is the dispatch registry extension (A1). Old readers ignore unknown
+// fields (serde default), and every new field is optional or defaulted, so
+// old files load cleanly and old binaries keep working against new files.
 // ---------------------------------------------------------------------------
 
 #[derive(Default, Serialize, Deserialize)]
@@ -243,6 +274,31 @@ struct AoSession {
     log: Option<String>,
     #[serde(default)]
     dead: bool,
+    /// Exact relaunch command (`logs/ao-<slug>.cmd.sh`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    runner: Option<String>,
+    /// Isolated worktree dir when spawned with --worktree (else == cwd).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    worktree: Option<String>,
+    /// Worktree branch (`ao/<slug>`) when applicable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    branch: Option<String>,
+    /// Sentinel NOTES file armed via `ao watch` (frontmatter status: done|blocked).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sentinel: Option<String>,
+    /// Owning lead identity (A3). Absent on pre-registry records — dispatch
+    /// operations refuse fail-closed on those unless --as-human.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    lead: Option<String>,
+    /// running | dead | finished (free-form; absent on old records).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    lifecycle: Option<String>,
+    /// engine | tmux — which world the session was spawned in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    world: Option<String>,
+    /// Cached mailbox depth for peer:ao-<slug>; refreshed by queue/drain.
+    #[serde(default)]
+    queued: u32,
 }
 
 fn ao_home() -> PathBuf {
@@ -272,6 +328,97 @@ fn save_state(state: &AoState) {
         return;
     };
     let _ = serde_json::to_writer_pretty(std::io::BufWriter::new(file), state);
+}
+
+// ---------------------------------------------------------------------------
+// Ownership (A3 — fail-closed lead → runner)
+// ---------------------------------------------------------------------------
+
+/// Caller identity: explicit `--lead` flag > `AO_LEAD` env > USER/LOGNAME >
+/// "human". Spawn records this as the owning lead; dispatch operations
+/// resolve it the same way and compare.
+fn caller_identity(lead_flag: Option<&str>) -> String {
+    if let Some(lead) = lead_flag {
+        if !lead.is_empty() {
+            return lead.to_string();
+        }
+    }
+    for var in ["AO_LEAD", "USER", "LOGNAME"] {
+        if let Ok(value) = std::env::var(var) {
+            if !value.is_empty() {
+                return value.to_string();
+            }
+        }
+    }
+    "human".to_string()
+}
+
+/// Fail-closed ownership gate for dispatch/mailbox/recovery operations.
+/// The caller must be the recorded lead, or pass --as-human. An unknown
+/// owner (pre-registry record with no lead) refuses — never a guess.
+fn require_lead(
+    session: &str,
+    entry: Option<&AoSession>,
+    caller: &str,
+    as_human: bool,
+    op: &str,
+) -> Result<(), String> {
+    if as_human {
+        return Ok(());
+    }
+    match entry.and_then(|e| e.lead.as_deref()) {
+        Some(lead) if lead == caller => Ok(()),
+        Some(lead) => Err(format!(
+            "{op} on {session} refused — runner is owned by lead '{lead}' (caller is '{caller}'); use --as-human to override"
+        )),
+        None => Err(format!(
+            "{op} on {session} refused — no owning lead recorded; use --as-human to override"
+        )),
+    }
+}
+
+/// Parsed flags shared by the dispatch subcommands (queue/drain/recover).
+#[derive(Default)]
+struct DispatchFlags {
+    root: Option<String>,
+    lead: Option<String>,
+    as_human: bool,
+    all: bool,
+    apply: bool,
+    positional: Vec<String>,
+}
+
+fn take_dispatch_flags(args: &[String]) -> Result<DispatchFlags, i32> {
+    let mut flags = DispatchFlags::default();
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--root" => match iter.next() {
+                Some(value) => flags.root = Some(value.clone()),
+                None => return Err(2),
+            },
+            "--lead" => match iter.next() {
+                Some(value) => flags.lead = Some(value.clone()),
+                None => return Err(2),
+            },
+            "--as-human" => flags.as_human = true,
+            "--all" => flags.all = true,
+            "--apply" => flags.apply = true,
+            _ => flags.positional.push(arg.clone()),
+        }
+    }
+    Ok(flags)
+}
+
+fn mailbox_root(flag: Option<&str>) -> std::io::Result<PathBuf> {
+    crate::ao::peers::registry_root(flag)
+}
+
+/// Refresh the cached mailbox depth on a registry entry (best-effort).
+fn refresh_queued(root: &Path, state: &mut AoState, session: &str) {
+    if let Some(entry) = state.sessions.get_mut(session) {
+        entry.queued = crate::ao::mailbox::pending_depth(root, session).unwrap_or(0) as u32;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -355,9 +502,25 @@ fn eprintln_engine(err: &CallError) -> i32 {
 fn spawn(args: &[String]) -> std::io::Result<i32> {
     let mut args = args;
     let mut worktree = false;
-    if args.first().map(String::as_str) == Some("--worktree") {
-        worktree = true;
-        args = &args[1..];
+    let mut lead_flag: Option<String> = None;
+    // Leading flags: --worktree (parity with the script) and --lead <id>
+    // (dispatch ownership; additive — never present in parity fixtures).
+    loop {
+        match args.first().map(String::as_str) {
+            Some("--worktree") => {
+                worktree = true;
+                args = &args[1..];
+            }
+            Some("--lead") => {
+                let Some(value) = args.get(1) else {
+                    eprintln!("{USAGE_SPAWN}");
+                    return Ok(2);
+                };
+                lead_flag = Some(value.clone());
+                args = &args[2..];
+            }
+            _ => break,
+        }
     }
     if args.len() < 3 {
         eprintln!("{USAGE_SPAWN}");
@@ -367,6 +530,8 @@ fn spawn(args: &[String]) -> std::io::Result<i32> {
     let mut dir = args[1].clone();
     let agent_cmd = &args[2..];
     let session = session_of(slug);
+    let lead = caller_identity(lead_flag.as_deref());
+    let branch = worktree.then(|| format!("ao/{slug}"));
 
     let logs_dir = ao_home().join(LOGS_DIR);
     if let Err(err) = std::fs::create_dir_all(&logs_dir) {
@@ -525,6 +690,14 @@ fn spawn(args: &[String]) -> std::io::Result<i32> {
                 cwd: dir.clone(),
                 log: Some(log.display().to_string()),
                 dead: true,
+                runner: Some(runner.display().to_string()),
+                worktree: worktree.then(|| dir.clone()),
+                branch: branch.clone(),
+                sentinel: None,
+                lead: Some(lead.clone()),
+                lifecycle: Some("dead".to_string()),
+                world: Some("engine".to_string()),
+                queued: 0,
             },
         );
         save_state(&state);
@@ -538,6 +711,14 @@ fn spawn(args: &[String]) -> std::io::Result<i32> {
             cwd: dir.clone(),
             log: Some(log.display().to_string()),
             dead: false,
+            runner: Some(runner.display().to_string()),
+            worktree: worktree.then(|| dir.clone()),
+            branch: branch.clone(),
+            sentinel: None,
+            lead: Some(lead.clone()),
+            lifecycle: Some("running".to_string()),
+            world: Some("engine".to_string()),
+            queued: 0,
         },
     );
     save_state(&state);
@@ -551,6 +732,16 @@ fn spawn(args: &[String]) -> std::io::Result<i32> {
 // ---------------------------------------------------------------------------
 
 fn send(args: &[String]) -> std::io::Result<i32> {
+    let mut args = args;
+    // --queue (additive, A2): immediate verified send is still attempted;
+    // on a busy/unverifiable pane the prompt falls back to the Bus mailbox
+    // instead of being dropped. Without the flag the behavior is byte-identical
+    // to the bash contract.
+    let mut queue_fallback = false;
+    if args.first().map(String::as_str) == Some("--queue") {
+        queue_fallback = true;
+        args = &args[1..];
+    }
     if args.len() < 2 {
         eprintln!("{USAGE_SEND}");
         return Ok(2);
@@ -581,6 +772,9 @@ fn send(args: &[String]) -> std::io::Result<i32> {
     let workspace = match find_workspace(&client, &session) {
         Ok(Some(workspace)) => workspace,
         Ok(None) => {
+            if queue_fallback {
+                return enqueue_fallback(&session, &prompt);
+            }
             eprintln!("error: no session {session}");
             return Ok(1);
         }
@@ -588,37 +782,113 @@ fn send(args: &[String]) -> std::io::Result<i32> {
     };
     let workspace_id = workspace["workspace_id"].as_str().unwrap_or_default();
 
-    let stripped = alnum(&prompt);
+    let Some(marker) = prompt_marker(&prompt) else {
+        eprintln!("error: prompt has no alphanumeric content");
+        return Ok(2);
+    };
+
+    let pane = match first_pane_id(&client, workspace_id) {
+        Ok(Some(pane)) => pane,
+        Ok(None) => {
+            eprintln!("error: no session {session}");
+            return Ok(1);
+        }
+        Err(err) => return Ok(eprintln_engine(&err)),
+    };
+
+    match paste_and_verify(&client, &pane, &prompt, &marker) {
+        Ok(true) => {
+            println!("submitted to {session}");
+            Ok(0)
+        }
+        Ok(false) => {
+            if queue_fallback {
+                return enqueue_fallback(&session, &prompt);
+            }
+            eprintln!("error: prompt not found in {session} pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t {session}");
+            Ok(1)
+        }
+        Err(err) => Ok(send_failure_exit(&session, &err)),
+    }
+}
+
+/// Queue-not-drop fallback (A2): the immediate path could not verify
+/// delivery, so the prompt goes to the durable Bus mailbox for the drainer.
+/// Fail-closed on ownership like every dispatch operation (A3).
+fn enqueue_fallback(session: &str, prompt: &str) -> std::io::Result<i32> {
+    let root = mailbox_root(None)?;
+    let caller = caller_identity(None);
+    let state = load_state();
+    if let Err(message) = require_lead(
+        session,
+        state.sessions.get(session),
+        &caller,
+        false,
+        "send --queue",
+    ) {
+        eprintln!("error: {message}");
+        return Ok(1);
+    }
+    match crate::ao::mailbox::enqueue(&root, session, &caller, prompt) {
+        Ok((id, depth)) => {
+            let mut state = load_state();
+            refresh_queued(&root, &mut state, session);
+            save_state(&state);
+            println!(
+                "queued {id} to {} (depth {depth}) — pane busy or unverifiable",
+                crate::ao::mailbox::recipient_for(session)
+            );
+            Ok(0)
+        }
+        Err(err) => {
+            eprintln!("error: {err}");
+            Ok(1)
+        }
+    }
+}
+
+/// Marker loop token, verbatim from ao-send: last-40-alnum of the prompt.
+/// Comparing alnum-only text is immune to TUI line-wrapping, input-box
+/// border chars, and padding.
+fn prompt_marker(prompt: &str) -> Option<String> {
+    let stripped = alnum(prompt);
     let marker: String = stripped
         .chars()
         .skip(stripped.chars().count().saturating_sub(40))
         .collect();
-    if marker.is_empty() {
-        eprintln!("error: prompt has no alphanumeric content");
-        return Ok(2);
-    }
+    (!marker.is_empty()).then_some(marker)
+}
 
-    let pane = match call(
-        &client,
+fn first_pane_id(client: &ApiClient, workspace_id: &str) -> Result<Option<String>, CallError> {
+    let result = call(
+        client,
         Method::PaneList(PaneListParams {
             workspace_id: Some(workspace_id.to_string()),
         }),
-    ) {
-        Ok(result) => match result["panes"].as_array().and_then(|panes| panes.first()) {
-            Some(pane) => pane["pane_id"].as_str().unwrap_or_default().to_string(),
-            None => {
-                eprintln!("error: no session {session}");
-                return Ok(1);
-            }
-        },
-        Err(err) => return Ok(eprintln_engine(&err)),
-    };
+    )?;
+    Ok(result["panes"]
+        .as_array()
+        .and_then(|panes| panes.first())
+        .and_then(|pane| pane["pane_id"].as_str())
+        .map(str::to_string))
+}
 
+/// Verified bracketed-paste injection shared by `ao send` and the mailbox
+/// drainer (A2 settle path): paste, poll the pane until the marker shows in
+/// two consecutive captures (a single sighting can be a half-painted frame),
+/// Enter only after verified landing. On a bad read-back the line is cleared
+/// with C-u (NEVER C-c — that kills kimi). Ok(true) == Enter was sent.
+fn paste_and_verify(
+    client: &ApiClient,
+    pane: &str,
+    prompt: &str,
+    marker: &str,
+) -> Result<bool, CallError> {
     let send = |text: &str, keys: &[&str]| {
         call(
-            &client,
+            client,
             Method::PaneSendInput(PaneSendInputParams {
-                pane_id: pane.clone(),
+                pane_id: pane.to_string(),
                 text: text.to_string(),
                 keys: keys.iter().map(|key| (*key).to_string()).collect(),
             }),
@@ -626,22 +896,20 @@ fn send(args: &[String]) -> std::io::Result<i32> {
     };
 
     // Bracketed paste; the engine wraps text server-side (never send raw).
-    if let Err(err) = send(&prompt, &[]) {
+    if let Err(err) = send(prompt, &[]) {
         let _ = send("", &["ctrl+u"]);
-        return Ok(send_failure_exit(&session, &err));
+        return Err(err);
     }
 
-    // Marker loop, verbatim from ao-send: last-40-alnum marker, two
-    // consecutive captures, 5s deadline, Enter only after verified landing.
     let deadline = std::time::SystemTime::now() + Duration::from_secs(5);
     let mut seen = false;
     let mut last: String;
     loop {
-        last = match pane_read_text(&client, &pane, 80) {
+        last = match pane_read_text(client, pane, 80) {
             Ok(text) => alnum(&text),
             Err(_) => String::new(),
         };
-        if last.contains(&marker) {
+        if last.contains(marker) {
             if seen {
                 break;
             }
@@ -655,14 +923,12 @@ fn send(args: &[String]) -> std::io::Result<i32> {
         std::thread::sleep(Duration::from_millis(200));
     }
 
-    if last.contains(&marker) {
+    if last.contains(marker) {
         let _ = send("", &["enter"]);
-        println!("submitted to {session}");
-        Ok(0)
+        Ok(true)
     } else {
         let _ = send("", &["ctrl+u"]);
-        eprintln!("error: prompt not found in {session} pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t {session}");
-        Ok(1)
+        Ok(false)
     }
 }
 
@@ -697,6 +963,13 @@ fn watch(args: &[String]) -> std::io::Result<i32> {
         None => return Ok(2),
     };
     let client = ApiClient::local();
+    // Record the armed sentinel on the dispatch registry entry (A1) so
+    // `ao recover` can tell dead-but-unfinished sessions from finished ones.
+    let mut state = load_state();
+    if let Some(entry) = state.sessions.get_mut(&session) {
+        entry.sentinel = Some(sentinel.clone());
+        save_state(&state);
+    }
     let mut elapsed: u64 = 0;
     loop {
         if Path::new(sentinel).exists() {
@@ -716,8 +989,42 @@ fn watch(args: &[String]) -> std::io::Result<i32> {
             println!("TIMEOUT after {timeout}s; sentinel absent, pane alive");
             return Ok(4);
         }
+        // Mailbox auto-drain (A2): pending dispatch mail for this session is
+        // injected through the verified paste path once the pane reads idle.
+        // Silent when the mailbox is empty — the parity contract never sees it.
+        auto_drain_tick(&client, &session);
         std::thread::sleep(Duration::from_secs(interval));
         elapsed += interval;
+    }
+}
+
+/// One automatic drain attempt on the oldest pending mailbox row. Every
+/// failure mode (no bus, ownership mismatch, busy pane, unverifiable paste)
+/// is a silent skip: watch is a monitor, not a dispatcher, and the row stays
+/// pending for an explicit `ao drain`.
+fn auto_drain_tick(client: &ApiClient, session: &str) {
+    let Ok(root) = mailbox_root(None) else {
+        return;
+    };
+    let state = load_state();
+    let caller = caller_identity(None);
+    if require_lead(session, state.sessions.get(session), &caller, false, "drain").is_err() {
+        return;
+    }
+    let Ok(rows) = crate::ao::mailbox::pending(&root, session) else {
+        return;
+    };
+    let Some(row) = rows.first() else {
+        return;
+    };
+    let text = crate::ao::mailbox::message_text(row);
+    if matches!(drain_one(client, session, &text), Ok(true))
+        && crate::ao::mailbox::settle(&root, row.id).is_ok()
+    {
+        println!("drained {} -> {session}", row.id);
+        let mut state = load_state();
+        refresh_queued(&root, &mut state, session);
+        save_state(&state);
     }
 }
 
@@ -738,6 +1045,7 @@ fn mark_dead(session: &str) {
     let mut state = load_state();
     if let Some(entry) = state.sessions.get_mut(session) {
         entry.dead = true;
+        entry.lifecycle = Some("dead".to_string());
         save_state(&state);
     }
 }
@@ -928,6 +1236,543 @@ fn kill(args: &[String]) -> std::io::Result<i32> {
         }
     }
     Ok(0)
+}
+
+// ---------------------------------------------------------------------------
+// ao queue — Bus mailbox enqueue / inspect (A2)
+// ---------------------------------------------------------------------------
+
+fn queue(args: &[String]) -> std::io::Result<i32> {
+    let flags = match take_dispatch_flags(args) {
+        Ok(flags) => flags,
+        Err(code) => {
+            eprintln!("{USAGE_QUEUE}");
+            return Ok(code);
+        }
+    };
+    let Some(slug) = flags.positional.first() else {
+        eprintln!("{USAGE_QUEUE}");
+        return Ok(2);
+    };
+    let session = session_of(slug);
+    let root = mailbox_root(flags.root.as_deref())?;
+
+    if flags.positional.len() < 2 {
+        // Inspect form: list pending rows (read-only, no ownership needed).
+        return match crate::ao::mailbox::pending(&root, &session) {
+            Ok(rows) => {
+                if rows.is_empty() {
+                    println!(
+                        "no pending messages for {}",
+                        crate::ao::mailbox::recipient_for(&session)
+                    );
+                } else {
+                    for row in &rows {
+                        println!(
+                            "{}  {}  {}",
+                            row.id,
+                            row.created_at,
+                            crate::ao::mailbox::message_text(row)
+                        );
+                    }
+                }
+                Ok(0)
+            }
+            Err(err) => {
+                eprintln!("error: {err}");
+                Ok(1)
+            }
+        };
+    }
+
+    let caller = caller_identity(flags.lead.as_deref());
+    let state = load_state();
+    if let Err(message) = require_lead(
+        &session,
+        state.sessions.get(&session),
+        &caller,
+        flags.as_human,
+        "queue",
+    ) {
+        eprintln!("error: {message}");
+        return Ok(1);
+    }
+    let text = flags.positional[1..].join(" ");
+    match crate::ao::mailbox::enqueue(&root, &session, &caller, &text) {
+        Ok((id, depth)) => {
+            let mut state = load_state();
+            refresh_queued(&root, &mut state, &session);
+            save_state(&state);
+            println!(
+                "queued {id} to {} (depth {depth})",
+                crate::ao::mailbox::recipient_for(&session)
+            );
+            Ok(0)
+        }
+        Err(err) => {
+            eprintln!("error: {err}");
+            Ok(1)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ao drain — settle verified, roll back free (A2)
+//
+// Exactly one drainer may exist per recipient: the Bus delivery status is
+// global per recipient, so two concurrent drainers would race poll/settle.
+// The drainer is owned by ao-engine (this subcommand plus the watch loop's
+// auto-drain tick). Do not bolt a second drainer onto the HTTP inbox
+// endpoint — it marks delivered on read, which is exactly the semantics this
+// path exists to avoid.
+// ---------------------------------------------------------------------------
+
+fn drain(args: &[String]) -> std::io::Result<i32> {
+    let flags = match take_dispatch_flags(args) {
+        Ok(flags) => flags,
+        Err(code) => {
+            eprintln!("{USAGE_DRAIN}");
+            return Ok(code);
+        }
+    };
+    let Some(slug) = flags.positional.first() else {
+        eprintln!("{USAGE_DRAIN}");
+        return Ok(2);
+    };
+    let session = session_of(slug);
+    let root = mailbox_root(flags.root.as_deref())?;
+    let caller = caller_identity(flags.lead.as_deref());
+    let state = load_state();
+    if let Err(message) = require_lead(
+        &session,
+        state.sessions.get(&session),
+        &caller,
+        flags.as_human,
+        "drain",
+    ) {
+        eprintln!("error: {message}");
+        return Ok(1);
+    }
+
+    let client = ApiClient::local();
+    let mut drained: u32 = 0;
+    loop {
+        let rows = match crate::ao::mailbox::pending(&root, &session) {
+            Ok(rows) => rows,
+            Err(err) => {
+                eprintln!("error: {err}");
+                return Ok(1);
+            }
+        };
+        let Some(row) = rows.first() else {
+            if drained == 0 {
+                println!(
+                    "no pending messages for {}",
+                    crate::ao::mailbox::recipient_for(&session)
+                );
+            }
+            break;
+        };
+        let text = crate::ao::mailbox::message_text(row);
+        match drain_one(&client, &session, &text) {
+            Ok(true) => {
+                // Verified delivery — settle. Anything short of this leaves
+                // the row pending (rollback for free).
+                if let Err(err) = crate::ao::mailbox::settle(&root, row.id) {
+                    eprintln!("error: {err}");
+                    return Ok(1);
+                }
+                drained += 1;
+                println!("drained {} -> {session}", row.id);
+            }
+            Ok(false) => {
+                println!(
+                    "pending {} — pane busy or unverifiable; left in mailbox",
+                    row.id
+                );
+                break;
+            }
+            Err(err) => return Ok(eprintln_engine(&err)),
+        }
+        if !flags.all {
+            break;
+        }
+    }
+    let mut state = load_state();
+    refresh_queued(&root, &mut state, &session);
+    save_state(&state);
+    Ok(0)
+}
+
+/// One drain attempt: pane must be present and read idle, then the message
+/// goes through the same verified paste path as `ao send`. Ok(false) means
+/// "do not settle" — the row stays pending.
+fn drain_one(client: &ApiClient, session: &str, text: &str) -> Result<bool, CallError> {
+    let Some(workspace) = find_workspace(client, session)? else {
+        return Ok(false);
+    };
+    let workspace_id = workspace["workspace_id"].as_str().unwrap_or_default();
+    let Some(pane) = first_pane_id(client, workspace_id)? else {
+        return Ok(false);
+    };
+    if !pane_idle(client, &pane)? {
+        return Ok(false);
+    }
+    let Some(marker) = prompt_marker(text) else {
+        return Ok(false);
+    };
+    paste_and_verify(client, &pane, text, &marker)
+}
+
+/// Idle probe: two consecutive captures 800ms apart must be byte-identical.
+/// A busy agent mid-turn keeps repainting; an idle prompt does not.
+fn pane_idle(client: &ApiClient, pane: &str) -> Result<bool, CallError> {
+    let first = pane_read_text(client, pane, 80)?;
+    std::thread::sleep(Duration::from_millis(800));
+    let second = pane_read_text(client, pane, 80)?;
+    Ok(first == second)
+}
+
+// ---------------------------------------------------------------------------
+// ao recover — reconcile the registry against reality (A4)
+//
+// Dry-run by default: prints the plan; --apply respawns. A session is a
+// recovery candidate when it is dead in BOTH worlds (tmux + engine) and has
+// no `status: done` sentinel. Respawn replays the exact relaunch command
+// (logs/ao-<slug>.cmd.sh), upgraded to the harness's agent-level resume argv
+// via src/agent_resume.rs when the runner line carries a resumable session
+// reference (codex resume <id>, claude --resume <id>, kimi --session/-S <id>,
+// agy --conversation <id>, grok --resume <id>). Sentinel watchers are
+// re-armed after a successful respawn.
+// ---------------------------------------------------------------------------
+
+fn recover(args: &[String]) -> std::io::Result<i32> {
+    let flags = match take_dispatch_flags(args) {
+        Ok(flags) => flags,
+        Err(code) => {
+            eprintln!("{USAGE_RECOVER}");
+            return Ok(code);
+        }
+    };
+    let only = flags.positional.first().map(|slug| session_of(slug));
+    let caller = caller_identity(flags.lead.as_deref());
+    let client = ApiClient::local();
+    let state = load_state();
+    let tmux_sessions = tmux_list_ao_sessions();
+
+    let mut exit = 0;
+    let mut planned = 0u32;
+    for (session, entry) in &state.sessions {
+        if let Some(only) = &only {
+            if session != only {
+                continue;
+            }
+        }
+        let slug = session.strip_prefix("ao-").unwrap_or(session).to_string();
+        let alive = tmux_has_session(session)
+            || session_alive(&client, session).unwrap_or(false);
+        if alive {
+            if only.is_some() {
+                println!("SKIP {session} — alive");
+            }
+            continue;
+        }
+        if let Some(status) = sentinel_status(entry.sentinel.as_deref()) {
+            if status == "done" {
+                println!("SKIP {session} — sentinel status: done (finished)");
+                if flags.apply {
+                    let mut state = load_state();
+                    if let Some(entry) = state.sessions.get_mut(session) {
+                        entry.dead = true;
+                        entry.lifecycle = Some("finished".to_string());
+                        save_state(&state);
+                    }
+                }
+                continue;
+            }
+        }
+        if let Err(message) = require_lead(
+            session,
+            Some(entry),
+            &caller,
+            flags.as_human,
+            "recover",
+        ) {
+            println!("REFUSE {message}");
+            exit = 1;
+            continue;
+        }
+        let Some((argv, resumed)) = recover_argv(session, entry) else {
+            println!("SKIP {session} — no runner command file");
+            continue;
+        };
+        let world = entry.world.as_deref().unwrap_or("engine").to_string();
+        planned += 1;
+        let how = if resumed { "agent-level resume" } else { "verbatim relaunch" };
+        println!(
+            "PLAN respawn {session} [{world}] ({how}) cwd={} cmd={}",
+            entry.cwd,
+            argv.join(" ")
+        );
+        if flags.apply {
+            match respawn(&client, session, &slug, &world, &entry.cwd, &argv) {
+                Ok(log) => {
+                    let mut state = load_state();
+                    if let Some(entry) = state.sessions.get_mut(session) {
+                        entry.dead = false;
+                        entry.lifecycle = Some("running".to_string());
+                        entry.log = Some(log.display().to_string());
+                        save_state(&state);
+                    }
+                    println!("RECOVERED {session} — transcript {}", log.display());
+                    if let Some(sentinel) = &entry.sentinel {
+                        if let Ok(exe) = std::env::current_exe() {
+                            let _ = Command::new(exe)
+                                .arg("watch")
+                                .arg(&slug)
+                                .arg(sentinel)
+                                .stdin(Stdio::null())
+                                .stdout(Stdio::null())
+                                .stderr(Stdio::null())
+                                .spawn();
+                            println!("re-armed sentinel watch: ao watch {slug} {sentinel}");
+                        }
+                    }
+                }
+                Err(message) => {
+                    eprintln!("error: respawn {session}: {message}");
+                    exit = 1;
+                }
+            }
+        }
+    }
+
+    for session in &tmux_sessions {
+        if !state.sessions.contains_key(session) {
+            println!("NOTE {session} — live in tmux but absent from the dispatch registry");
+        }
+    }
+    if planned == 0 && exit == 0 {
+        println!("nothing to recover");
+    } else if planned > 0 && !flags.apply {
+        println!("dry-run — rerun with --apply to respawn");
+    }
+    Ok(exit)
+}
+
+/// Sentinel frontmatter status (`status: done|blocked`), or None when the
+/// sentinel is absent/unreadable — absence means unfinished.
+fn sentinel_status(sentinel: Option<&str>) -> Option<String> {
+    let content = std::fs::read_to_string(sentinel?).ok()?;
+    for line in content.lines().take(20) {
+        if let Some(value) = line.trim().strip_prefix("status:") {
+            return Some(value.trim().trim_matches('"').to_string());
+        }
+    }
+    None
+}
+
+/// Build the respawn argv from the runner command file, upgrading to the
+/// harness's resume argv (src/agent_resume.rs) when the recorded command is
+/// itself a resumable launch. Returns (argv, used_agent_resume).
+fn recover_argv(session: &str, entry: &AoSession) -> Option<(Vec<String>, bool)> {
+    let runner = entry
+        .runner
+        .clone()
+        .unwrap_or_else(|| ao_home().join(LOGS_DIR).join(format!("{session}.cmd.sh")).display().to_string());
+    let line = std::fs::read_to_string(runner).ok()?;
+    let argv: Vec<String> = line.split_whitespace().map(str::to_string).collect();
+    if argv.is_empty() {
+        return None;
+    }
+    if let Some(resumed) = resume_argv_from(&argv) {
+        return Some((resumed, true));
+    }
+    Some((argv, false))
+}
+
+/// Detect a resumable agent launch and rebuild it through
+/// agent_resume::plan. Unknown harnesses return None (verbatim relaunch).
+fn resume_argv_from(argv: &[String]) -> Option<Vec<String>> {
+    let binary = Path::new(argv.first()?).file_name()?.to_str()?;
+    let (source, agent, flag): (&str, &str, &str) = match binary {
+        "claude" => ("herdr:claude", "claude", "--resume"),
+        "codex" => ("herdr:codex", "codex", "resume"),
+        "kimi" => ("herdr:kimi", "kimi", "--session"),
+        "agy" => ("herdr:antigravity_cli", "agy", "--conversation"),
+        "grok" => ("herdr:grok", "grok", "--resume"),
+        _ => return None,
+    };
+    let session_id = if agent == "codex" {
+        // codex resume <id> — positional, not a --flag.
+        (argv.get(1).filter(|a| a.as_str() == "resume").and_then(|_| argv.get(2)))
+            .filter(|id| !id.starts_with('-'))?
+    } else {
+        let position = argv.iter().position(|arg| arg == flag || (agent == "kimi" && arg == "-S"))?;
+        argv.get(position + 1)?
+    };
+    let session_ref = crate::agent_resume::AgentSessionRef::id(session_id.clone())?;
+    let plan = crate::agent_resume::plan(source, agent, &session_ref)?;
+    Some(plan.argv)
+}
+
+/// Respawn a session in its recorded world. Returns the new transcript path.
+fn respawn(
+    client: &ApiClient,
+    session: &str,
+    slug: &str,
+    world: &str,
+    cwd: &str,
+    argv: &[String],
+) -> Result<PathBuf, String> {
+    let logs_dir = ao_home().join(LOGS_DIR);
+    std::fs::create_dir_all(&logs_dir).map_err(|err| format!("mkdir: {err}"))?;
+    let log = logs_dir.join(format!("{session}-{}.log", timestamp_now()));
+    let runner = logs_dir.join(format!("{session}.cmd.sh"));
+    std::fs::write(&runner, format!("{}\n", argv.join(" ")))
+        .map_err(|err| format!("write runner: {err}"))?;
+
+    if world == "tmux" {
+        if command_path("tmux").is_none() {
+            return Err("tmux not installed".to_string());
+        }
+        let inner = format!(
+            "script -q '{}' /bin/sh '{}'",
+            log.display(),
+            runner.display()
+        );
+        let status = Command::new("tmux")
+            .arg("new-session")
+            .arg("-d")
+            .arg("-s")
+            .arg(session)
+            .arg("-c")
+            .arg(cwd)
+            .arg(&inner)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map_err(|err| format!("tmux new-session: {err}"))?;
+        if !status.success() {
+            return Err("tmux new-session failed".to_string());
+        }
+        let mut opt = Command::new("tmux");
+        opt.arg("set-option")
+            .arg("-t")
+            .arg(format!("={session}:"))
+            .arg("remain-on-exit")
+            .arg("on");
+        let _ = run_quiet(&mut opt);
+        std::thread::sleep(Duration::from_millis(500));
+        if !tmux_has_session(session) {
+            return Err(format!("respawned agent exited immediately — see {}", log.display()));
+        }
+        return Ok(log);
+    }
+
+    // Engine world: same workspace+layout dance as spawn, with the respawn
+    // argv. The slug is only used for error text here.
+    let _ = slug;
+    ensure_engine_running().map_err(|err| format!("engine start: {err}"))?;
+    let created = call(
+        client,
+        Method::WorkspaceCreate(WorkspaceCreateParams {
+            source_workspace_id: None,
+            cwd: Some(cwd.to_string()),
+            focus: false,
+            label: Some(session.to_string()),
+            env: Default::default(),
+        }),
+    )
+    .map_err(|err| format!("workspace create: {}", call_error_text(&err)))?;
+    let workspace_id = created["workspace"]["workspace_id"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+    let tab_id = created["tab"]["tab_id"].as_str().unwrap_or_default();
+    let mut env = std::collections::HashMap::new();
+    env.insert(
+        crate::ao::transcript::TRANSCRIPT_ENV_VAR.to_string(),
+        log.display().to_string(),
+    );
+    if let Err(err) = call(
+        client,
+        Method::LayoutApply(LayoutApplyParams {
+            workspace_id: None,
+            tab_id: Some(tab_id.to_string()),
+            tab_label: None,
+            focus: false,
+            root: LayoutNode::Pane {
+                pane: LayoutPane {
+                    pane_id: None,
+                    label: None,
+                    cwd: Some(cwd.to_string()),
+                    command: Some(argv.to_vec()),
+                    env,
+                },
+            },
+        }),
+    ) {
+        let _ = call(
+            client,
+            Method::WorkspaceClose(WorkspaceCloseParams {
+                workspace_id,
+                close_group: true,
+            }),
+        );
+        return Err(format!("layout apply: {}", call_error_text(&err)));
+    }
+    std::thread::sleep(Duration::from_millis(500));
+    if !session_alive(client, session).unwrap_or(false) {
+        return Err(format!("respawned agent exited immediately — see {}", log.display()));
+    }
+    Ok(log)
+}
+
+fn call_error_text(err: &CallError) -> String {
+    match err {
+        CallError::EngineDown => "engine down".to_string(),
+        CallError::Rpc { message, .. } => message.clone(),
+        CallError::Io(err) => err.to_string(),
+    }
+}
+
+fn tmux_has_session(session: &str) -> bool {
+    if command_path("tmux").is_none() {
+        return false;
+    }
+    let mut check = Command::new("tmux");
+    check
+        .arg("has-session")
+        .arg("-t")
+        .arg(format!("={session}:"));
+    run_quiet(&mut check)
+}
+
+fn tmux_list_ao_sessions() -> Vec<String> {
+    if command_path("tmux").is_none() {
+        return Vec::new();
+    }
+    let output = Command::new("tmux")
+        .arg("list-sessions")
+        .arg("-F")
+        .arg("#{session_name}")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output();
+    let Ok(output) = output else {
+        return Vec::new();
+    };
+    if !output.status.success() {
+        return Vec::new();
+    }
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter(|line| line.starts_with("ao-"))
+        .map(str::to_string)
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -1151,4 +1996,155 @@ fn probe_executor(
         line.push_str(&format!(" ({note})"));
     }
     println!("{line}");
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry_with_lead(lead: Option<&str>) -> AoSession {
+        AoSession {
+            cwd: "/tmp".to_string(),
+            log: None,
+            dead: false,
+            runner: None,
+            worktree: None,
+            branch: None,
+            sentinel: None,
+            lead: lead.map(str::to_string),
+            lifecycle: Some("running".to_string()),
+            world: Some("engine".to_string()),
+            queued: 0,
+        }
+    }
+
+    #[test]
+    fn ownership_is_fail_closed() {
+        let owned = entry_with_lead(Some("lead-a"));
+        // Matching lead passes.
+        assert!(require_lead("ao-x", Some(&owned), "lead-a", false, "queue").is_ok());
+        // Mismatched caller refuses.
+        assert!(require_lead("ao-x", Some(&owned), "lead-b", false, "queue").is_err());
+        // --as-human overrides a mismatch.
+        assert!(require_lead("ao-x", Some(&owned), "lead-b", true, "queue").is_ok());
+        // Unknown owner (pre-registry record) refuses — never a guess.
+        let unknown = entry_with_lead(None);
+        assert!(require_lead("ao-x", Some(&unknown), "lead-a", false, "queue").is_err());
+        assert!(require_lead("ao-x", None, "lead-a", false, "queue").is_err());
+        // --as-human overrides the unknown-owner refusal too.
+        assert!(require_lead("ao-x", Some(&unknown), "lead-a", true, "queue").is_ok());
+    }
+
+    #[test]
+    fn caller_identity_prefers_flag_then_env_then_human() {
+        assert_eq!(caller_identity(Some("explicit")), "explicit");
+        // Env resolution is environment-dependent; only the fallback shape is
+        // asserted: never empty.
+        assert!(!caller_identity(None).is_empty());
+    }
+
+    #[test]
+    fn old_state_files_still_load() {
+        // The pre-dispatch-registry shape: only cwd/log/dead.
+        let old = r#"{"sessions":{"ao-x":{"cwd":"/tmp","log":"/tmp/x.log","dead":false}}}"#;
+        let state: AoState = serde_json::from_str(old).unwrap();
+        let entry = &state.sessions["ao-x"];
+        assert_eq!(entry.cwd, "/tmp");
+        assert!(!entry.dead);
+        assert_eq!(entry.lead, None);
+        assert_eq!(entry.queued, 0);
+        assert_eq!(entry.lifecycle, None);
+    }
+
+    #[test]
+    fn new_state_files_keep_legacy_keys() {
+        let mut state = AoState::default();
+        state
+            .sessions
+            .insert("ao-x".to_string(), entry_with_lead(Some("lead-a")));
+        let text = serde_json::to_string(&state).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let entry = &value["sessions"]["ao-x"];
+        // Legacy keys intact for old readers.
+        assert_eq!(entry["cwd"], "/tmp");
+        assert_eq!(entry["dead"], false);
+        assert!(entry.as_object().unwrap().contains_key("log"));
+        // New keys present.
+        assert_eq!(entry["lead"], "lead-a");
+        assert_eq!(entry["queued"], 0);
+        // Old readers ignore unknown fields: deserialize with only the
+        // legacy shape visible.
+        #[derive(Deserialize)]
+        struct LegacySession {
+            #[allow(dead_code)]
+            cwd: String,
+            #[allow(dead_code)]
+            #[serde(default)]
+            log: Option<String>,
+            #[allow(dead_code)]
+            #[serde(default)]
+            dead: bool,
+        }
+        #[derive(Deserialize)]
+        struct LegacyState {
+            sessions: BTreeMap<String, LegacySession>,
+        }
+        let legacy: LegacyState = serde_json::from_str(&text).unwrap();
+        assert!(legacy.sessions.contains_key("ao-x"));
+    }
+
+    #[test]
+    fn prompt_marker_matches_script_semantics() {
+        // Last 40 alnum chars; non-alnum stripped.
+        let marker = prompt_marker("hello, world!").unwrap();
+        assert_eq!(marker, "helloworld");
+        assert!(prompt_marker("!!! ---").is_none());
+        let long = "x".repeat(100);
+        assert_eq!(prompt_marker(&long).unwrap().len(), 40);
+    }
+
+    #[test]
+    fn resume_argv_detection() {
+        assert_eq!(
+            resume_argv_from(&["codex".into(), "resume".into(), "codex-id".into()]),
+            Some(vec!["codex".to_string(), "resume".to_string(), "codex-id".to_string()])
+        );
+        assert_eq!(
+            resume_argv_from(&["claude".into(), "--resume".into(), "claude-id".into()]),
+            Some(vec!["claude".to_string(), "--resume".to_string(), "claude-id".to_string()])
+        );
+        assert_eq!(
+            resume_argv_from(&["kimi".into(), "-S".into(), "kimi-id".into()]),
+            Some(vec!["kimi".to_string(), "--session".to_string(), "kimi-id".to_string()])
+        );
+        // Non-agent commands are not resumable.
+        assert!(resume_argv_from(&["cat".into()]).is_none());
+        // codex resume --last has no explicit session id.
+        assert!(resume_argv_from(&["codex".into(), "resume".into(), "--last".into()]).is_none());
+    }
+
+    #[test]
+    fn sentinel_status_parses_frontmatter() {
+        let dir = std::env::temp_dir().join(format!("ao-sentinel-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let done = dir.join("done.md");
+        std::fs::write(&done, "---\nstatus: done\n---\nnotes\n").unwrap();
+        assert_eq!(
+            sentinel_status(Some(done.to_str().unwrap())).as_deref(),
+            Some("done")
+        );
+        let blocked = dir.join("blocked.md");
+        std::fs::write(&blocked, "---\nstatus: blocked\n---\n").unwrap();
+        assert_eq!(
+            sentinel_status(Some(blocked.to_str().unwrap())).as_deref(),
+            Some("blocked")
+        );
+        assert_eq!(sentinel_status(Some(dir.join("absent.md").to_str().unwrap())), None);
+        assert_eq!(sentinel_status(None), None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

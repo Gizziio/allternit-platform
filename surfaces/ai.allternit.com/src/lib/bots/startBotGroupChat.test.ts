@@ -62,8 +62,8 @@ describe('startBotGroupChat', () => {
     expect(createGroupMock).toHaveBeenCalledWith(
       'Weekly sync',
       expect.arrayContaining([
-        expect.objectContaining({ botId: 'bot-alpha', displayName: 'Alpha' }),
-        expect.objectContaining({ botId: 'bot-beta', displayName: 'Beta' }),
+        expect.objectContaining({ botId: 'bot-alpha', displayName: 'Alpha', handle: 'alpha' }),
+        expect.objectContaining({ botId: 'bot-beta', displayName: 'Beta', handle: 'beta' }),
       ]),
     );
     const arg = createSessionMock.mock.calls[0][0] as { name: string };

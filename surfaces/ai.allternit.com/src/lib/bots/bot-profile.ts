@@ -81,6 +81,30 @@ export function getBotDisplayName(agent: Agent): string {
 }
 
 /**
+ * Slug used as a @mention handle when botProfile.handle is unset.
+ * Must stay identical to the fallback in startBotGroupChat — group rounds
+ * @mention members by this handle.
+ */
+export function slugBotHandle(displayName: string, fallbackId?: string): string {
+  const slug = displayName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  if (slug) return slug;
+  return (fallbackId ?? 'bot').slice(0, 8);
+}
+
+/**
+ * Get the @mention handle for a bot. Prefers an explicit botProfile.handle,
+ * otherwise slugifies the display name the same way group-chat membership does.
+ */
+export function getBotHandle(agent: Agent): string {
+  const explicit = agent.botProfile?.handle?.trim();
+  if (explicit) return explicit;
+  return slugBotHandle(getBotDisplayName(agent), agent.id);
+}
+
+/**
  * Get the bot's tagline or description.
  */
 export function getBotTagline(agent: Agent): string {

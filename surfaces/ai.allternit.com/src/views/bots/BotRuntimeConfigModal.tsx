@@ -16,8 +16,11 @@ import {
   type AgentVMProvider,
   type AgentVMNetworkPolicy,
   type AgentVMPersistence,
+  type BotBrainBinding,
 } from "@/lib/agents/agent.types";
 import { updateAgent } from "@/lib/agents/agent.service";
+import { BotBrainBindFields } from "@/lib/bots/BotBrainBindFields";
+import { normalizeBotBrain, resolveAgentBrain } from "@/lib/bots/bot-brain";
 import { sealAgentSecret } from "@/lib/agents/agent-secrets.service";
 import { createAgentWallet } from "@/lib/bots/agent-wallet-factory";
 import { provisionAgentEmail, provisionAgentPhone, getAgentEmailStatus, type AgentEmailRailStatus } from "@/lib/bots/agent-identity.service";
@@ -61,6 +64,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
   const [secrets, setSecrets] = useState<AgentSecretRef[]>(bot.secretRefs ?? []);
   const [secretValues, setSecretValues] = useState<Record<number, string>>({});
 
+  const [brain, setBrain] = useState<BotBrainBinding>(() => resolveAgentBrain(bot));
   const [harnessMode, setHarnessMode] = useState(bot.harness?.mode || "cloud");
   const [byokAnthropicKey, setByokAnthropicKey] = useState(bot.harness?.byok?.anthropic?.apiKey || "");
   const [byokOpenAIKey, setByokOpenAIKey] = useState(bot.harness?.byok?.openai?.apiKey || "");
@@ -172,6 +176,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
       setBindings(bot.connectorBindings ?? []);
       setSecrets(bot.secretRefs ?? []);
       setSecretValues({});
+      setBrain(resolveAgentBrain(bot));
       setHarnessMode(bot.harness?.mode || "cloud");
       setByokAnthropicKey(bot.harness?.byok?.anthropic?.apiKey || "");
       setByokOpenAIKey(bot.harness?.byok?.openai?.apiKey || "");
@@ -652,6 +657,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
         identityChannels,
         messagingConfig,
         vmOperator,
+        brain: normalizeBotBrain(brain),
       });
 
       const sealTasks: Promise<void>[] = [];
@@ -678,6 +684,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
     secrets,
     secretValues,
     harnessMode,
+    brain,
     byokAnthropicKey,
     byokOpenAIKey,
     byokGoogleKey,
@@ -900,6 +907,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
               </div>
 
               <div className="space-y-4">
+                <BotBrainBindFields value={brain} onChange={setBrain} />
                 <div>
                   <Label className="text-[12px] text-[var(--text-secondary)]">Execution Mode</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
