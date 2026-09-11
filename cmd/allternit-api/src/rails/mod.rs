@@ -14,6 +14,7 @@ use axum::{
     Json, Router,
 };
 pub mod routes_cowork;
+mod visibility;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::PathBuf;
@@ -405,59 +406,35 @@ async fn list_peers(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct VisibilityPane {
-    id: String,
-    label: String,
-    state: String,
+pub(crate) struct VisibilityPane {
+    pub(crate) id: String,
+    pub(crate) label: String,
+    pub(crate) state: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct VisibilityNeed {
-    id: String,
-    label: String,
-    reason: String,
+pub(crate) struct VisibilityNeed {
+    pub(crate) id: String,
+    pub(crate) label: String,
+    pub(crate) reason: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct VisibilityDto {
-    panes: Vec<VisibilityPane>,
-    machines: Vec<serde_json::Value>,
+pub(crate) struct VisibilityDto {
+    pub(crate) panes: Vec<VisibilityPane>,
+    pub(crate) machines: Vec<serde_json::Value>,
     #[serde(rename = "fabricDevices")]
-    fabric_devices: Vec<serde_json::Value>,
+    pub(crate) fabric_devices: Vec<serde_json::Value>,
     #[serde(rename = "needsYou")]
-    needs_you: Vec<VisibilityNeed>,
+    pub(crate) needs_you: Vec<VisibilityNeed>,
 }
 
-fn peer_pane_state(status: allternit_commrails::peer::PeerStatus) -> &'static str {
-    match status {
-        allternit_commrails::peer::PeerStatus::Active => "working",
-        allternit_commrails::peer::PeerStatus::Idle | allternit_commrails::peer::PeerStatus::Dead => {
-            "idle"
-        }
-    }
-}
-
-/// Read-only visibility DTO for the CommRails rail. Best-effort from the
-/// local peer registry — empty arrays when ao is down / no peers.
+/// Read-only visibility DTO for the CommRails rail. Prefers `ao visibility`
+/// (engine blocked/idle panes + waiting-on-you); falls back to the local
+/// peer registry when ao is down.
 async fn visibility(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let peers = state.rails.peers.list();
-    let panes = peers
-        .iter()
-        .map(|peer| VisibilityPane {
-            id: peer.peer_id.clone(),
-            label: peer.name.clone(),
-            state: peer_pane_state(peer.status).to_string(),
-        })
-        .collect();
-    (
-        StatusCode::OK,
-        Json(VisibilityDto {
-            panes,
-            machines: Vec::new(),
-            fabric_devices: Vec::new(),
-            needs_you: Vec::new(),
-        }),
-    )
+    let dto = visibility::load_visibility(&state.rails.root_dir, &state.rails.peers).await;
+    (StatusCode::OK, Json(dto))
 }
 
 async fn register_peer(

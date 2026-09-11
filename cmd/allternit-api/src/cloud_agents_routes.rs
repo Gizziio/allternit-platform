@@ -114,6 +114,10 @@ struct CreateCloudSessionBody {
     parent_thread_id: Option<String>,
     #[serde(default)]
     permission: Option<String>,
+    /// Bot Agents BA-8: packaged bot id. Stored on metadata; used as the
+    /// session agent when `agent` is omitted.
+    #[serde(default)]
+    bot_id: Option<String>,
 }
 
 fn empty_object() -> Value {
@@ -182,6 +186,7 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
         },
         "brain_id": session.brain_id,
         "vault_ids": vault_ids,
+        "bot_id": session.metadata.get("bot_id"),
         "parent_thread_id": session.parent_thread_id,
         "permission": session.metadata.get("permission"),
         "created_at": session.created_at,
@@ -447,6 +452,11 @@ async fn create_cloud_session(
         }
     };
     let parent_thread_id = body.parent_thread_id.clone();
+    let bot_id = body
+        .bot_id
+        .as_ref()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
 
     let db = state.db.clone();
     let organization_id = user.organization_id.clone();
@@ -469,10 +479,17 @@ async fn create_cloud_session(
         if let Some(permission) = &permission {
             object.insert("permission".to_string(), json!(permission));
         }
+        if let Some(bot_id) = &bot_id {
+            object.insert("bot_id".to_string(), json!(bot_id));
+        }
         metadata
     };
     let budget = body.budget;
-    let agent_ref = body.agent;
+    let agent_ref = match (body.agent, bot_id.clone()) {
+        (Some(agent), _) => Some(agent),
+        (None, Some(bot_id)) => Some(AgentRef::Id(bot_id)),
+        (None, None) => None,
+    };
 
     let session = tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
