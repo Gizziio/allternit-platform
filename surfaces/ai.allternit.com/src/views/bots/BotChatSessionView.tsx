@@ -28,6 +28,11 @@ import { BotComputerViewport } from "./BotComputerViewport";
 import { PolicyGovernance } from "./PolicyGovernance";
 import { useBotActiveVm } from "./useBotActiveVm";
 import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
+import {
+  botSessionStatus,
+  groupMessagesByDay,
+  splitCompactMessages,
+} from "@/lib/bots/bot-session-chrome";
 
 export interface BotChatSessionViewProps {
   sessionId?: string;
@@ -177,6 +182,7 @@ function BotChatSessionContent({
   const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const [computerOpen, setComputerOpen] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [showOlder, setShowOlder] = useState(false);
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
 
   // The computer pane is user-driven only: it opens via the top-right
@@ -271,6 +277,33 @@ function BotChatSessionContent({
     setAciSidecarExpanded(true);
   }, [botId, setConnectedBotId, setAciSidecarExpanded]);
 
+  const sessionStatus = useMemo(
+    () =>
+      botSessionStatus({
+        botName,
+        isStreaming,
+        sendError,
+        computerOpen,
+      }),
+    [botName, isStreaming, sendError, computerOpen]
+  );
+
+  const { older: olderMessages, recent: recentMessages } = useMemo(
+    () => splitCompactMessages(messages),
+    [messages]
+  );
+  const visibleMessages = showOlder ? messages : recentMessages;
+  const dayGroups = useMemo(
+    () => groupMessagesByDay(visibleMessages),
+    [visibleMessages]
+  );
+  const statusDot =
+    sessionStatus.tone === "running"
+      ? "var(--status-warning)"
+      : sessionStatus.tone === "error"
+        ? "var(--status-error)"
+        : "var(--status-success)";
+
   return (
     <div className="flex h-full flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] pt-12">
       {/* Header */}
@@ -319,17 +352,16 @@ function BotChatSessionContent({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-base font-semibold">{botName}</h2>
-              <span className="flex h-2 w-2 rounded-full bg-[var(--status-success)]" title="Online" />
+              <span
+                className="flex h-2 w-2 rounded-full"
+                style={{ background: statusDot }}
+                title={sessionStatus.label}
+              />
             </div>
-            {botTagline ? (
-              <p className="truncate text-xs text-[var(--text-secondary)]">
-                {botTagline}
-              </p>
-            ) : (
-              <p className="truncate text-xs text-[var(--text-tertiary)]">
-                Bot session
-              </p>
-            )}
+            <p className="truncate text-xs text-[var(--text-secondary)]">
+              {sessionStatus.label}
+              {botTagline ? ` · ${botTagline}` : ""}
+            </p>
           </div>
         </div>
         {hasVm && (
@@ -402,18 +434,38 @@ function BotChatSessionContent({
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {messages.map((message) => (
-              <BotChatMessage
-                key={message.id}
-                message={message}
-                bot={bot}
-                botName={botName}
-                accentColor={accentColor}
-              />
+            {olderMessages.length > 0 && !showOlder && (
+              <button
+                type="button"
+                onClick={() => setShowOlder(true)}
+                className="self-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+              >
+                Show earlier conversation ({olderMessages.length})
+              </button>
+            )}
+            {dayGroups.map((group) => (
+              <div key={group.day} className="flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="h-px flex-1 bg-[var(--border-subtle)]" />
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+                    {group.day}
+                  </span>
+                  <span className="h-px flex-1 bg-[var(--border-subtle)]" />
+                </div>
+                {group.messages.map((message) => (
+                  <BotChatMessage
+                    key={message.id}
+                    message={message}
+                    bot={bot}
+                    botName={botName}
+                    accentColor={accentColor}
+                  />
+                ))}
+              </div>
             ))}
             {isStreaming && (
               <div className="flex items-center justify-center gap-2 py-2 text-xs text-[var(--text-tertiary)]">
-                <CircleNotch size={14} className="animate-spin" />
+                {bot ? <BotAvatar bot={bot} size={18} /> : <CircleNotch size={14} className="animate-spin" />}
                 {botName} is thinking…
               </div>
             )}
