@@ -68,6 +68,18 @@ export function splitCompactMessages<T extends Timed>(
   return { older, recent };
 }
 
+export function summarizeOlderMessages(
+  older: Array<{ role?: string; content?: string; timestamp?: string | number }>
+): string {
+  if (older.length === 0) return "";
+  const fromYou = older.filter((m) => m.role === "user").length;
+  const replies = older.length - fromYou;
+  const first = messageDayKey(older[0]?.timestamp);
+  const last = messageDayKey(older[older.length - 1]?.timestamp);
+  const span = first === last ? first : `${first} – ${last}`;
+  return `${older.length} earlier messages (${fromYou} from you, ${replies} replies) · ${span}`;
+}
+
 export function groupMessagesByDay<T extends Timed>(
   messages: T[],
   now = Date.now()

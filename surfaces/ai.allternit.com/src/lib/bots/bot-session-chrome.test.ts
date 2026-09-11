@@ -5,6 +5,7 @@ import {
   groupMessagesByDay,
   messageDayKey,
   splitCompactMessages,
+  summarizeOlderMessages,
 } from "./bot-session-chrome";
 
 describe("botSessionStatus", () => {
@@ -50,6 +51,20 @@ describe("splitCompactMessages", () => {
     );
     expect(older).toHaveLength(1);
     expect(recent).toHaveLength(1);
+  });
+});
+
+describe("summarizeOlderMessages", () => {
+  it("counts sides and names the span", () => {
+    const now = Date.parse("2026-09-10T18:00:00.000Z");
+    const text = summarizeOlderMessages([
+      { role: "user", content: "hi", timestamp: "2026-09-01T12:00:00.000Z" },
+      { role: "assistant", content: "hey", timestamp: "2026-09-02T12:00:00.000Z" },
+    ]);
+    expect(text).toContain("2 earlier messages");
+    expect(text).toContain("1 from you");
+    expect(text).toContain("1 replies");
+    void now;
   });
 });
 
