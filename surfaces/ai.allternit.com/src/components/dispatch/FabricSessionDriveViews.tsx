@@ -148,6 +148,7 @@ export function FabricAciDrive({
   onOpenComputer,
   watching = false,
   onToggleWatch,
+  liveView,
 }: {
   session: FabricSessionWithStatus;
   detail: FabricSessionDetail | null;
@@ -158,6 +159,12 @@ export function FabricAciDrive({
   onOpenComputer?: () => void;
   watching?: boolean;
   onToggleWatch?: () => void;
+  /**
+   * Desktop-style live ACI viewport (element highlights, status strip)
+   * rendered in place of the plain screenshot while watching. When absent
+   * the drive falls back to the raw frame image.
+   */
+  liveView?: React.ReactNode;
 }) {
   const frame = screenshot || latestComputerFrame(detail, events);
   const host = hostName || session.session.title || 'paired node';
@@ -178,7 +185,9 @@ export function FabricAciDrive({
           </span>
         </div>
         <div className="relative flex-1 min-h-0 bg-[#0b0b0a] flex items-center justify-center overflow-hidden">
-          {frame ? (
+          {liveView && watching && frame ? (
+            liveView
+          ) : frame ? (
             <img src={frame} alt={watching ? "Computer screen" : "Last computer screen"} className="max-w-full max-h-full object-contain" />
           ) : (
             <div className="flex flex-col items-center gap-3 px-6 text-center">
