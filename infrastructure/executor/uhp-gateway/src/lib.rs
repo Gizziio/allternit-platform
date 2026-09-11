@@ -1,4 +1,4 @@
-//! uhp-gateway — a UHP (Unified Harness Protocol) 2026-08-11 "core"-class HTTP
+//! uhp-gateway — a UHP (Unified Harness Protocol) 2026-08-11 "full"-class HTTP
 //! server that turns prompts into real CLI-agent turns by driving the ao
 //! engine (herdr) over its Unix-domain-socket NDJSON JSON-RPC API.
 
@@ -87,6 +87,30 @@ pub fn model_catalog() -> ModelCatalog {
         "codex".to_string(),
         backend_models("codex", "gpt-5-codex", &["gpt-5-codex", "gpt-5", "codex-mini-latest"]),
     );
+    backends.insert(
+        "gemini".to_string(),
+        backend_models("gemini", "gemini-2.5-pro", &["gemini-2.5-pro", "gemini-2.5-flash"]),
+    );
+    backends.insert(
+        "qwen".to_string(),
+        backend_models("qwen", "qwen3-coder", &["qwen3-coder", "qwen3-coder-plus"]),
+    );
+    backends.insert(
+        "opencode".to_string(),
+        backend_models("opencode", "opencode/gpt-5", &["opencode/gpt-5", "opencode/claude-sonnet-4"]),
+    );
+    backends.insert(
+        "cline".to_string(),
+        backend_models("cline", "gpt-4o", &["gpt-4o", "gpt-4.1"]),
+    );
+    backends.insert(
+        "pi".to_string(),
+        backend_models("pi", "sonnet", &["sonnet", "opus", "gpt-5"]),
+    );
+    backends.insert(
+        "dsh".to_string(),
+        backend_models("dsh", "deepseek-chat", &["deepseek-chat", "deepseek-reasoner"]),
+    );
     ModelCatalog { backends }
 }
 
@@ -108,15 +132,12 @@ fn backend_models(backend: &str, default: &str, ids: &[&str]) -> BackendModels {
 }
 
 pub fn binary_for_backend(base: &str) -> &'static str {
-    match drivers::DriverKind::from_base(base) {
-        Some(drivers::DriverKind::Kimi) => "kimi",
-        Some(drivers::DriverKind::Claude) => "claude",
-        Some(drivers::DriverKind::Codex) => "codex",
-        None => "",
-    }
+    drivers::DriverKind::from_base(base)
+        .map(|kind| kind.binary())
+        .unwrap_or("")
 }
 
-fn binary_available(binary: &str) -> bool {
+pub fn binary_available(binary: &str) -> bool {
     if binary.is_empty() {
         return false;
     }
@@ -134,7 +155,9 @@ fn scan_path_binaries() -> std::collections::HashMap<String, bool> {
     let Some(paths) = std::env::var_os("PATH") else {
         return map;
     };
-    for binary in ["kimi", "claude", "codex"] {
+    for binary in [
+        "kimi", "claude", "codex", "gemini", "qwen", "opencode", "cline", "pi", "dsh",
+    ] {
         let found = std::env::split_paths(&paths).any(|dir| {
             let candidate = dir.join(binary);
             std::fs::metadata(&candidate)
@@ -203,6 +226,9 @@ mod tests {
         assert!(catalog.backends.contains_key("kimi"));
         assert!(catalog.backends.contains_key("claude-code"));
         assert!(catalog.backends.contains_key("codex"));
+        for extra in ["gemini", "qwen", "opencode", "cline", "pi", "dsh"] {
+            assert!(catalog.backends.contains_key(extra), "missing backend {extra}");
+        }
         for backend in catalog.backends.values() {
             assert!(!backend.default.is_empty());
             assert!(!backend.models.is_empty());

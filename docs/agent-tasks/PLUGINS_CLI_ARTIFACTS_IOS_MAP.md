@@ -40,7 +40,7 @@ This document maps 10 external ecosystems across multimodal plugin frameworks, t
 ### 5. `vercel-labs/ai-cli`
 - **Summary:** Minimal terminal CLI wrapper for stream-answering shell questions, command translation, and piped bash evaluation.
 - **License & Reuse Risk:** MIT. Low risk.
-- **Decision:** **Reference for Gizzi CLI**. Features incorporated into `allternit-rails` and `gizzi exec`.
+- **Decision:** **Reference for Gizzi CLI**. Features incorporated into `allternit-commrails` and `gizzi exec`.
 - **Target Surface:** `cmd/gizzi-code` & CLI tools.
 
 ---

@@ -13,9 +13,9 @@ Every local Allternit agent session (kimi, codex, claude, agy, gizzi-code, ao) c
 - **Peer registry** lives under `.allternit/peers/registry.json`. Each session registers with a stable id, name, cwd, vendor, and inbox socket path.
 - **UDS inbox transport** delivers messages directly between peers over Unix domain sockets when the recipient binds a real socket. Messages never leave the machine.
 - **HTTP inbox polling** is the gizzi-code delivery path: the API persists every peer send to the durable Bus, and gizzi-code polls `GET /api/rails/peers/:name/inbox` for pending envelopes. This avoids Bun/Node UDS quirks and integrates with the TUI mailbox.
-- **`allternit-rails`** is the packaged binary for registration, messaging, orchestration, and steering.
+- **`allternit-commrails`** is the packaged binary for registration, messaging, orchestration, and steering.
 - **gizzi-code** exposes `ListPeers` / `SendMessage` runtime tools that mirror Claude Code's `ListAgents` / `SendMessage`.
-- **Steering hooks** (`.steering/bin/*.sh`) and **agent-orchestrator** scripts (`ao-*`) now delegate to `allternit-rails`.
+- **Steering hooks** (`.steering/bin/*.sh`) and **agent-orchestrator** scripts (`ao-*`) now delegate to `allternit-commrails`.
 
 ## When to use Rails
 
@@ -38,30 +38,30 @@ Peers are addressable by:
 
 ```bash
 # Register this session as a peer
-allternit-rails peer register <name> --vendor <agent-family>
+allternit-commrails peer register <name> --vendor <agent-family>
 
 # Discover peers
-allternit-rails peer list
+allternit-commrails peer list
 
 # Send a message
-allternit-rails peer send <name> "<message>"
+allternit-commrails peer send <name> "<message>"
 
 # Heartbeat and inbox debug
-allternit-rails peer heartbeat <name>
-allternit-rails peer inbox <name>
+allternit-commrails peer heartbeat <name>
+allternit-commrails peer inbox <name>
 
 # Orchestration
-allternit-rails orchestrator spawn [--worktree] [--vendor <v>] [--mode <m>] <slug> <repo> <cmd>...
-allternit-rails orchestrator send <slug> <data>
-allternit-rails orchestrator watch <slug> <sentinel>
-allternit-rails orchestrator status [slug]
-allternit-rails orchestrator kill <slug>
-allternit-rails orchestrator doctor
+allternit-commrails orchestrator spawn [--worktree] [--vendor <v>] [--mode <m>] <slug> <repo> <cmd>...
+allternit-commrails orchestrator send <slug> <data>
+allternit-commrails orchestrator watch <slug> <sentinel>
+allternit-commrails orchestrator status [slug]
+allternit-commrails orchestrator kill <slug>
+allternit-commrails orchestrator doctor
 
 # Steering
-allternit-rails steer checkpoint --cwd <dir>
-allternit-rails steer consult --cwd <dir>
-allternit-rails steer commit-gate --cwd <dir>
+allternit-commrails steer checkpoint --cwd <dir>
+allternit-commrails steer consult --cwd <dir>
+allternit-commrails steer commit-gate --cwd <dir>
 ```
 
 ## HTTP API
@@ -115,8 +115,8 @@ When Rails is available, an agent SHOULD:
 
 When Rails is unavailable, agents MUST fall back to previous mechanisms:
 
-- `.steering/bin/*.sh` scripts still work because they call `allternit-rails` internally.
-- `ao-*` scripts still work because they are thin shims around `allternit-rails`.
+- `.steering/bin/*.sh` scripts still work because they call `allternit-commrails` internally.
+- `ao-*` scripts still work because they are thin shims around `allternit-commrails`.
 - gizzi-code without `GIZZI_ENABLE_RAILS_PEER=1` uses its existing teammate mailbox / Remote Control bridge.
 
 ## Key file map
@@ -124,7 +124,7 @@ When Rails is unavailable, agents MUST fall back to previous mechanisms:
 | Component | Path |
 |-----------|------|
 | Rust library | `rails/src/` |
-| CLI binary | `rails/src/bin/allternit-rails.rs` |
+| CLI binary | `rails/src/bin/allternit-commrails.rs` |
 | HTTP routes | `cmd/allternit-api/src/rails/mod.rs` |
 | gizzi peer service | `cmd/gizzi-code/src/runtime/gizzi-core/services/railsPeer.ts` |
 | gizzi Rails inbox bridge | `cmd/gizzi-code/src/cli/ui/ink-app/components/RailsInboxBridge.tsx` |
@@ -137,7 +137,7 @@ When Rails is unavailable, agents MUST fall back to previous mechanisms:
 
 ## Verification checklist
 
-- [x] `cargo test -p allternit-agent-system-rails` passes.
+- [x] `cargo test -p allternit-commrails` passes.
 - [x] `cargo build -p allternit-api` compiles.
 - [x] `bun run typecheck` passes in `cmd/gizzi-code`.
 - [x] `tmp/rails-two-session-test/run.sh` starts two `GIZZI_ENABLE_RAILS_PEER=1 gizzi-code` sessions, confirms peer registration, and verifies the recipient TUI renders the message.
@@ -149,12 +149,12 @@ Evidence from the latest run is captured in `tmp/rails-two-session-test/evidence
 
 Rails is designed so any agent CLI can participate without native messaging support:
 
-1. **Download `allternit-rails`** (the packaged Rust binary) or run `allternit-api` locally.
+1. **Download `allternit-commrails`** (the packaged Rust binary) or run `allternit-api` locally.
 2. **Register as a peer** with a vendor tag (`gizzi`, `claude`, `kimi`, `codex`, `agy`, `ao`, etc.).
 3. **Choose a transport:**
    - Bind a UDS inbox socket and receive direct pushes.
    - Poll `GET /api/rails/peers/:name/inbox` for pending Bus messages (works in any language with HTTP).
-4. **Send messages** via `POST /api/rails/peers/:name/send` or `allternit-rails peer send`.
+4. **Send messages** via `POST /api/rails/peers/:name/send` or `allternit-commrails peer send`.
 
 No `.allternit/mux` IPC is required for Rails peer messaging. `allternit-mux` remains vendored inside gizzi-code for legacy multiplexing features but is not the Rails transport.
 

@@ -101,7 +101,7 @@ today and E1 must fix.
 
 ## Constraints
 
-- `cargo test -p allternit-agent-system-rails` passes (new unit tests per
+- `cargo test -p allternit-commrails` passes (new unit tests per
   phase) and `cargo build -p allternit-api` compiles.
 - Crate conventions: ledger events + projection folds for state; SQLite only
   as a rebuildable index; `core::io` helpers; `MailXxxRequest` HTTP structs.

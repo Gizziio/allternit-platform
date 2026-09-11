@@ -3,6 +3,8 @@
 Vendored into this worktree as **reference + test-oracle material only** for implementing a Rust
 server that passes the UHP (Unified Harness Protocol) conformance suite.
 
+The Rust surface is **full class** as of P6b (PR #280). Operator how-to: `docs/UHP.md`.
+
 > **⚠️ ORACLES ONLY.** Nothing under `vendor/harnessrouter-ce/` is compiled, imported, executed,
 > or invoked from any Rust/TS code in this repo. It is not in the cargo workspace. The vendored
 > tree exists so the Rust implementation can be checked against the upstream protocol spec,

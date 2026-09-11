@@ -106,7 +106,7 @@ Key layout docs:
 | `voice-service` | `services/voice/src/main.rs` | Rust voice TTS/STT service (port 8001) |
 | `allternit-simple-memory` | `services/memory/src/main.rs` | Rust memory HTTP adapter |
 | `registry-apps` | `services/registry/apps-registry/src/main.rs` | App registry service |
-| `allternit-rails` / `rails` | `rails/cli/src/` | Rails ticket/DAG/agent execution CLI |
+| `allternit-commrails` / `rails` | `rails/cli/src/` | Rails ticket/DAG/agent execution CLI |
 
 ### TypeScript/Bun CLIs
 | CLI | Path | Purpose |
@@ -220,7 +220,7 @@ The TUI/CLI exposes a large command set under `cmd/gizzi-code/src/cli/commands/`
 - **Database:** SQLite via Drizzle (`~/.local/share/gizzi-code/gizzi.db`); migration files in `cmd/gizzi-code/migration/`.
 
 ### 6.2 `rails/` — Allternit Agent System Rails
-- **Crate:** `allternit-agent-system-rails`.
+- **Crate:** `allternit-commrails`.
 - **Purpose:** deterministic work execution under policy gates (DAG, WIH, runs, leases, ledger, vault, mail, tickets).
 - **Key modules:** `src/gate.rs`, `src/ledger.rs`, `src/work.rs`, `src/tickets.rs`, `src/doctor.rs`, `src/peer.rs`, `src/steer.rs`, `src/mail.rs`, `src/vault.rs`, `src/memory.rs`, `src/orchestrator/`, `src/receipts/`.
 - **CLI:** `rails init`, `rails ticket new`, `rails dag block`, `rails ready`, `rails doctor`, `rails memory learn`, `rails gate add`, `rails sync linear pull`, etc. (`rails/cli/`).

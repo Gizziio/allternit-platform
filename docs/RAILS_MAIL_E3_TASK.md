@@ -36,7 +36,7 @@ then commit
 
 ## Constraints
 
-- `cargo test -p allternit-agent-system-rails` passes;
+- `cargo test -p allternit-commrails` passes;
   `cargo build -p allternit-api` compiles. Record in NOTES.
 - Do not touch mail_share/share_asset (standing non-goal).
 - Keep the E1/E2 envelope and index behavior unchanged except as needed for

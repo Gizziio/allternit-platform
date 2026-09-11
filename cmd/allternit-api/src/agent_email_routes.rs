@@ -29,7 +29,7 @@ use tracing::{info, warn};
 use crate::auth::AuthUser;
 use crate::mailflare_client::{MailflareClient, SendEmailRequest};
 use crate::AppState;
-use allternit_agent_system_rails::{MailImportance, TypedMessage};
+use allternit_commrails::{MailImportance, TypedMessage};
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -460,15 +460,15 @@ pub async fn decide_outbound_for_thread(
             }
             // Ledger receipt for the provider-side action (same pattern as the
             // mail_share receipt write in rails/mod.rs).
-            let receipt = allternit_agent_system_rails::ReceiptRecord {
-                receipt_id: allternit_agent_system_rails::core::ids::create_receipt_id(),
+            let receipt = allternit_commrails::ReceiptRecord {
+                receipt_id: allternit_commrails::core::ids::create_receipt_id(),
                 run_id: format!("agent-email-outbound:{outbound_id}"),
                 step: None,
                 tool: "agent-email".to_string(),
                 tool_version: None,
                 inputs_ref: None,
                 outputs_ref: provider_message_id.clone(),
-                exit: Some(allternit_agent_system_rails::core::types::ReceiptExit {
+                exit: Some(allternit_commrails::core::types::ReceiptExit {
                     code: Some(0),
                     summary: Some(format!("mailflare {decision}: job {job_id}")),
                 }),

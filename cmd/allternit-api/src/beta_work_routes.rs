@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use crate::{auth::AuthUser, error::ApiError, AppState};
+use crate::{auth::AuthUser, beta_session_routes, error::ApiError, AppState};
 
 /// How long a lease is held before it is eligible for another worker to
 /// reclaim (i.e. the worker crashed or stalled without heartbeating).
@@ -336,14 +336,29 @@ async fn ack_task(
     )
     .await?;
     let db = state.db.clone();
+    let result_json = body.result.clone().unwrap_or_else(|| json!({}));
     let task = tokio::task::spawn_blocking(move || {
-        let conn = db.connect()?;
-        conn.execute(
+        let mut conn = db.connect()?;
+        let tx = conn.transaction()?;
+        let updated = tx.execute(
             "UPDATE beta_work_tasks SET status = 'succeeded', result = ?1, lease_worker_id = NULL,
              lease_expires_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?2 AND lease_worker_id = ?3",
             params![body.result.map(|v| v.to_string()), id, body.worker_id],
         )?;
-        conn.query_row(&format!("{TASK_SELECT} WHERE id = ?1"), params![id], read_task)
+        if updated == 0 {
+            return Err(rusqlite::Error::QueryReturnedNoRows);
+        }
+        let task = tx.query_row(&format!("{TASK_SELECT} WHERE id = ?1"), params![id], read_task)?;
+        if let Some(ref session_id) = task.session_id {
+            beta_session_routes::emit_turn_terminal(
+                &tx,
+                session_id,
+                "completed",
+                &json!({"task_id": task.id, "result": result_json}),
+            )?;
+        }
+        tx.commit()?;
+        Ok(task)
     })
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))?
@@ -359,19 +374,39 @@ async fn stop_task(
 ) -> Result<Json<Value>, ApiError> {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let error_msg = body.error.clone();
     let affected = tokio::task::spawn_blocking(move || {
-        let conn = db.connect()?;
-        conn.execute(
+        let mut conn = db.connect()?;
+        let tx = conn.transaction()?;
+        let affected = tx.execute(
             "UPDATE beta_work_tasks SET status = 'cancelled', error = ?1, lease_worker_id = NULL,
              lease_expires_at = NULL, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?2 AND user_id = ?3
                AND (?4 IS NULL OR lease_worker_id = ?4)
                AND status NOT IN ('succeeded', 'failed', 'cancelled')",
-            params![body.error, id, user_id, body.worker_id],
-        )
+            params![error_msg, id, user_id, body.worker_id],
+        )?;
+        if affected > 0 {
+            let session_id: Option<String> = tx.query_row(
+                "SELECT session_id FROM beta_work_tasks WHERE id = ?1",
+                params![id],
+                |row| row.get(0),
+            )?;
+            if let Some(session_id) = session_id {
+                beta_session_routes::emit_turn_terminal(
+                    &tx,
+                    &session_id,
+                    "failed",
+                    &json!({"task_id": id, "error": error_msg}),
+                )?;
+            }
+        }
+        tx.commit()?;
+        Ok::<_, rusqlite::Error>(affected)
     })
     .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e: rusqlite::Error| ApiError::DbError(e.to_string()))?;
     if affected == 0 {
         return Err(ApiError::NotFound(
             "task not found, already terminal, or leased by a different worker".into(),

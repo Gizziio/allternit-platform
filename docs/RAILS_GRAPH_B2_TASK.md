@@ -33,7 +33,7 @@ the HTTP handlers MUST wrap calls in `tokio::task::spawn_blocking`.
    - All three: `tokio::task::spawn_blocking` around compute; response
      includes the per-metric status tags (Computed/Approx/Timeout/Skipped)
      and the graph content hash from B1's cache.
-2. **CLI** (`rails/src/bin/allternit-rails.rs`): new `rails graph` command
+2. **CLI** (`rails/src/bin/allternit-commrails.rs`): new `rails graph` command
    group with `insights`, `triage`, `impact <ticket_id>` subcommands printing
    the same JSON as the HTTP responses (shared serialization code, not two
    implementations — put the view-model builders in the rails crate, e.g.
@@ -46,7 +46,7 @@ the HTTP handlers MUST wrap calls in `tokio::task::spawn_blocking`.
 
 ## Constraints
 
-- `cargo test -p allternit-agent-system-rails` passes;
+- `cargo test -p allternit-commrails` passes;
   `cargo build -p allternit-api` compiles (record both in NOTES).
 - No new external crates without a NOTES justification.
 - Do not modify `rails/src/work/` (different graph system, out of scope).

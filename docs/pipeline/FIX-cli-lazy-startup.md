@@ -4,7 +4,7 @@
 
 ## Context
 
-`rails/src/bin/allternit-rails.rs` `main()` (lines ~386-430) eagerly constructs
+`rails/src/bin/allternit-commrails.rs` `main()` (lines ~386-430) eagerly constructs
 Ledger, Leases, ReceiptStore, Index, Vault, and Gate for EVERY subcommand —
 including ones that need none of the SQLite-backed stores (`ticket ready`,
 `graph insights`, `mail *` reads). Two independent executors confirmed the
@@ -22,7 +22,7 @@ some environments.
 - [ ] R2: WHEN a SQLite-backed store IS initialized, THE SYSTEM SHALL open its
   database with create-if-missing semantics (dir + db file), so a fresh
   checkout or new workspace never fails with SQLITE_CANTOPEN.
-- [ ] R3: WHEN `allternit-rails ticket ready` and `allternit-rails graph
+- [ ] R3: WHEN `allternit-commrails ticket ready` and `allternit-commrails graph
   insights` run in a fresh temp directory, THE SYSTEM SHALL exit 0 (or a
   domain-appropriate empty result) without initializing Leases/Index at all —
   verified by a test or scripted check that observes no `.allternit/leases/`
@@ -37,7 +37,7 @@ some environments.
 
 - Scenario: light subcommands stay light
   Given a fresh temp directory
-  When `allternit-rails ticket ready` runs
+  When `allternit-commrails ticket ready` runs
   Then it exits 0 and neither `.allternit/leases/` nor `.allternit/index/`
   exists afterward.
 - Scenario: heavy subcommands self-heal

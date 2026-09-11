@@ -228,6 +228,7 @@ pub(crate) const DRIVERS: &[Driver] = &[
     Driver { key: "openclaw", label: "OpenClaw", probes: &[Probe::Which("openclaw"), Probe::Exists("~/.openclaw")] },
     Driver { key: "hermes", label: "Hermes", probes: &[Probe::Which("hermes"), Probe::Exists("~/.hermes")] },
     Driver { key: "dsh", label: "DeepSeek Harness", probes: &[Probe::Which("dsh"), Probe::Exists("~/.dsh")] },
+    Driver { key: "pi", label: "Pi", probes: &[Probe::Which("pi"), Probe::Exists("~/.pi")] },
     Driver { key: "qoder", label: "Qoder", probes: &[Probe::Which("qoder"), Probe::Exists("~/.qoder")] },
 ];
 
@@ -780,13 +781,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn embedded_manifest_parses_with_all_16_tools() {
+    fn embedded_manifest_parses_with_all_17_tools() {
         let manifest: Manifest = serde_json::from_str(EMBEDDED_MANIFEST).expect("embedded manifest parses");
-        assert_eq!(manifest.tools.len(), 16, "manifest must cover exactly 16 tools");
+        assert_eq!(manifest.tools.len(), 17, "manifest must cover exactly 17 tools");
         for driver in DRIVERS {
             assert!(manifest.tools.contains_key(driver.key), "manifest missing tool {}", driver.key);
         }
-        assert_eq!(DRIVERS.len(), 16);
+        assert_eq!(DRIVERS.len(), 17);
     }
 
     #[test]

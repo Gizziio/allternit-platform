@@ -5,7 +5,7 @@ Gherkin). This is a small, surgical bug fix — resist expanding it.
 
 ## Context (verified)
 
-`rails/src/bin/allternit-rails.rs` `main()` eagerly builds Ledger, Leases,
+`rails/src/bin/allternit-commrails.rs` `main()` eagerly builds Ledger, Leases,
 ReceiptStore, Index, Vault, Gate for EVERY subcommand (~lines 386-430).
 Leases/Index use sqlx SQLite and can abort startup with SQLITE_CANTOPEN,
 breaking even subcommands that never touch them (`ticket ready`,
@@ -31,13 +31,13 @@ breaking even subcommands that never touch them (`ticket ready`,
   `SqliteConnectOptions` — `create_if_missing(true)` — in Leases/Index and
   the new mail index from E2 for consistency; fix all three if flag absent).
 - R3 verification: script or test — in a fresh temp dir, run
-  `allternit-rails ticket ready`, assert exit 0 AND that
+  `allternit-commrails ticket ready`, assert exit 0 AND that
   `.allternit/leases/` + `.allternit/index/` were NOT created. Run a
   SQLite-needing subcommand in another fresh dir, assert the db is created
   and exit 0. Record exact commands + output in NOTES.
-- `cargo test -p allternit-agent-system-rails` must pass.
+- `cargo test -p allternit-commrails` must pass.
 
 ## Constraints
 
 - No behavior change to any subcommand's output.
-- Surgical: only bin/allternit-rails.rs + the connect-options fixes.
+- Surgical: only bin/allternit-commrails.rs + the connect-options fixes.

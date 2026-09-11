@@ -45,7 +45,7 @@ warning.
 
 ## Verification
 
-`cargo test -p allternit-agent-system-rails` — **passes**:
+`cargo test -p allternit-commrails` — **passes**:
 61 lib tests (incl. 5 new `graph::tests`), 5 `tests/invariants.rs`,
 1 doc-test; 0 failed.
 

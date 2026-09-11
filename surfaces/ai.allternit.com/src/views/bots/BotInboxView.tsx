@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import { useCommRailsMailStore } from "@/lib/bots/comrails-mail.store";
+import { useCommRailsMailStore } from "@/lib/bots/commrails-mail.store";
 import type { Agent, AgentMailMessage, AgentMailThread } from "@/lib/agents/agent.types";
 import { getBotAccentColor, getBotDisplayName, isBot } from "@/lib/bots/bot-profile";
 import {

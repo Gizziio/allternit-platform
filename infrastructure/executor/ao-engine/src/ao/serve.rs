@@ -1,5 +1,5 @@
 //! `ao serve` — run the UHP (Unified Harness Protocol) HTTP surface in-process
-//! under the ao binary (P6a; plan §2.6, spec `Research/specs/ao-uhp-gateway.md`).
+//! under the ao binary (P6a core + P6b full; plan §2.6). Operator doc: `docs/UHP.md`.
 //!
 //! Not a sidecar: the gateway lives in the `uhp-gateway` workspace crate and
 //! is mounted here so the `ao serve` process IS the UHP server. The gateway
@@ -25,7 +25,7 @@ const USAGE: &str = concat!(
     "                [--data-dir DIR] [--engine-socket PATH]\n",
     "       ao serve health [--addr 127.0.0.1:8410] [--token TOKEN]\n",
     "\n",
-    "Run the UHP 2026-08-11 HTTP surface in-process (P6a).\n",
+    "Run the UHP 2026-08-11 HTTP surface in-process (full class).\n",
     "\n",
     "  --addr           bind address (default 127.0.0.1:8410)\n",
     "  --token          bearer token (env UHP_TOKEN; random if unset)\n",

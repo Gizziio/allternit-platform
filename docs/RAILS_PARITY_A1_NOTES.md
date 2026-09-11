@@ -6,7 +6,7 @@ files_changed:
   - rails/src/batch.rs
   - rails/src/doctor.rs
   - rails/src/mcp.rs
-  - rails/src/bin/allternit-rails.rs
+  - rails/src/bin/allternit-commrails.rs
   - cmd/allternit-api/src/rails/mod.rs
 deviations:
   - templates.rs was left unchanged (not in the task's module list; it mutates
@@ -76,7 +76,7 @@ remaining:
 
 ## Verification (exact commands + outputs)
 
-- `cargo test -p allternit-agent-system-rails` — **56 passed; 0 failed**
+- `cargo test -p allternit-commrails` — **56 passed; 0 failed**
   (plus 1 doc-test passed). New tests:
   - dependencies.rs: `add_edge_emits_event_and_graph_rebuilds_from_full_log`
     (deletes graph.json, rebuilds, checks ready exclusion),
@@ -91,7 +91,7 @@ remaining:
 - `cargo build -p allternit-api` — **compiles** (`Finished dev profile in
   1m 41s`; the only warnings are pre-existing ones in untouched files:
   vm_session_routes.rs, auth.rs).
-- CLI smoke note: `allternit-rails ticket ready` compiles into the binary,
+- CLI smoke note: `allternit-commrails ticket ready` compiles into the binary,
   but on this machine the CLI aborts in startup with a sqlx
   `unable to open database file` error from `Index::new` — the pre-existing
   `ledger tail` subcommand fails identically, so this is a pre-existing

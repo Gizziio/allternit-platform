@@ -36,6 +36,7 @@ use allternit_api::beta_deployment_routes::beta_deployment_router;
 use allternit_api::beta_memory_store_routes::beta_memory_store_router;
 use allternit_api::beta_session_routes::beta_session_router;
 use allternit_api::beta_work_routes::beta_work_router;
+use allternit_api::cloud_agents_routes::cloud_agents_router;
 use allternit_api::user_profile_routes::{enrollment_router, user_profile_router};
 use allternit_api::agent_workspace_routes::agent_workspace_router;
 use allternit_api::agents_v1_routes::agents_v1_router;
@@ -673,6 +674,7 @@ async fn main() {
         .merge(agent_workspace_router())
         .merge(agent_session_router())
         .merge(beta_session_router())
+        .merge(cloud_agents_router())
         .merge(beta_deployment_router())
         .merge(beta_work_router())
         .merge(webhook_subscription_router())
@@ -795,6 +797,8 @@ async fn main() {
         .nest("/vm-session", vm_session_router())
         .nest("/rails", rails_router())
         .nest("/api/rails", rails_router())
+        .nest("/commrails", rails_router())
+        .nest("/api/commrails", rails_router())
         .nest("/stream", stream_router())
         .nest("/ws/bots", bot_desktop_stream_router())
         .nest(

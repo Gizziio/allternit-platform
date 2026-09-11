@@ -13,7 +13,10 @@ import { join } from "node:path"
 import type { OrchestrationEvent } from "@allternit/orchestrator"
 import { gatewayUrl } from "@/shared/constants/allternitGateway"
 
-const RAILS_BASE = process.env.GIZZI_RAILS_URL ?? gatewayUrl("/api/rails")
+const RAILS_BASE =
+  process.env.GIZZI_COMMRAILS_URL ??
+  process.env.GIZZI_RAILS_URL ??
+  gatewayUrl("/api/commrails")
 const SHARED_CONTEXT_RELATIVE = ".allternit/shared-context.md"
 
 async function railsPost(path: string, body: unknown): Promise<void> {
