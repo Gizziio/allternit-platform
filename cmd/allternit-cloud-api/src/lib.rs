@@ -320,6 +320,9 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .merge(routes::hosted_runtimes::routes())
         .merge(routes::contabo_hosted_runtimes::routes())
         .merge(routes::hosted_entitlements::routes())
+        // Server-to-server wallet transfers (org fabric ledger bridge) are
+        // gated by the billing sync secret, like the entitlement sync routes.
+        .merge(routes::billing_transfer::routes())
         // Credit balance verifies the Clerk session per-request, like the
         // hosted runtime routes.
         .merge(routes::billing_credits::routes())

@@ -27,6 +27,7 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/credits/balance", get(get_balance))
         .route("/credits/transactions", get(list_transactions))
         .route("/credits/purchase", post(purchase_credits))
+        .route("/credits/transfer_from_wallet", post(transfer_from_wallet))
         .route("/admin/credits/grant", post(admin_grant_credits))
 }
 
@@ -280,6 +281,157 @@ struct GrantRequest {
     description: Option<String>,
     #[serde(default)]
     idempotency_key: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TransferFromWalletRequest {
+    amount_cents: i64,
+    #[serde(default)]
+    idempotency_key: Option<String>,
+}
+
+/// Move credits from the caller's Stripe-backed user wallet (cloud-api) into
+/// this organization's fabric credits ledger.
+///
+/// Orchestration: debit the wallet, credit the local ledger with the same
+/// idempotency key; if the local credit fails after a successful debit,
+/// refund the wallet (same key) so money is neither lost nor duplicated.
+async fn transfer_from_wallet(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(req): Json<TransferFromWalletRequest>,
+) -> Result<Json<Value>, ApiError> {
+    let org = require_org(&user)?;
+    let client = crate::wallet::ReqwestWalletClient::from_env(&state.config).ok_or_else(|| {
+        error(
+            StatusCode::CONFLICT,
+            "wallet_transfers_unavailable",
+            "Wallet transfers require hosted billing (no cloud API configured). Use an admin grant instead.",
+        )
+    })?;
+
+    let idempotency_key = req
+        .idempotency_key
+        .clone()
+        .filter(|key| !key.is_empty())
+        .unwrap_or_else(|| format!("wallet-transfer-{}", uuid::Uuid::new_v4()));
+
+    let result = transfer_from_wallet_inner(
+        state.db.clone(),
+        client,
+        user.user_id.clone(),
+        org,
+        req.amount_cents,
+        idempotency_key,
+    )
+    .await?;
+
+    Ok(Json(result))
+}
+
+async fn transfer_from_wallet_inner(
+    db: crate::db::DbHandle,
+    client: impl crate::wallet::WalletClient,
+    user_id: String,
+    org: String,
+    amount_cents: i64,
+    idempotency_key: String,
+) -> Result<Value, ApiError> {
+    use crate::wallet::{TransferDirection, WalletError};
+
+    if amount_cents <= 0 {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "invalid_amount",
+            "amount_cents must be positive.",
+        ));
+    }
+
+    let wallet_balance = match client
+        .transfer(
+            &user_id,
+            amount_cents,
+            &idempotency_key,
+            TransferDirection::Debit,
+        )
+        .await
+    {
+        Ok(result) => result.balance_usd,
+        Err(WalletError::Insufficient(message)) => {
+            return Err(error(
+                StatusCode::PAYMENT_REQUIRED,
+                "insufficient_wallet_balance",
+                message,
+            ));
+        }
+        Err(WalletError::Unauthorized(message)) => {
+            return Err(error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "wallet_credentials_rejected",
+                message,
+            ));
+        }
+        Err(e) => {
+            return Err(error(
+                StatusCode::BAD_GATEWAY,
+                "wallet_transfer_failed",
+                e.to_string(),
+            ));
+        }
+    };
+
+    let key_for_credit = idempotency_key.clone();
+    let org_for_credit = org.clone();
+    let user_id_for_credit = user_id.clone();
+    let credit = tokio::task::spawn_blocking(move || {
+        let ledger = CreditsLedger::new(db);
+        ledger.credit_with_idempotency(
+            &org_for_credit,
+            amount_cents,
+            TransactionType::Grant,
+            Some("transfer from user wallet"),
+            Some("wallet_transfer"),
+            Some(&user_id_for_credit),
+            None,
+            Some(&key_for_credit),
+        )
+    })
+    .await
+    .map_err(internal)?;
+
+    match credit {
+        Ok(entry) => Ok(json!({
+            "organization_id": org,
+            "transaction": entry_json(&entry),
+            "balance_cents": entry.balance_cents_after,
+            "available_cents": entry.balance_cents_after,
+            "wallet_balance_usd": wallet_balance,
+        })),
+        Err(e) => {
+            // The wallet was already debited — refund it with the same key so
+            // the transfer is all-or-nothing across the two ledgers.
+            let refund = client
+                .transfer(
+                    &user_id,
+                    amount_cents,
+                    &idempotency_key,
+                    TransferDirection::Credit,
+                )
+                .await;
+            match refund {
+                Ok(_) => Err(error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "ledger_credit_failed_refunded",
+                    format!("Wallet debit was refunded: {e}"),
+                )),
+                Err(refund_err) => Err(error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "ledger_credit_failed_refund_failed",
+                    format!("Local credit failed ({e}) AND wallet refund failed ({refund_err}) — reconcile manually."),
+                )),
+            }
+        }
+    }
 }
 
 async fn admin_grant_credits(
@@ -621,5 +773,149 @@ mod tests {
         let txs = body["transactions"].as_array().unwrap();
         assert_eq!(txs.len(), 1);
         assert_eq!(txs[0]["amount_cents"], 3000);
+    }
+
+    mod transfer_from_wallet_tests {
+        use super::*;
+        use crate::db::DbHandle;
+        use crate::wallet::{TransferDirection, WalletClient, WalletError, WalletTransferResult};
+        use std::sync::{Arc, Mutex};
+
+        #[derive(Default)]
+        struct FakeWallet {
+            balance_usd: Arc<Mutex<f64>>,
+            insufficient: bool,
+            calls: Arc<Mutex<Vec<(TransferDirection, i64, String)>>>,
+        }
+
+        impl WalletClient for FakeWallet {
+            async fn transfer(
+                &self,
+                user_id: &str,
+                amount_cents: i64,
+                idempotency_key: &str,
+                direction: TransferDirection,
+            ) -> Result<WalletTransferResult, WalletError> {
+                self.calls
+                    .lock()
+                    .unwrap()
+                    .push((direction, amount_cents, idempotency_key.to_string()));
+                if direction == TransferDirection::Debit && self.insufficient {
+                    return Err(WalletError::Insufficient(
+                        "$0.00 available".to_string(),
+                    ));
+                }
+                let mut balance = self.balance_usd.lock().unwrap();
+                let amount = amount_cents as f64 / 100.0;
+                *balance += if direction == TransferDirection::Debit {
+                    -amount
+                } else {
+                    amount
+                };
+                Ok(WalletTransferResult {
+                    balance_usd: *balance,
+                    idempotent_replay: false,
+                })
+            }
+        }
+
+        fn test_db() -> DbHandle {
+            let db = DbHandle::new_memory().expect("memory db");
+            let conn = db.connect().unwrap();
+            conn.execute(
+                "INSERT OR IGNORE INTO organizations (id, name) VALUES ('org-1', 'Test Org')",
+                [],
+            )
+            .unwrap();
+            db
+        }
+
+        #[tokio::test]
+        async fn transfer_debits_wallet_and_credits_org_ledger() {
+            let db = test_db();
+            let wallet = FakeWallet {
+                balance_usd: Arc::new(Mutex::new(20.0)),
+                ..Default::default()
+            };
+            let calls = wallet.calls.clone();
+
+            let result = super::transfer_from_wallet_inner(
+                db.clone(),
+                wallet,
+                "user-1".to_string(),
+                "org-1".to_string(),
+                1500,
+                "key-1".to_string(),
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(result["balance_cents"], 1500);
+            assert_eq!(result["wallet_balance_usd"], 5.0);
+            let ledger = CreditsLedger::new(db);
+            assert_eq!(ledger.balance_cents("org-1").unwrap(), 1500);
+            let calls = calls.lock().unwrap();
+            assert_eq!(calls.len(), 1);
+            assert_eq!(calls[0].0, TransferDirection::Debit);
+            assert_eq!(calls[0].1, 1500);
+        }
+
+        #[tokio::test]
+        async fn transfer_insufficient_wallet_credits_nothing() {
+            let db = test_db();
+            let wallet = FakeWallet {
+                balance_usd: Arc::new(Mutex::new(5.0)),
+                insufficient: true,
+                ..Default::default()
+            };
+            let calls = wallet.calls.clone();
+
+            let err = super::transfer_from_wallet_inner(
+                db.clone(),
+                wallet,
+                "user-1".to_string(),
+                "org-1".to_string(),
+                1500,
+                "key-1".to_string(),
+            )
+            .await
+            .unwrap_err();
+
+            assert_eq!(err.status, StatusCode::PAYMENT_REQUIRED);
+            let ledger = CreditsLedger::new(db);
+            assert_eq!(ledger.balance_cents("org-1").unwrap(), 0);
+            assert_eq!(calls.lock().unwrap().len(), 1, "no refund without a debit");
+        }
+
+        #[tokio::test]
+        async fn transfer_ledger_failure_refunds_wallet() {
+            let db = test_db();
+            let wallet = FakeWallet {
+                balance_usd: Arc::new(Mutex::new(20.0)),
+                ..Default::default()
+            };
+            let calls = wallet.calls.clone();
+
+            // The org row does not exist, so the ledger credit fails on its
+            // foreign key AFTER the wallet debit succeeds — the compensation
+            // path must refund the wallet.
+            let err = super::transfer_from_wallet_inner(
+                db,
+                wallet,
+                "user-1".to_string(),
+                "org-missing".to_string(),
+                1500,
+                "key-1".to_string(),
+            )
+            .await
+            .unwrap_err();
+
+            assert_eq!(err.status, StatusCode::INTERNAL_SERVER_ERROR);
+            let calls = calls.lock().unwrap();
+            assert_eq!(calls.len(), 2, "debit then refund");
+            assert_eq!(calls[0].0, TransferDirection::Debit);
+            assert_eq!(calls[1].0, TransferDirection::Credit);
+            assert_eq!(calls[1].2, "key-1", "refund reuses the idempotency key");
+        }
     }
 }

@@ -81,6 +81,7 @@ pub mod computer_audit;
 pub mod computer_ws;
 pub mod vnc_auth;
 pub mod vnc_readonly;
+pub mod wallet;
 pub mod computer_embed;
 pub mod desktop_template_build;
 pub mod template_catalog;
@@ -98,6 +99,7 @@ pub mod cowork_routes;
 pub mod cowork_team_routes;
 pub mod cron_lite;
 pub mod db;
+pub mod deployment_scheduler;
 pub mod desktop_host_registry;
 pub mod desktop_host_provisioner;
 pub mod desktop_host_admin;
@@ -318,6 +320,9 @@ pub mod test_helpers {
             fabric_price_cache,
             os_control_plane,
             dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
+            deployment_scheduler: Arc::new(
+                crate::deployment_scheduler::DeploymentSchedulerState::new(),
+            ),
         })
     }
 }
@@ -445,6 +450,9 @@ pub struct AppState {
     /// resource creation is routed through the OS `POST /v1/leases/issue`
     /// endpoint instead of the internal Cloud scheduler.
     pub os_control_plane: Option<crate::fabric::os_client::OsControlPlaneClient>,
+    /// Deployment scheduler counters (last tick, total runs fired) surfaced
+    /// in `GET /monitor/system`.
+    pub deployment_scheduler: Arc<crate::deployment_scheduler::DeploymentSchedulerState>,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

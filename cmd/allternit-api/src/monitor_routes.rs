@@ -381,6 +381,7 @@ async fn monitor_system(State(state): State<Arc<AppState>>) -> impl IntoResponse
             "db_size_bytes": db_size_bytes,
             "table_counts": stats["table_counts"],
             "work_queue": stats["work_queue"],
+            "deployment_scheduler": state.deployment_scheduler.snapshot(),
         }))
         .into_response(),
         Ok(Err(e)) => {
