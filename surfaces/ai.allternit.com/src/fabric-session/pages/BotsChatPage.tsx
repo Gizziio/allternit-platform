@@ -21,7 +21,6 @@ import { BotTranscript } from "@/components/bot-chat/BotTranscript";
 import { WaitingOnYouPill } from "@/components/bot-chat/WaitingOnYouPill";
 import {
   applyEvent,
-  approvalAnswerToEvent,
   initTranscript,
   messagesToTranscript,
   streamCallbacksToEvents,
@@ -33,7 +32,10 @@ import {
   transcriptToShareText,
 } from "@/lib/bots/bot-chat-composer";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
+import { useBotApprovalBridge } from "@/lib/bots/use-bot-approval-bridge";
 import { useUnifiedRoster } from "@/lib/bots/use-unified-roster";
+import { useBotActiveVm } from "@/views/bots/useBotActiveVm";
+import { BotWatchStrip } from "@/views/bots/BotWatchStrip";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 
 export interface BotsChatPageProps {
@@ -129,6 +131,14 @@ export function BotsChatPage({
     setTranscript((t) => applyEvent(t, event));
   }, []);
 
+  const { onApprovalAnswer, onApprovalGrant } = useBotApprovalBridge(
+    sessionId,
+    botId,
+    botName,
+    apply,
+  );
+  const activeVM = useBotActiveVm(botId);
+
   const { suggestions, commands } = useMemo(
     () => (botId ? routinesToComposerProps(botId) : { suggestions: [], commands: [] }),
     [botId],
@@ -219,8 +229,16 @@ export function BotsChatPage({
         title: watching ? "Stop watching" : "Watch computer",
         subtitle: watching
           ? "Stop pulling screen frames"
-          : "Pull the computer screen when a machine is open",
-        onSelect: () => onToggleWatch?.(),
+          : activeVM
+            ? "Pull this bot's computer screen"
+            : "This bot has no computer attached",
+        onSelect: () => {
+          if (!activeVM && !watching) {
+            setStatus("This bot has no computer attached.");
+            return;
+          }
+          onToggleWatch?.();
+        },
       },
       {
         id: "share",
@@ -243,7 +261,7 @@ export function BotsChatPage({
       });
     }
     return rows;
-  }, [abortGeneration, handleShare, isStreaming, onToggleWatch, sessionId, watching]);
+  }, [abortGeneration, activeVM, handleShare, isStreaming, onToggleWatch, sessionId, watching]);
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
@@ -266,7 +284,8 @@ export function BotsChatPage({
           <ApprovalPill
             approvals={pending}
             accentColor={accent}
-            onAnswer={(approvalId, optionId) => apply(approvalAnswerToEvent(approvalId, optionId))}
+            onAnswer={onApprovalAnswer}
+            onGrant={onApprovalGrant}
           />
         ) : null}
 
@@ -289,10 +308,19 @@ export function BotsChatPage({
         </header>
       </div>
 
+      {watching ? (
+        <BotWatchStrip
+          botId={botId}
+          sandboxId={activeVM?.status === "running" ? activeVM.id : undefined}
+          computerOpen={false}
+        />
+      ) : null}
+
       <BotTranscript
         transcript={transcript}
         className="min-h-0 flex-1 overflow-y-auto"
-        onApprovalAnswer={(approvalId, optionId) => apply(approvalAnswerToEvent(approvalId, optionId))}
+        onApprovalAnswer={onApprovalAnswer}
+        onApprovalGrant={onApprovalGrant}
       />
 
       <div
