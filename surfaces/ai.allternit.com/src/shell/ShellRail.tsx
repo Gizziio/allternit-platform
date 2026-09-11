@@ -48,6 +48,7 @@ import { useChatStore } from '../views/chat/ChatStore';
 
 import { useCoworkStore } from '../views/cowork/CoworkStore';
 
+import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 
 import { useSurfaceAgentModeEnabled } from '../lib/agents/surface-agent-context';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -1932,8 +1933,7 @@ export function ShellRail({
           }}
           className="w-full flex items-center gap-2.5 p-[10px_16px] text-[var(--shell-item-fg)] cursor-pointer hover:bg-[var(--shell-item-hover)] border-none bg-transparent font-semibold text-[13px] text-left transition-colors"
         >
-          <Palette size={18} weight="bold" className="text-[var(--shell-item-muted)]" />
-          <span>Design</span>
+          <AProtocolWordmark theme="adaptive" height={12} suffix="DESIGN" />
         </button>
         )}
 

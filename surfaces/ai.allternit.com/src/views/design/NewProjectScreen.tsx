@@ -29,9 +29,9 @@ import './new-project-screen.css';
 const CREATION_TYPES = [
   { id: 'prototype', label: 'Prototype', hint: 'Interactive product flow', icon: Browsers },
   { id: 'slides', label: 'Slides', hint: 'Deck or presentation', icon: Slideshow },
-  { id: 'dashboard', label: 'Document', hint: 'Structured visual document', icon: FileText },
-  { id: 'brand', label: 'Wireframe', hint: 'Interface structure', icon: GridFour },
-  { id: 'content-engine', label: 'Animation', hint: 'Motion concept or sequence', icon: Play },
+  { id: 'dashboard', label: 'Dashboard', hint: 'Data-dense tool UI', icon: FileText },
+  { id: 'brand', label: 'Brand', hint: 'Identity and brand system', icon: GridFour },
+  { id: 'content-engine', label: 'Content engine', hint: 'Content pipeline and campaigns', icon: Play },
 ] as const;
 
 type LibraryTab = 'projects' | 'systems' | 'templates';
@@ -42,6 +42,7 @@ interface NewProjectScreenProps {
     prompt: string;
     type: string;
     direction: DesignDirection;
+    system?: DesignSystemEntry;
     skill?: SkillRecord;
     skillValues?: Record<string, unknown>;
   }) => void;
@@ -65,7 +66,7 @@ export function NewProjectScreen({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState('');
   const [selectedType, setSelectedType] = useState('prototype');
-  const [selectedDirection, setSelectedDirection] = useState('modern-minimal');
+  const [selectedDirection, setSelectedDirection] = useState('allternit-brand');
   const [selectedSystem, setSelectedSystem] = useState<DesignSystemEntry | null>(null);
   const [activeMenu, setActiveMenu] = useState<'system' | 'type' | 'attach' | null>(null);
   const [libraryTab, setLibraryTab] = useState<LibraryTab>('projects');
@@ -97,6 +98,7 @@ export function NewProjectScreen({
       prompt: request,
       type: selectedType,
       direction,
+      system: selectedSystem ?? undefined,
       skill: selectedSkill ?? undefined,
       skillValues: selectedSkill ? (skillValues ?? {}) : undefined,
     });
@@ -112,8 +114,7 @@ export function NewProjectScreen({
     <div className="ad-launch">
       <header className="ad-launch__header">
         <div className="ad-launch__brand">
-          <AProtocolWordmark theme="adaptive" height={13} />
-          <span>DESIGN</span>
+          <AProtocolWordmark theme="adaptive" height={13} suffix="DESIGN" />
           <span className="ad-launch__beta">BETA</span>
         </div>
         <button type="button" className="ad-launch__quiet">What’s new</button>

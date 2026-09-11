@@ -8,6 +8,7 @@ import {
   type ProjectFile,
   type ProjectFileTree,
 } from '../../lib/design/project-file-store';
+import { lintGeneratedHtml, isBrandP0Violation } from '../../lib/design/html-linter';
 
 interface ProjectFileWorkspaceProps {
   projectId: string;
@@ -19,6 +20,9 @@ export function ProjectFileWorkspace({ projectId, onOpenFile }: ProjectFileWorks
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [newFileName, setNewFileName] = useState('');
   const [showNewInput, setShowNewInput] = useState(false);
+  // Gate: HTML with unresolved P0 brand violations (legacy coral / purple) is
+  // blocked from being saved as a project file until fixed.
+  const [brandGateError, setBrandGateError] = useState<string | null>(null);
 
   useEffect(() => {
     loadProjectFiles(projectId).then(setTree);
@@ -33,10 +37,21 @@ export function ProjectFileWorkspace({ projectId, onOpenFile }: ProjectFileWorks
     setNewFileName('');
     setShowNewInput(false);
     setSelectedPath(path);
+    setBrandGateError(null);
   }
 
   async function updateSelected(content: string) {
     if (!selectedPath) return;
+    if (selectedPath.endsWith('.html')) {
+      const brandP0 = lintGeneratedHtml(content).violations.filter(isBrandP0Violation);
+      if (brandP0.length > 0) {
+        setBrandGateError(
+          `Not saved — ${brandP0.length} P0 brand violation(s): ${brandP0.map((v) => v.message).join(' ')}`,
+        );
+        return;
+      }
+    }
+    setBrandGateError(null);
     const updated = await writeProjectFile(projectId, selectedPath, content);
     setTree(updated);
   }
@@ -125,6 +140,11 @@ export function ProjectFileWorkspace({ projectId, onOpenFile }: ProjectFileWorks
             <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
               {selectedFile.path}
             </div>
+            {brandGateError && (
+              <div role="alert" style={{ padding: '8px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', background: 'color-mix(in srgb, #B08D6E 12%, transparent)', borderBottom: '1px solid var(--border-subtle)' }}>
+                {brandGateError}
+              </div>
+            )}
             <textarea
               value={selectedFile.content}
               onChange={(e) => updateSelected(e.target.value)}

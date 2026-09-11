@@ -15,10 +15,10 @@ const THEME = {
 
 type DockMode = 'chat' | 'cowork' | 'bot';
 
-const MODE_SEGMENTS: Array<{ id: DockMode; label: string; icon: typeof ChatTeardropText }> = [
-  { id: 'chat', label: 'Chat', icon: ChatTeardropText },
-  { id: 'cowork', label: 'Cowork', icon: UsersThree },
-  { id: 'bot', label: 'Bots', icon: Robot },
+const MODE_SEGMENTS: Array<{ id: DockMode; label: string; icon: typeof ChatTeardropText; bleed: string }> = [
+  { id: 'chat', label: 'Chat', icon: ChatTeardropText, bleed: 'before:-left-[calc(0.125rem+1px)] before:right-0' },
+  { id: 'cowork', label: 'Cowork', icon: UsersThree, bleed: 'before:inset-x-0' },
+  { id: 'bot', label: 'Bots', icon: Robot, bleed: 'before:left-0 before:-right-[calc(0.125rem+1px)]' },
 ];
 
 function ChatCoworkToggle() {
@@ -50,14 +50,18 @@ function ChatCoworkToggle() {
             aria-pressed={isActive}
             onClick={() => handleSwitch(segment.id)}
             className={cn(
-              'flex items-center gap-1 px-2 border-none rounded-md transition-all duration-150 text-xs font-semibold',
+              'relative flex items-center border-none rounded-md transition-all duration-150 text-xs font-semibold',
+              'before:absolute before:inset-y-0 before:rounded-md before:content-[\'\'] before:transition-colors before:duration-150',
+              segment.bleed,
               isActive
-                ? 'h-7 bg-composer-soft text-primary'
+                ? 'h-7 before:bg-composer-soft text-primary'
                 : 'h-full bg-transparent text-muted hover:text-primary'
             )}
           >
-            <SegmentIcon size={14} weight={isActive ? 'fill' : 'bold'} />
-            {segment.label}
+            <span className="relative z-[1] flex items-center gap-1 px-2">
+              <SegmentIcon size={14} weight={isActive ? 'fill' : 'bold'} />
+              {segment.label}
+            </span>
           </button>
         );
       })}

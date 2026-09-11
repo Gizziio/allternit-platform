@@ -10,12 +10,14 @@ import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
+import { openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
 import { BotRailRow, BotGroupRailRow } from '@/views/bots/BotRailRows';
 import { BotLaunchpadView } from '@/views/bots/BotLaunchpadView';
 import { BotHomeView } from '@/views/bots/BotHomeView';
 import { BotChatSessionView } from '@/views/bots/BotChatSessionView';
 import { GroupsListView } from '@/views/bots/GroupsListView';
 import { GroupChatView } from '@/views/bots/GroupChatView';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 export type FabricBotView = 'hub' | 'bot-home' | 'bot-chat' | 'groups' | 'group-chat';
 
@@ -56,7 +58,9 @@ export function FabricBotModeRail({
   const [draggingBotId, setDraggingBotId] = useState<string | null>(null);
   const [pinDropActive, setPinDropActive] = useState(false);
 
-  const { startSession, isStarting } = useStartBotSession();
+  const { startSession, isStarting } = useStartBotSession((startedSessionId, startedBotId) => {
+    openBotChatView(startedSessionId, startedBotId, 'bot-launchpad');
+  });
 
   const pinnedBots = useMemo(
     () =>
@@ -92,7 +96,10 @@ export function FabricBotModeRail({
   );
 
   const groupList = useMemo(
-    () => Object.values(groups).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    () =>
+      Object.values(groups).sort((a, b) =>
+        String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')),
+      ),
     [groups],
   );
 
@@ -293,40 +300,50 @@ export function FabricBotModeCanvas({
   if (view === 'bot-chat' && botId) {
     return (
       <div className="flex-1 min-h-0 flex flex-col">
-        <BotChatSessionView
-          botId={botId}
-          sessionId={sessionId ?? undefined}
-          onBack={() => onView({ view: 'hub', botId: null, sessionId: null })}
-        />
+        <ErrorBoundary componentName="FabricBotChatSession">
+          <BotChatSessionView
+            botId={botId}
+            sessionId={sessionId ?? undefined}
+            onBack={() => onView({ view: 'hub', botId: null, sessionId: null })}
+          />
+        </ErrorBoundary>
       </div>
     );
   }
   if (view === 'bot-home' && botId) {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <BotHomeView botId={botId} />
+        <ErrorBoundary componentName="FabricBotHome">
+          <BotHomeView botId={botId} />
+        </ErrorBoundary>
       </div>
     );
   }
   if (view === 'group-chat' && groupId) {
     return (
       <div className="flex-1 min-h-0 flex flex-col">
-        <GroupChatView groupId={groupId} onBack={() => onView({ view: 'groups', groupId: null })} />
+        <ErrorBoundary componentName="FabricGroupChat">
+          <GroupChatView groupId={groupId} onBack={() => onView({ view: 'groups', groupId: null })} />
+        </ErrorBoundary>
       </div>
     );
   }
   if (view === 'groups') {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <GroupsListView
-          onOpenGroup={(id) => onView({ view: 'group-chat', groupId: id })}
-        />
+        <ErrorBoundary componentName="FabricGroupsList">
+          <GroupsListView
+            onOpenGroup={(id) => onView({ view: 'group-chat', groupId: id })}
+          />
+        </ErrorBoundary>
       </div>
     );
   }
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <BotLaunchpadView />
+      <ErrorBoundary componentName="FabricBotHub">
+        <BotLaunchpadView />
+      </ErrorBoundary>
     </div>
   );
 }
