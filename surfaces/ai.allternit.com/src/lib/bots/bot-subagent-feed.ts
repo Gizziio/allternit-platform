@@ -1,13 +1,13 @@
 /**
  * BA-5 spawned-child event feed: live subagents of a parent bot, merged with
- * the transcript tool ladder. Uses GET /api/v1/agents/:id/subagents plus
+ * the transcript tree. Uses GET /api/v1/agents/:id/subagents plus
  * parent-scoped ledger events (parent_agent_id on the event payload).
  */
 
 import { api } from "@/integration/api-client";
-import type { BotActivityNode, BotActivityTree } from "./bot-subagent-tree";
-import { treeFromTranscript } from "./bot-subagent-tree";
 import type { BotChatTranscript } from "@/components/bot-chat/types";
+import type { BotActivityChild, BotActivityTree } from "./bot-subagent-tree";
+import { treeFromTranscript } from "./bot-subagent-tree";
 
 export interface SubagentRow {
   id: string;
@@ -24,56 +24,62 @@ export interface SubagentEvent {
   data?: Record<string, unknown>;
 }
 
-function statusFromAgent(status: string): BotActivityNode["status"] {
+function statusFromAgent(status: string): BotActivityChild["status"] {
   const s = status.toLowerCase();
   if (s === "working" || s === "running") return "running";
   if (s === "error" || s === "failed" || s === "blocked") return "error";
   return "success";
 }
 
-export function treeFromSubagents(rows: SubagentRow[]): BotActivityTree {
-  let running = 0;
-  let done = 0;
-  let failed = 0;
-  const nodes: BotActivityNode[] = rows.map((row) => {
-    const status = statusFromAgent(row.status);
-    if (status === "running") running += 1;
-    else if (status === "error") failed += 1;
-    else done += 1;
-    return { id: row.id, name: row.name, status };
-  });
-  return { running, done, failed, nodes };
-}
-
-export function mergeActivityTrees(...trees: BotActivityTree[]): BotActivityTree {
-  const byId = new Map<string, BotActivityNode>();
-  for (const tree of trees) {
-    for (const node of tree.nodes) byId.set(node.id, node);
-  }
-  const nodes = [...byId.values()];
+function emptyTree(parentName: string): BotActivityTree {
   return {
-    running: nodes.filter((n) => n.status === "running").length,
-    done: nodes.filter((n) => n.status === "success").length,
-    failed: nodes.filter((n) => n.status === "error").length,
-    nodes: nodes.slice(-12),
+    parentName,
+    running: 0,
+    done: 0,
+    failed: 0,
+    actions: 0,
+    elapsedMs: 0,
+    parentSteps: [],
+    children: [],
   };
 }
 
-export function treeFromEvents(events: SubagentEvent[]): BotActivityTree {
-  const nodes: BotActivityNode[] = [];
-  for (const event of events) {
-    const id =
-      (typeof event.data?.subagent_id === "string" && event.data.subagent_id) ||
-      event.agent_id ||
-      event.run_id;
-    if (!id) continue;
-    const name =
-      (typeof event.data?.name === "string" && event.data.name) ||
-      event.event_type;
-    const status = statusFromAgent(String(event.data?.status ?? event.event_type));
-    nodes.push({ id, name, status });
+function recount(tree: BotActivityTree): BotActivityTree {
+  const header = [...tree.parentSteps, ...tree.children];
+  return {
+    ...tree,
+    running: header.filter((n) => n.status === "running").length,
+    done: header.filter((n) => n.status === "success").length,
+    failed: header.filter((n) => n.status === "error").length,
+    actions: tree.parentSteps.length + tree.children.reduce((n, c) => n + 1 + c.steps.length, 0),
+  };
+}
+
+export function childrenFromSubagents(rows: SubagentRow[]): BotActivityChild[] {
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    task: row.mode ?? "",
+    status: statusFromAgent(row.status),
+    steps: [],
+  }));
+}
+
+export function mergeActivityTrees(base: BotActivityTree, extraChildren: BotActivityChild[]): BotActivityTree {
+  const byId = new Map(base.children.map((c) => [c.id, c]));
+  for (const child of extraChildren) {
+    const existing = byId.get(child.id);
+    if (existing) {
+      byId.set(child.id, {
+        ...existing,
+        name: child.name || existing.name,
+        status: child.status === "running" ? "running" : existing.status,
+      });
+    } else {
+      byId.set(child.id, child);
+    }
   }
-  return mergeActivityTrees({ running: 0, done: 0, failed: 0, nodes });
+  return recount({ ...base, children: [...byId.values()] });
 }
 
 export async function fetchSubagentFeed(parentId: string): Promise<SubagentRow[]> {
@@ -86,10 +92,8 @@ export async function fetchSubagentFeed(parentId: string): Promise<SubagentRow[]
 export function liveActivityTree(
   transcript: BotChatTranscript | null | undefined,
   subagents: SubagentRow[],
-  events: SubagentEvent[] = [],
+  parentName = "Bot",
 ): BotActivityTree {
-  const fromTranscript = transcript
-    ? treeFromTranscript(transcript)
-    : { running: 0, done: 0, failed: 0, nodes: [] };
-  return mergeActivityTrees(fromTranscript, treeFromSubagents(subagents), treeFromEvents(events));
+  const base = transcript ? treeFromTranscript(transcript, parentName) : emptyTree(parentName);
+  return mergeActivityTrees(base, childrenFromSubagents(subagents));
 }

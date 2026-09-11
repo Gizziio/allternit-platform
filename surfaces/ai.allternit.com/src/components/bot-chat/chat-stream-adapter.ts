@@ -98,11 +98,29 @@ export function streamCallbacksToEvents(
     },
     onToolCall: (toolCall) => {
       toolSeq += 1;
+      const rec = asRecord(toolCall);
+      const input = asRecord(rec.input ?? rec.args);
+      const subagentType =
+        (typeof input.subagent_type === "string" && input.subagent_type) ||
+        (typeof rec.subagent_type === "string" && rec.subagent_type) ||
+        "";
+      const description =
+        (typeof input.description === "string" && input.description) ||
+        (typeof rec.description === "string" && rec.description) ||
+        "";
+      const inputSummary =
+        subagentType || description
+          ? JSON.stringify({
+              subagent_type: subagentType || undefined,
+              description: description || undefined,
+              input: input.prompt ?? input.input,
+            })
+          : clip(rec.input ?? rec.args, toolName(toolCall));
       onEvent({
         type: "tool.call",
         id: toolId(toolCall, `${ctx.turnId}-tool-${toolSeq}`),
         tool: toolName(toolCall),
-        inputSummary: clip(asRecord(toolCall).input ?? asRecord(toolCall).args, toolName(toolCall)),
+        inputSummary,
         createdAt: now(),
       });
     },

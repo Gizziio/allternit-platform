@@ -19,6 +19,7 @@ import {
 import { activityCounts, formatActivityLines } from "@/lib/bots/bot-activity-rows";
 import { fetchSubagentFeed, liveActivityTree, type SubagentRow } from "@/lib/bots/bot-subagent-feed";
 import type { BotChatTranscript } from "@/components/bot-chat/types";
+import { BotSubagentTree } from "./BotSubagentTree";
 import { fetchPolicyAudit, type PolicyAuditRow } from "./policy-audit";
 import { claimVnc, releaseVnc } from "./bot-computer-vnc";
 
@@ -37,6 +38,7 @@ export interface BotWatchStripProps {
   computerOpen?: boolean;
   onOpenComputer?: () => void;
   transcript?: BotChatTranscript;
+  parentName?: string;
 }
 
 export function BotWatchStrip({
@@ -45,6 +47,7 @@ export function BotWatchStrip({
   computerOpen,
   onOpenComputer,
   transcript,
+  parentName,
 }: BotWatchStripProps) {
   const [png, setPng] = useState<string | null>(null);
   const [screenError, setScreenError] = useState(false);
@@ -156,10 +159,10 @@ export function BotWatchStrip({
 
   const lines = formatActivityLines(rows);
   const counts = activityCounts(rows);
-  const tree = liveActivityTree(transcript, subagents);
+  const tree = liveActivityTree(transcript, subagents, parentName);
   const showScreen = Boolean(sandboxId) && !computerOpen;
 
-  if (!showScreen && lines.length === 0 && !(tree && tree.nodes.length > 0)) {
+  if (!showScreen && lines.length === 0 && tree.children.length === 0 && tree.parentSteps.length === 0) {
     return null;
   }
 
@@ -197,31 +200,15 @@ export function BotWatchStrip({
       )}
 
       <div className="min-w-0 flex-1">
-        <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
-          {tree.nodes.length > 0
-            ? `${tree.running} running · ${tree.done} done`
-            : `${counts.allowed} allowed · ${counts.denied} denied`}
-        </p>
-        {tree && tree.nodes.length > 0 && (
-          <ul className="mb-1 flex flex-col gap-0.5">
-            {tree.nodes.map((node) => (
-              <li key={node.id} className="text-[11px] text-[var(--text-secondary)]">
-                <span className="font-medium">{node.name}</span>{" "}
-                {node.status === "running" ? "…" : node.status === "error" ? "✗" : "✓"}
-                {node.durationMs != null ? (
-                  <span className="text-[var(--text-tertiary)]">
-                    {" "}
-                    {(node.durationMs / 1000).toFixed(1)}s
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-        {lines.length === 0 ? (
-          <p className="text-[11px] text-[var(--text-tertiary)]">No actions yet</p>
+        {tree.children.length > 0 || tree.parentSteps.length > 0 ? (
+          <BotSubagentTree tree={tree} />
         ) : (
-          <ul className="flex flex-col gap-0.5">
+          <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+            {counts.allowed} allowed · {counts.denied} denied
+          </p>
+        )}
+        {lines.length > 0 && (
+          <ul className="mt-1 flex flex-col gap-0.5">
             {lines.map((line) => (
               <li
                 key={line.key}
@@ -247,6 +234,9 @@ export function BotWatchStrip({
             ))}
           </ul>
         )}
+        {lines.length === 0 && !(tree && (tree.children.length > 0 || tree.parentSteps.length > 0)) ? (
+          <p className="text-[11px] text-[var(--text-tertiary)]">No actions yet</p>
+        ) : null}
       </div>
     </div>
   );
