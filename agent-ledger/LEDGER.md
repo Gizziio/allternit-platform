@@ -21,6 +21,15 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 19:35 — grok — CommRails rename + live rail (BA-0b/BA-1) and Fabric PWA bot-mode UI
+- **Session ID / Branch:** `ao/ba-0b-commrails`, `ao/fabric-pwa-bot-mode-ui`
+- **Agent:** grok (orchestrator; kimi/agy executors quota-limited)
+- **Summary:** Rename Rails crate to CommRails with shims; live Desktop rail; Fabric PWA bot chat 1A–1C
+- **Commit:** PR #284 merge `3c96baba5`; PR #285 merge `ae36c67b3`
+- **How it works:** `allternit-commrails` is the crate/CLI; `/api/commrails/visibility` feeds Sessions on the rail; Fabric PWA uses shared `bot-chat/` components and a bumped SW cache
+- **Outstanding work:** BA-3 brain bind; ao-engine visibility HTTP; cleanup.sh `rails/target`; desktop DMG not rebuilt
+- **Summary file:** [summaries/2026-09-10-1935-ba-0b-ba-1-fabric-pwa-grok.md](./summaries/2026-09-10-1935-ba-0b-ba-1-fabric-pwa-grok.md)
+
 ### 2026-09-10 20:54 — grok — Cloud Agents Phase 2 turn lifecycle (rq-20260910-002)
 
 - **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
