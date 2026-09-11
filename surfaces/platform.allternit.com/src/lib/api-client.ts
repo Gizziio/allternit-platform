@@ -133,7 +133,7 @@ class AllternitApiClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new AllternitApiError(
-        errorData.message || `HTTP ${response.status}`,
+        errorData.error || errorData.message || `HTTP ${response.status}`,
         response.status,
         errorData.code,
         errorData.details
@@ -165,6 +165,20 @@ class AllternitApiClient {
 
   delete<T>(path: string, options?: RequestInit): Promise<T> {
     return this.request<T>('DELETE', path, undefined, options);
+  }
+
+  async raw(path: string, options: RequestInit = {}): Promise<Response> {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const token = await this.resolveToken();
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers as Record<string, string> || {}),
+    };
+    return fetch(`${this.gatewayBase()}${normalizedPath}`, {
+      ...options,
+      headers,
+    });
   }
 }
 
