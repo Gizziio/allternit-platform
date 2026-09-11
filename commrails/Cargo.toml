@@ -1,21 +1,29 @@
 [package]
-name = "allternit-agent-system-rails"
+name = "allternit-commrails"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
 publish = false
 
 [lib]
-name = "allternit_agent_system_rails"
+name = "allternit_commrails"
 path = "src/lib.rs"
 
 [[bin]]
+name = "allternit-commrails"
+path = "src/bin/allternit-commrails.rs"
+
+[[bin]]
 name = "allternit-rails"
-path = "src/bin/allternit-rails.rs"
+path = "src/bin/allternit-commrails.rs"
+
+[[bin]]
+name = "allternit-commrails-service"
+path = "src/bin/allternit-commrails-service.rs"
 
 [[bin]]
 name = "allternit-rails-service"
-path = "src/bin/allternit-rails-service.rs"
+path = "src/bin/allternit-commrails-service.rs"
 
 [features]
 default = []

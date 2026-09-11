@@ -22,19 +22,19 @@ use std::time::Duration;
 use tracing::{debug, error, info};
 
 use crate::AppState;
-use allternit_agent_system_rails::bus::{Bus, NewBusMessage};
-use allternit_agent_system_rails::dependencies::{
+use allternit_commrails::bus::{Bus, NewBusMessage};
+use allternit_commrails::dependencies::{
     self, DependencyEdge, DependencyKind,
 };
-use allternit_agent_system_rails::graph::{views, GraphAnalytics, GraphView, InsightsConfig};
-use allternit_agent_system_rails::rails_id::{HierarchicalId, TicketId};
-use allternit_agent_system_rails::receipts::ReceiptQuery;
-use allternit_agent_system_rails::tickets::{
+use allternit_commrails::graph::{views, GraphAnalytics, GraphView, InsightsConfig};
+use allternit_commrails::rails_id::{HierarchicalId, TicketId};
+use allternit_commrails::receipts::ReceiptQuery;
+use allternit_commrails::tickets::{
     self, BlockedTicket, Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore,
     TicketUpdate,
 };
-use allternit_agent_system_rails::wait_gates::WaitGateStore;
-use allternit_agent_system_rails::{
+use allternit_commrails::wait_gates::WaitGateStore;
+use allternit_commrails::{
     Actor, ActorType, AllternitEvent, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
     DagMutation, Gate, GateOptions, Index, IndexOptions, LeaseRecord, Leases, LeasesOptions,
     Ledger, LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex, MailIndexOptions,
@@ -158,7 +158,7 @@ impl RailsState {
         // Initialize peer registry + bus for cross-session messaging.
         let peers = Arc::new(PeerRegistry::new(root_dir.clone())?);
         let bus = Arc::new(
-            Bus::new(allternit_agent_system_rails::bus::BusOptions {
+            Bus::new(allternit_commrails::bus::BusOptions {
                 root_dir: root_dir.clone(),
                 ledger: ledger.clone(),
                 actor_id: Some("api".to_string()),
@@ -206,6 +206,8 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/peers/:id_or_name/heartbeat", post(heartbeat_peer))
         .route("/peers/:id_or_name/send", post(send_to_peer))
         .route("/peers/:id_or_name/inbox", get(poll_peer_inbox))
+        // Bot Agents BA-1: read-only ao/peer visibility DTO (empty panes if none)
+        .route("/visibility", get(visibility))
         // Steer
         .route("/steer/checkpoint", post(steer_checkpoint))
         .route("/steer/consult", post(steer_consult))
@@ -376,10 +378,10 @@ struct PeerSendResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PeerInboxResponse {
-    messages: Vec<allternit_agent_system_rails::bus::BusMessage>,
+    messages: Vec<allternit_commrails::bus::BusMessage>,
 }
 
-fn peer_to_response(peer: &allternit_agent_system_rails::peer::Peer) -> PeerInfoResponse {
+fn peer_to_response(peer: &allternit_commrails::peer::Peer) -> PeerInfoResponse {
     PeerInfoResponse {
         peer_id: peer.peer_id.clone(),
         name: peer.name.clone(),
@@ -398,6 +400,62 @@ async fn list_peers(State(state): State<Arc<AppState>>) -> impl IntoResponse {
         StatusCode::OK,
         Json(PeerListResponse {
             peers: peers.iter().map(peer_to_response).collect(),
+        }),
+    )
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VisibilityPane {
+    id: String,
+    label: String,
+    state: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VisibilityNeed {
+    id: String,
+    label: String,
+    reason: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VisibilityDto {
+    panes: Vec<VisibilityPane>,
+    machines: Vec<serde_json::Value>,
+    #[serde(rename = "fabricDevices")]
+    fabric_devices: Vec<serde_json::Value>,
+    #[serde(rename = "needsYou")]
+    needs_you: Vec<VisibilityNeed>,
+}
+
+fn peer_pane_state(status: allternit_commrails::peer::PeerStatus) -> &'static str {
+    match status {
+        allternit_commrails::peer::PeerStatus::Active => "working",
+        allternit_commrails::peer::PeerStatus::Idle | allternit_commrails::peer::PeerStatus::Dead => {
+            "idle"
+        }
+    }
+}
+
+/// Read-only visibility DTO for the CommRails rail. Best-effort from the
+/// local peer registry — empty arrays when ao is down / no peers.
+async fn visibility(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let peers = state.rails.peers.list();
+    let panes = peers
+        .iter()
+        .map(|peer| VisibilityPane {
+            id: peer.peer_id.clone(),
+            label: peer.name.clone(),
+            state: peer_pane_state(peer.status).to_string(),
+        })
+        .collect();
+    (
+        StatusCode::OK,
+        Json(VisibilityDto {
+            panes,
+            machines: Vec::new(),
+            fabric_devices: Vec::new(),
+            needs_you: Vec::new(),
         }),
     )
 }
@@ -768,7 +826,7 @@ async fn query_ledger(
 ) -> impl IntoResponse {
     debug!(?params, "Querying ledger");
 
-    let mut scope = allternit_agent_system_rails::EventScope::default();
+    let mut scope = allternit_commrails::EventScope::default();
     if let Some(dag_id) = params.dag_id {
         scope.dag_id = Some(dag_id);
     }
@@ -1077,7 +1135,7 @@ fn parse_importance(priority: Option<&str>, importance: Option<MailImportance>) 
     }
 }
 
-fn message_to_json(msg: &allternit_agent_system_rails::mail::MailMessage, root_dir: &std::path::Path) -> serde_json::Value {
+fn message_to_json(msg: &allternit_commrails::mail::MailMessage, root_dir: &std::path::Path) -> serde_json::Value {
     let body = if let Some(path) = &msg.body_path {
         let abs = root_dir.join(path);
         std::fs::read_to_string(&abs).unwrap_or_default()
@@ -1437,7 +1495,7 @@ async fn read_mail_thread(
                     if evt.r#type != "MessageSent" {
                         return None;
                     }
-                    let msg = allternit_agent_system_rails::mail::MailMessage::from_event(&evt)?;
+                    let msg = allternit_commrails::mail::MailMessage::from_event(&evt)?;
                     Some(message_to_json(&msg, &state.rails.root_dir))
                 })
                 .collect();
@@ -1495,7 +1553,7 @@ async fn mail_share(
                 .unwrap_or(&thread_id)
                 .to_string();
             let receipt = ReceiptRecord {
-                receipt_id: allternit_agent_system_rails::core::ids::create_receipt_id(),
+                receipt_id: allternit_commrails::core::ids::create_receipt_id(),
                 run_id,
                 step: None,
                 tool: "executor".to_string(),
@@ -1614,7 +1672,7 @@ async fn write_receipt(
     Json(req): Json<ReceiptWriteRequest>,
 ) -> impl IntoResponse {
     let exit = if req.exit_code.is_some() || req.summary.is_some() {
-        Some(allternit_agent_system_rails::core::types::ReceiptExit {
+        Some(allternit_commrails::core::types::ReceiptExit {
             code: req.exit_code,
             summary: req.summary,
         })
@@ -1622,7 +1680,7 @@ async fn write_receipt(
         None
     };
     let receipt = ReceiptRecord {
-        receipt_id: allternit_agent_system_rails::core::ids::create_receipt_id(),
+        receipt_id: allternit_commrails::core::ids::create_receipt_id(),
         run_id: req.run_id.unwrap_or_else(|| "run_orchestrator".to_string()),
         step: None,
         tool: req.tool.unwrap_or_else(|| "executor".to_string()),
@@ -1956,7 +2014,7 @@ async fn request_lease(
 ) -> impl IntoResponse {
     info!(wih_id = req.wih_id, "Requesting lease");
 
-    let lease_req = allternit_agent_system_rails::LeaseRequest {
+    let lease_req = allternit_commrails::LeaseRequest {
         lease_id: uuid::Uuid::new_v4().to_string(),
         wih_id: req.wih_id,
         agent_id: req.agent_id,
@@ -2470,7 +2528,7 @@ async fn dag_render(
     }
 }
 
-fn render_dag_markdown(dag: &allternit_agent_system_rails::work::types::DagState) -> String {
+fn render_dag_markdown(dag: &allternit_commrails::work::types::DagState) -> String {
     let mut out = String::new();
     out.push_str(&format!("# DAG {}\n", dag.dag_id));
     out.push_str("Nodes:\n");
@@ -2572,7 +2630,7 @@ async fn run_cancel(
     Path(run_id): Path<String>,
 ) -> impl IntoResponse {
     let event = AllternitEvent {
-        event_id: allternit_agent_system_rails::core::ids::create_event_id(),
+        event_id: allternit_commrails::core::ids::create_event_id(),
         ts: chrono::Utc::now().to_rfc3339(),
         actor: Actor {
             r#type: ActorType::Gate,
@@ -2819,7 +2877,7 @@ async fn seal_context_pack(
     }
 
     let event = AllternitEvent {
-        event_id: allternit_agent_system_rails::core::ids::create_event_id(),
+        event_id: allternit_commrails::core::ids::create_event_id(),
         ts: stored_at.clone(),
         actor: Actor {
             r#type: ActorType::Gate,
@@ -3096,7 +3154,7 @@ async fn gate_verify(
                     .cloned()
                     .collect();
                 let dag = project_dag(&dag_events, &dag_id);
-                if allternit_agent_system_rails::work::graph::has_cycle_edges(&dag.edges) {
+                if allternit_commrails::work::graph::has_cycle_edges(&dag.edges) {
                     cycle_dags.push(dag_id);
                 }
             }

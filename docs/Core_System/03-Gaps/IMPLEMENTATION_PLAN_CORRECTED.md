@@ -55,7 +55,7 @@
 **Goal**: Integrate existing Rails service into this workspace
 
 **Tasks**:
-1. Add `allternit-agent-system-rails` as path dependency
+1. Add `allternit-commrails` as path dependency
 2. Create workspace service wrapper
 3. Add HTTP API routes for Rails operations
 4. WebSocket bridge for Ledger streaming
@@ -255,7 +255,7 @@ gizzi cowork reject <id>
 ### 1. Rails Service Startup
 ```rust
 // In API server main.rs
-let rails = allternit_agent_system_rails::service::ServiceState::new(
+let rails = allternit_commrails::service::ServiceState::new(
     PathBuf::from("/var/lib/allternit")
 ).await?;
 ```

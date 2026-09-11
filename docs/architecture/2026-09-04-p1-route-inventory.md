@@ -2109,7 +2109,7 @@ All served today only by `agent_session_router` (`cmd/allternit-api/src/agent_se
 
 ### 3.5 Namespace: rails (the `/api/rails/*` subset 8013 actually serves)
 
-The :8013 rails router (`rails/mod.rs:197-277`) is a **different, smaller surface** than the standalone `allternit-agent-system-rails` service on :3011 (`rails/src/service.rs:2819-2901`). The web client's `rails.service.ts` speaks the :3011 shape through `/api/rails`, so only the subset below is proxyable to :8013 today; the rest are orphans needing either a :8013 shim or a client retarget (see §2.3 and §6).
+The :8013 rails router (`rails/mod.rs:197-277`) is a **different, smaller surface** than the standalone `allternit-commrails` service on :3011 (`rails/src/service.rs:2819-2901`). The web client's `rails.service.ts` speaks the :3011 shape through `/api/rails`, so only the subset below is proxyable to :8013 today; the rest are orphans needing either a :8013 shim or a client retarget (see §2.3 and §6).
 
 | # | Proposed cloud-api route | Method | Notes |
 |---|---|---|---|
@@ -2219,7 +2219,7 @@ Key mappings to existing concepts:
 ## 6. Surprises worth surfacing to the platform team
 
 1. **`/api/v1/tasks` and `/api/v1/runs` are claimed by BOTH backends with different shapes.** cloud-api `tasks.rs`/`runs.rs` (Postgres, cowork orchestration) vs 8013 `task_routes.rs` and `rails/routes_cowork.rs` (node-local). Same paths, different data models — the deployed web client currently gets whichever backend fronts it. `/api/v1/tasks/stream` exists only on cloud; `/api/v1/runs/:id/handoffs` only on 8013; `/api/v1/runs/:id/recover` on neither.
-2. **The web Rails client speaks the wrong rails' dialect.** `rails.service.ts` targets the standalone `allternit-agent-system-rails` (:3011, `/v1/*`) route shapes via `/api/rails`, but the :8013 `/api/rails` router implements a partially overlapping, differently-shaped surface. ~25 called paths 404 on the gateway today (all behind `isRailsApiEnabled`, so they fail closed — but they will 404 the moment the flag is flipped without a shim).
+2. **The web Rails client speaks the wrong rails' dialect.** `rails.service.ts` targets the standalone `allternit-commrails` (:3011, `/v1/*`) route shapes via `/api/rails`, but the :8013 `/api/rails` router implements a partially overlapping, differently-shaped surface. ~25 called paths 404 on the gateway today (all behind `isRailsApiEnabled`, so they fail closed — but they will 404 the moment the flag is flipped without a shim).
 3. **`/api/v1/sessions*` (the non-`agent-` session family: CRUD, `/chat`, `/messages`, `/permission`, `/question/*`) is served by no Rust backend at all** — called from `integration/api-client.ts:615-671` and `lib/sdk.ts:75-100`, presumably legacy from a previous API generation.
 4. **Office bindings are in-memory per process** (`office_routes.rs:26`) — any multi-node story for office needs node-affinity routing, not just a proxy.
 5. **`/api/chat` vs `/api/agent-chat`:** the runner's chat path (`/api/chat`) is close to what `/api/agent-chat` does, but the wire protocols differ (env.ts:131-136) — a :8013 alias handler is ~free once P1 proxies it.

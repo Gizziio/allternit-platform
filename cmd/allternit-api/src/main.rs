@@ -778,6 +778,8 @@ async fn main() {
         .nest("/vm-session", vm_session_router())
         .nest("/rails", rails_router())
         .nest("/api/rails", rails_router())
+        .nest("/commrails", rails_router())
+        .nest("/api/commrails", rails_router())
         .nest("/stream", stream_router())
         .nest("/ws/bots", bot_desktop_stream_router())
         .nest(

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useCommRailsMailStore, useCommRailsUnreadCount } from './comrails-mail.store';
+import { useCommRailsMailStore, useCommRailsUnreadCount } from './commrails-mail.store';
 import { railsApi } from '@/lib/agents/rails.service';
 import type { MailMessage } from '@/lib/agents/rails.service';
 
@@ -45,7 +45,7 @@ function makeRailsMessage(overrides: Partial<MailMessage> = {}): MailMessage {
   };
 }
 
-describe('comrails-mail.store', () => {
+describe('commrails-mail.store', () => {
   beforeEach(() => {
     useCommRailsMailStore.getState().reset();
     vi.clearAllMocks();

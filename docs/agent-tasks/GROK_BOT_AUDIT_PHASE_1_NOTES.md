@@ -140,7 +140,7 @@ Agent marketplace: `cmd/allternit-api/src/agent_routes.rs` has full CRUD for `ag
 
 ### 2.6 Rails / Peer System
 
-- Rust library: `allternit-agent-system-rails`
+- Rust library: `allternit-commrails`
 - HTTP surface: `/api/rails/peers`, `/api/rails/steer/*`
 - gizzi-code integration: `railsPeer.ts`, `RailsInboxBridge.tsx`
 - Peer registration, UDS inbox, message passing between agent sessions.

@@ -78,7 +78,9 @@ import { deriveBotPresence, type BotPresenceState } from '@/lib/bots/bot-presenc
 import { useBotHasNewActivity } from '@/lib/bots/bot-activity-watermark';
 import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
-import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
+import { useCommRailsMailStore } from '@/lib/bots/commrails-mail.store';
+import { useCommRailSections } from '@/lib/bots/use-commrail-sections';
+import { useBotStatus } from '@/lib/bots/bot-operational-state.store';
 import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import type { GroupChat } from '@/lib/bots/group-chat.types';
@@ -409,6 +411,10 @@ export function ShellRail({
 
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
+  const { sections: commRailSections, visibility: commRailVisibility } =
+    useCommRailSections();
+  const sessionsSection = commRailSections.find((s) => s.id === 'comrails-sessions');
+  const needsYouSection = commRailSections.find((s) => s.id === 'comrails-needs-you');
 
   // Bot-mode rail data: pinned bots (bot-roster store), canonical-chat recency
   // for ordering, and group chats with unread counts.
@@ -1288,6 +1294,54 @@ export function ShellRail({
               <span>New group chat</span>
             </button>
           </RecentsPanel>
+
+          <RecentsPanel
+            shrink
+            expanded
+            onToggle={() => {}}
+            title="Sessions"
+          >
+            {(sessionsSection?.items.length ?? 0) === 0 ||
+            (sessionsSection?.items.length === 1 &&
+              sessionsSection.items[0]?.id === 'ao-down') ? (
+              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                {commRailVisibility.aoRunning
+                  ? 'No ao sessions'
+                  : 'ao is not running'}
+              </div>
+            ) : (
+              sessionsSection?.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--shell-item-fg)]"
+                >
+                  <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {item.label}
+                  </span>
+                  {item.status ? (
+                    <span className="shrink-0 text-[11px] text-[var(--shell-item-muted)]">
+                      {item.status}
+                    </span>
+                  ) : null}
+                </div>
+              ))
+            )}
+          </RecentsPanel>
+
+          {(needsYouSection?.items.length ?? 0) > 0 && (
+            <RecentsPanel shrink expanded onToggle={() => {}} title="Needs you">
+              {needsYouSection?.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--accent-primary)]"
+                >
+                  <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {item.label}
+                  </span>
+                </div>
+              ))}
+            </RecentsPanel>
+          )}
         </>
       ) : !isCodeMode ? (
         <>
@@ -2636,6 +2690,16 @@ function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
   );
 }
 
+function BotNeedsYouHint({ botId }: { botId: string }): React.ReactNode {
+  const { needsAttention, hasPendingApprovals } = useBotStatus(botId);
+  if (!needsAttention && !hasPendingApprovals) return null;
+  return (
+    <span className="shrink-0 text-[10px] font-medium text-[var(--accent-primary)]">
+      Needs you
+    </span>
+  );
+}
+
 function BotRailRow({ bot, isActive, disabled, onOpen, onUnpin, draggable, onDragStart, onDragEnd }: {
   bot: Agent;
   isActive?: boolean;
@@ -2668,6 +2732,7 @@ function BotRailRow({ bot, isActive, disabled, onOpen, onUnpin, draggable, onDra
         <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
           {getBotDisplayName(bot)}
         </span>
+        <BotNeedsYouHint botId={bot.id} />
       </button>
       {onUnpin && (
         <button

@@ -6,7 +6,7 @@ files_changed:
   - rails/src/mail/mod.rs
   - rails/src/lib.rs
   - rails/src/service.rs
-  - rails/src/bin/allternit-rails.rs
+  - rails/src/bin/allternit-commrails.rs
   - cmd/allternit-api/src/rails/mod.rs
   - .steering/checkpoint.md
   - docs/RAILS_MAIL_E3_NOTES.md
@@ -50,7 +50,7 @@ remaining: []
 
 ## Verification
 
-- `cargo test -p allternit-agent-system-rails` — **82 passed, 0 failed**
+- `cargo test -p allternit-commrails` — **82 passed, 0 failed**
   (4 new E3 tests: one recipient overdue until their ack + wrong-agent ack
   does not clear; two recipients stay overdue after the first ack and clear
   after the second, including an actor-fallback ack with no `agent_id`;

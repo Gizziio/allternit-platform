@@ -3,10 +3,10 @@ import {
   AGENT_COMMUNICATION_TOOL_DEFINITION,
   executeAgentCommunicationTool,
 } from './agent-comm.tool';
-import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
+import { useCommRailsMailStore } from '@/lib/bots/commrails-mail.store';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 
-vi.mock('@/lib/bots/comrails-mail.store', () => ({
+vi.mock('@/lib/bots/commrails-mail.store', () => ({
   useCommRailsMailStore: {
     getState: vi.fn(() => ({
       sendMail: vi.fn(),

@@ -1,9 +1,13 @@
 [package]
-name = "rails"
+name = "commrails"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
 publish = false
+
+[[bin]]
+name = "commrails"
+path = "src/main.rs"
 
 [[bin]]
 name = "rails"
@@ -11,10 +15,10 @@ path = "src/main.rs"
 
 [features]
 default = ["dolt"]
-dolt = ["allternit-agent-system-rails/dolt"]
+dolt = ["allternit-commrails/dolt"]
 
 [dependencies]
-allternit-agent-system-rails = { path = ".." }
+allternit-commrails = { path = ".." }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }

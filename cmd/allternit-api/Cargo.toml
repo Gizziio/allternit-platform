@@ -35,8 +35,8 @@ regex = { workspace = true }
 des = "0.8"
 cipher = "0.4"
 
-# Internal crates - Rails & Cowork
-allternit-agent-system-rails = { path = "../../rails" }
+# Internal crates - CommRails & Cowork
+allternit-commrails = { path = "../../commrails" }
 allternit-cowork-runtime = { path = "../../infrastructure/executor/cowork/cowork/allternit-cowork-runtime" }
 allternit-cowork-scheduler = { path = "../../infrastructure/executor/cowork/cowork/allternit-cowork-scheduler" }
 allternit-gc-agents = { workspace = true }
