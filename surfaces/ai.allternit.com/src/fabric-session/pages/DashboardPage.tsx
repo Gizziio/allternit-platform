@@ -165,10 +165,6 @@ export function DashboardPage({
   const isPhone = useMediaQuery("(max-width: 768px), (pointer: coarse)");
   const isLandscape = useMediaQuery("(orientation: landscape) and (pointer: coarse)");
   const vv = useVisualViewportRect();
-  const inBrowserTab =
-    typeof window !== "undefined" &&
-    window.matchMedia("(display-mode: browser)").matches &&
-    !window.matchMedia("(display-mode: standalone)").matches;
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
@@ -378,7 +374,7 @@ export function DashboardPage({
     if (isPhone) {
       return (
         <div
-          className="z-50 flex flex-col bg-[#0b0b0a] text-white overflow-hidden"
+          className="z-50 bg-[#0b0b0a] text-white overflow-hidden"
           style={{
             position: "fixed",
             top: vv.height ? vv.top : 0,
@@ -387,40 +383,17 @@ export function DashboardPage({
             height: vv.height ? vv.height : "100%",
           }}
         >
-          {!isLandscape ? (
-            <div
-              className="shrink-0 flex items-center gap-2 px-3 pb-1"
-              style={{ paddingTop: "max(8px, env(safe-area-inset-top))" }}
-            >
-              <button
-                type="button"
-                onClick={closeSession}
-                className="inline-flex items-center gap-1 rounded-lg border-none bg-white/10 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
-              >
-                <CaretLeft size={16} weight="bold" />
-                Machines
-              </button>
-              <div className="min-w-0 flex-1 truncate text-[14px] font-semibold">{selected.name}</div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={closeSession}
-              className="absolute z-30 left-2 top-2 inline-flex items-center rounded-full border-none bg-black/55 px-2 py-1.5 text-white cursor-pointer"
-              style={{ top: "max(8px, env(safe-area-inset-top))" }}
-              title="Back to machines"
-            >
-              <CaretLeft size={16} weight="bold" />
-            </button>
-          )}
-          <div className="flex-1 min-h-0">
-            <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
-          </div>
-          {inBrowserTab ? (
-            <div className="pointer-events-none absolute right-2 bottom-24 z-30 rounded-lg bg-black/70 px-2 py-1 text-[11px] text-white/80">
-              Share → Add to Home Screen to hide Safari tabs
-            </div>
-          ) : null}
+          <button
+            type="button"
+            onClick={closeSession}
+            className="absolute z-30 left-2 inline-flex items-center gap-1 rounded-full border-none bg-black/55 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
+            style={{ top: "max(8px, env(safe-area-inset-top))" }}
+            title="Back to machines"
+          >
+            <CaretLeft size={16} weight="bold" />
+            {!isLandscape ? "Machines" : null}
+          </button>
+          <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
         </div>
       );
     }

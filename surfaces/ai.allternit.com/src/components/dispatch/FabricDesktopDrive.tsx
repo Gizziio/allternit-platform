@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Monitor, Keyboard, Spinner } from '@phosphor-icons/react';
+import { Monitor, Keyboard, Spinner, PlusSquare } from '@phosphor-icons/react';
 import { cloudApiUrl } from '@/lib/cloud-api';
 import { cn } from '@/lib/utils';
 
@@ -40,11 +40,13 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n));
 }
 
-function devicePortrait() {
-  if (typeof window === 'undefined') return true;
-  const o = window.screen?.orientation?.type;
-  if (o) return o.startsWith('portrait');
-  return window.innerHeight >= window.innerWidth;
+function isStandaloneDisplay() {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches
+    || window.matchMedia('(display-mode: fullscreen)').matches
+    || Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone)
+  );
 }
 
 /** Safari moves this when the URL bar or keyboard comes in. Use it as the phone shell. */
@@ -82,7 +84,9 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
   const [viewMode, setViewMode] = useState<ViewMode>('fit');
   const [kbdOpen, setKbdOpen] = useState(false);
   const [draft, setDraft] = useState('');
-  const [portrait, setPortrait] = useState(devicePortrait);
+  const [standalone, setStandalone] = useState(isStandaloneDisplay);
+  const [installHelp, setInstallHelp] = useState(false);
+  const installPromptRef = useRef<Event & { prompt?: () => Promise<void> } | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const imgSize = useRef({ w: 0, h: 0 });
   const cursor = useRef({ x: 0, y: 0 });
@@ -137,7 +141,7 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
 
   useEffect(() => {
     const onOrient = () => {
-      setPortrait(devicePortrait());
+      setStandalone(isStandaloneDisplay());
       layout(viewMode);
     };
     window.addEventListener('orientationchange', onOrient);
@@ -154,7 +158,16 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
 
   useEffect(() => {
     layout(viewMode);
-  }, [layout, viewMode, portrait, status]);
+  }, [layout, viewMode, status, kbdOpen]);
+
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      installPromptRef.current = e as Event & { prompt?: () => Promise<void> };
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -399,10 +412,10 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
   const innerH = imgSize.current.h || 1080;
 
   return (
-    <div className="flex flex-col min-h-0 h-full bg-[#0b0b0a]">
+    <div className="relative h-full min-h-0 bg-[#0b0b0a]">
       <div
         ref={stageRef}
-        className="relative flex-1 min-h-0 overflow-hidden touch-none bg-[#0b0b0a]"
+        className="absolute inset-0 overflow-hidden touch-none bg-[#0b0b0a]"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -448,15 +461,32 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
         )}
       </div>
 
+      <div className="absolute inset-x-0 bottom-0 z-20">
       <div
-        className="shrink-0 z-20 flex flex-nowrap items-center gap-1 px-2 pt-1.5 bg-[#0b0b0a]"
+        className="flex flex-nowrap items-center gap-1 px-2 pt-1.5 bg-gradient-to-t from-black/80 to-black/35"
         style={{ paddingBottom: kbdOpen ? 4 : 'max(8px, env(safe-area-inset-bottom))' }}
       >
         <span className={cn('shrink-0 size-2 rounded-full', status === 'live' ? 'bg-[#22c55e]' : status === 'connecting' ? 'bg-[#febc2e]' : 'bg-[#ef4444]')} />
-        <button type="button" onClick={() => setInputMode('touch')} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'touch' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Touch</button>
-        <button type="button" onClick={() => setInputMode('trackpad')} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'trackpad' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Trackpad</button>
-        <button type="button" onClick={() => { setViewMode('fit'); layout('fit'); }} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'fit' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Fit</button>
-        <button type="button" onClick={() => { setViewMode('actual'); layout('actual'); }} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'actual' ? 'bg-white text-black' : 'bg-white/10 text-white/80')}>Actual</button>
+        <button type="button" onClick={() => setInputMode('touch')} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'touch' ? 'bg-white text-black' : 'bg-white/15 text-white')}>Touch</button>
+        <button type="button" onClick={() => setInputMode('trackpad')} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'trackpad' ? 'bg-white text-black' : 'bg-white/15 text-white')}>Trackpad</button>
+        <button type="button" onClick={() => { setViewMode('fit'); layout('fit'); }} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'fit' ? 'bg-white text-black' : 'bg-white/15 text-white')}>Fit</button>
+        <button type="button" onClick={() => { setViewMode('actual'); layout('actual'); }} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'actual' ? 'bg-white text-black' : 'bg-white/15 text-white')}>Actual</button>
+        {!standalone ? (
+          <button
+            type="button"
+            onClick={() => {
+              const prompt = installPromptRef.current;
+              if (prompt?.prompt) {
+                void prompt.prompt();
+                return;
+              }
+              setInstallHelp(true);
+            }}
+            className="px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer bg-white/15 text-white inline-flex items-center gap-1"
+          >
+            <PlusSquare size={13} /> Home Screen
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => {
@@ -466,13 +496,20 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
               return next;
             });
           }}
-          className={cn('ml-auto px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer inline-flex items-center gap-1', kbdOpen ? 'bg-white text-black' : 'bg-white/10 text-white/80')}
+          className={cn('ml-auto px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer inline-flex items-center gap-1', kbdOpen ? 'bg-white text-black' : 'bg-white/15 text-white')}
         >
           <Keyboard size={13} /> Keyboard
         </button>
       </div>
+      {installHelp && !standalone ? (
+        <div className="absolute inset-x-4 z-40 rounded-2xl bg-[#1c1c1c] p-3 text-[13px] text-white shadow-lg" style={{ bottom: 'max(56px, env(safe-area-inset-bottom))' }}>
+          <div className="font-semibold mb-1">Add to Home Screen</div>
+          <p className="m-0 text-white/75 leading-5">Tap Safari’s Share button, then <strong>Add to Home Screen</strong>. Safari does not let a page do that itself. After that, this button hides.</p>
+          <button type="button" onClick={() => setInstallHelp(false)} className="mt-2 rounded-lg border-none bg-white text-black text-[12px] font-bold px-3 py-1.5 cursor-pointer">OK</button>
+        </div>
+      ) : null}
       {kbdOpen ? (
-        <div className="shrink-0 z-20 flex items-end gap-2 px-2 pb-2 bg-[#0b0b0a]">
+        <div className="flex items-end gap-2 px-2 pt-1 bg-[#0b0b0a]" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
           <textarea
             ref={composerRef}
             value={draft}
@@ -507,6 +544,7 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
           </button>
         </div>
       ) : null}
+      </div>
     </div>
   );
 }
