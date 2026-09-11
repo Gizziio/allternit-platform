@@ -10,7 +10,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const HELPER = join(HERE, '..', '..', 'input', 'input_helper.py');
+const HELPER_MAC = join(HERE, '..', '..', 'input', 'input_helper.py');
+const HELPER_X11 = join(HERE, '..', '..', 'input', 'input_helper_x11.py');
+const HELPER = process.platform === 'darwin' ? HELPER_MAC : HELPER_X11;
 
 export class InputBridge extends EventEmitter {
   constructor({ python = 'python3', helperPath = HELPER, dryRun = false, log = console.error } = {}) {

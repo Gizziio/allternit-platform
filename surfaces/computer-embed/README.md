@@ -7,7 +7,8 @@ component. No React, no noVNC dependency, no build step required to serve it.
 
 Viewers are **read-only by construction**: the client has no code path for
 keyboard, mouse, or clipboard input, and embed tokens are forced read-only on
-the server as well.
+the server as well. Interactive control of a paired machine lives in Fabric
+Session Desktop (`https://fabrictransport.allternit.com`), not in this embed.
 
 ## Quick start
 

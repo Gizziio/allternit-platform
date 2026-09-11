@@ -50,7 +50,11 @@ export class Capture extends EventEmitter {
   async start() {
     if (this.running) return;
     this.running = true;
-    if (this.mode === 'sckit') {
+    if (this.mode === 'x11' || (this.mode !== 'sckit' && this.mode !== 'screencapture' && process.platform !== 'darwin')) {
+      this.#startX11Loop();
+      return;
+    }
+    if (this.mode === 'sckit' && process.platform === 'darwin') {
       try {
         await this.#startSckit();
         return;
@@ -58,7 +62,11 @@ export class Capture extends EventEmitter {
         this.log(`[capture] ScreenCaptureKit unavailable: ${err.message} — falling back to screencapture loop`);
       }
     }
-    this.#startScreencaptureLoop();
+    if (process.platform === 'darwin') {
+      this.#startScreencaptureLoop();
+      return;
+    }
+    this.#startX11Loop();
   }
 
   async #startSckit() {
@@ -113,6 +121,48 @@ export class Capture extends EventEmitter {
         this.#startScreencaptureLoop();
       }
     });
+  }
+
+  #startX11Loop() {
+    this.actualMode = 'x11';
+    const display = process.env.DISPLAY || ':0';
+    const tmp = join(tmpdir(), `phone-remote-${process.pid}.jpg`);
+    this.log(`[capture] X11 loop on DISPLAY=${display} (target ~${this.fps}fps)`);
+    this.emit('info', { width: 0, height: 0 });
+    const grab = async () => {
+      try {
+        await execFileP('ffmpeg', [
+          '-y', '-loglevel', 'error',
+          '-f', 'x11grab', '-video_size', '1280x720', '-i', `${display}.0`,
+          '-frames', '1', '-q:v', String(Math.max(2, Math.round((1 - this.quality) * 30))),
+          tmp,
+        ], { timeout: 4000 });
+        return true;
+      } catch {
+        try {
+          await execFileP('scrot', ['-o', tmp], { timeout: 4000, env: { ...process.env, DISPLAY: display } });
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    };
+    const tick = async () => {
+      if (!this.running) return;
+      const t0 = performance.now();
+      try {
+        if (await grab()) {
+          const frame = readFileSync(tmp);
+          this.lastFrame = frame;
+          this.emit('frame', frame);
+        }
+      } catch (err) {
+        this.emit('captureError', { type: 'error', error: `x11 capture: ${err.message}` });
+      }
+      const wait = Math.max(0, 1000 / this.fps - (performance.now() - t0));
+      this.timer = setTimeout(tick, wait);
+    };
+    tick();
   }
 
   #startScreencaptureLoop() {

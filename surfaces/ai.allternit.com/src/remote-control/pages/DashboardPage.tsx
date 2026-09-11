@@ -15,6 +15,7 @@ import { env } from "@/lib/env";
 import { useToast } from "@/hooks/use-toast";
 import { MachinesPanel } from "@/components/dispatch/MachinesPanel";
 import { RemoteSessionPanel } from "@/components/dispatch/RemoteSessionPanel";
+import { FabricDesktopDrive } from "@/components/dispatch/FabricDesktopDrive";
 import { RecordingsPanel } from "../recordings/RecordingsPanel";
 import { useRuntimes, type RuntimeViewModel } from "@/components/dispatch/useRuntimes";
 import { useRuntimeSelection } from "@/components/dispatch/useRuntimeSelection";
@@ -121,6 +122,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
+  const [machineTab, setMachineTab] = useState<"desktop" | "sessions">("desktop");
   const onlineCount = runtimes.filter((r) => r.status === "online").length;
   const { permissions: pendingPermissions, questions: pendingQuestions } = useRemotePendingCounts(runtimes, auth.getToken);
 
@@ -372,8 +374,32 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         />
 
         {selected && (
-          <div className="mt-6 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden h-[600px]">
-            <RemoteSessionPanel runtimeId={selected.id} getToken={auth.getToken} />
+          <div className="mt-6 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden h-[600px] flex flex-col">
+            <div className="shrink-0 flex gap-1 p-2 border-b border-solid border-[var(--border-subtle)]">
+              {(['desktop', 'sessions'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setMachineTab(tab)}
+                  className="px-3 py-1.5 rounded-lg text-[12px] font-bold border-none cursor-pointer"
+                  style={{
+                    background: machineTab === tab ? 'var(--bg-primary)' : 'transparent',
+                    color: machineTab === tab ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  }}
+                >
+                  {tab === 'desktop' ? 'Desktop' : 'Sessions'}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 min-h-0">
+              {machineTab === 'desktop' ? (
+                <div className="h-full p-3">
+                  <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
+                </div>
+              ) : (
+                <RemoteSessionPanel runtimeId={selected.id} getToken={auth.getToken} />
+              )}
+            </div>
           </div>
         )}
 
