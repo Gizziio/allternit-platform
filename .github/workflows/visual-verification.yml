@@ -11,7 +11,7 @@ on:
     paths:
       - 'src/**/*.{tsx,jsx,vue,svelte}'
       - 'src/**/*.{css,scss}'
-      - '**/*.html'
+      - 'src/**/*.html'
       - 'public/**'
   
   push:
@@ -19,7 +19,7 @@ on:
     paths:
       - 'src/**/*.{tsx,jsx,vue,svelte}'
       - 'src/**/*.{css,scss}'
-      - '**/*.html'
+      - 'src/**/*.html'
       - 'public/**'
 
 jobs:

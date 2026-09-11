@@ -51,7 +51,7 @@ remaining: []
 
 ## Verification
 
-- `cargo test -p allternit-agent-system-rails` — **72 passed, 0 failed**
+- `cargo test -p allternit-commrails` — **72 passed, 0 failed**
   (new unit tests: thread-id resolution incl. `mail:general` default;
   typed+legacy send coexistence with inbox skipping `MailAssetShared`;
   typed send rejects invalid thread; registry idempotency + projection;

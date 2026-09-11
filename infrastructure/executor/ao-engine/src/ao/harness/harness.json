@@ -355,6 +355,23 @@
       "_convention": "DeepSeek Harness: skills ~/.dsh/skills per teamai-cli toolPaths — dsh's skill-filesystem provider scans it as user root (rank 400) and discovers both dir bundles (<name>/SKILL.md) and flat .md. No MCP or rules path in teamai source — both null. confidence: teamai",
       "_licenseNote": "DeepSeek Harness developer preview. HarnessRouter CE annotates it 'MIT, developer preview' but that is secondhand — per the P7 spec binding, dsh stays undeclared until independent upstream evidence. Pins + own-venv + import-check-before-ready pattern ported verbatim from HR CE entrypoint (0.1.0rc7 -> 0.1.2rc1 is where HR learned pin-bump must rebuild the venv). Installs only with --accept-terms dsh."
     },
+    "pi": {
+      "skillsDir": "~/.pi/agent/skills",
+      "rulesFile": null,
+      "mcp": null,
+      "license": "mit",
+      "install": {
+        "method": "npm",
+        "pinnedVersion": "0.85.1",
+        "installArgs": [
+          "@earendil-works/pi-coding-agent@0.85.1",
+          "pi-mcp-adapter"
+        ],
+        "verifyCmd": "pi --version"
+      },
+      "_convention": "Pi coding-agent (earendil-works). HR CE docker/entrypoint.sh lines 312-319: npm install -g --ignore-scripts @earendil-works/pi-coding-agent pi-mcp-adapter. Skills live under ~/.pi/agent (pi's home). No teamai matrix entry; install oracle is the vendor entrypoint. confidence: vendor-entrypoint",
+      "_licenseNote": "MIT (https://www.npmjs.com/package/@earendil-works/pi-coding-agent, npm metadata 0.85.1 verified 2026-09-10). Human opt-in 2026-09-10 added pi to the auto-install list for P6b live gates."
+    },
     "qoder": {
       "skillsDir": "~/.qoder/skills",
       "rulesFile": null,

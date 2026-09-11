@@ -83,9 +83,9 @@ Never accept the notes file at face value:
 
 Write the next phase's task spec, `ao-send` it to the SAME session, re-arm `ao-watch`. When all phases pass review: merge/apply the worktree branch, then `ao-kill <slug> [--rm-worktree]`. Report actual phase durations, not guesses.
 
-## Platform integration (canvas + rails)
+## Platform integration (canvas + commrails)
 
-`ao-*` sessions are discovered by the allternit app and shown as executor tiles on the code canvas (lifecycle → rails mail thread `wih:executor-<slug>`; see ORCHESTRATOR.md "Platform integration"). In task specs, tell executors: append milestone notes to `.allternit/shared-context.md` when present (append-only, `### <slug> <ISO ts>`), and drop artifacts in `~/.agent-orchestrator/evidence/<slug>/`, announcing each via `curl -X POST http://127.0.0.1:8013/api/rails/mail/share` with `{"thread":"wih:executor-<slug>","asset_ref":"<path>"}` — that's what makes progress and artifacts show up for humans in the app.
+`ao-*` sessions are discovered by the allternit app and shown as executor tiles on the code canvas (lifecycle → commrails mail thread `wih:executor-<slug>`; see ORCHESTRATOR.md "Platform integration"). In task specs, tell executors: append milestone notes to `.allternit/shared-context.md` when present (append-only, `### <slug> <ISO ts>`), and drop artifacts in `~/.agent-orchestrator/evidence/<slug>/`, announcing each via `curl -X POST http://127.0.0.1:8013/api/commrails/mail/share` with `{"thread":"wih:executor-<slug>","asset_ref":"<path>"}` — that's what makes progress and artifacts show up for humans in the app. (The old `/api/rails/mail/share` prefix remains as a one-release alias.)
 
 ## Dispatch semantics (registry, mailbox, ownership, recovery)
 

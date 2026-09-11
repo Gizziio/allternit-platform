@@ -79,6 +79,11 @@ describe('generateBotAvatar', () => {
     const b = generateBotAvatar('fixed', 'pet');
     expect(a).toEqual(b);
   });
+
+  it('defaults to a pet companion when no type is given', () => {
+    const avatar = generateBotAvatar('any-seed');
+    expect(avatar.type).toBe('pet');
+  });
 });
 
 describe('createImageBotAvatar', () => {

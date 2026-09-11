@@ -328,7 +328,7 @@ impl LocalRailsClient {
 impl allternit_cowork_runtime::RailsClient for LocalRailsClient {
     async fn create_dag(&self, run_id: RunId, spec: &CreateRunSpec) -> anyhow::Result<String> {
         let dag_id = uuid::Uuid::new_v4().to_string();
-        let mutation = allternit_agent_system_rails::DagMutation::CreateNode {
+        let mutation = allternit_commrails::DagMutation::CreateNode {
             node_id: self.root_node_id(&dag_id),
             node_kind: "task".to_string(),
             title: format!("cowork-run-{}", run_id),
@@ -356,7 +356,7 @@ impl allternit_cowork_runtime::RailsClient for LocalRailsClient {
         spec: &CreateJobSpec,
     ) -> anyhow::Result<String> {
         let node_id = format!("{}-job-{}", dag_id, job_id);
-        let mutation = allternit_agent_system_rails::DagMutation::CreateNode {
+        let mutation = allternit_commrails::DagMutation::CreateNode {
             node_id: node_id.clone(),
             node_kind: spec.job_type.clone(),
             title: format!("Job {}", job_id),
@@ -373,7 +373,7 @@ impl allternit_cowork_runtime::RailsClient for LocalRailsClient {
     }
 
     async fn update_run_state(&self, dag_id: &str, state: RunState) -> anyhow::Result<()> {
-        let mutation = allternit_agent_system_rails::DagMutation::SetState {
+        let mutation = allternit_commrails::DagMutation::SetState {
             node_id: self.root_node_id(dag_id),
             dimension: "status".to_string(),
             value: state.to_string().to_uppercase(),
@@ -396,7 +396,7 @@ impl allternit_cowork_runtime::RailsClient for LocalRailsClient {
         }
         let dag_id = parts[2];
 
-        let mutation = allternit_agent_system_rails::DagMutation::SetState {
+        let mutation = allternit_commrails::DagMutation::SetState {
             node_id: node_id.to_string(),
             dimension: "status".to_string(),
             value: state.to_string().to_uppercase(),
@@ -413,7 +413,7 @@ impl allternit_cowork_runtime::RailsClient for LocalRailsClient {
 
     async fn request_lease(&self, resource_id: &str, owner_id: &str) -> anyhow::Result<bool> {
         let lease_id = uuid::Uuid::new_v4().to_string();
-        let lease_req = allternit_agent_system_rails::LeaseRequest {
+        let lease_req = allternit_commrails::LeaseRequest {
             lease_id,
             wih_id: resource_id.to_string(),
             agent_id: owner_id.to_string(),
@@ -456,14 +456,14 @@ impl allternit_cowork_runtime::RailsClient for LocalRailsClient {
             CoworkEvent::Detached { .. } => "cowork.attachment.detached",
         };
 
-        let allternit_event = allternit_agent_system_rails::AllternitEvent {
+        let allternit_event = allternit_commrails::AllternitEvent {
             event_id: uuid::Uuid::new_v4().to_string(),
             ts: chrono::Utc::now().to_rfc3339(),
-            actor: allternit_agent_system_rails::Actor {
-                r#type: allternit_agent_system_rails::ActorType::Agent,
+            actor: allternit_commrails::Actor {
+                r#type: allternit_commrails::ActorType::Agent,
                 id: "cowork-runtime".to_string(),
             },
-            scope: Some(allternit_agent_system_rails::EventScope {
+            scope: Some(allternit_commrails::EventScope {
                 project_id: None,
                 dag_id: None,
                 node_id: None,

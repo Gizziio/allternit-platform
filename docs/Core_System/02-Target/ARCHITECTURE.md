@@ -83,8 +83,8 @@ The substrate layer serves as the foundational infrastructure for the entire All
   - CanvasProtocol: Communication and rendering protocol for canvas-based UIs
   - Layout strategies and interaction specifications
 
-**`allternit-agent-system-rails`**
-- **Location**: `infrastructure/allternit-agent-system-rails/`
+**`allternit-commrails`**
+- **Location**: `infrastructure/allternit-commrails/`
 - **Purpose**: Agent system infrastructure and utilities
 - **Key Features**:
   - Agent lifecycle management
@@ -714,7 +714,7 @@ ALLTERNIT_VISION_INFERENCE_KEY=sk-...
 
 | Attribute | Value |
 |-----------|-------|
-| **Path** | `allternit-agent-system-rails/` |
+| **Path** | `allternit-commrails/` |
 | **Port** | 3011 |
 | **Language** | Rust (Axum) |
 | **Purpose** | Agent task planning and work execution under policy gates |
@@ -868,17 +868,17 @@ impl RailsClient {
 **Gateway Routes:**
 
 ```
-/api/v1/rails/*         →  allternit-rails:3011
-/api/v1/plan*           →  allternit-rails:3011
-/api/v1/dags/*          →  allternit-rails:3011
-/api/v1/wihs/*          →  allternit-rails:3011
-/api/v1/leases*         →  allternit-rails:3011
-/api/v1/ledger/*        →  allternit-rails:3011
-/api/v1/index/*         →  allternit-rails:3011
-/api/v1/mail/*          →  allternit-rails:3011
-/api/v1/gate/*          →  allternit-rails:3011
-/api/v1/vault/*         →  allternit-rails:3011
-/api/v1/init            →  allternit-rails:3011
+/api/v1/rails/*         →  allternit-commrails:3011
+/api/v1/plan*           →  allternit-commrails:3011
+/api/v1/dags/*          →  allternit-commrails:3011
+/api/v1/wihs/*          →  allternit-commrails:3011
+/api/v1/leases*         →  allternit-commrails:3011
+/api/v1/ledger/*        →  allternit-commrails:3011
+/api/v1/index/*         →  allternit-commrails:3011
+/api/v1/mail/*          →  allternit-commrails:3011
+/api/v1/gate/*          →  allternit-commrails:3011
+/api/v1/vault/*         →  allternit-commrails:3011
+/api/v1/init            →  allternit-commrails:3011
 ```
 
 **Environment Variables:**
@@ -1791,7 +1791,7 @@ curl http://localhost:8013/api/v1/vault/status
 | **Voice** | 8001 | `services/ai/voice-service/` | Python | TTS & voice cloning |
 | **WebVM** | 8002 | `services/bridges/allternit-webvm/` | Rust | Browser-based VMs |
 | **Operator** | 3010 | `services/allternit-operator/` | Python | Browser, Desktop, Parallel automation |
-| **Rails** | 3011 | `allternit-agent-system-rails/` | Rust | Agent task planning & work execution |
+| **Rails** | 3011 | `allternit-commrails/` | Rust | Agent task planning & work execution |
 | **Gateway** | 8013 | `services/gateway/` | Python | Public entry point |
 | **Shell** | - | `6-apps/shell-electron/` | JS/TS | Desktop UI |
 | **Executor** | 3510 | `domains/kernel/compute/executor/` | Rust | On-demand compute |

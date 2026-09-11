@@ -42,7 +42,7 @@ inside R1/R3/R5. This file is the HOW.
 
 ## Verification (required — this phase builds Rust)
 
-- `cargo test -p allternit-agent-system-rails` MUST pass. Add unit tests for:
+- `cargo test -p allternit-commrails` MUST pass. Add unit tests for:
   dependency event round-trip + full-log graph rebuild, event-only get()
   rebuild (labels/status/notes), shared ready function incl. wait-gate
   exclusion, cycle rejection.

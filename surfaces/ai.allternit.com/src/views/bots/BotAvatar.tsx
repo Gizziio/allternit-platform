@@ -155,86 +155,125 @@ function GeometricAvatar({
 function VectorPetAvatar({ data, size }: { data: BotPetAvatar; size: number }) {
   const { species, primaryColor, secondaryColor, accessory } = data;
   const cx = size * 0.5;
-  const cy = size * 0.55;
-  const r = size * 0.3;
+  const headCy = size * 0.42;
+  const headR = size * 0.28;
+  const bodyCy = size * 0.78;
+  const bodyRx = size * 0.28;
+  const bodyRy = size * 0.18;
 
   const ears = useMemo(() => {
     switch (species) {
       case "cat":
         return (
           <>
-            <polygon points={`${cx - r * 0.8},${cy - r * 0.4} ${cx - r * 0.2},${cy - r * 1.1} ${cx + r * 0.1},${cy - r * 0.4}`} fill={primaryColor} />
-            <polygon points={`${cx + r * 0.8},${cy - r * 0.4} ${cx + r * 0.2},${cy - r * 1.1} ${cx - r * 0.1},${cy - r * 0.4}`} fill={primaryColor} />
+            <polygon points={`${cx - headR * 0.85},${headCy - headR * 0.2} ${cx - headR * 0.35},${headCy - headR * 1.15} ${cx - headR * 0.05},${headCy - headR * 0.35}`} fill={primaryColor} />
+            <polygon points={`${cx + headR * 0.85},${headCy - headR * 0.2} ${cx + headR * 0.35},${headCy - headR * 1.15} ${cx + headR * 0.05},${headCy - headR * 0.35}`} fill={primaryColor} />
+            <polygon points={`${cx - headR * 0.7},${headCy - headR * 0.25} ${cx - headR * 0.38},${headCy - headR * 0.9} ${cx - headR * 0.18},${headCy - headR * 0.3}`} fill={secondaryColor} />
+            <polygon points={`${cx + headR * 0.7},${headCy - headR * 0.25} ${cx + headR * 0.38},${headCy - headR * 0.9} ${cx + headR * 0.18},${headCy - headR * 0.3}`} fill={secondaryColor} />
           </>
         );
       case "dog":
         return (
           <>
-            <ellipse cx={cx - r * 0.7} cy={cy - r * 0.5} rx={r * 0.35} ry={r * 0.7} fill={primaryColor} transform={`rotate(-20 ${cx - r * 0.7} ${cy - r * 0.5})`} />
-            <ellipse cx={cx + r * 0.7} cy={cy - r * 0.5} rx={r * 0.35} ry={r * 0.7} fill={primaryColor} transform={`rotate(20 ${cx + r * 0.7} ${cy - r * 0.5})`} />
+            <ellipse cx={cx - headR * 0.75} cy={headCy - headR * 0.15} rx={headR * 0.32} ry={headR * 0.55} fill={primaryColor} transform={`rotate(-25 ${cx - headR * 0.75} ${headCy - headR * 0.15})`} />
+            <ellipse cx={cx + headR * 0.75} cy={headCy - headR * 0.15} rx={headR * 0.32} ry={headR * 0.55} fill={primaryColor} transform={`rotate(25 ${cx + headR * 0.75} ${headCy - headR * 0.15})`} />
           </>
         );
       case "rabbit":
         return (
           <>
-            <ellipse cx={cx - r * 0.5} cy={cy - r * 0.8} rx={r * 0.22} ry={r * 0.7} fill={primaryColor} />
-            <ellipse cx={cx + r * 0.5} cy={cy - r * 0.8} rx={r * 0.22} ry={r * 0.7} fill={primaryColor} />
+            <ellipse cx={cx - headR * 0.38} cy={headCy - headR * 1.05} rx={headR * 0.18} ry={headR * 0.7} fill={primaryColor} />
+            <ellipse cx={cx + headR * 0.38} cy={headCy - headR * 1.05} rx={headR * 0.18} ry={headR * 0.7} fill={primaryColor} />
+            <ellipse cx={cx - headR * 0.38} cy={headCy - headR * 1.0} rx={headR * 0.08} ry={headR * 0.5} fill={secondaryColor} />
+            <ellipse cx={cx + headR * 0.38} cy={headCy - headR * 1.0} rx={headR * 0.08} ry={headR * 0.5} fill={secondaryColor} />
           </>
         );
       case "fox":
         return (
           <>
-            <polygon points={`${cx - r * 0.9},${cy - r * 0.2} ${cx - r * 0.1},${cy - r * 0.9} ${cx - r * 0.1},${cy - r * 0.2}`} fill={primaryColor} />
-            <polygon points={`${cx + r * 0.9},${cy - r * 0.2} ${cx + r * 0.1},${cy - r * 0.9} ${cx + r * 0.1},${cy - r * 0.2}`} fill={primaryColor} />
+            <polygon points={`${cx - headR * 0.95},${headCy - headR * 0.05} ${cx - headR * 0.15},${headCy - headR * 1.05} ${cx - headR * 0.05},${headCy - headR * 0.15}`} fill={primaryColor} />
+            <polygon points={`${cx + headR * 0.95},${headCy - headR * 0.05} ${cx + headR * 0.15},${headCy - headR * 1.05} ${cx + headR * 0.05},${headCy - headR * 0.15}`} fill={primaryColor} />
           </>
         );
       case "owl":
         return (
           <>
-            <polygon points={`${cx - r * 0.6},${cy - r * 0.7} ${cx - r * 0.2},${cy - r * 1.2} ${cx + r * 0.1},${cy - r * 0.6}`} fill={primaryColor} />
-            <polygon points={`${cx + r * 0.6},${cy - r * 0.7} ${cx + r * 0.2},${cy - r * 1.2} ${cx - r * 0.1},${cy - r * 0.6}`} fill={primaryColor} />
+            <polygon points={`${cx - headR * 0.7},${headCy - headR * 0.55} ${cx - headR * 0.25},${headCy - headR * 1.2} ${cx},${headCy - headR * 0.45}`} fill={primaryColor} />
+            <polygon points={`${cx + headR * 0.7},${headCy - headR * 0.55} ${cx + headR * 0.25},${headCy - headR * 1.2} ${cx},${headCy - headR * 0.45}`} fill={primaryColor} />
           </>
         );
       case "robot":
       default:
         return (
           <>
-            <rect x={cx - r * 0.8} y={cy - r * 1.1} width={r * 0.35} height={r * 0.5} rx={2} fill={secondaryColor} />
-            <rect x={cx + r * 0.45} y={cy - r * 1.1} width={r * 0.35} height={r * 0.5} rx={2} fill={secondaryColor} />
+            <rect x={cx - headR * 0.85} y={headCy - headR * 1.15} width={headR * 0.28} height={headR * 0.45} rx={2} fill={secondaryColor} />
+            <rect x={cx + headR * 0.57} y={headCy - headR * 1.15} width={headR * 0.28} height={headR * 0.45} rx={2} fill={secondaryColor} />
           </>
         );
     }
-  }, [species, cx, cy, r, primaryColor, secondaryColor]);
+  }, [species, cx, headCy, headR, primaryColor, secondaryColor]);
+
+  const muzzle = useMemo(() => {
+    if (species === "owl") {
+      return (
+        <polygon
+          points={`${cx},${headCy + headR * 0.08} ${cx - headR * 0.16},${headCy + headR * 0.28} ${cx + headR * 0.16},${headCy + headR * 0.28}`}
+          fill={secondaryColor}
+        />
+      );
+    }
+    if (species === "robot") {
+      return (
+        <rect
+          x={cx - headR * 0.28}
+          y={headCy + headR * 0.18}
+          width={headR * 0.56}
+          height={headR * 0.12}
+          rx={2}
+          fill={secondaryColor}
+        />
+      );
+    }
+    return (
+      <ellipse
+        cx={cx}
+        cy={headCy + headR * 0.28}
+        rx={headR * (species === "fox" ? 0.28 : 0.22)}
+        ry={headR * 0.16}
+        fill={secondaryColor}
+      />
+    );
+  }, [species, cx, headCy, headR, secondaryColor]);
 
   const accessoryElement = useMemo(() => {
     if (accessory === "glasses") {
       return (
         <>
-          <circle cx={cx - r * 0.35} cy={cy - r * 0.05} r={r * 0.22} stroke={secondaryColor} strokeWidth={size * 0.025} fill="none" />
-          <circle cx={cx + r * 0.35} cy={cy - r * 0.05} r={r * 0.22} stroke={secondaryColor} strokeWidth={size * 0.025} fill="none" />
-          <line x1={cx - r * 0.13} y1={cy - r * 0.05} x2={cx + r * 0.13} y2={cy - r * 0.05} stroke={secondaryColor} strokeWidth={size * 0.025} />
+          <circle cx={cx - headR * 0.32} cy={headCy - headR * 0.05} r={headR * 0.22} stroke={secondaryColor} strokeWidth={size * 0.025} fill="none" />
+          <circle cx={cx + headR * 0.32} cy={headCy - headR * 0.05} r={headR * 0.22} stroke={secondaryColor} strokeWidth={size * 0.025} fill="none" />
+          <line x1={cx - headR * 0.1} y1={headCy - headR * 0.05} x2={cx + headR * 0.1} y2={headCy - headR * 0.05} stroke={secondaryColor} strokeWidth={size * 0.025} />
         </>
       );
     }
     if (accessory === "bow") {
       return (
         <>
-          <polygon points={`${cx},${cy - r * 0.9} ${cx - r * 0.25},${cy - r * 1.15} ${cx - r * 0.25},${cy - r * 0.65}`} fill={secondaryColor} />
-          <polygon points={`${cx},${cy - r * 0.9} ${cx + r * 0.25},${cy - r * 1.15} ${cx + r * 0.25},${cy - r * 0.65}`} fill={secondaryColor} />
-          <circle cx={cx} cy={cy - r * 0.9} r={r * 0.08} fill={secondaryColor} />
+          <polygon points={`${cx},${headCy - headR * 0.95} ${cx - headR * 0.28},${headCy - headR * 1.2} ${cx - headR * 0.28},${headCy - headR * 0.7}`} fill={secondaryColor} />
+          <polygon points={`${cx},${headCy - headR * 0.95} ${cx + headR * 0.28},${headCy - headR * 1.2} ${cx + headR * 0.28},${headCy - headR * 0.7}`} fill={secondaryColor} />
+          <circle cx={cx} cy={headCy - headR * 0.95} r={headR * 0.08} fill={primaryColor} />
         </>
       );
     }
     if (accessory === "headset") {
       return (
         <>
-          <path d={`M ${cx - r * 0.6} ${cy - r * 0.9} Q ${cx} ${cy - r * 1.4} ${cx + r * 0.6} ${cy - r * 0.9}`} stroke={secondaryColor} strokeWidth={size * 0.04} fill="none" />
-          <rect x={cx + r * 0.55} y={cy - r * 0.95} width={r * 0.25} height={r * 0.35} rx={2} fill={secondaryColor} />
+          <path d={`M ${cx - headR * 0.7} ${headCy - headR * 0.55} Q ${cx} ${headCy - headR * 1.25} ${cx + headR * 0.7} ${headCy - headR * 0.55}`} stroke={secondaryColor} strokeWidth={size * 0.045} fill="none" />
+          <rect x={cx + headR * 0.55} y={headCy - headR * 0.55} width={headR * 0.28} height={headR * 0.38} rx={3} fill={secondaryColor} />
         </>
       );
     }
     return null;
-  }, [accessory, cx, cy, r, secondaryColor, size]);
+  }, [accessory, cx, headCy, headR, secondaryColor, primaryColor, size]);
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${species} bot avatar`}>
@@ -244,12 +283,15 @@ function VectorPetAvatar({ data, size }: { data: BotPetAvatar; size: number }) {
           <stop offset="100%" stopColor={secondaryColor} />
         </linearGradient>
       </defs>
+      <ellipse cx={cx} cy={bodyCy} rx={bodyRx} ry={bodyRy} fill={`url(#bot-pet-gradient-${data.seed})`} />
       {ears}
+      <circle cx={cx} cy={headCy} r={headR} fill={`url(#bot-pet-gradient-${data.seed})`} />
+      <circle cx={cx - headR * 0.32} cy={headCy - headR * 0.08} r={headR * 0.16} fill="#fff" />
+      <circle cx={cx + headR * 0.32} cy={headCy - headR * 0.08} r={headR * 0.16} fill="#fff" />
+      <circle cx={cx - headR * 0.28} cy={headCy - headR * 0.08} r={headR * 0.08} fill="#111827" />
+      <circle cx={cx + headR * 0.28} cy={headCy - headR * 0.08} r={headR * 0.08} fill="#111827" />
+      {muzzle}
       {accessoryElement}
-      <circle cx={cx} cy={cy} r={r} fill={`url(#bot-pet-gradient-${data.seed})`} />
-      <circle cx={cx - r * 0.35} cy={cy - r * 0.1} r={r * 0.12} fill={secondaryColor} />
-      <circle cx={cx + r * 0.35} cy={cy - r * 0.1} r={r * 0.12} fill={secondaryColor} />
-      <ellipse cx={cx} cy={cy + r * 0.25} rx={r * 0.18} ry={r * 0.12} fill={secondaryColor} />
     </svg>
   );
 }

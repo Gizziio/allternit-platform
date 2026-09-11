@@ -70,6 +70,7 @@ pub mod chat_routes;
 pub mod checkpoints_routes;
 pub mod cli_provider_detector;
 pub mod cloud_credentials_routes;
+pub mod cloud_agents_routes;
 pub mod compliance_routes;
 pub mod computer_control;
 pub mod computer_routes;

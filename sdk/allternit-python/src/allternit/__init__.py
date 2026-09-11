@@ -6,6 +6,7 @@ from .provider_request import (
     to_kimi_request,
     to_openai_request,
 )
+from .sessions import Allternit, CloudAgentsError, CloudSessionEvent
 from .types import (
     CacheControl,
     HarnessError,
@@ -20,6 +21,9 @@ from .types import (
 
 __all__ = [
     "Harness",
+    "Allternit",
+    "CloudAgentsError",
+    "CloudSessionEvent",
     "Tool",
     "Message",
     "StreamRequest",

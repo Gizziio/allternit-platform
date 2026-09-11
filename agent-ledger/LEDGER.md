@@ -21,6 +21,84 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:23 — grok — remaining OpenBot UX (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-remaining` (worktree `allternit-ao-openbot-policy-gateway`)
+- **Agent:** grok
+- **Summary:** Merged PR #290 (18ed1019b) — computer-tool policy `bot_id`, live VNC watch strip, transcript activity ladder, old-stretch summary, notify modes.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/290 · 18ed1019bac5a84ce0d7b8275a69eee9ee2b4c14
+- **How it works:** Read-only computer lookup before policy eval (not guest dispatch). Strip VNC is lowest-priority claim. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Spawned-child subagent tree still needs an event feed.
+- **Summary file:** [2026-09-10-2123-openbot-remaining-grok.md](./summaries/2026-09-10-2123-openbot-remaining-grok.md)
+
+### 2026-09-10 21:23 — grok — Cloud Agents Phase 3 brain attach + vaults alias (rq-20260910-002)
+
+- **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
+- **Agent:** grok (CLI executors quota-blocked)
+- **Summary:** Merged PR #289 (44c9c8589) — session create validates `brain_id`/`vault_ids`; V141 `beta_sessions.brain_id`; `/api/v1/vaults` aliases `/beta/vaults` CRUD.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/289 · 44c9c85897eefec272ffca4faa68972d820abe86
+- **How it works:** Unknown brain/vault ids return 400. Public session JSON includes `brain_id` and `vault_ids`. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Sandbox entitlement, fabric/desktop workers, outputs, schedules, tool_search. Dollar budget parked. Bot Agents BA-* separate.
+- **Summary file:** [2026-09-10-2123-allternit-runtime-api-p3-grok.md](./summaries/2026-09-10-2123-allternit-runtime-api-p3-grok.md)
+
+### 2026-09-10 19:35 — grok — CommRails rename + live rail (BA-0b/BA-1) and Fabric PWA bot-mode UI
+- **Session ID / Branch:** `ao/ba-0b-commrails`, `ao/fabric-pwa-bot-mode-ui`
+- **Agent:** grok (orchestrator; kimi/agy executors quota-limited)
+- **Summary:** Rename Rails crate to CommRails with shims; live Desktop rail; Fabric PWA bot chat 1A–1C
+- **Commit:** PR #284 merge `3c96baba5`; PR #285 merge `ae36c67b3`
+- **How it works:** `allternit-commrails` is the crate/CLI; `/api/commrails/visibility` feeds Sessions on the rail; Fabric PWA uses shared `bot-chat/` components and a bumped SW cache
+- **Outstanding work:** BA-3 brain bind; ao-engine visibility HTTP; cleanup.sh `rails/target`; desktop DMG not rebuilt
+- **Summary file:** [summaries/2026-09-10-1935-ba-0b-ba-1-fabric-pwa-grok.md](./summaries/2026-09-10-1935-ba-0b-ba-1-fabric-pwa-grok.md)
+
+### 2026-09-10 20:54 — grok — Cloud Agents Phase 2 turn lifecycle (rq-20260910-002)
+
+- **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
+- **Agent:** grok (CLI executors quota-blocked)
+- **Summary:** Merged PR #286 (de9a497f1) — work-task ack/stop emit turn completed/failed + session.idle; `GET /sessions/:id/turns`; TS/Python turns clients. Completions/Responses untouched.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/286 · de9a497f1ef9e706abd8b1054e4b13007bbd75ff
+- **How it works:** `emit_turn_terminal` on `/beta/work` ack/stop when `session_id` is set and the session is not archived. Public status still derived from in-flight work. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Sandbox entitlement, vaults, brains, schedules, tool_search (new named approve). Dollar budget parked. Interrupt does not emit `turn.failed`. Bot Agents BA-* separate.
+- **Summary file:** [2026-09-10-2054-allternit-runtime-api-p2-grok.md](./summaries/2026-09-10-2054-allternit-runtime-api-p2-grok.md)
+
+### 2026-09-10 20:50 — grok — watch strip in chat (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-screen-in-chat` (worktree `allternit-ao-openbot-policy-gateway`)
+- **Agent:** grok
+- **Summary:** Merged PR #283 (0fa6782db) — live desktop screenshot + compact audit tool rows in the bot session column; per-thread mute. Not injected into message bubbles.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/283 · 0fa6782db32101c64d8ce91c6b4801a47147baec
+- **How it works:** `BotWatchStrip` polls `getBotDesktopScreenshot` and `GET /api/aci/policy/audit`. Click opens existing computer pane. Mute is local. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Herald subagent tree (no event feed on this path yet).
+- **Summary file:** [2026-09-10-2050-openbot-screen-in-chat-grok.md](./summaries/2026-09-10-2050-openbot-screen-in-chat-grok.md)
+
+### 2026-09-10 19:27 — grok — pet avatars + long-running bot session chrome (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-session-chrome` (worktree `allternit-ao-openbot-policy-gateway`)
+- **Agent:** grok
+- **Summary:** Merged PR #279 (232102ee2) — bots default to pet companion avatars; 1:1 sessions get status line, day separators, 48h compaction; group rounds show who is typing. `@mention` routing was already present.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/279 · 232102ee223a9da0148b78d096e622aaf598c7aa
+- **How it works:** `generateBotAvatar` defaults to `pet`. `bot-session-chrome.ts` drives status/day/compact. Policy chips stay out of the dialogue. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Herald subagent tree, computer-screen-in-chat, per-thread notify settings.
+- **Summary file:** [2026-09-10-1927-openbot-session-chrome-grok.md](./summaries/2026-09-10-1927-openbot-session-chrome-grok.md)
+
+### 2026-09-10 19:12 — grok — P6b UHP remaining drivers + full-class conformance (rq-20260908-028)
+
+- **Session ID / Branch:** `ao/uhp-p6b` (worktree `allternit-ao-uhp-p6b`; grok pickup after kimi executor quota)
+- **Agent:** grok
+- **Summary:** Merged PR #280 (db516a1b1) — six remaining UHP drivers (gemini/qwen/opencode/cline/pi/dsh) + discovery raised to full class (skills, sharing, session delete, files list). Conformance **63/64 CONFORMANT WITH SKIPS** (`--class full`, X-07 skip). pi added to the 17-tool auto-install list (human opt-in).
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/280 · db516a1b1c1fc2f3d1fc673f28c0285854574f07
+- **How it works:** Drivers follow the existing kimi/claude/codex argv+NDJSON shape. Full-class surface is additive on `uhp-gateway` (no herdr engine internals). Live qwen turns complete at the protocol layer (model 401 is environmental); opencode direct CLI works, UHP engine pane does not; pi installed to `~/.ao/harness` but the engine daemon cannot spawn it (managed bin not on engine PATH); dsh pin missing on PyPI.
+- **Outstanding work:** engine PATH for managed installs; OpenCode UHP live turn; dsh pin; Gate 2 claude/codex (unchanged from P6a). Summary: `agent-ledger/summaries/2026-09-10-1912-p6b-uhp-full-grok.md`.
+
+### 2026-09-10 18:58 — grok — Cloud Agents Phase 1 public sessions (rq-20260910-002)
+
+- **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`; Phase 2 still in this worktree)
+- **Agent:** grok orchestrator + kimi executor (`ao-allternit-runtime-api`)
+- **Summary:** Merged PR #274 (20b101ebb) — Allternit Agents / Cloud Agents Phase 1: `/api/v1/sessions` facade over `beta_sessions`, Allternit event names, inline agent, computer.kind none/local/sandbox-400, TS+Python `Allternit` clients, V140. Completions/Responses untouched. Beta alias kept.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/274 · 20b101ebb79c41a15c7e7c064b9f7e82b2148635
+- **How it works:** Public status is derived from in-flight `beta_work_tasks`; stored session status stays `active|archived`. Review fixed computer event projection, SDK emit path, two Rust move errors. GitHub Actions green; Vercel + Pages Git previews ignored (same as #267–#275).
+- **Outstanding work:** Phase 2 executing (`ao-allternit-runtime-api-p2`, agy): turn.completed/session.idle on work ack + GET /turns. Sandbox entitlement, vaults, brains, schedules, Bot Agents BA-* deferred. Worktree kept.
+- **Summary file:** [2026-09-10-1858-allternit-runtime-api-p1-grok.md](./summaries/2026-09-10-1858-allternit-runtime-api-p1-grok.md)
+
 ### 2026-09-10 18:52 — grok — OpenBot policy gateway + bot-mode audit UI (rq-20260910-001)
 
 - **Session ID / Branch:** `ao/openbot-policy-gateway` (worktree `allternit-ao-openbot-policy-gateway`; pickup of kimi `session_497f0582`)

@@ -3,7 +3,7 @@
  *
  * Deterministic, bot-scoped avatar generation. Supports three avatar families:
  *   - geometric: hash-derived SVG shape, color, and eyes
- *   - pet: hash-derived companion face/species
+ *   - pet: hash-derived companion face/species (the default identity)
  *   - image: user-supplied image URL
  *
  * Avatars are stored in bot metadata (`botProfile.avatar`) so the same bot always
@@ -141,10 +141,10 @@ export function generatePetAvatar(seed: string): BotPetAvatar {
 /**
  * Generate a deterministic bot avatar.
  *
- * If no type is provided, the seed hash decides between geometric and pet.
+ * If no type is provided, default to a pet companion (herald-style identity).
  */
 export function generateBotAvatar(seed: string, type?: BotAvatarType): BotAvatar {
-  const resolvedType = type ?? (hashSeed(seed) % 2 === 0 ? 'geometric' : 'pet');
+  const resolvedType = type ?? 'pet';
 
   switch (resolvedType) {
     case 'geometric':

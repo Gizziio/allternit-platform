@@ -16,5 +16,6 @@ describe('fabricSessionKind', () => {
     expect(fabricKindSurface('aci')).toBe('browser');
     expect(fabricKindSurface('bot')).toBe('bot');
     expect(fabricKindSurface('chat')).toBe('chat');
+    expect(fabricKindSurface('desktop')).toBe('desktop');
   });
 });

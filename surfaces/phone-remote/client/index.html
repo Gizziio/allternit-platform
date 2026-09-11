@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>phone-remote</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="phone-remote">
+  <meta name="theme-color" content="#0b0b0c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="screen"></canvas>
+
+  <div id="hud">
+    <span id="dot" class="dot offline"></span>
+    <span id="status">connecting…</span>
+    <span id="fps"></span>
+  </div>
+
+  <div id="toolbar">
+    <div id="mode-row">
+      <button id="btn-touch" class="active" title="finger taps the screen">Touch</button>
+      <button id="btn-trackpad" title="finger moves a cursor">Trackpad</button>
+      <button id="btn-fit" class="active" title="fit the whole desktop">Fit</button>
+      <button id="btn-actual" title="native pixels">Actual</button>
+    </div>
+    <button id="btn-kbd" title="keyboard">Keyboard</button>
+    <div id="special-keys" hidden>
+      <button data-key="esc">esc</button>
+      <button data-key="tab">tab</button>
+      <button data-key="left">◀</button>
+      <button data-key="down">▼</button>
+      <button data-key="up">▲</button>
+      <button data-key="right">▶</button>
+      <button data-key="return">⏎</button>
+      <button data-key="space">space</button>
+      <button data-key="delete">⌫</button>
+    </div>
+  </div>
+  <div id="cursor" hidden></div>
+
+  <!-- Hidden field: focusing it summons the iOS on-screen keyboard. -->
+  <textarea id="kbd" autocapitalize="off" autocorrect="off" autocomplete="off"
+            spellcheck="false" aria-label="remote keyboard input"></textarea>
+
+  <script src="app.js"></script>
+</body>
+</html>
