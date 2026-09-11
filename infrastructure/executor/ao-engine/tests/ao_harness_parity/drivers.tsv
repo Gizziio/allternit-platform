@@ -11,9 +11,8 @@ kimi	Kimi Code CLI	exists:~/.kimi-code	which:kimi
 grok	Grok CLI	exists:~/.grok	which:grok
 cursor	Cursor	exists:~/.cursor	which:cursor	exists:/Applications/Cursor.app
 gizzi	Gizzi Code	exists:~/.gizzi	which:gizzi
-agy	agy	which:agy	exists:~/.local/bin/agy
+agy	Antigravity CLI	which:agy	exists:~/.local/bin/agy	exists:~/.gemini/antigravity-cli
 opencode	OpenCode	which:opencode	exists:~/.config/opencode
-antigravity	Antigravity IDE	exists:~/.gemini/antigravity-cli	which:antigravity
 qwen	Qwen Code	which:qwen	exists:~/.qwen
 codebuddy	CodeBuddy	which:codebuddy	exists:~/.codebuddy
 workbuddy	WorkBuddy	which:workbuddy	exists:~/.workbuddy

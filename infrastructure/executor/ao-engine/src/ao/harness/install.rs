@@ -143,6 +143,11 @@ pub(crate) trait InstallBackend {
     /// venv entry point (HR CE form for hermes/dsh — own venv so dependency
     /// trees never fight; the shim only after pip succeeded).
     fn venv_pip(&self, root: &Path, tool: &str, install_args: &[String]) -> io::Result<()>;
+    /// Vendor bootstrap script: `curl -fsSL <url> | bash -s -- <rest…>`.
+    /// `{bin}` in rest args is replaced with `<root>/bin`. After the script
+    /// runs, the tool key must exist as `<root>/bin/<tool>` (copied/shimmed
+    /// from `~/.local/bin` when the vendor hardcodes that path).
+    fn script(&self, root: &Path, tool: &str, install_args: &[String]) -> io::Result<()>;
 }
 
 /// Run `cmd`, capture combined output, and fail with the tail of the log on
@@ -214,6 +219,47 @@ impl InstallBackend for SystemBackend {
             ));
         }
         write_shim(&root.join("bin").join(tool), &entry)
+    }
+
+    fn script(&self, root: &Path, tool: &str, install_args: &[String]) -> io::Result<()> {
+        let url = install_args.first().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "script install needs a URL")
+        })?;
+        let bin_dir = root.join("bin");
+        std::fs::create_dir_all(&bin_dir)?;
+        let bin_str = bin_dir.to_string_lossy().into_owned();
+        let extra: Vec<String> = install_args
+            .iter()
+            .skip(1)
+            .map(|arg| arg.replace("{bin}", &bin_str))
+            .collect();
+        let curl = Command::new("curl")
+            .args(["-fsSL", url])
+            .stdout(std::process::Stdio::piped())
+            .spawn()?;
+        let curl_out = curl.stdout.ok_or_else(|| {
+            io::Error::new(io::ErrorKind::BrokenPipe, "curl produced no stdout")
+        })?;
+        let mut bash = Command::new("bash");
+        bash.args(["-s", "--"]).args(&extra).stdin(curl_out);
+        run_logged(&mut bash, &format!("install script {url}"))?;
+        let dest = bin_dir.join(tool);
+        if dest.exists() {
+            return Ok(());
+        }
+        // Vendor scripts that ignore --dir (Cursor) land in ~/.local/bin.
+        let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/"));
+        let local = home.join(".local").join("bin");
+        for name in [tool, "cursor-agent", "agent", "agy"] {
+            let src = local.join(name);
+            if src.exists() {
+                return write_shim(&dest, &src);
+            }
+        }
+        Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("script install of {tool} produced no {}", dest.display()),
+        ))
     }
 }
 
@@ -297,6 +343,11 @@ impl InstallBackend for FakeBackend {
             .iter()
             .find_map(|arg| arg.split_once("==").map(|(_, v)| v.to_string()));
         Self::write_fake_tool(root, tool, pin.as_deref().unwrap_or(tool))
+    }
+
+    fn script(&self, root: &Path, tool: &str, install_args: &[String]) -> io::Result<()> {
+        self.calls.borrow_mut().push(format!("script:{tool}:{install_args:?}"));
+        Self::write_fake_tool(root, tool, tool)
     }
 }
 
@@ -487,9 +538,20 @@ pub(crate) fn install_tool(
             root.display(),
             block.install_args.join(" ")
         ),
+        "script" => format!(
+            "curl -fsSL {} | bash -s -- {}",
+            block.install_args.first().map(String::as_str).unwrap_or(""),
+            block
+                .install_args
+                .iter()
+                .skip(1)
+                .map(|arg| arg.replace("{bin}", &root.join("bin").display().to_string()))
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
         other => {
             return Err(format!(
-                "{tool}: unknown install method '{other}' (expected npm | venv-pip | unsupported)"
+                "{tool}: unknown install method '{other}' (expected npm | venv-pip | script | unsupported)"
             ))
         }
     };
@@ -507,6 +569,7 @@ pub(crate) fn install_tool(
     match block.method.as_str() {
         "npm" => backend.npm_global(root, tool, &block.install_args).map_err(|err| err.to_string())?,
         "venv-pip" => backend.venv_pip(root, tool, &block.install_args).map_err(|err| err.to_string())?,
+        "script" => backend.script(root, tool, &block.install_args).map_err(|err| err.to_string())?,
         _ => unreachable!("method validated above"),
     }
 
@@ -973,6 +1036,9 @@ mod tests {
         fn venv_pip(&self, _root: &Path, _tool: &str, _args: &[String]) -> io::Result<()> {
             Ok(())
         }
+        fn script(&self, _root: &Path, _tool: &str, _args: &[String]) -> io::Result<()> {
+            Ok(())
+        }
     }
 
     #[test]
@@ -991,6 +1057,9 @@ mod tests {
             FakeBackend::write_fake_tool(root, "kimi", "0.0.0-test")
         }
         fn venv_pip(&self, _root: &Path, _tool: &str, _args: &[String]) -> io::Result<()> {
+            Ok(())
+        }
+        fn script(&self, _root: &Path, _tool: &str, _args: &[String]) -> io::Result<()> {
             Ok(())
         }
     }

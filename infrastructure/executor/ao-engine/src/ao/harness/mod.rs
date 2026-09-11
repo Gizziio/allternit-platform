@@ -215,13 +215,16 @@ pub(crate) const DRIVERS: &[Driver] = &[
         probes: &[Probe::Exists("~/.cursor"), Probe::Which("cursor"), Probe::Exists("/Applications/Cursor.app")],
     },
     Driver { key: "gizzi", label: "Gizzi Code", probes: &[Probe::Exists("~/.gizzi"), Probe::Which("gizzi")] },
-    Driver { key: "agy", label: "agy", probes: &[Probe::Which("agy"), Probe::Exists("~/.local/bin/agy")] },
-    Driver { key: "opencode", label: "OpenCode", probes: &[Probe::Which("opencode"), Probe::Exists("~/.config/opencode")] },
     Driver {
-        key: "antigravity",
-        label: "Antigravity IDE",
-        probes: &[Probe::Exists("~/.gemini/antigravity-cli"), Probe::Which("antigravity")],
+        key: "agy",
+        label: "Antigravity CLI",
+        probes: &[
+            Probe::Which("agy"),
+            Probe::Exists("~/.local/bin/agy"),
+            Probe::Exists("~/.gemini/antigravity-cli"),
+        ],
     },
+    Driver { key: "opencode", label: "OpenCode", probes: &[Probe::Which("opencode"), Probe::Exists("~/.config/opencode")] },
     Driver { key: "qwen", label: "Qwen Code", probes: &[Probe::Which("qwen"), Probe::Exists("~/.qwen")] },
     Driver { key: "codebuddy", label: "CodeBuddy", probes: &[Probe::Which("codebuddy"), Probe::Exists("~/.codebuddy")] },
     Driver { key: "workbuddy", label: "WorkBuddy", probes: &[Probe::Which("workbuddy"), Probe::Exists("~/.workbuddy")] },
@@ -781,13 +784,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn embedded_manifest_parses_with_all_17_tools() {
+    fn embedded_manifest_parses_with_all_16_tools() {
         let manifest: Manifest = serde_json::from_str(EMBEDDED_MANIFEST).expect("embedded manifest parses");
-        assert_eq!(manifest.tools.len(), 17, "manifest must cover exactly 17 tools");
+        assert_eq!(manifest.tools.len(), 16, "manifest must cover exactly 16 tools");
         for driver in DRIVERS {
             assert!(manifest.tools.contains_key(driver.key), "manifest missing tool {}", driver.key);
         }
-        assert_eq!(DRIVERS.len(), 17);
+        assert_eq!(DRIVERS.len(), 16);
     }
 
     #[test]
@@ -802,7 +805,7 @@ mod tests {
                 .unwrap_or_else(|| panic!("{key} missing license tag"));
             let block = cfg.install.as_ref().unwrap_or_else(|| panic!("{key} missing install block"));
             match block.method.as_str() {
-                "npm" | "venv-pip" => {
+                "npm" | "venv-pip" | "script" => {
                     assert!(
                         block.pinned_version.as_deref().is_some_and(|p| !p.is_empty()),
                         "{key}: {method} method must carry a pinnedVersion",
@@ -819,7 +822,7 @@ mod tests {
             }
             if class.requires_acceptance() {
                 assert!(
-                    matches!(block.method.as_str(), "npm" | "venv-pip" | "unsupported"),
+                    matches!(block.method.as_str(), "npm" | "venv-pip" | "script" | "unsupported"),
                     "{key}: gated class with unexpected method"
                 );
             }
