@@ -554,6 +554,7 @@ export function FabricSessionPanel({
                 <Plus size={14} weight="bold" />
               </button>
             </div>
+          </div>
           ) : null}
         </div>
         <div className="flex-1 overflow-y-auto px-2 pb-2">
