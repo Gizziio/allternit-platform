@@ -38,7 +38,7 @@ On first launch:
 1. Open Allternit Desktop.
 2. Complete desktop sign-in.
 3. Wait for the local services to come online.
-4. Open `Office & Extensions`.
+4. Open `Allternit Office` (the ACI rail bottom tab).
 
 Expected status in the Office cards:
 
@@ -86,7 +86,7 @@ Run these checks in order:
 
 1. Open Allternit Desktop.
 2. Sign in.
-3. Open `Office & Extensions`.
+3. Open `Allternit Office` (the ACI rail bottom tab).
 4. Confirm the relevant Office host says `installed`.
 5. Open the companion view for that host.
 6. Open the add-in inside the real Microsoft Office host.

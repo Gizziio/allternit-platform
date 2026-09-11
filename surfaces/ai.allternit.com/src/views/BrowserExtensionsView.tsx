@@ -17,14 +17,10 @@ import type { Extension } from './browser-extensions/main/BrowserExtensions.type
 import { ExtensionDetailView } from './browser-extensions/main/ExtensionDetailView';
 import { EXTENSION_MARKETPLACE } from './browser-extensions/main/extension-marketplace';
 import { Modal, ModalHeader, ModalBody, ModalFooter, ModalButton } from '@/components/ui/Modal';
-import { OfficeSuiteSection } from './office/OfficeSuiteSection';
 
-export interface BrowserExtensionsViewProps {
-  /** Shell context: open office editors as ACI shell views (from the ViewRegistry). */
-  openView?: (viewType: string, context?: unknown) => void;
-}
+export interface BrowserExtensionsViewProps {}
 
-export function BrowserExtensionsView({ openView }: BrowserExtensionsViewProps) {
+export function BrowserExtensionsView(_props: BrowserExtensionsViewProps) {
   const [selectedExtensionId, setSelectedExtensionId] = useState<string | null>(null);
   const [selectedMarketplaceExtension, setSelectedMarketplaceExtension] = useState<Extension | null>(null);
   const [showMarketplace, setShowMarketplace] = useState(false);
@@ -72,20 +68,10 @@ export function BrowserExtensionsView({ openView }: BrowserExtensionsViewProps) 
       )}
 
       <div className="mx-auto flex w-full max-w-6xl flex-col px-8 pb-12 pt-10">
-        <h1 className="m-0 text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Office &amp; Extensions</h1>
-
-        <section className="mt-8" data-testid="office-suite-block">
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold">Allternit Office</h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Create and edit Word, Excel, PowerPoint, and PDF files — saved as Allternit artifacts.
-            </p>
-          </div>
-          <OfficeSuiteSection openView={openView} />
-        </section>
+        <h1 className="m-0 text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>ACI Extensions</h1>
 
         <div className="mt-10 flex items-center justify-between gap-4">
-          <h2 className="m-0 text-lg font-semibold tracking-tight">Browser Extensions</h2>
+          <h2 className="m-0 text-lg font-semibold tracking-tight">Extensions</h2>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               type="button"
@@ -150,7 +136,7 @@ export function BrowserExtensionsView({ openView }: BrowserExtensionsViewProps) 
               title="No extensions found"
               caption={searchQuery || activeCategory !== 'all'
                 ? 'Try adjusting your filters or search query.'
-                : 'Install browser extensions to give your agent new capabilities.'}
+                : 'Install ACI extensions to give your agent new capabilities.'}
               ctaLabel={searchQuery || activeCategory !== 'all' ? 'Clear filters' : 'Browse marketplace'}
               primaryCta
               onCtaClick={() => {
@@ -166,7 +152,7 @@ export function BrowserExtensionsView({ openView }: BrowserExtensionsViewProps) 
             <div className="mt-4 max-w-[520px] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 text-center">
               <h3 className="text-[15px] font-semibold text-[var(--text-primary)] m-0 mb-1">Build your own extensions</h3>
               <p className="text-[13px] text-[var(--text-secondary)] m-0 mb-4 leading-relaxed">
-                Our SDK allows you to create native browser extensions that interact with agent context, handle page automation, and surface unique tools.
+                Our SDK allows you to create native ACI extensions that interact with agent context, handle page automation, and surface unique tools.
               </p>
               <button
                 type="button"
@@ -196,7 +182,7 @@ export function BrowserExtensionsView({ openView }: BrowserExtensionsViewProps) 
       <Modal isOpen={showUpload} onClose={() => setShowUpload(false)} size="medium">
         <ModalHeader title="Upload extension" onClose={() => setShowUpload(false)} />
         <ModalBody><div className="space-y-4"><label className="block text-sm text-[var(--text-secondary)]">Name<input value={uploadName} onChange={(e) => setUploadName(e.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 text-[var(--text-primary)] outline-none" /></label><label className="block text-sm text-[var(--text-secondary)]">Description<textarea value={uploadDescription} onChange={(e) => setUploadDescription(e.target.value)} rows={3} className="mt-1.5 w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3 text-[var(--text-primary)] outline-none" /></label><label className="block text-sm text-[var(--text-secondary)]">Package or store URL<input value={uploadUrl} onChange={(e) => setUploadUrl(e.target.value)} placeholder="https://…" className="mt-1.5 h-10 w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 text-[var(--text-primary)] outline-none" /></label></div></ModalBody>
-        <ModalFooter><ModalButton variant="secondary" onClick={() => setShowUpload(false)}>Cancel</ModalButton><ModalButton variant="primary" disabled={!uploadName.trim()} onClick={() => { addCustomExtension({ name: uploadName.trim(), description: uploadDescription.trim() || 'Custom browser extension', storeUrl: uploadUrl.trim() || undefined }); setUploadName(''); setUploadDescription(''); setUploadUrl(''); setShowUpload(false); }}>Add extension</ModalButton></ModalFooter>
+        <ModalFooter><ModalButton variant="secondary" onClick={() => setShowUpload(false)}>Cancel</ModalButton><ModalButton variant="primary" disabled={!uploadName.trim()} onClick={() => { addCustomExtension({ name: uploadName.trim(), description: uploadDescription.trim() || 'Custom ACI extension', storeUrl: uploadUrl.trim() || undefined }); setUploadName(''); setUploadDescription(''); setUploadUrl(''); setShowUpload(false); }}>Add extension</ModalButton></ModalFooter>
       </Modal>
     </div>
   );

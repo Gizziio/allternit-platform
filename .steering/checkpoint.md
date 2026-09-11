@@ -1,32 +1,14 @@
-# Checkpoint — session/pipelinefix-0911
+# Steering checkpoint — session/bbf3793b
 
 ## Goal
-Fix the two flags from the designwordmark session: (1) Cloudflare Pages
-deploy red on main, (2) electron-builder requiring cloned npm-style
-node_modules. Then rebuild the desktop app from fixed main.
+Extract Allternit Office from the ACI "Office & Extensions" tab (renamed "ACI Extensions") into a dedicated Electron window (mirroring the Design window UX) with the A://TERNIT OFFICE wordmark as header logo; ACI-mode bottom rail Design button becomes "Allternit Office" (other modes unchanged).
 
 ## Just did
-- Root-caused flag 1 from CI logs (run 34614092853): `verify-ai` typecheck
-  fails on 6 pre-existing fabric-session errors → gates the ai deploy. Not
-  CF-side.
-- Root-caused flag 2: app-builder-lib packageManager detection — desktop
-  package.json lacks `packageManager` + own lockfile → npm collector →
-  breaks on npm 11 (works on CI only because node 20/npm 10).
-- Created worktree `allternit-session-pipelinefix-0911` on
-  `session/pipelinefix-0911` from origin/main (1e52b9ea7).
-- Fixed BotsChatPage (bot.agent → bot / botProfile accessors, ×5 errors)
-  and FabricSessionPanel (dead 'bot' comparison).
-- Added `"packageManager": "pnpm@10.28.0"` to desktop package.json.
-- Found 2 more pre-existing deploy-gate failures: BotsRosterSection tests
-  stale vs the component's Agent[] contract — rewrote fixtures/messages.
-- Verified: typecheck 0 errors; full vitest 209 files / 1641 tests green;
-  desktop dmg built with the plain pnpm node_modules — electron-builder
-  logged pm=pnpm via the packageManager field, asar has real node_modules
-  (1983 entries).
+- Phases 1-5 implemented in session worktree: office suite extracted from BrowserExtensionsView (now extensions-only "ACI Extensions"), new /office route + OfficeDesktopView + OfficePage with wordmark header (56px design-matched bar), shell:open-office-window IPC + preload openOfficeWindow + lib/open-office-window, ACI-only footer rail tab (small wordmark / collapsed mark when labels off; More-dropdown item swapped too), desktop-bridge launcher retargeted to the office window, DocumentsView pointer updated, docs + comments swept, tests reworked (office-hub helper → office-surface; office-extensions-view.spec → aci-extensions-view.spec with rail/window/popup tests; desktop office-windows.spec launcher test updated).
+- pnpm install running in the fresh worktree (needed before typecheck).
 
 ## Next
-- Commit, push, PR, merge; attest; fast-forward worktree to merged main;
-  rebuild dmg from merged main; swap preview binary; cleanup.
+- Verify: platform typecheck:fast + vitest shell/office, desktop typecheck + vitest, release-preflight, then commit/PR per ritual.
 
 ## Open questions
-- None.
+- Rail icon: full small wordmark (labels on) vs collapsed A:// mark (labels off) — chose this for rail width; owner can tune height.

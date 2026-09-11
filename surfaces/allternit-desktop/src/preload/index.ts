@@ -325,6 +325,7 @@ const meshAPI = {
 const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   openDesign: (): Promise<void> => ipcRenderer.invoke('shell:open-design'),
+  openOfficeWindow: (): Promise<void> => ipcRenderer.invoke('shell:open-office-window'),
   openRemoteControl: (): Promise<void> => ipcRenderer.invoke('shell:open-remote-control'),
   openFabricSession: (): Promise<void> => ipcRenderer.invoke('shell:open-fabric-session'),
   openHud: (): Promise<void> => ipcRenderer.invoke('shell:open-hud'),
