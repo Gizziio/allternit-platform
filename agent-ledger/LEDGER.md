@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:59 — grok — ao visibility HTTP + SDK client.bots (BA-8)
+
+- **Session ID / Branch:** `ao/ba-remaining` (worktree `allternit-ao-ba-remaining`)
+- **Agent:** grok (implemented + merged)
+- **Summary:** Merged PR #297 (c934a1cc5) — visibility DTO from `ao visibility`; `Allternit.bots` create|list|get|archive; session `bot_id`. Also merged #295 and #294 this session.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/297 · c934a1cc5b922f73af76c38c9c1e5425447f8968
+- **How it works:** Engine blocked/idle panes + waiting-on-you when `ao` answers; peer registry fallback. Bots live on the agents table (`is_bot`). Session create uses `bot_id` as the agent when `agent` is omitted.
+- **Outstanding work:** BA-6 computer-orgo Phase 1; BA-5 spawned-child event feed; native CLI spawn for `bot.brain`; UHP spawn (BA-7).
+- **Summary file:** [2026-09-10-2159-ba-remaining-visibility-bots-grok.md](./summaries/2026-09-10-2159-ba-remaining-visibility-bots-grok.md)
+
 ### 2026-09-10 21:45 — grok — Fabric PWA leftover approvals/watch + desktop rebuild
 
 - **Session ID / Branch:** `ao/fabric-pwa-bot-mode-deferred`
