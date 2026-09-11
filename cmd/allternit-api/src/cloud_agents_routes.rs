@@ -98,6 +98,10 @@ struct CloudBudget {
     max_tokens: Option<u64>,
     max_turns: Option<u64>,
     max_tool_calls: Option<u64>,
+    /// User-visible cost ceiling in USD. Telemetry only — Allternit does not
+    /// charge this today. Stored so a later billing change has a field.
+    #[serde(default)]
+    max_cost_usd: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -175,6 +179,36 @@ fn public_status(db_status: &str, in_flight: bool) -> &'static str {
     }
 }
 
+fn public_budget(session: &beta::SessionRow) -> Value {
+    let tokens = session
+        .budget
+        .get("tokens_used")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let estimated_cost_cents =
+        crate::pricing::compute_cost_cents("llm_tokens", "tokens", tokens as f64);
+    let estimated_cost_usd = estimated_cost_cents as f64 / 100.0;
+    let max_cost_usd = session
+        .metadata
+        .get("max_cost_usd")
+        .and_then(Value::as_f64);
+    let over_budget = max_cost_usd
+        .map(|max| estimated_cost_usd > max)
+        .unwrap_or(false);
+    let mut budget = session.budget.clone();
+    if let Some(object) = budget.as_object_mut() {
+        object.insert(
+            "estimated_cost_cents".into(),
+            json!(estimated_cost_cents),
+        );
+        object.insert("estimated_cost_usd".into(), json!(estimated_cost_usd));
+        object.insert("charged".into(), json!(false));
+        object.insert("max_cost_usd".into(), json!(max_cost_usd));
+        object.insert("over_budget".into(), json!(over_budget));
+    }
+    budget
+}
+
 fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
     let vault_ids = session
         .metadata
@@ -187,7 +221,7 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
         "name": session.name,
         "status": public_status(&session.status, in_flight),
         "metadata": session.metadata,
-        "budget": session.budget,
+        "budget": public_budget(session),
         "computer": {
             "kind": session.computer_kind.clone().unwrap_or_else(|| "none".to_string()),
             "id": session.computer_id,
@@ -508,6 +542,9 @@ async fn create_cloud_session(
         }
         if let Some(bot_id) = &bot_id {
             object.insert("bot_id".to_string(), json!(bot_id));
+        }
+        if let Some(max_cost_usd) = body.budget.as_ref().and_then(|b| b.max_cost_usd) {
+            object.insert("max_cost_usd".to_string(), json!(max_cost_usd));
         }
         metadata
     };
@@ -1242,6 +1279,7 @@ mod tests {
             "agent": {"model": "kimi-k2", "instructions": "Be terse.", "name": "helper"},
             "computer": {"kind": "none"},
             "input": "hello agent",
+            "budget": {"max_cost_usd": 5.0},
             "metadata": {"origin": "test"}
         });
         let (status, payload) = post_json(&router, "/sessions", &body, "user-a").await;
@@ -1249,6 +1287,10 @@ mod tests {
         let session = &payload["session"];
         assert_eq!(session["status"], "running");
         assert_eq!(session["computer"]["kind"], "none");
+        assert_eq!(session["budget"]["charged"], false);
+        assert_eq!(session["budget"]["estimated_cost_cents"], 0);
+        assert_eq!(session["budget"]["over_budget"], false);
+        assert_eq!(session["budget"]["max_cost_usd"], 5.0);
         assert!(session["agent_id"].is_string());
 
         // The inline agent became a real agents row; instructions → system_prompt.

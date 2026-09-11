@@ -279,7 +279,12 @@ surface above is the one that translates to Allternit names.
 | `400` | Archived session, unknown event type, `computer.kind: fabric`, version mismatch, unknown `brain_id`/`vault_ids`/`parent_thread_id`. |
 | `503` | Error handling: Computer Cloud could not provision (`code: computer_unavailable`). The API process has no Incus/Tart VM driver. This is fail-closed — the session is not silently created as `kind: none`. |
 
-Session `budget` is `{ max_tokens, max_turns, max_tool_calls }` plus usage counters. There is no USD field on this surface.
+Session `budget` includes usage counters (`tokens_used`, `turns_used`,
+`tool_calls_used`) plus **cost telemetry for the user**:
+`estimated_cost_cents`, `estimated_cost_usd`, `charged: false`, optional
+`max_cost_usd`, and `over_budget`. Allternit does not charge this amount.
+The field is in place so a later billing change does not need a new shape.
+Token estimate uses `pricing.rs` (`llm_tokens:tokens`).
 
 `permission: always_ask` records the policy and **does not** auto-provision a Cloud Desktop (the client binds `computer.id` later or recreates with `always_allow`). `always_allow` and `auto` provision immediately when a driver is present.
 

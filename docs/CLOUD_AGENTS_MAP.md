@@ -16,7 +16,7 @@ Orchestrator-owned. Phases 1–3 are on main.
 
 ## Done vs not this product
 
-- Session budget on this API is token/turn/tool caps, not USD.
+- Session budget includes USD **telemetry** (`estimated_cost_usd`, `charged: false`). Not a charge.
 - `503` + `code: computer_unavailable` is error handling when Computer Cloud has no VM driver.
 - Bot Agents BA-* is a different specialty (named BA-* gate).
 - OpenAI/Anthropic compat shims are a spec non-goal.
