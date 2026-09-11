@@ -12,8 +12,16 @@ const statusEl = document.getElementById('status');
 const fpsEl = document.getElementById('fps');
 const kbd = document.getElementById('kbd');
 const btnKbd = document.getElementById('btn-kbd');
-const btnZoom = document.getElementById('btn-zoom');
+const btnTouch = document.getElementById('btn-touch');
+const btnTrackpad = document.getElementById('btn-trackpad');
+const btnFit = document.getElementById('btn-fit');
+const btnActual = document.getElementById('btn-actual');
 const specialKeys = document.getElementById('special-keys');
+const cursorEl = document.getElementById('cursor');
+
+let inputMode = 'touch'; // touch | trackpad
+let viewMode = 'fit';    // fit | actual
+let cursorImg = { x: 0, y: 0 };
 
 // ── Connection ──────────────────────────────────────────────────────────────
 
@@ -74,6 +82,7 @@ function connect() {
       imgW = bitmap.width;
       imgH = bitmap.height;
       send({ type: 'view', imgW, imgH });
+      cursorImg = { x: imgW / 2, y: imgH / 2 };
       resetView();
     }
     latest = bitmap;
@@ -108,11 +117,40 @@ function resizeCanvas() {
 function resetView() {
   if (!imgW || !imgH) return;
   fitScale = Math.min(canvas.width / imgW, canvas.height / imgH);
-  zoom = 1;
-  scale = fitScale;
-  offX = (canvas.width - imgW * scale) / 2;
-  offY = (canvas.height - imgH * scale) / 2;
+  zoom = viewMode === 'actual' ? Math.max(1, (window.devicePixelRatio || 1)) : 1;
+  // Fit = contain. Actual = 1 CSS pixel per stream pixel (no magnifying-glass zoom).
+  if (viewMode === 'actual') {
+    scale = window.devicePixelRatio || 1;
+    offX = (canvas.width - imgW * scale) / 2;
+    offY = (canvas.height - imgH * scale) / 2;
+  } else {
+    scale = fitScale;
+    offX = (canvas.width - imgW * scale) / 2;
+    offY = (canvas.height - imgH * scale) / 2;
+  }
   scheduleDraw();
+}
+
+function setInputMode(mode) {
+  inputMode = mode;
+  btnTouch.classList.toggle('active', mode === 'touch');
+  btnTrackpad.classList.toggle('active', mode === 'trackpad');
+  cursorEl.hidden = mode !== 'trackpad';
+}
+
+function setViewMode(mode) {
+  viewMode = mode;
+  btnFit.classList.toggle('active', mode === 'fit');
+  btnActual.classList.toggle('active', mode === 'actual');
+  resetView();
+}
+
+function placeCursorFromImage(ix, iy) {
+  cursorImg = { x: ix, y: iy };
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  cursorEl.style.left = `${rect.left + (offX + ix * scale) / dpr}px`;
+  cursorEl.style.top = `${rect.top + (offY + iy * scale) / dpr}px`;
 }
 
 function scheduleDraw() {
@@ -168,6 +206,10 @@ canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
   if (e.touches.length === 1) {
     const t = e.touches[0];
+    if (inputMode === 'trackpad') {
+      gesture = { mode: 'trackpad', lastX: t.clientX, lastY: t.clientY, startT: performance.now(), moved: false };
+      return;
+    }
     gesture = {
       mode: 'single',
       startX: t.clientX, startY: t.clientY,
@@ -200,6 +242,19 @@ canvas.addEventListener('touchstart', (e) => {
 canvas.addEventListener('touchmove', (e) => {
   e.preventDefault();
   if (!gesture) return;
+  if (gesture.mode === 'trackpad' && e.touches.length === 1) {
+    const t = e.touches[0];
+    const dx = t.clientX - gesture.lastX;
+    const dy = t.clientY - gesture.lastY;
+    if (Math.hypot(dx, dy) > 2) gesture.moved = true;
+    cursorImg.x = Math.max(0, Math.min(imgW, cursorImg.x + dx / (scale / (window.devicePixelRatio || 1))));
+    cursorImg.y = Math.max(0, Math.min(imgH, cursorImg.y + dy / (scale / (window.devicePixelRatio || 1))));
+    placeCursorFromImage(cursorImg.x, cursorImg.y);
+    sendInput({ type: 'move', x: Math.round(cursorImg.x), y: Math.round(cursorImg.y) });
+    gesture.lastX = t.clientX;
+    gesture.lastY = t.clientY;
+    return;
+  }
   if (gesture.mode === 'single' && e.touches.length === 1) {
     const t = e.touches[0];
     const moved = Math.hypot(t.clientX - gesture.startX, t.clientY - gesture.startY);
@@ -221,22 +276,17 @@ canvas.addEventListener('touchmove', (e) => {
     const [a, b] = e.touches;
     const mid = midpoint(a, b);
     const dist = distance(a, b);
-    const ratio = dist / (gesture.dist || dist);
-    if (!gesture.pinch && (ratio > 1.12 || ratio < 0.89)) gesture.pinch = true;
-    if (gesture.pinch) {
-      clampZoomAround(dist / gesture.dist, mid.x, mid.y);
-    } else {
-      // two-finger drag → scroll the remote (natural direction)
-      gesture.scrollAccum.x += mid.x - gesture.mid.x;
-      gesture.scrollAccum.y += mid.y - gesture.mid.y;
-      const step = 18; // CSS px per wheel line
-      const dx = Math.trunc(gesture.scrollAccum.x / step);
-      const dy = Math.trunc(gesture.scrollAccum.y / step);
-      if (dx || dy) {
-        sendInput({ type: 'scroll', dx, dy });
-        gesture.scrollAccum.x -= dx * step;
-        gesture.scrollAccum.y -= dy * step;
-      }
+    // Pinch-zoom of a JPEG is what made the picture look grainy. Fit/Actual
+    // are the only view modes; two-finger drag always scrolls the remote.
+    gesture.scrollAccum.x += mid.x - gesture.mid.x;
+    gesture.scrollAccum.y += mid.y - gesture.mid.y;
+    const step = 18; // CSS px per wheel line
+    const dx = Math.trunc(gesture.scrollAccum.x / step);
+    const dy = Math.trunc(gesture.scrollAccum.y / step);
+    if (dx || dy) {
+      sendInput({ type: 'scroll', dx, dy });
+      gesture.scrollAccum.x -= dx * step;
+      gesture.scrollAccum.y -= dy * step;
     }
     gesture.mid = mid;
     gesture.dist = dist;
@@ -246,7 +296,11 @@ canvas.addEventListener('touchmove', (e) => {
 canvas.addEventListener('touchend', (e) => {
   e.preventDefault();
   if (!gesture) return;
-  if (gesture.mode === 'single') {
+  if (gesture.mode === 'trackpad') {
+    if (!gesture.moved && performance.now() - gesture.startT < TAP_MAX_MS) {
+      sendInput({ type: 'click', x: Math.round(cursorImg.x), y: Math.round(cursorImg.y), button: 'left' });
+    }
+  } else if (gesture.mode === 'single') {
     if (gesture.timer) clearTimeout(gesture.timer);
     if (gesture.dragging) {
       const p = toImageCoords(gesture.lastX, gesture.lastY);
@@ -331,7 +385,10 @@ specialKeys.addEventListener('click', (e) => {
   kbd.focus(); // keep the OSK up
 });
 
-btnZoom.addEventListener('click', resetView);
+btnTouch.addEventListener('click', () => setInputMode('touch'));
+btnTrackpad.addEventListener('click', () => setInputMode('trackpad'));
+btnFit.addEventListener('click', () => setViewMode('fit'));
+btnActual.addEventListener('click', () => setViewMode('actual'));
 
 window.addEventListener('resize', resizeCanvas);
 window.visualViewport?.addEventListener('resize', resizeCanvas);

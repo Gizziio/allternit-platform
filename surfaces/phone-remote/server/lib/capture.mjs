@@ -43,6 +43,8 @@ export class Capture extends EventEmitter {
     this.child = null;
     this.running = false;
     this.actualMode = null;
+    this.lastFrame = null;
+    this.lastInfo = { width: 0, height: 0 };
   }
 
   async start() {
@@ -75,7 +77,9 @@ export class Capture extends EventEmitter {
         if (buf.length < 4) break;
         const n = buf.readUInt32BE(0);
         if (buf.length < 4 + n) break;
-        this.emit('frame', buf.subarray(4, 4 + n));
+        const jpeg = buf.subarray(4, 4 + n);
+        this.lastFrame = jpeg;
+        this.emit('frame', jpeg);
         buf = buf.subarray(4 + n);
       }
     });
@@ -88,7 +92,10 @@ export class Capture extends EventEmitter {
         errBuf = errBuf.slice(idx + 1);
         try {
           const msg = JSON.parse(line);
-          if (msg.type === 'display') this.emit('info', { width: msg.width, height: msg.height });
+          if (msg.type === 'display') {
+            this.lastInfo = { width: msg.width, height: msg.height };
+            this.emit('info', this.lastInfo);
+          }
           else if (msg.type === 'started') this.log(`[capture] sckit started ${msg.captureWidth}x${msg.captureHeight} @${msg.fps}fps`);
           else if (msg.type === 'error') this.emit('captureError', msg);
         } catch {
@@ -122,6 +129,7 @@ export class Capture extends EventEmitter {
         // Downscale to the same ballpark as the sckit path (sips is a system tool).
         await execFileP('sips', ['-Z', '1280', '-s', 'formatOptions', String(Math.round(this.quality * 100)), tmp, '--out', small], { timeout: 5000 });
         const frame = readFileSync(small);
+        this.lastFrame = frame;
         this.emit('frame', frame);
       } catch (err) {
         this.emit('captureError', { type: 'error', error: `screencapture: ${err.message}` });

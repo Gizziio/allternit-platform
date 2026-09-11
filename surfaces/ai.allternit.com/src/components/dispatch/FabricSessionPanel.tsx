@@ -20,6 +20,7 @@ import {
 } from '@/lib/dispatch/fabric-session-client';
 import { FABRIC_DRIVE_KINDS, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
 import { extractAciScreenshot, FabricAciDrive, FabricBotDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive, mergeNodeBots } from '@/components/dispatch/FabricSessionDriveViews';
+import { FabricDesktopDrive } from '@/components/dispatch/FabricDesktopDrive';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
 
 export interface FabricSessionPanelProps {
@@ -456,6 +457,7 @@ export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runti
                   {pushLoading ? <Spinner className="animate-spin" size={14} /> : pushEnabled ? <Bell size={14} weight="fill" /> : <BellSlash size={14} />}
                 </button>
               )}
+              {driveKind !== 'desktop' ? (
               <button
                 type="button"
                 onClick={() => void handleStartSession()}
@@ -464,6 +466,7 @@ export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runti
               >
                 <Plus size={14} weight="bold" />
               </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -503,6 +506,10 @@ export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runti
                 })();
               }}
             />
+          ) : driveKind === 'desktop' ? (
+            <div className="px-3 py-4 text-[12px] text-[var(--shell-item-muted)] leading-5">
+              Live display of this machine. Capture stays on the node; this PWA talks through Fabric.
+            </div>
           ) : kindSessions.length === 0 ? (
             <div className="px-2 py-6 text-center">
               <p className="text-[12px] font-medium text-[var(--shell-item-fg)] m-0 mb-1">No {driveKind} sessions</p>
@@ -577,7 +584,11 @@ export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct, runti
       </aside>
 
       <div className="flex flex-col min-w-0 min-h-0 bg-[var(--shell-view-bg)]">
-        {!selectedSession ? (
+        {driveKind === 'desktop' ? (
+          <div className="flex-1 min-h-0 p-3">
+            <FabricDesktopDrive runtimeId={runtimeId} getToken={getToken} hostName={runtime?.name || runtime?.host} />
+          </div>
+        ) : !selectedSession ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
               <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />

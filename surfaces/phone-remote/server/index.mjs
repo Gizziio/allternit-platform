@@ -42,8 +42,8 @@ function parseArgs(argv) {
     token: null,
     capture: 'sckit', // sckit | screencapture | none
     fps: 10,
-    scale: 0.5,
-    quality: 0.6,
+    scale: 0.75,
+    quality: 0.72,
     input: true,
     inputDryRun: false,
   };
@@ -71,8 +71,8 @@ const USAGE = `usage: node server/index.mjs [options]
   --token T            auth token (default: random per boot)
   --capture MODE       sckit | screencapture | none (default sckit)
   --fps N              capture fps target (default 10)
-  --scale F            sckit capture scale 0-1 (default 0.5)
-  --quality F          JPEG quality 0-1 (default 0.6)
+  --scale F            sckit capture scale 0-1 (default 0.75)
+  --quality F          JPEG quality 0-1 (default 0.72)
   --no-input           disable input injection entirely
   --input-dry-run      input helper echoes commands, posts no events`;
 
@@ -82,6 +82,11 @@ function tailscaleIPv4() {
   } catch {
     return null;
   }
+}
+
+function isLoopback(req) {
+  const a = req.socket?.remoteAddress || '';
+  return a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1';
 }
 
 function tokenMatches(cfg, presented) {
@@ -132,6 +137,9 @@ async function main() {
 
   let viewer = null; // single-viewer: the one WSConnection holding the session
 
+  // Capture runs for the process lifetime so Fabric can poll /frame without a WS viewer.
+  if (capture) capture.start().catch((err) => console.error(`[capture] start: ${err.message}`));
+
   function sendJSON(conn, obj) { conn.sendText(JSON.stringify(obj)); }
 
   function onViewerMessage(conn, text) {
@@ -167,13 +175,12 @@ async function main() {
       input: input ? { enabled: true, dryRun: cfg.inputDryRun, accessibilityTrusted: input.ready?.accessibilityTrusted ?? null } : { enabled: false },
       display: input?.display ?? null,
     });
-    capture?.start().catch((err) => sendJSON(conn, { type: 'error', error: `capture: ${err.message}` }));
+    // Capture is already running at process start; a second start() is a no-op.
 
     conn.on('text', (t) => onViewerMessage(conn, t));
     conn.on('close', () => {
       console.error('[server] viewer disconnected');
       if (viewer === conn) viewer = null;
-      capture?.stop();
     });
     conn.on('error', () => {});
   }
@@ -204,6 +211,51 @@ async function main() {
   const httpHandler = async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
+
+    // Loopback is the Fabric shim on this machine. Token still required off-loopback.
+    const trustedLocal = isLoopback(req);
+    if (url.pathname === '/hello' && (req.method === 'GET' || req.method === 'HEAD')) {
+      if (!trustedLocal && !tokenMatches(cfg, presentedToken(req, url))) {
+        res.writeHead(403, { 'content-type': 'text/plain' }); return res.end('403\n');
+      }
+      const body = Buffer.from(JSON.stringify({
+        capture: { mode: capture?.actualMode ?? cfg.capture, fps: cfg.fps, ...((capture?.lastInfo) || {}) },
+        input: input ? { enabled: true, dryRun: cfg.inputDryRun, accessibilityTrusted: input.ready?.accessibilityTrusted ?? null } : { enabled: false },
+        display: input?.display ?? null,
+        hasFrame: Boolean(capture?.lastFrame),
+      }));
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'content-length': body.length });
+      return res.end(body);
+    }
+    if (url.pathname === '/frame' && req.method === 'GET') {
+      if (!trustedLocal && !tokenMatches(cfg, presentedToken(req, url))) {
+        res.writeHead(403, { 'content-type': 'text/plain' }); return res.end('403\n');
+      }
+      const jpeg = capture?.lastFrame;
+      if (!jpeg) { res.writeHead(503, { 'content-type': 'text/plain' }); return res.end('no frame\n'); }
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': jpeg.length });
+      return res.end(jpeg);
+    }
+    if (url.pathname === '/input' && req.method === 'POST') {
+      if (!trustedLocal && !tokenMatches(cfg, presentedToken(req, url))) {
+        res.writeHead(403, { 'content-type': 'text/plain' }); return res.end('403\n');
+      }
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      let ev;
+      try { ev = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch {
+        res.writeHead(400, { 'content-type': 'text/plain' }); return res.end('bad json\n');
+      }
+      if (!input) { res.writeHead(409, { 'content-type': 'text/plain' }); return res.end('input disabled\n'); }
+      if (ev.type === 'view') {
+        input.setImageSize(Number(ev.imgW) || 0, Number(ev.imgH) || 0);
+        res.writeHead(204); return res.end();
+      }
+      const r = await input.handleClientEvent(ev);
+      res.writeHead(r.ok ? 204 : 400, { 'content-type': 'application/json' });
+      return res.end(r.ok ? '' : JSON.stringify(r));
+    }
+
     if (req.method !== 'GET') { res.writeHead(405); return res.end(); }
     if (!tokenMatches(cfg, presentedToken(req, url))) {
       res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });

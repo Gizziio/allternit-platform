@@ -24,8 +24,13 @@
   </div>
 
   <div id="toolbar">
-    <button id="btn-kbd" title="keyboard">⌨</button>
-    <button id="btn-zoom" title="reset zoom">1:1</button>
+    <div id="mode-row">
+      <button id="btn-touch" class="active" title="finger taps the screen">Touch</button>
+      <button id="btn-trackpad" title="finger moves a cursor">Trackpad</button>
+      <button id="btn-fit" class="active" title="fit the whole desktop">Fit</button>
+      <button id="btn-actual" title="native pixels">Actual</button>
+    </div>
+    <button id="btn-kbd" title="keyboard">Keyboard</button>
     <div id="special-keys" hidden>
       <button data-key="esc">esc</button>
       <button data-key="tab">tab</button>
@@ -38,6 +43,7 @@
       <button data-key="delete">⌫</button>
     </div>
   </div>
+  <div id="cursor" hidden></div>
 
   <!-- Hidden field: focusing it summons the iOS on-screen keyboard. -->
   <textarea id="kbd" autocapitalize="off" autocorrect="off" autocomplete="off"

@@ -216,6 +216,17 @@ async function partB() {
     assert.notEqual(traversal.status, 200);
     ok('path traversal blocked');
 
+    const helloHttp = await httpGet(port, '/hello');
+    assert.equal(helloHttp.status, 200);
+    const helloBody = JSON.parse(helloHttp.body);
+    assert.equal(helloBody.capture.mode, 'none');
+    assert.equal(helloBody.hasFrame, false);
+    ok('loopback GET /hello without token → capture status');
+
+    const noFrame = await httpGet(port, '/frame');
+    assert.equal(noFrame.status, 503);
+    ok('loopback GET /frame with capture none → 503');
+
     // WS without token → 403 (raw socket, since wsClient expects 101)
     await new Promise((resolve, reject) => {
       const sock = connect(port, '127.0.0.1', () => {
