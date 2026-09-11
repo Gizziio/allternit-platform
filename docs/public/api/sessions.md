@@ -25,11 +25,11 @@ event vocabulary; this surface translates to Allternit names on read.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `agent` | string \| object | no | Existing agent id, `{ "id", "version" }` reference, or an inline agent: `{ "model", "instructions"?, "tools"?, "name"? }`. Inline agents create an `agents` row (`instructions` becomes its system prompt); the default name is `cloud-agent`. |
-| `computer` | object | no | `{ "kind": "none" \| "sandbox" \| "local" }`. Default `none`. |
+| `computer` | object | no | `{ "kind": "none" \| "sandbox" \| "desktop" \| "fabric" \| "local", "id"? }`. Default `none`. |
 | `input` | string \| object | no | Initial user message: a plain string or `{ "type": "user.message", "content": "…" }`. Enqueues a run, like sending `user.message` after create. |
 | `stream` | boolean | no | If true, the response is an SSE stream of the session's events (same as `GET /sessions/:id/events/stream`), starting with `session.created`, instead of a JSON session body. |
 | `vault_ids` | string[] | no | Vault ids the session may use. Each id must exist (`created_by` = caller) or create returns `400`. Recorded on session metadata and returned as top-level `vault_ids`. |
-| `budget` | object | no | `{ "max_tokens"?, "max_turns"?, "max_tool_calls"? }`. |
+| `budget` | object | no | `{ "max_tokens"?, "max_turns"?, "max_tool_calls"?, "max_cost_usd"? }`. Usage plus USD telemetry (`estimated_cost_usd`, `charged: false`). Not a charge. |
 | `metadata` | object | no | Arbitrary key/value object. Defaults to `{}`. |
 | `brain_id` | string \| null | no | Brain to attach. Must exist for the caller or create returns `400`. Stored on the session row and returned as `brain_id`. |
 | `bot_id` | string | no | Bot Agent id (`is_bot` agent). If `agent` is omitted, this agent is used. Returned on the session. |
