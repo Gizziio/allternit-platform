@@ -2,8 +2,10 @@
  * Start Bot Session — plain (non-hook) session-start core.
  *
  * Extracted from useStartBotSession so non-React callers (rail rows, toasts,
- * launchpad, bot home) can start or reuse a bot's canonical chat session and
- * land it in the standard in-chat surface without mounting the hook.
+ * launchpad, bot home) can start or reuse a bot's canonical chat session
+ * without mounting the hook. This core only prepares the session — callers
+ * decide where to land it (every shell entry point opens the dedicated
+ * 'bot-chat-session' view via openBotChatView).
  *
  * @module start-bot-session
  */

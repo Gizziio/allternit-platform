@@ -31,12 +31,8 @@ import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
 import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
-import { buildBotRuntimeEnv } from "@/lib/bots/bot-runtime-env";
-import { getBotAccentColor } from "@/lib/bots/bot-profile";
-import type { ResolvedSecret } from "@/lib/agents/agent-secrets-resolver";
-import type { ResolvedConnectorCredential } from "@/lib/agents/agent-connectors-resolver";
-import type { Agent, HarnessConfig } from "@/lib/agents/agent.types";
-import { BotRuntimeConfigModal } from "./bots/BotRuntimeConfigModal";
+import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
+import type { Agent } from "@/lib/agents/agent.types";
 import { useVoice } from "@/providers/voice-provider";
 import {
   ComposerPermissionInfoBar,
@@ -56,7 +52,6 @@ import { SendErrorBanner } from "./chat/main/SendErrorBanner";
 import { NativeOriginBanner } from "@/components/native-sessions/NativeOriginBanner";
 
 import { createModuleLogger } from '@/lib/logger';
-import { ArrowLeft } from "lucide-react";
 
 const logger = createModuleLogger('ChatView');
 
@@ -194,9 +189,33 @@ export function ChatView({
   const voiceWasLoadingRef = useRef(false);
   const lastSpokenMessageRef = useRef<string | null>(null);
 
+  // Redirect guard: bot sessions render only in the dedicated
+  // BotChatSessionView (viewType 'bot-chat-session'), never inline in this
+  // home chat surface. If a store-level path still activates a bot session
+  // here, hand it off and render nothing below. Opening the other view
+  // replaces this one, and the effect only re-runs when the active session
+  // changes, so it cannot loop.
   const isBotSession = Boolean(activeNativeSession?.metadata?.isBot);
+  const activeBotId = (activeNativeSession?.metadata?.agentId as string | undefined)
+    ?? (activeNativeSession?.metadata?.botCanonicalFor as string | undefined)
+    ?? null;
+  useEffect(() => {
+    if (!isBotSession || !activeNativeSession) return;
+    if (activeBotId) {
+      openBotChatView(activeNativeSession.id, activeBotId, 'chat');
+    } else {
+      window.dispatchEvent(
+        new CustomEvent('allternit:open-view', {
+          detail: {
+            viewType: 'bot-chat-session',
+            context: { sessionId: activeNativeSession.id, originView: 'chat' },
+          },
+        }),
+      );
+    }
+  }, [isBotSession, activeNativeSession, activeBotId]);
+
   const [agentCardDismissed, setAgentCardDismissed] = useState(false);
-  const [isRuntimeModalOpen, setIsRuntimeModalOpen] = useState(false);
   useEffect(() => {
     setAgentCardDismissed(false);
   }, [embeddedAgentSession.sessionId]);
@@ -273,17 +292,8 @@ export function ChatView({
 
   const dismissEmbeddedAgentSession = useCallback(() => {
     // Hide the agent context card instead of tearing down the active session.
-    // Previously this closed the session, which caused a crash for bot sessions
-    // and left the user with no way to continue the conversation.
     setAgentCardDismissed(true);
   }, []);
-
-  const closeBotSession = useCallback(() => {
-    // Leave the bot session without deleting it — it stays in recents and can
-    // be reopened from bot home or search. Clearing the active session returns
-    // the chat surface to its home empty state.
-    setActiveNativeSession(null);
-  }, [setActiveNativeSession]);
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
@@ -508,102 +518,45 @@ export function ChatView({
   const hasAgentBinding = Boolean(
     embeddedAgentDescriptor.agentId || embeddedAgentDescriptor.agentName,
   );
-  // For bot sessions, show the context card only while the session is empty.
-  // Once the user starts messaging, the card is hidden so the conversation
-  // owns the screen; the X button safely dismisses it without crashing.
   const showAgentCard =
     isAgentSessionEmbedded &&
     hasAgentBinding &&
-    !agentCardDismissed &&
-    (!isBotSession || nativeMessages.length === 0);
+    !agentCardDismissed;
 
-  // Build runtime context for bot sessions so the card shows what the bot
-  // actually has configured (connectors, secrets, harness) and what is missing.
   const sessionMetadata = embeddedAgentSession.session?.metadata as Record<string, unknown> | undefined;
-  const botRuntimeEnv = useMemo(() => {
-    if (!isBotSession) return undefined;
-    return buildBotRuntimeEnv({
-      harness: (sessionMetadata?.harness as HarnessConfig | undefined) ?? selectedAgent?.harness,
-      resolvedSecrets: (sessionMetadata?.resolvedSecrets as ResolvedSecret[] | undefined) ?? undefined,
-      resolvedConnectors: (sessionMetadata?.resolvedConnectors as ResolvedConnectorCredential[] | undefined) ?? undefined,
-      vmOperator: (sessionMetadata?.vmOperator as Agent['vmOperator']) ?? selectedAgent?.vmOperator,
-      agentId: selectedAgent?.id,
-      characterLayer: selectedAgent?.characterLayer,
-    });
-  }, [isBotSession, sessionMetadata, selectedAgent?.harness, selectedAgent?.vmOperator, selectedAgent?.id, selectedAgent?.characterLayer]);
-  const runtimeEnvEntries = useMemo(() => {
-    if (!botRuntimeEnv) return undefined;
-    return Object.entries(botRuntimeEnv.env).map(([key, value]) => ({
-      key,
-      value: String(value),
-      source: 'runtime' as const,
-    }));
-  }, [botRuntimeEnv]);
-  const missingRuntimeKeys = useMemo(() => {
-    if (!isBotSession) return undefined;
-    const missing: string[] = [];
-    const missingSecrets = sessionMetadata?.missingSecrets;
-    const missingConnectors = sessionMetadata?.missingConnectors;
-    if (Array.isArray(missingSecrets)) missing.push(...missingSecrets.map(String));
-    if (Array.isArray(missingConnectors)) missing.push(...missingConnectors.map(String));
-    return missing.length > 0 ? missing : undefined;
-  }, [isBotSession, sessionMetadata]);
 
-  const botProfile = sessionMetadata?.botProfile as { welcomeMessage?: string; tagline?: string; starterPrompts?: string[] } | undefined;
-  const botSessionDescription =
+  const agentSessionDescription =
     embeddedAgentSession.session?.description ||
-    botProfile?.welcomeMessage ||
-    botProfile?.tagline ||
     selectedAgent?.description;
 
   const embeddedAgentStrip = showAgentCard ? (
     <AgentContextStrip
       surface={agentSurface}
       sessionName={embeddedAgentSession.session?.name || "Agent Session"}
-      sessionDescription={botSessionDescription}
+      sessionDescription={agentSessionDescription}
       agentName={embeddedAgentDescriptor.agentName || selectedAgent?.name || undefined}
       harnessMode={selectedAgent?.harness?.mode}
-      statusLabel={isBotSession ? "Bot" : getAgentSessionStatusLabel(embeddedAgentSession.session)}
+      statusLabel={getAgentSessionStatusLabel(embeddedAgentSession.session)}
       messageCount={embeddedAgentSession.session?.messageCount ?? nativeMessages.length}
       workspaceScope={embeddedAgentDescriptor.workspaceScope}
       canvasCount={embeddedCanvasIds.length}
       tags={embeddedAgentSession.session?.tags}
       toolsEnabled={embeddedAgentDescriptor.agentFeatures?.tools === true}
       automationEnabled={embeddedAgentDescriptor.agentFeatures?.automation === true}
-      runtimeEnv={botRuntimeEnv?.env}
-      runtimeEnvEntries={runtimeEnvEntries}
       connectorBindings={(sessionMetadata?.connectorBindings as AgentContextStripProps["connectorBindings"]) ?? selectedAgent?.connectorBindings}
       secretRefs={(sessionMetadata?.secretRefs as AgentContextStripProps["secretRefs"]) ?? selectedAgent?.secretRefs}
-      missingRuntimeKeys={missingRuntimeKeys}
       vmOperator={(sessionMetadata?.vmOperator as Agent["vmOperator"]) ?? selectedAgent?.vmOperator}
       vmSandbox={(sessionMetadata?.vmSandbox as AgentContextStripProps["vmSandbox"]) ?? undefined}
-      accentColor={selectedAgent && isBotSession ? getBotAccentColor(selectedAgent) ?? undefined : undefined}
-      botId={isBotSession ? selectedAgent?.id : undefined}
-      onEditRuntime={isBotSession ? () => setIsRuntimeModalOpen(true) : undefined}
       onDismiss={dismissEmbeddedAgentSession}
     />
   ) : null;
 
-  // Bot sessions had no way back home: the full context card can be dismissed
-  // (or never shown), leaving the session stranded. Keep a slim bar with a
-  // Back button for every bot session so the escape hatch is always present,
-  // even while the context card is open.
-  const botSessionBar = isBotSession && !hudMode ? (
-    <div className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2">
-      <button
-        type="button"
-        onClick={closeBotSession}
-        aria-label="Back to home"
-        className="flex items-center gap-1.5 rounded-lg border-none bg-transparent px-2 py-1.5 text-[13px] font-medium text-[var(--text-secondary)] cursor-pointer transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
-      >
-        <ArrowLeft size={15} />
-        Back
-      </button>
-      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--text-primary)]">
-        {selectedAgent?.name ?? embeddedAgentSession.session?.name ?? 'Bot session'}
-      </span>
-    </div>
-  ) : null;
+  // Bot sessions render only in the dedicated BotChatSessionView — the effect
+  // above hands the active bot session off to that view, so there is nothing
+  // to render here (this also keeps hidden keep-alive chat views blank).
+  if (isBotSession) {
+    return null;
+  }
 
   return (
     <ChatBackground
@@ -684,12 +637,7 @@ export function ChatView({
             />
           ) : (
             <ChatActiveContent
-              embeddedAgentStrip={
-                <>
-                  {botSessionBar}
-                  {embeddedAgentStrip}
-                </>
-              }
+              embeddedAgentStrip={embeddedAgentStrip}
               isAgentSessionEmbedded={isAgentSessionEmbedded}
               chatId={chatId}
               linkedAgentSessionIds={linkedAgentSessionIds}
@@ -757,15 +705,6 @@ export function ChatView({
         onCancel={cancelSelection}
         trigger={<div className="hidden" />}
       />
-
-      {isBotSession && selectedAgent && (
-        <BotRuntimeConfigModal
-          bot={selectedAgent}
-          isOpen={isRuntimeModalOpen}
-          onClose={() => setIsRuntimeModalOpen(false)}
-          onSaved={() => setIsRuntimeModalOpen(false)}
-        />
-      )}
     </ChatBackground>
   );
 }

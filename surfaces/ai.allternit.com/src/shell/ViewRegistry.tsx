@@ -474,7 +474,16 @@ export function getShellViewRegistry(handlers: {
           <BotChatSessionView
             sessionId={ctx?.sessionId}
             botId={ctx?.botId ?? context?.viewId}
-            onBack={() => open(ctx?.originView ?? 'agent-hub')}
+            onBack={() => {
+              // Back to the home chat view: clear the store-active chat
+              // session first. It is still the bot session (BotChatSessionView
+              // keeps it active), and the home chat view redirects bot
+              // sessions straight back here — without clearing, Back loops.
+              if (!ctx?.originView || ctx.originView === 'chat') {
+                useChatSessionStore.getState().setActiveSession(null);
+              }
+              open(ctx?.originView ?? 'agent-hub');
+            }}
           />
         </ErrorBoundary>
       );
