@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-11 11:30 — kimi — fabric session fallbacks: kernel local peer/lease/invoke + desktop relay
+
+- **Session ID / Branch:** `session/fabricfix-0911`
+- **Agent:** kimi
+- **Summary:** Kernel `/api/v1/fabric/*` + `/api/v1/session-worker/invoke` now fall back to a synthesized local desktop peer and the gizzi remote-control/session APIs when the upstream 404s; desktop auth-manager intercepts the same routes for the packaged app. Un-broke FabricSessionClient lease+invoke and Fabric Transport "This node" on the paired desktop node.
+- **Commit:** PR #340 (merge `b5b752a88`)
+- **Evidence:** `agent-ledger/summaries/2026-09-11-1130-fabricfix-0911-kimi-code-fabric-sessions-fix.md`
+
 ### 2026-09-11 08:51 — kimi — cream-squircle A mark across AI product surfaces
 
 - **Session ID / Branch:** `session/logo0911`
