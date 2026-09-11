@@ -22,6 +22,7 @@ import type { GroupChatMessage } from "@/lib/bots/group-chat.types";
 import {
   runGroupChat,
   createMentionHandoffAdapter,
+  parseGroupChatMentions,
   type MemberTurnAdapter,
 } from "@/lib/bots/group-chat.service";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
@@ -34,7 +35,6 @@ import {
   Users,
   Folder,
   Robot,
-  CircleNotch,
   Warning,
   X,
 } from "@phosphor-icons/react";
@@ -138,6 +138,22 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
     [group?.log, visibleMessageCount]
   );
   const hasMoreMessages = (group?.log.length ?? 0) > visibleMessageCount;
+
+  const typingMembers = useMemo(() => {
+    if (!isRunning || !group) return [];
+    const lastUser = [...group.log].reverse().find((message) => message.from === "user");
+    if (!lastUser) return group.members;
+    const names = parseGroupChatMentions(lastUser.text);
+    if (names.includes("everyone") || names.length === 0) return group.members;
+    const matched = group.members.filter((member) =>
+      names.some(
+        (name) =>
+          member.handle?.toLowerCase() === name ||
+          member.displayName.toLowerCase().includes(name)
+      )
+    );
+    return matched.length ? matched : group.members;
+  }, [isRunning, group]);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -246,15 +262,16 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
                 {group.members.length}
               </span>
             </div>
-            {group.metadata?.bulletin ? (
-              <p className="truncate text-xs text-[var(--text-secondary)]">
-                {group.metadata.bulletin}
-              </p>
-            ) : (
-              <p className="truncate text-xs text-[var(--text-tertiary)]">
-                {group.members.map((m) => m.displayName).join(", ")}
-              </p>
-            )}
+            <p className="truncate text-xs text-[var(--text-secondary)]">
+              {isRunning
+                ? typingMembers.length
+                  ? `${typingMembers.map((m) => m.displayName).join(", ")} working`
+                  : "group round running"
+                : runError
+                  ? "waiting on you"
+                  : group.metadata?.bulletin ||
+                    group.members.map((m) => m.displayName).join(", ")}
+            </p>
           </div>
         </div>
 
@@ -399,8 +416,23 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
             })}
             {isRunning && (
               <div className="flex items-center justify-center gap-2 text-xs text-[var(--text-tertiary)] py-1">
-                <CircleNotch size={14} className="animate-spin" />
-                Bots are thinking…
+                <div className="flex -space-x-1.5">
+                  {typingMembers.slice(0, 4).map((member) => {
+                    const agent = agents.find((a) => a.id === member.botId);
+                    return agent ? (
+                      <BotAvatar key={member.botId} bot={agent} size={18} />
+                    ) : (
+                      <GroupChatAvatar
+                        key={member.botId}
+                        name={member.displayName}
+                        size={18}
+                      />
+                    );
+                  })}
+                </div>
+                {typingMembers.length === 1
+                  ? `${typingMembers[0].displayName} is typing…`
+                  : "Members are typing…"}
               </div>
             )}
             <div ref={logEndRef} />

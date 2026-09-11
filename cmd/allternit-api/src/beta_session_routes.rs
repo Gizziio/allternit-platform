@@ -207,21 +207,25 @@ struct BudgetState {
 }
 
 #[derive(Debug, Serialize)]
-struct SessionRow {
-    id: String,
-    agent_id: Option<String>,
-    name: Option<String>,
-    parent_thread_id: Option<String>,
-    status: String,
-    metadata: Value,
-    budget: Value,
-    context: Value,
-    created_at: String,
-    updated_at: String,
-    archived_at: Option<String>,
+pub(crate) struct SessionRow {
+    pub(crate) id: String,
+    pub(crate) agent_id: Option<String>,
+    pub(crate) name: Option<String>,
+    pub(crate) parent_thread_id: Option<String>,
+    pub(crate) status: String,
+    pub(crate) metadata: Value,
+    pub(crate) budget: Value,
+    pub(crate) context: Value,
+    pub(crate) created_at: String,
+    pub(crate) updated_at: String,
+    pub(crate) archived_at: Option<String>,
+    pub(crate) computer_kind: Option<String>,
+    pub(crate) computer_id: Option<String>,
 }
 
-fn read_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionRow> {
+/// Shared with `cloud_agents_routes` (the public `/sessions` facade reads the
+/// same rows through this mapping). Column order must match `SESSION_SELECT`.
+pub(crate) fn read_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionRow> {
     let metadata: String = row.get(5)?;
     let truncation_strategy: TruncationStrategy = row.get(13)?;
     Ok(SessionRow {
@@ -246,13 +250,15 @@ fn read_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionRow> {
         created_at: row.get(14)?,
         updated_at: row.get(15)?,
         archived_at: row.get(16)?,
+        computer_kind: row.get(17)?,
+        computer_id: row.get(18)?,
     })
 }
 
-const SESSION_SELECT: &str = "SELECT id, agent_id, name, parent_thread_id, status, metadata,
+pub(crate) const SESSION_SELECT: &str = "SELECT id, agent_id, name, parent_thread_id, status, metadata,
     max_tokens, max_turns, max_tool_calls, tokens_used, turns_used, tool_calls_used,
     context_window, truncation_strategy,
-    created_at, updated_at, archived_at FROM beta_sessions";
+    created_at, updated_at, archived_at, computer_kind, computer_id FROM beta_sessions";
 
 async fn create_session(
     State(state): State<Arc<AppState>>,
@@ -352,7 +358,9 @@ async fn get_session(
     Ok(Json(json!({"session": session})))
 }
 
-async fn load_session(
+/// Shared with `cloud_agents_routes`: the public facade loads sessions through
+/// this loader so ownership and not-found semantics stay identical.
+pub(crate) async fn load_session(
     state: Arc<AppState>,
     user_id: String,
     id: String,
@@ -1201,7 +1209,8 @@ async fn stream_events_to_websocket(
     mut cursor: i64,
 ) {
     loop {
-        if let Some((sequence, event_type, data)) = next_event(db.clone(), id.clone(), cursor).await
+        if let Some((sequence, _event_id, event_type, data, _created_at)) =
+            next_event(db.clone(), id.clone(), cursor).await
         {
             let data = serde_json::from_str::<Value>(&data).unwrap_or(Value::Null);
             let message = json!({"sequence": sequence, "type": event_type, "data": data});
@@ -1226,21 +1235,32 @@ async fn stream_events_to_websocket(
     }
 }
 
-async fn next_event(
+/// Shared with `cloud_agents_routes` for the public SSE event stream.
+pub(crate) async fn next_event(
     db: crate::db::DbHandle,
     id: String,
     cursor: i64,
-) -> Option<(i64, String, String)> {
-    tokio::task::spawn_blocking(move || -> rusqlite::Result<Option<(i64, String, String)>> {
-        let conn = db.connect()?;
-        conn.query_row(
-            "SELECT sequence, event_type, data FROM beta_session_events
+) -> Option<(i64, String, String, String, String)> {
+    tokio::task::spawn_blocking(
+        move || -> rusqlite::Result<Option<(i64, String, String, String, String)>> {
+            let conn = db.connect()?;
+            conn.query_row(
+                "SELECT sequence, id, event_type, data, created_at FROM beta_session_events
              WHERE session_id = ?1 AND sequence > ?2 ORDER BY sequence LIMIT 1",
-            params![id, cursor],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )
-        .optional()
-    })
+                params![id, cursor],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                },
+            )
+            .optional()
+        },
+    )
     .await
     .ok()
     .and_then(Result::ok)
@@ -1260,7 +1280,7 @@ async fn stream_events(
         |(db, id, cursor)| async move {
             loop {
                 let next = next_event(db.clone(), id.clone(), cursor).await;
-                if let Some((sequence, event_type, data)) = next {
+                if let Some((sequence, _event_id, event_type, data, _created_at)) = next {
                     let event = Event::default()
                         .id(sequence.to_string())
                         .event(event_type)
@@ -1369,7 +1389,9 @@ async fn list_events_json(
     Ok(Json(json!({ "events": results })))
 }
 
-fn insert_event(
+/// Shared with `cloud_agents_routes`: appending a session event uses the same
+/// stored (legacy) event vocabulary so both surfaces read one history.
+pub(crate) fn insert_event(
     conn: &rusqlite::Connection,
     session_id: &str,
     event_type: &str,
@@ -1384,6 +1406,37 @@ fn insert_event(
     Ok(
         json!({"id": id, "sequence": sequence, "session_id": session_id, "type": event_type, "data": data}),
     )
+}
+
+/// Cloud Agents Phase 2: when a work task finishes, append the stored
+/// `turn_*` + `session_idle` events so the public facade can translate them.
+/// No-op if the session is missing or already archived. Does not rewrite
+/// `beta_sessions.status` (CHECK remains `active|archived`).
+pub(crate) fn emit_turn_terminal(
+    conn: &rusqlite::Connection,
+    session_id: &str,
+    outcome: &str,
+    data: &Value,
+) -> rusqlite::Result<()> {
+    let status: Option<String> = conn
+        .query_row(
+            "SELECT status FROM beta_sessions WHERE id = ?1",
+            params![session_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match status.as_deref() {
+        Some("archived") | None => return Ok(()),
+        _ => {}
+    }
+    let turn_ty = match outcome {
+        "completed" => "turn_completed",
+        "failed" => "turn_failed",
+        _ => return Ok(()),
+    };
+    insert_event(conn, session_id, turn_ty, data)?;
+    insert_event(conn, session_id, "session_idle", data)?;
+    Ok(())
 }
 
 fn exceeded_budget(state: BudgetState, delta: UsageDelta) -> Option<&'static str> {
@@ -1596,7 +1649,7 @@ async fn set_tool_context(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
@@ -1607,7 +1660,7 @@ mod tests {
     use tokio::sync::RwLock;
     use tower::ServiceExt;
 
-    fn test_user(id: &str) -> AuthUser {
+    pub(crate) fn test_user(id: &str) -> AuthUser {
         AuthUser {
             user_id: id.to_string(),
             email: Some(format!("{}@example.test", id)),
@@ -1620,7 +1673,7 @@ mod tests {
         }
     }
 
-    fn temp_dir(tag: &str) -> std::path::PathBuf {
+    pub(crate) fn temp_dir(tag: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!(
             "allternit-beta-session-{}-{}",
             tag,
@@ -1641,7 +1694,7 @@ mod tests {
         });
     }
 
-    async fn test_app_state(temp: &FsPath) -> Arc<AppState> {
+    pub(crate) async fn test_app_state(temp: &FsPath) -> Arc<AppState> {
         init_test_encryption_key();
         let config = crate::AppConfig {
             company: Default::default(),
@@ -1697,12 +1750,12 @@ mod tests {
         })
     }
 
-    async fn body_json(body: Body) -> Value {
+    pub(crate) async fn body_json(body: Body) -> Value {
         let bytes = body.collect().await.unwrap().to_bytes();
         serde_json::from_slice(&bytes).unwrap()
     }
 
-    fn json_body(value: &Value) -> Body {
+    pub(crate) fn json_body(value: &Value) -> Body {
         Body::from(value.to_string())
     }
 

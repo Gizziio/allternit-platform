@@ -32,6 +32,10 @@
       "import": "./dist/ai-runtime.js",
       "types": "./dist/ai-runtime.d.ts"
     },
+    "./cloud-agents": {
+      "import": "./dist/cloud-agents/index.js",
+      "types": "./dist/cloud-agents/index.d.ts"
+    },
     "./harness": {
       "import": "./dist/harness/index.js",
       "types": "./dist/harness/index.d.ts"

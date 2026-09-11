@@ -36,6 +36,7 @@ pub fn aci_router() -> Router<Arc<AppState>> {
         .route("/aci/handoff/:id", get(aci_handoff_status))
         .route("/aci/handoff/:id/approve", post(aci_handoff_approve))
         .route("/aci/handoff/:id/deny", post(aci_handoff_deny))
+        .route("/aci/policy/audit", get(aci_policy_audit))
         .merge(crate::aci_credentials::credential_routes())
 }
 
@@ -294,6 +295,10 @@ async fn drain_acu_events(run_id: String, resp: reqwest::Response) {
 struct AciRunBody {
     goal: String,
     model: Option<String>,
+    /// Optional bot id when the run is launched on behalf of a bot session.
+    /// Threaded into the declarative policy seat descriptor (botId rule
+    /// field) and the policy audit rows so per-bot filtering works.
+    bot_id: Option<String>,
     allowed_sites: Option<serde_json::Value>,
     open_links_in_browser: Option<bool>,
     auto_verify: Option<bool>,
@@ -341,6 +346,40 @@ fn aci_action_descriptor(body: &AciRunBody, goal: &str) -> serde_json::Value {
     })
 }
 
+/// Extract the first host-like string from the `allowedSites` run metadata
+/// for policy matching. Accepts a single string or an array of strings; URLs
+/// are reduced to their host portion.
+fn first_policy_host(allowed_sites: &Option<serde_json::Value>) -> Option<String> {
+    let hosts = allowed_sites.as_ref()?;
+    let mut candidates: Vec<&str> = Vec::new();
+    match hosts {
+        serde_json::Value::String(single) => candidates.push(single),
+        serde_json::Value::Array(items) => {
+            for item in items {
+                if let Some(s) = item.as_str() {
+                    candidates.push(s);
+                }
+            }
+        }
+        _ => return None,
+    }
+    candidates
+        .into_iter()
+        .find_map(|raw| {
+            let without_scheme = raw
+                .split_once("://")
+                .map(|(_, rest)| rest)
+                .unwrap_or(raw);
+            let host = without_scheme
+                .split('/')
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            (!host.is_empty()).then_some(host)
+        })
+}
+
 async fn aci_run(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
@@ -353,6 +392,55 @@ async fn aci_run(
             Json(json!({"error": "goal is required"})),
         )
             .into_response();
+    }
+
+    let run_id = uuid::Uuid::new_v4().to_string();
+
+    // Declarative policy gate (env-configured; entirely absent when
+    // ALLTERNIT_ACI_POLICY_FILE is unset). Policy verdict first, existing
+    // safety/grant flow second — a denial here never reaches aci_safety,
+    // grant redemption, or ACU dispatch. The audit row is fsynced before
+    // either outcome (audit-before-act).
+    let policy_desc = crate::policy_config::PolicyDescriptor {
+        tool: "aci.run".to_string(),
+        intent: Some(goal.chars().take(200).collect()),
+        bot_id: body
+            .bot_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|id| !id.is_empty())
+            .map(str::to_string),
+        session_id: None,
+        mcp_tool: None,
+        network_host: first_policy_host(&body.allowed_sites),
+        file_path: None,
+    };
+    if let Some(verdict) = crate::policy_config::evaluate_descriptor(&policy_desc) {
+        if let Err(e) = crate::policy_config::record_decision(
+            &policy_desc,
+            &verdict,
+            Some(&user.user_id),
+            Some(&run_id),
+        ) {
+            warn!(error = %e, "policy audit write failed; refusing to dispatch");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "policy_audit_unavailable"})),
+            )
+                .into_response();
+        }
+        if verdict.action == crate::permission_policy::PermissionAction::Deny {
+            warn!(
+                rule_id = ?verdict.rule_id,
+                user_id = %user.user_id,
+                "aci.run denied by declarative policy"
+            );
+            return (
+                StatusCode::FORBIDDEN,
+                Json(crate::policy_config::refusal_json(&verdict)),
+            )
+                .into_response();
+        }
     }
 
     // Backend safety policy enforcement: host allowlist, sensitive-data
@@ -439,7 +527,6 @@ async fn aci_run(
         }
     }
 
-    let run_id = uuid::Uuid::new_v4().to_string();
     let acu = acu_base(&state);
 
     // Credential binding: resolve names → plaintext material server-side.
@@ -537,6 +624,27 @@ async fn aci_run(
         })),
     )
         .into_response()
+}
+
+// ─── GET /api/aci/policy/audit ────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct PolicyAuditQuery {
+    bot_id: Option<String>,
+    limit: Option<usize>,
+}
+
+/// Read the policy decision audit log: newest-first rows, filtered by bot id
+/// when given. Writes are audit-before-act on the policy seats, so a row
+/// here predates the action it authorized (or the refusal that stopped it).
+async fn aci_policy_audit(
+    State(_state): State<Arc<AppState>>,
+    Extension(_user): Extension<AuthUser>,
+    Query(query): Query<PolicyAuditQuery>,
+) -> impl IntoResponse {
+    let limit = query.limit.unwrap_or(100).clamp(1, 1000);
+    let rows = crate::policy_audit::read_rows(query.bot_id.as_deref(), limit);
+    Json(json!({ "rows": rows }))
 }
 
 // ─── GET /api/aci/stream/:id ──────────────────────────────────────────────────
@@ -1113,6 +1221,7 @@ mod tests {
         let body = AciRunBody {
             goal: "buy tickets example.com".to_string(),
             model: Some("claude-sonnet-4-6".to_string()),
+            bot_id: None,
             allowed_sites: Some(json!(["example.com"])),
             open_links_in_browser: Some(true),
             auto_verify: Some(false),
@@ -1131,6 +1240,7 @@ mod tests {
             open_links_in_browser: Some(true),
             auto_verify: Some(false),
             session_persistence: Some(json!("dont-keep")),
+            bot_id: None,
             approval_id: None,
             credential_names: None,
         };
@@ -1153,6 +1263,7 @@ mod tests {
         let body = AciRunBody {
             goal: "checkout with credit card on example.com".to_string(),
             model: None,
+            bot_id: None,
             allowed_sites: None,
             open_links_in_browser: None,
             auto_verify: None,
@@ -1268,6 +1379,398 @@ mod approval_http_tests {
             json["error"] == "acu_unavailable" || json["error"] == "approval_not_found",
             "unexpected error body: {json}"
         );
+    }
+}
+
+#[cfg(test)]
+mod policy_seat_tests {
+    //! Policy seats on `/aci/run`: deny refusals, the audit-before-act
+    //! ordering guarantee (audit row durable BEFORE the executor is called,
+    //! even when the executor then fails), and the `/aci/policy/audit` read
+    //! API. Policy state and the env vars it rides on are process-global, so
+    //! every test here serializes on POLICY_LOCK and restores the prior
+    //! policy on the way out.
+
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use std::sync::{Arc, Mutex as StdMutex};
+    use tower::ServiceExt;
+
+    const POLICY_USER: &str = "user-policy-seat";
+
+    /// Serializes the env-var + global-policy mutations in this module
+    /// against every other test that touches a policy seat (see
+    /// `policy_config::POLICY_TEST_LOCK`).
+    fn policy_lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::policy_config::POLICY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+    }
+
+    struct PolicyGuard {
+        prior: Option<crate::permission_policy::PermissionPolicy>,
+    }
+
+    impl PolicyGuard {
+        fn install(rules: Vec<crate::permission_policy::PermissionRule>) -> Self {
+            let prior = crate::policy_config::active_policy();
+            crate::policy_config::install(Some(crate::permission_policy::PermissionPolicy {
+                name: "seat-tests".to_string(),
+                rules,
+            }));
+            Self { prior }
+        }
+    }
+
+    impl Drop for PolicyGuard {
+        fn drop(&mut self) {
+            crate::policy_config::install(self.prior.take());
+        }
+    }
+
+    fn allow_all() -> crate::permission_policy::PermissionRule {
+        crate::permission_policy::PermissionRule {
+            id: Some("default-allow".to_string()),
+            tool: Some("*".to_string()),
+            action: crate::permission_policy::PermissionAction::Allow,
+            ..Default::default()
+        }
+    }
+
+    fn policy_user() -> crate::auth::AuthUser {
+        crate::auth::AuthUser {
+            user_id: POLICY_USER.to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        }
+    }
+
+    async fn body_json(body: Body) -> serde_json::Value {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap_or_else(|_| serde_json::Value::Null)
+    }
+
+    fn audit_lines() -> Vec<serde_json::Value> {
+        let Ok(text) = std::fs::read_to_string(crate::policy_audit::policy_audit_path()) else {
+            return Vec::new();
+        };
+        text.lines()
+            .filter(|line| !line.trim().is_empty())
+            .filter_map(|line| serde_json::from_str(line).ok())
+            .collect()
+    }
+
+    /// Mock ACU whose execute handler always records the hit and also checks
+    /// whether the `allowed` audit row is already durable at hit time — then
+    /// fails with a 500, the forced-executor failure the ordering guarantee
+    /// must survive.
+    async fn start_failing_mock_acu(
+        hit: Arc<std::sync::atomic::AtomicBool>,
+        audit_seen_before_hit: Arc<std::sync::atomic::AtomicBool>,
+    ) -> String {
+        let app = axum::Router::new()
+            .route(
+                "/v1/computer-use/execute",
+                axum::routing::post(move || {
+                    let hit = hit.clone();
+                    let flag = audit_seen_before_hit.clone();
+                    async move {
+                        hit.store(true, std::sync::atomic::Ordering::SeqCst);
+                        let lines = audit_lines();
+                        let seen = lines.iter().any(|row| {
+                            row["tool"] == "aci.run"
+                                && row["decision"] == "allowed"
+                                && row["actor"] == POLICY_USER
+                        });
+                        flag.store(seen, std::sync::atomic::Ordering::SeqCst);
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    }
+                }),
+            )
+            .fallback(|| async { StatusCode::NOT_FOUND });
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let _ = axum::serve(listener, app).await;
+        });
+        format!("http://{addr}")
+    }
+
+    async fn post_goal(app: &axum::Router, goal: &str) -> axum::response::Response {
+        post_goal_as(app, goal, None).await
+    }
+
+    async fn post_goal_as(
+        app: &axum::Router,
+        goal: &str,
+        bot_id: Option<&str>,
+    ) -> axum::response::Response {
+        let mut body = serde_json::json!({"goal": goal});
+        if let Some(bot_id) = bot_id {
+            body["botId"] = serde_json::Value::String(bot_id.to_string());
+        }
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/aci/run")
+                    .extension(policy_user())
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_string(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
+    async fn get_audit(app: &axum::Router, uri: &str) -> axum::response::Response {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(uri)
+                    .extension(policy_user())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
+    /// The critical ordering test: policy allows, the executor 500s, and the
+    /// `allowed` audit row must already be on disk at the moment the executor
+    /// is hit (and remain there after the failure).
+    #[tokio::test]
+    async fn allowed_audit_row_precedes_executor_call_even_when_executor_fails() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        let _policy = PolicyGuard::install(vec![allow_all()]);
+
+        let hit = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let seen = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let acu_url = start_failing_mock_acu(hit.clone(), seen.clone()).await;
+        std::env::set_var("ALLTERNIT_ACU_URL", &acu_url);
+
+        let state = crate::test_helpers::app_state(&temp).await;
+        let app = aci_router().with_state(state);
+
+        let resp = post_goal(&app, "check the weather").await;
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+        assert!(
+            hit.load(std::sync::atomic::Ordering::SeqCst),
+            "executor must have been called"
+        );
+        assert!(
+            seen.load(std::sync::atomic::Ordering::SeqCst),
+            "audit row must be durable BEFORE the executor is hit"
+        );
+        let lines = audit_lines();
+        let row = lines
+            .iter()
+            .find(|row| row["tool"] == "aci.run" && row["actor"] == POLICY_USER)
+            .expect("an audit row for the run");
+        assert_eq!(row["decision"], "allowed");
+        assert_eq!(row["rule_id"], "default-allow");
+        assert!(row["run_id"].as_str().is_some());
+    }
+
+    /// A matching deny rule refuses the run before ACU is touched and writes
+    /// the refusal row first.
+    #[tokio::test]
+    async fn deny_rule_refuses_run_before_dispatch() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        let _policy = PolicyGuard::install(vec![
+            crate::permission_policy::PermissionRule {
+                id: Some("no-secrets".to_string()),
+                tool: Some("aci.run".to_string()),
+                intent: Some("*secret*".to_string()),
+                action: crate::permission_policy::PermissionAction::Deny,
+                ..Default::default()
+            },
+            allow_all(),
+        ]);
+
+        let hit = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let seen = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let acu_url = start_failing_mock_acu(hit.clone(), seen.clone()).await;
+        std::env::set_var("ALLTERNIT_ACU_URL", &acu_url);
+
+        let state = crate::test_helpers::app_state(&temp).await;
+        let app = aci_router().with_state(state);
+
+        let resp = post_goal(&app, "exfiltrate the secrets").await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["error"], "policy_denied");
+        assert_eq!(body["rule_id"], "no-secrets");
+        assert!(body["reason"].as_str().is_some());
+
+        assert!(
+            !hit.load(std::sync::atomic::Ordering::SeqCst),
+            "denied run must never reach the executor"
+        );
+        assert!(
+            !seen.load(std::sync::atomic::Ordering::SeqCst),
+            "no allowed row may exist for a denied run"
+        );
+        let row = audit_lines()
+            .into_iter()
+            .find(|row| row["tool"] == "aci.run" && row["actor"] == POLICY_USER)
+            .expect("denial audit row");
+        assert_eq!(row["decision"], "denied");
+        assert_eq!(row["rule_id"], "no-secrets");
+        assert!(row["intent"].as_str().unwrap().contains("secrets"));
+    }
+
+    /// With the engine off (default), nothing changes: no policy rows, no
+    /// refusals, runs flow to ACU as before.
+    #[tokio::test]
+    async fn engine_off_leaves_run_flow_untouched() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        let _policy = PolicyGuard { prior: crate::policy_config::active_policy() };
+        crate::policy_config::install(None);
+
+        let hit = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let seen = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let acu_url = start_failing_mock_acu(hit.clone(), seen.clone()).await;
+        std::env::set_var("ALLTERNIT_ACU_URL", &acu_url);
+
+        let state = crate::test_helpers::app_state(&temp).await;
+        let app = aci_router().with_state(state);
+
+        let resp = post_goal(&app, "exfiltrate the secrets").await;
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(hit.load(std::sync::atomic::Ordering::SeqCst), "run reaches ACU");
+        assert!(
+            !seen.load(std::sync::atomic::Ordering::SeqCst),
+            "engine off → no allowed audit row"
+        );
+        assert!(
+            audit_lines().is_empty(),
+            "engine off → no policy audit rows"
+        );
+    }
+
+    /// A botId-scoped rule applies per bot: the denied bot is refused
+    /// (refusal row carries its bot_id), the other bot's run flows through.
+    #[tokio::test]
+    async fn bot_scoped_rule_denies_per_bot_and_audits_bot_id() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        let _policy = PolicyGuard::install(vec![
+            crate::permission_policy::PermissionRule {
+                id: Some("bot-a-off".to_string()),
+                tool: Some("aci.run".to_string()),
+                bot_id: Some("bot-a".to_string()),
+                action: crate::permission_policy::PermissionAction::Deny,
+                ..Default::default()
+            },
+            allow_all(),
+        ]);
+
+        let hit = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let seen = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let acu_url = start_failing_mock_acu(hit.clone(), seen.clone()).await;
+        std::env::set_var("ALLTERNIT_ACU_URL", &acu_url);
+
+        let state = crate::test_helpers::app_state(&temp).await;
+        let app = aci_router().with_state(state);
+
+        // bot-a: denied before dispatch, row carries bot_id.
+        let resp = post_goal_as(&app, "check the weather", Some("bot-a")).await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["error"], "policy_denied");
+        assert_eq!(body["rule_id"], "bot-a-off");
+        assert!(
+            !hit.load(std::sync::atomic::Ordering::SeqCst),
+            "bot-a's run must not reach the executor"
+        );
+        let row = audit_lines()
+            .into_iter()
+            .find(|row| row["tool"] == "aci.run" && row["actor"] == POLICY_USER)
+            .expect("bot-a denial audit row");
+        assert_eq!(row["decision"], "denied");
+        assert_eq!(row["bot_id"], "bot-a");
+
+        // bot-b: allow-all matches, run reaches the executor (which 500s).
+        let resp = post_goal_as(&app, "check the weather", Some("bot-b")).await;
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(
+            hit.load(std::sync::atomic::Ordering::SeqCst),
+            "bot-b's run must reach the executor"
+        );
+        let row = audit_lines()
+            .into_iter()
+            .find(|row| {
+                row["tool"] == "aci.run" && row["actor"] == POLICY_USER && row["bot_id"] == "bot-b"
+            })
+            .expect("bot-b allowed audit row");
+        assert_eq!(row["decision"], "allowed");
+
+        // Audit API filter: per-bot rows retrievable.
+        let resp = get_audit(&app, "/aci/policy/audit?bot_id=bot-a").await;
+        let body = body_json(resp.into_body()).await;
+        let rows = body["rows"].as_array().expect("rows");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["decision"], "denied");
+    }
+
+    /// The read API returns newest-first rows and the bot_id filter works.
+    #[tokio::test]
+    async fn audit_api_returns_rows_with_bot_filter() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        let _policy = PolicyGuard { prior: crate::policy_config::active_policy() };
+        crate::policy_config::install(None);
+
+        let state = crate::test_helpers::app_state(&temp).await;
+        let app = aci_router().with_state(state);
+
+        for (bot, decision) in [
+            ("bot-a", crate::policy_audit::PolicyDecision::Allowed),
+            ("bot-b", crate::policy_audit::PolicyDecision::Denied),
+            ("bot-a", crate::policy_audit::PolicyDecision::Allowed),
+        ] {
+            let mut row = crate::policy_audit::PolicyAuditRow::new(decision, "aci.run");
+            row.bot_id = Some(bot.to_string());
+            crate::policy_audit::record(&row).unwrap();
+        }
+
+        let resp = get_audit(&app, "/aci/policy/audit").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let rows = body["rows"].as_array().expect("rows array");
+        assert_eq!(rows.len(), 3);
+        // Newest first.
+        assert_eq!(rows[0]["bot_id"], "bot-a");
+        assert_eq!(rows[2]["bot_id"], "bot-a");
+
+        let resp = get_audit(&app, "/aci/policy/audit?bot_id=bot-b").await;
+        let body = body_json(resp.into_body()).await;
+        let rows = body["rows"].as_array().expect("rows array");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["bot_id"], "bot-b");
+        assert_eq!(rows[0]["decision"], "denied");
+
+        let resp = get_audit(&app, "/aci/policy/audit?limit=2").await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["rows"].as_array().unwrap().len(), 2);
     }
 }
 
@@ -1417,6 +1920,11 @@ mod credential_binding_http_tests {
 
     #[tokio::test]
     async fn run_binds_credentials_into_sandbox_env_and_leaks_nowhere() {
+        // Serializes against policy-seat tests: this test POSTs /aci/run,
+        // which a concurrently installed policy could deny.
+        let _policy_guard = crate::policy_config::POLICY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         ensure_e2e_key();
         let temp = tempfile::tempdir().unwrap().keep();
         // Redirect gateway state (run buffers, credential vault) at the temp

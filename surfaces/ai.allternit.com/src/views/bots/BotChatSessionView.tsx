@@ -12,7 +12,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CircleNotch, Desktop, Robot, Sparkle, X } from "@phosphor-icons/react";
+import { ArrowLeft, Bell, BellSlash, CircleNotch, Desktop, Robot, Sparkle, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useAgentStore } from "@/lib/agents/agent.store";
@@ -25,8 +25,19 @@ import { ModelSelectionProvider, useModelSelection } from "@/providers/model-sel
 import type { ModelSelection } from "@/components/model-picker";
 import { getProviderMeta } from "@/lib/providers/provider-registry";
 import { BotComputerViewport } from "./BotComputerViewport";
+import { PolicyGovernance } from "./PolicyGovernance";
+import { BotWatchStrip } from "./BotWatchStrip";
 import { useBotActiveVm } from "./useBotActiveVm";
+import {
+  isBotThreadMuted,
+  setBotThreadMuted,
+} from "@/lib/bots/bot-thread-notify";
 import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
+import {
+  botSessionStatus,
+  groupMessagesByDay,
+  splitCompactMessages,
+} from "@/lib/bots/bot-session-chrome";
 
 export interface BotChatSessionViewProps {
   sessionId?: string;
@@ -176,7 +187,15 @@ function BotChatSessionContent({
   const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const [computerOpen, setComputerOpen] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [showOlder, setShowOlder] = useState(false);
+  const [notifyMuted, setNotifyMuted] = useState(() =>
+    isBotThreadMuted(session?.id)
+  );
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
+
+  useEffect(() => {
+    setNotifyMuted(isBotThreadMuted(session?.id));
+  }, [session?.id]);
 
   // The computer pane is user-driven only: it opens via the top-right
   // "Computer" button, never on its own. Connect the bot to the global
@@ -270,6 +289,33 @@ function BotChatSessionContent({
     setAciSidecarExpanded(true);
   }, [botId, setConnectedBotId, setAciSidecarExpanded]);
 
+  const sessionStatus = useMemo(
+    () =>
+      botSessionStatus({
+        botName,
+        isStreaming,
+        sendError,
+        computerOpen,
+      }),
+    [botName, isStreaming, sendError, computerOpen]
+  );
+
+  const { older: olderMessages, recent: recentMessages } = useMemo(
+    () => splitCompactMessages(messages),
+    [messages]
+  );
+  const visibleMessages = showOlder ? messages : recentMessages;
+  const dayGroups = useMemo(
+    () => groupMessagesByDay(visibleMessages),
+    [visibleMessages]
+  );
+  const statusDot =
+    sessionStatus.tone === "running"
+      ? "var(--status-warning)"
+      : sessionStatus.tone === "error"
+        ? "var(--status-error)"
+        : "var(--status-success)";
+
   return (
     <div className="flex h-full flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] pt-12">
       {/* Header */}
@@ -318,33 +364,65 @@ function BotChatSessionContent({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-base font-semibold">{botName}</h2>
-              <span className="flex h-2 w-2 rounded-full bg-[var(--status-success)]" title="Online" />
+              <span
+                className="flex h-2 w-2 rounded-full"
+                style={{ background: statusDot }}
+                title={sessionStatus.label}
+              />
             </div>
-            {botTagline ? (
-              <p className="truncate text-xs text-[var(--text-secondary)]">
-                {botTagline}
-              </p>
-            ) : (
-              <p className="truncate text-xs text-[var(--text-tertiary)]">
-                Bot session
-              </p>
-            )}
+            <p className="truncate text-xs text-[var(--text-secondary)]">
+              {sessionStatus.label}
+              {botTagline ? ` · ${botTagline}` : ""}
+            </p>
           </div>
         </div>
-        {hasVm && (
-          <Button
-            type="button"
-            variant={computerOpen ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setComputerOpen((open) => !open)}
-            className="gap-1.5 shrink-0"
-            aria-pressed={computerOpen}
-          >
-            <Desktop size={14} />
-            Computer
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {sessionId && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={notifyMuted ? "Unmute this thread" : "Mute this thread"}
+              aria-pressed={notifyMuted}
+              onClick={() => {
+                const next = !notifyMuted;
+                setBotThreadMuted(sessionId, next);
+                setNotifyMuted(next);
+              }}
+            >
+              {notifyMuted ? <BellSlash size={16} /> : <Bell size={16} />}
+            </Button>
+          )}
+          {hasVm && (
+            <Button
+              type="button"
+              variant={computerOpen ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setComputerOpen((open) => !open)}
+              className="gap-1.5 shrink-0"
+              aria-pressed={computerOpen}
+            >
+              <Desktop size={14} />
+              Computer
+            </Button>
+          )}
+        </div>
       </div>
+
+      <PolicyGovernance
+        botId={botId}
+        sessionMode={session?.metadata?.sessionMode}
+        isBot={session?.metadata?.isBot === true}
+      />
+
+      {botId && (session?.metadata?.sessionMode === "agent" || session?.metadata?.isBot === true) && (
+        <BotWatchStrip
+          botId={botId}
+          sandboxId={activeVM?.status === "running" ? activeVM.id : undefined}
+          computerOpen={computerOpen}
+          onOpenComputer={() => setComputerOpen(true)}
+        />
+      )}
 
       <div className="flex min-h-0 flex-1">
       {/* Messages */}
@@ -395,18 +473,38 @@ function BotChatSessionContent({
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {messages.map((message) => (
-              <BotChatMessage
-                key={message.id}
-                message={message}
-                bot={bot}
-                botName={botName}
-                accentColor={accentColor}
-              />
+            {olderMessages.length > 0 && !showOlder && (
+              <button
+                type="button"
+                onClick={() => setShowOlder(true)}
+                className="self-center rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-1 text-[11px] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+              >
+                Show earlier conversation ({olderMessages.length})
+              </button>
+            )}
+            {dayGroups.map((group) => (
+              <div key={group.day} className="flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="h-px flex-1 bg-[var(--border-subtle)]" />
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+                    {group.day}
+                  </span>
+                  <span className="h-px flex-1 bg-[var(--border-subtle)]" />
+                </div>
+                {group.messages.map((message) => (
+                  <BotChatMessage
+                    key={message.id}
+                    message={message}
+                    bot={bot}
+                    botName={botName}
+                    accentColor={accentColor}
+                  />
+                ))}
+              </div>
             ))}
             {isStreaming && (
               <div className="flex items-center justify-center gap-2 py-2 text-xs text-[var(--text-tertiary)]">
-                <CircleNotch size={14} className="animate-spin" />
+                {bot ? <BotAvatar bot={bot} size={18} /> : <CircleNotch size={14} className="animate-spin" />}
                 {botName} is thinking…
               </div>
             )}
