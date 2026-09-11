@@ -459,13 +459,7 @@ async fn create_cloud_session(
         .unwrap_or_else(default_computer_kind);
     let provision_kind = computer_kind.clone();
     match computer_kind.as_str() {
-        "none" | "local" | "sandbox" | "desktop" => {}
-        "fabric" => {
-            return Err(ApiError::BadRequest(
-                "computer.kind \"fabric\" is not available on this account (no silent downgrade to none)"
-                    .into(),
-            ));
-        }
+        "none" | "local" | "sandbox" | "desktop" | "fabric" => {}
         other => {
             return Err(ApiError::BadRequest(format!(
                 "unsupported computer.kind: {other}"
@@ -660,7 +654,7 @@ async fn create_cloud_session(
                     &json!({"kind": "local"}),
                 )?;
             }
-            "sandbox" | "desktop" => {
+            "sandbox" | "desktop" | "fabric" => {
                 beta::insert_event(
                     &tx,
                     &session_id,
@@ -737,7 +731,7 @@ async fn create_cloud_session(
                 return Err(ApiError::BadRequest("computer not found".into()));
             }
         }
-    } else if provision_kind == "sandbox" || provision_kind == "desktop" {
+    } else if matches!(provision_kind.as_str(), "sandbox" | "desktop" | "fabric") {
         let persistence = if provision_kind == "sandbox" {
             crate::computer_routes::Persistence::Ephemeral
         } else {
@@ -1668,7 +1662,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fabric_kind_is_400_desktop_without_driver_is_503() {
+    async fn fabric_and_desktop_without_driver_are_503() {
         let temp = beta_test::temp_dir("cloud-kind-400");
         let state = beta_test::test_app_state(&temp).await;
         let router = cloud_agents_router().with_state(state);
@@ -1677,14 +1671,18 @@ mod tests {
             "/sessions",
             &json!({
                 "agent": {"model": "kimi-k2", "instructions": "hi"},
-                "computer": {"kind": "fabric"}
+                "computer": {"kind": "desktop"}
             }),
             "user-a",
         )
         .await;
-        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         assert!(
-            payload["error"].as_str().unwrap_or("").contains("fabric"),
+            payload["error"].as_str().unwrap_or("").contains("driver")
+                || payload["error"].as_str().unwrap_or("").contains("Computer")
+                || payload["error"].as_str().unwrap_or("").contains("desktop")
+                || payload["error"].as_str().unwrap_or("").contains("Tart")
+                || payload["error"].as_str().unwrap_or("").contains("substrate"),
             "{payload}"
         );
 
@@ -1693,7 +1691,7 @@ mod tests {
             "/sessions",
             &json!({
                 "agent": {"model": "kimi-k2", "instructions": "hi"},
-                "computer": {"kind": "desktop"}
+                "computer": {"kind": "fabric"}
             }),
             "user-a",
         )

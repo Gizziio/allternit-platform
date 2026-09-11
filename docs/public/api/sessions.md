@@ -44,7 +44,8 @@ Computer kinds:
 - `local` — descriptor only in this release. The session records the intent
   (`computer.pending`) and accepts events, but no worker is attached and
   nothing is awaited.
-- `fabric` — not available; create returns `400`.
+- `fabric` — Computer Cloud desktop, session-lived (same plane as `desktop`).
+  Cloud Agents do not use Fly.
 
 ### Example
 
