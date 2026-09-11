@@ -44,6 +44,15 @@ pub fn beta_deployment_router() -> Router<Arc<AppState>> {
             get(list_runs).post(trigger_run),
         )
         .route("/beta/deployments/:id/runs/:run_id", patch(update_run))
+        .route("/schedules", get(list_deployments).post(create_deployment))
+        .route(
+            "/schedules/:id",
+            get(get_deployment)
+                .patch(update_deployment)
+                .delete(delete_deployment),
+        )
+        .route("/schedules/:id/runs", get(list_runs).post(trigger_run))
+        .route("/schedules/:id/runs/:run_id", patch(update_run))
 }
 
 #[derive(Debug, Deserialize)]

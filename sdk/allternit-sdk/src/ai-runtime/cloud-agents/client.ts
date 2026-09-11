@@ -83,6 +83,8 @@ export class CloudSessionsResource {
           budget: options.budget,
           metadata: options.metadata,
           brain_id: options.brainId,
+          parent_thread_id: options.parent_thread_id,
+          permission: options.permission,
         }),
       },
     );
@@ -107,6 +109,20 @@ export class CloudSessionsResource {
 
   readonly events = new CloudSessionEventsResource(this.client);
   readonly turns = new CloudSessionTurnsResource(this.client);
+
+  async threads(sessionId: string): Promise<CloudSession[]> {
+    const body = await this.client.request<{ threads: CloudSession[] }>(
+      `/api/v1/sessions/${encodeURIComponent(sessionId)}/threads`,
+    );
+    return body.threads;
+  }
+
+  async outputs(sessionId: string): Promise<unknown[]> {
+    const body = await this.client.request<{ outputs: unknown[] }>(
+      `/api/v1/sessions/${encodeURIComponent(sessionId)}/outputs`,
+    );
+    return body.outputs;
+  }
 }
 
 export class CloudSessionTurnsResource {

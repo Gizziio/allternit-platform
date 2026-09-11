@@ -272,7 +272,29 @@ surface above is the one that translates to Allternit names.
 |------|------|
 | `201` | Session created. |
 | `200` | Retrieve, list, archive, send, list events. |
-| `400` | Archived session, unknown event type, `computer.kind: "sandbox"` without entitlement, version mismatch, unknown `brain_id` or `vault_ids`. |
+| `400` | Archived session, unknown event type, `computer.kind` sandbox/fabric/desktop without entitlement, version mismatch, unknown `brain_id`/`vault_ids`/`parent_thread_id`. |
+
+## Threads
+
+`GET /sessions/:id/threads` lists child sessions whose `parent_thread_id` is
+this session. Create accepts `parent_thread_id` (must be a session you own).
+
+## Outputs
+
+`GET /sessions/:id/outputs` lists files stored on the session (`session_files`).
+There is no separate `/workspace/outputs` route.
+
+## Schedules
+
+`/api/v1/schedules` is an alias of `/api/v1/beta/deployments` (cron bound to
+an agent). Credential-style subroutes for vaults stay on beta; schedule
+create/list/get/patch/delete and runs are on both prefixes.
+
+## Permission
+
+Create may set `permission`: `always_allow`, `always_ask`, or `auto`. It is
+recorded on the session and returned in JSON. It is not enforced on this
+surface (Bot Agents use the ACI policy gateway).
 
 ## Vaults
 

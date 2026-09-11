@@ -47,6 +47,8 @@ pub fn cloud_agents_router() -> Router<Arc<AppState>> {
         )
         .route("/sessions/:id/events/stream", get(stream_cloud_events))
         .route("/sessions/:id/turns", get(list_cloud_turns))
+        .route("/sessions/:id/threads", get(list_cloud_threads))
+        .route("/sessions/:id/outputs", get(list_cloud_outputs))
 }
 
 // ─── Request bodies ──────────────────────────────────────────────────────────
@@ -108,6 +110,10 @@ struct CreateCloudSessionBody {
     metadata: Value,
     #[serde(default)]
     brain_id: Option<Value>,
+    #[serde(default)]
+    parent_thread_id: Option<String>,
+    #[serde(default)]
+    permission: Option<String>,
 }
 
 fn empty_object() -> Value {
@@ -176,6 +182,8 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
         },
         "brain_id": session.brain_id,
         "vault_ids": vault_ids,
+        "parent_thread_id": session.parent_thread_id,
+        "permission": session.metadata.get("permission"),
         "created_at": session.created_at,
         "updated_at": session.updated_at,
         "archived_at": session.archived_at,
@@ -410,13 +418,15 @@ async fn create_cloud_session(
     match computer_kind.as_str() {
         "none" | "local" => {}
         "sandbox" => {
-            // Hosted sandbox provisioning is not wired to entitlements in this
-            // release. Per the product contract this is a hard 400 — never a
-            // silent downgrade to `none`.
             return Err(ApiError::BadRequest(
                 "computer.kind \"sandbox\" requires a hosted computer entitlement that is not available on this account"
                     .into(),
             ));
+        }
+        "fabric" | "desktop" => {
+            return Err(ApiError::BadRequest(format!(
+                "computer.kind \"{computer_kind}\" is not available on this account (no silent downgrade to none)"
+            )));
         }
         other => {
             return Err(ApiError::BadRequest(format!(
@@ -427,6 +437,16 @@ async fn create_cloud_session(
     let input_text = parse_input(&body.input)?;
     let brain_id = parse_brain_id(&body.brain_id)?;
     let vault_ids = parse_vault_ids(&body.vault_ids)?;
+    let permission = match body.permission.as_deref() {
+        None => None,
+        Some("always_allow" | "always_ask" | "auto") => body.permission.clone(),
+        Some(other) => {
+            return Err(ApiError::BadRequest(format!(
+                "unsupported permission: {other} (always_allow | always_ask | auto)"
+            )))
+        }
+    };
+    let parent_thread_id = body.parent_thread_id.clone();
 
     let db = state.db.clone();
     let organization_id = user.organization_id.clone();
@@ -446,6 +466,9 @@ async fn create_cloud_session(
         if let Some(brain_id) = &brain_id {
             object.insert("brain_id".to_string(), json!(brain_id));
         }
+        if let Some(permission) = &permission {
+            object.insert("permission".to_string(), json!(permission));
+        }
         metadata
     };
     let budget = body.budget;
@@ -455,6 +478,18 @@ async fn create_cloud_session(
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
 
+        if let Some(parent_id) = &parent_thread_id {
+            let exists = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM beta_sessions WHERE id = ?1 AND user_id = ?2)",
+                params![parent_id, user_id],
+                |row| row.get::<_, bool>(0),
+            )?;
+            if !exists {
+                return Err(rusqlite::Error::InvalidParameterName(
+                    "parent_thread_id not found".to_string(),
+                ));
+            }
+        }
         if let Some(brain_id) = &brain_id {
             let exists = tx.query_row(
                 "SELECT EXISTS(SELECT 1 FROM brains WHERE id = ?1 AND user_id = ?2)",
@@ -540,8 +575,8 @@ async fn create_cloud_session(
         tx.execute(
             "INSERT INTO beta_sessions
              (id, user_id, agent_id, metadata, max_tokens, max_turns, max_tool_calls,
-              status, computer_kind, brain_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'active', ?8, ?9)",
+              status, computer_kind, brain_id, parent_thread_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'active', ?8, ?9, ?10)",
             params![
                 session_id,
                 user_id,
@@ -552,6 +587,7 @@ async fn create_cloud_session(
                 budget.as_ref().and_then(|b| b.max_tool_calls),
                 computer_kind,
                 brain_id,
+                parent_thread_id,
             ],
         )?;
         beta::insert_event(&tx, &session_id, "session_created", &json!({}))?;
@@ -938,6 +974,71 @@ async fn list_cloud_turns(
     .map_err(|e| ApiError::DbError(e.to_string()))?;
     let events = parse_public_events(&id, rows);
     Ok(Json(json!({ "turns": turns_from_events(&events) })))
+}
+
+async fn list_cloud_threads(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    beta::load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let in_flight = sessions_with_in_flight_work(state.clone(), user.user_id.clone()).await;
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let parent_id = id.clone();
+    let rows = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(&format!(
+            "{} WHERE user_id = ?1 AND parent_thread_id = ?2 ORDER BY created_at DESC",
+            beta::SESSION_SELECT
+        ))?;
+        let rows = stmt
+            .query_map(params![user_id, parent_id], beta::read_session)?
+            .collect::<Result<Vec<beta::SessionRow>, _>>()?;
+        Ok::<Vec<beta::SessionRow>, rusqlite::Error>(rows)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+    let threads = rows
+        .iter()
+        .map(|session| public_session(session, in_flight.contains(&session.id)))
+        .collect::<Vec<Value>>();
+    Ok(Json(json!({ "threads": threads })))
+}
+
+async fn list_cloud_outputs(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    beta::load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let files = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, session_id, org_id, filename, mime_type, storage_path, size_bytes, created_at
+             FROM session_files WHERE session_id = ?1 ORDER BY created_at DESC, id",
+        )?;
+        let rows = stmt
+            .query_map(params![id], beta::read_session_file)?
+            .collect::<Result<Vec<beta::SessionFileRow>, _>>()?;
+        Ok::<Vec<beta::SessionFileRow>, rusqlite::Error>(rows)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+    let outputs: Vec<Value> = files
+        .into_iter()
+        .map(|file| {
+            json!({
+                "id": file.id,
+                "filename": file.filename,
+                "mime_type": file.mime_type,
+                "size_bytes": file.size_bytes,
+                "created_at": file.created_at,
+            })
+        })
+        .collect();
+    Ok(Json(json!({ "outputs": outputs })))
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -1421,5 +1522,88 @@ mod tests {
             payload["error"].as_str().unwrap_or("").contains("vault"),
             "{payload}"
         );
+    }
+
+    #[tokio::test]
+    async fn fabric_and_desktop_kinds_are_400() {
+        let temp = beta_test::temp_dir("cloud-kind-400");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state);
+        for kind in ["fabric", "desktop"] {
+            let (status, payload) = post_json(
+                &router,
+                "/sessions",
+                &json!({
+                    "agent": {"model": "kimi-k2", "instructions": "hi"},
+                    "computer": {"kind": kind}
+                }),
+                "user-a",
+            )
+            .await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{kind}");
+            assert!(
+                payload["error"].as_str().unwrap_or("").contains(kind),
+                "{kind} {payload}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn parent_thread_and_permission_and_empty_outputs() {
+        let temp = beta_test::temp_dir("cloud-thread");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state);
+
+        let (status, parent) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "permission": "always_ask"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        assert_eq!(parent["session"]["permission"], "always_ask");
+        let parent_id = parent["session"]["id"].as_str().unwrap().to_string();
+
+        let (status, child) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "parent_thread_id": parent_id
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        assert_eq!(child["session"]["parent_thread_id"], parent_id);
+
+        let (status, threads) =
+            get_json(&router, &format!("/sessions/{parent_id}/threads"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(threads["threads"].as_array().unwrap().len(), 1);
+
+        let (status, outputs) =
+            get_json(&router, &format!("/sessions/{parent_id}/outputs"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(outputs["outputs"].as_array().unwrap().len(), 0);
+
+        let (status, _) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "parent_thread_id": "missing"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
     }
 }
