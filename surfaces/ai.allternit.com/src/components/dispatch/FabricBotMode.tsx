@@ -16,6 +16,7 @@ import { BotHomeView } from '@/views/bots/BotHomeView';
 import { BotChatSessionView } from '@/views/bots/BotChatSessionView';
 import { GroupsListView } from '@/views/bots/GroupsListView';
 import { GroupChatView } from '@/views/bots/GroupChatView';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 export type FabricBotView = 'hub' | 'bot-home' | 'bot-chat' | 'groups' | 'group-chat';
 
@@ -92,7 +93,10 @@ export function FabricBotModeRail({
   );
 
   const groupList = useMemo(
-    () => Object.values(groups).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    () =>
+      Object.values(groups).sort((a, b) =>
+        String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')),
+      ),
     [groups],
   );
 
@@ -326,7 +330,9 @@ export function FabricBotModeCanvas({
   }
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <BotLaunchpadView />
+      <ErrorBoundary componentName="FabricBotHub">
+        <BotLaunchpadView />
+      </ErrorBoundary>
     </div>
   );
 }
