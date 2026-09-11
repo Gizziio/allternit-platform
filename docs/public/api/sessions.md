@@ -28,10 +28,10 @@ event vocabulary; this surface translates to Allternit names on read.
 | `computer` | object | no | `{ "kind": "none" \| "sandbox" \| "local" }`. Default `none`. |
 | `input` | string \| object | no | Initial user message: a plain string or `{ "type": "user.message", "content": "…" }`. Enqueues a run, like sending `user.message` after create. |
 | `stream` | boolean | no | If true, the response is an SSE stream of the session's events (same as `GET /sessions/:id/events/stream`), starting with `session.created`, instead of a JSON session body. |
-| `vault_ids` | string[] | no | Vaults to make available to the run. Recorded on session metadata. |
+| `vault_ids` | string[] | no | Vault ids the session may use. Each id must exist (`created_by` = caller) or create returns `400`. Recorded on session metadata and returned as top-level `vault_ids`. |
 | `budget` | object | no | `{ "max_tokens"?, "max_turns"?, "max_tool_calls"? }`. |
 | `metadata` | object | no | Arbitrary key/value object. Defaults to `{}`. |
-| `brain_id` | string \| null | no | Brain attachment for the run. Recorded on session metadata. |
+| `brain_id` | string \| null | no | Brain to attach. Must exist for the caller or create returns `400`. Stored on the session row and returned as `brain_id`. |
 
 Computer kinds:
 
@@ -272,5 +272,12 @@ surface above is the one that translates to Allternit names.
 |------|------|
 | `201` | Session created. |
 | `200` | Retrieve, list, archive, send, list events. |
-| `400` | Archived session, unknown event type, `computer.kind: "sandbox"` without entitlement, version mismatch. |
+| `400` | Archived session, unknown event type, `computer.kind: "sandbox"` without entitlement, version mismatch, unknown `brain_id` or `vault_ids`. |
+
+## Vaults
+
+`GET/POST /api/v1/vaults` and `GET/DELETE /api/v1/vaults/:id` are aliases of
+`/api/v1/beta/vaults`. Credential subroutes stay on the beta path this
+release. Vaults are organization-scoped; session `vault_ids` must refer to
+vaults the caller created.
 | `404` | Unknown session id. |
