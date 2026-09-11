@@ -1,26 +1,27 @@
-# Checkpoint — session/wordmarkpixel-0911
+# Steering checkpoint — session/b569de1d (kimi-code)
 
 ## Goal
-Owner: the design wordmark leads with a cream-squircle ICON, not the pixel
-A:// protocol mark that spells out like office.allternit.com — port the
-office pixel mark. Also add each product wordmark to its Electron window
-headers, and fix the design window header colliding with the macOS traffic
-lights.
+Restructure the chat composer "+" sheet (ComposerPlusSheet) per owner direction:
+remove unwired/dead controls and unused view rows, keep the endorsed rows, add
+Plugins and Skills.
 
 ## Just did
-- Worktree `allternit-session-wordmarkpixel-0911` on `session/wordmarkpixel-0911`
-  from origin/main (2f4ae087b).
-- `AProtocolWordmark.tsx` (platform): replaced the PNG img mark with the
-  pixel A:// mark (MARK_CELLS + coral core, exact port of the
-  office.allternit.com geometry); kept collapse animation + themes;
-  restored role="img"/aria-label on the span.
-- Wordmark tests updated (mark adds one <g>); new chrome wordmark test.
-- Headers: `OfficePageChrome` (docs/sheets/slides/pdf) now carries
-  A://TERNIT OFFICE at height 12; `OfficeDesktopView` (/office) header gets
-  72px electron traffic-light clearance; `DesignModeView` project header
-  gained the A://TERNIT DESIGN wordmark (height 12) with 72px electron
-  clearance; `NewProjectScreen` launch header gets the same clearance.
-- Verified: typecheck 0 err; vitest 1654 pass / 0 fail (213 files).
+- Removed: Style grid button + submenu + ResponseStyle plumbing; Tool access
+  segmented control + ToolAccessLevel plumbing (both only injected prompt-text
+  prefixes, never reached backend settings — owner directive); the composer
+  Style chip; duplicate Connectors list row; Form Surfaces / Cowork Tasks /
+  Bot Activity list rows (Form Surfaces and Cowork Tasks views had NO other
+  entry point — now orphaned by design; Bot Activity remains reachable via
+  /agent-activity routes, shell panel, and global event).
+- Kept: Files, GitHub (+URL panel), Web, Project submenu, grid Connectors,
+  Web search + Research toggles, Capture to brain, Permissions (value badge
+  removed with toolAccess).
+- Added: Plugins row → `allternit:open-view {viewType:'apps-extensions'}`;
+  Skills row → `allternit:open-settings {section:'skills'}`.
+- Verified: tsc typecheck project clean on touched files; vitest src/views/chat
+  45 passed / 1 skipped. Puzzle→PuzzlePiece icon fix for installed phosphor
+  version.
 
 ## Next
-- Commit, push, PR, merge; attest; rebuild dmg; swap preview; cleanup.
+Commit, push, PR, merge, ledger attestation, cleanup. Desktop preview rebuild
+deferred (note honestly in ledger) — source lands on main.
