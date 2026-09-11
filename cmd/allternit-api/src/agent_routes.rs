@@ -45,6 +45,7 @@ pub fn agent_router() -> Router<Arc<AppState>> {
             get(get_agent).put(update_agent).delete(delete_agent),
         )
         .route("/agents/:id/archive", post(archive_agent))
+        .route("/agents/:id/toolset", get(get_agent_toolset))
         .route("/agents/:id/runs", post(run_agent).get(list_agent_runs))
         .route("/agents/:id/events", get(stream_agent_events))
         .route(
@@ -1302,6 +1303,57 @@ async fn get_agent(
             )
                 .into_response()
         }
+    }
+}
+
+async fn get_agent_toolset(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let row = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.query_row(
+            "SELECT tools, allowed_tools, allowed_skills FROM agents WHERE id = ?1 AND user_id = ?2",
+            params![id, user_id],
+            |row| {
+                Ok((
+                    parse_json_column(row.get(0)?),
+                    parse_json_column(row.get(1)?),
+                    parse_json_column(row.get(2)?),
+                ))
+            },
+        )
+    })
+    .await;
+    match row {
+        Ok(Ok((tools, allowed_tools, allowed_skills))) => Json(json!({
+            "toolset": {
+                "tools": tools.unwrap_or(json!([])),
+                "allowed_tools": allowed_tools.unwrap_or(json!([])),
+                "allowed_skills": allowed_skills.unwrap_or(json!([])),
+                "mcp": [],
+                "tool_search": false,
+                "programmatic": false
+            }
+        }))
+        .into_response(),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
+            (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response()
+        }
+        Ok(Err(e)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 

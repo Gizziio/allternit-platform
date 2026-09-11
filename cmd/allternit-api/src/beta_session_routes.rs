@@ -972,17 +972,17 @@ struct UploadFileBody {
 }
 
 #[derive(Debug, Serialize)]
-struct SessionFileRow {
-    id: String,
-    session_id: String,
+pub(crate) struct SessionFileRow {
+    pub(crate) id: String,
+    pub(crate) session_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    org_id: Option<String>,
-    filename: String,
-    mime_type: String,
+    pub(crate) org_id: Option<String>,
+    pub(crate) filename: String,
+    pub(crate) mime_type: String,
     #[serde(skip)]
-    storage_path: String,
-    size_bytes: i64,
-    created_at: String,
+    pub(crate) storage_path: String,
+    pub(crate) size_bytes: i64,
+    pub(crate) created_at: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1173,7 +1173,7 @@ async fn delete_file(
     Ok(StatusCode::NO_CONTENT)
 }
 
-fn read_session_file(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionFileRow> {
+pub(crate) fn read_session_file(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionFileRow> {
     Ok(SessionFileRow {
         id: row.get(0)?,
         session_id: row.get(1)?,

@@ -137,6 +137,18 @@ class _SessionsResource:
         )
         return payload.get("turns", [])
 
+    def threads(self, session_id: str) -> List[Dict[str, Any]]:
+        payload = self._client._request(
+            "GET", f"/api/v1/sessions/{session_id}/threads"
+        )
+        return payload.get("threads", [])
+
+    def outputs(self, session_id: str) -> List[Dict[str, Any]]:
+        payload = self._client._request(
+            "GET", f"/api/v1/sessions/{session_id}/outputs"
+        )
+        return payload.get("outputs", [])
+
     def create(
         self,
         agent: Optional[Union[str, Dict[str, Any]]] = None,
@@ -146,6 +158,8 @@ class _SessionsResource:
         budget: Optional[Dict[str, int]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         brain_id: Optional[str] = None,
+        parent_thread_id: Optional[str] = None,
+        permission: Optional[str] = None,
     ) -> Dict[str, Any]:
         body: Dict[str, Any] = {"stream": False}
         if agent is not None:
@@ -161,6 +175,10 @@ class _SessionsResource:
             body["metadata"] = metadata
         if brain_id is not None:
             body["brain_id"] = brain_id
+        if parent_thread_id is not None:
+            body["parent_thread_id"] = parent_thread_id
+        if permission is not None:
+            body["permission"] = permission
         payload = self._client._request("POST", "/api/v1/sessions", body)
         return payload.get("session", payload)
 

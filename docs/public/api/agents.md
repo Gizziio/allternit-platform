@@ -61,8 +61,12 @@ Sessions use Allternit event type names (`session.created`, `turn.started`,
 `waiting`, `failed`, `archived`). Turns are listed at
 `GET /api/v1/sessions/:id/turns`. Session create can bind a `brain_id` and
 `vault_ids` (unknown ids return `400`). `/api/v1/vaults` is the public
-alias of `/api/v1/beta/vaults`. There is no public `/runtimes` resource;
-the computer binding lives on the session.
+alias of `/api/v1/beta/vaults`. `GET /agents/:id/toolset` returns the agent's
+tools, allowed_tools, and allowed_skills (`tool_search` and MCP are not
+bound on this surface yet). `/api/v1/schedules` aliases `/beta/deployments`.
+There is no public `/runtimes` resource; the computer binding lives on the
+session. `computer.kind` `sandbox`, `fabric`, and `desktop` return `400`
+until provision is entitled.
 
 ## SDK
 

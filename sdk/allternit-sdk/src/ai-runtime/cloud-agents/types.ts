@@ -29,6 +29,8 @@ export interface CloudSession {
   computer: CloudComputer;
   brain_id?: string | null;
   vault_ids?: string[];
+  parent_thread_id?: string | null;
+  permission?: "always_allow" | "always_ask" | "auto" | null;
   created_at: string;
   updated_at: string;
   archived_at?: string | null;
@@ -58,6 +60,8 @@ export interface CreateCloudSessionOptions {
   };
   metadata?: Record<string, unknown>;
   brainId?: string | null;
+  parent_thread_id?: string;
+  permission?: "always_allow" | "always_ask" | "auto";
 }
 
 export type SendCloudSessionEvent =

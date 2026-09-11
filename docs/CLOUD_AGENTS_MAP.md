@@ -1,17 +1,21 @@
-# Cloud Agents — Phase 3 (brain attach + vaults alias)
+# Cloud Agents — Phase 4 (remaining leftovers)
 
-Orchestrator-owned. Phase 1+2 are on main. This handoff only.
+Orchestrator-owned. Phases 1–3 are on main.
 
-## Product (locked)
+## In this phase
 
-Allternit Agents / Cloud Agents. No `/runtimes`. Completions/Responses untouched. No Bot Agents. No dollar budget. No sandbox provision this phase.
+| Leftover | What we ship |
+|---|---|
+| Threads | `GET /sessions/:id/threads` = child sessions (`parent_thread_id`). Create accepts `parent_thread_id`. |
+| Outputs | `GET /sessions/:id/outputs` lists `session_files` (there is no `/workspace/outputs` route). |
+| Schedules | `/api/v1/schedules` aliases `/beta/deployments` CRUD + runs. |
+| Toolset | `GET /agents/:id/toolset` from existing agent columns. `tool_search`/`mcp` are `false`/`[]` until a later bind. |
+| Permission | Session create `permission`: `always_allow` \| `always_ask` \| `auto`. Stored in metadata, returned on public JSON. Not enforced (ACI is Bot). |
+| fabric/desktop | `400`, never silent `none`. Same contract as sandbox this release. |
 
-## Phase 3 target
+## Parked / not this PR
 
-1. **Brain attach.** `brain_id` on `POST /sessions` is validated against `brains` (`id` + `user_id`). Stored on `beta_sessions.brain_id`. Returned on public session JSON. Unknown → `400`. Null/omitted → no bind.
-2. **Vault ids.** `vault_ids` must be a JSON array of strings. Each id must exist in `allternit_vaults` with `created_by = user`. Unknown → `400`. Still stored in session metadata; also returned top-level `vault_ids` on public JSON.
-3. **Vault facade.** `/api/v1/vaults` and `/api/v1/vaults/:id` are aliases of the existing `/beta/vaults` CRUD (same handlers). Credential subroutes stay on `/beta/vaults/...` this phase.
-
-## Do not
-
-Sandbox entitlement, fabric/desktop workers, schedules, tool_search, outputs, permission policies, dollar budget, OpenAI wrap, Completions/Responses, Bot Agents, git, Docker, Stripe.
+- Session dollar budget (money-adjacent)
+- Sandbox/Fly hosted-runtime provision (credits/org; still 400)
+- Bot Agents BA-*
+- OpenAI/Anthropic compat shims
