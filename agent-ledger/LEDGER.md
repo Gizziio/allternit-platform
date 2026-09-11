@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 19:27 — grok — pet avatars + long-running bot session chrome (rq-20260910-001)
+
+- **Session ID / Branch:** `ao/openbot-session-chrome` (worktree `allternit-ao-openbot-policy-gateway`)
+- **Agent:** grok
+- **Summary:** Merged PR #279 (232102ee2) — bots default to pet companion avatars; 1:1 sessions get status line, day separators, 48h compaction; group rounds show who is typing. `@mention` routing was already present.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/279 · 232102ee223a9da0148b78d096e622aaf598c7aa
+- **How it works:** `generateBotAvatar` defaults to `pet`. `bot-session-chrome.ts` drives status/day/compact. Policy chips stay out of the dialogue. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Herald subagent tree, computer-screen-in-chat, per-thread notify settings.
+- **Summary file:** [2026-09-10-1927-openbot-session-chrome-grok.md](./summaries/2026-09-10-1927-openbot-session-chrome-grok.md)
+
 ### 2026-09-10 19:12 — grok — P6b UHP remaining drivers + full-class conformance (rq-20260908-028)
 
 - **Session ID / Branch:** `ao/uhp-p6b` (worktree `allternit-ao-uhp-p6b`; grok pickup after kimi executor quota)
