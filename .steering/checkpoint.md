@@ -1,27 +1,32 @@
-# Steering checkpoint — session/742d251e (kimi-code)
+# Checkpoint — session/pipelinefix-0911
 
 ## Goal
-Fix the Allternit Desktop rail "+" (New Session) menu to match the Anthropic/ChatGPT
-creation-menu pattern: one canonical `+` entry point (expanded + collapsed rail),
-compact icon + single-line rows, and an overlay consistent with the shell's other
-menus (tokens, shadow, z-index, entrance animation, keyboard support).
+Fix the two flags from the designwordmark session: (1) Cloudflare Pages
+deploy red on main, (2) electron-builder requiring cloned npm-style
+node_modules. Then rebuild the desktop app from fixed main.
 
 ## Just did
-- Gap analysis of `ui/shell/FloatingWidgets.tsx:193-221` create menu vs sibling
-  menus (`ProjectRailSection.tsx`, `SettingsDrilldown.tsx`) and vs Anthropic's
-  pattern (research: claude.ai sidebar + = compact New chat/New project rows;
-  Claude desktop = Chat/Cowork/Code session-type entries; composer + = icon rows).
-- Created session worktree `allternit-session-742d251e` on `session/742d251e`
-  from `origin/main` (1e52b9ea7).
-- Implemented: shared `ShellMenu` primitive + rewired create menu (Plus button,
-  icon + single-line items, collapsed-rail support). Typecheck clean on touched
-  files; FloatingWidgets vitest 6/6. Committed, pushed, PR #335.
-- Merged origin/main (checkpoint.md conflict with session/dmp1-0911's stale
-  checkpoint resolved in favor of this session — dmp1's work is merged + attested).
+- Root-caused flag 1 from CI logs (run 34614092853): `verify-ai` typecheck
+  fails on 6 pre-existing fabric-session errors → gates the ai deploy. Not
+  CF-side.
+- Root-caused flag 2: app-builder-lib packageManager detection — desktop
+  package.json lacks `packageManager` + own lockfile → npm collector →
+  breaks on npm 11 (works on CI only because node 20/npm 10).
+- Created worktree `allternit-session-pipelinefix-0911` on
+  `session/pipelinefix-0911` from origin/main (1e52b9ea7).
+- Fixed BotsChatPage (bot.agent → bot / botProfile accessors, ×5 errors)
+  and FabricSessionPanel (dead 'bot' comparison).
+- Added `"packageManager": "pnpm@10.28.0"` to desktop package.json.
+- Found 2 more pre-existing deploy-gate failures: BotsRosterSection tests
+  stale vs the component's Agent[] contract — rewrote fixtures/messages.
+- Verified: typecheck 0 errors; full vitest 209 files / 1641 tests green;
+  desktop dmg built with the plain pnpm node_modules — electron-builder
+  logged pm=pnpm via the packageManager field, asar has real node_modules
+  (1983 entries).
 
 ## Next
-- Merge PR #335; sync main; ledger attestation; desktop preview rebuild; cleanup.
+- Commit, push, PR, merge; attest; fast-forward worktree to merged main;
+  rebuild dmg from merged main; swap preview binary; cleanup.
 
 ## Open questions
-- Whether to add a "New Project" row (Anthropic lists projects): deferred — the
-  shell has no existing create-project handler to wire; noted for a future pass.
+- None.
