@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import React, { lazy, Suspense, useState, useEffect, useMemo } from "react";
+import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sliders, MagicWand, Sun, Moon, Scissors,
@@ -31,6 +31,9 @@ import { DesignTeamWorkspace } from "./DesignTeamWorkspace";
 import { DesignSystemView } from "./DesignSystemView";
 import { DesignHandoffView } from "./DesignHandoffView";
 import type { DesignSystem } from "../../lib/design/design-registry";
+import { getDesignById } from "../../lib/design/design-registry";
+import { ALLTERNIT_DESIGN_SYSTEM } from "../../lib/design/allternit-design-system";
+import { getP0Findings, lintGeneratedHtml } from "../../lib/design/html-linter";
 import { DesignImportModal } from "./DesignImportModal";
 import { composeStudioSystemPrompt } from "../../lib/design/studio-system-prompt";
 import { ErrorBoundary } from "../../components/design/ErrorBoundary";
@@ -115,6 +118,7 @@ function buildDirectProject(initialTab: CanvasTab): Project {
     tabs: [
       { id: 'files', label: 'Files', type: 'files' as CanvasTab },
       { id: 'questions', label: 'Discovery', type: 'questions' },
+      { id: 'system', label: 'Design System', type: 'system' as CanvasTab },
       { id: 'mobile', label: 'Mobile View', type: 'mobile' },
       { id: 'video', label: 'Video Editor', type: 'video' },
       ...(isContent
@@ -147,7 +151,7 @@ function GenerativeLoader({ title }: { title: string }) {
           <motion.div 
             animate={{ rotate: -360, borderRadius: ["30%", "50%", "30%"] }} 
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            style={{ position: "absolute", inset: "10px", background: "rgba(226,124,89,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ position: "absolute", inset: "10px", background: "rgba(176,141,110,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
              <MagicWand size={32} color="var(--accent-primary)" weight="fill" />
           </motion.div>
@@ -365,6 +369,27 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     return '';
   }, [backendMessages]);
 
+  // P0 lint feedback loop: when the latest saved artifact has error-severity
+  // findings, surface them as a system message in the session store so the
+  // findings are visible and the agent is told to fix them before finalizing.
+  const lintP0Findings = useMemo(() => {
+    if (!latestArtifactHtml) return null;
+    const findings = getP0Findings(lintGeneratedHtml(latestArtifactHtml));
+    return findings.length ? findings : null;
+  }, [latestArtifactHtml]);
+
+  const lintNotifiedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!lintP0Findings || !activeSessionId) return;
+    const key = lintP0Findings.join('\n');
+    if (lintNotifiedRef.current === key) return; // don't re-notify on unchanged findings
+    lintNotifiedRef.current = key;
+    useDesignSessionStore.getState().appendOptimisticEvent(
+      activeSessionId,
+      `[Design lint] ${lintP0Findings.length} P0 issue(s) in the latest artifact — fix these before finalizing:\n${lintP0Findings.map((f) => `- ${f}`).join('\n')}`,
+    );
+  }, [lintP0Findings, activeSessionId]);
+
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
   // Seed the composer with any prompt carried over from the project view.
@@ -390,8 +415,11 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     const lastAsstMsg = [...backendMessages].reverse().find(m => m.role === 'assistant');
     if (!lastAsstMsg) return;
     const content = lastAsstMsg.content || '';
-    // Extract design system markdown: look for # Brand or # Design System sections
-    const mdMatch = content.match(/#\s*(?:Brand|Design System|Tokens)[\s\S]*?(?=\n#\s|\n<artifact|<\/?artifact|\z)/i);
+    // Extract design system markdown: look for # Brand or # Design System sections.
+    // Note: \z is NOT end-of-string in JavaScript (it matches a literal "z") —
+    // use $ instead. There is no structured designMd parser yet, so this regex
+    // remains the recovery path.
+    const mdMatch = content.match(/#\s*(?:Brand|Design System|Tokens)[\s\S]*?(?=\n#\s|\n<artifact|<\/?artifact|$)/i);
     if (mdMatch) setDesignMd(mdMatch[0].trim());
     // Extract UI stream: look for v:card, v:metric, or similar stream syntax
     const uiMatch = content.match(/(?:\?\[v:|\[v:)[\s\S]*/);
@@ -408,6 +436,9 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   function handleInstallDesign(design: DesignSystem) {
     setInstalledDesignId(design.id);
     setDesignMd(design.designMd);
+    if (activeProject?.id) {
+      useDesignProjectStore.getState().setProjectDesignSystem(activeProject.id, design.id);
+    }
     setActiveTab('questions');
     if (activeSessionId) {
       sendMessageStream(activeSessionId, {
@@ -416,7 +447,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     }
   }
 
-  async function startProject(config: { name: string; prompt?: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; skill?: SkillRecord; skillValues?: Record<string, unknown> }) {
+  async function startProject(config: { name: string; prompt?: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; system?: import('../../lib/design/design-systems-library').DesignSystemEntry; skill?: SkillRecord; skillValues?: Record<string, unknown> }) {
     const isContent = config.type === 'content-engine';
     const skill = config.skill;
     const projectId = `design-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -450,6 +481,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       fidelity: 'high',
       activeTabId: isContent ? 'graph' : 'questions',
       tabs,
+      designSystemId: config.system?.id ?? installedDesignId ?? undefined,
     });
 
     setActiveProject({
@@ -461,9 +493,16 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     const directionMd = dir
       ? `## Visual Direction: ${dir.label}\n${dir.mood}\n\nDisplay font: ${dir.displayFont}\nBody font: ${dir.bodyFont}${dir.monoFont ? `\nMono font: ${dir.monoFont}` : ''}\n\nPalette:\n- Background: ${dir.palette.bg}\n- Surface: ${dir.palette.surface}\n- Foreground: ${dir.palette.fg}\n- Accent: ${dir.palette.accent}\n\nReferences: ${dir.references.join(', ')}\n\nPosture:\n${dir.posture.map(p => `- ${p}`).join('\n')}`
       : undefined;
+    // Resolve the bound design system for the prompt: explicit picker selection
+    // first, then the in-session installed system, then the chosen direction,
+    // and finally the canonical A:// Design System — so generation always has
+    // a bound system even when the user never opened the picker.
+    const systemBody = config.system?.body ?? designMd ?? directionMd ?? ALLTERNIT_DESIGN_SYSTEM.designMd;
+    const systemTitle = config.system?.title
+      ?? (installedDesignId ? 'Installed design system' : dir?.label ?? ALLTERNIT_DESIGN_SYSTEM.name);
     const systemPrompt = composeStudioSystemPrompt({
-      designSystemBody: designMd ?? directionMd,
-      designSystemTitle: installedDesignId ? 'Installed design system' : dir?.label,
+      designSystemBody: systemBody,
+      designSystemTitle: systemTitle,
       skillBody: skill?.body,
       skillName: skill?.name,
       craftRequirements: skill?.craft.requires,
@@ -517,6 +556,21 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
           });
           setActiveTab(safeTab);
 
+          // Restore the project's bound design system (persisted on the project
+          // record — without this the installed system was lost on reload).
+          const persistedSystemId = (project as { designSystemId?: string }).designSystemId;
+          let restoredSystemBody: string | undefined;
+          let restoredSystemTitle: string | undefined;
+          if (persistedSystemId) {
+            const boundSystem = getDesignById(persistedSystemId);
+            if (boundSystem) {
+              setInstalledDesignId(boundSystem.id);
+              setDesignMd(boundSystem.designMd);
+              restoredSystemBody = boundSystem.designMd;
+              restoredSystemTitle = boundSystem.name;
+            }
+          }
+
           try {
             await loadSessions();
             const sessionStore = useDesignSessionStore.getState();
@@ -535,8 +589,8 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
               projectId: project.id,
               sessionMode: 'agent',
               systemPrompt: composeStudioSystemPrompt({
-                designSystemBody: designMd ?? undefined,
-                designSystemTitle: installedDesignId ? 'Installed design system' : undefined,
+                designSystemBody: restoredSystemBody ?? designMd ?? undefined,
+                designSystemTitle: restoredSystemTitle ?? (installedDesignId ? 'Installed design system' : undefined),
               }),
             });
             useDesignSessionStore.getState().setActiveSession(sessionId);
@@ -573,7 +627,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     '--border-default': 'rgba(0,0,0,0.12)',
     '--surface-panel': '#fff',
     '--surface-hover': 'rgba(0,0,0,0.04)',
-    '--accent-primary': '#e27c59',
+    '--accent-primary': '#B08D6E',
     '--status-success': '#22c55e',
   } as React.CSSProperties;
 
@@ -838,6 +892,9 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
             setShowImport(false);
             setDesignMd(design.designMd);
             setInstalledDesignId(design.id);
+            if (activeProject?.id) {
+              useDesignProjectStore.getState().setProjectDesignSystem(activeProject.id, design.id);
+            }
             if (activeSessionId) {
               sendMessageStream(activeSessionId, {
                 text: `[Design Import] Apply the imported design system: "${design.name}". ${design.designMd}`,

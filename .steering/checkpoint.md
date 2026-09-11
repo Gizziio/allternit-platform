@@ -1,29 +1,24 @@
-# Checkpoint — ao/fabric-bot-followup-0911 (MERGED, awaiting deploy go-ahead)
+# Checkpoint — session/dmp1-0911
 
 ## Goal
-Fabric Transport bot-mode follow-up: verify v34 bot rail vs desktop parity,
-polish divergences. Done.
+Execute the LOCKED Design Mode P0 + P1 plan from the 2026-09-11 gap analysis
+(fake penpot tool, orphan import-url route, A:// Design System default + brand
+gate, quick wins). Plan: `.steering/plans/plan-dmp1-0911.md` (all 16 items done).
 
 ## Just did
-- PR #330 merged (168012ca5): rail bot rows open BotChatSessionView
-  (session-started callback → openBotChatView, desktop parity), ErrorBoundary
-  on all bot canvas branches, SW v34→v35, FabricBotMode rail purity +
-  navigation regression tests, stale BotsRosterSection test fixed.
-- Ledger attestation 24704c5fa on main. Worktree now on main (deploy-ready).
-- CI: all code checks pass; Vercel/CF Pages failures identical on PR #329
-  (pre-existing infra).
+- All P0/P1/P2 items implemented in-worktree (two parallel streams: Rust API +
+  TS design surface). Verification: `cargo check -p allternit-api` clean;
+  8/8 new import-url unit tests pass; `vitest run src/lib/design` 13/13;
+  `vitest run src/shell` 20/20; `pnpm typecheck` zero new errors (11
+  pre-existing). 5 failing Rust lib tests are pre-existing on pristine HEAD
+  (agent_cloud_routes external-CLI spawns + 1 rails test), verified unrelated.
+- Import-url: no live-server smoke yet (route covered by unit tests; needs a
+  running :8013 + real URL to exercise end-to-end).
+- Spot-checked diff: penpot tool honest, lint feedback loop + save gate wired.
 
 ## Next
-- AWAITING EOJ GO-AHEAD for deploy from this worktree:
-  cd surfaces/ai.allternit.com
-  pnpm exec vite build --config vite.fabric-session.config.ts
-  node scripts/prepare-fabric-session-pwa.mjs
-  pnpm exec wrangler pages deploy tmp/fabric-session-pwa \
-    --project-name=allternit-remote-control --branch=main \
-    --commit-hash=168012ca5 --commit-dirty=true
-- After deploy: Eoj hard-refresh/clears site data (SW v35); phone runtime
-  check of rail → bot chat; then worktree/branch cleanup + desktop rebuild
-  follow-up.
+- Commit (2 logical commits), push, PR, merge; ledger attestation; desktop
+  rebuild; cleanup.
 
 ## Open questions
 - None.
