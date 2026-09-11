@@ -6,8 +6,10 @@ Allternit Agents is one product with two specialties:
   agent and a computer kind, send user events, and read the event stream.
   This is the same kind of product as hosted agent sessions, on Allternit's
   own session model. See [Sessions](sessions.md) for the full reference.
-- **Bot Agents** — the existing Bot contract for persistent desktop/chat
-  agents. It is unchanged by this API.
+- **Bot Agents** — the same Agent, packaged as a teammate (Hub, Desktop,
+  Fabric, @mention). Same `agents` table with `is_bot`. Persistent Computer
+  Cloud desktop. Talk over CommRails. Run via ao. Sessions use
+  `/api/v1/sessions` with `bot_id`.
 
 Underneath both sits the model access layer, exposed directly for callers
 who want to drive their own loop:
@@ -22,7 +24,7 @@ who want to drive their own loop:
 | Send a prompt and get a model completion back | Completions |
 | Send a prompt with tools/instructions and get a structured response | Responses |
 | Run a stateful agent over multiple turns, with events and history | Cloud Agents sessions (`/api/v1/sessions`) |
-| Operate a persistent desktop or messaging agent | Bot Agents (existing contract) |
+| Operate a packaged teammate (Hub / Desktop / Fabric) | Bot Agents (`Allternit.bots` + `bot_id` on a session) |
 
 ## Cloud Agents at a glance
 
@@ -93,13 +95,47 @@ await allternit.sessions.archive(session.id);
 
 The Python SDK exposes the same client as `allternit.Allternit`.
 
+### Bot Agents (`Allternit.bots`)
+
+Bots are rows on `/api/v1/agents` with `is_bot: true`. Create, list, get,
+and archive:
+
+```ts
+const bot = await allternit.bots.create({
+  name: "research",
+  systemPrompt: "Be terse.",
+  botProfile: { tagline: "Looks things up" },
+});
+const session = await allternit.sessions.create({
+  botId: bot.id,
+  computer: { kind: "desktop" },
+});
+```
+
+`bot_id` on session create uses that agent. The bot's persistent computer
+is Computer Cloud (`ensureBotComputer` / `/api/v1/computers`), not a second
+agent table. Policy for computer tools is the ACI gateway (Bot Agents), not
+the Cloud Agents `permission` field.
+
+## Bot Agents
+
+Same primitive as Cloud Agents. Extra packaging:
+
+| Layer | What it is |
+|---|---|
+| Bot Mode | Who you talk to (profile, brain bind, roster) |
+| CommRails | How they talk (`/api/commrails/*`, Desktop rail) |
+| ao | How they run (spawn / watch / harness) |
+| Computer | Persistent desktop bound by `bot_id` |
+| Policy | Fail-closed ACI before computer acts |
+
 ## Notes
 
 - Completions and Responses (`/api/agents/v1/*`) are unchanged by the Cloud
   Agents release and are documented with the model-routing surface.
 - `/api/v1/beta/sessions` keeps working as an alias over the same sessions
   table. New integrations should use `/api/v1/sessions`.
-- `computer.kind: "sandbox"` returns `400` unless the account has a hosted
-  computer entitlement; it never silently downgrades to `none`.
-- `computer.kind: "local"` is a descriptor only in this release: the session
-  records the intent and accepts events, but no worker is attached.
+- `computer.kind` `sandbox` / `desktop` / `fabric` provision Computer Cloud.
+  No VM driver on this host → `503` `computer_unavailable` (fail-closed).
+- `computer.kind: "local"` is a descriptor only: the session records the
+  intent and accepts events, but no worker is attached.
