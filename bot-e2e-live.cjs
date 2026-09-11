@@ -55,6 +55,9 @@ const BOT_SPECS = [
   },
 ];
 const GROUP_NAME = 'AlphaBeta Verification';
+const RUN_ID = `BOTMODE-${Date.now().toString(36)}`;
+const SINGLE_PROMPT = `What is your name? ${RUN_ID}`;
+const GROUP_PROMPT = `Say your names. ${RUN_ID}`;
 const SCREENSHOT_PATH = '/tmp/bot-e2e-live-result.png';
 
 const RESULT = {
@@ -176,6 +179,7 @@ async function fetchAgentsAuthed(page) {
       is_bot: true,
       bot_profile: {
         displayName: s.name,
+        handle: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
         tagline: s.description,
         groupChatEnabled: true,
         botCategory: 'custom',
@@ -214,6 +218,7 @@ async function fetchAgentsAuthed(page) {
           is_bot: true,
           bot_profile: {
             displayName: s.name,
+            handle: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
             tagline: s.description,
             groupChatEnabled: true,
             botCategory: 'custom',
@@ -279,9 +284,10 @@ async function fetchAgentsAuthed(page) {
     //    builds that land on the discovery grid.
     log('Opening Bot Hub...');
     const botHubNav = page.getByRole('button', { name: 'Bot Hub' }).first();
-    if (await botHubNav.count()) {
+    try {
+      await botHubNav.waitFor({ timeout: 20000 });
       await botHubNav.click();
-    } else {
+    } catch {
       await page.getByText('Agent | Bot Hub').first().click();
     }
     await waitForText(page, 'Your bots');
@@ -294,27 +300,36 @@ async function fetchAgentsAuthed(page) {
     log('Starting single-bot chat with Echo Alpha...');
     await page.getByText(BOT_A).first().click();
     await waitForText(page, 'Delegate work to Echo Alpha');
-    await page.getByRole('button', { name: 'Chat' }).first().click();
+    // Playwright's role-based click can land on a no-op match (icon-only
+    // rail buttons share the accessible name); click the visible text-exact
+    // button in the DOM instead — verified to dispatch open-view.
+    await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button')).filter(
+        (b) => (b.textContent || '').trim() === 'Chat' && b.offsetParent !== null && !b.disabled,
+      );
+      if (!btns.length) throw new Error('no visible Chat button on bot home');
+      btns[0].click();
+    });
 
-    const singleComposer = page.locator('textarea[placeholder*="Type your message"]').first();
+    const singleComposer = page.locator('textarea[placeholder^="Message "], textarea[placeholder*="Type your message"]').first();
     await singleComposer.waitFor({ timeout: 30000 });
     log('  Sending single-bot message...');
-    await singleComposer.fill('What is your name?');
+    await singleComposer.fill(SINGLE_PROMPT);
     await singleComposer.press('Enter');
 
     try {
-      await waitForChatTranscriptContains(page, 'What is your name?', ['Echo Alpha'], 150000);
+      await waitForChatTranscriptContains(page, SINGLE_PROMPT, ['Echo Alpha'], 150000);
     } catch (err) {
-      const transcriptText = await page.evaluate(() => {
+      const transcriptText = await page.evaluate((prompt) => {
         const userEl = Array.from(document.querySelectorAll('p.whitespace-pre-wrap, div, span')).find(
-          (el) => el.textContent?.trim() === 'What is your name?'
+          (el) => el.textContent?.trim() === prompt
         );
         let transcript = userEl?.parentElement;
         while (transcript && !transcript.classList.contains('overflow-y-auto')) {
           transcript = transcript.parentElement;
         }
         return transcript ? transcript.innerText : 'NO_TRANSCRIPT_FOUND';
-      });
+      }, SINGLE_PROMPT);
       log('  Single-bot transcript debug:', transcriptText.slice(0, 500));
       throw err;
     }
@@ -323,7 +338,13 @@ async function fetchAgentsAuthed(page) {
 
     // 5. Group chat.
     log('Returning to Bot Hub for group chat...');
-    await page.getByText('Agent | Bot Hub').first().click();
+    const botHubNav2 = page.getByRole('button', { name: 'Bot Hub' }).first();
+    try {
+      await botHubNav2.waitFor({ timeout: 20000 });
+      await botHubNav2.click();
+    } catch {
+      await page.getByText('Agent | Bot Hub').first().click();
+    }
     await waitForText(page, 'Your bots');
     await page.getByRole('button', { name: 'New group chat' }).first().click();
     await waitForText(page, 'Start group chat');
@@ -334,25 +355,25 @@ async function fetchAgentsAuthed(page) {
     await page.locator('input[placeholder="e.g., Research Squad"]').first().fill(GROUP_NAME);
     await page.locator('.fixed.inset-0').getByRole('button', { name: 'Start chat' }).first().click();
 
-    const groupComposer = page.locator('textarea[aria-label="Message the group"]').first();
+    const groupComposer = page.locator('textarea[aria-label="Message the group"], textarea[placeholder^="Message #"]').first();
     await groupComposer.waitFor({ timeout: 30000 });
     log('  Sending group message...');
-    await groupComposer.fill('Say your names.');
+    await groupComposer.fill(GROUP_PROMPT);
     await groupComposer.press('Enter');
 
     try {
-      await waitForChatTranscriptContains(page, 'Say your names.', ['Echo Alpha', 'Echo Beta'], 240000);
+      await waitForChatTranscriptContains(page, GROUP_PROMPT, ['Echo Alpha', 'Echo Beta'], 240000);
     } catch (err) {
-      const transcriptText = await page.evaluate(() => {
+      const transcriptText = await page.evaluate((prompt) => {
         const userEl = Array.from(document.querySelectorAll('p.whitespace-pre-wrap, div, span')).find(
-          (el) => el.textContent?.trim() === 'Say your names.'
+          (el) => el.textContent?.trim() === prompt
         );
         let transcript = userEl?.parentElement;
         while (transcript && !transcript.classList.contains('overflow-y-auto')) {
           transcript = transcript.parentElement;
         }
         return transcript ? transcript.innerText : 'NO_TRANSCRIPT_FOUND';
-      });
+      }, GROUP_PROMPT);
       log('  Transcript debug:', transcriptText.slice(0, 500));
       throw err;
     }
@@ -360,9 +381,9 @@ async function fetchAgentsAuthed(page) {
     log('  Group replies from both bots detected in chat transcript.');
 
     await page.waitForFunction(
-      () => {
+      (prompt) => {
         const userEl = Array.from(document.querySelectorAll('p.whitespace-pre-wrap, div, span')).find(
-          (el) => el.textContent?.trim() === 'Say your names.'
+          (el) => el.textContent?.trim() === prompt
         );
         let transcript = userEl?.parentElement;
         while (transcript && !transcript.classList.contains('overflow-y-auto')) {
@@ -370,6 +391,7 @@ async function fetchAgentsAuthed(page) {
         }
         return transcript ? !transcript.innerText.includes('Bots are thinking') : false;
       },
+      GROUP_PROMPT,
       { timeout: 60000 }
     );
 

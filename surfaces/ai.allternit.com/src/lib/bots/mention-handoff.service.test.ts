@@ -89,6 +89,15 @@ describe('resolveMention', () => {
     expect(resolveMention('ALPHA', [ALPHA], [])?.agent?.id).toBe('bot-alpha');
   });
 
+  it('resolves a slugified display name when botProfile.handle is unset', () => {
+    // Group membership uses the same slug (startBotGroupChat → getBotHandle),
+    // then @mentions that handle. Echo Alpha / Echo Beta from the live
+    // harness have displayName but no stored handle.
+    const echo = makeBot('904ef696-c3a0-40e6-ad4b-ee057cbfad97', 'Echo Alpha');
+    expect(resolveMention('echo-alpha', [echo], [])?.agent?.id).toBe(echo.id);
+    expect(resolveMention('Echo Alpha', [echo], [])?.agent?.id).toBe(echo.id);
+  });
+
   it('resolves stacked agents by name or display name', () => {
     expect(resolveMention('stacky', [], [STACKED])?.stacked?.external.externalId).toBe('ext-1');
     expect(resolveMention('stacked-1', [], [STACKED])?.stacked?.external.externalId).toBe('ext-1');

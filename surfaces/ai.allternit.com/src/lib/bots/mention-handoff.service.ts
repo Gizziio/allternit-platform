@@ -11,7 +11,7 @@
  */
 
 import type { Agent } from '@/lib/agents/agent.types';
-import { isBot, getBotDisplayName } from '@/lib/bots/bot-profile';
+import { isBot, getBotDisplayName, getBotHandle } from '@/lib/bots/bot-profile';
 import type { StackedAgent } from '@/lib/bots/stacked-agent.service';
 import { wakeBot } from '@/lib/bots/bot-wake.service';
 import { classifyFailure, isAttentionReason } from '@/lib/bots/failure-reasons';
@@ -174,8 +174,9 @@ export function resolveMention(
     if (!isBot(a)) return false;
     return (
       a.name.toLowerCase() === lower ||
-      (a.botProfile?.handle ?? '').toLowerCase() === lower ||
-      (a.botProfile?.displayName ?? '').toLowerCase() === lower
+      a.id.toLowerCase() === lower ||
+      getBotHandle(a).toLowerCase() === lower ||
+      getBotDisplayName(a).toLowerCase() === lower
     );
   });
 
@@ -187,7 +188,9 @@ export function resolveMention(
     const a = s.agent;
     return (
       a.name.toLowerCase() === lower ||
-      (a.botProfile?.displayName ?? '').toLowerCase() === lower
+      a.id.toLowerCase() === lower ||
+      getBotHandle(a).toLowerCase() === lower ||
+      getBotDisplayName(a).toLowerCase() === lower
     );
   });
 

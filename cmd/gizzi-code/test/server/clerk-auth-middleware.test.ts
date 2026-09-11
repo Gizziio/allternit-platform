@@ -42,6 +42,14 @@ beforeAll(async () => {
 
 const AUTHED = { authorization: `Basic ${btoa("gizzi:test-password")}` }
 
+describe("ClerkAuth.allowedIssuers", () => {
+  test("accepts the first-party Clerk proxy issuer used by Vite/Fabric JWTs", () => {
+    const issuers = ClerkAuth.allowedIssuers()
+    expect(issuers).toContain(ClerkAuth.DEFAULT_ISSUER)
+    expect(issuers).toContain(ClerkAuth.PROXY_ISSUER)
+  })
+})
+
 describe("ClerkAuth.middleware — Bearer alt_ Allternit gateway tokens", () => {
   test("valid alt_ token is accepted and sets clerkUser", async () => {
     stubFetch(async () => new Response(JSON.stringify({ valid: true, user_id: "u_123", name: "Dev" }), { status: 200 }))

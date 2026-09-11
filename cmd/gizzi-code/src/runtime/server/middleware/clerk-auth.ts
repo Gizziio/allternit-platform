@@ -23,6 +23,9 @@ export namespace ClerkAuth {
 
   export const DEFAULT_JWKS_URL = `${CLOUD_URLS.clerk}/.well-known/jwks.json`
   export const DEFAULT_ISSUER = CLOUD_URLS.clerk
+  // First-party Clerk proxy used by the web surface in Vite/Fabric. Browser
+  // session JWTs carry this `iss`; allternit-api already accepts it.
+  export const PROXY_ISSUER = "https://allternit.com/__clerk"
   // Token-validation endpoint of allternit-cloud-api (public by design — it
   // only answers "is this token valid" for a token the caller already holds).
   // Used to authenticate durable `alt_`-prefixed Allternit gateway tokens,
@@ -35,6 +38,10 @@ export namespace ClerkAuth {
 
   export function issuer(): string {
     return Flag.GIZZI_CLERK_ISSUER ?? DEFAULT_ISSUER
+  }
+
+  export function allowedIssuers(): string[] {
+    return [...new Set([issuer(), DEFAULT_ISSUER, PROXY_ISSUER])]
   }
 
   export function validateUrl(): string {
@@ -78,7 +85,7 @@ export namespace ClerkAuth {
 
   export async function verify(token: string): Promise<ClerkUser> {
     const { payload } = await jwtVerify(token, jwks(), {
-      issuer: issuer(),
+      issuer: allowedIssuers(),
       algorithms: ["RS256"],
     })
     // Clerk session token v2 org claim ("o") with v1 fallback (auth.rs parity).
