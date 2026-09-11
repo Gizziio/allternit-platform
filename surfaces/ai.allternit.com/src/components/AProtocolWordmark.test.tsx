@@ -12,8 +12,8 @@ describe('AProtocolWordmark glyphs', () => {
     ['DESIGN', 6],
   ])('renders every letter of suffix "%s"', (suffix, count) => {
     const { container } = render(<AProtocolWordmark suffix={suffix} height={20} />);
-    // One <g> per pixel letter (the A:// mark is an <img> outside the svg).
-    expect(container.querySelectorAll('svg g')).toHaveLength(6 + count);
+    // One <g> per pixel letter plus one <g> for the A:// mark.
+    expect(container.querySelectorAll('svg g')).toHaveLength(7 + count);
   });
 
   it('advances the grid for unknown letters instead of collapsing the word', () => {
