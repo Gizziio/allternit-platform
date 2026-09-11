@@ -8,7 +8,7 @@ import {
   DeviceAccessIcon,
   Wallet01Icon,
   Key01Icon,
-  BookOpen01Icon,
+  BotIcon,
   Setting07Icon,
   Search01Icon,
   Notification01Icon,
@@ -46,6 +46,10 @@ interface NavItem {
   label: string;
 }
 
+interface TopNavItem extends NavItem {
+  icon: IconData;
+}
+
 interface NavGroup {
   label: string;
   icon: IconData;
@@ -53,40 +57,55 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const dashboardItem: NavItem = { to: "/", label: "Dashboard" };
+const topNavItems: TopNavItem[] = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboardIcon },
+  { to: "/api-keys", label: "API keys", icon: Key01Icon },
+];
 
 const navGroups: NavGroup[] = [
+  {
+    label: "Agents",
+    icon: BotIcon,
+    defaultOpen: true,
+    items: [
+      { to: "/agents", label: "Agents" },
+      { to: "/runs", label: "Runs" },
+      { to: "/schedules", label: "Schedules" },
+      { to: "/approvals", label: "Approvals" },
+    ],
+  },
   {
     label: "Cloud",
     icon: CloudIcon,
     defaultOpen: true,
     items: [
-      { to: "/organizations", label: "Organizations" },
       { to: "/compute", label: "Compute" },
-      { to: "/agents", label: "Agents" },
       { to: "/devices", label: "Devices" },
       { to: "/fabric", label: "Fabric" },
-      { to: "/runs", label: "Runs" },
-      { to: "/schedules", label: "Schedules" },
-      { to: "/approvals", label: "Approvals" },
-      { to: "/billing", label: "Billing" },
       { to: "/cloud-accounts", label: "Cloud accounts" },
-      { to: "/api-keys", label: "API keys" },
     ],
   },
   {
-    label: "Resources",
-    icon: BookOpen01Icon,
-    items: [{ to: "/docs", label: "Docs" }],
-  },
-  {
-    label: "Settings",
-    icon: Setting07Icon,
-    items: [{ to: "/settings", label: "Settings" }],
+    label: "Organization",
+    icon: TeamWorkIcon,
+    items: [
+      { to: "/organizations", label: "Organizations" },
+      { to: "/billing", label: "Billing" },
+    ],
   },
 ];
 
-const flatNavItems = [dashboardItem, ...navGroups.flatMap((g) => g.items)];
+const settingsItem: TopNavItem = {
+  to: "/settings",
+  label: "Settings",
+  icon: Setting07Icon,
+};
+
+const flatNavItems = [
+  ...topNavItems,
+  ...navGroups.flatMap((g) => g.items),
+  settingsItem,
+];
 
 function groupContainsPath(group: NavGroup, pathname: string): boolean {
   return group.items.some(
@@ -232,7 +251,8 @@ function SidebarContent({
     [q]
   );
 
-  const dashboardVisible = matches(dashboardItem.label);
+  const visibleTop = topNavItems.filter((item) => matches(item.label));
+  const settingsVisible = matches(settingsItem.label);
 
   const isGroupOpen = (group: NavGroup) => {
     if (q) return true;
@@ -248,19 +268,18 @@ function SidebarContent({
   };
 
   const firstFiltered = q
-    ? (dashboardVisible ? dashboardItem : null) ??
-      visibleGroups[0]?.items[0] ??
-      null
+    ? visibleTop[0] ?? visibleGroups[0]?.items[0] ?? null
     : null;
 
   if (collapsed) {
     return (
       <>
         <div className="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2 py-3">
-          {dashboardVisible && (
+          {visibleTop.map((item) => (
             <NavLink
-              to={dashboardItem.to}
-              title={dashboardItem.label}
+              key={item.to}
+              to={item.to}
+              title={item.label}
               className={({ isActive }) =>
                 cn(
                   "flex size-10 items-center justify-center rounded-lg transition-colors",
@@ -270,9 +289,9 @@ function SidebarContent({
                 )
               }
             >
-              <HugeiconsIcon icon={LayoutDashboardIcon} size={19} />
+              <HugeiconsIcon icon={item.icon} size={19} />
             </NavLink>
-          )}
+          ))}
           {visibleGroups.map((group) => (
             <button
               key={group.label}
@@ -284,6 +303,22 @@ function SidebarContent({
               <HugeiconsIcon icon={group.icon} size={19} />
             </button>
           ))}
+          {settingsVisible && (
+            <NavLink
+              to={settingsItem.to}
+              title={settingsItem.label}
+              className={({ isActive }) =>
+                cn(
+                  "flex size-10 items-center justify-center rounded-lg transition-colors",
+                  isActive
+                    ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                )
+              }
+            >
+              <HugeiconsIcon icon={settingsItem.icon} size={19} />
+            </NavLink>
+          )}
         </div>
         <div className="border-t border-[var(--border-subtle)] py-2">
           <RailUserCard collapsed />
@@ -326,9 +361,10 @@ function SidebarContent({
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-3">
-        {dashboardVisible && (
+        {visibleTop.map((item) => (
           <NavLink
-            to={dashboardItem.to}
+            key={item.to}
+            to={item.to}
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
@@ -339,10 +375,10 @@ function SidebarContent({
               )
             }
           >
-            <HugeiconsIcon icon={LayoutDashboardIcon} size={17} />
-            {dashboardItem.label}
+            <HugeiconsIcon icon={item.icon} size={17} />
+            {item.label}
           </NavLink>
-        )}
+        ))}
 
         {visibleGroups.map((group) => {
           const open = isGroupOpen(group);
@@ -361,16 +397,13 @@ function SidebarContent({
                 <HugeiconsIcon icon={group.icon} size={17} />
                 <span className="flex-1 text-left">{group.label}</span>
                 <HugeiconsIcon
-                  icon={ChevronDownIcon}
+                  icon={open ? ChevronDownIcon : ChevronRightIcon}
                   size={14}
-                  className={cn(
-                    "text-[var(--text-tertiary)] transition-transform",
-                    open && "rotate-180"
-                  )}
+                  className="text-[var(--text-tertiary)]"
                 />
               </button>
               {open && (
-                <div className="ml-[26px] border-l border-solid border-[var(--border-subtle)] pb-1 pt-1">
+                <div className="mt-0.5 space-y-px pl-[38px]">
                   {group.items.map((item) => (
                     <NavLink
                       key={item.to}
@@ -378,7 +411,7 @@ function SidebarContent({
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         cn(
-                          "block rounded-md py-1.5 pl-4 pr-3 text-[13px] transition-colors",
+                          "block rounded-md px-3 py-1.5 text-[13px] transition-colors",
                           isActive
                             ? "bg-[var(--surface-hover)] font-medium text-[var(--text-primary)]"
                             : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
@@ -394,7 +427,25 @@ function SidebarContent({
           );
         })}
 
-        {q && !dashboardVisible && visibleGroups.length === 0 && (
+        {settingsVisible && (
+          <NavLink
+            to={settingsItem.to}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                "mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                isActive
+                  ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+              )
+            }
+          >
+            <HugeiconsIcon icon={settingsItem.icon} size={17} />
+            {settingsItem.label}
+          </NavLink>
+        )}
+
+        {q && visibleTop.length === 0 && !settingsVisible && visibleGroups.length === 0 && (
           <p className="px-3 py-4 text-[12px] text-[var(--text-tertiary)]">
             No matches for “{query}”.
           </p>
