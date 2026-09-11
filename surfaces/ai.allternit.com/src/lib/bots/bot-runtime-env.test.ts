@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildBotRuntimeEnv, botRuntimeEnvToEnvMap } from './bot-runtime-env';
+import { buildBotRuntimeEnv, botRuntimeEnvToEnvMap, resolveModelRef } from './bot-runtime-env';
 import type { HarnessConfig } from '@/lib/agents/agent.types';
 import type { ResolvedSecret } from '@/lib/agents/agent-secrets-resolver';
 import type { ResolvedConnectorCredential } from '@/lib/agents/agent-connectors-resolver';
@@ -121,5 +121,25 @@ describe('botRuntimeEnvToEnvMap', () => {
 
   it('returns empty object when runtime env is undefined', () => {
     expect(botRuntimeEnvToEnvMap(undefined)).toEqual({});
+  });
+});
+
+describe('resolveModelRef', () => {
+  it('does not double-prefix a model that already has a provider/', async () => {
+    const ref = await resolveModelRef({
+      provider: 'allternit',
+      model: 'allternit/kimi-k3',
+      harness: { mode: 'cloud' },
+    } as never);
+    expect(ref).toBe('allternit/kimi-k3');
+  });
+
+  it('joins provider and bare model id', async () => {
+    const ref = await resolveModelRef({
+      provider: 'openai',
+      model: 'gpt-4o',
+      harness: { mode: 'cloud' },
+    } as never);
+    expect(ref).toBe('openai/gpt-4o');
   });
 });

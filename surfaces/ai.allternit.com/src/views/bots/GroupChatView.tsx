@@ -12,8 +12,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAgentsWithSwarms } from "@/lib/agents";
-import { useAgentStore } from "@/lib/agents/agent.store";
-import { useStackProviders } from "@/lib/bots/use-stack-providers";
 import {
   useGroupChatStore,
   type GroupChatState,
@@ -21,10 +19,10 @@ import {
 import type { GroupChatMessage } from "@/lib/bots/group-chat.types";
 import {
   runGroupChat,
-  createMentionHandoffAdapter,
   parseGroupChatMentions,
   type MemberTurnAdapter,
 } from "@/lib/bots/group-chat.service";
+import { streamNativeBotReply } from "@/lib/bots/group-chat-turn-runner";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -75,18 +73,6 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
   const setActiveGroup = useGroupChatStore((s: GroupChatState) => s.setActiveGroup);
 
   const agents = useAgentsWithSwarms();
-  const { stackedAgents } = useStackProviders();
-  const sendMail = useAgentStore((s) => s.sendMail);
-  const fetchMail = useAgentStore((s) => s.fetchMail);
-  const acknowledgeMail = useAgentStore((s) => s.acknowledgeMail);
-
-  const fetchMailForGroup = useCallback(
-    async (agentId: string) => {
-      await fetchMail(agentId);
-      return useAgentStore.getState().mail[agentId] ?? [];
-    },
-    [fetchMail]
-  );
 
   const [isRunning, setIsRunning] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -114,17 +100,19 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
   }, [group?.log.length]);
 
   const adapter = useMemo<MemberTurnAdapter>(() => {
-    return createMentionHandoffAdapter({
-      nativeAgents: agents,
-      stackedAgents,
-      sendMail,
-      fetchMail: fetchMailForGroup,
-      acknowledgeMail,
-      senderName: "Group Chat",
-      senderHandle: "group",
-      mailReplyTimeoutMs: 30_000,
-    });
-  }, [agents, stackedAgents, sendMail, fetchMailForGroup, acknowledgeMail]);
+    return {
+      runTurn: async (member, prompt) => {
+        const bot = agents.find((a) => a.id === member.botId);
+        if (!bot) return undefined;
+        return streamNativeBotReply({
+          bot,
+          prompt,
+          systemPrompt: `You are ${member.displayName}. You must ALWAYS identify yourself as ${member.displayName}. NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${member.displayName}.`,
+          displayName: member.displayName,
+        });
+      },
+    };
+  }, [agents]);
 
   const memberMap = useMemo(() => {
     const map = new Map(

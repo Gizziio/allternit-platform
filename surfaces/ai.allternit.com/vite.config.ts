@@ -251,12 +251,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/local-ai/, ''),
       },
-      // Chat streaming is handled by the local gizzi runtime in dev; the
-      // allternit-api backend does not yet implement /agent-chat.
-      '/api/agent-chat': {
-        target: 'http://127.0.0.1:4096',
-        changeOrigin: true,
-      },
       // Clerk same-origin proxy (getProxyUrl() in platform-auth-client.tsx
       // always points Clerk at <origin>/__clerk). Production serves this via
       // Cloudflare; without a dev equivalent ClerkJS cannot load and seeded

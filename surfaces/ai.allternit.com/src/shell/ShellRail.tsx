@@ -2756,6 +2756,7 @@ function BotGroupRailRow({ group, unread, isActive, onOpen }: {
 }): React.ReactNode {
   return (
     <div
+      data-rail-item={`group-${group.id}`}
       className={cn(
         "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
         isActive

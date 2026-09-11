@@ -272,6 +272,28 @@ const bundlePlugin = {
         build.onResolve({ filter: /^audio-capture-napi$/ }, () => ({
             path: resolve("src/vendor/anthropic-stubs/audio-capture-napi.ts"),
         }));
+        // Optional OTel exporters/SDKs — not all are declared in package.json;
+        // without a stub Bun.build fails before the binary is produced.
+        build.onResolve({
+            filter: /^@opentelemetry\/(sdk-metrics|sdk-trace-base|exporter-.*)$/,
+        }, () => ({
+            path: resolve("src/vendor/anthropic-stubs/optional-otel.ts"),
+        }));
+        // @allternit/gizzi-sdk lives at packages/sdk (not packages/gizzi-sdk).
+        // Without this alias Bun.build cannot resolve provider subpaths and
+        // the production binary ships without Bot Mode / provider adapters.
+        build.onResolve({ filter: /^@allternit\/gizzi-sdk/ }, (args) => {
+            const rest = args.path.replace(/^@allternit\/gizzi-sdk\/?/, "");
+            const pkgDir = resolve("packages/sdk");
+            if (!rest) {
+                return { path: resolve(pkgDir, "dist/index.js") };
+            }
+            const jsPath = resolve(pkgDir, "dist", rest + ".js");
+            if (Bun.file(jsPath).size > 0) return { path: jsPath };
+            const indexPath = resolve(pkgDir, "dist", rest, "index.js");
+            if (Bun.file(indexPath).size > 0) return { path: indexPath };
+            return { path: jsPath };
+        });
         // Resolve @allternit workspace packages to their source or dist
         build.onResolve({ filter: /^@allternit\/(plugin|script|sdk|util|gizzi-util)/ }, (args) => {
             const parts = args.path.split("/");

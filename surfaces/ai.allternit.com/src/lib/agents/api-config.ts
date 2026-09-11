@@ -127,6 +127,18 @@ export async function buildAuthHeaders(): Promise<Record<string, string>> {
   }
 
   let bearerToken = window.localStorage.getItem('allternit_token');
+  // Clerk session JWTs last ~60s. Prefer a live token over a stale snapshot
+  // so a long group-chat round does not 401 after the first minute.
+  try {
+    const clerk = (window as unknown as { Clerk?: { session?: { getToken?: () => Promise<string | null> } } }).Clerk;
+    const live = await clerk?.session?.getToken?.();
+    if (live) {
+      bearerToken = live;
+      window.localStorage.setItem('allternit_token', live);
+    }
+  } catch {
+    // Fall through to the stored snapshot / desktop bridge.
+  }
   if (!bearerToken) {
     try {
       bearerToken = await window.allternit?.auth?.getClerkToken?.() ?? null;

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { agentToBot, agentToCreateAgentInput, createBotAgent } from './bot-profile';
+import { agentToBot, agentToCreateAgentInput, createBotAgent, getBotHandle, slugBotHandle } from './bot-profile';
 import { BotSchema } from './orpc-contracts';
 import type { Agent, BotProfile } from '../agents/agent.types';
 
@@ -114,5 +114,18 @@ describe('agentToCreateAgentInput (share-auth / duplicate inheritance)', () => {
     expect(refs).toHaveLength(1);
     expect(refs[0].vaultRef).toBe('vault://team/api-key');
     expect(refs[0].value).toBeUndefined();
+  });
+});
+
+describe('getBotHandle', () => {
+  it('prefers an explicit botProfile.handle', () => {
+    expect(getBotHandle(makeAgent())).toBe('deep-researcher');
+  });
+
+  it('slugifies a spaced display name when handle is unset', () => {
+    expect(slugBotHandle('Echo Alpha', 'id-ignored-when-slugable')).toBe('echo-alpha');
+    const agent = makeAgent();
+    agent.botProfile = { ...agent.botProfile!, displayName: 'Echo Beta', handle: undefined };
+    expect(getBotHandle(agent)).toBe('echo-beta');
   });
 });

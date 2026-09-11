@@ -216,8 +216,10 @@ export async function resolveModelRef(agent: Agent | undefined): Promise<string 
     }
     case 'cloud':
     default: {
-      if (agent.provider && agent.model && agent.model !== 'default') {
-        return `${agent.provider}/${agent.model}`;
+      if (agent.model && agent.model !== 'default') {
+        // Model is already a provider/model ref (e.g. allternit/kimi-k3).
+        if (agent.model.includes('/')) return agent.model;
+        if (agent.provider) return `${agent.provider}/${agent.model}`;
       }
       return undefined;
     }

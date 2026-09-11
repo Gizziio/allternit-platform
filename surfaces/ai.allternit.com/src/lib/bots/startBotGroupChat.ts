@@ -1,6 +1,6 @@
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import type { Agent } from '@/lib/agents/agent.types';
-import { getBotDisplayName } from './bot-profile';
+import { getBotDisplayName, getBotHandle } from './bot-profile';
 import { useGroupChatStore } from './group-chat.store';
 import type { GroupChatMember } from './group-chat.types';
 
@@ -32,14 +32,10 @@ export async function startBotGroupChat(
 
   const members: GroupChatMember[] = bots.map((bot) => {
     const displayName = getBotDisplayName(bot);
-    const handle =
-      bot.botProfile?.handle ??
-      (displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') ||
-        bot.id.slice(0, 8));
     return {
       botId: bot.id,
       displayName,
-      handle,
+      handle: getBotHandle(bot),
       source: 'native' as const,
     };
   });
