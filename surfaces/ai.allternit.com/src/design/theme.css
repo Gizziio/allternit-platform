@@ -277,7 +277,7 @@
   --view-browser-bg:      var(--shell-view-bg);
   --view-settings-bg:     var(--shell-view-bg);
   --view-cowork-bg:       var(--shell-view-bg);
-  --view-bot-bg:          color-mix(in srgb, var(--accent-bot) 5%, var(--shell-view-bg));
+  --view-bot-bg:          color-mix(in srgb, var(--accent-bot) 2%, var(--shell-view-bg));
 }
 
 /* Compact density — set by Settings → Appearance → Compact density via

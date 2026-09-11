@@ -38,9 +38,9 @@ function ChatCoworkToggle() {
     <div
       role="group"
       aria-label="Chat, Cowork, or Bots"
-      className="flex items-center rounded-md overflow-hidden border border-composer-border bg-transparent h-7 flex-shrink-0"
+      className="flex items-center gap-0.5 rounded-lg border border-composer-border bg-transparent h-7 flex-shrink-0 p-0.5"
     >
-      {MODE_SEGMENTS.map((segment, index) => {
+      {MODE_SEGMENTS.map((segment) => {
         const isActive = mode === segment.id;
         const SegmentIcon = segment.icon;
         return (
@@ -50,8 +50,7 @@ function ChatCoworkToggle() {
             aria-pressed={isActive}
             onClick={() => handleSwitch(segment.id)}
             className={cn(
-              'flex items-center gap-1 px-2 h-full border-none transition-all duration-150 text-xs font-semibold',
-              index > 0 && 'border-l border-composer-border',
+              'flex items-center gap-1 px-2 h-full border-none rounded-md transition-all duration-150 text-xs font-semibold',
               isActive
                 ? 'bg-composer-soft text-primary'
                 : 'bg-transparent text-muted hover:text-primary'
