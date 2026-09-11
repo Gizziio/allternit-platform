@@ -835,6 +835,65 @@ async fn create_standalone_desktop(
     (StatusCode::CREATED, Json(response)).into_response()
 }
 
+/// Cloud Agents session bind: provision a Computer Cloud desktop (Incus/Tart),
+/// not Fly hosted-runtime. `owner_type=session`. Returns the computers.id.
+pub(crate) async fn provision_cloud_desktop_for_session(
+    state: Arc<AppState>,
+    user: AuthUser,
+    session_id: String,
+    persistence: Persistence,
+    os: Option<String>,
+    template_id: Option<String>,
+    provider: Option<String>,
+) -> Result<String, (StatusCode, String)> {
+    let req = CreateComputerRequest {
+        kind: ComputerKind::CloudDesktop,
+        owner_type: Some("session".into()),
+        owner_id: None,
+        cpu_cores: None,
+        memory_mb: None,
+        disk_mb: None,
+        resolution: None,
+        bot_id: None,
+        name: Some(format!("cloud-agent-{session_id}")),
+        os,
+        template_id,
+        template_ref: None,
+        session_id: Some(session_id),
+        persistence: Some(persistence),
+        provider,
+    };
+    let owner = ("user".to_string(), user.user_id.clone());
+    let response = create_standalone_desktop(state, user, req, owner).await;
+    let status = response.status();
+    let body = match axum::body::to_bytes(response.into_body(), 1_048_576).await {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "failed to read computer provision response".into(),
+            ))
+        }
+    };
+    let json: Value = serde_json::from_slice(&body).unwrap_or_else(|_| json!({}));
+    if status.is_success() {
+        json.get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "computer provision returned no id".into(),
+            ))
+    } else {
+        let message = json
+            .get("error")
+            .and_then(Value::as_str)
+            .unwrap_or("Computer Cloud desktop provision failed")
+            .to_string();
+        Err((status, message))
+    }
+}
+
 /// A desktop spawned by the shared spawn internals, with its persisted row.
 pub(crate) struct SpawnedDesktop {
     pub handle: allternit_driver_interface::ExecutionHandle,

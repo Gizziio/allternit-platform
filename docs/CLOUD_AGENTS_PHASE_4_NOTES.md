@@ -16,10 +16,10 @@ deviations:
   - Schedules alias beta/deployments (cron deployments), not a new scheduler.
   - tool_search/mcp/programmatic are false/[] on GET /agents/:id/toolset until a later bind.
   - permission is recorded, not enforced (ACI is Bot Agents).
-  - sandbox/fabric/desktop remain 400 (no silent none). Sandbox provision not wired (credits/org).
+  - sandbox/desktop provision Computer Cloud (Cloud Desktop). Tests without a VM driver expect 503. fabric stays 400.
 remaining:
-  - Sandbox/Fly hosted-runtime provision
-  - fabric/desktop worker claim
+  - Live Computer Cloud provision still needs a configured Incus/Tart driver (unit tests assert 503 without one)
+  - fabric kind still 400
   - Dollar budget (parked)
   - Bot Agents BA-*
   - OpenAI/Anthropic shims (non-goal)

@@ -79,6 +79,14 @@ struct InlineAgent {
 struct ComputerSpec {
     #[serde(default = "default_computer_kind")]
     kind: String,
+    #[serde(default)]
+    id: Option<String>,
+    #[serde(default)]
+    os: Option<String>,
+    #[serde(default)]
+    template_id: Option<String>,
+    #[serde(default)]
+    provider: Option<String>,
 }
 
 fn default_computer_kind() -> String {
@@ -188,6 +196,35 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
         "updated_at": session.updated_at,
         "archived_at": session.archived_at,
     })
+}
+
+async fn bind_session_computer(
+    state: Arc<AppState>,
+    session_id: &str,
+    computer_id: &str,
+    kind: &str,
+) -> Result<(), ApiError> {
+    let db = state.db.clone();
+    let session_id = session_id.to_string();
+    let computer_id_owned = computer_id.to_string();
+    let kind = kind.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "UPDATE beta_sessions SET computer_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+            params![computer_id_owned, session_id],
+        )?;
+        beta::insert_event(
+            &conn,
+            &session_id,
+            "computer_ready",
+            &json!({"kind": kind, "computer_id": computer_id_owned, "plane": "computer_cloud"}),
+        )?;
+        Ok::<(), rusqlite::Error>(())
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::DbError(e.to_string()))
 }
 
 fn parse_brain_id(value: &Option<Value>) -> Result<Option<String>, ApiError> {
@@ -415,18 +452,14 @@ async fn create_cloud_session(
         .as_ref()
         .map(|computer| computer.kind.clone())
         .unwrap_or_else(default_computer_kind);
+    let provision_kind = computer_kind.clone();
     match computer_kind.as_str() {
-        "none" | "local" => {}
-        "sandbox" => {
+        "none" | "local" | "sandbox" | "desktop" => {}
+        "fabric" => {
             return Err(ApiError::BadRequest(
-                "computer.kind \"sandbox\" requires a hosted computer entitlement that is not available on this account"
+                "computer.kind \"fabric\" is not available on this account (no silent downgrade to none)"
                     .into(),
             ));
-        }
-        "fabric" | "desktop" => {
-            return Err(ApiError::BadRequest(format!(
-                "computer.kind \"{computer_kind}\" is not available on this account (no silent downgrade to none)"
-            )));
         }
         other => {
             return Err(ApiError::BadRequest(format!(
@@ -450,7 +483,7 @@ async fn create_cloud_session(
 
     let db = state.db.clone();
     let organization_id = user.organization_id.clone();
-    let user_id = user.user_id;
+    let user_id = user.user_id.clone();
     let session_id = uuid::Uuid::new_v4().to_string();
     let result_session_id = session_id.clone();
     let webhook_session_id = session_id.clone();
@@ -610,6 +643,14 @@ async fn create_cloud_session(
                     &json!({"kind": "local"}),
                 )?;
             }
+            "sandbox" | "desktop" => {
+                beta::insert_event(
+                    &tx,
+                    &session_id,
+                    "computer_pending",
+                    &json!({"kind": computer_kind, "plane": "computer_cloud"}),
+                )?;
+            }
             _ => {}
         }
         if let Some(text) = input_text {
@@ -650,6 +691,81 @@ async fn create_cloud_session(
         rusqlite::Error::InvalidParameterName(msg) => ApiError::BadRequest(msg),
         other => ApiError::DbError(other.to_string()),
     })?;
+
+    let computer_bind_id = body.computer.as_ref().and_then(|c| c.id.clone());
+    let computer_os = body.computer.as_ref().and_then(|c| c.os.clone());
+    let computer_template = body
+        .computer
+        .as_ref()
+        .and_then(|c| c.template_id.clone());
+    let computer_provider = body.computer.as_ref().and_then(|c| c.provider.clone());
+    let mut session = session;
+
+    if let Some(existing_id) = computer_bind_id {
+        match crate::computer_routes::fetch_computer(&state, &user, &existing_id).await {
+            Ok(Some(computer)) => {
+                bind_session_computer(
+                    state.clone(),
+                    &result_session_id,
+                    &computer.id,
+                    &provision_kind,
+                )
+                .await?;
+                session.computer_id = Some(computer.id);
+            }
+            Ok(None) => {
+                return Err(ApiError::BadRequest("computer not found".into()));
+            }
+            Err(_) => {
+                return Err(ApiError::BadRequest("computer not found".into()));
+            }
+        }
+    } else if provision_kind == "sandbox" || provision_kind == "desktop" {
+        let persistence = if provision_kind == "sandbox" {
+            crate::computer_routes::Persistence::Ephemeral
+        } else {
+            crate::computer_routes::Persistence::Session
+        };
+        match crate::computer_routes::provision_cloud_desktop_for_session(
+            state.clone(),
+            user.clone(),
+            result_session_id.clone(),
+            persistence,
+            computer_os,
+            computer_template,
+            computer_provider,
+        )
+        .await
+        {
+            Ok(computer_id) => {
+                bind_session_computer(
+                    state.clone(),
+                    &result_session_id,
+                    &computer_id,
+                    &provision_kind,
+                )
+                .await?;
+                session.computer_id = Some(computer_id);
+            }
+            Err((status, message)) => {
+                let db = state.db.clone();
+                let sid = result_session_id.clone();
+                let kind = provision_kind.clone();
+                let fail_msg = message.clone();
+                let _ = tokio::task::spawn_blocking(move || {
+                    let conn = db.connect()?;
+                    beta::insert_event(
+                        &conn,
+                        &sid,
+                        "computer_failed",
+                        &json!({"kind": kind, "error": fail_msg, "plane": "computer_cloud"}),
+                    )
+                })
+                .await;
+                return Ok((status, Json(json!({ "error": message }))).into_response());
+            }
+        }
+    }
 
     let public = public_session(&session, run_input);
     webhook_subscription_routes::deliver_session_event(
@@ -1142,7 +1258,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn sandbox_computer_without_entitlement_is_400() {
+    async fn sandbox_computer_without_driver_is_503() {
         let temp = beta_test::temp_dir("cloud-sandbox");
         let state = beta_test::test_app_state(&temp).await;
         let router = cloud_agents_router().with_state(state);
@@ -1151,8 +1267,18 @@ mod tests {
             "agent": {"model": "kimi-k2", "instructions": "hi"},
             "computer": {"kind": "sandbox"}
         });
-        let (status, _) = post_json(&router, "/sessions", &body, "user-a").await;
-        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let (status, payload) = post_json(&router, "/sessions", &body, "user-a").await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(
+            payload["error"]
+                .as_str()
+                .unwrap_or("")
+                .to_lowercase()
+                .contains("driver")
+                || payload["error"].as_str().unwrap_or("").contains("Computer Cloud")
+                || payload["error"].as_str().unwrap_or("").contains("desktop"),
+            "{payload}"
+        );
     }
 
     #[tokio::test]
@@ -1525,27 +1651,45 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fabric_and_desktop_kinds_are_400() {
+    async fn fabric_kind_is_400_desktop_without_driver_is_503() {
         let temp = beta_test::temp_dir("cloud-kind-400");
         let state = beta_test::test_app_state(&temp).await;
         let router = cloud_agents_router().with_state(state);
-        for kind in ["fabric", "desktop"] {
-            let (status, payload) = post_json(
-                &router,
-                "/sessions",
-                &json!({
-                    "agent": {"model": "kimi-k2", "instructions": "hi"},
-                    "computer": {"kind": kind}
-                }),
-                "user-a",
-            )
-            .await;
-            assert_eq!(status, StatusCode::BAD_REQUEST, "{kind}");
-            assert!(
-                payload["error"].as_str().unwrap_or("").contains(kind),
-                "{kind} {payload}"
-            );
-        }
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "fabric"}
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(
+            payload["error"].as_str().unwrap_or("").contains("fabric"),
+            "{payload}"
+        );
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "desktop"}
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(
+            payload["error"].as_str().unwrap_or("").contains("driver")
+                || payload["error"].as_str().unwrap_or("").contains("Computer")
+                || payload["error"].as_str().unwrap_or("").contains("desktop")
+                || payload["error"].as_str().unwrap_or("").contains("Tart")
+                || payload["error"].as_str().unwrap_or("").contains("substrate"),
+            "{payload}"
+        );
     }
 
     #[tokio::test]

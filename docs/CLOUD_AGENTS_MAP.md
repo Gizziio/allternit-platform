@@ -11,7 +11,8 @@ Orchestrator-owned. Phases 1–3 are on main.
 | Schedules | `/api/v1/schedules` aliases `/beta/deployments` CRUD + runs. |
 | Toolset | `GET /agents/:id/toolset` from existing agent columns. `tool_search`/`mcp` are `false`/`[]` until a later bind. |
 | Permission | Session create `permission`: `always_allow` \| `always_ask` \| `auto`. Stored in metadata, returned on public JSON. Not enforced (ACI is Bot). |
-| fabric/desktop | `400`, never silent `none`. Same contract as sandbox this release. |
+| desktop / sandbox | Computer Cloud Cloud Desktop (Incus/Tart), not Fly. `desktop` = session persistence, `sandbox` = ephemeral. `503` if no VM driver. Never silent `none`. |
+| fabric | `400`, never silent `none`. |
 
 ## Parked / not this PR
 

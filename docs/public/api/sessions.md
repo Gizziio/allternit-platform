@@ -37,11 +37,14 @@ Computer kinds:
 
 - `none` — no computer. The session is valid; a `computer.ready` event is
   recorded immediately.
-- `sandbox` — hosted sandbox. Returns `400` unless the account has a hosted
-  computer entitlement wired; it never silently becomes `none`.
+- `sandbox` — Computer Cloud desktop, ephemeral. Provisioned on Allternit's
+  Cloud Desktop plane (Incus/Tart), not Fly. Returns `503` if no VM driver
+  is configured. Never silently becomes `none`.
+- `desktop` — Computer Cloud desktop, session-lived. Same plane as sandbox.
 - `local` — descriptor only in this release. The session records the intent
   (`computer.pending`) and accepts events, but no worker is attached and
   nothing is awaited.
+- `fabric` — not available; create returns `400`.
 
 ### Example
 
@@ -272,7 +275,8 @@ surface above is the one that translates to Allternit names.
 |------|------|
 | `201` | Session created. |
 | `200` | Retrieve, list, archive, send, list events. |
-| `400` | Archived session, unknown event type, `computer.kind` sandbox/fabric/desktop without entitlement, version mismatch, unknown `brain_id`/`vault_ids`/`parent_thread_id`. |
+| `400` | Archived session, unknown event type, `computer.kind: fabric`, version mismatch, unknown `brain_id`/`vault_ids`/`parent_thread_id`. |
+| `503` | `computer.kind` sandbox/desktop and Computer Cloud has no VM driver. |
 
 ## Threads
 
