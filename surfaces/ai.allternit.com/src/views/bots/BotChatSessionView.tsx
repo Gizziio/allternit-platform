@@ -210,6 +210,7 @@ function BotChatSessionContent({
     () => summarizeOlderMessages(olderMessages),
     [olderMessages]
   );
+  const [showOlder, setShowOlder] = useState(false);
 
   useEffect(() => {
     setTranscript(messagesToTranscript(showOlder ? messages : recentMessages));
@@ -230,7 +231,6 @@ function BotChatSessionContent({
   const [notifyMode, setNotifyMode] = useState<BotThreadNotifyMode>(() =>
     getBotThreadNotifyMode(session?.id)
   );
-  const [showOlder, setShowOlder] = useState(false);
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
 
   useEffect(() => {
