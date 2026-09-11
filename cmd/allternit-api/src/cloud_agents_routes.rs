@@ -130,6 +130,8 @@ struct CreateCloudSessionBody {
     #[serde(default)]
     brain_id: Option<Value>,
     #[serde(default)]
+    memory_store_ids: Option<Value>,
+    #[serde(default)]
     parent_thread_id: Option<String>,
     #[serde(default)]
     permission: Option<String>,
@@ -222,6 +224,11 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
         .get("vault_ids")
         .cloned()
         .unwrap_or_else(|| json!([]));
+    let memory_store_ids = session
+        .metadata
+        .get("memory_store_ids")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
     json!({
         "id": session.id,
         "agent_id": session.agent_id,
@@ -235,6 +242,7 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
         },
         "brain_id": session.brain_id,
         "vault_ids": vault_ids,
+        "memory_store_ids": memory_store_ids,
         "bot_id": session.metadata.get("bot_id"),
         "parent_thread_id": session.parent_thread_id,
         "permission": session.metadata.get("permission"),
@@ -370,6 +378,29 @@ fn parse_vault_ids(value: &Option<Value>) -> Result<Vec<String>, ApiError> {
         }
         Some(_) => Err(ApiError::BadRequest(
             "vault_ids must be an array of strings".into(),
+        )),
+    }
+}
+
+fn parse_memory_store_ids(value: &Option<Value>) -> Result<Vec<String>, ApiError> {
+    match value {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(Value::Array(items)) => {
+            let mut ids = Vec::with_capacity(items.len());
+            for item in items {
+                match item.as_str() {
+                    Some(id) if !id.trim().is_empty() => ids.push(id.to_string()),
+                    _ => {
+                        return Err(ApiError::BadRequest(
+                            "memory_store_ids must be an array of strings".into(),
+                        ))
+                    }
+                }
+            }
+            Ok(ids)
+        }
+        Some(_) => Err(ApiError::BadRequest(
+            "memory_store_ids must be an array of strings".into(),
         )),
     }
 }
@@ -578,6 +609,7 @@ async fn create_cloud_session(
     let input_text = parse_input(&body.input)?;
     let brain_id = parse_brain_id(&body.brain_id)?;
     let vault_ids = parse_vault_ids(&body.vault_ids)?;
+    let memory_store_ids = parse_memory_store_ids(&body.memory_store_ids)?;
     let permission = match body.permission.as_deref() {
         None => None,
         Some("always_allow" | "always_ask" | "auto") => body.permission.clone(),
@@ -609,6 +641,9 @@ async fn create_cloud_session(
             .expect("metadata validated as object");
         if !vault_ids.is_empty() {
             object.insert("vault_ids".to_string(), json!(vault_ids.clone()));
+        }
+        if !memory_store_ids.is_empty() {
+            object.insert("memory_store_ids".to_string(), json!(memory_store_ids.clone()));
         }
         if let Some(brain_id) = &brain_id {
             object.insert("brain_id".to_string(), json!(brain_id));
@@ -669,6 +704,18 @@ async fn create_cloud_session(
             if !exists {
                 return Err(rusqlite::Error::InvalidParameterName(
                     "vault not found".to_string(),
+                ));
+            }
+        }
+        for store_id in &memory_store_ids {
+            let exists = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM beta_memory_stores WHERE id = ?1 AND user_id = ?2)",
+                params![store_id, user_id],
+                |row| row.get::<_, bool>(0),
+            )?;
+            if !exists {
+                return Err(rusqlite::Error::InvalidParameterName(
+                    "memory store not found".to_string(),
                 ));
             }
         }
@@ -1863,6 +1910,90 @@ mod tests {
             payload["error"].as_str().unwrap_or("").contains("vault"),
             "{payload}"
         );
+    }
+
+    #[tokio::test]
+    async fn unknown_memory_store_id_is_400() {
+        let temp = beta_test::temp_dir("cloud-store-miss");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state);
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "memory_store_ids": ["missing-store"]
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(
+            payload["error"]
+                .as_str()
+                .unwrap_or("")
+                .contains("memory store"),
+            "{payload}"
+        );
+    }
+
+    #[tokio::test]
+    async fn memory_store_ids_bind_and_echo_on_session() {
+        let temp = beta_test::temp_dir("cloud-store-hit");
+        let state = beta_test::test_app_state(&temp).await;
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO beta_memory_stores (id, user_id, name) VALUES (?1, ?2, ?3)",
+            params!["store-1", "user-a", "knowledge"],
+        )
+        .unwrap();
+        // Another user's store must not bind.
+        conn.execute(
+            "INSERT INTO beta_memory_stores (id, user_id, name) VALUES (?1, ?2, ?3)",
+            params!["store-other", "user-b", "foreign"],
+        )
+        .unwrap();
+        drop(conn);
+        let router = cloud_agents_router().with_state(state);
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "memory_store_ids": ["store-1"]
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        assert_eq!(payload["session"]["memory_store_ids"], json!(["store-1"]));
+        assert_eq!(
+            payload["session"]["metadata"]["memory_store_ids"],
+            json!(["store-1"])
+        );
+
+        // Session read echoes the binding.
+        let id = payload["session"]["id"].as_str().unwrap().to_string();
+        let (status, read_back) = get_json(&router, &format!("/sessions/{id}"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(read_back["session"]["memory_store_ids"], json!(["store-1"]));
+
+        // Cross-user binding is rejected.
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "memory_store_ids": ["store-other"]
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

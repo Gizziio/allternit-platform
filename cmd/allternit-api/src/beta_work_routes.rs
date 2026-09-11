@@ -26,6 +26,14 @@
 //! create, see `cloud_agents_routes`) is injected into the leased task's
 //! payload as an optional field. External workers enforce it themselves —
 //! workers that predate the field simply ignore it.
+//!
+//! Memory context (Phase 4): when the session's metadata carries
+//! `memory_store_ids` (validated at session create), the leased task's
+//! payload additionally carries a `memory_context` object built by
+//! `beta_memory_store_routes::build_memory_context` — the bound stores'
+//! entries grouped by namespace, capped per store with a `truncated` marker.
+//! Workers consume `memory_context` by injecting it into the agent's
+//! context.
 
 use axum::{
     extract::{Extension, Path, Query, State},
@@ -262,9 +270,11 @@ async fn lease_task(
             params![worker_id, lease_expires_at.to_rfc3339(), id],
         )?;
         let mut task = tx.query_row(&format!("{TASK_SELECT} WHERE id = ?1"), params![id], read_task)?;
-        // Ship the session's effective permission map to the worker as an
-        // optional payload field (absent for tasks without a session or a
-        // pre-Phase-2 session, so older workers are unaffected).
+        // Ship the session's effective permission map and memory context to
+        // the worker as optional payload fields (absent for tasks without a
+        // session or a pre-Phase-2/4 session, so older workers are
+        // unaffected). Workers consume both: they enforce the permission map
+        // and inject memory_context into the agent's context.
         if let Some(ref session_id) = task.session_id {
             let metadata: Option<String> = tx
                 .query_row(
@@ -278,6 +288,24 @@ async fn lease_task(
                     if let Some(perms) = metadata.get("effective_permissions") {
                         if let Some(payload) = task.payload.as_object_mut() {
                             payload.insert("effective_permissions".to_string(), perms.clone());
+                        }
+                    }
+                    if let Some(store_ids) = metadata.get("memory_store_ids").and_then(Value::as_array) {
+                        let store_ids: Vec<String> = store_ids
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(str::to_string)
+                            .collect();
+                        if !store_ids.is_empty() {
+                            if let Ok(memory_context) =
+                                crate::beta_memory_store_routes::build_memory_context(
+                                    &tx, &user_id, &store_ids,
+                                )
+                            {
+                                if let Some(payload) = task.payload.as_object_mut() {
+                                    payload.insert("memory_context".to_string(), memory_context);
+                                }
+                            }
                         }
                     }
                 }
@@ -764,6 +792,132 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[tokio::test]
+    async fn lease_injects_memory_context_for_bound_session() {
+        let temp = temp_dir("memory-context");
+        let state = test_app_state(&temp).await;
+
+        // A memory store with entries in two namespaces, bound to a session.
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO beta_memory_stores (id, user_id, name) VALUES ('store-1', 'user-a', 'kb')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO beta_memory_entries (id, store_id, namespace, key, value)
+             VALUES ('e1', 'store-1', 'default', 'color', 'blue')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO beta_memory_entries (id, store_id, namespace, key, value)
+             VALUES ('e2', 'store-1', 'prefs', 'lang', 'rust')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO beta_sessions (id, user_id, status, metadata)
+             VALUES ('sess-1', 'user-a', 'active', '{\"memory_store_ids\": [\"store-1\"]}')",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+
+        let app = beta_work_router().with_state(state);
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/work")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "session_id": "sess-1",
+                        "payload": {"command": "echo hi"}
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/beta/work/queue?worker_id=worker-a")
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let leased_task_id = body["task"]["id"].as_str().unwrap().to_string();
+        let memory_context = &body["task"]["payload"]["memory_context"];
+        assert!(!memory_context.is_null(), "{body}");
+        let store = &memory_context["stores"][0];
+        assert_eq!(store["store_id"], json!("store-1"));
+        assert_eq!(store["name"], json!("kb"));
+        assert_eq!(store["namespaces"]["default"]["color"], json!("blue"));
+        assert_eq!(store["namespaces"]["prefs"]["lang"], json!("rust"));
+        assert_eq!(store["truncated"], json!(false));
+
+        // A task with no session carries no memory_context.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/work")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({"payload": {}})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/work/{leased_task_id}/stop"))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({"worker_id": "worker-a"})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/beta/work/queue?worker_id=worker-a")
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body = body_json(resp.into_body()).await;
+        let task = &body["task"];
+        assert!(!task.is_null());
+        assert!(task["payload"]["memory_context"].is_null(), "{body}");
 
         let _ = std::fs::remove_dir_all(&temp);
     }
