@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:24 — grok — harness install channels; fold agy/antigravity (rq-20260908-028)
+
+- **Session ID / Branch:** `ao/harness-install-channels` (worktree `allternit-harness-install-fix`)
+- **Agent:** grok
+- **Summary:** Merged PR #291 (d363492c0) — 16 tools, every one has an install recipe. agy is Antigravity CLI (duplicate key dropped). npm pins for grok/gizzi/codebuddy/qoder/workbuddy; `script` method for agy and cursor vendor installers.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/291 · d363492c0bc560f29679b58e44bf4071a73cc567
+- **How it works:** `ao harness install` now accepts `script` (curl|bash, `{bin}` interpolation, shim from `~/.local/bin` when the vendor hardcodes that path). Gated licenses still need `--accept-terms`.
+- **Outstanding work:** dsh PyPI pin `0.1.2rc1` still missing; cursor script pin is the vendor date stamp (installer fetches latest).
+- **Summary file:** [2026-09-10-2124-harness-install-channels-grok.md](./summaries/2026-09-10-2124-harness-install-channels-grok.md)
+
 ### 2026-09-10 21:23 — grok — remaining OpenBot UX (rq-20260910-001)
 
 - **Session ID / Branch:** `ao/openbot-remaining` (worktree `allternit-ao-openbot-policy-gateway`)
