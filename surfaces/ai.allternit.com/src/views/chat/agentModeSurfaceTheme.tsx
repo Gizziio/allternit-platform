@@ -1,6 +1,7 @@
 import React from 'react';
 import type { CSSProperties } from 'react';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
+import { useResolvedTheme, useThemeStore } from '@/design/ThemeStore';
 
 export interface AgentModeSurfaceTheme {
   accent: string;
@@ -76,6 +77,19 @@ const SURFACE_THEMES: Record<AgentModeSurface, AgentModeSurfaceTheme> = {
   },
 };
 
+// Light-theme bot surface: neutral warm sand (matches --accent-bot #B08D6E in
+// the light :root). Dark theme keeps the teal SURFACE_THEMES.bot values.
+const BOT_SURFACE_THEME_LIGHT: AgentModeSurfaceTheme = {
+  accent: '#B08D6E',
+  glow: 'rgba(176,141,110,0.26)',
+  soft: 'rgba(176,141,110,0.14)',
+  wash: 'rgba(176,141,110,0.18)',
+  fog: 'rgba(122,89,61,0.2)',
+  edge: 'rgba(176,141,110,0.16)',
+  panelTint: 'rgba(176,141,110,0.08)',
+  shadow: 'rgba(83,51,24,0.12)',
+};
+
 const backdropAnimationStyles = `
 @keyframes allternit-agent-surface-glow {
   0% {
@@ -133,6 +147,24 @@ export function getAgentModeSurfaceTheme(
   return SURFACE_THEMES[surface ?? 'chat'];
 }
 
+/**
+ * Theme-aware variant of getAgentModeSurfaceTheme for React components.
+ * The bot surface swaps to neutral warm values in the light theme and keeps
+ * its teal values in dark; all other surfaces are unchanged. Re-renders on
+ * live theme switches.
+ */
+export function useAgentModeSurfaceTheme(
+  surface?: AgentModeSurface | null,
+): AgentModeSurfaceTheme {
+  const theme = useThemeStore((state) => state.theme);
+  const resolvedTheme = useResolvedTheme(theme);
+  const resolvedSurface = surface ?? 'chat';
+  if (resolvedSurface === 'bot' && resolvedTheme === 'light') {
+    return BOT_SURFACE_THEME_LIGHT;
+  }
+  return SURFACE_THEMES[resolvedSurface];
+}
+
 interface AgentModeBackdropProps {
   active: boolean;
   surface: AgentModeSurface;
@@ -150,11 +182,11 @@ export function AgentModeBackdrop({
   opacity = 1,
   dataTestId = 'agent-mode-backdrop',
 }: AgentModeBackdropProps) {
+  const theme = useAgentModeSurfaceTheme(surface);
+
   if (!active) {
     return null;
   }
-
-  const theme = getAgentModeSurfaceTheme(surface);
 
   return (
     <>
@@ -197,7 +229,7 @@ function AgentActivationSweep({
   inset = 0,
   borderRadius = 'inherit',
 }: AgentActivationSweepProps) {
-  const theme = getAgentModeSurfaceTheme(surface);
+  const theme = useAgentModeSurfaceTheme(surface);
 
   return (
     <>
@@ -233,7 +265,7 @@ function AgentComposerHalo({
   triggerKey,
   className,
 }: AgentComposerHaloProps) {
-  const theme = getAgentModeSurfaceTheme(surface);
+  const theme = useAgentModeSurfaceTheme(surface);
 
   return (
     <>
