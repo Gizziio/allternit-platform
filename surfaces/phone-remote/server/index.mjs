@@ -256,6 +256,14 @@ async function main() {
       res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': jpeg.length });
       return res.end(jpeg);
     }
+    if (url.pathname === '/start' && req.method === 'POST') {
+      if (!trustedLocal && !tokenMatches(cfg, presentedToken(req, url))) {
+        res.writeHead(403, { 'content-type': 'text/plain' }); return res.end('403\n');
+      }
+      const body = Buffer.from(JSON.stringify({ ok: true, already: true, pid: process.pid }));
+      res.writeHead(200, { 'content-type': 'application/json', 'content-length': body.length });
+      return res.end(body);
+    }
     if (url.pathname === '/input' && req.method === 'POST') {
       if (!trustedLocal && !tokenMatches(cfg, presentedToken(req, url))) {
         res.writeHead(403, { 'content-type': 'text/plain' }); return res.end('403\n');
