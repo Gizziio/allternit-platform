@@ -107,7 +107,7 @@ const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperat
 const DesktopCloudAdminView  = lazy(() => import('../views/desktop-cloud/DesktopCloudAdminView').then(m => ({ default: m.DesktopCloudAdminView })));
 const CloudConsoleView       = lazy(() => import('../views/cloud-console/CloudConsoleView').then(m => ({ default: m.CloudConsoleView })));
 const ModelGatewayView       = lazy(() => import('../views/model-gateway/ModelGatewayView').then(m => ({ default: m.ModelGatewayView })));
-const AgentCloudView         = lazy(() => import('../views/agent-cloud/AgentCloudView').then(m => ({ default: m.AgentCloudView })));
+const AgentCloudView         = lazy(() => import('../views/agent-cloud/AgentsConsoleView').then(m => ({ default: m.AgentsConsoleView })));
 const HistoryView            = lazy(() => import('../views/HistoryView').then(m => ({ default: m.HistoryView })));
 const ArchivedView           = lazy(() => import('../views/ArchivedView').then(m => ({ default: m.ArchivedView })));
 const RecentsView            = lazy(() => import('../views/RecentsView').then(m => ({ default: m.RecentsView })));
@@ -820,7 +820,7 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     "agent-cloud": ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Cloud" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agents Console" />}>
         <AgentCloudView />
       </ErrorBoundary>
     ),
