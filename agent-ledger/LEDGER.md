@@ -21,6 +21,15 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 19:12 — grok — P6b UHP remaining drivers + full-class conformance (rq-20260908-028)
+
+- **Session ID / Branch:** `ao/uhp-p6b` (worktree `allternit-ao-uhp-p6b`; grok pickup after kimi executor quota)
+- **Agent:** grok
+- **Summary:** Merged PR #280 (db516a1b1) — six remaining UHP drivers (gemini/qwen/opencode/cline/pi/dsh) + discovery raised to full class (skills, sharing, session delete, files list). Conformance **63/64 CONFORMANT WITH SKIPS** (`--class full`, X-07 skip). pi added to the 17-tool auto-install list (human opt-in).
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/280 · db516a1b1c1fc2f3d1fc673f28c0285854574f07
+- **How it works:** Drivers follow the existing kimi/claude/codex argv+NDJSON shape. Full-class surface is additive on `uhp-gateway` (no herdr engine internals). Live qwen turns complete at the protocol layer (model 401 is environmental); opencode direct CLI works, UHP engine pane does not; pi installed to `~/.ao/harness` but the engine daemon cannot spawn it (managed bin not on engine PATH); dsh pin missing on PyPI.
+- **Outstanding work:** engine PATH for managed installs; OpenCode UHP live turn; dsh pin; Gate 2 claude/codex (unchanged from P6a). Summary: `agent-ledger/summaries/2026-09-10-1912-p6b-uhp-full-grok.md`.
+
 ### 2026-09-10 18:58 — grok — Cloud Agents Phase 1 public sessions (rq-20260910-002)
 
 - **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`; Phase 2 still in this worktree)
