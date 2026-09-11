@@ -1,6 +1,6 @@
 ---
 title: Cloud Agents
-description: Hosted agent sessions on Allternit's own API. Not an OpenAI or Anthropic wrap.
+description: Hosted agent sessions on Allternit's session API.
 ---
 
 Allternit Agents has two specialties. **Cloud Agents** is the hosted session API. **Bot Agents** are the same agent packaged as a teammate (`is_bot`, persistent Computer Cloud desktop).
@@ -14,7 +14,7 @@ curl -X POST http://localhost:8013/api/v1/sessions \
   -H "Authorization: Bearer $CLERK_JWT" \
   -H "Content-Type: application/json" \
   -d '{
-    "agent": { "model": "kimi-k2", "instructions": "Be terse." },
+    "agent": { "model": "default", "instructions": "Be terse." },
     "computer": { "kind": "none" },
     "input": "Summarize the repo layout."
   }'
@@ -24,17 +24,17 @@ curl -X POST http://localhost:8013/api/v1/sessions \
 import { Allternit } from "@allternit/sdk/cloud-agents";
 const allternit = new Allternit({ apiKey, baseURL: "http://localhost:8013" });
 const session = await allternit.sessions.create({
-  agent: { model: "kimi-k2", instructions: "Be terse." },
+  agent: { model: "default", instructions: "Be terse." },
   computer: { kind: "none" },
   input: "Summarize the repo layout.",
 });
 ```
 
-`computer.kind`: `none` | `local` | `sandbox` | `desktop` | `fabric`. Sandbox/desktop/fabric provision Computer Cloud (Incus/Tart on the VPS), not Fly. No VM driver → `503` `computer_unavailable`.
+`computer.kind`: `none` | `local` | `sandbox` | `desktop` | `fabric`. Sandbox, desktop, and fabric provision Computer Cloud (Incus/Tart on the VPS). No VM driver → `503` `computer_unavailable`.
 
 Budget includes `estimated_cost_usd` with `charged: false`. Allternit does not bill this.
 
-**Cloud Console → Agents** is the in-product analog of Claude Console / Managed Agents. It is not the Hub/Desktop chat composer (that is Chat + Bot Agents).
+**Cloud Console → Agents** is the developer session runner. It is not the Hub or Desktop chat composer (that is Chat and Bot Agents).
 
 ## Bot Agents
 
