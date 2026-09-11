@@ -534,6 +534,7 @@ function BotChatSessionContent({
           computerOpen={computerOpen}
           onOpenComputer={() => setComputerOpen(true)}
           transcript={transcript}
+          parentName={botName}
         />
       )}
 
