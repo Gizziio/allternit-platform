@@ -1,36 +1,12 @@
-/** Chat (Layer A) vs Cloud Agent session vs Bot Agent. */
-
-export type ComposerLayer = "chat" | "agent" | "bot";
-
-const KEY = "allternit.composer-layer";
-
-export function getComposerLayer(): ComposerLayer {
-  if (typeof window === "undefined") return "chat";
-  const value = window.sessionStorage.getItem(KEY);
-  if (value === "agent" || value === "bot" || value === "chat") return value;
-  return "chat";
-}
-
-export function setComposerLayer(layer: ComposerLayer): void {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(KEY, layer);
-}
+/** Open Cloud Console on the Agents tab (Managed Agents analog). Not Hub chat. */
 
 export function openAgentsConsole(sessionId?: string): void {
   window.dispatchEvent(
     new CustomEvent("allternit:open-view", {
       detail: {
-        viewType: "agent-cloud",
-        context: sessionId ? { sessionId } : undefined,
+        viewType: "cloud-console",
+        context: { tab: "agents", sessionId },
       },
-    }),
-  );
-}
-
-export function openBotHub(): void {
-  window.dispatchEvent(
-    new CustomEvent("allternit:open-view", {
-      detail: { viewType: "agent-hub" },
     }),
   );
 }

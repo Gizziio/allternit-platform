@@ -107,7 +107,7 @@ const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperat
 const DesktopCloudAdminView  = lazy(() => import('../views/desktop-cloud/DesktopCloudAdminView').then(m => ({ default: m.DesktopCloudAdminView })));
 const CloudConsoleView       = lazy(() => import('../views/cloud-console/CloudConsoleView').then(m => ({ default: m.CloudConsoleView })));
 const ModelGatewayView       = lazy(() => import('../views/model-gateway/ModelGatewayView').then(m => ({ default: m.ModelGatewayView })));
-const AgentCloudView         = lazy(() => import('../views/agent-cloud/AgentsConsoleView').then(m => ({ default: m.AgentsConsoleView })));
+const AgentCloudView         = lazy(() => import('../views/agent-cloud/AgentCloudView').then(m => ({ default: m.AgentCloudView })));
 const HistoryView            = lazy(() => import('../views/HistoryView').then(m => ({ default: m.HistoryView })));
 const ArchivedView           = lazy(() => import('../views/ArchivedView').then(m => ({ default: m.ArchivedView })));
 const RecentsView            = lazy(() => import('../views/RecentsView').then(m => ({ default: m.RecentsView })));
@@ -809,24 +809,24 @@ export function getShellViewRegistry(handlers: {
         <DesktopCloudAdminView />
       </ErrorBoundary>
     ),
-    "cloud-console": ({ context }: { context?: ViewContext }) => (
+    "cloud-console": ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { tab?: string; sessionId?: string } | undefined;
+      return (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cloud Console" />}>
-        <CloudConsoleView />
+        <CloudConsoleView initialTab={ctx?.tab} sessionId={ctx?.sessionId} />
       </ErrorBoundary>
-    ),
+      );
+    },
     "model-gateway": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Model Gateway" />}>
         <ModelGatewayView />
       </ErrorBoundary>
     ),
-    "agent-cloud": ({ context }: { context?: ViewContext }) => {
-      const ctx = context?.context as { sessionId?: string } | undefined;
-      return (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agents Console" />}>
-        <AgentCloudView sessionId={ctx?.sessionId} />
+    "agent-cloud": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Cloud" />}>
+        <AgentCloudView />
       </ErrorBoundary>
-      );
-    },
+    ),
     history: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="History" />}>
         <HistoryView />

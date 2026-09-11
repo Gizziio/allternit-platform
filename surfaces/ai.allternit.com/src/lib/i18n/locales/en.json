@@ -444,8 +444,8 @@
     }
   },
   "agentCloud": {
-    "title": "Agents Console",
-    "subtitle": "Cloud Agent sessions — create, stream events, interrupt",
+    "title": "Agent Cloud",
+    "subtitle": "Persistent agents with Fabric-scheduled runtimes",
     "tabs": {
       "agents": "Agents",
       "create": "Create Agent"
