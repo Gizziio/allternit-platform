@@ -85,7 +85,7 @@ export function OfficeDesktopView() {
           data-testid="office-wordmark"
           style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--text-primary)' }}
         >
-          <AProtocolWordmark suffix="OFFICE" height={18} theme="adaptive" markVariant="current" />
+          <AProtocolWordmark suffix="OFFICE" height={12} theme="adaptive" />
         </span>
         <div style={{ flex: 1, height: '100%', WebkitAppRegion: 'drag' } as React.CSSProperties} />
       </header>

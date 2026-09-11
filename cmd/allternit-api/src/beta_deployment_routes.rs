@@ -107,6 +107,7 @@ struct RunRow {
     error: Option<String>,
     started_at: String,
     finished_at: Option<String>,
+    triggered_by: Option<String>,
 }
 
 const DEPLOYMENT_SELECT: &str = "SELECT id, agent_id, cron, next_run_at, last_run_at, status,
@@ -137,8 +138,12 @@ fn read_run(row: &rusqlite::Row<'_>) -> rusqlite::Result<RunRow> {
         error: row.get(4)?,
         started_at: row.get(5)?,
         finished_at: row.get(6)?,
+        triggered_by: row.get(7)?,
     })
 }
+
+const RUN_SELECT: &str = "SELECT id, deployment_id, status, result, error, started_at,
+    finished_at, triggered_by FROM beta_deployment_runs";
 
 async fn create_deployment(
     State(state): State<Arc<AppState>>,
@@ -330,8 +335,7 @@ async fn list_runs(
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
-            "SELECT id, deployment_id, status, result, error, started_at, finished_at
-             FROM beta_deployment_runs WHERE deployment_id = ?1 ORDER BY started_at DESC",
+            &format!("{RUN_SELECT} WHERE deployment_id = ?1 ORDER BY started_at DESC"),
         )?;
         let rows = stmt
             .query_map(params![id], read_run)?
@@ -341,6 +345,42 @@ async fn list_runs(
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))??;
     Ok(Json(json!({"runs": rows})))
+}
+
+/// Insert a `running` run row for `deployment_id` plus the deployment-tied
+/// `beta_work_tasks` row that external workers lease and execute. Shared by
+/// the manual trigger handler ([`trigger_run`]) and the deployment scheduler
+/// daemon ([`crate::deployment_scheduler`]) so both produce the same shape.
+/// Must be called inside the caller's transaction. Returns (run_id, task_id).
+pub(crate) fn insert_deployment_run_tx(
+    tx: &rusqlite::Transaction<'_>,
+    deployment_id: &str,
+    user_id: &str,
+    agent_id: Option<&str>,
+    triggered_by: &str,
+) -> Result<(String, String), rusqlite::Error> {
+    let run_id = uuid::Uuid::new_v4().to_string();
+    let task_id = uuid::Uuid::new_v4().to_string();
+    tx.execute(
+        "INSERT INTO beta_deployment_runs (id, deployment_id, status, triggered_by)
+         VALUES (?1, ?2, 'running', ?3)",
+        params![run_id, deployment_id, triggered_by],
+    )?;
+    // Mirror the session-run payload convention ({messages, tools}) so
+    // existing workers can execute deployment runs without changes; a
+    // scheduled deployment carries no prompt, so messages is empty.
+    let payload = json!({
+        "deployment_run_id": run_id,
+        "agent_id": agent_id,
+        "messages": [],
+        "tools": Value::Null,
+    });
+    tx.execute(
+        "INSERT INTO beta_work_tasks (id, user_id, deployment_id, payload)
+         VALUES (?1, ?2, ?3, ?4)",
+        params![task_id, user_id, deployment_id, payload.to_string()],
+    )?;
+    Ok((run_id, task_id))
 }
 
 async fn trigger_run(
@@ -354,36 +394,34 @@ async fn trigger_run(
         .map_err(|e| ApiError::BadRequest(format!("invalid cron expression: {e}")))?;
 
     let db = state.db.clone();
-    let run_id = uuid::Uuid::new_v4().to_string();
-    let result_id = run_id.clone();
+    let user_id = user.user_id.clone();
+    let agent_id = deployment.agent_id.clone();
     let run = tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
-        tx.execute(
-            "INSERT INTO beta_deployment_runs (id, deployment_id, status) VALUES (?1, ?2, 'running')",
-            params![run_id, id],
-        )?;
+        let (run_id, _task_id) =
+            insert_deployment_run_tx(&tx, &id, &user_id, agent_id.as_deref(), "manual")?;
         tx.execute(
             "UPDATE beta_deployments SET last_run_at = ?1, next_run_at = ?2, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?3",
             params![now.to_rfc3339(), next_run_at.to_rfc3339(), id],
         )?;
         let run = tx.query_row(
-            "SELECT id, deployment_id, status, result, error, started_at, finished_at
-             FROM beta_deployment_runs WHERE id = ?1",
+            &format!("{RUN_SELECT} WHERE id = ?1"),
             params![run_id],
             read_run,
         )?;
         tx.commit()?;
-        Ok::<RunRow, rusqlite::Error>(run)
+        Ok::<(RunRow, String), rusqlite::Error>((run, run_id))
     })
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))?
     .map_err(|e: rusqlite::Error| ApiError::DbError(e.to_string()))?;
+    let result_id = run.1.clone();
 
     Ok((
         StatusCode::CREATED,
-        Json(json!({"run": run, "id": result_id})),
+        Json(json!({"run": run.0, "id": result_id})),
     ))
 }
 
@@ -423,8 +461,7 @@ async fn update_run(
     let run = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         conn.query_row(
-            "SELECT id, deployment_id, status, result, error, started_at, finished_at
-             FROM beta_deployment_runs WHERE id = ?1",
+            &format!("{RUN_SELECT} WHERE id = ?1"),
             params![lookup_run_id],
             read_run,
         )
@@ -529,6 +566,9 @@ mod tests {
             fabric_price_cache: crate::fabric::PriceCache::new(db.clone()),
             os_control_plane: None,
             dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
+            deployment_scheduler: Arc::new(
+                crate::deployment_scheduler::DeploymentSchedulerState::new(),
+            ),
         })
     }
 

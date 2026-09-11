@@ -442,6 +442,9 @@ async fn main() {
         fabric_scheduler,
         fabric_price_cache,
         os_control_plane,
+        deployment_scheduler: Arc::new(
+            allternit_api::deployment_scheduler::DeploymentSchedulerState::new(),
+        ),
     });
     allternit_api::computer_idle::spawn_idle_sweeper(state.clone(), shutdown_tx.subscribe());
 
@@ -587,6 +590,12 @@ async fn main() {
 
     // Phase 5: start the in-process batch execution/polling worker.
     allternit_api::llm_gateway::batches::spawn_batch_worker(Arc::clone(&state));
+
+    // Deployment scheduler daemon: fires due /beta/deployments cron bindings.
+    allternit_api::deployment_scheduler::spawn_deployment_scheduler(
+        Arc::clone(&state),
+        shutdown_tx.subscribe(),
+    );
 
     // Desktop capacity monitor and autoscale signaler.
     {
