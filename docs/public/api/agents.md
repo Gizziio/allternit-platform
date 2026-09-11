@@ -59,7 +59,9 @@ curl -X POST http://localhost:8013/api/v1/sessions \
 Sessions use Allternit event type names (`session.created`, `turn.started`,
 `agent.message`, …) and Allternit status names (`idle`, `running`,
 `waiting`, `failed`, `archived`). Turns are listed at
-`GET /api/v1/sessions/:id/turns`. There is no public `/runtimes` resource;
+`GET /api/v1/sessions/:id/turns`. Session create can bind a `brain_id` and
+`vault_ids` (unknown ids return `400`). `/api/v1/vaults` is the public
+alias of `/api/v1/beta/vaults`. There is no public `/runtimes` resource;
 the computer binding lives on the session.
 
 ## SDK

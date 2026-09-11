@@ -27,6 +27,8 @@ export interface CloudSession {
   metadata: Record<string, unknown>;
   budget: CloudSessionBudget;
   computer: CloudComputer;
+  brain_id?: string | null;
+  vault_ids?: string[];
   created_at: string;
   updated_at: string;
   archived_at?: string | null;

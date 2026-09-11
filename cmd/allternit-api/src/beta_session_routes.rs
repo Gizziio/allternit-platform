@@ -221,6 +221,7 @@ pub(crate) struct SessionRow {
     pub(crate) archived_at: Option<String>,
     pub(crate) computer_kind: Option<String>,
     pub(crate) computer_id: Option<String>,
+    pub(crate) brain_id: Option<String>,
 }
 
 /// Shared with `cloud_agents_routes` (the public `/sessions` facade reads the
@@ -252,13 +253,14 @@ pub(crate) fn read_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionR
         archived_at: row.get(16)?,
         computer_kind: row.get(17)?,
         computer_id: row.get(18)?,
+        brain_id: row.get(19)?,
     })
 }
 
 pub(crate) const SESSION_SELECT: &str = "SELECT id, agent_id, name, parent_thread_id, status, metadata,
     max_tokens, max_turns, max_tool_calls, tokens_used, turns_used, tool_calls_used,
     context_window, truncation_strategy,
-    created_at, updated_at, archived_at, computer_kind, computer_id FROM beta_sessions";
+    created_at, updated_at, archived_at, computer_kind, computer_id, brain_id FROM beta_sessions";
 
 async fn create_session(
     State(state): State<Arc<AppState>>,

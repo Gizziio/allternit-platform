@@ -106,6 +106,8 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/vault/credentials/:id", delete(revoke_legacy_credential))
         .route("/beta/vaults", post(create_vault).get(list_vaults))
         .route("/beta/vaults/:id", get(get_vault).delete(delete_vault))
+        .route("/vaults", post(create_vault).get(list_vaults))
+        .route("/vaults/:id", get(get_vault).delete(delete_vault))
         .route(
             "/beta/vaults/:id/credentials",
             post(put_vault_credential).get(list_vault_credentials),

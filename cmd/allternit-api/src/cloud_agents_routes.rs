@@ -158,6 +158,11 @@ fn public_status(db_status: &str, in_flight: bool) -> &'static str {
 }
 
 fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
+    let vault_ids = session
+        .metadata
+        .get("vault_ids")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
     json!({
         "id": session.id,
         "agent_id": session.agent_id,
@@ -169,10 +174,45 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
             "kind": session.computer_kind.clone().unwrap_or_else(|| "none".to_string()),
             "id": session.computer_id,
         },
+        "brain_id": session.brain_id,
+        "vault_ids": vault_ids,
         "created_at": session.created_at,
         "updated_at": session.updated_at,
         "archived_at": session.archived_at,
     })
+}
+
+fn parse_brain_id(value: &Option<Value>) -> Result<Option<String>, ApiError> {
+    match value {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(id)) if !id.trim().is_empty() => Ok(Some(id.clone())),
+        Some(_) => Err(ApiError::BadRequest(
+            "brain_id must be a string or null".into(),
+        )),
+    }
+}
+
+fn parse_vault_ids(value: &Option<Value>) -> Result<Vec<String>, ApiError> {
+    match value {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(Value::Array(items)) => {
+            let mut ids = Vec::with_capacity(items.len());
+            for item in items {
+                match item.as_str() {
+                    Some(id) if !id.trim().is_empty() => ids.push(id.to_string()),
+                    _ => {
+                        return Err(ApiError::BadRequest(
+                            "vault_ids must be an array of strings".into(),
+                        ))
+                    }
+                }
+            }
+            Ok(ids)
+        }
+        Some(_) => Err(ApiError::BadRequest(
+            "vault_ids must be an array of strings".into(),
+        )),
+    }
 }
 
 /// Translate one stored (legacy) event row into zero or more public events.
@@ -385,6 +425,8 @@ async fn create_cloud_session(
         }
     }
     let input_text = parse_input(&body.input)?;
+    let brain_id = parse_brain_id(&body.brain_id)?;
+    let vault_ids = parse_vault_ids(&body.vault_ids)?;
 
     let db = state.db.clone();
     let organization_id = user.organization_id.clone();
@@ -395,17 +437,14 @@ async fn create_cloud_session(
     let run_input = input_text.is_some();
     let metadata = {
         let mut metadata = body.metadata.clone();
-        if let Some(vault_ids) = &body.vault_ids {
-            metadata
-                .as_object_mut()
-                .expect("metadata validated as object")
-                .insert("vault_ids".to_string(), vault_ids.clone());
+        let object = metadata
+            .as_object_mut()
+            .expect("metadata validated as object");
+        if !vault_ids.is_empty() {
+            object.insert("vault_ids".to_string(), json!(vault_ids.clone()));
         }
-        if let Some(brain_id) = &body.brain_id {
-            metadata
-                .as_object_mut()
-                .expect("metadata validated as object")
-                .insert("brain_id".to_string(), brain_id.clone());
+        if let Some(brain_id) = &brain_id {
+            object.insert("brain_id".to_string(), json!(brain_id));
         }
         metadata
     };
@@ -415,6 +454,31 @@ async fn create_cloud_session(
     let session = tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
+
+        if let Some(brain_id) = &brain_id {
+            let exists = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM brains WHERE id = ?1 AND user_id = ?2)",
+                params![brain_id, user_id],
+                |row| row.get::<_, bool>(0),
+            )?;
+            if !exists {
+                return Err(rusqlite::Error::InvalidParameterName(
+                    "brain not found".to_string(),
+                ));
+            }
+        }
+        for vault_id in &vault_ids {
+            let exists = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM allternit_vaults WHERE id = ?1 AND created_by = ?2)",
+                params![vault_id, user_id],
+                |row| row.get::<_, bool>(0),
+            )?;
+            if !exists {
+                return Err(rusqlite::Error::InvalidParameterName(
+                    "vault not found".to_string(),
+                ));
+            }
+        }
 
         // Resolve the agent reference to an agents-row id.
         let agent_id = match &agent_ref {
@@ -476,8 +540,8 @@ async fn create_cloud_session(
         tx.execute(
             "INSERT INTO beta_sessions
              (id, user_id, agent_id, metadata, max_tokens, max_turns, max_tool_calls,
-              status, computer_kind)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'active', ?8)",
+              status, computer_kind, brain_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'active', ?8, ?9)",
             params![
                 session_id,
                 user_id,
@@ -487,6 +551,7 @@ async fn create_cloud_session(
                 budget.as_ref().and_then(|b| b.max_turns),
                 budget.as_ref().and_then(|b| b.max_tool_calls),
                 computer_kind,
+                brain_id,
             ],
         )?;
         beta::insert_event(&tx, &session_id, "session_created", &json!({}))?;
@@ -1283,5 +1348,78 @@ mod tests {
         assert!(types.contains(&"session.idle"), "{types:?}");
         assert!(!types.contains(&"turn_completed"));
         assert!(!types.contains(&"session_idle"));
+    }
+
+    #[tokio::test]
+    async fn unknown_brain_id_is_400() {
+        let temp = beta_test::temp_dir("cloud-brain-miss");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state);
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "brain_id": "does-not-exist"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(
+            payload["error"].as_str().unwrap_or("").contains("brain"),
+            "{payload}"
+        );
+    }
+
+    #[tokio::test]
+    async fn known_brain_id_binds_on_session() {
+        let temp = beta_test::temp_dir("cloud-brain-hit");
+        let state = beta_test::test_app_state(&temp).await;
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO brains (id, user_id, path) VALUES (?1, ?2, ?3)",
+            params!["brain-1", "user-a", "/tmp/brain-1.git"],
+        )
+        .unwrap();
+        drop(conn);
+        let router = cloud_agents_router().with_state(state);
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "brain_id": "brain-1"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        assert_eq!(payload["session"]["brain_id"], "brain-1");
+    }
+
+    #[tokio::test]
+    async fn unknown_vault_id_is_400() {
+        let temp = beta_test::temp_dir("cloud-vault-miss");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state);
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "vault_ids": ["missing-vault"]
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(
+            payload["error"].as_str().unwrap_or("").contains("vault"),
+            "{payload}"
+        );
     }
 }
