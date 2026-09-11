@@ -65,7 +65,7 @@ Phase 2 is **not building bot infrastructure from scratch**. Allternit already h
 2. **Bot History = Durable Stream; Bot Session = Bounded WIH** — the bot owns a durable activity stream; each concrete task/conversation partition is a WIH with an independent context budget, summary, and lifecycle.
 3. **Consensus = Ralph Loop** — the consensus loop is the Rails runner's iteration system. Surface it, don't rebuild it.
 4. **Group Chat = Bus + Swarm** — bots coordinate via the Rails bus and swarm communication patterns.
-5. **Rails → CommRails** — rename in the UI layer only. The Rust crate stays `allternit-agent-system-rails`.
+5. **Rails → CommRails** — rename in the UI layer only. The Rust crate stays `allternit-commrails`.
 6. **Agent PillTab → Bot Sessions** — rebrand the existing agent session views as bot sessions.
 7. **Comprehensive config, good UX** — bot config exposes the full Agent type power but with a progressive disclosure UX.
 
@@ -330,7 +330,7 @@ resync response when retention has invalidated a cursor.
 
 ### UI layer rename only
 
-The Rust crate `allternit-agent-system-rails` stays as-is. The rename is in the **UI surface layer**:
+The Rust crate `allternit-commrails` stays as-is. The rename is in the **UI surface layer**:
 
 | Current UI Name | New Name | Where |
 |---|---|---|
@@ -1126,7 +1126,7 @@ How does the Rails runner's iteration state reach the React frontend?
 
 ### Q3: CommRails naming scope
 Should "CommRails" be used everywhere in the UI, or just for the rail section?
-- **Recommendation:** CommRails for the **entire orchestration surface** in the UI (rail, panels, commands). The Rust crate stays `allternit-agent-system-rails`. This creates a clean boundary: "Rails" = infrastructure, "CommRails" = user-facing orchestration.
+- **Recommendation:** CommRails for the **entire orchestration surface** in the UI (rail, panels, commands). The Rust crate stays `allternit-commrails`. This creates a clean boundary: "Rails" = infrastructure, "CommRails" = user-facing orchestration.
 
 ### Q4: Bot persistence
 Where do bot configurations live?

@@ -7,14 +7,14 @@ description: Orchestrate external CLI agents (kimi, codex, agy, claude, gizzi-co
 
 You are the **orchestrator**: you own scoping, task specs, monitoring, review, and bug-fixing. The **executor** is an external CLI agent in its own tmux session. You never do the bulk implementation yourself — but you always verify it.
 
-The underlying engine is `allternit-rails` from the `allternit-agent-system-rails` crate. The bundled `ao-*` scripts in this directory are thin shims over `allternit-rails orchestrator` (and `allternit-rails steer` for consults). The binary must be on PATH:
+The underlying engine is `allternit-commrails` from the `allternit-commrails` crate. The bundled `ao-*` scripts in this directory are thin shims over `allternit-commrails orchestrator` (and `allternit-commrails steer` for consults). The binary must be on PATH:
 
 ```bash
-cargo build -p allternit-agent-system-rails
-# symlink or copy target/debug/allternit-rails onto PATH, e.g. ~/.local/bin
+cargo build -p allternit-commrails
+# symlink or copy target/debug/allternit-commrails onto PATH, e.g. ~/.local/bin
 ```
 
-Every spawned session is registered as a Rails peer under `.allternit/peers/`, with a per-session UDS inbox. That lets other local agents discover it (`allternit-rails peer list`, `/list-agents` in gizzi-code) and send plain-text messages to it (`allternit-rails peer send`, `/send-message`).
+Every spawned session is registered as a Rails peer under `.allternit/peers/`, with a per-session UDS inbox. That lets other local agents discover it (`allternit-commrails peer list`, `/list-agents` in gizzi-code) and send plain-text messages to it (`allternit-commrails peer send`, `/send-message`).
 
 ## Phase 0 — Detect agents
 
@@ -60,7 +60,7 @@ so the executor can participate in Rails cross-session messaging.
 ao-send <slug> "Read docs/<TASK_FILE> and execute it exactly."
 ```
 
-`ao-send` now delegates to `allternit-rails orchestrator send`. It prefers UDS delivery if the peer inbox is listening, otherwise falls back to tmux key injection.
+`ao-send` now delegates to `allternit-commrails orchestrator send`. It prefers UDS delivery if the peer inbox is listening, otherwise falls back to tmux key injection.
 
 ## Phase 4 — Monitor and steer
 
@@ -85,15 +85,15 @@ When all phases pass: merge/apply the worktree branch, then `ao-kill <slug> [--r
 Local peers are discoverable with:
 
 ```bash
-allternit-rails peer list
-allternit-rails peer send <name> "<message>"
+allternit-commrails peer list
+allternit-commrails peer send <name> "<message>"
 ```
 
 From gizzi-code, the runtime exposes `allternit_list_agents` and `allternit_send_message` tools. Messages travel over the peer's UDS inbox and never leave the machine.
 
 ## Platform integration
 
-Executor lifecycle events are still mirrored into Rails mail thread `wih:executor-<slug>` via `runtime/server/rails-bridge.ts`, and artifacts can be shared with `POST /api/rails/mail/share`.
+Executor lifecycle events are still mirrored into CommRails mail thread `wih:executor-<slug>` via `runtime/server/rails-bridge.ts`, and artifacts can be shared with `POST /api/commrails/mail/share` (the old `/api/rails/mail/share` prefix remains as a one-release alias).
 
 ## Pitfalls learned the hard way
 

@@ -454,20 +454,22 @@ When adding new courses/modules, update:
 
 ---
 
-## Rails — agent communication and coordination
+## CommRails — agent communication and coordination
 
-This repo uses the **Allternit Agent System Rails** as its unified communication and coordination substrate:
+This repo uses **CommRails** (crate `allternit-commrails`, formerly `allternit-agent-system-rails`) as its unified communication and coordination substrate:
 
-- `rails` — Rust library (`allternit-agent-system-rails`).
-- `cmd/allternit-api/src/rails/mod.rs` — HTTP surface mounted at `/api/rails` and `/rails`.
+- `commrails/` — Rust library crate (`allternit-commrails`).
+- `cmd/allternit-api/src/rails/mod.rs` — HTTP surface mounted at `/api/commrails` and `/commrails` (canonical; `/api/rails` and `/rails` remain as aliases).
 - `cmd/gizzi-code/src/runtime/gizzi-core/services/railsPeer.ts` — gizzi-code peer registration + HTTP inbox poller.
 - `cmd/gizzi-code/src/cli/ui/ink-app/components/RailsInboxBridge.tsx` — bridges polled envelopes into the TUI mailbox.
 
-Every local agent session can register itself as a **peer** under `.allternit/peers/`. Peers can discover each other and send plain-text messages — the Allternit equivalent of Claude Code's `ListAgents` / `SendMessage`. Messages never leave the machine. UDS sockets are supported for direct push; gizzi-code uses HTTP polling of the durable Bus inbox. Any CLI can participate by registering and polling the HTTP inbox; `.allternit/mux` is not required for Rails messaging.
+Every local agent session can register itself as a **peer** under `.allternit/peers/`. Peers can discover each other and send plain-text messages — the Allternit equivalent of Claude Code's `ListAgents` / `SendMessage`. Messages never leave the machine. UDS sockets are supported for direct push; gizzi-code uses HTTP polling of the durable Bus inbox. Any CLI can participate by registering and polling the HTTP inbox; `.allternit/mux` is not required for CommRails messaging.
+
+**One-release shims:** the old binaries (`allternit-rails`, `allternit-rails-service`, `rails`) and the old HTTP prefixes (`/api/rails`, `/rails`) and env names (`ALLTERNIT_RAILS_*`, `GIZZI_RAILS_URL`) still work. New callers should use `allternit-commrails`, `/api/commrails`, and `ALLTERNIT_COMMRAILS_*` / `GIZZI_COMMRAILS_URL`.
 
 ### Current status (Phase 1–7 complete)
 
-The peer registry, UDS inbox transport, steering checkpoint, `/api/rails/peers` HTTP routes, `/api/rails/steer/*` routes, `allternit-rails` CLI commands, gizzi-code runtime tools, `ao-*` shims, and `.steering/bin` hook delegation are implemented and verified:
+The peer registry, UDS inbox transport, steering checkpoint, `/api/rails/peers` HTTP routes, `/api/rails/steer/*` routes, `allternit-commrails` CLI commands, gizzi-code runtime tools, `ao-*` shims, and `.steering/bin` hook delegation are implemented and verified:
 
 - `POST /api/rails/peers` — register a peer (`{ name, cwd, vendor }`).
 - `GET /api/rails/peers` — list peers.
@@ -480,38 +482,38 @@ The peer registry, UDS inbox transport, steering checkpoint, `/api/rails/peers` 
 From the shell:
 
 ```bash
-allternit-rails peer register <name> --vendor <agent-family>
-allternit-rails peer list
-allternit-rails peer send <name> "<message>"
-allternit-rails peer heartbeat <name>
-allternit-rails peer inbox <name>
-allternit-rails orchestrator doctor
-allternit-rails steer checkpoint --cwd <dir>
-allternit-rails steer consult --cwd <dir>
-allternit-rails steer commit-gate --cwd <dir>
+allternit-commrails peer register <name> --vendor <agent-family>
+allternit-commrails peer list
+allternit-commrails peer send <name> "<message>"
+allternit-commrails peer heartbeat <name>
+allternit-commrails peer inbox <name>
+allternit-commrails orchestrator doctor
+allternit-commrails steer checkpoint --cwd <dir>
+allternit-commrails steer consult --cwd <dir>
+allternit-commrails steer commit-gate --cwd <dir>
 ```
 
 From gizzi-code, the runtime exposes:
 
 - `ListPeers` (alias `ListAgents`) — discover local agent peers.
-- `SendMessage` (alias `SendMessageToPeer`) — send to a Rails peer by name, with `uds:` and `bridge:` address support and teammate-mailbox fallback.
+- `SendMessage` (alias `SendMessageToPeer`) — send to a CommRails peer by name, with `uds:` and `bridge:` address support and teammate-mailbox fallback.
 
-### Enabling Rails peer mode in gizzi-code
+### Enabling CommRails peer mode in gizzi-code
 
-The `UDS_INBOX` bundle feature is disabled in local dev builds. To opt into Rails peer registration and the new messaging tools:
+The `UDS_INBOX` bundle feature is disabled in local dev builds. To opt into CommRails peer registration and the new messaging tools:
 
 ```bash
 GIZZI_ENABLE_RAILS_PEER=1 gizzi
 ```
 
-This registers the session as `gizzi-<sessionId>` with the Rails API and polls the HTTP inbox for peer messages. The process also exports:
+This registers the session as `gizzi-<sessionId>` with the CommRails API and polls the HTTP inbox for peer messages. The process also exports (new name first, legacy alias still set):
 
-- `ALLTERNIT_RAILS_PEER_NAME`
-- `ALLTERNIT_RAILS_INBOX`
+- `ALLTERNIT_COMMRAILS_PEER_NAME` (alias `ALLTERNIT_RAILS_PEER_NAME`)
+- `ALLTERNIT_COMMRAILS_INBOX` (alias `ALLTERNIT_RAILS_INBOX`)
 
 ### Verification
 
-- `cargo test -p allternit-agent-system-rails` ✅
+- `cargo test -p allternit-commrails` ✅
 - `cargo build -p allternit-api` ✅
 - `bun run typecheck` in `cmd/gizzi-code` ✅
 - `cmd/gizzi-code/test/rails-peer-e2e.ts` registers two peers, lists them, and confirms Bus/UDS message delivery.

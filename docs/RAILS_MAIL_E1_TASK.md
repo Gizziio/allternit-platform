@@ -44,7 +44,7 @@ NOTES in R2. They are binding.
 
 ## Verification (required)
 
-- `cargo test -p allternit-agent-system-rails` passes (new unit tests:
+- `cargo test -p allternit-commrails` passes (new unit tests:
   registry idempotency, typed+legacy send coexistence, inbox skips
   MailAssetShared events, thread-id consolidation incl. mail:general default).
 - `cargo build -p allternit-api` compiles. Record both in NOTES.

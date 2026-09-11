@@ -9,7 +9,7 @@
  * BotOperationalState projection (bot-operational-state.store.ts).
  * Never infer or fabricate status on the client.
  *
- * @module comrails-types
+ * @module commrails-types
  */
 
 import type { Icon } from '@phosphor-icons/react';

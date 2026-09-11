@@ -23,8 +23,8 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::{auth::AuthUser, error::ApiError, AppState};
-use allternit_agent_system_rails::rails_id::{HierarchicalId, TicketId};
-use allternit_agent_system_rails::tickets::{
+use allternit_commrails::rails_id::{HierarchicalId, TicketId};
+use allternit_commrails::tickets::{
     Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore,
 };
 

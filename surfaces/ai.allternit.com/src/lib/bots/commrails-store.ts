@@ -5,7 +5,7 @@
  * state for the CommRails left-rail surface. Persists to localStorage
  * so the rail restores across page reloads.
  *
- * @module comrails-store
+ * @module commrails-store
  */
 
 import { create } from 'zustand';
@@ -17,7 +17,8 @@ import type {
   BotRailItem,
   GroupRailItem,
   WIHSummary,
-} from './comrails-types';
+} from './commrails-types';
+import { isSeedBotSession } from './commrails-visibility';
 
 const logger = createModuleLogger('CommRails');
 
@@ -45,40 +46,9 @@ export interface CommRailsState {
   getSections: () => CommRailSection[];
 }
 
-// ============================================================================
-// Seed Data
-// ============================================================================
-
-const SEED_BOT_SESSIONS: BotRailItem[] = [
-  {
-    id: 'bot-session-deep-researcher',
-    label: 'Deep Researcher',
-    payload: 'deep-researcher',
-    status: 'working',
-    botId: 'deep-researcher-001',
-    wihId: 'wih-research-q3-analysis',
-    accentColor: '#A78BFA',
-    badge: 3,
-  },
-  {
-    id: 'bot-session-code-reviewer',
-    label: 'Code Reviewer',
-    payload: 'code-reviewer',
-    status: 'idle',
-    botId: 'code-reviewer-001',
-    accentColor: '#4ade80',
-  },
-  {
-    id: 'bot-session-writing-partner',
-    label: 'Writing Partner',
-    payload: 'writing-partner',
-    status: 'waiting_input',
-    botId: 'writing-partner-001',
-    wihId: 'wih-docs-api-guide',
-    accentColor: '#D4956A',
-    badge: 1,
-  },
-];
+export function dropSeedBotSessions(items: BotRailItem[]): BotRailItem[] {
+  return items.filter((item) => !isSeedBotSession(item.id, item.botId));
+}
 
 // ============================================================================
 // Store
@@ -88,8 +58,7 @@ export const useCommRailsStore = create<CommRailsState>()(
   devtools(
     persist(
       (set, get) => ({
-        // Initial state with seed data
-        activeBotSessions: SEED_BOT_SESSIONS,
+        activeBotSessions: [],
         activeGroups: [],
         wihSummaries: {},
 
@@ -202,6 +171,15 @@ export const useCommRailsStore = create<CommRailsState>()(
       {
         name: 'allternit-comrails',
         storage: createBrowserJSONStorage(),
+        merge: (persisted, current) => {
+          const incoming = (persisted ?? {}) as Partial<CommRailsState>;
+          const sessions = dropSeedBotSessions(incoming.activeBotSessions ?? []);
+          return {
+            ...current,
+            ...incoming,
+            activeBotSessions: sessions,
+          };
+        },
       },
     ),
   ),

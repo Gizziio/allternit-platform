@@ -4,7 +4,7 @@
  * Thin client for the server-side group-room routes on the Rust allternit-api
  * (`cmd/allternit-api/src/group_rooms.rs`, mounted at `/api/group-rooms`).
  * Served only by the local gateway (:8013) — callers must gate on
- * `isRailsApiEnabled()` and fail closed, same as comrails-mail.store.
+ * `isRailsApiEnabled()` and fail closed, same as commrails-mail.store.
  *
  * @module group-rooms-api
  */

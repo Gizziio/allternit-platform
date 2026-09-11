@@ -31,7 +31,7 @@ never patched.
    fingerprint scheme. sqlite/protobuf readers and the gizzi session DB are
    deferred (spec binding decision 3). Live state only via the `agent_session`
    join key; unjoined rows render as external catalog entries.
-4. **Feed 3 — Rails peers** — links `allternit-agent-system-rails` (workspace
+4. **Feed 3 — Rails peers** — links `allternit-commrails` (workspace
    dep) and reads `<root>/.allternit/peers/registry.json` **read-only**, reusing
    rails `Peer` types. Two deliberate deviations from `PeerRegistry::list()`:
    statuses are recomputed in memory (missing inbox socket ⇒ Dead) and never
@@ -61,7 +61,7 @@ never patched.
 | Client poller | `infrastructure/executor/ao-engine/src/client/visibility_feed.rs` |
 | Shell overlay | `src/client/shell/{state,overlay_input,overlays,actions}.rs`, `src/client/{events,mod}.rs` |
 | Keybind | `src/input/keybindings.rs` (`OpenVisibility`), `src/config/model.rs` (`keys.visibility`), `src/config/keybinds.rs`, help entry in `src/input/keybind_help.rs` |
-| Crate link | `infrastructure/executor/ao-engine/Cargo.toml` (`allternit-agent-system-rails = { workspace = true }`, `tempfile` dev-dep) |
+| Crate link | `infrastructure/executor/ao-engine/Cargo.toml` (`allternit-commrails = { workspace = true }`, `tempfile` dev-dep) |
 | Parity gate | `infrastructure/executor/ao-engine/tests/ao_visibility_parity/` (TS↔Rust fingerprint parity) |
 
 ## Test evidence (exact commands + results)
@@ -78,8 +78,8 @@ never patched.
 - `infrastructure/executor/ao-engine/tests/ao_visibility_parity/run.sh` —
   **"PARITY OK"** (Rust fingerprint output byte-identical to the TS harness
   reference for fixed vectors; env-gated cargo test).
-- `cargo build -p herdr --bin ao` and `cargo build -p allternit-agent-system-rails
-  --bin allternit-rails` — clean (only the repo's standing contributor-policy
+- `cargo build -p herdr --bin ao` and `cargo build -p allternit-commrails
+  --bin allternit-commrails` — clean (only the repo's standing contributor-policy
   warning).
 
 ## Hard-gate demo evidence
@@ -92,7 +92,7 @@ wait ~75 s → `ao pane send-text <pane> "create the directory /tmp/ao-p5-demo/n
 `send-keys Enter` → poll `ao agent list` → `ao visibility` snapshots →
 TUI (`tmux new-session … 'HERDR_SOCKET_PATH=… ao'`, `C-b v`,
 `tmux capture-pane -p -e`) → approve dialog (`send-keys Enter`) → re-capture.
-Peers: `allternit-rails peer register demo-peer --vendor kimi` from the worktree
+Peers: `allternit-commrails peer register demo-peer --vendor kimi` from the worktree
 root + a python UDS listener holding the inbox socket (macOS AF_UNIX path limit
 is 104 bytes; the registry's socket path is ~117 chars, so the listener binds a
 short path and the registry path is a symlink to it — noted as a real deployment
@@ -233,5 +233,5 @@ real hook-driven state transitions, plus headless JSON twins and TUI renders.
   demo pane kimi processes terminated. Scratch under `/tmp/ao-p5-demo`,
   `/tmp/ao-p5-bare`, `/tmp/ao-p5-inbox`, `/tmp/ao-visibility-feed-debug.log`
   removed. Worktree `.allternit/peers/` (untracked demo registry) removed —
-  re-create any time with `allternit-rails peer register <name> --vendor <v>`.
+  re-create any time with `allternit-commrails peer register <name> --vendor <v>`.
 - Evidence preserved under `~/.agent-orchestrator/evidence/ao-visibility-peers/`.

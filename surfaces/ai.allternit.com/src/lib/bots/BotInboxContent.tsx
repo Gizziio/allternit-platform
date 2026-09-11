@@ -17,7 +17,7 @@ import {
 } from '@/lib/bots/bot-activity-toasts';
 import { computeInboxBadge, selectVisibleBotAttention } from '@/lib/bots/bot-inbox';
 import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
-import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
+import { useCommRailsMailStore } from '@/lib/bots/commrails-mail.store';
 import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import {

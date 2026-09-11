@@ -34,7 +34,7 @@ work/DAG/WIH system anywhere in Track B.
   phase 2 triggers when nodes > 200 or edges > 1000, timeout = min(500ms +
   1ms/edge, 5s) — cache results keyed by a content hash of the graph, and tag
   every metric `computed | approx | timeout | skipped`.
-- [ ] B1-R3: WHEN `cargo test -p allternit-agent-system-rails` runs, THE
+- [ ] B1-R3: WHEN `cargo test -p allternit-commrails` runs, THE
   SYSTEM SHALL pass analytics correctness tests on known fixtures: diamond
   (A blocks B,C; B,C block D), chain, and a cycle — asserting keystone,
   chokepoint, and impact rankings by construction.
@@ -81,4 +81,4 @@ before scoping B3.
 
 - No new external crates (PageRank/HITS/betweenness implemented in-crate;
   betweenness via Brandes' algorithm, expect ~80-100 lines with edge cases).
-- `cargo test -p allternit-agent-system-rails` passes.
+- `cargo test -p allternit-commrails` passes.

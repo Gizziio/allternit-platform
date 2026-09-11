@@ -9,32 +9,32 @@ use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use allternit_agent_system_rails::bus::{Bus, BusMessage, BusOptions, NewBusMessage};
-use allternit_agent_system_rails::cli::work::{run_work_command, WorkCmd, WorkContext};
-use allternit_agent_system_rails::core::ids::{create_event_id, create_lease_id};
-use allternit_agent_system_rails::core::io::{ensure_dir, write_json_atomic};
-use allternit_agent_system_rails::dependencies::load_graph;
-use allternit_agent_system_rails::gate::gate::{GateOptions, WihPickupOptions};
-use allternit_agent_system_rails::leases::leases::LeasesOptions;
-use allternit_agent_system_rails::ledger::ledger::LedgerOptions;
-use allternit_agent_system_rails::graph::{views, GraphAnalytics, GraphView, InsightsConfig};
-use allternit_agent_system_rails::policy;
-use allternit_agent_system_rails::rails_id::TicketId;
-use allternit_agent_system_rails::tickets::{self, TicketStore};
-use allternit_agent_system_rails::wait_gates::WaitGateStore;
-use allternit_agent_system_rails::wih::projection::project_wih;
-use allternit_agent_system_rails::wih::types::LoopPolicy;
-use allternit_agent_system_rails::work::graph::{has_cycle_edges, ready_nodes};
-use allternit_agent_system_rails::work::projection::project_dag;
-use allternit_agent_system_rails::work::types::DagState;
-use allternit_agent_system_rails::{
+use allternit_commrails::bus::{Bus, BusMessage, BusOptions, NewBusMessage};
+use allternit_commrails::cli::work::{run_work_command, WorkCmd, WorkContext};
+use allternit_commrails::core::ids::{create_event_id, create_lease_id};
+use allternit_commrails::core::io::{ensure_dir, write_json_atomic};
+use allternit_commrails::dependencies::load_graph;
+use allternit_commrails::gate::gate::{GateOptions, WihPickupOptions};
+use allternit_commrails::leases::leases::LeasesOptions;
+use allternit_commrails::ledger::ledger::LedgerOptions;
+use allternit_commrails::graph::{views, GraphAnalytics, GraphView, InsightsConfig};
+use allternit_commrails::policy;
+use allternit_commrails::rails_id::TicketId;
+use allternit_commrails::tickets::{self, TicketStore};
+use allternit_commrails::wait_gates::WaitGateStore;
+use allternit_commrails::wih::projection::project_wih;
+use allternit_commrails::wih::types::LoopPolicy;
+use allternit_commrails::work::graph::{has_cycle_edges, ready_nodes};
+use allternit_commrails::work::projection::project_dag;
+use allternit_commrails::work::types::DagState;
+use allternit_commrails::{
     AllternitEvent, Actor, ActorType, DagMutation, EventScope, Gate, Index, IndexOptions, LeaseRequest,
     Leases, Ledger, LedgerQuery, Mail, MailOptions, Orchestrator, PeerEnvelope, PeerRegistry,
     ReceiptStore, ReceiptStoreOptions, SpawnOptions, Steer, Vault, VaultOptions, WatchOutcome,
     WorkOps, send_envelope,
 };
 #[cfg(unix)]
-use allternit_agent_system_rails::PeerSocket;
+use allternit_commrails::PeerSocket;
 #[cfg(unix)]
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 #[cfg(unix)]
@@ -44,8 +44,8 @@ use tokio::sync::OnceCell;
 use tokio::time::{sleep, Duration as TokioDuration};
 
 #[derive(Parser)]
-#[command(name = "allternit-rails")]
-#[command(about = "Allternit Agent System Rails CLI", long_about = None)]
+#[command(name = "allternit-commrails")]
+#[command(about = "Allternit CommRails CLI", long_about = None)]
 struct Cli {
     #[arg(long)]
     root: Option<PathBuf>,
@@ -1227,7 +1227,7 @@ async fn main() -> Result<()> {
                 GraphCmd::Impact { ticket_id } => {
                     let id: TicketId = ticket_id
                         .parse()
-                        .map_err(|e: allternit_agent_system_rails::rails_id::InvalidTicketId| {
+                        .map_err(|e: allternit_commrails::rails_id::InvalidTicketId| {
                             anyhow::anyhow!(e)
                         })?;
                     match views::build_impact_view(&insights, &view, &all, &id) {
@@ -2751,7 +2751,7 @@ fn matches_trace(
 fn project_wih_from_events(
     events: &[AllternitEvent],
     wih_id: &str,
-) -> Option<allternit_agent_system_rails::wih::types::WihState> {
+) -> Option<allternit_commrails::wih::types::WihState> {
     let filtered: Vec<AllternitEvent> = events
         .iter()
         .filter(|evt| evt.payload.get("wih_id").and_then(|v| v.as_str()) == Some(wih_id))

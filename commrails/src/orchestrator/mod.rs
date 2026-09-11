@@ -124,17 +124,23 @@ impl Orchestrator {
             .register(&session, workdir.clone(), opts.vendor)?;
 
         // Build the tmux command.  We run under script(1) for a transcript,
-        // inject Rails env vars, and chain the notes sentinel if requested.
+        // inject CommRails env vars (both the new ALLTERNIT_COMMRAILS_* names
+        // and the legacy ALLTERNIT_RAILS_* names for one release, so old
+        // executors still see them), and chain the notes sentinel if requested.
         let mut inner = format!(
-            "export ALLTERNIT_RAILS_PEER_NAME={}; export ALLTERNIT_RAILS_INBOX={}; export ALLTERNIT_RAILS_ROOT={}; ",
+            "export ALLTERNIT_COMMRAILS_PEER_NAME={}; export ALLTERNIT_COMMRAILS_INBOX={}; export ALLTERNIT_COMMRAILS_ROOT={}; export ALLTERNIT_RAILS_PEER_NAME={}; export ALLTERNIT_RAILS_INBOX={}; export ALLTERNIT_RAILS_ROOT={}; ",
+            shell_escape(&peer.name),
+            shell_escape(&peer.inbox_socket.to_string_lossy()),
+            shell_escape(&workdir.to_string_lossy()),
             shell_escape(&peer.name),
             shell_escape(&peer.inbox_socket.to_string_lossy()),
             shell_escape(&workdir.to_string_lossy())
         );
         if let Some(task) = opts.task_file {
+            let task_escaped = shell_escape(&task.to_string_lossy());
             inner.push_str(&format!(
-                "export ALLTERNIT_RAILS_TASK_FILE={}; ",
-                shell_escape(&task.to_string_lossy())
+                "export ALLTERNIT_COMMRAILS_TASK_FILE={0}; export ALLTERNIT_RAILS_TASK_FILE={0}; ",
+                task_escaped
             ));
         }
         inner.push_str(&format!(

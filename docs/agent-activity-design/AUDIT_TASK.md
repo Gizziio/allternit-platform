@@ -4,7 +4,7 @@ Two mockup HTML files sit next to this file: `mockup-v1.html` and `mockup-v2.htm
 
 ## Context: what this is actually for
 
-Allternit (the product, this repo) has a real, already-functional backend feature called **Rails Mail** — an internal agent-to-agent / agent-to-human coordination system (`cmd/allternit-api/src/rails/mod.rs`, the `allternit_agent_system_rails` crate). It's the exact mechanism this repo's own `agent-orchestrator` skill uses to post executor progress. Real capabilities, all already live:
+Allternit (the product, this repo) has a real, already-functional backend feature called **Rails Mail** — an internal agent-to-agent / agent-to-human coordination system (`cmd/allternit-api/src/rails/mod.rs`, the `allternit_commrails` crate). It's the exact mechanism this repo's own `agent-orchestrator` skill uses to post executor progress. Real capabilities, all already live:
 
 - `ensureThread(topic)` — create/get a thread
 - `send(threadId, ...)` — post a message into a thread
