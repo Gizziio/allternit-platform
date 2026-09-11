@@ -22,6 +22,7 @@ import { z } from 'zod';
 import type { Agent, Bot, BotProfile } from '@/lib/agents/agent.types';
 import {
   harnessConfigSchema,
+  botBrainSchema,
   agentConnectorBindingSchema,
   agentSecretRefSchema,
   agentMessagingConfigSchema,
@@ -122,6 +123,10 @@ export const botPackageSchema = z.object({
 
   // Optional autonomous primitives
   harness: harnessConfigSchema.optional(),
+  /** Gizzi knowledge brain — not the BA-3 execution bind. */
+  brainId: z.string().optional(),
+  /** Bot Agents BA-3 execution brain. */
+  brain: botBrainSchema.optional(),
   connectorBindings: z.array(botConnectorBindingSchema).optional(),
   secretRefs: z.array(botSecretRefSchema).optional(),
   messagingConfig: botMessagingConfigSchema.optional(),

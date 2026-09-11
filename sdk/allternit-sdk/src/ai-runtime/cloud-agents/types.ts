@@ -29,6 +29,7 @@ export interface CloudSession {
   computer: CloudComputer;
   brain_id?: string | null;
   vault_ids?: string[];
+  bot_id?: string | null;
   parent_thread_id?: string | null;
   permission?: "always_allow" | "always_ask" | "auto" | null;
   created_at: string;
@@ -49,6 +50,8 @@ export type CloudSessionAgentRef =
 export interface CreateCloudSessionOptions {
   /** Existing agent id, versioned reference, or an inline agent definition. */
   agent?: CloudSessionAgentRef;
+  /** Packaged bot id (BA-8). Used as the session agent when `agent` is omitted. */
+  botId?: string;
   computer?: CloudComputer;
   /** Initial user message (plain string or `{ type: "user.message", content }`). */
   input?: string | { type: "user.message"; content: string };
@@ -62,6 +65,38 @@ export interface CreateCloudSessionOptions {
   brainId?: string | null;
   parent_thread_id?: string;
   permission?: "always_allow" | "always_ask" | "auto";
+}
+
+export interface BotProfile {
+  displayName: string;
+  tagline?: string;
+  welcomeMessage?: string;
+  starterPrompts?: string[];
+  accentColor?: string;
+  groupChatEnabled?: boolean;
+  botCategory?: string;
+}
+
+export interface BotAgent {
+  id: string;
+  name: string;
+  description?: string;
+  isBot?: boolean;
+  botProfile?: BotProfile;
+  model?: string;
+  provider?: string;
+  status?: string;
+  brain?: unknown;
+  brainId?: string;
+}
+
+export interface CreateBotOptions {
+  name: string;
+  description?: string;
+  model?: string;
+  provider?: string;
+  systemPrompt?: string;
+  botProfile: BotProfile;
 }
 
 export type SendCloudSessionEvent =

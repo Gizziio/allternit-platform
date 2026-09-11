@@ -21,6 +21,56 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-11 — grok — Cloud Agents Phase 4 leftovers + Computer Cloud (rq-20260910-002)
+
+- **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
+- **Agent:** grok
+- **Summary:** Merged PR #295 (8788dd6b5) — threads, outputs, schedules alias, toolset, permission field; sandbox/desktop provision Computer Cloud Cloud Desktop, not Fly. 503 without VM driver. fabric still 400.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/295 · 8788dd6b5d319bfb33cfb778f99452793fbbb18a
+- **How it works:** Session create calls existing Computer Cloud standalone desktop spawn (ephemeral vs session persistence). GitHub Actions green; Vercel + Pages Git ignored.
+- **Outstanding work:** Map fabric → Computer Cloud; live Incus/Tart driver; dollar budget parked; Bot Agents BA-*.
+- **Summary file:** [2026-09-11-allternit-runtime-api-p4-grok.md](./summaries/2026-09-11-allternit-runtime-api-p4-grok.md)
+
+### 2026-09-10 21:59 — grok — ao visibility HTTP + SDK client.bots (BA-8)
+
+- **Session ID / Branch:** `ao/ba-remaining` (worktree `allternit-ao-ba-remaining`)
+- **Agent:** grok (implemented + merged)
+- **Summary:** Merged PR #297 (c934a1cc5) — visibility DTO from `ao visibility`; `Allternit.bots` create|list|get|archive; session `bot_id`. Also merged #295 and #294 this session.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/297 · c934a1cc5b922f73af76c38c9c1e5425447f8968
+- **How it works:** Engine blocked/idle panes + waiting-on-you when `ao` answers; peer registry fallback. Bots live on the agents table (`is_bot`). Session create uses `bot_id` as the agent when `agent` is omitted.
+- **Outstanding work:** BA-6 computer-orgo Phase 1; BA-5 spawned-child event feed; native CLI spawn for `bot.brain`; UHP spawn (BA-7).
+- **Summary file:** [2026-09-10-2159-ba-remaining-visibility-bots-grok.md](./summaries/2026-09-10-2159-ba-remaining-visibility-bots-grok.md)
+
+### 2026-09-10 21:45 — grok — Fabric PWA leftover approvals/watch + desktop rebuild
+
+- **Session ID / Branch:** `ao/fabric-pwa-bot-mode-deferred`
+- **Agent:** grok
+- **Summary:** Merged PR #294 (a421d0da2) — approval replies hit the server; PWA Watch computer pulls bot screenshots; 390×844 Bots smoke; rebuilt unsigned arm64 DMG `1.1.1-b1960`.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/294 · a421d0da261a5435aa239eb53ecae0f822d4f264
+- **How it works:** `replyBotApproval` uses permission-store/cowork. PWA chat mounts `BotWatchStrip` while watching. Packaged SW cache is v24.
+- **Outstanding work:** Paired-node ACI `streamAci` still requires the machine drive to be mounted; this watch path is the bot desktop. DMG unsigned.
+- **Summary file:** [2026-09-10-2145-fabric-pwa-deferred-grok.md](./summaries/2026-09-10-2145-fabric-pwa-deferred-grok.md)
+
+### 2026-09-10 21:33 — grok — persist bot.brain execution bind (BA-3)
+
+- **Session ID / Branch:** `ao/ba-3-brain-bind` (worktree `allternit-ao-ba-3-brain-bind`)
+- **Agent:** grok (implemented + merged)
+- **Summary:** Merged PR #293 (b6013f12d) — durable `bot.brain` execution bind; native harness fail-closed; Hub chip + CommRails session join.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/293 · b6013f12d1fc625933ead6e16e6cc7997321da97
+- **How it works:** Stored in `config.botBrain`, distinct from Gizzi `brainId`. Native start pickups the bound session and does not fall through to Allternit cloud.
+- **Outstanding work:** UHP persist-only (no spawn); native create is catalog pickup not CLI spawn; ao-engine visibility HTTP; desktop DMG; BA-5/6/8.
+- **Summary file:** [2026-09-10-2133-ba-3-brain-bind-grok.md](./summaries/2026-09-10-2133-ba-3-brain-bind-grok.md)
+
+### 2026-09-10 21:30 — grok — UHP/harness remaining work (rq-20260908-028)
+
+- **Session ID / Branch:** follow-up backlog (no branch yet)
+- **Agent:** grok
+- **Summary:** Recorded unfinished work after P6b (#280), docs (#281), and harness install channels (#291). Not started.
+- **Commit:** none — tracking only
+- **How it works:** Six follow-ups stay on the ledger until a later session picks them: (1) engine PATH for `~/.ao/harness/bin` so managed installs spawn from `ao serve`; (2) OpenCode UHP turn in an engine pane; (3) dsh PyPI pin that exists; (4) Gate 2 claude/codex after re-auth / 2026-09-16; (5) CI job for `uhp-conformance --class full`; (6) session artifact download (X-07).
+- **Outstanding work:** all six items above. Do not treat P6b as having delivered them.
+- **Summary file:** [2026-09-10-2130-uhp-p6b-followups-grok.md](./summaries/2026-09-10-2130-uhp-p6b-followups-grok.md)
+
 ### 2026-09-10 21:26 — grok — bot-mode live e2e (web/PWA) + gizzi 2.0.8
 
 - **Session ID / Branch:** `session/botmode-group-e2e-0910` (worktree `allternit-session-botmode-clerk-0910`; pickup of Kimi `session_6f5d4729`)

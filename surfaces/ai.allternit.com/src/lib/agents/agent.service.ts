@@ -40,6 +40,7 @@ import {
   agentSchema,
   coerceVmOperatorConfig,
 } from './agent.types';
+import { parseBotBrain } from '../bots/bot-brain';
 import { getDefaultAgentModel } from './agent-models';
 import {
   createLocalAgent,
@@ -279,6 +280,14 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
       isBot: true,
       botProfile: input.botProfile,
       ...(input.brainId ? { brainId: input.brainId } : {}),
+      ...(input.brain ? { botBrain: input.brain } : {}),
+    };
+  }
+
+  if (input.brain && !input.isBot) {
+    apiInput.config = {
+      ...(apiInput.config as Record<string, unknown> || {}),
+      botBrain: input.brain,
     };
   }
 
@@ -418,6 +427,7 @@ export function transformAgentFromApi(apiAgent: unknown): Agent {
       config.botProfile as Agent['botProfile'],
     ) || undefined,
     brainId: pick<string>(a.brain_id, a.brainId, config.brainId as string),
+    brain: parseBotBrain(pick(a.brain, a.bot_brain, a.botBrain, config.botBrain)),
     connectorBindings: pick<Agent['connectorBindings']>(
       Array.isArray(a.connector_bindings) ? a.connector_bindings : undefined,
       Array.isArray(a.connectorBindings) ? a.connectorBindings : undefined,
@@ -499,6 +509,12 @@ export async function updateAgent(
   if (updates.isBot !== undefined) apiUpdates.is_bot = updates.isBot;
   if (updates.botProfile !== undefined) apiUpdates.bot_profile = updates.botProfile;
   if (updates.brainId !== undefined) apiUpdates.brain_id = updates.brainId;
+  if (updates.brain !== undefined) {
+    apiUpdates.config = {
+      ...((apiUpdates.config as Record<string, unknown>) || {}),
+      botBrain: updates.brain,
+    };
+  }
   if (updates.connectorBindings !== undefined) apiUpdates.connector_bindings = updates.connectorBindings;
   if (updates.secretRefs !== undefined) apiUpdates.secret_refs = updates.secretRefs;
   if (updates.messagingConfig !== undefined) apiUpdates.messaging_config = updates.messagingConfig;
@@ -510,6 +526,7 @@ export async function updateAgent(
   if (
     updates.isBot !== undefined ||
     updates.botProfile !== undefined ||
+    updates.brain !== undefined ||
     updates.connectorBindings !== undefined ||
     updates.secretRefs !== undefined ||
     updates.messagingConfig !== undefined ||
@@ -520,6 +537,7 @@ export async function updateAgent(
       ...((apiUpdates.config as Record<string, unknown>) || {}),
       ...(updates.isBot !== undefined ? { isBot: updates.isBot } : {}),
       ...(updates.botProfile !== undefined ? { botProfile: updates.botProfile } : {}),
+      ...(updates.brain !== undefined ? { botBrain: updates.brain } : {}),
       ...(updates.connectorBindings !== undefined ? { connectorBindings: updates.connectorBindings } : {}),
       ...(updates.secretRefs !== undefined ? { secretRefs: updates.secretRefs } : {}),
       ...(updates.messagingConfig !== undefined ? { messagingConfig: updates.messagingConfig } : {}),

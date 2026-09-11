@@ -35,12 +35,12 @@ import { BotComposer, type BotComposerAction } from "@/components/bot-chat/BotCo
 import { BotTranscript } from "@/components/bot-chat/BotTranscript";
 import {
   applyEvent,
-  approvalAnswerToEvent,
   initTranscript,
   messagesToTranscript,
   streamCallbacksToEvents,
   userSendEvent,
 } from "@/components/bot-chat/chat-stream-adapter";
+import { useBotApprovalBridge } from "@/lib/bots/use-bot-approval-bridge";
 import type { BotChatTranscript } from "@/components/bot-chat/types";
 import {
   routinesToComposerProps,
@@ -308,6 +308,12 @@ function BotChatSessionContent({
   const botName = (bot ? getBotDisplayName(bot) : null) ?? session?.name ?? "Bot";
   const botTagline = bot?.botProfile?.tagline ?? session?.description ?? "";
   const accentColor = bot?.botProfile?.accentColor ?? "var(--accent-primary)";
+  const { onApprovalAnswer, onApprovalGrant } = useBotApprovalBridge(
+    sessionId,
+    botId ?? "",
+    botName,
+    applyFold,
+  );
 
   const { suggestions, commands } = useMemo(
     () => (botId ? routinesToComposerProps(botId) : { suggestions: [], commands: [] }),
@@ -580,9 +586,8 @@ function BotChatSessionContent({
         <BotTranscript
           transcript={transcript}
           className="flex-1 overflow-y-auto px-1 py-2"
-          onApprovalAnswer={(approvalId, optionId) =>
-            applyFold(approvalAnswerToEvent(approvalId, optionId))
-          }
+          onApprovalAnswer={onApprovalAnswer}
+          onApprovalGrant={onApprovalGrant}
         />
       )}
 
