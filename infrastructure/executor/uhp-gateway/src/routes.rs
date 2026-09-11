@@ -1,4 +1,4 @@
-//! Axum router: auth + UHP-Version middleware and every core-class handler.
+//! Axum router: auth + UHP-Version middleware and every full-class handler.
 
 use std::sync::atomic::Ordering;
 use std::sync::Arc;

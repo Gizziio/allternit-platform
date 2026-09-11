@@ -4,6 +4,12 @@ Date: 2026-09-10 · Branch: `ao/uhp-gateway` · Executor: P6a (uhp-gateway sessi
 Spec: `Research/specs/ao-uhp-gateway.md` (Brain) · Binding prep: `Research/drafts/prep-p6-uhp-gateway.md`
 Plan: `Products/AgentOrchestratorRuntime.md` §2.6, §5 P6a
 
+**Current surface (P6b, PR #280, 2026-09-10):** class is **`full`**, not core.
+Six more drivers (gemini/qwen/opencode/cline/pi/dsh), skill files, session
+sharing, session delete, files list. Operator how-to: `docs/UHP.md`. P6b
+evidence: `docs/AO_UHP_P6B_NOTES.md`. Stub list below is historical P6a —
+item 4 (extended/full not implemented) is **superseded**.
+
 ## What this is
 
 The UHP (Unified Harness Protocol) 2026-08-11 **core-class** execution layer, in Rust,
@@ -171,10 +177,10 @@ cargo test -p herdr           # full suite: flaky failure cluster in
    command executions) are parsed but not rendered as UHP items.
 3. **kimi usage is always null** — kimi CLI 0.42.0 `--output-format stream-json`
    emits no usage event. Allowed by T-05 (`usage` null, never fabricated).
-4. **Extended/full class**: files input/output, session files/archive, containers,
-   session sharing are not implemented; discovery honestly reports
-   `files_input/files_output/session_sharing: false` and class `core`
-   (`session_listing`/`harness_management` are true and implemented).
+4. **Extended/full class (P6a):** not implemented then. **Superseded by P6b
+   (PR #280):** discovery is `full`; skills, sharing, session delete, and
+   files list shipped. Artifact *download* (X-07) still skips when a session
+   produced no files. See `docs/UHP.md`.
 5. **Codex model override** writes an isolated `CODEX_HOME` with
    `model_provider="openai"` (per the inventory's namespaced-provider note) —
    compile-verified only; live path blocked by the same usage limit.
@@ -194,9 +200,8 @@ auth, per-session cwd isolation only. Mode (b) Allternit-cloud credentials via t
 existing `cmd/allternit-api/src/llm_gateway/` BYO machinery is a reference the
 drivers can resolve later — no code in this crate touches keys.
 
-## P6b pointers
+## P6b (landed PR #280)
 
-- Per-driver PRs: gemini, qwen, opencode, cline, pi, dsh (runner `BACKENDS` map).
-- Conformance class extended → full as files/sharing land.
-- CI conformance job + advisory pytest job (vendor-path install).
-- Re-run Gate 2 for claude/codex once credentials are live; promote from red.
+Shipped. How-to `docs/UHP.md`; evidence `docs/AO_UHP_P6B_NOTES.md`.
+Still open: CI conformance job; Gate 2 claude/codex re-run; engine PATH for
+managed installs; OpenCode UHP pane; dsh PyPI pin.

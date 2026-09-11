@@ -3,6 +3,7 @@
 Date: 2026-09-10 · Branch: `ao/uhp-p6b` · Worktree: `allternit-ao-uhp-p6b`
 Plan: `Products/AgentOrchestratorRuntime.md` §5 P6b · Parent: P6a (PR #265)
 Scope: `docs/AO_UHP_P6B_SCOPE.md`
+Operator how-to: `docs/UHP.md`
 
 Human override 2026-09-10: pi added to the auto-install list; live-gate
 pi / dsh / opencode / qwen. gemini and cline stay fixture-only.
