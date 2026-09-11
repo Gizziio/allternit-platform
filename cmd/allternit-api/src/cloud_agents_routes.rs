@@ -731,7 +731,9 @@ async fn create_cloud_session(
                 return Err(ApiError::BadRequest("computer not found".into()));
             }
         }
-    } else if matches!(provision_kind.as_str(), "sandbox" | "desktop" | "fabric") {
+    } else if matches!(provision_kind.as_str(), "sandbox" | "desktop" | "fabric")
+        && permission.as_deref() != Some("always_ask")
+    {
         let persistence = if provision_kind == "sandbox" {
             crate::computer_routes::Persistence::Ephemeral
         } else {
@@ -773,7 +775,14 @@ async fn create_cloud_session(
                     )
                 })
                 .await;
-                return Ok((status, Json(json!({ "error": message }))).into_response());
+                return Ok((
+                    status,
+                    Json(json!({
+                        "error": message,
+                        "code": "computer_unavailable"
+                    })),
+                )
+                    .into_response());
             }
         }
     }
@@ -1280,6 +1289,7 @@ mod tests {
         });
         let (status, payload) = post_json(&router, "/sessions", &body, "user-a").await;
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(payload["code"], "computer_unavailable");
         assert!(
             payload["error"]
                 .as_str()
@@ -1677,6 +1687,7 @@ mod tests {
         )
         .await;
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(payload["code"], "computer_unavailable");
         assert!(
             payload["error"].as_str().unwrap_or("").contains("driver")
                 || payload["error"].as_str().unwrap_or("").contains("Computer")
@@ -1691,12 +1702,28 @@ mod tests {
             "/sessions",
             &json!({
                 "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "desktop"},
+                "permission": "always_ask"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{payload}");
+        assert_eq!(payload["session"]["permission"], "always_ask");
+        assert_eq!(payload["session"]["computer"]["kind"], "desktop");
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
                 "computer": {"kind": "fabric"}
             }),
             "user-a",
         )
         .await;
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(payload["code"], "computer_unavailable");
         assert!(
             payload["error"].as_str().unwrap_or("").contains("driver")
                 || payload["error"].as_str().unwrap_or("").contains("Computer")

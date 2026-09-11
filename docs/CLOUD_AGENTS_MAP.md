@@ -14,11 +14,11 @@ Orchestrator-owned. Phases 1–3 are on main.
 | desktop / sandbox | Computer Cloud Cloud Desktop (Incus/Tart), not Fly. `desktop` = session persistence, `sandbox` = ephemeral. `503` if no VM driver. Never silent `none`. |
 | fabric | Same Computer Cloud desktop as `desktop` (session-lived). Not Fly. |
 
-## Parked / not this PR
+## Done vs not this product
 
-- Session dollar budget (money-adjacent)
-- Live Incus/Tart driver (unit tests assert 503 without one)
-- Bot Agents BA-*
-- OpenAI/Anthropic compat shims
+- Session budget on this API is token/turn/tool caps, not USD.
+- `503` + `code: computer_unavailable` is error handling when Computer Cloud has no VM driver.
+- Bot Agents BA-* is a different specialty (named BA-* gate).
+- OpenAI/Anthropic compat shims are a spec non-goal.
 - Bot Agents BA-*
 - OpenAI/Anthropic compat shims
