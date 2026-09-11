@@ -1,19 +1,26 @@
 # Steering checkpoint
 
 ## Goal
-Match the platform console shell rail 1:1 to the Claude Console rail design Eoj
-screenshotted (2026-09-11 10:15). Model cards + overlay were already merged in PR #331.
+Fix issue #368: `skill-registry.ts` parser drops `od.inputs` (and any nested
+list-of-maps) — every bundled skill parses with `inputs: []`, so the design
+launch flow's Inputs block is always empty. Session: session/skillinputs-0911,
+worktree allternit-session-skillinputs-0911.
 
 ## Just did
-- Restructured rail nav in ConsoleLayout.tsx: Dashboard + API keys as top-level links;
-  groups Agents / Cloud / Organization (plain indented children, no border-l tree);
-  Settings as top-level link; group chevron shows › closed / ⌄ open (was rotated chevron-down).
-- Verified: npm run typecheck, npm run build, Playwright smoke (20/20 PASS: rail
-  structure, group expand/collapse, nested rows, credits row, search filter, model
-  cards, overlay open/Esc-close, API keys nav). Screenshots at /tmp/console-ui-smoke/.
+- Rewrote parseYamlFrontmatter as a recursive indentation parser (nested maps,
+  sequences of scalars AND of maps, inline arrays, quoted/numeric/bool scalars,
+  |/> block scalars, standalone-line fence). Replaced 145-line flat loop.
+- New skill-registry.test.ts: 8 tests (saas-landing verbatim fixture end-to-end,
+  synthetic enum/integer/i18n/folded fixture, fence edge case, no-fence case).
+- Exported RAW_SKILLS; bundled-skills.test.ts now asserts every skill declaring
+  od.inputs parses >0 well-formed inputs (issue #368 regression lock).
+- Verified: typecheck 0 errors; vitest src/lib/design 27/27 (was 18);
+  vitest src/shell 21/21; live spot-check: 15/15 input-declaring skills parse
+  fully-typed inputs (labels, placeholders, defaults, required).
 
 ## Next
-- Commit, push, PR, merge, ledger attestation, worktree cleanup per AGENTS.md ritual.
+- Commit, push, PR, merge, ledger attestation, release-preflight, desktop
+  rebuild, worktree cleanup per AGENTS.md ritual.
 
 ## Open questions
 - None.

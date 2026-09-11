@@ -139,158 +139,198 @@ function isPreviewType(value: string): value is PreviewType {
 
 /**
  * Minimal YAML frontmatter parser.
- * Only handles the flat-ish shape used by SKILL.md files:
- *   ---
- *   name: foo
- *   triggers:
- *     - "a"
- *     - "b"
- *   od:
- *     mode: prototype
- *   ---
+ *
+ * Supports the subset used by SKILL.md files:
+ *   - nested mappings (arbitrary depth, two-space indentation)
+ *   - sequences of scalars (`- "a"`) and sequences of mappings
+ *     (`- name: x` followed by deeper-indented continuation keys)
+ *   - inline arrays (`[a, b]`), quoted scalars (colons allowed inside quotes),
+ *     booleans, nulls, and numeric scalars
+ *   - literal (`|`) and folded (`>`) block scalars
+ *
+ * Implemented as a small recursive indentation parser — the previous flat
+ * line loop could not represent list-of-maps and silently flattened
+ * `od.inputs` entries into unparseable strings (issue #368).
  */
+
+interface YamlParseState {
+  pos: number;
+}
+
+function yamlLineIndent(line: string): number {
+  return line.length - line.trimStart().length;
+}
+
+function isQuotedScalar(value: string): boolean {
+  return (value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"));
+}
+
+/** `key: value`, `key:` (empty value), key = letters/digits/_/.- (no spaces). */
+const YAML_MAP_ENTRY_RE = /^([A-Za-z0-9_.-]+):(?:\s+(.*))?$/;
+const YAML_BLOCK_SCALAR_RE = /^[|>][-+]?\s*$/;
+
+function parseInlineArray(value: string): string[] | null {
+  if (!value.startsWith('[') || !value.endsWith(']')) return null;
+  const inner = value.slice(1, -1).trim();
+  if (!inner) return [];
+  return inner.split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+}
+
+function parseYamlScalar(value: string): unknown {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (value === 'null' || value === '~') return null;
+  const arr = parseInlineArray(value);
+  if (arr) return arr;
+  if (isQuotedScalar(value)) return value.slice(1, -1);
+  if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+  return value;
+}
+
+function skipYamlNoise(lines: string[], state: YamlParseState): void {
+  while (state.pos < lines.length) {
+    const text = lines[state.pos]!.trim();
+    if (text === '' || text.startsWith('#')) state.pos++;
+    else break;
+  }
+}
+
+/** Read the value half of a `key: value` entry, consuming any nested block. */
+function readYamlEntryValue(
+  lines: string[],
+  state: YamlParseState,
+  valueText: string,
+  parentIndent: number,
+): unknown {
+  if (YAML_BLOCK_SCALAR_RE.test(valueText)) {
+    const fold = valueText.startsWith('>');
+    const collected: string[] = [];
+    let contentIndent = Infinity;
+    while (state.pos < lines.length) {
+      const line = lines[state.pos]!;
+      const indent = yamlLineIndent(line);
+      if (line.trim() !== '' && indent <= parentIndent) break;
+      if (line.trim() !== '') {
+        contentIndent = Math.min(contentIndent, indent);
+        collected.push(line);
+      } else {
+        collected.push('');
+      }
+      state.pos++;
+    }
+    const texts = collected.map((line) => (line === '' ? '' : line.slice(contentIndent === Infinity ? 0 : contentIndent)));
+    const joined = fold ? texts.join(' ') : texts.join('\n');
+    return joined.replace(/\s+$/g, '');
+  }
+
+  if (valueText === '') {
+    // Value is a nested block starting on the following deeper-indented lines.
+    skipYamlNoise(lines, state);
+    if (state.pos < lines.length && yamlLineIndent(lines[state.pos]!) > parentIndent) {
+      const sub = parseYamlNode(lines, state, parentIndent + 1);
+      return sub;
+    }
+    return null;
+  }
+
+  return parseYamlScalar(valueText);
+}
+
+function isYamlSequenceItem(lines: string[], pos: number, indent: number): boolean {
+  if (pos >= lines.length) return false;
+  const text = lines[pos]!.trim();
+  return yamlLineIndent(lines[pos]!) === indent && (text.startsWith('- ') || text === '-');
+}
+
+/** Parse the mapping or sequence that starts at (or after) state.pos. */
+function parseYamlNode(lines: string[], state: YamlParseState, minIndent: number): unknown {
+  skipYamlNoise(lines, state);
+  if (state.pos >= lines.length) return null;
+  const baseIndent = yamlLineIndent(lines[state.pos]!);
+  if (baseIndent < minIndent) return null;
+
+  if (isYamlSequenceItem(lines, state.pos, baseIndent)) {
+    const arr: unknown[] = [];
+    while (isYamlSequenceItem(lines, state.pos, baseIndent)) {
+      const text = lines[state.pos]!.trim();
+      const itemText = text === '-' ? '' : text.slice(2).trim();
+      state.pos++;
+      if (itemText === '') {
+        // Bare dash: value is a nested block (or null).
+        skipYamlNoise(lines, state);
+        arr.push(
+          state.pos < lines.length && yamlLineIndent(lines[state.pos]!) > baseIndent
+            ? parseYamlNode(lines, state, baseIndent + 1)
+            : null,
+        );
+        continue;
+      }
+      const mapMatch = itemText.match(YAML_MAP_ENTRY_RE);
+      if (mapMatch && !isQuotedScalar(itemText)) {
+        // Sequence-of-maps: first key inline, continuation keys deeper-indented.
+        const obj: Record<string, unknown> = {};
+        obj[mapMatch[1]!] = readYamlEntryValue(lines, state, mapMatch[2] ?? '', baseIndent);
+        for (;;) {
+          skipYamlNoise(lines, state);
+          if (state.pos >= lines.length) break;
+          const contIndent = yamlLineIndent(lines[state.pos]!);
+          const contText = lines[state.pos]!.trim();
+          if (contIndent <= baseIndent || isYamlSequenceItem(lines, state.pos, contIndent)) break;
+          const contMatch = contText.match(YAML_MAP_ENTRY_RE);
+          state.pos++;
+          if (!contMatch) continue; // tolerate stray non-key line
+          obj[contMatch[1]!] = readYamlEntryValue(lines, state, contMatch[2] ?? '', contIndent);
+        }
+        arr.push(obj);
+        continue;
+      }
+      arr.push(parseYamlScalar(itemText));
+    }
+    return arr;
+  }
+
+  const obj: Record<string, unknown> = {};
+  for (;;) {
+    skipYamlNoise(lines, state);
+    if (state.pos >= lines.length) break;
+    const indent = yamlLineIndent(lines[state.pos]!);
+    const text = lines[state.pos]!.trim();
+    if (indent !== baseIndent || isYamlSequenceItem(lines, state.pos, indent)) break;
+    const match = text.match(YAML_MAP_ENTRY_RE);
+    if (!match) break;
+    state.pos++;
+    obj[match[1]!] = readYamlEntryValue(lines, state, match[2] ?? '', baseIndent);
+  }
+  return obj;
+}
+
 export function parseYamlFrontmatter(raw: string): { frontmatter: ParsedFrontmatter; body: string } {
   const trimmed = raw.trim();
   if (!trimmed.startsWith('---')) {
     return { frontmatter: {}, body: trimmed };
   }
 
-  const end = trimmed.indexOf('---', 3);
+  const lines = trimmed.split('\n');
+  // The closing fence is a line that is exactly `---`; a value containing the
+  // substring `---` must not terminate the frontmatter early.
+  let end = -1;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i]!.trim() === '---') {
+      end = i;
+      break;
+    }
+  }
   if (end === -1) {
     return { frontmatter: {}, body: trimmed };
   }
 
-  const yaml = trimmed.slice(3, end).trim();
-  const body = trimmed.slice(end + 3).trim();
-  const frontmatter: ParsedFrontmatter = {};
-  let currentKey: string | null = null;
-  let currentNested: Record<string, unknown> | null = null;
-  let nestedKey: string | null = null;
-  // Block scalar (| literal / > folded) accumulation — top-level keys only.
-  let blockKey: string | null = null;
-  let blockFold = false;
-  let blockLines: string[] = [];
-  let blockIndent: number | null = null;
-
-  const finalizeBlock = () => {
-    if (!blockKey) return;
-    const joined = blockFold ? blockLines.join(' ') : blockLines.join('\n');
-    frontmatter[blockKey] = joined.replace(/\s+$/g, '');
-    blockKey = null;
-    blockLines = [];
-    blockIndent = null;
-  };
-
-  const parseInlineArray = (value: string): string[] | null => {
-    if (!value.startsWith('[') || !value.endsWith(']')) return null;
-    const inner = value.slice(1, -1).trim();
-    if (!inner) return [];
-    return inner.split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
-  };
-
-  const unquote = (value: string): unknown => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    const arr = parseInlineArray(value);
-    if (arr) return arr;
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      return value.slice(1, -1);
-    }
-    return value;
-  };
-
-  for (const line of yaml.split('\n')) {
-    const indent = line.length - line.trimStart().length;
-    const trimmedLine = line.trim();
-
-    if (!trimmedLine || trimmedLine.startsWith('#')) continue;
-
-    // While collecting a block scalar, indented lines are content; a dedent ends it.
-    if (blockKey) {
-      if (indent > 0) {
-        if (blockIndent === null) blockIndent = indent;
-        blockLines.push(line.slice(Math.min(blockIndent, indent)));
-        continue;
-      }
-      finalizeBlock();
-    }
-
-    // Top-level key: value
-    if (indent === 0 && trimmedLine.includes(':')) {
-      currentNested = null;
-      nestedKey = null;
-      const idx = trimmedLine.indexOf(':');
-      const key = trimmedLine.slice(0, idx).trim();
-      const value = trimmedLine.slice(idx + 1).trim();
-      if (value === '') {
-        // Nested block starting on the next line.
-        currentKey = key;
-        frontmatter[key] = {};
-        currentNested = frontmatter[key] as Record<string, unknown>;
-        continue;
-      }
-      if (/^[|>][-+]?\s*$/.test(value)) {
-        // Start of a literal (|) or folded (>) block scalar.
-        blockKey = key;
-        blockFold = value.startsWith('>');
-        blockLines = [];
-        blockIndent = null;
-        currentKey = key;
-        continue;
-      }
-      frontmatter[key] = unquote(value);
-      currentKey = key;
-      continue;
-    }
-
-    // Top-level array item
-    if (indent === 2 && trimmedLine.startsWith('- ') && currentKey) {
-      if (!Array.isArray(frontmatter[currentKey])) {
-        frontmatter[currentKey] = [];
-      }
-      (frontmatter[currentKey] as string[]).push(trimmedLine.slice(2).replace(/^["']|["']$/g, ''));
-      continue;
-    }
-
-    // Nested key under current od block
-    if (indent === 2 && trimmedLine.includes(':') && currentNested) {
-      nestedKey = null;
-      const idx = trimmedLine.indexOf(':');
-      const key = trimmedLine.slice(0, idx).trim();
-      const value = trimmedLine.slice(idx + 1).trim();
-      if (value === '') {
-        nestedKey = key;
-        currentNested[key] = {};
-        continue;
-      }
-      currentNested[key] = unquote(value);
-      nestedKey = key;
-      continue;
-    }
-
-    // Nested array item (indent 4 under a nested key)
-    if (indent === 4 && trimmedLine.startsWith('- ') && currentNested && nestedKey) {
-      if (!Array.isArray(currentNested[nestedKey])) {
-        currentNested[nestedKey] = [];
-      }
-      (currentNested[nestedKey] as string[]).push(trimmedLine.slice(2).replace(/^["']|["']$/g, ''));
-      continue;
-    }
-
-    // Deeper nested key (indent 4) — treat as key under current nested object
-    if (indent === 4 && trimmedLine.includes(':') && currentNested) {
-      const idx = trimmedLine.indexOf(':');
-      const key = trimmedLine.slice(0, idx).trim();
-      const value = trimmedLine.slice(idx + 1).trim();
-      if (nestedKey && typeof currentNested[nestedKey] === 'object' && currentNested[nestedKey] !== null) {
-        (currentNested[nestedKey] as Record<string, unknown>)[key] = unquote(value);
-      } else {
-        currentNested[key] = unquote(value);
-      }
-      continue;
-    }
-  }
-  finalizeBlock();
+  const state: YamlParseState = { pos: 1 };
+  const parsed = parseYamlNode(lines, state, 0);
+  const body = lines.slice(end + 1).join('\n').trim();
+  const frontmatter =
+    parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as ParsedFrontmatter)
+      : {};
 
   return { frontmatter, body };
 }
