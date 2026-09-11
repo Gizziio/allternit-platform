@@ -1,30 +1,38 @@
-# Checkpoint — session/rmvercel-0911
+# Checkpoint — session/dmp1-0911
 
 ## Goal
-Remove Vercel from the codebase: dead verceldeploy plugin wiring (hosting
-integration we don't use). The Vercel GitHub App that posts PR checks is a
-dashboard-side integration — removal steps reported to owner, not code.
+Execute the LOCKED Design Mode P0 + P1 plan (done, PR #332) and rebuild the
+desktop binary from merged main (ritual step 8), landing REAL long-term build
+fixes (Eoj: no sidesteps) rather than environment hacks.
 
 ## Just did
-- Worktree `allternit-session-rmvercel-0911` on `session/rmvercel-0911`
-  from origin/main (e6bea0466).
-- Removed dead `verceldeploy` MCP server from `.mcp.json` (pointed into
-  archive/ — already broken), `.vercel` lines from `.gitignore` /
-  `.dockerignore`, the stale `VERCEL_AGENT_PLUGIN_ADAPTER_PHASE_1_TASK.md`
-  next-batch doc (plugin archived), the `codex-verceldeploy-plugin` entry
-  from the native plugin catalog, the Phase 1 check + expected ids from
-  `scripts/validate-codex-plugins.ts`, and all vercel sections from
-  `docs/PLUGIN_AND_SERVICE_INTEGRATION.md`.
-- Deliberately left: archive/, agent-ledger history, the open-connector
-  vercel provider + icons (product connector catalog), the design-system
-  library's "vercel" preset + style mentions, the website plugin's
-  `deploymentTarget: 'vercel'` option, vendored + THIRD_PARTY files.
-- Verified: `.mcp.json` parses; ai typecheck 0 errors; vitest 1650 pass;
-  validator script runs (5p/3f — was 5p/4f on clean main; remaining
-  failures pre-existing, remotion/iosappbuild also archived).
+- PR #332 (P0/P1) + PR #334 (ledger) + PR #337 (office-engine Document cast,
+  release-path fix) all merged.
+- Desktop rebuild saga: 9 attempts surfaced (1) phantom deps in ai surface
+  (issue #336), (2) office-engine DOM cast (fixed #337), (3) urllib optional
+  proxy-agent, (4) @types/ws walk-up, (5) accidental DOM lib via
+  @types/opentype.js, (6) electron-builder npm collector choking on
+  pnpm-managed nm.
+- Verified b2065 DMG contains all three change markers (allternit-brand,
+  honest penpot string, import-url client) — content proven.
+- Per Eoj: sidestep rejected. Real fix in progress on session branch:
+  desktop package.json gains `packageManager: pnpm@10.28.0` (deterministic
+  pnpm collector for electron-builder) + `@types/ws`; ai.allternit.com
+  package.json gains the phantom deps (@blocksuite/icons ^2.2.17,
+  immer ^10.2.0, mermaid ^11.16.1, yjs ^13.6.30); preload tsconfig declares
+  lib DOM explicitly (replaces the accidental opentype.js side effect).
+- Removed all worktree nm symlinks; fresh `pnpm@10.28.0 install` running
+  (task bash-n5fwjb6j) — the honest verification.
 
 ## Next
-- Commit, push, PR, merge; attest; cleanup.
+- After install: full `npm run dist` in the worktree with NO env hacks and NO
+  manual symlinks. Must reach DMG.
+- Grep bundle markers again; commit package.json/tsconfig/lockfile changes;
+  push; PR; merge; ledger note; cleanup worktree + branch.
+- Shared-checkout nm additive symlinks (icons/univerjs/immer/yjs/mermaid/ws/
+  chrome/filesystem/offscreencanvas/opentype.js/proxy-agent) left in place
+  deliberately: gitignored, reconciled by the next pnpm install, and removing
+  them mid-flight could break the concurrent session in the shared checkout.
 
 ## Open questions
 - None.
