@@ -1906,11 +1906,11 @@ export function ShellRail({
         >
           {showSidebarLabels ? (
             <span className="text-[var(--shell-item-muted)]" data-testid="rail-office-wordmark">
-              <AProtocolWordmark suffix="OFFICE" height={10} theme="adaptive" />
+              <AProtocolWordmark suffix="OFFICE" height={12} theme="adaptive" />
             </span>
           ) : (
             <span className="text-[var(--shell-item-muted)] inline-flex" data-testid="rail-office-mark">
-              <AProtocolWordmark collapsed height={16} theme="adaptive" />
+              <AProtocolWordmark collapsed height={12} theme="adaptive" />
             </span>
           )}
         </button>

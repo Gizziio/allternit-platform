@@ -1,36 +1,31 @@
-# Steering checkpoint — session/console-be-p3
+# Checkpoint — session/wordmarksize-0911
 
 ## Goal
-Backend build-out Phase 3 (G6): deployment scheduler daemon in allternit-api — poll beta_deployments where next_run_at <= now, restart-safe claim, enqueue work task + insert beta_deployment_runs row, recompute next_run_at. Scheduler only creates runs; terminal status still via existing worker PATCH. Overdue policy: fire-once (documented).
+Owner screenshot: rail footer shows A://TERNIT OFFICE (height 10, added by a
+parallel session) next to A://TERNIT DESIGN (height 12) — different sizes;
+and DESIGN still "reads desisn".
+
+## Root causes
+- The G glyph added in #348 is cell-for-cell identical to S (both: top bar,
+  left stem rows 1–2, full middle bar, right stem row 3, bottom bar) — so
+  "DESIGN" rendered "DESISN". Fixed in all three copies: G = S + the left
+  stem continuing below the middle bar ([0,3]) — the one-block difference
+  that makes a G read as G.
+- Heights diverged across parallel sessions: rail OFFICE 10 / collapsed 16,
+  design launch header 13, /office launcher header 18.
 
 ## Just did
-- G6 complete: V144 migration (triggered_by), shared insert_deployment_run_tx
-  (run + deployment-tied work task) used by trigger_run (manual) and the new
-  deployment_scheduler daemon; scheduler module with restart-safe claim,
-  fire-once overdue policy, next-occurrence anchored to the DUE time;
-  AppState.deployment_scheduler wired through all 21 constructors;
-  monitor/system exposes {last_tick_at, runs_fired_total}.
-- Verified: cargo test -p allternit-api → 918 passed, 5 failed (exactly the
-  known pre-existing agent_cloud×4 + rails gate×1). Live smoke on scratch
-  port 18099: cron */1 fired at the minute boundary, run row
-  (triggered_by=scheduler) + queued work task created, next_run_at advanced
-  to the next minute (due-anchored), fire-once confirmed, monitor fields
-  present. release-preflight 35/0.
+- Worktree `allternit-session-wordmarksize-0911` on `session/wordmarksize-0911`
+  from origin/main (6b3548c7a).
+- Fixed G in platform + office-site + add-in copies.
+- Unified every product-suffixed wordmark (DESIGN/OFFICE) to height 12:
+  ShellRail OFFICE 10→12 + collapsed 16→12, NewProjectScreen 13→12,
+  OfficeDesktopView 18→12 (dropped the now-no-op markVariant prop at the
+  call site).
+- Added a G≠S regression test (G must be exactly one block heavier than S).
+
+## Verification
+- typecheck 0 err; wordmark+shell tests 25/25; full suite 1653 pass.
 
 ## Next
-- Parent review; commit/PR/attest/cleanup per repo ritual (not done here —
-  session scoped to implementation + verification only).
-
-## Open questions
-- (resolved during impl) trigger_run did NOT enqueue a work task today and
-  beta_deployment_runs had no triggered_by column. Followed the task's
-  shared-function instruction: both paths now insert run + work task;
-  triggered_by added via V144. Manual trigger response shape unchanged
-  apart from the additive triggered_by field.
-- Interval env: DEPLOYMENT_SCHEDULER_INTERVAL_SECS, default 15s.
-- Overdue reconciliation: next computed after the DUE time (no per-tick
-  drift); if that next is still <= now (multiple missed occurrences), fall
-  back to next after now so catch-up still fires exactly once.
-- Work-task payload for deployment runs: {"deployment_run_id", "agent_id",
-  "messages": [], "tools": null} — mirrors the session-run convention;
-  messages empty because a scheduled run carries no prompt.
+- Commit, push, PR, merge; attest; rebuild dmg; swap; reopen the app.
