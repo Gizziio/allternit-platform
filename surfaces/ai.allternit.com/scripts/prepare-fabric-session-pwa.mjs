@@ -73,7 +73,7 @@ const publicFiles = [
   "fabric-session-icon-192.png",
   "fabric-session-icon-512.png",
   "fabric-session-splash-1170x2532.png",
-  "favicon.svg",
+  "favicon.png",
 ];
 for (const file of publicFiles) {
   const from = path.join(root, "public", file);
@@ -90,7 +90,7 @@ fs.writeFileSync(
 /assets/* /assets/:splat 200
 /fabric-session-service-worker.js /fabric-session-service-worker.js 200
 /manifest.webmanifest /manifest.webmanifest 200
-/favicon.svg /favicon.svg 200
+/favicon.png /favicon.png 200
 /fabric-session-icon-192.png /fabric-session-icon-192.png 200
 /fabric-session-icon-512.png /fabric-session-icon-512.png 200
 /fabric-session-splash-1170x2532.png /fabric-session-splash-1170x2532.png 200

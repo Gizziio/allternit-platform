@@ -3,8 +3,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Allternit', {
       body: data.body || 'Test notification',
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
+      icon: '/favicon.png',
+      badge: '/favicon.png',
       requireInteraction: true,
     })
   );

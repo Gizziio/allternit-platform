@@ -689,21 +689,6 @@ function createMainWindow(): BrowserWindow {
         };
       }
 
-      if (requestedUrl.pathname === '/remote-control.html') {
-        return {
-          action: 'allow',
-          overrideBrowserWindowOptions: {
-            width: 1280,
-            height: 840,
-            minWidth: 820,
-            minHeight: 560,
-            backgroundColor: '#0F0C0A',
-            autoHideMenuBar: true,
-            title: 'Allternit Remote Control',
-          },
-        };
-      }
-
       if (
         (requestedUrl.pathname === '/platform' || requestedUrl.pathname === '/shell') &&
         requestedUrl.searchParams.get('detachedSurface') === 'code'
@@ -2645,9 +2630,7 @@ function openFabricSessionWindow(): void {
   remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
   const dashboardUrl = process.env.ALLTERNIT_FABRIC_SESSION_URL
     ? new URL('/', process.env.ALLTERNIT_FABRIC_SESSION_URL).toString()
-    : process.env.ALLTERNIT_REMOTE_CONTROL_URL
-      ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
-      : new URL('/fabric-session.html', activePlatformUrl).toString();
+    : new URL('/fabric-session.html', activePlatformUrl).toString();
   void remoteControlWindow.loadURL(dashboardUrl);
 }
 

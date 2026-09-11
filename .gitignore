@@ -11,7 +11,12 @@ rails/reference/beads/
 .beads/
 *.log
 *.png
-!surfaces/ai.allternit.com/public/remote-control-*.png
+!surfaces/ai.allternit.com/public/fabric-session-*.png
+!surfaces/ai.allternit.com/public/favicon.png
+!surfaces/ai.allternit.com/public/brand/*.png
+!surfaces/platform.allternit.com/public/favicon.png
+!surfaces/office.allternit.com/public/favicon.png
+!services/remote-control-push/favicon.png
 !surfaces/platform.allternit.com/public/billing/*.png
 *.mov
 *.zip
