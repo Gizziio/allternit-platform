@@ -441,6 +441,7 @@ export function FabricSessionPanel({
   }
 
   const showDetail = Boolean(selectedSession);
+  const sessionTabs = FABRIC_DRIVE_KINDS.filter((tab) => tab.id !== 'desktop');
 
   return (
     <div
@@ -454,8 +455,8 @@ export function FabricSessionPanel({
         )}
       >
         <div className="px-3 pt-3 pb-2 shrink-0">
-          <div className="flex p-0.5 bg-[var(--surface-hover)] rounded-xl gap-0.5 border border-solid border-[var(--border-subtle)]">
-            {FABRIC_DRIVE_KINDS.filter((tab) => tab.id !== 'desktop').map((tab) => {
+          <div className="hidden md:flex p-0.5 bg-[var(--surface-hover)] rounded-xl gap-0.5 border border-solid border-[var(--border-subtle)]">
+            {sessionTabs.map((tab) => {
               const active = driveKind === tab.id;
               return (
                 <button
@@ -471,14 +472,14 @@ export function FabricSessionPanel({
                   )}
                 >
                   <FabricKindIcon kind={tab.id} size={13} />
-                  <span className="hidden xl:inline">{tab.label}</span>
+                  <span className="truncate">{tab.label}</span>
                 </button>
               );
             })}
           </div>
           <div className="flex items-center justify-between mt-3 px-1">
             <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--shell-item-muted)]">
-              {driveKind === 'bot' ? 'Bots' : `${FABRIC_DRIVE_KINDS.find((tab) => tab.id === driveKind)?.label} sessions`}
+              {driveKind === 'bot' ? 'Bots' : `${sessionTabs.find((tab) => tab.id === driveKind)?.label ?? 'Chat'} sessions`}
             </div>
             <div className="flex items-center gap-0.5">
               {pushSupported && (
@@ -812,6 +813,33 @@ export function FabricSessionPanel({
           </>
         )}
       </div>
+      <nav
+        className="md:hidden shrink-0 grid grid-cols-4 border-t border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]"
+        style={{ paddingBottom: 'max(6px, env(safe-area-inset-bottom))' }}
+        aria-label="Session kinds"
+      >
+        {sessionTabs.map((tab) => {
+          const active = driveKind === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              title={tab.hint}
+              onClick={() => {
+                setDriveKind(tab.id);
+                setSelectedSessionId(null);
+              }}
+              className={cn(
+                'flex min-h-[44px] flex-col items-center justify-center gap-0.5 border-none bg-transparent cursor-pointer',
+                active ? 'text-[var(--accent-primary)]' : 'text-[var(--shell-item-muted)]',
+              )}
+            >
+              <FabricKindIcon kind={tab.id} size={20} />
+              <span className="text-[10px] font-semibold leading-none">{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
