@@ -26,6 +26,7 @@ od:
     requires: false
   speaker_notes: false
   animations: false
+  example_prompt: "Create a quiet, classical HTML deck for my thesis."
 ---
 
 # Cartesian
