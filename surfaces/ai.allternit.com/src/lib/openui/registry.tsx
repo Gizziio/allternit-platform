@@ -197,7 +197,7 @@ const MetricDisplay = ({ label, val, trend, trendVal }: any) => (
     className="p-4 rounded-xl flex flex-col gap-1 border transition-colors"
     style={{
       backgroundColor: 'var(--design-color-surface, rgba(255, 255, 255, 0.03))',
-      borderColor: 'var(--design-color-primary, var(--accent-chat))80',
+      borderColor: 'var(--design-color-primary, var(--accent-primary))80',
     }}
   >
     <span 
@@ -238,7 +238,7 @@ const OpenUICard = ({ title, variant, elevation, children }: any) => (
       <div className="mb-4 flex items-center gap-2">
         <div 
           className="w-1 h-3 rounded-full" 
-          style={{ backgroundColor: 'var(--design-color-primary, var(--accent-chat))' }}
+          style={{ backgroundColor: 'var(--design-color-primary, var(--accent-primary))' }}
         />
         <h3 
           className="text-sm font-semibold tracking-tight"
@@ -303,7 +303,7 @@ const Evaluator = ({ title, optionA, optionB, onSelect }: any) => {
                 <div
                   className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold"
                   style={{
-                    backgroundColor: 'var(--design-color-primary, var(--accent-chat))',
+                    backgroundColor: 'var(--design-color-primary, var(--accent-primary))',
                     color: 'var(--ui-text-on-accent, #111)',
                   }}
                 >
@@ -385,7 +385,7 @@ const Pipeline = ({ items }: any) => (
   <div className="w-full flex flex-col gap-2">
     {items?.map((item: any, i: number) => (
       <div key={i} className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center gap-3">
-        <div className="size-8  rounded-lg bg-[var(--accent-primary)]/20 flex items-center justify-center text-xs font-black" style={{ backgroundColor: 'var(--design-color-primary, var(--accent-chat))', color: '#000' }}>{item.platform[0]}</div>
+        <div className="size-8  rounded-lg bg-[var(--accent-primary)]/20 flex items-center justify-center text-xs font-black" style={{ backgroundColor: 'var(--design-color-primary, var(--accent-primary))', color: '#000' }}>{item.platform[0]}</div>
         <div className="flex-1">
           <div className="text-xs font-bold">{item.platform}</div>
           <div className="text-xs opacity-40 uppercase">{item.status}</div>
@@ -442,8 +442,8 @@ export const componentRegistry: Record<string, React.ComponentType<any>> = {
       onClick={() => action && handleUIAction(action)}
       style={{
         borderRadius: 'var(--design-radius-button, 8px)',
-        backgroundColor: props.variant === 'primary' ? 'var(--design-color-primary, var(--accent-chat))' : undefined,
-        borderColor: props.variant === 'outline' ? 'var(--design-color-primary, var(--accent-chat))' : undefined,
+        backgroundColor: props.variant === 'primary' ? 'var(--design-color-primary, var(--accent-primary))' : undefined,
+        borderColor: props.variant === 'outline' ? 'var(--design-color-primary, var(--accent-primary))' : undefined,
       }}
     >
       {label}

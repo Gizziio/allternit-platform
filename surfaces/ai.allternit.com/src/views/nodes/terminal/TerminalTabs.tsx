@@ -298,7 +298,7 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
                   onClick={() => setActiveSessionId(session.id)}
                   className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors ${
                     activeSessionId === session.id
-                      ? 'bg-[var(--accent-code)] text-[var(--text-inverse)] shadow-sm'
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-inverse)] shadow-sm'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-panel)]/80'
                   }`}
                 >
@@ -466,7 +466,7 @@ function NewTerminalDialog({
                     onClick={() => onSelect(node.id)}
                     className={`flex items-center justify-between p-3 rounded-md border transition-colors text-left ${
                       selectedNodeId === node.id
-                        ? 'border-[var(--accent-code)] bg-[var(--accent-code)]/5'
+                        ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/5'
                         : 'hover:bg-[var(--surface-hover)]'
                     }`}
                   >
@@ -475,7 +475,7 @@ function NewTerminalDialog({
                       <p className="text-xs text-[var(--text-secondary)]">{node.id}</p>
                     </div>
                     {selectedNodeId === node.id && (
-                      <div className="size-4  rounded-full bg-[var(--accent-code)]" />
+                      <div className="size-4  rounded-full bg-[var(--accent-primary)]" />
                     )}
                   </button>
                 ))}
@@ -544,7 +544,7 @@ function NewTerminalDialog({
                   <Label>Environment Variables</Label>
                   <button type="button"
                     onClick={addEnvVar}
-                    className="text-xs text-[var(--accent-code)] hover:underline"
+                    className="text-xs text-[var(--accent-primary)] hover:underline"
                   >
                     + Add Variable
                   </button>
@@ -619,7 +619,7 @@ function NewTerminalDialog({
               {/* Sandbox Mode */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center gap-2">
-                  <Cube className="size-4  text-[var(--accent-code)]" />
+                  <Cube className="size-4  text-[var(--accent-primary)]" />
                   <Label className="font-medium">Sandbox Mode</Label>
                 </div>
                 
@@ -704,7 +704,7 @@ function NewTerminalDialog({
                         <Label>Volume Mounts</Label>
                         <button type="button"
                           onClick={addVolumeMount}
-                          className="text-xs text-[var(--accent-code)] hover:underline"
+                          className="text-xs text-[var(--accent-primary)] hover:underline"
                         >
                           + Add Volume
                         </button>
@@ -756,7 +756,7 @@ function NewTerminalDialog({
                     {/* Security Options */}
                     <div className="space-y-3 pt-2">
                       <div className="flex items-center gap-2">
-                        <Shield className="size-4  text-[var(--accent-code)]" />
+                        <Shield className="size-4  text-[var(--accent-primary)]" />
                         <Label className="text-sm font-medium">Security Options</Label>
                       </div>
                       

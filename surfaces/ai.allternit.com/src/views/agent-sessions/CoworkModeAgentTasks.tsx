@@ -40,7 +40,7 @@ export function CoworkModeAgentTasks({
   onClose,
 }: CoworkModeAgentTasksProps) {
   const mode = 'cowork';
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.cowork;
+  const modeColors = MODE_COLORS.design as typeof MODE_COLORS.design;
   
   const [isExecuting, setIsExecuting] = useState(false);
   const [activeTab, setActiveTab] = useState<'plan' | 'receipts' | 'policy'>('plan');
@@ -162,7 +162,7 @@ function WorkspaceComputer({
 }
 
 function TabButton({ label, active, onClick, mode }: { label: string; active: boolean; onClick: () => void; mode: 'cowork' }) {
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.cowork;
+  const modeColors = MODE_COLORS.design as typeof MODE_COLORS.design;
   return (
     <button type="button"
       onClick={onClick}
@@ -212,7 +212,7 @@ function PlanView({ mode }: { mode: 'cowork' }) {
 }
 
 function DagNode({ label, status, mode }: { label: string; status: 'completed' | 'active' | 'pending'; mode: 'cowork' }) {
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.cowork;
+  const modeColors = MODE_COLORS.design as typeof MODE_COLORS.design;
   return (
     <div 
       className="flex items-center gap-3 p-3 rounded-lg border border-white/5"

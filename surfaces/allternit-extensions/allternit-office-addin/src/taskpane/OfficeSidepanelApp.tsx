@@ -26,9 +26,10 @@ const OFFICE_SIDEPANEL_COPY = {
   settingsContextLabel: 'Runtime',
 } as const
 
-/** Brand mark for the chat header — the A:// core at task-pane scale. */
+/** Brand wordmark for the chat header — full A://TERNIT OFFICE at the same
+ * scale as the A://TERNIT DESIGN wordmark in the platform shell rail. */
 function OfficeBrandIcon() {
-  return <AProtocolMark height={15} markOnly ink="#29201A" />
+  return <AProtocolMark height={12} suffix="OFFICE" ink="#29201A" />
 }
 
 /** Hero mark for the empty state — larger, so the coral core reads clearly. */

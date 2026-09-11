@@ -45,7 +45,7 @@ export const CatalogViewHeader: React.FC<CatalogViewHeaderProps> = ({
             className={`
               flex items-center gap-1.5 px-4 py-2 rounded-md transition-all duration-150 cursor-pointer text-[14px] font-medium border border-solid
               ${view === tab.id 
-                ? 'bg-[var(--accent,#7c3aed)] text-white border-none' 
+                ? 'bg-[var(--accent,#B08D6E)] text-white border-none' 
                 : 'bg-transparent border-[var(--border-subtle,#27272a)] text-[var(--text-secondary,#d4d4d8)] hover:bg-white/5'
               }
             `}

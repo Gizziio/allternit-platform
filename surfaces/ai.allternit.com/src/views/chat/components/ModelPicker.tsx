@@ -276,7 +276,7 @@ export function ModelPicker({
                     className={cn(
                       "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors",
                       selected
-                        ? "border-[var(--accent-chat)]/40 bg-[var(--accent-chat)]/10 text-[var(--accent-chat)]"
+                        ? "border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
                         : "border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]",
                       dimmed &&
                         "cursor-not-allowed opacity-50 hover:bg-[var(--surface-panel)]"
@@ -346,7 +346,7 @@ export function ModelPicker({
                         {isCurrent && (
                           <Check
                             size={14}
-                            className="shrink-0 text-[var(--accent-chat)]"
+                            className="shrink-0 text-[var(--accent-primary)]"
                           />
                         )}
                       </button>

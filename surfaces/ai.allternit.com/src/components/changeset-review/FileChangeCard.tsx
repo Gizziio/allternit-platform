@@ -28,7 +28,7 @@ export function FileChangeCard({ change, changeSetId }: FileChangeCardProps) {
         }}
       >
         {expanded ? <CaretDown size={14} /> : <CaretRight size={14} />}
-        <FileCode size={16} color="var(--accent-code)" />
+        <FileCode size={16} color="var(--accent-primary)" />
         {change.filePath}
         <div style={{ fontSize: 12, opacity: 0.4, fontWeight: 400 }}>
           +{change.additions} -{change.deletions}
@@ -132,7 +132,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
             background: 'transparent', 
             border: 'none', 
             cursor: 'pointer', 
-            color: 'var(--accent-chat)', 
+            color: 'var(--accent-primary)', 
             fontSize: 12, 
             fontWeight: 600, 
             display: 'flex', 

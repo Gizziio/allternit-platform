@@ -24,7 +24,7 @@ export function CodeModeAgentSession({
   onClose,
 }: CodeModeAgentSessionProps) {
   const mode = 'code';
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
+  const modeColors = MODE_COLORS.design as typeof MODE_COLORS.design;
 
   const activeSessionId = useCodeSessionStore((s) => s.activeSessionId);
   const sessionId = sessionIdProp ?? activeSessionId;

@@ -86,7 +86,7 @@ export const Interactive: Story = {
           <Slide in={visible} direction="up" distance={100}>
             <div style={{
               padding: '32px',
-              background: 'var(--accent-code)',
+              background: 'var(--accent-primary)',
               borderRadius: '12px',
               color: 'white',
               fontWeight: 600,
@@ -242,7 +242,7 @@ export const Distances: Story = {
           {distances.map((dist, index) => (
             <div key={dist} style={{ overflow: 'hidden' }}>
               <Slide key={`${key}-${index}`} in={true} direction="left" distance={dist} delay={index * 0.1}>
-                <div style={{ padding: '16px', background: 'var(--accent-cowork)', borderRadius: '8px', color: 'white' }}>
+                <div style={{ padding: '16px', background: 'var(--accent-primary)', borderRadius: '8px', color: 'white' }}>
                   {dist}px distance
                 </div>
               </Slide>

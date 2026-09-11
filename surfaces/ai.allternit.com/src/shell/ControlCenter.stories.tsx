@@ -175,7 +175,7 @@ export const SectionNavigation: Story = {
                 padding: '8px 16px',
                 borderRadius: '6px',
                 border: '1px solid var(--border-default)',
-                background: activeSection === section ? 'var(--accent-chat)' : 'var(--bg-secondary)',
+                background: activeSection === section ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                 color: activeSection === section ? 'white' : 'inherit',
                 cursor: 'pointer',
                 textTransform: 'capitalize',

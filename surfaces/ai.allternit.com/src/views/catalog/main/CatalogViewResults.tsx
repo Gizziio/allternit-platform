@@ -39,13 +39,13 @@ export const CatalogViewResults: React.FC<CatalogViewResultsProps> = ({
             aria-label="Search courses"
             value={searchQuery}            onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && searchCourses(searchQuery)}
-            className="w-full p-2.5 pl-10 bg-[var(--bg-secondary,#111113)] border border-solid border-[var(--border-subtle,#27272a)] rounded-md text-[var(--text-primary,#e5e5e5)] text-[14px] outline-none transition-all focus:border-[var(--accent,#7c3aed)] focus:ring-1 focus:ring-[var(--accent,#7c3aed)]"
+            className="w-full p-2.5 pl-10 bg-[var(--bg-secondary,#111113)] border border-solid border-[var(--border-subtle,#27272a)] rounded-md text-[var(--text-primary,#e5e5e5)] text-[14px] outline-none transition-all focus:border-[var(--accent,#B08D6E)] focus:ring-1 focus:ring-[var(--accent,#B08D6E)]"
           />
         </div>
         <button type="button"
           onClick={() => searchCourses(searchQuery)}
           disabled={loading || !searchQuery.trim()}
-          className="flex items-center gap-1.5 px-5 py-2.5 bg-[var(--accent,#7c3aed)] border-none rounded-md text-white font-semibold cursor-pointer text-[14px] transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-5 py-2.5 bg-[var(--accent,#B08D6E)] border-none rounded-md text-white font-semibold cursor-pointer text-[14px] transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Search size={16} />
           {loading ? 'Searching...' : 'Search'}

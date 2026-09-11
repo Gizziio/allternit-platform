@@ -9,7 +9,7 @@ const THEME = {
   textPrimary: 'var(--ui-text-primary)',
   textSecondary: 'var(--chat-composer-muted)',
   textMuted: 'var(--ui-text-muted)',
-  accent: 'var(--accent-chat)',
+  accent: 'var(--accent-primary)',
   hoverBg: 'var(--chat-composer-hover)',
   menuBg: 'var(--chat-composer-menu-bg)',
   menuBorder: 'var(--chat-composer-menu-border)',
@@ -62,7 +62,7 @@ function WihItem({
       case 'open':
         return 'var(--ui-text-muted)';
       case 'signed':
-        return 'var(--accent-cowork)';
+        return 'var(--accent-primary)';
       default:
         return 'var(--ui-text-muted)';
     }

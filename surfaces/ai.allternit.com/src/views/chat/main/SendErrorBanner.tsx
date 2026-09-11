@@ -18,7 +18,7 @@ export const SendErrorBanner = ({
         </span>
         <button type="button"
           onClick={onDismiss}
-          className="bg-transparent border-none cursor-pointer text-[var(--accent-chat)] text-[12px] font-semibold p-0 underline shrink-0"
+          className="bg-transparent border-none cursor-pointer text-[var(--accent-primary)] text-[12px] font-semibold p-0 underline shrink-0"
         >
           Dismiss
         </button>

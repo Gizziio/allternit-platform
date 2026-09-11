@@ -84,7 +84,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
       {/* Header */}
       <div className="flex items-center justify-between p-[14px_16px] border-b border-solid border-[var(--ui-border-muted)]">
         <div className="flex items-center gap-2.5">
-          <Shield size={18} className="text-[var(--accent-code)]" />
+          <Shield size={18} className="text-[var(--accent-primary)]" />
           <span className="text-[14px] font-bold text-[var(--text-primary)]">
             Workspace Audit
           </span>
@@ -118,7 +118,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
           disabled={loading}
           className={cn(
             "w-full p-[10px_14px] rounded-xl border-none text-white text-[13px] font-bold flex items-center justify-center gap-2 mb-4 transition-all duration-200",
-            loading ? "bg-[var(--ui-border-muted)] opacity-50 cursor-default" : "bg-[var(--accent-code)] cursor-pointer hover:opacity-90"
+            loading ? "bg-[var(--ui-border-muted)] opacity-50 cursor-default" : "bg-[var(--accent-primary)] cursor-pointer hover:opacity-90"
           )}
         >
           {loading ? (

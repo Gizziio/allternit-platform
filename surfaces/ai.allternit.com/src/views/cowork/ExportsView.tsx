@@ -146,7 +146,7 @@ export const ExportsView: React.FC = () => {
                         padding: '8px 12px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundColor: 'var(--accent-cowork)',
+                        backgroundColor: 'var(--accent-primary)',
                         color: '#fff',
                         fontSize: '13px',
                         fontWeight: 600,

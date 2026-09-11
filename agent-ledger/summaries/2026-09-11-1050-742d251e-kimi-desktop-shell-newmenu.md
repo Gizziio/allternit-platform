@@ -70,7 +70,30 @@ overlay/UX fix, not a rewiring.
   second attempt merged cleanly.
 
 ## Follow-ups
-- Desktop preview binary rebuild from merged main (ritual step 8) — see below.
 - Optional: adopt `ShellMenu` in `ProjectRailSection` / `SettingsDrilldown`;
   extract shared create-menu items; add New Project row if a create-project
   handler lands.
+
+## Step 8 — desktop preview rebuild (completed same day, amended attestation)
+Rebuilt the preview DMG from merged main in the owner's
+`allternit-desktop-preview` worktree (moved forward-only to `origin/main`).
+New artifact: `Allternit-Desktop-1.1.1-b2070-arm64.dmg`; verified the packaged
+app contains the change (ShellApp chunk contains "Continue CLI Session" and the
+`submenuSlideIn` animation); previous DMG `b1765` deleted only after
+verification. Incidents fixed along the way, all machine-state, none requiring
+repo changes:
+- `resources/bin/allternit-voice-service` was the stale pre-cleanup PyInstaller
+  binary (verify-packaged-resources ✗); replaced with the Rust voice-service
+  binary from the shared checkout's `target/release`.
+- The worktree's desktop `node_modules` had drifted from main (mixed symlinks
+  into two pnpm stores); electron-builder's `npm ls` collector then produced
+  empty stdout ("No JSON content found in output"). Fixed with a clean local
+  `npm install` plus two PATH shims for the build invocation only (a no-op
+  `husky` stub for `update-electron-app`'s install script, and a bash `npm`
+  shim — npm emits its JSON tree reliably under a bash-exec'd process but not
+  under node's async spawn+pipe in this environment). Shims lived in /tmp,
+  nothing repo-side changed.
+- npm's allow-scripts gate blocked esbuild's postinstall; ran
+  `node node_modules/esbuild/install.js` manually.
+Note: a `Allternit-Desktop-1.1.1-local-arm64.dmg` (11:28) in the same release/
+dir was NOT produced by this session and was left untouched.

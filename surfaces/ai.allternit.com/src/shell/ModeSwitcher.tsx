@@ -27,7 +27,7 @@ const MODES: ModeConfig[] = [
     id: 'chat',
     label: 'Chat',
     icon: ChatText,
-    accentColor: 'var(--accent-chat)',
+    accentColor: 'var(--accent-primary)',
     accentLight: 'var(--shell-mode-chat-soft)',
     accentDark: 'var(--shell-mode-chat-strong)',
     description: 'Conversational AI interface'
@@ -36,7 +36,7 @@ const MODES: ModeConfig[] = [
     id: 'cowork',
     label: 'Cowork',
     icon: UsersThree,
-    accentColor: 'var(--accent-cowork)',
+    accentColor: 'var(--accent-primary)',
     accentLight: 'var(--shell-mode-cowork-soft)',
     accentDark: 'var(--shell-mode-cowork-strong)',
     description: 'Collaborative workspace with artifacts'
@@ -54,7 +54,7 @@ const MODES: ModeConfig[] = [
     id: 'code',
     label: 'Code',
     icon: TerminalWindow,
-    accentColor: 'var(--accent-code)',
+    accentColor: 'var(--accent-primary)',
     accentLight: 'var(--shell-mode-code-soft)',
     accentDark: 'var(--shell-mode-code-strong)',
     description: 'Development environment with code tools'
@@ -72,7 +72,7 @@ const MODES: ModeConfig[] = [
     id: 'browser',
     label: 'ACI',
     icon: Globe,
-    accentColor: 'var(--accent-browser)',
+    accentColor: 'var(--accent-primary)',
     accentLight: 'var(--shell-mode-browser-soft)',
     accentDark: 'var(--shell-mode-browser-strong)',
     description: 'Web browser with AI operator'

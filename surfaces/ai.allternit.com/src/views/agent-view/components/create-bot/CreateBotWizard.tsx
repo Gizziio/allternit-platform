@@ -101,7 +101,7 @@ function buildInitialFormData(draft?: Partial<CreateAgentInput>): Partial<Create
       tagline: draft?.botProfile?.tagline || "",
       welcomeMessage: draft?.botProfile?.welcomeMessage || "",
       starterPrompts: draft?.botProfile?.starterPrompts || [],
-      accentColor: draft?.botProfile?.accentColor || "#D4956A",
+      accentColor: draft?.botProfile?.accentColor || "#B08D6E",
       groupChatEnabled: draft?.botProfile?.groupChatEnabled ?? true,
       botCategory: draft?.botProfile?.botCategory || "custom",
     },
@@ -124,7 +124,7 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
     createDefaultAvatarPickerConfig(""),
   );
   const [mascotTemplate, setMascotTemplate] = useState<AvatarEditorState["mascotTemplate"]>("gizzi");
-  const [gizziColor, setGizziColor] = useState("#D4956A");
+  const [gizziColor, setGizziColor] = useState("#B08D6E");
   const [gizziEmotion, setGizziEmotion] = useState<AvatarEditorState["gizziEmotion"]>("pleased");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [petUrl, setPetUrl] = useState("");
@@ -211,7 +211,7 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
     setAvatarMode("gizzi");
     setAvatarPicker(createDefaultAvatarPickerConfig(""));
     setMascotTemplate("gizzi");
-    setGizziColor("#D4956A");
+    setGizziColor("#B08D6E");
     setGizziEmotion("pleased");
     setImageDataUrl(null);
     setPetUrl("");
@@ -306,7 +306,7 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
             tagline: initial.botProfile?.tagline || "",
             welcomeMessage: initial.botProfile?.welcomeMessage || "",
             starterPrompts: initial.botProfile?.starterPrompts || [],
-            accentColor: initial.botProfile?.accentColor || "#D4956A",
+            accentColor: initial.botProfile?.accentColor || "#B08D6E",
             botCategory: initial.botProfile?.botCategory || "custom",
           } as CreateAgentInput["botProfile"],
         }));
@@ -316,7 +316,7 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
       const agent = template.create();
       const botCategory =
         AGENT_CATEGORY_TO_BOT_CATEGORY[agent.category ?? "general"] ?? "custom";
-      const accentColor = agent.botProfile?.accentColor || "#D4956A";
+      const accentColor = agent.botProfile?.accentColor || "#B08D6E";
 
       setSelectedTemplateId(template.id);
       updateBotProfile({

@@ -18,7 +18,7 @@ export const MASCOT_TEMPLATES: Record<MascotTemplate, {
   gizzi: {
     name: 'Gizzi',
     description: 'Classic friendly companion with expressive eyes',
-    defaultColors: ['#D4956A', '#E8C4A8', '#F5E6D3'],
+    defaultColors: ['#B08D6E', '#E8C4A8', '#F5E6D3'],
     features: ['Large expressive eyes', 'Soft rounded body', 'Bouncy animations'],
   },
   bot: {
@@ -30,7 +30,7 @@ export const MASCOT_TEMPLATES: Record<MascotTemplate, {
   orb: {
     name: 'Orb',
     description: 'Floating energy sphere with particle effects',
-    defaultColors: ['#8B5CF6', '#A78BFA', '#C4B5FD'],
+    defaultColors: ['#8B5CF6', '#B08D6E', '#C4B5FD'],
     features: ['Floating animation', 'Particle trail', 'Energy pulses'],
   },
   creature: {

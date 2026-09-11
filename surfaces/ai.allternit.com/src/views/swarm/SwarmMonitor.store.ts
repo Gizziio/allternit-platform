@@ -76,7 +76,7 @@ function disconnectSessionSync() {
 const roleColors: Record<AgentRole, string> = {
   orchestrator: '#c17817',  // Amber/orange from demo-v3/v4/v5
   worker: STATUS.info,
-  specialist: '#a78bfa',
+  specialist: '#B08D6E',
   reviewer: STATUS.success,
 };
 

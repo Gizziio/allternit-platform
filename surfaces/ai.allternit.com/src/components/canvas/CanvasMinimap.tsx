@@ -157,7 +157,7 @@ export function CanvasMinimap({ tiles, viewport, canvasSize, onViewportChange }:
                     : tile.type === 'diff'
                       ? 'var(--status-warning)'
                       : tile.type === 'terminal'
-                        ? 'var(--accent-cowork)'
+                        ? 'var(--accent-primary)'
                         : tile.type === 'knowledge'
                           ? 'var(--accent-primary)'
                           : tile.type === 'knowledge-graph'

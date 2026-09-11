@@ -53,7 +53,7 @@ export function AgentSessionLayout({
   status = 'idle',
   onClose,
 }: AgentSessionLayoutProps) {
-  const modeColors = MODE_COLORS[mode as AgentMode];
+  const modeColors = MODE_COLORS.design;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showTerminal, setShowTerminal] = useState(false);
 
@@ -187,7 +187,7 @@ function WorkbenchSection({
   defaultExpanded?: boolean;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const modeColors = MODE_COLORS[mode as AgentMode];
+  const modeColors = MODE_COLORS.design;
 
   return (
     <div className="border-b" style={{ borderColor: modeColors.border }}>
@@ -238,7 +238,7 @@ function WorkbenchItem({
   badge?: number;
   mode: AgentSessionMode;
 }) {
-  const modeColors = MODE_COLORS[mode as AgentMode];
+  const modeColors = MODE_COLORS.design;
 
   return (
     <button type="button"
@@ -274,7 +274,7 @@ export function CanvasPanel({
   mode: AgentSessionMode;
   actions?: React.ReactNode;
 }) {
-  const modeColors = MODE_COLORS[mode as AgentMode];
+  const modeColors = MODE_COLORS.design;
 
   return (
     <div className="flex flex-col h-full">

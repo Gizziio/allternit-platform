@@ -40,6 +40,7 @@ const GLYPHS: Record<string, ReadonlyArray<readonly [number, number]>> = {
   B: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 0], [2, 0], [3, 0], [4, 1], [1, 2], [2, 2], [3, 2], [4, 3], [1, 4], [2, 4], [3, 4]],
   F: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [1, 2], [2, 2], [3, 2], [0, 3], [0, 4]],
   C: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
+  G: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [4, 3], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
 };
 
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
@@ -64,8 +65,7 @@ function layout(word: string): { letters: LetterSpec[]; totalCols: number } {
       continue;
     }
     const cells = GLYPHS[ch];
-    if (!cells) continue;
-    letters.push({ cells, col });
+    if (cells) letters.push({ cells, col });
     col += PITCH;
   }
   return { letters, totalCols: col - 1 };
@@ -82,6 +82,10 @@ export interface AProtocolWordmarkProps {
    *  mono = currentColor letters, adaptive = currentColor ink (follows the
    *  host theme). The mark image is a fixed cream squircle in all themes. */
   theme?: 'ink' | 'light' | 'mono' | 'adaptive';
+  /** 'current' renders the A:// mark in currentColor (CSS-masked over the
+   *  squircle shape) instead of the fixed cream image — for chrome surfaces
+   *  that want the mark to follow the theme like the letters do. */
+  markVariant?: 'cream' | 'current';
   className?: string;
 }
 
@@ -90,6 +94,7 @@ export function AProtocolWordmark({
   height = 20,
   suffix = '',
   theme = 'ink',
+  markVariant = 'cream',
   className,
 }: AProtocolWordmarkProps) {
   const ink = theme === 'light' ? '#F0EEE6'
@@ -117,13 +122,30 @@ export function AProtocolWordmark({
         verticalAlign: 'middle',
       }}
     >
-      <img
-        src={MARK_SRC}
-        alt="Allternit"
-        width={height}
-        height={height}
-        style={{ display: 'block', borderRadius: '22%' }}
-      />
+      {markVariant === 'current' ? (
+        <span
+          role="img"
+          aria-label="Allternit"
+          style={{
+            display: 'block',
+            width: height,
+            height,
+            borderRadius: '22%',
+            flexShrink: 0,
+            background: 'currentColor',
+            WebkitMask: `url(${MARK_SRC}) center / contain no-repeat`,
+            mask: `url(${MARK_SRC}) center / contain no-repeat`,
+          }}
+        />
+      ) : (
+        <img
+          src={MARK_SRC}
+          alt="Allternit"
+          width={height}
+          height={height}
+          style={{ display: 'block', borderRadius: '22%' }}
+        />
+      )}
       <svg
         viewBox={`${TERNIT_START * CELL} 0 ${letterCols * CELL} ${ROWS * CELL}`}
         width={lettersW}

@@ -69,7 +69,7 @@ const MessageActions = memo(function MessageActions({
     >
       <ActionButton onClick={onCopy} aria-label={copied ? 'Copied!' : 'Copy'}>
         {copied
-          ? <Check size={14} className="text-[var(--accent-chat)]" />
+          ? <Check size={14} className="text-[var(--accent-primary)]" />
           : <Copy size={14} />}
       </ActionButton>
       {onRegenerate && (
@@ -92,7 +92,7 @@ const MessageActions = memo(function MessageActions({
           {isSpeakingLoading ? (
             <Waveform size={14} className="animate-pulse" />
           ) : isSpeaking ? (
-            <SpeakerHigh size={14} className="text-[var(--accent-chat)]" />
+            <SpeakerHigh size={14} className="text-[var(--accent-primary)]" />
           ) : (
             <SpeakerHigh size={14} />
           )}
@@ -409,7 +409,7 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
               showGlow={false}
             />
           ) : (
-            <div className="size-5 rounded-md bg-[var(--accent-chat,#D4B08C)] flex items-center justify-center text-[12px] font-bold text-white shrink-0">
+            <div className="size-5 rounded-md bg-[var(--accent-primary,#D4B08C)] flex items-center justify-center text-[12px] font-bold text-white shrink-0">
               {agentName.charAt(0).toUpperCase()}
             </div>
           )}
@@ -428,7 +428,7 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
             className="flex items-center gap-2 py-1.5 pb-2.5 mb-1"
             aria-label="Agent status"
           >
-            <div className="size-1.5 rounded-full bg-[var(--accent-chat,#D4B08C)] animate-pulse" />
+            <div className="size-1.5 rounded-full bg-[var(--accent-primary,#D4B08C)] animate-pulse" />
             <TextShimmer
               as="span"
               className="text-[13px] font-medium text-[var(--ui-text-secondary)]"

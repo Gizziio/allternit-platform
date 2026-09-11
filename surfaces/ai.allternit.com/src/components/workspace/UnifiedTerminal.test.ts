@@ -12,7 +12,6 @@ describe('terminalThemeFromElement', () => {
     document.documentElement.style.setProperty('--status-success', 'rgb(5, 150, 105)');
     document.documentElement.style.setProperty('--status-warning', 'rgb(217, 119, 6)');
     document.documentElement.style.setProperty('--status-info', 'rgb(37, 99, 235)');
-    document.documentElement.style.setProperty('--accent-code', 'rgb(8, 145, 178)');
     document.documentElement.style.setProperty('--surface-active', 'rgba(124, 92, 66, 0.2)');
 
     const element = document.createElement('div');
@@ -29,6 +28,6 @@ describe('terminalThemeFromElement', () => {
     expect(theme.cursor).toBe('#e8e4df');
     expect(theme.red).toBe('rgb(190, 24, 93)');
     expect(theme.green).toBe('rgb(5, 150, 105)');
-    expect(theme.cyan).toBe('rgb(8, 145, 178)');
+    expect(theme.cyan).toBe('#0891b2');
   });
 });

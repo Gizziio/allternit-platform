@@ -14,7 +14,7 @@ const AI_SLOP_HTML = `<!doctype html>
   <style>
     :root { --accent: #8b5cf6; }
     .hero { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
-    .cta { background: #7c3aed; }
+    .cta { background: #B08D6E; }
     .legacy { color: #e27c59; }
     .legacy2 { color: #d97757; }
   </style>

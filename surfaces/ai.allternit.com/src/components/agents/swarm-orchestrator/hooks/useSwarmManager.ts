@@ -36,7 +36,7 @@ export function useSwarmManager(props: SwarmOrchestratorProps) {
     onExecuteSwarm
   } = props;
   
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS.design;
 
   const [activeTab, setActiveTab] = useState<'design' | 'configure' | 'monitor'>('design');
   const [nodes, setNodes, onNodesChange] = useNodesState<AgentNodeData>([]);

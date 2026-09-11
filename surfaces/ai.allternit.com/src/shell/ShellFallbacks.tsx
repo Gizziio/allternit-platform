@@ -21,7 +21,7 @@ export function ChatErrorFallback({ error }: { error?: Error }): React.ReactNode
         )}
         <button type="button"
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-[var(--accent-chat)] text-[var(--shell-control-active-fg)] rounded-md border-none cursor-pointer hover:opacity-90 transition-opacity"
+          className="px-4 py-2 bg-[var(--accent-primary)] text-[var(--shell-control-active-fg)] rounded-md border-none cursor-pointer hover:opacity-90 transition-opacity"
         >
           Reload
         </button>
@@ -49,7 +49,7 @@ export function OpenClawErrorFallback({ error }: { error?: Error }): React.React
         )}
         <button type="button"
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-[var(--accent-chat)] text-[var(--shell-control-active-fg)] rounded-md border-none cursor-pointer hover:opacity-90 transition-opacity"
+          className="px-4 py-2 bg-[var(--accent-primary)] text-[var(--shell-control-active-fg)] rounded-md border-none cursor-pointer hover:opacity-90 transition-opacity"
         >
           Reload
         </button>

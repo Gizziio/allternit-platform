@@ -79,7 +79,7 @@ export function CoworkModeTabs({
               variant === 'bottom-dock' && 'h-7 px-2.5',
               variant === 'top-pills' && 'h-8 px-3',
               isActive
-                ? 'bg-[var(--accent-cowork)] text-white shadow-sm'
+                ? 'bg-[var(--accent-primary)] text-white shadow-sm'
                 : 'text-[var(--chat-composer-muted)] hover:text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]'
             )}
           >

@@ -82,12 +82,12 @@ export function ShellHeader({
   }, []);
 
   const modeColors: Record<string, string> = {
-    chat: 'var(--accent-chat)',
-    cowork: 'var(--accent-cowork)',
+    chat: 'var(--accent-primary)',
+    cowork: 'var(--accent-primary)',
     bot: 'var(--accent-bot)',
-    code: 'var(--accent-code)',
+    code: 'var(--accent-primary)',
     design: 'var(--accent-primary)',
-    browser: 'var(--accent-browser)',
+    browser: 'var(--accent-primary)',
   };
   const currentModeColor = modeColors[activeMode] || modeColors.chat;
 

@@ -690,7 +690,7 @@ export function AutomationTasksView({
             <div className="flex flex-col">
               <div className="flex items-center justify-between mb-4 p-[12px_16px] bg-[var(--bg-elevated)] rounded-xl border border-solid border-[var(--border-default)]">
                 <div className="flex items-center gap-3">
-                  <div className="size-9 rounded-[10px] bg-[linear-gradient(135deg,rgba(167,139,250,0.2)_0%,rgba(167,139,250,0.1)_100%)] flex items-center justify-center"><Robot size={18} className="text-[#a78bfa]" /></div>
+                  <div className="size-9 rounded-[10px] bg-[linear-gradient(135deg,rgba(176,141,110,0.2)_0%,rgba(176,141,110,0.1)_100%)] flex items-center justify-center"><Robot size={18} className="text-[#B08D6E]" /></div>
                   <div><div className="text-[14px] font-semibold text-[var(--text-primary)]">{agents.find(a => a.id === selectedHeartbeatAgent)?.name || 'Unknown Agent'}</div><div className="text-[12px] text-[var(--text-tertiary)]">Managing heartbeat tasks</div></div>
                 </div>
                 <button type="button" onClick={() => setSelectedHeartbeatAgent(null)} className="p-[8px_16px] rounded-lg border border-solid border-[var(--border-default)] bg-transparent text-[var(--text-secondary)] text-[13px] font-semibold cursor-pointer flex items-center gap-2 hover:bg-white/5 transition-colors"><X size={16} /> Change Agent</button>

@@ -48,14 +48,17 @@ export const tokens = {
       900: 'var(--sand-900)',
       950: 'var(--sand-950)',
     },
-    chat: { primary: 'var(--accent-chat)', gradient: 'linear-gradient(135deg, var(--accent-chat) 0%, var(--sand-600) 100%)' },
-    cowork: { primary: 'var(--accent-cowork)', gradient: 'linear-gradient(135deg, var(--accent-cowork) 0%, #7D5F8D 100%)' },
-    code: { primary: 'var(--accent-code)', gradient: 'linear-gradient(135deg, var(--accent-code) 0%, #4A7B5A 100%)' },
+    // Amber-only law (2026-09-11): the per-mode accent palettes are removed;
+    // chat/cowork/code all resolve to the amber accent. Keys are kept for
+    // call-site compatibility.
+    chat: { primary: 'var(--accent-primary)', gradient: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--sand-600) 100%)' },
+    cowork: { primary: 'var(--accent-primary)', gradient: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--sand-600) 100%)' },
+    code: { primary: 'var(--accent-primary)', gradient: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--sand-600) 100%)' },
     system: { bg: 'var(--bg-primary)', surface: 'var(--bg-secondary)', text: 'var(--text-primary)', textMuted: 'var(--text-tertiary)' },
     textPrimary: 'var(--text-primary)',
     textSecondary: 'var(--text-secondary)',
     textTertiary: 'var(--text-tertiary)',
-    accentChat: 'var(--accent-chat)',
+    accentChat: 'var(--accent-primary)',
     accentCode: 'var(--status-success)'
   }
 };

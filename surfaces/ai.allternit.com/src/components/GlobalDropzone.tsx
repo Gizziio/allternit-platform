@@ -294,7 +294,7 @@ interface GlobalDropzoneOverlayProps {
 function GlobalDropzoneOverlay({ target, isReject }: GlobalDropzoneOverlayProps) {
   const targetConfig = {
     chat: { icon: Chat, label: 'Drop to attach in chat', color: 'var(--accent-primary)' },
-    cowork: { icon: FolderOpen, label: 'Drop to upload to files', color: 'var(--accent-cowork)' },
+    cowork: { icon: FolderOpen, label: 'Drop to upload to files', color: 'var(--accent-primary)' },
     code: { icon: Code, label: 'Drop to add to project', color: 'var(--status-success)' },
     design: { icon: MagicWand, label: 'Drop to attach in design studio', color: 'var(--accent-design)' },
     agent: { icon: UploadSimple, label: 'Drop to use with agent', color: 'var(--status-info)' },
