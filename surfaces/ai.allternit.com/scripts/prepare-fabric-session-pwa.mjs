@@ -48,22 +48,15 @@ const manifest = {
   start_url: "/?source=pwa",
   scope: "/",
   display: "standalone",
-  background_color: "#FFFFFF",
-  theme_color: "#FFFFFF",
-  orientation: "portrait-primary",
+  display_override: ["standalone", "browser"],
+  background_color: "#0B0B0A",
+  theme_color: "#0B0B0A",
+  orientation: "any",
   icons: [
-    {
-      src: "/fabric-session-icon-192.png",
-      sizes: "192x192",
-      type: "image/png",
-      purpose: "any maskable",
-    },
-    {
-      src: "/fabric-session-icon-512.png",
-      sizes: "512x512",
-      type: "image/png",
-      purpose: "any maskable",
-    },
+    { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png", purpose: "any" },
+    { src: "/fabric-session-icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+    { src: "/fabric-session-icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+    { src: "/fabric-session-icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
   ],
 };
 fs.writeFileSync(path.join(out, "manifest.webmanifest"), `${JSON.stringify(manifest, null, 2)}\n`);
@@ -72,6 +65,8 @@ const publicFiles = [
   "fabric-session-service-worker.js",
   "fabric-session-icon-192.png",
   "fabric-session-icon-512.png",
+  "apple-touch-icon.png",
+  "apple-touch-icon-180x180.png",
   "fabric-session-splash-1170x2532.png",
   "favicon.svg",
 ];
@@ -91,6 +86,8 @@ fs.writeFileSync(
 /fabric-session-service-worker.js /fabric-session-service-worker.js 200
 /manifest.webmanifest /manifest.webmanifest 200
 /favicon.svg /favicon.svg 200
+/apple-touch-icon.png /apple-touch-icon.png 200
+/apple-touch-icon-180x180.png /apple-touch-icon-180x180.png 200
 /fabric-session-icon-192.png /fabric-session-icon-192.png 200
 /fabric-session-icon-512.png /fabric-session-icon-512.png 200
 /fabric-session-splash-1170x2532.png /fabric-session-splash-1170x2532.png 200

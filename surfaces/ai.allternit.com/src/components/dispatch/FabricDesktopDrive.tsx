@@ -509,7 +509,20 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
         </div>
       ) : null}
       {kbdOpen ? (
-        <div className="flex items-end gap-2 px-2 pt-1 bg-[#0b0b0a]" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
+        <div className="flex flex-col gap-1 px-2 pt-1 bg-[#0b0b0a]" style={{ paddingBottom: 'max(8px, env(keyboard-inset-height, 0px), env(safe-area-inset-bottom))' }}>
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {(['esc', 'tab', 'ctrl', 'alt', 'left', 'right', 'up', 'down'] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => void sendInput({ type: 'key', key })}
+              className="shrink-0 rounded-md border-none bg-white/12 text-white text-[11px] font-bold px-2 py-1 cursor-pointer"
+            >
+              {key}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-end gap-2">
           <textarea
             ref={composerRef}
             value={draft}
@@ -542,6 +555,7 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
           >
             Send
           </button>
+        </div>
         </div>
       ) : null}
       </div>
