@@ -290,6 +290,7 @@
             "group": "Agents & Runtime",
             "pages": [
               "api/agents",
+              "api/cloud-agents",
               "api/agents-v1",
               "api/agent-operations",
               "api/agent-runtimes",
