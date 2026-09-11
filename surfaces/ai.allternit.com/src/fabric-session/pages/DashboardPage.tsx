@@ -37,7 +37,7 @@ import {
 } from "@/fabric-session/theme/FabricSessionThemeStore";
 import type { BeforeInstallPromptEvent } from "../types";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import { useUnifiedRoster } from "@/lib/bots/use-unified-roster";
+import { getBots } from "@/lib/bots/bot-profile";
 import { BotsRosterSection } from "./BotsRosterSection";
 
 interface DashboardPageProps {
@@ -51,7 +51,7 @@ interface DashboardPageProps {
 
 const PUSH_WORKER_URL =
   env("VITE_FABRIC_SESSION_PUSH_URL") || env("VITE_REMOTE_CONTROL_PUSH_URL") || "https://push.fabrictransport.allternit.com";
-const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_PLATFORM_URL") ?? "https://platform.allternit.com";
+
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -156,7 +156,8 @@ export function DashboardPage({
     return () => window.clearTimeout(timer);
   }, [auth.isLoaded]);
 
-  const roster = useUnifiedRoster();
+  const agents = useAgentStore((s) => s.agents);
+  const roster = React.useMemo(() => getBots(agents), [agents]);
 
   React.useEffect(() => {
     if (!auth.isSignedIn) return;
@@ -400,8 +401,8 @@ export function DashboardPage({
         </FabricHeaderControl>
       )}
       <FabricHeaderControl
-        href={`${PLATFORM_HUB_URL}/shell`}
-        title="Open Allternit Shell"
+        href={env("VITE_ALLTERNIT_WEB_URL") || "https://ai.allternit.com"}
+        title="Open Allternit"
         className="hidden sm:inline-flex"
       >
         Shell
