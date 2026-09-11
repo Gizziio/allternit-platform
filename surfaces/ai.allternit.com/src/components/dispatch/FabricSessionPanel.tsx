@@ -19,12 +19,13 @@ import {
   type FabricQuestionRequest,
   type PushSubscriptionJSON,
 } from '@/lib/dispatch/fabric-session-client';
-import { FABRIC_DRIVE_KINDS, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
-import { extractAciScreenshot, FabricAciDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive } from '@/components/dispatch/FabricSessionDriveViews';
-import { ACIComputerUseView } from '@/capsules/browser/ACIComputerUseView';
+import { FABRIC_DRIVE_KINDS, fabricAppModeKind, fabricKindAppMode, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
+import { extractAciScreenshot, FabricCodeDrive, FabricKindIcon, isFabricKeepalive, latestComputerFrame } from '@/components/dispatch/FabricSessionDriveViews';
+import { FabricAciModeCanvas } from '@/components/dispatch/FabricAciModeCanvas';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { FabricBotModeCanvas, FabricBotModeRail, type FabricBotView } from '@/components/dispatch/FabricBotMode';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
+import { useMode } from '@/providers/mode-provider';
 
 export interface FabricSessionPanelProps {
   runtimeId: string;
@@ -68,6 +69,28 @@ export function FabricSessionPanel({
   const [driveKindState, setDriveKindState] = useState<FabricDriveKind>('chat');
   const driveKind = driveKindProp ?? driveKindState;
   const setDriveKind = onDriveKindChange ?? setDriveKindState;
+
+  // The fabric drive kind is the source of truth; mirror it into the
+  // platform app mode so desktop views mounted here (bot composer dock,
+  // mode-accented chrome) behave exactly as they do on the desktop shell.
+  const { setMode } = useMode();
+  useEffect(() => {
+    setMode(fabricKindAppMode(driveKind));
+  }, [driveKind, setMode]);
+
+  // The composer dock's Chat/Cowork/Bots toggle routes through this event on
+  // the desktop shell; map it back onto the fabric drive kind so the toggle
+  // also switches rails here instead of being a dead click.
+  useEffect(() => {
+    const onSwitchMode = (event: Event) => {
+      const mode = (event as CustomEvent<{ mode?: string }>).detail?.mode;
+      if (!mode) return;
+      const next = fabricAppModeKind(mode);
+      if (next) setDriveKind(next);
+    };
+    window.addEventListener('allternit:switch-mode', onSwitchMode);
+    return () => window.removeEventListener('allternit:switch-mode', onSwitchMode);
+  }, [setDriveKind]);
   const [codePane, setCodePane] = useState<'terminal' | 'chat'>('terminal');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -129,7 +152,6 @@ export function FabricSessionPanel({
     [],
   );
   const [aciRunId, setAciRunId] = useState<string | null>(null);
-  const [aciScreenshot, setAciScreenshot] = useState<string | null>(null);
   const [aciOpening, setAciOpening] = useState(false);
   const [localWatching, setLocalWatching] = useState(false);
   const aciWatching = watchingProp ?? localWatching;
@@ -209,7 +231,6 @@ export function FabricSessionPanel({
   }, [fetchDetail]);
 
   useEffect(() => {
-    setAciScreenshot(null);
     setAciRunId(null);
     setAciOpening(false);
     useBrowserAgentStore.setState({
@@ -221,6 +242,18 @@ export function FabricSessionPanel({
       currentLayer: null,
     });
   }, [selectedSessionId]);
+
+  // No live stream yet (not watching / run finished): show the session's
+  // last computer frame in the ACI viewport instead of a blank idle state.
+  useEffect(() => {
+    if (driveKind !== 'aci') return;
+    const store = useBrowserAgentStore.getState();
+    if (store.screenshot || store.status === 'Running' || store.status === 'WaitingApproval') return;
+    const frame = latestComputerFrame(detail, events);
+    if (!frame) return;
+    const b64 = frame.replace(/^data:image\/[a-z0-9+]+;base64,/i, '');
+    useBrowserAgentStore.setState({ screenshot: b64 });
+  }, [driveKind, detail, events, selectedSessionId]);
 
   useEffect(() => {
     if (!selectedSessionId) return;
@@ -279,7 +312,14 @@ export function FabricSessionPanel({
         goal,
         model: selectedBrain ? `${selectedBrain.providerID}/${selectedBrain.modelID}` : undefined,
       });
-      if (run.sessionId) setAciRunId(run.sessionId);
+      if (run.sessionId) {
+        setAciRunId(run.sessionId);
+        // Open the run in the ACI rail and start watching it live, the same
+        // way the desktop shell lands an ACI run in browser mode.
+        setDriveKind('aci');
+        pickSession(run.sessionId);
+        if (!aciWatching) toggleAciWatch();
+      }
     } catch (error) {
       addToast({
         title: 'Could not open computer',
@@ -288,7 +328,7 @@ export function FabricSessionPanel({
       });
       setAciOpening(false);
     }
-  }, [addToast, fabricClient, selectedBrain]);
+  }, [addToast, fabricClient, selectedBrain, setDriveKind, pickSession, aciWatching, toggleAciWatch]);
 
   useEffect(() => {
     const onVis = () => setPageVisible(document.visibilityState === "visible");
@@ -306,11 +346,7 @@ export function FabricSessionPanel({
         for await (const frame of fabricClient.streamAci(runId)) {
           if (!active) break;
           useBrowserAgentStore.getState().ingestAciStreamEvent(frame);
-          const shot = extractAciScreenshot(frame);
-          if (shot) {
-            setAciScreenshot(shot);
-            setAciOpening(false);
-          }
+          if (extractAciScreenshot(frame)) setAciOpening(false);
           if (frame.type === 'done') break;
         }
       } catch {
@@ -401,9 +437,6 @@ export function FabricSessionPanel({
     setSending(true);
     const text = composerText.trim();
     try {
-      if (driveKind === 'aci') {
-        await openComputer(text);
-      }
       await fabricClient.sendMessage(selectedSessionId, {
         text,
         model: selectedBrain ?? undefined,
@@ -687,6 +720,24 @@ export function FabricSessionPanel({
             groupId={botViewGroupId}
             onView={applyBotView}
           />
+        ) : driveKind === 'aci' ? (
+          <FabricAciModeCanvas
+            session={selectedSession ?? null}
+            hostName={runtime?.name || runtime?.host}
+            opening={aciOpening}
+            watching={aciWatching}
+            onToggleWatch={toggleAciWatch}
+            onRunGoal={(goal) => void openComputer(goal)}
+            brainPicker={(
+              <FabricBrainPicker
+                runtimeId={runtimeId}
+                brains={brains}
+                loading={brainsLoading}
+                value={selectedBrain}
+                onChange={setSelectedBrain}
+              />
+            )}
+          />
         ) : !selectedSession ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
@@ -762,31 +813,17 @@ export function FabricSessionPanel({
               </div>
             </div>
 
-            <div className={cn('flex-1 min-h-0 p-4 space-y-3', (driveKind === 'code' && codePane === 'terminal') || driveKind === 'aci' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto')}>
+            <div className={cn('flex-1 min-h-0 p-4 space-y-3', driveKind === 'code' && codePane === 'terminal' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto')}>
               {driveKind === 'code' && codePane === 'terminal' && selectedSession ? (
                 <FabricCodeDrive session={selectedSession} detail={detail} events={events} />
               ) : null}
-              {driveKind === 'aci' && selectedSession ? (
-                <FabricAciDrive
-                  session={selectedSession}
-                  detail={detail}
-                  events={events}
-                  hostName={runtime?.name || runtime?.host}
-                  screenshot={aciScreenshot}
-                  opening={aciOpening}
-                  onOpenComputer={() => void openComputer('Open the desktop so I can see the screen.')}
-                  watching={aciWatching}
-                  onToggleWatch={toggleAciWatch}
-                  liveView={<ACIComputerUseView agentBarHeight={0} />}
-                />
-              ) : null}
-              {driveKind !== 'aci' && !(driveKind === 'code' && codePane === 'terminal') && detailLoading && (
+              {!(driveKind === 'code' && codePane === 'terminal') && detailLoading && (
                 <div className="flex items-center text-xs text-[var(--text-tertiary)]">
                   <Spinner className="animate-spin mr-2" size={14} />
                   Loading messages…
                 </div>
               )}
-              {driveKind !== 'aci' && !(driveKind === 'code' && codePane === 'terminal') && detail?.messages.map((msg) => (
+              {!(driveKind === 'code' && codePane === 'terminal') && detail?.messages.map((msg) => (
                 <div
                   key={msg.info.id}
                   className={cn(

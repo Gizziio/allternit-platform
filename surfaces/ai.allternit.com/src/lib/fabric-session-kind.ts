@@ -1,4 +1,5 @@
 import type { FabricSession } from '@/lib/dispatch/fabric-session-client';
+import type { AppMode } from '@/shell/ShellHeader';
 
 export type FabricDriveKind = 'chat' | 'bot' | 'code' | 'aci' | 'desktop';
 
@@ -57,4 +58,43 @@ export function fabricSessionKind(session: Pick<FabricSession, 'surface' | 'agen
 
 export function fabricKindSurface(kind: FabricDriveKind): 'chat' | 'cowork' | 'bot' | 'code' | 'browser' | 'desktop' {
   return FABRIC_DRIVE_KINDS.find((entry) => entry.id === kind)?.surface ?? 'chat';
+}
+
+/**
+ * Map a fabric drive kind to the platform app mode so desktop views mounted
+ * in the fabric session surface (bot launchpad/chat, ACI viewport) see the
+ * same mode the desktop shell would set — e.g. the composer dock highlights
+ * Bots when the Bots rail is active, not Chat.
+ */
+export function fabricKindAppMode(kind: FabricDriveKind): AppMode {
+  switch (kind) {
+    case 'bot':
+      return 'bot';
+    case 'code':
+      return 'code';
+    case 'aci':
+    case 'desktop':
+      return 'browser';
+    case 'chat':
+    default:
+      return 'chat';
+  }
+}
+
+/** Reverse of {@link fabricKindAppMode} for `allternit:switch-mode` events. */
+export function fabricAppModeKind(mode: string): FabricDriveKind | null {
+  switch (mode) {
+    case 'bot':
+      return 'bot';
+    case 'code':
+      return 'code';
+    case 'browser':
+      return 'aci';
+    case 'chat':
+    case 'cowork':
+      // Fabric has no cowork kind; cowork sessions surface as chat.
+      return 'chat';
+    default:
+      return null;
+  }
 }

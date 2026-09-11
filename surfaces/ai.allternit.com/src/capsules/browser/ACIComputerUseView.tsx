@@ -218,10 +218,17 @@ function ElementHighlight({
 export interface ACIComputerUseViewProps {
   /** Extra bottom inset to reserve below the live screenshot area */
   agentBarHeight?: number;
+  /**
+   * Show the "ACI engine unreachable" hint in the idle state. The fabric
+   * session surface streams frames from a paired node and never checks the
+   * local engine, so it passes false to avoid a misleading warning.
+   */
+  engineHint?: boolean;
 }
 
 export function ACIComputerUseView({
   agentBarHeight = 54,
+  engineHint = true,
 }: ACIComputerUseViewProps) {
   const connectedBotId = useBrowserAgentStore((s) => s.connectedBotId);
   const setAciSidecarExpanded = useBrowserAgentStore((s) => s.setAciSidecarExpanded);
@@ -376,7 +383,7 @@ export function ACIComputerUseView({
                 No live computer session
               </div>
               <div className="text-[12px] text-[var(--text-secondary)] leading-[1.5]">
-                {engineHealthy === false
+                {engineHint && engineHealthy === false
                   ? "The ACI engine isn't reachable. Start the computer-use service, then run a task or connect a bot for a live view."
                   : 'Run a computer-use task or connect a bot to stream a live view here.'}
               </div>
