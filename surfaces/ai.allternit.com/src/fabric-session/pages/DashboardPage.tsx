@@ -397,7 +397,7 @@ export function DashboardPage({
   if (!auth.isSignedIn) {
     return (
       <div
-        className="min-h-screen w-full flex items-center justify-center px-5 bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]"
+        className="min-h-[100dvh] w-full flex items-center justify-center px-5 overflow-y-auto bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]"
       >
         <div className="max-w-md w-full p-8 text-center rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]">
           <DesktopTower size={48} style={{ opacity: 0.6 }} className="mx-auto mb-4" color="var(--accent-primary)" />
@@ -499,6 +499,7 @@ export function DashboardPage({
             />
           )}
         >
+        <FabricAppHeader title={selected.name} onBack={closeSession}>
           {headerActions}
         </FabricAppHeader>
         <main className="flex-1 min-h-0">
@@ -519,7 +520,7 @@ export function DashboardPage({
   }
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
+    <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
       <FabricAppHeader>{headerActions}</FabricAppHeader>
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto px-4 pt-6 pb-10 sm:px-8 sm:pt-10 sm:pb-12">
@@ -532,6 +533,7 @@ export function DashboardPage({
               <p className="m-0 mt-2 text-[12px] text-[var(--shell-item-muted)] truncate">
                 {signedInAs}
               </p>
+              <p className="m-0 mt-2 text-[12px] text-[var(--shell-item-muted)] truncate">{signedInAs}</p>
             ) : null}
           </div>
 
