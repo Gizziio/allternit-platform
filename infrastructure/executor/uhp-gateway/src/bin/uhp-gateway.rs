@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             "--engine-socket" => engine_socket = Some(PathBuf::from(value()?)),
             "--help" | "-h" => {
                 println!(
-                    "uhp-gateway — UHP 2026-08-11 core-class gateway over the ao engine\n\
+                    "uhp-gateway — UHP 2026-08-11 full-class gateway over the ao engine\n\
                      \n\
                      usage: uhp-gateway [--addr 127.0.0.1:8410] [--token TOKEN]\n\
                      \x20                    [--data-dir DIR] [--engine-socket PATH]\n\

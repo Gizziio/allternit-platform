@@ -270,10 +270,37 @@ export default defineConfig({
         // the header so sign-in works in dev. (Production uses the Cloudflare
         // worker, which forwards headers differently.)
         headers: { origin: 'https://ai.allternit.com' },
+        // FAPI scopes its session cookies to the shim origin's parent domain
+        // (Set-Cookie ...; Domain=allternit.com; Secure). A browser on
+        // http://localhost rejects Domain cookies from another registrable
+        // domain, so __client never persists and every request mints a fresh
+        // client — seeded sign-in completes (200) but the session reads as
+        // signed_out. Strip the Domain attribute so the cookies become
+        // host-only for the dev origin.
+        configure: (proxy) => {
+          proxy.on('proxyRes', (res) => {
+            const cookies = res.headers['set-cookie'];
+            if (cookies) {
+              res.headers['set-cookie'] = cookies.map((c) =>
+                c.replace(/;\s*Domain=allternit\.com/i, ''),
+              );
+            }
+          });
+        },
       },
       '/api': {
         target: 'http://127.0.0.1:8013',
         changeOrigin: true,
+        // The gateway CORS-gates on the Origin header; the allowlist covers
+        // deployed origins plus specific dev ports, and every local browser
+        // call through this proxy carries the vite origin. The proxy is a
+        // same-origin dev tunnel, so drop Origin and let the calls through
+        // as non-browser traffic (never CORS-gated). Without this, app
+        // writes from this surface 403 whenever the local gateway's
+        // ALLTERNIT_CORS_ORIGINS doesn't list this exact dev port.
+        configure: (proxy) => {
+          proxy.on('proxyReq', (req) => req.removeHeader('origin'));
+        },
       },
       '/viz': {
         target: 'http://127.0.0.1:8013',

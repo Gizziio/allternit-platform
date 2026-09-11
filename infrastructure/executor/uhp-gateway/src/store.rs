@@ -21,6 +21,17 @@ const SEED_HARNESSES: &[(&str, &str, &str, &str)] = &[
     ("chrn_codex", "Codex", "codex", "gpt-5-codex"),
 ];
 
+/// P6b seeds: only when the binary is actually on PATH (available must
+/// reflect real presence; do not claim a harness for an absent CLI).
+const OPTIONAL_SEED_HARNESSES: &[(&str, &str, &str, &str)] = &[
+    ("chrn_qwen", "Qwen", "qwen", "qwen3-coder"),
+    ("chrn_opencode", "OpenCode", "opencode", "opencode/gpt-5"),
+    ("chrn_gemini", "Gemini", "gemini", "gemini-2.5-pro"),
+    ("chrn_cline", "Cline", "cline", "gpt-4o"),
+    ("chrn_pi", "Pi", "pi", "sonnet"),
+    ("chrn_dsh", "DeepSeek Harness", "dsh", "deepseek-chat"),
+];
+
 pub struct SessionRow {
     pub id: String,
     pub harness_id: String,
@@ -105,6 +116,16 @@ impl Store {
         )
         .execute(&pool)
         .await?;
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS shares (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                revoked INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await?;
         let store = Self { pool };
         store.seed_harnesses().await?;
         Ok(store)
@@ -112,18 +133,35 @@ impl Store {
 
     async fn seed_harnesses(&self) -> Result<(), sqlx::Error> {
         for (id, name, base, default_model) in SEED_HARNESSES {
-            sqlx::query(
-                "INSERT OR IGNORE INTO harnesses (id, name, base, default_model, builtin, created_at)
-                 VALUES (?, ?, ?, ?, 1, ?)",
-            )
-            .bind(id)
-            .bind(name)
-            .bind(base)
-            .bind(default_model)
-            .bind(protocol::now_unix() as i64)
-            .execute(&self.pool)
-            .await?;
+            self.insert_seed(id, name, base, default_model).await?;
         }
+        for (id, name, base, default_model) in OPTIONAL_SEED_HARNESSES {
+            let binary = crate::binary_for_backend(base);
+            if crate::binary_available(binary) {
+                self.insert_seed(id, name, base, default_model).await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn insert_seed(
+        &self,
+        id: &str,
+        name: &str,
+        base: &str,
+        default_model: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "INSERT OR IGNORE INTO harnesses (id, name, base, default_model, builtin, created_at)
+             VALUES (?, ?, ?, ?, 1, ?)",
+        )
+        .bind(id)
+        .bind(name)
+        .bind(base)
+        .bind(default_model)
+        .bind(protocol::now_unix() as i64)
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -331,6 +369,67 @@ impl Store {
                 status: row.get("status"),
             })
             .collect())
+    }
+
+    pub async fn delete_session(&self, id: &str) -> Result<bool, sqlx::Error> {
+        sqlx::query("UPDATE shares SET revoked = 1 WHERE session_id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        let result = sqlx::query("DELETE FROM sessions WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(result.rows_affected() > 0)
+    }
+
+    // ── shares ───────────────────────────────────────────────────────────────
+
+    pub async fn insert_share(&self, id: &str, session_id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("INSERT INTO shares (id, session_id, revoked, created_at) VALUES (?, ?, 0, ?)")
+            .bind(id)
+            .bind(session_id)
+            .bind(protocol::now_unix() as i64)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn latest_share(&self, session_id: &str) -> Result<Option<(String, String)>, sqlx::Error> {
+        let row = sqlx::query(
+            "SELECT id, session_id FROM shares WHERE session_id = ? AND revoked = 0
+             ORDER BY created_at DESC, id DESC LIMIT 1",
+        )
+        .bind(session_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|row| (row.get("id"), row.get("session_id"))))
+    }
+
+    pub async fn get_share(&self, id: &str) -> Result<Option<(String, String)>, sqlx::Error> {
+        let row = sqlx::query(
+            "SELECT id, session_id FROM shares WHERE id = ? AND revoked = 0",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|row| (row.get("id"), row.get("session_id"))))
+    }
+
+    pub async fn revoke_shares_for_session(&self, session_id: &str) -> Result<u64, sqlx::Error> {
+        let result = sqlx::query("UPDATE shares SET revoked = 1 WHERE session_id = ? AND revoked = 0")
+            .bind(session_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(result.rows_affected())
+    }
+
+    pub async fn live_share_ids(&self, session_id: &str) -> Result<Vec<String>, sqlx::Error> {
+        let rows = sqlx::query("SELECT id FROM shares WHERE session_id = ? AND revoked = 0")
+            .bind(session_id)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.iter().map(|row| row.get("id")).collect())
     }
 
     // ── responses ────────────────────────────────────────────────────────────

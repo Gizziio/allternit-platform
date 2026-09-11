@@ -1,19 +1,18 @@
-# Checkpoint — fabric-pwa-bot-mode-ui (Phase 1C)
+# Checkpoint — fabric-pwa-bot-mode-ui (Phase 1C reviewed)
 
 ## Goal
-Execute `docs/FABRIC_PWA_BOT_MODE_PHASE_1C_TASK.md` exactly. Preserve 1A/1B.
-No git. No deploy. Do not start past 1C.
+Ship approved spec `fabric-pwa-bot-mode-ui` (rq-20260910-007): shared bot-chat
+components + Fabric Transport PWA bots surface + web adoption + ACI watch-to-pull.
 
 ## Just did
-- Fold adapter + tests; PWA view switch, Bots roster, BotsChatPage;
-  BotChatSessionView transcript/composer swap; ACI watch-to-pull;
-  GIZZI PWA section; smoke script.
-- Verification: vitest 53/53, tsc 0 errors, release-preflight 35/0.
-- PWA smoke SKIP (this worktree Vite has no Clerk; :3013 is a sibling
-  worktree). NOTES `status: done`.
+- Phases 1A–1C implemented and reviewed (commits 63e9cb96e, 875d8ed1f, fb54110a2).
+- Merged origin/main into this worktree. Resolved BotChatSessionView to keep
+  BotTranscript/BotComposer plus main's PolicyGovernance and session-status chrome.
 
 ## Next
-- Orchestrator: review + merge. Nothing past 1C.
+- Push `ao/fabric-pwa-bot-mode-ui` and open the PR.
+- Do not merge until the PR is up; land/ledger is a separate step.
 
 ## Open questions
-- Live 390×844 smoke needs Clerk keys on this worktree. Not a code gap.
+- Live 390×844 smoke still needs Clerk keys on this worktree.
+- Approval answers are local fold only (server has no option sets / grantKey).

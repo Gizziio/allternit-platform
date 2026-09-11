@@ -112,6 +112,28 @@ pub(crate) fn classify_control_action(action: &ComputerControlAction) -> crate::
 // Shared implementation.
 // ---------------------------------------------------------------------------
 
+/// Canonical policy-seat descriptor for a control action: the tool name and
+/// the file path where one applies. Bot id is not resolvable at the seat —
+/// ownership checks happen later in this function — so it stays unset.
+fn control_policy_descriptor(action: &ComputerControlAction) -> crate::policy_config::PolicyDescriptor {
+    use ComputerControlAction::*;
+    let (tool, path): (&str, Option<String>) = match action {
+        Screenshot => ("computer.screenshot", None),
+        Mouse(_) => ("computer.mouse", None),
+        Keyboard(_) => ("computer.keyboard", None),
+        Shell(_) => ("computer.shell", None),
+        FileRead { path } => ("computer.file_read", Some(path.clone())),
+        FileWrite { path, .. } => ("computer.file_write", Some(path.clone())),
+        ProxyEnable { .. } => ("computer.proxy_enable", None),
+        ProxyDisable => ("computer.proxy_disable", None),
+    };
+    crate::policy_config::PolicyDescriptor {
+        tool: tool.to_string(),
+        file_path: path,
+        ..Default::default()
+    }
+}
+
 /// Execute a control action against a single computer.  This is the shared
 /// implementation behind the REST control routes and the `computer_*` tools.
 ///
@@ -125,6 +147,35 @@ pub(crate) async fn execute_computer_tool(
     action: ComputerControlAction,
     approval_id: Option<&str>,
 ) -> Result<Value, (StatusCode, Value)> {
+    // Declarative policy gate (env-configured; entirely absent when
+    // ALLTERNIT_ACI_POLICY_FILE is unset). Policy verdict first,
+    // confirmation enforcement and guest dispatch second — a denial here
+    // never reaches the guest. The audit row is fsynced before either
+    // outcome (audit-before-act).
+    let policy_desc = control_policy_descriptor(&action);
+    if let Some(verdict) = crate::policy_config::evaluate_descriptor(&policy_desc) {
+        if let Err(e) =
+            crate::policy_config::record_decision(&policy_desc, &verdict, Some(user_id), None)
+        {
+            warn!(user_id, error = %e, "policy audit write failed; refusing to dispatch");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({"error": "policy_audit_unavailable"}),
+            ));
+        }
+        if verdict.action == crate::permission_policy::PermissionAction::Deny {
+            warn!(
+                user_id,
+                rule_id = ?verdict.rule_id,
+                "computer control action denied by declarative policy"
+            );
+            return Err((
+                StatusCode::FORBIDDEN,
+                crate::policy_config::refusal_json(&verdict),
+            ));
+        }
+    }
+
     let class = classify_control_action(&action);
     if let Err(denial) = crate::aci_safety::enforce_confirmation(
         &state.approval_store,
@@ -706,6 +757,14 @@ mod tests {
         }
     }
 
+    /// Serializes against every other test that touches a policy seat or the
+    /// computer-use dir env var (see `policy_config::POLICY_TEST_LOCK`).
+    fn policy_lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::policy_config::POLICY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+    }
+
     async fn test_state(temp: &Path, driver: Arc<MockExecutionDriver>) -> Arc<AppState> {
         let state = crate::test_helpers::app_state_with_driver(temp, Some(driver)).await;
         let conn = state.db.connect().expect("test db conn");
@@ -742,6 +801,7 @@ mod tests {
 
     #[tokio::test]
     async fn screenshot_tool_returns_base64_png() {
+        let _policy_guard = policy_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         let driver = Arc::new(MockExecutionDriver::new());
         let png_b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -771,6 +831,7 @@ mod tests {
 
     #[tokio::test]
     async fn shell_tool_returns_command_output() {
+        let _policy_guard = policy_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         let driver = Arc::new(MockExecutionDriver::new());
         driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
@@ -806,6 +867,7 @@ mod tests {
 
     #[tokio::test]
     async fn file_read_tool_returns_base64_content() {
+        let _policy_guard = policy_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         let driver = Arc::new(MockExecutionDriver::new());
         driver.seed_file("/tmp/test.txt", b"file contents".to_vec());
@@ -830,6 +892,7 @@ mod tests {
 
     #[tokio::test]
     async fn file_write_tool_stores_content() {
+        let _policy_guard = policy_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         let driver = Arc::new(MockExecutionDriver::new());
         let state = test_state(&temp, driver.clone()).await;
@@ -860,6 +923,7 @@ mod tests {
 
     #[tokio::test]
     async fn risky_action_without_grant_is_denied_before_touching_guest() {
+        let _policy_guard = policy_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         let driver = Arc::new(MockExecutionDriver::new());
         driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
@@ -895,6 +959,7 @@ mod tests {
 
     #[tokio::test]
     async fn grant_bound_to_other_action_is_denied() {
+        let _policy_guard = policy_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         let driver = Arc::new(MockExecutionDriver::new());
         driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
@@ -939,6 +1004,7 @@ mod tests {
 
     #[tokio::test]
     async fn reversible_shell_command_needs_no_grant() {
+        let _policy_guard = policy_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         let driver = Arc::new(MockExecutionDriver::new());
         driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
@@ -965,5 +1031,164 @@ mod tests {
         .unwrap();
 
         assert_eq!(result["stdout"], "listing");
+    }
+
+    // ── Declarative policy seat tests ────────────────────────────────────
+
+    struct ControlPolicyGuard(Option<crate::permission_policy::PermissionPolicy>);
+
+    impl ControlPolicyGuard {
+        fn install(rules: Vec<crate::permission_policy::PermissionRule>) -> Self {
+            let prior = crate::policy_config::active_policy();
+            crate::policy_config::install(Some(crate::permission_policy::PermissionPolicy {
+                name: "control-seat-tests".to_string(),
+                rules,
+            }));
+            Self(prior)
+        }
+    }
+
+    impl Drop for ControlPolicyGuard {
+        fn drop(&mut self) {
+            crate::policy_config::install(self.0.take());
+        }
+    }
+
+    fn deny_file_read() -> crate::permission_policy::PermissionRule {
+        crate::permission_policy::PermissionRule {
+            id: Some("no-file-read".to_string()),
+            tool: Some("computer.file_read".to_string()),
+            action: crate::permission_policy::PermissionAction::Deny,
+            ..Default::default()
+        }
+    }
+
+    fn allow_all_rule() -> crate::permission_policy::PermissionRule {
+        crate::permission_policy::PermissionRule {
+            id: Some("allow-all".to_string()),
+            tool: Some("*".to_string()),
+            action: crate::permission_policy::PermissionAction::Allow,
+            ..Default::default()
+        }
+    }
+
+    fn audit_lines_for_test() -> Vec<serde_json::Value> {
+        let Ok(text) = std::fs::read_to_string(crate::policy_audit::policy_audit_path()) else {
+            return Vec::new();
+        };
+        text.lines()
+            .filter(|line| !line.trim().is_empty())
+            .filter_map(|line| serde_json::from_str(line).ok())
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn policy_deny_blocks_file_read_before_guest_and_audits() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        let _policy = ControlPolicyGuard::install(vec![deny_file_read(), allow_all_rule()]);
+
+        let driver = Arc::new(MockExecutionDriver::new());
+        driver.seed_file("/tmp/test.txt", b"file contents".to_vec());
+        let state = test_state(&temp, driver.clone()).await;
+
+        let (status, body) = execute_computer_tool(
+            &state,
+            "user-1",
+            "computer-1",
+            ComputerControlAction::FileRead {
+                path: "/tmp/test.txt".to_string(),
+            },
+            None,
+        )
+        .await
+        .expect_err("policy deny must refuse the action");
+
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["error"], "policy_denied");
+        assert_eq!(body["rule_id"], "no-file-read");
+        assert!(driver.recorded().is_empty(), "guest must not be touched");
+
+        let row = audit_lines_for_test()
+            .into_iter()
+            .find(|row| row["tool"] == "computer.file_read")
+            .expect("denial audit row");
+        assert_eq!(row["decision"], "denied");
+        assert_eq!(row["path"], "/tmp/test.txt");
+        assert_eq!(row["actor"], "user-1");
+    }
+
+    #[tokio::test]
+    async fn policy_allow_records_row_and_action_proceeds() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        let _policy = ControlPolicyGuard::install(vec![allow_all_rule()]);
+
+        let driver = Arc::new(MockExecutionDriver::new());
+        driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
+            exit_code: 0,
+            stdout: Some(b"listing".to_vec()),
+            stderr: None,
+            duration_ms: 1,
+            resource_usage: ResourceConsumption::default(),
+        }));
+        let state = test_state(&temp, driver.clone()).await;
+
+        let result = execute_computer_tool(
+            &state,
+            "user-1",
+            "computer-1",
+            ComputerControlAction::Shell(ShellInput {
+                command: vec!["ls".to_string()],
+                env: HashMap::new(),
+                timeout: None,
+            }),
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result["stdout"], "listing");
+        let row = audit_lines_for_test()
+            .into_iter()
+            .find(|row| row["tool"] == "computer.shell")
+            .expect("allowed audit row");
+        assert_eq!(row["decision"], "allowed");
+        assert_eq!(row["rule_id"], "allow-all");
+    }
+
+    #[tokio::test]
+    async fn policy_bot_scoped_rule_does_not_match_unresolvable_bot() {
+        let _guard = policy_lock();
+        let temp = tempfile::tempdir().unwrap().keep();
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+        // Only a rule scoped to a different bot: the seat cannot resolve a
+        // bot id yet, so the rule must not match — and fail-closed denies.
+        let _policy = ControlPolicyGuard::install(vec![crate::permission_policy::PermissionRule {
+            id: Some("other-bot-only".to_string()),
+            tool: Some("computer.screenshot".to_string()),
+            bot_id: Some("bot-someone-else".to_string()),
+            action: crate::permission_policy::PermissionAction::Allow,
+            ..Default::default()
+        }]);
+
+        let driver = Arc::new(MockExecutionDriver::new());
+        let state = test_state(&temp, driver.clone()).await;
+
+        let (status, body) = execute_computer_tool(
+            &state,
+            "user-1",
+            "computer-1",
+            ComputerControlAction::Screenshot,
+            None,
+        )
+        .await
+        .expect_err("no matching allow → fail-closed deny");
+
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["error"], "policy_denied");
+        assert!(driver.recorded().is_empty());
     }
 }

@@ -92,6 +92,11 @@ pub(crate) async fn send_desktop_mouse(
         }
     };
 
+    let sandbox_id = match crate::bot_desktop_routes::resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let record = match read_bot_sandbox(&state.db, &bot_id) {
         Ok(Some(r)) => r,
         Ok(None) => {
@@ -112,7 +117,7 @@ pub(crate) async fn send_desktop_mouse(
     };
     send_desktop_mouse_core(
         &state,
-        &query.sandbox_id,
+        &sandbox_id,
         &record.os,
         &record.provider,
         Some(&bot_id),
@@ -365,6 +370,11 @@ pub(crate) async fn send_desktop_keyboard(
         }
     };
 
+    let sandbox_id = match crate::bot_desktop_routes::resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let record = match read_bot_sandbox(&state.db, &bot_id) {
         Ok(Some(r)) => r,
         Ok(None) => {
@@ -385,7 +395,7 @@ pub(crate) async fn send_desktop_keyboard(
     };
     send_desktop_keyboard_core(
         &state,
-        &query.sandbox_id,
+        &sandbox_id,
         &record.os,
         &record.provider,
         Some(&bot_id),
@@ -671,6 +681,11 @@ pub(crate) async fn download_desktop_file(
         }
     };
 
+    let sandbox_id = match crate::bot_desktop_routes::resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let record = match read_bot_sandbox(&state.db, &bot_id) {
         Ok(Some(r)) => r,
         Ok(None) => {
@@ -691,7 +706,7 @@ pub(crate) async fn download_desktop_file(
     };
     download_desktop_file_core(
         &state,
-        &query.sandbox_id,
+        &sandbox_id,
         &record.os,
         &record.provider,
         Some(&bot_id),
@@ -773,6 +788,11 @@ pub(crate) async fn upload_desktop_file(
         }
     };
 
+    let sandbox_id = match crate::bot_desktop_routes::resolve_sandbox_id(&state, &bot_id, &query).await {
+        Ok(id) => id,
+        Err(resp) => return resp,
+    };
+
     let record = match read_bot_sandbox(&state.db, &bot_id) {
         Ok(Some(r)) => r,
         Ok(None) => {
@@ -793,7 +813,7 @@ pub(crate) async fn upload_desktop_file(
     };
     upload_desktop_file_core(
         &state,
-        &query.sandbox_id,
+        &sandbox_id,
         &record.os,
         &record.provider,
         Some(&bot_id),

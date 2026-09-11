@@ -36,6 +36,7 @@ use allternit_api::beta_deployment_routes::beta_deployment_router;
 use allternit_api::beta_memory_store_routes::beta_memory_store_router;
 use allternit_api::beta_session_routes::beta_session_router;
 use allternit_api::beta_work_routes::beta_work_router;
+use allternit_api::cloud_agents_routes::cloud_agents_router;
 use allternit_api::user_profile_routes::{enrollment_router, user_profile_router};
 use allternit_api::agent_workspace_routes::agent_workspace_router;
 use allternit_api::agents_v1_routes::agents_v1_router;
@@ -163,6 +164,23 @@ async fn main() {
     // Load unified configuration once and make it globally available.
     let app_config = allternit_api::init_app_config();
     info!("Configuration loaded");
+
+    // Declarative ACI policy engine. Env unset → engine off (legacy
+    // behavior); env set → the document must load cleanly or the gateway
+    // refuses to start (fail-closed — a missing or malformed policy must
+    // never mean an unguarded gateway).
+    match allternit_api::policy_config::load_from_env() {
+        Ok(policy) => {
+            let enabled = policy.is_some();
+            let rule_count = policy.as_ref().map(|p| p.rules.len()).unwrap_or(0);
+            allternit_api::policy_config::install(policy);
+            info!(enabled, rule_count, "ACI policy engine initialized");
+        }
+        Err(e) => {
+            tracing::error!("refusing to start: failed to load ACI policy document: {e}");
+            std::process::exit(1);
+        }
+    }
 
     // Data directory for local state
     let data_dir = std::env::var("ALLTERNIT_DATA_DIR")
@@ -656,6 +674,7 @@ async fn main() {
         .merge(agent_workspace_router())
         .merge(agent_session_router())
         .merge(beta_session_router())
+        .merge(cloud_agents_router())
         .merge(beta_deployment_router())
         .merge(beta_work_router())
         .merge(webhook_subscription_router())

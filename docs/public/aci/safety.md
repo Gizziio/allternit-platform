@@ -112,6 +112,71 @@ cannot bypass it):
 - **Circuit breaker** — per-actor rate limits (default 30 actions/minute,
   300/hour) plus cooldown after bursts and after 5 consecutive errors.
 
+### Declarative policy layer (optional, fail-closed)
+
+An optional JSON policy document extends the rule engine in
+`cmd/allternit-api/src/permission_policy.rs` with declarative, bot-scoped
+rules. It is configured by pointing `ALLTERNIT_ACI_POLICY_FILE` at the
+document and has three states:
+
+- **Env unset** — the engine is off. Nothing in this section applies and
+  behavior is unchanged from the pre-policy gateway (the default).
+- **Env set, document missing/empty/malformed** (bad JSON, unknown action
+  value, rule without `tool`) — the gateway refuses to start and names the
+  offending rule in the log. A missing or broken policy never means an
+  unguarded gateway.
+- **Env set, valid document** — every action on the policy seats is
+  evaluated before anything else. A document that parses to zero rules
+  denies every action.
+
+The document is `{"rules": [...]}` where each rule extends `PermissionRule`:
+
+```json
+{
+  "rules": [
+    { "id": "no-secrets", "tool": "aci.run", "intent": "*secret*", "action": "deny" },
+    { "id": "bots-read-only", "tool": "computer.file_write", "botId": "bot-a", "action": "ask" },
+    { "id": "default", "tool": "*", "action": "allow" }
+  ]
+}
+```
+
+Semantics:
+
+- Every field a rule specifies must match the action descriptor (AND);
+  fields the rule omits are wildcards.
+- Precedence is deny, then ask, then allow. A matching deny anywhere in the
+  document beats any allow. `ask` passes through to the existing
+  grant/approval flow above unchanged — the policy layer never replaces it.
+- An action no rule speaks for is denied (fail-closed).
+
+Two seats evaluate the document, always policy-first, existing safety
+machinery second — `aci_safety`, grants, `enforce_confirmation`, host policy,
+and the circuit breaker all still run on every path:
+
+- `POST /api/aci/run` — after goal validation, before `aci_safety` and grant
+  redemption. The descriptor is `tool: "aci.run"`, the goal as intent, the
+  optional `botId` request field as bot id, and the first `allowedSites`
+  entry as host.
+- `execute_computer_tool` (direct control routes and `computer_*` tools) —
+  before confirmation enforcement and before anything touches the guest.
+
+**Audit-before-act.** Every allow/deny decision is appended (write + flush +
+fsync) to `<computer_use_dir>/policy_audit/policy_audit.jsonl` before the
+action dispatches. A row therefore exists for every policy-gated action,
+including refusals that never reached an executor and actions whose executor
+failed afterwards. Rows carry `{ts, decision, rule_id, bot_id, session_id,
+actor, tool, intent, host, path, mcp_tool, run_id}` with absent fields
+omitted. `ask` verdicts write no row here — they fall through to the grant
+flow, which persists its own redemption receipts before execution.
+
+**Read API.** `GET /api/aci/policy/audit?bot_id=<id>&limit=<n>` (default
+limit 100, capped at 1000) returns the newest rows first, filtered by bot id
+when given.
+
+If the audit row cannot be written, the gateway refuses the action instead
+of running unaudited: an action that cannot be recorded does not dispatch.
+
 ### Run monitor
 
 The ACU planning loop accepts a pluggable monitor

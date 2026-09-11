@@ -48,8 +48,10 @@ import { ModelSelectionProvider, useModelSelection } from "@/providers/model-sel
 import { ModelPicker, type ModelSelection } from "@/components/model-picker";
 import { getProviderMeta } from "@/lib/providers/provider-registry";
 import { BotComputerViewport } from "./BotComputerViewport";
+import { PolicyGovernance } from "./PolicyGovernance";
 import { useBotActiveVm } from "./useBotActiveVm";
 import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
+import { botSessionStatus } from "@/lib/bots/bot-session-chrome";
 
 export interface BotChatSessionViewProps {
   sessionId?: string;
@@ -356,6 +358,23 @@ function BotChatSessionContent({
     return rows;
   }, [computerOpen, handleShare, handleStop, hasVm, isStreaming]);
 
+  const sessionStatus = useMemo(
+    () =>
+      botSessionStatus({
+        botName,
+        isStreaming,
+        sendError,
+        computerOpen,
+      }),
+    [botName, isStreaming, sendError, computerOpen]
+  );
+  const statusDot =
+    sessionStatus.tone === "running"
+      ? "var(--status-warning)"
+      : sessionStatus.tone === "error"
+        ? "var(--status-error)"
+        : "var(--status-success)";
+
   return (
     <div className="flex h-full flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] pt-12">
       {/* Header */}
@@ -404,17 +423,16 @@ function BotChatSessionContent({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-base font-semibold">{botName}</h2>
-              <span className="flex h-2 w-2 rounded-full bg-[var(--status-success)]" title="Online" />
+              <span
+                className="flex h-2 w-2 rounded-full"
+                style={{ background: statusDot }}
+                title={sessionStatus.label}
+              />
             </div>
-            {botTagline ? (
-              <p className="truncate text-xs text-[var(--text-secondary)]">
-                {botTagline}
-              </p>
-            ) : (
-              <p className="truncate text-xs text-[var(--text-tertiary)]">
-                Bot session
-              </p>
-            )}
+            <p className="truncate text-xs text-[var(--text-secondary)]">
+              {sessionStatus.label}
+              {botTagline ? ` · ${botTagline}` : ""}
+            </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -452,6 +470,12 @@ function BotChatSessionContent({
           onCancel={cancelSelection}
         />
       </div>
+
+      <PolicyGovernance
+        botId={botId}
+        sessionMode={session?.metadata?.sessionMode}
+        isBot={session?.metadata?.isBot === true}
+      />
 
       <div className="flex min-h-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
