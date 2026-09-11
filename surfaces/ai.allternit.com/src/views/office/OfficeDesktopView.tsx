@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import { NativeOriginBanner } from '@/components/native-sessions/NativeOriginBanner';
+import { isElectronShell } from '@/lib/platform';
 import { OfficeSuiteSection } from './OfficeSuiteSection';
 
 /**
@@ -67,7 +68,9 @@ export function OfficeDesktopView() {
           background: 'var(--surface-panel)',
           display: 'flex',
           alignItems: 'center',
-          padding: '0 16px',
+          // Frameless Electron window: reserve the top-left for the macOS
+          // traffic lights (same 72px clearance as OfficePageChrome).
+          padding: isElectronShell() ? '0 16px 0 72px' : '0 16px',
           flexShrink: 0,
           gap: '12px',
         }}
