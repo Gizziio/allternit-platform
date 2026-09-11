@@ -7,7 +7,7 @@ export const THEME = {
   textPrimary: 'var(--ui-text-primary)',
   textSecondary: 'var(--ui-text-secondary)',
   textMuted: 'var(--ui-text-muted)',
-  accent: 'var(--accent-chat)',
+  accent: 'var(--accent-primary)',
   borderSubtle: 'var(--ui-border-muted)',
 };
 

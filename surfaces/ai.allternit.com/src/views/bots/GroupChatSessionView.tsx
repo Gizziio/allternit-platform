@@ -80,7 +80,7 @@ export function GroupChatSessionView({ sessionId, onClose }: GroupChatSessionVie
 
 function LegacyGroupChatSessionView({ sessionId, onClose }: GroupChatSessionViewProps) {
   const mode = 'chat';
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS.design;
 
   const sessions = useChatSessionStore((s) => s.sessions);
   const session = useMemo(
@@ -334,7 +334,7 @@ function GroupChatMessageCluster({
   isLast: boolean;
   mode: 'chat';
 }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS.design;
   const isUser = cluster.speakerKey === 'user';
   const firstMessage = cluster.messages[0];
   const botId = isUser
@@ -438,7 +438,7 @@ function GroupMembersPanel({
   bots: Agent[];
   groupName: string;
 }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS.design;
 
   return (
     <CanvasPanel title="Group Members" mode={mode}>

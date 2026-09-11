@@ -66,7 +66,7 @@ function AskUserQuestion({
   validation,
   onSubmit,
   onCancel,
-  accentColor = "#D4956A",
+  accentColor = "#B08D6E",
   isLoading = false,
 }: AskUserQuestionProps) {
   const [value, setValue] = useState<string | string[] | boolean | number>(
@@ -536,9 +536,9 @@ function ConfirmInput({
           gap: 8,
           padding: "12px 16px",
           borderRadius: 10,
-          border: `1px solid ${value === true ? "#79C47C" : "var(--ui-border-muted)"}`,
-          background: value === true ? "rgba(121,196,124,0.15)" : "var(--surface-hover)",
-          color: value === true ? "#79C47C" : "#a8998c",
+          border: `1px solid ${value === true ? "var(--status-success)" : "var(--ui-border-muted)"}`,
+          background: value === true ? "rgba(176,141,110,0.15)" : "var(--surface-hover)",
+          color: value === true ? "var(--status-success)" : "#a8998c",
           fontSize: 14,
           fontWeight: 600,
           cursor: "pointer",
@@ -580,7 +580,7 @@ function QuestionWizard({
   questions,
   onComplete,
   onCancel,
-  accentColor = "#D4956A",
+  accentColor = "#B08D6E",
   title = "Setup Wizard",
 }: QuestionWizardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -697,7 +697,7 @@ function QuestionWizard({
 
 function ToolQuestionDisplay({
   sessionId,
-  accentColor = "#D4956A",
+  accentColor = "#B08D6E",
   onAnswer,
 }: ToolQuestionDisplayProps) {
   const { getQuestionsForSession, submitAnswer, cancelQuestion } = useAskUserToolStore();

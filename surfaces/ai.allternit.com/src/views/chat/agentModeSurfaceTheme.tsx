@@ -14,27 +14,24 @@ export interface AgentModeSurfaceTheme {
   shadow: string;
 }
 
+// Amber-only law (locked 2026-09-11): chat/cowork/code/browser no longer carry
+// their own accent colors — every surface resolves to the amber identity
+// values below. Bot keeps its dedicated token (teal dark / sand light) and
+// design keeps its identity sand; both are outside the removed four palettes.
+const AMBER_SURFACE_THEME: AgentModeSurfaceTheme = {
+  accent: 'var(--accent-primary)',
+  glow: 'rgba(176,141,110,0.26)',
+  soft: 'rgba(176,141,110,0.14)',
+  wash: 'rgba(176,141,110,0.18)',
+  fog: 'rgba(122,89,61,0.2)',
+  edge: 'rgba(176,141,110,0.16)',
+  panelTint: 'rgba(176,141,110,0.08)',
+  shadow: 'rgba(83,51,24,0.12)',
+};
+
 const SURFACE_THEMES: Record<AgentModeSurface, AgentModeSurfaceTheme> = {
-  chat: {
-    accent: 'var(--accent-primary)',
-    glow: 'rgba(212,149,106,0.28)',
-    soft: 'rgba(212,149,106,0.14)',
-    wash: 'rgba(212,149,106,0.18)',
-    fog: 'rgba(147,94,53,0.18)',
-    edge: 'rgba(212,149,106,0.14)',
-    panelTint: 'rgba(212,149,106,0.08)',
-    shadow: 'rgba(83,51,24,0.12)',
-  },
-  cowork: {
-    accent: '#A78BFA',
-    glow: 'rgba(167,139,250,0.28)',
-    soft: 'rgba(167,139,250,0.14)',
-    wash: 'rgba(167,139,250,0.18)',
-    fog: 'rgba(93,74,166,0.2)',
-    edge: 'rgba(167,139,250,0.16)',
-    panelTint: 'rgba(167,139,250,0.08)',
-    shadow: 'rgba(58,42,113,0.14)',
-  },
+  chat: AMBER_SURFACE_THEME,
+  cowork: AMBER_SURFACE_THEME,
   bot: {
     accent: '#2DD4BF',
     glow: 'rgba(45,212,191,0.26)',
@@ -45,26 +42,8 @@ const SURFACE_THEMES: Record<AgentModeSurface, AgentModeSurfaceTheme> = {
     panelTint: 'rgba(45,212,191,0.08)',
     shadow: 'rgba(10,74,66,0.14)',
   },
-  code: {
-    accent: '#79C47C',
-    glow: 'rgba(121,196,124,0.28)',
-    soft: 'rgba(121,196,124,0.14)',
-    wash: 'rgba(121,196,124,0.18)',
-    fog: 'rgba(67,129,71,0.2)',
-    edge: 'rgba(121,196,124,0.16)',
-    panelTint: 'rgba(121,196,124,0.08)',
-    shadow: 'rgba(34,78,37,0.14)',
-  },
-  browser: {
-    accent: '#69A8C8',
-    glow: 'rgba(105,168,200,0.26)',
-    soft: 'rgba(105,168,200,0.14)',
-    wash: 'rgba(105,168,200,0.18)',
-    fog: 'rgba(61,106,138,0.2)',
-    edge: 'rgba(105,168,200,0.16)',
-    panelTint: 'rgba(105,168,200,0.08)',
-    shadow: 'rgba(29,62,80,0.14)',
-  },
+  code: AMBER_SURFACE_THEME,
+  browser: AMBER_SURFACE_THEME,
   design: {
     accent: '#E879A0',
     glow: 'rgba(232,121,160,0.26)',
@@ -135,7 +114,7 @@ const backdropAnimationStyles = `
     opacity: 1;
   }
   100% {
-    box-shadow: 0 0 0 8px rgba(212,149,106,0);
+    box-shadow: 0 0 0 8px rgba(176,141,110,0);
     opacity: 0;
   }
 }

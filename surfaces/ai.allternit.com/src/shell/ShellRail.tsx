@@ -1936,7 +1936,7 @@ export function ShellRail({
                 title={currentUserDisplayName ?? 'Account'}
                 className="w-full min-w-0 flex items-center gap-2 border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors rounded-lg p-[6px_8px] -ml-1"
               >
-                <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
+                <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
                   {accountInitial}
                 </div>
                 <div className="min-w-0 flex-1 overflow-hidden flex items-center gap-1 text-[var(--shell-item-fg)] text-[13px] font-semibold">

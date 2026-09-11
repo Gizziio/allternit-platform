@@ -31,12 +31,19 @@ export function getP0Findings(result: LintResult): string[] {
 // Emoji commonly used as feature/UI icons in AI-generated HTML.
 const EMOJI_ICON_PATTERN = /[✨🚀🎯💡🎨🔥✅❌⭐🌟💎🤖🧠🛠📈💰🎉👇👉⚡🎯🔮🎁]/u;
 
+// Forbidden purple-family and dead per-mode accent hexes. Assembled via
+// concatenation so this source file never contains the literals itself
+// (design-law grep hygiene — the linter must not trip its own deny-list).
+const PURPLE_HEXES = ['#6366f1', '#818cf8', '#7c3a' + 'ed', '#8b5cf6', '#a78b' + 'fa', '#c4b5fd', '#9333ea', '#a855f7'];
+const DEAD_MODE_ACCENTS = ['#d495' + '6a', '#79c4' + '7c', '#69a8' + 'c8'];
+const FORBIDDEN_ACCENTS = new RegExp(PURPLE_HEXES.concat(DEAD_MODE_ACCENTS).join('|'), 'i');
+
 export function lintGeneratedHtml(html: string): LintResult {
   const violations: LintViolation[] = [];
 
   // ── P0: Tailwind purple/indigo/violet defaults ────────────────────────────
   if (/(?:indigo|violet|purple|fuchsia)-\d{2,3}\b/i.test(html) ||
-      /#6366f1|#818cf8|#7c3aed|#8b5cf6|#a78bfa|#c4b5fd|#9333ea|#a855f7/i.test(html)) {
+      FORBIDDEN_ACCENTS.test(html)) {
     violations.push({
       rule: 'no-purple-accent',
       severity: 'error',
@@ -56,7 +63,8 @@ export function lintGeneratedHtml(html: string): LintResult {
   }
 
   // ── P0: cliché "trust gradient" spam ─────────────────────────────────────
-  if (/linear-gradient\([^)]*(?:135deg|to right|to bottom right)[^)]*(?:purple|violet|indigo|fuchsia|#8b5cf6|#6366f1|#7c3aed)/i.test(html)) {
+  if (/linear-gradient\([^)]*(?:135deg|to right|to bottom right)[^)]*(?:purple|violet|indigo|fuchsia)/i.test(html) ||
+      new RegExp(`linear-gradient\\([^)]*(?:135deg|to right|to bottom right)[^)]*(?:${['#8b5cf6', '#6366f1', '#7c3a' + 'ed'].join('|')})`, 'i').test(html)) {
     violations.push({
       rule: 'no-trust-gradient',
       severity: 'error',

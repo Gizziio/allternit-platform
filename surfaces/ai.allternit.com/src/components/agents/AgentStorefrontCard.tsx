@@ -78,7 +78,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           ...style,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = "var(--accent-chat)";
+          e.currentTarget.style.borderColor = "var(--accent-primary)";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.borderColor = "var(--ui-border-muted)";
@@ -88,7 +88,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           {avatarConfig ? (
             <AgentAvatar config={avatarConfig as any} size={32} emotion="steady" isAnimating={false} showGlow={false} />
           ) : (
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: agent.botProfile?.accentColor || "var(--accent-chat)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: agent.botProfile?.accentColor || "var(--accent-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
               {getBotDisplayName(agent).charAt(0).toUpperCase()}
             </div>
           )}
@@ -113,7 +113,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
             style={{
               padding: "4px 10px",
               borderRadius: 6,
-              background: "var(--accent-chat)",
+              background: "var(--accent-primary)",
               color: "#000",
               border: "none",
               fontSize: 12,
@@ -144,7 +144,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
         transition: "all 0.15s ease",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "var(--accent-chat)";
+        e.currentTarget.style.borderColor = "var(--accent-primary)";
         e.currentTarget.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={(e) => {
@@ -158,7 +158,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           {avatarConfig ? (
             <AgentAvatar config={avatarConfig as any} size={48} emotion="steady" isAnimating={false} showGlow={false} />
           ) : (
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: agent.botProfile?.accentColor || "var(--accent-chat)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: agent.botProfile?.accentColor || "var(--accent-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>
               {getBotDisplayName(agent).charAt(0).toUpperCase()}
             </div>
           )}
@@ -237,7 +237,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
             width: "100%",
             padding: "8px",
             borderRadius: 8,
-            background: "var(--accent-chat)",
+            background: "var(--accent-primary)",
             color: "#000",
             border: "none",
             fontSize: 13,

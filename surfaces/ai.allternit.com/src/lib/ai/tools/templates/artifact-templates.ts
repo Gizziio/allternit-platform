@@ -919,7 +919,7 @@ input:focus,select:focus{border-color:#3b4fd8}
 <div class="bars-panel"><h3>Spending by Category</h3><div id="bars"></div></div>
 <script>
 const EMOJI={Food:'🍔',Housing:'🏠',Transport:'🚗',Health:'💊',Entertainment:'🎬',Shopping:'🛍️',Utilities:'⚡',Salary:'💰',Other:'📦'};
-const COLOR={Food:'var(--status-warning)',Housing:'var(--status-info)',Transport:'#a78bfa',Health:'var(--status-success)',Entertainment:'var(--status-error)',Shopping:'#fb923c',Utilities:'#38bdf8',Salary:'var(--status-success)',Other:'#94a3b8'};
+const COLOR={Food:'var(--status-warning)',Housing:'var(--status-info)',Transport:'#B08D6E',Health:'var(--status-success)',Entertainment:'var(--status-error)',Shopping:'#fb923c',Utilities:'#38bdf8',Salary:'var(--status-success)',Other:'#94a3b8'};
 let txs=JSON.parse(localStorage.getItem('budget')||'null')||[
   {id:1,name:'Monthly Salary',amount:5000,type:'income',cat:'Salary',date:'2024-03-01'},
   {id:2,name:'Rent',amount:1500,type:'expense',cat:'Housing',date:'2024-03-02'},
@@ -1068,7 +1068,7 @@ const ORG_CHART = `flowchart TD
 
   style CEO fill:#3b4fd8,color:#fff,stroke:#3b4fd8
   style CTO fill:#0f766e,color:#fff,stroke:#0f766e
-  style CPO fill:#7c3aed,color:#fff,stroke:#7c3aed
+  style CPO fill:#B08D6E,color:#fff,stroke:#B08D6E
   style CFO fill:#b45309,color:#fff,stroke:#b45309`;
 
 const USER_JOURNEY = `journey

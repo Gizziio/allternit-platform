@@ -249,7 +249,7 @@ export const FullDemo: Story = {
                 padding: '4px 8px',
                 borderRadius: 4,
                 border: 'none',
-                background: 'var(--accent-chat)',
+                background: 'var(--accent-primary)',
                 color: 'white',
                 cursor: 'pointer',
               }}

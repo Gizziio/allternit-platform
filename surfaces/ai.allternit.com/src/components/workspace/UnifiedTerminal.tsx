@@ -220,7 +220,9 @@ export function terminalThemeFromElement(_element: HTMLElement): import('@xterm/
     yellow: token('--status-warning', '#f59e0b'),
     blue: token('--status-info', '#3b82f6'),
     magenta: '#8b5cf6',
-    cyan: token('--accent-code', '#0891b2'),
+    // The legacy per-mode code accent was removed in the 2026-09-11 amber-only
+    // design-law amendment; ANSI cyan keeps its dedicated fallback.
+    cyan: '#0891b2',
     white: terminalFg,
     brightBlack: token('--text-tertiary', '#6b7280'),
     brightRed: '#f87171',
@@ -766,7 +768,7 @@ export function UnifiedTerminal({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <TerminalIcon size={15} weight="duotone" style={{ color: 'var(--accent-code)' }} />
+          <TerminalIcon size={15} weight="duotone" style={{ color: 'var(--accent-primary)' }} />
           <span
             style={{
               fontSize: 12,
@@ -924,7 +926,7 @@ export function UnifiedTerminal({
               borderRadius: 999,
               border: '1px solid var(--border-subtle)',
               background: 'var(--surface-panel)',
-              color: 'var(--accent-code)',
+              color: 'var(--accent-primary)',
               fontSize: 11,
               fontWeight: 600,
               cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -1201,7 +1203,7 @@ export function UnifiedTerminal({
                 key={tab.id}
                 style={{
                   borderRadius: 14,
-                  border: `1px solid ${tab.id === activeTabId ? 'var(--accent-code)' : 'var(--border-subtle)'}`,
+                  border: `1px solid ${tab.id === activeTabId ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
                   background: 'var(--glass-bg-thick)',
                   backdropFilter: 'blur(14px) saturate(160%)',
                   WebkitBackdropFilter: 'blur(14px) saturate(160%)',
@@ -1210,7 +1212,7 @@ export function UnifiedTerminal({
                   overflow: 'hidden',
                   minHeight: 120,
                   boxShadow: tab.id === activeTabId
-                    ? '0 0 0 1px color-mix(in srgb, var(--accent-code) 24%, transparent), var(--shadow-lg)'
+                    ? '0 0 0 1px color-mix(in srgb, var(--accent-primary) 24%, transparent), var(--shadow-lg)'
                     : 'var(--shadow-lg)',
                 }}
               >

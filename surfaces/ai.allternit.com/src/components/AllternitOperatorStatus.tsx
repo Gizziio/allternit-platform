@@ -89,7 +89,7 @@ export function AllternitOperatorStatus() {
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Robot size={20} style={{ color: 'var(--accent-chat)' }} />
+              <Robot size={20} style={{ color: 'var(--accent-primary)' }} />
               <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Allternit Operator</span>
             </div>
             <button type="button"

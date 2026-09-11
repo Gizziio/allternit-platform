@@ -17,37 +17,15 @@ export function formatSurfaceLabel(surface: AgentModeSurface): string {
 }
 
 export function getSurfacePalette(surface: AgentModeSurface): SurfacePalette {
-  switch (surface) {
-    case "browser":
-      return {
-        accent: "#69A8C8",
-        glow: "rgba(105,168,200,0.26)",
-        soft: "rgba(105,168,200,0.14)",
-        border: "rgba(105,168,200,0.16)",
-      };
-    case "code":
-      return {
-        accent: "#79C47C",
-        glow: "rgba(121,196,124,0.28)",
-        soft: "rgba(121,196,124,0.14)",
-        border: "rgba(121,196,124,0.16)",
-      };
-    case "cowork":
-      return {
-        accent: "#A78BFA",
-        glow: "rgba(167,139,250,0.28)",
-        soft: "rgba(167,139,250,0.14)",
-        border: "rgba(167,139,250,0.16)",
-      };
-    case "chat":
-    default:
-      return {
-        accent: "#D4956A",
-        glow: "color-mix(in srgb, var(--accent-primary) 28%, transparent)",
-        soft: "color-mix(in srgb, var(--accent-primary) 14%, transparent)",
-        border: "color-mix(in srgb, var(--accent-primary) 14%, transparent)",
-      };
-  }
+  // Amber-only law (2026-09-11): every surface resolves to the amber accent;
+  // `surface` is kept in the signature for call-site compatibility.
+  void surface;
+  return {
+    accent: "var(--accent-primary)",
+    glow: "color-mix(in srgb, var(--accent-primary) 28%, transparent)",
+    soft: "color-mix(in srgb, var(--accent-primary) 14%, transparent)",
+    border: "color-mix(in srgb, var(--accent-primary) 14%, transparent)",
+  };
 }
 
 export function compactWorkspaceScope(workspaceScope?: string): string {

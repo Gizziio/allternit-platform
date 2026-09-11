@@ -252,7 +252,7 @@ function parseSkills(files: string[]): string[] {
 const RAIL_TEXT   = 'var(--text-primary)';
 const RAIL_MUTED  = 'var(--text-secondary)';
 const RAIL_BORDER = 'var(--border-subtle)';
-const RAIL_AMBER  = 'var(--accent-cowork)';
+const RAIL_AMBER  = 'var(--accent-primary)';
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -263,8 +263,8 @@ function LiveDot() {
         @keyframes crPing{75%,100%{transform:scale(2);opacity:0}}
         @keyframes crPulse{0%,100%{opacity:1}50%{opacity:.5}}
       `}</style>
-      <span style={{ position:'absolute', inset:0, borderRadius:'50%', background:'var(--accent-cowork,#c8a96e)', animation:'crPing 1.2s cubic-bezier(0,0,.2,1) infinite', opacity:.5 }} />
-      <span style={{ position:'relative', width:8, height:8, borderRadius:'50%', background:'var(--accent-cowork,#c8a96e)', animation:'crPulse 2s ease infinite' }} />
+      <span style={{ position:'absolute', inset:0, borderRadius:'50%', background:'var(--accent-primary,#c8a96e)', animation:'crPing 1.2s cubic-bezier(0,0,.2,1) infinite', opacity:.5 }} />
+      <span style={{ position:'relative', width:8, height:8, borderRadius:'50%', background:'var(--accent-primary,#c8a96e)', animation:'crPulse 2s ease infinite' }} />
     </span>
   );
 }
@@ -306,7 +306,7 @@ function StepNumber({ n, status }: { n: number; status: TodoEntry['status'] }) {
     return (
       <span style={{
         width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-        background: 'color-mix(in srgb, var(--accent-cowork) 15%, transparent)',
+        background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <Check size={11} style={{ color: RAIL_AMBER }} />
@@ -317,7 +317,7 @@ function StepNumber({ n, status }: { n: number; status: TodoEntry['status'] }) {
     return (
       <span style={{
         width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-        background: 'var(--accent-cowork, #c8a96e)',
+        background: 'var(--accent-primary, #c8a96e)',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 10, fontWeight: 700, color: '#1a1208',
         animation: 'crPulse 2s ease infinite',
@@ -407,9 +407,9 @@ function WorkingFolder({ files, isStreaming }: { files: string[]; isStreaming: b
             type="button"
             onClick={() => handleCopy(p)}
             title={p}
-            style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 6px', background:'color-mix(in srgb, var(--accent-cowork) 8%, transparent)', border:'1px solid color-mix(in srgb, var(--accent-cowork) 12%, transparent)', borderRadius:6, cursor:'pointer', width:'100%', textAlign:'left' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-cowork) 14%, transparent)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-cowork) 8%, transparent)')}
+            style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 6px', background:'color-mix(in srgb, var(--accent-primary) 8%, transparent)', border:'1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)', borderRadius:6, cursor:'pointer', width:'100%', textAlign:'left' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-primary) 14%, transparent)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-primary) 8%, transparent)')}
           >
             <FileIcon filename={name} />
             <span style={{ flex:1, minWidth:0, fontSize:12, color:RAIL_TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -489,7 +489,7 @@ function ContextSection({ connectors, skills }: { connectors: string[]; skills: 
 const LANG_COLORS: Record<string, string> = {
   ts: '#3b82f6', tsx: '#3b82f6', js: '#eab308', jsx: '#eab308',
   py: '#22c55e', rs: '#f97316', go: '#06b6d4',
-  json: '#a78bfa', css: '#f472b6', html: '#fb923c',
+  json: '#B08D6E', css: '#f472b6', html: '#fb923c',
   sh: '#94a3b8', sql: '#67e8f9', md: '#94a3b8',
 };
 
@@ -522,11 +522,11 @@ function ArtifactsSection({ artifacts, isStreaming }: { artifacts: ArtifactEntry
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '5px 8px', borderRadius: 6, width: '100%', textAlign: 'left',
-            background: 'color-mix(in srgb, var(--accent-cowork) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-cowork) 12%, transparent)',
+            background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)',
             cursor: 'pointer',
           }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-cowork) 14%, transparent)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-cowork) 8%, transparent)')}
+          onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-primary) 14%, transparent)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-primary) 8%, transparent)')}
         >
           <span style={{
             fontSize: 9, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
@@ -568,8 +568,8 @@ function AuditLogsSection({ auditLogs }: { auditLogs: any[] }) {
           style={{
             padding: '6px 8px',
             borderRadius: 6,
-            background: 'color-mix(in srgb, var(--accent-cowork) 6%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--accent-cowork) 10%, transparent)',
+            background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
             fontSize: '11px',
             color: RAIL_TEXT,
           }}
@@ -655,7 +655,7 @@ export const CoworkRightRail = memo(function CoworkRightRail({
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
           {totalCount > 0 && (
-            <span style={{ fontSize:11, color:RAIL_MUTED, background:'color-mix(in srgb, var(--accent-cowork) 12%, transparent)', borderRadius:8, padding:'1px 7px', lineHeight:'18px' }}>
+            <span style={{ fontSize:11, color:RAIL_MUTED, background:'color-mix(in srgb, var(--accent-primary) 12%, transparent)', borderRadius:8, padding:'1px 7px', lineHeight:'18px' }}>
               {completedCount} of {totalCount}
             </span>
           )}

@@ -171,7 +171,7 @@ export function CodeSessionBar() {
                 data-testid="code-sessionbar-state-pill"
                 icon={<ClockCounterClockwise size={12} weight="bold" />}
                 variant="outline"
-                className="text-[var(--accent-browser)] border-[var(--accent-browser)]/30 bg-[var(--accent-browser)]/10 cursor-pointer"
+                className="text-[var(--accent-primary)] border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 cursor-pointer"
               >
                 {`${activeSession.mode}${activeSession.state}`}
               </Pill>

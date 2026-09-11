@@ -264,7 +264,7 @@ export const TasksView: React.FC = () => {
             padding: '8px 16px',
             borderRadius: '8px',
             border: 'none',
-            backgroundColor: 'var(--accent-cowork)',
+            backgroundColor: 'var(--accent-primary)',
             color: 'var(--ui-text-primary)',
             fontSize: '13px',
             fontWeight: 600,
@@ -431,7 +431,7 @@ export const TasksView: React.FC = () => {
                               width: '20px',
                               height: '20px',
                               borderRadius: '50%',
-                              backgroundColor: 'var(--accent-cowork)',
+                              backgroundColor: 'var(--accent-primary)',
                               color: 'var(--ui-text-primary)',
                               fontSize: '12px',
                               fontWeight: 700,
@@ -750,16 +750,16 @@ export const TasksView: React.FC = () => {
                             padding: '4px',
                             borderRadius: '6px',
                             border: 'none',
-                            backgroundColor: 'color-mix(in srgb, var(--accent-cowork) 10%, transparent)',
-                            color: 'var(--accent-cowork)',
+                            backgroundColor: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+                            color: 'var(--accent-primary)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--accent-cowork) 20%, transparent)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--accent-primary) 20%, transparent)';
                           }}
                           onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--accent-cowork) 10%, transparent)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--accent-primary) 10%, transparent)';
                           }}
                         >
                           <Timer size={12} />

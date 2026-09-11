@@ -115,7 +115,7 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
             {msg.role === 'user' ? (
               <User size={14} color="#fff" />
             ) : (
-              <Bot size={14} color="#a78bfa" />
+              <Bot size={14} color="#B08D6E" />
             )}
           </div>
 

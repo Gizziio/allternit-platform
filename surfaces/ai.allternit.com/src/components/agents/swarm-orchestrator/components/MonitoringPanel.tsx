@@ -23,7 +23,7 @@ interface MonitoringPanelProps {
   executionHistory: SwarmExecution[];
   nodes: Node<AgentNodeData>[];
   onClose: () => void;
-  modeColors: (typeof MODE_COLORS)['chat'];
+  modeColors: (typeof MODE_COLORS)['design'];
 }
 
 export function MonitoringPanel({
@@ -67,7 +67,7 @@ export function MonitoringPanel({
       case 'running':
       case 'starting': return 'var(--status-success)';
       case 'paused': return 'var(--status-warning)';
-      case 'completed': return '#69A8C8';
+      case 'completed': return 'var(--status-success)';
       case 'failed':
       case 'cancelled':
       case 'timeout': return 'var(--status-error)';

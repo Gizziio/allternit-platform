@@ -71,7 +71,7 @@ export function ModeDock({
       {agentStatus && (
         <div className="flex items-center gap-2 py-1" aria-label="Agent status">
           <div
-            className="size-1.5 rounded-full animate-pulse bg-[var(--accent-chat,#D4B08C)]"
+            className="size-1.5 rounded-full animate-pulse bg-[var(--accent-primary,#D4B08C)]"
           />
           <TextShimmer as="span" className="text-xs font-medium">
             {agentStatus}

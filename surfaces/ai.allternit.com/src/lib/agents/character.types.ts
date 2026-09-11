@@ -293,7 +293,7 @@ export function createDefaultAvatarConfig(setup: AgentSetup): AvatarConfig {
           primary: "#8B5CF6",
           secondary: "#EC4899",
           glow: "#E879F9",
-          outline: "#7C3AED"
+          outline: "#B08D6E"
         },
         personality: { bounce: 0.4, sway: 0.3, breathing: true }
       };

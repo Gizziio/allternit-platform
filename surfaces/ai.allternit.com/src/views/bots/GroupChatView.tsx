@@ -392,7 +392,7 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
                       className={cn(
                         "mt-1 whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm leading-relaxed shadow-sm",
                         isUser
-                          ? "rounded-tr-none bg-[var(--accent-chat)] text-[var(--ui-text-inverse)]"
+                          ? "rounded-tr-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]"
                           : "rounded-tl-none border border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--text-primary)]"
                       )}
                     >

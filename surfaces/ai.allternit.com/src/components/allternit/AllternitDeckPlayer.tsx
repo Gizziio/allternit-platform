@@ -228,7 +228,7 @@ export function AllternitDeckPlayer({
             {/* Theme selector */}
             <select aria-label="Selection" value={activeTheme}
               onChange={(e) => setActiveTheme(e.target.value as any)}
-              className="bg-[#1a1a1a] border border-[#333] text-[#888] text-xs rounded px-2 py-1 outline-none focus:border-[#D4956A]"
+              className="bg-[#1a1a1a] border border-[#333] text-[#888] text-xs rounded px-2 py-1 outline-none focus:border-[#B08D6E]"
             >
               <option value="allternit-dark">Allternit Dark</option>
               <option value="allternit-light">Allternit Light</option>
@@ -242,7 +242,7 @@ export function AllternitDeckPlayer({
               onClick={() => setShowGrid(!showGrid)}
               className={cn(
                 "h-7 text-[#888] hover:text-[#ECECEC]",
-                showGrid && "text-[#D4956A] bg-[#D4956A]/10"
+                showGrid && "text-[#B08D6E] bg-[#B08D6E]/10"
               )}
             >
               <SquaresFour size={16} />
@@ -338,7 +338,7 @@ export function AllternitDeckPlayer({
               className={cn(
                 "size-2  rounded-full transition-all duration-200",
                 index === currentIndex
-                  ? "bg-[#D4956A] w-4"
+                  ? "bg-[#B08D6E] w-4"
                   : "bg-[#333] hover:bg-[#444]"
               )}
               title={`Slide ${index + 1}`}
@@ -381,7 +381,7 @@ export function AllternitDeckPlayer({
                 className={cn(
                   "aspect-video rounded-lg border-2 overflow-hidden transition-all text-left",
                   index === currentIndex
-                    ? "border-[#D4956A] bg-[#1a1a1a]"
+                    ? "border-[#B08D6E] bg-[#1a1a1a]"
                     : "border-[#333] bg-[#242424] hover:border-[#444]"
                 )}
               >
@@ -427,7 +427,7 @@ function renderSlideContent(slide: Slide) {
     case 'quote':
       return (
         <div className="flex flex-col items-center justify-center h-full p-12">
-          <div className="text-6xl text-[#D4956A] mb-6">"</div>
+          <div className="text-6xl text-[#B08D6E] mb-6">"</div>
           <blockquote className="text-2xl text-[#ECECEC] italic text-center max-w-3xl">
             {slide.content?.join(' ')}
           </blockquote>
@@ -445,7 +445,7 @@ function renderSlideContent(slide: Slide) {
             <ul className="space-y-3">
               {slide.content?.map((item, i) => (
                 <li key={`${item}-${i}`} className="text-[#b8b8b8] flex items-start gap-2">
-                  <span className="size-2  rounded-full bg-[#D4956A] mt-2 flex-shrink-0" />
+                  <span className="size-2  rounded-full bg-[#B08D6E] mt-2 flex-shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -490,7 +490,7 @@ function renderSlideContent(slide: Slide) {
             <ul className="space-y-4">
               {slide.content?.map((item, i) => (
                 <li key={`${item}-${i}`} className="text-[#b8b8b8] text-lg flex items-start gap-3">
-                  <span className="size-2  rounded-full bg-[#D4956A] mt-2.5 flex-shrink-0" />
+                  <span className="size-2  rounded-full bg-[#B08D6E] mt-2.5 flex-shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}

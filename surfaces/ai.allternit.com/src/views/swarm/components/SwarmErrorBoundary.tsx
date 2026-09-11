@@ -49,7 +49,7 @@ export class SwarmErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      const modeColors = MODE_COLORS.code;
+      const modeColors = MODE_COLORS.design;
       
       return (
         <div 

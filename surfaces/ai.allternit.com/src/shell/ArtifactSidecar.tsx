@@ -110,7 +110,7 @@ function TabButton({ active, onClick, icon: Icon, title }: TabButtonProps): Reac
       title={title}
       className={cn(
         "p-[6px_10px] max-md:min-h-11 max-md:min-w-11 rounded-md border-none flex items-center justify-center cursor-pointer transition-all duration-200",
-        active ? "bg-[var(--bg-primary)] text-[var(--accent-chat)]" : "bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]"
+        active ? "bg-[var(--bg-primary)] text-[var(--accent-primary)]" : "bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]"
       )}
     >
       <Icon size={18} weight={active ? 'fill' : 'regular'} />

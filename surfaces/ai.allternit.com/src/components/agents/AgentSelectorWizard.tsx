@@ -15,7 +15,7 @@ import {
   Sparkle,
 } from '@phosphor-icons/react';
 
-import { MODE_COLORS, TEXT } from '@/design/allternit.tokens';
+import { MODE_COLORS, TEXT, type AgentMode } from '@/design/allternit.tokens';
 import { getTemplatesByCategory } from '@/lib/agents/agent-templates.specialist';
 import type { SpecialistTemplate, AgentCategory } from '@/lib/agents/agent-templates.specialist';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ interface AgentSelectorWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: (template: SpecialistTemplate, agentName: string) => void;
-  accentColor?: keyof typeof MODE_COLORS;
+  accentColor?: AgentMode; // deprecated: ignored — amber-only law (2026-09-11)
 }
 
 type WizardStep = 'category' | 'template' | 'review' | 'name';
@@ -67,14 +67,14 @@ function AgentSelectorWizard({
   isOpen,
   onClose,
   onComplete,
-  accentColor = 'chat',
+  accentColor = 'design',
 }: AgentSelectorWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('category');
   const [selectedCategory, setSelectedCategory] = useState<AgentCategory | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<SpecialistTemplate | null>(null);
   const [agentName, setAgentName] = useState('');
 
-  const theme = MODE_COLORS[accentColor];
+  const theme = MODE_COLORS.design;
 
   const handleNext = useCallback(() => {
     const currentIndex = STEPS.findIndex(s => s.id === currentStep);

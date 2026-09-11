@@ -212,7 +212,7 @@ export function AutomationDrawer({ automationEnabled, palette }: AutomationDrawe
         <div
           className={cn(
             "px-2 py-1 rounded-full text-[12px] font-bold",
-            automationEnabled ? "bg-[#79C47C]/20 text-[#79C47C]" : "bg-[var(--ui-border-muted)] text-[var(--text-secondary)]"
+            automationEnabled ? "bg-[var(--status-success-bg)] text-[var(--status-success)]" : "bg-[var(--ui-border-muted)] text-[var(--text-secondary)]"
           )}
         >
           {automationEnabled ? "Enabled" : "Disabled"}
@@ -427,7 +427,7 @@ function ScheduledJobsView({
 function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, onToggle }: any) {
   const isClient = useIsClient();
   const statusColors: any = {
-    active: "#79C47C",
+    active: "var(--status-success)",
     paused: "#fbbf24",
     failed: "#ef4444",
   };
@@ -627,7 +627,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
   }
 
   const statusColors: Record<string, string> = {
-    completed: "#79C47C",
+    completed: "var(--status-success)",
     failed: "#ef4444",
     running: "#3b82f6",
     cancelled: "#888",
@@ -718,7 +718,7 @@ function AutomationConfigView({ palette }: { palette: SurfacePalette }) {
           disabled={isRunning}
           className={cn(
             "flex-1 py-2 px-3 rounded-lg border border-solid text-[12px] font-semibold transition-all",
-            isRunning ? "bg-[var(--surface-hover)] border-[var(--ui-border-default)] text-[#666] cursor-not-allowed" : "bg-[#79C47C]/15 border-[#79C47C]/30 text-[#79C47C] cursor-pointer hover:bg-[#79C47C]/25"
+            isRunning ? "bg-[var(--surface-hover)] border-[var(--ui-border-default)] text-[#666] cursor-not-allowed" : "bg-[var(--status-success-bg)] border-[color-mix(in_srgb,var(--status-success)_30%,transparent)] text-[var(--status-success)] cursor-pointer hover:opacity-80"
           )}
         >
           {isRunning ? "Runner Active" : "Start Runner"}

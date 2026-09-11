@@ -829,7 +829,7 @@ export function CronJobWizard({
   onCancel,
   onGeneratePrompt,
   defaultPrompt = "",
-  accentColor = "#D4956A",
+  accentColor = "#B08D6E",
   initialConfig,
 }: CronJobWizardProps) {
   const [step, setStep] = useState<WizardStep>(initialConfig ? "configure" : "template");

@@ -358,7 +358,7 @@ export function ComposerPlusSheet({
                       type="button"
                       onClick={handleGitHubSubmit}
                       disabled={!githubUrl.trim()}
-                      className="text-xs font-semibold text-[var(--accent-chat)] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                      className="text-xs font-semibold text-[var(--accent-primary)] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                     >
                       Add
                     </button>
@@ -385,7 +385,7 @@ export function ComposerPlusSheet({
                         className={cn(
                           "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-colors",
                           selected
-                            ? "bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]"
+                            ? "bg-[color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-floating))] text-[var(--accent-primary)]"
                             : "text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
                         )}
                       >
@@ -409,7 +409,7 @@ export function ComposerPlusSheet({
                     className={cn(
                       "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-colors",
                       activeProjectId === null
-                        ? "bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]"
+                        ? "bg-[color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-floating))] text-[var(--accent-primary)]"
                         : "text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
                     )}
                   >
@@ -426,7 +426,7 @@ export function ComposerPlusSheet({
                         className={cn(
                           "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-colors",
                           selected
-                            ? "bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]"
+                            ? "bg-[color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-floating))] text-[var(--accent-primary)]"
                             : "text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
                         )}
                       >
@@ -562,7 +562,7 @@ function GridButton({
       className={cn(
         "group relative flex flex-col items-center gap-1.5 rounded-xl border p-2 text-center transition-all",
         active
-          ? "border-[var(--accent-chat)]/40 bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]"
+          ? "border-[var(--accent-primary)]/40 bg-[color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-floating))] text-[var(--accent-primary)]"
           : danger
           ? "border-transparent bg-[color-mix(in_srgb,var(--status-error)_10%,var(--surface-floating))] text-[var(--status-error)] hover:bg-[color-mix(in_srgb,var(--status-error)_16%,var(--surface-floating))]"
           : "border-transparent bg-[var(--bg-tertiary)]/30 text-[var(--text-primary)] hover:bg-[var(--surface-hover)]",
@@ -573,7 +573,7 @@ function GridButton({
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105",
           active
-            ? "bg-[color-mix(in_srgb,var(--accent-chat)_18%,var(--surface-floating))] text-[var(--accent-chat)]"
+            ? "bg-[color-mix(in_srgb,var(--accent-primary)_18%,var(--surface-floating))] text-[var(--accent-primary)]"
             : danger
             ? "bg-[color-mix(in_srgb,var(--status-error)_16%,var(--surface-floating))] text-[var(--status-error)]"
             : "bg-[var(--bg-tertiary)]/60 text-[var(--text-secondary)]"
@@ -583,7 +583,7 @@ function GridButton({
       </span>
       <span className="text-[10px] font-semibold leading-tight">{label}</span>
       {check && (
-        <span className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--accent-chat)] text-[var(--text-inverse)]">
+        <span className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[var(--text-inverse)]">
           <Check size={8} weight="bold" />
         </span>
       )}
@@ -637,7 +637,7 @@ function ToggleRow({
       onClick={onToggle}
       className="flex items-center gap-3 w-full py-1.5 text-left group"
     >
-      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-tertiary)]/60 text-[var(--accent-chat)] shrink-0">
+      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-tertiary)]/60 text-[var(--accent-primary)] shrink-0">
         {icon}
       </span>
       <div className="flex-1 min-w-0">
@@ -647,7 +647,7 @@ function ToggleRow({
       <div
         className={cn(
           "relative w-9 h-5 rounded-full transition-colors",
-          isOn ? "bg-[var(--accent-chat)]" : "bg-[var(--border-subtle)]"
+          isOn ? "bg-[var(--accent-primary)]" : "bg-[var(--border-subtle)]"
         )}
       >
         <span
@@ -680,7 +680,7 @@ function ListRow({
       onClick={onClick}
       className="flex items-center gap-3 w-full p-3 rounded-xl border border-[var(--border-subtle)]/60 bg-[var(--surface-floating)]/40 text-left hover:bg-[var(--surface-hover)] transition-colors"
     >
-      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-tertiary)]/60 text-[var(--accent-chat)] shrink-0">
+      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-tertiary)]/60 text-[var(--accent-primary)] shrink-0">
         {icon}
       </span>
       <div className="flex-1 min-w-0">

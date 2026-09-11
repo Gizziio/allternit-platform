@@ -44,10 +44,10 @@ interface ModeButton {
 }
 
 const MODE_BUTTONS: ModeButton[] = [
-  { id: 'chat', label: 'Home', icon: House, accent: 'var(--accent-chat)' },
+  { id: 'chat', label: 'Home', icon: House, accent: 'var(--accent-primary)' },
   { id: 'bot', label: 'Bots', icon: Robot, accent: 'var(--accent-bot)' },
-  { id: 'code', label: 'Code', icon: TerminalWindow, accent: 'var(--accent-code)' },
-  { id: 'browser', label: 'ACI', icon: Globe, accent: 'var(--accent-browser)' },
+  { id: 'code', label: 'Code', icon: TerminalWindow, accent: 'var(--accent-primary)' },
+  { id: 'browser', label: 'ACI', icon: Globe, accent: 'var(--accent-primary)' },
 ];
 
 export function RailControls({

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from "react";
 import { ArrowCounterClockwise, ArrowsIn, ArrowsOut, CaretDown, CaretUp, Check, CheckCircle, CircleNotch, Clock, Copy, FileText, GearSix, MagnifyingGlass, Terminal, Warning, Wrench, X, XCircle, Record } from "@phosphor-icons/react";
 import type { ToolCall } from "@/lib/agents";
 import { cn } from "@/lib/utils";
-import { MODE_COLORS } from "@/design/allternit.tokens";
+import { MODE_COLORS, type AgentMode } from "@/design/allternit.tokens";
 
 interface ToolCallVisualizationProps {
   toolCalls: ToolCall[];
@@ -86,8 +86,10 @@ function getToolMeta(toolName: string): ToolMeta {
   };
 }
 
-export function useToolCallAccent(mode: keyof typeof MODE_COLORS): string {
-  return MODE_COLORS[mode]?.accent ?? "#D4956A";
+// Amber-only law (2026-09-11): the mode argument no longer selects a color —
+// every surface resolves to the amber identity accent.
+export function useToolCallAccent(_mode: AgentMode): string {
+  return MODE_COLORS.design.accent;
 }
 
 export function ToolCallVisualization({
@@ -95,7 +97,7 @@ export function ToolCallVisualization({
   results = {},
   errors = {},
   isLoading = false,
-  accentColor = "#D4956A",
+  accentColor = "#B08D6E",
   onRetry,
   executionTimes = {},
 }: ToolCallVisualizationProps) {
@@ -189,7 +191,7 @@ function SingleToolCallView({
               ? `${accentColor}4d`
               : hasResult
                 ? isSuccess
-                  ? "rgba(121,196,124,0.2)"
+                  ? "var(--status-success-bg)"
                   : "rgba(239,68,68,0.2)"
                 : `${accentColor}33`,
           }}
@@ -198,7 +200,7 @@ function SingleToolCallView({
             <CircleNotch size={14} className="animate-spin" style={{ color: accentColor }} />
           ) : hasResult ? (
             isSuccess ? (
-              <CheckCircle size={14} className="text-[#79C47C]" />
+              <CheckCircle size={14} className="text-[var(--status-success)]" />
             ) : (
               <XCircle size={14} className="text-[#ef4444]" />
             )
@@ -227,7 +229,7 @@ function SingleToolCallView({
               <span className="flex items-center gap-1.5">
                 {isSuccess ? (
                   <>
-                    <Check size={10} className="text-[#79C47C]" />
+                    <Check size={10} className="text-[var(--status-success)]" />
                     Completed
                     {executionTime && (
                       <span className="text-[#7a6b5d]">· {formatExecutionTime(executionTime)}</span>
@@ -256,7 +258,7 @@ function SingleToolCallView({
               }}
               className={cn(
                 "p-1 px-2 rounded-md border-none text-[12px] cursor-pointer flex items-center gap-1 transition-colors",
-                copied ? "bg-[#79C47C]/20 text-[#79C47C]" : "bg-transparent text-[#7a6b5d] hover:bg-white/5"
+                copied ? "bg-[color-mix(in_srgb,var(--status-success)_20%,transparent)] text-[var(--status-success)]" : "bg-transparent text-[#7a6b5d] hover:bg-white/5"
               )}
               title="Copy result"
             >
@@ -296,7 +298,7 @@ function SingleToolCallView({
           {hasResult && (
             <div className="mt-3">
               <SectionHeader 
-                accentColor={isSuccess ? "#79C47C" : "#ef4444"} 
+                accentColor={isSuccess ? "var(--status-success)" : "var(--status-error)"} 
                 title={isSuccess ? "Result" : "Error"}
                 isError={!isSuccess}
               />
@@ -377,7 +379,7 @@ function ResultViewer({ result }: { result: unknown }) {
       return <CodeBlock content={result} maxHeight={200} />;
     }
     return (
-      <div className="p-2.5 rounded-lg bg-[#79C47C]/10 border border-solid border-[#79C47C]/20 text-[12px] text-[#d1c3b4] leading-relaxed">
+      <div className="p-2.5 rounded-lg bg-[color-mix(in_srgb,var(--status-success)_10%,transparent)] border border-solid border-[color-mix(in_srgb,var(--status-success)_20%,transparent)] text-[12px] text-[#d1c3b4] leading-relaxed">
         {result}
       </div>
     );
@@ -387,14 +389,14 @@ function ResultViewer({ result }: { result: unknown }) {
     return (
       <div className={cn(
         "flex items-center gap-2 p-2.5 rounded-lg",
-        result ? "bg-[#79C47C]/10" : "bg-red-500/10"
+        result ? "bg-[color-mix(in_srgb,var(--status-success)_10%,transparent)]" : "bg-red-500/10"
       )}>
         {result ? (
-          <CheckCircle size={16} className="text-[#79C47C]" />
+          <CheckCircle size={16} className="text-[var(--status-success)]" />
         ) : (
           <XCircle size={16} className="text-[#ef4444]" />
         )}
-        <span className={cn("font-bold text-[13px]", result ? "text-[#79C47C]" : "text-[#ef4444]")}>
+        <span className={cn("font-bold text-[13px]", result ? "text-[var(--status-success)]" : "text-[#ef4444]")}>
           {result ? "True" : "False"}
         </span>
       </div>
@@ -458,11 +460,11 @@ function ResultViewer({ result }: { result: unknown }) {
 // Helper hook to get surface accent color
 export function getToolCallAccent(surface: "chat" | "cowork" | "bot" | "code" | "browser" | "design"): string {
   const colors = {
-    chat: "#D4956A",
-    cowork: "#A78BFA",
+    chat: "#B08D6E",
+    cowork: "#B08D6E",
     bot: "#2DD4BF",
-    code: "#79C47C",
-    browser: "#69A8C8",
+    code: "#B08D6E",
+    browser: "#B08D6E",
     design: "#D4B08C",
   };
   return colors[surface];

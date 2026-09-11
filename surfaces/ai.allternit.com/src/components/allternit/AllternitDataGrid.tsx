@@ -197,7 +197,7 @@ export function AllternitDataGrid({
               {rowCount} rows × {columns.length} columns
             </span>
             {selectedRows > 0 && (
-              <span className="text-xs text-[#D4956A]">
+              <span className="text-xs text-[#B08D6E]">
                 {selectedRows} selected
               </span>
             )}
@@ -211,7 +211,7 @@ export function AllternitDataGrid({
               onClick={() => setFilterEnabled(!filterEnabled)}
               className={cn(
                 "h-7 text-[#888] hover:text-[#ECECEC]",
-                filterEnabled && "text-[#D4956A] bg-[#D4956A]/10"
+                filterEnabled && "text-[#B08D6E] bg-[#B08D6E]/10"
               )}
             >
               <Funnel size={16} />
@@ -299,13 +299,13 @@ export function AllternitDataGrid({
           <span>{rowCount} rows</span>
           <span>{columns.length} columns</span>
           {selectedRows > 0 && (
-            <span className="text-[#D4956A]">{selectedRows} selected</span>
+            <span className="text-[#B08D6E]">{selectedRows} selected</span>
           )}
         </div>
         
         <div className="flex items-center gap-2">
           {filterEnabled && (
-            <span className="text-[#D4956A]">Filters active</span>
+            <span className="text-[#B08D6E]">Filters active</span>
           )}
           {readOnly && (
             <span className="text-[#666]">Read-only</span>
