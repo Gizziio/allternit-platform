@@ -81,6 +81,7 @@ pub mod computer_audit;
 pub mod computer_ws;
 pub mod vnc_auth;
 pub mod vnc_readonly;
+pub mod wallet;
 pub mod computer_embed;
 pub mod desktop_template_build;
 pub mod template_catalog;

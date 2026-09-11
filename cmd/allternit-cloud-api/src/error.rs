@@ -40,6 +40,10 @@ pub enum ApiError {
     #[error("Forbidden: {0}")]
     Forbidden(String),
 
+    /// Payment required — e.g. a credits transfer the wallet cannot cover.
+    #[error("Payment required: {0}")]
+    PaymentRequired(String),
+
     #[error("Token expired: {0}")]
     TokenExpired(String),
 
@@ -126,6 +130,11 @@ impl IntoResponse for ApiError {
                 "Unauthorized".to_string(),
             ),
             ApiError::Forbidden(msg) => (StatusCode::FORBIDDEN, "FORBIDDEN", msg.clone()),
+            ApiError::PaymentRequired(msg) => (
+                StatusCode::PAYMENT_REQUIRED,
+                "PAYMENT_REQUIRED",
+                msg.clone(),
+            ),
             ApiError::TokenExpired(_) => (
                 StatusCode::UNAUTHORIZED,
                 "TOKEN_EXPIRED",
