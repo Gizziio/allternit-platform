@@ -1269,11 +1269,26 @@ export class DesktopAuthManager {
         : message.body_encoding === 'base64'
           ? Buffer.from(message.body, 'base64')
           : Buffer.from(message.body, 'utf8');
-      // Fabric Desktop: live capture is phone-remote on loopback, not allternit-api.
-      const desktopPrefix = '/v1/remote-control/desktop';
-      const localUrl = requestPath.startsWith(desktopPrefix)
-        ? `http://127.0.0.1:8477${requestPath.slice(desktopPrefix.length) || '/'}`
-        : `${URLS.API}${requestPath}`;
+
+      if (requestPath === '/api/v1/fabric/leases' && method === 'POST') {
+        const payload = JSON.parse(body?.toString('utf8') || '{}') as { capabilityId?: string; grantee?: string; ttlSeconds?: number };
+        this.sendRelayJson(socket, requestId, 200, {
+          capabilityId: payload.capabilityId ?? 'harness.session',
+          grantee: payload.grantee ?? 'web-client',
+          ttlSeconds: payload.ttlSeconds ?? 300,
+          signature: 'desktop-local',
+          issuedAt: new Date().toISOString(),
+        });
+        return;
+      }
+      if (requestPath === '/api/v1/session-worker/invoke' && method === 'POST') {
+        const payload = JSON.parse(body?.toString('utf8') || '{}') as { capability?: string; inputs?: Record<string, unknown> };
+        const result = await this.invokeNodeHarness(payload.capability || '', payload.inputs || {});
+        this.sendRelayJson(socket, requestId, 200, { result });
+        return;
+      }
+
+      const localUrl = this.relayLocalUrl(requestPath);
       const response = await fetch(localUrl, { method, headers, body });
       const responseHeaders: Record<string, string> = {};
       for (const name of ['content-type', 'cache-control', 'content-disposition', 'etag', 'last-modified', 'x-request-id']) {
@@ -1316,6 +1331,103 @@ export class DesktopAuthManager {
         body_encoding: 'base64',
       }));
       socket.send(JSON.stringify({ type: 'response_end', request_id: requestId }));
+    }
+  }
+
+  private sendRelayJson(socket: any, requestId: string, status: number, payload: unknown): void {
+    const body = Buffer.from(JSON.stringify(payload));
+    socket.send(JSON.stringify({
+      type: 'response_start',
+      request_id: requestId,
+      status,
+      headers: { 'content-type': 'application/json' },
+    }));
+    socket.send(JSON.stringify({
+      type: 'response_chunk',
+      request_id: requestId,
+      body: body.toString('base64'),
+      body_encoding: 'base64',
+    }));
+    socket.send(JSON.stringify({ type: 'response_end', request_id: requestId }));
+  }
+
+  private relayLocalUrl(requestPath: string): string {
+    const desktopPrefix = '/v1/remote-control/desktop';
+    if (requestPath.startsWith(desktopPrefix)) {
+      return `${'http://127.0.0.1:8477'}${requestPath.slice(desktopPrefix.length) || '/'}`;
+    }
+    if (requestPath.startsWith('/api/v1/remote-control/')) {
+      return `${URLS.GIZZI}${requestPath.replace('/api/v1/remote-control/', '/v1/remote-control/')}`;
+    }
+    if (requestPath.startsWith('/v1/remote-control/')) return `${URLS.GIZZI}${requestPath}`;
+    if (requestPath.startsWith('/api/v1/providers')) return `${URLS.GIZZI}/v1/provider`;
+    if (requestPath.startsWith('/api/v1/agents')) return `${URLS.GIZZI}/v1/agent/list`;
+    if (
+      requestPath.startsWith('/v1/provider')
+      || requestPath.startsWith('/v1/agent')
+      || requestPath.startsWith('/v1/permission')
+      || requestPath.startsWith('/v1/question')
+      || requestPath === '/v1/session'
+      || requestPath.startsWith('/v1/session/')
+    ) {
+      return `${URLS.GIZZI}${requestPath}`;
+    }
+    return `${URLS.API}${requestPath}`;
+  }
+
+  private async invokeNodeHarness(capability: string, inputs: Record<string, unknown>): Promise<unknown> {
+    const gizzi = URLS.GIZZI;
+    const sessionId = typeof inputs.sessionID === 'string' ? inputs.sessionID : '';
+    const getJson = async (path: string, init?: RequestInit) => {
+      const res = await fetch(`${gizzi}${path}`, init);
+      const text = await res.text();
+      if (!res.ok) throw new Error(`${res.status} ${path}: ${text.slice(0, 240)}`);
+      return text ? JSON.parse(text) : null;
+    };
+    switch (capability) {
+      case 'harness.session':
+        return getJson('/v1/remote-control/sessions');
+      case 'harness.session.get':
+        return getJson(`/v1/remote-control/sessions/${encodeURIComponent(sessionId)}`);
+      case 'harness.session.message':
+        return getJson(`/v1/remote-control/sessions/${encodeURIComponent(sessionId)}/messages`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            text: inputs.text,
+            attachments: inputs.attachments,
+            agent: inputs.agent,
+            model: inputs.model,
+          }),
+        });
+      case 'harness.session.abort':
+        return getJson(`/v1/remote-control/sessions/${encodeURIComponent(sessionId)}/abort`, { method: 'POST' });
+      case 'harness.session.create':
+        return getJson('/v1/session', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(inputs),
+        });
+      case 'harness.session.permissions.list':
+        return getJson('/v1/permission');
+      case 'harness.session.questions.list':
+        return getJson('/v1/question');
+      case 'harness.session.permissions.reply':
+        return getJson(`/v1/permission/${encodeURIComponent(String(inputs.requestID))}/reply`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ reply: inputs.reply, message: inputs.message }),
+        });
+      case 'harness.session.questions.reply':
+        return getJson(`/v1/question/${encodeURIComponent(String(inputs.requestID))}/reply`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ answers: inputs.answers }),
+        });
+      case 'harness.session.questions.reject':
+        return getJson(`/v1/question/${encodeURIComponent(String(inputs.requestID))}/reject`, { method: 'POST' });
+      default:
+        throw new Error(`unsupported harness capability ${capability}`);
     }
   }
 
