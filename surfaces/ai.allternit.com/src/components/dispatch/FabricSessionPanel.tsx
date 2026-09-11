@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow, SidebarSimple } from '@phosphor-icons/react';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow } from '@phosphor-icons/react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type { RuntimeViewModel } from '@/components/dispatch/useRuntimes';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,10 @@ export interface FabricSessionPanelProps {
   /** Controlled ACI watch flag. Default (uncontrolled) is off. */
   watching?: boolean;
   onToggleWatch?: () => void;
+  driveKind?: FabricDriveKind;
+  onDriveKindChange?: (kind: FabricDriveKind) => void;
+  railCollapsed?: boolean;
+  onToggleRail?: () => void;
 }
 
 export function FabricSessionPanel({
@@ -42,6 +46,10 @@ export function FabricSessionPanel({
   runtime,
   watching: watchingProp,
   onToggleWatch,
+  driveKind: driveKindProp,
+  onDriveKindChange,
+  railCollapsed: railCollapsedProp,
+  onToggleRail,
 }: FabricSessionPanelProps) {
   const { addToast } = useToast();
   const fabricClient = useMemo(
@@ -54,11 +62,13 @@ export function FabricSessionPanel({
   );
 
   const [sessions, setSessions] = useState<FabricSessionWithStatus[]>([]);
-  const [driveKind, setDriveKind] = useState<FabricDriveKind>('chat');
+  const [driveKindState, setDriveKindState] = useState<FabricDriveKind>('chat');
+  const driveKind = driveKindProp ?? driveKindState;
+  const setDriveKind = onDriveKindChange ?? setDriveKindState;
   const [codePane, setCodePane] = useState<'terminal' | 'chat'>('terminal');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [railCollapsed, setRailCollapsed] = useState(() => {
+  const [railCollapsedState, setRailCollapsedState] = useState(() => {
     if (typeof window === 'undefined') return false;
     if (window.matchMedia('(max-width: 768px)').matches) return true;
     try {
@@ -67,8 +77,9 @@ export function FabricSessionPanel({
       return false;
     }
   });
-  const toggleRail = useCallback(() => {
-    setRailCollapsed((current) => {
+  const railCollapsed = railCollapsedProp ?? railCollapsedState;
+  const toggleRail = onToggleRail ?? (() => {
+    setRailCollapsedState((current) => {
       const next = !current;
       if (typeof window !== 'undefined' && !window.matchMedia('(max-width: 768px)').matches) {
         try {
@@ -79,13 +90,14 @@ export function FabricSessionPanel({
       }
       return next;
     });
-  }, []);
+  });
   const pickSession = useCallback((id: string | null) => {
     setSelectedSessionId(id);
     if (id && typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
-      setRailCollapsed(true);
+      if (onToggleRail && !railCollapsed) onToggleRail();
+      else setRailCollapsedState(true);
     }
-  }, []);
+  }, [onToggleRail, railCollapsed]);
   const [detail, setDetail] = useState<FabricSessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -493,16 +505,7 @@ export function FabricSessionPanel({
         )}
       >
         <div className="px-3 pt-3 pb-2 shrink-0">
-          <div className="flex items-center gap-1 mb-2">
-            <button
-              type="button"
-              title="Collapse sidebar"
-              onClick={toggleRail}
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer"
-            >
-              <SidebarSimple size={18} weight="bold" />
-            </button>
-            <div className="flex flex-1 p-0.5 bg-[var(--surface-hover)] rounded-xl gap-0.5 border border-solid border-[var(--border-subtle)]">
+          <div className="flex p-0.5 bg-[var(--surface-hover)] rounded-xl gap-0.5 border border-solid border-[var(--border-subtle)]">
             {sessionTabs.map((tab) => {
               const active = driveKind === tab.id;
               return (
@@ -523,7 +526,6 @@ export function FabricSessionPanel({
                 </button>
               );
             })}
-          </div>
           </div>
           <div className="flex items-center justify-between mt-3 px-1">
             <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--shell-item-muted)]">
@@ -663,40 +665,6 @@ export function FabricSessionPanel({
       ) : null}
 
       <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-[var(--shell-view-bg)]">
-        {railCollapsed ? (
-          <div className="flex h-11 shrink-0 items-center gap-0.5 px-2 border-b border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]">
-            <button
-              type="button"
-              title="Expand sidebar"
-              onClick={toggleRail}
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer"
-            >
-              <SidebarSimple size={18} weight="bold" />
-            </button>
-            {sessionTabs.map((tab) => {
-              const active = driveKind === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  title={tab.hint}
-                  onClick={() => {
-                    setDriveKind(tab.id);
-                    setSelectedSessionId(null);
-                    setRailCollapsed(false);
-                  }}
-                  className={cn(
-                    'flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border-none cursor-pointer sm:min-h-8 sm:min-w-8 sm:flex-none sm:flex-row sm:px-2',
-                    active ? 'bg-[var(--accent-primary)] text-[var(--bg-primary)]' : 'bg-transparent text-[var(--shell-item-muted)]',
-                  )}
-                >
-                  <FabricKindIcon kind={tab.id} size={16} />
-                  <span className="text-[10px] font-semibold leading-none sm:sr-only">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
         {!selectedSession ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">

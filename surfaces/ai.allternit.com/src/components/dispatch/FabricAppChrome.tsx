@@ -93,11 +93,13 @@ export function FabricAppHeader({
   title,
   onBack,
   backLabel = 'Home',
+  leading,
   children,
 }: {
   title?: string;
   onBack?: () => void;
   backLabel?: string;
+  leading?: React.ReactNode;
   children?: React.ReactNode;
 }): React.ReactNode {
   return (
@@ -114,6 +116,7 @@ export function FabricAppHeader({
             <span className="hidden sm:inline">{backLabel}</span>
           </button>
         ) : null}
+        {leading}
         {title ? (
           <span className="text-[14px] sm:text-[15px] font-medium tracking-tight truncate" style={{ fontFamily: 'var(--font-ui)' }}>
             {title}

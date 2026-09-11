@@ -26,6 +26,8 @@ import { useToast } from "@/hooks/use-toast";
 import { MachinesPanel } from "@/components/dispatch/MachinesPanel";
 import { FabricOperatorKeys } from "@/components/dispatch/FabricOperatorKeys";
 import { FabricSessionPanel } from "@/components/dispatch/FabricSessionPanel";
+import { FabricSessionRailControls } from "@/components/dispatch/FabricSessionRailControls";
+import type { FabricDriveKind } from "@/lib/fabric-session-kind";
 import { useRuntimes, type RuntimeViewModel } from "@/components/dispatch/useRuntimes";
 import { useRuntimeSelection } from "@/components/dispatch/useRuntimeSelection";
 import { useFabricPendingCounts } from "@/components/dispatch/useFabricPendingCounts";
@@ -173,10 +175,35 @@ export function DashboardPage({
     return Boolean(new URLSearchParams(window.location.search).get("runtime"));
   });
   const [desktopOpen, setDesktopOpen] = React.useState(false);
+  const [driveKind, setDriveKind] = React.useState<FabricDriveKind>("chat");
+  const [railCollapsed, setRailCollapsed] = React.useState(() => {
+    if (typeof window === "undefined") return false;
+    if (window.matchMedia("(max-width: 768px)").matches) return true;
+    try {
+      return window.localStorage.getItem("fabric-session:rail-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const toggleRail = useCallback(() => {
+    setRailCollapsed((current) => {
+      const next = !current;
+      if (typeof window !== "undefined" && !window.matchMedia("(max-width: 768px)").matches) {
+        try {
+          window.localStorage.setItem("fabric-session:rail-collapsed", String(next));
+        } catch {
+          /* ignore */
+        }
+      }
+      return next;
+    });
+  }, []);
 
   const openSession = useCallback(
     (id: string) => {
       setDesktopOpen(false);
+      setDriveKind("chat");
+      setRailCollapsed(typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches);
       setSelectedId(id);
       setSessionOpen(true);
     },
@@ -411,7 +438,18 @@ export function DashboardPage({
     }
     return (
       <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
-        <FabricAppHeader title={selected.name} onBack={closeSession}>
+        <FabricAppHeader
+          title={selected.name}
+          onBack={closeSession}
+          leading={(
+            <FabricSessionRailControls
+              railCollapsed={railCollapsed}
+              driveKind={driveKind}
+              onToggleRail={toggleRail}
+              onDriveKindChange={setDriveKind}
+            />
+          )}
+        >
           {headerActions}
         </FabricAppHeader>
         <main className="flex-1 min-h-0">
@@ -421,6 +459,10 @@ export function DashboardPage({
             getToken={auth.getToken}
             watching={watching}
             onToggleWatch={onToggleWatch}
+            driveKind={driveKind}
+            onDriveKindChange={setDriveKind}
+            railCollapsed={railCollapsed}
+            onToggleRail={toggleRail}
           />
         </main>
       </div>
