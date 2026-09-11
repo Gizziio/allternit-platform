@@ -19,12 +19,12 @@ use tokio_stream::StreamExt as _;
 
 use crate::drivers::DriverKind;
 use crate::protocol::{
-    CreateResponseRequest, Discovery, ErrorEnvelope, Harness, HarnessList, HarnessModels,
-    HarnessUpsert, Response as UhpResponse, ResponseMetadata, ResponseStatus, SessionList,
-    StreamEvent, TurnList, PROTOCOL_VERSION,
+    self, CreateResponseRequest, Discovery, ErrorEnvelope, Harness, HarnessList, HarnessModels,
+    HarnessUpsert, SessionShare, SessionList, SkillFiles, Response as UhpResponse,
+    ResponseMetadata, ResponseStatus, StreamEvent, TurnList, PROTOCOL_VERSION,
 };
 use crate::turn::{TurnContext, TurnControl, DEFAULT_TURN_TIMEOUT};
-use crate::{model_catalog, protocol, resolve_model, AppState, DeleteAck};
+use crate::{model_catalog, resolve_model, AppState, DeleteAck};
 
 pub fn router(state: Arc<AppState>) -> Router {
     let api = Router::new()
@@ -34,16 +34,27 @@ pub fn router(state: Arc<AppState>) -> Router {
             get(get_harness).put(update_harness).delete(delete_harness),
         )
         .route("/v1/harnesses/:id/models", get(harness_models))
+        .route(
+            "/v1/harnesses/:id/skills/:name/files",
+            get(get_skill_files),
+        )
         .route("/v1/models", get(models_catalog))
         .route("/v1/responses", post(create_response))
         .route("/v1/responses/:id", get(get_response))
         .route("/v1/responses/:id/cancel", post(cancel_response))
         .route("/v1/sessions", get(list_sessions))
-        .route("/v1/sessions/:id", get(get_session))
+        .route("/v1/sessions/:id", get(get_session).delete(delete_session))
         .route("/v1/sessions/:id/turns", get(list_turns))
+        .route("/v1/sessions/:id/files", get(list_session_files))
+        .route(
+            "/v1/sessions/:id/share",
+            post(create_share).get(get_share).delete(revoke_share),
+        )
+        .route("/v1/traces/:id", axum::routing::delete(delete_session))
         .route_layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
     Router::new()
         .route("/v1/uhp", get(discovery))
+        .route("/v1/shares/:id", get(shared_view))
         .merge(api)
         .layer(middleware::from_fn(uhp_version_middleware))
         .with_state(state)
@@ -119,7 +130,20 @@ async fn discovery() -> Response {
 
 // ── harnesses ────────────────────────────────────────────────────────────────
 
-const KNOWN_BASES: [&str; 3] = ["kimi", "claude-code", "codex"];
+const KNOWN_BASES: [&str; 12] = [
+    "kimi",
+    "kimi-code",
+    "claude",
+    "claude-code",
+    "codex",
+    "gemini",
+    "qwen",
+    "opencode",
+    "cline",
+    "pi",
+    "dsh",
+    "deepseek",
+];
 
 async fn list_harnesses(State(state): State<Arc<AppState>>) -> Response {
     match state.store.list_harnesses().await {
@@ -139,7 +163,7 @@ async fn create_harness(
     let Some(base) = body.base.clone() else {
         return invalid_request("missing required field: base", Some("base"));
     };
-    if !KNOWN_BASES.contains(&base.as_str()) {
+    if DriverKind::from_base(&base).is_none() {
         let mut envelope = ErrorEnvelope::new(
             "invalid_request_error",
             "unsupported_base",
@@ -148,6 +172,13 @@ async fn create_harness(
         );
         envelope.error.param = Some("base".into());
         return error_response(StatusCode::UNPROCESSABLE_ENTITY, envelope);
+    }
+    let extra = protocol::normalize_harness_extra(body.extra.clone());
+    if let Err(message) = protocol::validate_skills(&extra) {
+        return error_response(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            ErrorEnvelope::new("invalid_request_error", "invalid_skill", message, None),
+        );
     }
     let id = body
         .id
@@ -168,7 +199,7 @@ async fn create_harness(
         base_label: None,
         default_model: body.default_model.clone(),
         created_at: Some(protocol::now_unix()),
-        extra: body.extra.clone(),
+        extra,
     };
     if let Err(err) = state.store.create_harness(&harness).await {
         return internal_error(&format!("database error: {err}"));
@@ -209,7 +240,13 @@ async fn update_harness(
         }
     }
     let mut extra = existing.extra.clone();
-    extra.extend(body.extra.clone());
+    extra.extend(protocol::normalize_harness_extra(body.extra.clone()));
+    if let Err(message) = protocol::validate_skills(&extra) {
+        return error_response(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            ErrorEnvelope::new("invalid_request_error", "invalid_skill", message, None),
+        );
+    }
     let harness = Harness {
         id: id.clone(),
         object: Some("harness".into()),
@@ -514,6 +551,14 @@ async fn get_session(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     }
 }
 
+async fn list_session_files(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    match state.store.get_session(&id).await {
+        Ok(Some(_)) => Json(serde_json::json!({ "files": [] })).into_response(),
+        Ok(None) => not_found("session_not_found", "no session with this id"),
+        Err(err) => internal_error(&format!("database error: {err}")),
+    }
+}
+
 async fn list_turns(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     match state.store.get_session(&id).await {
         Ok(Some(_)) => {}
@@ -524,6 +569,105 @@ async fn list_turns(State(state): State<Arc<AppState>>, Path(id): Path<String>) 
         Ok(turns) => Json(TurnList { turns }).into_response(),
         Err(err) => internal_error(&format!("database error: {err}")),
     }
+}
+
+async fn delete_session(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    match state.store.delete_session(&id).await {
+        Ok(true) => Json(DeleteAck {
+            id,
+            object: "session".into(),
+            deleted: true,
+        })
+        .into_response(),
+        Ok(false) => not_found("session_not_found", "no session with this id"),
+        Err(err) => internal_error(&format!("database error: {err}")),
+    }
+}
+
+async fn get_skill_files(
+    State(state): State<Arc<AppState>>,
+    Path((id, name)): Path<(String, String)>,
+) -> Response {
+    let Ok(Some(harness)) = state.store.get_harness(&id).await else {
+        return not_found("harness_not_found", "no harness with this id");
+    };
+    match protocol::skill_files(&harness.extra, &name) {
+        Some(files) => Json(SkillFiles { files }).into_response(),
+        None => not_found("skill_not_found", "no skill with this name on the harness"),
+    }
+}
+
+fn share_body(id: &str, session_id: &str) -> SessionShare {
+    SessionShare {
+        id: id.to_string(),
+        url: format!("/v1/shares/{id}"),
+        object: "session.share".into(),
+        session_id: Some(session_id.to_string()),
+        enabled: Some(true),
+    }
+}
+
+async fn create_share(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    match state.store.get_session(&id).await {
+        Ok(Some(_)) => {}
+        Ok(None) => return not_found("session_not_found", "no session with this id"),
+        Err(err) => return internal_error(&format!("database error: {err}")),
+    }
+    let share_id = protocol::share_id();
+    if let Err(err) = state.store.insert_share(&share_id, &id).await {
+        return internal_error(&format!("database error: {err}"));
+    }
+    Json(share_body(&share_id, &id)).into_response()
+}
+
+async fn get_share(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    match state.store.latest_share(&id).await {
+        Ok(Some((share_id, session_id))) => Json(share_body(&share_id, &session_id)).into_response(),
+        Ok(None) => not_found("share_not_found", "this session has no published share"),
+        Err(err) => internal_error(&format!("database error: {err}")),
+    }
+}
+
+async fn revoke_share(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    match state.store.get_session(&id).await {
+        Ok(Some(_)) => {}
+        Ok(None) => return not_found("session_not_found", "no session with this id"),
+        Err(err) => return internal_error(&format!("database error: {err}")),
+    }
+    match state.store.revoke_shares_for_session(&id).await {
+        Ok(_) => Json(DeleteAck {
+            id,
+            object: "session.share".into(),
+            deleted: true,
+        })
+        .into_response(),
+        Err(err) => internal_error(&format!("database error: {err}")),
+    }
+}
+
+/// Unauthenticated read-only view (R-01). Writes on this path are unrouted
+/// (404/405), which is what R-04 requires.
+async fn shared_view(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    let Ok(Some((share_id, session_id))) = state.store.get_share(&id).await else {
+        return not_found("not_found", "no such share");
+    };
+    let Ok(Some(row)) = state.store.get_session(&session_id).await else {
+        return not_found("not_found", "no such share");
+    };
+    Json(serde_json::json!({
+        "object": "session.shared",
+        "id": share_id,
+        "session": {
+            "id": row.id,
+            "object": "session",
+            "harness_id": row.harness_id,
+            "title": row.title,
+            "status": row.status,
+            "created_at": row.created_at,
+            "updated_at": row.updated_at,
+        }
+    }))
+    .into_response()
 }
 
 // ── error helpers ────────────────────────────────────────────────────────────
