@@ -204,7 +204,7 @@ export async function convertUrlToMarkdown(rawUrl: string): Promise<UrlConversio
   let article: { title?: string | null; content?: string | null } | null
   try {
     const { document } = parseHTML(html)
-    article = new Readability(document as unknown as Document).parse()
+    article = new Readability(document as unknown as ConstructorParameters<typeof Readability>[0]).parse()
   } catch (err) {
     throw new MarkdownConversionError('malformed', `HTML extraction failed: ${(err as Error).message}`)
   }
