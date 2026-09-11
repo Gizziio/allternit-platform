@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:26 — grok — bot-mode live e2e (web/PWA) + gizzi 2.0.8
+
+- **Session ID / Branch:** `session/botmode-group-e2e-0910` (worktree `allternit-session-botmode-clerk-0910`; pickup of Kimi `session_6f5d4729`)
+- **Agent:** grok
+- **Summary:** Merged PR #288 (3d0459f2f) — live web/PWA bot-mode e2e green; group replies via local `kimi-cli/kimi-k3`; packaged gizzi 2.0.8 includes `gizzi bot`.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/288 · 3d0459f2fb2284ac47721d5dacc752cc1f979708
+- **How it works:** Catalog `allternit/<model>` is not a gizzi provider. Agent-chat runtime model maps onto the local CLI brain. Vite `/api/agent-chat` goes through allternit-api (Clerk proxy issuer). Production build aliases `@allternit/gizzi-sdk`.
+- **Outstanding work:** Desktop-UI e2e + full desktop rebuild; `gizzi-code/v2.0.8` GitHub release + homebrew-tap bump.
+- **Summary file:** [2026-09-10-2126-botmode-group-e2e-0910-grok-bot-mode-live-e2e.md](./summaries/2026-09-10-2126-botmode-group-e2e-0910-grok-bot-mode-live-e2e.md)
+
 ### 2026-09-10 21:24 — grok — harness install channels; fold agy/antigravity (rq-20260908-028)
 
 - **Session ID / Branch:** `ao/harness-install-channels` (worktree `allternit-harness-install-fix`)
