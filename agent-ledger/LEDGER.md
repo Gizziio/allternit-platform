@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-11 08:51 — kimi — cream-squircle A mark across AI product surfaces
+
+- **Session ID / Branch:** `session/logo0911`
+- **Agent:** kimi-code
+- **Summary:** Merged PR #320 (4a5c96218) — every AI-product web surface now uses the icon-candidates-v7 cream-squircle A as favicon/PWA/app icon + ai.allternit.com header mark; dead remote-control web surface retired; fabrictransport manually redeployed with the new-icon Fabric Session PWA.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/320 · 4a5c96218 (branch tip 8d188c02c)
+- **How it works:** Pillow-generated asset set from the 1024×1024 master (opaque variants flattened on `#fdf8f3`); all `favicon.svg` files deleted and references moved to `favicon.png`; `AProtocolWordmark` renders `/brand/a-only-cream-squircle.png` + unchanged pixel-letter TERNIT; fabric-session SW CACHE_NAME now v30; `build/icon.{png,icns,ico}` regenerated. Live verified byte-identical on ai / platform (console) / office; fabrictransport serves the new PWA (SW v30).
+- **Outstanding work:** Desktop DMG rebuild follows this attestation. Deferred per Eoj: docs.allternit.com (different icon later), phone-remote deploy (not Pages-hosted), other device-class splashes.
+- **Summary file:** [2026-09-11-0851-logo0911-kimi-code-icon-swap.md](./summaries/2026-09-11-0851-logo0911-kimi-code-icon-swap.md)
+
 ### 2026-09-11 — grok — Agents Console on Cloud Console (rq-20260911-001)
 
 - **Branch:** `ao/allternit-agents-surfaces`
