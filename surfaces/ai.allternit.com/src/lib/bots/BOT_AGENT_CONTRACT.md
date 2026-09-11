@@ -97,6 +97,8 @@ interface Agent {
   agentCard?: AgentCard;        // A2A/discovery metadata
   isBot?: boolean;              // packaging flag
   botProfile?: BotProfile;      // present when isBot === true
+  brainId?: string;             // Gizzi knowledge brain from /api/v1/brains — not the execution bind
+  brain?: BotBrainBinding;      // BA-3 execution brain (native_harness | allternit_cloud | uhp_harness)
 
   // Autonomous bot primitives (see agent.types.ts)
   connectorBindings?: AgentConnectorBinding[];
@@ -139,6 +141,9 @@ type Bot = Agent & {
 3. `agent.name` remains the unique system handle (used for IDs, sessions, A2A, and `@` mentions if no separate handle is introduced).
 4. `botProfile.displayName` is the human-readable label shown in the Bots hub, session header, and cards.
 5. A bot may be filtered/searched by `displayName`, `tagline`, `description`, and `tags`.
+6. `brain` is the Bot Agents execution bind: `{ mode: 'native_harness' | 'allternit_cloud' | 'uhp_harness', harness?, nativeSessionId?, uhpHarnessId?, modelRef? }`. Starting a bot with `native_harness` resumes or creates that harness session and never silently switches to another brain.
+7. `brainId` is a Gizzi knowledge brain from `/api/v1/brains`. It is not `brain`. Do not store `nativeSessionId` in `brainId`.
+8. Join key: `brain.nativeSessionId` ↔ native catalog session / `AgentInfo.agent_session`. When a CommRails pane id matches `nativeSessionId`, it is the same row.
 
 ## UX contract
 

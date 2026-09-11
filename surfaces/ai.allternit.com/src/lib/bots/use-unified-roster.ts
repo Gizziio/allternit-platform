@@ -13,6 +13,7 @@ import { useMemo } from 'react';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { useAgentsWithSwarms } from '@/lib/agents';
 import { isBot, getBotDisplayName } from './bot-profile';
+import { botBrainLabel, resolveAgentBrain } from './bot-brain';
 import { useStackProviders } from './use-stack-providers';
 import type { Agent } from '@/lib/agents/agent.types';
 import type { StackedAgent } from './stacked-agent.service';
@@ -42,6 +43,8 @@ export interface UnifiedRosterBot {
   stacked?: StackedAgent;
   /** ISO timestamp of last update. */
   updatedAt: string;
+  /** BA-3 execution-brain chip (not Gizzi brainId). */
+  brainLabel?: string;
 }
 
 function toUnifiedBot(agent: Agent, source: RosterBotSource, stacked?: StackedAgent): UnifiedRosterBot {
@@ -61,6 +64,7 @@ function toUnifiedBot(agent: Agent, source: RosterBotSource, stacked?: StackedAg
     agent,
     stacked,
     updatedAt: agent.updatedAt,
+    brainLabel: botBrainLabel(resolveAgentBrain(agent)),
   };
 }
 

@@ -10,6 +10,7 @@ import type {
   CharacterLayerConfig,
   CreateAgentInput,
 } from "@/lib/agents/agent.types";
+import { normalizeBotBrain } from "@/lib/bots/bot-brain";
 import {
   validateAgentCreationChecklist,
   type ChecklistResult,
@@ -170,9 +171,21 @@ export function buildCreateBotPayload({ formData, avatar }: BuildPayloadArgs): C
       accentColor,
     } as CreateAgentInput["botProfile"],
     brainId: formData.brainId || undefined,
+    brain: normalizeBotBrain(
+      formData.brain,
+      formData.provider && formData.model
+        ? { providerID: formData.provider, modelID: formData.model }
+        : undefined,
+    ),
     config: {
       ...(formData.config || {}),
       brainId: formData.brainId || undefined,
+      botBrain: normalizeBotBrain(
+        formData.brain,
+        formData.provider && formData.model
+          ? { providerID: formData.provider, modelID: formData.model }
+          : undefined,
+      ),
     },
   } as CreateAgentInput;
 }

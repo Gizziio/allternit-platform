@@ -12,6 +12,7 @@ import { ProviderRoutingCard } from "./ProviderRoutingCard";
 import { TeamImportButton } from "@/components/bots/TeamImportButton";
 import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
+import { botBrainLabel, resolveAgentBrain } from "@/lib/bots/bot-brain";
 import { cn } from "@/lib/utils";
 
 interface BotConfigTabProps {
@@ -92,9 +93,17 @@ export function BotConfigTab({ bot, accentColor }: BotConfigTabProps) {
                 <InfoCard
                   icon={Brain}
                   label="Brain"
-                  value={bot.brainId ? `Gizzi · ${shortId(bot.brainId)}` : "Default"}
+                  value={botBrainLabel(resolveAgentBrain(bot))}
                   accentColor={accentColor}
                 />
+                {bot.brainId ? (
+                  <InfoCard
+                    icon={Brain}
+                    label="Gizzi knowledge"
+                    value={`Gizzi · ${shortId(bot.brainId)}`}
+                    accentColor={accentColor}
+                  />
+                ) : null}
                 <InfoCard
                   icon={Robot}
                   label="Model"

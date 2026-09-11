@@ -140,6 +140,8 @@ function coerceAgent(value: unknown): Agent | null {
     characterLayer: isRecord(value.characterLayer) ? (value.characterLayer as unknown as Agent["characterLayer"]) : undefined,
     isBot: value.isBot === true,
     botProfile: isRecord(value.botProfile) ? (value.botProfile as unknown as Agent["botProfile"]) : undefined,
+    brainId: typeof value.brainId === "string" ? value.brainId : undefined,
+    brain: isRecord(value.brain) ? (value.brain as unknown as Agent["brain"]) : undefined,
     connectorBindings: Array.isArray(value.connectorBindings)
       ? (value.connectorBindings as unknown as Agent["connectorBindings"])
       : undefined,
@@ -240,6 +242,7 @@ function toAgent(input: CreateAgentInput): Agent {
     isBot: input.isBot === true,
     botProfile: isRecord(input.botProfile) ? (input.botProfile as unknown as Agent["botProfile"]) : undefined,
     brainId: input.brainId,
+    brain: input.brain,
     connectorBindings: input.connectorBindings,
     secretRefs: input.secretRefs,
     messagingConfig: input.messagingConfig,
@@ -247,6 +250,7 @@ function toAgent(input: CreateAgentInput): Agent {
     vmOperator: coerceVmOperatorConfig(input.vmOperator),
     config: {
       ...(isRecord(input.config) ? input.config : {}),
+      ...(input.brain ? { botBrain: input.brain } : {}),
       localRegistry: {
         fallback: true,
         importedAt: now,
@@ -337,10 +341,11 @@ export function updateLocalAgent(
     temperature: updates.temperature ?? current.temperature,
     voice: updates.voice !== undefined ? updates.voice : current.voice,
     config:
-      updates.config !== undefined
+      updates.config !== undefined || updates.brain !== undefined
         ? {
             ...current.config,
             ...(isRecord(updates.config) ? updates.config : {}),
+            ...(updates.brain !== undefined ? { botBrain: updates.brain } : {}),
           }
         : current.config,
     harness: updates.harness !== undefined ? updates.harness : current.harness,
@@ -351,6 +356,7 @@ export function updateLocalAgent(
     isBot: updates.isBot !== undefined ? updates.isBot : current.isBot,
     botProfile: updates.botProfile !== undefined ? updates.botProfile : current.botProfile,
     brainId: updates.brainId !== undefined ? updates.brainId : current.brainId,
+    brain: updates.brain !== undefined ? updates.brain : current.brain,
     connectorBindings:
       updates.connectorBindings !== undefined
         ? updates.connectorBindings
