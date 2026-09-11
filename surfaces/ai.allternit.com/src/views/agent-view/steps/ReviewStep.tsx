@@ -128,8 +128,8 @@ export function ReviewStep({ formData, blueprint, cardSeed, projectedStats, isBo
                 <div className="flex justify-between">
                   <span className="text-[13px] text-[var(--text-secondary)]">Accent</span>
                   <span className="flex items-center gap-2 text-[13px] font-medium text-[var(--text-primary)]">
-                    <span className="inline-block size-3 rounded-full" style={{ backgroundColor: formData.botProfile.accentColor || '#6366f1' }} />
-                    {formData.botProfile.accentColor || '#6366f1'}
+                    <span className="inline-block size-3 rounded-full" style={{ backgroundColor: formData.botProfile.accentColor || '#B08D6E' }} />
+                    {formData.botProfile.accentColor || '#B08D6E'}
                   </span>
                 </div>
                 <div className="flex justify-between">

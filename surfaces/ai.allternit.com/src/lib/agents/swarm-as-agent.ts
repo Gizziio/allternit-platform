@@ -45,7 +45,7 @@ export function swarmToAgent(swarm: AgentSwarm): Agent {
       roleCard: { domain: swarm.strategy, inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
       voice: { style: "", rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
       progression: { class: "Swarm Orchestrator", relevantStats: [], level: { maxLevel: 99, xpFormula: "linear" } },
-      avatar: { type: "mascot", mascot: { template: "bot" }, style: { primaryColor: "#8b5cf6", accentColor: "#1e1c1a" } },
+      avatar: { type: "mascot", mascot: { template: "bot" }, style: { primaryColor: "#B08D6E", accentColor: "#1e1c1a" } },
     },
     agentCard: {
       tagline: `${swarm.agents.length}-agent ${swarm.strategy} swarm`,
@@ -73,14 +73,14 @@ function generateSwarmAvatar(swarm: AgentSwarm): Record<string, unknown> {
   const colors: Record<string, string> = {
     "round-robin": "#06b6d4",
     hierarchical: "#ec4899",
-    democratic: "#8b5cf6",
+    democratic: "#B08D6E",
     competitive: "#f97316",
     collaborative: "#10b981",
     specialist: "#f59e0b",
-    adaptive: "#6366f1",
+    adaptive: "#9A7658",
   };
 
-  const color = colors[swarm.strategy] || "#6366f1";
+  const color = colors[swarm.strategy] || "#B08D6E";
 
   return {
     preset: "geometric",

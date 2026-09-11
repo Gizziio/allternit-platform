@@ -30,7 +30,7 @@ export const MASCOT_TEMPLATES: Record<MascotTemplate, {
   orb: {
     name: 'Orb',
     description: 'Floating energy sphere with particle effects',
-    defaultColors: ['#8B5CF6', '#B08D6E', '#C4B5FD'],
+    defaultColors: ['#B08D6E', '#C4A684', '#E8C4A8'],
     features: ['Floating animation', 'Particle trail', 'Energy pulses'],
   },
   creature: {
@@ -60,7 +60,7 @@ export const MASCOT_TEMPLATES: Record<MascotTemplate, {
   magic: {
     name: 'Magic',
     description: 'Ethereal particles and mystic runes',
-    defaultColors: ['#8b5cf6', '#d946ef', '#f43f5e'],
+    defaultColors: ['#B08D6E', '#d946ef', '#f43f5e'],
     features: ['Sparkle trails', 'Floating runes', 'Aura waves'],
   },
   nature: {

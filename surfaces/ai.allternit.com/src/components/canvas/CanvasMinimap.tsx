@@ -161,7 +161,7 @@ export function CanvasMinimap({ tiles, viewport, canvasSize, onViewportChange }:
                         : tile.type === 'knowledge'
                           ? 'var(--accent-primary)'
                           : tile.type === 'knowledge-graph'
-                            ? '#8b5cf6'
+                            ? 'var(--accent-primary)'
                             : 'var(--text-muted)',
               border: tile.zIndex === Math.max(...tiles.map((t) => t.zIndex))
                 ? '1px solid var(--border-strong)'

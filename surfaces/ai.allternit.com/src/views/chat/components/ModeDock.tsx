@@ -26,11 +26,11 @@ interface ModeDockProps {
 export const MODE_TABS = [
   { id: 'swarms', label: 'Agent Swarm', color: '#14b8a6', icon: UsersThree },
   { id: 'research', label: 'Deep Research', color: 'var(--status-info)', icon: BookOpen },
-  { id: 'website', label: 'Websites', color: '#6366f1', icon: Globe },
+  { id: 'website', label: 'Websites', color: 'var(--accent-primary)', icon: Globe },
   { id: 'docs', label: 'Docs', color: '#3b82f6', icon: FileText },
   { id: 'data', label: 'Sheets', color: 'var(--status-success)', icon: Database },
   { id: 'slides', label: 'Slides', color: 'var(--status-warning)', icon: PresentationChart },
-  { id: 'image', label: 'Image', color: '#8b5cf6', icon: Image },
+  { id: 'image', label: 'Image', color: 'var(--accent-primary)', icon: Image },
   { id: 'video', label: 'Video', color: '#ec4899', icon: VideoCamera },
 ] as const;
 

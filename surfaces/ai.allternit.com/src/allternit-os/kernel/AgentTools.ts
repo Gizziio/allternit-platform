@@ -278,7 +278,7 @@ function handleLaunchProgram(
             id: 'modern',
             name: 'Modern',
             primaryColor: 'var(--status-info)',
-            secondaryColor: '#8b5cf6',
+            secondaryColor: '#C4A684',
             backgroundColor: '#ffffff',
             textColor: 'var(--surface-panel)',
             fontHeading: 'system-ui, sans-serif',

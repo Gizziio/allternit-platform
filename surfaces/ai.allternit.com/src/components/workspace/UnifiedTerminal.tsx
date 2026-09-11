@@ -219,7 +219,7 @@ export function terminalThemeFromElement(_element: HTMLElement): import('@xterm/
     green: token('--status-success', '#10b981'),
     yellow: token('--status-warning', '#f59e0b'),
     blue: token('--status-info', '#3b82f6'),
-    magenta: '#8b5cf6',
+    magenta: '#ec4899', // ANSI magenta → DESIGN.md tier pink (purple family retired)
     // The legacy per-mode code accent was removed in the 2026-09-11 amber-only
     // design-law amendment; ANSI cyan keeps its dedicated fallback.
     cyan: '#0891b2',
@@ -229,7 +229,7 @@ export function terminalThemeFromElement(_element: HTMLElement): import('@xterm/
     brightGreen: '#34d399',
     brightYellow: '#fbbf24',
     brightBlue: '#60a5fa',
-    brightMagenta: '#c084fc',
+    brightMagenta: '#f472b6',
     brightCyan: '#67e8f9',
     brightWhite: terminalFg,
   };

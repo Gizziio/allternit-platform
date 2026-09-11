@@ -593,7 +593,7 @@ function makeSpotlight(): SpotlightItem[] {
     {
       id: 'local-brain', title: 'Local Brain', tagline: 'Private · Offline · Yours',
       description: 'Run AI entirely on your machine. No internet, no API keys, no cloud. Powered by Ollama + Llama 3.2. Every conversation stays on your device — permanently.',
-      gradient: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', accent: '#8b5cf6',
+      gradient: 'linear-gradient(135deg,#B08D6E,#9A7658)', accent: '#B08D6E',
       icon: <Brain size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Offline', '~2 GB'], art: 'local-brain',
       ctaPrimary: { label: 'Set Up Local Brain', action: d('models-manage') },
@@ -601,7 +601,7 @@ function makeSpotlight(): SpotlightItem[] {
     {
       id: 'canvas', title: 'Allternit Canvas', tagline: 'Documents Built with AI',
       description: 'A new kind of document editor. Prompt to draft, refine together, export anywhere. The blank page, replaced.',
-      gradient: 'linear-gradient(135deg,#6366f1,#4f46e5)', accent: '#6366f1',
+      gradient: 'linear-gradient(135deg,#B08D6E,#9A7658)', accent: '#B08D6E',
       icon: <Note size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Beta'], art: 'canvas-doc',
       ctaPrimary: { label: 'Open Canvas', action: d('allternit-canvas') },
@@ -829,16 +829,16 @@ const ALL_PRODUCTS: MiniProduct[] = [
   { id:'computer-use', name:'Computer Use',    description:'AI that sees and controls browsers',    icon:<Monitor size={17} weight="fill"/>,      accent:'#5B8DEF', gradient:'linear-gradient(135deg,#5B8DEF,#3b5bdb)', viewType:'operator',      status:'live',  category:'AI Agents' },
   { id:'swarm',        name:'Swarm ADE',       description:'Orchestrate hundreds of AI agents',     icon:<Robot size={17} weight="fill"/>,        accent:'var(--status-success)', gradient:'linear-gradient(135deg,#10b981,#059669)', viewType:'swarm',         status:'live',  category:'AI Agents' },
   { id:'agent-hub',    name:'Agent | Bot Hub',       description:'Build, deploy, and manage agents & bots',      icon:<Cpu size={17} weight="fill"/>,          accent:'#B08D6E', gradient:'linear-gradient(135deg,#B08D6E,#B08D6E)', viewType:'agent-hub',     status:'live',  category:'AI Agents' },
-  { id:'canvas',       name:'Canvas',          description:'Documents built with AI',               icon:<Note size={17} weight="fill"/>,         accent:'#6366f1', gradient:'linear-gradient(135deg,#6366f1,#4f46e5)', viewType:'allternit-canvas', status:'beta', category:'Create' },
+  { id:'canvas',       name:'Canvas',          description:'Documents built with AI',               icon:<Note size={17} weight="fill"/>,         accent:'#B08D6E', gradient:'linear-gradient(135deg,#B08D6E,#9A7658)', viewType:'allternit-canvas', status:'beta', category:'Create' },
   { id:'design',       name:'Allternit Design', description:'Visual design and creative tools',     icon:<Palette size={17} weight="fill"/>,      accent:'#ec4899', gradient:'linear-gradient(135deg,#ec4899,#be185d)', viewType:'design',        status:'beta',  category:'Create' },
   { id:'workflow',     name:'Workflows',       description:'Visual automation and task pipelines',  icon:<GitBranch size={17} weight="fill"/>,    accent:'#14b8a6', gradient:'linear-gradient(135deg,#14b8a6,#0d9488)', viewType:'cowork-runs',   status:'beta',  category:'Create' },
-  { id:'local-brain',  name:'Local Brain',     description:'Private offline AI on your machine',   icon:<Brain size={17} weight="fill"/>,        accent:'#8b5cf6', gradient:'linear-gradient(135deg,#8b5cf6,#6d28d9)', viewType:'models-manage', status:'live',  category:'Infrastructure' },
+  { id:'local-brain',  name:'Local Brain',     description:'Private offline AI on your machine',   icon:<Brain size={17} weight="fill"/>,        accent:'#B08D6E', gradient:'linear-gradient(135deg,#B08D6E,#9A7658)', viewType:'models-manage', status:'live',  category:'Infrastructure' },
   { id:'cloud-deploy', name:'Cloud Deploy',    description:'Deploy Allternit nodes to any cloud',  icon:<RocketLaunch size={17} weight="fill"/>, accent:'var(--status-success)', gradient:'linear-gradient(135deg,#22c55e,#16a34a)', viewType:'deploy',        status:'live',  category:'Infrastructure' },
   { id:'browser',      name:'Browser Capsule', description:'AI assistant in every browser tab',    icon:<Puzzle size={17} weight="fill"/>,       accent:'#4285F4', gradient:'linear-gradient(135deg,#4285F4,#34A853)', viewType:'browser-ext',   status:'live',  category:'Surfaces' },
   { id:'desktop',      name:'Desktop App',     description:'Native app for macOS, Windows, Linux', icon:<Laptop size={17} weight="fill"/>,       accent:'var(--accent-primary)', gradient:'linear-gradient(135deg,#D4B08C,#B08D6E)', viewType:'desktop-dl',    status:'live',  category:'Surfaces' },
   { id:'labs',         name:'A://Labs',        description:'AI courses — 7 live in Canvas LMS',   icon:<GraduationCap size={17} weight="fill"/>, accent:'var(--status-warning)', gradient:'linear-gradient(135deg,#f59e0b,#b45309)', viewType:'labs',          status:'live',  category:'Learn' },
   { id:'marketplace',  name:'Marketplace',     description:'Discover plugins and extensions',      icon:<ShoppingBag size={17} weight="fill"/>,  accent:'var(--status-success)', gradient:'linear-gradient(135deg,#10b981,#059669)', viewType:'marketplace',   status:'beta',  category:'Ecosystem' },
-  { id:'dev-portal',   name:'Dev Portal',      description:'APIs, SDKs, and documentation',        icon:<ArrowSquareOut size={17}/>,             accent:'#6366f1', gradient:'linear-gradient(135deg,#6366f1,#4338ca)', viewType:'dev-portal',    status:'live',  category:'Ecosystem' },
+  { id:'dev-portal',   name:'Dev Portal',      description:'APIs, SDKs, and documentation',        icon:<ArrowSquareOut size={17}/>,             accent:'#B08D6E', gradient:'linear-gradient(135deg,#B08D6E,#9A7658)', viewType:'dev-portal',    status:'live',  category:'Ecosystem' },
   { id:'manufacturing',name:'Allternit Manufacturing', description:'Digital microfactory for AI hardware & B2B', icon:<Factory size={17} weight="fill"/>, accent:'#d97706', gradient:'linear-gradient(135deg,#d97706,#b45309)', viewType:'manufacturing', status:'soon', category:'Manufacturing' },
 ];
 
@@ -1276,7 +1276,7 @@ const TESTIMONIALS = [
   },
   {
     category: 'Privacy',
-    catColor: '#8b5cf6',
+    catColor: '#B08D6E',
     subject: 'Local Brain — HIPAA-compliant AI, finally',
     handle: '@drmayaortiz',
     name: 'Dr. Maya Ortiz',

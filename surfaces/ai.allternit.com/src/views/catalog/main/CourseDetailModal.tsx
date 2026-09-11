@@ -113,7 +113,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
           {/* Category Tag */}
           {course.category && (
             <div className="mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--info-bg,#1e1b4b)] border border-solid border-[var(--info-border,#4338ca)] rounded-full text-[12px] font-semibold text-[#818cf8]">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--info-bg,#4A3826)] border border-solid border-[var(--info-border,#9A7658)] rounded-full text-[12px] font-semibold text-[#C4A684]">
                 <Info size={12} />
                 {course.category}
               </span>

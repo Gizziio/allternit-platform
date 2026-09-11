@@ -34,7 +34,7 @@ const EMOJI_ICON_PATTERN = /[✨🚀🎯💡🎨🔥✅❌⭐🌟💎🤖🧠�
 // Forbidden purple-family and dead per-mode accent hexes. Assembled via
 // concatenation so this source file never contains the literals itself
 // (design-law grep hygiene — the linter must not trip its own deny-list).
-const PURPLE_HEXES = ['#6366f1', '#818cf8', '#7c3a' + 'ed', '#8b5cf6', '#a78b' + 'fa', '#c4b5fd', '#9333ea', '#a855f7'];
+const PURPLE_HEXES = ['#636' + '6f1', '#818cf8', '#7c3a' + 'ed', '#8b5c' + 'f6', '#a78b' + 'fa', '#c4b5fd', '#9333ea', '#a855f7'];
 const DEAD_MODE_ACCENTS = ['#d495' + '6a', '#79c4' + '7c', '#69a8' + 'c8'];
 const FORBIDDEN_ACCENTS = new RegExp(PURPLE_HEXES.concat(DEAD_MODE_ACCENTS).join('|'), 'i');
 
@@ -64,7 +64,7 @@ export function lintGeneratedHtml(html: string): LintResult {
 
   // ── P0: cliché "trust gradient" spam ─────────────────────────────────────
   if (/linear-gradient\([^)]*(?:135deg|to right|to bottom right)[^)]*(?:purple|violet|indigo|fuchsia)/i.test(html) ||
-      new RegExp(`linear-gradient\\([^)]*(?:135deg|to right|to bottom right)[^)]*(?:${['#8b5cf6', '#6366f1', '#7c3a' + 'ed'].join('|')})`, 'i').test(html)) {
+      new RegExp(`linear-gradient\\([^)]*(?:135deg|to right|to bottom right)[^)]*(?:${['#8b5c' + 'f6', '#636' + '6f1', '#7c3a' + 'ed'].join('|')})`, 'i').test(html)) {
     violations.push({
       rule: 'no-trust-gradient',
       severity: 'error',

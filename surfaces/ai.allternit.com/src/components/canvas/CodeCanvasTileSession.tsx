@@ -134,7 +134,7 @@ function CodeCanvasTileSessionContent({
             borderRadius: 6,
             border: '1px solid rgba(139,92,246,0.2)',
             background: 'rgba(139,92,246,0.08)',
-            color: '#8b5cf6',
+            color: '#B08D6E',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',

@@ -27,7 +27,7 @@ function DirectionCardItem({ card, selected, onClick }: CardProps) {
       className={cn(
         "w-full p-3 rounded-lg border border-solid text-left cursor-pointer transition-all duration-150",
         selected 
-          ? "bg-[var(--accent-primary,#6366f1)]/10 border-[var(--accent-primary,#6366f1)]" 
+          ? "bg-[var(--accent-primary,#B08D6E)]/10 border-[var(--accent-primary,#B08D6E)]" 
           : "bg-[var(--surface-panel,rgba(255,255,255,0.04))] border-[var(--border-default,rgba(255,255,255,0.1))] hover:bg-white/5"
       )}
     >
@@ -85,7 +85,7 @@ function QuestionField({ question, value, onChange }: QuestionFieldProps) {
                   value={opt.value}
                   checked={strVal === opt.value}
                   onChange={() => onChange(opt.value)}
-                  className="mt-0.5 accent-[var(--accent-primary,#6366f1)] shrink-0"
+                  className="mt-0.5 accent-[var(--accent-primary,#B08D6E)] shrink-0"
                 />
                 <div>
                   <div className="text-[12px] text-[var(--text-primary,#e8e0d8)] group-hover:text-white transition-colors">{opt.label}</div>
@@ -121,7 +121,7 @@ function QuestionField({ question, value, onChange }: QuestionFieldProps) {
                       : arrVal.filter((v) => v !== opt.value);
                     onChange(next);
                   }}
-                  className="mt-0.5 accent-[var(--accent-primary,#6366f1)] shrink-0"
+                  className="mt-0.5 accent-[var(--accent-primary,#B08D6E)] shrink-0"
                 />
                 <div>
                   <div className="text-[12px] text-[var(--text-primary,#e8e0d8)] group-hover:text-white transition-colors">{opt.label}</div>
@@ -144,7 +144,7 @@ function QuestionField({ question, value, onChange }: QuestionFieldProps) {
           {question.description && <div className="text-[11px] text-[var(--text-secondary,rgba(255,255,255,0.5))] mb-2 leading-relaxed">{question.description}</div>}
           <select aria-label="Selection" value={strVal}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full p-[8px_10px] rounded-md border border-solid border-[var(--border-default,rgba(255,255,255,0.1))] bg-[var(--surface-panel,rgba(255,255,255,0.04))] text-[var(--text-primary,#e8e0d8)] text-[13px] outline-none appearance-none cursor-pointer focus:border-[var(--accent-primary,#6366f1)] transition-colors"
+            className="w-full p-[8px_10px] rounded-md border border-solid border-[var(--border-default,rgba(255,255,255,0.1))] bg-[var(--surface-panel,rgba(255,255,255,0.04))] text-[var(--text-primary,#e8e0d8)] text-[13px] outline-none appearance-none cursor-pointer focus:border-[var(--accent-primary,#B08D6E)] transition-colors"
           >
             <option value="">Select…</option>
             {(question.options ?? []).map((opt) => (
@@ -163,7 +163,7 @@ function QuestionField({ question, value, onChange }: QuestionFieldProps) {
             value={strVal}
             placeholder={question.placeholder ?? ''}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full p-[8px_10px] rounded-md border border-solid border-[var(--border-default,rgba(255,255,255,0.1))] bg-[var(--surface-panel,rgba(255,255,255,0.04))] text-[var(--text-primary,#e8e0d8)] text-[13px] outline-none focus:border-[var(--accent-primary,#6366f1)] transition-colors"
+            className="w-full p-[8px_10px] rounded-md border border-solid border-[var(--border-default,rgba(255,255,255,0.1))] bg-[var(--surface-panel,rgba(255,255,255,0.04))] text-[var(--text-primary,#e8e0d8)] text-[13px] outline-none focus:border-[var(--accent-primary,#B08D6E)] transition-colors"
           />
         </div>
       );
@@ -177,7 +177,7 @@ function QuestionField({ question, value, onChange }: QuestionFieldProps) {
             placeholder={question.placeholder ?? ''}
             onChange={(e) => onChange(e.target.value)}
             rows={4}
-            className="w-full p-[8px_10px] rounded-md border border-solid border-[var(--border-default,rgba(255,255,255,0.1))] bg-[var(--surface-panel,rgba(255,255,255,0.04))] text-[var(--text-primary,#e8e0d8)] text-[13px] outline-none resize-y focus:border-[var(--accent-primary,#6366f1)] transition-colors"
+            className="w-full p-[8px_10px] rounded-md border border-solid border-[var(--border-default,rgba(255,255,255,0.1))] bg-[var(--surface-panel,rgba(255,255,255,0.04))] text-[var(--text-primary,#e8e0d8)] text-[13px] outline-none resize-y focus:border-[var(--accent-primary,#B08D6E)] transition-colors"
           />
         </div>
       );
@@ -229,7 +229,7 @@ export function QuestionFormView({ form, onSubmit }: Props) {
   if (submitted) {
     return (
       <div className="p-[12px_16px] rounded-lg border border-solid border-[var(--border-default,rgba(255,255,255,0.1))] bg-[var(--surface-panel,rgba(255,255,255,0.04))] flex items-center gap-2 text-[12px] text-[var(--text-secondary,rgba(255,255,255,0.5))]">
-        <span className="text-[var(--accent-primary,#6366f1)] font-semibold">✓ Answered</span>
+        <span className="text-[var(--accent-primary,#B08D6E)] font-semibold">✓ Answered</span>
         {form.title && <span>— {form.title}</span>}
       </div>
     );
@@ -263,8 +263,8 @@ export function QuestionFormView({ form, onSubmit }: Props) {
         className={cn(
           "mt-4 px-4 py-2 rounded-md border-none text-[12px] font-semibold transition-all duration-150",
           allRequired 
-            ? "bg-[var(--accent-primary,#6366f1)] text-white cursor-pointer hover:opacity-90" 
-            : "bg-[var(--accent-primary,#6366f1)]/50 text-white/50 cursor-not-allowed"
+            ? "bg-[var(--accent-primary,#B08D6E)] text-white cursor-pointer hover:opacity-90" 
+            : "bg-[var(--accent-primary,#B08D6E)]/50 text-white/50 cursor-not-allowed"
         )}
       >
         Submit

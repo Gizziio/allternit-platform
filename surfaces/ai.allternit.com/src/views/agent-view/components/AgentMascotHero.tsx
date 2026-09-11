@@ -25,7 +25,7 @@ const VOICES: { id: VoiceStyle; label: string; description: string; color: strin
 const TONES: { id: ToneStyle; label: string; description: string; color: string }[] = [
   { id: "friendly", label: "Friendly", description: "Approachable and open", color: "#f59e0b" },
   { id: "direct", label: "Direct", description: "Straight to the point", color: "#ef4444" },
-  { id: "witty", label: "Witty", description: "Clever and playful", color: "#8b5cf6" },
+  { id: "witty", label: "Witty", description: "Clever and playful", color: "#B08D6E" },
   { id: "empathetic", label: "Empathetic", description: "Understanding and supportive", color: "#ec4899" },
   { id: "technical", label: "Technical", description: "Detailed and exact", color: "#0ea5e9" },
 ];

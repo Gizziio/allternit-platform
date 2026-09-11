@@ -162,7 +162,7 @@ When uncertain, say so clearly. When a question spans multiple domains, structur
             'What are the differences between MCP, A2A, ANP, and Agora protocols?',
             'How do I create a bot group with consensus-based decision making?',
           ],
-          accentColor: '#6366f1', // Allternit indigo
+          accentColor: '#B08D6E', // Allternit amber
           groupChatEnabled: true,
         }
       ),
@@ -189,7 +189,7 @@ When uncertain, say so clearly. When a question spans multiple domains, structur
             'Summarize the latest papers on agent memory architectures.',
             'Compare these three approaches and recommend the best one.',
           ],
-          accentColor: '#8b5cf6',
+          accentColor: '#B08D6E',
           groupChatEnabled: true,
         }
       ),

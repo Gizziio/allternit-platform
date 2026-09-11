@@ -249,7 +249,7 @@ ${renderDirectionSpecBlock()}
 - ❌ Filler copy — lorem ipsum, "Feature One / Feature Two / Feature Three", placeholder text
 - ❌ An icon next to every single heading — use icons for navigation and status, not decoration
 - ❌ A gradient on every background — pick one decisive gradient per design, max
-- ❌ Tailwind indigo (#6366f1) as the brand accent — it screams "AI default"
+- ❌ Tailwind indigo as the brand accent — it screams "AI default"
 - ❌ Cyber neon / cold deep navy (#0D1117, #050505) as default dark — "generic AI dark"
 - ❌ Holographic or rainbow gradient overlays without a clear narrative purpose
 - ❌ Three perfectly equal-width columns as default grid — signals template, not design
