@@ -277,7 +277,11 @@ surface above is the one that translates to Allternit names.
 | `201` | Session created. |
 | `200` | Retrieve, list, archive, send, list events. |
 | `400` | Archived session, unknown event type, `computer.kind: fabric`, version mismatch, unknown `brain_id`/`vault_ids`/`parent_thread_id`. |
-| `503` | `computer.kind` sandbox/desktop and Computer Cloud has no VM driver. |
+| `503` | Error handling: Computer Cloud could not provision (`code: computer_unavailable`). The API process has no Incus/Tart VM driver. This is fail-closed — the session is not silently created as `kind: none`. |
+
+Session `budget` is `{ max_tokens, max_turns, max_tool_calls }` plus usage counters. There is no USD field on this surface.
+
+`permission: always_ask` records the policy and **does not** auto-provision a Cloud Desktop (the client binds `computer.id` later or recreates with `always_allow`). `always_allow` and `auto` provision immediately when a driver is present.
 
 ## Threads
 

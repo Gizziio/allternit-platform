@@ -1306,6 +1306,53 @@ async fn get_agent(
     }
 }
 
+fn json_names_tool(tools: &serde_json::Value, allowed: &serde_json::Value, names: &[&str]) -> bool {
+    fn walk(value: &serde_json::Value, names: &[&str]) -> bool {
+        match value {
+            serde_json::Value::String(s) => names.iter().any(|n| s == n || s.contains(n)),
+            serde_json::Value::Array(items) => items.iter().any(|item| walk(item, names)),
+            serde_json::Value::Object(map) => {
+                if let Some(name) = map.get("name").and_then(|v| v.as_str()) {
+                    if names.iter().any(|n| name == *n) {
+                        return true;
+                    }
+                }
+                map.values().any(|v| walk(v, names))
+            }
+            _ => false,
+        }
+    }
+    walk(tools, names) || walk(allowed, names)
+}
+
+async fn list_mcp_for_user(state: &Arc<AppState>, user_id: &str) -> Vec<serde_json::Value> {
+    let db = state.db.clone();
+    let user_id = user_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect().ok()?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, name, url, enabled FROM mcp_connectors WHERE user_id = ?1 ORDER BY created_at DESC",
+            )
+            .ok()?;
+        let rows = stmt
+            .query_map(params![user_id], |row| {
+                Ok(json!({
+                    "id": row.get::<_, String>(0)?,
+                    "name": row.get::<_, String>(1)?,
+                    "url": row.get::<_, Option<String>>(2)?,
+                    "enabled": row.get::<_, i64>(3)? != 0,
+                }))
+            })
+            .ok()?;
+        Some(rows.filter_map(Result::ok).collect::<Vec<_>>())
+    })
+    .await
+    .ok()
+    .flatten()
+    .unwrap_or_default()
+}
+
 async fn get_agent_toolset(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
@@ -1313,7 +1360,8 @@ async fn get_agent_toolset(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
-    let user_id = user.user_id;
+    let user_id = user.user_id.clone();
+    let mcp_user = user.user_id.clone();
     let row = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         conn.query_row(
@@ -1330,17 +1378,27 @@ async fn get_agent_toolset(
     })
     .await;
     match row {
-        Ok(Ok((tools, allowed_tools, allowed_skills))) => Json(json!({
-            "toolset": {
-                "tools": tools.unwrap_or(json!([])),
-                "allowed_tools": allowed_tools.unwrap_or(json!([])),
-                "allowed_skills": allowed_skills.unwrap_or(json!([])),
-                "mcp": [],
-                "tool_search": false,
-                "programmatic": false
-            }
-        }))
-        .into_response(),
+        Ok(Ok((tools, allowed_tools, allowed_skills))) => {
+            let tools = tools.unwrap_or(json!([]));
+            let allowed_tools = allowed_tools.unwrap_or(json!([]));
+            let allowed_skills = allowed_skills.unwrap_or(json!([]));
+            let mcp = list_mcp_for_user(&state, &mcp_user).await;
+            Json(json!({
+                "toolset": {
+                    "tools": tools,
+                    "allowed_tools": allowed_tools,
+                    "allowed_skills": allowed_skills,
+                    "mcp": mcp,
+                    "tool_search": json_names_tool(&tools, &allowed_tools, &["tool_search"]),
+                    "programmatic": json_names_tool(
+                        &tools,
+                        &allowed_tools,
+                        &["programmatic", "code_execution", "bash"],
+                    )
+                }
+            }))
+            .into_response()
+        }
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
             (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response()
         }
