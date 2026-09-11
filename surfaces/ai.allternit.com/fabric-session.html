@@ -22,7 +22,9 @@
       }
       html.fabric-session-app,
       html.fabric-session-app body {
-        overflow: hidden !important;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
       html.fabric-session-app #root {
         overflow: hidden;

@@ -26,6 +26,16 @@ export function FabricSessionApp(): React.ReactNode {
       import.meta.env.VITE_REMOTE_CONTROL_PUSH_URL ||
       'https://push.fabrictransport.allternit.com';
 
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    if (isSafari) {
+      navigator.serviceWorker.getRegistrations?.().then((regs) => {
+        regs.forEach((reg) => void reg.unregister())
+      })
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      }
+    }
+
     navigator.serviceWorker
       .register('/fabric-session-service-worker.js')
       .then((reg) => {
