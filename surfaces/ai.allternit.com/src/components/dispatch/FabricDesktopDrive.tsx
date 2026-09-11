@@ -463,14 +463,30 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
 
       <div className="absolute inset-x-0 bottom-0 z-20">
       <div
-        className="flex flex-nowrap items-center gap-1 px-2 pt-1.5 bg-gradient-to-t from-black/80 to-black/35"
-        style={{ paddingBottom: kbdOpen ? 4 : 'max(8px, env(safe-area-inset-bottom))' }}
+        className="flex flex-nowrap items-center gap-1.5 px-2 pt-2 overflow-x-auto"
+        style={{
+          paddingBottom: kbdOpen ? 6 : 'max(10px, env(safe-area-inset-bottom))',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.35))',
+        }}
       >
-        <span className={cn('shrink-0 size-2 rounded-full', status === 'live' ? 'bg-[#22c55e]' : status === 'connecting' ? 'bg-[#febc2e]' : 'bg-[#ef4444]')} />
-        <button type="button" onClick={() => setInputMode('touch')} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'touch' ? 'bg-white text-black' : 'bg-white/15 text-white')}>Touch</button>
-        <button type="button" onClick={() => setInputMode('trackpad')} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', inputMode === 'trackpad' ? 'bg-white text-black' : 'bg-white/15 text-white')}>Trackpad</button>
-        <button type="button" onClick={() => { setViewMode('fit'); layout('fit'); }} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'fit' ? 'bg-white text-black' : 'bg-white/15 text-white')}>Fit</button>
-        <button type="button" onClick={() => { setViewMode('actual'); layout('actual'); }} className={cn('px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer', viewMode === 'actual' ? 'bg-white text-black' : 'bg-white/15 text-white')}>Actual</button>
+        {([
+          { id: 'touch', label: 'Touch', on: inputMode === 'touch', go: () => setInputMode('touch') },
+          { id: 'trackpad', label: 'Track', on: inputMode === 'trackpad', go: () => setInputMode('trackpad') },
+          { id: 'fit', label: 'Fit', on: viewMode === 'fit', go: () => { setViewMode('fit'); layout('fit'); } },
+          { id: 'actual', label: '1:1', on: viewMode === 'actual', go: () => { setViewMode('actual'); layout('actual'); } },
+        ] as const).map((b) => (
+          <button
+            key={b.id}
+            type="button"
+            onClick={b.go}
+            className={cn(
+              'h-9 min-w-9 shrink-0 px-3 rounded-full text-[12px] font-semibold leading-none border-none cursor-pointer',
+              b.on ? 'bg-white text-black' : 'bg-white/15 text-white',
+            )}
+          >
+            {b.label}
+          </button>
+        ))}
         {!standalone ? (
           <button
             type="button"
@@ -482,9 +498,10 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
               }
               setInstallHelp(true);
             }}
-            className="px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer bg-white/15 text-white inline-flex items-center gap-1"
+            className="h-9 min-w-9 shrink-0 px-3 rounded-full text-[12px] font-semibold leading-none border-none cursor-pointer bg-white/15 text-white inline-flex items-center justify-center gap-1"
           >
-            <PlusSquare size={13} /> Home Screen
+            <PlusSquare size={14} weight="bold" />
+            Home
           </button>
         ) : null}
         <button
@@ -496,10 +513,15 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
               return next;
             });
           }}
-          className={cn('ml-auto px-2 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer inline-flex items-center gap-1', kbdOpen ? 'bg-white text-black' : 'bg-white/15 text-white')}
+          className={cn(
+            'ml-auto h-9 min-w-9 shrink-0 px-3 rounded-full text-[12px] font-semibold leading-none border-none cursor-pointer inline-flex items-center justify-center gap-1',
+            kbdOpen ? 'bg-white text-black' : 'bg-white/15 text-white',
+          )}
         >
-          <Keyboard size={13} /> Keyboard
+          <Keyboard size={14} weight="bold" />
+          Keys
         </button>
+        <span className={cn('shrink-0 size-2 rounded-full', status === 'live' ? 'bg-[#22c55e]' : status === 'connecting' ? 'bg-[#febc2e]' : 'bg-[#ef4444]')} />
       </div>
       {installHelp && !standalone ? (
         <div className="absolute inset-x-4 z-40 rounded-2xl bg-[#1c1c1c] p-3 text-[13px] text-white shadow-lg" style={{ bottom: 'max(56px, env(safe-area-inset-bottom))' }}>
@@ -516,7 +538,7 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
               key={key}
               type="button"
               onClick={() => void sendInput({ type: 'key', key })}
-              className="shrink-0 rounded-md border-none bg-white/12 text-white text-[11px] font-bold px-2 py-1 cursor-pointer"
+              className="h-8 shrink-0 rounded-full border-none bg-white/15 text-white text-[12px] font-semibold px-3 cursor-pointer"
             >
               {key}
             </button>
@@ -527,7 +549,7 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
             ref={composerRef}
             value={draft}
             rows={1}
-            className="flex-1 min-h-[40px] max-h-[88px] rounded-xl border-none bg-[#1c1c1c] text-[16px] px-3 py-2 text-white"
+            className="flex-1 h-9 min-h-9 rounded-full border-none bg-white/10 text-[16px] px-3 py-1.5 text-white"
             placeholder="Type or dictate — Send to the Mac"
             autoCapitalize="off"
             autoCorrect="off"
@@ -551,7 +573,7 @@ export function FabricDesktopDrive({ runtimeId, getToken, hostName }: FabricDesk
           <button
             type="button"
             onClick={() => void sendDraft()}
-            className="shrink-0 rounded-xl border-none bg-white text-black text-[13px] font-bold px-3 py-2 cursor-pointer"
+            className="h-9 shrink-0 rounded-full border-none bg-white text-black text-[12px] font-semibold px-3 cursor-pointer"
           >
             Send
           </button>
