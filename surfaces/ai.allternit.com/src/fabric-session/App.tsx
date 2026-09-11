@@ -1,9 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { DashboardPage } from './pages/DashboardPage';
+import { BotsChatPage } from './pages/BotsChatPage';
+import type { ApprovalRequest } from '@/components/bot-chat/types';
 import type { BeforeInstallPromptEvent } from './types';
 
 export function FabricSessionApp(): React.ReactNode {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [view, setView] = useState<'dashboard' | 'chat'>('dashboard');
+  const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
+  const [pendingByBot, setPendingByBot] = useState<Record<string, boolean>>({});
+  const [watching, setWatching] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !("serviceWorker" in navigator)) return;
@@ -52,9 +58,38 @@ export function FabricSessionApp(): React.ReactNode {
     }
   };
 
+  const handleSelectBot = useCallback((botId: string) => {
+    setSelectedBotId(botId);
+    setView('chat');
+  }, []);
+
+  const handleApprovalsChange = useCallback((botId: string, pending: ApprovalRequest[]) => {
+    setPendingByBot((prev) => ({ ...prev, [botId]: pending.length > 0 }));
+  }, []);
+
+  if (view === 'chat' && selectedBotId) {
+    return (
+      <BotsChatPage
+        botId={selectedBotId}
+        onBack={() => {
+          setView('dashboard');
+          setSelectedBotId(null);
+        }}
+        onApprovalsChange={handleApprovalsChange}
+        watching={watching}
+        onToggleWatch={() => setWatching((v) => !v)}
+      />
+    );
+  }
+
   return (
-    <>
-      <DashboardPage installPrompt={installPrompt} onInstallClick={handleInstall} />
-    </>
+    <DashboardPage
+      installPrompt={installPrompt}
+      onInstallClick={handleInstall}
+      onSelectBot={handleSelectBot}
+      pendingByBot={pendingByBot}
+      watching={watching}
+      onToggleWatch={() => setWatching((v) => !v)}
+    />
   );
 }

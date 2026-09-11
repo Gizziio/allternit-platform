@@ -1594,6 +1594,7 @@ export function createModeSessionStore(config: StoreConfig) {
                   onToolResult: (toolResult) => {
                     deltaBuffer.push({ type: 'toolResult', toolResult });
                     scheduleDeltaFlush();
+                    options.callbacks?.onToolResult?.(toolResult);
 
                     // Generate-web-artifact tools emit a real ArtifactUIPart so the
                     // canvas view can render them without requiring a backend artifact
@@ -1635,6 +1636,7 @@ export function createModeSessionStore(config: StoreConfig) {
                   onToolError: (toolError) => {
                     deltaBuffer.push({ type: 'toolError', toolError });
                     scheduleDeltaFlush();
+                    options.callbacks?.onToolError?.(toolError);
                   },
                   onArtifact: (artifact) => {
                     emittedArtifactCount += 1;

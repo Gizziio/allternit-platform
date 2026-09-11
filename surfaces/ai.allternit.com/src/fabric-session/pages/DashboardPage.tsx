@@ -30,10 +30,17 @@ import {
   type Theme,
 } from "@/fabric-session/theme/FabricSessionThemeStore";
 import type { BeforeInstallPromptEvent } from "../types";
+import { useAgentStore } from "@/lib/agents/agent.store";
+import { useUnifiedRoster } from "@/lib/bots/use-unified-roster";
+import { BotsRosterSection } from "./BotsRosterSection";
 
 interface DashboardPageProps {
   installPrompt: BeforeInstallPromptEvent | null;
   onInstallClick: () => void;
+  onSelectBot?: (botId: string) => void;
+  pendingByBot?: Record<string, boolean>;
+  watching?: boolean;
+  onToggleWatch?: () => void;
 }
 
 const PUSH_WORKER_URL =
@@ -119,7 +126,14 @@ function usePushByRuntime(
   return { pushByRuntime, setPushByRuntime };
 }
 
-export function DashboardPage({ installPrompt, onInstallClick }: DashboardPageProps): React.ReactNode {
+export function DashboardPage({
+  installPrompt,
+  onInstallClick,
+  onSelectBot,
+  pendingByBot,
+  watching,
+  onToggleWatch,
+}: DashboardPageProps): React.ReactNode {
   const { addToast } = useToast();
   const auth = usePlatformAuth();
   const { user } = usePlatformUser();
@@ -135,6 +149,15 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
     const timer = window.setTimeout(() => setLoadTimedOut(true), 8000);
     return () => window.clearTimeout(timer);
   }, [auth.isLoaded]);
+
+  const roster = useUnifiedRoster();
+
+  React.useEffect(() => {
+    if (!auth.isSignedIn) return;
+    void useAgentStore.getState().fetchAgents().catch(() => {
+      // Bots empty-state; machines still work.
+    });
+  }, [auth.isSignedIn]);
 
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
@@ -348,7 +371,13 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
           {headerActions}
         </FabricAppHeader>
         <main className="flex-1 min-h-0">
-          <FabricSessionPanel runtimeId={selected.id} runtime={selected} getToken={auth.getToken} />
+          <FabricSessionPanel
+            runtimeId={selected.id}
+            runtime={selected}
+            getToken={auth.getToken}
+            watching={watching}
+            onToggleWatch={onToggleWatch}
+          />
         </main>
       </div>
     );
@@ -437,6 +466,12 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
               </div>
             </section>
           )}
+
+          <BotsRosterSection
+            bots={roster}
+            pendingByBot={pendingByBot}
+            onSelectBot={(id) => onSelectBot?.(id)}
+          />
 
           <h2 className="text-[15px] font-semibold m-0 mb-3">Machines</h2>
           <MachinesPanel

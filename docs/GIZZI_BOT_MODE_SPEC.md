@@ -70,3 +70,14 @@ sessions, cron, and Rails peers.
 - **B5 — TUI bots pane** ✅: `/bots` roster with presence (90s window), unread
   badges, canonical-chat open/create/delete. Known limit: REPL transcript not
   reloaded on session switch from the pane.
+
+## PWA
+
+Fabric Transport (`surfaces/ai.allternit.com/src/fabric-session/`, served at
+`/fabric-session.html` on the platform origin) is the phone surface for bot
+mode. The dashboard lists bots after sign-in; tapping a bot opens a full-screen
+chat. Transcript and composer are the shared `src/components/bot-chat/` set
+used by the web bot session view, so the two cannot drift. Stream/SSE events
+are the only transcript truth — no optimistic assistant text. ACI screenshots
+are watch-to-pull: frames start only when the user turns watch on, and stop
+when they turn it off or the page is hidden.

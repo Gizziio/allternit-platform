@@ -1,16 +1,16 @@
-# Checkpoint — ao/ba-0b-commrails (Bot Agents BA-0b + BA-1)
+# Checkpoint — fabric-pwa-bot-mode-ui (merge)
 
 ## Goal
-Rename the Rails crate to CommRails and ship a live Desktop rail (no seed bots).
+Merge approved spec `fabric-pwa-bot-mode-ui` PR #285 onto main.
 
 ## Just did
-- BA-0b: `rails/` → `commrails/`, package `allternit-commrails`, bins `allternit-commrails` + `-service` + nested `commrails`. One-release shims (old bin names, `/api/rails`, `ALLTERNIT_RAILS_*`, `commrails/compat`). `cargo test -p allternit-commrails` 5/5.
-- BA-1: seed sessions dropped; `GET /api/commrails/visibility` (+ `/api/rails` alias) from PeerRegistry; Sessions + Needs you panels in ShellRail. vitest `commrails-store.test.ts` 6/6.
-- PR #284 opened. Merging origin/main to make the merge commit clean.
+- Phases 1A–1C reviewed and pushed. Merged current origin/main (watch strip, mute, commrails).
+- Bumped fabric-session CACHE_NAME to v22.
 
 ## Next
-- Push merge, `gh pr merge 284 --merge`.
-- Do not start BA-3 (brain bind) in this PR.
+- Wait for check-sw-cache-bump, then `gh pr merge 285 --merge`.
+- Ledger attestation on shared main checkout after merge.
 
 ## Open questions
-- None for this PR. Live ao-engine pane states (blocked vs idle) still need a later HTTP bridge; peers only this phase.
+- Live 390×844 smoke still needs Clerk keys.
+- Approval answers remain local-fold only.
