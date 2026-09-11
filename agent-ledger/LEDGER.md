@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-10 21:23 — grok — Cloud Agents Phase 3 brain attach + vaults alias (rq-20260910-002)
+
+- **Session ID / Branch:** `ao/allternit-runtime-api` (worktree `allternit-ao-allternit-runtime-api`)
+- **Agent:** grok (CLI executors quota-blocked)
+- **Summary:** Merged PR #289 (44c9c8589) — session create validates `brain_id`/`vault_ids`; V141 `beta_sessions.brain_id`; `/api/v1/vaults` aliases `/beta/vaults` CRUD.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/289 · 44c9c85897eefec272ffca4faa68972d820abe86
+- **How it works:** Unknown brain/vault ids return 400. Public session JSON includes `brain_id` and `vault_ids`. GitHub Actions green; Vercel + Pages Git previews ignored.
+- **Outstanding work:** Sandbox entitlement, fabric/desktop workers, outputs, schedules, tool_search. Dollar budget parked. Bot Agents BA-* separate.
+- **Summary file:** [2026-09-10-2123-allternit-runtime-api-p3-grok.md](./summaries/2026-09-10-2123-allternit-runtime-api-p3-grok.md)
+
 ### 2026-09-10 19:35 — grok — CommRails rename + live rail (BA-0b/BA-1) and Fabric PWA bot-mode UI
 - **Session ID / Branch:** `ao/ba-0b-commrails`, `ao/fabric-pwa-bot-mode-ui`
 - **Agent:** grok (orchestrator; kimi/agy executors quota-limited)
