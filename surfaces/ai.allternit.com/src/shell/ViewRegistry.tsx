@@ -819,11 +819,14 @@ export function getShellViewRegistry(handlers: {
         <ModelGatewayView />
       </ErrorBoundary>
     ),
-    "agent-cloud": ({ context }: { context?: ViewContext }) => (
+    "agent-cloud": ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string } | undefined;
+      return (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agents Console" />}>
-        <AgentCloudView />
+        <AgentCloudView sessionId={ctx?.sessionId} />
       </ErrorBoundary>
-    ),
+      );
+    },
     history: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="History" />}>
         <HistoryView />

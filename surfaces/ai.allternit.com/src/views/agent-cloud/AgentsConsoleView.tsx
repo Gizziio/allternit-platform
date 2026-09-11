@@ -28,6 +28,7 @@ import {
   buildSessionBody,
   createConsoleSession,
   parseSseChunk,
+  retrieveConsoleSession,
   sendConsoleEvent,
   sessionCreateCurl,
   sessionCreateSdk,
@@ -37,10 +38,13 @@ import {
 
 const KINDS: ComputerKind[] = ["none", "sandbox", "desktop", "fabric", "local"];
 
-export function AgentsConsoleView() {
+export function AgentsConsoleView({ sessionId }: { sessionId?: string } = {}) {
   const [model, setModel] = useState("kimi-k2");
   const [instructions, setInstructions] = useState("Be terse. Report real output.");
-  const [input, setInput] = useState("Summarize what you can see and stop.");
+  const [input, setInput] = useState(() => {
+    if (typeof window === "undefined") return "Summarize what you can see and stop.";
+    return window.sessionStorage.getItem("agents-console-draft-input") || "Summarize what you can see and stop.";
+  });
   const [computerKind, setComputerKind] = useState<ComputerKind>("none");
   const [maxCostUsd, setMaxCostUsd] = useState("");
   const [running, setRunning] = useState(false);
@@ -144,6 +148,24 @@ export function AgentsConsoleView() {
   }, [session, stopStream]);
 
   useEffect(() => () => stopStream(), [stopStream]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const loaded = await retrieveConsoleSession(sessionId);
+        if (cancelled) return;
+        setSession(loaded);
+        await streamEvents(loaded.id);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, streamEvents]);
 
   const copy = async (which: "curl" | "sdk") => {
     await navigator.clipboard.writeText(which === "curl" ? curl : sdk);

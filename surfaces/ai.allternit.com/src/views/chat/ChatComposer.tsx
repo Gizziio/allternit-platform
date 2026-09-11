@@ -82,6 +82,8 @@ import { parseMentions } from '@/lib/bots/mention-handoff.service';
 import { useActiveChatSession } from './ChatSessionStore';
 import { useChatStore } from './ChatStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
+import { ComposerLayerToggle } from './ComposerLayerToggle';
+import { getComposerLayer, openAgentsConsole, openBotHub } from '@/lib/composer-layer';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
 import { isToolsApiEnabled } from '@/lib/env';
@@ -1038,6 +1040,17 @@ export function ChatComposer({
 
     const enrichedInput = buildEnrichedInput(messageText);
 
+    const composerLayer = getComposerLayer();
+    if (composerLayer === 'agent') {
+      openAgentsConsole();
+      window.sessionStorage.setItem('agents-console-draft-input', enrichedInput);
+      return;
+    }
+    if (composerLayer === 'bot') {
+      openBotHub();
+      return;
+    }
+
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().startAciSession(enrichedInput);
     }
@@ -1711,6 +1724,11 @@ export function ChatComposer({
           />
         ) : null}
         {agentModeSurface === 'cowork' && <CoworkTopDeck />}
+        {(!agentModeSurface || agentModeSurface === 'chat') ? (
+          <div className="mb-2 flex justify-start">
+            <ComposerLayerToggle />
+          </div>
+        ) : null}
         <div
           className={cn(
             'w-full rounded-2xl flex flex-col overflow-visible transition-shadow z-10 relative',

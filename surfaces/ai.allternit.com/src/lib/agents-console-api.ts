@@ -11,6 +11,8 @@ export interface ConsoleSession {
   id: string;
   agent_id?: string;
   status?: string;
+  updated_at?: string;
+  created_at?: string;
   computer?: { kind?: string; id?: string | null };
   budget?: {
     estimated_cost_usd?: number;
@@ -120,6 +122,11 @@ export async function sendConsoleEvent(
 
 export async function archiveConsoleSession(sessionId: string): Promise<void> {
   await api.post(`/api/v1/sessions/${encodeURIComponent(sessionId)}/archive`, {});
+}
+
+export async function listConsoleSessions(): Promise<ConsoleSession[]> {
+  const body = await api.get<{ sessions?: ConsoleSession[] }>("/api/v1/sessions");
+  return Array.isArray(body.sessions) ? body.sessions : [];
 }
 
 export async function retrieveConsoleSession(sessionId: string): Promise<ConsoleSession> {

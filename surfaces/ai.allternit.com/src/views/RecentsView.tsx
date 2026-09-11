@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import type { ConsoleSession } from '@/lib/agents-console-api';
 import type { Icon } from '@phosphor-icons/react';
 import {
   ChatTeardropText,
@@ -26,8 +27,10 @@ import type { AppMode } from '../shell/ShellHeader';
 import { NativeSourceBadge } from '@/components/native-sessions/NativeOriginBanner';
 import { sourceRefFromMetadata } from '@/lib/agents/native-sessions-api';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
+import { listConsoleSessions } from '@/lib/agents-console-api';
+import { openAgentsConsole } from '@/lib/composer-layer';
 
-type ItemKind = 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
+type ItemKind = 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code' | 'cloud';
 type ItemStatus = 'active' | 'completed' | 'archived';
 type DateFilter = 'all' | 'today' | 'week' | 'month';
 type GroupBy = 'none' | 'date' | 'type';
@@ -51,6 +54,7 @@ const KIND_ICONS: Record<ItemKind, Icon> = {
   agent: Robot,
   browser: Globe,
   code: Robot,
+  cloud: Robot,
 };
 
 const KIND_LABELS: Record<ItemKind, string> = {
@@ -60,6 +64,7 @@ const KIND_LABELS: Record<ItemKind, string> = {
   agent: 'Agent',
   browser: 'Browser',
   code: 'Code',
+  cloud: 'Cloud Agent',
 };
 
 function toItemStatus(status?: string): ItemStatus {
@@ -125,6 +130,13 @@ export function RecentsView(): React.ReactNode {
   const coworkSessions = useCoworkSessionStore((s) => s.sessions ?? []);
   const tasks = useCoworkStore((s) => s.tasks ?? []);
   const browserSessions = useBrowserAgentStore((s) => s.pageAgentSessions ?? []);
+  const [cloudSessions, setCloudSessions] = useState<ConsoleSession[]>([]);
+
+  useEffect(() => {
+    void listConsoleSessions()
+      .then(setCloudSessions)
+      .catch(() => setCloudSessions([]));
+  }, []);
 
   const allItems = useMemo<RecentItem[]>(() => {
     const list: RecentItem[] = [];
@@ -192,6 +204,18 @@ export function RecentsView(): React.ReactNode {
       });
     });
 
+    cloudSessions.forEach((s) => {
+      list.push({
+        id: s.id,
+        title: s.agent_id ? `Cloud Agent ${s.agent_id.slice(0, 8)}` : `Session ${s.id.slice(0, 8)}`,
+        kind: 'cloud',
+        status: s.status === 'archived' ? 'archived' : 'active',
+        updatedAt: Date.parse(s.updated_at || s.created_at || '') || Date.now(),
+        mode: 'chat',
+        sessionId: s.id,
+      });
+    });
+
     browserSessions.forEach((s) => {
       list.push({
         id: s.id,
@@ -205,7 +229,7 @@ export function RecentsView(): React.ReactNode {
     });
 
     return list.sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [chatSessions, codeSessions, coworkSessions, tasks, browserSessions]);
+  }, [chatSessions, codeSessions, coworkSessions, tasks, browserSessions, cloudSessions]);
 
   const filteredItems = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -253,6 +277,10 @@ export function RecentsView(): React.ReactNode {
   }, []);
 
   const openItem = useCallback((item: RecentItem) => {
+    if (item.kind === 'cloud') {
+      openAgentsConsole(item.sessionId ?? item.id);
+      return;
+    }
     const sessionId = item.sessionId ?? item.id;
     const defaultViewForMode: Record<AppMode, string> = {
       chat: 'chat',

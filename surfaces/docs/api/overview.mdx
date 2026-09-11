@@ -25,7 +25,7 @@ Do not point production clients at `http://localhost:8013` or at any second publ
 |--------------|------|--------|---------|
 | Pair a desktop or VPS, proxy to it, provision hosted/provisioned compute, bill, list models | [Cloud API](/api/cloud-api) | `allternit-cloud-api` | Postgres |
 | Run chat completions / embeddings with a virtual key | Cloud API `/v1/*` | `allternit-cloud-api` | Postgres + model router |
-| Create an agent session, Office binding, or beta research session | Cloud API `/api/v1/agent-sessions`, `/api/v1/office`, `/api/v1/beta/*` | Cloud API **relays** to Allternit API on your node | Node SQLite |
+| Create an agent session, Office binding, or beta research session | Cloud API `/api/v1/sessions` (Cloud Agents), `/api/v1/office`, `/api/v1/beta/*` | Cloud API **relays** to Allternit API on your node | Node SQLite |
 | Run the runtime yourself (desktop, your VPS, or an Allternit-provisioned box) | [Allternit API](/api/allternit-api) on loopback / tailnet | `allternit-api` | Per-instance SQLite |
 
 ## Topology

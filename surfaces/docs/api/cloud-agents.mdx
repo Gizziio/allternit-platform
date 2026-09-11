@@ -1,0 +1,48 @@
+---
+title: Cloud Agents
+description: Hosted agent sessions on Allternit's own API. Not an OpenAI or Anthropic wrap.
+---
+
+Allternit Agents has two specialties. **Cloud Agents** is the hosted session API. **Bot Agents** are the same agent packaged as a teammate (`is_bot`, persistent Computer Cloud desktop).
+
+Canonical reference in the platform repo: `docs/public/api/agents.md` and `docs/public/api/sessions.md`.
+
+## Create a session
+
+```bash
+curl -X POST http://localhost:8013/api/v1/sessions \
+  -H "Authorization: Bearer $CLERK_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent": { "model": "kimi-k2", "instructions": "Be terse." },
+    "computer": { "kind": "none" },
+    "input": "Summarize the repo layout."
+  }'
+```
+
+```ts
+import { Allternit } from "@allternit/sdk/cloud-agents";
+const allternit = new Allternit({ apiKey, baseURL: "http://localhost:8013" });
+const session = await allternit.sessions.create({
+  agent: { model: "kimi-k2", instructions: "Be terse." },
+  computer: { kind: "none" },
+  input: "Summarize the repo layout.",
+});
+```
+
+`computer.kind`: `none` | `local` | `sandbox` | `desktop` | `fabric`. Sandbox/desktop/fabric provision Computer Cloud (Incus/Tart on the VPS), not Fly. No VM driver → `503` `computer_unavailable`.
+
+Budget includes `estimated_cost_usd` with `charged: false`. Allternit does not bill this.
+
+Hub **Agents Console** (view `agent-cloud`) is the in-product analog of Claude Console's session runner.
+
+## Bot Agents
+
+```ts
+const bot = await allternit.bots.create({
+  name: "research",
+  systemPrompt: "Be terse.",
+  botProfile: { tagline: "Looks things up" },
+});
+await allternit.sessions.create({ botId: bot.id, computer: { kind: "desktop" } });
+```
