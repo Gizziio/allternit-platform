@@ -38,6 +38,9 @@ const TEST_PAGE = `<!doctype html>
   <button id="toggle" type="button" onclick="const f = document.querySelector('#flag'); f.textContent = f.textContent === 'off' ? 'on' : 'off';">Toggle flag</button>
   <p id="counter">0</p>
   <p id="flag">off</p>
+  <button id="alertbtn" type="button" onclick="alert('smoke dialog')">Trigger alert</button>
+  <input id="file" type="file" onchange="document.querySelector('#fname').textContent = this.files[0]?.name ?? ''" />
+  <p id="fname"></p>
 </body></html>`;
 
 let passed = 0;
@@ -49,9 +52,20 @@ function report(step: string, ok: boolean, detail = ""): void {
 }
 
 // ---------------------------------------------------------------------------
-// Static test page server (localhost only; no public internet).
+// Static test page server (localhost only; no public internet). The
+// /smoke-download route answers with Content-Disposition: attachment so a
+// plain navigate triggers a real download into the sandbox downloads dir.
 // ---------------------------------------------------------------------------
+const DOWNLOAD_BODY = "smoke-download-body";
 const server = createServer((req, res) => {
+  if (req.url === "/smoke-download") {
+    res.writeHead(200, {
+      "content-type": "text/plain",
+      "content-disposition": 'attachment; filename="smoke-download.txt"',
+    });
+    res.end(DOWNLOAD_BODY);
+    return;
+  }
   res.writeHead(200, { "content-type": "text/html" });
   res.end(TEST_PAGE);
 });
@@ -312,26 +326,24 @@ try {
   );
 
   // 6. provider stub over the stdio sidecar (P0 wiring of createStagehandProvider)
-  const provider = createStagehandProvider({ baseUrl: 'sidecar://local', headless: true });
-  const events = await provider.execute({
-    schemaVersion: "1.0",
-    actionId: "smoke-1",
+  const { mkdtempSync, writeFileSync, existsSync, readFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { createHash } = await import("node:crypto");
+  const sandboxDir = mkdtempSync(join(tmpdir(), "abr-smoke-"));
+  const provider = createStagehandProvider({ baseUrl: 'sidecar://local', headless: true, sandboxDir });
+  const intent = (kind: string, input: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
+    schemaVersion: "1.0" as const,
+    actionId: `smoke-${kind}`,
     runId: "smoke-run",
     sessionId: "smoke-session",
-    kind: "navigate",
-    reason: "provider stub smoke",
-    input: { url: testUrl },
+    kind: kind as any,
+    reason: `provider stub smoke ${kind}`,
+    input,
+    ...extra,
   });
-  const clickEvents = await provider.execute({
-    schemaVersion: "1.0",
-    actionId: "smoke-2",
-    runId: "smoke-run",
-    sessionId: "smoke-session",
-    kind: "click",
-    reason: "provider stub smoke click",
-    targetDescription: "Increment counter",
-    input: {},
-  });
+  const events = await provider.execute(intent("navigate", { url: testUrl }));
+  const clickEvents = await provider.execute(intent("click", {}, { targetDescription: "Increment counter" }));
   const observation = await provider.observe("smoke-session");
   const providerOk =
     events.length > 0 &&
@@ -341,6 +353,88 @@ try {
     "provider stub (createStagehandProvider over sidecar: navigate + click + observe)",
     providerOk,
     `events=${events.length + clickEvents.length} observation.url=${observation.url}`,
+  );
+
+  // 7. screenshot intent: SHA-256 hash of the PNG recorded at capture time
+  const shotEvents = await provider.execute(intent("screenshot", {}));
+  const shotPayload = (shotEvents[0]?.payload ?? {}) as { pngBase64?: string; sha256?: string | null };
+  const shotHashOk =
+    typeof shotPayload.pngBase64 === "string" &&
+    typeof shotPayload.sha256 === "string" &&
+    shotPayload.sha256 === createHash("sha256").update(Buffer.from(shotPayload.pngBase64, "base64")).digest("hex");
+  report(
+    "provider screenshot (sha256 at capture time)",
+    shotHashOk,
+    `sha256=${shotPayload.sha256?.slice(0, 12)}…`,
+  );
+
+  // 8. tab intents: open a second tab, focus it, observe, close it
+  const openEvents = await provider.execute(intent("tab.open", { url: testUrl }));
+  const openedTab = (openEvents[0]?.payload ?? {}) as { pageId?: string };
+  const focusEvents = await provider.execute(
+    intent("tab.focus", { pageId: openedTab.pageId }),
+  );
+  const tabObservation = await provider.observe("smoke-session");
+  const closeEvents = await provider.execute(
+    intent("tab.close", { pageId: openedTab.pageId }),
+  );
+  report(
+    "provider tabs (open + focus + observe + close)",
+    Boolean(openedTab.pageId) &&
+      focusEvents[0]?.payload?.state !== "failed" &&
+      tabObservation.url.startsWith("http://127.0.0.1") &&
+      closeEvents[0]?.payload?.state !== "failed",
+    `tab=${openedTab.pageId?.slice(0, 8)}… url=${tabObservation.url}`,
+  );
+
+  // 9. dialog intents: navigate to a page that alerts shortly after load,
+  //    then accept the dialog (a modal during navigation would deadlock the
+  //    sequential request flow, so the alert is deferred past the load event).
+  await provider.execute(intent("navigate", { url: 'data:text/html,<body>dialog page<script>setTimeout(() => alert("smoke dialog"), 300)</script></body>' }));
+  const dialogEvents = await provider.execute(
+    intent("dialog.accept", {}, { targetDescription: "accept the smoke alert" }),
+  );
+  const dialogPayload = (dialogEvents[0]?.payload ?? {}) as { handled?: boolean; dialogType?: string };
+  await provider.execute(intent("navigate", { url: testUrl }));
+  report(
+    "provider dialog.accept (host-side CDP over the page target)",
+    dialogPayload.handled === true && dialogPayload.dialogType === "alert",
+    JSON.stringify(dialogPayload),
+  );
+
+  // 10. file.upload intent: sandbox-contained path upload + escape refusal
+  const uploadFile = join(sandboxDir, "smoke-upload.txt");
+  writeFileSync(uploadFile, "smoke upload payload");
+  const uploadEvents = await provider.execute(
+    intent("file.upload", { selector: "#file", files: [{ path: "smoke-upload.txt" }] }),
+  );
+  const escapeEvents = await provider.execute(
+    intent("file.upload", { selector: "#file", files: [{ path: "../../etc/passwd" }] }),
+  );
+  const uploadPayload = (uploadEvents[0]?.payload ?? {}) as { uploaded?: number };
+  const escapePayload = (escapeEvents[0]?.payload ?? {}) as { state?: string; error?: string };
+  report(
+    "provider file.upload (sandbox-contained) + escape refusal",
+    uploadPayload.uploaded === 1 && escapePayload.state === "failed",
+    `uploaded=${uploadPayload.uploaded} escape=${escapePayload.error ?? escapePayload.state}`,
+  );
+
+  // 11. download intent: attachment navigate lands in the sandbox downloads
+  //    dir; the download intent lists it, and the bytes are on disk.
+  await provider.execute(intent("navigate", { url: `${testUrl}smoke-download` }));
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const downloadEvents = await provider.execute(intent("download", {}));
+  const downloadPayload = (downloadEvents[0]?.payload ?? {}) as {
+    downloads?: Array<{ name: string; size: number }>;
+  };
+  const downloaded = downloadPayload.downloads?.find((d) => d.name === "smoke-download.txt");
+  const onDisk = downloaded
+    ? readFileSync(join(sandboxDir, "downloads", "smoke-download.txt"), "utf8")
+    : null;
+  report(
+    "provider download (attachment lands in run sandbox, intent lists it)",
+    downloaded?.size === DOWNLOAD_BODY.length && onDisk === DOWNLOAD_BODY,
+    `downloads=${JSON.stringify(downloadPayload.downloads ?? [])}`,
   );
   await provider.close("smoke-session");
 } catch (error) {
