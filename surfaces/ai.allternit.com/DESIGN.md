@@ -483,17 +483,22 @@ renderer must keep this policy.
   with in-memory objects. Defense in depth — modern browsers already throw on
   real storage access from an opaque-origin frame, but the shim guarantees
   artifact code cannot persist anything even where access wouldn't throw.
+- **CSP egress lockdown** (`injectSandboxCsp`, `src/components/artifact/sandbox-csp.ts`):
+  every generated srcdoc gets a `<meta http-equiv="Content-Security-Policy">`
+  as the first thing in `<head>`:
+  `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'`.
+  Network egress is blocked: `fetch`/XHR/beacon/WebSocket and external
+  `<script src>`/`<img>`/`<link>`/font loads all fail. Inline artifact JS and
+  data-/blob-embedded images, media, and fonts keep working. `postMessage`
+  (the aio-target click-to-target channel) is not a network fetch and is
+  unaffected by `connect-src`. No renderer type needs a policy exception
+  today — the templates in `artifact-templates.ts` are fully self-contained.
+  If one ever does, scope the CSP per renderer type and record the exception
+  here (§11.3).
 - **Mermaid artifacts** render as plain text (no markup injection at all).
 
 ### 11.2 Advisory / known gaps (not enforced today)
 
-- **No CSP.** The sandboxed iframe has no Content-Security-Policy. Script
-  execution is allowed by design (artifacts are interactive), and network
-  egress is not blocked: `fetch`/XHR can reach arbitrary origins (response
-  reading is still subject to the target's CORS), and `<script src>` / `<img>`
-  / `<link>` can load remote resources. Tightening (a restrictive CSP injected
-  into the srcDoc) is tracked as a follow-up issue — do not assume egress is
-  blocked.
 - **The storage shim is per-document, not a quota system.** It prevents
   persistence and origin leakage; it does not limit in-memory usage.
 - The `allow-scripts allow-forms allow-modals` token set exists so artifacts

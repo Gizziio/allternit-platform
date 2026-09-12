@@ -2,6 +2,9 @@
 
 Status: design for review (Phase 2 program, session `artifactsapi-0911`)
 Mapping doc: §2 row 16, Eoj amendment 2026-09-11
+Decisions amendment 2026-09-12 (Eoj, session `artdecisions-0912`): §6 sharing
+tiers (publish + relay) and §8 version retention all DECIDED — see §6, §7,
+§8.
 
 ## What this is
 
@@ -258,34 +261,38 @@ client of the API; the per-surface build plans belong to their own sessions.
   :8013, `surfaces/allternit-desktop/src/main/unified-main.ts`); no new
   transport.
 
-## 6. Sharing tiers (row 10 — mostly OPEN)
+## 6. Sharing tiers (row 10 — all tiers decided 2026-09-12)
 
 | Tier | Mechanism | Status |
 |------|-----------|--------|
 | **Local (default)** | `a://artifact/<id>` on the local gateway; only this machine, only authenticated local users | DECIDED |
 | **Static export** | Existing client-side pipelines: HTML / PDF / ZIP / PPTX / MP4 (`artifact-export.ts`) | DECIDED — exists, unchanged; export stays client-side in Phase 1 |
-| **Hosted publish (Cloudflare Pages)** | Infra exists (the Ops gateway already deploys Pages projects). Publish = explicit user action that exports a version and deploys it to a Pages project under the user's account. | OPEN — see questions |
-| **Org relay (A:// mesh)** | Artifact travels between gateways over the mesh (CommRails substrate, `commrails/`). | OPEN — see questions |
+| **Hosted publish (Cloudflare Pages)** | Infra exists (the Ops gateway already deploys Pages projects). Publish = explicit user action that exports a version and deploys it to a Pages project under the user's account. | DECIDED 2026-09-12 (Eoj) — see answers below |
+| **Org relay (A:// mesh)** | Artifact travels between gateways over the mesh (CommRails substrate, `commrails/`). | DECIDED 2026-09-12 (Eoj) — see answers below |
 
-**OPEN questions for Eoj (publish tier):**
-1. What URL shape does a published artifact get — a per-user Pages project
-   (`<user>.artifacts.allternit.com/<id>`), or a shared project with per-user
-   routes?
-2. Does publish snapshot a *version* (immutable, "what you reviewed is what is
-   live") or track `current_version` (live updates)? Snapshot is the safer
-   default; confirm.
-3. Unpublish/takedown: delete the Pages deployment on artifact delete, or keep
-   deployments immutable and only unpublish the route?
-4. Is publish gated on the sandbox policy (e.g. artifacts that requested
-   network access can't be published), or is that overkill for v1?
+**Publish tier — decisions (2026-09-12, decided by Eoj; the former OPEN
+questions, answered):**
+1. **URL shape: shared Pages project with per-user routes** — NOT per-user
+   projects. One project, routes namespaced per user
+   (`artifacts.allternit.com/<user>/<id>`-style), keeping deploy/ops surface
+   flat.
+2. **Publish snapshots a version — immutable.** "What you reviewed is what is
+   live." A publish points at a specific version row; it does not track
+   `current_version`.
+3. **Deployments stay immutable.** Unpublish/takedown removes the route only;
+   it does not delete the Pages deployment.
+4. **Publish IS gated on the sandbox policy for v1.** Artifacts whose
+   `sandbox_policy` requests network access are rejected at publish time with
+   a clear error.
 
-**OPEN questions for Eoj (relay tier):**
-5. Addressing across machines: is `a://artifact/<id>` resolvable on another
-   gateway (registry lookup), or does relay mint a new local id and keep the
-   origin id in provenance? (Design leans to the latter — local ids stay
-   local, provenance carries origin.)
-6. Trust model: does a received artifact run under `sandbox_policy='received'`
-   (stricter iframe sandbox) until the user promotes it?
+**Relay tier — decisions (2026-09-12, decided by Eoj; the former OPEN
+questions, answered):**
+5. **Addressing: mint a new local id on receive; the origin id is carried in
+   provenance.** Local ids stay local (the design's lean confirmed); no
+   cross-gateway registry lookup.
+6. **Trust: NO stricter received sandbox.** Received artifacts render under
+   the standard policy; provenance is displayed to the user. There is no
+   `sandbox_policy='received'` promotion flow in v1.
 
 ## 7. Phasing
 
@@ -300,10 +307,18 @@ landed today (PR #378, P0 gallery, ~700 lines).
 - **Phase 2 — Cross-surface consumption.** Chat persist step, cowork
   `a://artifact/<id>` links, gizzi-code `artifact` client commands, typed
   renderers for deck/prototype/mobile (decision in §2.1), IndexedDB stores
-  demoted to read-through cache.
+  demoted to read-through cache. Version retention is DECIDED (§8: cap 50,
+  admin-configurable, prune oldest) and implemented at append time in
+  Phase 1, so Phase 2 has no retention item.
 - **Phase 3 — Publish tiers.** Static-export polish plus hosted publish via
-  Cloudflare Pages (answers to §6 questions required before build starts).
-  Org relay stays out of Phase 3 unless the §6 answers land early.
+  Cloudflare Pages. The §6 publish-tier answers are DECIDED (2026-09-12, Eoj):
+  shared Pages project with per-user routes, version-snapshot publish,
+  immutable deployments (unpublish removes the route only), and a publish
+  gate that rejects artifacts whose `sandbox_policy` requests network access
+  — Phase 3 must implement that gate. Org relay stays out of Phase 3; its
+  §6 relay-tier answers are also decided (new local id on receive with origin
+  id in provenance; standard sandbox for received artifacts, provenance
+  displayed).
 
 ## 8. Risks / honesty
 
@@ -321,11 +336,13 @@ landed today (PR #378, P0 gallery, ~700 lines).
   future policy change is a data change, not a renderer rewrite. The API does
   not execute artifacts; it stores and serves them. Execution stays in the
   surfaces, under the same sandbox as today.
-- **Version retention.** Append-only versions grow without bound. Phase 1
-  ships no pruning; Phase 2 must pick a retention policy (candidate: cap N
-  versions per artifact with admin-configurable N, matching the memory-store
-  cap pattern). An honest unknown, tracked as an OPEN item in the Phase 2
-  issue.
+- **Version retention.** Append-only versions grow without bound. DECIDED
+  2026-09-12 (Eoj): industry-standard cap of **50 versions per artifact**,
+  admin-configurable, pruning the oldest beyond the cap — the same pattern as
+  the memory-store cap. Phase 1 implements the cap at version-append time so
+  the append-only store never grows unbounded from day one (the Phase 1
+  session owns this); the admin-configurable knob lands with it (env or
+  config, default 50).
 - **Name collision.** "Artifact" already means the sectioned-document model in
   this codebase (`artifact_routes.rs`). The new tables and routes use the
   `content-artifact`/`content_artifacts` prefix to keep the two apart; the
