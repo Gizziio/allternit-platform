@@ -44,6 +44,10 @@ Plan at .steering/plans/plan-fedesign-0911.md.
   note; 5 new vitest assertions. LIVE RENDER CHECK PASSED: fixture <h1>Render check</h1>
   -> real Chrome PNG 9825 bytes 1280x800 via both --html-file and stdin; fixtures deleted.
   Awaiting typecheck + vitest before commit.
+- (rendercompare-0911) ALL GATES GREEN: typecheck 0 errors; vitest src/lib/design
+  src/shell src/views/design 79/79 across 13 files (baseline 66/66 @12 — main gained
+  tests from other sessions; this change adds 5 in studio-system-prompt.test.ts);
+  release-preflight 35/0; node --test scripts/render-artifact-screenshot.test.mjs 11/11.
 - (artifactsapi-0911) Worktree created. Read the real code first: ArtifactRenderer.tsx (sandboxed
   srcDoc iframe + storage shim), artifact-parser.ts (splitOnArtifacts),
   gallery-store.ts / project-file-store.ts (the two IndexedDB stores),

@@ -12,21 +12,21 @@ persist the final screenshot as a project file `/.renders/<timestamp>.png`.
 
 - [x] Worktree + pnpm install (playwright-core resolvable from root node_modules; Chrome at
       /Applications/Google Chrome.app; preflight baseline 35/0)
-- [ ] `scripts/render-artifact-screenshot.mjs` (repo root): `--html-file` | stdin, `--out`,
+- [x] `scripts/render-artifact-screenshot.mjs` (repo root): `--html-file` | stdin, `--out`,
       `--width 1280 --height 800 --wait <ms>`; Chrome discovery + playwright-core ad-hoc
       resolution mirroring client-report screenshot.js; graceful non-zero exit + stderr.
       Pure helpers (parseArgs, output-path defaulting) factored for node:test coverage.
-- [ ] `scripts/render-artifact-screenshot.test.mjs` — pure-helper tests only, no browser.
-- [ ] Studio steering: bounded "Self-verification — render and compare" block in
+- [x] `scripts/render-artifact-screenshot.test.mjs` — pure-helper tests only, no browser.
+- [x] Studio steering: bounded "Self-verification — render and compare" block in
       `composeStudioSystemPrompt` (surfaces/ai.allternit.com/src/lib/design/studio-system-prompt.ts)
       with the exact command line + repo-root mount note.
-- [ ] Extend studio-system-prompt.test.ts (self-verification instruction, exact script path,
+- [x] Extend studio-system-prompt.test.ts (self-verification instruction, exact script path,
       2-pass cap).
-- [ ] Verify: `pnpm typecheck` 0 errors; `pnpm vitest run src/lib/design src/shell src/views/design`
+- [x] Verify: `pnpm typecheck` 0 errors; `pnpm vitest run src/lib/design src/shell src/views/design`
       all green; `node --test scripts/render-artifact-screenshot.test.mjs`.
-- [ ] Live render check: fixture HTML `<h1>Render check</h1>` + inline styles → real non-empty PNG;
+- [x] Live render check: fixture HTML `<h1>Render check</h1>` + inline styles → real non-empty PNG;
       show size; delete fixture.
-- [ ] `node scripts/release-preflight.mjs` passes.
+- [x] `node scripts/release-preflight.mjs` passes (35/0).
 - [ ] Commit, push, PR (--merge), merge SHA.
 - [ ] Ledger branch session/ledger-rendercompare-0911: summary + LEDGER.md bullet, PR, merge.
 - [ ] Desktop rebuild from merged main (copy sidecar bin/, `npm run dist` background), bundle grep

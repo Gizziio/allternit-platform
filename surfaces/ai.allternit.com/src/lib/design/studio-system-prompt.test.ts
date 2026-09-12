@@ -57,3 +57,34 @@ describe('composeStudioSystemPrompt — design taste steering', () => {
     expect(prompt).toContain('RULE 1 — turn 1 must emit');
   });
 });
+
+describe('composeStudioSystemPrompt — self-verification (render and compare, P1.5)', () => {
+  const prompt = composeStudioSystemPrompt();
+
+  it('instructs render-and-compare before finalizing the artifact', () => {
+    expect(prompt).toContain('## Self-verification — render and compare (binding, max 2 passes)');
+    expect(prompt).toContain('BEFORE emitting `<artifact>`');
+    // Defect categories to check against the brief
+    expect(prompt).toMatch(/overflow\/clipping/i);
+    expect(prompt).toMatch(/contrast/i);
+    expect(prompt).toMatch(/hierarchy/i);
+    expect(prompt).toMatch(/alignment/i);
+  });
+
+  it('gives the exact render script command line', () => {
+    expect(prompt).toContain('node scripts/render-artifact-screenshot.mjs --html-file /tmp/studio-verify.html');
+    expect(prompt).toContain('--width 1280 --height 800');
+  });
+
+  it('caps the render passes at 2', () => {
+    expect(prompt).toContain('max 2 render passes total');
+  });
+
+  it('persists the final screenshot as a project file under /.renders/', () => {
+    expect(prompt).toContain('/.renders/<timestamp>.png');
+  });
+
+  it('requires honesty when the renderer is unavailable', () => {
+    expect(prompt).toContain('never claim you rendered when you did not');
+  });
+});
