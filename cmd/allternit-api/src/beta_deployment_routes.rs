@@ -396,6 +396,7 @@ async fn trigger_run(
     let db = state.db.clone();
     let user_id = user.user_id.clone();
     let agent_id = deployment.agent_id.clone();
+    let webhook_deployment_id = id.clone();
     let run = tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
@@ -418,6 +419,14 @@ async fn trigger_run(
     .map_err(|e| ApiError::Internal(e.to_string()))?
     .map_err(|e: rusqlite::Error| ApiError::DbError(e.to_string()))?;
     let result_id = run.1.clone();
+
+    webhook_subscription_routes::deliver_registered_event(
+        state.clone(),
+        user.organization_id.as_deref(),
+        webhook_subscription_routes::events::DEPLOYMENT_RUN_CREATED,
+        json!({"deployment_id": webhook_deployment_id, "run_id": result_id, "triggered_by": "manual"}),
+    )
+    .await;
 
     Ok((
         StatusCode::CREATED,

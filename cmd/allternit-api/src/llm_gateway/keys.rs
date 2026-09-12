@@ -198,7 +198,20 @@ pub async fn create_key(
     .await;
 
     match result {
-        Ok(Ok(())) => (
+        Ok(Ok(())) => {
+            // Fire-and-forget webhook (never fails the request).
+            crate::webhook_subscription_routes::deliver_registered_event(
+                state.clone(),
+                tenant_id.as_deref(),
+                crate::webhook_subscription_routes::events::KEY_CREATED,
+                serde_json::json!({
+                    "key_id": id,
+                    "name": payload.name,
+                    "key_prefix": key_prefix,
+                }),
+            )
+            .await;
+            (
             StatusCode::CREATED,
             Json(json!({
                 "id": id,
@@ -212,7 +225,8 @@ pub async fn create_key(
                 "created_at": chrono::Utc::now().to_rfc3339(),
             })),
         )
-            .into_response(),
+            .into_response()
+        },
         Ok(Err(err)) => internal_error(err).into_response(),
         Err(err) => internal_error(err).into_response(),
     }
@@ -374,6 +388,7 @@ pub async fn revoke_key(
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let key_id_for_task = key_id.clone();
+    let webhook_org = user.organization_id.clone().or(user.tenant_id.clone());
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect().map_err(internal_error)?;
         authorize_key(&conn, &user, &key_id_for_task)?;
@@ -389,7 +404,16 @@ pub async fn revoke_key(
     .await;
 
     match result {
-        Ok(Ok(())) => Json(json!({ "id": key_id, "revoked": true })).into_response(),
+        Ok(Ok(())) => {
+            crate::webhook_subscription_routes::deliver_registered_event(
+                state.clone(),
+                webhook_org.as_deref(),
+                crate::webhook_subscription_routes::events::KEY_REVOKED,
+                serde_json::json!({"key_id": key_id}),
+            )
+            .await;
+            Json(json!({ "id": key_id, "revoked": true })).into_response()
+        }
         Ok(Err((status, body))) => (status, body).into_response(),
         Err(err) => internal_error(err).into_response(),
     }

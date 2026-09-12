@@ -730,6 +730,8 @@ async fn create_agent(
     );
     let secret_refs = body.secret_refs.clone();
     let identity_channels = body.identity_channels.clone();
+    let webhook_org = user.organization_id.clone();
+    let webhook_name = body.name.clone();
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -848,6 +850,15 @@ async fn create_agent(
             .and_then(Result::ok)
             .map(|v| v != 0)
             .unwrap_or(false);
+
+            // Fire-and-forget webhook (never fails the request).
+            crate::webhook_subscription_routes::deliver_registered_event(
+                state.clone(),
+                webhook_org.as_deref(),
+                crate::webhook_subscription_routes::events::AGENT_CREATED,
+                json!({"agent_id": id, "name": webhook_name}),
+            )
+            .await;
 
             (
                 StatusCode::CREATED,
@@ -2129,6 +2140,9 @@ async fn update_agent(
 
     let db = state.db.clone();
     let user_id = user.user_id;
+    let webhook_org = user.organization_id.clone();
+    let webhook_name = body.name.clone();
+    let webhook_agent_id = id.clone();
 
     let secret_refs = body.secret_refs.clone();
     let identity_channels = body.identity_channels.clone();
@@ -2144,7 +2158,16 @@ async fn update_agent(
     .await;
 
     match result {
-        Ok(Ok(())) => Json(json!({"success": true})).into_response(),
+        Ok(Ok(())) => {
+            crate::webhook_subscription_routes::deliver_registered_event(
+                state.clone(),
+                webhook_org.as_deref(),
+                crate::webhook_subscription_routes::events::AGENT_UPDATED,
+                json!({"agent_id": webhook_agent_id, "name": webhook_name}),
+            )
+            .await;
+            Json(json!({"success": true})).into_response()
+        }
         Ok(Err(e)) => {
             warn!("DB error updating agent: {}", e);
             (
@@ -2182,6 +2205,8 @@ async fn patch_agent(
 
     let db = state.db.clone();
     let user_id = user.user_id;
+    let webhook_org = user.organization_id.clone();
+    let webhook_agent_id = id.clone();
 
     let secret_refs = body.secret_refs.clone();
     let identity_channels = body.identity_channels.clone();
@@ -2200,7 +2225,16 @@ async fn patch_agent(
     .await;
 
     match result {
-        Ok(Ok(agent)) => Json(json!({"agent": agent})).into_response(),
+        Ok(Ok(agent)) => {
+            crate::webhook_subscription_routes::deliver_registered_event(
+                state.clone(),
+                webhook_org.as_deref(),
+                crate::webhook_subscription_routes::events::AGENT_UPDATED,
+                json!({"agent_id": webhook_agent_id, "name": agent.name}),
+            )
+            .await;
+            Json(json!({"agent": agent})).into_response()
+        }
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
             (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response()
         }
@@ -2236,9 +2270,18 @@ async fn archive_agent(
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let webhook_org = user.organization_id.clone();
+    let webhook_agent_id = id.clone();
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
+        let name: Option<String> = conn
+            .query_row(
+                "SELECT name FROM agents WHERE id = ?1 AND user_id = ?2",
+                params![id, user_id],
+                |row| row.get(0),
+            )
+            .optional()?;
         let affected = conn.execute(
             "UPDATE agents SET status = 'archived', archived_at = CURRENT_TIMESTAMP,
              updated_at = CURRENT_TIMESTAMP WHERE id = ?1 AND user_id = ?2",
@@ -2247,12 +2290,21 @@ async fn archive_agent(
         if affected == 0 {
             return Err(rusqlite::Error::QueryReturnedNoRows);
         }
-        Ok::<_, rusqlite::Error>(())
+        Ok::<_, rusqlite::Error>(name)
     })
     .await;
 
     match result {
-        Ok(Ok(())) => Json(json!({"archived": true})).into_response(),
+        Ok(Ok(name)) => {
+            crate::webhook_subscription_routes::deliver_registered_event(
+                state.clone(),
+                webhook_org.as_deref(),
+                crate::webhook_subscription_routes::events::AGENT_ARCHIVED,
+                json!({"agent_id": webhook_agent_id, "name": name}),
+            )
+            .await;
+            Json(json!({"archived": true})).into_response()
+        }
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
             (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response()
         }

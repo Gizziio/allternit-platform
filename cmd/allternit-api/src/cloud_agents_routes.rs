@@ -984,6 +984,13 @@ async fn create_cloud_session(
         &json!({"type": "session.created", "session_id": result_session_id}),
     )
     .await;
+    webhook_subscription_routes::deliver_registered_event(
+        state.clone(),
+        organization_id.as_deref(),
+        webhook_subscription_routes::events::SESSION_CREATED,
+        json!({"session_id": result_session_id}),
+    )
+    .await;
 
     if body.stream {
         // SSE of this session's events, replayed from the beginning so the
@@ -1010,6 +1017,8 @@ async fn archive_cloud_session(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
     let db = state.db.clone();
+    let webhook_org = user.organization_id.clone();
+    let webhook_session_id = id.clone();
     tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
@@ -1033,6 +1042,13 @@ async fn archive_cloud_session(
             ApiError::DbError(e.to_string())
         }
     })?;
+    webhook_subscription_routes::deliver_registered_event(
+        state.clone(),
+        webhook_org.as_deref(),
+        webhook_subscription_routes::events::SESSION_ARCHIVED,
+        json!({"session_id": webhook_session_id}),
+    )
+    .await;
     Ok(Json(json!({ "archived": true })))
 }
 

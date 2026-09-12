@@ -666,6 +666,17 @@ async fn append_event(
         &result.1,
     )
     .await;
+    if !result.0 {
+        // The append was rejected because the projected usage exceeds the
+        // session budget — result.1 is the budget_exceeded event.
+        webhook_subscription_routes::deliver_registered_event(
+            state.clone(),
+            user.organization_id.as_deref(),
+            webhook_subscription_routes::events::SESSION_OVER_BUDGET,
+            json!({"session_id": id, "event": result.1}),
+        )
+        .await;
+    }
     Ok(Json(json!({"accepted": result.0, "event": result.1})))
 }
 

@@ -110,6 +110,7 @@ pub struct FiredRun {
     pub deployment_id: String,
     pub run_id: String,
     pub task_id: String,
+    pub user_id: String,
     pub next_run_at: DateTime<Utc>,
 }
 
@@ -213,6 +214,7 @@ pub fn run_tick(db: &DbHandle, now: DateTime<Utc>) -> Result<Vec<FiredRun>, rusq
             deployment_id: deployment.id,
             run_id,
             task_id,
+            user_id: deployment.user_id,
             next_run_at: next,
         });
     }
@@ -249,6 +251,41 @@ pub fn spawn_deployment_scheduler(
                                         "deployment scheduler fired run"
                                     );
                                 }
+                                // Fire-and-forget webhooks for the new runs.
+                                // Org scope resolves from the deployment
+                                // owner's users row; no org → no delivery.
+                                let state = state.clone();
+                                let fired = fired.clone();
+                                tokio::spawn(async move {
+                                    for run in fired {
+                                        let db = state.db.clone();
+                                        let user_id = run.user_id.clone();
+                                        let org = tokio::task::spawn_blocking(move || {
+                                            let conn = db.connect().ok()?;
+                                            conn.query_row(
+                                                "SELECT organization_id FROM users WHERE id = ?1",
+                                                rusqlite::params![user_id],
+                                                |row| row.get::<_, Option<String>>(0),
+                                            )
+                                            .ok()
+                                            .flatten()
+                                        })
+                                        .await
+                                        .ok()
+                                        .flatten();
+                                        crate::webhook_subscription_routes::deliver_registered_event(
+                                            state.clone(),
+                                            org.as_deref(),
+                                            crate::webhook_subscription_routes::events::DEPLOYMENT_RUN_CREATED,
+                                            serde_json::json!({
+                                                "deployment_id": run.deployment_id,
+                                                "run_id": run.run_id,
+                                                "triggered_by": "scheduler",
+                                            }),
+                                        )
+                                        .await;
+                                    }
+                                });
                             }
                         }
                         Ok(Err(e)) => warn!("deployment scheduler tick failed: {e}"),

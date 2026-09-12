@@ -248,6 +248,7 @@ async fn purchase_credits(
     let amount_cents = req.amount_cents;
     let reference_id = req.reference_id;
     let idempotency_key = req.idempotency_key;
+    let method = req.method.clone();
     let org_for_ledger = org.clone();
     let entry = tokio::task::spawn_blocking(move || {
         let ledger = CreditsLedger::new(db);
@@ -265,6 +266,20 @@ async fn purchase_credits(
     .await
     .map_err(internal)?
     .map_err(credits_error)?;
+
+    crate::webhook_subscription_routes::deliver_registered_event(
+        state.clone(),
+        Some(&org),
+        crate::webhook_subscription_routes::events::BILLING_CREDIT_PURCHASE,
+        json!({
+            "organization_id": org,
+            "amount_cents": entry.amount_cents,
+            "balance_cents_after": entry.balance_cents_after,
+            "method": method,
+            "transaction_id": entry.id,
+        }),
+    )
+    .await;
 
     Ok(Json(json!({
         "organization_id": org,
