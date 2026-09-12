@@ -1,24 +1,13 @@
 # Steering checkpoint — session/designfixes-0912
 
-## Goal
-Deferred design UI work, 3 items: (1) critique-panel image wiring, (2) gallery
-thumbnails (view layer only — gallery-store/project-file-store/content-artifact-sync
-owned by sibling artphase2-0912), (3) `/design` ack channel (gizzi-code receipt
-file + CLI pickup confirmation). Desktop rebuild required after merge.
-
-## Just did
-- Read surgicaleye-0911 attestation (context), critique route, /design command,
-  DesignModeView, NewProjectScreen, gallery/artifact-thumbnail libs, gizzi
-  state-dir conventions (`~/.allternit`, orchestrator.ts precedent).
-- Findings: save-time thumbnail capture ALREADY exists (renderArtifactThumbnail
-  → entry.thumbnail); remaining gallery gap = view-side generation for
-  thumbnail-less entries + consistent card sizing. Critique route accepts html
-  only. No ack channel exists anywhere.
-- Wrote plan `.steering/plans/plan-designfixes-0912.md`. pnpm install done.
-
-## Next
-Land: merge origin/main before PR (sibling concurrency), conventional commits,
-gh pr create + merge --merge, ledger attestation, desktop rebuild, cleanup.
+- **Goal:** Deferred design UI work, 3 items: (1) critique-panel image wiring, (2) gallery
+  thumbnails (view layer only — gallery-store/project-file-store/content-artifact-sync
+  owned by sibling artphase2-0912), (3) `/design` ack channel (gizzi-code receipt
+  file + CLI pickup confirmation). Desktop rebuild required after merge.
+- **Just did:** All three items implemented and verified (see status below); merged
+  concurrent origin/main (PR #414 fabric-cowork-switch checkpoint kept, theirs first).
+- **Next:** PR, `gh pr merge --merge`, ledger attestation, desktop rebuild, cleanup.
+- **Open questions:** none.
 
 ## Status (all three items implemented + verified)
 - Critique images: turn-images.ts (11 tests), panel strip + images in POST body,
@@ -35,5 +24,11 @@ gh pr create + merge --merge, ledger attestation, desktop rebuild, cleanup.
   bun typecheck 0; build-production.js exit 0 (bundle greps: design-prompt-ack.json ×4,
   picked up your prompt ×3, attached-image- ×3); release-preflight 35/0.
 
-## Open questions
-- None.
+---
+
+# Prior checkpoint — session/fabric-cowork-switch-0912 (merged via #414)
+
+- **Goal:** Fabric Transport — composer Home/Cowork/Bots toggle must switch the canvas (cowork was a dead click); rename the switcher's "Chat" segment to "Home".
+- **Just did:** Worktree `fabric-cowork-switch-0912` off origin/main (`00a186602`). `FabricSessionPanel` `allternit:switch-mode` handler now routes `cowork` → chat kind + cowork canvas (+ clears node session selection), `chat` → chat canvas; app-mode mirror reflects the cowork canvas so the toggle highlights the right segment. `BottomDock` segment label Chat → Home (aria-label too) + tests updated. SW v40→v41. Typecheck ✅, BottomDock + dispatch tests 17 passed ✅, build + prepare verified v41.
+- **Next:** (landed — PR #414)
+- **Open questions:** none.
