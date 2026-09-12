@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -98,6 +99,7 @@ export function createStagehandProvider(
       capabilities: [
         'navigate', 'observe.dom', 'observe.accessibility', 'observe.screenshot',
         'interact.pointer', 'interact.keyboard', 'tabs', 'network.inspect', 'console.inspect',
+        'files.upload', 'files.download', 'dialogs',
       ],
       local: true,
       attachedToUserSession: false,
@@ -121,14 +123,23 @@ export interface StagehandSidecarOptions {
   /** Launch the sidecar's Chrome headless (default true). */
   headless?: boolean;
   /**
-   * Model mode for the sidecar runtime. P0 defaults to 'mock' (canned
-   * structured outputs — no external inference). 'provider' routes to a direct
-   * provider key; P1 will route through the allternit gateway instead.
+   * Model mode for the sidecar runtime. P0 default 'mock' (canned
+   * structured outputs — no external inference). 'gateway' routes the
+   * client-LLM callback through the allternit gateway
+   * (POST {ALLTERNIT_GATEWAY_URL}/v1/chat/completions with the
+   * ALLTERNIT_GATEWAY_KEY Bearer virtual key, model from
+   * ALLTERNIT_BROWSER_RUNTIME_MODEL or the A://C routing default).
+   * Fail-closed: no direct provider keys are used anywhere.
    */
-  modelMode?: 'mock' | 'provider';
-  /** Direct provider model config, used when modelMode is 'provider'. */
-  modelName?: string;
-  modelApiKey?: string;
+  modelMode?: 'mock' | 'gateway';
+  /**
+   * Run-scoped sandbox directory for file intents: downloads land in
+   * `<sandboxDir>/downloads`, path-based uploads are containment-checked
+   * against this root. Defaults to
+   * `<os.tmpdir()>/allternit-browser-runs/<first-run-id>` so different runs
+   * never share a download/upload surface.
+   */
+  sandboxDir?: string;
 }
 
 type SidecarRequest = { id: number; method: string; params?: Record<string, unknown> };
@@ -183,7 +194,7 @@ export class StagehandSidecarProvider implements BrowserProvider {
 
   async observe(sessionId: string): Promise<BrowserObservation> {
     this.sessionId = sessionId;
-    await this.ensureReady();
+    await this.ensureReady(undefined);
     const [actionsResult, pageInfo] = await Promise.all([
       this.request<{ actions: Array<{ selector: string; description: string; method?: string }> }>(
         'observe',
@@ -213,7 +224,7 @@ export class StagehandSidecarProvider implements BrowserProvider {
   async execute(action: ActionIntent): Promise<BrowserEvent[]> {
     this.sessionId = action.sessionId;
     try {
-      await this.ensureReady();
+      await this.ensureReady(action.runId);
       const result = await this.executeKind(action);
       return [this.event(action, 'committed', result)];
     } catch (error) {
@@ -259,13 +270,50 @@ export class StagehandSidecarProvider implements BrowserProvider {
           instruction: String(action.input.instruction ?? action.reason),
           schema: action.input.schema,
         });
-      case 'screenshot':
-        return await this.request('screenshot', {});
+      case 'screenshot': {
+        const result = await this.request<{ pngBase64: string; sha256?: string }>('screenshot', {});
+        // The runtime hashes the PNG at capture time; carry the hash in the
+        // event payload so receipt metadata binds the exact pixels observed.
+        return { ...result, sha256: result.sha256 ?? null };
+      }
       case 'wait':
         await new Promise((resolve) => setTimeout(resolve, Number(action.input.ms ?? 500)));
         return { waitedMs: Number(action.input.ms ?? 500) };
+      // Tabs ride the vendored SDK's BrowserContext (pageId === CDP targetId).
+      case 'tab.open':
+        return await this.request('tabOpen', { url: action.input.url });
+      case 'tab.focus':
+        return await this.request('tabSwitch', {
+          pageId: String(action.input.pageId ?? action.targetRef ?? ''),
+        });
+      case 'tab.close':
+        return await this.request('tabClose', {
+          pageId: String(action.input.pageId ?? action.targetRef ?? ''),
+        });
+      // Dialogs are handled host-side over raw CDP (the extension protocol
+      // has no dialog op — nothing invented that the extension can't run).
+      case 'dialog.accept':
+        return await this.request('dialog', {
+          accept: true,
+          promptText: action.input.promptText,
+          timeoutMs: action.input.timeoutMs,
+        });
+      case 'dialog.dismiss':
+        return await this.request('dialog', {
+          accept: false,
+          timeoutMs: action.input.timeoutMs,
+        });
+      // Files: uploads are containment-checked server-side against the
+      // run-scoped sandbox dir; downloads list the sandbox downloads dir.
+      case 'file.upload':
+        return await this.request('upload', {
+          selector: String(action.input.selector ?? target),
+          files: action.input.files,
+        });
+      case 'download':
+        return await this.request('downloads', {});
       default:
-        throw new Error(`action kind "${action.kind}" is not supported by the stagehand sidecar provider in P0`);
+        throw new Error(`action kind "${action.kind}" is not supported by the stagehand sidecar provider`);
     }
   }
 
@@ -282,20 +330,28 @@ export class StagehandSidecarProvider implements BrowserProvider {
     });
   }
 
-  private async ensureReady(): Promise<void> {
+  private async ensureReady(runId?: string): Promise<void> {
     if (!this.child) this.spawn();
-    this.initPromise ??= this.request('init', {
-      headless: this.options.headless ?? true,
-      model:
-        this.options.modelMode === 'provider'
-          ? {
-              mode: 'provider',
-              modelName: this.options.modelName ?? 'openai/gpt-4.1-mini',
-              apiKey: this.options.modelApiKey ?? process.env.OPENAI_API_KEY ?? '',
-            }
-          : { mode: 'mock' },
-    });
+    this.initPromise ??= (async () => {
+      const sandboxDir = this.resolveSandboxDir(runId);
+      await this.request('init', {
+        headless: this.options.headless ?? true,
+        model: this.options.modelMode === 'gateway' ? { mode: 'gateway' } : { mode: 'mock' },
+        // Run-scoped sandbox: downloads are pinned here at launch
+        // (Browser.setDownloadBehavior) and path-based uploads are
+        // containment-checked against this root by the sidecar.
+        ...(sandboxDir
+          ? { sandboxDir, downloadsPath: path.join(sandboxDir, 'downloads') }
+          : {}),
+      });
+    })();
     await this.initPromise;
+  }
+
+  private resolveSandboxDir(runId?: string): string | undefined {
+    if (this.options.sandboxDir) return this.options.sandboxDir;
+    if (!runId) return undefined;
+    return path.join(os.tmpdir(), 'allternit-browser-runs', sanitizeRunId(runId));
   }
 
   private spawn(): void {
@@ -347,6 +403,12 @@ export class StagehandSidecarProvider implements BrowserProvider {
 
 function randomId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Run ids become directory names; keep only safe characters. */
+function sanitizeRunId(runId: string): string {
+  const sanitized = runId.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return sanitized.slice(0, 64) || 'run';
 }
 
 export interface ExtensionTabProviderOptions {
