@@ -673,6 +673,8 @@ struct GizziCodeUsageEvent {
     #[serde(default)]
     tool_calls_rejected: i64,
     #[serde(default)]
+    lines_accepted: i64,
+    #[serde(default)]
     metadata: Option<serde_json::Value>,
     #[serde(default)]
     created_at: Option<String>,
@@ -710,8 +712,8 @@ async fn ingest_gizzi_code_events(
                 "INSERT INTO gizzi_code_usage_events
                  (id, tenant_id, user_id, session_id, event_type, model, provider,
                   prompt_tokens, completion_tokens, cost_microdollars,
-                  tool_calls_accepted, tool_calls_rejected, metadata, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+                  tool_calls_accepted, tool_calls_rejected, lines_accepted, metadata, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             )
             .map_err(internal)?;
         for event in body.events {
@@ -735,6 +737,7 @@ async fn ingest_gizzi_code_events(
                 event.cost_microdollars,
                 event.tool_calls_accepted,
                 event.tool_calls_rejected,
+                event.lines_accepted,
                 metadata_json,
                 created_at,
             ])
@@ -767,7 +770,8 @@ async fn gizzi_code_usage(
                 SUM(completion_tokens) AS completion_tokens,
                 SUM(cost_microdollars) AS cost_microdollars,
                 SUM(tool_calls_accepted) AS tool_calls_accepted,
-                SUM(tool_calls_rejected) AS tool_calls_rejected
+                SUM(tool_calls_rejected) AS tool_calls_rejected,
+                SUM(lines_accepted) AS lines_accepted
          FROM gizzi_code_usage_events
          WHERE tenant_id = ?1 AND created_at >= ?2 AND created_at < ?3
          GROUP BY bucket
@@ -786,6 +790,7 @@ async fn gizzi_code_usage(
                 "cost_microdollars": row.get::<_, i64>(6)?,
                 "tool_calls_accepted": row.get::<_, i64>(7)?,
                 "tool_calls_rejected": row.get::<_, i64>(8)?,
+                "lines_accepted": row.get::<_, i64>(9)?,
             }))
         })
         .map_err(internal)?
@@ -1365,6 +1370,7 @@ mod tests {
                                     "cost_microdollars": 5000,
                                     "tool_calls_accepted": 1,
                                     "tool_calls_rejected": 0,
+                                    "lines_accepted": 42,
                                     "created_at": "2026-08-01T10:00:00Z",
                                 },
                                 {
@@ -1408,9 +1414,12 @@ mod tests {
         assert_eq!(aug1["events"], 1);
         assert_eq!(aug1["prompt_tokens"], 100);
         assert_eq!(aug1["tool_calls_accepted"], 1);
+        assert_eq!(aug1["lines_accepted"], 42);
         let aug2 = items.iter().find(|i| i["bucket"] == "2026-08-02").unwrap();
         assert_eq!(aug2["events"], 1);
         assert_eq!(aug2["completion_tokens"], 100);
         assert_eq!(aug2["tool_calls_rejected"], 1);
+        // Pre-V151 payloads without lines_accepted ingest and aggregate as 0.
+        assert_eq!(aug2["lines_accepted"], 0);
     }
 }

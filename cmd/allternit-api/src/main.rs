@@ -798,6 +798,11 @@ async fn main() {
         .merge(artifact_router())
         .merge(allternit_api::content_artifact_routes::content_artifact_router())
         .merge(allternit_api::content_artifact_publish::content_artifact_publish_router())
+        .merge(allternit_api::console_announcement_routes::console_announcement_router())
+        // Analytics on the /api/v1 surface too — the gizzi-code telemetry
+        // client and admin console call /api/v1/analytics/* (the historical
+        // /api mount below stays for backward compatibility).
+        .merge(analytics_router())
         .merge(conversation_router())
         .merge(office_router())
         .merge(office_cli_router())

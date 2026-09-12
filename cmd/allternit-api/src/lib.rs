@@ -3,6 +3,7 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod aci_approvals;
+pub mod aci_batch;
 pub mod aci_credentials;
 pub mod aci_routes;
 pub mod aci_safety;
@@ -93,6 +94,7 @@ pub mod config;
 pub mod connector_routes;
 pub mod content_artifact_publish;
 pub mod content_artifact_routes;
+pub mod console_announcement_routes;
 pub mod conversation_routes;
 pub mod cors;
 pub mod credits;

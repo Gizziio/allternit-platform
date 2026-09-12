@@ -61,11 +61,15 @@ export const LocalBrowserConnectOptionsSchema = z
   })
   .meta({ id: "LocalBrowserConnectOptions" });
 
-export const DEFAULT_BROWSERBASE_URL = "https://api.browserbase.com";
+// Self-hosted fork: the upstream Browserbase URL constant was scrubbed (P1,
+// spec stagehand-batch-fork). The inert `browserbase` session factory now
+// requires an explicit baseUrl at parse time — fail-closed: nothing in this
+// runtime may reach a third-party browser cloud unless a caller names the
+// endpoint themselves.
 
 type BrowserbaseLaunchOptionsInput = Browserbase.SessionCreateParams & {
   apiKey: string;
-  baseUrl?: string;
+  baseUrl: string;
 };
 
 type BrowserbaseLaunchOptionsOutput = Browserbase.SessionCreateParams & {
@@ -80,7 +84,7 @@ type BrowserbaseLaunchOptionsOutput = Browserbase.SessionCreateParams & {
 export const BrowserbaseLaunchOptionsSchema = z
   .looseObject({
     apiKey: z.string().min(1),
-    baseUrl: z.url().default(DEFAULT_BROWSERBASE_URL),
+    baseUrl: z.url(),
     apiUrl: z.never().optional(),
     type: z.never().optional(),
   })
@@ -92,7 +96,7 @@ export const BrowserbaseLaunchOptionsSchema = z
 export const BrowserbaseConnectOptionsSchema = z
   .strictObject({
     apiKey: z.string().min(1),
-    baseUrl: z.url().default(DEFAULT_BROWSERBASE_URL),
+    baseUrl: z.url(),
     sessionId: z.string().min(1),
     extensionId: z.string().min(1).optional(),
   })
@@ -100,7 +104,7 @@ export const BrowserbaseConnectOptionsSchema = z
 
 const BrowserbaseClientOptionsSchema = {
   apiKey: z.string().min(1),
-  baseUrl: z.url().default(DEFAULT_BROWSERBASE_URL),
+  baseUrl: z.url(),
 };
 
 /** Data returned by the Browserbase SDK after creating a session. */
