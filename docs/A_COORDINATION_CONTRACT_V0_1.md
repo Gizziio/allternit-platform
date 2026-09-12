@@ -679,6 +679,16 @@ A new approval MUST be obtained unless policy explicitly defines a safe reusable
 
 This prevents replay of stale approvals after reassignment.
 
+**Implemented (v0.1 proof slice).** `cowork_approval_bindings` (migration V155) scopes
+every approval to (executor, capability, target, run_id, job_id, lease_generation).
+Workers request under their lease via `POST /api/v1/fabric/transport/jobs/:id/approvals/request`
+and gate protected actions with `.../approvals/check` (store-level:
+`allternit-cowork-runtime/src/sqlite_store.rs::request_approval/check_approval`);
+humans decide via `.../approvals/:id/grant|deny` (user auth). Lease expiry
+invalidates all bindings of the expired generation (`approval.invalidated` event,
+executor-attributed), so a replacement worker under a new generation must
+re-obtain approval — enforced in the §8.24 conformance test.
+
 ## 8.15 Delegation chain
 
 Every delegated Intent or Job MUST carry an append-only causation chain.
@@ -826,6 +836,13 @@ which Jobs require human intervention
 ```
 
 A process restart MUST NOT silently convert unknown work into success or loss.
+
+**Implemented (v0.1 proof slice).** At boot, `cmd/allternit-api` first runs one
+`expire_leases` pass against the canonical store (server clock; downtime-expired
+leases get the same requeue/dead-letter recovery as runtime expiry), then
+rehydrates ALL runs and ALL jobs — queued and leased — into the RunManager
+mirror (`load_persisted_cowork_jobs`, `RunManager::load_job`; the runtime `Job`
+type carries `lease_id`, `lease_generation`, `required_capabilities`).
 
 ## 8.21 Dead-letter
 
@@ -1236,13 +1253,19 @@ Rust runtime already nails this: `cowork_runs` (initiator, mode, state, entrypoi
 
 `cowork_jobs` (migration `V8__cowork_jobs_and_handoffs.sql`) already has `lease_owner`, `retry_count/max_retries`, `timeout_sec` — the lease columns exist. But there is no claim/heartbeat/renew/expire protocol (heartbeat loops are empty, `run.rs:560-592`), no lease generation/token, and job transitions are unvalidated. This is the critical path.
 
-### Approval — Extend
+### Approval — binding implemented (v0.1)
 
-`ApprovalGate` (risk rules, timeout) is real; cloud-api has `approvals.rs`. Needed: scope to `(executor, capability, target, run, lease_generation)`; fix the unscoped listing bug (`cmd/allternit-api/src/cowork_routes.rs:1527-1529` returns all users' rows — non-conformant under §8.18/§16); add approval timeout/auto-deny semantics.
+Scoped bindings landed: `cowork_approval_bindings` (V155) with
+(executor, capability, target, run, job, lease_generation) scope, request/check/grant/deny
+protocol under `/api/v1/fabric/transport/*`, and expiry invalidation (§8.14) — see the
+§8.14 implementation note. The unscoped listing bug (`cmd/allternit-api/src/cowork_routes.rs`
+`GET /cowork/approvals`) is fixed (user-filtered). Still open: approval
+timeout/auto-deny semantics, and unifying this with the older `ApprovalGate`
+risk-rules engine.
 
-### Event/Attribution — Extend
+### Event/Attribution — conformant for material events
 
-`cowork_run_events` (append-only) + commrails ledger mirroring (`cmd/allternit-api/src/rails_client_impl.rs:436-482`) + SSE stream (`rails/routes_cowork.rs:952-1027`) are the right spine. Needed: the three-actor attribution triple in the event schema, idempotency on `event_id`, event types aligned to §8.22.
+`cowork_run_events` (append-only) + commrails ledger mirroring (`cmd/allternit-api/src/rails_client_impl.rs:436-482`) + SSE stream (`rails/routes_cowork.rs`) are the spine. Landed: the three-actor attribution triple (V154) on every fabric-transport material event, event types per §8.22 for the transport/approval vocabulary (`job.claimed`, `job.lease_expired`, `approval.requested/granted/denied/invalidated`, `result.created`, …). Still open: idempotency on client-supplied `event_id` (system-generated ids today).
 
 ### Result/Artifact — Extend
 
@@ -1267,9 +1290,11 @@ policy beyond requeue, CommRails push wake-up.
 
 ```text
 Run                = conformant
-Event/Transport    = near
-Approval           = near
-Principal/Intent/Lease/Fabric-transport = proof slice landed (see Appendix B)
+Event/Transport    = conformant (attribution triple on material events)
+Approval           = binding conformant (§8.14; scoped + invalidated on expiry)
+Principal          = auth conformant (bearer-token, hashed)
+Lease/Fabric-transport = proof slice conformant (§8.24 test passes)
+Intent             = not yet (envelope type; run creation is the current entry)
 ```
 
 ---
@@ -1297,4 +1322,4 @@ Target: the §8.24 test with the simplest real job (a shell step sequence, not a
 
 ---
 
-*Changelog: 2026-09-12 — v0.1 internal draft. Merged dispatcher/lease protocol as §8, superseding the original §8 "Lease / claim semantics". Folded in the four architectural locks (§8.0). Added Appendix A (codebase type mapping) and Appendix B (proof-slice plan). 2026-09-12 (later) — terminology locked: "dispatcher"/"dispatch" renamed to **fabric transport** throughout §7/§8 and the appendices (lifecycle `DISPATCHED` → `TRANSPORTED`); `A_DISPATCH_FAILED` → `A_TRANSPORT_FAILED`; HTTP surface `/api/v1/dispatch/*` → `/api/v1/fabric/transport/*`; env `ALLTERNIT_DISPATCH_*` → `ALLTERNIT_FABRIC_TRANSPORT_*`. Behavior, CAS mechanism, and the four locks unchanged.*
+*Changelog: 2026-09-12 — v0.1 internal draft (third update): approval↔lease binding (§8.14) implemented — `cowork_approval_bindings` (V155), request/check/grant/deny protocol, expiry invalidation; boot-time recovery (§8.20) implemented — downtime lease expiry pass + full run/job rehydration; `start_run` now stops at `queued` (RUNNING = lease held, §8.2); full §8.24 conformance test including approval steps passes. 2026-09-12 — v0.1 internal draft. Merged dispatcher/lease protocol as §8, superseding the original §8 "Lease / claim semantics". Folded in the four architectural locks (§8.0). Added Appendix A (codebase type mapping) and Appendix B (proof-slice plan). 2026-09-12 (later) — terminology locked: "dispatcher"/"dispatch" renamed to **fabric transport** throughout §7/§8 and the appendices (lifecycle `DISPATCHED` → `TRANSPORTED`); `A_DISPATCH_FAILED` → `A_TRANSPORT_FAILED`; HTTP surface `/api/v1/dispatch/*` → `/api/v1/fabric/transport/*`; env `ALLTERNIT_DISPATCH_*` → `ALLTERNIT_FABRIC_TRANSPORT_*`. Behavior, CAS mechanism, and the four locks unchanged.*
