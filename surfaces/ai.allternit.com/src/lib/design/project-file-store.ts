@@ -1,16 +1,33 @@
 /**
- * Virtual project file workspace for Allternit Design mode.
+ * Virtual project file workspace for Allternit Design mode, Phase 2
+ * read-through cache (docs/design/artifacts-api.md §4, §7 Phase 2).
  *
  * Stores files per project in IndexedDB. Each project has a flat file tree
  * keyed by path. Files are strings (HTML, JSON, MD, etc.). The workspace can
  * be imported/exported as ZIP and synced to the active artifact preview.
+ *
+ * The project's artifact file (`/index.html`) is read-through cached over the
+ * gateway content-artifact for the project: writes go to IndexedDB first and
+ * then best-effort append/create a gateway version; loads fall back to the
+ * gateway body when the local tree has no `/index.html`. The rest of the file
+ * tree is local-only (the gateway has no multi-file model in Phase 2).
  */
+
+import {
+  appendContentArtifactVersion,
+  createContentArtifact,
+  getContentArtifact,
+  listContentArtifacts,
+} from './content-artifact-api';
 
 const DB_NAME = 'allternit-design-files';
 const DB_VERSION = 2;
 const STORE_NAME = 'projectFiles';
 const VERSIONS_STORE_NAME = 'fileVersions';
 const MAX_FILE_VERSIONS = 10;
+
+/** The project artifact file — mirrors the project's gateway content-artifact. */
+export const PROJECT_ARTIFACT_PATH = '/index.html';
 
 export interface ProjectFile {
   path: string;
@@ -54,6 +71,30 @@ function openDb(): Promise<IDBDatabase> {
 }
 
 export async function loadProjectFiles(projectId: string): Promise<ProjectFileTree> {
+  const tree = await loadCachedProjectFiles(projectId);
+  if (tree.files[PROJECT_ARTIFACT_PATH]) return tree;
+  // Read-through: the gateway artifact for this project may hold a body this
+  // browser hasn't cached yet.
+  try {
+    const res = await listContentArtifacts({ project: projectId, limit: 1 });
+    const artifactId = res.artifacts?.[0]?.id;
+    if (!artifactId) return tree;
+    const full = await getContentArtifact(artifactId);
+    const body = full.artifact?.body;
+    if (!body) return tree;
+    tree.files[PROJECT_ARTIFACT_PATH] = {
+      path: PROJECT_ARTIFACT_PATH,
+      content: body,
+      updatedAt: full.artifact?.updatedAt ?? new Date().toISOString(),
+    };
+    await saveProjectFiles(tree).catch(() => {});
+    return tree;
+  } catch {
+    return tree;
+  }
+}
+
+async function loadCachedProjectFiles(projectId: string): Promise<ProjectFileTree> {
   try {
     const db = await openDb();
     return new Promise((resolve, reject) => {
@@ -95,7 +136,33 @@ export async function writeProjectFile(
   } catch {
     // IndexedDB unavailable or version store missing — file write already succeeded.
   }
+  // The artifact file also writes through to the gateway content-artifact
+  // (create version 1, or append the next immutable version). Best-effort:
+  // the IndexedDB write above already succeeded. The idempotency key is
+  // content-hashed so a retried identical write dedupes server-side.
+  if (path === PROJECT_ARTIFACT_PATH) {
+    syncArtifactFileToGateway(projectId, content).catch(() => {});
+  }
   return tree;
+}
+
+async function syncArtifactFileToGateway(projectId: string, content: string): Promise<void> {
+  const res = await listContentArtifacts({ project: projectId, limit: 1 });
+  const artifactId = res.artifacts?.[0]?.id;
+  if (artifactId) {
+    await appendContentArtifactVersion(artifactId, content, {
+      idempotencyKey: `files-append-${projectId}-${hashContent(content)}`,
+    });
+    return;
+  }
+  await createContentArtifact({
+    title: projectId,
+    type: 'text/html',
+    body: content,
+    projectId,
+    sandboxPolicy: 'standard',
+    idempotencyKey: `files-create-${projectId}`,
+  });
 }
 
 function fileVersionsId(projectId: string, path: string): string {

@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { api } from '@/integration/api-client';
 
 import {
   deleteGalleryEntry,
@@ -7,6 +8,17 @@ import {
   upsertGalleryEntry,
   type GalleryEntry,
 } from './gallery-store';
+
+vi.mock('@/integration/api-client', () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
+const mockedApi = vi.mocked(api);
 
 /** Minimal in-memory IndexedDB fake — jsdom provides no indexedDB. */
 const stores = new Map<string, Map<string, unknown>>();
@@ -28,9 +40,7 @@ function fakeIndexedDB() {
       const req: {
         result: unknown;
         error: null;
-        onsuccess: null | ((e: unknown) => void);
-        onerror: null;
-        onupgradeneeded: null | ((e: unknown) => void);
+        onsuccess: null | ((e: unknown) => void); onerror: null; onupgradeneeded: null | ((e: unknown) => void);
       } = { result: null, error: null, onsuccess: null, onerror: null, onupgradeneeded: null };
       queueMicrotask(() => {
         if (!stores.has(dbName)) stores.set(dbName, new Map());
@@ -73,9 +83,12 @@ const entry = (overrides: Partial<Parameters<typeof upsertGalleryEntry>[0]>) => 
   ...overrides,
 });
 
-describe('gallery-store', () => {
+describe('gallery-store (read-through cache)', () => {
   beforeEach(() => {
     stores.clear();
+    vi.clearAllMocks();
+    // Default: gateway offline — exercises the pure-cache paths.
+    mockedApi.get.mockRejectedValue(new Error('gateway unreachable'));
     (globalThis as { indexedDB?: unknown }).indexedDB = fakeIndexedDB();
   });
 
@@ -120,5 +133,124 @@ describe('gallery-store', () => {
     expect(fetched.designSystemId).toBe('allternit-brand');
     expect(fetched.thumbnail).toBe('data:image/jpeg;base64,x');
     expect(saved.artifactHtml).toContain('<h1>Acme</h1>');
+  });
+
+  describe('gateway write-through', () => {
+    it('creates a gateway artifact on upsert when the project has none', async () => {
+      // getEntryByProjectId (cache miss) consumes the first lookup, the
+      // write-through the second.
+      mockedApi.get
+        .mockResolvedValueOnce({ artifacts: [] })
+        .mockResolvedValueOnce({ artifacts: [] });
+      mockedApi.post.mockResolvedValueOnce({});
+
+      await upsertGalleryEntry(entry({}));
+      // Allow the fire-and-forget write-through to settle.
+      await vi.waitFor(() => expect(mockedApi.post).toHaveBeenCalled());
+
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/api/v1/content-artifacts',
+        expect.objectContaining({
+          title: 'Acme landing',
+          projectId: 'design-1',
+          idempotencyKey: 'gallery-create-design-1',
+        }),
+      );
+    });
+
+    it('appends a gateway version on upsert when the project already has an artifact', async () => {
+      // Cache-miss lookup, then body fetch for the found entry, then the
+      // write-through's own find-existing lookup.
+      mockedApi.get
+        .mockResolvedValueOnce({
+          artifacts: [{ id: 'art_01', projectId: 'design-1' }],
+        })
+        .mockResolvedValueOnce({ artifact: { body: '<html><body><h1>Acme</h1></body></html>' } })
+        .mockResolvedValueOnce({
+          artifacts: [{ id: 'art_01', projectId: 'design-1' }],
+        });
+      mockedApi.put.mockResolvedValueOnce({});
+
+      await upsertGalleryEntry(entry({}));
+      await vi.waitFor(() => expect(mockedApi.put).toHaveBeenCalled());
+
+      expect(mockedApi.put).toHaveBeenCalledWith(
+        '/api/v1/content-artifacts/art_01/versions',
+        expect.objectContaining({ body: '<html><body><h1>Acme</h1></body></html>' }),
+      );
+    });
+
+    it('soft-deletes the gateway artifact on delete', async () => {
+      await upsertGalleryEntry(entry({}));
+      mockedApi.get.mockResolvedValueOnce({
+        artifacts: [{ id: 'art_01', projectId: 'design-1' }],
+      });
+      mockedApi.delete.mockResolvedValueOnce({} as never);
+
+      await deleteGalleryEntry('design-1');
+
+      expect(mockedApi.delete).toHaveBeenCalledWith('/api/v1/content-artifacts/art_01');
+    });
+  });
+
+  describe('gateway-first reads', () => {
+    it('serves the gateway list and merges local-only entries', async () => {
+      await upsertGalleryEntry(entry({ projectId: 'local-1', projectName: 'Offline save' }));
+      mockedApi.get
+        .mockResolvedValueOnce({
+          artifacts: [
+            {
+              id: 'art_01',
+              title: 'Synced',
+              type: 'text/html',
+              projectId: 'design-1',
+              provenance: { prompt: 'Create a SaaS landing page' },
+              createdAt: '2026-09-12T10:00:00Z',
+              updatedAt: '2026-09-12T11:00:00Z',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ artifact: { body: '<html>remote</html>' } });
+
+      const all = await listGalleryEntries();
+
+      expect(all.map((e) => e.projectId).sort()).toEqual(['design-1', 'local-1']);
+      const synced = all.find((e) => e.projectId === 'design-1')!;
+      expect(synced.artifactHtml).toBe('<html>remote</html>');
+      expect(synced.type).toBe('other');
+    });
+
+    it('falls back to the cache when the gateway is unreachable', async () => {
+      await upsertGalleryEntry(entry({ projectName: 'Offline save' }));
+
+      const all = await listGalleryEntries();
+
+      expect(all.map((e) => e.projectName)).toEqual(['Offline save']);
+    });
+
+    it('fills a cache miss from the gateway on getEntryByProjectId', async () => {
+      mockedApi.get
+        .mockResolvedValueOnce({
+          artifacts: [
+            {
+              id: 'art_09',
+              title: 'Remote only',
+              type: 'text/html',
+              projectId: 'remote-1',
+              createdAt: '2026-09-12T10:00:00Z',
+              updatedAt: '2026-09-12T10:00:00Z',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ artifact: { body: '<html>from-gateway</html>' } });
+
+      const found = await getEntryByProjectId('remote-1');
+
+      expect(found).toMatchObject({
+        id: 'art_09',
+        projectId: 'remote-1',
+        artifactHtml: '<html>from-gateway</html>',
+      });
+    });
   });
 });

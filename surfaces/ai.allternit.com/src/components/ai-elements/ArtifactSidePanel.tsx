@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   X,
   Copy,
@@ -18,6 +18,10 @@ import { KIND_META, type SelectedArtifact } from './artifact.types';
 import { cn } from "@/lib/utils";
 import { HtmlPreview } from './HtmlPreview';
 import { MermaidRenderer } from './MermaidRenderer';
+import {
+  isPersistableChatArtifactKind,
+  persistChatArtifact,
+} from '@/lib/design/content-artifact-api';
 
 // ─── Sanitization helper ─────────────────────────────────────────────────────
 
@@ -197,14 +201,38 @@ function ArtifactContent({ artifact }: { artifact: SelectedArtifact }) {
 interface ArtifactSidePanelProps {
   artifact: SelectedArtifact | null;
   onClose: () => void;
+  /** Producing chat session id — recorded as provenance when the user saves. */
+  sessionId?: string;
 }
 
-export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps) {
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+export function ArtifactSidePanel({ artifact, onClose, sessionId }: ArtifactSidePanelProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const [showRenderModal, setShowRenderModal] = useState(false);
   const [renderFormat, setRenderFormat] = useState<RenderFormat>('mp4');
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [savedAddress, setSavedAddress] = useState('');
   const hf = useHyperFrames(artifact?.kind === 'html' ? artifact.content : undefined);
+
+  const handleSaveToArtifacts = useCallback(async () => {
+    if (!artifact?.content || saveState === 'saving') return;
+    setSaveState('saving');
+    setSavedAddress('');
+    try {
+      const saved = await persistChatArtifact({
+        title: artifact.title,
+        kind: artifact.kind,
+        content: artifact.content,
+        sourceSessionId: sessionId,
+      });
+      setSavedAddress(saved.address);
+      setSaveState('saved');
+    } catch {
+      setSaveState('error');
+    }
+  }, [artifact, saveState, sessionId]);
 
   const handleCopy = useCallback(async () => {
     if (!artifact?.content) return;
@@ -222,6 +250,12 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
   const handleRender = useCallback(async () => {
     await hf.render(renderFormat);
   }, [hf, renderFormat]);
+
+  // Save state belongs to the artifact currently shown — reset on switch.
+  useEffect(() => {
+    setSaveState('idle');
+    setSavedAddress('');
+  }, [artifact?.title, artifact?.content, artifact?.kind]);
 
   if (!artifact) return null;
   const meta = KIND_META[artifact.kind] ?? KIND_META.document;
@@ -241,6 +275,19 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {artifact.content && isPersistableChatArtifactKind(artifact.kind) && (
+            <button type="button"
+              onClick={handleSaveToArtifacts}
+              disabled={saveState === 'saving'}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-solid text-[12px] font-medium transition-all duration-150 cursor-pointer disabled:opacity-60",
+                saveState === 'saved' ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500" : saveState === 'error' ? "bg-red-500/10 border-red-500/50 text-red-500" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.5)]"
+              )}
+            >
+              {saveState === 'saving' ? <><SpinnerGap size={13} className="animate-spin" /> Saving…</> : saveState === 'saved' ? <><Check size={13} /> Saved</> : saveState === 'error' ? <><Warning size={13} /> Failed</> : 'Save to artifacts'}
+            </button>
+          )}
+
           {artifact.content && (
             <button type="button"
               onClick={handleCopy}
@@ -273,6 +320,14 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
           </button>
         </div>
       </div>
+
+      {/* Saved artifact address */}
+      {savedAddress && (
+        <div className="px-4 py-2 border-b border-solid border-[var(--ui-border-muted)] bg-emerald-500/5 shrink-0">
+          <div className="text-[11px] font-semibold tracking-wider uppercase text-emerald-500/70 mb-0.5">Saved to artifact library</div>
+          <div className="text-[12px] font-mono text-[rgba(255,255,255,0.45)] break-all">{savedAddress}</div>
+        </div>
+      )}
 
       {/* HyperFrames Panel */}
       {showRenderModal && artifact.kind === 'html' && (

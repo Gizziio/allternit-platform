@@ -12,6 +12,7 @@ import {
   type AioTargetPayload,
 } from '@/lib/design/aio-targeting';
 import { ARTIFACT_CSP, injectSandboxCsp } from './sandbox-csp';
+import { DeckRenderer, MobileRenderer } from './typed-renderers';
 
 export { ARTIFACT_CSP, injectSandboxCsp };
 
@@ -198,6 +199,20 @@ const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, w
       return <MarkdownRenderer content={content} height={height} width={width} />;
     }
     case 'document/html': {
+      return <HTMLRenderer htmlContent={content} height={height} width={width} aioTargeting={aioTargeting} onAioTarget={onAioTarget} />;
+    }
+    // Allternit typed renderers (docs/design/artifacts-api.md §2.1, Phase 2):
+    // same sandboxed iframe, plus type-specific presentation chrome.
+    case 'application/vnd.allternit.deck': {
+      return <DeckRenderer htmlContent={content} height={height} width={width} />;
+    }
+    case 'application/vnd.allternit.mobile': {
+      return <MobileRenderer htmlContent={content} height={height} />;
+    }
+    case 'application/vnd.allternit.prototype': {
+      // Hotspot linking is in-document anchor navigation — the standard
+      // sandboxed iframe already supports it. The typed case pins the MIME
+      // type to a defined renderer instead of the default fallback.
       return <HTMLRenderer htmlContent={content} height={height} width={width} aioTargeting={aioTargeting} onAioTarget={onAioTarget} />;
     }
     default: {

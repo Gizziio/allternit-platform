@@ -658,6 +658,7 @@ export function ChatView({
           <ArtifactSidePanel
             artifact={selectedArtifact}
             onClose={handleCloseArtifact}
+            sessionId={activeComposerSessionId}
           />
         )}
       </div>
