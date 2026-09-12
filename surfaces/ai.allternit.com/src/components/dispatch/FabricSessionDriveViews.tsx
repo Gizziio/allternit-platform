@@ -31,11 +31,16 @@ export function FabricCodeDrive({
   terminalSessionId,
   terminalWorkingDir,
 }: {
-  session: FabricSessionWithStatus;
+  /**
+   * Optional when `terminalSessionId` is set — the Termius-style terminal
+   * binds to a runtime-scoped id, so the code home screen can open a
+   * terminal before any fabric session exists.
+   */
+  session?: FabricSessionWithStatus;
   detail: FabricSessionDetail | null;
   events: FabricSessionEvent[];
   /**
-   * Override the terminal binding — e.g. the Termius-style "Sessions" tab
+   * Override the terminal binding — e.g. the code-mode Terminal view
    * passes a runtime-scoped id so UnifiedTerminal manages its own
    * multi-session tabs instead of the fabric session's single terminal.
    */
@@ -47,8 +52,8 @@ export function FabricCodeDrive({
       <div className="min-h-0 flex-1 overflow-hidden bg-[var(--view-code-bg)]">
         <Suspense fallback={<div className="p-4 text-[12px] text-[var(--text-tertiary)]">Loading terminal…</div>}>
           <UnifiedTerminal
-            sessionId={terminalSessionId ?? session.session.id}
-            workingDir={terminalSessionId ? terminalWorkingDir : session.session.directory}
+            sessionId={terminalSessionId ?? session?.session.id ?? 'fabric-terminal'}
+            workingDir={terminalSessionId ? terminalWorkingDir : session?.session.directory}
           />
         </Suspense>
       </div>
