@@ -70,46 +70,36 @@ const HTMLRenderer = memo<{ htmlContent: string; height?: string; width?: string
   )
 );
 
-const SVGRenderer = memo<{ content: string }>(({ content }) => (
-  <div
-    style={{
-      border: '1px solid var(--border-subtle)',
-      borderRadius: '10px',
-      padding: 'var(--spacing-md)',
-      background: 'var(--bg-secondary)',
-      overflow: 'auto',
-    }}
-    dangerouslySetInnerHTML={{ __html: content }}
-  />
-));
-
-const MarkdownRenderer = memo<{ content: string }>(({ content }) => {
-  const html = useMemo(() => {
-    return content
-      .replace(/^### (.*$)/gim, '<h3 style="margin:12px 0 6px;color:var(--text-primary)">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 style="margin:14px 0 8px;color:var(--text-primary)">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 style="margin:16px 0 10px;color:var(--text-primary)">$1</h1>')
-      .replace(/```([\s\S]*?)```/g, '<pre style="background:var(--surface-panel);padding:12px;border-radius:8px;overflow:auto"><code>$1</code></pre>')
-      .replace(/`([^`]+)`/g, '<code style="background:var(--surface-panel);padding:2px 4px;border-radius:4px">$1</code>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br/>');
-  }, [content]);
-
-  return (
-    <div
-      style={{
-        color: 'var(--text-primary)',
-        fontSize: '14px',
-        lineHeight: 1.6,
-        padding: 'var(--spacing-md)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: '10px',
-        background: 'var(--bg-secondary)',
-      }}
-      dangerouslySetInnerHTML={{ __html: html }}
+const SVGRenderer = memo<{ content: string; height?: string; width?: string }>(
+  ({ content, width = '100%', height = '360px' }) => (
+    // SVG artifacts are untrusted documents too — render inside the sandboxed
+    // iframe (opaque origin) instead of injecting markup into the host document.
+    <HTMLRenderer
+      htmlContent={`<html><body style="margin:0">${content}</body></html>`}
+      height={height}
+      width={width}
     />
-  );
-});
+  ),
+);
+
+const MarkdownRenderer = memo<{ content: string; height?: string; width?: string }>(
+  ({ content, width = '100%', height = '360px' }) => {
+    const html = useMemo(() => {
+      return content
+        .replace(/^### (.*$)/gim, '<h3 style="margin:12px 0 6px;color:var(--text-primary)">$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2 style="margin:14px 0 8px;color:var(--text-primary)">$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1 style="margin:16px 0 10px;color:var(--text-primary)">$1</h1>')
+        .replace(/```([\s\S]*?)```/g, '<pre style="background:var(--surface-panel);padding:12px;border-radius:8px;overflow:auto"><code>$1</code></pre>')
+        .replace(/`([^`]+)`/g, '<code style="background:var(--surface-panel);padding:2px 4px;border-radius:4px">$1</code>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br/>');
+    }, [content]);
+
+    // The markdown transform does not sanitize raw inline HTML, so the result
+    // is untrusted — render it in the sandboxed iframe, never the host document.
+    return <HTMLRenderer htmlContent={html} height={height} width={width} />;
+  },
+);
 
 const MermaidRenderer = memo<{ content: string }>(({ content }) => (
   <div
@@ -144,7 +134,7 @@ const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, w
     }
     case 'image/svg+xml':
     case 'media/svg': {
-      return <SVGRenderer content={content} />;
+      return <SVGRenderer content={content} height={height} width={width} />;
     }
     case 'application/lobe.artifacts.mermaid':
     case 'media/mermaid': {
@@ -152,7 +142,7 @@ const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, w
     }
     case 'text/markdown':
     case 'document/markdown': {
-      return <MarkdownRenderer content={content} />;
+      return <MarkdownRenderer content={content} height={height} width={width} />;
     }
     case 'document/html': {
       return <HTMLRenderer htmlContent={content} height={height} width={width} />;

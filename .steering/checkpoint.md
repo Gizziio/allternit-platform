@@ -66,3 +66,41 @@ auditing ArtifactRenderer.tsx. Plan at .steering/plans/plan-p2wins-0911.md.
 
 ## Open questions
 - None.
+
+---
+
+## Goal
+Session: session/p2wins-0911 — implement + verify three P2 quick wins, merge,
+ledger, desktop rebuild, cleanup.
+
+## Just did
+- Item 1 DONE: project-file-store DB v2 with `fileVersions` store (keyPath id,
+  record {id: projectId:path, projectId, path, versions[{hash,content,savedAt}]}),
+  djb2 hash, dedupe of back-to-back identical writes, cap 10 (drop oldest),
+  listFileVersions + restoreFileVersion (restore is itself recorded). History
+  popover in ProjectFileWorkspace.tsx (ClockCounterClockwise button, timestamps
+  newest-first, "Restore this version" buttons). 8 new tests with store-aware
+  fake IDB (multi-store + onupgradeneeded); covers accumulate, cap, restore,
+  per-path isolation, v1→v2 upgrade. 8/8 pass.
+- Item 2 ALREADY SATISFIED on main: DesignTeamWorkspace.tsx:174-188 honesty
+  banner landed today in ef79c4166 ("Preview — collaboration is not wired up
+  yet... mock data"). Plain Register 1, in-tab. No new code needed; verified.
+- Item 3 DONE: audit found HTML path sound (no allow-same-origin, srcDoc,
+  storage shim) but REAL hole: SVG + Markdown renderers injected artifact
+  markup into host document via dangerouslySetInnerHTML. Fixed in code: both
+  now route through the sandboxed HTMLRenderer iframe. New
+  ArtifactRenderer.test.tsx (4 tests: no allow-same-origin for all types,
+  svg/md in iframe, shim idempotence). DESIGN.md §11 "Artifact sandbox" added:
+  enforced vs advisory (CSP NOT set, egress not blocked — follow-up issue to
+  file with gh).
+- Verification: pnpm typecheck 0 errors; vitest src/lib/design src/shell
+  src/views/design 82/82 across 14 files (baseline 66/12; +8 mine, +8 from
+  concurrent fedesign merge).
+
+## Next
+- Commit, push, PR, merge --merge. File CSP follow-up gh issue. release-preflight.
+- Desktop rebuild (bin copy + npm run dist background), bundle grep, DMG swap.
+- Ledger branch + summary + PR + merge. Cleanup.
+
+## Open questions
+- None.

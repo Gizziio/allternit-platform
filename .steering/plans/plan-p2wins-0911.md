@@ -4,27 +4,27 @@ Session F, 2026-09-11. From origin/main @ 474348b40. Three items, locked scope.
 
 ## 1. IndexedDB file versions (mapping doc §3 port #4, open-design .file-versions)
 
-- [ ] `src/lib/design/project-file-store.ts`: DB version 1 → 2, upgrade creates `fileVersions` store.
+- [x] `src/lib/design/project-file-store.ts`: DB version 1 → 2, upgrade creates `fileVersions` store.
       Records: `{ id: `${projectId}:${path}`, projectId, path, versions: [{ hash, content, savedAt }] }`.
-- [ ] `writeProjectFile` appends versions (djb2 string hash), cap 10/file (drop oldest).
-- [ ] New APIs: `listFileVersions(projectId, path)`, `restoreFileVersion(projectId, path, index)`.
-- [ ] UI: History affordance in `src/views/design/ProjectFileWorkspace.tsx` (popover: timestamps + restore), inline-style conventions.
-- [ ] Tests: `project-file-store.test.ts` with store-aware fake-IndexedDB (gallery-store.test.ts fake only supports one store name — generalize). Cover: accumulate, cap at 10, restore content, v1→v2 upgrade doesn't crash.
+- [x] `writeProjectFile` appends versions (djb2 string hash), cap 10/file (drop oldest).
+- [x] New APIs: `listFileVersions(projectId, path)`, `restoreFileVersion(projectId, path, index)`.
+- [x] UI: History affordance in `src/views/design/ProjectFileWorkspace.tsx` (popover: timestamps + restore), inline-style conventions.
+- [x] Tests: `project-file-store.test.ts` with store-aware fake-IndexedDB (gallery-store.test.ts fake only supports one store name — generalize). Cover: accumulate, cap at 10, restore content, v1→v2 upgrade doesn't crash.
 
 ## 2. Team tab honesty label (mapping doc §2 row 15)
 
-- [ ] Plain Register 1 in-tab notice in Team tab content (host: DesignTeamWorkspace.tsx): multiplayer not available yet; tab is a layout preview only.
+- [x] Plain Register 1 in-tab notice in Team tab content (host: DesignTeamWorkspace.tsx): multiplayer not available yet; tab is a layout preview only.
 
 ## 3. Artifact sandbox policy codified (mapping doc §2 row 9)
 
-- [ ] Audit `src/components/artifact/ArtifactRenderer.tsx`: confirm no `allow-same-origin`, no storage access, note CSP absence.
-- [ ] DESIGN.md (under surfaces/ai.allternit.com/): "Artifact sandbox" section — enforced vs advisory, storage shim, no-allow-same-origin rationale, rule for new renderers.
-- [ ] If a real hole: fix in code. CSP tightening (not currently set) → `gh issue create` follow-up.
+- [x] Audit `src/components/artifact/ArtifactRenderer.tsx`: confirm no `allow-same-origin`, no storage access, note CSP absence.
+- [x] DESIGN.md (under surfaces/ai.allternit.com/): "Artifact sandbox" section — enforced vs advisory, storage shim, no-allow-same-origin rationale, rule for new renderers.
+- [x] If a real hole: fix in code. CSP tightening (not currently set) → `gh issue create` follow-up.
 
 ## Verification gate
 
-- [ ] `pnpm typecheck` 0 errors.
-- [ ] `pnpm vitest run src/lib/design src/shell src/views/design` all green (baseline 66/66, 12 files — only add).
+- [x] `pnpm typecheck` 0 errors.
+- [x] `pnpm vitest run src/lib/design src/shell src/views/design` all green (baseline 66/66, 12 files — only add).
 
 ## Ritual
 
