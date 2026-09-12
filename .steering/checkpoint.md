@@ -1,22 +1,28 @@
 # Steering checkpoint
 
 ## Goal
-Session D: mapping doc §6 P1 — one-box zero-friction start. Add the model picker
-chip (kimi.com/design "K3 · High" equivalent) to the studio landing composer.
-Session: session/onebox-0911, worktree allternit-session-onebox-0911, from
-origin/main @ 8e4d3ad03 (includes #381). Plan at
-.steering/plans/plan-onebox-0911.md.
+Session: session/artifactsapi-0911, worktree allternit-session-artifactsapi-0911,
+from origin/main @ 9b01fc5bf. DESIGN BEFORE BUILD — design doc + tracking
+issues only for the A:// Artifacts API (mapping doc §2 row 16, Eoj amendment
+2026-09-11). Plan at .steering/plans/plan-artifactsapi-0911.md.
 
 ## Just did
-- Worktree created; pnpm install done (1m19s). Investigation verified:
-  selectModel → persistModelSelection (`allternit:model-selection`) →
-  readComposerRuntimeModelId() → createDesignSession default (mode-session-store.ts:604).
-  DesignModeView landing renders NewProjectScreen without ChatModelsProvider/
-  ModelSelectionProvider; in-project composer wraps them at ~line 952.
+- Worktree created. Read the real code first: ArtifactRenderer.tsx (sandboxed
+  srcDoc iframe + storage shim), artifact-parser.ts (splitOnArtifacts),
+  gallery-store.ts / project-file-store.ts (the two IndexedDB stores),
+  artifact-export.ts (client-side export tiers), artifact_routes.rs (existing
+  *document* artifact API — adjacent, untouched), migrations V1–V145
+  (next: V146), docs/NATIVE_SESSIONS.md + AGENT_EMAIL_RAIL.md for doc style.
+- Wrote `docs/design/artifacts-api.md` (8 sections, DECIDED/OPEN marked).
 
 ## Next
-- Commit + push session/onebox-0911; PR → merge (--merge) → ledger attestation →
-  preflight → desktop rebuild → bundle grep → DMG swap → cleanup.
+- Commit + push session/artifactsapi-0911; PR → merge (--merge).
+- gh issues: epic + 3 phase issues (enhancement label), linked.
+- Ledger branch session/ledger-artifactsapi-0911: summary + LEDGER.md bullet,
+  PR, merge.
+- Cleanup: worktree remove, delete both branches local+remote. No desktop
+  rebuild (docs-only, ritual skip rule).
 
 ## Open questions
-- None.
+- §6 publish/relay tier questions (4 publish + 2 relay) are OPEN for Eoj —
+  listed in the design doc; Phase 3 blocked on the publish answers.
