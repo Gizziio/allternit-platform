@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-12 11:31 — kimi — fabric transport: composer mode toggle switches canvas; Chat segment renamed Home
+
+- **Session ID / Branch:** `ao/fabric-cowork-switch-0912`
+- **Agent:** kimi
+- **Summary:** Fixed the dead Home/Cowork/Bots toggle on Fabric Transport — the switch-mode handler now flips the chat-mode canvas to CoworkRoot on cowork (and back on Home), and the mirrored app mode highlights the right segment. Renamed the composer dock's 'Chat' segment to 'Home' (shared with desktop). SW v40→v41.
+- **Commit:** PR #414 (merge `3e2c58bf9`)
+- **Evidence:** `agent-ledger/summaries/2026-09-12-1131-ao-fabric-cowork-switch-0912-kimi-mode-toggle.md`
+
 ### 2026-09-12 10:15 — kimi — fabric transport: desktop chat/cowork/code views mounted
 
 - **Session ID / Branch:** `ao/fabric-chat-code-views-0912`
