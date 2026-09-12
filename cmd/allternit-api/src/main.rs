@@ -345,8 +345,13 @@ async fn main() {
     let (cowork_background, bg_state) = initialize_cowork_background(&data_dir).await;
 
     // Initialize cowork runtime run manager (Rails-backed DAG/WIH lifecycle)
-    let cowork_run_manager =
-        initialize_cowork_run_manager(&data_dir, rails.clone(), &app_config).await;
+    let cowork_run_manager = initialize_cowork_run_manager(
+        &data_dir,
+        rails.clone(),
+        &app_config,
+        Some(db.path().to_path_buf()),
+    )
+    .await;
     if let Some(ref manager) = cowork_run_manager {
         load_persisted_cowork_runs(&db, manager).await;
     }
@@ -681,6 +686,7 @@ async fn main() {
         .merge(cowork_router())
         .merge(cowork_preferences_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
+        .merge(allternit_api::rails::routes_a_dispatch::dispatch_routes())
         .merge(agent_router())
         .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
@@ -1117,10 +1123,14 @@ async fn initialize_cowork_background(
 }
 
 /// Initialize the cowork runtime run manager backed by Rails DAGs/WIHs.
+///
+/// `store_path` points at the canonical SQLite store; when present the
+/// RunManager runs the A:// lease-expiry sweeper against it (lock 1/3).
 async fn initialize_cowork_run_manager(
     data_dir: &std::path::Path,
     rails: allternit_api::rails::RailsState,
     app_config: &allternit_api::config::AppConfig,
+    store_path: Option<std::path::PathBuf>,
 ) -> Option<Arc<RunManager>> {
     let runtime_dir = data_dir.join("cowork-runtime");
     if let Err(e) = std::fs::create_dir_all(&runtime_dir) {
@@ -1130,12 +1140,23 @@ async fn initialize_cowork_run_manager(
     let rails_url = app_config.rails_url();
     let workspace_id = app_config.rails_workspace_id();
 
+    let lease_duration_secs = std::env::var("ALLTERNIT_DISPATCH_LEASE_SECS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(60);
+    let lease_sweep_interval_secs = std::env::var("ALLTERNIT_DISPATCH_SWEEP_SECS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5);
+
     let config = RunManagerConfig {
         data_dir: runtime_dir,
         rails_base_url: rails_url,
         attachment_timeout_secs: 300,
-        lease_duration_secs: 60,
+        lease_duration_secs,
         max_checkpoint_age_hours: 24,
+        store_path,
+        lease_sweep_interval_secs,
     };
 
     let rails_client = create_local_rails_client(rails, workspace_id);
