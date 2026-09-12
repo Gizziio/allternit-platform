@@ -207,6 +207,10 @@ const IDEMPOTENCY_STALE_SECS: i64 = 600;
 
 const SESSION_HEADER: &str = "x-allternit-session-id";
 const FALLBACK_HEADER: &str = "x-allternit-fallback";
+/// Set by the native batch executor on every sub-request so the usage row can
+/// be attributed to its batch (task G10). Internal header — not part of the
+/// public OpenAI surface.
+const BATCH_HEADER: &str = "x-allternit-batch-id";
 
 fn gizzi_base() -> String {
     crate::APP_CONFIG
@@ -225,6 +229,28 @@ fn http_client() -> reqwest::Client {
         .timeout(COMPLETION_TIMEOUT + Duration::from_secs(15))
         .build()
         .unwrap_or_default()
+}
+
+/// Cost-attribution labels (task G8/G10): the explicit request `tags` win;
+/// when absent, the virtual key's inherited defaults apply. Returned in the
+/// serialized JSON-object form stored on `llm_usage_events.tags`.
+fn resolve_outcome_tags(
+    request_tags: &Option<std::collections::BTreeMap<String, String>>,
+    key: &LlmKeyContext,
+) -> Option<String> {
+    let effective = request_tags.clone().or_else(|| key.tags.clone())?;
+    serde_json::to_string(&effective).ok()
+}
+
+/// Batch attribution (task G10): the native batch executor stamps each
+/// sub-request with `X-Allternit-Batch-Id` (the `llm_batches.id`).
+fn batch_id_from_headers(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(BATCH_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && value.len() <= 128)
+        .map(str::to_string)
 }
 
 /// Read a JSON number as i64 regardless of its wire representation.
@@ -848,6 +874,12 @@ pub struct RequestOutcome {
     /// B5 routing decision for policy-alias requests; persisted (linked to
     /// this row) by `record_usage_event`.
     pub routing_decision: Option<RoutingDecision>,
+    /// Serialized `{key: value}` JSON for cost attribution (task G8): the
+    /// request's `tags`, or the key's inherited default. `None` stores NULL.
+    pub tags: Option<String>,
+    /// `llm_batches.id` when this request ran as a native batch sub-request
+    /// (task G10); `None` for interactive traffic.
+    pub batch_id: Option<String>,
 }
 
 /// Result of the collection loop: the aggregated state plus either success
@@ -1004,7 +1036,8 @@ pub(crate) fn record_usage_event(
                     cached_tokens = ?9, cost_microdollars = ?10, latency_ms = ?11,
                     ttft_ms = ?12, status = ?13, error_type = ?14,
                     gizzi_session_id = ?15, response_body = ?16,
-                    recomputed_cost_microdollars = ?17, cost_mismatch = ?18
+                    recomputed_cost_microdollars = ?17, cost_mismatch = ?18,
+                    tags = ?19, batch_id = ?20
                  WHERE idempotency_key = ?1 AND status = 'in_progress'",
                 rusqlite::params![
                     idem,
@@ -1025,6 +1058,8 @@ pub(crate) fn record_usage_event(
                     response_body,
                     recomputed,
                     cost_mismatch as i64,
+                    outcome.tags,
+                    outcome.batch_id,
                 ],
             )?;
             if updated > 0 {
@@ -1047,10 +1082,10 @@ pub(crate) fn record_usage_event(
                  fallback_from, prompt_tokens, completion_tokens, reasoning_tokens,
                  cached_tokens, cost_microdollars, latency_ms, ttft_ms, status,
                  error_type, gizzi_session_id, idempotency_key, response_body,
-                 recomputed_cost_microdollars, cost_mismatch)
+                 recomputed_cost_microdollars, cost_mismatch, tags, batch_id)
              VALUES
                 (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-                 ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
+                 ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
             rusqlite::params![
                 row_id,
                 key.key_id,
@@ -1074,6 +1109,8 @@ pub(crate) fn record_usage_event(
                 response_body,
                 recomputed,
                 cost_mismatch as i64,
+                outcome.tags,
+                outcome.batch_id,
             ],
         )?;
         if let Some(decision) = &outcome.routing_decision {
@@ -1157,6 +1194,10 @@ struct StreamUsageGuard {
     routing_decision: Option<RoutingDecision>,
     started: Instant,
     progress: Arc<Mutex<StreamProgress>>,
+    /// Cost-attribution labels applied to the disconnect-path usage row
+    /// (same values the normal completion path records).
+    tags: Option<String>,
+    batch_id: Option<String>,
 }
 
 impl Drop for StreamUsageGuard {
@@ -1180,6 +1221,8 @@ impl Drop for StreamUsageGuard {
             ttft_ms: progress.ttft_ms,
             response_body: None,
             routing_decision: self.routing_decision.take(),
+            tags: self.tags.clone(),
+            batch_id: self.batch_id.clone(),
         };
         drop(progress);
 
@@ -1688,6 +1731,11 @@ pub async fn chat_completions(
         }
     }
 
+    // Cost-attribution labels (G8/G10): explicit request tags, else the key's
+    // inherited defaults; batch sub-requests arrive with X-Allternit-Batch-Id.
+    let outcome_tags = resolve_outcome_tags(&request.tags, &key);
+    let batch_id = batch_id_from_headers(&headers);
+
     let stream = request.stream.unwrap_or(false);
 
     // Idempotency-Key is honored for non-streaming requests only (a stream
@@ -1971,6 +2019,8 @@ pub async fn chat_completions(
                 .and_then(|o| o.include_usage)
                 .unwrap_or(false),
             if idem_active { idempotency_key.clone() } else { None },
+            outcome_tags,
+            batch_id,
         )
         .await
     } else {
@@ -2012,6 +2062,8 @@ pub async fn chat_completions(
                 request.citations == Some(true),
                 resolved.policy.clone(),
                 resolved.routing_decision.clone(),
+                outcome_tags.clone(),
+                batch_id.clone(),
             )
             .await;
 
@@ -2052,6 +2104,8 @@ pub async fn chat_completions(
                         ttft_ms: None,
                         response_body: None,
                         routing_decision: resolved.routing_decision.clone(),
+                        tags: outcome_tags.clone(),
+                        batch_id: batch_id.clone(),
                     };
                     break;
                 }
@@ -2194,6 +2248,8 @@ async fn nonstream_completion(
     citations_enabled: bool,
     policy: Option<String>,
     routing_decision: Option<RoutingDecision>,
+    tags: Option<String>,
+    batch_id: Option<String>,
 ) -> (Response, RequestOutcome) {
     let Collection { collector, failure } = collect(send_task, events, started).await;
     let latency_ms = started.elapsed().as_millis() as i64;
@@ -2211,6 +2267,8 @@ async fn nonstream_completion(
                 ttft_ms: collector.ttft.map(|d| d.as_millis() as i64),
                 response_body: None,
                 routing_decision,
+                tags,
+                batch_id,
             };
             (
                 OpenAiErrorResponse::upstream(message, &error_type).into_response(),
@@ -2283,6 +2341,8 @@ async fn nonstream_completion(
                 ttft_ms: collector.ttft.map(|d| d.as_millis() as i64),
                 response_body: Some(body.clone()),
                 routing_decision,
+                tags,
+                batch_id,
             };
             let mut resp = (StatusCode::OK, Json(body)).into_response();
             if let Ok(value) = HeaderValue::from_str(&session_id) {
@@ -2326,6 +2386,8 @@ async fn stream_completion(
     routing_decision: Option<RoutingDecision>,
     include_usage: bool,
     idempotency_key: Option<String>,
+    tags: Option<String>,
+    batch_id: Option<String>,
 ) -> Response {
     let completion_id = new_completion_id();
     let created = chrono::Utc::now().timestamp();
@@ -2343,6 +2405,8 @@ async fn stream_completion(
         routing_decision,
         started,
         progress: shared_progress.clone(),
+        tags: tags.clone(),
+        batch_id: batch_id.clone(),
     };
 
     let stream = async_stream::stream! {
@@ -2463,6 +2527,8 @@ async fn stream_completion(
                     ttft_ms: collector.ttft.map(|d| d.as_millis() as i64),
                     response_body: None,
                     routing_decision,
+                    tags,
+                    batch_id,
                 };
             }
             None => {
@@ -2502,6 +2568,8 @@ async fn stream_completion(
                     ttft_ms: collector.ttft.map(|d| d.as_millis() as i64),
                     response_body: None,
                     routing_decision,
+                    tags,
+                    batch_id,
                 };
             }
         }
@@ -2963,5 +3031,172 @@ mod pricing_tests {
         let resp = build_pricing_response(&HashMap::new());
         assert_eq!(resp["data"].as_array().unwrap().len(), 0);
         assert_eq!(resp["object"], "list");
+    }
+}
+
+#[cfg(test)]
+mod metering_tests {
+    use super::*;
+    use super::super::auth::LlmKeyContext;
+
+    fn test_db() -> (DbHandle, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let db = DbHandle::new(dir.path().join("test.db")).unwrap();
+        (db, dir)
+    }
+
+    fn insert_key(db: &DbHandle, key_tags: Option<&str>) -> LlmKeyContext {
+        let conn = db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO users (id, email) VALUES ('u1', 'test@example.com')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO llm_virtual_keys
+             (id, user_id, key_hash, key_prefix, allowed_models, tags)
+             VALUES ('vk1', 'u1', 'hash', 'ak-test', NULL, ?1)",
+            params![key_tags],
+        )
+        .unwrap();
+        LlmKeyContext {
+            key_id: "vk1".to_string(),
+            user_id: "u1".to_string(),
+            tenant_id: None,
+            key_prefix: "ak-test".to_string(),
+            monthly_budget_cents: None,
+            rate_limit_rpm: None,
+            allowed_models: None,
+            tags: key_tags.and_then(|raw| serde_json::from_str(raw).ok()),
+        }
+    }
+
+    fn outcome(status: &'static str) -> RequestOutcome {
+        RequestOutcome {
+            status,
+            error_type: None,
+            usage: GizziUsage {
+                prompt_tokens: 10,
+                completion_tokens: 5,
+                cost_microdollars: 123_000,
+                ..GizziUsage::default()
+            },
+            policy: None,
+            fallback_from: None,
+            gizzi_session_id: None,
+            latency_ms: 42,
+            ttft_ms: None,
+            response_body: None,
+            routing_decision: None,
+            tags: None,
+            batch_id: None,
+        }
+    }
+
+    #[test]
+    fn record_usage_event_persists_tags_and_batch_id() {
+        let (db, _dir) = test_db();
+        let key = insert_key(&db, None);
+
+        let mut tagged = outcome("ok");
+        tagged.tags = Some(r#"{"team":"alpha"}"#.to_string());
+        tagged.batch_id = Some("batch_123".to_string());
+        record_usage_event(&db, &key, &tagged, None);
+
+        // Requests without tags store NULL.
+        record_usage_event(&db, &key, &outcome("ok"), None);
+
+        let conn = db.connect().unwrap();
+        let tagged_row: (Option<String>, Option<String>) = conn
+            .query_row(
+                "SELECT tags, batch_id FROM llm_usage_events WHERE batch_id IS NOT NULL",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            tagged_row,
+            (
+                Some(r#"{"team":"alpha"}"#.to_string()),
+                Some("batch_123".to_string())
+            )
+        );
+
+        // Requests without tags store NULL.
+        let untagged: (Option<String>, Option<String>) = conn
+            .query_row(
+                "SELECT tags, batch_id FROM llm_usage_events WHERE batch_id IS NULL",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(untagged, (None, None));
+    }
+
+    #[test]
+    fn record_usage_event_updates_tags_on_idempotent_finalize() {
+        let (db, _dir) = test_db();
+        let key = insert_key(&db, None);
+        let conn = db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO llm_usage_events
+             (id, virtual_key_id, user_id, status, idempotency_key)
+             VALUES ('pre', 'vk1', 'u1', 'in_progress', 'idem-1')",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+
+        let mut tagged = outcome("ok");
+        tagged.tags = Some(r#"{"project":"p1"}"#.to_string());
+        record_usage_event(&db, &key, &tagged, Some("idem-1"));
+
+        let conn = db.connect().unwrap();
+        let (tags, count): (Option<String>, i64) = conn
+            .query_row(
+                "SELECT tags, COUNT(*) FROM llm_usage_events
+                 WHERE idempotency_key = 'idem-1' GROUP BY id",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(tags.as_deref(), Some(r#"{"project":"p1"}"#));
+        let _ = count;
+    }
+
+    #[test]
+    fn resolve_outcome_tags_prefers_request_over_key_inheritance() {
+        let mut key = insert_key(&DbHandle::new_memory().unwrap(), None);
+        key.tags = Some(BTreeMap::from([("org".to_string(), "acme".to_string())]));
+
+        // Request tags win.
+        let request_tags = Some(BTreeMap::from([("team".to_string(), "blue".to_string())]));
+        assert_eq!(
+            resolve_outcome_tags(&request_tags, &key).as_deref(),
+            Some(r#"{"team":"blue"}"#)
+        );
+
+        // Key defaults apply when the request has none.
+        assert_eq!(
+            resolve_outcome_tags(&None, &key).as_deref(),
+            Some(r#"{"org":"acme"}"#)
+        );
+
+        // Neither → NULL.
+        key.tags = None;
+        assert_eq!(resolve_outcome_tags(&None, &key), None);
+    }
+
+    #[test]
+    fn batch_id_header_parsing() {
+        let mut headers = axum::http::HeaderMap::new();
+        assert_eq!(batch_id_from_headers(&headers), None);
+        headers.insert(
+            "x-allternit-batch-id",
+            axum::http::HeaderValue::from_static("batch_abc"),
+        );
+        assert_eq!(batch_id_from_headers(&headers).as_deref(), Some("batch_abc"));
+        headers.insert("x-allternit-batch-id", axum::http::HeaderValue::from_static(""));
+        assert_eq!(batch_id_from_headers(&headers), None);
     }
 }
