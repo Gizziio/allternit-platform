@@ -1,26 +1,36 @@
 # Steering checkpoint
 
-## session/adispatch-0912 (this worktree — A:// fabric-transport proof slice)
+## session/adispatch-0912 — A:// fabric transport (continuation, post-merge of #422)
 
 ### Goal
-A:// Coordination Contract v0.1 proof slice (Appendix B steps 0–9), renamed dispatch → fabric transport. Exit criterion: §8.24 adversarial two-worker test passes behaviorally. Canonical store = allternit-cowork-runtime SQLite.
+Owner directives: (1) rename dispatch → fabric transport [DONE, merged in #422];
+(2) merge #422 [DONE, 28457d6a6]; (3) continuation: approval↔lease binding (§8.14),
+boot rehydration (§8.20), full §8.24 conformance test — SECOND PR, not merged.
 
 ### Just did
-- All steps 0–9 built and verified; rename commit landed (routes now /api/v1/fabric/transport/*, env ALLTERNIT_FABRIC_TRANSPORT_*, V152–V154 after main took V149).
-- LIVE KILL-WORKER DEMO PASSED: A claimed gen 1, checkpointed, SIGKILLed; sweeper requeued; B claimed gen 2, replayed from checkpoint, completed; ghost A completion → 409 A_STALE_LEASE_GENERATION; duplicate → already_committed same result_id; ledger triple intact.
-- Merged origin/main (33 commits) to resolve PR #422 conflicts; renumbered migrations V149–V151 → V152–V154.
+- V155 cowork_approval_bindings + request/check/grant/deny store fns + HTTP
+  (/fabric/transport/jobs/:id/approvals/*, /fabric/transport/approvals/:id/*);
+  expiry invalidates bindings (approval.invalidated).
+- Boot: expire_downtime_leases + load_persisted_cowork_jobs (queued AND leased);
+  Job type extended (lease_id/lease_generation/required_capabilities + FromStr).
+- start_run stops at queued; claim CAS moves run → running (§8.2 honesty).
+- Tests: 12/12 green incl. test_full_824_sequence_with_approval and
+  test_downtime_expiry_recovers_at_boot.
+- LIVE full-sequence demo passed: A gen1 → protected step → approval granted →
+  killed → gen-1 approval invalidated → B gen2 → A_APPROVAL_INVALID → re-approved
+  → completed exactly-once; ghost A → 409; ledger triple intact (bonus: gen-2
+  lease also expired/requeued when it lapsed between demo steps — recovery
+  worked again).
+- Desktop rebuild: ONE attempt failed — session worktree was mid-edit when the
+  release sidecar build ran (E0277 etc.); preflight was 35/0. Not retried per
+  owner directive; documented in the PR.
 
 ### Next
-- Merge PR #422, attestation, desktop rebuild attempt, then continuation: approval↔lease binding (§8.14), boot job rehydration (§8.20), full §8.24 conformance test → second PR.
+- Push, open PR #2 (do NOT merge). Then cleanup per ritual after owner merges.
 
 ### Open questions
 - none.
 
 ---
 
-## Prior session: desktop-relay-watchdog-0912 (from main, for reference)
-
-- **Goal:** Fix #423 — desktop runtime relay silent-death (node dark until app restart).
-- **Just did:** relay heartbeat watchdog in auth-manager.ts; desktop typecheck ✅, 125 vitest ✅, release-preflight 35/0 ✅.
-- **Next:** PR → merge → ledger → rebuild desktop DMG.
-- **Open questions:** none.
+## Prior sessions: see agent-ledger/summaries/2026-09-12-1730-adispatch-0912-*.md (PR #422, merged)
