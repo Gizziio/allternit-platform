@@ -693,22 +693,20 @@ impl SidecarClient {
         writeln!(self.stdin, "{line}").map_err(|e| format!("sidecar write failed: {e}"))?;
         let deadline = std::time::Instant::now() + timeout;
         loop {
-            let remaining = deadline
-                .saturating_duration_since(std::time::Instant::now());
-            if remaining.is_zero() {
+            let now = std::time::Instant::now();
+            if now >= deadline {
                 return Err(format!("sidecar request {method} timed out after {timeout:?}"));
             }
-            let msg = self
-                .rx
-                .recv_timeout(remaining.min(Duration::from_millis(500)))
-                .map_err(|e| match e {
-                    std::sync::mpsc::RecvTimeoutError::Timeout => {
-                        format!("sidecar request {method} timed out")
-                    }
-                    std::sync::mpsc::RecvTimeoutError::Disconnected => {
-                        "sidecar closed the connection".to_string()
-                    }
-                })?;
+            let remaining = deadline.saturating_duration_since(now);
+            // Wait in slices so a mid-wait shutdown (channel disconnect) is
+            // noticed promptly; a slice timeout is NOT a request timeout.
+            let msg = match self.rx.recv_timeout(remaining.min(Duration::from_millis(250))) {
+                Ok(msg) => msg,
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    return Err("sidecar closed the connection".to_string());
+                }
+            };
             if msg.get("id").and_then(Value::as_u64) != Some(id) {
                 continue; // response to an earlier caller (single-flight per client)
             }
