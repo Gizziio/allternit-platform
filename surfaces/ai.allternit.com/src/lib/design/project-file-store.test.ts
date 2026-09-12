@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { api } from '@/integration/api-client';
 
 import {
   deleteProjectFile,
@@ -7,6 +8,17 @@ import {
   restoreFileVersion,
   writeProjectFile,
 } from './project-file-store';
+
+vi.mock('@/integration/api-client', () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
+const mockedApi = vi.mocked(api);
 
 /**
  * Store-aware in-memory IndexedDB fake — jsdom provides no indexedDB.
@@ -109,6 +121,9 @@ function seedV1Db() {
 describe('project-file-store', () => {
   beforeEach(() => {
     dbs.clear();
+    vi.clearAllMocks();
+    // Default: gateway offline — exercises the pure-cache paths.
+    mockedApi.get.mockRejectedValue(new Error('gateway unreachable'));
     (globalThis as { indexedDB?: unknown }).indexedDB = fakeIndexedDB();
   });
 
@@ -182,5 +197,58 @@ describe('project-file-store', () => {
     const versions = await listFileVersions('p1', '/a.html');
     expect(versions).toHaveLength(1);
     expect(versions[0]!.content).toBe('v1-data');
+  });
+
+  describe('gateway read/write-through (/index.html)', () => {
+    it('creates a gateway artifact on first artifact-file write', async () => {
+      mockedApi.get
+        .mockResolvedValueOnce({ artifacts: [] }) // load read-through lookup
+        .mockResolvedValueOnce({ artifacts: [] }); // write-through find-existing
+      mockedApi.post.mockResolvedValueOnce({});
+
+      await writeProjectFile('p1', '/index.html', '<h1>v1</h1>');
+
+      await vi.waitFor(() => expect(mockedApi.post).toHaveBeenCalled());
+      expect(mockedApi.post).toHaveBeenCalledWith(
+        '/api/v1/content-artifacts',
+        expect.objectContaining({
+          projectId: 'p1',
+          type: 'text/html',
+          body: '<h1>v1</h1>',
+          idempotencyKey: 'files-create-p1',
+        }),
+      );
+    });
+
+    it('appends a gateway version when the project already has an artifact', async () => {
+      await writeProjectFile('p1', '/index.html', 'old'); // seeded while gateway offline
+      mockedApi.get.mockResolvedValue({ artifacts: [{ id: 'art_1', projectId: 'p1' }] });
+      mockedApi.put.mockResolvedValue({});
+
+      await writeProjectFile('p1', '/index.html', 'new');
+
+      await vi.waitFor(() => expect(mockedApi.put).toHaveBeenCalled());
+      expect(mockedApi.put).toHaveBeenCalledWith(
+        '/api/v1/content-artifacts/art_1/versions',
+        expect.objectContaining({ body: 'new' }),
+      );
+    });
+
+    it('fills /index.html from the gateway when the local tree has it missing', async () => {
+      mockedApi.get
+        .mockResolvedValueOnce({ artifacts: [{ id: 'art_9', projectId: 'p9' }] })
+        .mockResolvedValueOnce({
+          artifact: { body: '<html>gateway</html>', updatedAt: '2026-09-12T10:00:00Z' },
+        });
+
+      const tree = await loadProjectFiles('p9');
+      expect(tree.files['/index.html']?.content).toBe('<html>gateway</html>');
+
+      // Cached on read — a second load does not hit the gateway again.
+      const calls = mockedApi.get.mock.calls.length;
+      const again = await loadProjectFiles('p9');
+      expect(again.files['/index.html']?.content).toBe('<html>gateway</html>');
+      expect(mockedApi.get.mock.calls.length).toBe(calls);
+    });
   });
 });

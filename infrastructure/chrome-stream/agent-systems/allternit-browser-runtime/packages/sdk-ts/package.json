@@ -1,0 +1,56 @@
+{
+  "name": "@allternit/browser-runtime",
+  "version": "4.1.0",
+  "description": "Allternit Browser Runtime \u2014 vendored fork of Browserbase Stagehand v4 (MIT). Self-hosted browser runtime: local Chrome + side-loaded MV3 extension.",
+  "keywords": [
+    "ai",
+    "automation",
+    "browser",
+    "testing",
+    "web-scraping"
+  ],
+  "homepage": "https://stagehand.dev",
+  "bugs": {
+    "url": "https://github.com/browserbase/stagehand/issues"
+  },
+  "license": "MIT",
+  "author": "Allternit LLC (vendored from Browserbase, Inc.)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/browserbase/stagehand.git",
+    "directory": "packages/sdk-ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@browserbasehq/sdk": "catalog:",
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/core": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@allternit/browser-runtime-protocol": "workspace:*",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "publint": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

@@ -9,7 +9,7 @@ export const FABRIC_DRIVE_KINDS: Array<{
   hint: string;
   surface: 'chat' | 'cowork' | 'bot' | 'code' | 'browser' | 'desktop';
 }> = [
-  { id: 'chat', label: 'Chat', hint: 'Regular agent sessions', surface: 'chat' },
+  { id: 'chat', label: 'Home', hint: 'Regular agent sessions', surface: 'chat' },
   { id: 'bot', label: 'Bots', hint: 'Named bots and cowork runs', surface: 'bot' },
   { id: 'code', label: 'Code', hint: 'Repo sessions with a live terminal', surface: 'code' },
   { id: 'aci', label: 'ACI', hint: 'Computer-use / browser-driven sessions', surface: 'browser' },

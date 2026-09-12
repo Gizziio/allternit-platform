@@ -1218,6 +1218,7 @@ function LaunchpadStage({
 
       {terminalCanvasOpen ? (
         <div
+          className="animate-deck-rise"
           style={{
             flex: 1,
             minHeight: 0,
@@ -1582,7 +1583,7 @@ function ConversationStage({
         </span>
       </div>
       {terminalCanvasOpen ? (
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="animate-deck-rise" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <CodeTerminalCanvas
             isOpen={terminalCanvasOpen}
             onToggle={onToggleTerminalCanvas}

@@ -1,22 +1,26 @@
-# Steering checkpoint — session/adispatch-0912
+# Steering checkpoint
 
-## Goal
-A:// Coordination Contract v0.1 proof slice (Appendix B steps 0–9). Exit criterion: §8.24 adversarial two-worker test passes behaviorally. Canonical store = allternit-cowork-runtime SQLite. Stop before merge (PR opened, human merges).
+## session/adispatch-0912 (this worktree — A:// fabric-transport proof slice)
 
-## Just did
-- All steps 0–9 built and verified (see plan file .steering/plans/plan-adispatch-0912.md).
-- LIVE KILL-WORKER DEMO PASSED on a real server (port 18477, fresh DB, lease 4s, sweep 2s):
-  worker A claimed gen 1 (lease_89b1…), ran step 0 + checkpoint + heartbeat, SIGKILLed;
-  sweeper logged "Lease expired; recovery policy applied lease_generation=1 outcome=queued";
-  worker B claimed gen 2 (lease_0e41…), replayed from checkpoint step 1, completed;
-  ghost A completion (gen 1) → HTTP 409 A_STALE_LEASE_GENERATION;
-  B duplicate completion → already_committed, same result_id (exactly-once);
-  ledger rows all carry initiator=user/joe, delegator=principal/al, executor=A→B;
-  run completed; steps 0-2 outputs present on disk.
-- fix: create_job route now enqueues persisted row (state 'queued') + approvals user-filter fix + clippy fixups.
+### Goal
+A:// Coordination Contract v0.1 proof slice (Appendix B steps 0–9), renamed dispatch → fabric transport. Exit criterion: §8.24 adversarial two-worker test passes behaviorally. Canonical store = allternit-cowork-runtime SQLite.
 
-## Next
-- Push, open PR (do NOT merge), report. Cleanup of demo scratch after PR.
+### Just did
+- All steps 0–9 built and verified; rename commit landed (routes now /api/v1/fabric/transport/*, env ALLTERNIT_FABRIC_TRANSPORT_*, V152–V154 after main took V149).
+- LIVE KILL-WORKER DEMO PASSED: A claimed gen 1, checkpointed, SIGKILLed; sweeper requeued; B claimed gen 2, replayed from checkpoint, completed; ghost A completion → 409 A_STALE_LEASE_GENERATION; duplicate → already_committed same result_id; ledger triple intact.
+- Merged origin/main (33 commits) to resolve PR #422 conflicts; renumbered migrations V149–V151 → V152–V154.
 
-## Open questions
-- Approval↔lease binding (§8.14) and job rehydration at boot (§8.20, runs-only today) deferred — noted in PR.
+### Next
+- Merge PR #422, attestation, desktop rebuild attempt, then continuation: approval↔lease binding (§8.14), boot job rehydration (§8.20), full §8.24 conformance test → second PR.
+
+### Open questions
+- none.
+
+---
+
+## Prior session: desktop-relay-watchdog-0912 (from main, for reference)
+
+- **Goal:** Fix #423 — desktop runtime relay silent-death (node dark until app restart).
+- **Just did:** relay heartbeat watchdog in auth-manager.ts; desktop typecheck ✅, 125 vitest ✅, release-preflight 35/0 ✅.
+- **Next:** PR → merge → ledger → rebuild desktop DMG.
+- **Open questions:** none.

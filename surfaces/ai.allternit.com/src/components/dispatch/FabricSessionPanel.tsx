@@ -71,28 +71,6 @@ export function FabricSessionPanel({
   const [driveKindState, setDriveKindState] = useState<FabricDriveKind>('chat');
   const driveKind = driveKindProp ?? driveKindState;
   const setDriveKind = onDriveKindChange ?? setDriveKindState;
-
-  // The fabric drive kind is the source of truth; mirror it into the
-  // platform app mode so desktop views mounted here (bot composer dock,
-  // mode-accented chrome) behave exactly as they do on the desktop shell.
-  const { setMode } = useMode();
-  useEffect(() => {
-    setMode(fabricKindAppMode(driveKind));
-  }, [driveKind, setMode]);
-
-  // The composer dock's Chat/Cowork/Bots toggle routes through this event on
-  // the desktop shell; map it back onto the fabric drive kind so the toggle
-  // also switches rails here instead of being a dead click.
-  useEffect(() => {
-    const onSwitchMode = (event: Event) => {
-      const mode = (event as CustomEvent<{ mode?: string }>).detail?.mode;
-      if (!mode) return;
-      const next = fabricAppModeKind(mode);
-      if (next) setDriveKind(next);
-    };
-    window.addEventListener('allternit:switch-mode', onSwitchMode);
-    return () => window.removeEventListener('allternit:switch-mode', onSwitchMode);
-  }, [setDriveKind]);
   // Code mode: the desktop code surface is the default canvas; the
   // Termius-style terminal is the alternate full-pane view.
   const [codePane, setCodePane] = useState<'desktop' | 'terminal'>('desktop');
@@ -103,6 +81,41 @@ export function FabricSessionPanel({
     setChatView(next.view);
     if (next.view === 'cowork') setSelectedSessionId(null);
   }, []);
+
+  // The fabric drive kind is the source of truth; mirror it into the
+  // platform app mode so desktop views mounted here (bot composer dock,
+  // mode-accented chrome) behave exactly as they do on the desktop shell.
+  const { setMode } = useMode();
+  useEffect(() => {
+    // Reflect the cowork canvas into the app mode too, so the composer
+    // dock's Chat/Cowork/Bots toggle highlights the matching segment.
+    setMode(chatView === 'cowork' ? 'cowork' : fabricKindAppMode(driveKind));
+  }, [driveKind, chatView, setMode]);
+
+  // The composer dock's Chat/Cowork/Bots toggle routes through this event on
+  // the desktop shell; map it back onto the fabric drive kind and chat canvas
+  // so the toggle switches views here exactly like the desktop shell. Fabric
+  // has no cowork drive kind — cowork lives as a canvas inside chat mode.
+  useEffect(() => {
+    const onSwitchMode = (event: Event) => {
+      const mode = (event as CustomEvent<{ mode?: string }>).detail?.mode;
+      if (!mode) return;
+      if (mode === 'cowork') {
+        setDriveKind('chat');
+        setSelectedSessionId(null);
+        setChatView('cowork');
+        return;
+      }
+      // Any non-cowork mode leaves the cowork canvas — otherwise the stale
+      // chatView keeps mirroring 'cowork' into the app mode and the dock
+      // toggle highlights Cowork while e.g. Bots is active.
+      setChatView('chat');
+      const next = fabricAppModeKind(mode);
+      if (next) setDriveKind(next);
+    };
+    window.addEventListener('allternit:switch-mode', onSwitchMode);
+    return () => window.removeEventListener('allternit:switch-mode', onSwitchMode);
+  }, [setDriveKind]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [railCollapsedState, setRailCollapsedState] = useState(() => {

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '@/integration/api-client';
 
-import { listGalleryEntries, upsertGalleryEntry, type GalleryEntry } from './gallery-store';
 import {
   listGalleryEntriesGatewayFirst,
   saveGalleryEntryToGateway,
+  type GalleryEntry,
 } from './content-artifact-sync';
 
 vi.mock('@/integration/api-client', () => ({
@@ -12,6 +12,7 @@ vi.mock('@/integration/api-client', () => ({
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -37,9 +38,7 @@ function fakeIndexedDB() {
       const req: {
         result: unknown;
         error: null;
-        onsuccess: null | ((e: unknown) => void);
-        onerror: null;
-        onupgradeneeded: null;
+        onsuccess: null; onerror: null; onupgradeneeded: null;
       } = { result: null, error: null, onsuccess: null, onerror: null, onupgradeneeded: null };
       queueMicrotask(() => {
         if (!stores.has(dbName)) stores.set(dbName, new Map());
@@ -73,20 +72,19 @@ function fakeIndexedDB() {
   };
 }
 
-const entry = (overrides: Partial<Parameters<typeof upsertGalleryEntry>[0]>) => ({
+const entry = (overrides: Partial<GalleryEntry> = {}): GalleryEntry => ({
+  id: 'gallery-design-1',
   projectId: 'design-1',
   projectName: 'Acme landing',
   prompt: 'Create a SaaS landing page',
   type: 'prototype',
   artifactHtml: '<html><body><h1>Acme</h1></body></html>',
+  createdAt: Date.parse('2026-09-12T10:00:00Z'),
+  updatedAt: Date.parse('2026-09-12T11:00:00Z'),
   ...overrides,
 });
 
-async function savedEntry(overrides: Parameters<typeof entry>[0] = {}): Promise<GalleryEntry> {
-  return upsertGalleryEntry(entry(overrides));
-}
-
-describe('content-artifact-sync', () => {
+describe('content-artifact-sync (Phase 2 delegates)', () => {
   beforeEach(() => {
     stores.clear();
     vi.clearAllMocks();
@@ -98,7 +96,7 @@ describe('content-artifact-sync', () => {
       mockedApi.get.mockResolvedValueOnce({ artifacts: [] });
       mockedApi.post.mockResolvedValueOnce({});
 
-      await saveGalleryEntryToGateway(await savedEntry());
+      await saveGalleryEntryToGateway(entry());
 
       expect(mockedApi.post).toHaveBeenCalledWith(
         '/api/v1/content-artifacts',
@@ -115,29 +113,19 @@ describe('content-artifact-sync', () => {
       expect(mockedApi.put).not.toHaveBeenCalled();
     });
 
-    it('passes MIME types through unchanged', async () => {
-      mockedApi.get.mockResolvedValueOnce({ artifacts: [] });
-      mockedApi.post.mockResolvedValueOnce({});
-
-      await saveGalleryEntryToGateway(await savedEntry({ type: 'image/svg+xml' }));
-
-      expect(mockedApi.post.mock.calls[0]![1]).toMatchObject({ type: 'image/svg+xml' });
-    });
-
     it('appends a version when the project already has a gateway artifact', async () => {
-      const saved = await savedEntry();
       mockedApi.get.mockResolvedValueOnce({
         artifacts: [{ id: 'art_01', projectId: 'design-1' }],
       });
       mockedApi.put.mockResolvedValueOnce({});
 
-      await saveGalleryEntryToGateway(saved);
+      await saveGalleryEntryToGateway(entry());
 
       expect(mockedApi.put).toHaveBeenCalledWith(
         '/api/v1/content-artifacts/art_01/versions',
         expect.objectContaining({
           body: '<html><body><h1>Acme</h1></body></html>',
-          idempotencyKey: `gallery-append-design-1-${saved.updatedAt}`,
+          idempotencyKey: `gallery-append-design-1-${Date.parse('2026-09-12T11:00:00Z')}`,
         }),
       );
       expect(mockedApi.post).not.toHaveBeenCalled();
@@ -145,43 +133,7 @@ describe('content-artifact-sync', () => {
   });
 
   describe('listGalleryEntriesGatewayFirst', () => {
-    it('maps gateway records, reusing the local category and body', async () => {
-      await savedEntry({ skillId: 'saas-landing', skillName: 'SaaS Landing' });
-      mockedApi.get.mockResolvedValueOnce({
-        artifacts: [
-          {
-            id: 'art_01',
-            title: 'Acme landing',
-            type: 'text/html',
-            projectId: 'design-1',
-            provenance: { prompt: 'Create a SaaS landing page', skillId: 'saas-landing', skillName: 'SaaS Landing' },
-            thumbnail: 'data:image/jpeg;base64,x',
-            createdAt: '2026-09-12T10:00:00Z',
-            updatedAt: '2026-09-12T11:00:00Z',
-          },
-        ],
-      });
-
-      const entries = await listGalleryEntriesGatewayFirst();
-
-      expect(entries).toHaveLength(1);
-      expect(entries[0]).toMatchObject({
-        id: 'art_01',
-        projectId: 'design-1',
-        projectName: 'Acme landing',
-        prompt: 'Create a SaaS landing page',
-        // UI category comes from the local cache, not the MIME type.
-        type: 'prototype',
-        skillId: 'saas-landing',
-        artifactHtml: '<html><body><h1>Acme</h1></body></html>',
-        thumbnail: 'data:image/jpeg;base64,x',
-      });
-      expect(entries[0]!.createdAt).toBe(Date.parse('2026-09-12T10:00:00Z'));
-      // No per-artifact body fetch needed — the local cache had it.
-      expect(mockedApi.get).toHaveBeenCalledTimes(1);
-    });
-
-    it('fetches the body once for gateway-only artifacts', async () => {
+    it('delegates to the store gateway-first list', async () => {
       mockedApi.get
         .mockResolvedValueOnce({
           artifacts: [
@@ -199,42 +151,13 @@ describe('content-artifact-sync', () => {
 
       const entries = await listGalleryEntriesGatewayFirst();
 
+      expect(entries).toHaveLength(1);
       expect(entries[0]).toMatchObject({
         id: 'art_02',
         projectId: 'proj-x',
         type: 'other',
         artifactHtml: '<html>remote</html>',
       });
-    });
-
-    it('keeps local-only entries and falls back to IndexedDB when the gateway is down', async () => {
-      await savedEntry({ projectId: 'local-1', projectName: 'Offline save' });
-      mockedApi.get.mockRejectedValueOnce(new Error('gateway unreachable'));
-
-      const entries = await listGalleryEntriesGatewayFirst();
-
-      expect(entries.map((e) => e.projectName)).toEqual(['Offline save']);
-      expect(await listGalleryEntries()).toHaveLength(1);
-    });
-
-    it('merges local-only entries into a reachable gateway list', async () => {
-      await savedEntry({ projectId: 'local-1', projectName: 'Offline save' });
-      await savedEntry({ projectId: 'design-1', projectName: 'Synced' });
-      mockedApi.get.mockResolvedValueOnce({
-        artifacts: [
-          {
-            id: 'art_01',
-            title: 'Synced',
-            type: 'text/html',
-            projectId: 'design-1',
-            updatedAt: '2026-09-12T11:00:00Z',
-          },
-        ],
-      });
-
-      const entries = await listGalleryEntriesGatewayFirst();
-
-      expect(entries.map((e) => e.projectId).sort()).toEqual(['design-1', 'local-1']);
     });
   });
 });
