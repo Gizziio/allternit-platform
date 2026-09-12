@@ -4,7 +4,7 @@ use axum::{
     extract::{Extension, Path, Query, State},
     http::{Method, StatusCode},
     response::{IntoResponse, Response},
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
     Json, Router,
 };
 use rusqlite::{params, OptionalExtension};
@@ -105,9 +105,15 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/vault/credentials", post(put_legacy_credential))
         .route("/vault/credentials/:id", delete(revoke_legacy_credential))
         .route("/beta/vaults", post(create_vault).get(list_vaults))
-        .route("/beta/vaults/:id", get(get_vault).delete(delete_vault))
         .route("/vaults", post(create_vault).get(list_vaults))
-        .route("/vaults/:id", get(get_vault).delete(delete_vault))
+        .route(
+            "/vaults/:id",
+            get(get_vault).patch(update_vault).delete(delete_vault),
+        )
+        .route(
+            "/beta/vaults/:id",
+            get(get_vault).patch(update_vault).delete(delete_vault),
+        )
         .route(
             "/beta/vaults/:id/credentials",
             post(put_vault_credential).get(list_vault_credentials),
@@ -309,6 +315,76 @@ async fn get_vault(
     })
     .await
     {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct UpdateVault {
+    name: Option<String>,
+    description: Option<String>,
+}
+
+async fn update_vault(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    credential: Option<Extension<CredentialContext>>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdateVault>,
+) -> Response {
+    if let Err(e) = authorize(
+        credential.as_ref().map(|e| &e.0),
+        Method::PATCH,
+        &format!("/api/v1/beta/vaults/{id}"),
+    ) {
+        return e.into_response();
+    }
+    if let Some(name) = &body.name {
+        if name.trim().is_empty() || name.len() > 128 {
+            return err(
+                StatusCode::BAD_REQUEST,
+                "invalid_name",
+                "Name must be 1-128 characters.",
+            )
+            .into_response();
+        }
+    }
+    if body.name.is_none() && body.description.is_none() {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "invalid_request",
+            "Provide name and/or description to update.",
+        )
+        .into_response();
+    }
+    let org = match organization(&user) {
+        Ok(org) => org,
+        Err(e) => return e.into_response(),
+    };
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        // 404 semantics match get/delete: the vault must belong to the caller's org.
+        find_vault(&conn, &id, &org)?;
+        if let Some(name) = &body.name {
+            conn.execute(
+                "UPDATE allternit_vaults SET name = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+                params![id, name.trim()],
+            )
+            .map_err(internal)?;
+        }
+        if let Some(description) = &body.description {
+            conn.execute(
+                "UPDATE allternit_vaults SET description = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+                params![id, description],
+            )
+            .map_err(internal)?;
+        }
+        find_vault(&conn, &id, &org)
+    })
+    .await;
+    match result {
         Ok(Ok(v)) => Json(v).into_response(),
         Ok(Err(e)) => e.into_response(),
         Err(e) => internal(e).into_response(),
@@ -972,6 +1048,139 @@ async fn revoke_legacy_credential(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn auth_user(org_id: &str, user_id: &str) -> AuthUser {
+        AuthUser {
+            user_id: user_id.to_string(),
+            email: Some(format!("{}@test.local", user_id)),
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: Some(org_id.to_string()),
+            organization_role: None,
+            organization_slug: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn patch_vault_round_trip_and_404() {
+        use tower::ServiceExt;
+
+        let temp = tempfile::tempdir().unwrap();
+        let state = crate::test_helpers::app_state(temp.path()).await;
+        {
+            let conn = state.db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO organizations (id, name) VALUES ('org-v', 'Vault Org')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO users (id, email) VALUES ('user-v', 'user-v@test.local')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO allternit_vaults (id, organization_id, created_by, name, description)
+                 VALUES ('vault-1', 'org-v', 'user-v', 'Original', 'old description')",
+                [],
+            )
+            .unwrap();
+        }
+        let app = router().with_state(state);
+
+        // PATCH name + description → 200 with the updated vault.
+        let resp = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("PATCH")
+                    .uri("/vaults/vault-1")
+                    .header("content-type", "application/json")
+                    .extension(auth_user("org-v", "user-v"))
+                    .body(axum::body::Body::from(
+                        json!({"name": "Renamed", "description": "new description"}).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["name"], json!("Renamed"));
+        assert_eq!(body["description"], json!("new description"));
+        assert_eq!(body["id"], json!("vault-1"));
+
+        // GET reflects the update.
+        let resp = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("GET")
+                    .uri("/vaults/vault-1")
+                    .extension(auth_user("org-v", "user-v"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["name"], json!("Renamed"));
+
+        // PATCH on a missing vault → 404 (same as GET/DELETE).
+        let resp = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("PATCH")
+                    .uri("/vaults/nope")
+                    .header("content-type", "application/json")
+                    .extension(auth_user("org-v", "user-v"))
+                    .body(axum::body::Body::from(json!({"name": "X"}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Invalid name → 400.
+        let resp = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("PATCH")
+                    .uri("/vaults/vault-1")
+                    .header("content-type", "application/json")
+                    .extension(auth_user("org-v", "user-v"))
+                    .body(axum::body::Body::from(json!({"name": "  "}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Empty body → 400.
+        let resp = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("PATCH")
+                    .uri("/vaults/vault-1")
+                    .header("content-type", "application/json")
+                    .extension(auth_user("org-v", "user-v"))
+                    .body(axum::body::Body::from(json!({}).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
 
     #[test]
     fn enterprise_vault_paths_require_vault_scopes() {

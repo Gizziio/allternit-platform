@@ -1,34 +1,25 @@
-# Steering checkpoint — session/designfixes-0912
+# Steering checkpoint — session/console-be-p8
 
-- **Goal:** Deferred design UI work, 3 items: (1) critique-panel image wiring, (2) gallery
-  thumbnails (view layer only — gallery-store/project-file-store/content-artifact-sync
-  owned by sibling artphase2-0912), (3) `/design` ack channel (gizzi-code receipt
-  file + CLI pickup confirmation). Desktop rebuild required after merge.
-- **Just did:** All three items implemented and verified (see status below); merged
-  concurrent origin/main (PR #414 fabric-cowork-switch checkpoint kept, theirs first).
-- **Next:** PR, `gh pr merge --merge`, ledger attestation, desktop rebuild, cleanup.
-- **Open questions:** none.
+## Goal
+Backend build-out Phase 8 (G13–G14): (1) data-residency enforcement — gateway resolves org policy (data_residency_policies, data_residency_routes.rs CRUD-only today) during provider selection (llm_gateway/provider_routing.rs resolve step), restricting candidates by region; data_residency_violation error when no compliant provider. (2) Org rate limits: admin GET/PUT /api/v1/admin/rate-limits (read/write organizations.api_rate_limit_rpm — middleware already reads it, rate_limit.rs:1-50); org-level gateway LLM RPM limit (new column + check in llm_gateway/auth.rs beside budget pre-check). (3) Vaults PATCH/update endpoint (allternit_vault.rs has POST/GET/DELETE only).
 
-## Status (all three items implemented + verified)
-- Critique images: turn-images.ts (11 tests), panel strip + images in POST body,
-  gizzi critique route accepts images (max 6) and embeds capped markdown refs in
-  the panelist prompt. Smoke: 2-image request validates (503=no brain only),
-  7 images → 400.
-- Gallery thumbnails: GalleryCardImage lazy client-side capture for
-  thumbnail-less entries (module cache, placeholder fallback), CSS 4/3 cover.
-- /design ack: gizzi routes/design.ts POST+GET /v1/design/ack →
-  ~/.allternit/design-prompt-ack.json (env override); web reporter fires on
-  initialPrompt consume; CLI polls receipt ≤8s and prints pickup confirmation.
-  Smoke: 404→200→200, invalid → 400.
-- Verification: pnpm typecheck 0 errors; vitest 111/111 (14 files);
-  bun typecheck 0; build-production.js exit 0 (bundle greps: design-prompt-ack.json ×4,
-  picked up your prompt ×3, attached-image- ×3); release-preflight 35/0.
+## Just did
+- V149 migration (next-free; V148 was taken by content_artifacts): providers.region TEXT NOT NULL DEFAULT 'global' + organizations.gateway_rate_limit_rpm INTEGER NULL.
+- New llm_gateway/data_residency.rs: per-org 10s-TTL policy cache + invalidation hook, provider_regions lookup (missing row → 'global'), apply_policy (drops non-compliant fallbacks, promotes compliant fallback, ResidencyViolation naming pinned regions), enforce() async wrapper, 451 + data_residency_violation error.
+- Hooked into proxy.rs chat_completions right after resolve_model (covers primary + Gizzi fallbackModels + nonstream retry chain).
+- data_residency_routes::set_policy now invalidates the cache.
+- New admin_rate_limit_routes.rs: GET/PUT /admin/rate-limits, org-admin gated like spend limits, mounted in main.rs. PUT accepts 1..=1_000_000 or null-to-clear; 0 rejected (middleware clamps .max(1) — NOT unlimited; documented). Serde double-Option needs custom deserializer to distinguish null vs missing.
+- auth.rs: org_rate_limit_middleware (in-memory sliding window per tenant, 429 + org_rate_limited), wired between per-key rate limit and DLP in llm_gateway_router.
+- allternit_vault.rs: PATCH /vaults/:id + /beta/vaults/:id (name/description; 404 matches existing).
+- New unit tests all green: data_residency 9, admin_rate_limit_routes 5, auth 6, vault 3.
 
----
+## Next
+- Full cargo test -p allternit-api; live smoke on scratch port; release-preflight; PR.
 
-# Prior checkpoint — session/fabric-cowork-switch-0912 (merged via #414)
+## Verification (2026-09-12)
+- cargo test -p allternit-api --lib: 1001 passed, 5 failed — all 5 in the known pre-existing env set (4× agent_cloud OS-control-plane "did not log its listening port", 1× rails gate_data_plane_round_trip). Integration tests (health_metrics 6, viz_routes 14): all pass.
+- Live smoke (scratch port 18099, temp DB, dev-bypass + desktop-token identity): GET rate-limits defaults → PUT round-trip → 0/out-of-range 400s → gateway org RPM 2 → 3rd request 429 org_rate_limited → pin us-east-1 (openai compliant passes filter; anthropic/global 451 data_residency_violation) → re-pin eu-west-1 blocked openai immediately (cache invalidation live) → enforce off → unrestricted 200 → vault POST/PATCH/404 all correct. Server killed, scratch removed.
+- node scripts/release-preflight.mjs: 35 passed, 0 failed.
 
-- **Goal:** Fabric Transport — composer Home/Cowork/Bots toggle must switch the canvas (cowork was a dead click); rename the switcher's "Chat" segment to "Home".
-- **Just did:** Worktree `fabric-cowork-switch-0912` off origin/main (`00a186602`). `FabricSessionPanel` `allternit:switch-mode` handler now routes `cowork` → chat kind + cowork canvas (+ clears node session selection), `chat` → chat canvas; app-mode mirror reflects the cowork canvas so the toggle highlights the right segment. `BottomDock` segment label Chat → Home (aria-label too) + tests updated. SW v40→v41. Typecheck ✅, BottomDock + dispatch tests 17 passed ✅, build + prepare verified v41.
-- **Next:** (landed — PR #414)
-- **Open questions:** none.
+## Open questions
+- Provider region is set at the DB/seed level (providers.region); there is no provider write route today — region exposure in provider_routes list responses left as follow-up if wanted.

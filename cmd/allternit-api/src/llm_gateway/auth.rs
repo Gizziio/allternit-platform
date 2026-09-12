@@ -5,8 +5,10 @@
 //!   1. [`llm_key_middleware`] — Bearer `ak-…` → SHA-256 lookup, attaches
 //!      [`LlmKeyContext`] to request extensions.
 //!   2. [`rate_limit_middleware`] — per-key in-memory sliding window.
-//!   3. [`budget_middleware`] — monthly key cap + tenant hard cap pre-check.
-//! (B6 DLP will slot in between 2 and 3; see `llm_gateway::mod`.)
+//!   3. [`org_rate_limit_middleware`] — per-organization sliding window
+//!      (`organizations.gateway_rate_limit_rpm`, G14).
+//!   4. `dlp::dlp_middleware` — B6 secret scanning + injection screening.
+//!   5. [`budget_middleware`] — monthly key cap + tenant hard cap pre-check.
 //!
 //! All rejections use the OpenAI error shape so existing OpenAI clients
 //! surface them correctly.
@@ -333,7 +335,106 @@ pub fn token_budget_status(
     })
 }
 
-// ─── 3. Budget pre-check ────────────────────────────────────────────────────
+// ─── 3. Org-level rate limiting (G14) ───────────────────────────────────────
+
+/// Per-organization sliding-window request timestamps for the LLM gateway,
+/// process-wide (same in-memory style as the per-key limiter above). Restart
+/// resets every window — an org that hammered the gateway before a restart
+/// starts with a clean slate.
+static ORG_RATE_LIMIT_WINDOWS: Lazy<Mutex<HashMap<String, VecDeque<Instant>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+fn org_check_rate_limit(org_id: &str, limit: usize) -> bool {
+    let now = Instant::now();
+    let mut windows = ORG_RATE_LIMIT_WINDOWS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let window = windows.entry(org_id.to_string()).or_default();
+    while window
+        .front()
+        .map(|t| now.duration_since(*t) > RATE_WINDOW)
+        .unwrap_or(false)
+    {
+        window.pop_front();
+    }
+    if window.len() >= limit {
+        return false;
+    }
+    window.push_back(now);
+    true
+}
+
+/// Read the org's `gateway_rate_limit_rpm` override, if one exists.
+fn lookup_org_gateway_limit(conn: &rusqlite::Connection, org_id: &str) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT gateway_rate_limit_rpm FROM organizations WHERE id = ?1",
+        params![org_id],
+        |row| row.get::<_, Option<i64>>(0),
+    )
+    .optional()
+    .map(|maybe| maybe.flatten())
+}
+
+/// Per-organization gateway RPM cap. Runs after [`llm_key_middleware`] so the
+/// key context (with its tenant id) is available; keys with no tenant and orgs
+/// without an override pass straight through — only the per-key limiter
+/// applies to them. Excess requests get 429 with code `org_rate_limited`.
+pub async fn org_rate_limit_middleware(
+    State(state): State<Arc<AppState>>,
+    request: Request,
+    next: Next,
+) -> Response {
+    let Some(ctx) = request.extensions().get::<LlmKeyContext>().cloned() else {
+        warn!("org_rate_limit_middleware ran without LlmKeyContext (middleware order bug)");
+        return server_error("Internal error: missing key context".to_string()).into_response();
+    };
+    let Some(org_id) = ctx.tenant_id.clone() else {
+        return next.run(request).await;
+    };
+
+    let db = state.db.clone();
+    let org_for_lookup = org_id.clone();
+    let limit = match tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        lookup_org_gateway_limit(&conn, &org_for_lookup)
+    })
+    .await
+    {
+        Ok(Ok(limit)) => limit,
+        Ok(Err(err)) => {
+            warn!(error = %err, "org gateway rate limit lookup failed; allowing request");
+            None
+        }
+        Err(err) => {
+            warn!(error = %err, "org gateway rate limit lookup task failed; allowing request");
+            None
+        }
+    };
+
+    let Some(limit) = limit.map(|l| l.max(1) as usize) else {
+        return next.run(request).await;
+    };
+
+    if !org_check_rate_limit(&org_id, limit) {
+        let retry_after = RATE_WINDOW.as_secs().max(1);
+        let body = json!({
+            "error": {
+                "message": format!("Organization rate limit exceeded ({limit} requests per minute). Please retry after the Retry-After interval."),
+                "type": "rate_limit_exceeded",
+                "code": crate::llm_gateway::translate::error_code::ORG_RATE_LIMITED
+            }
+        });
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            [(header::RETRY_AFTER, retry_after.to_string())],
+            Json(body),
+        )
+            .into_response();
+    }
+    next.run(request).await
+}
+
+// ─── 4. Budget pre-check ────────────────────────────────────────────────────
 
 /// Current-calendar-month spend for one virtual key, in microdollars.
 /// Bills off the gateway-recomputed cost when present (single source of
@@ -706,5 +807,63 @@ mod tests {
         .unwrap();
 
         assert_eq!(org_month_spend_microdollars(&conn, "org-1").unwrap(), 5_000_000);
+    }
+
+    #[tokio::test]
+    async fn org_rate_limit_middleware_blocks_with_org_rate_limited_code() {
+        use axum::{routing::get, Router};
+        use tower::ServiceExt;
+
+        let temp = tempfile::tempdir().unwrap();
+        let state = crate::test_helpers::app_state(temp.path()).await;
+        let org_id = format!("org-gw-{}", uuid::Uuid::new_v4());
+        {
+            let conn = state.db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO organizations (id, name, gateway_rate_limit_rpm) VALUES (?1, 'GW Org', 2)",
+                rusqlite::params![org_id],
+            )
+            .unwrap();
+        }
+
+        let app = Router::new()
+            .route("/test", get(|| async { StatusCode::NO_CONTENT }))
+            .layer(axum::middleware::from_fn_with_state(
+                state,
+                org_rate_limit_middleware,
+            ));
+
+        let request = |org: &str| {
+            let mut ctx = ctx_with_budget("key-1", 0);
+            ctx.tenant_id = Some(org.to_string());
+            Request::builder()
+                .method("GET")
+                .uri("/test")
+                .extension(ctx)
+                .body(axum::body::Body::empty())
+                .unwrap()
+        };
+
+        for _ in 0..2 {
+            let resp = app.clone().oneshot(request(&org_id)).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+        }
+
+        let blocked = app.clone().oneshot(request(&org_id)).await.unwrap();
+        assert_eq!(blocked.status(), StatusCode::TOO_MANY_REQUESTS);
+        let body = axum::body::to_bytes(blocked.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(
+            body["error"]["code"],
+            json!(crate::llm_gateway::translate::error_code::ORG_RATE_LIMITED)
+        );
+
+        // A different org id with no organizations row / no override is
+        // unaffected (org-level cap only applies when the override is set).
+        let other = format!("org-gw-other-{}", uuid::Uuid::new_v4());
+        let resp = app.clone().oneshot(request(&other)).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
     }
 }
