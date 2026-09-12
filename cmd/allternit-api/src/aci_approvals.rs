@@ -424,6 +424,16 @@ impl ActionGrantStore {
     pub fn receipts(&self) -> Vec<RedemptionReceipt> {
         self.receipts.lock().expect("receipt lock").clone()
     }
+
+    /// Test-only: force a grant's expiry into the past so the expired-redeem
+    /// path is exercisable without sleeping through a real TTL.
+    #[cfg(test)]
+    pub fn set_expires_for_test(&self, id: &str, expires_at: i64) {
+        let mut grants = self.grants.lock().expect("grant store lock");
+        if let Some(grant) = grants.get_mut(id) {
+            grant.expires_at = expires_at;
+        }
+    }
 }
 
 /// Process-wide grant store shared by every computer-use entry route. The

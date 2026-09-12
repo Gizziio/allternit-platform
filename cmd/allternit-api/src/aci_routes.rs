@@ -36,6 +36,11 @@ pub fn aci_router() -> Router<Arc<AppState>> {
         .route("/aci/handoff/:id", get(aci_handoff_status))
         .route("/aci/handoff/:id/approve", post(aci_handoff_approve))
         .route("/aci/handoff/:id/deny", post(aci_handoff_deny))
+        .route("/aci/batch", post(crate::aci_batch::aci_batch_execute))
+        .route(
+            "/aci/batch/receipts/:id",
+            get(crate::aci_batch::aci_batch_receipt),
+        )
         .route("/aci/policy/audit", get(aci_policy_audit))
         .merge(crate::aci_credentials::credential_routes())
 }

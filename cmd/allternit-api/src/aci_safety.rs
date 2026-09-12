@@ -347,7 +347,7 @@ fn env_u64(name: &str, default: u64) -> u64 {
 
 // ─── Global enforcer ────────────────────────────────────────────────────────
 
-static HOST_POLICY: Lazy<HostPolicy> = Lazy::new(HostPolicy::from_env);
+pub(crate) static HOST_POLICY: Lazy<HostPolicy> = Lazy::new(HostPolicy::from_env);
 static BREAKER: Lazy<CircuitBreaker> = Lazy::new(CircuitBreaker::from_env);
 
 /// Evaluate an ACI run request against the backend safety policy.
@@ -556,6 +556,7 @@ pub fn classify_file_write(path: &str) -> ConfirmationClass {
 
 /// Denial produced by [`enforce_confirmation`], ready to become an HTTP
 /// response on any entry route.
+#[derive(Debug)]
 pub struct ConfirmationDenial {
     pub status: axum::http::StatusCode,
     pub body: serde_json::Value,
