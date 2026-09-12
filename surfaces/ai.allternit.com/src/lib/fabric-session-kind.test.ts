@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fabricKindSurface, fabricSessionKind } from './fabric-session-kind';
+import { fabricAppModeKind, fabricKindAppMode, fabricKindSurface, fabricSessionKind } from './fabric-session-kind';
 
 describe('fabricSessionKind', () => {
   it('classifies code, ACI, bot, and chat sessions', () => {
@@ -17,5 +17,30 @@ describe('fabricSessionKind', () => {
     expect(fabricKindSurface('bot')).toBe('bot');
     expect(fabricKindSurface('chat')).toBe('chat');
     expect(fabricKindSurface('desktop')).toBe('desktop');
+  });
+});
+
+describe('fabricKindAppMode', () => {
+  it('maps drive kinds to the platform app mode desktop views expect', () => {
+    expect(fabricKindAppMode('chat')).toBe('chat');
+    expect(fabricKindAppMode('bot')).toBe('bot');
+    expect(fabricKindAppMode('code')).toBe('code');
+    expect(fabricKindAppMode('aci')).toBe('browser');
+    expect(fabricKindAppMode('desktop')).toBe('browser');
+  });
+});
+
+describe('fabricAppModeKind', () => {
+  it('maps switch-mode events back onto fabric drive kinds', () => {
+    expect(fabricAppModeKind('chat')).toBe('chat');
+    expect(fabricAppModeKind('cowork')).toBe('chat');
+    expect(fabricAppModeKind('bot')).toBe('bot');
+    expect(fabricAppModeKind('code')).toBe('code');
+    expect(fabricAppModeKind('browser')).toBe('aci');
+  });
+
+  it('ignores modes with no fabric rail', () => {
+    expect(fabricAppModeKind('design')).toBeNull();
+    expect(fabricAppModeKind('unknown')).toBeNull();
   });
 });

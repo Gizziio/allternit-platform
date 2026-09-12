@@ -1,7 +1,7 @@
 /* eslint-disable */
 // Allternit Fabric Session PWA service worker
 
-const CACHE_NAME = 'allternit-fabric-session-v36';
+const CACHE_NAME = 'allternit-fabric-session-v37';
 const DEDICATED_HOSTS = [
   'fabrictransport.allternit.com',
   'fabric-session.allternit.com',
