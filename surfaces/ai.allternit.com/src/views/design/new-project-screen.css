@@ -43,6 +43,11 @@
 .ad-skill-inputs__field input:focus,.ad-skill-inputs__field select:focus,.ad-skill-inputs__field textarea:focus { border-color: var(--launch-accent); }
 .ad-skill-inputs__field input[type="checkbox"] { width: 15px; height: 15px; margin: 6px 0 0; accent-color: var(--launch-accent); cursor: pointer; }
 .ad-skill-inputs__field input[type="number"] { font-variant-numeric: tabular-nums; }
+.ad-composer__aspects { display: flex; align-items: center; gap: 5px; margin: 2px 0 8px; padding: 0 4px; }
+.ad-composer__aspects button { padding: 4px 10px; border: 1px solid var(--launch-border); border-radius: 999px; background: transparent; color: var(--launch-muted); font-size: 9px; font-weight: 700; cursor: pointer; }
+.ad-composer__aspects button:hover { color: var(--launch-text); }
+.ad-composer__aspects button.is-active { border-color: var(--launch-accent); background: color-mix(in srgb, var(--launch-accent) 10%, transparent); color: var(--launch-text); }
+.ad-launch__footer { margin-top: 48px; text-align: center; color: var(--launch-muted); font-size: 9px; }
 .ad-menu-anchor { position: relative; }
 .ad-popover { position: absolute; top: calc(100% + 8px); left: 0; z-index: 50; width: 290px; padding: 8px; border: 1px solid var(--launch-border); border-radius: 10px; background: var(--launch-card); box-shadow: 0 18px 50px rgba(0,0,0,.28); }
 .ad-popover--attach,.ad-type-picker { width: 250px; }

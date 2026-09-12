@@ -36,6 +36,9 @@ const CREATION_TYPES = [
   { id: 'content-engine', label: 'Content engine', hint: 'Content pipeline and campaigns', icon: Play },
 ] as const;
 
+/** §6 P2 — Kimi "Adaptive"-equivalent output-shape pills. */
+const ASPECT_OPTIONS = ['Adaptive', '1:1', '16:9', '9:16', '4:3', '3:4'] as const;
+
 type LibraryTab = 'projects' | 'systems' | 'templates' | 'gallery';
 
 /** Gallery pill labels keyed by creation type — kimi.com/design category-tab pattern. */
@@ -60,6 +63,7 @@ interface NewProjectScreenProps {
     system?: DesignSystemEntry;
     skill?: SkillRecord;
     skillValues?: Record<string, unknown>;
+    aspect?: string;
   }) => void;
   onOpenProject?: (project: DesignProject) => void;
   onSelectDesignSystem?: (system: DesignSystemEntry) => void;
@@ -84,6 +88,7 @@ export function NewProjectScreen({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState('');
   const [selectedType, setSelectedType] = useState('prototype');
+  const [selectedAspect, setSelectedAspect] = useState<string>('Adaptive');
   const [selectedDirection, setSelectedDirection] = useState('allternit-brand');
   const [selectedSystem, setSelectedSystem] = useState<DesignSystemEntry | null>(null);
   const [activeMenu, setActiveMenu] = useState<'system' | 'type' | 'attach' | null>(null);
@@ -154,6 +159,7 @@ export function NewProjectScreen({
       system: selectedSystem ?? undefined,
       skill: selectedSkill ?? undefined,
       skillValues: selectedSkill ? (skillValues ?? {}) : undefined,
+      aspect: selectedAspect === 'Adaptive' ? undefined : selectedAspect,
     });
   }
 
@@ -264,6 +270,21 @@ export function NewProjectScreen({
               })}
             </div>
           )}
+
+          <div className="ad-composer__aspects" role="radiogroup" aria-label="Output shape">
+            {ASPECT_OPTIONS.map((aspect) => (
+              <button
+                key={aspect}
+                type="button"
+                role="radio"
+                aria-checked={selectedAspect === aspect}
+                className={selectedAspect === aspect ? 'is-active' : ''}
+                onClick={() => setSelectedAspect(aspect)}
+              >
+                {aspect}
+              </button>
+            ))}
+          </div>
 
           <div className="ad-composer__toolbar">
             <div className="ad-menu-anchor">
@@ -430,6 +451,8 @@ export function NewProjectScreen({
             </div>
           )}
         </section>
+
+        <footer className="ad-launch__footer">Artifacts are AI-generated. For reference only — review before use.</footer>
       </main>
     </div>
   );

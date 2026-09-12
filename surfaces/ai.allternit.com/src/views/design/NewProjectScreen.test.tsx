@@ -103,6 +103,27 @@ function fakeIndexedDB(seed: Record<string, unknown>[]) {
   };
 }
 
+describe('NewProjectScreen aspect picker + disclaimer (§6 P2/P3)', () => {
+  it('defaults to Adaptive (no aspect constraint) and flows a chosen aspect through onStart', () => {
+    const onStart = vi.fn();
+    render(<NewProjectScreen onStart={onStart} />);
+    fireEvent.change(screen.getByPlaceholderText('Describe the design you want to create'), {
+      target: { value: 'Poster for a jazz night' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create project' }));
+    expect(onStart.mock.calls[0]![0]).toMatchObject({ aspect: undefined });
+
+    fireEvent.click(screen.getByRole('radio', { name: '16:9' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create project' }));
+    expect(onStart.mock.calls[1]![0]).toMatchObject({ aspect: '16:9' });
+  });
+
+  it('renders the AI-generated disclaimer footer', () => {
+    render(<NewProjectScreen onStart={vi.fn()} />);
+    expect(screen.getByText(/Artifacts are AI-generated/)).toBeTruthy();
+  });
+});
+
 describe('NewProjectScreen gallery (P0 use-case gallery)', () => {
   it('shows the empty state when no artifacts have been captured', async () => {
     (globalThis as { indexedDB?: unknown }).indexedDB = fakeIndexedDB([]);
