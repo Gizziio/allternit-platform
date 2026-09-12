@@ -597,11 +597,14 @@ async fn create_job(
 
     let job = manager.create_job(spec).await?;
     manager.set_current_job(run_id, Some(job.id)).await?;
+    // New jobs enter the dispatch queue immediately; the A:// dispatcher only
+    // claims persisted rows in state 'queued'.
+    manager.transition_job_state(job.id, JobState::Queued).await.ok();
 
     let conn = state.db.connect().map_err(db_error)?;
     persist_job(&conn, &job).map_err(db_error)?;
     conn.execute(
-        "UPDATE cowork_jobs SET required_capabilities = ?1,
+        "UPDATE cowork_jobs SET state = 'queued', required_capabilities = ?1,
             initiator = (SELECT initiator FROM cowork_runs WHERE id = ?2),
             delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2)
          WHERE id = ?3",
