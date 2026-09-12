@@ -99,7 +99,7 @@
 .ad-gallery__masonry { columns: 3; column-gap: 8px; }
 .ad-gallery-card { position: relative; display: block; width: 100%; margin: 0 0 8px; padding: 0; overflow: hidden; break-inside: avoid; border: 1px solid var(--launch-border); border-radius: 10px; background: var(--launch-card-soft); color: var(--launch-text); text-align: left; cursor: pointer; }
 .ad-gallery-card:hover { border-color: var(--launch-accent); }
-.ad-gallery-card img { display: block; width: 100%; height: auto; }
+.ad-gallery-card img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
 .ad-gallery-card__placeholder { display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 3; background: color-mix(in srgb, var(--launch-accent) 8%, var(--launch-card-soft)); color: var(--launch-accent); font: 500 34px/1 var(--font-research, Georgia, serif); }
 .ad-gallery-card__meta { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; }
 .ad-gallery-card__meta b { font-size: 10px; }
