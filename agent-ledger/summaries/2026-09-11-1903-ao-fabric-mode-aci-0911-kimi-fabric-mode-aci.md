@@ -38,3 +38,11 @@ Unchanged per the fabric constraints: Bots rail still uses `getBots(agents)` pac
 - Mid-session, `/Users/joe/allternit-main` (a secondary clone this session had created its first worktree from) was deleted by an external cleanup, and macOS TCC briefly blocked `~/Desktop`. The in-flight worktree was re-homed: a fresh worktree was created from the shared checkout at `~/Desktop/allternit-workspace/allternit` (forward-only, shared checkout untouched), the 8 changed files copied over (verified zero upstream drift on them), and the orphaned directory removed. A first commit accidentally swept `dist-fabric-session/` build output in; amended out and force-pushed before PR creation (branch had no other consumers).
 - Phone users must hard-refresh / clear Fabric Transport site data to pick up SW v37.
 - Deferred: desktop app rebuild to bundle this (b2095 predates PR #375). Offered separately; not started.
+
+## Addendum (19:15 local) — desktop rebuild from merged main
+
+- Rebuilt the desktop app from main `2c94dbb51` (includes PR #375): `Allternit-Desktop-1.1.1-b2186-arm64.dmg`, unsigned (no APPLE_* creds), `release-preflight.mjs` 35/0 before building.
+- Bundle verified: SW `allternit-fabric-session-v37`, `data-aci-goal-composer`/`Run a task on` (FabricAciModeCanvas), `fabricKindAppMode`, `mode-provider` chunk, all six `resources/bin/` sidecars; `CFBundleVersion 1.1.1.2186`.
+- Replaced `/Applications/Allternit Desktop.app` (was a parallel session's timestamp-versioned build `1.1.1.1789151397293`, installed ~14:30 local) after quitting it; quarantine cleared; app relaunched and running (main + GPU helper processes).
+- Canonical DMG copied to `allternit-desktop-preview/surfaces/allternit-desktop/release/`; superseded DMGs removed per Eoj's standing instruction: b2095 (this session's earlier build), b2138 and `local` (parallel session's, both superseded by b2186).
+- Worktree `desktop-rebuild-0911` removed after the install verified.
