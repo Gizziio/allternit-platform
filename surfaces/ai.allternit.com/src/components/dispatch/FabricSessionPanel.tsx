@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow } from '@phosphor-icons/react';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, Plus, TerminalWindow, Code } from '@phosphor-icons/react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type { RuntimeViewModel } from '@/components/dispatch/useRuntimes';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,8 @@ import {
 import { FABRIC_DRIVE_KINDS, fabricAppModeKind, fabricKindAppMode, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
 import { FabricCodeDrive, FabricKindIcon, isFabricKeepalive, latestComputerFrame, partImageSrc } from '@/components/dispatch/FabricSessionDriveViews';
 import { FabricAciModeCanvas } from '@/components/dispatch/FabricAciModeCanvas';
+import { FabricChatModeCanvas, FabricCoworkRailSection, type FabricChatView } from '@/components/dispatch/FabricChatModeCanvas';
+import { FabricCodeModeCanvas } from '@/components/dispatch/FabricCodeModeCanvas';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { FabricBotModeCanvas, FabricBotModeRail, type FabricBotView } from '@/components/dispatch/FabricBotMode';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
@@ -91,10 +93,16 @@ export function FabricSessionPanel({
     window.addEventListener('allternit:switch-mode', onSwitchMode);
     return () => window.removeEventListener('allternit:switch-mode', onSwitchMode);
   }, [setDriveKind]);
-  // Code mode has two views: the regular session chat (default) and the
-  // Termius-style terminal. No third "sessions" tab — the terminal IS the
-  // multi-session view, matching desktop code mode.
-  const [codePane, setCodePane] = useState<'chat' | 'terminal'>('chat');
+  // Code mode: the desktop code surface is the default canvas; the
+  // Termius-style terminal is the alternate full-pane view.
+  const [codePane, setCodePane] = useState<'desktop' | 'terminal'>('desktop');
+  // Chat mode: the desktop chat surface is the default canvas; selecting a
+  // cowork session switches the canvas to the desktop cowork surface.
+  const [chatView, setChatView] = useState<FabricChatView>('chat');
+  const applyChatView = useCallback((next: { view: FabricChatView }) => {
+    setChatView(next.view);
+    if (next.view === 'cowork') setSelectedSessionId(null);
+  }, []);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [railCollapsedState, setRailCollapsedState] = useState(() => {
@@ -122,6 +130,9 @@ export function FabricSessionPanel({
   });
   const pickSession = useCallback((id: string | null) => {
     setSelectedSessionId(id);
+    // Selecting a fabric node session leaves the cowork canvas for the
+    // fabric session detail (desktop chat view shows when nothing is picked).
+    if (id) setChatView('chat');
     if (id && typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
       if (onToggleRail && !railCollapsed) onToggleRail();
       else setRailCollapsedState(true);
@@ -369,11 +380,12 @@ export function FabricSessionPanel({
 
   // Code mode full-pane drive: the Termius-style terminal owns the whole
   // canvas (no message list) when the Terminal view is active.
-  const codeDriveVisible = driveKind === 'code' && codePane === 'terminal';
 
   useEffect(() => {
     setDriveKind('chat');
     setSelectedSessionId(null);
+    setChatView('chat');
+    setCodePane('desktop');
   }, [runtimeId]);
 
   useEffect(() => {
@@ -640,6 +652,68 @@ export function FabricSessionPanel({
                 if (isMobile && !railCollapsed) toggleRail();
               }}
             />
+          ) : driveKind === 'chat' ? (
+            <>
+              <FabricCoworkRailSection
+                active={chatView === 'cowork'}
+                onOpen={() => {
+                  setSelectedSessionId(null);
+                  setChatView('cowork');
+                  if (isMobile && !railCollapsed) toggleRail();
+                }}
+              />
+              {kindSessions.length > 0 && (
+                <div className="px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--shell-item-muted)]">
+                  Node sessions
+                </div>
+              )}
+              {kindSessions.length === 0 ? (
+                <div className="px-2 py-6 text-center">
+                  <p className="text-[12px] font-medium text-[var(--shell-item-fg)] m-0 mb-1">No {driveKind} sessions</p>
+                  <p className="text-[11px] text-[var(--shell-item-muted)] m-0 mb-3">
+                    {FABRIC_DRIVE_KINDS.find((tab) => tab.id === driveKind)?.hint}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handleStartSession()}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer bg-[var(--bg-primary)] text-[var(--accent-primary)]"
+                  >
+                    <Plus size={12} weight="bold" />
+                    New session
+                  </button>
+                </div>
+              ) : kindSessions.map(({ session, status }) => {
+                const active = selectedSessionId === session.id;
+                const updated = session.time?.updated ? new Date(session.time.updated).toLocaleString() : null;
+                return (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => pickSession(session.id)}
+                className={cn(
+                  'w-full text-left rounded-xl border-none px-3 py-2.5 mb-1 cursor-pointer transition-colors',
+                  active
+                    ? 'bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)]'
+                    : 'bg-transparent text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <FabricKindIcon kind={fabricSessionKind(session)} size={13} />
+                  <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{session.title}</span>
+                  <StatusDot status={status.type} />
+                </div>
+                <div className={cn('mt-1 text-[10px] truncate', active ? 'text-[var(--shell-item-active-fg)]' : 'text-[var(--shell-item-muted)]')}>
+                  {status.type}
+                  {session.agentID ? ` · ${session.agentID}` : ''}
+                  {session.directory ? ` · ${session.directory}` : ''}
+                </div>
+                {updated && (
+                  <div className="mt-0.5 text-[10px] text-[var(--shell-item-muted)] truncate">{updated}</div>
+                )}
+              </button>
+            );
+          })}
+            </>
           ) : kindSessions.length === 0 ? (
             <div className="px-2 py-6 text-center">
               <p className="text-[12px] font-medium text-[var(--shell-item-fg)] m-0 mb-1">No {driveKind} sessions</p>
@@ -733,66 +807,44 @@ export function FabricSessionPanel({
               if (runId) void fabricClient.abortSession(runId);
             }}
           />
-        ) : driveKind === 'code' && !selectedSession ? (
-          <div className="flex-1 flex flex-col min-h-0">
+        ) : driveKind === 'code' ? (
+          <div className="relative flex-1 min-h-0 flex flex-col">
             {codePane === 'terminal' ? (
               <div className="flex-1 min-h-0 p-2">
                 <FabricCodeDrive
                   detail={null}
                   events={[]}
-                  terminalSessionId={`fabric-terminals:${runtimeId}`}
+                  session={selectedSession ?? undefined}
+                  terminalSessionId={selectedSession ? undefined : `fabric-terminals:${runtimeId}`}
                   terminalWorkingDir={undefined}
                 />
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
-                <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
-                  <TerminalWindow size={40} className="mx-auto mb-3 opacity-40" />
-                  <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">Code</p>
-                  <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
-                    Agent sessions and terminals on this node
-                  </p>
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void handleStartSession()}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
-                    >
-                      <Plus size={12} weight="bold" />
-                      Start a session
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCodePane('terminal')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-transparent text-[var(--text-primary)] border border-solid border-[var(--border-default)] cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
-                    >
-                      <TerminalWindow size={12} weight="bold" />
-                      Terminal
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <FabricCodeModeCanvas />
             )}
+            <button
+              type="button"
+              onClick={() => setCodePane((pane) => (pane === 'terminal' ? 'desktop' : 'terminal'))}
+              title={codePane === 'terminal' ? 'Back to Code' : 'Termius-style terminal sessions on this node'}
+              className="absolute top-2 right-2 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-semibold border border-solid border-[var(--border-subtle)] rounded-lg cursor-pointer bg-[var(--shell-view-bg)] text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] transition-colors"
+            >
+              {codePane === 'terminal' ? (
+                <>
+                  <Code size={12} weight="bold" />
+                  Code
+                </>
+              ) : (
+                <>
+                  <TerminalWindow size={12} weight="bold" />
+                  Terminal
+                </>
+              )}
+            </button>
           </div>
+        ) : chatView === 'cowork' ? (
+          <FabricChatModeCanvas view="cowork" onView={applyChatView} />
         ) : !selectedSession ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
-            <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
-              <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
-              <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">
-                {`Select a ${sessionTabs.find((tab) => tab.id === driveKind)?.label ?? 'chat'} session`}
-              </p>
-              <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
-                {sessionTabs.find((tab) => tab.id === driveKind)?.hint ?? 'Regular agent sessions'}
-              </p>
-              <button
-                type="button"
-                onClick={() => void handleStartSession()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
-              >
-                Start a session
-              </button>
-            </div>
-          </div>
+          <FabricChatModeCanvas view="chat" onView={applyChatView} />
         ) : (
           <>
             <div className="h-10 px-4 border-b border-solid border-[var(--border-subtle)] flex items-center justify-between gap-4 bg-[var(--shell-view-bg)]">
@@ -810,29 +862,6 @@ export function FabricSessionPanel({
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                {driveKind === 'code' && (
-                  <button
-                    type="button"
-                    onClick={() => setCodePane((pane) => (pane === 'terminal' ? 'chat' : 'terminal'))}
-                    title={codePane === 'terminal' ? 'Back to the session conversation' : 'Termius-style terminal sessions on this node'}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-semibold border border-solid border-[var(--border-subtle)] rounded-lg cursor-pointer bg-[var(--surface-hover)]',
-                      'text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] transition-colors'
-                    )}
-                  >
-                    {codePane === 'terminal' ? (
-                      <>
-                        <ChatTeardropText size={12} weight="bold" />
-                        Chat
-                      </>
-                    ) : (
-                      <>
-                        <TerminalWindow size={12} weight="bold" />
-                        Terminal
-                      </>
-                    )}
-                  </button>
-                )}
                 {selectedSession.status.type === 'busy' && (
                   <button
                     type="button"
@@ -847,23 +876,14 @@ export function FabricSessionPanel({
               </div>
             </div>
 
-            <div className={cn('flex-1 min-h-0 p-4 space-y-3', codeDriveVisible ? 'flex flex-col overflow-hidden' : 'overflow-y-auto')}>
-              {driveKind === 'code' && codePane === 'terminal' && selectedSession ? (
-                <FabricCodeDrive
-                  session={selectedSession}
-                  detail={detail}
-                  events={events}
-                  terminalSessionId={`fabric-terminals:${runtimeId}`}
-                  terminalWorkingDir={undefined}
-                />
-              ) : null}
-              {!codeDriveVisible && detailLoading && (
+            <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
+              {detailLoading && (
                 <div className="flex items-center text-xs text-[var(--text-tertiary)]">
                   <Spinner className="animate-spin mr-2" size={14} />
                   Loading messages…
                 </div>
               )}
-              {!codeDriveVisible && detail?.messages.map((msg) => (
+              {detail?.messages.map((msg) => (
                 <div
                   key={msg.info.id}
                   className={cn(
@@ -892,7 +912,7 @@ export function FabricSessionPanel({
                 </div>
               ))}
 
-              {!codeDriveVisible && sessionPermissions.map((permission) => (
+              {sessionPermissions.map((permission) => (
                 <PendingPermissionCard
                   key={permission.id}
                   permission={permission}
@@ -901,7 +921,7 @@ export function FabricSessionPanel({
                 />
               ))}
 
-              {!codeDriveVisible && sessionQuestions.map((question) => (
+              {sessionQuestions.map((question) => (
                 <PendingQuestionCard
                   key={question.id}
                   question={question}
@@ -914,14 +934,13 @@ export function FabricSessionPanel({
                 />
               ))}
 
-              {!codeDriveVisible && events.length > 0 && (
+              {events.length > 0 && (
                 <div className="text-xs text-[var(--text-tertiary)] pt-2 border-t border-[var(--border-subtle)]">
                   {events.filter((e) => !isFabricKeepalive(e.type)).length} events streamed
                 </div>
               )}
             </div>
 
-            {!codeDriveVisible && (
             <div className="p-3 border-t border-solid border-[var(--border-subtle)] bg-[var(--shell-view-bg)]">
               <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] px-3 pt-2.5 pb-2">
                 <textarea
@@ -957,7 +976,6 @@ export function FabricSessionPanel({
                 </div>
               </div>
             </div>
-            )}
           </>
         )}
       </div>
