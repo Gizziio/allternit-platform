@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-12 01:37 — kimi — fabric transport: hosted web-proxy, PWA brand assets, code-mode home + terminal
+
+- **Session ID / Branch:** `ao/fabric-aci-fixes-0911` + `ao/fabrictransport-web-proxy-0912`
+- **Agent:** kimi
+- **Summary:** Fixed ACI "Unauthorized" loading websites on fabrictransport.allternit.com — the zone worker `allternit-fabrictransport-api` now serves a public `/api/web-proxy` (port of `cmd/allternit-api/src/web_proxy_routes.rs`) instead of forwarding it to the bearer-only cloud-api that iframe requests can't authenticate to; Pages Function parity copy for other hosts; `public/brand` copied into the PWA deploy output (ACI logos); SW v38→v39; code mode reworked to a home screen + single Chat↔Terminal toggle (Terminal = Termius-style multi-session terminal, session-free from home).
+- **Commit:** PR #402 (merge `85d95982f`), PR #403 (merge `8b822baf9`), worker version `4b3859be`
+- **Evidence:** `agent-ledger/summaries/2026-09-12-0137-ao-fabric-aci-fixes-0911-kimi-web-proxy-code-mode.md`
+
 ### 2026-09-11 11:30 — kimi — fabric session fallbacks: kernel local peer/lease/invoke + desktop relay
 
 - **Session ID / Branch:** `session/fabricfix-0911`
