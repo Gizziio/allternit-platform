@@ -128,5 +128,5 @@ real key (`OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in env) or `--mock-model` for 
 structured outputs:
 
 ```
-node packages/sdk-ts/scripts/smoke-stagehand.ts [--mock-model]
+npx tsx scripts/smoke-stagehand.ts [--mock-model]   # from packages/sdk-ts (tsx resolves the ../src TS imports; plain `node` needs emitted src/*.js which tsdown does not produce)
 ```
