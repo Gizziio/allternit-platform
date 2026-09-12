@@ -13,11 +13,27 @@ Issue #388. Sibling: designfixes-0912 (gallery view layer, critique images, /des
 - Created worktree + branch session/artphase2-0912 (origin/main @ 00a186602).
 - pnpm install done (2m05s).
 - Wrote .steering/plans/plan-artphase2-0912.md.
+- DONE (commit 115fa8697): read-through caches — new content-artifact-api.ts raw client;
+  gallery-store gateway-first list + write-through upsert + soft-delete sync;
+  project-file-store /index.html read/write-through; sync module = thin delegates;
+  store tests rewritten (24/24 green).
+- DONE (commit 7d1054fd5): chat persist step (ArtifactSidePanel Save-to-artifacts +
+  sourceSessionId provenance via ChatView), cowork a:// resolution
+  (ArtifactAddressCard + CoworkStreamBlock + UnifiedMessageRenderer text parts),
+  typed renderers (DeckRenderer slide chrome, MobileRenderer 390px frame, prototype
+  pinned), doc §2.1 DECIDED. Web typecheck 0 errors; lib/design + components/artifact
+  vitest 97/97 green.
+- DONE (uncommitted): gizzi-code `artifact list/show/save` commands + allternitApi
+  content-artifact client fns + registry wiring. `bun run typecheck` clean,
+  `bun run script/build-production.js` green, `gizzi artifact --help` works.
+  NOTE: :8013 on this machine is a static SPA server (405 on POST), not
+  allternit-api — live smoke uses a scratch gateway on :18013.
 
 ## Next
-Implement work items 1–7 (content-artifact-api.ts → stores read-through → chat persist →
-cowork a:// links → gizzi-code artifact commands → typed renderers + doc §2.1 DECIDED),
-then verification battery, PR, ledger, desktop rebuild, cleanup.
+- Live curl + CLI smoke against scratch gateway (cargo build running in background).
+- cargo test -p allternit-api (prove no new failures vs pre-existing list).
+- release-preflight 35/0; design vitest full dirs; PR + merge; issue 388 comment/close;
+  ledger branch + attestation; desktop rebuild; cleanup.
 
 ## Open questions
 - File-ownership note: shared setup §6 lists this session's scope as "sibling owns" — the
