@@ -1,34 +1,14 @@
-# Steering checkpoint — session/designfixes-0912
+# Steering checkpoint — session/cu17-batchgate
 
-- **Goal:** Deferred design UI work, 3 items: (1) critique-panel image wiring, (2) gallery
-  thumbnails (view layer only — gallery-store/project-file-store/content-artifact-sync
-  owned by sibling artphase2-0912), (3) `/design` ack channel (gizzi-code receipt
-  file + CLI pickup confirmation). Desktop rebuild required after merge.
-- **Just did:** All three items implemented and verified (see status below); merged
-  concurrent origin/main (PR #414 fabric-cowork-switch checkpoint kept, theirs first).
-- **Next:** PR, `gh pr merge --merge`, ledger attestation, desktop rebuild, cleanup.
-- **Open questions:** none.
+**Goal:** P1 of spec `stagehand-batch-fork` — batch grant gate (Rust), gateway-routed sidecar inference + Browserbase URL scrub, ActionIntent coverage (dialogs/tabs/files) + screenshot hashing. Three slices + fix, then PR + ledger attestation.
 
-## Status (all three items implemented + verified)
-- Critique images: turn-images.ts (11 tests), panel strip + images in POST body,
-  gizzi critique route accepts images (max 6) and embeds capped markdown refs in
-  the panelist prompt. Smoke: 2-image request validates (503=no brain only),
-  7 images → 400.
-- Gallery thumbnails: GalleryCardImage lazy client-side capture for
-  thumbnail-less entries (module cache, placeholder fallback), CSS 4/3 cover.
-- /design ack: gizzi routes/design.ts POST+GET /v1/design/ack →
-  ~/.allternit/design-prompt-ack.json (env override); web reporter fires on
-  initialPrompt consume; CLI polls receipt ≤8s and prints pickup confirmation.
-  Smoke: 404→200→200, invalid → 400.
-- Verification: pnpm typecheck 0 errors; vitest 111/111 (14 files);
-  bun typecheck 0; build-production.js exit 0 (bundle greps: design-prompt-ack.json ×4,
-  picked up your prompt ×3, attached-image- ×3); release-preflight 35/0.
+**Done:**
+- Slice 1 `5bc039aa2`: Rust batch grant gate (`aci_batch.rs`), sidecar `actBatch`. Tests 19/19; aci suites 51→70.
+- Slice 2 `f49d2bf5c`: gateway-routed sidecar inference (mock|gateway modes, A://C default, fail-closed) + Browserbase URL scrub (grep-clean built artifact). Smoke 6/6, typecheck/build green.
+- Slice 3 `a74d8bfa9`: ActionIntent coverage (tab.open/focus/close, dialog.accept/dismiss via host CDP, file.upload with sandbox containment, download listing) + screenshot SHA-256 at capture. Smoke 11/11; @allternit/browser vitest 89/89.
+- Fix `1990fd8f0`: sidecar client deadline loop (found by live smoke).
+- Verification: cargo aci 70/0; runtime typecheck+build green; smoke 11/11; vitest 89/89; **live gated-batch smoke 11/11** (grant→approve→execute on local page→receipt correct; replay/tamper denied; halt position recorded); release-preflight 35/0 (script now has 35 checks, all pass — untouched release path).
 
----
+**Next:** push branch, `gh pr create` with evidence, wait checks, `gh pr merge --merge`, record PR + SHA. Then ledger attestation via detached worktree from origin/main + push HEAD:main, remove worktree, delete session branch local+remote.
 
-# Prior checkpoint — session/fabric-cowork-switch-0912 (merged via #414)
-
-- **Goal:** Fabric Transport — composer Home/Cowork/Bots toggle must switch the canvas (cowork was a dead click); rename the switcher's "Chat" segment to "Home".
-- **Just did:** Worktree `fabric-cowork-switch-0912` off origin/main (`00a186602`). `FabricSessionPanel` `allternit:switch-mode` handler now routes `cowork` → chat kind + cowork canvas (+ clears node session selection), `chat` → chat canvas; app-mode mirror reflects the cowork canvas so the toggle highlights the right segment. `BottomDock` segment label Chat → Home (aria-label too) + tests updated. SW v40→v41. Typecheck ✅, BottomDock + dispatch tests 17 passed ✅, build + prepare verified v41.
-- **Next:** (landed — PR #414)
-- **Open questions:** none.
+**Open questions:** none.
