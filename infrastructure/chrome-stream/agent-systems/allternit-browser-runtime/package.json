@@ -1,0 +1,18 @@
+{
+  "name": "allternit-browser-runtime-workspace",
+  "version": "4.1.0",
+  "private": true,
+  "description": "Allternit Browser Runtime — vendored fork of Browserbase Stagehand v4 (MIT). See VENDORED.md.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --filter @allternit/browser-runtime-extension build && pnpm --filter @allternit/browser-runtime build",
+    "build:extension": "pnpm --filter @allternit/browser-runtime-extension build",
+    "build:sdk": "pnpm --filter @allternit/browser-runtime build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@11.15.0"
+}
