@@ -31,6 +31,10 @@ pub enum TransportErrorCode {
     LeaseExpired,
     /// The job's run is cancelled.
     RunCancelled,
+    /// A protected action requires an approval for the current lease generation.
+    ApprovalRequired,
+    /// An approval exists but is bound to a stale generation or was invalidated.
+    ApprovalInvalid,
     /// The terminal result was already committed (idempotent replay signal).
     ResultAlreadyCommitted,
     /// The job id does not exist in the canonical store.
@@ -54,6 +58,8 @@ impl TransportErrorCode {
             Self::StaleLeaseGeneration => "A_STALE_LEASE_GENERATION",
             Self::LeaseExpired => "A_LEASE_EXPIRED",
             Self::RunCancelled => "A_RUN_CANCELLED",
+            Self::ApprovalRequired => "A_APPROVAL_REQUIRED",
+            Self::ApprovalInvalid => "A_APPROVAL_INVALID",
             Self::ResultAlreadyCommitted => "A_RESULT_ALREADY_COMMITTED",
             Self::JobNotFound => "A_JOB_NOT_FOUND",
             Self::Store => "A_STORE_ERROR",
@@ -64,11 +70,11 @@ impl TransportErrorCode {
     pub fn http_status(&self) -> u16 {
         match self {
             Self::AuthenticationFailed | Self::PrincipalNotFound => 401,
-            Self::PermissionDenied | Self::WorkspaceMismatch => 403,
+            Self::PermissionDenied | Self::WorkspaceMismatch | Self::ApprovalRequired => 403,
             Self::CapabilityMissing | Self::NoEligibleWorker => 422,
             Self::JobNotFound => 404,
             Self::Store => 500,
-            // Lease/claim conflicts are concurrency outcomes, not client bugs.
+            // Lease/claim/approval conflicts are concurrency outcomes, not client bugs.
             _ => 409,
         }
     }
@@ -189,6 +195,32 @@ pub struct ExpiryAction {
     pub outcome: String,
     /// retry_count after this expiry.
     pub retry_count: i64,
+}
+
+/// An approval binding scoped to (executor, capability, target, run, job,
+/// lease generation) per §8.14.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApprovalBinding {
+    /// Binding identifier.
+    pub id: String,
+    /// Run the protected action belongs to.
+    pub run_id: String,
+    /// Job the protected action belongs to.
+    pub job_id: String,
+    /// Lease the approval was requested under.
+    pub lease_id: String,
+    /// Lease generation the approval is bound to.
+    pub lease_generation: i64,
+    /// Executor principal the approval is bound to.
+    pub executor: String,
+    /// Protected capability, e.g. `connector.bank.payment.submit`.
+    pub capability: String,
+    /// Protected target, e.g. `payment/123`.
+    pub target: String,
+    /// `pending` | `granted` | `denied` | `invalidated`.
+    pub status: String,
+    /// Who granted/denied (user principal), if decided.
+    pub decided_by: Option<String>,
 }
 
 /// Hash a bearer token for storage/compared lookup (SHA-256 hex).

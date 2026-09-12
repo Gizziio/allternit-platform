@@ -17,8 +17,8 @@ pub mod types;
 pub use crate::attachment::AttachmentRegistry;
 pub use crate::checkpoint::CheckpointManager;
 pub use crate::transport::{
-    hash_token, CompleteOutcome, TransportError, TransportErrorCode, ExpiryAction, LeaseGrant,
-    PrincipalRecord,
+    hash_token, ApprovalBinding, CompleteOutcome, ExpiryAction, LeaseGrant, PrincipalRecord,
+    TransportError, TransportErrorCode,
 };
 pub use crate::error::{CoworkError, Result};
 pub use crate::run::{RunManager, RunManagerConfig, RailsClient};

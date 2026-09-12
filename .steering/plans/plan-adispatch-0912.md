@@ -28,7 +28,7 @@ SQLite (as wired inside cmd/allternit-api). Stop before merge.
 ## Todos
 
 - [x] Step 0: commit contract (`docs/A_COORDINATION_CONTRACT_V0_1.md`)
-- [ ] Steps 1–2: migrations V149 principals, V150 job lease columns, V151 event attribution
+- [ ] Steps 1–2: migrations V152 principals, V153 job lease columns, V154 event attribution
 - [ ] Steps 1–3: runtime dispatch types + sqlite_store (auth, CAS claim, heartbeat, renew, complete, sweep) + RunManager sweeper wiring
 - [ ] Step 3: API routes `rails/routes_a_dispatch.rs` (principal create, claim long-poll, heartbeat, renew, complete, result read), bearer-token auth
 - [ ] Step 9 (test-first): `tests/dispatch_conformance_tests.rs` adversarial two-worker test

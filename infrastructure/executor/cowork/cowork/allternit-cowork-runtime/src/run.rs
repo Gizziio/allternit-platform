@@ -195,6 +195,15 @@ impl RunManager {
         Ok(())
     }
 
+    /// Load a persisted job into the in-memory registry (§8.20 rehydration)
+    pub async fn load_job(&self, job: Job) -> Result<()> {
+        let job_id = job.id;
+        let job_arc = Arc::new(RwLock::new(job));
+        let mut jobs = self.jobs.write().await;
+        jobs.insert(job_id, job_arc);
+        Ok(())
+    }
+
     /// Get a run by ID
     pub async fn get_run(&self, run_id: RunId) -> Result<Run> {
         let runs = self.runs.read().await;
@@ -301,6 +310,9 @@ impl RunManager {
             priority: spec.priority,
             state: JobState::Scheduled,
             lease_owner: None,
+            lease_id: None,
+            lease_generation: 0,
+            required_capabilities: Vec::new(),
             lease_expires_at: None,
             retry_count: 0,
             max_retries: spec.max_retries,
