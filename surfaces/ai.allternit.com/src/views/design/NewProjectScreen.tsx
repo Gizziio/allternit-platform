@@ -28,6 +28,7 @@ import { DESIGN_SYSTEMS_LIBRARY, type DesignSystemEntry } from '../../lib/design
 import type { SkillRecord } from '../../lib/design/skill-registry';
 import { type GalleryEntry } from '../../lib/design/gallery-store';
 import { listGalleryEntriesGatewayFirst } from '../../lib/design/content-artifact-sync';
+import { renderArtifactThumbnail } from '../../lib/design/artifact-thumbnail';
 import { useDesignProjectStore, type DesignProject } from '@/views/project/design/design-project.store';
 import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import { isElectronShell } from '@/lib/platform';
@@ -46,6 +47,45 @@ const ASPECT_OPTIONS = ['Adaptive', '1:1', '16:9', '9:16', '4:3', '3:4'] as cons
 
 type LibraryTab = 'projects' | 'systems' | 'templates' | 'gallery';
 type ComposerMenu = 'system' | 'type' | 'attach' | 'model' | null;
+
+/**
+ * Gallery card media. Save-time capture (`entry.thumbnail`) covers artifacts
+ * finalized in this browser; entries restored from the gateway — or saved
+ * before thumbnails existed — may lack one, so render it lazily from the
+ * stored artifact HTML. Best-effort: the letter placeholder stays the
+ * fallback and generation never blocks the grid.
+ */
+const galleryThumbCache = new Map<string, string | undefined>();
+
+function galleryThumbCacheKey(entry: GalleryEntry): string {
+  return `${entry.projectId}:${entry.updatedAt}`;
+}
+
+function GalleryCardImage({ entry }: { entry: GalleryEntry }) {
+  const [generated, setGenerated] = useState<string | undefined>(() =>
+    galleryThumbCache.get(galleryThumbCacheKey(entry)),
+  );
+  useEffect(() => {
+    if (entry.thumbnail || generated !== undefined || !entry.artifactHtml) return;
+    let cancelled = false;
+    void renderArtifactThumbnail(entry.artifactHtml).then((thumb) => {
+      galleryThumbCache.set(galleryThumbCacheKey(entry), thumb);
+      if (!cancelled) setGenerated(thumb);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [entry, generated]);
+  const src = entry.thumbnail ?? generated;
+  if (!src) {
+    return (
+      <span className="ad-gallery-card__placeholder" aria-hidden>
+        {entry.projectName.slice(0, 1).toUpperCase()}
+      </span>
+    );
+  }
+  return <img src={src} alt="" loading="lazy" />;
+}
 
 /**
  * §6 P1 — model chip (kimi.com/design "K3 · High" equivalent).
@@ -515,11 +555,7 @@ export function NewProjectScreen({
                   <div className="ad-gallery__masonry">
                     {visibleGalleryEntries.map((entry) => (
                       <button type="button" key={entry.projectId} className="ad-gallery-card" onClick={() => onRemix?.(entry)} title={`Remix: ${entry.projectName}`}>
-                        {entry.thumbnail ? (
-                          <img src={entry.thumbnail} alt="" loading="lazy" />
-                        ) : (
-                          <span className="ad-gallery-card__placeholder" aria-hidden>{entry.projectName.slice(0, 1).toUpperCase()}</span>
-                        )}
+                        <GalleryCardImage entry={entry} />
                         <span className="ad-gallery-card__meta">
                           <b>{entry.projectName}</b>
                           <small>

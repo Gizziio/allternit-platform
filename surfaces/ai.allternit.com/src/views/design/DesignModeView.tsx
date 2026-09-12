@@ -25,6 +25,8 @@ import { SkillParameterPanel } from '../../components/design/SkillParameterPanel
 import { SurgicalEditPanel } from '../../components/design/SurgicalEditPanel';
 import ArtifactRenderer from '../../components/artifact/ArtifactRenderer';
 import { buildAioTargetDescription, type AioTargetPayload } from '../../lib/design/aio-targeting';
+import { extractTurnImages } from '../../lib/design/turn-images';
+import { reportDesignPromptConsumed } from '../../lib/design/design-prompt-ack';
 import { DesignCritiquePanel } from '../../components/design/DesignCritiquePanel';
 import { AgentAdapterPanel } from '../../components/design/AgentAdapterPanel';
 import { PluginPicker } from './PluginPicker';
@@ -387,6 +389,25 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     }
     return '';
   }, [backendMessages]);
+
+  // Images produced during the design turn (artifact blocks, markdown embeds,
+  // image-tool outputs) — attached to the critique panel so the review covers
+  // the visual assets, not just the HTML.
+  const latestTurnImages = useMemo(
+    () => extractTurnImages(backendMessages).map((i) => i.url),
+    [backendMessages],
+  );
+
+  // `/design` deep-link ack: when the studio applies an initialPrompt into the
+  // composer, report consumption locally so gizzi-code's /design command can
+  // confirm pickup (receipt at ~/.allternit/design-prompt-ack.json).
+  const ackedPromptRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prompt = (initialPrompt ?? '').trim();
+    if (!prompt || ackedPromptRef.current === prompt) return;
+    ackedPromptRef.current = prompt;
+    void reportDesignPromptConsumed(prompt, activeSessionId ?? undefined);
+  }, [initialPrompt, activeSessionId]);
 
   // P0 lint feedback loop: when the latest saved artifact has error-severity
   // findings, surface them as a system message in the session store so the
@@ -874,7 +895,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   )}
                   {activeTab === 'critique' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <DesignCritiquePanel artifactHtml={latestArtifactHtml} />
+                      <DesignCritiquePanel artifactHtml={latestArtifactHtml} artifactImages={latestTurnImages} />
                     </div>
                   )}
                   </ErrorBoundary>
