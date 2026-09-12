@@ -103,6 +103,20 @@ Adapted from Anthropic's verified \`frontend-design\` skill (github.com/anthropi
 - Deny-list (P0, machine-enforced): the legacy coral family (#D97757 / #E27C59 — reserved for Allternit platform UI) and all purple/indigo/violet families are forbidden as hex, Tailwind class, or gradient — src/lib/design/html-linter.ts fails the artifact on these. The amber family (#B08D6E / #C4A684 / #9A7658) is brand law, not an AI tell.
 - Copy is design content: plain language, active voice, sentence case, no hype. A CTA says exactly what happens. Errors state what happened and how to fix it.`;
 
+// ─── Self-verification — render and compare (P1.5) ───────────────────────────
+
+const SELF_VERIFICATION_BLOCK = `## Self-verification — render and compare (binding, max 2 passes)
+
+After you produce a candidate artifact and BEFORE emitting \`<artifact>\`, verify it visually — reading your own HTML is not seeing it:
+
+1. Write the candidate HTML to a scratch file (e.g. \`/tmp/studio-verify.html\`).
+2. Render it with the repo's render script via your bash tool (run from the platform repo root — \`~/Desktop/allternit-workspace/allternit\` in this environment — or pass the absolute script path):
+   \`node scripts/render-artifact-screenshot.mjs --html-file /tmp/studio-verify.html --width 1280 --height 800 --out <project-dir>/.renders/<timestamp>-pass1.png\`
+   If Chrome or playwright-core is unavailable, skip verification and say so plainly — never claim you rendered when you did not.
+3. Read the PNG back. List the concrete visual defects you see against the brief: overflow/clipping, contrast, hierarchy, alignment, broken or overlapping layout.
+4. Patch the artifact for the real defects you saw. Render again at most once — max 2 render passes total, then stop and emit.
+5. Keep the final pass screenshot as a project file at \`/.renders/<timestamp>.png\`.`;
+
 // ─── Discovery and philosophy ─────────────────────────────────────────────────
 
 const DISCOVERY_AND_PHILOSOPHY = `# Studio core directives (read first — these override anything later in this prompt)
@@ -359,6 +373,8 @@ export function composeStudioSystemPrompt({
     A_CRAFT_RULES,
     '\n\n---\n\n',
     DESIGN_TASTE_BLOCK,
+    '\n\n---\n\n',
+    SELF_VERIFICATION_BLOCK,
   ];
 
   if (designSystemBody?.trim()) {
