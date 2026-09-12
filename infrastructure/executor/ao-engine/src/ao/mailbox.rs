@@ -21,9 +21,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use allternit_agent_system_rails::bus::{Bus, BusMessage, BusOptions, NewBusMessage};
-use allternit_agent_system_rails::core::types::ActorType;
-use allternit_agent_system_rails::ledger::{Ledger, LedgerOptions};
+use allternit_commrails::bus::{Bus, BusMessage, BusOptions, NewBusMessage};
+use allternit_commrails::core::types::ActorType;
+use allternit_commrails::ledger::{Ledger, LedgerOptions};
 
 /// Transport tag for dispatch mailbox rows. The drainer filters on it so it
 /// never touches other Bus traffic addressed to the same peer (rails mail,
