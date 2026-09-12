@@ -16,7 +16,7 @@ const THEME = {
 type DockMode = 'chat' | 'cowork' | 'bot';
 
 const MODE_SEGMENTS: Array<{ id: DockMode; label: string; icon: typeof ChatTeardropText; bleed: string }> = [
-  { id: 'chat', label: 'Home', icon: ChatTeardropText, bleed: 'before:-left-[calc(0.125rem+1px)] before:right-0' },
+  { id: 'chat', label: 'Chat', icon: ChatTeardropText, bleed: 'before:-left-[calc(0.125rem+1px)] before:right-0' },
   { id: 'cowork', label: 'Cowork', icon: UsersThree, bleed: 'before:inset-x-0' },
   { id: 'bot', label: 'Bots', icon: Robot, bleed: 'before:left-0 before:-right-[calc(0.125rem+1px)]' },
 ];
@@ -37,7 +37,7 @@ function ChatCoworkToggle() {
   return (
     <div
       role="group"
-      aria-label="Home, Cowork, or Bots"
+      aria-label="Chat, Cowork, or Bots"
       className="flex items-center gap-0.5 rounded-lg border border-composer-border bg-transparent h-7 flex-shrink-0 p-0.5 overflow-hidden"
     >
       {MODE_SEGMENTS.map((segment) => {
