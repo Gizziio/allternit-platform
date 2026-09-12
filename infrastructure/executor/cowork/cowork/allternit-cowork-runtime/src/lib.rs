@@ -7,13 +7,19 @@
 
 pub mod attachment;
 pub mod checkpoint;
+pub mod dispatch;
 pub mod error;
 pub mod run;
+pub mod sqlite_store;
 pub mod types;
 
 // Re-export common types
 pub use crate::attachment::AttachmentRegistry;
 pub use crate::checkpoint::CheckpointManager;
+pub use crate::dispatch::{
+    hash_token, CompleteOutcome, DispatchError, DispatchErrorCode, ExpiryAction, LeaseGrant,
+    PrincipalRecord,
+};
 pub use crate::error::{CoworkError, Result};
 pub use crate::run::{RunManager, RunManagerConfig, RailsClient};
 pub use crate::types::{
