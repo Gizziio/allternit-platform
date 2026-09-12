@@ -44,3 +44,25 @@ Plan at .steering/plans/plan-fedesign-0911.md.
 - §6 publish/relay tier questions (4 publish + 2 relay) are OPEN for Eoj —
   listed in the design doc; Phase 3 blocked on the publish answers.
 - (fedesign-0911) None.
+
+---
+
+## Goal
+Session: session/p2wins-0911, worktree allternit-session-p2wins-0911, from
+origin/main @ 474348b40. Three locked P2 quick wins: (1) IndexedDB file
+versions in project-file-store (DB v2, fileVersions store, cap 10, history UI
+in ProjectFileWorkspace); (2) Team tab honesty label (pure mock, zero network
+calls — in-tab notice); (3) artifact sandbox policy codified in DESIGN.md after
+auditing ArtifactRenderer.tsx. Plan at .steering/plans/plan-p2wins-0911.md.
+
+## Just did
+- Worktree created on origin/main @ 474348b40; pnpm install running in background.
+
+## Next
+- Read project-file-store.ts, gallery-store.test.ts, ProjectFileWorkspace.tsx,
+  DesignTeamWorkspace.tsx, ArtifactRenderer.tsx, DESIGN.md.
+- Implement item 1 (store + APIs + tests), item 2 (notice), item 3 (audit + doc + issue).
+- Verify: typecheck 0 errors; vitest src/lib/design src/shell src/views/design all green.
+
+## Open questions
+- None.
