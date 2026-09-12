@@ -55,4 +55,4 @@ base-uri 'none'
 
 ## Desktop rebuild
 
-Required (web surface assets are bundled into the desktop app). Sidecars copied from shared checkout, `CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist` run, bundle grep `default-src 'none'` verified, new 8-file build set preserved to shared `release/`, previously-latest set retired. (Details recorded at rebuild time; see PR #407 and issue #396 close comment.)
+Done (web surface assets are bundled into the desktop app). Sidecars copied from shared checkout (6 binaries in `resources/bin/`), `CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist` completed exit 0 in surfaces/allternit-desktop of the session worktree. Bundle verify: `grep -rl "default-src 'none'" "release/mac-arm64/Allternit Desktop.app/Contents/Resources/platform/assets/"` → hit in `ArtifactRenderer-*.js` (and `AllternitOSView-*.js`). New build set **b2252** — 8 files (arm64+x64 dmg/zip + blockmaps) — preserved to shared `surfaces/allternit-desktop/release/`; previously-latest set **b2227** retired (8 files removed); older sets untouched. Unsigned/unnotarized local build (no APPLE_ID creds), as per the standard local procedure.
