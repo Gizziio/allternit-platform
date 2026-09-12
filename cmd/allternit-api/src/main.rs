@@ -731,6 +731,7 @@ async fn main() {
         .merge(allternit_api::upload_routes::upload_router())
         .merge(allternit_api::llm_gateway::gateway_keys_router())
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
+        .merge(allternit_api::tag_routes::tag_router())
         .merge(inference_router_router())
         .merge(allternit_api::enterprise_auth::router())
         .merge(allternit_api::eval_routes::router())

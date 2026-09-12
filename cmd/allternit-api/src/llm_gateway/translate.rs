@@ -159,6 +159,13 @@ pub struct ChatCompletionRequest {
     pub best_of: Option<bool>,
     #[serde(default)]
     pub user: Option<String>,
+    /// Cost-attribution tags (task G8): a JSON object `{key: value}` attached
+    /// to the usage event recorded for this request. Max 20 entries; keys and
+    /// values are capped at 128 characters each. Requests without tags store
+    /// NULL; a key-level default (`llm_virtual_keys.tags`) is inherited when
+    /// the request carries none.
+    #[serde(default)]
+    pub tags: Option<std::collections::BTreeMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -440,6 +447,28 @@ pub fn validate_request(req: &ChatCompletionRequest) -> Result<(), OpenAiErrorRe
                 format!("messages[{index}] with role 'tool' must include `tool_call_id`."),
                 Some("messages"),
             ));
+        }
+    }
+    if let Some(tags) = &req.tags {
+        if tags.len() > 20 {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`tags` may contain at most 20 entries.",
+                Some("tags"),
+            ));
+        }
+        for (key, value) in tags {
+            if key.is_empty() || key.len() > 128 {
+                return Err(OpenAiErrorResponse::invalid_request(
+                    "`tags` keys must be 1-128 characters.",
+                    Some("tags"),
+                ));
+            }
+            if value.len() > 128 {
+                return Err(OpenAiErrorResponse::invalid_request(
+                    "`tags` values must be at most 128 characters.",
+                    Some("tags"),
+                ));
+            }
         }
     }
     if let Some(temperature) = req.temperature {
@@ -1605,5 +1634,72 @@ mod tests {
             "https://example.com/doc"
         );
         assert_eq!(message["annotations"][1]["type"], "file_citation");
+    }
+
+    #[test]
+    fn validate_request_accepts_wellformed_tags() {
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "test/model",
+            "messages": [{ "role": "user", "content": "hi" }],
+            "tags": { "team": "alpha", "env": "prod" }
+        }))
+        .unwrap();
+        assert!(validate_request(&request).is_ok());
+    }
+
+    #[test]
+    fn validate_request_rejects_malformed_tags() {
+        // Over the 20-entry cap.
+        let tags: serde_json::Map<String, serde_json::Value> = (0..21)
+            .map(|i| (format!("k{i}"), json!("v")))
+            .collect();
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "test/model",
+            "messages": [{ "role": "user", "content": "hi" }],
+            "tags": tags,
+        }))
+        .unwrap();
+        let err = validate_request(&request).unwrap_err();
+        assert_eq!(err.status, axum::http::StatusCode::BAD_REQUEST);
+
+        // Over-long key (129 chars).
+        let err = validate_request(&serde_json::from_value::<ChatCompletionRequest>(json!({
+            "model": "test/model",
+            "messages": [{ "role": "user", "content": "hi" }],
+            "tags": { "x".repeat(129): "v" },
+        }))
+        .unwrap())
+        .unwrap_err();
+        assert_eq!(err.status, axum::http::StatusCode::BAD_REQUEST);
+
+        // Over-long value (129 chars).
+        let err = validate_request(&serde_json::from_value::<ChatCompletionRequest>(json!({
+            "model": "test/model",
+            "messages": [{ "role": "user", "content": "hi" }],
+            "tags": { "k": "x".repeat(129) },
+        }))
+        .unwrap())
+        .unwrap_err();
+        assert_eq!(err.status, axum::http::StatusCode::BAD_REQUEST);
+
+        // Empty key.
+        let err = validate_request(&serde_json::from_value::<ChatCompletionRequest>(json!({
+            "model": "test/model",
+            "messages": [{ "role": "user", "content": "hi" }],
+            "tags": { "": "v" },
+        }))
+        .unwrap())
+        .unwrap_err();
+        assert_eq!(err.status, axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn request_body_without_tags_parses_to_none() {
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "test/model",
+            "messages": [{ "role": "user", "content": "hi" }]
+        }))
+        .unwrap();
+        assert!(request.tags.is_none());
     }
 }

@@ -531,11 +531,17 @@ pub async fn dlp_middleware(
             .chain((outcome.injection_score >= block_threshold()).then_some("prompt_injection"))
             .collect();
 
-        // One usage row per request — blocked requests included.
+        // One usage row per request — blocked requests included. Their tags
+        // are preserved so blocked spend attempts still attribute correctly.
         let model = body_value
             .get("model")
             .and_then(Value::as_str)
             .map(str::to_string);
+        let tags = body_value
+            .get("tags")
+            .cloned()
+            .and_then(|value| serde_json::from_value::<std::collections::BTreeMap<String, String>>(value).ok())
+            .and_then(|map| serde_json::to_string(&map).ok());
         let usage_outcome = RequestOutcome {
             status: "dlp_blocked",
             error_type: Some("content_policy_violation".to_string()),
@@ -553,6 +559,8 @@ pub async fn dlp_middleware(
             ttft_ms: None,
             response_body: None,
             routing_decision: None,
+            tags,
+            batch_id: None,
         };
         let db = state.db.clone();
         tokio::task::spawn_blocking(move || {
