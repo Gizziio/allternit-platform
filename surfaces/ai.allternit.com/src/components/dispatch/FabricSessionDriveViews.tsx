@@ -28,18 +28,27 @@ export function isFabricKeepalive(type?: string): boolean {
 
 export function FabricCodeDrive({
   session,
+  terminalSessionId,
+  terminalWorkingDir,
 }: {
   session: FabricSessionWithStatus;
   detail: FabricSessionDetail | null;
   events: FabricSessionEvent[];
+  /**
+   * Override the terminal binding — e.g. the Termius-style "Sessions" tab
+   * passes a runtime-scoped id so UnifiedTerminal manages its own
+   * multi-session tabs instead of the fabric session's single terminal.
+   */
+  terminalSessionId?: string;
+  terminalWorkingDir?: string;
 }) {
   return (
     <div className="flex flex-col min-h-0 h-full">
       <div className="min-h-0 flex-1 overflow-hidden bg-[var(--view-code-bg)]">
         <Suspense fallback={<div className="p-4 text-[12px] text-[var(--text-tertiary)]">Loading terminal…</div>}>
           <UnifiedTerminal
-            sessionId={session.session.id}
-            workingDir={session.session.directory}
+            sessionId={terminalSessionId ?? session.session.id}
+            workingDir={terminalSessionId ? terminalWorkingDir : session.session.directory}
           />
         </Suspense>
       </div>
@@ -68,7 +77,7 @@ export function extractAciScreenshot(frame: { type?: string; data?: Record<strin
   return raw ? asImageSrc(raw) : null;
 }
 
-function partImageSrc(part: Record<string, unknown>): string | null {
+export function partImageSrc(part: Record<string, unknown>): string | null {
   const type = String(part.type || '');
   const mime = String(part.mime || part.mediaType || '');
   const url = typeof part.url === 'string' ? part.url
