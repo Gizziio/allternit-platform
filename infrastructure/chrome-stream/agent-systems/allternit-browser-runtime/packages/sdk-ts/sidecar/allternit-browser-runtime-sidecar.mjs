@@ -10,7 +10,12 @@
  *   sidecar → host:  { "id": number, "ok": true, "result": object }
  *                 |  { "id": number, "ok": false, "error": string }
  *
- * Methods: init, navigate, act, observe, extract, batch, pageInfo, close.
+ * Methods: init, navigate, act, observe, extract, batch, actBatch, pageInfo, close.
+ *
+ * `batch` takes free-text instructions (model-driven per step). `actBatch`
+ * takes structured whitelisted steps ({selector, method, arguments}) and
+ * executes them deterministically with no model call — this is the transport
+ * behind the Rust batch grant gate (POST /api/aci/batch).
  *
  * Requires `pnpm run build` to have produced ../dist/index.mjs (with the
  * bundled extension at dist/extension/). Requires Node ≥ 22.18.
@@ -200,6 +205,44 @@ const handlers = {
           results.push(await batch.act(instruction));
         }
         return results.map((r) => ({ success: r.data?.success, message: r.data?.message }));
+      })()`,
+    );
+    const results = await stagehand.experimentalBatch(callback, undefined, {
+      timeout: params.timeoutMs ?? 60_000,
+    });
+    return { steps: results };
+  },
+
+  async actBatch(params) {
+    // Deterministic structured-step batch behind the grant gate (spec
+    // stagehand-batch-fork P1): each step is a whitelisted Action
+    // ({selector, method, arguments}) executed via the extension's act
+    // handler with NO model call. Halts at the first failed step; reports
+    // one entry per executed step (the tail is absent by design).
+    const steps = params.steps ?? [];
+    const callback = new Function(
+      "batch",
+      `return (async () => {
+        const steps = ${JSON.stringify(steps)};
+        const results = [];
+        for (let index = 0; index < steps.length; index++) {
+          const step = steps[index];
+          try {
+            const r = await batch.act({
+              selector: step.selector,
+              description: step.description ?? (step.method + " " + step.selector),
+              method: step.method,
+              arguments: step.arguments ?? [],
+            });
+            const success = r.data?.success === true;
+            results.push({ index, success, message: r.data?.message ?? null });
+            if (!success) break;
+          } catch (error) {
+            results.push({ index, success: false, message: String(error?.message ?? error) });
+            break;
+          }
+        }
+        return results;
       })()`,
     );
     const results = await stagehand.experimentalBatch(callback, undefined, {
