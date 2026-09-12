@@ -47,6 +47,7 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!(8, "008_billing_guards.sql"),
     migration!(9, "009_inference_pools.sql"),
     migration!(10, "010_user_inference_keys.sql"),
+    migration!(15, "015_webhook_events.sql"),
 ];
 
 /// Bookkeeping table. One row per applied migration version.

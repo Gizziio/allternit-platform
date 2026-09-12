@@ -117,7 +117,7 @@ diff tooling later.
 Indexes: `(artifact_id, version)` unique; `(user_id, created_at)` for list;
 `(type)`; `(project_id)`.
 
-### 2.1 Type system (DECIDED shape, typed renderers OPEN for P2)
+### 2.1 Type system (DECIDED shape, typed renderers DECIDED 2026-09-12)
 
 `type` is a MIME-style string. Html-first, per row 1:
 
@@ -128,10 +128,33 @@ Indexes: `(artifact_id, version)` unique; `(user_id, created_at)` for list;
 - `application/vnd.allternit.deck`, `…prototype`, `…mobile` — typed
   renderers. Deck already has a real export path
   (`artifact-export.ts` extracts slides from `<deck-stage>` / `.slide`
-  patterns for PPTX). Prototype and mobile get typed renderers in Phase 2 —
-  what a "typed renderer" adds beyond `text/html` + viewport metadata is an
-  OPEN question for that phase (deck = slide navigation; mobile = device
-  frame; prototype = hotspot linking). The *storage* model does not care.
+  patterns for PPTX).
+
+**Typed renderers — DECIDED (2026-09-12, session `artphase2-0912`).** A typed
+renderer is a *thin presentation-chrome layer over the same sandboxed srcdoc
+iframe* every artifact renders in — not a separate execution environment:
+
+- **Storage does not care.** One body column, one sandbox policy; the MIME
+  type selects presentation only. No per-type tables, policies, or CSP
+  variants.
+- **deck** = the deck-stage skeleton already ships in-document nav (click
+  zones, keyboard, hash routes). The typed renderer adds a chrome bar with a
+  live slide counter fed by deck-stage's `slideIndexChanged` postMessage
+  (validated like the aio-targeting channel: opaque origin, own iframe only)
+  and prev/next buttons that navigate through the iframe's `#slide-N` hash.
+- **mobile** = the artifact renders inside a 390px device frame (viewport
+  metadata made visible).
+- **prototype** = the standard sandboxed iframe unchanged. Hotspot linking is
+  in-document anchor navigation, which the sandbox already supports; the
+  typed case exists so the MIME type maps to a defined renderer rather than
+  the default fallback.
+
+Reasoning: the §2.1 open question asked what a typed renderer adds beyond
+`text/html` + viewport metadata. The answer after looking at the real deck
+skeleton: navigation chrome the host must own (counter, parent-driven nav) —
+everything else (hotspots, slide markup) already lives inside the artifact
+document. Execution policy stays byte-for-byte identical (no
+`allow-same-origin`, CSP untouched) so "typed" can never widen the sandbox.
 
 ## 3. API shape (DECIDED, served at :8013 under `/api/v1`)
 
@@ -214,6 +237,52 @@ memory-store work — no OFFSET paging.
 Sets `deleted_at`; list/get exclude it. Hard purge is a retention concern
 (§8.3), not an API concern.
 
+### Publish tier (Phase 3, IMPLEMENTED 2026-09-12 — session `artphase3-0912`)
+
+Served by `content_artifact_publish.rs`; state in V150
+(`content_artifact_publishes` + `content_artifact_publish_routes`).
+
+### `POST /api/v1/content-artifacts/:id/publish` — publish a version snapshot
+
+```json
+// request (version optional; defaults to current_version)
+{ "version": 2 }
+// response 201 — { "published": true, "artifactId", "version": 2,
+//                  "routePath": "u-<hash12>/art_…", "deploymentId",
+//                  "deploymentUrl", "url", "publisher", "publishedAt" }
+// response 200 — idempotent replay when the same version is already live
+```
+
+Implements the §6 publish decisions: (4) artifacts whose `sandbox_policy`
+requests network access are rejected with **422** and an error naming the
+policy; (2) the publish snapshots the resolved version — later appends do
+not change what is live; (1) the deploy lands in the shared Cloudflare Pages
+project under a deterministic per-user route prefix (`u-<sha12(user_id)>`,
+stored idempotently in `content_artifact_publish_routes`).
+
+The version body is exported as a static site (`index.html`; full documents
+pass through, fragments get a standards-mode shell) and deployed through a
+narrow publisher interface, `ALLTERNIT_ARTIFACT_PUBLISHER`:
+- `wrangler` — real `npx wrangler pages deploy` against the shared project
+  (`ALLTERNIT_ARTIFACT_PAGES_PROJECT`, default `allternit-artifacts`).
+- `fs` (dev/test default) — immutable deployments under
+  `<data_dir>/artifact-publish/deployments/<id>/` with routes as directories
+  under `routes/<user_prefix>/<artifact_id>/`; servable by any static file
+  server. Not a fake — the same per-user-route-over-immutable-deployment
+  layout the shared project uses.
+
+### `GET /api/v1/content-artifacts/:id/publish` — publish status
+
+`{"published": false}` when never published or after unpublish (with
+`unpublishedAt` history); full snapshot fields when live.
+
+### `DELETE /api/v1/content-artifacts/:id/publish` — unpublish
+
+Implements decision (3): removes the route only — the Pages deployment
+stays immutable (wrangler: the tree is redeployed without the route and the
+previous deployment keeps its own `pages.dev` URL; fs: the route directory
+is removed, the deployment file stays). 404 when not published.
+
 ### Idempotency (DECIDED)
 
 `Idempotency-Key` header (preferred) or `idempotencyKey` body field. Keyed on
@@ -267,7 +336,7 @@ client of the API; the per-surface build plans belong to their own sessions.
 |------|-----------|--------|
 | **Local (default)** | `a://artifact/<id>` on the local gateway; only this machine, only authenticated local users | DECIDED |
 | **Static export** | Existing client-side pipelines: HTML / PDF / ZIP / PPTX / MP4 (`artifact-export.ts`) | DECIDED — exists, unchanged; export stays client-side in Phase 1 |
-| **Hosted publish (Cloudflare Pages)** | Infra exists (the Ops gateway already deploys Pages projects). Publish = explicit user action that exports a version and deploys it to a Pages project under the user's account. | DECIDED 2026-09-12 (Eoj) — see answers below |
+| **Hosted publish (Cloudflare Pages)** | Infra exists (the Ops gateway already deploys Pages projects). Publish = explicit user action that exports a version and deploys it to a Pages project under the user's account. | IMPLEMENTED 2026-09-12 (`artphase3-0912`) — `POST/GET/DELETE /api/v1/content-artifacts/:id/publish`; shared project + per-user routes, version-snapshot publish, immutable deployments, sandbox-policy gate |
 | **Org relay (A:// mesh)** | Artifact travels between gateways over the mesh (CommRails substrate, `commrails/`). | DECIDED 2026-09-12 (Eoj) — see answers below |
 
 **Publish tier — decisions (2026-09-12, decided by Eoj; the former OPEN
@@ -311,14 +380,19 @@ landed today (PR #378, P0 gallery, ~700 lines).
   admin-configurable, prune oldest) and implemented at append time in
   Phase 1, so Phase 2 has no retention item.
 - **Phase 3 — Publish tiers.** Static-export polish plus hosted publish via
-  Cloudflare Pages. The §6 publish-tier answers are DECIDED (2026-09-12, Eoj):
-  shared Pages project with per-user routes, version-snapshot publish,
-  immutable deployments (unpublish removes the route only), and a publish
-  gate that rejects artifacts whose `sandbox_policy` requests network access
-  — Phase 3 must implement that gate. Org relay stays out of Phase 3; its
-  §6 relay-tier answers are also decided (new local id on receive with origin
-  id in provenance; standard sandbox for received artifacts, provenance
-  displayed).
+  Cloudflare Pages. **IMPLEMENTED 2026-09-12 (session `artphase3-0912`)**:
+  the §6 publish routes (`POST/GET/DELETE …/publish`), the V150 publish-state
+  migration, the publisher interface (wrangler-backed for the shared Pages
+  project, filesystem publisher as the dev/test default), and the
+  sandbox-policy publish gate all landed; gallery cards gained
+  publish/unpublish actions. The §6 publish-tier answers are implemented as
+  decided: shared Pages project with per-user routes, version-snapshot
+  publish, immutable deployments (unpublish removes the route only), and the
+  publish gate rejecting artifacts whose `sandbox_policy` requests network
+  access. Static-export polish (client-side `artifact-export.ts`) remains
+  client-side, unchanged. Org relay stays out of Phase 3; its §6 relay-tier
+  answers are also decided (new local id on receive with origin id in
+  provenance; standard sandbox for received artifacts, provenance displayed).
 
 ## 8. Risks / honesty
 

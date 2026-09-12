@@ -34,6 +34,10 @@ pub struct RunManager {
     shutdown: mpsc::Receiver<()>,
     /// Handle to the event forwarding task
     event_forwarder: Option<JoinHandle<()>>,
+    /// Canonical SQLite store path for the lease sweeper (A:// lock 1)
+    store_path: Option<std::path::PathBuf>,
+    /// Seconds between lease-expiry sweeps
+    lease_sweep_interval_secs: u64,
 }
 
 /// Trait for Rails client interaction
@@ -68,6 +72,11 @@ pub struct RunManagerConfig {
     pub lease_duration_secs: u64,
     /// Maximum age of a checkpoint before it is eligible for deletion
     pub max_checkpoint_age_hours: u64,
+    /// Path to the canonical SQLite store (A:// lock 1). When set, the
+    /// RunManager runs the real lease-expiry sweeper against it.
+    pub store_path: Option<std::path::PathBuf>,
+    /// Seconds between lease-expiry sweeps.
+    pub lease_sweep_interval_secs: u64,
 }
 
 impl Default for RunManagerConfig {
@@ -78,6 +87,8 @@ impl Default for RunManagerConfig {
             attachment_timeout_secs: 300, // 5 minutes
             lease_duration_secs: 60,      // 1 minute
             max_checkpoint_age_hours: 24,
+            store_path: None,
+            lease_sweep_interval_secs: 5,
         }
     }
 }
@@ -121,11 +132,13 @@ impl RunManager {
             rails_client,
             shutdown: shutdown_rx,
             event_forwarder: Some(event_forwarder),
+            store_path: config.store_path.clone(),
+            lease_sweep_interval_secs: config.lease_sweep_interval_secs,
         };
 
         // Start background tasks
         manager.start_heartbeat_task().await;
-        manager.start_lease_renewal_task().await;
+        manager.start_lease_sweep_task().await;
 
         Ok((manager, event_tx))
     }
@@ -574,10 +587,19 @@ impl RunManager {
         });
     }
 
-    /// Start the lease renewal task
-    async fn start_lease_renewal_task(&self) {
-        let _jobs = self.jobs.clone();
-        let interval_secs = 30u64;
+    /// Start the lease-expiry sweeper (A:// §8.13).
+    ///
+    /// Expires dead workers' leases against the canonical SQLite store with
+    /// the server-authoritative clock, requeues (or dead-letters) the job per
+    /// recovery policy, and syncs the in-memory job mirrors. A lease renewed
+    /// mid-sweep survives because each expiry is a store-level CAS.
+    async fn start_lease_sweep_task(&self) {
+        let Some(store_path) = self.store_path.clone() else {
+            debug!("No store path configured; lease sweeper disabled");
+            return;
+        };
+        let jobs = self.jobs.clone();
+        let interval_secs = self.lease_sweep_interval_secs.max(1);
 
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(interval_secs));
@@ -585,8 +607,47 @@ impl RunManager {
             loop {
                 interval.tick().await;
 
-                // Lease renewal is handled by individual job workers
-                debug!("Lease renewal task tick");
+                let path = store_path.clone();
+                let result = tokio::task::spawn_blocking(move || {
+                    let mut conn = crate::sqlite_store::open_store(&path)?;
+                    crate::sqlite_store::expire_leases(&mut conn, Utc::now())
+                })
+                .await;
+
+                match result {
+                    Ok(Ok(actions)) => {
+                        for action in actions {
+                            info!(
+                                job_id = %action.job_id,
+                                lease_generation = action.lease_generation,
+                                outcome = %action.outcome,
+                                "Lease expired; recovery policy applied"
+                            );
+                            if let Ok(job_id) = action.job_id.parse::<uuid::Uuid>() {
+                                let job_id = JobId(job_id);
+                                let jobs = jobs.read().await;
+                                if let Some(job_arc) = jobs.get(&job_id) {
+                                    let mut job = job_arc.write().await;
+                                    job.state = if action.outcome == "dead_letter" {
+                                        JobState::DeadLetter
+                                    } else {
+                                        JobState::Queued
+                                    };
+                                    job.lease_owner = None;
+                                    job.lease_expires_at = None;
+                                    job.retry_count = action.retry_count as i32;
+                                    job.updated_at = Utc::now();
+                                }
+                            }
+                        }
+                    }
+                    Ok(Err(e)) => {
+                        error!(error = %e, "Lease sweeper tick failed");
+                    }
+                    Err(e) => {
+                        error!(error = %e, "Lease sweeper task join failed");
+                    }
+                }
             }
         });
     }

@@ -552,3 +552,115 @@ export async function pollApiPeerInbox(
     `/api/rails/peers/${encodeURIComponent(name)}/inbox${qs ? `?${qs}` : ''}`,
   )
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Content artifacts (A:// Artifacts API — docs/design/artifacts-api.md §3)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ApiContentArtifactProvenance = {
+  prompt?: string
+  designSystemId?: string
+  skillId?: string
+  skillName?: string
+  sourceSessionId?: string
+}
+
+export type ApiContentArtifact = {
+  id: string
+  address?: string
+  title?: string
+  type?: string
+  version?: number
+  projectId?: string
+  provenance?: ApiContentArtifactProvenance
+  sandboxPolicy?: string
+  thumbnail?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type ApiContentArtifactListResponse = {
+  artifacts?: ApiContentArtifact[]
+  next_cursor?: string | null
+}
+
+export type ApiContentArtifactGetResponse = ApiContentArtifact & {
+  body?: string
+  bodySha256?: string
+}
+
+export type ApiContentArtifactVersion = {
+  version?: number
+  bodySha256?: string
+  createdAt?: string
+}
+
+export async function listApiContentArtifacts(
+  config: AllternitApiConfig,
+  query: { type?: string; project?: string; q?: string; limit?: number } = {},
+): Promise<ApiContentArtifactListResponse> {
+  const params = new URLSearchParams()
+  if (query.type) params.set('type', query.type)
+  if (query.project) params.set('project', query.project)
+  if (query.q) params.set('q', query.q)
+  if (query.limit !== undefined) params.set('limit', String(query.limit))
+  const qs = params.toString()
+  return apiFetchJson<ApiContentArtifactListResponse>(
+    config,
+    `/api/v1/content-artifacts${qs ? `?${qs}` : ''}`,
+  )
+}
+
+export async function getApiContentArtifact(
+  config: AllternitApiConfig,
+  id: string,
+): Promise<{ artifact: ApiContentArtifactGetResponse }> {
+  return apiFetchJson<{ artifact: ApiContentArtifactGetResponse }>(
+    config,
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}`,
+  )
+}
+
+export async function getApiContentArtifactVersion(
+  config: AllternitApiConfig,
+  id: string,
+  version: number,
+): Promise<{ artifactId: string; version: number; body: string; bodySha256?: string; createdAt?: string }> {
+  return apiFetchJson(
+    config,
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}/versions/${version}`,
+  )
+}
+
+export async function listApiContentArtifactVersions(
+  config: AllternitApiConfig,
+  id: string,
+): Promise<{ versions?: ApiContentArtifactVersion[] }> {
+  return apiFetchJson(
+    config,
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}/versions`,
+  )
+}
+
+export async function createApiContentArtifact(
+  config: AllternitApiConfig,
+  input: {
+    title: string
+    type?: string
+    body: string
+    projectId?: string
+    sourceSessionId?: string
+    prompt?: string
+    designSystemId?: string
+    skillId?: string
+    skillName?: string
+    sandboxPolicy?: string
+    idempotencyKey?: string
+  },
+): Promise<{ artifact: ApiContentArtifact }> {
+  return apiFetchJson<{ artifact: ApiContentArtifact }>(
+    config,
+    '/api/v1/content-artifacts',
+    { method: 'POST', body: JSON.stringify(input) },
+  )
+}

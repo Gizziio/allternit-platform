@@ -133,13 +133,13 @@ struct ListQuery {
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-fn sha256_hex(body: &str) -> String {
+pub(crate) fn sha256_hex(body: &str) -> String {
     let mut hasher = sha2::Sha256::new();
     hasher.update(body.as_bytes());
     hex::encode(hasher.finalize())
 }
 
-fn now_rfc3339() -> String {
+pub(crate) fn now_rfc3339() -> String {
     chrono::Utc::now().to_rfc3339()
 }
 
@@ -210,21 +210,21 @@ fn find_idempotency(
     Ok(row)
 }
 
-struct ArtifactMeta {
-    id: String,
-    title: String,
-    artifact_type: String,
-    project_id: Option<String>,
-    source_session_id: Option<String>,
-    prompt: Option<String>,
-    design_system_id: Option<String>,
-    skill_id: Option<String>,
-    skill_name: Option<String>,
-    sandbox_policy: String,
-    thumbnail: Option<String>,
-    current_version: i64,
-    created_at: String,
-    updated_at: String,
+pub(crate) struct ArtifactMeta {
+    pub(crate) id: String,
+    pub(crate) title: String,
+    pub(crate) artifact_type: String,
+    pub(crate) project_id: Option<String>,
+    pub(crate) source_session_id: Option<String>,
+    pub(crate) prompt: Option<String>,
+    pub(crate) design_system_id: Option<String>,
+    pub(crate) skill_id: Option<String>,
+    pub(crate) skill_name: Option<String>,
+    pub(crate) sandbox_policy: String,
+    pub(crate) thumbnail: Option<String>,
+    pub(crate) current_version: i64,
+    pub(crate) created_at: String,
+    pub(crate) updated_at: String,
 }
 
 fn read_artifact_meta(row: &rusqlite::Row<'_>) -> rusqlite::Result<ArtifactMeta> {
@@ -252,7 +252,7 @@ const META_SELECT: &str = "SELECT id, title, type, project_id, source_session_id
     FROM content_artifacts";
 
 /// Fetch an artifact's metadata scoped to the user, excluding soft-deleted rows.
-fn fetch_artifact_meta(
+pub(crate) fn fetch_artifact_meta(
     conn: &Connection,
     artifact_id: &str,
     user_id: &str,
@@ -290,7 +290,7 @@ fn artifact_json(meta: &ArtifactMeta) -> serde_json::Value {
 }
 
 /// Read a version's body, resolving file-backed storage from disk (§4).
-fn read_version_body(
+pub(crate) fn read_version_body(
     conn: &Connection,
     data_dir: &std::path::Path,
     artifact_id: &str,
@@ -940,7 +940,7 @@ async fn delete_content_artifact(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
@@ -948,7 +948,7 @@ mod tests {
     use std::path::Path;
     use tower::ServiceExt;
 
-    fn test_user(user_id: &str, org_id: Option<&str>) -> AuthUser {
+    pub(crate) fn test_user(user_id: &str, org_id: Option<&str>) -> AuthUser {
         AuthUser {
             user_id: user_id.to_string(),
             email: None,
@@ -961,7 +961,7 @@ mod tests {
         }
     }
 
-    async fn test_app_state(temp: &Path) -> Arc<AppState> {
+    pub(crate) async fn test_app_state(temp: &Path) -> Arc<AppState> {
         let config = crate::AppConfig {
             company: Default::default(),
             user: Default::default(),
@@ -1020,12 +1020,12 @@ mod tests {
         })
     }
 
-    async fn body_json(body: Body) -> serde_json::Value {
+    pub(crate) async fn body_json(body: Body) -> serde_json::Value {
         let bytes = body.collect().await.unwrap().to_bytes();
         serde_json::from_slice(&bytes).unwrap()
     }
 
-    fn post_json(uri: &str, payload: serde_json::Value, user: &AuthUser) -> Request<Body> {
+    pub(crate) fn post_json(uri: &str, payload: serde_json::Value, user: &AuthUser) -> Request<Body> {
         Request::builder()
             .method("POST")
             .uri(uri)
@@ -1035,7 +1035,7 @@ mod tests {
             .unwrap()
     }
 
-    async fn create_artifact(
+    pub(crate) async fn create_artifact(
         app: &axum::Router,
         user: &AuthUser,
         title: &str,
@@ -1060,7 +1060,7 @@ mod tests {
         (status, body)
     }
 
-    fn merge_json(target: &mut serde_json::Value, extra: serde_json::Value) {
+    pub(crate) fn merge_json(target: &mut serde_json::Value, extra: serde_json::Value) {
         if let (Some(t), serde_json::Value::Object(e)) = (target.as_object_mut(), extra) {
             for (k, v) in e {
                 t.insert(k, v);

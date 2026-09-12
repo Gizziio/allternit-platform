@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Terminal as TerminalIcon, X, Plus, PushPin } from '@phosphor-icons/react';
+import { Terminal as TerminalIcon, X, Plus } from '@phosphor-icons/react';
 import { TerminalSurface } from '@/components/workspace/UnifiedTerminal';
 import {
   createTerminalSession,
@@ -85,7 +85,7 @@ function deletePersistedCanvasState(sessionId: string): void {
  * Malleable terminal canvas for Code mode.
  *
  * - Shows multiple terminal sessions as a responsive grid of live tiles.
- * - Hovering (or clicking) a tile pops it into a focused overlay for interaction.
+ * - Clicking a tile pops it into a focused overlay for interaction.
  * - New sessions can be spawned and individual sessions can be closed.
  * - Built on top of the shared terminal backend (terminal-api + TerminalSurface)
  *   so sessions survive canvas toggles and page reloads.
@@ -104,10 +104,6 @@ export function CodeTerminalCanvas({
 
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [overlayTileId, setOverlayTileId] = useState<string | null>(null);
-  const [overlayPinned, setOverlayPinned] = useState(false);
-  const overlayHoveredRef = useRef(false);
-  const tileHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const overlayCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tilesRef = useRef<TerminalTile[]>([]);
   tilesRef.current = tiles;
@@ -218,31 +214,15 @@ export function CodeTerminalCanvas({
     }
   }, [tiles.length, workingDir]);
 
-  const clearTimers = useCallback(() => {
-    if (tileHoverTimerRef.current) {
-      clearTimeout(tileHoverTimerRef.current);
-      tileHoverTimerRef.current = null;
-    }
-    if (overlayCloseTimerRef.current) {
-      clearTimeout(overlayCloseTimerRef.current);
-      overlayCloseTimerRef.current = null;
-    }
-  }, []);
-
-  const openOverlay = useCallback((tileId: string, pin = false) => {
-    clearTimers();
+  const openOverlay = useCallback((tileId: string) => {
     setOverlayTileId(tileId);
     setOverlayOpen(true);
-    if (pin) setOverlayPinned(true);
-  }, [clearTimers]);
+  }, []);
 
   const closeOverlay = useCallback(() => {
-    clearTimers();
     setOverlayOpen(false);
-    setOverlayPinned(false);
     setOverlayTileId(null);
-    overlayHoveredRef.current = false;
-  }, [clearTimers]);
+  }, []);
 
   const handleCloseTile = useCallback((tileId: string) => {
     const target = tilesRef.current.find((t) => t.id === tileId);
@@ -253,59 +233,12 @@ export function CodeTerminalCanvas({
     }
   }, [overlayTileId, closeOverlay]);
 
-  const handleTileMouseEnter = useCallback(
-    (tileId: string) => {
-      if (overlayPinned) return;
-      clearTimers();
-      tileHoverTimerRef.current = setTimeout(() => {
-        openOverlay(tileId);
-      }, 250);
-    },
-    [clearTimers, openOverlay, overlayPinned],
-  );
-
-  const handleTileMouseLeave = useCallback(() => {
-    if (overlayPinned) return;
-    clearTimers();
-    overlayCloseTimerRef.current = setTimeout(() => {
-      if (!overlayHoveredRef.current) closeOverlay();
-    }, 150);
-  }, [clearTimers, closeOverlay, overlayPinned]);
-
-  const handleOverlayMouseEnter = useCallback(() => {
-    overlayHoveredRef.current = true;
-    clearTimers();
-  }, [clearTimers]);
-
-  const handleOverlayMouseLeave = useCallback(() => {
-    overlayHoveredRef.current = false;
-    if (overlayPinned) return;
-    clearTimers();
-    overlayCloseTimerRef.current = setTimeout(() => {
-      if (!overlayHoveredRef.current) closeOverlay();
-    }, 150);
-  }, [clearTimers, closeOverlay, overlayPinned]);
-
   const handleTileClick = useCallback(
     (tileId: string) => {
-      openOverlay(tileId, true);
+      openOverlay(tileId);
     },
     [openOverlay],
   );
-
-  const handleTogglePin = useCallback(() => {
-    if (overlayPinned) {
-      closeOverlay();
-    } else {
-      setOverlayPinned(true);
-    }
-  }, [closeOverlay, overlayPinned]);
-
-  useEffect(() => {
-    return () => {
-      clearTimers();
-    };
-  }, [clearTimers]);
 
   const overlayTile = useMemo(
     () => tiles.find((t) => t.id === overlayTileId) ?? null,
@@ -337,7 +270,7 @@ export function CodeTerminalCanvas({
           gap: 12,
           padding: '0 12px 0 14px',
           borderBottom: '1px solid var(--border-subtle)',
-          background: 'var(--surface-panel)',
+          background: 'var(--surface-canvas)',
         }}
       >
         <div
@@ -463,7 +396,7 @@ export function CodeTerminalCanvas({
           flex: 1,
           minHeight: 0,
           overflow: 'auto',
-          padding: 12,
+          padding: 8,
         }}
       >
         {isInitializing ? (
@@ -480,7 +413,7 @@ export function CodeTerminalCanvas({
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
               gridAutoRows: 'minmax(220px, 1fr)',
-              gap: 12,
+              gap: 8,
               height: '100%',
             }}
           >
@@ -488,8 +421,6 @@ export function CodeTerminalCanvas({
               <div
                 key={tile.id}
                 data-testid={`code-terminal-tile-${tile.id}`}
-                onMouseEnter={() => handleTileMouseEnter(tile.id)}
-                onMouseLeave={handleTileMouseLeave}
                 onClick={() => handleTileClick(tile.id)}
                 style={{
                   borderRadius: 14,
@@ -550,6 +481,7 @@ export function CodeTerminalCanvas({
                   <TerminalSurface
                     remoteSessionId={tile.remoteSessionId}
                     isActive
+                    padding={0}
                     onStatusChange={(status, errorMsg) =>
                       handleStatusChange(tile.id, status as TerminalTileStatus, errorMsg)
                     }
@@ -568,8 +500,6 @@ export function CodeTerminalCanvas({
           onClick={(e) => {
             if (e.target === e.currentTarget) closeOverlay();
           }}
-          onMouseEnter={handleOverlayMouseEnter}
-          onMouseLeave={handleOverlayMouseLeave}
           style={{
             position: 'fixed',
             inset: 0,
@@ -624,13 +554,6 @@ export function CodeTerminalCanvas({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <IconButton
-                  aria-label={overlayPinned ? 'Unpin overlay' : 'Pin overlay'}
-                  title={overlayPinned ? 'Unpin' : 'Pin'}
-                  onClick={handleTogglePin}
-                >
-                  <PushPin size={14} weight={overlayPinned ? 'fill' : 'regular'} />
-                </IconButton>
-                <IconButton
                   aria-label="Close overlay"
                   title="Close"
                   onClick={closeOverlay}
@@ -646,6 +569,7 @@ export function CodeTerminalCanvas({
                 key={overlayTile.remoteSessionId}
                 remoteSessionId={overlayTile.remoteSessionId}
                 isActive
+                padding={0}
                 onStatusChange={(status, errorMsg) =>
                   handleStatusChange(overlayTile.id, status as TerminalTileStatus, errorMsg)
                 }

@@ -88,11 +88,11 @@ export function FabricSessionPanel({
   const { setMode } = useMode();
   useEffect(() => {
     // Reflect the cowork canvas into the app mode too, so the composer
-    // dock's Home/Cowork/Bots toggle highlights the matching segment.
+    // dock's Chat/Cowork/Bots toggle highlights the matching segment.
     setMode(chatView === 'cowork' ? 'cowork' : fabricKindAppMode(driveKind));
   }, [driveKind, chatView, setMode]);
 
-  // The composer dock's Home/Cowork/Bots toggle routes through this event on
+  // The composer dock's Chat/Cowork/Bots toggle routes through this event on
   // the desktop shell; map it back onto the fabric drive kind and chat canvas
   // so the toggle switches views here exactly like the desktop shell. Fabric
   // has no cowork drive kind — cowork lives as a canvas inside chat mode.
@@ -106,7 +106,10 @@ export function FabricSessionPanel({
         setChatView('cowork');
         return;
       }
-      if (mode === 'chat') setChatView('chat');
+      // Any non-cowork mode leaves the cowork canvas — otherwise the stale
+      // chatView keeps mirroring 'cowork' into the app mode and the dock
+      // toggle highlights Cowork while e.g. Bots is active.
+      setChatView('chat');
       const next = fabricAppModeKind(mode);
       if (next) setDriveKind(next);
     };

@@ -1,14 +1,24 @@
-# Steering checkpoint — session/cu17-batchgate
+# Steering checkpoint — session/console-be-p9
 
-**Goal:** P1 of spec `stagehand-batch-fork` — batch grant gate (Rust), gateway-routed sidecar inference + Browserbase URL scrub, ActionIntent coverage (dialogs/tabs/files) + screenshot hashing. Three slices + fix, then PR + ledger attestation.
+## Goal
+Backend build-out Phase 9 (G15, MONEY): credits ↔ Stripe — credit-pack checkout → webhook-confirmed grant into the allternit-api org credits ledger, with end-to-end idempotency and a /credits/purchase honesty gate.
 
-**Done:**
-- Slice 1 `5bc039aa2`: Rust batch grant gate (`aci_batch.rs`), sidecar `actBatch`. Tests 19/19; aci suites 51→70.
-- Slice 2 `f49d2bf5c`: gateway-routed sidecar inference (mock|gateway modes, A://C default, fail-closed) + Browserbase URL scrub (grep-clean built artifact). Smoke 6/6, typecheck/build green.
-- Slice 3 `a74d8bfa9`: ActionIntent coverage (tab.open/focus/close, dialog.accept/dismiss via host CDP, file.upload with sandbox containment, download listing) + screenshot SHA-256 at capture. Smoke 11/11; @allternit/browser vitest 89/89.
-- Fix `1990fd8f0`: sidecar client deadline loop (found by live smoke).
-- Verification: cargo aci 70/0; runtime typecheck+build green; smoke 11/11; vitest 89/89; **live gated-batch smoke 11/11** (grant→approve→execute on local page→receipt correct; replay/tamper denied; halt position recorded); release-preflight 35/0 (script now has 35 checks, all pass — untouched release path).
+## Status: IMPLEMENTATION + VERIFICATION COMPLETE (uncommitted, awaiting human review/PR)
 
-**Next:** push branch, `gh pr create` with evidence, wait checks, `gh pr merge --merge`, record PR + SHA. Then ledger attestation via detached worktree from origin/main + push HEAD:main, remove worktree, delete session branch local+remote.
+## Just did (full session)
+- allternit-api: `ALLTERNIT_CREDITS_CHECKOUT_ENABLED` honesty gate on POST /credits/purchase (409 "credits purchase is not enabled in this deployment; use the billing checkout" unless flag set AND cloud API configured; then returns the billing checkout URL, never self-credits); internal-token grant path on /admin/credits/grant (synthetic `internal-service` identity from auth_middleware + header re-verified in handler; org + idempotency_key mandatory; reference_type stripe_checkout; 404 on unknown org); `credit_purchase_idempotency` ledger replay verified; BILLING_CREDIT_PURCHASE webhook delivery moved to the internal grant path.
+- cloud-api: checkout metadata gains `allternit_org_id` (400 at checkout when bridge on but no org); webhook grants only on mode=payment + payment_status=paid (async payment methods settle via checkout.session.async_payment_succeeded, now also handled); `webhook_events` dedup table (migrations_pg 015, registered as v15) written after successful grant; `services/fabric_ledger.rs` bridge client (ALLTERNIT_FABRIC_LEDGER_URL + ALLTERNIT_INTERNAL_SERVICE_TOKEN, 5s timeout); misconfigured bridge (URL without token) refuses to grant; wallet fallback preserved + recorded so enabling the bridge later never re-grants old events.
+- Docs: cmd/allternit-cloud-api/docs/credits-stripe-bridge.md (flow, cross-service auth, env flags, deployment requirement, not-production-live notes).
 
-**Open questions:** none.
+## Verification evidence
+- cargo test -p allternit-cloud-api --no-fail-fast: lib 294 passed / 1 failed (pre-existing docker-env contabo test); integration_tests 0/32 (pre-existing tests/common harness breakage — confirmed identical failure with changes stashed); cost_params 3/3, e2e 1/1 + 1 ignored, billing_webhook_grants 1/1 (new HTTP-level signed-webhook test: forged signature 401, paid event grants once, replay idempotentReplay=true, no double grant).
+- cargo test -p allternit-api --no-fail-fast: lib 1005 passed / 6 failed = known pre-existing set exactly (4× agent_cloud OS-control-plane + 1× rails gate + 1× scheduler claim_race flake, both "possibly" items from the brief's list); integration binaries all green (health_metrics 6/6, viz_routes 14/14).
+- node scripts/release-preflight.mjs: 35 passed, 0 failed.
+- LIVE TEST-MODE round trip (operator has stripe CLI test profile): `stripe listen` → local cloud-api with test keys; real checkout session created via POST /billing/checkout (metadata contract on the session, verified via retrieve); `stripe trigger checkout.session.completed` with metadata overrides → Stripe-signed delivery → webhook verified signature → $10 granted once (credit_transactions + user_credits + webhook_events rows); GET /billing/credits shows balance_usd 10.0. No live keys touched, no real charge, all rows/processes/key file cleaned up.
+
+## Next
+- Human review → PR (session rules: commit/push/PR/merge are human-gated steps this session was told not to perform: "Do NOT run git commit/push").
+- Production wiring still required: set ALLTERNIT_FABRIC_LEDGER_URL + ALLTERNIT_INTERNAL_SERVICE_TOKEN (same value both services) to turn on fabric-ledger grants; set ALLTERNIT_CREDITS_CHECKOUT_ENABLED on allternit-api to open the /credits/purchase delegation.
+
+## Open questions
+- None.

@@ -29,6 +29,8 @@ pub struct CreateRunRequest {
     pub tenant_id: String,
     pub workspace_id: String,
     pub initiator: String,
+    /// A:// delegating principal (§8.18), e.g. a://principal/al
+    pub delegator: Option<String>,
     pub mode: RunMode,
     pub entrypoint: String,
     pub policy_profile: Option<String>,
@@ -405,6 +407,13 @@ async fn create_run(
 
     let conn = state.db.connect().map_err(db_error)?;
     persist_run(&conn, &run).map_err(db_error)?;
+    if let Some(delegator) = &req.delegator {
+        conn.execute(
+            "UPDATE cowork_runs SET delegator = ?1 WHERE id = ?2",
+            rusqlite::params![delegator, run.id.to_string()],
+        )
+        .map_err(db_error)?;
+    }
     insert_run_event(
         &conn,
         &run.id.to_string(),
@@ -535,6 +544,8 @@ pub struct CreateJobRequest {
     pub payload: serde_json::Value,
     pub max_retries: i32,
     pub timeout_sec: i32,
+    /// Mandatory capability strings for A:// fabric-transport eligibility (§8.6–8.7)
+    pub required_capabilities: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -586,9 +597,24 @@ async fn create_job(
 
     let job = manager.create_job(spec).await?;
     manager.set_current_job(run_id, Some(job.id)).await?;
+    // New jobs enter the fabric-transport queue immediately; fabric transport only
+    // claims persisted rows in state 'queued'.
+    manager.transition_job_state(job.id, JobState::Queued).await.ok();
 
     let conn = state.db.connect().map_err(db_error)?;
     persist_job(&conn, &job).map_err(db_error)?;
+    conn.execute(
+        "UPDATE cowork_jobs SET state = 'queued', required_capabilities = ?1,
+            initiator = (SELECT initiator FROM cowork_runs WHERE id = ?2),
+            delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2)
+         WHERE id = ?3",
+        rusqlite::params![
+            serde_json::to_string(&req.required_capabilities.unwrap_or_default()).unwrap(),
+            run_id.to_string(),
+            job.id.to_string(),
+        ],
+    )
+    .map_err(db_error)?;
     conn.execute(
         "UPDATE cowork_runs SET current_job_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
         rusqlite::params![job.id.to_string(), run_id.to_string()],
