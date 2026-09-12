@@ -61,12 +61,13 @@
   /Applications/Google Chrome.app/Contents/MacOS/Google Chrome). PNG read back and
   visually confirmed (heading rendered, amber on dark). Fixtures deleted after.
 - `node scripts/release-preflight.mjs` — 35 passed, 0 failed.
-- Desktop rebuild from merged main: build b2207, bundle grep for
+- Desktop rebuild from merged main: build **b2218**, bundle grep for
   `render-artifact-screenshot.mjs --html-file` hit in
-  `release/mac-arm64/Allternit Desktop.app/Contents/Resources/platform/assets/`.
-  DMGs copied to the shared checkout release dir; previously-latest b2198 DMG set
-  retired (nothing newer was added by other sessions in between); older builds left
-  alone.
+  `release/mac-arm64/Allternit Desktop.app/Contents/Resources/platform/assets/`
+  (DesignModeView chunk). DMGs copied to the shared checkout release dir;
+  previously-latest **b2206** DMG set retired (the briefing's "b2198" was already
+  gone — a concurrent session had landed b2206 and retired b2198 before this
+  session's swap); older builds left alone.
 
 ## Known gaps / remaining work
 
