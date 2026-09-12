@@ -1,7 +1,7 @@
 {
   "name": "@allternit/browser-runtime",
   "version": "4.1.0",
-  "description": "Browserbase's SDK for building browser agents",
+  "description": "Allternit Browser Runtime \u2014 vendored fork of Browserbase Stagehand v4 (MIT). Self-hosted browser runtime: local Chrome + side-loaded MV3 extension.",
   "keywords": [
     "ai",
     "automation",
@@ -14,7 +14,7 @@
     "url": "https://github.com/browserbase/stagehand/issues"
   },
   "license": "MIT",
-  "author": "Browserbase",
+  "author": "Allternit LLC (vendored from Browserbase, Inc.)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/browserbase/stagehand.git",

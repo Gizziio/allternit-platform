@@ -70,6 +70,12 @@ packages:
   # See surfaces/computer-embed/README.md.
   - '!surfaces/computer-embed'
   - '!surfaces/computer-embed/**'
+  # Vendored Stagehand fork (Allternit Browser Runtime, Phase P0) — Node >=22.18
+  # with its own pnpm workspace/lock. MUST stay separate from the root
+  # workspace: the sibling @allternit/browser package is Node 18 and the two
+  # toolchains must never merge. See its VENDORED.md.
+  - '!infrastructure/chrome-stream/agent-systems/allternit-browser-runtime'
+  - '!infrastructure/chrome-stream/agent-systems/allternit-browser-runtime/**'
 
 # pnpm 10 reads overrides from this file, not from package.json.
 overrides:

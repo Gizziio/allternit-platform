@@ -6,15 +6,15 @@ import {
 import { checkProtocolCompatibility } from "@allternit/browser-runtime-protocol/protocol-version";
 import { z } from "zod/v4";
 
-export const STAGEHAND_RUNTIME_NAME = "stagehand";
+export const STAGEHAND_RUNTIME_NAME = "allternit-browser-runtime";
 
 export type RuntimeRequirement = {
   protocolVersion: string;
 };
 /**
  * The marker a connected runtime published. Unlike the protocol's `RuntimeDescriptor`, the
- * server name is not pinned to "stagehand" so a foreign runtime can be reported as incompatible
- * rather than silently treated as unreadable.
+ * server name is not pinned to the expected literal so a foreign runtime can be reported as
+ * incompatible rather than silently treated as unreadable.
  */
 export type ReportedRuntimeDescriptor = {
   protocolVersion: string;
