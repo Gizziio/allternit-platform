@@ -16,6 +16,7 @@ import { isElectronShell } from "@/lib/platform";
 import { useDesignTabStore } from "../../stores/design-tab.store";
 import { useDesignProjectStore, type DesignProject } from "@/views/project/design/design-project.store";
 import { upsertGalleryEntry, type GalleryEntry } from '../../lib/design/gallery-store';
+import { saveGalleryEntryToGateway } from '../../lib/design/content-artifact-sync';
 import { renderArtifactThumbnail } from '../../lib/design/artifact-thumbnail';
 import { writeProjectFile } from '../../lib/design/project-file-store';
 import { NewProjectScreen } from './NewProjectScreen';
@@ -439,7 +440,15 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       artifactHtml: html,
     };
     void renderArtifactThumbnail(html).then((thumbnail) => {
-      upsertGalleryEntry({ ...snapshot, thumbnail }).catch(() => {});
+      // IndexedDB first (offline fallback), then write through the
+      // content-artifacts API (gateway is canonical — see
+      // docs/design/artifacts-api.md §4). The gateway write is best-effort:
+      // when the gateway is unreachable the IndexedDB entry still stands.
+      upsertGalleryEntry({ ...snapshot, thumbnail })
+        .then((saved) => {
+          saveGalleryEntryToGateway(saved).catch(() => {});
+        })
+        .catch(() => {});
     });
   }, [latestArtifactHtml, lintP0Findings, isStreaming, activeProject, backendMessages, selectedSkill, installedDesignId]);
 

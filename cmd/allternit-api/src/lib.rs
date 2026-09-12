@@ -90,6 +90,7 @@ pub mod data_residency_routes;
 pub mod device_attestation_routes;
 pub mod config;
 pub mod connector_routes;
+pub mod content_artifact_routes;
 pub mod conversation_routes;
 pub mod cors;
 pub mod credits;
