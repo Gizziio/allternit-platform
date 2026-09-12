@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-12 12:20 — kimi — fabric transport: rail switcher Home/Bots/Code/ACI, dock revert, highlight fix
+
+- **Session ID / Branch:** `ao/fabric-mode-labels-0912`
+- **Agent:** kimi
+- **Summary:** Fabric rail mode-switcher now labels the chat kind Home (switcher reads Home/Bots/Code/ACI); reverted #414's composer-dock rename (dock stays Chat/Cowork/Bots, desktop app gets its labels back); fixed the bug where selecting Bots highlighted Cowork — any non-cowork switch-mode now resets the chat canvas so the stale cowork view can't poison the mirrored app mode. SW v41→v42.
+- **Commit:** PR #420 (merge `69236bb29`)
+- **Evidence:** `agent-ledger/summaries/2026-09-12-1220-ao-fabric-mode-labels-0912-kimi-toggle-labels.md`
+
 ### 2026-09-12 11:31 — kimi — fabric transport: composer mode toggle switches canvas; Chat segment renamed Home
 
 - **Session ID / Branch:** `ao/fabric-cowork-switch-0912`
