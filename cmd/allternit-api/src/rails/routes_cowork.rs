@@ -434,21 +434,21 @@ async fn start_run(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
+    // §8.2 honesty: RUNNING means a worker holds a valid lease. start_run only
+    // makes the run dispatchable (queued); fabric transport moves it to
+    // running atomically with the first lease grant.
     manager
         .transition_run_state(run_id, RunState::Planned)
         .await?;
     manager
         .transition_run_state(run_id, RunState::Queued)
         .await?;
-    manager
-        .transition_run_state(run_id, RunState::Running)
-        .await?;
 
     let conn = state.db.connect().map_err(db_error)?;
-    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Running).map_err(db_error)?;
-    insert_run_event(&conn, &run_id.to_string(), "run_started", json!({})).map_err(db_error)?;
+    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Queued).map_err(db_error)?;
+    insert_run_event(&conn, &run_id.to_string(), "run_queued", json!({})).map_err(db_error)?;
 
-    Ok(Json(json!({ "started": true })))
+    Ok(Json(json!({ "started": true, "state": "queued" })))
 }
 
 /// List runs

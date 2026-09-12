@@ -14,8 +14,8 @@ use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use uuid::Uuid;
 
 use crate::transport::{
-    CompleteOutcome, TransportError, TransportErrorCode as Code, ExpiryAction, LeaseGrant,
-    PrincipalRecord,
+    ApprovalBinding, CompleteOutcome, ExpiryAction, LeaseGrant, PrincipalRecord,
+    TransportError, TransportErrorCode as Code,
 };
 
 fn store_err(e: rusqlite::Error) -> TransportError {
@@ -62,7 +62,14 @@ pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
             capabilities TEXT NOT NULL DEFAULT '[]', token_hash TEXT,
             status TEXT NOT NULL DEFAULT 'active',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);",
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+         CREATE TABLE IF NOT EXISTS cowork_approval_bindings (
+            id TEXT PRIMARY KEY, run_id TEXT NOT NULL, job_id TEXT NOT NULL,
+            lease_id TEXT NOT NULL, lease_generation INTEGER NOT NULL,
+            executor TEXT NOT NULL, capability TEXT NOT NULL, target TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            decided_at DATETIME, decided_by TEXT);",
     )
     .map_err(store_err)
 }
@@ -461,6 +468,15 @@ pub fn claim_job(
     let attr = load_run_attribution(&tx, &run_id)?;
     let initiator = attr.initiator.as_deref();
     let delegator = attr.delegator.as_deref();
+
+    // RUNNING means a worker holds a valid lease (§8.2): the first claim moves
+    // the run from queued to running atomically with the lease grant.
+    tx.execute(
+        "UPDATE cowork_runs SET state = 'running', updated_at = ?1
+         WHERE id = ?2 AND state = 'queued'",
+        params![now.to_rfc3339(), run_id],
+    )
+    .map_err(store_err)?;
 
     tx.execute(
         "UPDATE cowork_runs SET current_job_id = ?1, updated_at = ?2 WHERE id = ?3",
@@ -932,6 +948,56 @@ pub fn expire_leases(conn: &mut Connection, now: DateTime<Utc>) -> Result<Vec<Ex
             attr.delegator.as_deref(),
             job.lease_owner.as_deref(),
         )?;
+
+        // §8.13 / §8.14: a lease-bound approval dies with its generation. A
+        // replacement worker under a new generation must re-obtain approval.
+        let invalidated: Vec<(String, String, String, String)> = {
+            let mut stmt = tx
+                .prepare(
+                    "SELECT id, executor, capability, target FROM cowork_approval_bindings
+                     WHERE job_id = ?1 AND lease_generation = ?2
+                       AND status IN ('pending','granted')",
+                )
+                .map_err(store_err)?;
+            let rows = stmt
+                .query_map(
+                    rusqlite::params![job.id, job.lease_generation],
+                    |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, String>(1)?,
+                            row.get::<_, String>(2)?,
+                            row.get::<_, String>(3)?,
+                        ))
+                    },
+                )
+                .map_err(store_err)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(store_err)?;
+            rows
+        };
+        tx.execute(
+            "UPDATE cowork_approval_bindings SET status = 'invalidated'
+             WHERE job_id = ?1 AND lease_generation = ?2 AND status IN ('pending','granted')",
+            params![job.id, job.lease_generation],
+        )
+        .map_err(store_err)?;
+        for (binding_id, executor, capability, target) in invalidated {
+            insert_event(
+                &tx,
+                &job.run_id,
+                "approval.invalidated",
+                serde_json::json!({
+                    "approval_id": binding_id,
+                    "capability": capability,
+                    "target": target,
+                    "lease_generation": job.lease_generation,
+                }),
+                attr.initiator.as_deref(),
+                attr.delegator.as_deref(),
+                Some(executor.as_str()),
+            )?;
+        }
         insert_event(
             &tx,
             &job.run_id,
@@ -992,4 +1058,224 @@ pub fn get_job_view(
         "initiator": job.initiator,
         "delegator": job.delegator,
     })))
+}
+
+// ─── Approval bindings (§8.14) ───────────────────────────────────────────────
+
+fn load_binding(conn: &Connection, approval_id: &str) -> Result<Option<ApprovalBinding>, TransportError> {
+    conn.query_row(
+        "SELECT id, run_id, job_id, lease_id, lease_generation, executor,
+                capability, target, status, decided_by
+         FROM cowork_approval_bindings WHERE id = ?1",
+        params![approval_id],
+        |row| {
+            Ok(ApprovalBinding {
+                id: row.get(0)?,
+                run_id: row.get(1)?,
+                job_id: row.get(2)?,
+                lease_id: row.get(3)?,
+                lease_generation: row.get(4)?,
+                executor: row.get(5)?,
+                capability: row.get(6)?,
+                target: row.get(7)?,
+                status: row.get(8)?,
+                decided_by: row.get(9)?,
+            })
+        },
+    )
+    .optional()
+    .map_err(store_err)
+}
+
+/// Request an approval for a protected action under the caller's current
+/// lease. Idempotent per (job, capability, target, generation): an existing
+/// pending/granted binding for the same scope is returned.
+pub fn request_approval(
+    conn: &mut Connection,
+    principal: &PrincipalRecord,
+    job_id: &str,
+    lease_id: &str,
+    generation: i64,
+    capability: &str,
+    target: &str,
+) -> Result<ApprovalBinding, TransportError> {
+    let job = validate_lease(conn, principal, job_id, lease_id, generation)?;
+
+    if let Some(existing) = conn
+        .query_row(
+            "SELECT id FROM cowork_approval_bindings
+             WHERE job_id = ?1 AND capability = ?2 AND target = ?3
+               AND lease_generation = ?4 AND status IN ('pending','granted')
+             ORDER BY created_at DESC LIMIT 1",
+            params![job_id, capability, target, generation],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(store_err)?
+    {
+        return load_binding(conn, &existing)?
+            .ok_or_else(|| TransportError::new(Code::Store, "binding vanished"));
+    }
+
+    let id = format!("appr_{}", Uuid::new_v4());
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(store_err)?;
+    tx.execute(
+        "INSERT INTO cowork_approval_bindings
+            (id, run_id, job_id, lease_id, lease_generation, executor, capability, target, status)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'pending')",
+        params![
+            id,
+            job.run_id,
+            job_id,
+            lease_id,
+            generation,
+            principal.id,
+            capability,
+            target,
+        ],
+    )
+    .map_err(store_err)?;
+    let attr = load_run_attribution(&tx, &job.run_id)?;
+    insert_event(
+        &tx,
+        &job.run_id,
+        "approval.requested",
+        serde_json::json!({
+            "approval_id": id,
+            "job_id": job_id,
+            "capability": capability,
+            "target": target,
+            "lease_generation": generation,
+        }),
+        attr.initiator.as_deref(),
+        attr.delegator.as_deref(),
+        Some(principal.id.as_str()),
+    )?;
+    tx.commit().map_err(store_err)?;
+
+    load_binding(conn, &id)?
+        .ok_or_else(|| TransportError::new(Code::Store, "binding vanished after insert"))
+}
+
+/// Human decision on a pending approval (§8.22 approval.granted/denied).
+pub fn decide_approval(
+    conn: &mut Connection,
+    approval_id: &str,
+    grant: bool,
+    decided_by: &str,
+) -> Result<ApprovalBinding, TransportError> {
+    let binding = load_binding(conn, approval_id)?
+        .ok_or_else(|| TransportError::new(Code::JobNotFound, format!("approval {approval_id} not found")))?;
+    match binding.status.as_str() {
+        "granted" if grant => return Ok(binding),
+        "denied" if !grant => return Ok(binding),
+        "pending" => {}
+        other => {
+            return Err(TransportError::new(
+                Code::ApprovalInvalid,
+                format!("approval {approval_id} is {other}, not pending"),
+            ))
+        }
+    }
+
+    let new_status = if grant { "granted" } else { "denied" };
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(store_err)?;
+    tx.execute(
+        "UPDATE cowork_approval_bindings SET status = ?1, decided_at = ?2, decided_by = ?3
+         WHERE id = ?4 AND status = 'pending'",
+        params![new_status, Utc::now().to_rfc3339(), decided_by, approval_id],
+    )
+    .map_err(store_err)?;
+    let attr = load_run_attribution(&tx, &binding.run_id)?;
+    insert_event(
+        &tx,
+        &binding.run_id,
+        if grant { "approval.granted" } else { "approval.denied" },
+        serde_json::json!({
+            "approval_id": approval_id,
+            "capability": binding.capability,
+            "target": binding.target,
+            "lease_generation": binding.lease_generation,
+            "decided_by": decided_by,
+        }),
+        attr.initiator.as_deref(),
+        attr.delegator.as_deref(),
+        Some(binding.executor.as_str()),
+    )?;
+    tx.commit().map_err(store_err)?;
+
+    load_binding(conn, approval_id)?
+        .ok_or_else(|| TransportError::new(Code::Store, "binding vanished after decision"))
+}
+
+/// Check whether a protected action may proceed under the caller's current
+/// lease (§8.14). Stale-generation or invalidated approvals are rejected so
+/// approvals can never be replayed across reassignment.
+pub fn check_approval(
+    conn: &mut Connection,
+    principal: &PrincipalRecord,
+    job_id: &str,
+    lease_id: &str,
+    generation: i64,
+    capability: &str,
+    target: &str,
+) -> Result<ApprovalBinding, TransportError> {
+    let job = validate_lease(conn, principal, job_id, lease_id, generation)?;
+
+    let latest = conn
+        .query_row(
+            "SELECT id FROM cowork_approval_bindings
+             WHERE job_id = ?1 AND capability = ?2 AND target = ?3
+             ORDER BY created_at DESC, rowid DESC LIMIT 1",
+            params![job_id, capability, target],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(store_err)?;
+
+    let Some(binding_id) = latest else {
+        return Err(TransportError::new(
+            Code::ApprovalRequired,
+            format!("no approval on file for {capability}/{target} on job {job_id}"),
+        ));
+    };
+    let binding = load_binding(conn, &binding_id)?
+        .ok_or_else(|| TransportError::new(Code::Store, "binding vanished"))?;
+
+    if binding.lease_generation != job.lease_generation {
+        return Err(TransportError::new(
+            Code::ApprovalInvalid,
+            format!(
+                "approval {} is bound to lease generation {}, current is {}",
+                binding.id, binding.lease_generation, job.lease_generation
+            ),
+        ));
+    }
+    match binding.status.as_str() {
+        "granted" => Ok(binding),
+        "pending" => Err(TransportError::new(
+            Code::ApprovalRequired,
+            format!("approval {} is still pending for {capability}/{target}", binding.id),
+        )),
+        "denied" => Err(TransportError::new(
+            Code::ApprovalRequired,
+            format!("approval {} was denied; a new approval must be obtained", binding.id),
+        )),
+        other => Err(TransportError::new(
+            Code::ApprovalInvalid,
+            format!("approval {} is {other} and cannot be reused", binding.id),
+        )),
+    }
+}
+
+/// Read an approval binding (worker polling for the human decision).
+pub fn get_approval(
+    conn: &Connection,
+    approval_id: &str,
+) -> Result<Option<ApprovalBinding>, TransportError> {
+    load_binding(conn, approval_id)
 }
