@@ -1669,6 +1669,23 @@ async function handleProtocolCallback(url: string | null): Promise<void> {
     return;
   }
 
+  // A:// Studio (Design mode) deep link from gizzi-code's `/design` command:
+  // allternit://design?prompt=... (allternit-dev:// in dev builds). Opens the
+  // design window at /design, carrying the prompt into the studio composer.
+  if (
+    url.startsWith('allternit://design') ||
+    url.startsWith('allternit-dev://design')
+  ) {
+    let prompt: string | null = null;
+    try {
+      prompt = new URL(url).searchParams.get('prompt');
+    } catch {
+      prompt = null;
+    }
+    openDesignStudio(prompt);
+    return;
+  }
+
   // Buffer if auth manager hasn't initialized yet — will be flushed after initialize()
   if (!authManagerReady) {
     log.info('[Main] Auth manager not yet initialized — buffering URL');
@@ -2143,9 +2160,12 @@ ipcMain.handle('app:get-platform-url', () => activePlatformUrl);
 handleGuarded('shell:open-external', (_event, url: string) => {
   openExternalAllowlisted(url);
 });
-ipcMain.handle('shell:open-design', () => {
+function openDesignStudio(prompt?: string | null): void {
+  const target = new URL('/design', activePlatformUrl);
+  if (prompt) target.searchParams.set('prompt', prompt);
+  const targetUrl = target.toString();
   if (designWindow && !designWindow.isDestroyed()) {
-    void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
+    void designWindow.loadURL(targetUrl);
     designWindow.show();
     designWindow.focus();
     return;
@@ -2177,7 +2197,11 @@ ipcMain.handle('shell:open-design', () => {
   });
   designWindow.once('ready-to-show', () => designWindow?.show());
   designWindow.on('closed', () => { designWindow = null; });
-  void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
+  void designWindow.loadURL(targetUrl);
+}
+
+ipcMain.handle('shell:open-design', () => {
+  openDesignStudio();
 });
 
 // The Allternit Office window — the ACI rail's bottom-tab surface. Same

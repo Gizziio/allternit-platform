@@ -241,3 +241,49 @@ export async function openCurrentSessionInDesktop(): Promise<{
 
   return { success: true, deepLinkUrl }
 }
+
+/**
+ * Build the A:// Studio (Design mode) deep link.
+ * Format: allternit://design?prompt=<optional prompt>
+ * In dev mode: allternit-dev://design?prompt=...
+ */
+export function buildDesignDeepLink(prompt?: string): string {
+  const protocol = isDevMode() ? 'allternit-dev' : 'allternit'
+  const url = new URL(`${protocol}://design`)
+  const trimmed = prompt?.trim()
+  if (trimmed) url.searchParams.set('prompt', trimmed)
+  return url.toString()
+}
+
+/**
+ * Open A:// Studio (the design mode) in Allternit Desktop, carrying an
+ * optional prompt into the studio composer. Returns the deep link in all
+ * cases so callers can surface it when the open itself fails.
+ */
+export async function openDesignStudioInDesktop(prompt?: string): Promise<{
+  success: boolean
+  error?: string
+  deepLinkUrl: string
+  notInstalled?: boolean
+}> {
+  const deepLinkUrl = buildDesignDeepLink(prompt)
+  const installed = await isDesktopInstalled()
+  if (!installed) {
+    return {
+      success: false,
+      notInstalled: true,
+      error:
+        'Allternit Desktop is not installed. Install it from https://github.com/Gizziio/desktop/releases',
+      deepLinkUrl,
+    }
+  }
+  const opened = await openDeepLink(deepLinkUrl)
+  if (!opened) {
+    return {
+      success: false,
+      error: 'Failed to open Allternit Desktop. Please try opening it manually.',
+      deepLinkUrl,
+    }
+  }
+  return { success: true, deepLinkUrl }
+}

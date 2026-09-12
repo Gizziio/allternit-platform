@@ -1,6 +1,36 @@
 # Steering checkpoint
 
-## Goal
+## Session H — surgicaleye-0911 (active)
+Session: session/surgicaleye-0911, worktree allternit-session-surgicaleye-0911,
+from origin/main @ dc372e2f3. Plan at .steering/plans/plan-surgicaleye-0911.md.
+
+Goal: (1) Click-to-target surgical edit — click an element in the artifact
+preview → seeds the SurgicalEditPanel target (mapping doc §3 port #5, shortcut
+version of Onlook's DOM↔code binding; postMessage-only over the sandboxed
+opaque-origin ArtifactRenderer iframe). (2) `/design [prompt]` command in
+gizzi-code → deep-link into A:// Studio (mapping doc §2 row 12).
+
+Just did: worktree created, deps installed, code read (ArtifactRenderer,
+SurgicalEditPanel, surgical-edit.ts, DesignModeView, gizzi-code command
+registry, desktopDeepLink.ts, desktop protocol handling, /design route).
+Part 1 implemented: `src/lib/design/aio-targeting.ts` (injectAioIds /
+injectAioTargetCapture / parseAioTargetMessage / buildAioTargetDescription),
+ArtifactRenderer aioTargeting+onAioTarget props (origin-'null' + payload
+validation), SurgicalEditPanel targetSeed prop, DesignModeView artifact
+preview + Crosshair target toggle above the surgical panel; 18 new tests in
+aio-targeting.test.ts. Part 2 implemented: desktopDeepLink
+buildDesignDeepLink/openDesignStudioInDesktop, desktop main handles
+allternit://design?prompt=... (refactored shell:open-design into
+openDesignStudio), /design?prompt= seeds DesignModeView composer,
+gizzi-code `/design [prompt]` local-jsx command registered. release-preflight
+35/0.
+
+Next: finish verification (ai vitest+typecheck, gizzi-code typecheck +
+production build re-run post-interruption), commit + push, PR → merge
+(--merge), ledger branch (date 2026-09-12), desktop rebuild + bundle grep,
+cleanup.
+
+## Goal (other sessions)
 Session E: session/rendercompare-0911, worktree allternit-session-rendercompare-0911,
 from origin/main @ dce56e070. Mapping doc §3 port #2 ("P1.5") — render-and-compare
 self-verification: shared `scripts/render-artifact-screenshot.mjs` (Chrome +

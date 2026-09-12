@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChatTeardropText, Check, X, Warning } from '@phosphor-icons/react';
 import type { SurgicalComment } from '../../lib/design/surgical-edit';
 import { generateCommentId } from '../../lib/design/surgical-edit';
@@ -11,14 +11,27 @@ interface SurgicalEditPanelProps {
   onApply: () => void;
   agent?: Agent;
   artifactHtml?: string;
+  /**
+   * Click-to-target seed (mapping doc §3 port #5): when a new seed arrives
+   * (nonce changes), the target field is pre-filled with the clicked
+   * element's description and focused.
+   */
+  targetSeed?: { target: string; nonce: number } | null;
 }
 
-export function SurgicalEditPanel({ comments, onChange, onApply, agent, artifactHtml }: SurgicalEditPanelProps) {
+export function SurgicalEditPanel({ comments, onChange, onApply, agent, artifactHtml, targetSeed }: SurgicalEditPanelProps) {
   const canSurgicalEdit = !agent || (agent.capabilities ?? []).includes('surgical-edit');
   const hasArtifact = Boolean(artifactHtml && artifactHtml.trim().length > 0);
   const [target, setTarget] = useState('');
   const [body, setBody] = useState('');
+  const targetInputRef = useRef<HTMLInputElement>(null);
   const openCount = comments.filter((c) => !c.resolved).length;
+
+  useEffect(() => {
+    if (!targetSeed) return;
+    setTarget(targetSeed.target);
+    targetInputRef.current?.focus();
+  }, [targetSeed]);
 
   function addComment() {
     if (!target.trim() || !body.trim()) return;
@@ -78,6 +91,7 @@ export function SurgicalEditPanel({ comments, onChange, onApply, agent, artifact
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
         <input
           aria-label="Target selector"
+          ref={targetInputRef}
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           disabled={!canSurgicalEdit || !hasArtifact}

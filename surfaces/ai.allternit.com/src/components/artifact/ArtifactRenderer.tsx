@@ -4,13 +4,28 @@
  * Reskinned for Allternit with native design tokens.
  */
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useEffect, useMemo, useRef } from 'react';
+import {
+  injectAioIds,
+  injectAioTargetCapture,
+  parseAioTargetMessage,
+  type AioTargetPayload,
+} from '@/lib/design/aio-targeting';
 
 interface ArtifactRendererProps {
   content: string;
   type?: string;
   height?: string;
   width?: string;
+  /**
+   * Click-to-target (mapping doc §3 port #5): when enabled, element ids and a
+   * click-capture script are injected into the sandboxed srcdoc and clicks on
+   * elements postMessage back to the parent (opaque origin → `event.origin`
+   * is the string 'null'). Only meaningful together with `onAioTarget`.
+   */
+  aioTargeting?: boolean;
+  /** Called with the validated payload when an element is clicked in targeting mode. */
+  onAioTarget?: (payload: AioTargetPayload) => void;
 }
 
 const SANDBOX_STORAGE_SHIM = `<script data-allternit-artifact-storage-shim>
@@ -53,21 +68,55 @@ export function injectSandboxStorageShim(htmlContent: string): string {
   return SANDBOX_STORAGE_SHIM + '\n' + htmlContent;
 }
 
-const HTMLRenderer = memo<{ htmlContent: string; height?: string; width?: string }>(
-  ({ htmlContent, width = '100%', height = '360px' }) => (
-    <iframe
-      sandbox="allow-scripts allow-forms allow-modals"
-      srcDoc={injectSandboxStorageShim(htmlContent)}
-      style={{
-        border: '1px solid var(--border-subtle)',
-        borderRadius: '10px',
-        height,
-        width,
-        background: 'var(--bg-secondary)',
-      }}
-      title="artifact-html-renderer"
-    />
-  )
+const HTMLRenderer = memo<{
+  htmlContent: string;
+  height?: string;
+  width?: string;
+  aioTargeting?: boolean;
+  onAioTarget?: (payload: AioTargetPayload) => void;
+}>(
+  ({ htmlContent, width = '100%', height = '360px', aioTargeting = false, onAioTarget }) => {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    // Click-to-target: the sandboxed srcdoc iframe has an opaque origin, so
+    // the only channel from the artifact DOM to the parent is postMessage.
+    // Accept only messages from our iframe's contentWindow with origin 'null'
+    // (opaque) and a strictly validated payload shape.
+    useEffect(() => {
+      if (!aioTargeting || !onAioTarget) return;
+      const handler = (event: MessageEvent) => {
+        if (event.origin !== 'null') return;
+        if (iframeRef.current?.contentWindow == null) return;
+        if (event.source !== iframeRef.current.contentWindow) return;
+        const payload = parseAioTargetMessage(event.data);
+        if (payload) onAioTarget(payload);
+      };
+      window.addEventListener('message', handler);
+      return () => window.removeEventListener('message', handler);
+    }, [aioTargeting, onAioTarget]);
+
+    const srcDoc = useMemo(() => {
+      const shimmed = injectSandboxStorageShim(htmlContent);
+      if (!aioTargeting) return shimmed;
+      return injectAioTargetCapture(injectAioIds(shimmed));
+    }, [htmlContent, aioTargeting]);
+
+    return (
+      <iframe
+        ref={iframeRef}
+        sandbox="allow-scripts allow-forms allow-modals"
+        srcDoc={srcDoc}
+        style={{
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '10px',
+          height,
+          width,
+          background: 'var(--bg-secondary)',
+        }}
+        title="artifact-html-renderer"
+      />
+    );
+  }
 );
 
 const SVGRenderer = memo<{ content: string; height?: string; width?: string }>(
@@ -118,7 +167,7 @@ const MermaidRenderer = memo<{ content: string }>(({ content }) => (
   </div>
 ));
 
-const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, width }) => {
+const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, width, aioTargeting, onAioTarget }) => {
   switch (type) {
     case 'application/lobe.artifacts.react':
     case 'code/react': {
@@ -128,7 +177,7 @@ const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, w
           <div style={{ padding: '6px 12px', background: 'var(--surface-panel)', fontSize: '12px', color: 'var(--text-secondary)' }}>
             React Component Preview
           </div>
-          <HTMLRenderer htmlContent={content} height={height} width={width} />
+          <HTMLRenderer htmlContent={content} height={height} width={width} aioTargeting={aioTargeting} onAioTarget={onAioTarget} />
         </div>
       );
     }
@@ -145,10 +194,10 @@ const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, w
       return <MarkdownRenderer content={content} height={height} width={width} />;
     }
     case 'document/html': {
-      return <HTMLRenderer htmlContent={content} height={height} width={width} />;
+      return <HTMLRenderer htmlContent={content} height={height} width={width} aioTargeting={aioTargeting} onAioTarget={onAioTarget} />;
     }
     default: {
-      return <HTMLRenderer htmlContent={content} height={height} width={width} />;
+      return <HTMLRenderer htmlContent={content} height={height} width={width} aioTargeting={aioTargeting} onAioTarget={onAioTarget} />;
     }
   }
 });
