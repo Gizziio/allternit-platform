@@ -1,6 +1,25 @@
 # Steering checkpoint
 
-## Goal
+## Session H — surgicaleye-0911 (active)
+Session: session/surgicaleye-0911, worktree allternit-session-surgicaleye-0911,
+from origin/main @ dc372e2f3. Plan at .steering/plans/plan-surgicaleye-0911.md.
+
+Goal: (1) Click-to-target surgical edit — click an element in the artifact
+preview → seeds the SurgicalEditPanel target (mapping doc §3 port #5, shortcut
+version of Onlook's DOM↔code binding; postMessage-only over the sandboxed
+opaque-origin ArtifactRenderer iframe). (2) `/design [prompt]` command in
+gizzi-code → deep-link into A:// Studio (mapping doc §2 row 12).
+
+Just did: worktree created, deps installed, code read (ArtifactRenderer,
+SurgicalEditPanel, surgical-edit.ts, DesignModeView, gizzi-code command
+registry, desktopDeepLink.ts, desktop protocol handling, /design route).
+
+Next: implement Part 1 (aio-targeting util + renderer wiring + panel seeding +
+tests), Part 2 (deep link + desktop main handler + gizzi-code command),
+verify (typecheck, vitest, gizzi-code typecheck + production build, preflight),
+PR → merge, ledger, desktop rebuild + bundle grep, cleanup.
+
+## Goal (other sessions — untouched below)
 Session: session/artifactsapi-0911, worktree allternit-session-artifactsapi-0911,
 from origin/main @ 9b01fc5bf. DESIGN BEFORE BUILD — design doc + tracking
 issues only for the A:// Artifacts API (mapping doc §2 row 16, Eoj amendment
