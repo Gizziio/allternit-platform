@@ -13,7 +13,8 @@
   design vitest 1770/0; release-preflight 35/0; live curl smoke green
   (publish → status → append → snapshot pinned → unpublish → deployment kept,
   422 gate).
-- **Next:** release build, PR, merge, ledger, desktop rebuild, cleanup.
+- **Next:** merge PR #426 once the release build is green, then ledger attestation,
+  desktop rebuild, cleanup.
 - **Open questions:** none.
 
 ## Checkpoint — desktop-relay-watchdog-0912 (session merged via #424, kept for history)
