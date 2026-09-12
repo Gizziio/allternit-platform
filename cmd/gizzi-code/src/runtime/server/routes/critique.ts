@@ -34,6 +34,8 @@ const CritiqueRequest = z.object({
   modelID: z.string().optional(),
   panelists: z.number().int().min(1).max(5).default(3),
   sessionID: z.string().optional(),
+  /** Images produced during the design turn (data URLs or http(s) URLs). */
+  images: z.array(z.string().min(1)).max(6).optional(),
 })
 
 const PublicPanelistSchema = PanelistCritiqueSchema.extend({
@@ -117,10 +119,19 @@ const PANELISTS: Panelist[] = [
 ]
 
 const MAX_HTML_CHARS = 120_000
+const MAX_IMAGE_REF_CHARS = 100_000
 
-function buildPrompt(panelist: Panelist, html: string) {
+function buildPrompt(panelist: Panelist, html: string, images: string[] = []) {
   const truncated = html.length > MAX_HTML_CHARS
   const body = truncated ? html.slice(0, MAX_HTML_CHARS) : html
+  // Attached turn images are referenced as markdown image embeds after the
+  // HTML block. CLI/subprocess brains only forward text, so this stays a
+  // single text turn; vision-capable API brains receive the same references.
+  // Each ref is hard-capped so a multi-MB data URL cannot blow the context.
+  const imageRefs = images
+    .filter((u) => u.startsWith("data:image/") || /^https?:\/\//.test(u))
+    .slice(0, 6)
+    .map((u, i) => `![attached-image-${i + 1}](${u.length > MAX_IMAGE_REF_CHARS ? u.slice(0, MAX_IMAGE_REF_CHARS) : u})`)
   const system = `${panelist.stance}
 
 You must return ONLY a single JSON object (no prose, no markdown code fences, no comments) with exactly this shape:
@@ -144,7 +155,11 @@ Example of the exact output format (use double-quoted keys, real values from THI
 
 \`\`\`html
 ${body}
-\`\`\`
+\`\`\`${imageRefs.length ? `
+
+${imageRefs.length} image(s) generated during the same design turn are attached below as image references. Review them as part of the artifact's visual output (e.g. hero images, illustrations, brand marks); if your brain cannot render them, judge whether the HTML references them appropriately and say so in your summary.
+
+${imageRefs.join("\n")}` : ""}
 
 Return the structured critique now.`
   return { system, user }
@@ -296,8 +311,8 @@ async function buildCallCtx(modelRef: ModelRef) {
 
 type CallCtx = Awaited<ReturnType<typeof buildCallCtx>>
 
-async function runPanelist(panelist: Panelist, html: string, ctx: CallCtx): Promise<PanelistOut> {
-  const { system, user } = buildPrompt(panelist, html)
+async function runPanelist(panelist: Panelist, html: string, images: string[] | undefined, ctx: CallCtx): Promise<PanelistOut> {
+  const { system, user } = buildPrompt(panelist, html, images)
   try {
     const stream = ctx.streamText({
       model: ctx.wrappedModel,
@@ -412,7 +427,7 @@ export const CritiqueRoutes = () =>
         const roster = PANELISTS.slice(0, body.panelists)
         const runId = `crt_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 8)}`
         const ctx = await buildCallCtx(modelRef)
-        const results: PanelistOut[] = await Promise.all(roster.map((p) => runPanelist(p, body.html, ctx)))
+        const results: PanelistOut[] = await Promise.all(roster.map((p) => runPanelist(p, body.html, body.images, ctx)))
 
         const agg = aggregate(results)
         const usable = results.filter((r) => !r.error)
@@ -475,7 +490,7 @@ export const CritiqueRoutes = () =>
           // Run in parallel; emit each panelist event as soon as it resolves.
           const results: PanelistOut[] = await Promise.all(
             roster.map(async (p) => {
-              const r = await runPanelist(p, body.html, ctx)
+              const r = await runPanelist(p, body.html, body.images, ctx)
               await send("critique.panelist", { runId, panelist: publicPanelist(r) })
               return r
             }),

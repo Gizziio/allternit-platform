@@ -48,6 +48,7 @@ import { QuestionRoutes } from "@/runtime/server/routes/question"
 import { PermissionRoutes } from "@/runtime/server/routes/permission"
 import { GlobalRoutes } from "@/runtime/server/routes/global"
 import { CritiqueRoutes } from "@/runtime/server/routes/critique"
+import { DesignRoutes } from "@/runtime/server/routes/design"
 import { AuthRoutes } from "@/runtime/server/routes/auth"
 import { AgentRoutes } from "@/runtime/server/routes/agent"
 import { CommandRoutes } from "@/runtime/server/routes/command"
@@ -273,6 +274,7 @@ export namespace Server {
         })
         .route("/global", GlobalRoutes())
         .route("/critique", CritiqueRoutes())
+        .route("/design", DesignRoutes())
         .put(
           "/auth/:providerID",
           describeRoute({
@@ -509,6 +511,7 @@ export namespace Server {
             .route("/auth/terminal/clerk", TerminalClerkAuthRoutes())
             .route("/global", GlobalRoutes())
         .route("/critique", CritiqueRoutes())
+        .route("/design", DesignRoutes())
             .route("/project", ProjectRoutes())
             .route("/experimental", ExperimentalRoutes())
             .route("/tui", TuiRoutes())
