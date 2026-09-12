@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-12 10:15 — kimi — fabric transport: desktop chat/cowork/code views mounted
+
+- **Session ID / Branch:** `ao/fabric-chat-code-views-0912`
+- **Agent:** kimi
+- **Summary:** Fabric Transport chat mode now renders the desktop chat surface (ChatViewWrapper) with a Cowork rail section — selecting a cowork session flips the canvas to the desktop CoworkRoot. Code mode renders the desktop CodeRoot, with the Termius-style terminal kept as a floating Code<->Terminal toggle. Fabric node sessions stay in the rail unchanged. SW v39→v40.
+- **Commit:** PR #410 (merge `24a00b336`)
+- **Evidence:** `agent-ledger/summaries/2026-09-12-1015-ao-fabric-chat-code-0912-kimi-desktop-views.md`
+
 ### 2026-09-12 01:37 — kimi — fabric transport: hosted web-proxy, PWA brand assets, code-mode home + terminal
 
 - **Session ID / Branch:** `ao/fabric-aci-fixes-0911` + `ao/fabrictransport-web-proxy-0912`
