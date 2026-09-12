@@ -7,6 +7,9 @@
  *   2. BASE_DESIGNER_IDENTITY — the expert-designer identity charter.
  *   3. Active DESIGN.md body (if a design system is selected).
  *   4. Active SKILL.md body (if a skill is bound to the session).
+ *   5. DESIGN_TASTE_BLOCK — design-taste steering adapted from Anthropic's
+ *      verified frontend-design skill (vendored reference:
+ *      skills/references/frontend-design.md, Apache-2.0).
  *
  * Usage:
  *   const systemPrompt = composeStudioSystemPrompt({
@@ -83,6 +86,22 @@ const A_CRAFT_RULES = `## A:// craft rules (binding)
 - Body text contrast ≥ 4.5:1 against its background; large text ≥ 3:1.
 - No lorem ipsum, no "Feature One" filler, no invented metrics or social proof ("10× faster", "99.9% uptime", "trusted by 50,000 teams") — use brief copy or honest labelled stubs like [METRIC].
 - Typography aliases: "Allternit Sans" = Allternit Sans with Inter acceptable ONLY as the local fallback; "Allternit Serif" = Newsreader stack; "Allternit Mono" = JetBrains Mono stack.`;
+
+// ─── Design taste (vendored frontend-design skill, adapted) ───────────────────
+
+const DESIGN_TASTE_BLOCK = `## Design taste (steering — binding)
+
+Adapted from Anthropic's verified \`frontend-design\` skill (github.com/anthropics/skills, Apache-2.0), restated against Allternit brand law. Full reference: skills/references/frontend-design.md.
+
+- Plan tokens before code: name 4–6 palette values, type roles, and one layout principle specific to THIS brief; bind them to :root custom properties before any layout. If a plan choice reads like the generic default for any similar page, revise it and say why.
+- Spend your boldness in one place: one memorable element, everything else quiet. Cut decoration that does not serve the brief.
+- Typography is the personality: one family or two clearly distinct ones; never body and display from the same family without a decision. Line length < 80 chars; serif body gets more line-height.
+- Icons: inline SVG with currentColor only — never emoji as icons or feature glyphs.
+- Contrast: body text ≥ 4.5:1 against its background (large text ≥ 3:1) — verify with oklch lightness difference.
+- No invented content: no lorem ipsum, no "Feature One", no unsourced metrics — use honest labelled stubs like [METRIC].
+- No template-chrome defaults: single accented word in a headline, ALL-CAPS eyebrow labels, numbered markers on non-sequences, middle-dot meta strings, three equal columns, one border-radius on everything, a gradient on every background (at most one decisive gradient per design).
+- Deny-list (P0, machine-enforced): the legacy coral family (#D97757 / #E27C59 — reserved for Allternit platform UI) and all purple/indigo/violet families are forbidden as hex, Tailwind class, or gradient — src/lib/design/html-linter.ts fails the artifact on these. The amber family (#B08D6E / #C4A684 / #9A7658) is brand law, not an AI tell.
+- Copy is design content: plain language, active voice, sentence case, no hype. A CTA says exactly what happens. Errors state what happened and how to fix it.`;
 
 // ─── Discovery and philosophy ─────────────────────────────────────────────────
 
@@ -338,6 +357,8 @@ export function composeStudioSystemPrompt({
     BASE_DESIGNER_IDENTITY,
     '\n\n---\n\n',
     A_CRAFT_RULES,
+    '\n\n---\n\n',
+    DESIGN_TASTE_BLOCK,
   ];
 
   if (designSystemBody?.trim()) {
