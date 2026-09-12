@@ -675,19 +675,23 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   if (showCutscene) return <StudioOnboarding onComplete={() => setShowCutscene(false)} />;
   if (!activeProject) return (
     <>
-      <NewProjectScreen
-        onStart={startProject}
-        onOpenProject={openProjectRecord}
-        onRemix={remixGalleryEntry}
-        onSelectDesignSystem={(system) => {
-          setInstalledDesignId(system.id);
-          setDesignMd(system.body);
-        }}
-        selectedSkill={selectedSkill}
-        onSelectSkill={(skill) => { if (!skill) setShowSkillPicker(true); else setSelectedSkill(skill); }}
-        skillValues={skillValues}
-        onChangeSkillValues={setSkillValues}
-      />
+      <ChatModelsProvider>
+        <ModelSelectionProvider defaultSelection={defaultSelection}>
+          <NewProjectScreen
+            onStart={startProject}
+            onOpenProject={openProjectRecord}
+            onRemix={remixGalleryEntry}
+            onSelectDesignSystem={(system) => {
+              setInstalledDesignId(system.id);
+              setDesignMd(system.body);
+            }}
+            selectedSkill={selectedSkill}
+            onSelectSkill={(skill) => { if (!skill) setShowSkillPicker(true); else setSelectedSkill(skill); }}
+            skillValues={skillValues}
+            onChangeSkillValues={setSkillValues}
+          />
+        </ModelSelectionProvider>
+      </ChatModelsProvider>
       {showSkillPicker && (
         <SkillPicker
           initialMode={selectedSkill?.mode}

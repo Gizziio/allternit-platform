@@ -4,7 +4,14 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 import saasLandingSkill from '../../../skills/saas-landing-skill/SKILL.md?raw';
 import { parseSkillMarkdown } from '../../lib/design/skill-registry';
+import { useModelSelection } from '@/providers/model-selection-provider';
 import { NewProjectScreen } from './NewProjectScreen';
+
+vi.mock('@/providers/model-selection-provider', () => ({
+  useModelSelection: vi.fn(() => {
+    throw new Error('useModelSelection must be used within a ModelSelectionProvider');
+  }),
+}));
 
 const skill = parseSkillMarkdown('saas-landing', saasLandingSkill, ['assets/base.html']);
 
@@ -155,5 +162,83 @@ describe('NewProjectScreen gallery (P0 use-case gallery)', () => {
     fireEvent.click(screen.getByTitle('Remix: Acme landing'));
     expect(onRemix).toHaveBeenCalledTimes(1);
     expect(onRemix.mock.calls[0]![0]).toMatchObject({ projectId: 'design-1', prompt: 'Create a SaaS landing page' });
+  });
+});
+
+describe('NewProjectScreen model picker (§6 P1)', () => {
+  it('renders nothing (no crash) when no ModelSelectionProvider is present', () => {
+    render(<NewProjectScreen onStart={vi.fn()} />);
+    // The screen itself still mounts and submits.
+    expect(screen.getByPlaceholderText('Describe the design you want to create')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Create project' })).toBeTruthy();
+    // The model chip is absent rather than crashed.
+    expect(screen.queryByRole('button', { name: /Model/ })).toBeNull();
+  });
+
+  it('shows the fallback "Model" label when the provider has no selection yet', () => {
+    vi.mocked(useModelSelection).mockReturnValue({
+      selection: null,
+      availableModels: [],
+      isLoading: false,
+      isSelecting: false,
+      selectModel: vi.fn(),
+      clearSelection: vi.fn(),
+      startSelection: vi.fn(),
+      cancelSelection: vi.fn(),
+    } as unknown as ReturnType<typeof useModelSelection>);
+    render(<NewProjectScreen onStart={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /Model/ })).toBeTruthy();
+  });
+
+  it('lists available models and calls selectModel on pick', () => {
+    const selectModel = vi.fn();
+    vi.mocked(useModelSelection).mockReturnValue({
+      selection: { providerId: 'kimi-cli', profileId: 'kimi-cli', modelId: 'kimi-k3', modelName: 'K3' },
+      availableModels: [
+        { id: 'kimi-cli/kimi-k3', name: 'K3', providerId: 'kimi-cli', providerName: 'Kimi' },
+        { id: 'claude-cli/claude-fable', name: 'Fable', providerId: 'claude-cli', providerName: 'Claude' },
+      ],
+      isLoading: false,
+      isSelecting: false,
+      selectModel,
+      clearSelection: vi.fn(),
+      startSelection: vi.fn(),
+      cancelSelection: vi.fn(),
+    } as unknown as ReturnType<typeof useModelSelection>);
+    render(<NewProjectScreen onStart={vi.fn()} />);
+
+    // Current selection shows on the chip.
+    expect(screen.getByRole('button', { name: /K3/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /K3/ }));
+    const fable = screen.getByRole('menuitem', { name: /Fable/ });
+    fireEvent.click(fable);
+
+    expect(selectModel).toHaveBeenCalledTimes(1);
+    expect(selectModel).toHaveBeenCalledWith({
+      providerId: 'claude-cli',
+      profileId: 'claude-cli',
+      modelId: 'claude-fable',
+      modelName: 'Fable',
+      modelAuto: false,
+    });
+    // Popover closed after the pick.
+    expect(screen.queryByRole('menuitem')).toBeNull();
+  });
+
+  it('shows the empty state when no models are available', () => {
+    vi.mocked(useModelSelection).mockReturnValue({
+      selection: null,
+      availableModels: [],
+      isLoading: false,
+      isSelecting: false,
+      selectModel: vi.fn(),
+      clearSelection: vi.fn(),
+      startSelection: vi.fn(),
+      cancelSelection: vi.fn(),
+    } as unknown as ReturnType<typeof useModelSelection>);
+    render(<NewProjectScreen onStart={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Model/ }));
+    expect(screen.getByText(/No models connected yet/)).toBeTruthy();
   });
 });

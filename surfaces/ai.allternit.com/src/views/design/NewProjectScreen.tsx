@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUp,
+  Brain,
   Browsers,
   Check,
   FileText,
@@ -19,6 +20,9 @@ import {
   SquaresFour,
   X,
 } from '@phosphor-icons/react';
+import { useModelSelection } from '@/providers/model-selection-provider';
+import type { ModelSelection } from '@/components/model-picker';
+import type { ModelOption } from '@/components/prompt-kit/prompt-model-selector';
 import { DESIGN_DIRECTIONS, type DesignDirection } from '../../lib/design/directions';
 import { DESIGN_SYSTEMS_LIBRARY, type DesignSystemEntry } from '../../lib/design/design-systems-library';
 import type { SkillRecord } from '../../lib/design/skill-registry';
@@ -40,6 +44,78 @@ const CREATION_TYPES = [
 const ASPECT_OPTIONS = ['Adaptive', '1:1', '16:9', '9:16', '4:3', '3:4'] as const;
 
 type LibraryTab = 'projects' | 'systems' | 'templates' | 'gallery';
+type ComposerMenu = 'system' | 'type' | 'attach' | 'model' | null;
+
+/**
+ * §6 P1 — model chip (kimi.com/design "K3 · High" equivalent).
+ *
+ * `useModelSelection` throws outside a `ModelSelectionProvider` by design;
+ * when no provider is above us (tests, Storybook) this renders nothing
+ * instead of crashing the screen.
+ */
+function ModelPickerControl({ isOpen, onToggle }: { isOpen: boolean; onToggle: () => void }) {
+  let selection: ModelSelection | null = null;
+  let availableModels: ModelOption[] = [];
+  let isLoading = false;
+  let selectModel: ((next: ModelSelection) => void) | null = null;
+  try {
+    const context = useModelSelection();
+    selection = context.selection;
+    availableModels = context.availableModels;
+    isLoading = context.isLoading;
+    selectModel = context.selectModel;
+  } catch {
+    return null;
+  }
+
+  /** Stable `provider/model` key — matches what readComposerRuntimeModelId rehydrates. */
+  function modelKey(model: ModelOption): string {
+    const providerId = model.providerId || model.provider
+      || (model.id.includes('/') ? model.id.split('/')[0] : 'allternit');
+    const modelId = model.id.includes('/') ? model.id.split('/').slice(1).join('/') : model.id;
+    return `${providerId}/${modelId}`;
+  }
+
+  const selectedKey = selection ? `${selection.providerId}/${selection.modelId}` : null;
+
+  return (
+    <div className="ad-menu-anchor">
+      <button type="button" className="ad-toolbar-button" onClick={onToggle}>
+        <Brain size={15} weight="duotone" />
+        <span><small>Model</small>{selection?.modelName ?? 'Model'}</span>
+      </button>
+      {isOpen && (
+        <div className="ad-popover ad-model-picker" role="menu" aria-label="Choose model">
+          {isLoading && availableModels.length === 0 && (
+            <p className="ad-model-picker__status">Loading models…</p>
+          )}
+          {!isLoading && availableModels.length === 0 && (
+            <p className="ad-model-picker__status">No models connected yet — pick a brain in Settings.</p>
+          )}
+          {availableModels.map((model) => (
+            <button
+              type="button"
+              key={modelKey(model)}
+              role="menuitem"
+              className={selectedKey === modelKey(model) ? 'is-selected' : ''}
+              onClick={() => {
+                if (!selectModel) return;
+                const providerId = model.providerId || model.provider
+                  || (model.id.includes('/') ? model.id.split('/')[0] : 'allternit');
+                const modelId = model.id.includes('/') ? model.id.split('/').slice(1).join('/') : model.id;
+                selectModel({ providerId, profileId: providerId, modelId, modelName: model.name, modelAuto: false });
+                onToggle();
+              }}
+            >
+              <Brain size={16} /><span><b>{model.name}</b><small>{model.providerName ?? model.providerId ?? model.provider ?? ''}</small></span>
+              {selectedKey === modelKey(model) && <Check size={14} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Gallery pill labels keyed by creation type — kimi.com/design category-tab pattern. */
 const GALLERY_TYPE_LABELS: Record<string, string> = {
@@ -91,7 +167,7 @@ export function NewProjectScreen({
   const [selectedAspect, setSelectedAspect] = useState<string>('Adaptive');
   const [selectedDirection, setSelectedDirection] = useState('allternit-brand');
   const [selectedSystem, setSelectedSystem] = useState<DesignSystemEntry | null>(null);
-  const [activeMenu, setActiveMenu] = useState<'system' | 'type' | 'attach' | null>(null);
+  const [activeMenu, setActiveMenu] = useState<ComposerMenu>(null);
   const [libraryTab, setLibraryTab] = useState<LibraryTab>('projects');
   const [query, setQuery] = useState('');
   const [gridView, setGridView] = useState(false);
@@ -344,6 +420,11 @@ export function NewProjectScreen({
                 </div>
               )}
             </div>
+
+            <ModelPickerControl
+              isOpen={activeMenu === 'model'}
+              onToggle={() => setActiveMenu(activeMenu === 'model' ? null : 'model')}
+            />
 
             {selectedSkill && <span className="ad-composer__skill"><Robot size={12} />{selectedSkill.name}</span>}
             <span className="ad-composer__agent">Allternit</span>
