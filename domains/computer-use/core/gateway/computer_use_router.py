@@ -499,6 +499,8 @@ async def _execute_non_claude_path(
         approval_policy=body.options.get("approval_policy", "on-risk"),
         record=body.options.get("record", True),
         vision_provider=body.options.get("vision_provider"),
+        batch_enabled=body.options.get("batch_enabled", True),
+        batch_mode=body.options.get("batch_mode", "batch"),
     )
 
     vp_override = body.options.get("vision_provider") or loop_config.vision_provider
@@ -588,6 +590,13 @@ async def _execute_non_claude_path(
         )
         await recorder.start()
 
+    # Canonical ledger writer for run-scoped records (batch.context.* per the
+    # session-preservation contract). Session/run bound here so the loop
+    # stays testable with a plain collector.
+    def ledger(event_type: str, payload: Dict[str, Any]) -> None:
+        _emit_canonical(event_type, session_id=body.session_id, run_id=body.run_id,
+                        payload=payload)
+
     planning_loop = PlanningLoop(
         vision_provider=vision_provider,
         adapter=adapter,
@@ -596,6 +605,7 @@ async def _execute_non_claude_path(
         event_callback=event_callback,
         approval_callback=approval_callback if loop_config.approval_policy != "never" else None,
         history_preflight=history_preflight_for_task,
+        ledger=ledger,
     )
 
     # Hook cancel_event into the loop

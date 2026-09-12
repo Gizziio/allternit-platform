@@ -114,6 +114,12 @@ class PlanningLoopConfig:
     approval_policy: str = "on-risk"   # never | on-risk | always
     record: bool = True
     vision_provider: Optional[str] = None  # override env
+    # P2 batch dispatch (core/batch_dispatch.py): when a plan carries N≥2
+    # groundable whitelist actions, ship them as one grant-bound batch through
+    # the Rust /api/aci/batch surface instead of N step-by-step turns.
+    batch_enabled: bool = True
+    batch_mode: str = "batch"          # "batch" (one grant) | "per_step"
+    batch_headless: bool = True
 
 
 @dataclass
@@ -134,6 +140,7 @@ class PlanningLoopResult:
     final_screenshot_b64: str = ""
     error: Optional[str] = None
     gif_path: Optional[str] = None
+    model_turns: int = 0                # planning-loop turns consumed (P3 turns-per-task substrate)
 
     def to_dict(self) -> Dict:
         return {
@@ -151,6 +158,7 @@ class PlanningLoopResult:
             "duration_ms": self.duration_ms,
             "error": self.error,
             "gif_path": self.gif_path,
+            "model_turns": self.model_turns,
         }
 
 
@@ -198,6 +206,8 @@ class PlanningLoop:
         approval_callback: Optional[Callable[[LoopStep], bool]] = None,
         history_preflight: Optional[Callable[[str], Awaitable[Optional[Dict]]]] = None,
         monitor: Optional[Any] = None,  # core.monitor.Monitor implementation
+        ledger: Optional[Callable[[str, Dict], None]] = None,  # canonical EventLedger writer (session/run bound by caller)
+        batch_client: Optional[Any] = None,  # AciBatchClient; default constructed lazily
     ):
         self.vision_provider = vision_provider
         # Accept ComputerUseExecutor directly — it has the same execute() interface
@@ -209,6 +219,8 @@ class PlanningLoop:
         self.approval_callback = approval_callback
         self.history_preflight = history_preflight
         self.monitor = monitor
+        self.ledger = ledger
+        self.batch_client = batch_client
         self._cancelled = False
         self._monitor_history: List[Dict[str, Any]] = []
 
@@ -230,6 +242,7 @@ class PlanningLoop:
         stop_reason = StopReason.ERROR
         error_msg: Optional[str] = None
         _consecutive_screenshots = 0
+        model_turns = 0
 
         # Inject scratchpad context — strategy + skills + lessons from prior runs
         try:
@@ -356,6 +369,7 @@ class PlanningLoop:
                 total_cost += step.cost_usd
                 total_input_tokens += int(getattr(plan, "input_tokens", 0) or 0)
                 total_output_tokens += int(getattr(plan, "output_tokens", 0) or 0)
+                model_turns += 1
 
                 self._emit({"type": "plan.created", "run_id": run_id, "step": step_num,
                            "reasoning": plan.reasoning, "action_type": plan.immediate_action.type,
@@ -412,26 +426,70 @@ class PlanningLoop:
                     except Exception:
                         pass
 
-                # ACT phase
-                self._emit({"type": "action.started", "run_id": run_id, "step": step_num,
-                           "action_type": step.action_type, "target": step.action_target})
+                # ACT phase — P2 batch dispatch: when the plan grounds N≥2
+                # consecutive whitelist actions on the same session, ship them
+                # as ONE grant-bound batch through the Rust /api/aci/batch
+                # surface. Any batch failure (transport, refusal, declined
+                # grant) falls back to the existing step-by-step path — policy
+                # never gets decided here.
+                batch_outcome: Optional[Dict[str, Any]] = None
+                batch_steps: Optional[List[Dict[str, Any]]] = None
+                if self.config.batch_enabled and getattr(plan, "batch", None):
+                    from .batch_dispatch import actions_to_batch_steps
+                    candidates = [plan.immediate_action, *plan.batch]
+                    batch_steps = actions_to_batch_steps(candidates)
+                    if batch_steps is not None:
+                        batch_outcome = await self._dispatch_batch(
+                            step=step,
+                            batch_steps=batch_steps,
+                            session_id=session_id,
+                            run_id=run_id,
+                            step_num=step_num,
+                        )
+                        if batch_outcome is None:
+                            batch_steps = None  # fell back — run step-by-step below
 
-                # Emit cursor position when coordinates available
-                if plan.immediate_action.coordinates and len(plan.immediate_action.coordinates) >= 2:
-                    cx, cy = plan.immediate_action.coordinates[0], plan.immediate_action.coordinates[1]
-                    effect = "ripple" if plan.immediate_action.type in ("click", "double_click") else \
-                             "glow" if plan.immediate_action.type == "hover" else "none"
-                    self._emit({"type": "cursor.moved", "run_id": run_id, "step": step_num,
-                               "x": cx, "y": cy, "agent_id": "primary", "effect": effect})
+                if batch_outcome is not None:
+                    step.action_type = "batch"
+                    step.action_target = f"{len(batch_steps)} whitelisted steps"
+                    step.action_params = {
+                        "batch_steps": batch_steps,
+                        "descriptor_hash": batch_outcome.get("descriptor_hash"),
+                        "receipt_id": batch_outcome.get("receipt_id"),
+                        "enforcement": batch_outcome.get("enforcement"),
+                    }
+                    step.adapter_result = {"batch_receipt": batch_outcome.get("receipt")}
+                    step.action_succeeded = batch_outcome.get("status") == "completed"
+                    if not step.action_succeeded:
+                        halted = batch_outcome.get("halted_at")
+                        step.error = (
+                            f"batch {batch_outcome.get('status')}"
+                            + (f" at step {halted}" if halted is not None else "")
+                        )
+                        logger.warning("Batch outcome at step %s: %s", step_num, step.error)
+                    self._emit({"type": "action.started", "run_id": run_id, "step": step_num,
+                               "action_type": "batch", "target": step.action_target,
+                               "batch_steps": len(batch_steps)})
+                else:
+                    self._emit({"type": "action.started", "run_id": run_id, "step": step_num,
+                               "action_type": step.action_type, "target": step.action_target})
 
-                try:
-                    result = await self._execute_action(plan.immediate_action, session_id)
-                    step.adapter_result = result
-                    step.action_succeeded = True
-                except Exception as act_err:
-                    step.error = str(act_err)
-                    step.action_succeeded = False
-                    logger.warning(f"Action failed at step {step_num}: {act_err}")
+                    # Emit cursor position when coordinates available
+                    if plan.immediate_action.coordinates and len(plan.immediate_action.coordinates) >= 2:
+                        cx, cy = plan.immediate_action.coordinates[0], plan.immediate_action.coordinates[1]
+                        effect = "ripple" if plan.immediate_action.type in ("click", "double_click") else \
+                                 "glow" if plan.immediate_action.type == "hover" else "none"
+                        self._emit({"type": "cursor.moved", "run_id": run_id, "step": step_num,
+                                   "x": cx, "y": cy, "agent_id": "primary", "effect": effect})
+
+                    try:
+                        result = await self._execute_action(plan.immediate_action, session_id)
+                        step.adapter_result = result
+                        step.action_succeeded = True
+                    except Exception as act_err:
+                        step.error = str(act_err)
+                        step.action_succeeded = False
+                        logger.warning(f"Action failed at step {step_num}: {act_err}")
 
                 # OBSERVE phase
                 new_screenshot = await self._capture_screenshot(session_id)
@@ -550,6 +608,7 @@ class PlanningLoop:
             duration_ms=duration_ms,
             final_screenshot_b64=_bytes_to_b64(current_screenshot) if current_screenshot else "",
             error=error_msg,
+            model_turns=model_turns,
         )
 
         event_type = "run.completed" if status in ("completed",) else "run.failed"
@@ -715,6 +774,124 @@ class PlanningLoop:
         else:
             result = await self.adapter.execute(req)
         return result.to_dict() if result else {}
+
+    async def _dispatch_batch(
+        self,
+        *,
+        step: LoopStep,
+        batch_steps: List[Dict[str, Any]],
+        session_id: str,
+        run_id: str,
+        step_num: int,
+    ) -> Optional[Dict[str, Any]]:
+        """Dispatch a grant-bound batch through the P1 Rust surface.
+
+        Returns the outcome dict when the batch executed (whatever the step
+        outcomes — halt-at-first-failure is reported honestly, not retried),
+        or ``None`` when the caller should fall back to step-by-step execution
+        (transport failure, declined grant, or an unexpected gate response).
+        Grant policy (which steps are risky, which mode applies) is decided
+        entirely Rust-side; this method only presents the batch and, on a
+        ``confirmation_required`` denial, routes the grant request through the
+        SAME human-approval flow as per-step risk approval.
+        """
+        from .batch_context import (
+            BatchContextRecord,
+            close_batch_context,
+            open_batch_context,
+        )
+        from .batch_dispatch import AciBatchClient, place_grant_for_retry
+
+        client = self.batch_client
+        if client is None:
+            try:
+                client = AciBatchClient()
+            except Exception as exc:
+                logger.warning("Batch client unavailable, falling back to step-by-step: %s", exc)
+                return None
+            self.batch_client = client
+
+        record = BatchContextRecord(
+            run_id=run_id,
+            session_id=session_id,
+            step_count=len(batch_steps),
+            step_methods=[s["method"] for s in batch_steps],
+            batch_mode=self.config.batch_mode,
+        )
+        # Contract §4: opened BEFORE the batch RPC (audit-before-act).
+        open_batch_context(self.ledger, record)
+
+        async def _try(approval_id=None, step_approval_ids=None):
+            return await client.execute_batch(
+                steps=batch_steps,
+                mode=self.config.batch_mode,
+                session=session_id,
+                approval_id=approval_id,
+                step_approval_ids=step_approval_ids,
+                headless=self.config.batch_headless,
+            )
+
+        attempt = await _try()
+
+        if attempt.confirmation_required:
+            record.batch_id = record.descriptor_hash = attempt.action_hash or "pending"
+            # Surface the grant request through the same approval flow as
+            # per-step risk approval; the SSE events distinguish it by reason.
+            self._emit({"type": "approval.required", "run_id": run_id, "step": step_num,
+                       "action_preview": {"kind": "batch", "descriptor_hash": attempt.action_hash,
+                                          "step_index": attempt.step_index,
+                                          "step_count": len(batch_steps)},
+                       "reason": f"batch grant required (hash={attempt.action_hash})"})
+            approved = await self._request_approval(step)
+            self._emit({"type": "approval.received", "run_id": run_id, "step": step_num,
+                       "approved": approved})
+            if not approved or not attempt.approval_id:
+                close_batch_context(self.ledger, record, status="denied",
+                                    model_turns_saved=0)
+                logger.info("Batch grant declined at step %s — step-by-step fallback", step_num)
+                return None
+            retry_kwargs = place_grant_for_retry(
+                self.config.batch_mode, attempt, attempt.approval_id, len(batch_steps)
+            )
+            attempt = await _try(**retry_kwargs)
+            if not attempt.executed:
+                close_batch_context(
+                    self.ledger, record,
+                    status="denied" if attempt.confirmation_required else "failed",
+                    model_turns_saved=0,
+                )
+                logger.warning("Batch grant retry did not execute (%s) — step-by-step fallback",
+                               attempt.error or "still confirmation_required")
+                return None
+
+        if not attempt.executed:
+            close_batch_context(self.ledger, record, status="failed", model_turns_saved=0)
+            logger.warning("Batch dispatch failed (%s) — step-by-step fallback", attempt.error)
+            return None
+
+        receipt = attempt.receipt or {}
+        status = receipt.get("status", "completed")
+        halted_at = receipt.get("halted_at")
+        steps_completed = sum(
+            1 for s in receipt.get("steps", []) if s.get("status") == "completed"
+        )
+        record.batch_id = record.descriptor_hash = attempt.descriptor_hash or "unknown"
+        close_batch_context(
+            self.ledger, record,
+            status=status,
+            halted_at=halted_at,
+            steps_completed=steps_completed,
+            receipt_id=attempt.receipt_id,
+            model_turns_saved=len(batch_steps) - 1,
+        )
+        return {
+            "status": status,
+            "halted_at": halted_at,
+            "descriptor_hash": attempt.descriptor_hash,
+            "receipt_id": attempt.receipt_id,
+            "enforcement": attempt.enforcement,
+            "receipt": receipt,
+        }
 
     async def _reflect(self, before: bytes, after: bytes, action, succeeded: bool) -> str:
         """Ask the vision provider to reflect on what changed."""
