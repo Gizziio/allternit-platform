@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-12 12:52 — kimi — desktop runtime relay heartbeat watchdog (#423)
+
+- **Session ID / Branch:** `ao/desktop-relay-watchdog-0912`
+- **Agent:** kimi
+- **Summary:** Fixed the silent relay-socket death that left paired nodes dark until an app restart (Fabric Transport viewer: 'Runtime relay is offline'). auth-manager.ts now runs a heartbeat watchdog — the cloud pings every 25s, so a 75s silence closes the socket and the existing backoff reconnect takes over. Desktop typecheck ✅, 125 tests ✅, release-preflight 35/0 ✅. Restarted the installed app as an immediate fix; unsigned rebuild from merged main installed after merge.
+- **Commit:** PR #424 (merge `9a56125e8`), fixes #423
+- **Evidence:** `agent-ledger/summaries/2026-09-12-1252-ao-desktop-relay-watchdog-0912-kimi-relay-watchdog.md`
+
 ### 2026-09-12 12:20 — kimi — fabric transport: rail switcher Home/Bots/Code/ACI, dock revert, highlight fix
 
 - **Session ID / Branch:** `ao/fabric-mode-labels-0912`
