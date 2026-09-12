@@ -33,6 +33,16 @@
 .ad-composer__attachments { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
 .ad-composer__attachments > span { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 6px; background: var(--launch-card-soft); color: var(--launch-muted); font-size: 9px; }
 .ad-composer__attachments button { display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.ad-skill-inputs { display: flex; flex-direction: column; gap: 9px; margin: 4px 0 10px; padding: 10px 4px 2px; border-top: 1px solid var(--launch-border); }
+.ad-skill-inputs__field { display: flex; align-items: flex-start; gap: 9px; }
+.ad-skill-inputs__label { flex: none; width: 128px; padding-top: 6px; color: var(--launch-muted); font-size: 9px; font-weight: 700; }
+.ad-skill-inputs__required { margin-left: 2px; color: var(--launch-accent); font-style: normal; }
+.ad-skill-inputs__field input[type="text"],.ad-skill-inputs__field input[type="number"],.ad-skill-inputs__field select,.ad-skill-inputs__field textarea { flex: 1; min-width: 0; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--launch-border); border-radius: 7px; outline: 0; background: var(--launch-card-soft); color: var(--launch-text); font-size: 11px; line-height: 1.45; }
+.ad-skill-inputs__field textarea { resize: vertical; font: inherit; }
+.ad-skill-inputs__field input::placeholder,.ad-skill-inputs__field textarea::placeholder { color: var(--launch-muted); }
+.ad-skill-inputs__field input:focus,.ad-skill-inputs__field select:focus,.ad-skill-inputs__field textarea:focus { border-color: var(--launch-accent); }
+.ad-skill-inputs__field input[type="checkbox"] { width: 15px; height: 15px; margin: 6px 0 0; accent-color: var(--launch-accent); cursor: pointer; }
+.ad-skill-inputs__field input[type="number"] { font-variant-numeric: tabular-nums; }
 .ad-menu-anchor { position: relative; }
 .ad-popover { position: absolute; top: calc(100% + 8px); left: 0; z-index: 50; width: 290px; padding: 8px; border: 1px solid var(--launch-border); border-radius: 10px; background: var(--launch-card); box-shadow: 0 18px 50px rgba(0,0,0,.28); }
 .ad-popover--attach,.ad-type-picker { width: 250px; }

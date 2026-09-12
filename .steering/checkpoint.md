@@ -1,26 +1,20 @@
 # Steering checkpoint
 
 ## Goal
-Fix issue #368: `skill-registry.ts` parser drops `od.inputs` (and any nested
-list-of-maps) — every bundled skill parses with `inputs: []`, so the design
-launch flow's Inputs block is always empty. Session: session/skillinputs-0911,
-worktree allternit-session-skillinputs-0911.
+Issue #374: give the Design launch screen a skill-inputs collection form.
+Parser fixed last session (PR #372); this session is the UI half so `od.inputs`
+reach the run prompt end-to-end. Session: session/skillinputui-0911, worktree
+allternit-session-skillinputui-0911. P0 use-case gallery follows as session B.
 
 ## Just did
-- Rewrote parseYamlFrontmatter as a recursive indentation parser (nested maps,
-  sequences of scalars AND of maps, inline arrays, quoted/numeric/bool scalars,
-  |/> block scalars, standalone-line fence). Replaced 145-line flat loop.
-- New skill-registry.test.ts: 8 tests (saas-landing verbatim fixture end-to-end,
-  synthetic enum/integer/i18n/folded fixture, fence edge case, no-fence case).
-- Exported RAW_SKILLS; bundled-skills.test.ts now asserts every skill declaring
-  od.inputs parses >0 well-formed inputs (issue #368 regression lock).
-- Verified: typecheck 0 errors; vitest src/lib/design 27/27 (was 18);
-  vitest src/shell 21/21; live spot-check: 15/15 input-declaring skills parse
-  fully-typed inputs (labels, placeholders, defaults, required).
+- Scoped: NewProjectScreen ignores onChangeSkillValues and renders no fields;
+  plumbing downstream is complete. testing-library + jsdom available for a
+  component test. Plan at .steering/plans/plan-skillinputui-0911.md.
 
 ## Next
-- Commit, push, PR, merge, ledger attestation, release-preflight, desktop
-  rebuild, worktree cleanup per AGENTS.md ritual.
+- Implement ad-skill-inputs form (per-type controls, required gating), styles,
+  component test off the saas-landing fixture, verify, PR → merge → ledger →
+  rebuild → cleanup.
 
 ## Open questions
 - None.
