@@ -683,6 +683,60 @@ mod tests {
     }
 
     #[test]
+    fn credit_with_idempotency_replays_return_the_first_entry() {
+        let ledger = test_ledger();
+        let org = "org-1";
+
+        let first = ledger
+            .credit_with_idempotency(
+                org,
+                1000,
+                TransactionType::Purchase,
+                Some("stripe pack"),
+                Some("stripe_checkout"),
+                Some("evt_1"),
+                None,
+                Some("stripe-evt_1"),
+            )
+            .unwrap();
+        assert_eq!(ledger.balance_cents(org).unwrap(), 1000);
+
+        // Same key (a Stripe webhook retry) must replay the first entry,
+        // not credit again — even with a different amount.
+        let replay = ledger
+            .credit_with_idempotency(
+                org,
+                9999,
+                TransactionType::Purchase,
+                Some("stripe pack"),
+                Some("stripe_checkout"),
+                Some("evt_1"),
+                None,
+                Some("stripe-evt_1"),
+            )
+            .unwrap();
+        assert_eq!(first.id, replay.id);
+        assert_eq!(replay.amount_cents, 1000, "the replayed entry is the original");
+        assert_eq!(ledger.balance_cents(org).unwrap(), 1000);
+        assert_eq!(ledger.list(org, 10).unwrap().len(), 1);
+
+        // A different key credits normally.
+        ledger
+            .credit_with_idempotency(
+                org,
+                500,
+                TransactionType::Purchase,
+                None,
+                None,
+                None,
+                None,
+                Some("stripe-evt_2"),
+            )
+            .unwrap();
+        assert_eq!(ledger.balance_cents(org).unwrap(), 1500);
+    }
+
+    #[test]
     fn purchase_and_balance() {
         let ledger = test_ledger();
         let org = "org-1";

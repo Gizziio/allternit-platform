@@ -1,25 +1,24 @@
-# Steering checkpoint — session/console-be-p8
+# Steering checkpoint — session/console-be-p9
 
 ## Goal
-Backend build-out Phase 8 (G13–G14): (1) data-residency enforcement — gateway resolves org policy (data_residency_policies, data_residency_routes.rs CRUD-only today) during provider selection (llm_gateway/provider_routing.rs resolve step), restricting candidates by region; data_residency_violation error when no compliant provider. (2) Org rate limits: admin GET/PUT /api/v1/admin/rate-limits (read/write organizations.api_rate_limit_rpm — middleware already reads it, rate_limit.rs:1-50); org-level gateway LLM RPM limit (new column + check in llm_gateway/auth.rs beside budget pre-check). (3) Vaults PATCH/update endpoint (allternit_vault.rs has POST/GET/DELETE only).
+Backend build-out Phase 9 (G15, MONEY): credits ↔ Stripe — credit-pack checkout → webhook-confirmed grant into the allternit-api org credits ledger, with end-to-end idempotency and a /credits/purchase honesty gate.
 
-## Just did
-- V149 migration (next-free; V148 was taken by content_artifacts): providers.region TEXT NOT NULL DEFAULT 'global' + organizations.gateway_rate_limit_rpm INTEGER NULL.
-- New llm_gateway/data_residency.rs: per-org 10s-TTL policy cache + invalidation hook, provider_regions lookup (missing row → 'global'), apply_policy (drops non-compliant fallbacks, promotes compliant fallback, ResidencyViolation naming pinned regions), enforce() async wrapper, 451 + data_residency_violation error.
-- Hooked into proxy.rs chat_completions right after resolve_model (covers primary + Gizzi fallbackModels + nonstream retry chain).
-- data_residency_routes::set_policy now invalidates the cache.
-- New admin_rate_limit_routes.rs: GET/PUT /admin/rate-limits, org-admin gated like spend limits, mounted in main.rs. PUT accepts 1..=1_000_000 or null-to-clear; 0 rejected (middleware clamps .max(1) — NOT unlimited; documented). Serde double-Option needs custom deserializer to distinguish null vs missing.
-- auth.rs: org_rate_limit_middleware (in-memory sliding window per tenant, 429 + org_rate_limited), wired between per-key rate limit and DLP in llm_gateway_router.
-- allternit_vault.rs: PATCH /vaults/:id + /beta/vaults/:id (name/description; 404 matches existing).
-- New unit tests all green: data_residency 9, admin_rate_limit_routes 5, auth 6, vault 3.
+## Status: IMPLEMENTATION + VERIFICATION COMPLETE (uncommitted, awaiting human review/PR)
+
+## Just did (full session)
+- allternit-api: `ALLTERNIT_CREDITS_CHECKOUT_ENABLED` honesty gate on POST /credits/purchase (409 "credits purchase is not enabled in this deployment; use the billing checkout" unless flag set AND cloud API configured; then returns the billing checkout URL, never self-credits); internal-token grant path on /admin/credits/grant (synthetic `internal-service` identity from auth_middleware + header re-verified in handler; org + idempotency_key mandatory; reference_type stripe_checkout; 404 on unknown org); `credit_purchase_idempotency` ledger replay verified; BILLING_CREDIT_PURCHASE webhook delivery moved to the internal grant path.
+- cloud-api: checkout metadata gains `allternit_org_id` (400 at checkout when bridge on but no org); webhook grants only on mode=payment + payment_status=paid (async payment methods settle via checkout.session.async_payment_succeeded, now also handled); `webhook_events` dedup table (migrations_pg 015, registered as v15) written after successful grant; `services/fabric_ledger.rs` bridge client (ALLTERNIT_FABRIC_LEDGER_URL + ALLTERNIT_INTERNAL_SERVICE_TOKEN, 5s timeout); misconfigured bridge (URL without token) refuses to grant; wallet fallback preserved + recorded so enabling the bridge later never re-grants old events.
+- Docs: cmd/allternit-cloud-api/docs/credits-stripe-bridge.md (flow, cross-service auth, env flags, deployment requirement, not-production-live notes).
+
+## Verification evidence
+- cargo test -p allternit-cloud-api --no-fail-fast: lib 294 passed / 1 failed (pre-existing docker-env contabo test); integration_tests 0/32 (pre-existing tests/common harness breakage — confirmed identical failure with changes stashed); cost_params 3/3, e2e 1/1 + 1 ignored, billing_webhook_grants 1/1 (new HTTP-level signed-webhook test: forged signature 401, paid event grants once, replay idempotentReplay=true, no double grant).
+- cargo test -p allternit-api --no-fail-fast: lib 1005 passed / 6 failed = known pre-existing set exactly (4× agent_cloud OS-control-plane + 1× rails gate + 1× scheduler claim_race flake, both "possibly" items from the brief's list); integration binaries all green (health_metrics 6/6, viz_routes 14/14).
+- node scripts/release-preflight.mjs: 35 passed, 0 failed.
+- LIVE TEST-MODE round trip (operator has stripe CLI test profile): `stripe listen` → local cloud-api with test keys; real checkout session created via POST /billing/checkout (metadata contract on the session, verified via retrieve); `stripe trigger checkout.session.completed` with metadata overrides → Stripe-signed delivery → webhook verified signature → $10 granted once (credit_transactions + user_credits + webhook_events rows); GET /billing/credits shows balance_usd 10.0. No live keys touched, no real charge, all rows/processes/key file cleaned up.
 
 ## Next
-- Full cargo test -p allternit-api; live smoke on scratch port; release-preflight; PR.
-
-## Verification (2026-09-12)
-- cargo test -p allternit-api --lib: 1001 passed, 5 failed — all 5 in the known pre-existing env set (4× agent_cloud OS-control-plane "did not log its listening port", 1× rails gate_data_plane_round_trip). Integration tests (health_metrics 6, viz_routes 14): all pass.
-- Live smoke (scratch port 18099, temp DB, dev-bypass + desktop-token identity): GET rate-limits defaults → PUT round-trip → 0/out-of-range 400s → gateway org RPM 2 → 3rd request 429 org_rate_limited → pin us-east-1 (openai compliant passes filter; anthropic/global 451 data_residency_violation) → re-pin eu-west-1 blocked openai immediately (cache invalidation live) → enforce off → unrestricted 200 → vault POST/PATCH/404 all correct. Server killed, scratch removed.
-- node scripts/release-preflight.mjs: 35 passed, 0 failed.
+- Human review → PR (session rules: commit/push/PR/merge are human-gated steps this session was told not to perform: "Do NOT run git commit/push").
+- Production wiring still required: set ALLTERNIT_FABRIC_LEDGER_URL + ALLTERNIT_INTERNAL_SERVICE_TOKEN (same value both services) to turn on fabric-ledger grants; set ALLTERNIT_CREDITS_CHECKOUT_ENABLED on allternit-api to open the /credits/purchase delegation.
 
 ## Open questions
-- Provider region is set at the DB/seed level (providers.region); there is no provider write route today — region exposure in provider_routes list responses left as follow-up if wanted.
+- None.

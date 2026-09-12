@@ -60,6 +60,14 @@ pub struct CompanyConfig {
     #[serde(rename = "internalServiceToken")]
     pub internal_service_token: Option<String>,
 
+    /// Whether the Stripe-backed credit-pack checkout is live in this
+    /// deployment. `POST /credits/purchase` refuses with 409 ("not enabled")
+    /// unless this is true AND a cloud API (billing checkout backend) is
+    /// configured — the endpoint never self-credits. Env
+    /// `ALLTERNIT_CREDITS_CHECKOUT_ENABLED` overrides this file value.
+    #[serde(rename = "creditsCheckoutEnabled")]
+    pub credits_checkout_enabled: Option<bool>,
+
     /// Cloudflare Remote Control push worker URL. Optional.
     #[serde(rename = "pushWorkerUrl")]
     pub push_worker_url: Option<String>,
@@ -277,6 +285,20 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
             .or_else(|| self.company.cloud_api_url.clone())
             .filter(|s| !s.is_empty())
+    }
+
+    /// Whether `POST /credits/purchase` may delegate to the platform billing
+    /// checkout. False by default: the endpoint then answers 409 "not
+    /// enabled" instead of self-crediting, and only an explicit opt-in
+    /// (`ALLTERNIT_CREDITS_CHECKOUT_ENABLED=true`/`1` or the company config
+    /// flag) turns the delegation path on — and even then only when a cloud
+    /// API checkout backend is configured.
+    pub fn credits_checkout_enabled(&self) -> bool {
+        std::env::var("ALLTERNIT_CREDITS_CHECKOUT_ENABLED")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .map(|value| value == "true" || value == "1")
+            .unwrap_or(self.company.credits_checkout_enabled.unwrap_or(false))
     }
 
     /// Default LLM provider/model when a request does not specify one.

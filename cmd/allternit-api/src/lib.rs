@@ -267,6 +267,24 @@ pub mod test_helpers {
             company: config::CompanyConfig::default(),
             user: config::UserConfig::default(),
         };
+        app_state_with_config_and_os(temp, config, vm_driver, os_control_plane).await
+    }
+
+    /// Like `app_state`, with an explicit config — for tests that exercise
+    /// config-gated behavior (e.g. the credits-purchase honesty gate).
+    pub async fn app_state_with_config(
+        temp: &Path,
+        config: AppConfig,
+    ) -> Arc<AppState> {
+        app_state_with_config_and_os(temp, config, None, None).await
+    }
+
+    async fn app_state_with_config_and_os(
+        temp: &Path,
+        config: AppConfig,
+        vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
+        os_control_plane: Option<crate::fabric::os_client::OsControlPlaneClient>,
+    ) -> Arc<AppState> {
         let db = db::DbHandle::new(temp.join("test.db")).expect("test db");
         let auth_config = auth::AuthConfig::from_app_config(&config);
         let jwks = auth::JwksManager::new(&auth_config);
