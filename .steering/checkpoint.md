@@ -1,15 +1,9 @@
-# Checkpoint — artdecisions-0912
+# Checkpoint — csp-egress-0912
 
-## Goal
-Record Eoj's 7 Artifacts API decisions into docs/design/artifacts-api.md (§6 publish tier x4, §6 relay tier x2, §8 version retention x1), unblock Phase 3, comment on issues 386/387/388/389. Docs-only session — no desktop rebuild.
+**Goal:** Fix issue #396 — inject strict CSP into artifact iframe srcdocs, close egress hole, tests, DESIGN.md §11 update, desktop rebuild.
 
-## Just did
-- Fetched origin/main, created worktree allternit-session-artdecisions-0912 on branch session/artdecisions-0912.
-- Read docs/design/artifacts-api.md fully (346 lines).
-- Recorded all 7 decisions: §6 publish tier (shared project/per-user routes, version snapshot, immutable deployments/route-only unpublish, sandbox-policy publish gate), §6 relay tier (mint local id + origin in provenance, standard sandbox for received), §8 retention (cap 50, admin-configurable, prune oldest). Updated §7 Phase 2/Phase 3 notes and the header status line. OPEN lists rewritten as answered decisions, dated 2026-09-12 / Eoj.
+**Just did:** Implemented `sandbox-csp.ts` (`ARTIFACT_CSP` + `injectSandboxCsp`), wired into HTMLRenderer srcdoc pipeline (CSP before storage shim). Extended ArtifactRenderer tests (9 tests). Updated DESIGN.md §11 (CSP now in 11.1 enforced; removed the 11.2 "No CSP" advisory). Verified: vitest artifact 9/9, src/lib/design 73/73, typecheck 0 errors, release-preflight 35/0.
 
-## Next
-Markdown consistency verified by re-reading edited sections. Commit, push, PR, merge (--merge). Then issue comments (386 epic, 389, 387, 388), ledger branch, cleanup.
+**Next:** Commit + push, PR, merge, close issue #396, ledger branch, desktop rebuild, cleanup.
 
-## Open questions
-None — all 7 decisions supplied by owner in session spec.
+**Open questions:** None. No per-renderer CSP exceptions needed — templates are fully self-contained; documented in §11.1. LibraryItemDialog has its own srcdoc iframe using only the storage shim (same class of gap) — out of scope for #396, noted in PR.
