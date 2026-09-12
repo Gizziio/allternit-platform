@@ -55,6 +55,14 @@
 .ad-popover--attach > button:hover,.ad-type-picker > button:hover { background: var(--launch-card-soft); }
 .ad-popover--attach span,.ad-type-picker span { display: flex; flex: 1; flex-direction: column; }
 .ad-popover b { font-size: 10px; }.ad-popover small { color: var(--launch-muted); font-size: 8px; }
+/* §6 P1 — model chip popover (same pattern as the Format picker). */
+.ad-model-picker { width: 260px; max-height: 320px; overflow-y: auto; }
+.ad-model-picker > button { width: 100%; display: flex; align-items: center; gap: 9px; padding: 9px; border: 0; border-radius: 7px; background: transparent; color: var(--launch-text); text-align: left; cursor: pointer; }
+.ad-model-picker > button:hover { background: var(--launch-card-soft); }
+.ad-model-picker > button.is-selected { background: color-mix(in srgb, var(--launch-accent) 8%, transparent); }
+.ad-model-picker > button > svg:first-child { flex: none; color: var(--launch-muted); }
+.ad-model-picker > button span { display: flex; flex: 1; flex-direction: column; overflow: hidden; }
+.ad-model-picker__status { margin: 4px 2px; color: var(--launch-muted); font-size: 9px; line-height: 1.5; }
 .ad-popover__search { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid var(--launch-border); border-radius: 7px; }
 .ad-popover__search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--launch-text); font-size: 10px; }
 .ad-system-picker { width: 360px; }
