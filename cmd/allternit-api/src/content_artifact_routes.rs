@@ -99,7 +99,9 @@ struct CreateBody {
     prompt: Option<String>,
     #[serde(alias = "designSystemId")]
     design_system_id: Option<String>,
+    #[serde(alias = "skillId")]
     skill_id: Option<String>,
+    #[serde(alias = "skillName")]
     skill_name: Option<String>,
     #[serde(alias = "sandboxPolicy")]
     sandbox_policy: Option<String>,
@@ -821,48 +823,43 @@ async fn list_content_artifacts(
 
         // Cursor pagination on (created_at, id) — the repo convention (see
         // beta_memory_store_routes / admin_audit_routes). Ties on the
-        // second-precision timestamp are broken by id.
+        // second-precision timestamp are broken by id. Each placeholder index
+        // is computed immediately before its bind is pushed.
         let mut sql = format!("{META_SELECT} WHERE user_id = ?1 AND deleted_at IS NULL");
         let mut binds: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(user_id)];
+        let push_bind = |value: Box<dyn rusqlite::ToSql>, binds: &mut Vec<Box<dyn rusqlite::ToSql>>| -> String {
+            let idx = binds.len() + 1;
+            binds.push(value);
+            format!("?{idx}")
+        };
         if let Some(t) = &query.artifact_type {
-            sql.push_str(" AND type = ?");
-            sql.push_str(&(binds.len() + 1).to_string());
-            binds.push(Box::new(t.clone()));
+            let ph = push_bind(Box::new(t.clone()), &mut binds);
+            sql.push_str(&format!(" AND type = {ph}"));
         }
         if let Some(p) = &query.project {
-            sql.push_str(" AND project_id = ?");
-            sql.push_str(&(binds.len() + 1).to_string());
-            binds.push(Box::new(p.clone()));
+            let ph = push_bind(Box::new(p.clone()), &mut binds);
+            sql.push_str(&format!(" AND project_id = {ph}"));
         }
         if let Some(q) = &query.q {
             let like = format!("%{}%", q.replace('%', "").replace('_', ""));
-            sql.push_str(" AND (title LIKE ?");
-            sql.push_str(&(binds.len() + 1).to_string());
-            sql.push_str(" OR prompt LIKE ?");
-            sql.push_str(&(binds.len() + 1).to_string());
-            sql.push(')');
-            binds.push(Box::new(like.clone()));
-            binds.push(Box::new(like));
+            let ph_title = push_bind(Box::new(like.clone()), &mut binds);
+            let ph_prompt = push_bind(Box::new(like), &mut binds);
+            sql.push_str(&format!(" AND (title LIKE {ph_title} OR prompt LIKE {ph_prompt})"));
         }
         if let Some(cursor) = &query.cursor {
             let parts: Vec<&str> = cursor.split('|').collect();
             if parts.len() != 2 {
                 return Ok(Err("cursor must be created_at|id".to_string()));
             }
-            sql.push_str(" AND (created_at > ?");
-            sql.push_str(&(binds.len() + 1).to_string());
-            sql.push_str(" OR (created_at = ?");
-            sql.push_str(&(binds.len() + 1).to_string());
-            sql.push_str(" AND id > ?");
-            sql.push_str(&(binds.len() + 1).to_string());
-            sql.push_str("))");
-            binds.push(Box::new(parts[0].to_string()));
-            binds.push(Box::new(parts[0].to_string()));
-            binds.push(Box::new(parts[1].to_string()));
+            let ph_created = push_bind(Box::new(parts[0].to_string()), &mut binds);
+            let ph_created_eq = push_bind(Box::new(parts[0].to_string()), &mut binds);
+            let ph_id = push_bind(Box::new(parts[1].to_string()), &mut binds);
+            sql.push_str(&format!(
+                " AND (created_at > {ph_created} OR (created_at = {ph_created_eq} AND id > {ph_id}))"
+            ));
         }
-        sql.push_str(" ORDER BY created_at ASC, id ASC LIMIT ?");
-        sql.push_str(&(binds.len() + 1).to_string());
-        binds.push(Box::new(limit + 1));
+        let ph_limit = push_bind(Box::new(limit + 1), &mut binds);
+        sql.push_str(&format!(" ORDER BY created_at ASC, id ASC LIMIT {ph_limit}"));
 
         let binds_ref: Vec<&dyn rusqlite::ToSql> = binds.iter().map(|b| b.as_ref()).collect();
         let mut stmt = conn.prepare(&sql)?;
@@ -1036,15 +1033,6 @@ mod tests {
             .header("Content-Type", "application/json")
             .body(Body::from(payload.to_string()))
             .unwrap()
-    }
-
-    // AuthUser must be Clone for the helper above; if it is not, the build
-    // fails here and the helper is adjusted.
-    #[allow(dead_code)]
-    fn assert_clone<T: Clone>() {}
-    #[allow(dead_code)]
-    fn _auth_user_is_clone() {
-        assert_clone::<AuthUser>();
     }
 
     async fn create_artifact(
@@ -1519,12 +1507,16 @@ mod tests {
         let page1 = body_json(resp.into_body()).await;
         assert_eq!(page1["artifacts"].as_array().unwrap().len(), 2);
         let cursor = page1["next_cursor"].as_str().unwrap().to_string();
+        // RFC3339 cursors contain '+' (the UTC offset), which must be
+        // percent-encoded in a query string — otherwise '+' decodes to a
+        // space and the cursor comparison silently matches everything.
+        let encoded_cursor = cursor.replace('+', "%2B");
         let resp = app
             .clone()
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri(format!("/content-artifacts?limit=2&cursor={cursor}"))
+                    .uri(format!("/content-artifacts?limit=2&cursor={encoded_cursor}"))
                     .extension(user.clone())
                     .body(Body::empty())
                     .unwrap(),
