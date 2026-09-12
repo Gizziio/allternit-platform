@@ -9,7 +9,7 @@ function Wrapper({ children, mode = 'chat' as const }: { children: React.ReactNo
 }
 
 describe('BottomDock mode toggle', () => {
-  it('renders Home, Cowork, and Bots buttons in chat mode', () => {
+  it('renders Chat, Cowork, and Bots buttons in chat mode', () => {
     render(
       <Wrapper>
         <BottomDock
@@ -19,7 +19,7 @@ describe('BottomDock mode toggle', () => {
       </Wrapper>
     );
 
-    expect(screen.getByRole('button', { name: /Home/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Chat/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cowork/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Bots/i })).toBeInTheDocument();
   });
@@ -34,7 +34,7 @@ describe('BottomDock mode toggle', () => {
       </Wrapper>
     );
 
-    expect(screen.getByRole('button', { name: /Home/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Chat/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cowork/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Bots/i })).toBeInTheDocument();
   });
@@ -70,7 +70,7 @@ describe('BottomDock mode toggle', () => {
       </Wrapper>
     );
 
-    expect(screen.queryByRole('button', { name: /Home/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Chat/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Cowork/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Bots/i })).not.toBeInTheDocument();
   });
@@ -85,7 +85,7 @@ describe('BottomDock mode toggle', () => {
       </ModeProvider>
     );
 
-    expect(screen.queryByRole('button', { name: /Home/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Chat/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Cowork/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Bots/i })).not.toBeInTheDocument();
   });
