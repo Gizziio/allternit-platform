@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow } from '@phosphor-icons/react';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow, SquaresFour } from '@phosphor-icons/react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type { RuntimeViewModel } from '@/components/dispatch/useRuntimes';
 import { cn } from '@/lib/utils';
@@ -19,12 +19,13 @@ import {
   type FabricQuestionRequest,
   type PushSubscriptionJSON,
 } from '@/lib/dispatch/fabric-session-client';
-import { FABRIC_DRIVE_KINDS, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
-import { extractAciScreenshot, FabricAciDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive } from '@/components/dispatch/FabricSessionDriveViews';
-import { ACIComputerUseView } from '@/capsules/browser/ACIComputerUseView';
+import { FABRIC_DRIVE_KINDS, fabricAppModeKind, fabricKindAppMode, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
+import { FabricCodeDrive, FabricKindIcon, isFabricKeepalive, latestComputerFrame, partImageSrc } from '@/components/dispatch/FabricSessionDriveViews';
+import { FabricAciModeCanvas } from '@/components/dispatch/FabricAciModeCanvas';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { FabricBotModeCanvas, FabricBotModeRail, type FabricBotView } from '@/components/dispatch/FabricBotMode';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
+import { useMode } from '@/providers/mode-provider';
 
 export interface FabricSessionPanelProps {
   runtimeId: string;
@@ -68,7 +69,29 @@ export function FabricSessionPanel({
   const [driveKindState, setDriveKindState] = useState<FabricDriveKind>('chat');
   const driveKind = driveKindProp ?? driveKindState;
   const setDriveKind = onDriveKindChange ?? setDriveKindState;
-  const [codePane, setCodePane] = useState<'terminal' | 'chat'>('terminal');
+
+  // The fabric drive kind is the source of truth; mirror it into the
+  // platform app mode so desktop views mounted here (bot composer dock,
+  // mode-accented chrome) behave exactly as they do on the desktop shell.
+  const { setMode } = useMode();
+  useEffect(() => {
+    setMode(fabricKindAppMode(driveKind));
+  }, [driveKind, setMode]);
+
+  // The composer dock's Chat/Cowork/Bots toggle routes through this event on
+  // the desktop shell; map it back onto the fabric drive kind so the toggle
+  // also switches rails here instead of being a dead click.
+  useEffect(() => {
+    const onSwitchMode = (event: Event) => {
+      const mode = (event as CustomEvent<{ mode?: string }>).detail?.mode;
+      if (!mode) return;
+      const next = fabricAppModeKind(mode);
+      if (next) setDriveKind(next);
+    };
+    window.addEventListener('allternit:switch-mode', onSwitchMode);
+    return () => window.removeEventListener('allternit:switch-mode', onSwitchMode);
+  }, [setDriveKind]);
+  const [codePane, setCodePane] = useState<'terminal' | 'sessions' | 'chat'>('terminal');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [railCollapsedState, setRailCollapsedState] = useState(() => {
@@ -129,8 +152,6 @@ export function FabricSessionPanel({
     [],
   );
   const [aciRunId, setAciRunId] = useState<string | null>(null);
-  const [aciScreenshot, setAciScreenshot] = useState<string | null>(null);
-  const [aciOpening, setAciOpening] = useState(false);
   const [localWatching, setLocalWatching] = useState(false);
   const aciWatching = watchingProp ?? localWatching;
   const toggleAciWatch = onToggleWatch ?? (() => setLocalWatching((v) => !v));
@@ -209,9 +230,7 @@ export function FabricSessionPanel({
   }, [fetchDetail]);
 
   useEffect(() => {
-    setAciScreenshot(null);
     setAciRunId(null);
-    setAciOpening(false);
     useBrowserAgentStore.setState({
       screenshot: null,
       status: 'Idle',
@@ -221,6 +240,18 @@ export function FabricSessionPanel({
       currentLayer: null,
     });
   }, [selectedSessionId]);
+
+  // No live stream yet (not watching / run finished): show the session's
+  // last computer frame in the ACI viewport instead of a blank idle state.
+  useEffect(() => {
+    if (driveKind !== 'aci') return;
+    const store = useBrowserAgentStore.getState();
+    if (store.screenshot || store.status === 'Running' || store.status === 'WaitingApproval') return;
+    const frame = latestComputerFrame(detail, events);
+    if (!frame) return;
+    const b64 = frame.replace(/^data:image\/[a-z0-9+]+;base64,/i, '');
+    useBrowserAgentStore.setState({ screenshot: b64 });
+  }, [driveKind, detail, events, selectedSessionId]);
 
   useEffect(() => {
     if (!selectedSessionId) return;
@@ -266,7 +297,6 @@ export function FabricSessionPanel({
   }, [fabricClient, selectedSessionId, addToast, fetchSessions]);
 
   const openComputer = useCallback(async (goal: string) => {
-    setAciOpening(true);
     useBrowserAgentStore.setState({
       goal,
       status: 'Running',
@@ -279,16 +309,23 @@ export function FabricSessionPanel({
         goal,
         model: selectedBrain ? `${selectedBrain.providerID}/${selectedBrain.modelID}` : undefined,
       });
-      if (run.sessionId) setAciRunId(run.sessionId);
+      if (run.sessionId) {
+        setAciRunId(run.sessionId);
+        // Open the run in the ACI rail and start watching it live, the same
+        // way the desktop shell lands an ACI run in browser mode.
+        setDriveKind('aci');
+        pickSession(run.sessionId);
+        if (!aciWatching) toggleAciWatch();
+      }
     } catch (error) {
       addToast({
         title: 'Could not open computer',
         description: error instanceof Error ? error.message : 'ACI run failed',
         type: 'error',
       });
-      setAciOpening(false);
+      useBrowserAgentStore.setState({ status: 'Done' });
     }
-  }, [addToast, fabricClient, selectedBrain]);
+  }, [addToast, fabricClient, selectedBrain, setDriveKind, pickSession, aciWatching, toggleAciWatch]);
 
   useEffect(() => {
     const onVis = () => setPageVisible(document.visibilityState === "visible");
@@ -306,11 +343,6 @@ export function FabricSessionPanel({
         for await (const frame of fabricClient.streamAci(runId)) {
           if (!active) break;
           useBrowserAgentStore.getState().ingestAciStreamEvent(frame);
-          const shot = extractAciScreenshot(frame);
-          if (shot) {
-            setAciScreenshot(shot);
-            setAciOpening(false);
-          }
           if (frame.type === 'done') break;
         }
       } catch {
@@ -331,6 +363,10 @@ export function FabricSessionPanel({
     () => sessions.filter((entry) => fabricSessionKind(entry.session) === driveKind),
     [sessions, driveKind]
   );
+
+  // Code mode full-pane drives: the session terminal and the Termius-style
+  // multi-session terminal both own the whole canvas (no message list).
+  const codeDriveVisible = driveKind === 'code' && (codePane === 'terminal' || codePane === 'sessions');
 
   useEffect(() => {
     setDriveKind('chat');
@@ -401,9 +437,6 @@ export function FabricSessionPanel({
     setSending(true);
     const text = composerText.trim();
     try {
-      if (driveKind === 'aci') {
-        await openComputer(text);
-      }
       await fabricClient.sendMessage(selectedSessionId, {
         text,
         model: selectedBrain ?? undefined,
@@ -687,6 +720,16 @@ export function FabricSessionPanel({
             groupId={botViewGroupId}
             onView={applyBotView}
           />
+        ) : driveKind === 'aci' ? (
+          <FabricAciModeCanvas
+            session={selectedSession ?? null}
+            hostName={runtime?.name || runtime?.host}
+            onRunGoal={(goal) => void openComputer(goal)}
+            onStopRun={() => {
+              const runId = aciRunId ?? selectedSessionId;
+              if (runId) void fabricClient.abortSession(runId);
+            }}
+          />
         ) : !selectedSession ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
@@ -738,6 +781,18 @@ export function FabricSessionPanel({
                     </button>
                     <button
                       type="button"
+                      onClick={() => setCodePane('sessions')}
+                      title="Termius-style terminal sessions on this node"
+                      className={cn(
+                        'px-2.5 py-1.5 text-[12px] font-semibold border-none cursor-pointer rounded-md',
+                        codePane === 'sessions' ? 'bg-[var(--bg-primary)] text-[var(--accent-primary)]' : 'bg-transparent text-[var(--shell-item-muted)]'
+                      )}
+                    >
+                      <SquaresFour size={12} className="inline mr-1" />
+                      Sessions
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setCodePane('chat')}
                       className={cn(
                         'px-2.5 py-1.5 text-[12px] font-semibold border-none cursor-pointer rounded-md',
@@ -762,31 +817,26 @@ export function FabricSessionPanel({
               </div>
             </div>
 
-            <div className={cn('flex-1 min-h-0 p-4 space-y-3', (driveKind === 'code' && codePane === 'terminal') || driveKind === 'aci' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto')}>
+            <div className={cn('flex-1 min-h-0 p-4 space-y-3', codeDriveVisible ? 'flex flex-col overflow-hidden' : 'overflow-y-auto')}>
               {driveKind === 'code' && codePane === 'terminal' && selectedSession ? (
                 <FabricCodeDrive session={selectedSession} detail={detail} events={events} />
               ) : null}
-              {driveKind === 'aci' && selectedSession ? (
-                <FabricAciDrive
+              {driveKind === 'code' && codePane === 'sessions' && selectedSession ? (
+                <FabricCodeDrive
                   session={selectedSession}
                   detail={detail}
                   events={events}
-                  hostName={runtime?.name || runtime?.host}
-                  screenshot={aciScreenshot}
-                  opening={aciOpening}
-                  onOpenComputer={() => void openComputer('Open the desktop so I can see the screen.')}
-                  watching={aciWatching}
-                  onToggleWatch={toggleAciWatch}
-                  liveView={<ACIComputerUseView agentBarHeight={0} />}
+                  terminalSessionId={`fabric-terminals:${runtimeId}`}
+                  terminalWorkingDir={undefined}
                 />
               ) : null}
-              {driveKind !== 'aci' && !(driveKind === 'code' && codePane === 'terminal') && detailLoading && (
+              {!codeDriveVisible && detailLoading && (
                 <div className="flex items-center text-xs text-[var(--text-tertiary)]">
                   <Spinner className="animate-spin mr-2" size={14} />
                   Loading messages…
                 </div>
               )}
-              {driveKind !== 'aci' && !(driveKind === 'code' && codePane === 'terminal') && detail?.messages.map((msg) => (
+              {!codeDriveVisible && detail?.messages.map((msg) => (
                 <div
                   key={msg.info.id}
                   className={cn(
@@ -797,15 +847,25 @@ export function FabricSessionPanel({
                   )}
                   style={msg.info.role === 'user' ? { background: 'var(--accent-primary)', color: 'var(--bg-primary)' } : undefined}
                 >
-                  {msg.parts
-                    .filter((p) => p.type === 'text')
-                    .map((p: any, i: number) => (
-                      <div key={i}>{p.text}</div>
-                    ))}
+                  {msg.parts.map((p: any, i: number) => {
+                    if (p.type === 'text') return <div key={i}>{p.text}</div>;
+                    const src = partImageSrc(p as Record<string, unknown>);
+                    if (src) {
+                      return (
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          className="mt-1 max-w-full rounded-lg border border-solid border-[var(--border-subtle)]"
+                        />
+                      );
+                    }
+                    return null;
+                  })}
                 </div>
               ))}
 
-              {sessionPermissions.map((permission) => (
+              {!codeDriveVisible && sessionPermissions.map((permission) => (
                 <PendingPermissionCard
                   key={permission.id}
                   permission={permission}
@@ -814,7 +874,7 @@ export function FabricSessionPanel({
                 />
               ))}
 
-              {sessionQuestions.map((question) => (
+              {!codeDriveVisible && sessionQuestions.map((question) => (
                 <PendingQuestionCard
                   key={question.id}
                   question={question}
@@ -827,14 +887,14 @@ export function FabricSessionPanel({
                 />
               ))}
 
-              {events.length > 0 && (
+              {!codeDriveVisible && events.length > 0 && (
                 <div className="text-xs text-[var(--text-tertiary)] pt-2 border-t border-[var(--border-subtle)]">
                   {events.filter((e) => !isFabricKeepalive(e.type)).length} events streamed
                 </div>
               )}
             </div>
 
-            {!(driveKind === 'code' && codePane === 'terminal') && (
+            {!codeDriveVisible && (
             <div className="p-3 border-t border-solid border-[var(--border-subtle)] bg-[var(--shell-view-bg)]">
               <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] px-3 pt-2.5 pb-2">
                 <textarea

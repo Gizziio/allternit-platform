@@ -1,0 +1,346 @@
+# A:// Artifacts API — Design
+
+Status: design for review (Phase 2 program, session `artifactsapi-0911`)
+Mapping doc: §2 row 16, Eoj amendment 2026-09-11
+
+## What this is
+
+The artifact library is the platform's best output type — sandboxed HTML
+documents the design agent produces and every surface can render. Today it is a
+design-mode detail: artifacts live in two IndexedDB stores
+(`allternit-design-gallery`, `allternit-design-files`) that only the web app
+can see, and the gateway has a *different* artifact API
+(`cmd/allternit-api/src/artifact_routes.rs`) that models sectioned text
+documents, not rendered artifacts.
+
+This design turns artifacts into the platform's shared content type: one
+artifact system, many surfaces. Every artifact gets an address
+(`a://artifact/<id>`), a canonical home in the local gateway on :8013, and a
+defined way for chat, cowork, design, code, and desktop to create, read, and
+version it.
+
+The market context: Anthropic's artifacts have no public API (verified
+2026-08 — no create/read/list/delete surface, no export, no addressing).
+That wall is their lock-in. Our position is the opposite: artifacts are
+first-class, addressable, and open. This doc is about the mechanics, not the
+marketing.
+
+Every claim below is grounded in code that exists today; paths are cited.
+
+## 1. Goals / non-goals
+
+**Goals (DECIDED)**
+
+- Artifacts are first-class addressable objects: `a://artifact/<id>`, served
+  over the local gateway (`cmd/allternit-api`, default port :8013,
+  `main.rs:995`).
+- One artifact system, many surfaces: chat, cowork, design, code, and desktop
+  all consume the same records through the same API. Surfaces stop owning
+  private artifact stores.
+- The gateway is canonical. Client-side stores (IndexedDB) become sync caches,
+  not sources of truth.
+- Non-destructive versioning from day one, aligned with the upcoming
+  file-versions work (same version-row shape, same retention questions).
+- Provenance is a first-class field: which session/project produced the
+  artifact, from what prompt, with which design system and skill.
+
+**Non-goals (DECIDED)**
+
+- **Viewer-pays AI artifacts: OUT.** Deferred per Eoj (2026-09-11 amendment).
+  No billing, metering, or marketplace mechanics in this program.
+- **Public-by-default anything: OUT.** Sharing is local unless the user takes
+  an explicit publish action (§6).
+- **Replacing the in-session `<artifact>` streaming format: OUT.** The
+  `<artifact type identifier title>` tag format parsed by
+  `src/lib/openui/artifact-parser.ts` (`splitOnArtifacts`) stays the
+  session-level wire format. The API stores what sessions produce; it does not
+  change how streams are emitted.
+- **Multi-device sync: not solved here.** Local-first means one gateway, one
+  machine (§8).
+- **General document store.** The existing `artifacts`/`artifact_sections`/
+  `artifact_revisions` tables (V1 baseline, `migrations/V1__baseline_schema.sql`)
+  serve the Next.js-style sectioned-document model and stay as-is. The A://
+  Artifacts API is a *content-artifact* model (renderable HTML-first objects).
+  Same gateway, adjacent tables, no migration of existing rows.
+
+## 2. Data model (DECIDED)
+
+New tables next to the existing document-artifact tables, in the same
+`allternit.db` (`main.rs:212`, data dir). Migrations follow the existing
+convention (`migrations/V<nnn>__<name>.sql`; latest is V145
+`beta_memory_entries`, so these land at **V146**).
+
+### `content_artifacts` — one row per artifact
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | TEXT PK | `art_<ulid>`; the `<id>` in `a://artifact/<id>` |
+| `user_id` | TEXT NOT NULL | from `AuthUser` (same convention as `artifact_routes.rs`) |
+| `title` | TEXT NOT NULL | display name |
+| `type` | TEXT NOT NULL | MIME-style; html-first (§2.1) |
+| `project_id` | TEXT | design project, when produced in one (gallery-store `projectId`) |
+| `source_session_id` | TEXT | producing session, when known |
+| `prompt` | TEXT | first user message of the producing run (gallery-store `prompt`) |
+| `design_system_id` | TEXT | gallery-store `designSystemId` |
+| `skill_id` / `skill_name` | TEXT | gallery-store `skillId` / `skillName` |
+| `sandbox_policy` | TEXT NOT NULL DEFAULT 'standard' | reference to the execution policy (§8.2) |
+| `thumbnail` | TEXT | JPEG dataURL, best-effort (same capture as `artifact-thumbnail.ts`) |
+| `current_version` | INTEGER NOT NULL DEFAULT 1 | denormalized pointer to latest version |
+| `created_at` / `updated_at` | DATETIME | RFC3339, `chrono::Utc::now().to_rfc3339()` as elsewhere |
+| `deleted_at` | DATETIME NULL | soft delete; rows purge later per retention (§8.3) |
+
+The provenance fields deliberately reuse the `GalleryEntry` field names
+(`surfaces/ai.allternit.com/src/lib/design/gallery-store.ts:13`) so the
+IndexedDB → gateway mapping is mechanical.
+
+### `content_artifact_versions` — one row per immutable version
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | TEXT PK | `ver_<ulid>` |
+| `artifact_id` | TEXT NOT NULL | FK → `content_artifacts.id`, cascade delete |
+| `version` | INTEGER NOT NULL | 1-based, monotonic per artifact; unique(artifact_id, version) |
+| `body` | TEXT NOT NULL | full artifact content (HTML/SVG/MD source) |
+| `body_sha256` | TEXT NOT NULL | content-hash dedupe, same idea as the P0 gallery capture |
+| `storage` | TEXT NOT NULL DEFAULT 'inline' | `inline` (row body) or `file` (body on disk, §4) |
+| `file_path` | TEXT NULL | set when storage = 'file' |
+| `created_at` | DATETIME | |
+
+Versions are append-only. Editing an artifact never rewrites a version row;
+it inserts the next one and bumps `current_version`. This is the same shape
+the file-versions work is converging on, so the two can share retention and
+diff tooling later.
+
+Indexes: `(artifact_id, version)` unique; `(user_id, created_at)` for list;
+`(type)`; `(project_id)`.
+
+### 2.1 Type system (DECIDED shape, typed renderers OPEN for P2)
+
+`type` is a MIME-style string. Html-first, per row 1:
+
+- `text/html` — default; rendered in the sandboxed srcDoc iframe
+  (`ArtifactRenderer.tsx:58-70`).
+- `image/svg+xml` — inline SVG renderer (`ArtifactRenderer.tsx:73-84`).
+- `text/markdown` — markdown renderer (as today).
+- `application/vnd.allternit.deck`, `…prototype`, `…mobile` — typed
+  renderers. Deck already has a real export path
+  (`artifact-export.ts` extracts slides from `<deck-stage>` / `.slide`
+  patterns for PPTX). Prototype and mobile get typed renderers in Phase 2 —
+  what a "typed renderer" adds beyond `text/html` + viewport metadata is an
+  OPEN question for that phase (deck = slide navigation; mobile = device
+  frame; prototype = hotspot linking). The *storage* model does not care.
+
+## 3. API shape (DECIDED, served at :8013 under `/api/v1`)
+
+New route module `cmd/allternit-api/src/content_artifact_routes.rs`, mounted
+exactly like `artifact_router()` (`.merge(...)` in `main.rs:783`, inside the
+protected `/api/v1` nest — same `Extension<AuthUser>` auth, same
+`AppState.db` handle, same `spawn_blocking` + rusqlite transaction pattern as
+`artifact_routes.rs`).
+
+Error convention matches the existing API: HTTP status + `{"error": "<message>"}`
+(see `create_artifact` in `artifact_routes.rs:397`). List endpoints return
+camelCase aliases for web-surface params (`#[serde(alias = "projectId")]`), as
+`ListQuery` already does.
+
+### `POST /api/v1/content-artifacts` — create (also creates version 1)
+
+```json
+// request
+{
+  "title": "Q3 deck — launch narrative",
+  "type": "application/vnd.allternit.deck",
+  "body": "<!DOCTYPE html>…",
+  "projectId": "proj_01J…",
+  "sourceSessionId": "ses_01J…",
+  "prompt": "Build a 6-slide deck for the Q3 launch…",
+  "designSystemId": "amber-law",
+  "skillId": "od.deck", "skillName": "Deck Builder",
+  "sandboxPolicy": "standard",
+  "idempotencyKey": "01J…-run-3"
+}
+
+// response 201
+{
+  "artifact": {
+    "id": "art_01J8ZK…",
+    "address": "a://artifact/art_01J8ZK…",
+    "title": "Q3 deck — launch narrative",
+    "type": "application/vnd.allternit.deck",
+    "version": 1,
+    "projectId": "proj_01J…",
+    "provenance": { "prompt": "…", "designSystemId": "amber-law",
+                    "skillId": "od.deck", "skillName": "Deck Builder",
+                    "sourceSessionId": "ses_01J…" },
+    "sandboxPolicy": "standard",
+    "createdAt": "2026-09-11T19:30:00Z",
+    "updatedAt": "2026-09-11T19:30:00Z"
+  }
+}
+```
+
+### `GET /api/v1/content-artifacts/:id` — read (current version body inline)
+
+200 returns the artifact with `body`; 404 `{"error":"not found"}`; rows are
+scoped to `user_id` like every other route in the crate.
+
+### `PUT /api/v1/content-artifacts/:id/versions` — append a version
+
+```json
+// request
+{ "body": "<!DOCTYPE html>…v2…", "idempotencyKey": "…" }
+// response 201 — { "version": 2, "artifactId": "art_01J8ZK…" }
+```
+
+Also exposed as `PATCH /api/v1/content-artifacts/:id` with `{ "body": … }`
+convenience (update = append version + bump pointer), matching the
+`PATCH` convention the document-artifact routes already use.
+
+### `GET /api/v1/content-artifacts/:id/versions` — list versions (no bodies)
+
+### `GET /api/v1/content-artifacts/:id/versions/:n` — read one version (body inline)
+
+### `GET /api/v1/content-artifacts?type=&project=&q=&limit=&cursor=` — list
+
+Filterable by `type`, `project`, free-text `q` over title/prompt. Cursor
+pagination (limit + `created_at` cursor), the pattern used by the console
+memory-store work — no OFFSET paging.
+
+### `DELETE /api/v1/content-artifacts/:id` — soft delete
+
+Sets `deleted_at`; list/get exclude it. Hard purge is a retention concern
+(§8.3), not an API concern.
+
+### Idempotency (DECIDED)
+
+`Idempotency-Key` header (preferred) or `idempotencyKey` body field. Keyed on
+`(user_id, key)`: a repeated create with the same key returns the original
+artifact (status 200, not 201) instead of duplicating. Stored in a small
+`content_artifact_idempotency` table (key, user_id, artifact_id, created_at,
+24h TTL sweep). This fills a real gap — the existing document-artifact routes
+have no idempotency today (`create_artifact`, `artifact_routes.rs:397`), and
+agent-produced creates are exactly where retries happen. The convention is new
+to this crate; the error/status shape stays identical.
+
+## 4. Storage (DECIDED)
+
+- **DB:** `allternit.db` (data dir, `main.rs:212`), migrations V146+
+  (`migrations/V146__content_artifacts.sql` and forward), same `DbHandle`
+  connection pool as everything else.
+- **Inline vs file:** bodies ≤ 256 KB store inline in
+  `content_artifact_versions.body`; larger bodies store on disk under
+  `<data_dir>/content-artifacts/<artifact_id>/<version>.<ext>` with
+  `storage='file'` and the row holding the path + sha256. Thumbnails (already
+  JPEG dataURLs from `artifact-thumbnail.ts`) stay inline on the artifact row.
+- **IndexedDB relationship:** the gateway is canonical. The web surface keeps
+  `allternit-design-gallery` / `allternit-design-files` as offline/read-through
+  caches in Phase 1 (sync-on-save; reconcile on launch). Phase 2 moves surfaces
+  to fetch-through. The gallery UI does not change — only where its data comes
+  from.
+
+## 5. Surfaces (bounded)
+
+This doc does not prescribe per-surface UI. Each surface change is a thin
+client of the API; the per-surface build plans belong to their own sessions.
+
+- **Design (web, `surfaces/ai.allternit.com`):** Phase 1 adopter. The P0
+  gallery capture (`DesignModeView` → `upsertGalleryEntry`) writes through to
+  the gateway instead of only IndexedDB. Gallery list reads gateway-first.
+- **Chat:** `splitOnArtifacts` segments gain an optional persist step —
+  rendered artifacts can be saved as `content_artifacts` with
+  `sourceSessionId` set. Chat rendering itself is unchanged.
+- **Cowork:** artifacts produced in cowork runs are created through the API
+  with provenance; the cowork rail links `a://artifact/<id>` instead of
+  embedding bodies in messages.
+- **Code (gizzi-code):** read/write client for CLI-produced artifacts
+  (`gizzi artifact save/list/show`), thin adapter over the HTTP API.
+- **Desktop:** consumes the same gateway it already bundles (hard-codes
+  :8013, `surfaces/allternit-desktop/src/main/unified-main.ts`); no new
+  transport.
+
+## 6. Sharing tiers (row 10 — mostly OPEN)
+
+| Tier | Mechanism | Status |
+|------|-----------|--------|
+| **Local (default)** | `a://artifact/<id>` on the local gateway; only this machine, only authenticated local users | DECIDED |
+| **Static export** | Existing client-side pipelines: HTML / PDF / ZIP / PPTX / MP4 (`artifact-export.ts`) | DECIDED — exists, unchanged; export stays client-side in Phase 1 |
+| **Hosted publish (Cloudflare Pages)** | Infra exists (the Ops gateway already deploys Pages projects). Publish = explicit user action that exports a version and deploys it to a Pages project under the user's account. | OPEN — see questions |
+| **Org relay (A:// mesh)** | Artifact travels between gateways over the mesh (CommRails substrate, `commrails/`). | OPEN — see questions |
+
+**OPEN questions for Eoj (publish tier):**
+1. What URL shape does a published artifact get — a per-user Pages project
+   (`<user>.artifacts.allternit.com/<id>`), or a shared project with per-user
+   routes?
+2. Does publish snapshot a *version* (immutable, "what you reviewed is what is
+   live") or track `current_version` (live updates)? Snapshot is the safer
+   default; confirm.
+3. Unpublish/takedown: delete the Pages deployment on artifact delete, or keep
+   deployments immutable and only unpublish the route?
+4. Is publish gated on the sandbox policy (e.g. artifacts that requested
+   network access can't be published), or is that overkill for v1?
+
+**OPEN questions for Eoj (relay tier):**
+5. Addressing across machines: is `a://artifact/<id>` resolvable on another
+   gateway (registry lookup), or does relay mint a new local id and keep the
+   origin id in provenance? (Design leans to the latter — local ids stay
+   local, provenance carries origin.)
+6. Trust model: does a received artifact run under `sandbox_policy='received'`
+   (stricter iframe sandbox) until the user promotes it?
+
+## 7. Phasing
+
+Each phase is one build session of roughly the size of the sessions that
+landed today (PR #378, P0 gallery, ~700 lines).
+
+- **Phase 1 — Gateway CRUD + design-session persistence.** V146 migration,
+  `content_artifact_routes.rs` (create/read/list/version/delete + idempotency),
+  design-session save writes through the API, gallery reads gateway-first.
+  Verification: `cargo test -p allternit-api`, live `curl` smoke against a
+  running gateway, typecheck + design vitest on the web surface.
+- **Phase 2 — Cross-surface consumption.** Chat persist step, cowork
+  `a://artifact/<id>` links, gizzi-code `artifact` client commands, typed
+  renderers for deck/prototype/mobile (decision in §2.1), IndexedDB stores
+  demoted to read-through cache.
+- **Phase 3 — Publish tiers.** Static-export polish plus hosted publish via
+  Cloudflare Pages (answers to §6 questions required before build starts).
+  Org relay stays out of Phase 3 unless the §6 answers land early.
+
+## 8. Risks / honesty
+
+- **Local-first limits.** One gateway = one machine. Artifacts created on the
+  laptop are not on the desktop until the relay tier exists, and there is no
+  conflict-resolution story for the same id on two machines. We are not
+  solving multi-device sync in this program; the doc says so instead of
+  pretending otherwise.
+- **Sandbox execution policy.** Today rendering is a srcDoc iframe with
+  `sandbox="allow-scripts allow-forms allow-modals"` and a storage shim that
+  strips persistence (`ArtifactRenderer.tsx:16-71`) — no `allow-same-origin`,
+  no network permission beyond what the sandbox allows by default. The
+  `sandbox_policy` column codifies this (row 9's codification work): the
+  stored policy string maps to the iframe attribute set at render time, so a
+  future policy change is a data change, not a renderer rewrite. The API does
+  not execute artifacts; it stores and serves them. Execution stays in the
+  surfaces, under the same sandbox as today.
+- **Version retention.** Append-only versions grow without bound. Phase 1
+  ships no pruning; Phase 2 must pick a retention policy (candidate: cap N
+  versions per artifact with admin-configurable N, matching the memory-store
+  cap pattern). An honest unknown, tracked as an OPEN item in the Phase 2
+  issue.
+- **Name collision.** "Artifact" already means the sectioned-document model in
+  this codebase (`artifact_routes.rs`). The new tables and routes use the
+  `content-artifact`/`content_artifacts` prefix to keep the two apart; the
+  user-facing name stays "artifact" (nobody sees the table names).
+
+## Appendix — what exists today (the grounding)
+
+| Piece | Path | Role |
+|-------|------|------|
+| Artifact renderer (sandboxed iframe) | `surfaces/ai.allternit.com/src/components/artifact/ArtifactRenderer.tsx` | Renders html/svg/markdown/mermaid/react artifacts |
+| In-session parser | `surfaces/ai.allternit.com/src/lib/openui/artifact-parser.ts` | `splitOnArtifacts` on `<artifact>` tags — unchanged by this design |
+| Templates | `surfaces/ai.allternit.com/src/lib/ai/tools/templates/artifact-templates.ts` | Self-contained HTML templates (kind: html/svg/mermaid/jsx) |
+| Export pipelines | `surfaces/ai.allternit.com/src/lib/design/artifact-export.ts` | Client-side html/pdf/zip/pptx/mp4 export — the static tier |
+| Gallery store (IndexedDB) | `surfaces/ai.allternit.com/src/lib/design/gallery-store.ts` | `GalleryEntry` — provenance field source for this design |
+| Project file store (IndexedDB) | `surfaces/ai.allternit.com/src/lib/design/project-file-store.ts` | Per-project file trees — becomes a cache |
+| Document-artifact API | `cmd/allternit-api/src/artifact_routes.rs` | Existing `/api/v1/artifacts` (sections/revisions model) — untouched |
+| Mount + DB | `cmd/allternit-api/src/main.rs:212,783` | `allternit.db`, router merge pattern this design follows |
+| Migration convention | `cmd/allternit-api/migrations/V1…V145` | Next: V146 |

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   applyAciStreamEvent,
+  getFabricAciRunner,
+  setFabricAciRunner,
   useBrowserAgentStore,
 } from "./browserAgent.store";
 
@@ -17,6 +19,7 @@ function resetStore() {
     engineHealthy: false,
     engineRuntimeStatus: null,
   });
+  setFabricAciRunner(null);
 }
 
 describe("applyAciStreamEvent", () => {
@@ -97,5 +100,54 @@ describe("applyAciStreamEvent", () => {
     const s = useBrowserAgentStore.getState();
     expect(s.engineHealthy).toBe(true);
     expect(s.lastEventMessage).toBe("hello");
+  });
+});
+
+describe("fabric ACI runner delegation", () => {
+  beforeEach(resetStore);
+
+  it("startAciSession routes to the fabric runner and marks the run Running", () => {
+    const started: string[] = [];
+    setFabricAciRunner({
+      start: (goal) => started.push(goal),
+      stop: () => {},
+    });
+    useBrowserAgentStore.getState().startAciSession("open allternit.com");
+    expect(started).toEqual(["open allternit.com"]);
+    const s = useBrowserAgentStore.getState();
+    expect(s.status).toBe("Running");
+    expect(s.goal).toBe("open allternit.com");
+  });
+
+  it("stopExecution routes to the fabric runner and clears the run state", () => {
+    let stops = 0;
+    setFabricAciRunner({
+      start: () => {},
+      stop: () => {
+        stops += 1;
+      },
+    });
+    useBrowserAgentStore.getState().startAciSession("task");
+    useBrowserAgentStore.getState().stopExecution();
+    expect(stops).toBe(1);
+    expect(useBrowserAgentStore.getState().status).toBe("Done");
+  });
+
+  it("stopAcuTask routes to the fabric runner", () => {
+    let stops = 0;
+    setFabricAciRunner({
+      start: () => {},
+      stop: () => {
+        stops += 1;
+      },
+    });
+    useBrowserAgentStore.getState().stopAcuTask();
+    expect(stops).toBe(1);
+  });
+
+  it("without a runner the store keeps its local-engine behavior (no throw)", () => {
+    expect(getFabricAciRunner()).toBeNull();
+    useBrowserAgentStore.getState().stopExecution();
+    expect(useBrowserAgentStore.getState().status).toBe("Done");
   });
 });

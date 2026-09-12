@@ -26,52 +26,29 @@ export function isFabricKeepalive(type?: string): boolean {
   return type === 'remote.heartbeat' || type === 'session-worker.heartbeat' || type === 'session-worker.connected';
 }
 
-function summarizeProperties(properties: unknown): string {
-  if (!properties || typeof properties !== 'object') return '';
-  const record = properties as Record<string, unknown>;
-  const text = typeof record.text === 'string' ? record.text
-    : typeof record.message === 'string' ? record.message
-    : typeof record.permission === 'string' ? record.permission
-    : typeof record.label === 'string' ? record.label
-    : '';
-  return text.slice(0, 140);
-}
-
-export function FabricLiveEventLog({ events }: { events: FabricSessionEvent[] }) {
-  const visible = events.filter((event) => event.type && !isFabricKeepalive(event.type)).slice(-40);
-  if (visible.length === 0) {
-    return (
-      <div className="text-[12px] text-[var(--text-tertiary)] px-1 py-2">
-        Waiting for live events from the paired node…
-      </div>
-    );
-  }
-  return (
-    <div className="font-mono text-[11px] leading-5 text-[var(--text-secondary)] space-y-1 max-h-36 overflow-y-auto">
-      {visible.map((event, index) => (
-        <div key={`${event.type}-${index}`}>
-          <span className="text-[var(--text-tertiary)]">{event.type}</span>
-          {event.properties ? ` ${summarizeProperties(event.properties)}` : ''}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function FabricCodeDrive({
   session,
+  terminalSessionId,
+  terminalWorkingDir,
 }: {
   session: FabricSessionWithStatus;
   detail: FabricSessionDetail | null;
   events: FabricSessionEvent[];
+  /**
+   * Override the terminal binding — e.g. the Termius-style "Sessions" tab
+   * passes a runtime-scoped id so UnifiedTerminal manages its own
+   * multi-session tabs instead of the fabric session's single terminal.
+   */
+  terminalSessionId?: string;
+  terminalWorkingDir?: string;
 }) {
   return (
     <div className="flex flex-col min-h-0 h-full">
       <div className="min-h-0 flex-1 overflow-hidden bg-[var(--view-code-bg)]">
         <Suspense fallback={<div className="p-4 text-[12px] text-[var(--text-tertiary)]">Loading terminal…</div>}>
           <UnifiedTerminal
-            sessionId={session.session.id}
-            workingDir={session.session.directory}
+            sessionId={terminalSessionId ?? session.session.id}
+            workingDir={terminalSessionId ? terminalWorkingDir : session.session.directory}
           />
         </Suspense>
       </div>
@@ -100,7 +77,7 @@ export function extractAciScreenshot(frame: { type?: string; data?: Record<strin
   return raw ? asImageSrc(raw) : null;
 }
 
-function partImageSrc(part: Record<string, unknown>): string | null {
+export function partImageSrc(part: Record<string, unknown>): string | null {
   const type = String(part.type || '');
   const mime = String(part.mime || part.mediaType || '');
   const url = typeof part.url === 'string' ? part.url
@@ -136,99 +113,6 @@ export function latestComputerFrame(
     }
   }
   return null;
-}
-
-export function FabricAciDrive({
-  session,
-  detail,
-  events,
-  hostName,
-  screenshot,
-  opening,
-  onOpenComputer,
-  watching = false,
-  onToggleWatch,
-  liveView,
-}: {
-  session: FabricSessionWithStatus;
-  detail: FabricSessionDetail | null;
-  events: FabricSessionEvent[];
-  hostName?: string;
-  screenshot?: string | null;
-  opening?: boolean;
-  onOpenComputer?: () => void;
-  watching?: boolean;
-  onToggleWatch?: () => void;
-  /**
-   * Desktop-style live ACI viewport (element highlights, status strip)
-   * rendered in place of the plain screenshot while watching. When absent
-   * the drive falls back to the raw frame image.
-   */
-  liveView?: React.ReactNode;
-}) {
-  const frame = screenshot || latestComputerFrame(detail, events);
-  const host = hostName || session.session.title || 'paired node';
-  const live = watching && (Boolean(frame) || events.some((event) => event.type && !isFabricKeepalive(event.type)));
-
-  return (
-    <div className="flex flex-col min-h-0 h-full gap-0">
-      <div className="flex-1 min-h-0 flex flex-col rounded-2xl overflow-hidden border border-solid border-[var(--border-subtle)] bg-[#111110]">
-        <div className="h-9 shrink-0 flex items-center gap-2 px-3 border-b border-solid border-white/10">
-          <span className="size-2 rounded-full bg-[#ff5f57]" />
-          <span className="size-2 rounded-full bg-[#febc2e]" />
-          <span className="size-2 rounded-full bg-[#28c840]" />
-          <span className="ml-2 text-[11px] font-semibold tracking-wide text-white/55 truncate">
-            Computer · {host}
-          </span>
-          <span className="ml-auto text-[10px] uppercase tracking-[0.08em] text-white/40">
-            {opening ? 'Opening' : watching ? (live ? 'Live' : 'Watching') : 'Not watching'}
-          </span>
-        </div>
-        <div className="relative flex-1 min-h-0 bg-[#0b0b0a] flex items-center justify-center overflow-hidden">
-          {liveView && watching && frame ? (
-            liveView
-          ) : frame ? (
-            <img src={frame} alt={watching ? "Computer screen" : "Last computer screen"} className="max-w-full max-h-full object-contain" />
-          ) : (
-            <div className="flex flex-col items-center gap-3 px-6 text-center">
-              <Browser size={36} className="text-white/35" />
-              <div className="text-[13px] font-semibold text-white/80">
-                {opening ? 'Opening the computer' : watching ? 'Waiting for a frame' : 'Not watching'}
-              </div>
-              <div className="text-[12px] text-white/45 max-w-sm">
-                {watching
-                  ? `Pulling the screen on ${host}. Frames stop if you leave this page.`
-                  : `The computer on ${host} is idle until you watch it.`}
-              </div>
-              {onOpenComputer && !opening ? (
-                <button
-                  type="button"
-                  onClick={onOpenComputer}
-                  className="mt-1 min-h-[44px] rounded-full border-none bg-white/12 px-3.5 py-1.5 text-[12px] font-semibold text-white cursor-pointer"
-                >
-                  Open computer
-                </button>
-              ) : null}
-            </div>
-          )}
-        </div>
-        {onToggleWatch ? (
-          <div className="shrink-0 flex items-center justify-center px-3 py-2 border-t border-solid border-white/10">
-            <button
-              type="button"
-              onClick={onToggleWatch}
-              className="min-h-[44px] rounded-full border-none bg-white/12 px-4 text-[12px] font-semibold text-white cursor-pointer"
-            >
-              {watching ? 'Stop watching' : 'Watch computer'}
-            </button>
-          </div>
-        ) : null}
-      </div>
-      <div className="shrink-0 pt-2">
-        <FabricLiveEventLog events={events} />
-      </div>
-    </div>
-  );
 }
 
 export function mergeNodeBots(agents: FabricBot[], brains: FabricBrain[]): FabricBot[] {

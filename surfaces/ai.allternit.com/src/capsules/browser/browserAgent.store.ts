@@ -479,6 +479,27 @@ export function applyAciStreamEvent(
 // Store Creation
 // ============================================================================
 
+/**
+ * Fabric ACI runner — when set (fabric session surface driving a paired
+ * node), ACI run starts/stops from the browser capsule's agent bar delegate
+ * to the fabric session client instead of the local engine endpoints
+ * (/api/aci/*), which don't exist on the hosted PWA.
+ */
+export interface FabricAciRunner {
+  start: (goal: string) => void;
+  stop: () => void;
+}
+
+let fabricAciRunner: FabricAciRunner | null = null;
+
+export function setFabricAciRunner(runner: FabricAciRunner | null): void {
+  fabricAciRunner = runner;
+}
+
+export function getFabricAciRunner(): FabricAciRunner | null {
+  return fabricAciRunner;
+}
+
 export const useBrowserAgentStore = create<BrowserAgentState>()(
   persist(subscribeWithSelector((set, get) => ({
     // Initial state
@@ -610,6 +631,18 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     connectedBotId: null,
     setConnectedBotId: (botId) => set({ connectedBotId: botId }),
     startAciSession: (goal) => {
+      if (fabricAciRunner) {
+        set({
+          goal,
+          status: 'Running',
+          currentAction: null,
+          screenshot: null,
+          lastEventMessage: null,
+          aciSessionId: null,
+        });
+        fabricAciRunner.start(goal);
+        return;
+      }
       if (get().connectedBotId) {
         // Bot computers are the cloud-desktop viewport. Do not start a local
         // CUA run against this Mac while that view is connected.
@@ -946,8 +979,12 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     },
 
     stopAcuTask: () => {
-      const { currentRunId } = get();
       set({ status: 'Done', currentAction: null, requiresApproval: false });
+      if (fabricAciRunner) {
+        fabricAciRunner.stop();
+        return;
+      }
+      const { currentRunId } = get();
       if (currentRunId) {
         void getPlatformComputerUseClient().cancelRun(currentRunId).catch(() => {});
       }
@@ -991,9 +1028,14 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
 
     // Stop execution
     stopExecution: () => {
-      const { aciSessionId } = get();
       set({ status: 'Done', currentAction: null, requiresApproval: false });
 
+      if (fabricAciRunner) {
+        fabricAciRunner.stop();
+        return;
+      }
+
+      const { aciSessionId } = get();
       if (aciSessionId) {
         fetch(`/api/aci/stop/${aciSessionId}`, { method: 'POST' }).catch(() => {});
       }

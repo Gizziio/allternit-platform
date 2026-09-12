@@ -29,7 +29,7 @@ import blogPostSkill from '../../../plugins/examples/blog-post/SKILL.md?raw';
 import dataReportSkill from '../../../plugins/examples/data-report/SKILL.md?raw';
 import cartesianDeckSkill from '../../../plugins/examples/html-ppt-zhangzara-cartesian/SKILL.md?raw';
 
-const RAW_SKILLS: { id: string; source: string; assets: string[] }[] = [
+export const RAW_SKILLS: { id: string; source: string; assets: string[] }[] = [
   { id: 'saas-landing', source: saasLandingSkill, assets: ['assets/base.html'] },
   { id: 'dashboard', source: dashboardSkill, assets: ['assets/base.html'] },
   { id: 'magazine-deck', source: magazineDeckSkill, assets: ['assets/template.html'] },

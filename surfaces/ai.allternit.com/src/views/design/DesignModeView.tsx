@@ -5,7 +5,7 @@ import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from "rea
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sliders, MagicWand, Sun, Moon, Scissors,
-  TreeStructure, Megaphone, ShieldCheck, UploadSimple, Plus, PuzzlePiece
+  TreeStructure, Megaphone, ShieldCheck, UploadSimple, Plus, PuzzlePiece, Crosshair
 } from "@phosphor-icons/react";
 import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
@@ -14,11 +14,16 @@ import { NativeOriginBanner } from "@/components/native-sessions/NativeOriginBan
 import { AProtocolWordmark } from "@/components/AProtocolWordmark";
 import { isElectronShell } from "@/lib/platform";
 import { useDesignTabStore } from "../../stores/design-tab.store";
-import { useDesignProjectStore } from "@/views/project/design/design-project.store";
+import { useDesignProjectStore, type DesignProject } from "@/views/project/design/design-project.store";
+import { upsertGalleryEntry, type GalleryEntry } from '../../lib/design/gallery-store';
+import { renderArtifactThumbnail } from '../../lib/design/artifact-thumbnail';
+import { writeProjectFile } from '../../lib/design/project-file-store';
 import { NewProjectScreen } from './NewProjectScreen';
 import { SkillPicker } from './SkillPicker';
 import { SkillParameterPanel } from '../../components/design/SkillParameterPanel';
 import { SurgicalEditPanel } from '../../components/design/SurgicalEditPanel';
+import ArtifactRenderer from '../../components/artifact/ArtifactRenderer';
+import { buildAioTargetDescription, type AioTargetPayload } from '../../lib/design/aio-targeting';
 import { DesignCritiquePanel } from '../../components/design/DesignCritiquePanel';
 import { AgentAdapterPanel } from '../../components/design/AgentAdapterPanel';
 import { PluginPicker } from './PluginPicker';
@@ -104,6 +109,8 @@ interface DesignModeViewProps {
   initialTab?: CanvasTab;
   initialDesignMd?: string;
   initialStream?: string;
+  /** Deep-link entry: seed the composer with a prompt carried over the /design URL. */
+  initialPrompt?: string;
   /** Shell context: open office editors as ACI shell views (from the ViewRegistry). */
   openView?: (viewType: string, context?: unknown) => void;
 }
@@ -273,7 +280,7 @@ function TabLoadingState({ label = "Loading workspace…" }: { label?: string })
 
 // ─── Main Studio Component ───────────────────────────────────────────────────
 
-export default function DesignModeView({ initialTab, initialDesignMd, initialStream, openView }: DesignModeViewProps) {
+export default function DesignModeView({ initialTab, initialDesignMd, initialStream, initialPrompt, openView }: DesignModeViewProps) {
   useNav();
   const defaultSelection = useDefaultModelSelection();
   // Bridge mode tab selection to canvas/renderer opening (parity with Chat/Cowork)
@@ -294,7 +301,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     initialTab ?? (initialDesignMd ? 'system' : 'questions')
   );
   const [showTweaks, setShowTweaks] = useState(false);
-  const [composerSeed, setComposerSeed] = useState("");
+  const [composerSeed, setComposerSeed] = useState(initialPrompt ?? "");
   const [designMd, setDesignMd] = useState<string | null>(initialDesignMd ?? null);
   const [uiStream, setUiStream] = useState<string | null>(initialStream ?? null);
   const [tokens, setTokens] = useState({ radius: 12, spacing: 4, primary: 'var(--accent-primary)', font: 'Allternit Sans' });
@@ -318,6 +325,15 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   const [skillValues, setSkillValues] = useState<Record<string, unknown>>({});
   const [showPluginPicker, setShowPluginPicker] = useState(false);
   const [surgicalComments, setSurgicalComments] = useState<SurgicalComment[]>([]);
+  // Click-to-target (mapping doc §3 port #5): when targeting mode is on, the
+  // artifact preview iframe reports clicks on [data-aio-id] elements via
+  // postMessage; the resolved description seeds the surgical-edit target.
+  const [aioTargeting, setAioTargeting] = useState(false);
+  const [targetSeed, setTargetSeed] = useState<{ target: string; nonce: number } | null>(null);
+  const handleAioTarget = React.useCallback((payload: AioTargetPayload) => {
+    setTargetSeed({ target: buildAioTargetDescription(payload), nonce: Date.now() });
+    setAioTargeting(false);
+  }, []);
   const { selectedAgent } = useSurfaceAgentSelection('design');
   const [skillParameters, setSkillParameters] = useState<Record<string, number>>({});
 
@@ -394,6 +410,39 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
+  // Use-case gallery seeding (mapping doc §6, P0): when the latest artifact
+  // passes the P0 lint gate, record it (prompt + skill + system + thumbnail)
+  // so the landing gallery shows real outputs and can offer click-to-remix.
+  const galleryHashRef = useRef<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (!latestArtifactHtml || !activeProject?.id || lintP0Findings || isStreaming) return;
+    let hash = 5381;
+    for (let i = 0; i < latestArtifactHtml.length; i++) {
+      hash = ((hash << 5) + hash + latestArtifactHtml.charCodeAt(i)) >>> 0;
+    }
+    if (galleryHashRef.current.get(activeProject.id) === hash) return;
+    galleryHashRef.current.set(activeProject.id, hash);
+    const firstUser = backendMessages.find((m) => m.role === 'user');
+    const prompt = typeof firstUser?.content === 'string' && firstUser.content.trim()
+      ? firstUser.content.trim()
+      : activeProject.name;
+    const html = latestArtifactHtml;
+    const projectId = activeProject.id;
+    const snapshot = {
+      projectId,
+      projectName: activeProject.name,
+      prompt,
+      type: activeProject.type,
+      designSystemId: installedDesignId ?? undefined,
+      skillId: selectedSkill?.id,
+      skillName: selectedSkill?.name,
+      artifactHtml: html,
+    };
+    void renderArtifactThumbnail(html).then((thumbnail) => {
+      upsertGalleryEntry({ ...snapshot, thumbnail }).catch(() => {});
+    });
+  }, [latestArtifactHtml, lintP0Findings, isStreaming, activeProject, backendMessages, selectedSkill, installedDesignId]);
+
   // Seed the composer with any prompt carried over from the project view.
   useEffect(() => {
     if (pendingPrompt) {
@@ -449,7 +498,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     }
   }
 
-  async function startProject(config: { name: string; prompt?: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; system?: import('../../lib/design/design-systems-library').DesignSystemEntry; skill?: SkillRecord; skillValues?: Record<string, unknown> }) {
+  async function startProject(config: { name: string; prompt?: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; system?: import('../../lib/design/design-systems-library').DesignSystemEntry; skill?: SkillRecord; skillValues?: Record<string, unknown>; aspect?: string }) {
     const isContent = config.type === 'content-engine';
     const skill = config.skill;
     const projectId = `design-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -514,20 +563,120 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     try {
       const sessionId = await createDesignSession({ name: config.name, projectId, sessionMode: 'agent', systemPrompt });
       const userRequest = config.prompt?.trim() || config.name;
+    const aspectLine = config.aspect ? ` Aspect ratio: ${config.aspect}.` : '';
       if (isContent) {
         await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] Project: "${config.name}". User request: ${userRequest}\n\nRun skill_graph_ops action="sync" to read /content-skill-graph/index.md, then create the first working artifact for this request and open it in the canvas.` });
       } else if (skill) {
         const opener = skill.examplePrompt ?? `Run the ${skill.name} skill for this project.`;
         const inputs = skill.inputs.map((i) => `${i.label ?? i.name}: ${config.skillValues?.[i.name] ?? i.default ?? ''}`).join('\n');
         const params = skill.parameters.map((p) => `${p.label ?? p.name}: ${skillParameters[p.name] ?? p.default}`).join('\n');
-        await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nUser request: ${userRequest}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Begin the skill workflow now. Create the first usable design artifact and open it in the canvas; do not stop at a discovery question unless a required detail is truly missing.` });
+        await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nUser request: ${userRequest}\nType: ${config.type}${aspectLine ? `\nAspect: ${config.aspect}` : ''}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Begin the skill workflow now. Create the first usable design artifact and open it in the canvas; do not stop at a discovery question unless a required detail is truly missing.` });
       } else {
         const dirContext = dir ? ` The visual direction is "${dir.label}" — ${dir.mood}. Key references: ${dir.references.join(', ')}.` : '';
-        await sendMessageStream(sessionId, { text: `Create a ${config.type} for this request:\n\n${userRequest}\n\nProject name: "${config.name}".${dirContext}\n\nStart building immediately. Produce the first complete, editable design artifact, save it as a project file, and open it in the canvas. Make reasonable design decisions from the request instead of replying with only a discovery brief.` });
+        await sendMessageStream(sessionId, { text: `Create a ${config.type} for this request:\n\n${userRequest}\n\nProject name: "${config.name}".${aspectLine}${dirContext}\n\nStart building immediately. Produce the first complete, editable design artifact, save it as a project file, and open it in the canvas. Make reasonable design decisions from the request instead of replying with only a discovery brief.` });
       }
     } catch (err) {
       logger.error('Failed to start Design project agent session', { err, projectId });
     }
+  }
+
+  async function openProjectRecord(project: DesignProject) {
+    const projectTabs = Array.isArray(project.tabs) ? project.tabs : [];
+    const safeTab = projectTabs.some((tab) => tab.id === project.activeTabId)
+      ? project.activeTabId as CanvasTab
+      : 'questions';
+    useDesignProjectStore.getState().setActiveProject(project.id);
+    setActiveProject({
+      id: project.id,
+      name: project.name,
+      type: project.type as ProjectType,
+      specialist: project.specialist,
+      fidelity: project.fidelity,
+      activeTabId: safeTab,
+      tabs: projectTabs.map((tab) => ({ ...tab, type: tab.type as CanvasTab })),
+    });
+    setActiveTab(safeTab);
+
+    // Restore the project's bound design system (persisted on the project
+    // record — without this the installed system was lost on reload).
+    const persistedSystemId = (project as { designSystemId?: string }).designSystemId;
+    let restoredSystemBody: string | undefined;
+    let restoredSystemTitle: string | undefined;
+    if (persistedSystemId) {
+      const boundSystem = getDesignById(persistedSystemId);
+      if (boundSystem) {
+        setInstalledDesignId(boundSystem.id);
+        setDesignMd(boundSystem.designMd);
+        restoredSystemBody = boundSystem.designMd;
+        restoredSystemTitle = boundSystem.name;
+      }
+    }
+
+    try {
+      await loadSessions();
+      const sessionStore = useDesignSessionStore.getState();
+      const linkedSession = sessionStore.sessions.find(
+        (session) => session.metadata?.projectId === project.id
+      );
+      if (linkedSession) {
+        sessionStore.setActiveSession(linkedSession.id);
+        return;
+      }
+
+      // Projects created before project/session linking was introduced
+      // need a recovery session so their workspace and composer remain usable.
+      const sessionId = await createDesignSession({
+        name: project.name,
+        projectId: project.id,
+        sessionMode: 'agent',
+        systemPrompt: composeStudioSystemPrompt({
+          designSystemBody: restoredSystemBody ?? designMd ?? undefined,
+          designSystemTitle: restoredSystemTitle ?? (installedDesignId ? 'Installed design system' : undefined),
+        }),
+      });
+      useDesignSessionStore.getState().setActiveSession(sessionId);
+    } catch (error) {
+      logger.error({ err: error, projectId: project.id }, 'Failed to restore Design project session');
+    }
+  }
+
+  // Click-to-remix (mapping doc §6, P0): fork a gallery entry into a new
+  // project — artifact HTML copied into the file tree, bound design system
+  // carried over, composer seeded with the original prompt.
+  async function remixGalleryEntry(entry: GalleryEntry) {
+    const now = Date.now();
+    const projectId = `design-${now}-${Math.random().toString(36).slice(2, 8)}`;
+    const remixed: DesignProject = {
+      id: projectId,
+      name: `Remix — ${entry.projectName}`.slice(0, 64),
+      type: (entry.type as DesignProject['type']) || 'prototype',
+      specialist: 'architect',
+      fidelity: 'high',
+      createdAt: now,
+      updatedAt: now,
+      isFavorite: false,
+      isArchived: false,
+      activeTabId: 'questions',
+      tabs: [
+        { id: 'files', label: 'Files', type: 'files' },
+        { id: 'questions', label: 'Discovery', type: 'questions' },
+        { id: 'sketch', label: 'Canvas', type: 'sketch' },
+        { id: 'system', label: 'Design System', type: 'system' },
+        { id: 'handoff', label: 'Handoff', type: 'handoff' },
+      ],
+      designSystemId: entry.designSystemId,
+    };
+    useDesignProjectStore.getState().upsertProject(remixed);
+    await writeProjectFile(projectId, '/index.html', entry.artifactHtml);
+    if (entry.designSystemId) {
+      const boundSystem = getDesignById(entry.designSystemId);
+      if (boundSystem) {
+        setInstalledDesignId(boundSystem.id);
+        setDesignMd(boundSystem.designMd);
+      }
+    }
+    setComposerSeed(entry.prompt);
+    await openProjectRecord(useDesignProjectStore.getState().projects.find((p) => p.id === projectId) ?? remixed);
   }
 
   const completeWizard = () => {
@@ -539,76 +688,23 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   if (showCutscene) return <StudioOnboarding onComplete={() => setShowCutscene(false)} />;
   if (!activeProject) return (
     <>
-      <NewProjectScreen
-        onStart={startProject}
-        onOpenProject={async (project) => {
-          const projectTabs = Array.isArray(project.tabs) ? project.tabs : [];
-          const safeTab = projectTabs.some((tab) => tab.id === project.activeTabId)
-            ? project.activeTabId as CanvasTab
-            : 'questions';
-          useDesignProjectStore.getState().setActiveProject(project.id);
-          setActiveProject({
-            id: project.id,
-            name: project.name,
-            type: project.type as ProjectType,
-            specialist: project.specialist,
-            fidelity: project.fidelity,
-            activeTabId: safeTab,
-            tabs: projectTabs.map((tab) => ({ ...tab, type: tab.type as CanvasTab })),
-          });
-          setActiveTab(safeTab);
-
-          // Restore the project's bound design system (persisted on the project
-          // record — without this the installed system was lost on reload).
-          const persistedSystemId = (project as { designSystemId?: string }).designSystemId;
-          let restoredSystemBody: string | undefined;
-          let restoredSystemTitle: string | undefined;
-          if (persistedSystemId) {
-            const boundSystem = getDesignById(persistedSystemId);
-            if (boundSystem) {
-              setInstalledDesignId(boundSystem.id);
-              setDesignMd(boundSystem.designMd);
-              restoredSystemBody = boundSystem.designMd;
-              restoredSystemTitle = boundSystem.name;
-            }
-          }
-
-          try {
-            await loadSessions();
-            const sessionStore = useDesignSessionStore.getState();
-            const linkedSession = sessionStore.sessions.find(
-              (session) => session.metadata?.projectId === project.id
-            );
-            if (linkedSession) {
-              sessionStore.setActiveSession(linkedSession.id);
-              return;
-            }
-
-            // Projects created before project/session linking was introduced
-            // need a recovery session so their workspace and composer remain usable.
-            const sessionId = await createDesignSession({
-              name: project.name,
-              projectId: project.id,
-              sessionMode: 'agent',
-              systemPrompt: composeStudioSystemPrompt({
-                designSystemBody: restoredSystemBody ?? designMd ?? undefined,
-                designSystemTitle: restoredSystemTitle ?? (installedDesignId ? 'Installed design system' : undefined),
-              }),
-            });
-            useDesignSessionStore.getState().setActiveSession(sessionId);
-          } catch (error) {
-            logger.error({ err: error, projectId: project.id }, 'Failed to restore Design project session');
-          }
-        }}
-        onSelectDesignSystem={(system) => {
-          setInstalledDesignId(system.id);
-          setDesignMd(system.body);
-        }}
-        selectedSkill={selectedSkill}
-        onSelectSkill={(skill) => { if (!skill) setShowSkillPicker(true); else setSelectedSkill(skill); }}
-        skillValues={skillValues}
-        onChangeSkillValues={setSkillValues}
-      />
+      <ChatModelsProvider>
+        <ModelSelectionProvider defaultSelection={defaultSelection}>
+          <NewProjectScreen
+            onStart={startProject}
+            onOpenProject={openProjectRecord}
+            onRemix={remixGalleryEntry}
+            onSelectDesignSystem={(system) => {
+              setInstalledDesignId(system.id);
+              setDesignMd(system.body);
+            }}
+            selectedSkill={selectedSkill}
+            onSelectSkill={(skill) => { if (!skill) setShowSkillPicker(true); else setSelectedSkill(skill); }}
+            skillValues={skillValues}
+            onChangeSkillValues={setSkillValues}
+          />
+        </ModelSelectionProvider>
+      </ChatModelsProvider>
       {showSkillPicker && (
         <SkillPicker
           initialMode={selectedSkill?.mode}
@@ -845,11 +941,41 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
               />
             </div>
           )}
+          {latestArtifactHtml && (
+            <div style={{ padding: '12px 12px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Artifact preview{aioTargeting ? ' — click an element to target it' : ''}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAioTargeting((v) => !v)}
+                  title={aioTargeting ? 'Exit target mode' : 'Target an element for surgical edits'}
+                  style={{
+                    width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border-subtle)',
+                    background: aioTargeting ? 'var(--accent-primary)' : 'transparent',
+                    color: aioTargeting ? '#fff' : 'var(--text-secondary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                  }}
+                >
+                  <Crosshair size={13} weight={aioTargeting ? 'fill' : 'regular'} />
+                </button>
+              </div>
+              <ArtifactRenderer
+                content={latestArtifactHtml}
+                type="text/html"
+                height="240px"
+                aioTargeting={aioTargeting}
+                onAioTarget={handleAioTarget}
+              />
+            </div>
+          )}
           <div style={{ padding: '12px 12px 0' }}>
             <SurgicalEditPanel
               comments={surgicalComments}
               agent={selectedAgent ?? undefined}
               artifactHtml={latestArtifactHtml}
+              targetSeed={targetSeed}
               onChange={setSurgicalComments}
               onApply={() => {
                 if (!activeSessionId) return;

@@ -4,13 +4,28 @@
  * Reskinned for Allternit with native design tokens.
  */
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useEffect, useMemo, useRef } from 'react';
+import {
+  injectAioIds,
+  injectAioTargetCapture,
+  parseAioTargetMessage,
+  type AioTargetPayload,
+} from '@/lib/design/aio-targeting';
 
 interface ArtifactRendererProps {
   content: string;
   type?: string;
   height?: string;
   width?: string;
+  /**
+   * Click-to-target (mapping doc §3 port #5): when enabled, element ids and a
+   * click-capture script are injected into the sandboxed srcdoc and clicks on
+   * elements postMessage back to the parent (opaque origin → `event.origin`
+   * is the string 'null'). Only meaningful together with `onAioTarget`.
+   */
+  aioTargeting?: boolean;
+  /** Called with the validated payload when an element is clicked in targeting mode. */
+  onAioTarget?: (payload: AioTargetPayload) => void;
 }
 
 const SANDBOX_STORAGE_SHIM = `<script data-allternit-artifact-storage-shim>
@@ -53,63 +68,87 @@ export function injectSandboxStorageShim(htmlContent: string): string {
   return SANDBOX_STORAGE_SHIM + '\n' + htmlContent;
 }
 
-const HTMLRenderer = memo<{ htmlContent: string; height?: string; width?: string }>(
-  ({ htmlContent, width = '100%', height = '360px' }) => (
-    <iframe
-      sandbox="allow-scripts allow-forms allow-modals"
-      srcDoc={injectSandboxStorageShim(htmlContent)}
-      style={{
-        border: '1px solid var(--border-subtle)',
-        borderRadius: '10px',
-        height,
-        width,
-        background: 'var(--bg-secondary)',
-      }}
-      title="artifact-html-renderer"
-    />
-  )
+const HTMLRenderer = memo<{
+  htmlContent: string;
+  height?: string;
+  width?: string;
+  aioTargeting?: boolean;
+  onAioTarget?: (payload: AioTargetPayload) => void;
+}>(
+  ({ htmlContent, width = '100%', height = '360px', aioTargeting = false, onAioTarget }) => {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    // Click-to-target: the sandboxed srcdoc iframe has an opaque origin, so
+    // the only channel from the artifact DOM to the parent is postMessage.
+    // Accept only messages from our iframe's contentWindow with origin 'null'
+    // (opaque) and a strictly validated payload shape.
+    useEffect(() => {
+      if (!aioTargeting || !onAioTarget) return;
+      const handler = (event: MessageEvent) => {
+        if (event.origin !== 'null') return;
+        if (iframeRef.current?.contentWindow == null) return;
+        if (event.source !== iframeRef.current.contentWindow) return;
+        const payload = parseAioTargetMessage(event.data);
+        if (payload) onAioTarget(payload);
+      };
+      window.addEventListener('message', handler);
+      return () => window.removeEventListener('message', handler);
+    }, [aioTargeting, onAioTarget]);
+
+    const srcDoc = useMemo(() => {
+      const shimmed = injectSandboxStorageShim(htmlContent);
+      if (!aioTargeting) return shimmed;
+      return injectAioTargetCapture(injectAioIds(shimmed));
+    }, [htmlContent, aioTargeting]);
+
+    return (
+      <iframe
+        ref={iframeRef}
+        sandbox="allow-scripts allow-forms allow-modals"
+        srcDoc={srcDoc}
+        style={{
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '10px',
+          height,
+          width,
+          background: 'var(--bg-secondary)',
+        }}
+        title="artifact-html-renderer"
+      />
+    );
+  }
 );
 
-const SVGRenderer = memo<{ content: string }>(({ content }) => (
-  <div
-    style={{
-      border: '1px solid var(--border-subtle)',
-      borderRadius: '10px',
-      padding: 'var(--spacing-md)',
-      background: 'var(--bg-secondary)',
-      overflow: 'auto',
-    }}
-    dangerouslySetInnerHTML={{ __html: content }}
-  />
-));
-
-const MarkdownRenderer = memo<{ content: string }>(({ content }) => {
-  const html = useMemo(() => {
-    return content
-      .replace(/^### (.*$)/gim, '<h3 style="margin:12px 0 6px;color:var(--text-primary)">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 style="margin:14px 0 8px;color:var(--text-primary)">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 style="margin:16px 0 10px;color:var(--text-primary)">$1</h1>')
-      .replace(/```([\s\S]*?)```/g, '<pre style="background:var(--surface-panel);padding:12px;border-radius:8px;overflow:auto"><code>$1</code></pre>')
-      .replace(/`([^`]+)`/g, '<code style="background:var(--surface-panel);padding:2px 4px;border-radius:4px">$1</code>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br/>');
-  }, [content]);
-
-  return (
-    <div
-      style={{
-        color: 'var(--text-primary)',
-        fontSize: '14px',
-        lineHeight: 1.6,
-        padding: 'var(--spacing-md)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: '10px',
-        background: 'var(--bg-secondary)',
-      }}
-      dangerouslySetInnerHTML={{ __html: html }}
+const SVGRenderer = memo<{ content: string; height?: string; width?: string }>(
+  ({ content, width = '100%', height = '360px' }) => (
+    // SVG artifacts are untrusted documents too — render inside the sandboxed
+    // iframe (opaque origin) instead of injecting markup into the host document.
+    <HTMLRenderer
+      htmlContent={`<html><body style="margin:0">${content}</body></html>`}
+      height={height}
+      width={width}
     />
-  );
-});
+  ),
+);
+
+const MarkdownRenderer = memo<{ content: string; height?: string; width?: string }>(
+  ({ content, width = '100%', height = '360px' }) => {
+    const html = useMemo(() => {
+      return content
+        .replace(/^### (.*$)/gim, '<h3 style="margin:12px 0 6px;color:var(--text-primary)">$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2 style="margin:14px 0 8px;color:var(--text-primary)">$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1 style="margin:16px 0 10px;color:var(--text-primary)">$1</h1>')
+        .replace(/```([\s\S]*?)```/g, '<pre style="background:var(--surface-panel);padding:12px;border-radius:8px;overflow:auto"><code>$1</code></pre>')
+        .replace(/`([^`]+)`/g, '<code style="background:var(--surface-panel);padding:2px 4px;border-radius:4px">$1</code>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br/>');
+    }, [content]);
+
+    // The markdown transform does not sanitize raw inline HTML, so the result
+    // is untrusted — render it in the sandboxed iframe, never the host document.
+    return <HTMLRenderer htmlContent={html} height={height} width={width} />;
+  },
+);
 
 const MermaidRenderer = memo<{ content: string }>(({ content }) => (
   <div
@@ -128,7 +167,7 @@ const MermaidRenderer = memo<{ content: string }>(({ content }) => (
   </div>
 ));
 
-const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, width }) => {
+const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, width, aioTargeting, onAioTarget }) => {
   switch (type) {
     case 'application/lobe.artifacts.react':
     case 'code/react': {
@@ -138,13 +177,13 @@ const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, w
           <div style={{ padding: '6px 12px', background: 'var(--surface-panel)', fontSize: '12px', color: 'var(--text-secondary)' }}>
             React Component Preview
           </div>
-          <HTMLRenderer htmlContent={content} height={height} width={width} />
+          <HTMLRenderer htmlContent={content} height={height} width={width} aioTargeting={aioTargeting} onAioTarget={onAioTarget} />
         </div>
       );
     }
     case 'image/svg+xml':
     case 'media/svg': {
-      return <SVGRenderer content={content} />;
+      return <SVGRenderer content={content} height={height} width={width} />;
     }
     case 'application/lobe.artifacts.mermaid':
     case 'media/mermaid': {
@@ -152,13 +191,13 @@ const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, w
     }
     case 'text/markdown':
     case 'document/markdown': {
-      return <MarkdownRenderer content={content} />;
+      return <MarkdownRenderer content={content} height={height} width={width} />;
     }
     case 'document/html': {
-      return <HTMLRenderer htmlContent={content} height={height} width={width} />;
+      return <HTMLRenderer htmlContent={content} height={height} width={width} aioTargeting={aioTargeting} onAioTarget={onAioTarget} />;
     }
     default: {
-      return <HTMLRenderer htmlContent={content} height={height} width={width} />;
+      return <HTMLRenderer htmlContent={content} height={height} width={width} aioTargeting={aioTargeting} onAioTarget={onAioTarget} />;
     }
   }
 });

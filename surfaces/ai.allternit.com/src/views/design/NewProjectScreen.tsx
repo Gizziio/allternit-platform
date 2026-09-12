@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUp,
+  Brain,
   Browsers,
   Check,
   FileText,
@@ -19,9 +20,13 @@ import {
   SquaresFour,
   X,
 } from '@phosphor-icons/react';
+import { useModelSelection } from '@/providers/model-selection-provider';
+import type { ModelSelection } from '@/components/model-picker';
+import type { ModelOption } from '@/components/prompt-kit/prompt-model-selector';
 import { DESIGN_DIRECTIONS, type DesignDirection } from '../../lib/design/directions';
 import { DESIGN_SYSTEMS_LIBRARY, type DesignSystemEntry } from '../../lib/design/design-systems-library';
 import type { SkillRecord } from '../../lib/design/skill-registry';
+import { listGalleryEntries, type GalleryEntry } from '../../lib/design/gallery-store';
 import { useDesignProjectStore, type DesignProject } from '@/views/project/design/design-project.store';
 import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import { isElectronShell } from '@/lib/platform';
@@ -35,7 +40,95 @@ const CREATION_TYPES = [
   { id: 'content-engine', label: 'Content engine', hint: 'Content pipeline and campaigns', icon: Play },
 ] as const;
 
-type LibraryTab = 'projects' | 'systems' | 'templates';
+/** §6 P2 — Kimi "Adaptive"-equivalent output-shape pills. */
+const ASPECT_OPTIONS = ['Adaptive', '1:1', '16:9', '9:16', '4:3', '3:4'] as const;
+
+type LibraryTab = 'projects' | 'systems' | 'templates' | 'gallery';
+type ComposerMenu = 'system' | 'type' | 'attach' | 'model' | null;
+
+/**
+ * §6 P1 — model chip (kimi.com/design "K3 · High" equivalent).
+ *
+ * `useModelSelection` throws outside a `ModelSelectionProvider` by design;
+ * when no provider is above us (tests, Storybook) this renders nothing
+ * instead of crashing the screen.
+ */
+function ModelPickerControl({ isOpen, onToggle }: { isOpen: boolean; onToggle: () => void }) {
+  let selection: ModelSelection | null = null;
+  let availableModels: ModelOption[] = [];
+  let isLoading = false;
+  let selectModel: ((next: ModelSelection) => void) | null = null;
+  try {
+    const context = useModelSelection();
+    selection = context.selection;
+    availableModels = context.availableModels;
+    isLoading = context.isLoading;
+    selectModel = context.selectModel;
+  } catch {
+    return null;
+  }
+
+  /** Stable `provider/model` key — matches what readComposerRuntimeModelId rehydrates. */
+  function modelKey(model: ModelOption): string {
+    const providerId = model.providerId || model.provider
+      || (model.id.includes('/') ? model.id.split('/')[0] : 'allternit');
+    const modelId = model.id.includes('/') ? model.id.split('/').slice(1).join('/') : model.id;
+    return `${providerId}/${modelId}`;
+  }
+
+  const selectedKey = selection ? `${selection.providerId}/${selection.modelId}` : null;
+
+  return (
+    <div className="ad-menu-anchor">
+      <button type="button" className="ad-toolbar-button" onClick={onToggle}>
+        <Brain size={15} weight="duotone" />
+        <span><small>Model</small>{selection?.modelName ?? 'Model'}</span>
+      </button>
+      {isOpen && (
+        <div className="ad-popover ad-model-picker" role="menu" aria-label="Choose model">
+          {isLoading && availableModels.length === 0 && (
+            <p className="ad-model-picker__status">Loading models…</p>
+          )}
+          {!isLoading && availableModels.length === 0 && (
+            <p className="ad-model-picker__status">No models connected yet — pick a brain in Settings.</p>
+          )}
+          {availableModels.map((model) => (
+            <button
+              type="button"
+              key={modelKey(model)}
+              role="menuitem"
+              className={selectedKey === modelKey(model) ? 'is-selected' : ''}
+              onClick={() => {
+                if (!selectModel) return;
+                const providerId = model.providerId || model.provider
+                  || (model.id.includes('/') ? model.id.split('/')[0] : 'allternit');
+                const modelId = model.id.includes('/') ? model.id.split('/').slice(1).join('/') : model.id;
+                selectModel({ providerId, profileId: providerId, modelId, modelName: model.name, modelAuto: false });
+                onToggle();
+              }}
+            >
+              <Brain size={16} /><span><b>{model.name}</b><small>{model.providerName ?? model.providerId ?? model.provider ?? ''}</small></span>
+              {selectedKey === modelKey(model) && <Check size={14} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Gallery pill labels keyed by creation type — kimi.com/design category-tab pattern. */
+const GALLERY_TYPE_LABELS: Record<string, string> = {
+  prototype: 'Landing pages',
+  slides: 'Decks',
+  dashboard: 'Dashboards',
+  brand: 'Brand systems',
+  mobile: 'Mobile apps',
+  'content-engine': 'Content engines',
+  template: 'Templates',
+  other: 'Other',
+};
+const GALLERY_TYPE_ORDER = ['prototype', 'slides', 'dashboard', 'mobile', 'brand', 'content-engine', 'template', 'other'];
 
 interface NewProjectScreenProps {
   onStart: (config: {
@@ -46,9 +139,11 @@ interface NewProjectScreenProps {
     system?: DesignSystemEntry;
     skill?: SkillRecord;
     skillValues?: Record<string, unknown>;
+    aspect?: string;
   }) => void;
   onOpenProject?: (project: DesignProject) => void;
   onSelectDesignSystem?: (system: DesignSystemEntry) => void;
+  onRemix?: (entry: GalleryEntry) => void;
   selectedSkill?: SkillRecord | null;
   onSelectSkill?: (skill: SkillRecord | null) => void;
   skillValues?: Record<string, unknown>;
@@ -59,24 +154,61 @@ export function NewProjectScreen({
   onStart,
   onOpenProject,
   onSelectDesignSystem,
+  onRemix,
   selectedSkill,
   onSelectSkill,
   skillValues,
+  onChangeSkillValues,
 }: NewProjectScreenProps) {
   const projects = useDesignProjectStore((state) => state.projects);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState('');
   const [selectedType, setSelectedType] = useState('prototype');
+  const [selectedAspect, setSelectedAspect] = useState<string>('Adaptive');
   const [selectedDirection, setSelectedDirection] = useState('allternit-brand');
   const [selectedSystem, setSelectedSystem] = useState<DesignSystemEntry | null>(null);
-  const [activeMenu, setActiveMenu] = useState<'system' | 'type' | 'attach' | null>(null);
+  const [activeMenu, setActiveMenu] = useState<ComposerMenu>(null);
   const [libraryTab, setLibraryTab] = useState<LibraryTab>('projects');
   const [query, setQuery] = useState('');
   const [gridView, setGridView] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [galleryEntries, setGalleryEntries] = useState<GalleryEntry[]>([]);
+  const [galleryCategory, setGalleryCategory] = useState<string>('all');
+
+  useEffect(() => {
+    let cancelled = false;
+    listGalleryEntries().then((entries) => {
+      if (!cancelled) setGalleryEntries(entries);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [libraryTab]);
+
+  const galleryTypes = GALLERY_TYPE_ORDER.filter((type) => galleryEntries.some((entry) => entry.type === type));
+  const visibleGalleryEntries = galleryCategory === 'all'
+    ? galleryEntries
+    : galleryEntries.filter((entry) => entry.type === galleryCategory);
 
   const direction = DESIGN_DIRECTIONS.find((item) => item.id === selectedDirection) ?? DESIGN_DIRECTIONS[0];
   const activeType = CREATION_TYPES.find((item) => item.id === selectedType) ?? CREATION_TYPES[0];
+  const skillInputs = selectedSkill?.inputs ?? [];
+
+  /** Effective value for a skill input: user-set value wins, then declared default. */
+  function skillInputValue(input: (typeof skillInputs)[number]): unknown {
+    if (skillValues && input.name in skillValues) return skillValues[input.name];
+    return input.default;
+  }
+
+  const missingRequiredInputs = skillInputs.filter((input) => {
+    if (!input.required || input.type === 'boolean') return false;
+    const value = skillInputValue(input);
+    return value === undefined || value === null || String(value).trim() === '';
+  });
+
+  function setSkillInput(name: string, value: unknown) {
+    onChangeSkillValues?.({ ...(skillValues ?? {}), [name]: value });
+  }
   const visibleSystems = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return DESIGN_SYSTEMS_LIBRARY.filter((system) =>
@@ -93,6 +225,7 @@ export function NewProjectScreen({
   function submit() {
     const request = prompt.trim();
     if (!request) return;
+    if (missingRequiredInputs.length > 0) return;
     const name = request.length > 54 ? `${request.slice(0, 51).trimEnd()}…` : request;
     onStart({
       name,
@@ -102,6 +235,7 @@ export function NewProjectScreen({
       system: selectedSystem ?? undefined,
       skill: selectedSkill ?? undefined,
       skillValues: selectedSkill ? (skillValues ?? {}) : undefined,
+      aspect: selectedAspect === 'Adaptive' ? undefined : selectedAspect,
     });
   }
 
@@ -151,6 +285,82 @@ export function NewProjectScreen({
               ))}
             </div>
           )}
+
+          {skillInputs.length > 0 && (
+            <div className="ad-skill-inputs" aria-label={`${selectedSkill!.name} inputs`}>
+              {skillInputs.map((input) => {
+                const label = input.label ?? input.name;
+                const value = skillInputValue(input);
+                return (
+                  <label key={input.name} className="ad-skill-inputs__field">
+                    <span className="ad-skill-inputs__label">
+                      {label}
+                      {input.required && <i className="ad-skill-inputs__required" aria-hidden>*</i>}
+                    </span>
+                    {input.type === 'boolean' ? (
+                      <input
+                        aria-label={label}
+                        type="checkbox"
+                        checked={value === true}
+                        onChange={(event) => setSkillInput(input.name, event.target.checked)}
+                      />
+                    ) : input.type === 'enum' ? (
+                      <select
+                        aria-label={label}
+                        value={typeof value === 'string' ? value : ''}
+                        onChange={(event) => setSkillInput(input.name, event.target.value)}
+                      >
+                        {!input.required && <option value="">—</option>}
+                        {(input.values ?? []).map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    ) : input.type === 'text' ? (
+                      <textarea
+                        aria-label={label}
+                        rows={2}
+                        value={typeof value === 'string' ? value : ''}
+                        placeholder={input.placeholder}
+                        onChange={(event) => setSkillInput(input.name, event.target.value)}
+                      />
+                    ) : (
+                      <input
+                        aria-label={label}
+                        type={input.type === 'integer' ? 'number' : 'text'}
+                        value={typeof value === 'string' || typeof value === 'number' ? value : ''}
+                        placeholder={input.placeholder ?? (input.default != null && input.default !== '' ? String(input.default) : undefined)}
+                        min={input.min}
+                        max={input.max}
+                        onChange={(event) =>
+                          setSkillInput(
+                            input.name,
+                            input.type === 'integer' && event.target.value !== ''
+                              ? Number(event.target.value)
+                              : event.target.value,
+                          )
+                        }
+                      />
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="ad-composer__aspects" role="radiogroup" aria-label="Output shape">
+            {ASPECT_OPTIONS.map((aspect) => (
+              <button
+                key={aspect}
+                type="button"
+                role="radio"
+                aria-checked={selectedAspect === aspect}
+                className={selectedAspect === aspect ? 'is-active' : ''}
+                onClick={() => setSelectedAspect(aspect)}
+              >
+                {aspect}
+              </button>
+            ))}
+          </div>
 
           <div className="ad-composer__toolbar">
             <div className="ad-menu-anchor">
@@ -211,9 +421,14 @@ export function NewProjectScreen({
               )}
             </div>
 
+            <ModelPickerControl
+              isOpen={activeMenu === 'model'}
+              onToggle={() => setActiveMenu(activeMenu === 'model' ? null : 'model')}
+            />
+
             {selectedSkill && <span className="ad-composer__skill"><Robot size={12} />{selectedSkill.name}</span>}
             <span className="ad-composer__agent">Allternit</span>
-            <button type="button" className="ad-submit" disabled={!prompt.trim()} onClick={submit} aria-label="Create project"><ArrowUp size={17} weight="bold" /></button>
+            <button type="button" className="ad-submit" disabled={!prompt.trim() || missingRequiredInputs.length > 0} onClick={submit} aria-label="Create project"><ArrowUp size={17} weight="bold" /></button>
           </div>
         </section>
 
@@ -236,6 +451,7 @@ export function NewProjectScreen({
               <button type="button" className={libraryTab === 'projects' ? 'is-active' : ''} onClick={() => setLibraryTab('projects')}>Projects</button>
               <button type="button" className={libraryTab === 'systems' ? 'is-active' : ''} onClick={() => setLibraryTab('systems')}>Design systems</button>
               <button type="button" className={libraryTab === 'templates' ? 'is-active' : ''} onClick={() => setLibraryTab('templates')}>Templates</button>
+              <button type="button" className={libraryTab === 'gallery' ? 'is-active' : ''} onClick={() => setLibraryTab('gallery')}>Gallery</button>
             </nav>
             <div className="ad-library__tools">
               <label><MagnifyingGlass size={13} /><input placeholder="Search" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
@@ -278,7 +494,46 @@ export function NewProjectScreen({
               ))}
             </div>
           )}
+
+          {libraryTab === 'gallery' && (
+            <div className="ad-gallery">
+              {galleryEntries.length === 0 ? (
+                <div className="ad-library__empty"><GridFour size={18} /><span>Artifacts you create will appear here — every design that passes the brand gate gets featured.</span></div>
+              ) : (
+                <>
+                  <div className="ad-gallery__pills">
+                    <button type="button" className={galleryCategory === 'all' ? 'is-active' : ''} onClick={() => setGalleryCategory('all')}>All</button>
+                    {galleryTypes.map((type) => (
+                      <button key={type} type="button" className={galleryCategory === type ? 'is-active' : ''} onClick={() => setGalleryCategory(type)}>
+                        {GALLERY_TYPE_LABELS[type] ?? type}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ad-gallery__masonry">
+                    {visibleGalleryEntries.map((entry) => (
+                      <button type="button" key={entry.projectId} className="ad-gallery-card" onClick={() => onRemix?.(entry)} title={`Remix: ${entry.projectName}`}>
+                        {entry.thumbnail ? (
+                          <img src={entry.thumbnail} alt="" loading="lazy" />
+                        ) : (
+                          <span className="ad-gallery-card__placeholder" aria-hidden>{entry.projectName.slice(0, 1).toUpperCase()}</span>
+                        )}
+                        <span className="ad-gallery-card__meta">
+                          <b>{entry.projectName}</b>
+                          <small>
+                            {GALLERY_TYPE_LABELS[entry.type] ?? 'Other'}
+                            {entry.skillName ? ` · ${entry.skillName}` : ''}
+                          </small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </section>
+
+        <footer className="ad-launch__footer">Artifacts are AI-generated. For reference only — review before use.</footer>
       </main>
     </div>
   );

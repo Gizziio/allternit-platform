@@ -457,3 +457,54 @@ A design system migration task is complete only when:
 - Animation respects `prefers-reduced-motion`
 - Focus rings are visible and consistent
 - Validation script passes or blockers are documented
+
+---
+
+## 11. Artifact Sandbox
+
+Artifacts are **untrusted documents** — model-generated HTML, SVG, and markdown
+that must never get a foothold in the host page. `src/components/artifact/ArtifactRenderer.tsx`
+is the only supported rendering path for artifact content. Any new artifact
+renderer must keep this policy.
+
+### 11.1 Enforced by code (current)
+
+- **Sandboxed iframe for all markup-bearing artifact types** (HTML, React preview,
+  SVG, markdown): `sandbox="allow-scripts allow-forms allow-modals"`, rendered
+  via `srcDoc`. **There is deliberately no `allow-same-origin`.**
+- **Why no `allow-same-origin`:** with it, the iframe would share the host
+  origin and a malicious artifact could read/write the host's cookies,
+  localStorage, sessionStorage, and DOM. Without it the iframe runs under an
+  opaque origin and is cut off from all of it. SVG and markdown renderers route
+  through the same sandboxed iframe — they previously injected markup into the
+  host document (`dangerouslySetInnerHTML`), which was a real hole and is now closed.
+- **Storage shim** (`injectSandboxStorageShim`): artifact HTML gets a script
+  prepended that shadows `window.localStorage` and `window.sessionStorage`
+  with in-memory objects. Defense in depth — modern browsers already throw on
+  real storage access from an opaque-origin frame, but the shim guarantees
+  artifact code cannot persist anything even where access wouldn't throw.
+- **Mermaid artifacts** render as plain text (no markup injection at all).
+
+### 11.2 Advisory / known gaps (not enforced today)
+
+- **No CSP.** The sandboxed iframe has no Content-Security-Policy. Script
+  execution is allowed by design (artifacts are interactive), and network
+  egress is not blocked: `fetch`/XHR can reach arbitrary origins (response
+  reading is still subject to the target's CORS), and `<script src>` / `<img>`
+  / `<link>` can load remote resources. Tightening (a restrictive CSP injected
+  into the srcDoc) is tracked as a follow-up issue — do not assume egress is
+  blocked.
+- **The storage shim is per-document, not a quota system.** It prevents
+  persistence and origin leakage; it does not limit in-memory usage.
+- The `allow-scripts allow-forms allow-modals` token set exists so artifacts
+  can run their own JS and show dialogs. Do not add `allow-popups`,
+  `allow-top-navigation`, or `allow-same-origin` without re-reviewing this
+  section.
+
+### 11.3 Rule for new renderers
+
+If you add an artifact renderer for a new type: render it in the sandboxed
+iframe (`HTMLRenderer`) or as non-executable text. Never use
+`dangerouslySetInnerHTML` with artifact content in the host document. Add the
+type to the sandbox-policy test in
+`src/components/artifact/ArtifactRenderer.test.tsx`.
