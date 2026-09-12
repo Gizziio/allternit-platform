@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import ArtifactRenderer, { injectSandboxStorageShim } from './ArtifactRenderer';
+import ArtifactRenderer, {
+  ARTIFACT_CSP,
+  injectSandboxCsp,
+  injectSandboxStorageShim,
+} from './ArtifactRenderer';
 
 describe('artifact sandbox policy', () => {
   it('never grants allow-same-origin, for any artifact type', () => {
@@ -48,5 +52,59 @@ describe('artifact sandbox policy', () => {
   it('storage shim wraps content with no head or html tag', () => {
     const injected = injectSandboxStorageShim('<p>loose</p>');
     expect(injected.startsWith('<script data-allternit-artifact-storage-shim>')).toBe(true);
+  });
+});
+
+describe('artifact CSP (issue #396)', () => {
+  it('policy denies network egress and external origins outright', () => {
+    expect(ARTIFACT_CSP).toContain("default-src 'none'");
+    expect(ARTIFACT_CSP).toContain("connect-src 'none'");
+    expect(ARTIFACT_CSP).toContain("form-action 'none'");
+    expect(ARTIFACT_CSP).toContain("base-uri 'none'");
+    // No scheme/source that would allow remote loads anywhere in the policy.
+    expect(ARTIFACT_CSP).not.toContain('http:');
+    expect(ARTIFACT_CSP).not.toContain('https:');
+    expect(ARTIFACT_CSP).not.toContain("'self'");
+    // Inline scripts/styles stay allowed (artifact JS is inline by design).
+    expect(ARTIFACT_CSP).toContain("script-src 'unsafe-inline'");
+    expect(ARTIFACT_CSP).toContain("style-src 'unsafe-inline'");
+  });
+
+  it('injects the CSP meta into head, before any artifact content', () => {
+    const html = '<html><head><title>t</title><script>alert(1)</script></head><body><p>x</p></body></html>';
+    const injected = injectSandboxCsp(html);
+    expect(injected).toContain('http-equiv="Content-Security-Policy"');
+    expect(injected).toContain('data-allternit-artifact-csp');
+    expect(injected.indexOf('Content-Security-Policy')).toBeLessThan(injected.indexOf('<title>'));
+    expect(injected.indexOf('Content-Security-Policy')).toBeLessThan(injected.indexOf('alert(1)'));
+    expect(injectSandboxCsp(injected)).toBe(injected);
+  });
+
+  it('wraps fragment content with no head or html tag in a head carrying the CSP', () => {
+    const injected = injectSandboxCsp('<p>loose</p>');
+    expect(injected.startsWith('<head><meta http-equiv="Content-Security-Policy"')).toBe(true);
+  });
+
+  it('every iframe-rendering artifact type gets the CSP in its srcdoc', () => {
+    const types = ['document/html', 'code/react', 'image/svg+xml', 'media/svg', 'text/markdown', 'document/markdown', 'unknown/thing'];
+    for (const type of types) {
+      const markup = renderToStaticMarkup(
+        <ArtifactRenderer content={type.includes('svg') ? '<svg/>' : '# hi'} type={type} />,
+      );
+      if (markup.includes('srcdoc=')) {
+        expect(markup).toContain('Content-Security-Policy');
+        expect(markup).toContain("default-src 'none'");
+        expect(markup).toContain("connect-src 'none'");
+      }
+    }
+  });
+
+  it('aio targeting keeps the CSP alongside the capture script (postMessage is unaffected by connect-src)', () => {
+    const markup = renderToStaticMarkup(
+      <ArtifactRenderer content={'<button>Buy</button>'} type="document/html" aioTargeting onAioTarget={() => {}} />,
+    );
+    expect(markup).toContain('Content-Security-Policy');
+    expect(markup).toContain('data-allternit-aio-target-capture');
+    expect(markup).toContain('data-allternit-artifact-storage-shim');
   });
 });

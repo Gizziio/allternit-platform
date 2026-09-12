@@ -26,7 +26,8 @@ import type { ModelOption } from '@/components/prompt-kit/prompt-model-selector'
 import { DESIGN_DIRECTIONS, type DesignDirection } from '../../lib/design/directions';
 import { DESIGN_SYSTEMS_LIBRARY, type DesignSystemEntry } from '../../lib/design/design-systems-library';
 import type { SkillRecord } from '../../lib/design/skill-registry';
-import { listGalleryEntries, type GalleryEntry } from '../../lib/design/gallery-store';
+import { type GalleryEntry } from '../../lib/design/gallery-store';
+import { listGalleryEntriesGatewayFirst } from '../../lib/design/content-artifact-sync';
 import { useDesignProjectStore, type DesignProject } from '@/views/project/design/design-project.store';
 import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import { isElectronShell } from '@/lib/platform';
@@ -177,7 +178,9 @@ export function NewProjectScreen({
 
   useEffect(() => {
     let cancelled = false;
-    listGalleryEntries().then((entries) => {
+    // Gateway-first (canonical per docs/design/artifacts-api.md §4), with the
+    // IndexedDB gallery as the offline fallback.
+    listGalleryEntriesGatewayFirst().then((entries) => {
       if (!cancelled) setGalleryEntries(entries);
     });
     return () => {

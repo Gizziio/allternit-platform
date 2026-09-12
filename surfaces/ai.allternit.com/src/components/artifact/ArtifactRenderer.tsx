@@ -11,6 +11,9 @@ import {
   parseAioTargetMessage,
   type AioTargetPayload,
 } from '@/lib/design/aio-targeting';
+import { ARTIFACT_CSP, injectSandboxCsp } from './sandbox-csp';
+
+export { ARTIFACT_CSP, injectSandboxCsp };
 
 interface ArtifactRendererProps {
   content: string;
@@ -96,7 +99,8 @@ const HTMLRenderer = memo<{
     }, [aioTargeting, onAioTarget]);
 
     const srcDoc = useMemo(() => {
-      const shimmed = injectSandboxStorageShim(htmlContent);
+      // CSP first: it must precede every resource-bearing element to govern it.
+      const shimmed = injectSandboxStorageShim(injectSandboxCsp(htmlContent));
       if (!aioTargeting) return shimmed;
       return injectAioTargetCapture(injectAioIds(shimmed));
     }, [htmlContent, aioTargeting]);
