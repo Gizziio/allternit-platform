@@ -75,6 +75,29 @@ export function parseArtifactAddress(
   return m ? { id: m[1]! } : null;
 }
 
+const ARTIFACT_ADDRESS_RE = /a:\/\/artifact\/[A-Za-z0-9_-]+/g;
+
+/**
+ * Split free text into text chunks and `a://artifact/<id>` addresses (in
+ * order) so surfaces can render addresses as resolvable cards instead of
+ * dead text.
+ */
+export function splitArtifactAddressText(text: string): Array<
+  { kind: 'text'; text: string } | { kind: 'address'; address: string }
+> {
+  const out: Array<{ kind: 'text'; text: string } | { kind: 'address'; address: string }> = [];
+  let last = 0;
+  ARTIFACT_ADDRESS_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = ARTIFACT_ADDRESS_RE.exec(text)) !== null) {
+    if (m.index > last) out.push({ kind: 'text', text: text.slice(last, m.index) });
+    out.push({ kind: 'address', address: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ kind: 'text', text: text.slice(last) });
+  return out;
+}
+
 function listQueryString(query: ContentArtifactListQuery = {}): string {
   const params = new URLSearchParams();
   if (query.type) params.set('type', query.type);
@@ -131,4 +154,66 @@ export async function appendContentArtifactVersion(
 /** Soft delete. Missing rows are a no-op on the gateway side. */
 export async function deleteContentArtifact(id: string): Promise<void> {
   await api.delete(`/api/v1/content-artifacts/${encodeURIComponent(id)}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Chat persist step (docs/design/artifacts-api.md §5 "Chat")
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Renderable chat artifact kinds → gateway MIME type. The API is html-first;
+ * code/jsx/sheet artifacts are not renderable documents and get no persist
+ * path in Phase 2.
+ */
+const CHAT_ARTIFACT_MIME: Record<string, string> = {
+  html: 'text/html',
+  svg: 'image/svg+xml',
+  document: 'text/markdown',
+  mermaid: 'application/vnd.allternit.mermaid',
+  openui: 'text/html',
+};
+
+export function isPersistableChatArtifactKind(kind: string): boolean {
+  return kind in CHAT_ARTIFACT_MIME;
+}
+
+export interface PersistChatArtifactInput {
+  title: string;
+  kind: string;
+  content: string;
+  /** Producing chat session — stored as provenance.sourceSessionId. */
+  sourceSessionId?: string;
+  prompt?: string;
+}
+
+/**
+ * Persist a chat-produced artifact through the content-artifacts API (Phase 2
+ * chat persist step). Returns the artifact id and its `a://artifact/<id>`
+ * address. Throws on gateway rejection — the caller surfaces the error.
+ */
+export async function persistChatArtifact(
+  input: PersistChatArtifactInput,
+): Promise<{ id: string; address: string }> {
+  const mime = CHAT_ARTIFACT_MIME[input.kind] ?? 'text/html';
+  const res = await createContentArtifact({
+    title: input.title,
+    type: mime,
+    body: input.content,
+    sourceSessionId: input.sourceSessionId,
+    prompt: input.prompt,
+    sandboxPolicy: 'standard',
+    idempotencyKey: `chat-save-${input.sourceSessionId ?? 'anon'}-${hashString(input.content)}`,
+  });
+  const id = res.artifact?.id;
+  if (!id) throw new Error('gateway did not return an artifact id');
+  return { id, address: artifactAddress(id) };
+}
+
+/** djb2 — deterministic idempotency-key ingredient for content hashing. */
+function hashString(value: string): number {
+  let hash = 5381;
+  for (let i = 0; i < value.length; i++) {
+    hash = ((hash << 5) + hash + value.charCodeAt(i)) | 0;
+  }
+  return hash >>> 0;
 }

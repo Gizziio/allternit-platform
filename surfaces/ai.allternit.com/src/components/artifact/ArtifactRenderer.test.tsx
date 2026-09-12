@@ -17,6 +17,9 @@ describe('artifact sandbox policy', () => {
       'text/markdown',
       'document/markdown',
       'application/lobe.artifacts.mermaid',
+      'application/vnd.allternit.deck',
+      'application/vnd.allternit.prototype',
+      'application/vnd.allternit.mobile',
       'unknown/thing',
     ];
     for (const type of types) {
@@ -106,5 +109,35 @@ describe('artifact CSP (issue #396)', () => {
     expect(markup).toContain('Content-Security-Policy');
     expect(markup).toContain('data-allternit-aio-target-capture');
     expect(markup).toContain('data-allternit-artifact-storage-shim');
+  });
+});
+
+describe('typed renderers (§2.1 Phase 2)', () => {
+  it('deck renders slide chrome over the sandboxed iframe', () => {
+    const markup = renderToStaticMarkup(
+      <ArtifactRenderer content={'<deck-stage><section>s1</section></deck-stage>'} type="application/vnd.allternit.deck" />,
+    );
+    expect(markup).toContain('artifact-deck-renderer');
+    expect(markup).toContain('sandbox="allow-scripts allow-forms allow-modals"');
+    expect(markup).not.toContain('allow-same-origin');
+    expect(markup).toContain('Content-Security-Policy');
+  });
+
+  it('mobile renders a 390px device frame in the sandboxed iframe', () => {
+    const markup = renderToStaticMarkup(
+      <ArtifactRenderer content={'<html><body>app</body></html>'} type="application/vnd.allternit.mobile" />,
+    );
+    expect(markup).toContain('artifact-mobile-renderer');
+    expect(markup).toContain('sandbox="allow-scripts allow-forms allow-modals"');
+    expect(markup).toContain('Content-Security-Policy');
+    expect(markup).toContain('390px device frame');
+  });
+
+  it('prototype renders in the standard sandboxed iframe', () => {
+    const markup = renderToStaticMarkup(
+      <ArtifactRenderer content={'<html><body>proto</body></html>'} type="application/vnd.allternit.prototype" />,
+    );
+    expect(markup).toContain('sandbox="allow-scripts allow-forms allow-modals"');
+    expect(markup).not.toContain('allow-same-origin');
   });
 });

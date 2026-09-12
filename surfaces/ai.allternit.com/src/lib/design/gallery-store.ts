@@ -102,7 +102,16 @@ function gatewayType(entry: GalleryEntry): string {
 }
 
 function entryFromGatewayRecord(
-  a: { id: string; title?: string; type?: string; projectId?: string; provenance?: Record<string, string | undefined>; thumbnail?: string; createdAt?: string; updatedAt?: string },
+  a: {
+    id: string;
+    title?: string;
+    type?: string;
+    projectId?: string;
+    provenance?: { prompt?: string; designSystemId?: string; skillId?: string; skillName?: string; sourceSessionId?: string };
+    thumbnail?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  },
   localEntry: GalleryEntry | undefined,
   artifactHtml: string,
 ): GalleryEntry {

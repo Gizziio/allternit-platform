@@ -117,7 +117,7 @@ diff tooling later.
 Indexes: `(artifact_id, version)` unique; `(user_id, created_at)` for list;
 `(type)`; `(project_id)`.
 
-### 2.1 Type system (DECIDED shape, typed renderers OPEN for P2)
+### 2.1 Type system (DECIDED shape, typed renderers DECIDED 2026-09-12)
 
 `type` is a MIME-style string. Html-first, per row 1:
 
@@ -128,10 +128,33 @@ Indexes: `(artifact_id, version)` unique; `(user_id, created_at)` for list;
 - `application/vnd.allternit.deck`, `…prototype`, `…mobile` — typed
   renderers. Deck already has a real export path
   (`artifact-export.ts` extracts slides from `<deck-stage>` / `.slide`
-  patterns for PPTX). Prototype and mobile get typed renderers in Phase 2 —
-  what a "typed renderer" adds beyond `text/html` + viewport metadata is an
-  OPEN question for that phase (deck = slide navigation; mobile = device
-  frame; prototype = hotspot linking). The *storage* model does not care.
+  patterns for PPTX).
+
+**Typed renderers — DECIDED (2026-09-12, session `artphase2-0912`).** A typed
+renderer is a *thin presentation-chrome layer over the same sandboxed srcdoc
+iframe* every artifact renders in — not a separate execution environment:
+
+- **Storage does not care.** One body column, one sandbox policy; the MIME
+  type selects presentation only. No per-type tables, policies, or CSP
+  variants.
+- **deck** = the deck-stage skeleton already ships in-document nav (click
+  zones, keyboard, hash routes). The typed renderer adds a chrome bar with a
+  live slide counter fed by deck-stage's `slideIndexChanged` postMessage
+  (validated like the aio-targeting channel: opaque origin, own iframe only)
+  and prev/next buttons that navigate through the iframe's `#slide-N` hash.
+- **mobile** = the artifact renders inside a 390px device frame (viewport
+  metadata made visible).
+- **prototype** = the standard sandboxed iframe unchanged. Hotspot linking is
+  in-document anchor navigation, which the sandbox already supports; the
+  typed case exists so the MIME type maps to a defined renderer rather than
+  the default fallback.
+
+Reasoning: the §2.1 open question asked what a typed renderer adds beyond
+`text/html` + viewport metadata. The answer after looking at the real deck
+skeleton: navigation chrome the host must own (counter, parent-driven nav) —
+everything else (hotspots, slide markup) already lives inside the artifact
+document. Execution policy stays byte-for-byte identical (no
+`allow-same-origin`, CSP untouched) so "typed" can never widen the sandbox.
 
 ## 3. API shape (DECIDED, served at :8013 under `/api/v1`)
 
