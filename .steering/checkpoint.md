@@ -13,11 +13,22 @@ gizzi-code → deep-link into A:// Studio (mapping doc §2 row 12).
 Just did: worktree created, deps installed, code read (ArtifactRenderer,
 SurgicalEditPanel, surgical-edit.ts, DesignModeView, gizzi-code command
 registry, desktopDeepLink.ts, desktop protocol handling, /design route).
+Part 1 implemented: `src/lib/design/aio-targeting.ts` (injectAioIds /
+injectAioTargetCapture / parseAioTargetMessage / buildAioTargetDescription),
+ArtifactRenderer aioTargeting+onAioTarget props (origin-'null' + payload
+validation), SurgicalEditPanel targetSeed prop, DesignModeView artifact
+preview + Crosshair target toggle above the surgical panel; 18 new tests in
+aio-targeting.test.ts. Part 2 implemented: desktopDeepLink
+buildDesignDeepLink/openDesignStudioInDesktop, desktop main handles
+allternit://design?prompt=... (refactored shell:open-design into
+openDesignStudio), /design?prompt= seeds DesignModeView composer,
+gizzi-code `/design [prompt]` local-jsx command registered. release-preflight
+35/0.
 
-Next: implement Part 1 (aio-targeting util + renderer wiring + panel seeding +
-tests), Part 2 (deep link + desktop main handler + gizzi-code command),
-verify (typecheck, vitest, gizzi-code typecheck + production build, preflight),
-PR → merge, ledger, desktop rebuild + bundle grep, cleanup.
+Next: finish verification (ai vitest+typecheck, gizzi-code typecheck +
+production build re-run post-interruption), commit + push, PR → merge
+(--merge), ledger branch (date 2026-09-12), desktop rebuild + bundle grep,
+cleanup.
 
 ## Goal (other sessions — untouched below)
 Session: session/artifactsapi-0911, worktree allternit-session-artifactsapi-0911,
