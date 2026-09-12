@@ -1,29 +1,24 @@
-# Checkpoint — artphase3-0912
+# Steering checkpoint — artphase3-0912 (this session) + relay-watchdog (merged #424)
 
-## Goal
-A:// Artifacts Phase 3 (issue #389): hosted publish/unpublish/status gateway
-routes + deploy plumbing + minimal web actions + design-doc updates, per
-docs/design/artifacts-api.md §6 decisions (2026-09-12).
+- **Goal (artphase3-0912):** A:// Artifacts Phase 3 (issue #389): hosted
+  publish/unpublish/status gateway routes + deploy plumbing + minimal web
+  actions + design-doc updates, per docs/design/artifacts-api.md §6 decisions.
+- **Just did:** V150 migration; content_artifact_publish.rs (POST/GET/DELETE
+  /content-artifacts/:id/publish) with the sandbox-policy gate (422, names the
+  policy), immutable version snapshot, unpublish = route removal only, and an
+  ArtifactPublisher trait (wrangler pages deploy impl env-gated;
+  filesystem publisher dev default). Web: publish/unpublish + status on gallery
+  cards. Design doc §3/§6/§7 updated. cargo test content_artifact 14/14; full
+  api suite 1007 passed with only known pre-existing flakes; tsc 0 errors;
+  design vitest 1770/0; release-preflight 35/0; live curl smoke green
+  (publish → status → append → snapshot pinned → unpublish → deployment kept,
+  422 gate).
+- **Next:** release build, PR, merge, ledger, desktop rebuild, cleanup.
+- **Open questions:** none.
 
-## Just did
-- V150__content_artifact_publishes.sql (publish state + per-user route map).
-- content_artifact_publish.rs: POST/GET/DELETE /content-artifacts/:id/publish;
-  sandbox-policy gate (422, names policy); version-snapshot semantics; publisher
-  trait with real WranglerPagesPublisher (env ALLTERNIT_ARTIFACT_PUBLISHER=wrangler)
-  and FsPublisher dev default (immutable deployments + removable routes under
-  <data_dir>/artifact-publish/); 7 tests incl. gate, snapshot, unpublish-keeps-
-  deployment, idempotent republish, scoping. Mounted in main.rs; Phase 1 helpers
-  widened to pub(crate) (no behavior change).
-- Web: publish/unpublish/status client fns in content-artifact-api.ts;
-  GalleryPublishActions.tsx presentational row; NewProjectScreen card wrap; CSS.
-- Design doc: §3 publish API, §6 row IMPLEMENTED, §7 Phase 3 implemented.
-- tsc --noEmit 0 errors; NewProjectScreen + gallery vitest 24/24 green.
+## Checkpoint — desktop-relay-watchdog-0912 (session merged via #424, kept for history)
 
-## Next
-cargo test -p allternit-api (new tests; known pre-existing failures not mine),
-release build, live curl smoke with fs publisher, release-preflight, PR, ritual.
-
-## Open questions
-- Resolved: gate = policy containing "network" (case-insensitive). Documented.
-- Wrangler unpublish redeploys tree minus route (old deployment URL stays live) —
-  stated in design doc §3 and will be in the PR.
+- **Goal:** Fix #423 — desktop runtime relay silent-death (node dark until app restart).
+- **Just did:** Worktree `desktop-relay-watchdog-0912` off origin/main. `auth-manager.ts` gained a relay heartbeat watchdog: `relayLastMessageAt` stamped on every WS message (cloud pings every 25s), a 30s interval closes the socket with code 4000 when the last message is older than 75s — the close handler stops the watchdog and schedules the existing backoff reconnect. Watchdog stopped in `clearSession()` too; `reconnectRuntimeRelay()` already funnels through the close handler. Desktop typecheck ✅, 125 vitest ✅, release-preflight 35/0 ✅.
+- **Next:** PR → merge → ledger → rebuild desktop DMG from merged main (unsigned local build) → install into /Applications (quit running app first) → relaunch and verify `[Auth] Paired runtime relay connected` + viewer path.
+- **Open questions:** none.
