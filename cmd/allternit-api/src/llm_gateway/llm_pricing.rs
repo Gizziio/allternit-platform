@@ -251,6 +251,33 @@ pub fn recompute_cost_microdollars(
     Some(cost_microdollars(pricing, tokens))
 }
 
+/// Estimate the input-cost savings from provider-reported cache-read tokens
+/// (task G11): what the cached tokens *would* have cost at the model's full
+/// input rate had they not been served from cache. Same lookup and over-200k
+/// tier logic as the cost recompute; rates are $/1M tokens so
+/// `tokens × rate` is already microdollars. Returns None when the pricing
+/// cache or model is unavailable (callers report savings as unknown, never
+/// as zero).
+pub fn estimated_cache_savings_microdollars(
+    provider_id: &str,
+    model_id: &str,
+    cached_tokens: i64,
+) -> Option<i64> {
+    let map = current_pricing()?;
+    let pricing = find_pricing(&map, provider_id, model_id)?;
+    Some(cache_savings_microdollars(pricing, cached_tokens))
+}
+
+/// Savings math against an already-resolved rate card (kept pure so the
+/// estimate is unit-testable without the models.dev file).
+pub(crate) fn cache_savings_microdollars(pricing: &ModelPricing, cached_tokens: i64) -> i64 {
+    let rates = match (cached_tokens > 200_000, &pricing.context_over_200k) {
+        (true, Some(tier)) => tier.as_ref(),
+        _ => pricing,
+    };
+    (cached_tokens.max(0) as f64 * rates.input).round() as i64
+}
+
 /// Whether the recomputed and Gizzi-reported costs disagree by more than 1%
 /// (relative to the larger of the two). Both-zero is never a mismatch.
 pub fn is_mismatch(recomputed: i64, reported: i64) -> bool {
@@ -381,6 +408,28 @@ mod tests {
         let pricing = find_pricing(&map, "custom-gateway", "gpt-4o").unwrap();
         assert_eq!(pricing.input, 2.5);
         assert!(find_pricing(&map, "openai", "no-such-model").is_none());
+    }
+
+    #[test]
+    fn cache_savings_estimate_uses_input_rate() {
+        let map = fixture();
+        let sonnet = map.get("anthropic/claude-sonnet-4-5").unwrap();
+        // 10_000 cached tokens × $3.0/1M input = 30_000 microdollars ($0.03).
+        assert_eq!(cache_savings_microdollars(sonnet, 10_000), 30_000);
+
+        // Negative/garbage token counts clamp to zero, never negative savings.
+        assert_eq!(cache_savings_microdollars(sonnet, -5), 0);
+        assert_eq!(cache_savings_microdollars(sonnet, 0), 0);
+    }
+
+    #[test]
+    fn cache_savings_estimate_applies_over_200k_tier() {
+        let map = fixture();
+        let opus = map.get("anthropic/claude-opus-4-1").unwrap();
+        // Above the 200k threshold the over-200k input rate applies.
+        assert_eq!(cache_savings_microdollars(opus, 300_000), 9_000_000);
+        // Below it the standard rate applies.
+        assert_eq!(cache_savings_microdollars(opus, 100_000), 1_500_000);
     }
 
     #[test]
