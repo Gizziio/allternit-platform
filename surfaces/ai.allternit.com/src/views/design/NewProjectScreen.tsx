@@ -62,6 +62,7 @@ export function NewProjectScreen({
   selectedSkill,
   onSelectSkill,
   skillValues,
+  onChangeSkillValues,
 }: NewProjectScreenProps) {
   const projects = useDesignProjectStore((state) => state.projects);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +78,23 @@ export function NewProjectScreen({
 
   const direction = DESIGN_DIRECTIONS.find((item) => item.id === selectedDirection) ?? DESIGN_DIRECTIONS[0];
   const activeType = CREATION_TYPES.find((item) => item.id === selectedType) ?? CREATION_TYPES[0];
+  const skillInputs = selectedSkill?.inputs ?? [];
+
+  /** Effective value for a skill input: user-set value wins, then declared default. */
+  function skillInputValue(input: (typeof skillInputs)[number]): unknown {
+    if (skillValues && input.name in skillValues) return skillValues[input.name];
+    return input.default;
+  }
+
+  const missingRequiredInputs = skillInputs.filter((input) => {
+    if (!input.required || input.type === 'boolean') return false;
+    const value = skillInputValue(input);
+    return value === undefined || value === null || String(value).trim() === '';
+  });
+
+  function setSkillInput(name: string, value: unknown) {
+    onChangeSkillValues?.({ ...(skillValues ?? {}), [name]: value });
+  }
   const visibleSystems = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return DESIGN_SYSTEMS_LIBRARY.filter((system) =>
@@ -93,6 +111,7 @@ export function NewProjectScreen({
   function submit() {
     const request = prompt.trim();
     if (!request) return;
+    if (missingRequiredInputs.length > 0) return;
     const name = request.length > 54 ? `${request.slice(0, 51).trimEnd()}…` : request;
     onStart({
       name,
@@ -149,6 +168,67 @@ export function NewProjectScreen({
                   <button type="button" onClick={() => setAttachments((items) => items.filter((_, itemIndex) => itemIndex !== index))}><X size={11} /></button>
                 </span>
               ))}
+            </div>
+          )}
+
+          {skillInputs.length > 0 && (
+            <div className="ad-skill-inputs" aria-label={`${selectedSkill!.name} inputs`}>
+              {skillInputs.map((input) => {
+                const label = input.label ?? input.name;
+                const value = skillInputValue(input);
+                return (
+                  <label key={input.name} className="ad-skill-inputs__field">
+                    <span className="ad-skill-inputs__label">
+                      {label}
+                      {input.required && <i className="ad-skill-inputs__required" aria-hidden>*</i>}
+                    </span>
+                    {input.type === 'boolean' ? (
+                      <input
+                        aria-label={label}
+                        type="checkbox"
+                        checked={value === true}
+                        onChange={(event) => setSkillInput(input.name, event.target.checked)}
+                      />
+                    ) : input.type === 'enum' ? (
+                      <select
+                        aria-label={label}
+                        value={typeof value === 'string' ? value : ''}
+                        onChange={(event) => setSkillInput(input.name, event.target.value)}
+                      >
+                        {!input.required && <option value="">—</option>}
+                        {(input.values ?? []).map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    ) : input.type === 'text' ? (
+                      <textarea
+                        aria-label={label}
+                        rows={2}
+                        value={typeof value === 'string' ? value : ''}
+                        placeholder={input.placeholder}
+                        onChange={(event) => setSkillInput(input.name, event.target.value)}
+                      />
+                    ) : (
+                      <input
+                        aria-label={label}
+                        type={input.type === 'integer' ? 'number' : 'text'}
+                        value={typeof value === 'string' || typeof value === 'number' ? value : ''}
+                        placeholder={input.placeholder ?? (input.default != null && input.default !== '' ? String(input.default) : undefined)}
+                        min={input.min}
+                        max={input.max}
+                        onChange={(event) =>
+                          setSkillInput(
+                            input.name,
+                            input.type === 'integer' && event.target.value !== ''
+                              ? Number(event.target.value)
+                              : event.target.value,
+                          )
+                        }
+                      />
+                    )}
+                  </label>
+                );
+              })}
             </div>
           )}
 
@@ -213,7 +293,7 @@ export function NewProjectScreen({
 
             {selectedSkill && <span className="ad-composer__skill"><Robot size={12} />{selectedSkill.name}</span>}
             <span className="ad-composer__agent">Allternit</span>
-            <button type="button" className="ad-submit" disabled={!prompt.trim()} onClick={submit} aria-label="Create project"><ArrowUp size={17} weight="bold" /></button>
+            <button type="button" className="ad-submit" disabled={!prompt.trim() || missingRequiredInputs.length > 0} onClick={submit} aria-label="Create project"><ArrowUp size={17} weight="bold" /></button>
           </div>
         </section>
 
