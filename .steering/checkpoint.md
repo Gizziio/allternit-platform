@@ -1,9 +1,9 @@
 # Checkpoint — artphase1-0912
 
-**Goal:** Land Artifacts API Phase 1 (gateway CRUD + design-session persistence) per docs/design/artifacts-api.md; version retention cap 50 implemented at append time; PR merge, ledger, desktop rebuild, cleanup.
+**Goal:** Land Artifacts API Phase 1 (gateway CRUD + design-session persistence) per docs/design/artifacts-api.md; version retention cap 50 at append time; PR merge, ledger, desktop rebuild, cleanup.
 
-**Just did:** V148 migration (content_artifacts + content_artifact_versions + content_artifact_idempotency). content_artifact_routes.rs complete (create/read/list/append/PATCH/versions/soft-delete, idempotency header+body key with 24h TTL sweep, retention cap via ALLTERNIT_CONTENT_ARTIFACT_MAX_VERSIONS default 50, inline ≤256KB + file storage under <data_dir>/content-artifacts/). Mounted in main.rs. 6 route tests written; cargo check clean; cargo test running. Web: content-artifact-sync.ts (save-through + gateway-first read w/ IndexedDB fallback + local merge), wired into DesignModeView (save) and NewProjectScreen (read). Design vitest green 80/80 incl. 7 new sync tests. typecheck running.
+**Just did:** All 6 content-artifact route tests pass (lifecycle, create idempotency, append idempotency, retention cap prune w/ env override, filters+cursor pagination+user scoping, file storage roundtrip). Fixed two real bugs found by tests: skillId/skillName camelCase aliases; cursor-bind placeholder collapse. Design vitest 80/80. typecheck 0 errors. release-preflight 35/0. Session branch pushed (2 commits). Full `cargo test -p allternit-api` running in background.
 
-**Next:** cargo test results → release build → live curl smoke → release-preflight → commits → PR.
+**Next:** Full test suite → `cargo build --release -p allternit-api` → live curl smoke (ALLTERNIT_LOCAL_DEV_BYPASS=1, port 18013, temp data dir) → PR + merge → issue 387 comment/close → ledger → desktop rebuild → cleanup.
 
-**Open questions:** Gallery `type` is a UI category slug, not MIME — gateway stores MIME; merged entries reuse local category or 'other' (documented in PR).
+**Open questions:** None.
