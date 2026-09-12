@@ -1,10 +1,13 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { Plus, Trash, FileCode, FileText, DownloadSimple } from '@phosphor-icons/react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Plus, Trash, FileCode, FileText, DownloadSimple, ClockCounterClockwise } from '@phosphor-icons/react';
 import {
   loadProjectFiles,
   writeProjectFile,
   deleteProjectFile,
+  restoreFileVersion,
+  listFileVersions,
+  type FileVersion,
   type ProjectFile,
   type ProjectFileTree,
 } from '../../lib/design/project-file-store';
@@ -23,10 +26,26 @@ export function ProjectFileWorkspace({ projectId, onOpenFile }: ProjectFileWorks
   // Gate: HTML with unresolved P0 brand violations (legacy coral / purple) is
   // blocked from being saved as a project file until fixed.
   const [brandGateError, setBrandGateError] = useState<string | null>(null);
+  // Version history popover for the selected file (non-destructive, capped at 10).
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [versions, setVersions] = useState<FileVersion[]>([]);
+
+  const refreshVersions = useCallback(() => {
+    if (!selectedPath) {
+      setVersions([]);
+      return;
+    }
+    listFileVersions(projectId, selectedPath).then(setVersions);
+  }, [projectId, selectedPath]);
 
   useEffect(() => {
     loadProjectFiles(projectId).then(setTree);
   }, [projectId]);
+
+  useEffect(() => {
+    setHistoryOpen(false);
+    refreshVersions();
+  }, [refreshVersions]);
 
   async function createFile() {
     const name = newFileName.trim();
@@ -54,6 +73,16 @@ export function ProjectFileWorkspace({ projectId, onOpenFile }: ProjectFileWorks
     setBrandGateError(null);
     const updated = await writeProjectFile(projectId, selectedPath, content);
     setTree(updated);
+    refreshVersions();
+  }
+
+  async function restoreVersion(index: number) {
+    if (!selectedPath) return;
+    const updated = await restoreFileVersion(projectId, selectedPath, index);
+    setTree(updated);
+    onOpenFile?.(selectedPath, updated.files[selectedPath]?.content ?? '');
+    setHistoryOpen(false);
+    refreshVersions();
   }
 
   async function removeFile(path: string) {
@@ -137,9 +166,52 @@ export function ProjectFileWorkspace({ projectId, onOpenFile }: ProjectFileWorks
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {selectedFile ? (
           <>
-            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
-              {selectedFile.path}
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedFile.path}</span>
+              <button
+                type="button"
+                onClick={() => setHistoryOpen((open) => !open)}
+                title="File history"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 5,
+                  border: '1px solid var(--border-subtle)', background: historyOpen ? 'var(--surface-hover)' : 'transparent',
+                  color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                <ClockCounterClockwise size={12} />
+                History{versions.length > 0 ? ` (${versions.length})` : ''}
+              </button>
             </div>
+            {historyOpen && (
+              <div style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-panel)', padding: '8px 14px', maxHeight: 220, overflow: 'auto' }}>
+                {versions.length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '4px 0' }}>
+                    No saved versions yet — versions are recorded each time the file is saved.
+                  </div>
+                ) : (
+                  [...versions].reverse().map((version, reversedIdx) => {
+                    const index = versions.length - 1 - reversedIdx;
+                    return (
+                      <div key={`${version.hash}-${version.savedAt}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {new Date(version.savedAt).toLocaleString()}
+                          {index === versions.length - 1 ? ' (current)' : ''}
+                        </span>
+                        {index !== versions.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => restoreVersion(index)}
+                            style={{ padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Restore this version
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
             {brandGateError && (
               <div role="alert" style={{ padding: '8px 14px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', background: 'color-mix(in srgb, #B08D6E 12%, transparent)', borderBottom: '1px solid var(--border-subtle)' }}>
                 {brandGateError}
