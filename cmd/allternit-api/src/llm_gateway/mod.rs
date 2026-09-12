@@ -4,9 +4,9 @@
 //!
 //! - [`llm_gateway_router`] — the public OpenAI surface, nested at `/v1` in
 //!   main.rs: `POST /v1/chat/completions`, `GET /v1/models`. It carries its
-//!   own middleware chain (virtual-key auth → rate limit → DLP → budget
-//!   pre-check) and is therefore mounted on the *public* router, outside
-//!   Clerk auth.
+//!   own middleware chain (virtual-key auth → rate limit → org rate limit →
+//!   DLP → budget pre-check) and is therefore mounted on the *public* router,
+//!   outside Clerk auth.
 //! - [`gateway_keys_router`] — key management, merged into the
 //!   Clerk-protected `/api/v1` chain in main.rs (`/api/v1/gateway/keys*`).
 //! - [`admin_routes::gateway_admin_router`] — observability + tenant config
@@ -17,8 +17,10 @@
 //!   1. `auth::llm_key_middleware` — Bearer `ak-…` → [`auth::LlmKeyContext`]
 //!      request extension.
 //!   2. `auth::rate_limit_middleware` — per-key sliding window.
-//!   3. `dlp::dlp_middleware` — B6 secret scanning + injection screening.
-//!   4. `auth::budget_middleware` — monthly key/tenant cap pre-check.
+//!   3. `auth::org_rate_limit_middleware` — per-org sliding window
+//!      (`organizations.gateway_rate_limit_rpm`, G14).
+//!   4. `dlp::dlp_middleware` — B6 secret scanning + injection screening.
+//!   5. `auth::budget_middleware` — monthly key/tenant cap pre-check.
 //!
 //! Cross-cutting modules:
 //! - `router` + `benchmarks` — B5 routing policies: benchmark-weighted model
@@ -35,6 +37,7 @@ pub mod benchmarks;
 pub mod cache;
 pub mod citations;
 pub mod context_cache;
+pub mod data_residency;
 pub mod dlp;
 pub mod dlp_patterns;
 pub mod embeddings;
@@ -108,7 +111,8 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/realtime/sessions/:id/ws", get(realtime_audio::ws_handler))
         .merge(vector_store::vector_store_router())
         // Layer order: the LAST layer added runs FIRST. Execution order is
-        // therefore llm_key auth → rate limit → DLP → budget → handler.
+        // therefore llm_key auth → rate limit → org rate limit → DLP →
+        // budget → handler.
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::budget_middleware,
@@ -118,6 +122,11 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             dlp::dlp_middleware,
+        ))
+        // G14: org-level RPM cap between the per-key limiter and DLP.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            auth::org_rate_limit_middleware,
         ))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),

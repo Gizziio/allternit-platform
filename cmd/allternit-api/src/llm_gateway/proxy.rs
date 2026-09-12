@@ -1786,6 +1786,57 @@ pub async fn chat_completions(
         Err(response) => return response.into_response(),
     };
 
+    // G13 data residency: drop candidates whose provider region violates the
+    // org's pinned regions — the failover chain included. A compliant fallback
+    // is promoted when the primary violates; when nothing is compliant the
+    // request fails with data_residency_violation (never routed around).
+    let mut resolved = resolved;
+    {
+        let primary = super::failover::ModelRef {
+            provider_id: resolved.provider_id.clone(),
+            model_id: resolved.model_id.clone(),
+        };
+        let fallback_refs: Vec<super::failover::ModelRef> = resolved
+            .fallbacks
+            .iter()
+            .map(|c| super::failover::ModelRef {
+                provider_id: c.provider_id.clone(),
+                model_id: c.model_id.clone(),
+            })
+            .collect();
+        match super::data_residency::enforce(
+            &state.db,
+            key.tenant_id.as_deref(),
+            &primary,
+            &fallback_refs,
+        )
+        .await
+        {
+            Ok(Some(outcome)) => {
+                let filtered_primary = outcome.primary.full_id();
+                resolved.provider_id = outcome.primary.provider_id;
+                resolved.model_id = outcome.primary.model_id;
+                resolved.fallbacks = outcome
+                    .fallbacks
+                    .iter()
+                    .map(|m| router::CandidateRef {
+                        provider_id: m.provider_id.clone(),
+                        model_id: m.model_id.clone(),
+                    })
+                    .collect();
+                if outcome.filtered {
+                    info!(
+                        org_id = %key.tenant_id.as_deref().unwrap_or(""),
+                        primary = %filtered_primary,
+                        "Data-residency policy filtered provider candidates"
+                    );
+                }
+            }
+            Ok(None) => {}
+            Err(err_response) => return err_response.into_response(),
+        }
+    }
+
     // Provider routing (Products/ProviderRouting.md): the tenant's policy
     // pins which backend serves the active model. Resolved per model — the
     // primary below, and each failover attempt re-resolves its own pin in the
