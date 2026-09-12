@@ -104,7 +104,16 @@ fn job_state(conn: &rusqlite::Connection, job_id: &str) -> String {
     .unwrap()
 }
 
-async fn setup() -> Fixture {    let tmp = tempfile::tempdir().unwrap();
+async fn setup() -> Fixture {
+    setup_with_payload(serde_json::json!({
+        "steps": ["echo step-0", "echo step-1", "echo step-2"],
+        "checkpoint_every": 1,
+    }))
+    .await
+}
+
+async fn setup_with_payload(payload: serde_json::Value) -> Fixture {
+    let tmp = tempfile::tempdir().unwrap();
     let db_path = tmp.path().join("transport.db");
     {
         let mut conn = open(&db_path);
@@ -130,10 +139,7 @@ async fn setup() -> Fixture {    let tmp = tempfile::tempdir().unwrap();
             &mut conn,
             &run_id,
             "shell_steps",
-            serde_json::json!({
-                "steps": ["echo step-0", "echo step-1", "echo step-2"],
-                "checkpoint_every": 1,
-            }),
+            payload,
             &["shell.exec".to_string()],
             60,
             2,
@@ -534,4 +540,283 @@ fn test_concurrent_claims_single_winner() {
         h.join().unwrap();
     }
     assert_eq!(*winners.lock().unwrap(), 1, "exactly one concurrent winner");
+}
+
+const PROTECTED_CAPABILITY: &str = "connector.bank.payment.submit";
+const PROTECTED_TARGET: &str = "payment/123";
+
+async fn wait_until_queued(db_path: &std::path::Path, job_id: &str) {
+    // tokio::time::sleep (not std::thread::sleep): the test runtime is
+    // single-threaded and must yield for the sweeper task to run.
+    let deadline = std::time::Instant::now() + Duration::from_secs(20);
+    loop {
+        {
+            let conn = open(db_path);
+            if job_state(&conn, job_id) == "queued" {
+                return;
+            }
+        }
+        assert!(std::time::Instant::now() < deadline, "sweeper never requeued");
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+}
+
+/// The FULL §8.24 proof-of-protocol sequence, including the approval steps:
+/// protected action → approval request → user grants → execution resumes →
+/// worker killed → approval bound to generation 1 invalidated → the
+/// generation-2 worker must re-obtain approval → completes exactly once with
+/// correct attribution.
+#[tokio::test]
+async fn test_full_824_sequence_with_approval() {
+    let fx = setup_with_payload(serde_json::json!({
+        "steps": ["echo step-0", "echo pay", "echo step-2"],
+        "checkpoint_every": 1,
+        "protected": { "step": 1, "capability": PROTECTED_CAPABILITY, "target": PROTECTED_TARGET },
+    }))
+    .await;
+    let lease_ttl = Duration::from_secs(2);
+    let mut conn = open(&fx.db_path);
+    let a = auth(&conn, "token-a");
+    let b = auth(&conn, "token-b");
+    let run_id_uuid =
+        allternit_cowork_runtime::RunId(uuid::Uuid::parse_str(&fx.run_id).unwrap());
+
+    // 5–7. A authenticates, claims lease generation 1, begins execution.
+    let lease_a = sqlite_store::claim_job(&mut conn, &a, Some(&fx.job_id), lease_ttl)
+        .expect("A claims gen 1");
+    assert_eq!(lease_a.lease_generation, 1);
+
+    // 8. A executes step 0 and checkpoints.
+    let cp0 = fx
+        .manager
+        .checkpoint(run_id_uuid, None, 0, serde_json::json!({ "completed_steps": 1 }))
+        .await
+        .unwrap();
+    conn.execute(
+        "UPDATE cowork_runs SET current_checkpoint_id = ?1 WHERE id = ?2",
+        rusqlite::params![cp0.id, fx.run_id],
+    )
+    .unwrap();
+
+    // 9–10. Step 1 is a protected action: no approval on file → required.
+    let required = sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, 1,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect_err("protected action without approval");
+    assert_eq!(required.code, TransportErrorCode::ApprovalRequired);
+
+    let binding1 = sqlite_store::request_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, 1,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect("A requests approval");
+    assert_eq!(binding1.status, "pending");
+    assert_eq!(binding1.lease_generation, 1);
+    assert_eq!(binding1.executor, WORKER_A);
+
+    // Pending approval still blocks execution.
+    let pending = sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, 1,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect_err("pending approval does not authorize");
+    assert_eq!(pending.code, TransportErrorCode::ApprovalRequired);
+
+    // 11. The user grants (approval bound to generation 1).
+    let granted1 = sqlite_store::decide_approval(&mut conn, &binding1.id, true, INITIATOR)
+        .expect("user grants");
+    assert_eq!(granted1.status, "granted");
+    sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, 1,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect("granted approval authorizes");
+
+    // 12. Execution resumes; A runs the protected step and checkpoints.
+    let cp1 = fx
+        .manager
+        .checkpoint(run_id_uuid, None, 1, serde_json::json!({ "completed_steps": 2, "paid": true }))
+        .await
+        .unwrap();
+    conn.execute(
+        "UPDATE cowork_runs SET current_checkpoint_id = ?1 WHERE id = ?2",
+        rusqlite::params![cp1.id, fx.run_id],
+    )
+    .unwrap();
+    drop(conn);
+
+    // 13–15. A is killed before completion. Heartbeats stop; gen 1 expires.
+    wait_until_queued(&fx.db_path, &fx.job_id).await;
+    let mut conn = open(&fx.db_path);
+
+    // 16. The approval bound to generation 1 is invalidated by expiry.
+    let b1 = sqlite_store::get_approval(&conn, &binding1.id).unwrap().unwrap();
+    assert_eq!(b1.status, "invalidated", "lease expiry invalidates bound approvals");
+
+    // The invalidated approval must not authorize anything, even from A.
+    let stale_check = sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, 1,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect_err("invalidated approval cannot authorize");
+    // The ghost's lease is dead (job requeued, lease cleared) — anything it
+    // presents is invalid before approval state even matters.
+    assert!(matches!(
+        stale_check.code,
+        TransportErrorCode::ApprovalInvalid
+            | TransportErrorCode::LeaseExpired
+            | TransportErrorCode::StaleLeaseGeneration
+            | TransportErrorCode::InvalidLease
+    ));
+
+    // 18–19. B authenticates and claims lease generation 2.
+    let lease_b = sqlite_store::claim_job(&mut conn, &b, Some(&fx.job_id), lease_ttl)
+        .expect("B claims gen 2");
+    assert_eq!(lease_b.lease_generation, 2);
+    assert_eq!(
+        lease_b.current_checkpoint_id.as_deref(),
+        Some(cp1.id.as_str()),
+        "B replays from A's last committed checkpoint"
+    );
+
+    // 20. The protected action is re-evaluated: the gen-1 approval is invalid.
+    let invalid = sqlite_store::check_approval(
+        &mut conn, &b, &fx.job_id, &lease_b.lease_id, 2,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect_err("stale-generation approval must be rejected");
+    assert_eq!(invalid.code, TransportErrorCode::ApprovalInvalid);
+
+    // B re-obtains approval under generation 2; the user grants again.
+    let binding2 = sqlite_store::request_approval(
+        &mut conn, &b, &fx.job_id, &lease_b.lease_id, 2,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect("B re-requests approval");
+    assert_eq!(binding2.lease_generation, 2);
+    assert_ne!(binding2.id, binding1.id);
+    sqlite_store::decide_approval(&mut conn, &binding2.id, true, INITIATOR).unwrap();
+    sqlite_store::check_approval(
+        &mut conn, &b, &fx.job_id, &lease_b.lease_id, 2,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect("gen-2 approval authorizes");
+
+    // The killed worker still cannot complete under generation 1.
+    let stale = sqlite_store::complete_job(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, 1,
+        true, Some("A finished late".to_string()), None,
+    )
+    .expect_err("killed worker's completion rejected");
+    assert_eq!(stale.code, TransportErrorCode::StaleLeaseGeneration);
+
+    // 21–23. B completes; the result commits exactly once; the run completes.
+    let outcome = sqlite_store::complete_job(
+        &mut conn, &b, &fx.job_id, &lease_b.lease_id, 2,
+        true, Some("re-approval under gen 2, steps replayed".to_string()),
+        Some(serde_json::json!({ "paid": true, "reapproved": true })),
+    )
+    .expect("B completes");
+    let result_id = match outcome {
+        CompleteOutcome::Committed { result, .. } => {
+            result["result_id"].as_str().unwrap().to_string()
+        }
+        CompleteOutcome::AlreadyCommitted { .. } => panic!("first completion must commit"),
+    };
+    let dup = sqlite_store::complete_job(
+        &mut conn, &b, &fx.job_id, &lease_b.lease_id, 2,
+        true, Some("duplicate".to_string()), None,
+    )
+    .unwrap();
+    match dup {
+        CompleteOutcome::AlreadyCommitted { result, .. } => {
+            assert_eq!(result["result_id"].as_str().unwrap(), result_id);
+        }
+        _ => panic!("duplicate must return the canonical result"),
+    }
+
+    // 25. Ledger: attribution triple + the full approval event story.
+    let rows = event_rows(&conn, &fx.run_id);
+    let count = |t: &str| rows.iter().filter(|r| r.0 == t).count();
+    assert_eq!(count("approval.requested"), 2);
+    assert_eq!(count("approval.granted"), 2);
+    assert_eq!(count("approval.invalidated"), 1);
+    assert_eq!(count("result.created"), 1);
+    assert_eq!(count("job.completed"), 1);
+    assert!(rows.iter().any(|r| r.0 == "run.completed"));
+
+    let invalidated_row = rows.iter().find(|r| r.0 == "approval.invalidated").unwrap();
+    assert_eq!(invalidated_row.3, WORKER_A, "invalidated approval attributes its executor");
+
+    let requested_a = rows.iter().filter(|r| r.0 == "approval.requested" && r.3 == WORKER_A).count();
+    let requested_b = rows.iter().filter(|r| r.0 == "approval.requested" && r.3 == WORKER_B).count();
+    assert_eq!(requested_a, 1);
+    assert_eq!(requested_b, 1);
+
+    for (etype, initiator, delegator, executor) in &rows {
+        assert_eq!(initiator, INITIATOR, "{etype}: initiator");
+        assert_eq!(delegator, DELEGATOR, "{etype}: delegator");
+        assert!(
+            !executor.is_empty() || etype == &"job.requeued",
+            "{etype}: executor attribution"
+        );
+    }
+}
+
+/// §8.20/§8.21: leases that expire during downtime are recovered at boot by
+/// the server clock — requeued per policy, never silently lost — and queued
+/// and leased jobs rehydrate into the runtime mirror.
+#[tokio::test]
+async fn test_downtime_expiry_recovers_at_boot() {
+    // No manager/sweeper: simulate a server that goes down while a lease is
+    // held, and stays down past the lease expiry.
+    let tmp = tempfile::tempdir().unwrap();
+    let db_path = tmp.path().join("downtime.db");
+    let (run_id, job_id) = {
+        let mut conn = open(&db_path);
+        sqlite_store::apply_store_ddl(&mut conn).unwrap();
+        sqlite_store::register_principal(&mut conn, WORKER_A, WORKSPACE, &caps(), "token-a")
+            .unwrap();
+        let run_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO cowork_runs
+                (id, tenant_id, workspace_id, initiator, delegator, mode, state,
+                 entrypoint, dag_id, policy_profile)
+             VALUES (?1, 'tenant-1', ?2, ?3, ?4, 'cowork', 'running', 'x', 'd', 'default')",
+            rusqlite::params![run_id, WORKSPACE, INITIATOR, DELEGATOR],
+        )
+        .unwrap();
+        let job_id = sqlite_store::enqueue_job(
+            &mut conn, &run_id, "shell_steps",
+            serde_json::json!({"steps": ["echo hi"]}),
+            &["shell.exec".to_string()], 60, 2, Some(INITIATOR), Some(DELEGATOR),
+        )
+        .unwrap();
+        // Worker claims with a 2s lease, then the server dies.
+        let a = auth(&conn, "token-a");
+        sqlite_store::claim_job(&mut conn, &a, Some(&job_id), Duration::from_secs(2)).unwrap();
+        assert_eq!(job_state(&conn, &job_id), "leased");
+        (run_id, job_id)
+    };
+
+    // "Downtime" passes (well past lease expiry). Boot: expire, then rehydrate.
+    std::thread::sleep(Duration::from_secs(3));
+    let actions = {
+        let mut conn = open(&db_path);
+        let actions = sqlite_store::expire_leases(&mut conn, chrono::Utc::now()).unwrap();
+        assert_eq!(actions.len(), 1, "downtime-expired lease is recovered at boot");
+        assert_eq!(actions[0].outcome, "queued");
+        assert_eq!(job_state(&conn, &job_id), "queued");
+        actions
+    };
+
+    // The rehydrated view a fresh manager would load: job is queued and
+    // claimable by a replacement worker under a new generation.
+    let mut conn = open(&db_path);
+    let b = sqlite_store::authenticate_principal(&conn, "token-a").unwrap();
+    let grant = sqlite_store::claim_job(&mut conn, &b, Some(&job_id), Duration::from_secs(60))
+        .expect("requeued job claimable after boot recovery");
+    assert!(grant.lease_generation > actions[0].lease_generation);
+    let _ = run_id;
 }

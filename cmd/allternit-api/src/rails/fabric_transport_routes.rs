@@ -35,6 +35,25 @@ pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
         .route("/fabric/transport/jobs/:job_id/heartbeat", post(heartbeat))
         .route("/fabric/transport/jobs/:job_id/renew", post(renew))
         .route("/fabric/transport/jobs/:job_id/complete", post(complete))
+        // Approval bindings (§8.14): scoped to (executor, capability, target,
+        // run, job, lease_generation); invalidated when the lease expires.
+        .route(
+            "/fabric/transport/jobs/:job_id/approvals/request",
+            post(request_approval),
+        )
+        .route(
+            "/fabric/transport/jobs/:job_id/approvals/check",
+            post(check_approval),
+        )
+        .route("/fabric/transport/approvals/:approval_id", get(get_approval))
+        .route(
+            "/fabric/transport/approvals/:approval_id/grant",
+            post(decide_approval_grant),
+        )
+        .route(
+            "/fabric/transport/approvals/:approval_id/deny",
+            post(decide_approval_deny),
+        )
 }
 
 fn db_error(e: rusqlite::Error) -> ErrorResponse {
@@ -185,6 +204,7 @@ async fn claim(
             Ok(grant) => {
                 drop(conn);
                 sync_job_state(&state, &grant.job_id, JobState::Leased).await;
+                sync_run_state(&state, &grant.run_id, RunState::Running).await;
                 return Ok(Json(grant));
             }
             Err(e)
@@ -356,4 +376,113 @@ async fn get_job(
             code: 404,
         })?;
     Ok(Json(view))
+}
+
+// ─── Approval bindings (§8.14) ──────────────────────────────────────────────
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ApprovalScopeRequest {
+    pub lease_id: String,
+    pub lease_generation: i64,
+    pub capability: String,
+    pub target: String,
+}
+
+async fn request_approval(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(job_id): Path<String>,
+    Json(req): Json<ApprovalScopeRequest>,
+) -> Result<Json<allternit_cowork_runtime::ApprovalBinding>, ErrorResponse> {
+    let principal = authenticate(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let binding = sqlite_store::request_approval(
+        &mut conn,
+        &principal,
+        &job_id,
+        &req.lease_id,
+        req.lease_generation,
+        &req.capability,
+        &req.target,
+    )
+    .map_err(transport_err)?;
+    Ok(Json(binding))
+}
+
+async fn check_approval(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(job_id): Path<String>,
+    Json(req): Json<ApprovalScopeRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    let principal = authenticate(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let binding = sqlite_store::check_approval(
+        &mut conn,
+        &principal,
+        &job_id,
+        &req.lease_id,
+        req.lease_generation,
+        &req.capability,
+        &req.target,
+    )
+    .map_err(transport_err)?;
+    Ok(Json(json!({ "ok": true, "approval_id": binding.id, "status": binding.status })))
+}
+
+async fn get_approval(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(approval_id): Path<String>,
+) -> Result<Json<allternit_cowork_runtime::ApprovalBinding>, ErrorResponse> {
+    let principal = authenticate(&state, &headers)?;
+    let conn = state.db.connect().map_err(db_error)?;
+    let binding = sqlite_store::get_approval(&conn, &approval_id)
+        .map_err(transport_err)?
+        .ok_or_else(|| ErrorResponse {
+            error: "A_JOB_NOT_FOUND: approval binding not found".to_string(),
+            code: 404,
+        })?;
+    if binding.executor != principal.id {
+        return Err(ErrorResponse {
+            error: "A_PERMISSION_DENIED: approval belongs to another executor".to_string(),
+            code: 403,
+        });
+    }
+    Ok(Json(binding))
+}
+
+/// Human decision endpoints — require the normal user auth (Extension-style
+/// via headers), not a worker bearer token.
+async fn decide_approval_grant(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(approval_id): Path<String>,
+) -> Result<Json<allternit_cowork_runtime::ApprovalBinding>, ErrorResponse> {
+    decide_approval(state, headers, approval_id, true).await
+}
+
+async fn decide_approval_deny(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(approval_id): Path<String>,
+) -> Result<Json<allternit_cowork_runtime::ApprovalBinding>, ErrorResponse> {
+    decide_approval(state, headers, approval_id, false).await
+}
+
+async fn decide_approval(
+    state: Arc<AppState>,
+    headers: HeaderMap,
+    approval_id: String,
+    grant: bool,
+) -> Result<Json<allternit_cowork_runtime::ApprovalBinding>, ErrorResponse> {
+    let user = crate::auth::get_user(&headers).ok_or_else(|| ErrorResponse {
+        error: "authentication required to decide approvals".to_string(),
+        code: 401,
+    })?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let binding =
+        sqlite_store::decide_approval(&mut conn, &approval_id, grant, &user.user_id)
+            .map_err(transport_err)?;
+    Ok(Json(binding))
 }
