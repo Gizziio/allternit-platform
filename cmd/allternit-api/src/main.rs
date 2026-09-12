@@ -790,6 +790,7 @@ async fn main() {
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(allternit_api::content_artifact_routes::content_artifact_router())
+        .merge(allternit_api::content_artifact_publish::content_artifact_publish_router())
         .merge(conversation_router())
         .merge(office_router())
         .merge(office_cli_router())
