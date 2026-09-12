@@ -209,7 +209,7 @@ struct JobRow {
     run_id: String,
     state: String,
     payload: String,
-    required_capabilities: String,
+    _required_capabilities: String,
     lease_id: Option<String>,
     lease_generation: i64,
     lease_expires_at: Option<String>,
@@ -234,7 +234,7 @@ fn load_job(conn: &Connection, job_id: &str) -> Result<Option<JobRow>, DispatchE
                 run_id: row.get(1)?,
                 state: row.get(2)?,
                 payload: row.get(3)?,
-                required_capabilities: row.get(4)?,
+                _required_capabilities: row.get(4)?,
                 lease_id: row.get(5)?,
                 lease_generation: row.get(6)?,
                 lease_expires_at: row.get(7)?,
@@ -656,6 +656,7 @@ pub fn renew_lease(
 /// killed worker can never submit a valid completion under an old generation),
 /// while the worker that holds the terminal generation gets the canonical
 /// existing result back on repeat — exactly-once side effects either way.
+#[allow(clippy::too_many_arguments)]
 pub fn complete_job(
     conn: &mut Connection,
     principal: &PrincipalRecord,
@@ -851,7 +852,7 @@ pub fn expire_leases(conn: &mut Connection, now: DateTime<Utc>) -> Result<Vec<Ex
                 run_id: row.get(1)?,
                 state: row.get(2)?,
                 payload: row.get(3)?,
-                required_capabilities: row.get(4)?,
+                _required_capabilities: row.get(4)?,
                 lease_id: row.get(5)?,
                 lease_generation: row.get(6)?,
                 lease_expires_at: row.get(7)?,
