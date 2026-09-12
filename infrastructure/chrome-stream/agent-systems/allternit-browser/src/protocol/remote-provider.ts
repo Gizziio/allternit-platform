@@ -121,14 +121,15 @@ export interface StagehandSidecarOptions {
   /** Launch the sidecar's Chrome headless (default true). */
   headless?: boolean;
   /**
-   * Model mode for the sidecar runtime. P0 defaults to 'mock' (canned
-   * structured outputs — no external inference). 'provider' routes to a direct
-   * provider key; P1 will route through the allternit gateway instead.
+   * Model mode for the sidecar runtime. P0 default 'mock' (canned
+   * structured outputs — no external inference). 'gateway' routes the
+   * client-LLM callback through the allternit gateway
+   * (POST {ALLTERNIT_GATEWAY_URL}/v1/chat/completions with the
+   * ALLTERNIT_GATEWAY_KEY Bearer virtual key, model from
+   * ALLTERNIT_BROWSER_RUNTIME_MODEL or the A://C routing default).
+   * Fail-closed: no direct provider keys are used anywhere.
    */
-  modelMode?: 'mock' | 'provider';
-  /** Direct provider model config, used when modelMode is 'provider'. */
-  modelName?: string;
-  modelApiKey?: string;
+  modelMode?: 'mock' | 'gateway';
 }
 
 type SidecarRequest = { id: number; method: string; params?: Record<string, unknown> };
@@ -286,14 +287,7 @@ export class StagehandSidecarProvider implements BrowserProvider {
     if (!this.child) this.spawn();
     this.initPromise ??= this.request('init', {
       headless: this.options.headless ?? true,
-      model:
-        this.options.modelMode === 'provider'
-          ? {
-              mode: 'provider',
-              modelName: this.options.modelName ?? 'openai/gpt-4.1-mini',
-              apiKey: this.options.modelApiKey ?? process.env.OPENAI_API_KEY ?? '',
-            }
-          : { mode: 'mock' },
+      model: this.options.modelMode === 'gateway' ? { mode: 'gateway' } : { mode: 'mock' },
     });
     await this.initPromise;
   }

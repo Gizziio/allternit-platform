@@ -12,8 +12,9 @@
  *   6. provider stub — createStagehandProvider() over the stdio sidecar
  *
  * Model modes:
- *   --mock-model     canned structured outputs (default when no key in env)
- *   (no flag)        uses OPENAI_API_KEY or ANTHROPIC_API_KEY from env if present
+ *   --mock-model     canned structured outputs (default when no gateway key)
+ *   (no flag)        allternit gateway (ALLTERNIT_GATEWAY_KEY + optional
+ *                    ALLTERNIT_GATEWAY_URL / ALLTERNIT_BROWSER_RUNTIME_MODEL)
  *
  * Usage (from packages/sdk-ts, after `pnpm run build` at the workspace root):
  *   pnpm exec tsx scripts/smoke-stagehand.ts [--mock-model]
@@ -24,13 +25,10 @@ import { z } from "zod/v4";
 import { Stagehand, localBrowser } from "../src/index.js";
 import { createStagehandProvider } from "../../../../allternit-browser/src/protocol/remote-provider.js";
 
-const MOCK = process.argv.includes("--mock-model") ||
-  (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY);
+const MOCK = process.argv.includes("--mock-model") || !process.env.ALLTERNIT_GATEWAY_KEY;
 const MODEL_MODE = MOCK
   ? "mock (canned structured outputs)"
-  : process.env.OPENAI_API_KEY
-    ? "openai/gpt-4.1-mini (direct provider key)"
-    : "anthropic/claude-sonnet-4-5 (direct provider key)";
+  : `allternit gateway (${process.env.ALLTERNIT_BROWSER_RUNTIME_MODEL ?? "claude-sonnet-5"})`;
 
 const TEST_PAGE = `<!doctype html>
 <html><head><title>ABR Smoke Page</title></head>
@@ -100,16 +98,83 @@ function pickElement(prompt: string, prefer: RegExp): TreeElement | undefined {
 
 const FAKE_USAGE = { inputTokens: 1, outputTokens: 1, totalTokens: 2 };
 
+/** Text content out of the protocol's message-content shapes. */
+function textOfContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content.map((block: any) => block?.text ?? "").join("\n");
+  }
+  return (content as any)?.text ?? "";
+}
+
+/**
+ * Gateway-backed client-LLM callback (P1): all inference goes through the
+ * allternit gateway's OpenAI-compatible surface, never to a provider key
+ * directly and never to Browserbase. Fail-closed on unreachable gateway or
+ * non-JSON structured output.
+ */
+async function gatewayGenerate(params: any): Promise<any> {
+  const baseUrl = (process.env.ALLTERNIT_GATEWAY_URL ?? "http://127.0.0.1:8013").replace(/\/+$/, "");
+  const apiKey = process.env.ALLTERNIT_GATEWAY_KEY ?? "";
+  const model = process.env.ALLTERNIT_BROWSER_RUNTIME_MODEL ?? "claude-sonnet-5";
+  if (!apiKey) throw new Error("ALLTERNIT_GATEWAY_KEY is required for gateway model mode");
+  const messages = (params.messages ?? []).map((m: any) => ({
+    role: m.role,
+    content: textOfContent(m.content),
+  }));
+  const wantsJson = params.responseFormat?.type === "json_schema";
+  const body: Record<string, unknown> = { model, messages };
+  if (wantsJson) {
+    body.response_format = {
+      type: "json_schema",
+      json_schema: {
+        name: params.responseFormat.name ?? "structured",
+        schema: params.responseFormat.schema ?? { type: "object" },
+        strict: false,
+      },
+    };
+  }
+  let resp: Response;
+  try {
+    resp = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new Error(`allternit gateway unreachable: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!resp.ok) {
+    throw new Error(`allternit gateway returned ${resp.status}: ${await resp.text()}`);
+  }
+  const data = await resp.json();
+  const choice = data.choices?.[0];
+  const content = textOfContent(choice?.message?.content ?? "");
+  const usage = data.usage ?? {};
+  const base = {
+    role: "assistant",
+    content: { type: "text", text: content },
+    stopReason: choice?.finish_reason ?? "stop",
+    usage: {
+      inputTokens: usage.prompt_tokens ?? 0,
+      outputTokens: usage.completion_tokens ?? 0,
+      totalTokens: usage.total_tokens ?? 0,
+    },
+  };
+  if (wantsJson) {
+    let structuredContent: unknown;
+    try {
+      structuredContent = JSON.parse(content);
+    } catch {
+      throw new Error("allternit gateway returned non-JSON content for a structured call");
+    }
+    return { ...base, outputFormat: "json_schema", structuredContent };
+  }
+  return { ...base, outputFormat: "text" };
+}
+
 async function realGenerate(params: any): Promise<any> {
-  const modelName = process.env.OPENAI_API_KEY ? "openai/gpt-4.1-mini" : "anthropic/claude-sonnet-4-5";
-  const apiKey = process.env.OPENAI_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? "";
-  const { createAiSdkLanguageModel, generateWithAiSdk } = await import(
-    "../../../extension/llm/aiSdkClient.js"
-  );
-  return await generateWithAiSdk(
-    createAiSdkLanguageModel({ modelName, apiKey } as any, params),
-    params,
-  );
+  return gatewayGenerate(params);
 }
 
 /** Canned structured outputs for Act / Observation / Extraction / Metadata calls. */

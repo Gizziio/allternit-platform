@@ -28,9 +28,112 @@ const require = createRequire(import.meta.url);
 const { z } = require("zod/v4");
 
 // ---------------------------------------------------------------------------
-// Canned mock model (used when params.model.mode === "mock", the P0 default).
-// Same contract as the SDK client-LLM callback: the extension bounces LLM
-// requests here over JSON-RPC and we answer with structured content.
+// Allternit-gateway model mode (params.model.mode === "gateway", the P1
+// default for real inference). The extension bounces LLM requests here over
+// JSON-RPC; we forward them to the allternit gateway's OpenAI-compatible
+// surface (POST {baseUrl}/v1/chat/completions, Bearer ak-... virtual key).
+// Fail-closed: unreachable gateway, missing key, or non-JSON structured
+// output is an error — never a silent fallback to direct provider keys, and
+// never Browserbase. Model default honors the Brain's model-routing policy
+// (browser act/observe/extract = routine execution → A://C backend).
+// ---------------------------------------------------------------------------
+
+const GATEWAY_DEFAULT_MODEL = "claude-sonnet-5";
+
+function textOfContent(content) {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content.map((block) => block?.text ?? "").join("\n");
+  }
+  return content?.text ?? "";
+}
+
+function gatewayGenerate({ baseUrl, apiKey, model }) {
+  if (!apiKey) {
+    throw new Error(
+      "gateway model mode requires an API key: set ALLTERNIT_GATEWAY_KEY or pass model.apiKey",
+    );
+  }
+  const endpoint = `${baseUrl.replace(/\/+$/, "")}/v1/chat/completions`;
+  return async function generate(params) {
+    const messages = (params.messages ?? []).map((m) => ({
+      role: m.role,
+      content: textOfContent(m.content),
+    }));
+    const body = { model, messages };
+    const wantsJson = params.responseFormat?.type === "json_schema";
+    if (wantsJson) {
+      body.response_format = {
+        type: "json_schema",
+        json_schema: {
+          name: params.responseFormat.name ?? "structured",
+          schema: params.responseFormat.schema ?? { type: "object" },
+          strict: false,
+        },
+      };
+    }
+    let resp;
+    try {
+      resp = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      throw new Error(`allternit gateway unreachable: ${error?.message ?? error}`);
+    }
+    if (!resp.ok) {
+      throw new Error(`allternit gateway returned ${resp.status}: ${await resp.text()}`);
+    }
+    const data = await resp.json();
+    const choice = data.choices?.[0];
+    const content = textOfContent(choice?.message?.content ?? "");
+    const usage = data.usage ?? {};
+    const base = {
+      role: "assistant",
+      content: { type: "text", text: content },
+      stopReason: choice?.finish_reason ?? "stop",
+      usage: {
+        inputTokens: usage.prompt_tokens ?? 0,
+        outputTokens: usage.completion_tokens ?? 0,
+        totalTokens: usage.total_tokens ?? 0,
+      },
+    };
+    if (wantsJson) {
+      let structuredContent;
+      try {
+        structuredContent = JSON.parse(content);
+      } catch {
+        throw new Error("allternit gateway returned non-JSON content for a structured call");
+      }
+      return { ...base, outputFormat: "json_schema", structuredContent };
+    }
+    return { ...base, outputFormat: "text" };
+  };
+}
+
+function resolveGatewayConfig(modelConfig) {
+  return {
+    baseUrl:
+      modelConfig.baseUrl ??
+      process.env.ALLTERNIT_GATEWAY_URL ??
+      "http://127.0.0.1:8013",
+    apiKey: modelConfig.apiKey ?? process.env.ALLTERNIT_GATEWAY_KEY ?? "",
+    model:
+      modelConfig.model ??
+      process.env.ALLTERNIT_BROWSER_RUNTIME_MODEL ??
+      GATEWAY_DEFAULT_MODEL,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Canned mock model (used when params.model.mode === "mock", the smoke
+// default). Same contract as the SDK client-LLM callback: the extension
+// bounces LLM requests here over JSON-RPC and we answer with structured
+// content.
 // ---------------------------------------------------------------------------
 
 function parseTree(prompt) {
@@ -148,10 +251,15 @@ async function ensurePage() {
 const handlers = {
   async init(params) {
     const modelConfig = params.model ?? { mode: "mock" };
-    model =
-      modelConfig.mode === "provider"
-        ? { modelName: modelConfig.modelName, apiKey: modelConfig.apiKey }
-        : { generate: mockGenerate };
+    if (modelConfig.mode === "gateway") {
+      model = { generate: gatewayGenerate(resolveGatewayConfig(modelConfig)) };
+    } else if (modelConfig.mode === "mock" || modelConfig.mode === undefined) {
+      model = { generate: mockGenerate };
+    } else {
+      throw new Error(
+        `unknown model mode: ${modelConfig.mode} (expected "mock" or "gateway")`,
+      );
+    }
     const browser = await localBrowser.launch({
       headless: params.headless ?? true,
       ...(params.executablePath ? { executablePath: params.executablePath } : {}),
