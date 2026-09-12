@@ -1,16 +1,20 @@
-# Steering checkpoint — session/cu17-batchgate
+# Steering checkpoint — session/console-be-p10
 
-**Goal:** P1 of spec `stagehand-batch-fork` — batch grant gate (Rust), gateway-routed sidecar inference + Browserbase URL scrub, ActionIntent coverage (dialogs/tabs/files) + screenshot hashing. Slices committed, verified, merged with origin/main; landing in PR #430.
+## Goal
+Backend build-out Phase 10 (G16–G17, final): (1) gizzi-code opt-in telemetry client posting to the existing /api/v1/analytics/gizzi-code/events endpoint (analytics_routes.rs:690-790 — backend already exists), env-gated OFF by default, plus lines-accepted counters in payload + aggregation; (2) announcements backend: table + GET /api/v1/console/announcements (audience-gated: org, dismissible-id) + admin publish endpoint. gizzi-code is desktop-bundled → release-preflight must be 26→35/0 before merge.
 
-**Done (this session, branch `session/cu17-batchgate`):**
-- `5bc039aa2` Slice 1: Rust batch grant gate (`cmd/allternit-api/src/aci_batch.rs`) — batch descriptor over the 11-action whitelist, one SHA-256-bound single-use expiring grant per batch (reusing `aci_approvals`), auto/one-grant/per-step enforcement plans, JSONL batch receipts written before dispatch (audit-before-act), routes `POST /api/aci/batch` + `GET /api/aci/batch/receipts/:id`, sidecar `actBatch` transport. 19 new tests; aci suites 51→70.
-- `f49d2bf5c` Slice 2: sidecar client-model callback routes through the allternit gateway (`/v1/chat/completions`, Bearer `ALLTERNIT_GATEWAY_KEY`, A://C default model, fail-closed); direct-provider mode removed; `DEFAULT_BROWSERBASE_URL` scrubbed (built service worker grep-clean). Smoke 6/6.
-- `a74d8bfa9` Slice 3: ActionIntent coverage — tab.open/focus/close (SDK BrowserContext), dialog.accept/dismiss (host-side raw CDP; extension protocol has no dialog op), file.upload (sandbox containment + base64), download listing (Browser.setDownloadBehavior pinned), screenshot SHA-256 at capture. Smoke 11/11; `@allternit/browser` vitest 89/89.
-- `1990fd8f0` Fix: sidecar NDJSON client slice-timeout bug (found by live smoke).
-- `32225f0b9` Merge origin/main (console-be-p9 era). `.steering/checkpoint.md` conflict resolved theirs — this rewrite restores cu17 state.
+## Just did
+- Worktree allternit-session-console-be-p10 on session/console-be-p10 from origin/main (bef00dff0).
+- G16 backend: V151 migration (gizzi_code_usage_events.lines_accepted NOT NULL DEFAULT 0 + console_announcements table); analytics_routes.rs ingest + aggregation extended; existing gizzi test extended with lines_accepted + old-payload case.
+- G17 backend: new src/console_announcement_routes.rs (GET /console/announcements, POST+DELETE /admin/console/announcements, admin_org gating, numeric semver filter), wired in lib.rs + main.rs; 8 tests.
+- G16 client: src/runtime/services/telemetry/gizziUsageTelemetry.ts (GIZZI_TELEMETRY=1 opt-in, honors global privacy killswitches, fire-and-forget ≤1 retry, flushed in gracefulShutdown's 500ms-bounded analytics flush). Hooks: both countLinesChanged copies (accepted edits + lines), permissionLogging + toolExecution headless (rejections). docs/telemetry.md section 6. bun test test/telemetry/gizziUsageTelemetry.test.ts (14 tests).
+- Env decision: GIZZI_TELEMETRY is ALSO the upstream kill switch; client turns on only for truthy values AND when privacyLevel permits — documented in module + telemetry.md.
 
-**Verification evidence (all green):** cargo aci 70/0 (baseline 51/0); runtime typecheck+build green; smoke 11/11; vitest 89/89; **live gated-batch smoke 11/11** on a real gateway (`ALLTERNIT_API_PORT=8123`, `ALLTERNIT_LOCAL_DEV_BYPASS=1`) + real Chrome: grant→approve→execute→receipt, replay/tamper denied, halt position recorded; `release-preflight.mjs` 35/0.
+## Next
+- PR; attest; cleanup. (Implementation + verification complete: cargo 1023 pass / 5 known pre-existing fails, gizzi smoke 1300 pass, typecheck green, preflight 35/0, live smoke green.)
 
-**Next:** push `32225f0b9` (updates PR #430), wait checks, `gh pr merge 430 --merge`, record merge SHA, ledger attestation `agent-ledger/summaries/2026-09-12-HHMM-cu17-batchgate-kimi-*.md` + LEDGER.md line via detached worktree push to main, then worktree/branch cleanup.
+## Deviation note
+- Task said telemetry endpoint lives at /api/v1/analytics/gizzi-code/events, but analytics_router was only mounted at /api. Fixed by merging analytics_router() into v1_routes (main.rs:798) so /api/v1 works; historical /api mount kept. Also: migration numbering — V150 exists and V151 was next-free, so both G16+G17 schema changes share V151.
 
-**Open questions:** none. Note for later sessions: port 8013 is occupied by a long-running gateway owned by another session; use `ALLTERNIT_API_PORT` to boot your own.
+## Open questions
+- gizzi-code client placement: follow gizzi-code's existing patterns for background/persisted state; telemetry off unless GIZZI_TELEMETRY=1 (pick name consistent with GIZZI_* env style).
