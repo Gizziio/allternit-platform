@@ -1,24 +1,16 @@
-# Steering checkpoint — session/console-be-p9
+# Steering checkpoint — session/cu17-batchgate
 
-## Goal
-Backend build-out Phase 9 (G15, MONEY): credits ↔ Stripe — credit-pack checkout → webhook-confirmed grant into the allternit-api org credits ledger, with end-to-end idempotency and a /credits/purchase honesty gate.
+**Goal:** P1 of spec `stagehand-batch-fork` — batch grant gate (Rust), gateway-routed sidecar inference + Browserbase URL scrub, ActionIntent coverage (dialogs/tabs/files) + screenshot hashing. Slices committed, verified, merged with origin/main; landing in PR #430.
 
-## Status: IMPLEMENTATION + VERIFICATION COMPLETE (uncommitted, awaiting human review/PR)
+**Done (this session, branch `session/cu17-batchgate`):**
+- `5bc039aa2` Slice 1: Rust batch grant gate (`cmd/allternit-api/src/aci_batch.rs`) — batch descriptor over the 11-action whitelist, one SHA-256-bound single-use expiring grant per batch (reusing `aci_approvals`), auto/one-grant/per-step enforcement plans, JSONL batch receipts written before dispatch (audit-before-act), routes `POST /api/aci/batch` + `GET /api/aci/batch/receipts/:id`, sidecar `actBatch` transport. 19 new tests; aci suites 51→70.
+- `f49d2bf5c` Slice 2: sidecar client-model callback routes through the allternit gateway (`/v1/chat/completions`, Bearer `ALLTERNIT_GATEWAY_KEY`, A://C default model, fail-closed); direct-provider mode removed; `DEFAULT_BROWSERBASE_URL` scrubbed (built service worker grep-clean). Smoke 6/6.
+- `a74d8bfa9` Slice 3: ActionIntent coverage — tab.open/focus/close (SDK BrowserContext), dialog.accept/dismiss (host-side raw CDP; extension protocol has no dialog op), file.upload (sandbox containment + base64), download listing (Browser.setDownloadBehavior pinned), screenshot SHA-256 at capture. Smoke 11/11; `@allternit/browser` vitest 89/89.
+- `1990fd8f0` Fix: sidecar NDJSON client slice-timeout bug (found by live smoke).
+- `32225f0b9` Merge origin/main (console-be-p9 era). `.steering/checkpoint.md` conflict resolved theirs — this rewrite restores cu17 state.
 
-## Just did (full session)
-- allternit-api: `ALLTERNIT_CREDITS_CHECKOUT_ENABLED` honesty gate on POST /credits/purchase (409 "credits purchase is not enabled in this deployment; use the billing checkout" unless flag set AND cloud API configured; then returns the billing checkout URL, never self-credits); internal-token grant path on /admin/credits/grant (synthetic `internal-service` identity from auth_middleware + header re-verified in handler; org + idempotency_key mandatory; reference_type stripe_checkout; 404 on unknown org); `credit_purchase_idempotency` ledger replay verified; BILLING_CREDIT_PURCHASE webhook delivery moved to the internal grant path.
-- cloud-api: checkout metadata gains `allternit_org_id` (400 at checkout when bridge on but no org); webhook grants only on mode=payment + payment_status=paid (async payment methods settle via checkout.session.async_payment_succeeded, now also handled); `webhook_events` dedup table (migrations_pg 015, registered as v15) written after successful grant; `services/fabric_ledger.rs` bridge client (ALLTERNIT_FABRIC_LEDGER_URL + ALLTERNIT_INTERNAL_SERVICE_TOKEN, 5s timeout); misconfigured bridge (URL without token) refuses to grant; wallet fallback preserved + recorded so enabling the bridge later never re-grants old events.
-- Docs: cmd/allternit-cloud-api/docs/credits-stripe-bridge.md (flow, cross-service auth, env flags, deployment requirement, not-production-live notes).
+**Verification evidence (all green):** cargo aci 70/0 (baseline 51/0); runtime typecheck+build green; smoke 11/11; vitest 89/89; **live gated-batch smoke 11/11** on a real gateway (`ALLTERNIT_API_PORT=8123`, `ALLTERNIT_LOCAL_DEV_BYPASS=1`) + real Chrome: grant→approve→execute→receipt, replay/tamper denied, halt position recorded; `release-preflight.mjs` 35/0.
 
-## Verification evidence
-- cargo test -p allternit-cloud-api --no-fail-fast: lib 294 passed / 1 failed (pre-existing docker-env contabo test); integration_tests 0/32 (pre-existing tests/common harness breakage — confirmed identical failure with changes stashed); cost_params 3/3, e2e 1/1 + 1 ignored, billing_webhook_grants 1/1 (new HTTP-level signed-webhook test: forged signature 401, paid event grants once, replay idempotentReplay=true, no double grant).
-- cargo test -p allternit-api --no-fail-fast: lib 1005 passed / 6 failed = known pre-existing set exactly (4× agent_cloud OS-control-plane + 1× rails gate + 1× scheduler claim_race flake, both "possibly" items from the brief's list); integration binaries all green (health_metrics 6/6, viz_routes 14/14).
-- node scripts/release-preflight.mjs: 35 passed, 0 failed.
-- LIVE TEST-MODE round trip (operator has stripe CLI test profile): `stripe listen` → local cloud-api with test keys; real checkout session created via POST /billing/checkout (metadata contract on the session, verified via retrieve); `stripe trigger checkout.session.completed` with metadata overrides → Stripe-signed delivery → webhook verified signature → $10 granted once (credit_transactions + user_credits + webhook_events rows); GET /billing/credits shows balance_usd 10.0. No live keys touched, no real charge, all rows/processes/key file cleaned up.
+**Next:** push `32225f0b9` (updates PR #430), wait checks, `gh pr merge 430 --merge`, record merge SHA, ledger attestation `agent-ledger/summaries/2026-09-12-HHMM-cu17-batchgate-kimi-*.md` + LEDGER.md line via detached worktree push to main, then worktree/branch cleanup.
 
-## Next
-- Human review → PR (session rules: commit/push/PR/merge are human-gated steps this session was told not to perform: "Do NOT run git commit/push").
-- Production wiring still required: set ALLTERNIT_FABRIC_LEDGER_URL + ALLTERNIT_INTERNAL_SERVICE_TOKEN (same value both services) to turn on fabric-ledger grants; set ALLTERNIT_CREDITS_CHECKOUT_ENABLED on allternit-api to open the /credits/purchase delegation.
-
-## Open questions
-- None.
+**Open questions:** none. Note for later sessions: port 8013 is occupied by a long-running gateway owned by another session; use `ALLTERNIT_API_PORT` to boot your own.
