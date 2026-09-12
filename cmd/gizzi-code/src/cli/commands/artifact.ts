@@ -67,6 +67,8 @@ export const ArtifactShowCommand = cmd({
   describe: "read a content artifact (current version) from the local gateway",
   builder: (yargs: Argv) =>
     yargs
+      // `--version` here means artifact version, not CLI version.
+      .version(false)
       .positional("id", { type: "string", describe: "artifact id (art_…), or a full a://artifact/<id> address" })
       .option("version", { type: "number", describe: "read a specific version instead of the current one" })
       .option("body-only", { type: "boolean", describe: "print only the artifact body", default: false }),
