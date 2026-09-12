@@ -485,7 +485,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     }
   }
 
-  async function startProject(config: { name: string; prompt?: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; system?: import('../../lib/design/design-systems-library').DesignSystemEntry; skill?: SkillRecord; skillValues?: Record<string, unknown> }) {
+  async function startProject(config: { name: string; prompt?: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; system?: import('../../lib/design/design-systems-library').DesignSystemEntry; skill?: SkillRecord; skillValues?: Record<string, unknown>; aspect?: string }) {
     const isContent = config.type === 'content-engine';
     const skill = config.skill;
     const projectId = `design-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -550,16 +550,17 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     try {
       const sessionId = await createDesignSession({ name: config.name, projectId, sessionMode: 'agent', systemPrompt });
       const userRequest = config.prompt?.trim() || config.name;
+    const aspectLine = config.aspect ? ` Aspect ratio: ${config.aspect}.` : '';
       if (isContent) {
         await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] Project: "${config.name}". User request: ${userRequest}\n\nRun skill_graph_ops action="sync" to read /content-skill-graph/index.md, then create the first working artifact for this request and open it in the canvas.` });
       } else if (skill) {
         const opener = skill.examplePrompt ?? `Run the ${skill.name} skill for this project.`;
         const inputs = skill.inputs.map((i) => `${i.label ?? i.name}: ${config.skillValues?.[i.name] ?? i.default ?? ''}`).join('\n');
         const params = skill.parameters.map((p) => `${p.label ?? p.name}: ${skillParameters[p.name] ?? p.default}`).join('\n');
-        await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nUser request: ${userRequest}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Begin the skill workflow now. Create the first usable design artifact and open it in the canvas; do not stop at a discovery question unless a required detail is truly missing.` });
+        await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nUser request: ${userRequest}\nType: ${config.type}${aspectLine ? `\nAspect: ${config.aspect}` : ''}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Begin the skill workflow now. Create the first usable design artifact and open it in the canvas; do not stop at a discovery question unless a required detail is truly missing.` });
       } else {
         const dirContext = dir ? ` The visual direction is "${dir.label}" — ${dir.mood}. Key references: ${dir.references.join(', ')}.` : '';
-        await sendMessageStream(sessionId, { text: `Create a ${config.type} for this request:\n\n${userRequest}\n\nProject name: "${config.name}".${dirContext}\n\nStart building immediately. Produce the first complete, editable design artifact, save it as a project file, and open it in the canvas. Make reasonable design decisions from the request instead of replying with only a discovery brief.` });
+        await sendMessageStream(sessionId, { text: `Create a ${config.type} for this request:\n\n${userRequest}\n\nProject name: "${config.name}".${aspectLine}${dirContext}\n\nStart building immediately. Produce the first complete, editable design artifact, save it as a project file, and open it in the canvas. Make reasonable design decisions from the request instead of replying with only a discovery brief.` });
       }
     } catch (err) {
       logger.error('Failed to start Design project agent session', { err, projectId });
