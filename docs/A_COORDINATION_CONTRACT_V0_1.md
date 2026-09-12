@@ -1259,7 +1259,7 @@ attribution triple on every material event. File pointers:
 `allternit-cowork-runtime/src/sqlite_store.rs` (store-level protocol),
 `allternit-cowork-runtime/src/run.rs` (lease sweeper),
 `cmd/allternit-api/src/rails/fabric_transport_routes.rs` (HTTP surface under
-`/api/v1/fabric/transport/*`), migrations V149–V151. Still missing (later slices):
+`/api/v1/fabric/transport/*`), migrations V152–V154. Still missing (later slices):
 capability registry beyond flat strings, non-local compute placement, reassignment
 policy beyond requeue, CommRails push wake-up.
 

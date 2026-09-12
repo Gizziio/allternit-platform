@@ -31,7 +31,7 @@ pub fn open_store(path: &Path) -> Result<Connection, TransportError> {
     Ok(conn)
 }
 
-/// Apply the cowork migration DDL needed by the store (V5, V8, V149–V151).
+/// Apply the cowork migration DDL needed by the store (V5, V8, V152–V154).
 /// Used by tests and one-off tooling; the API applies the full refinery set.
 pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
     conn.execute_batch(
