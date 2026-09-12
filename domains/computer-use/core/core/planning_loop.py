@@ -120,6 +120,10 @@ class PlanningLoopConfig:
     batch_enabled: bool = True
     batch_mode: str = "batch"          # "batch" (one grant) | "per_step"
     batch_headless: bool = True
+    # Optional page binding folded into the batch descriptor hash. The loop
+    # does not track the browser URL itself; operators pin it per run (the
+    # runtime navigates there before dispatch). None = bind origin+session only.
+    batch_page_url: Optional[str] = None
 
 
 @dataclass
@@ -817,6 +821,7 @@ class PlanningLoop:
             step_count=len(batch_steps),
             step_methods=[s["method"] for s in batch_steps],
             batch_mode=self.config.batch_mode,
+            page_url=self.config.batch_page_url,
         )
         # Contract §4: opened BEFORE the batch RPC (audit-before-act).
         open_batch_context(self.ledger, record)
@@ -826,6 +831,7 @@ class PlanningLoop:
                 steps=batch_steps,
                 mode=self.config.batch_mode,
                 session=session_id,
+                page_url=self.config.batch_page_url,
                 approval_id=approval_id,
                 step_approval_ids=step_approval_ids,
                 headless=self.config.batch_headless,

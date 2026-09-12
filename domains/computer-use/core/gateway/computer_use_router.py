@@ -501,6 +501,7 @@ async def _execute_non_claude_path(
         vision_provider=body.options.get("vision_provider"),
         batch_enabled=body.options.get("batch_enabled", True),
         batch_mode=body.options.get("batch_mode", "batch"),
+        batch_page_url=body.options.get("batch_page_url"),
     )
 
     vp_override = body.options.get("vision_provider") or loop_config.vision_provider
