@@ -65,3 +65,74 @@ describe('NewProjectScreen skill inputs (issue #374)', () => {
     expect(submit.disabled).toBe(true);
   });
 });
+
+/** Minimal in-memory IndexedDB fake for gallery tests — jsdom provides no indexedDB. */
+function fakeIndexedDB(seed: Record<string, unknown>[]) {
+  const store = new Map<string, unknown>(seed.map((entry) => [(entry as { id: string }).id, entry]));
+  const makeRequest = (result: unknown) => {
+    const req: { result: unknown; error: null; onsuccess: null | ((e: unknown) => void); onerror: null } = {
+      result, error: null, onsuccess: null, onerror: null,
+    };
+    queueMicrotask(() => req.onsuccess?.({ target: req }));
+    return req;
+  };
+  return {
+    open: (_dbName: string, _version: number) => {
+      const req: { result: unknown; error: null; onsuccess: null | ((e: unknown) => void); onerror: null; onupgradeneeded: null } = {
+        result: null, error: null, onsuccess: null, onerror: null, onupgradeneeded: null,
+      };
+      queueMicrotask(() => {
+        req.result = {
+          transaction: () => {
+            const tx: { onerror: null; onabort: null; oncomplete: null | (() => void); objectStore: () => unknown } = {
+              onerror: null, onabort: null, oncomplete: null,
+              objectStore: () => ({
+                getAll: () => makeRequest([...store.values()]),
+                put: (value: { id: string }) => { store.set(value.id, value); return makeRequest(undefined); },
+                delete: (key: string) => { store.delete(key); return makeRequest(undefined); },
+              }),
+            };
+            queueMicrotask(() => tx.oncomplete?.());
+            return tx;
+          },
+        };
+        req.onsuccess?.({ target: req });
+      });
+      return req;
+    },
+  };
+}
+
+describe('NewProjectScreen gallery (P0 use-case gallery)', () => {
+  it('shows the empty state when no artifacts have been captured', async () => {
+    (globalThis as { indexedDB?: unknown }).indexedDB = fakeIndexedDB([]);
+    render(<NewProjectScreen onStart={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Gallery' }));
+    expect(await screen.findByText(/Artifacts you create will appear here/)).toBeTruthy();
+  });
+
+  it('lists category pills and remixes the clicked card', async () => {
+    const entry = {
+      id: 'gallery-design-1',
+      projectId: 'design-1',
+      projectName: 'Acme landing',
+      prompt: 'Create a SaaS landing page',
+      type: 'prototype',
+      artifactHtml: '<html><body><h1>Acme</h1></body></html>',
+      createdAt: 1,
+      updatedAt: 2,
+    };
+    (globalThis as { indexedDB?: unknown }).indexedDB = fakeIndexedDB([entry]);
+    const onRemix = vi.fn();
+    render(<NewProjectScreen onStart={vi.fn()} onRemix={onRemix} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Gallery' }));
+
+    expect(await screen.findByText('Acme landing')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'All' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Landing pages' })).toBeTruthy();
+
+    fireEvent.click(screen.getByTitle('Remix: Acme landing'));
+    expect(onRemix).toHaveBeenCalledTimes(1);
+    expect(onRemix.mock.calls[0]![0]).toMatchObject({ projectId: 'design-1', prompt: 'Create a SaaS landing page' });
+  });
+});

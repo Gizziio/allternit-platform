@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUp,
   Browsers,
@@ -22,6 +22,7 @@ import {
 import { DESIGN_DIRECTIONS, type DesignDirection } from '../../lib/design/directions';
 import { DESIGN_SYSTEMS_LIBRARY, type DesignSystemEntry } from '../../lib/design/design-systems-library';
 import type { SkillRecord } from '../../lib/design/skill-registry';
+import { listGalleryEntries, type GalleryEntry } from '../../lib/design/gallery-store';
 import { useDesignProjectStore, type DesignProject } from '@/views/project/design/design-project.store';
 import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import { isElectronShell } from '@/lib/platform';
@@ -35,7 +36,20 @@ const CREATION_TYPES = [
   { id: 'content-engine', label: 'Content engine', hint: 'Content pipeline and campaigns', icon: Play },
 ] as const;
 
-type LibraryTab = 'projects' | 'systems' | 'templates';
+type LibraryTab = 'projects' | 'systems' | 'templates' | 'gallery';
+
+/** Gallery pill labels keyed by creation type — kimi.com/design category-tab pattern. */
+const GALLERY_TYPE_LABELS: Record<string, string> = {
+  prototype: 'Landing pages',
+  slides: 'Decks',
+  dashboard: 'Dashboards',
+  brand: 'Brand systems',
+  mobile: 'Mobile apps',
+  'content-engine': 'Content engines',
+  template: 'Templates',
+  other: 'Other',
+};
+const GALLERY_TYPE_ORDER = ['prototype', 'slides', 'dashboard', 'mobile', 'brand', 'content-engine', 'template', 'other'];
 
 interface NewProjectScreenProps {
   onStart: (config: {
@@ -49,6 +63,7 @@ interface NewProjectScreenProps {
   }) => void;
   onOpenProject?: (project: DesignProject) => void;
   onSelectDesignSystem?: (system: DesignSystemEntry) => void;
+  onRemix?: (entry: GalleryEntry) => void;
   selectedSkill?: SkillRecord | null;
   onSelectSkill?: (skill: SkillRecord | null) => void;
   skillValues?: Record<string, unknown>;
@@ -59,6 +74,7 @@ export function NewProjectScreen({
   onStart,
   onOpenProject,
   onSelectDesignSystem,
+  onRemix,
   selectedSkill,
   onSelectSkill,
   skillValues,
@@ -75,6 +91,23 @@ export function NewProjectScreen({
   const [query, setQuery] = useState('');
   const [gridView, setGridView] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [galleryEntries, setGalleryEntries] = useState<GalleryEntry[]>([]);
+  const [galleryCategory, setGalleryCategory] = useState<string>('all');
+
+  useEffect(() => {
+    let cancelled = false;
+    listGalleryEntries().then((entries) => {
+      if (!cancelled) setGalleryEntries(entries);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [libraryTab]);
+
+  const galleryTypes = GALLERY_TYPE_ORDER.filter((type) => galleryEntries.some((entry) => entry.type === type));
+  const visibleGalleryEntries = galleryCategory === 'all'
+    ? galleryEntries
+    : galleryEntries.filter((entry) => entry.type === galleryCategory);
 
   const direction = DESIGN_DIRECTIONS.find((item) => item.id === selectedDirection) ?? DESIGN_DIRECTIONS[0];
   const activeType = CREATION_TYPES.find((item) => item.id === selectedType) ?? CREATION_TYPES[0];
@@ -316,6 +349,7 @@ export function NewProjectScreen({
               <button type="button" className={libraryTab === 'projects' ? 'is-active' : ''} onClick={() => setLibraryTab('projects')}>Projects</button>
               <button type="button" className={libraryTab === 'systems' ? 'is-active' : ''} onClick={() => setLibraryTab('systems')}>Design systems</button>
               <button type="button" className={libraryTab === 'templates' ? 'is-active' : ''} onClick={() => setLibraryTab('templates')}>Templates</button>
+              <button type="button" className={libraryTab === 'gallery' ? 'is-active' : ''} onClick={() => setLibraryTab('gallery')}>Gallery</button>
             </nav>
             <div className="ad-library__tools">
               <label><MagnifyingGlass size={13} /><input placeholder="Search" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
@@ -356,6 +390,43 @@ export function NewProjectScreen({
                   <type.icon size={21} /><span><b>{type.label}</b><small>{type.hint}</small></span>
                 </button>
               ))}
+            </div>
+          )}
+
+          {libraryTab === 'gallery' && (
+            <div className="ad-gallery">
+              {galleryEntries.length === 0 ? (
+                <div className="ad-library__empty"><GridFour size={18} /><span>Artifacts you create will appear here — every design that passes the brand gate gets featured.</span></div>
+              ) : (
+                <>
+                  <div className="ad-gallery__pills">
+                    <button type="button" className={galleryCategory === 'all' ? 'is-active' : ''} onClick={() => setGalleryCategory('all')}>All</button>
+                    {galleryTypes.map((type) => (
+                      <button key={type} type="button" className={galleryCategory === type ? 'is-active' : ''} onClick={() => setGalleryCategory(type)}>
+                        {GALLERY_TYPE_LABELS[type] ?? type}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ad-gallery__masonry">
+                    {visibleGalleryEntries.map((entry) => (
+                      <button type="button" key={entry.projectId} className="ad-gallery-card" onClick={() => onRemix?.(entry)} title={`Remix: ${entry.projectName}`}>
+                        {entry.thumbnail ? (
+                          <img src={entry.thumbnail} alt="" loading="lazy" />
+                        ) : (
+                          <span className="ad-gallery-card__placeholder" aria-hidden>{entry.projectName.slice(0, 1).toUpperCase()}</span>
+                        )}
+                        <span className="ad-gallery-card__meta">
+                          <b>{entry.projectName}</b>
+                          <small>
+                            {GALLERY_TYPE_LABELS[entry.type] ?? 'Other'}
+                            {entry.skillName ? ` · ${entry.skillName}` : ''}
+                          </small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </section>

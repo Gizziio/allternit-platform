@@ -14,7 +14,10 @@ import { NativeOriginBanner } from "@/components/native-sessions/NativeOriginBan
 import { AProtocolWordmark } from "@/components/AProtocolWordmark";
 import { isElectronShell } from "@/lib/platform";
 import { useDesignTabStore } from "../../stores/design-tab.store";
-import { useDesignProjectStore } from "@/views/project/design/design-project.store";
+import { useDesignProjectStore, type DesignProject } from "@/views/project/design/design-project.store";
+import { upsertGalleryEntry, type GalleryEntry } from '../../lib/design/gallery-store';
+import { renderArtifactThumbnail } from '../../lib/design/artifact-thumbnail';
+import { writeProjectFile } from '../../lib/design/project-file-store';
 import { NewProjectScreen } from './NewProjectScreen';
 import { SkillPicker } from './SkillPicker';
 import { SkillParameterPanel } from '../../components/design/SkillParameterPanel';
@@ -394,6 +397,39 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
+  // Use-case gallery seeding (mapping doc §6, P0): when the latest artifact
+  // passes the P0 lint gate, record it (prompt + skill + system + thumbnail)
+  // so the landing gallery shows real outputs and can offer click-to-remix.
+  const galleryHashRef = useRef<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (!latestArtifactHtml || !activeProject?.id || lintP0Findings || isStreaming) return;
+    let hash = 5381;
+    for (let i = 0; i < latestArtifactHtml.length; i++) {
+      hash = ((hash << 5) + hash + latestArtifactHtml.charCodeAt(i)) >>> 0;
+    }
+    if (galleryHashRef.current.get(activeProject.id) === hash) return;
+    galleryHashRef.current.set(activeProject.id, hash);
+    const firstUser = backendMessages.find((m) => m.role === 'user');
+    const prompt = typeof firstUser?.content === 'string' && firstUser.content.trim()
+      ? firstUser.content.trim()
+      : activeProject.name;
+    const html = latestArtifactHtml;
+    const projectId = activeProject.id;
+    const snapshot = {
+      projectId,
+      projectName: activeProject.name,
+      prompt,
+      type: activeProject.type,
+      designSystemId: installedDesignId ?? undefined,
+      skillId: selectedSkill?.id,
+      skillName: selectedSkill?.name,
+      artifactHtml: html,
+    };
+    void renderArtifactThumbnail(html).then((thumbnail) => {
+      upsertGalleryEntry({ ...snapshot, thumbnail }).catch(() => {});
+    });
+  }, [latestArtifactHtml, lintP0Findings, isStreaming, activeProject, backendMessages, selectedSkill, installedDesignId]);
+
   // Seed the composer with any prompt carried over from the project view.
   useEffect(() => {
     if (pendingPrompt) {
@@ -530,6 +566,105 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     }
   }
 
+  async function openProjectRecord(project: DesignProject) {
+    const projectTabs = Array.isArray(project.tabs) ? project.tabs : [];
+    const safeTab = projectTabs.some((tab) => tab.id === project.activeTabId)
+      ? project.activeTabId as CanvasTab
+      : 'questions';
+    useDesignProjectStore.getState().setActiveProject(project.id);
+    setActiveProject({
+      id: project.id,
+      name: project.name,
+      type: project.type as ProjectType,
+      specialist: project.specialist,
+      fidelity: project.fidelity,
+      activeTabId: safeTab,
+      tabs: projectTabs.map((tab) => ({ ...tab, type: tab.type as CanvasTab })),
+    });
+    setActiveTab(safeTab);
+
+    // Restore the project's bound design system (persisted on the project
+    // record — without this the installed system was lost on reload).
+    const persistedSystemId = (project as { designSystemId?: string }).designSystemId;
+    let restoredSystemBody: string | undefined;
+    let restoredSystemTitle: string | undefined;
+    if (persistedSystemId) {
+      const boundSystem = getDesignById(persistedSystemId);
+      if (boundSystem) {
+        setInstalledDesignId(boundSystem.id);
+        setDesignMd(boundSystem.designMd);
+        restoredSystemBody = boundSystem.designMd;
+        restoredSystemTitle = boundSystem.name;
+      }
+    }
+
+    try {
+      await loadSessions();
+      const sessionStore = useDesignSessionStore.getState();
+      const linkedSession = sessionStore.sessions.find(
+        (session) => session.metadata?.projectId === project.id
+      );
+      if (linkedSession) {
+        sessionStore.setActiveSession(linkedSession.id);
+        return;
+      }
+
+      // Projects created before project/session linking was introduced
+      // need a recovery session so their workspace and composer remain usable.
+      const sessionId = await createDesignSession({
+        name: project.name,
+        projectId: project.id,
+        sessionMode: 'agent',
+        systemPrompt: composeStudioSystemPrompt({
+          designSystemBody: restoredSystemBody ?? designMd ?? undefined,
+          designSystemTitle: restoredSystemTitle ?? (installedDesignId ? 'Installed design system' : undefined),
+        }),
+      });
+      useDesignSessionStore.getState().setActiveSession(sessionId);
+    } catch (error) {
+      logger.error({ err: error, projectId: project.id }, 'Failed to restore Design project session');
+    }
+  }
+
+  // Click-to-remix (mapping doc §6, P0): fork a gallery entry into a new
+  // project — artifact HTML copied into the file tree, bound design system
+  // carried over, composer seeded with the original prompt.
+  async function remixGalleryEntry(entry: GalleryEntry) {
+    const now = Date.now();
+    const projectId = `design-${now}-${Math.random().toString(36).slice(2, 8)}`;
+    const remixed: DesignProject = {
+      id: projectId,
+      name: `Remix — ${entry.projectName}`.slice(0, 64),
+      type: (entry.type as DesignProject['type']) || 'prototype',
+      specialist: 'architect',
+      fidelity: 'high',
+      createdAt: now,
+      updatedAt: now,
+      isFavorite: false,
+      isArchived: false,
+      activeTabId: 'questions',
+      tabs: [
+        { id: 'files', label: 'Files', type: 'files' },
+        { id: 'questions', label: 'Discovery', type: 'questions' },
+        { id: 'sketch', label: 'Canvas', type: 'sketch' },
+        { id: 'system', label: 'Design System', type: 'system' },
+        { id: 'handoff', label: 'Handoff', type: 'handoff' },
+      ],
+      designSystemId: entry.designSystemId,
+    };
+    useDesignProjectStore.getState().upsertProject(remixed);
+    await writeProjectFile(projectId, '/index.html', entry.artifactHtml);
+    if (entry.designSystemId) {
+      const boundSystem = getDesignById(entry.designSystemId);
+      if (boundSystem) {
+        setInstalledDesignId(boundSystem.id);
+        setDesignMd(boundSystem.designMd);
+      }
+    }
+    setComposerSeed(entry.prompt);
+    await openProjectRecord(useDesignProjectStore.getState().projects.find((p) => p.id === projectId) ?? remixed);
+  }
+
   const completeWizard = () => {
     localStorage.setItem('allternit-design-onboarded', '1');
     setShowWizard(false);
@@ -541,65 +676,8 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     <>
       <NewProjectScreen
         onStart={startProject}
-        onOpenProject={async (project) => {
-          const projectTabs = Array.isArray(project.tabs) ? project.tabs : [];
-          const safeTab = projectTabs.some((tab) => tab.id === project.activeTabId)
-            ? project.activeTabId as CanvasTab
-            : 'questions';
-          useDesignProjectStore.getState().setActiveProject(project.id);
-          setActiveProject({
-            id: project.id,
-            name: project.name,
-            type: project.type as ProjectType,
-            specialist: project.specialist,
-            fidelity: project.fidelity,
-            activeTabId: safeTab,
-            tabs: projectTabs.map((tab) => ({ ...tab, type: tab.type as CanvasTab })),
-          });
-          setActiveTab(safeTab);
-
-          // Restore the project's bound design system (persisted on the project
-          // record — without this the installed system was lost on reload).
-          const persistedSystemId = (project as { designSystemId?: string }).designSystemId;
-          let restoredSystemBody: string | undefined;
-          let restoredSystemTitle: string | undefined;
-          if (persistedSystemId) {
-            const boundSystem = getDesignById(persistedSystemId);
-            if (boundSystem) {
-              setInstalledDesignId(boundSystem.id);
-              setDesignMd(boundSystem.designMd);
-              restoredSystemBody = boundSystem.designMd;
-              restoredSystemTitle = boundSystem.name;
-            }
-          }
-
-          try {
-            await loadSessions();
-            const sessionStore = useDesignSessionStore.getState();
-            const linkedSession = sessionStore.sessions.find(
-              (session) => session.metadata?.projectId === project.id
-            );
-            if (linkedSession) {
-              sessionStore.setActiveSession(linkedSession.id);
-              return;
-            }
-
-            // Projects created before project/session linking was introduced
-            // need a recovery session so their workspace and composer remain usable.
-            const sessionId = await createDesignSession({
-              name: project.name,
-              projectId: project.id,
-              sessionMode: 'agent',
-              systemPrompt: composeStudioSystemPrompt({
-                designSystemBody: restoredSystemBody ?? designMd ?? undefined,
-                designSystemTitle: restoredSystemTitle ?? (installedDesignId ? 'Installed design system' : undefined),
-              }),
-            });
-            useDesignSessionStore.getState().setActiveSession(sessionId);
-          } catch (error) {
-            logger.error({ err: error, projectId: project.id }, 'Failed to restore Design project session');
-          }
-        }}
+        onOpenProject={openProjectRecord}
+        onRemix={remixGalleryEntry}
         onSelectDesignSystem={(system) => {
           setInstalledDesignId(system.id);
           setDesignMd(system.body);
