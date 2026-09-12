@@ -1,15 +1,17 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { FabricAciModeCanvas } from "./FabricAciModeCanvas";
-import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
+import {
+  getFabricAciRunner,
+  setFabricAciRunner,
+  useBrowserAgentStore,
+} from "@/capsules/browser/browserAgent.store";
 import type { FabricSessionWithStatus } from "@/lib/dispatch/fabric-session-client";
 
-class ResizeObserverStub {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
+vi.mock("@/capsules/browser/BrowserCapsuleEnhanced", () => ({
+  BrowserCapsuleEnhanced: () => <div data-testid="browser-capsule" />,
+}));
 
 function aciSession(id: string, title: string): FabricSessionWithStatus {
   return {
@@ -20,69 +22,46 @@ function aciSession(id: string, title: string): FabricSessionWithStatus {
 
 describe("FabricAciModeCanvas", () => {
   beforeEach(() => {
-    (globalThis as Record<string, unknown>).ResizeObserver ??= ResizeObserverStub;
-    useBrowserAgentStore.setState({
-      status: "Idle",
-      goal: "",
-      screenshot: null,
-      currentAction: null,
-      lastEventMessage: null,
-      currentAdapterId: null,
-      currentLayer: null,
-      connectedBotId: null,
-    });
+    setFabricAciRunner(null);
+    useBrowserAgentStore.setState({ status: "Idle", goal: "", screenshot: null });
   });
 
-  it("renders the ACI viewport and a goal composer", () => {
-    render(
+  it("mounts the embedded browser capsule (desktop ACI/browser mode view)", async () => {
+    const { findByTestId } = render(
       <FabricAciModeCanvas
         session={aciSession("ses-1", "ACI run")}
         hostName="Studio Mac"
         onRunGoal={() => {}}
+        onStopRun={() => {}}
       />,
     );
-    expect(screen.getByText("COMPUTER USE")).toBeInTheDocument();
-    expect(screen.getByText("No live computer session")).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText("Run a task on Studio Mac…"),
-    ).toBeInTheDocument();
+    expect(await findByTestId("browser-capsule")).toBeInTheDocument();
   });
 
-  it("submits a trimmed goal and clears the composer", () => {
+  it("registers the fabric ACI runner while mounted and clears it on unmount", () => {
+    const { unmount } = render(
+      <FabricAciModeCanvas session={null} onRunGoal={() => {}} onStopRun={() => {}} />,
+    );
+    expect(getFabricAciRunner()).not.toBeNull();
+    unmount();
+    expect(getFabricAciRunner()).toBeNull();
+  });
+
+  it("routes capsule agent-bar runs to onRunGoal", () => {
     const onRunGoal = vi.fn();
     render(
-      <FabricAciModeCanvas session={null} hostName="Studio Mac" onRunGoal={onRunGoal} />,
+      <FabricAciModeCanvas session={null} onRunGoal={onRunGoal} onStopRun={() => {}} />,
     );
-    const composer = screen.getByPlaceholderText("Run a task on Studio Mac…");
-    fireEvent.change(composer, { target: { value: "  open allternit.com  " } });
-    fireEvent.keyDown(composer, { key: "Enter" });
+    useBrowserAgentStore.getState().startAciSession("open allternit.com");
     expect(onRunGoal).toHaveBeenCalledWith("open allternit.com");
-    expect(composer).toHaveValue("");
   });
 
-  it("does not submit an empty goal", () => {
-    const onRunGoal = vi.fn();
-    render(<FabricAciModeCanvas session={null} onRunGoal={onRunGoal} />);
-    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
-    expect(onRunGoal).not.toHaveBeenCalled();
-  });
-
-  it("toggles watching from the composer bar", () => {
-    const onToggleWatch = vi.fn();
+  it("routes agent-bar stops to onStopRun", () => {
+    const onStopRun = vi.fn();
     render(
-      <FabricAciModeCanvas
-        session={null}
-        watching={false}
-        onToggleWatch={onToggleWatch}
-        onRunGoal={() => {}}
-      />,
+      <FabricAciModeCanvas session={null} onRunGoal={() => {}} onStopRun={onStopRun} />,
     );
-    fireEvent.click(screen.getByTitle("Watch the computer"));
-    expect(onToggleWatch).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows the host fallback when no session or host is given", () => {
-    render(<FabricAciModeCanvas session={null} onRunGoal={() => {}} />);
-    expect(screen.getByPlaceholderText("Run a task on paired node…")).toBeInTheDocument();
+    useBrowserAgentStore.getState().stopExecution();
+    expect(onStopRun).toHaveBeenCalledTimes(1);
   });
 });
