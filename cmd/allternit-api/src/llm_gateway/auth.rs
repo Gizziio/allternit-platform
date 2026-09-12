@@ -54,6 +54,9 @@ pub struct LlmKeyContext {
     pub rate_limit_rpm: Option<i64>,
     /// Allowed model ids / policy aliases; `None` means all models.
     pub allowed_models: Option<Vec<String>>,
+    /// Default cost-attribution tags (JSON object) inherited by every request
+    /// made with this key; explicit request tags win (task G8, V146).
+    pub tags: Option<std::collections::BTreeMap<String, String>>,
 }
 
 impl LlmKeyContext {
@@ -111,7 +114,7 @@ fn lookup_key(db: &DbHandle, key_hash: &str) -> rusqlite::Result<Option<LlmKeyCo
     let row = conn
         .query_row(
             "SELECT id, user_id, tenant_id, key_prefix, monthly_budget_cents,
-                    rate_limit_rpm, allowed_models
+                    rate_limit_rpm, allowed_models, tags
              FROM llm_virtual_keys
              WHERE key_hash = ?1
                AND revoked = 0
@@ -119,6 +122,7 @@ fn lookup_key(db: &DbHandle, key_hash: &str) -> rusqlite::Result<Option<LlmKeyCo
             params![key_hash],
             |row| {
                 let allowed_models: Option<String> = row.get(6)?;
+                let tags: Option<String> = row.get(7)?;
                 Ok(LlmKeyContext {
                     key_id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -128,6 +132,7 @@ fn lookup_key(db: &DbHandle, key_hash: &str) -> rusqlite::Result<Option<LlmKeyCo
                     rate_limit_rpm: row.get(5)?,
                     allowed_models: allowed_models
                         .and_then(|json| serde_json::from_str::<Vec<String>>(&json).ok()),
+                    tags: tags.and_then(|json| serde_json::from_str(&json).ok()),
                 })
             },
         )
@@ -620,6 +625,7 @@ mod tests {
             monthly_budget_cents: Some(budget_cents),
             rate_limit_rpm: None,
             allowed_models: None,
+            tags: None,
         }
     }
 
@@ -657,6 +663,7 @@ mod tests {
             monthly_budget_cents: Some(1000),
             rate_limit_rpm: None,
             allowed_models: None,
+            tags: None,
         };
 
         // Tenant hard cap is tighter than the key budget.

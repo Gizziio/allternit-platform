@@ -276,6 +276,10 @@ struct UsageQuery {
     from: Option<String>,
     /// YYYY-MM-DD, exclusive. Defaults to tomorrow.
     to: Option<String>,
+    /// Aggregation mode. Default groups by day/provider/model/key.
+    /// `tag` explodes `llm_usage_events.tags` (json_each) and aggregates
+    /// spend/tokens per tag key+value (cost attribution, task G8).
+    group_by: Option<String>,
 }
 
 async fn get_usage(
@@ -297,47 +301,94 @@ async fn get_usage(
                 .to_string()
         });
 
-        // Spend bills off the recomputed cost when present (V27 single
-        // source of truth).
-        let sql = format!(
-            "SELECT date(e.created_at) AS day,
-                    COALESCE(e.provider_id, '') AS provider,
-                    COALESCE(e.model_id, '') AS model,
-                    COALESCE(e.virtual_key_id, '') AS key_id,
-                    k.key_prefix,
-                    COUNT(*) AS requests,
-                    SUM(e.prompt_tokens), SUM(e.completion_tokens),
-                    SUM(e.reasoning_tokens), SUM(e.cached_tokens),
-                    SUM(COALESCE(e.recomputed_cost_microdollars, e.cost_microdollars)) AS spend,
-                    SUM(e.cost_mismatch) AS mismatches
-             FROM llm_usage_events e
-             LEFT JOIN llm_virtual_keys k ON k.id = e.virtual_key_id
-             WHERE {} AND e.created_at >= ?2 AND e.created_at < ?3
-             GROUP BY day, provider, model, key_id
-             ORDER BY day DESC, spend DESC",
-            scope.usage_where(1, "e")
-        );
-        let mut stmt = conn.prepare(&sql).map_err(internal_error)?;
-        let rows = stmt
-            .query_map(params![scope.value(), from, to], |row| {
-                Ok(json!({
-                    "day": row.get::<_, String>(0)?,
-                    "provider_id": row.get::<_, String>(1)?,
-                    "model_id": row.get::<_, String>(2)?,
-                    "virtual_key_id": row.get::<_, String>(3)?,
-                    "key_prefix": row.get::<_, Option<String>>(4)?,
-                    "requests": row.get::<_, i64>(5)?,
-                    "prompt_tokens": row.get::<_, i64>(6)?,
-                    "completion_tokens": row.get::<_, i64>(7)?,
-                    "reasoning_tokens": row.get::<_, i64>(8)?,
-                    "cached_tokens": row.get::<_, i64>(9)?,
-                    "spend_microdollars": row.get::<_, i64>(10)?,
-                    "cost_mismatches": row.get::<_, i64>(11)?,
-                }))
-            })
-            .map_err(internal_error)?
-            .collect::<rusqlite::Result<Vec<_>>>()
-            .map_err(internal_error)?;
+        let group_by_tag = matches!(query.group_by.as_deref(), Some("tag"));
+        if query.group_by.is_some() && !group_by_tag {
+            return Err(bad_request(format!(
+                "`group_by` must be `tag` (got `{}`).",
+                query.group_by.as_deref().unwrap_or_default()
+            )));
+        }
+
+        let (rows, group_by) = if group_by_tag {
+            // Spend bills off the recomputed cost when present (V27 single
+            // source of truth). json_each skips NULL tags rows, so untagged
+            // spend simply does not appear in this mode.
+            let sql = format!(
+                "SELECT t.key, t.value,
+                        COUNT(*) AS requests,
+                        SUM(e.prompt_tokens), SUM(e.completion_tokens),
+                        SUM(e.reasoning_tokens), SUM(e.cached_tokens),
+                        SUM(COALESCE(e.recomputed_cost_microdollars, e.cost_microdollars)) AS spend,
+                        SUM(e.cost_mismatch) AS mismatches
+                 FROM llm_usage_events e, json_each(e.tags) t
+                 WHERE {} AND e.created_at >= ?2 AND e.created_at < ?3
+                 GROUP BY t.key, t.value
+                 ORDER BY spend DESC",
+                scope.usage_where(1, "e")
+            );
+            let mut stmt = conn.prepare(&sql).map_err(internal_error)?;
+            let rows = stmt
+                .query_map(params![scope.value(), from, to], |row| {
+                    Ok(json!({
+                        "tag_key": row.get::<_, String>(0)?,
+                        "tag_value": row.get::<_, String>(1)?,
+                        "requests": row.get::<_, i64>(2)?,
+                        "prompt_tokens": row.get::<_, i64>(3)?,
+                        "completion_tokens": row.get::<_, i64>(4)?,
+                        "reasoning_tokens": row.get::<_, i64>(5)?,
+                        "cached_tokens": row.get::<_, i64>(6)?,
+                        "spend_microdollars": row.get::<_, i64>(7)?,
+                        "cost_mismatches": row.get::<_, i64>(8)?,
+                    }))
+                })
+                .map_err(internal_error)?
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(internal_error)?;
+            (rows, "tag")
+        } else {
+            // Spend bills off the recomputed cost when present (V27 single
+            // source of truth).
+            let sql = format!(
+                "SELECT date(e.created_at) AS day,
+                        COALESCE(e.provider_id, '') AS provider,
+                        COALESCE(e.model_id, '') AS model,
+                        COALESCE(e.virtual_key_id, '') AS key_id,
+                        k.key_prefix,
+                        COUNT(*) AS requests,
+                        SUM(e.prompt_tokens), SUM(e.completion_tokens),
+                        SUM(e.reasoning_tokens), SUM(e.cached_tokens),
+                        SUM(COALESCE(e.recomputed_cost_microdollars, e.cost_microdollars)) AS spend,
+                        SUM(e.cost_mismatch) AS mismatches
+                 FROM llm_usage_events e
+                 LEFT JOIN llm_virtual_keys k ON k.id = e.virtual_key_id
+                 WHERE {} AND e.created_at >= ?2 AND e.created_at < ?3
+                 GROUP BY day, provider, model, key_id
+                 ORDER BY day DESC, spend DESC",
+                scope.usage_where(1, "e")
+            );
+            let mut stmt = conn.prepare(&sql).map_err(internal_error)?;
+            let rows = stmt
+                .query_map(params![scope.value(), from, to], |row| {
+                    Ok(json!({
+                        "day": row.get::<_, String>(0)?,
+                        "provider_id": row.get::<_, String>(1)?,
+                        "model_id": row.get::<_, String>(2)?,
+                        "virtual_key_id": row.get::<_, String>(3)?,
+                        "key_prefix": row.get::<_, Option<String>>(4)?,
+                        "requests": row.get::<_, i64>(5)?,
+                        "prompt_tokens": row.get::<_, i64>(6)?,
+                        "completion_tokens": row.get::<_, i64>(7)?,
+                        "reasoning_tokens": row.get::<_, i64>(8)?,
+                        "cached_tokens": row.get::<_, i64>(9)?,
+                        "spend_microdollars": row.get::<_, i64>(10)?,
+                        "cost_mismatches": row.get::<_, i64>(11)?,
+                    }))
+                })
+                .map_err(internal_error)?
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(internal_error)?;
+            (rows, "day")
+        };
 
         let mut totals = json!({
             "requests": 0, "prompt_tokens": 0, "completion_tokens": 0,
@@ -358,7 +409,7 @@ async fn get_usage(
         }
 
         Ok::<_, ApiError>(json!({
-            "from": from, "to": to,
+            "from": from, "to": to, "group_by": group_by,
             "usage": rows,
             "totals": totals,
         }))
@@ -379,6 +430,9 @@ struct LogsQuery {
     /// `created_at|id` of the last row of the previous page.
     cursor: Option<String>,
     status: Option<String>,
+    /// Filter to rows whose `tags` JSON contains this string as any key or
+    /// value (json_each match, task G8).
+    tag: Option<String>,
 }
 
 /// Split a `created_at|id` cursor.
@@ -419,12 +473,16 @@ async fn get_logs(
                     e.provider_id, e.model_id, e.fallback_from,
                     e.prompt_tokens, e.completion_tokens, e.reasoning_tokens, e.cached_tokens,
                     e.cost_microdollars, e.recomputed_cost_microdollars, e.cost_mismatch,
-                    e.latency_ms, e.ttft_ms, e.gizzi_session_id, k.key_prefix
+                    e.latency_ms, e.ttft_ms, e.gizzi_session_id, k.key_prefix,
+                    e.tags, e.batch_id
              FROM llm_usage_events e
              LEFT JOIN llm_virtual_keys k ON k.id = e.virtual_key_id
              WHERE {}
                AND (?2 IS NULL OR e.status = ?2)
                AND (?3 IS NULL OR e.created_at < ?3 OR (e.created_at = ?3 AND e.id < ?4))
+               AND (?6 IS NULL OR EXISTS (
+                       SELECT 1 FROM json_each(e.tags) t
+                       WHERE t.value = ?6 OR t.key = ?6))
              ORDER BY e.created_at DESC, e.id DESC
              LIMIT ?5",
             scope.usage_where(1, "e")
@@ -436,8 +494,16 @@ async fn get_logs(
         let mut stmt = conn.prepare(&sql).map_err(internal_error)?;
         let mut rows = stmt
             .query_map(
-                params![scope.value(), query.status, cursor_ts, cursor_id, limit + 1],
+                params![
+                    scope.value(),
+                    query.status,
+                    cursor_ts,
+                    cursor_id,
+                    limit + 1,
+                    query.tag
+                ],
                 |row| {
+                    let tags: Option<String> = row.get(19)?;
                     Ok(json!({
                         "id": row.get::<_, String>(0)?,
                         "created_at": row.get::<_, String>(1)?,
@@ -458,6 +524,8 @@ async fn get_logs(
                         "ttft_ms": row.get::<_, Option<i64>>(16)?,
                         "gizzi_session_id": row.get::<_, Option<String>>(17)?,
                         "key_prefix": row.get::<_, Option<String>>(18)?,
+                        "tags": tags.and_then(|raw| serde_json::from_str::<Value>(&raw).ok()),
+                        "batch_id": row.get::<_, Option<String>>(20)?,
                     }))
                 },
             )
@@ -1331,5 +1399,145 @@ mod tests {
         assert_eq!(tenant.usage_where(1, "e"), "e.tenant_id = ?1");
         let user = Scope::User("user_1".to_string());
         assert_eq!(user.usage_where(3, "e"), "e.user_id = ?3");
+    }
+
+    async fn tag_test_state() -> (Arc<AppState>, AuthUser) {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let user = AuthUser {
+            user_id: "user_1".to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        };
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO llm_usage_events
+             (id, virtual_key_id, user_id, status, prompt_tokens, completion_tokens,
+              cost_microdollars, tags, batch_id)
+             VALUES
+             ('e1', NULL, 'user_1', 'ok', 10, 5, 1000, '{\"team\":\"alpha\"}', NULL),
+             ('e2', NULL, 'user_1', 'ok', 20, 10, 2000, '{\"team\":\"beta\"}', 'batch_9'),
+             ('e3', NULL, 'user_1', 'error', 1, 0, 0, NULL, NULL)",
+            [],
+        )
+        .unwrap();
+        (state, user)
+    }
+
+    #[tokio::test]
+    async fn usage_group_by_tag_aggregates_spend() {
+        let (state, user) = tag_test_state().await;
+        let response = get_usage(
+            State(state),
+            Extension(user),
+            Query(UsageQuery {
+                from: None,
+                to: None,
+                group_by: Some("tag".to_string()),
+            }),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["group_by"], "tag");
+        let usage = body["usage"].as_array().unwrap();
+        assert_eq!(usage.len(), 2);
+        // Ordered by spend DESC: beta (2000) before alpha (1000).
+        assert_eq!(usage[0]["tag_key"], "team");
+        assert_eq!(usage[0]["tag_value"], "beta");
+        assert_eq!(usage[0]["spend_microdollars"], 2000);
+        assert_eq!(usage[1]["tag_value"], "alpha");
+        assert_eq!(usage[1]["spend_microdollars"], 1000);
+        // Totals include both tagged rows (untagged e3 is excluded).
+        assert_eq!(body["totals"]["spend_microdollars"], 3000);
+        assert_eq!(body["totals"]["requests"], 2);
+    }
+
+    #[tokio::test]
+    async fn usage_rejects_unknown_group_by() {
+        let (state, user) = tag_test_state().await;
+        let response = get_usage(
+            State(state),
+            Extension(user),
+            Query(UsageQuery {
+                from: None,
+                to: None,
+                group_by: Some("nope".to_string()),
+            }),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn logs_filter_by_tag_and_expose_batch_id() {
+        let (state, user) = tag_test_state().await;
+        let response = get_logs(
+            State(state.clone()),
+            Extension(user.clone()),
+            Query(LogsQuery {
+                limit: None,
+                cursor: None,
+                status: None,
+                tag: Some("alpha".to_string()),
+            }),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        let logs = body["logs"].as_array().unwrap();
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0]["id"], "e1");
+        assert_eq!(logs[0]["tags"]["team"], "alpha");
+        assert!(logs[0]["batch_id"].is_null());
+
+        // Untagged rows are excluded; value-match works too.
+        let response = get_logs(
+            State(state.clone()),
+            Extension(user.clone()),
+            Query(LogsQuery {
+                limit: None,
+                cursor: None,
+                status: None,
+                tag: Some("beta".to_string()),
+            }),
+        )
+        .await;
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        let logs = body["logs"].as_array().unwrap();
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0]["batch_id"], "batch_9");
+
+        // No filter → all three rows.
+        let response = get_logs(
+            State(state),
+            Extension(user),
+            Query(LogsQuery {
+                limit: None,
+                cursor: None,
+                status: None,
+                tag: None,
+            }),
+        )
+        .await;
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["logs"].as_array().unwrap().len(), 3);
     }
 }

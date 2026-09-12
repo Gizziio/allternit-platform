@@ -154,6 +154,49 @@ pub struct SetCostRateRequest {
     pub currency: Option<String>,
 }
 
+/// `run_costs` dimensions a breakdown can group by (task G9).
+pub const BREAKDOWN_GROUP_BY: [&str; 3] = ["provider", "region", "instance_type"];
+
+/// Resolve a `YYYY-MM` month filter to `[start, end)` bounds. `None` means
+/// the current calendar month with an open upper bound (month-to-date,
+/// matching the pre-filter behavior).
+fn month_bounds(month: &Option<String>) -> Result<(chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>), ApiError> {
+    use chrono::{Datelike, TimeZone};
+    match month {
+        Some(raw) => {
+            let start = chrono::NaiveDate::parse_from_str(&format!("{raw}-01"), "%Y-%m-%d")
+                .map_err(|_| {
+                    ApiError::BadRequest(format!(
+                        "`month` must be YYYY-MM (got `{raw}`)."
+                    ))
+                })?;
+            let start = chrono::Utc
+                .from_utc_datetime(&start.and_hms_opt(0, 0, 0).unwrap());
+            let end = if start.month() == 12 {
+                chrono::Utc
+                    .with_ymd_and_hms(start.year() + 1, 1, 1, 0, 0, 0)
+                    .unwrap()
+            } else {
+                chrono::Utc
+                    .with_ymd_and_hms(start.year(), start.month() + 1, 1, 0, 0, 0)
+                    .unwrap()
+            };
+            Ok((start, Some(end)))
+        }
+        None => {
+            let now = chrono::Utc::now();
+            let start = now
+                .with_day(1)
+                .unwrap_or(now)
+                .with_hour(0)
+                .unwrap_or(now)
+                .with_minute(0)
+                .unwrap_or(now);
+            Ok((start, None))
+        }
+    }
+}
+
 /// Cost service trait - defines the interface for cost tracking
 #[async_trait]
 pub trait CostService: Send + Sync {
@@ -190,11 +233,28 @@ pub trait CostService: Send + Sync {
         request: UpdateBudgetRequest,
     ) -> Result<UserCostBudget, ApiError>;
 
-    /// Get cost summary for a user
-    async fn get_user_cost_summary(&self, user_id: &str) -> Result<UserCostSummary, ApiError>;
+    /// Get cost summary for a user. `month` (YYYY-MM) filters to that
+    /// calendar month; `None` means the current month to date. Scoping
+    /// follows the crate tenant pattern: a run is visible when
+    /// `runs.tenant_id` (set from the authenticated user at creation) or the
+    /// legacy `runs.owner_id` matches.
+    async fn get_user_cost_summary(
+        &self,
+        user_id: &str,
+        month: Option<String>,
+    ) -> Result<UserCostSummary, ApiError>;
 
-    /// Get cost breakdown by provider/region for a user
-    async fn get_user_cost_breakdown(&self, user_id: &str) -> Result<Vec<CostBreakdown>, ApiError>;
+    /// Get cost breakdown for a user, honoring the same `month` filter as
+    /// the summary. `group_by` (provider | region | instance_type) collapses
+    /// the grouping to a single dimension — these are the existing
+    /// `run_costs` dimensions; untagged spend stays grouped under "unknown".
+    /// `None` keeps the legacy three-dimension grouping.
+    async fn get_user_cost_breakdown(
+        &self,
+        user_id: &str,
+        month: Option<String>,
+        group_by: Option<String>,
+    ) -> Result<Vec<CostBreakdown>, ApiError>;
 
     /// Check and send budget alerts for a user
     async fn check_budget_alerts(&self, user_id: &str) -> Result<Vec<CostAlert>, ApiError>;
@@ -670,34 +730,33 @@ impl CostService for CostServiceImpl {
         Ok(budget)
     }
 
-    async fn get_user_cost_summary(&self, user_id: &str) -> Result<UserCostSummary, ApiError> {
+    async fn get_user_cost_summary(
+        &self,
+        user_id: &str,
+        month: Option<String>,
+    ) -> Result<UserCostSummary, ApiError> {
         let budget = self.get_or_init_user_budget(user_id).await?;
+        let (month_start, month_end) = month_bounds(&month)?;
 
-        // Get current month start
-        let now = Utc::now();
-        let month_start = now
-            .with_day(1)
-            .unwrap_or(now)
-            .with_hour(0)
-            .unwrap_or(now)
-            .with_minute(0)
-            .unwrap_or(now);
-
-        // Aggregate costs for this user
+        // Aggregate costs for this user. Tenant scoping follows the crate
+        // pattern (runs.rs): runs carry `tenant_id` = creating user; the
+        // legacy `owner_id` column still matches for older rows.
         let result: Option<(f64, i64, i64)> = sqlx::query_as(
             r#"
-            SELECT 
+            SELECT
                 COALESCE(SUM(rc.total_cost), 0) as total_cost,
                 COUNT(rc.id) as run_count,
                 COALESCE(SUM(rc.duration_seconds), 0)::BIGINT as total_duration
             FROM run_costs rc
             JOIN runs r ON rc.run_id = r.id
-            WHERE r.owner_id = $1 
+            WHERE (r.tenant_id = $1 OR r.owner_id = $1)
             AND rc.started_at >= $2
+            AND ($3::timestamptz IS NULL OR rc.started_at < $3)
             "#,
         )
         .bind(user_id)
         .bind(month_start)
+        .bind(month_end)
         .fetch_optional(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
@@ -729,45 +788,88 @@ impl CostService for CostServiceImpl {
         })
     }
 
-    async fn get_user_cost_breakdown(&self, user_id: &str) -> Result<Vec<CostBreakdown>, ApiError> {
-        let now = Utc::now();
-        let month_start = now
-            .with_day(1)
-            .unwrap_or(now)
-            .with_hour(0)
-            .unwrap_or(now)
-            .with_minute(0)
-            .unwrap_or(now);
+    async fn get_user_cost_breakdown(
+        &self,
+        user_id: &str,
+        month: Option<String>,
+        group_by: Option<String>,
+    ) -> Result<Vec<CostBreakdown>, ApiError> {
+        let (month_start, month_end) = month_bounds(&month)?;
 
-        let breakdown: Vec<CostBreakdown> = sqlx::query_as(
+        // Whitelist-validated dimension; builds e.g.
+        // `COALESCE(rc.provider, 'unknown') AS provider` plus `'all'` for
+        // the non-selected dimensions.
+        let (group_expr, other) = match group_by.as_deref() {
+            None => (
+                "COALESCE(rc.provider, 'unknown') as provider,
+                 COALESCE(rc.region, 'unknown') as region,
+                 COALESCE(rc.instance_type, 'unknown') as instance_type"
+                    .to_string(),
+                None,
+            ),
+            Some(dim) if BREAKDOWN_GROUP_BY.contains(&dim) => {
+                // Keep the SELECT column order provider, region,
+                // instance_type regardless of which dimension is selected;
+                // non-selected dimensions report the literal "all".
+                let ordered = BREAKDOWN_GROUP_BY
+                    .iter()
+                    .map(|col| {
+                        if *col == dim {
+                            format!("COALESCE(rc.{col}, 'unknown') as {col}")
+                        } else {
+                            format!("'all' as {col}")
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                (ordered, Some(dim.to_string()))
+            }
+            Some(dim) => {
+                return Err(ApiError::BadRequest(format!(
+                    "`group_by` must be one of: {} (got `{dim}`).",
+                    BREAKDOWN_GROUP_BY.join(", ")
+                )))
+            }
+        };
+
+        let group_clause = other
+            .as_deref()
+            .map(|dim| format!("GROUP BY rc.{dim}"))
+            .unwrap_or_else(|| {
+                "GROUP BY rc.provider, rc.region, rc.instance_type".to_string()
+            });
+
+        let sql = format!(
             r#"
-            SELECT 
-                COALESCE(rc.provider, 'unknown') as provider,
-                COALESCE(rc.region, 'unknown') as region,
-                COALESCE(rc.instance_type, 'unknown') as instance_type,
+            SELECT
+                {group_expr},
                 COALESCE(SUM(rc.total_cost), 0) as total_cost,
                 COUNT(rc.id) as run_count,
                 COALESCE(SUM(rc.duration_seconds), 0)::DOUBLE PRECISION / 3600.0 as total_duration_hours
             FROM run_costs rc
             JOIN runs r ON rc.run_id = r.id
-            WHERE r.owner_id = $1 
+            WHERE (r.tenant_id = $1 OR r.owner_id = $1)
             AND rc.started_at >= $2
-            GROUP BY rc.provider, rc.region, rc.instance_type
+            AND ($3::timestamptz IS NULL OR rc.started_at < $3)
+            {group_clause}
             ORDER BY total_cost DESC
-            "#,
-        )
-        .bind(user_id)
-        .bind(month_start)
-        .fetch_all(&self.db)
-        .await
-        .map_err(ApiError::DatabaseError)?;
+            "#
+        );
+
+        let breakdown: Vec<CostBreakdown> = sqlx::query_as(&sql)
+            .bind(user_id)
+            .bind(month_start)
+            .bind(month_end)
+            .fetch_all(&self.db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
 
         Ok(breakdown)
     }
 
     async fn check_budget_alerts(&self, user_id: &str) -> Result<Vec<CostAlert>, ApiError> {
         let budget = self.get_or_init_user_budget(user_id).await?;
-        let summary = self.get_user_cost_summary(user_id).await?;
+        let summary = self.get_user_cost_summary(user_id, None).await?;
 
         if !budget.alert_enabled || budget.monthly_budget <= 0.0 {
             return Ok(Vec::new());
