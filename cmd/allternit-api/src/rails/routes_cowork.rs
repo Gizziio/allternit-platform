@@ -544,7 +544,7 @@ pub struct CreateJobRequest {
     pub payload: serde_json::Value,
     pub max_retries: i32,
     pub timeout_sec: i32,
-    /// Mandatory capability strings for A:// dispatcher eligibility (§8.6–8.7)
+    /// Mandatory capability strings for A:// fabric-transport eligibility (§8.6–8.7)
     pub required_capabilities: Option<Vec<String>>,
 }
 
@@ -597,7 +597,7 @@ async fn create_job(
 
     let job = manager.create_job(spec).await?;
     manager.set_current_job(run_id, Some(job.id)).await?;
-    // New jobs enter the dispatch queue immediately; the A:// dispatcher only
+    // New jobs enter the fabric-transport queue immediately; fabric transport only
     // claims persisted rows in state 'queued'.
     manager.transition_job_state(job.id, JobState::Queued).await.ok();
 

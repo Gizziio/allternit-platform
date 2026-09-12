@@ -1,9 +1,9 @@
-//! Store-level dispatcher operations over the canonical SQLite store.
+//! Store-level fabric-transport operations over the canonical SQLite store.
 //!
 //! Every claim, renew, complete, and expiry is a transactional
 //! compare-and-swap against the persisted `cowork_jobs` row (A:// lock 2):
 //! exclusivity of ownership is decided by SQLite, never by an in-process lock.
-//! Eligibility is computed here in the dispatcher; the CAS makes the winner
+//! Eligibility is computed here in fabric transport; the CAS makes the winner
 //! single. Lease times are server-authoritative RFC3339 UTC (lock 3).
 
 use std::path::Path;
@@ -13,18 +13,18 @@ use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use uuid::Uuid;
 
-use crate::dispatch::{
-    CompleteOutcome, DispatchError, DispatchErrorCode as Code, ExpiryAction, LeaseGrant,
+use crate::transport::{
+    CompleteOutcome, TransportError, TransportErrorCode as Code, ExpiryAction, LeaseGrant,
     PrincipalRecord,
 };
 
-fn store_err(e: rusqlite::Error) -> DispatchError {
-    DispatchError::new(Code::Store, format!("sqlite: {e}"))
+fn store_err(e: rusqlite::Error) -> TransportError {
+    TransportError::new(Code::Store, format!("sqlite: {e}"))
 }
 
 /// Open a store connection with a busy timeout so the sweeper, API handlers,
 /// and tests can write concurrently against the same DB file.
-pub fn open_store(path: &Path) -> Result<Connection, DispatchError> {
+pub fn open_store(path: &Path) -> Result<Connection, TransportError> {
     let conn = Connection::open(path).map_err(store_err)?;
     conn.busy_timeout(Duration::from_secs(5)).map_err(store_err)?;
     conn.execute_batch("PRAGMA journal_mode=WAL;").map_err(store_err)?;
@@ -33,7 +33,7 @@ pub fn open_store(path: &Path) -> Result<Connection, DispatchError> {
 
 /// Apply the cowork migration DDL needed by the store (V5, V8, V149–V151).
 /// Used by tests and one-off tooling; the API applies the full refinery set.
-pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), DispatchError> {
+pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS cowork_runs (
             id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
@@ -76,7 +76,7 @@ pub fn register_principal(
     workspace: &str,
     capabilities: &[String],
     token: &str,
-) -> Result<(), DispatchError> {
+) -> Result<(), TransportError> {
     conn.execute(
         "INSERT INTO cowork_principals (id, workspace, capabilities, token_hash, status, updated_at)
          VALUES (?1, ?2, ?3, ?4, 'active', CURRENT_TIMESTAMP)
@@ -90,7 +90,7 @@ pub fn register_principal(
             id,
             workspace,
             serde_json::to_string(capabilities).unwrap(),
-            crate::dispatch::hash_token(token),
+            crate::transport::hash_token(token),
         ],
     )
     .map_err(store_err)?;
@@ -101,8 +101,8 @@ pub fn register_principal(
 pub fn authenticate_principal(
     conn: &Connection,
     token: &str,
-) -> Result<PrincipalRecord, DispatchError> {
-    let hash = crate::dispatch::hash_token(token);
+) -> Result<PrincipalRecord, TransportError> {
+    let hash = crate::transport::hash_token(token);
     let row = conn
         .query_row(
             "SELECT id, workspace, capabilities, status FROM cowork_principals
@@ -121,7 +121,7 @@ pub fn authenticate_principal(
         .map_err(store_err)?;
 
     match row {
-        None => Err(DispatchError::new(
+        None => Err(TransportError::new(
             Code::AuthenticationFailed,
             "bearer token does not map to any principal",
         )),
@@ -131,7 +131,7 @@ pub fn authenticate_principal(
             capabilities: serde_json::from_str(&caps).unwrap_or_default(),
             status,
         }),
-        Some((id, _, _, status)) => Err(DispatchError::new(
+        Some((id, _, _, status)) => Err(TransportError::new(
             Code::PermissionDenied,
             format!("principal {id} is not active (status={status})"),
         )),
@@ -140,7 +140,7 @@ pub fn authenticate_principal(
 
 // ─── Job enqueue helper ─────────────────────────────────────────────────────
 
-/// Insert a queued job row directly (dispatch-slice path; skips the Rails DAG
+/// Insert a queued job row directly (fabric-transport path; skips the Rails DAG
 /// mirror, which the API layer maintains separately).
 #[allow(clippy::too_many_arguments)]
 pub fn enqueue_job(
@@ -153,7 +153,7 @@ pub fn enqueue_job(
     max_retries: i64,
     initiator: Option<&str>,
     delegator: Option<&str>,
-) -> Result<String, DispatchError> {
+) -> Result<String, TransportError> {
     let job_id = Uuid::new_v4().to_string();
     conn.execute(
         "INSERT INTO cowork_jobs
@@ -186,7 +186,7 @@ fn insert_event(
     initiator: Option<&str>,
     delegator: Option<&str>,
     executor: Option<&str>,
-) -> Result<(), DispatchError> {
+) -> Result<(), TransportError> {
     conn.execute(
         "INSERT INTO cowork_run_events (id, run_id, event_type, payload, initiator, delegator, executor)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -221,7 +221,7 @@ struct JobRow {
     delegator: Option<String>,
 }
 
-fn load_job(conn: &Connection, job_id: &str) -> Result<Option<JobRow>, DispatchError> {
+fn load_job(conn: &Connection, job_id: &str) -> Result<Option<JobRow>, TransportError> {
     conn.query_row(
         "SELECT id, run_id, state, payload, required_capabilities, lease_id,
                 lease_generation, lease_expires_at, lease_owner, retry_count,
@@ -267,7 +267,7 @@ struct RunAttribution {
 fn load_run_attribution(
     conn: &Connection,
     run_id: &str,
-) -> Result<RunAttribution, DispatchError> {
+) -> Result<RunAttribution, TransportError> {
     conn.query_row(
         "SELECT initiator, delegator, current_checkpoint_id FROM cowork_runs WHERE id = ?1",
         params![run_id],
@@ -303,12 +303,12 @@ pub fn claim_job(
     principal: &PrincipalRecord,
     job_id: Option<&str>,
     lease_ttl: Duration,
-) -> Result<LeaseGrant, DispatchError> {
+) -> Result<LeaseGrant, TransportError> {
     let now = Utc::now();
     let expires = now + lease_ttl;
     let lease_id = format!("lease_{}", Uuid::new_v4());
 
-    // Candidate selection (dispatcher-side eligibility).
+    // Candidate selection (fabric-transport eligibility).
     let mut candidates: Vec<(String, String, String, String, String)> = Vec::new(); // id, run_id, payload, req_caps, workspace
     {
         let sql = "SELECT j.id, j.run_id, j.payload, j.required_capabilities, r.workspace_id
@@ -339,7 +339,7 @@ pub fn claim_job(
             }
             if workspace != principal.workspace {
                 if job_id == Some(id.as_str()) {
-                    return Err(DispatchError::new(
+                    return Err(TransportError::new(
                         Code::WorkspaceMismatch,
                         format!(
                             "job {id} is in workspace {workspace}, principal {} is in {}",
@@ -357,7 +357,7 @@ pub fn claim_job(
                 .collect();
             if !missing.is_empty() {
                 if job_id == Some(id.as_str()) {
-                    return Err(DispatchError::new(
+                    return Err(TransportError::new(
                         Code::CapabilityMissing,
                         format!(
                             "principal {} lacks required capabilities: {}",
@@ -373,7 +373,7 @@ pub fn claim_job(
     }
 
     if candidates.is_empty() {
-        return Err(DispatchError::new(
+        return Err(TransportError::new(
             if job_id.is_some() {
                 Code::JobAlreadyLeased
             } else {
@@ -406,16 +406,16 @@ pub fn claim_job(
     match run_state.as_deref() {
         Some("cancelled") => {
             tx.rollback().map_err(store_err)?;
-            return Err(DispatchError::new(
+            return Err(TransportError::new(
                 Code::RunCancelled,
                 format!("run {run_id} is cancelled"),
             ));
         }
         Some("completed") | Some("failed") | None => {
             tx.rollback().map_err(store_err)?;
-            return Err(DispatchError::new(
+            return Err(TransportError::new(
                 Code::NoEligibleWorker,
-                format!("run {run_id} is not dispatchable (state={run_state:?})"),
+                format!("run {run_id} is not transportable (state={run_state:?})"),
             ));
         }
         _ => {}
@@ -451,7 +451,7 @@ pub fn claim_job(
         Some((g,)) => g,
         None => {
             tx.rollback().map_err(store_err)?;
-            return Err(DispatchError::new(
+            return Err(TransportError::new(
                 Code::JobAlreadyLeased,
                 format!("job {chosen} was claimed by another worker first"),
             ));
@@ -508,14 +508,14 @@ fn validate_lease(
     job_id: &str,
     lease_id: &str,
     generation: i64,
-) -> Result<JobRow, DispatchError> {
+) -> Result<JobRow, TransportError> {
     let job = load_job(conn, job_id)?
-        .ok_or_else(|| DispatchError::new(Code::JobNotFound, format!("job {job_id} not found")))?;
+        .ok_or_else(|| TransportError::new(Code::JobNotFound, format!("job {job_id} not found")))?;
 
     // Stale generations are rejected before anything else: a worker never
     // decides whether its own lease remains valid (§8.26).
     if job.lease_generation != generation {
-        return Err(DispatchError::new(
+        return Err(TransportError::new(
             Code::StaleLeaseGeneration,
             format!(
                 "job {job_id} is at lease generation {}, caller presented {generation}",
@@ -524,13 +524,13 @@ fn validate_lease(
         ));
     }
     if job.lease_id.as_deref() != Some(lease_id) {
-        return Err(DispatchError::new(
+        return Err(TransportError::new(
             Code::InvalidLease,
             format!("lease_id {lease_id} does not own job {job_id}"),
         ));
     }
     if job.lease_owner.as_deref() != Some(principal.id.as_str()) {
-        return Err(DispatchError::new(
+        return Err(TransportError::new(
             Code::PermissionDenied,
             format!(
                 "job {job_id} is leased to {:?}, not {}",
@@ -541,13 +541,13 @@ fn validate_lease(
     match job.state.as_str() {
         "leased" | "running" => {}
         "cancelled" => {
-            return Err(DispatchError::new(
+            return Err(TransportError::new(
                 Code::RunCancelled,
                 format!("job {job_id} is cancelled"),
             ))
         }
         _ => {
-            return Err(DispatchError::new(
+            return Err(TransportError::new(
                 Code::LeaseExpired,
                 format!("job {job_id} lease is no longer active (state={})", job.state),
             ))
@@ -555,7 +555,7 @@ fn validate_lease(
     }
     if let Some(exp) = job.lease_expires_at.as_deref() {
         if parse_time(exp).map(|e| e < Utc::now()).unwrap_or(true) {
-            return Err(DispatchError::new(
+            return Err(TransportError::new(
                 Code::LeaseExpired,
                 format!("lease on job {job_id} expired at {exp} (server clock)"),
             ));
@@ -573,7 +573,7 @@ pub fn record_heartbeat(
     lease_id: &str,
     generation: i64,
     worker_time: Option<String>,
-) -> Result<(), DispatchError> {
+) -> Result<(), TransportError> {
     let job = validate_lease(conn, principal, job_id, lease_id, generation)?;
     let attr = load_run_attribution(conn, &job.run_id)?;
     insert_event(
@@ -602,7 +602,7 @@ pub fn renew_lease(
     lease_id: &str,
     generation: i64,
     lease_ttl: Duration,
-) -> Result<String, DispatchError> {
+) -> Result<String, TransportError> {
     let job = validate_lease(conn, principal, job_id, lease_id, generation)?;
     let expires = (Utc::now() + lease_ttl).to_rfc3339();
 
@@ -626,7 +626,7 @@ pub fn renew_lease(
         .map_err(store_err)?;
     if updated == 0 {
         tx.rollback().map_err(store_err)?;
-        return Err(DispatchError::new(
+        return Err(TransportError::new(
             Code::InvalidLease,
             format!("renewal lost the race on job {job_id}"),
         ));
@@ -666,12 +666,12 @@ pub fn complete_job(
     success: bool,
     summary: Option<String>,
     outputs: Option<serde_json::Value>,
-) -> Result<CompleteOutcome, DispatchError> {
+) -> Result<CompleteOutcome, TransportError> {
     let job = load_job(conn, job_id)?
-        .ok_or_else(|| DispatchError::new(Code::JobNotFound, format!("job {job_id} not found")))?;
+        .ok_or_else(|| TransportError::new(Code::JobNotFound, format!("job {job_id} not found")))?;
 
     if job.lease_generation != generation {
-        return Err(DispatchError::new(
+        return Err(TransportError::new(
             Code::StaleLeaseGeneration,
             format!(
                 "job {job_id} is at lease generation {}, caller presented {generation}",
@@ -754,7 +754,7 @@ pub fn complete_job(
                 });
             }
         }
-        return Err(DispatchError::new(
+        return Err(TransportError::new(
             Code::LeaseExpired,
             format!("completion lost the race on job {job_id}"),
         ));
@@ -834,7 +834,7 @@ pub fn complete_job(
 /// passed. Recovery policy: requeue (`retry_count+1 <= max_retries`) or
 /// dead-letter. Each expiry is itself a CAS so a worker renewing mid-sweep
 /// keeps its lease. Returns the actions taken.
-pub fn expire_leases(conn: &mut Connection, now: DateTime<Utc>) -> Result<Vec<ExpiryAction>, DispatchError> {
+pub fn expire_leases(conn: &mut Connection, now: DateTime<Utc>) -> Result<Vec<ExpiryAction>, TransportError> {
     let candidates: Vec<JobRow> = {
         let mut stmt = conn
             .prepare(
@@ -947,7 +947,7 @@ pub fn expire_leases(conn: &mut Connection, now: DateTime<Utc>) -> Result<Vec<Ex
             }),
             attr.initiator.as_deref(),
             attr.delegator.as_deref(),
-            None, // dispatcher action, not an executor
+            None, // fabric-transport action, not an executor
         )?;
         tx.commit().map_err(store_err)?;
 
@@ -968,7 +968,7 @@ pub fn expire_leases(conn: &mut Connection, now: DateTime<Utc>) -> Result<Vec<Ex
 pub fn get_job_view(
     conn: &Connection,
     job_id: &str,
-) -> Result<Option<serde_json::Value>, DispatchError> {
+) -> Result<Option<serde_json::Value>, TransportError> {
     let Some(job) = load_job(conn, job_id)? else {
         return Ok(None);
     };

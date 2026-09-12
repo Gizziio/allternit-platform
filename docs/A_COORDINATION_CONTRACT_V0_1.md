@@ -4,7 +4,7 @@
 **Public status:** Not yet a customer-facing protocol
 **Pronunciation:** `A://` is pronounced **"Al"** when referring to the user-facing Coworker persona.
 **Scheme notation:** In technical specifications and code, the coordination namespace is written **`a://`**.
-**Last updated:** 2026-09-12 (four dispatcher/lease corrections folded into §8; see §8.0)
+**Last updated:** 2026-09-12 (four fabric-transport/lease corrections folded into §8; see §8.0)
 
 ---
 
@@ -18,7 +18,7 @@ It establishes how humans, agents, bots, tools, services, models, runtimes, and 
 - addressed
 - authorized
 - delegated work
-- dispatched
+- transported
 - supervised
 - approved
 - attributed
@@ -275,7 +275,7 @@ VALIDATED
   ↓
 PLANNED
   ↓
-DISPATCHED
+TRANSPORTED
   ↓
 LEASED
   ↓
@@ -307,7 +307,7 @@ The A:// lifecycle MUST map explicitly onto the canonical Run/DAG implementation
 A:// concept          Runtime state
 INTENT RECEIVED   →   created
 PLANNED           →   planned
-DISPATCHABLE      →   queued
+TRANSPORTABLE      →   queued
 LEASED            →   job: leased
 RUNNING           →   running
 WAITING APPROVAL  →   awaiting_approval
@@ -323,7 +323,7 @@ The implementation MUST define one canonical persisted state machine. Other prod
 
 ---
 
-## 7. Dispatch (summary)
+## 7. Fabric transport (summary)
 
 An accepted Intent produces or attaches to a Run.
 
@@ -331,13 +331,13 @@ An accepted Intent produces or attaches to a Run.
 Intent → Run → Jobs / DAG
 ```
 
-The dispatcher determines: eligible worker, execution environment, required capabilities, connector availability, permission compatibility, resource availability, concurrency, budget, policy.
+Fabric transport determines: eligible worker, execution environment, required capabilities, connector availability, permission compatibility, resource availability, concurrency, budget, policy.
 
 A:// is not considered operational until this path is real. §8 defines the protocol.
 
 ---
 
-# 8. Dispatcher and Lease Protocol
+# 8. Fabric Transport and Lease Protocol
 
 ## 8.0 The four locks (2026-09-12)
 
@@ -345,12 +345,12 @@ These four decisions are architectural and were folded in before implementation.
 
 1. **Canonical proof-slice store = Rust runtime SQLite.** For the v0.1 proof slice, the Rust `allternit-cowork-runtime` SQLite store is the canonical persisted run/job/event state. The cloud API and gizzi orchestrator act as clients of that spine for this slice; they do not maintain competing run truth. (The repo currently has three overlapping stores — Rust runtime SQLite, cloud-api Postgres/sqlx, gizzi-code Drizzle — so atomic leasing requires this choice now.)
 2. **Claims are atomic at the persistence layer.** Eligibility MAY be calculated in `RunManager`, but the actual claim MUST be a transactional compare-and-swap against the persisted `cowork_jobs` row, not an in-process lock.
-3. **Recovery = replay from the last committed checkpoint; server clock is authoritative.** A replacement worker does not magically resume in-memory state: a job is a deterministic step sequence and resumption = replay from the last committed checkpoint under a new lease generation. Lease expiry is judged by the dispatcher/server clock only; `worker_time` in heartbeats is advisory.
+3. **Recovery = replay from the last committed checkpoint; server clock is authoritative.** A replacement worker does not magically resume in-memory state: a job is a deterministic step sequence and resumption = replay from the last committed checkpoint under a new lease generation. Lease expiry is judged by the fabric-transport/server clock only; `worker_time` in heartbeats is advisory.
 4. **v0.1 workers discover jobs by long-polling the claim endpoint.** CommRails push is a latency optimization only and is outside the protocol correctness contract.
 
 ## 8.1 Purpose
 
-The A:// dispatcher converts validated intent into durable execution.
+A:// fabric transport converts validated intent into durable execution.
 
 Its responsibility is not to perform the work. Its responsibility is to determine:
 
@@ -363,11 +363,11 @@ Its responsibility is not to perform the work. Its responsibility is to determin
 - what happens when a worker disappears
 - how execution completes exactly once
 
-The dispatcher is part of the execution substrate, not part of Al's identity.
+Fabric transport is part of the execution substrate, not part of Al's identity.
 
 Al MAY create or delegate an Intent.
 
-Al MUST NOT be required for dispatch.
+Al MUST NOT be required for fabric transport.
 
 Any authorized A:// Principal or system component MAY originate executable work.
 
@@ -386,7 +386,7 @@ Generate Jobs / DAG
   ↓
 Queue Job
   ↓
-Dispatcher evaluates eligibility
+Fabric transport evaluates eligibility
   ↓
 Worker claims Lease        (long-poll; see 8.0 lock 4)
   ↓
@@ -492,7 +492,7 @@ artifact.create / artifact.modify
 
 Workers MAY expose additional namespaced capabilities (e.g. `vendor.example.capability`).
 
-Dispatcher eligibility requires the worker's effective capability set to satisfy all mandatory Job requirements.
+Fabric-transport eligibility requires the worker's effective capability set to satisfy all mandatory Job requirements.
 
 Capabilities describe what a worker **can** do. Policy determines what that worker **may** do in the current context. These are separate.
 
@@ -521,7 +521,7 @@ Eligibility is deterministic policy evaluation.
 
 Model reasoning MAY assist in planning work.
 
-Model reasoning MUST NOT silently bypass dispatcher eligibility rules.
+Model reasoning MUST NOT silently bypass fabric-transport eligibility rules.
 
 ## 8.8 Compute placement
 
@@ -529,7 +529,7 @@ A Job MAY declare a compute requirement or placement policy.
 
 Examples: `local`, `vm`, `remote`, `cloud`, `byo`, `auto`.
 
-The dispatcher resolves placement against: job requirements, principal policy, workspace policy, available workers, hardware capability, data locality, security classification, cost policy, latency policy.
+Fabric transport resolves placement against: job requirements, principal policy, workspace policy, available workers, hardware capability, data locality, security classification, cost policy, latency policy.
 
 Compute placement MUST NOT change the Principal responsible for the action.
 
@@ -572,11 +572,11 @@ A stale worker MUST NOT continue execution under an earlier lease generation.
 
 Workers discover work by **long-polling the claim endpoint** in v0.1 (lock 4). CommRails push MAY later optimize wake-up latency, but it is not part of the correctness contract.
 
-Workers claim Jobs; the dispatcher does not assume delivery equals ownership.
+Workers claim Jobs; fabric transport does not assume delivery equals ownership.
 
 ```text
 Worker → claim(job_id)
-Dispatcher:
+Fabric transport:
   ├── authenticate worker
   ├── verify eligibility
   ├── verify job still available
@@ -584,7 +584,7 @@ Dispatcher:
   └── return lease
 ```
 
-**Claiming MUST be atomic at the persistence layer.** Eligibility is evaluated in the dispatcher, but exclusivity of ownership is decided by a transactional compare-and-swap against the persisted job row (e.g. `UPDATE cowork_jobs SET lease_owner = ?, lease_generation = lease_generation + 1, ... WHERE job_id = ? AND state = 'queued' RETURNING ...`). An in-process lock MUST NOT be the source of claim exclusivity.
+**Claiming MUST be atomic at the persistence layer.** Eligibility is evaluated in fabric transport, but exclusivity of ownership is decided by a transactional compare-and-swap against the persisted job row (e.g. `UPDATE cowork_jobs SET lease_owner = ?, lease_generation = lease_generation + 1, ... WHERE job_id = ? AND state = 'queued' RETURNING ...`). An in-process lock MUST NOT be the source of claim exclusivity.
 
 Exactly one active lease generation may own a Job at a time. Concurrent claims must result in one winner. Other workers receive an explicit conflict or unavailable result.
 
@@ -768,7 +768,7 @@ Large artifacts SHOULD be referenced rather than embedded.
 
 ## 8.18 Attribution
 
-Every dispatch-related material event MUST preserve:
+Every transport-related material event MUST preserve:
 
 ```text
 initiator
@@ -812,7 +812,7 @@ The ledger must distinguish: cancel requested / execution stopped / external eff
 
 ## 8.20 Recovery on restart
 
-On restart, the dispatcher MUST rehydrate durable state from the canonical store (lock 1).
+On restart, fabric transport MUST rehydrate durable state from the canonical store (lock 1).
 
 It MUST determine:
 
@@ -845,7 +845,7 @@ Dead-letter Jobs require explicit inspection or remediation.
 
 Cowork SHOULD surface them prominently.
 
-## 8.22 Required dispatcher events
+## 8.22 Required fabric-transport events
 
 Version 0.1 SHOULD standardize at least:
 
@@ -867,7 +867,7 @@ Material execution events MUST carry attribution.
 
 A:// failures MUST be explicit.
 
-Initial dispatcher-related errors:
+Initial fabric-transport-related errors:
 
 ```text
 A_AUTHENTICATION_FAILED
@@ -887,21 +887,21 @@ A_DELEGATION_CYCLE
 A_DELEGATION_DEPTH_EXCEEDED
 A_RUN_CANCELLED
 A_RESULT_ALREADY_COMMITTED
-A_DISPATCH_FAILED
+A_TRANSPORT_FAILED
 ```
 
 Errors MUST be observable by Cowork and the audit ledger.
 
 ## 8.24 Proof-of-protocol test
 
-A:// Dispatcher Conformance is not achieved until the following test passes end to end:
+A:// Fabric-Transport Conformance is not achieved until the following test passes end to end:
 
 ```text
  1. User submits Intent
  2. Al delegates to Research Bot
  3. Intent resolves to durable Run
  4. Job enters queue
- 5. Dispatcher identifies eligible worker
+ 5. Fabric transport identifies eligible worker
  6. Worker authenticates
  7. Worker claims lease generation 1
  8. Worker begins execution
@@ -913,7 +913,7 @@ A:// Dispatcher Conformance is not achieved until the following test passes end 
 14. Heartbeats stop
 15. Lease generation 1 expires
 16. Approval bound to generation 1 becomes invalid
-17. Dispatcher requeues Job
+17. Fabric transport requeues Job
 18. Replacement worker authenticates
 19. Replacement claims lease generation 2
 20. Required protected action is re-evaluated
@@ -930,7 +930,7 @@ Passing this test establishes that:
 
 ```text
 identity is real
-dispatch is real
+transport is real
 leases are real
 failover is real
 approval binding is real
@@ -938,7 +938,7 @@ attribution is real
 exactly-once completion is real
 ```
 
-Only then should the implementation claim A:// Dispatcher conformance.
+Only then should the implementation claim A:// Fabric-Transport conformance.
 
 ## 8.25 Implementation priority
 
@@ -947,7 +947,7 @@ Only then should the implementation claim A:// Dispatcher conformance.
  2. Capability registry
  3. Canonical IntentEnvelope
  4. Intent → Run creation
- 5. Dispatcher
+ 5. Fabric transport
  6. Atomic Job claim (persistence-level CAS)
  7. Lease generation/token
  8. Heartbeat
@@ -964,7 +964,7 @@ UI polish comes after the execution contract is proven.
 
 ## 8.26 Invariant
 
-The dispatcher does not decide **who someone is**.
+Fabric transport does not decide **who someone is**.
 
 The model does not decide **what someone may do**.
 
@@ -1009,7 +1009,7 @@ The Run/DAG engine is the canonical execution substrate.
 A:// requests ultimately resolve into executable runs.
 
 ```text
-a:// intent → dispatcher → run/DAG → worker → tool/connector/computer
+a:// intent → fabric transport → run/DAG → worker → tool/connector/computer
    → event stream → ledger → result
 ```
 
@@ -1248,9 +1248,20 @@ Rust runtime already nails this: `cowork_runs` (initiator, mode, state, entrypoi
 
 Attachments registry (`allternit-cowork-runtime/src/attachment.rs`, with reconnect tokens — store hashed, per this spec's claim), checkpoints (JSON, best-effort). Missing: a declared typed result envelope (what does `COMPLETED` return? typed artifact refs, not stdout).
 
-### Dispatcher — Missing entirely
+### Fabric transport (was: dispatcher) — proof slice implemented
 
-No eligibility matching, no capability registry, no compute placement, no reassignment. §8 is a blank page in the codebase. Build order: dispatcher + lease protocol first, because lifecycle honesty, leases, approval binding, and the proof slice all bottom out in it.
+Was a blank page; now implemented as the v0.1 proof slice (see Appendix B): bearer-token
+principal auth, eligibility + persistence-level CAS claim, lease generation/token,
+heartbeat/renew, server-clock expiry sweeper with requeue/dead-letter, stale-generation
+completion rejection, exactly-once typed result, and the initiator/delegator/executor
+attribution triple on every material event. File pointers:
+`allternit-cowork-runtime/src/transport.rs` (types + `A_*` error codes),
+`allternit-cowork-runtime/src/sqlite_store.rs` (store-level protocol),
+`allternit-cowork-runtime/src/run.rs` (lease sweeper),
+`cmd/allternit-api/src/rails/fabric_transport_routes.rs` (HTTP surface under
+`/api/v1/fabric/transport/*`), migrations V149–V151. Still missing (later slices):
+capability registry beyond flat strings, non-local compute placement, reassignment
+policy beyond requeue, CommRails push wake-up.
 
 ### Honest scorecard against §16
 
@@ -1258,14 +1269,14 @@ No eligibility matching, no capability registry, no compute placement, no reassi
 Run                = conformant
 Event/Transport    = near
 Approval           = near
-Principal/Intent/Lease/Dispatcher = not yet
+Principal/Intent/Lease/Fabric-transport = proof slice landed (see Appendix B)
 ```
 
 ---
 
 # Appendix B — Proof-slice implementation plan
 
-Target: the §8.24 test with the simplest real job (a shell step sequence, not a model call). One store, one dispatcher, two fake workers.
+Target: the §8.24 test with the simplest real job (a shell step sequence, not a model call). One store, one fabric transport, two fake workers.
 
 | Step | Build | Lands in |
 |---|---|---|
@@ -1286,4 +1297,4 @@ Target: the §8.24 test with the simplest real job (a shell step sequence, not a
 
 ---
 
-*Changelog: 2026-09-12 — v0.1 internal draft. Merged dispatcher/lease protocol as §8, superseding the original §8 "Lease / claim semantics". Folded in the four architectural locks (§8.0). Added Appendix A (codebase type mapping) and Appendix B (proof-slice plan).*
+*Changelog: 2026-09-12 — v0.1 internal draft. Merged dispatcher/lease protocol as §8, superseding the original §8 "Lease / claim semantics". Folded in the four architectural locks (§8.0). Added Appendix A (codebase type mapping) and Appendix B (proof-slice plan). 2026-09-12 (later) — terminology locked: "dispatcher"/"dispatch" renamed to **fabric transport** throughout §7/§8 and the appendices (lifecycle `DISPATCHED` → `TRANSPORTED`); `A_DISPATCH_FAILED` → `A_TRANSPORT_FAILED`; HTTP surface `/api/v1/dispatch/*` → `/api/v1/fabric/transport/*`; env `ALLTERNIT_DISPATCH_*` → `ALLTERNIT_FABRIC_TRANSPORT_*`. Behavior, CAS mechanism, and the four locks unchanged.*

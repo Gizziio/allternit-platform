@@ -7,7 +7,7 @@
 
 pub mod attachment;
 pub mod checkpoint;
-pub mod dispatch;
+pub mod transport;
 pub mod error;
 pub mod run;
 pub mod sqlite_store;
@@ -16,8 +16,8 @@ pub mod types;
 // Re-export common types
 pub use crate::attachment::AttachmentRegistry;
 pub use crate::checkpoint::CheckpointManager;
-pub use crate::dispatch::{
-    hash_token, CompleteOutcome, DispatchError, DispatchErrorCode, ExpiryAction, LeaseGrant,
+pub use crate::transport::{
+    hash_token, CompleteOutcome, TransportError, TransportErrorCode, ExpiryAction, LeaseGrant,
     PrincipalRecord,
 };
 pub use crate::error::{CoworkError, Result};

@@ -1,4 +1,4 @@
-//! A:// Dispatcher conformance test — the §8.24 adversarial two-worker proof.
+//! A:// fabric-transport conformance test — the §8.24 adversarial two-worker proof.
 //!
 //! Scenario: worker A claims lease generation 1, checkpoints mid-job, and dies
 //! (heartbeats stop). The sweeper expires the lease; the job requeues. Worker B
@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use allternit_cowork_runtime::{
-    sqlite_store, CompleteOutcome, CoworkEvent, CreateJobSpec, CreateRunSpec, DispatchErrorCode,
+    sqlite_store, CompleteOutcome, CoworkEvent, CreateJobSpec, CreateRunSpec, TransportErrorCode,
     JobState, LeaseGrant, RailsClient, RunManager, RunManagerConfig, RunState,
 };
 
@@ -22,7 +22,7 @@ const WORKER_A: &str = "a://workspace/allternit/bot/worker-a";
 const WORKER_B: &str = "a://workspace/allternit/bot/worker-b";
 const SHELL_CAPS: &[&str] = &["shell.exec"];
 
-/// Mock Rails client — the dispatch store does not need a Rails backend.
+/// Mock Rails client — the fabric-transport store does not need a Rails backend.
 #[derive(Default, Clone)]
 struct MockRailsClient {
     inner: Arc<Mutex<Vec<CoworkEvent>>>,
@@ -35,7 +35,7 @@ impl RailsClient for MockRailsClient {
         _run_id: allternit_cowork_runtime::RunId,
         _spec: &CreateRunSpec,
     ) -> anyhow::Result<String> {
-        Ok("dag-dispatch-test".to_string())
+        Ok("dag-transport-test".to_string())
     }
     async fn create_node(
         &self,
@@ -105,7 +105,7 @@ fn job_state(conn: &rusqlite::Connection, job_id: &str) -> String {
 }
 
 async fn setup() -> Fixture {    let tmp = tempfile::tempdir().unwrap();
-    let db_path = tmp.path().join("dispatch.db");
+    let db_path = tmp.path().join("transport.db");
     {
         let mut conn = open(&db_path);
         sqlite_store::apply_store_ddl(&mut conn).unwrap();
@@ -189,7 +189,7 @@ async fn test_adversarial_two_worker_failover() {
     let no_shell = auth(&conn, "token-c");
     let ineligible = sqlite_store::claim_job(&mut conn, &no_shell, Some(&fx.job_id), lease_ttl)
         .expect_err("missing capability must be rejected");
-    assert_eq!(ineligible.code, DispatchErrorCode::CapabilityMissing);
+    assert_eq!(ineligible.code, TransportErrorCode::CapabilityMissing);
 
     // ── 6–7. Worker A authenticates and claims lease generation 1 ──────────
     let a = auth(&conn, "token-a");
@@ -205,7 +205,7 @@ async fn test_adversarial_two_worker_failover() {
     let b = auth(&conn, "token-b");
     let conflict = sqlite_store::claim_job(&mut conn, &b, Some(&fx.job_id), lease_ttl)
         .expect_err("B must lose the claim race");
-    assert_eq!(conflict.code, DispatchErrorCode::JobAlreadyLeased);
+    assert_eq!(conflict.code, TransportErrorCode::JobAlreadyLeased);
 
     // ── 8. A begins execution: heartbeat, renew, then a committed checkpoint ──
     sqlite_store::record_heartbeat(
@@ -226,7 +226,7 @@ async fn test_adversarial_two_worker_failover() {
         None,
     )
     .expect_err("wrong generation must be rejected");
-    assert_eq!(wrong_gen.code, DispatchErrorCode::StaleLeaseGeneration);
+    assert_eq!(wrong_gen.code, TransportErrorCode::StaleLeaseGeneration);
 
     let new_expiry = sqlite_store::renew_lease(
         &mut conn,
@@ -297,7 +297,7 @@ async fn test_adversarial_two_worker_failover() {
     .expect_err("ghost heartbeat must be rejected");
     assert!(matches!(
         ghost_hb.code,
-        DispatchErrorCode::InvalidLease | DispatchErrorCode::LeaseExpired
+        TransportErrorCode::InvalidLease | TransportErrorCode::LeaseExpired
     ));
 
     // ── 18–19. Worker B authenticates and claims lease generation 2 ─────────
@@ -331,7 +331,7 @@ async fn test_adversarial_two_worker_failover() {
     .expect_err("killed worker's completion must be rejected");
     assert_eq!(
         stale.code,
-        DispatchErrorCode::StaleLeaseGeneration,
+        TransportErrorCode::StaleLeaseGeneration,
         "late completion under an old generation is A_STALE_LEASE_GENERATION"
     );
     assert_eq!(job_state(&conn, &fx.job_id), "leased", "rejection must not disturb B's lease");
@@ -346,7 +346,7 @@ async fn test_adversarial_two_worker_failover() {
         lease_ttl,
     )
     .expect_err("stale renew must be rejected");
-    assert_eq!(stale_renew.code, DispatchErrorCode::StaleLeaseGeneration);
+    assert_eq!(stale_renew.code, TransportErrorCode::StaleLeaseGeneration);
 
     // ── 21–22. B replays the remaining steps and completes — exactly once ──
     let outcome = sqlite_store::complete_job(
@@ -417,7 +417,7 @@ async fn test_adversarial_two_worker_failover() {
     assert_eq!(claimed_b, 1, "exactly one claim event for B");
 
     for (etype, initiator, delegator, executor) in &rows {
-        // Every dispatch event carries the full triple context.
+        // Every transport event carries the full triple context.
         assert_eq!(initiator, INITIATOR, "{etype}: initiator attribution");
         assert_eq!(delegator, DELEGATOR, "{etype}: delegator attribution");
         match etype.as_str() {
@@ -426,7 +426,7 @@ async fn test_adversarial_two_worker_failover() {
                 assert!(!executor.is_empty(), "{etype}: executor attribution");
             }
             "job.lease_expired" => assert_eq!(executor, WORKER_A),
-            "job.requeued" => assert!(executor.is_empty(), "requeue is a dispatcher action"),
+            "job.requeued" => assert!(executor.is_empty(), "requeue is a fabric-transport action"),
             _ => {}
         }
     }
@@ -526,7 +526,7 @@ fn test_concurrent_claims_single_winner() {
             let p = auth(&conn, "t");
             match sqlite_store::claim_job(&mut conn, &p, Some(&job_id), Duration::from_secs(60)) {
                 Ok(_) => *winners.lock().unwrap() += 1,
-                Err(e) => assert_eq!(e.code, DispatchErrorCode::JobAlreadyLeased),
+                Err(e) => assert_eq!(e.code, TransportErrorCode::JobAlreadyLeased),
             }
         }));
     }

@@ -1,14 +1,14 @@
-//! A:// dispatcher and lease protocol types (contract v0.1 §8).
+//! A:// fabric transport and lease protocol types (contract v0.1 §8).
 //!
 //! Errors use the explicit A_* vocabulary from §8.23 so Cowork and the audit
-//! ledger can observe exactly why a dispatch step failed.
+//! ledger can observe exactly why a transport step failed.
 
 use serde::{Deserialize, Serialize};
 
-/// Explicit dispatcher failure codes (A:// §8.23).
+/// Explicit fabric-transport failure codes (A:// §8.23).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum DispatchErrorCode {
+pub enum TransportErrorCode {
     /// Bearer token is missing, unknown, or invalid.
     AuthenticationFailed,
     /// The authenticated identity does not resolve to a known principal.
@@ -39,7 +39,7 @@ pub enum DispatchErrorCode {
     Store,
 }
 
-impl DispatchErrorCode {
+impl TransportErrorCode {
     /// Stable wire string (`A_...`) for each code.
     pub fn as_wire(&self) -> &'static str {
         match self {
@@ -74,18 +74,18 @@ impl DispatchErrorCode {
     }
 }
 
-/// A dispatcher protocol failure.
+/// A fabric-transport protocol failure.
 #[derive(Debug, Clone)]
-pub struct DispatchError {
+pub struct TransportError {
     /// Machine-readable failure code.
-    pub code: DispatchErrorCode,
+    pub code: TransportErrorCode,
     /// Human-readable detail.
     pub message: String,
 }
 
-impl DispatchError {
+impl TransportError {
     /// Create a new error with a code and detail message.
-    pub fn new(code: DispatchErrorCode, message: impl Into<String>) -> Self {
+    pub fn new(code: TransportErrorCode, message: impl Into<String>) -> Self {
         Self {
             code,
             message: message.into(),
@@ -103,13 +103,13 @@ impl DispatchError {
     }
 }
 
-impl std::fmt::Display for DispatchError {
+impl std::fmt::Display for TransportError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.wire(), self.message)
     }
 }
 
-impl std::error::Error for DispatchError {}
+impl std::error::Error for TransportError {}
 
 /// A workspace-scoped principal authenticated by bearer token (§8.3–8.4).
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,4 +1,4 @@
-//! A:// dispatcher routes (contract v0.1 §8) — worker-facing dispatch API.
+//! A:// fabric transport routes (contract v0.1 §8) — worker-facing fabric-transport API.
 //!
 //! v0.1 workers discover work by long-polling the claim endpoint (lock 4; no
 //! push machinery). Every handler authenticates the worker as a Principal via
@@ -18,7 +18,7 @@ use std::time::Duration;
 use tracing::info;
 
 use allternit_cowork_runtime::{
-    sqlite_store, CompleteOutcome, DispatchError, JobState, LeaseGrant, RunId, RunManager,
+    sqlite_store, CompleteOutcome, TransportError, JobState, LeaseGrant, RunId, RunManager,
     RunState,
 };
 
@@ -26,26 +26,26 @@ use crate::AppState;
 
 use super::routes_cowork::ErrorResponse;
 
-/// Create the A:// dispatcher router (mounted under the v1 API).
-pub fn dispatch_routes() -> Router<Arc<AppState>> {
+/// Create the A:// fabric transport router (mounted under the v1 API).
+pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/dispatch/principals", post(create_principal))
-        .route("/dispatch/claim", post(claim))
-        .route("/dispatch/jobs/:job_id", get(get_job))
-        .route("/dispatch/jobs/:job_id/heartbeat", post(heartbeat))
-        .route("/dispatch/jobs/:job_id/renew", post(renew))
-        .route("/dispatch/jobs/:job_id/complete", post(complete))
+        .route("/fabric/transport/principals", post(create_principal))
+        .route("/fabric/transport/claim", post(claim))
+        .route("/fabric/transport/jobs/:job_id", get(get_job))
+        .route("/fabric/transport/jobs/:job_id/heartbeat", post(heartbeat))
+        .route("/fabric/transport/jobs/:job_id/renew", post(renew))
+        .route("/fabric/transport/jobs/:job_id/complete", post(complete))
 }
 
 fn db_error(e: rusqlite::Error) -> ErrorResponse {
-    tracing::error!("A:// dispatch DB error: {e}");
+    tracing::error!("A:// fabric-transport DB error: {e}");
     ErrorResponse {
         error: e.to_string(),
         code: 500,
     }
 }
 
-fn dispatch_err(e: DispatchError) -> ErrorResponse {
+fn transport_err(e: TransportError) -> ErrorResponse {
     ErrorResponse {
         error: format!("{}: {}", e.wire(), e.message),
         code: e.http_status(),
@@ -66,7 +66,7 @@ fn authenticate(
             code: 401,
         })?;
     let conn = state.db.connect().map_err(db_error)?;
-    sqlite_store::authenticate_principal(&conn, token).map_err(dispatch_err)
+    sqlite_store::authenticate_principal(&conn, token).map_err(transport_err)
 }
 
 fn run_manager(state: &AppState) -> Result<Arc<RunManager>, ErrorResponse> {
@@ -81,7 +81,7 @@ fn run_manager(state: &AppState) -> Result<Arc<RunManager>, ErrorResponse> {
 
 fn default_lease_ttl() -> Duration {
     Duration::from_secs(
-        std::env::var("ALLTERNIT_DISPATCH_LEASE_SECS")
+        std::env::var("ALLTERNIT_FABRIC_TRANSPORT_LEASE_SECS")
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(60),
@@ -146,7 +146,7 @@ async fn create_principal(
         &req.capabilities,
         &token,
     )
-    .map_err(dispatch_err)?;
+    .map_err(transport_err)?;
     info!(principal = %req.id, workspace = %req.workspace, "Registered A:// principal");
     Ok(Json(CreatePrincipalResponse {
         id: req.id,
@@ -189,17 +189,17 @@ async fn claim(
             }
             Err(e)
                 if e.code
-                    == allternit_cowork_runtime::DispatchErrorCode::NoEligibleWorker
+                    == allternit_cowork_runtime::TransportErrorCode::NoEligibleWorker
                     || e.code
-                        == allternit_cowork_runtime::DispatchErrorCode::JobAlreadyLeased =>
+                        == allternit_cowork_runtime::TransportErrorCode::JobAlreadyLeased =>
             {
                 if std::time::Instant::now() >= deadline {
-                    return Err(dispatch_err(e));
+                    return Err(transport_err(e));
                 }
                 drop(conn);
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
-            Err(e) => return Err(dispatch_err(e)),
+            Err(e) => return Err(transport_err(e)),
         }
     }
 }
@@ -230,7 +230,7 @@ async fn heartbeat(
         req.lease_generation,
         req.worker_time,
     )
-    .map_err(dispatch_err)?;
+    .map_err(transport_err)?;
     Ok(Json(json!({ "ok": true })))
 }
 
@@ -261,7 +261,7 @@ async fn renew(
         req.lease_generation,
         ttl,
     )
-    .map_err(dispatch_err)?;
+    .map_err(transport_err)?;
     Ok(Json(json!({ "ok": true, "lease_expires_at": expires_at })))
 }
 
@@ -294,7 +294,7 @@ async fn complete(
         req.summary,
         req.outputs,
     )
-    .map_err(dispatch_err)?;
+    .map_err(transport_err)?;
     drop(conn);
 
     match &outcome {
@@ -303,7 +303,7 @@ async fn complete(
             let job_state = job_state.clone();
             let view = {
                 let conn = state.db.connect().map_err(db_error)?;
-                sqlite_store::get_job_view(&conn, &job_id).map_err(dispatch_err)?
+                sqlite_store::get_job_view(&conn, &job_id).map_err(transport_err)?
             };
             let run_id = view
                 .as_ref()
@@ -350,7 +350,7 @@ async fn get_job(
 ) -> Result<Json<serde_json::Value>, ErrorResponse> {
     let conn = state.db.connect().map_err(db_error)?;
     let view = sqlite_store::get_job_view(&conn, &job_id)
-        .map_err(dispatch_err)?
+        .map_err(transport_err)?
         .ok_or_else(|| ErrorResponse {
             error: "A_JOB_NOT_FOUND: job not found".to_string(),
             code: 404,

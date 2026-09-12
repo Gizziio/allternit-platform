@@ -686,7 +686,7 @@ async fn main() {
         .merge(cowork_router())
         .merge(cowork_preferences_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
-        .merge(allternit_api::rails::routes_a_dispatch::dispatch_routes())
+        .merge(allternit_api::rails::fabric_transport_routes::fabric_transport_routes())
         .merge(agent_router())
         .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
@@ -1140,11 +1140,11 @@ async fn initialize_cowork_run_manager(
     let rails_url = app_config.rails_url();
     let workspace_id = app_config.rails_workspace_id();
 
-    let lease_duration_secs = std::env::var("ALLTERNIT_DISPATCH_LEASE_SECS")
+    let lease_duration_secs = std::env::var("ALLTERNIT_FABRIC_TRANSPORT_LEASE_SECS")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(60);
-    let lease_sweep_interval_secs = std::env::var("ALLTERNIT_DISPATCH_SWEEP_SECS")
+    let lease_sweep_interval_secs = std::env::var("ALLTERNIT_FABRIC_TRANSPORT_SWEEP_SECS")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(5);
