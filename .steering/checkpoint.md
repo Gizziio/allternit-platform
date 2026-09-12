@@ -1,22 +1,15 @@
-# Steering checkpoint — session/console-be-p6
+# Steering checkpoint — session/console-be-p7
 
 ## Goal
-Backend build-out Phase 6 (G11): cache-hit accounting. Add hits/last_used_at to llm_context_caches + prompt_cache, context_cache_id on llm_usage_events; record at the request path (proxy.rs where context_cache_id is consumed ~:1664-1683); GET /api/v1/gateway/caching aggregate (hit rate, cached_tokens savings estimate, per-cache stats).
+Backend build-out Phase 7 (G12): webhooks v2 — retry with backoff, delivery-log endpoint, event registry, emitters at real call sites. All implemented; verifying.
 
 ## Just did
-- Worktree allternit-session-console-be-p6 on session/console-be-p6 from origin/main (6f7bbcebb).
-- V147 migration (hits/last_used_at on llm_context_caches + prompt_cache, context_cache_id on llm_usage_events + index; prompt_cache materialized via CREATE IF NOT EXISTS first because cache.rs creates it lazily — ALTER alone would fail on fresh DBs).
-- context_cache::record_cache_hit; proxy.rs increments at cache-apply time (best-effort, warn-only) and threads context_cache_id through RequestOutcome → record_usage_event (INSERT + idempotent UPDATE), incl. streaming guard + failover paths.
-- llm_pricing::estimated_cache_savings_microdollars (+ pure cache_savings_microdollars, over-200k tier aware).
-- GET /api/v1/gateway/caching in admin_routes.rs (period param <n>d default 30d; totals incl. estimated savings + basis string; per-model cached tokens; context-cache breakdown scoped via llm_virtual_keys; prompt-cache breakdown honestly shows hits=0 — no in-proxy read path exists); /gateway/logs rows now expose context_cache_id.
-- 12 new unit tests (proxy metering, admin caching/logs, pricing savings) — all pass; llm_gateway lib suite 187/187.
-- prompt cache: NOT instrumented in-proxy (resolve_cache_entry has zero production callers) — documented in V147 header + report.
+- webhook_subscription_routes.rs: event registry (`events` module, 12 types + wildcard), `RetryPolicy` (env `ALLTERNIT_WEBHOOK_RETRY_BASE_SECS`, default 5s, ×4 per retry, ±25% jitter, MAX_ATTEMPTS=3), `attempt_delivery` retry loop (4xx = permanent fail), `GET /beta/webhooks/:id/deliveries` (page/limit/status, org-scoped 404, body truncated to 500 chars), `deliver_registered_event` ({id,type,created_at,data} envelope). Existing deliver_session_event / deliver_deployment_run_update payloads unchanged.
+- Emitters: agent.created/updated/archived (agent_routes create/patch/update/archive), session.created/archived (cloud_agents_routes), session.over_budget (beta_session_routes append_event), deployment.run_created (beta_deployment_routes trigger + deployment_scheduler tick), billing.credit_purchase (fabric_credits_routes purchase), key.created/revoked (llm_gateway keys create/revoke). All fire-and-forget, never fail the request.
+- 21 webhook tests pass (retry schedule, 4xx permanent, envelope+signature, wildcard, registry 400s, deliveries listing/filter/auth/scope, per-emitter firing, resilience).
 
 ## Next
-- DONE (verification): full suite 962 passed / 6 failed = the 5 known env failures (4× agent_cloud real-OS-control-plane, 1× rails gate round-trip) + 1 pre-existing flake `aci_routes::policy_seat_tests::audit_api_returns_rows_with_bot_filter` (env-var race on ALLTERNIT_COMPUTER_USE_DIR; passes in isolation, untouched by this change).
-- Live smoke passed (stub Gizzi, scratch port 4899, temp DB): cache create → completion w/ context_cache_id → hits=1, last_used_at set, usage row carries context_cache_id + cached_tokens=120, /gateway/caching + /gateway/logs sane.
-- release-preflight.mjs: 35 passed, 0 failed.
-- Awaiting human/orchestrator: commit + push + PR (commit/push forbidden to this agent).
+- Full `cargo test -p allternit-api` (running), live smoke, release-preflight, then PR/attest/cleanup per session lifecycle.
 
 ## Open questions
-- "Hit" definition: a request referencing a cache id counts as a hit for that cache; also derive provider-reported cached_tokens aggregate from llm_usage_events (already per-request).
+- None.
