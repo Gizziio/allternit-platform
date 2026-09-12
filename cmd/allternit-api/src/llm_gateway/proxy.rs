@@ -880,6 +880,10 @@ pub struct RequestOutcome {
     /// `llm_batches.id` when this request ran as a native batch sub-request
     /// (task G10); `None` for interactive traffic.
     pub batch_id: Option<String>,
+    /// `llm_context_caches.id` when the request referenced a reusable context
+    /// cache (task G11); persisted on the usage row so cache-attributed spend
+    /// is visible in /gateway/logs and /gateway/caching.
+    pub context_cache_id: Option<String>,
 }
 
 /// Result of the collection loop: the aggregated state plus either success
@@ -1037,7 +1041,7 @@ pub(crate) fn record_usage_event(
                     ttft_ms = ?12, status = ?13, error_type = ?14,
                     gizzi_session_id = ?15, response_body = ?16,
                     recomputed_cost_microdollars = ?17, cost_mismatch = ?18,
-                    tags = ?19, batch_id = ?20
+                    tags = ?19, batch_id = ?20, context_cache_id = ?21
                  WHERE idempotency_key = ?1 AND status = 'in_progress'",
                 rusqlite::params![
                     idem,
@@ -1060,6 +1064,7 @@ pub(crate) fn record_usage_event(
                     cost_mismatch as i64,
                     outcome.tags,
                     outcome.batch_id,
+                    outcome.context_cache_id,
                 ],
             )?;
             if updated > 0 {
@@ -1082,10 +1087,11 @@ pub(crate) fn record_usage_event(
                  fallback_from, prompt_tokens, completion_tokens, reasoning_tokens,
                  cached_tokens, cost_microdollars, latency_ms, ttft_ms, status,
                  error_type, gizzi_session_id, idempotency_key, response_body,
-                 recomputed_cost_microdollars, cost_mismatch, tags, batch_id)
+                 recomputed_cost_microdollars, cost_mismatch, tags, batch_id,
+                 context_cache_id)
              VALUES
                 (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-                 ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)",
+                 ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25)",
             rusqlite::params![
                 row_id,
                 key.key_id,
@@ -1111,6 +1117,7 @@ pub(crate) fn record_usage_event(
                 cost_mismatch as i64,
                 outcome.tags,
                 outcome.batch_id,
+                outcome.context_cache_id,
             ],
         )?;
         if let Some(decision) = &outcome.routing_decision {
@@ -1198,6 +1205,8 @@ struct StreamUsageGuard {
     /// (same values the normal completion path records).
     tags: Option<String>,
     batch_id: Option<String>,
+    /// Cache attribution (task G11), recorded on disconnect-path rows too.
+    context_cache_id: Option<String>,
 }
 
 impl Drop for StreamUsageGuard {
@@ -1223,6 +1232,7 @@ impl Drop for StreamUsageGuard {
             routing_decision: self.routing_decision.take(),
             tags: self.tags.clone(),
             batch_id: self.batch_id.clone(),
+            context_cache_id: self.context_cache_id.clone(),
         };
         drop(progress);
 
@@ -1707,6 +1717,12 @@ pub async fn chat_completions(
     if let Some(cache_id) = &request.context_cache_id {
         match context_cache::load_cache_messages(&state.db, &key.key_id, cache_id) {
             Ok(Some(cached)) => {
+                // Cache-hit accounting (task G11): bump hits + stamp
+                // last_used_at at apply time. Best-effort — accounting must
+                // never fail the request.
+                if let Err(err) = context_cache::record_cache_hit(&state.db, cache_id) {
+                    warn!(error = %err, cache_id = %cache_id, "Failed to record context cache hit");
+                }
                 let mut combined = cached;
                 combined.extend(request.messages);
                 request.messages = combined;
@@ -1735,6 +1751,8 @@ pub async fn chat_completions(
     // inherited defaults; batch sub-requests arrive with X-Allternit-Batch-Id.
     let outcome_tags = resolve_outcome_tags(&request.tags, &key);
     let batch_id = batch_id_from_headers(&headers);
+    // Cache attribution (G11): carried onto the usage row when present.
+    let context_cache_id = request.context_cache_id.clone();
 
     let stream = request.stream.unwrap_or(false);
 
@@ -2021,6 +2039,7 @@ pub async fn chat_completions(
             if idem_active { idempotency_key.clone() } else { None },
             outcome_tags,
             batch_id,
+            context_cache_id,
         )
         .await
     } else {
@@ -2064,6 +2083,7 @@ pub async fn chat_completions(
                 resolved.routing_decision.clone(),
                 outcome_tags.clone(),
                 batch_id.clone(),
+                context_cache_id.clone(),
             )
             .await;
 
@@ -2106,6 +2126,7 @@ pub async fn chat_completions(
                         routing_decision: resolved.routing_decision.clone(),
                         tags: outcome_tags.clone(),
                         batch_id: batch_id.clone(),
+                        context_cache_id: context_cache_id.clone(),
                     };
                     break;
                 }
@@ -2250,6 +2271,7 @@ async fn nonstream_completion(
     routing_decision: Option<RoutingDecision>,
     tags: Option<String>,
     batch_id: Option<String>,
+    context_cache_id: Option<String>,
 ) -> (Response, RequestOutcome) {
     let Collection { collector, failure } = collect(send_task, events, started).await;
     let latency_ms = started.elapsed().as_millis() as i64;
@@ -2269,6 +2291,7 @@ async fn nonstream_completion(
                 routing_decision,
                 tags,
                 batch_id,
+                context_cache_id,
             };
             (
                 OpenAiErrorResponse::upstream(message, &error_type).into_response(),
@@ -2343,6 +2366,7 @@ async fn nonstream_completion(
                 routing_decision,
                 tags,
                 batch_id,
+                context_cache_id,
             };
             let mut resp = (StatusCode::OK, Json(body)).into_response();
             if let Ok(value) = HeaderValue::from_str(&session_id) {
@@ -2388,6 +2412,7 @@ async fn stream_completion(
     idempotency_key: Option<String>,
     tags: Option<String>,
     batch_id: Option<String>,
+    context_cache_id: Option<String>,
 ) -> Response {
     let completion_id = new_completion_id();
     let created = chrono::Utc::now().timestamp();
@@ -2407,6 +2432,7 @@ async fn stream_completion(
         progress: shared_progress.clone(),
         tags: tags.clone(),
         batch_id: batch_id.clone(),
+        context_cache_id: context_cache_id.clone(),
     };
 
     let stream = async_stream::stream! {
@@ -2529,6 +2555,7 @@ async fn stream_completion(
                     routing_decision,
                     tags,
                     batch_id,
+                    context_cache_id,
                 };
             }
             None => {
@@ -2570,6 +2597,7 @@ async fn stream_completion(
                     routing_decision,
                     tags,
                     batch_id,
+                    context_cache_id,
                 };
             }
         }
@@ -3090,6 +3118,7 @@ mod metering_tests {
             routing_decision: None,
             tags: None,
             batch_id: None,
+            context_cache_id: None,
         }
     }
 
@@ -3131,6 +3160,101 @@ mod metering_tests {
             )
             .unwrap();
         assert_eq!(untagged, (None, None));
+    }
+
+    #[test]
+    fn record_usage_event_persists_context_cache_id() {
+        let (db, _dir) = test_db();
+        let key = insert_key(&db, None);
+
+        let mut cached = outcome("ok");
+        cached.context_cache_id = Some("ctxcache_abc".to_string());
+        record_usage_event(&db, &key, &cached, None);
+        record_usage_event(&db, &key, &outcome("ok"), None);
+
+        let conn = db.connect().unwrap();
+        let cached_row: Option<String> = conn
+            .query_row(
+                "SELECT context_cache_id FROM llm_usage_events
+                 WHERE context_cache_id IS NOT NULL",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(cached_row.as_deref(), Some("ctxcache_abc"));
+
+        let uncached: Option<String> = conn
+            .query_row(
+                "SELECT context_cache_id FROM llm_usage_events
+                 WHERE context_cache_id IS NULL",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(uncached, None);
+    }
+
+    #[test]
+    fn record_usage_event_updates_context_cache_id_on_idempotent_finalize() {
+        let (db, _dir) = test_db();
+        let key = insert_key(&db, None);
+        let conn = db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO llm_usage_events
+             (id, virtual_key_id, user_id, status, idempotency_key)
+             VALUES ('pre', 'vk1', 'u1', 'in_progress', 'idem-cache')",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+
+        let mut cached = outcome("ok");
+        cached.context_cache_id = Some("ctxcache_idem".to_string());
+        record_usage_event(&db, &key, &cached, Some("idem-cache"));
+
+        let conn = db.connect().unwrap();
+        let context_cache_id: Option<String> = conn
+            .query_row(
+                "SELECT context_cache_id FROM llm_usage_events
+                 WHERE idempotency_key = 'idem-cache'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(context_cache_id.as_deref(), Some("ctxcache_idem"));
+    }
+
+    #[test]
+    fn record_cache_hit_increments_and_stamps() {
+        let (db, _dir) = test_db();
+        let key = insert_key(&db, None);
+        let conn = db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO llm_context_caches
+             (id, virtual_key_id, tenant_id, name, messages_json, ttl_seconds, expires_at)
+             VALUES ('ctxcache_hit1', 'vk1', NULL, 'docs',
+                     '[{\"role\":\"system\",\"content\":\"ctx\"}]', 3600, NULL)",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+
+        super::super::context_cache::record_cache_hit(&db, "ctxcache_hit1").unwrap();
+        super::super::context_cache::record_cache_hit(&db, "ctxcache_hit1").unwrap();
+
+        let conn = db.connect().unwrap();
+        let (hits, last_used_at): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT hits, last_used_at FROM llm_context_caches WHERE id = 'ctxcache_hit1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(hits, 2);
+        assert!(
+            last_used_at.is_some_and(|ts| !ts.is_empty()),
+            "last_used_at stamped on hit"
+        );
     }
 
     #[test]

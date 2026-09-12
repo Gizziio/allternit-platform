@@ -561,6 +561,7 @@ pub async fn dlp_middleware(
             routing_decision: None,
             tags,
             batch_id: None,
+            context_cache_id: None,
         };
         let db = state.db.clone();
         tokio::task::spawn_blocking(move || {

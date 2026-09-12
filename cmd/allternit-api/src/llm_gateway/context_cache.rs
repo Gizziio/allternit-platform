@@ -253,6 +253,21 @@ pub async fn delete_cache(
     }
 }
 
+/// Record a hit on a context cache (task G11): bump `hits` and stamp
+/// `last_used_at`. Best-effort by contract — proxy.rs logs and continues when
+/// this fails so cache accounting can never fail a request.
+pub fn record_cache_hit(db: &crate::db::DbHandle, cache_id: &str) -> Result<(), String> {
+    let conn = db.connect().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE llm_context_caches
+         SET hits = hits + 1, last_used_at = CURRENT_TIMESTAMP
+         WHERE id = ?1",
+        params![cache_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// Load cached messages for a given cache id and virtual key. Returns None
 /// when the id does not exist or has expired.
 pub fn load_cache_messages(
