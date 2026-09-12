@@ -1,45 +1,24 @@
-# Steering checkpoint — artphase3-0912 (this session) + relay-watchdog (merged #424)
+# Steering checkpoint — session/console-be-p9
 
-- **Goal (artphase3-0912):** A:// Artifacts Phase 3 (issue #389): hosted
-  publish/unpublish/status gateway routes + deploy plumbing + minimal web
-  actions + design-doc updates, per docs/design/artifacts-api.md §6 decisions.
-- **Just did:** V150 migration; content_artifact_publish.rs (POST/GET/DELETE
-  /content-artifacts/:id/publish) with the sandbox-policy gate (422, names the
-  policy), immutable version snapshot, unpublish = route removal only, and an
-  ArtifactPublisher trait (wrangler pages deploy impl env-gated;
-  filesystem publisher dev default). Web: publish/unpublish + status on gallery
-  cards. Design doc §3/§6/§7 updated. cargo test content_artifact 14/14; full
-  api suite 1007 passed with only known pre-existing flakes; tsc 0 errors;
-  design vitest 1770/0; release-preflight 35/0; live curl smoke green
-  (publish → status → append → snapshot pinned → unpublish → deployment kept,
-  422 gate).
-- **Next:** merge PR #426 once the release build is green, then ledger attestation,
-  desktop rebuild, cleanup.
-- **Open questions:** none.
+## Goal
+Backend build-out Phase 9 (G15, MONEY): credits ↔ Stripe — credit-pack checkout → webhook-confirmed grant into the allternit-api org credits ledger, with end-to-end idempotency and a /credits/purchase honesty gate.
 
-## Checkpoint — desktop-relay-watchdog-0912 (session merged via #424, kept for history)
+## Status: IMPLEMENTATION + VERIFICATION COMPLETE (uncommitted, awaiting human review/PR)
 
-## session/adispatch-0912 (this worktree — A:// fabric-transport proof slice)
+## Just did (full session)
+- allternit-api: `ALLTERNIT_CREDITS_CHECKOUT_ENABLED` honesty gate on POST /credits/purchase (409 "credits purchase is not enabled in this deployment; use the billing checkout" unless flag set AND cloud API configured; then returns the billing checkout URL, never self-credits); internal-token grant path on /admin/credits/grant (synthetic `internal-service` identity from auth_middleware + header re-verified in handler; org + idempotency_key mandatory; reference_type stripe_checkout; 404 on unknown org); `credit_purchase_idempotency` ledger replay verified; BILLING_CREDIT_PURCHASE webhook delivery moved to the internal grant path.
+- cloud-api: checkout metadata gains `allternit_org_id` (400 at checkout when bridge on but no org); webhook grants only on mode=payment + payment_status=paid (async payment methods settle via checkout.session.async_payment_succeeded, now also handled); `webhook_events` dedup table (migrations_pg 015, registered as v15) written after successful grant; `services/fabric_ledger.rs` bridge client (ALLTERNIT_FABRIC_LEDGER_URL + ALLTERNIT_INTERNAL_SERVICE_TOKEN, 5s timeout); misconfigured bridge (URL without token) refuses to grant; wallet fallback preserved + recorded so enabling the bridge later never re-grants old events.
+- Docs: cmd/allternit-cloud-api/docs/credits-stripe-bridge.md (flow, cross-service auth, env flags, deployment requirement, not-production-live notes).
 
-### Goal
-A:// Coordination Contract v0.1 proof slice (Appendix B steps 0–9), renamed dispatch → fabric transport. Exit criterion: §8.24 adversarial two-worker test passes behaviorally. Canonical store = allternit-cowork-runtime SQLite.
+## Verification evidence
+- cargo test -p allternit-cloud-api --no-fail-fast: lib 294 passed / 1 failed (pre-existing docker-env contabo test); integration_tests 0/32 (pre-existing tests/common harness breakage — confirmed identical failure with changes stashed); cost_params 3/3, e2e 1/1 + 1 ignored, billing_webhook_grants 1/1 (new HTTP-level signed-webhook test: forged signature 401, paid event grants once, replay idempotentReplay=true, no double grant).
+- cargo test -p allternit-api --no-fail-fast: lib 1005 passed / 6 failed = known pre-existing set exactly (4× agent_cloud OS-control-plane + 1× rails gate + 1× scheduler claim_race flake, both "possibly" items from the brief's list); integration binaries all green (health_metrics 6/6, viz_routes 14/14).
+- node scripts/release-preflight.mjs: 35 passed, 0 failed.
+- LIVE TEST-MODE round trip (operator has stripe CLI test profile): `stripe listen` → local cloud-api with test keys; real checkout session created via POST /billing/checkout (metadata contract on the session, verified via retrieve); `stripe trigger checkout.session.completed` with metadata overrides → Stripe-signed delivery → webhook verified signature → $10 granted once (credit_transactions + user_credits + webhook_events rows); GET /billing/credits shows balance_usd 10.0. No live keys touched, no real charge, all rows/processes/key file cleaned up.
 
-### Just did
-- All steps 0–9 built and verified; rename commit landed (routes now /api/v1/fabric/transport/*, env ALLTERNIT_FABRIC_TRANSPORT_*, V152–V154 after main took V149).
-- LIVE KILL-WORKER DEMO PASSED: A claimed gen 1, checkpointed, SIGKILLed; sweeper requeued; B claimed gen 2, replayed from checkpoint, completed; ghost A completion → 409 A_STALE_LEASE_GENERATION; duplicate → already_committed same result_id; ledger triple intact.
-- Merged origin/main (33 commits) to resolve PR #422 conflicts; renumbered migrations V149–V151 → V152–V154.
+## Next
+- Human review → PR (session rules: commit/push/PR/merge are human-gated steps this session was told not to perform: "Do NOT run git commit/push").
+- Production wiring still required: set ALLTERNIT_FABRIC_LEDGER_URL + ALLTERNIT_INTERNAL_SERVICE_TOKEN (same value both services) to turn on fabric-ledger grants; set ALLTERNIT_CREDITS_CHECKOUT_ENABLED on allternit-api to open the /credits/purchase delegation.
 
-### Next
-- Merge PR #422, attestation, desktop rebuild attempt, then continuation: approval↔lease binding (§8.14), boot job rehydration (§8.20), full §8.24 conformance test → second PR.
-
-### Open questions
-- none.
-
----
-
-## Prior session: desktop-relay-watchdog-0912 (from main, for reference)
-
-- **Goal:** Fix #423 — desktop runtime relay silent-death (node dark until app restart).
-- **Just did:** relay heartbeat watchdog in auth-manager.ts; desktop typecheck ✅, 125 vitest ✅, release-preflight 35/0 ✅.
-- **Next:** PR → merge → ledger → rebuild desktop DMG.
-- **Open questions:** none.
+## Open questions
+- None.

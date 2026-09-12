@@ -1,5 +1,5 @@
 //! Stripe webhook receiver that syncs subscription state into hosted-compute
-//! entitlements.
+//! entitlements and grants one-off credit purchases.
 //!
 //! Stripe signs every delivery with the `Stripe-Signature` v1 scheme
 //! (`t=<unix>,v1=<hmac-sha256 hex>` over `"{t}.{raw body}"`); the endpoint
@@ -32,18 +32,43 @@
 //! access is additive state in `user_runtime_quotas`, so revocation is the
 //! same idempotent mutation with the free tier as its target.
 //!
-//! One-off credit purchases use a separate metadata contract on the payment
-//! object itself (the Checkout Session for `checkout.session.completed` with
-//! `mode = "payment"`, the invoice for `invoice.paid`):
+//! One-off credit purchases (G15) use a separate metadata contract on the
+//! payment object (the Checkout Session for `checkout.session.completed` /
+//! `checkout.session.async_payment_succeeded`, the invoice for
+//! `invoice.paid`):
 //! - `clerk_user_id` — the Clerk user to credit.
 //! - `allternit_credits_usd` — the credit amount in USD (must parse as a
-//!   positive number).
-//! Events carrying both keys grant via `CostService::add_credits` with
-//! transaction id `stripe-{event_id}`, so Stripe retries cannot double-grant
-//! (the `credit_transactions.transaction_id` uniqueness dedupes). Events of
-//! these types without both keys are acknowledged and ignored, keeping the
-//! subscription flow (which also emits `invoice.paid` /
-//! `checkout.session.completed` in subscription mode) untouched.
+//!   positive number). Written by `routes::billing_checkout` from the static
+//!   server-side pack catalog, never from client input.
+//! - `allternit_org_id` — the Clerk organization that owns the fabric
+//!   credits ledger to grant. Absent on sessions created while the
+//!   fabric-ledger bridge was off; those grants fall back to the cloud
+//!   wallet.
+//!
+//! Grant rules for checkout sessions: only `mode = "payment"` and only when
+//! `payment_status = "paid"`. `checkout.session.completed` can arrive with
+//! `payment_status = "unpaid"` for asynchronous payment methods (bank
+//! debits); Stripe then delivers `checkout.session.async_payment_succeeded`
+//! when the money actually settles, and THAT event is the grant trigger.
+//!
+//! Where the credits land depends on the fabric-ledger bridge
+//! (`services::fabric_ledger`): when `ALLTERNIT_FABRIC_LEDGER_URL` +
+//! `ALLTERNIT_INTERNAL_SERVICE_TOKEN` are configured and the event carries
+//! `allternit_org_id`, the grant goes to the allternit-api org ledger over
+//! an internal-token-authenticated HTTP call whose idempotency key is
+//! `stripe-{event_id}`. Otherwise the grant lands in the local cloud wallet
+//! via `CostService::add_credits`, deduped by the
+//! `credit_transactions.transaction_id` uniqueness.
+//!
+//! Either way the processed event id is recorded in `webhook_events`
+//! (migration 015) AFTER the grant succeeds: a Stripe retry is acknowledged
+//! as a replay without re-calling either ledger, and enabling the bridge
+//! later cannot re-deliver an event that already granted somewhere. The
+//! ledger idempotency key remains the money guarantee; `webhook_events` is
+//! the first-line dedupe and the audit trail. If the bridge URL is set but
+//! the token is missing the deployment is misconfigured: the handler errors
+//! (Stripe retries, the operator sees the log) instead of silently crediting
+//! the wrong ledger.
 
 use axum::{
     body::Bytes,
@@ -77,11 +102,14 @@ enum MappedStripeEvent {
     },
     /// Deleted subscription: fall back to the deployment's default tier.
     Revoke { event_id: String, user_id: String },
-    /// One-off credit purchase: grant prepaid credits to the user.
+    /// One-off credit purchase: grant prepaid credits to the user (cloud
+    /// wallet) or their organization (fabric ledger, when the bridge is
+    /// configured and the event names an org).
     GrantCredits {
         event_id: String,
         user_id: String,
         amount_usd: f64,
+        organization_id: Option<String>,
     },
     /// Paid subscription invoice (subscription_create / subscription_cycle): grant the
     /// plan's monthly credits with the rollover cap, resolving user and plan through
@@ -159,7 +187,19 @@ async fn stripe_webhook(
             event_id,
             user_id,
             amount_usd,
-        } => grant_credits_and_respond(&state, &event_id, &user_id, amount_usd).await,
+            organization_id,
+        } => {
+            let event_type = event["type"].as_str().unwrap_or_default().to_string();
+            grant_credits_and_respond(
+                &state,
+                &event_type,
+                &event_id,
+                &user_id,
+                organization_id.as_deref(),
+                amount_usd,
+            )
+            .await
+        }
         MappedStripeEvent::GrantSubscriptionCredits {
             event_id,
             invoice_id,
@@ -357,42 +397,76 @@ async fn grant_subscription_credits_and_respond(
     }
 }
 
-/// Grant a one-off credit purchase. Idempotent per Stripe event id: the
-/// `credit_transactions.transaction_id` uniqueness (`stripe-{event_id}`)
-/// makes retries a no-op, so the subscription-dedupe table
-/// (`billing_entitlement_events`, which is entitlement-specific) is not
-/// involved.
+/// The outcome of processing one credit-purchase Stripe event.
+struct CreditPurchaseOutcome {
+    /// Where the grant landed: the allternit-api fabric ledger when the
+    /// bridge consumed it, the local cloud wallet otherwise.
+    target: String,
+    /// True when the event id was already processed and nothing was granted.
+    idempotent_replay: bool,
+    /// Cloud-wallet balance after the grant (fabric grants have no local
+    /// balance to report).
+    balance_usd: Option<f64>,
+}
+
+/// Which ledger receives a credit-pack grant.
+enum CreditGrantTarget<'a> {
+    /// Grant into the allternit-api org fabric credits ledger via the
+    /// internal bridge (requires the target org from the session metadata).
+    Fabric(&'a dyn crate::services::fabric_ledger::FabricLedger, String),
+    /// Grant into the local cloud wallet (bridge off or the session predates
+    /// org capture) — pre-G15 behavior.
+    CloudWallet,
+}
+
+/// Grant a one-off credit purchase. Idempotent per Stripe event id at three
+/// layers:
 ///
-/// A fresh grant also records the purchase in `billing_purchase_trust` (the
-/// chargeback-hold table); replayed events skip it so retries cannot inflate
-/// the paid-purchase count.
+/// 1. `webhook_events` — a processed event is acknowledged as a replay
+///    without touching either ledger (first-line dedupe + audit trail).
+/// 2. The grant call itself carries the idempotency key `stripe-{event_id}`:
+///    the fabric ledger's `credit_purchase_idempotency` table and the cloud
+///    wallet's `credit_transactions.transaction_id` uniqueness make a
+///    concurrent or missed dedupe a no-op — this is the money guarantee.
+/// 3. `billing_purchase_trust` bookkeeping only counts a fresh grant, so
+///    retries cannot inflate the paid-purchase count.
+///
+/// The `webhook_events` row is written only AFTER the grant succeeds: a
+/// failed grant leaves no record, so Stripe's retry re-attempts it (layer 2
+/// keeps that safe).
 async fn grant_credits_and_respond(
     state: &ApiState,
+    event_type: &str,
     event_id: &str,
     user_id: &str,
+    organization_id: Option<&str>,
     amount_usd: f64,
 ) -> Response {
-    let transaction_id = format!("stripe-{event_id}");
-    // The grant dedupes on the ledger row; check it first so the trust
-    // bookkeeping only counts purchases that actually granted credits.
-    let fresh_grant: bool = match sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM credit_transactions WHERE transaction_id = $1)",
-    )
-    .bind(&transaction_id)
-    .fetch_one(&state.db)
-    .await
-    {
-        Ok(exists) => !exists,
-        Err(error) => return ApiError::DatabaseError(error).into_response(),
+    if crate::services::fabric_ledger::misconfigured() {
+        // The deployment pointed the bridge at a fabric ledger but never
+        // provisioned the shared token. Granting to the wallet would
+        // silently strand the purchase off the org ledger; error instead so
+        // Stripe retries and the operator sees the log.
+        tracing::error!(
+            "REVENUE-CRITICAL: ALLTERNIT_FABRIC_LEDGER_URL is set but ALLTERNIT_INTERNAL_SERVICE_TOKEN is missing; refusing to grant event {event_id}"
+        );
+        return ApiError::ServiceUnavailable(
+            "Fabric ledger bridge is misconfigured (missing internal service token).".to_string(),
+        )
+        .into_response();
+    }
+
+    let bridge = crate::services::fabric_ledger::from_env();
+    let target = match (&bridge, organization_id) {
+        (Some(ledger), Some(org)) => CreditGrantTarget::Fabric(ledger, org.to_string()),
+        _ => CreditGrantTarget::CloudWallet,
     };
 
-    let cost_service = crate::services::CostServiceImpl::new(state.db.clone());
-    match cost_service
-        .add_credits(user_id, amount_usd, &transaction_id, "stripe")
+    match process_credit_purchase(&state.db, target, event_type, event_id, user_id, amount_usd)
         .await
     {
-        Ok(balance_usd) => {
-            if fresh_grant {
+        Ok(outcome) => {
+            if !outcome.idempotent_replay {
                 crate::services::audit::write_audit_log(
                     &state.db,
                     crate::services::audit::AuditEvent {
@@ -403,17 +477,18 @@ async fn grant_credits_and_respond(
                         user_email: None,
                         details: Some(json!({
                             "creditsUsd": amount_usd,
-                            "balanceUsd": balance_usd,
+                            "balanceUsd": outcome.balance_usd,
+                            "target": outcome.target,
                         })),
                         success: true,
                     },
                 )
                 .await;
+                // Trust bookkeeping must never fail the webhook: the grant
+                // already landed and Stripe would retry on a non-2xx.
                 if let Err(error) =
                     billing_subscriptions::record_paid_purchase(&state.db, user_id).await
                 {
-                    // Trust bookkeeping must never fail the webhook: the grant
-                    // already landed and Stripe would retry on a non-2xx.
                     tracing::error!(
                         "REVENUE-CRITICAL: failed to record paid purchase for user {} (event {}): {}",
                         user_id,
@@ -422,17 +497,83 @@ async fn grant_credits_and_respond(
                     );
                 }
             }
-            Json(json!({
+            let mut response = json!({
                 "received": true,
                 "eventId": event_id,
                 "userId": user_id,
                 "creditsUsd": amount_usd,
-                "balanceUsd": balance_usd,
-            }))
-            .into_response()
+                "target": outcome.target,
+                "idempotentReplay": outcome.idempotent_replay,
+            });
+            if let Some(balance_usd) = outcome.balance_usd {
+                response["balanceUsd"] = json!(balance_usd);
+            }
+            Json(response).into_response()
         }
         Err(error) => error.into_response(),
     }
+}
+
+/// The testable core of `grant_credits_and_respond`: dedupe, grant into the
+/// selected ledger, then record the processed event. Returns the outcome so
+/// the HTTP shell can build the response and audit trail.
+async fn process_credit_purchase(
+    db: &PgPool,
+    target: CreditGrantTarget<'_>,
+    event_type: &str,
+    event_id: &str,
+    user_id: &str,
+    amount_usd: f64,
+) -> Result<CreditPurchaseOutcome, ApiError> {
+    let existing_target: Option<String> = sqlx::query_scalar(
+        "SELECT target FROM webhook_events WHERE id = $1",
+    )
+    .bind(event_id)
+    .fetch_optional(db)
+    .await
+    .map_err(ApiError::DatabaseError)?;
+    if let Some(target) = existing_target {
+        return Ok(CreditPurchaseOutcome {
+            target,
+            idempotent_replay: true,
+            balance_usd: None,
+        });
+    }
+
+    let transaction_id = format!("stripe-{event_id}");
+    let (target_name, balance_usd) = match target {
+        CreditGrantTarget::Fabric(ledger, organization_id) => {
+            let amount_cents = (amount_usd * 100.0).round() as i64;
+            ledger
+                .grant_pack_credits(&organization_id, amount_cents, &transaction_id, event_id)
+                .await?;
+            ("fabric_ledger".to_string(), None)
+        }
+        CreditGrantTarget::CloudWallet => {
+            let cost_service = crate::services::CostServiceImpl::new(db.clone());
+            let balance_usd = cost_service
+                .add_credits(user_id, amount_usd, &transaction_id, "stripe")
+                .await?;
+            ("cloud_wallet".to_string(), Some(balance_usd))
+        }
+    };
+
+    // Record only after the grant succeeded; ON CONFLICT makes a concurrent
+    // delivery a harmless no-op (layer-2 idempotency already protected the
+    // money).
+    sqlx::query("INSERT INTO webhook_events (id, event_type, target) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING")
+        .bind(event_id)
+        .bind(event_type)
+        .bind(&target_name)
+        .execute(db)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+
+    Ok(CreditPurchaseOutcome {
+        target: target_name,
+        idempotent_replay: false,
+        balance_usd,
+    })
 }
 
 /// Verify a `Stripe-Signature` header against the raw body. Any one `v1`
@@ -547,13 +688,21 @@ fn map_stripe_event(event: &Value) -> Result<MappedStripeEvent, ApiError> {
             })?;
             Ok(MappedStripeEvent::Revoke { event_id, user_id })
         }
-        "checkout.session.completed" | "invoice.paid" => {
+        "checkout.session.completed" | "checkout.session.async_payment_succeeded" | "invoice.paid" => {
             // Only one-off credit purchases map via object metadata; subscription-mode
             // checkouts are handled by the subscription events above, and subscription
             // invoices are handled below.
             let object = &event["data"]["object"];
-            if event_type == "checkout.session.completed"
-                && object["mode"].as_str().unwrap_or_default() != "payment"
+            let is_checkout_event = event_type != "invoice.paid";
+            if is_checkout_event && object["mode"].as_str().unwrap_or_default() != "payment" {
+                return Ok(MappedStripeEvent::Ignored(event_type.to_string()));
+            }
+            // Grant only after the money actually settled. checkout.session.completed
+            // can arrive with payment_status "unpaid" for asynchronous payment
+            // methods (e.g. bank debits); Stripe then delivers
+            // checkout.session.async_payment_succeeded, which is the grant trigger.
+            if is_checkout_event
+                && object["payment_status"].as_str().unwrap_or_default() != "paid"
             {
                 return Ok(MappedStripeEvent::Ignored(event_type.to_string()));
             }
@@ -618,6 +767,11 @@ fn map_stripe_event(event: &Value) -> Result<MappedStripeEvent, ApiError> {
                 event_id,
                 user_id: user_id.to_string(),
                 amount_usd,
+                organization_id: metadata["allternit_org_id"]
+                    .as_str()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string),
             })
         }
         other => Ok(MappedStripeEvent::Ignored(other.to_string())),
@@ -842,6 +996,21 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
+        // Processed-Stripe-event dedupe (migration 015) for the credit
+        // purchase grant path.
+        sqlx::query("DROP TABLE IF EXISTS webhook_events CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE webhook_events (
+                id TEXT PRIMARY KEY,
+                event_type TEXT NOT NULL,
+                target TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
         pool
     }
 
@@ -1056,6 +1225,7 @@ mod tests {
                 "object": {
                     "id": "cs_test_123",
                     "mode": mode,
+                    "payment_status": "paid",
                     "metadata": metadata,
                 }
             }
@@ -1076,6 +1246,7 @@ mod tests {
                 event_id: "evt_c1".to_string(),
                 user_id: "user_1".to_string(),
                 amount_usd: 25.0,
+                organization_id: None,
             }
         );
 
@@ -1091,7 +1262,89 @@ mod tests {
                 event_id: "evt_c2".to_string(),
                 user_id: "user_2".to_string(),
                 amount_usd: 10.5,
+                organization_id: None,
             }
+        );
+    }
+
+    #[test]
+    fn mapping_carries_the_org_for_fabric_routing() {
+        let checkout = payment_event(
+            "evt_c1o",
+            "checkout.session.completed",
+            "payment",
+            json!({
+                "clerk_user_id": "user_1",
+                "allternit_credits_usd": "25.00",
+                "allternit_org_id": "org_42"
+            }),
+        );
+        assert_eq!(
+            map_stripe_event(&checkout).unwrap(),
+            MappedStripeEvent::GrantCredits {
+                event_id: "evt_c1o".to_string(),
+                user_id: "user_1".to_string(),
+                amount_usd: 25.0,
+                organization_id: Some("org_42".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn mapping_grants_only_after_the_payment_settles() {
+        // checkout.session.completed with payment_status "unpaid" (async
+        // payment methods): no grant yet — Stripe delivers
+        // checkout.session.async_payment_succeeded when money settles.
+        let mut unpaid = payment_event(
+            "evt_u1",
+            "checkout.session.completed",
+            "payment",
+            json!({ "clerk_user_id": "user_1", "allternit_credits_usd": "25.00" }),
+        );
+        unpaid["data"]["object"]["payment_status"] = json!("unpaid");
+        assert_eq!(
+            map_stripe_event(&unpaid).unwrap(),
+            MappedStripeEvent::Ignored("checkout.session.completed".to_string())
+        );
+
+        // The settlement event for the same session IS the grant trigger.
+        let settled = payment_event(
+            "evt_u2",
+            "checkout.session.async_payment_succeeded",
+            "payment",
+            json!({ "clerk_user_id": "user_1", "allternit_credits_usd": "25.00" }),
+        );
+        assert_eq!(
+            map_stripe_event(&settled).unwrap(),
+            MappedStripeEvent::GrantCredits {
+                event_id: "evt_u2".to_string(),
+                user_id: "user_1".to_string(),
+                amount_usd: 25.0,
+                organization_id: None,
+            }
+        );
+
+        // A settlement event that somehow is not paid is still not granted.
+        let mut unsettled = settled.clone();
+        unsettled["id"] = json!("evt_u3");
+        unsettled["data"]["object"]["payment_status"] = json!("unpaid");
+        assert_eq!(
+            map_stripe_event(&unsettled).unwrap(),
+            MappedStripeEvent::Ignored("checkout.session.async_payment_succeeded".to_string())
+        );
+    }
+
+    #[test]
+    fn mapping_ignores_subscription_mode_async_settlement() {
+        let subscription_mode = payment_event(
+            "evt_a5",
+            "checkout.session.async_payment_succeeded",
+            "subscription",
+            json!({ "clerk_user_id": "user_1", "allternit_credits_usd": "25" }),
+        );
+        assert_eq!(
+            map_stripe_event(&subscription_mode).unwrap(),
+            MappedStripeEvent::Ignored("checkout.session.async_payment_succeeded".to_string())
         );
     }
 
@@ -1163,6 +1416,7 @@ mod tests {
             event_id,
             user_id,
             amount_usd,
+            ..
         } = map_stripe_event(&event).unwrap()
         else {
             panic!("credit purchase must map to a grant");
@@ -1257,8 +1511,191 @@ mod tests {
                 event_id: "evt_i4".to_string(),
                 user_id: "user_1".to_string(),
                 amount_usd: 25.0,
+                organization_id: None,
             }
         );
+    }
+
+    #[derive(Default)]
+    struct RecordingFabric {
+        calls: std::sync::Mutex<Vec<(String, i64, String, String)>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::services::fabric_ledger::FabricLedger for RecordingFabric {
+        async fn grant_pack_credits(
+            &self,
+            organization_id: &str,
+            amount_cents: i64,
+            idempotency_key: &str,
+            reference_id: &str,
+        ) -> Result<(), ApiError> {
+            self.calls.lock().unwrap().push((
+                organization_id.to_string(),
+                amount_cents,
+                idempotency_key.to_string(),
+                reference_id.to_string(),
+            ));
+            Ok(())
+        }
+    }
+
+    struct FailingFabric;
+
+    #[async_trait::async_trait]
+    impl crate::services::fabric_ledger::FabricLedger for FailingFabric {
+        async fn grant_pack_credits(
+            &self,
+            _organization_id: &str,
+            _amount_cents: i64,
+            _idempotency_key: &str,
+            _reference_id: &str,
+        ) -> Result<(), ApiError> {
+            Err(ApiError::Internal("fabric ledger unreachable".to_string()))
+        }
+    }
+
+    #[tokio::test]
+    async fn fabric_grant_happens_once_and_replays_are_deduped() {
+        let pool = test_pool().await;
+        let fabric = RecordingFabric::default();
+
+        let outcome = process_credit_purchase(
+            &pool,
+            CreditGrantTarget::Fabric(&fabric, "org_42".to_string()),
+            "checkout.session.completed",
+            "evt_f1",
+            "user_1",
+            25.0,
+        )
+        .await
+        .unwrap();
+        assert_eq!(outcome.target, "fabric_ledger");
+        assert!(!outcome.idempotent_replay);
+        assert_eq!(outcome.balance_usd, None);
+
+        // The grant call carries the org, integer cents, the Stripe-event-id
+        // idempotency key, and the event id as the ledger reference.
+        let calls = fabric.calls.lock().unwrap().clone();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(
+            calls[0],
+            ("org_42".to_string(), 2500, "stripe-evt_f1".to_string(), "evt_f1".to_string())
+        );
+
+        // Stripe retries the same delivery: acknowledged as a replay without
+        // a second grant call.
+        let replay = process_credit_purchase(
+            &pool,
+            CreditGrantTarget::Fabric(&fabric, "org_42".to_string()),
+            "checkout.session.completed",
+            "evt_f1",
+            "user_1",
+            25.0,
+        )
+        .await
+        .unwrap();
+        assert!(replay.idempotent_replay);
+        assert_eq!(replay.target, "fabric_ledger");
+        assert_eq!(fabric.calls.lock().unwrap().len(), 1, "replay must not re-grant");
+
+        // The processed event is recorded with its target.
+        let recorded: (String, String) =
+            sqlx::query_as("SELECT event_type, target FROM webhook_events WHERE id = 'evt_f1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(recorded, ("checkout.session.completed".to_string(), "fabric_ledger".to_string()));
+    }
+
+    #[tokio::test]
+    async fn wallet_fallback_grants_and_records_when_no_org_is_present() {
+        let pool = test_pool().await;
+        let fabric = RecordingFabric::default();
+
+        // Bridge available but the session predates org capture: the grant
+        // falls back to the cloud wallet and is still deduped by event id.
+        let outcome = process_credit_purchase(
+            &pool,
+            CreditGrantTarget::CloudWallet,
+            "checkout.session.completed",
+            "evt_w1",
+            "user_1",
+            25.0,
+        )
+        .await
+        .unwrap();
+        assert_eq!(outcome.target, "cloud_wallet");
+        assert!(!outcome.idempotent_replay);
+        assert!((outcome.balance_usd.unwrap() - 25.0).abs() < 1e-9);
+        assert_eq!(fabric.calls.lock().unwrap().len(), 0);
+
+        let grants: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM credit_transactions WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(grants, 1);
+
+        let recorded: String =
+            sqlx::query_scalar("SELECT target FROM webhook_events WHERE id = 'evt_w1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(recorded, "cloud_wallet");
+
+        // Later, enabling the bridge must NOT re-deliver this event.
+        let replay = process_credit_purchase(
+            &pool,
+            CreditGrantTarget::Fabric(&fabric, "org_42".to_string()),
+            "checkout.session.completed",
+            "evt_w1",
+            "user_1",
+            25.0,
+        )
+        .await
+        .unwrap();
+        assert!(replay.idempotent_replay);
+        assert_eq!(fabric.calls.lock().unwrap().len(), 0, "an event that already granted must not grant again after the bridge is enabled");
+    }
+
+    #[tokio::test]
+    async fn failed_fabric_grant_records_nothing_and_the_retry_succeeds_once() {
+        let pool = test_pool().await;
+
+        // First delivery: the fabric ledger is down — the event must not be
+        // recorded, so Stripe's retry re-attempts the grant.
+        let failed = process_credit_purchase(
+            &pool,
+            CreditGrantTarget::Fabric(&FailingFabric, "org_42".to_string()),
+            "checkout.session.completed",
+            "evt_x1",
+            "user_1",
+            25.0,
+        )
+        .await;
+        assert!(failed.is_err());
+        let recorded: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM webhook_events WHERE id = 'evt_x1'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(recorded, 0, "a failed grant records nothing");
+
+        // Retry with the ledger healthy: exactly one grant.
+        let fabric = RecordingFabric::default();
+        let outcome = process_credit_purchase(
+            &pool,
+            CreditGrantTarget::Fabric(&fabric, "org_42".to_string()),
+            "checkout.session.completed",
+            "evt_x1",
+            "user_1",
+            25.0,
+        )
+        .await
+        .unwrap();
+        assert!(!outcome.idempotent_replay);
+        assert_eq!(fabric.calls.lock().unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -1459,25 +1896,23 @@ mod tests {
     async fn credit_purchase_records_trust_and_replay_does_not_inflate_it() {
         let pool = test_pool().await;
 
-        // The handler path from grant_credits_and_respond: ledger-existence
-        // check, grant, then trust bookkeeping only for a fresh grant.
+        // The handler path from grant_credits_and_respond (wallet target):
+        // process the event, then trust bookkeeping only for a fresh grant.
         async fn grant_once(pool: &PgPool, event_id: &str) -> bool {
-            let transaction_id = format!("stripe-{event_id}");
-            let fresh: bool = !sqlx::query_scalar::<_, bool>(
-                "SELECT EXISTS(SELECT 1 FROM credit_transactions WHERE transaction_id = $1)",
+            let outcome = process_credit_purchase(
+                pool,
+                CreditGrantTarget::CloudWallet,
+                "checkout.session.completed",
+                event_id,
+                "user_1",
+                25.0,
             )
-            .bind(&transaction_id)
-            .fetch_one(pool)
             .await
             .unwrap();
-            crate::services::CostServiceImpl::new(pool.clone())
-                .add_credits("user_1", 25.0, &transaction_id, "stripe")
-                .await
-                .unwrap();
-            if fresh {
+            if !outcome.idempotent_replay {
                 billing_subscriptions::record_paid_purchase(pool, "user_1").await.unwrap();
             }
-            fresh
+            !outcome.idempotent_replay
         }
 
         assert!(grant_once(&pool, "evt_p1").await, "first delivery is a fresh grant");
