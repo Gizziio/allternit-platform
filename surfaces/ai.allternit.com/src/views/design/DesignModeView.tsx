@@ -5,7 +5,7 @@ import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from "rea
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sliders, MagicWand, Sun, Moon, Scissors,
-  TreeStructure, Megaphone, ShieldCheck, UploadSimple, Plus, PuzzlePiece
+  TreeStructure, Megaphone, ShieldCheck, UploadSimple, Plus, PuzzlePiece, Crosshair
 } from "@phosphor-icons/react";
 import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
@@ -22,6 +22,8 @@ import { NewProjectScreen } from './NewProjectScreen';
 import { SkillPicker } from './SkillPicker';
 import { SkillParameterPanel } from '../../components/design/SkillParameterPanel';
 import { SurgicalEditPanel } from '../../components/design/SurgicalEditPanel';
+import ArtifactRenderer from '../../components/artifact/ArtifactRenderer';
+import { buildAioTargetDescription, type AioTargetPayload } from '../../lib/design/aio-targeting';
 import { DesignCritiquePanel } from '../../components/design/DesignCritiquePanel';
 import { AgentAdapterPanel } from '../../components/design/AgentAdapterPanel';
 import { PluginPicker } from './PluginPicker';
@@ -107,6 +109,8 @@ interface DesignModeViewProps {
   initialTab?: CanvasTab;
   initialDesignMd?: string;
   initialStream?: string;
+  /** Deep-link entry: seed the composer with a prompt carried over the /design URL. */
+  initialPrompt?: string;
   /** Shell context: open office editors as ACI shell views (from the ViewRegistry). */
   openView?: (viewType: string, context?: unknown) => void;
 }
@@ -276,7 +280,7 @@ function TabLoadingState({ label = "Loading workspace…" }: { label?: string })
 
 // ─── Main Studio Component ───────────────────────────────────────────────────
 
-export default function DesignModeView({ initialTab, initialDesignMd, initialStream, openView }: DesignModeViewProps) {
+export default function DesignModeView({ initialTab, initialDesignMd, initialStream, initialPrompt, openView }: DesignModeViewProps) {
   useNav();
   const defaultSelection = useDefaultModelSelection();
   // Bridge mode tab selection to canvas/renderer opening (parity with Chat/Cowork)
@@ -297,7 +301,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     initialTab ?? (initialDesignMd ? 'system' : 'questions')
   );
   const [showTweaks, setShowTweaks] = useState(false);
-  const [composerSeed, setComposerSeed] = useState("");
+  const [composerSeed, setComposerSeed] = useState(initialPrompt ?? "");
   const [designMd, setDesignMd] = useState<string | null>(initialDesignMd ?? null);
   const [uiStream, setUiStream] = useState<string | null>(initialStream ?? null);
   const [tokens, setTokens] = useState({ radius: 12, spacing: 4, primary: 'var(--accent-primary)', font: 'Allternit Sans' });
@@ -321,6 +325,15 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   const [skillValues, setSkillValues] = useState<Record<string, unknown>>({});
   const [showPluginPicker, setShowPluginPicker] = useState(false);
   const [surgicalComments, setSurgicalComments] = useState<SurgicalComment[]>([]);
+  // Click-to-target (mapping doc §3 port #5): when targeting mode is on, the
+  // artifact preview iframe reports clicks on [data-aio-id] elements via
+  // postMessage; the resolved description seeds the surgical-edit target.
+  const [aioTargeting, setAioTargeting] = useState(false);
+  const [targetSeed, setTargetSeed] = useState<{ target: string; nonce: number } | null>(null);
+  const handleAioTarget = React.useCallback((payload: AioTargetPayload) => {
+    setTargetSeed({ target: buildAioTargetDescription(payload), nonce: Date.now() });
+    setAioTargeting(false);
+  }, []);
   const { selectedAgent } = useSurfaceAgentSelection('design');
   const [skillParameters, setSkillParameters] = useState<Record<string, number>>({});
 
@@ -928,11 +941,41 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
               />
             </div>
           )}
+          {latestArtifactHtml && (
+            <div style={{ padding: '12px 12px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Artifact preview{aioTargeting ? ' — click an element to target it' : ''}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAioTargeting((v) => !v)}
+                  title={aioTargeting ? 'Exit target mode' : 'Target an element for surgical edits'}
+                  style={{
+                    width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border-subtle)',
+                    background: aioTargeting ? 'var(--accent-primary)' : 'transparent',
+                    color: aioTargeting ? '#fff' : 'var(--text-secondary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                  }}
+                >
+                  <Crosshair size={13} weight={aioTargeting ? 'fill' : 'regular'} />
+                </button>
+              </div>
+              <ArtifactRenderer
+                content={latestArtifactHtml}
+                type="text/html"
+                height="240px"
+                aioTargeting={aioTargeting}
+                onAioTarget={handleAioTarget}
+              />
+            </div>
+          )}
           <div style={{ padding: '12px 12px 0' }}>
             <SurgicalEditPanel
               comments={surgicalComments}
               agent={selectedAgent ?? undefined}
               artifactHtml={latestArtifactHtml}
+              targetSeed={targetSeed}
               onChange={setSurgicalComments}
               onApply={() => {
                 if (!activeSessionId) return;
