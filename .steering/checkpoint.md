@@ -2,11 +2,12 @@
 
 Goal: P2 of stagehand-batch-fork — session-preservation contract (D1) + planning-loop batch consumption (D2).
 
-Just did: read spec (P2 gate, REPL semantics, product contract), P1 wire shape
-(aci_batch.rs: BatchDescriptor/hash, BatchPlan Auto/OneGrant/PerStep, receipts,
-run_gated_batch, /api/aci/batch + handoff approve endpoints), planning_loop.py,
-executor execute_batch, canonical_events EventLedger, sandbox_env os.environ tradeoff.
+Just did: D1 landed (contract doc 985eb593f, batch-context record 79786a9f5).
+D2 landed: batch_dispatch client + Rust step_index denial (dbd105187, cargo 19/19);
+planning-loop batch consumption + ActionPlan.batch + model_turns (cfda59541);
+22/22 new tests green (venv python: repo .venv + pytest/pytest-asyncio installed via uv).
 
-Next: D1a contract doc, then D1b batch-context record, commit each.
+Next: full-suite before/after counts (running on cu18 + origin/main baseline),
+live smoke (allternit-api build running), preflight, then merge main, PR, land.
 
-Open questions: none — per-step denial needs step_index in body (small Rust change, allowed).
+Open questions: none.
