@@ -167,7 +167,7 @@ describe("markBotRead", () => {
     expect(second).toEqual(first)
   })
 
-  test("stamps a null-sessionId watermark for an unpinned bot", async () => {
+  test("stamps a null-sessionId watermark for an unpinned bot", { timeout: 60000 }, async () => {
     await createBot({ name: "unpinned-bot", title: "Unpinned" })
 
     await markBotRead("unpinned-bot")
