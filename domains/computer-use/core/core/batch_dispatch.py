@@ -55,8 +55,13 @@ _ACTION_METHOD_MAP = {
 # BatchStep selectors must be CSS selectors or XPath — a grounding model emits
 # free-text element descriptions ("submit button") which the in-browser runtime
 # cannot resolve. Only selector-like targets are batchable; everything else
-# keeps the existing coordinate-based step-by-step path.
-_SELECTOR_LIKE = re.compile(r"^(//|#|\.|\[|[a-zA-Z][a-zA-Z0-9_-]*$)")
+# keeps the existing coordinate-based step-by-step path. Attribute selectors
+# (input[placeholder='Name']) are deterministic and resolve via querySelector
+# exactly like #id or bare-tag selectors, so they ground too (cu22 campaign:
+# frontier models prefer them even when ids exist).
+_SELECTOR_LIKE = re.compile(
+    r"^(//|#|\.|\[|[a-zA-Z][a-zA-Z0-9_-]*(\[[^\]]+\])?$)"
+)
 
 MIN_BATCH_STEPS = 2
 
