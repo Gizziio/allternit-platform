@@ -250,11 +250,16 @@ impl AppConfig {
     }
 
     /// Port the API server listens on.
+    ///
+    /// The production port (8013) is owned, not defaulted: production
+    /// launchers (packaged Desktop spawn, server systemd units) pin it
+    /// explicitly via `ALLTERNIT_API_PORT`. The unset default is the dev
+    /// port so worktree/debug builds never squat the production gateway.
     pub fn api_port(&self) -> u16 {
         std::env::var("ALLTERNIT_API_PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .unwrap_or(8013)
+            .unwrap_or(18013)
     }
 
     /// Port the dedicated inbound webhook receiver listens on.

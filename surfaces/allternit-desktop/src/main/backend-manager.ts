@@ -2,7 +2,8 @@
  * Allternit Backend Manager
  *
  * Spawns and manages the unified Rust API backend.
- *   - Rust API on port 8013 (allternit-api binary)
+ *   - Rust API on port 8013 (allternit-api binary) in the packaged app,
+ *     port 18013 in dev launches (see API_PORT below)
  *
  * The legacy Python gateway and Memory Agent sidecars have been removed;
  * the Rust API now proxies directly to Gizzi (port 4096).
@@ -20,7 +21,16 @@ import { PORTS, URLS, webhookReceiverUrl } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const API_PORT = PORTS.API;
+// Port ownership: the packaged app owns the production gateway port (8013)
+// and reclaims it on launch. A dev desktop (worktree Electron, npm run dev)
+// binds the dev port instead, so a dev build can run side by side with the
+// installed app without displacing its gateway. An explicit
+// ALLTERNIT_API_PORT export always wins.
+const API_PORT = app.isPackaged
+  ? PORTS.API
+  : process.env.ALLTERNIT_API_PORT
+    ? Number(process.env.ALLTERNIT_API_PORT)
+    : PORTS.API_DEV;
 // Debug builds of allternit-api can edge past 30s under a cold start; allow
 // an env override and default to a more generous window in development.
 const HEALTH_TIMEOUT_MS = process.env.ALLTERNIT_API_HEALTH_TIMEOUT_MS
@@ -94,12 +104,19 @@ export class BackendManager {
       return this.getUrl();
     }
     if (existing === 'misbehaving') {
-      log.warn(
-        '[BackendManager] Existing allternit-api is healthy but is not serving the platform UI ' +
-          '(GET / is not HTML). Replacing it so the shell does not boot onto a 501 JSON stub.',
-      );
-      this.terminateListenerOnPort();
-      await new Promise((r) => setTimeout(r, 400));
+      if (app.isPackaged) {
+        log.warn(
+          '[BackendManager] Existing allternit-api is healthy but is not serving the platform UI ' +
+            '(GET / is not HTML). Replacing it so the shell does not boot onto a 501 JSON stub.',
+        );
+        this.terminateListenerOnPort();
+        await new Promise((r) => setTimeout(r, 400));
+      } else {
+        log.warn(
+          `[BackendManager] Existing process on ${this.getUrl()} is not serving the platform UI, ` +
+            'but a dev desktop does not own the gateway port — leaving it alone and starting our own on the dev port.',
+        );
+      }
     }
 
     let binaryPath = this.resolveBinaryPath();
@@ -283,7 +300,11 @@ export class BackendManager {
     }
   }
 
-  /** SIGTERM whatever is listening on the operator API port. Packaged Desktop owns :8013. */
+  /**
+   * SIGTERM whatever is listening on the operator API port. Packaged Desktop
+   * owns :8013 and is the only caller — dev desktops must never kill the
+   * installed app's gateway listener.
+   */
   private terminateListenerOnPort(): void {
     try {
       const out = execFileSync(

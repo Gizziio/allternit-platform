@@ -1020,13 +1020,18 @@ async fn main() {
         allternit_api::metrics::metrics_middleware,
     ));
 
-    // Start server — port from config (env override supported), default 8013
+    // Start server — port from env; production owners pin 8013 explicitly,
+    // unset defaults to the dev port (18013) so ad-hoc builds never squat :8013.
     let port = app_config.api_port();
+    let port_source = match std::env::var("ALLTERNIT_API_PORT") {
+        Ok(value) if value.parse::<u16>().is_ok() => format!("env ALLTERNIT_API_PORT={value}"),
+        _ => "default (dev 18013 — production owners must pin ALLTERNIT_API_PORT=8013)".to_string(),
+    };
     let webhook_receiver_port = app_config.webhook_receiver_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .unwrap();
-    info!("Server listening on {}", listener.local_addr().unwrap());
+    info!("Server listening on {} ({})", listener.local_addr().unwrap(), port_source);
     info!("Webhook receiver port configured to {}", webhook_receiver_port);
     info!("API Documentation:");
     info!("  - Health:         GET /health");
