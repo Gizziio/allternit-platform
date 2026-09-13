@@ -466,6 +466,48 @@ function checkSidecarGuards(jobs) {
   }
 }
 
+/* ── Check 7: phone-remote server is bundled in the desktop app ── */
+
+function checkPhoneRemoteBundle() {
+  // The phone-remote server (surfaces/phone-remote) serves the ScreenCaptureKit
+  // frames the Fabric desktop viewer proxies to 127.0.0.1:8477. The desktop
+  // app spawns and supervises it (src/main/phone-remote-manager.ts) from
+  // Resources/phone-remote/server, so the electron-builder config must keep
+  // copying the source tree (index.mjs + lib/ + sc_capture.swift; the helper
+  // binary itself is built by first-run swiftc, never copied).
+  const pkg = JSON.parse(read('surfaces/allternit-desktop/package.json'));
+  const entries = (pkg.build && pkg.build.extraResources) || [];
+  const entry = entries.find((e) => e && e.to === 'phone-remote/server');
+  if (!entry) {
+    fail(
+      'phone-remote: desktop package.json build.extraResources has no entry copying ' +
+        'the phone-remote server to Resources/phone-remote/server — the packaged app ' +
+        'would spawn nothing on :8477 and the Fabric viewer would stay dark.'
+    );
+    return;
+  }
+
+  const fromDir = path.join(desktopDir, entry.from);
+  const required = [
+    path.join(fromDir, 'index.mjs'),
+    path.join(fromDir, 'lib', 'capture.mjs'),
+    path.join(fromDir, 'lib', 'ws.mjs'),
+    path.join(fromDir, 'lib', 'input.mjs'),
+    path.join(fromDir, 'lib', 'watchdog.mjs'),
+    path.join(fromDir, 'capture', 'sc_capture.swift'),
+  ];
+  const missing = required.filter((p) => !fs.existsSync(p));
+  if (missing.length > 0) {
+    fail(
+      'phone-remote: extraResources source tree is incomplete: ' +
+        missing.map((p) => path.relative(repoRoot, p)).join(', ') +
+        ' — the bundled phone-remote server would fail at spawn time.'
+    );
+    return;
+  }
+  pass('phone-remote: desktop extraResources bundles surfaces/phone-remote/server (index.mjs + lib/ + sc_capture.swift)');
+}
+
 /* ── Main ── */
 
 function main() {
@@ -482,6 +524,7 @@ function main() {
   checkNotarize(jobs);
   checkWindowsPnpmShim();
   checkSidecarGuards(jobs);
+  checkPhoneRemoteBundle();
 
   console.log('release-preflight: release-desktop.yml checks\n');
   for (const p of passes) console.log(`  ✓ ${p}`);
