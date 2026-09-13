@@ -37,6 +37,274 @@ fn mtime_ms(path: &Path) -> u64 {
         .unwrap_or(0)
 }
 
+/// Bounded tail budget for transcript scans (last-prompt extraction). The
+/// visibility path runs under an ~800ms gateway timeout — seek from the end,
+/// never whole-file.
+const TAIL_BYTES: u64 = 64 * 1024;
+
+/// Read the last `max_bytes` of a file as (lossy) UTF-8. The first line is
+/// dropped when the read started mid-line. `None` on any I/O error.
+fn tail_read(path: &Path, max_bytes: u64) -> Option<String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = fs::File::open(path).ok()?;
+    let len = file.metadata().ok()?.len();
+    let start = len.saturating_sub(max_bytes);
+    file.seek(SeekFrom::Start(start)).ok()?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf).ok()?;
+    let mut text = String::from_utf8_lossy(&buf).into_owned();
+    if start > 0 {
+        text = text.split_once('\n').map(|(_, rest)| rest).unwrap_or("").to_string();
+    }
+    Some(text)
+}
+
+/// Last `prompt.accepted` event in a kimi `wire.jsonl` tail → its `time`
+/// (epoch ms) and prompt text (`content` text parts joined). `None` when no
+/// such event is in the tail.
+fn kimi_last_prompt(wire: &Path) -> Option<(u64, String)> {
+    let text = tail_read(wire, TAIL_BYTES)?;
+    for line in text.lines().rev() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        if v.get("type").and_then(|t| t.as_str()) != Some("prompt.accepted") {
+            continue;
+        }
+        let ts = v.get("time").and_then(|t| t.as_u64())?;
+        let msg = content_text(v.get("content"))
+            .or_else(|| v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()))?;
+        if msg.trim().is_empty() {
+            continue;
+        }
+        return Some((ts, msg));
+    }
+    None
+}
+
+/// Last claude-style `{"type":"user"}` line in a transcript tail →
+/// (timestamp epoch ms, message text). `message.content` may be a string or
+/// a block array (handled by `content_text`).
+fn claude_like_last_prompt(transcript: &Path) -> Option<(u64, String)> {
+    let text = tail_read(transcript, TAIL_BYTES)?;
+    for line in text.lines().rev() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        if v.get("type").and_then(|t| t.as_str()) != Some("user") {
+            continue;
+        }
+        let ts = v
+            .get("timestamp")
+            .and_then(|t| t.as_str())
+            .and_then(parse_rfc3339_ms)?;
+        let msg = content_text(v.get("message").and_then(|m| m.get("content")))?;
+        if msg.trim().is_empty() {
+            continue;
+        }
+        return Some((ts, msg));
+    }
+    None
+}
+
+/// Last codex `payload.type == "user_message"` line in a rollout tail →
+/// (timestamp epoch ms, message text).
+fn codex_last_prompt(transcript: &Path) -> Option<(u64, String)> {
+    let text = tail_read(transcript, TAIL_BYTES)?;
+    for line in text.lines().rev() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        if v.pointer("/payload/type").and_then(|t| t.as_str()) != Some("user_message") {
+            continue;
+        }
+        let ts = v
+            .get("timestamp")
+            .and_then(|t| t.as_str())
+            .and_then(parse_rfc3339_ms)?;
+        let msg = v
+            .pointer("/payload/message")
+            .and_then(|m| m.as_str())?
+            .to_string();
+        if msg.trim().is_empty() {
+            continue;
+        }
+        return Some((ts, msg));
+    }
+    None
+}
+
+/// Normalize a timestamp value to epoch ms: numbers ≥1e12 are already ms,
+/// ≥1e9 are epoch seconds; strings try RFC 3339 then a plain number.
+/// Anything else → `None`.
+fn epoch_ms_value(v: &serde_json::Value) -> Option<u64> {
+    match v {
+        serde_json::Value::Number(n) => {
+            let f = n.as_f64()?;
+            if f >= 1e12 {
+                Some(f as u64)
+            } else if f >= 1e9 {
+                Some((f * 1000.0) as u64)
+            } else {
+                None
+            }
+        }
+        serde_json::Value::String(s) => {
+            let t = s.trim();
+            parse_rfc3339_ms(t).or_else(|| {
+                t.parse::<f64>().ok().and_then(|f| {
+                    if f >= 1e12 {
+                        Some(f as u64)
+                    } else if f >= 1e9 {
+                        Some((f * 1000.0) as u64)
+                    } else {
+                        None
+                    }
+                })
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Timestamp from the first present candidate key, top-level or nested under
+/// `message`.
+fn record_timestamp(v: &serde_json::Value) -> Option<u64> {
+    for key in ["timestamp", "time", "ts", "created_at", "createdAt"] {
+        if let Some(ms) = v.get(key).and_then(epoch_ms_value) {
+            return Some(ms);
+        }
+        if let Some(ms) = v.pointer("/message/timestamp").and_then(epoch_ms_value) {
+            return Some(ms);
+        }
+    }
+    None
+}
+
+/// Text from a gemini-style `parts` array (`[{"text": "…"}, …]`).
+fn parts_text(v: Option<&serde_json::Value>) -> Option<String> {
+    let parts = v?.as_array()?;
+    let mut out = String::new();
+    for part in parts {
+        if let Some(text) = part.get("text").and_then(|t| t.as_str()) {
+            out.push_str(text);
+        }
+    }
+    if out.is_empty() { None } else { Some(out) }
+}
+
+/// Best-effort (text, timestamp) from one transcript record that marks a
+/// user/human turn. Accepts the shapes the uncertain harnesses are known or
+/// believed to write: top-level `role:"user"`, claude-style `type:"user"`,
+/// OpenHands `source:"user"`, codex-style `payload.type:"user_message"`, and
+/// nested `message.role:"user"`. Text comes from `content` (string or block
+/// array via `content_text`), gemini-style `parts`, a string `message`, or a
+/// string `text`.
+fn generic_user_payload(v: &serde_json::Value) -> Option<(Option<u64>, String)> {
+    let is_user = v.get("role").and_then(|r| r.as_str()) == Some("user")
+        || v.get("type").and_then(|t| t.as_str()) == Some("user")
+        || v.get("type").and_then(|t| t.as_str()) == Some("user_message")
+        || v.get("source").and_then(|s| s.as_str()) == Some("user")
+        || v.pointer("/message/role").and_then(|r| r.as_str()) == Some("user")
+        || v.pointer("/payload/type").and_then(|t| t.as_str()) == Some("user_message");
+    if !is_user {
+        return None;
+    }
+    let msg = content_text(v.get("content"))
+        .or_else(|| content_text(v.get("message").and_then(|m| m.get("content"))))
+        .or_else(|| parts_text(v.get("parts")))
+        .or_else(|| parts_text(v.get("message").and_then(|m| m.get("parts"))))
+        .or_else(|| v.get("message").and_then(|m| m.as_str()).map(|s| s.to_string()))
+        .or_else(|| v.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()))
+        .or_else(|| {
+            v.pointer("/payload/message")
+                .and_then(|m| m.as_str())
+                .map(|s| s.to_string())
+        })?;
+    if msg.trim().is_empty() {
+        return None;
+    }
+    Some((record_timestamp(v), msg))
+}
+
+/// Generic bounded tail-scan for harnesses whose record shape varies by
+/// version (copilot, pi/omp, muse, vibe, gemini, droid, kimi-cli). Handles
+/// both jsonl (one record per line) and single-line JSON arrays. Timestamp
+/// may be `None` when the harness does not persist one.
+fn generic_last_user_prompt(transcript: &Path) -> Option<(Option<u64>, String)> {
+    let text = tail_read(transcript, TAIL_BYTES)?;
+    for line in text.lines().rev() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        // Single-line JSON array (gemini/droid chat exports).
+        if let Some(items) = v.as_array() {
+            for item in items.iter().rev() {
+                if let Some(found) = generic_user_payload(item) {
+                    return Some(found);
+                }
+            }
+            continue;
+        }
+        if let Some(found) = generic_user_payload(&v) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+/// Grok `updates.jsonl` tails carry `session/update` records; the user's
+/// prompt streams in as `user_message_chunk` updates. The last contiguous
+/// run of such chunks (they may split one prompt across lines) is joined;
+/// the timestamp (epoch **seconds**) of the run's first chunk is when the
+/// prompt started arriving.
+fn grok_last_prompt(updates: &Path) -> Option<(u64, String)> {
+    let text = tail_read(updates, TAIL_BYTES)?;
+    let mut run: Vec<(u64, String)> = Vec::new();
+    for line in text.lines().rev() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            if run.is_empty() { continue } else { break };
+        };
+        let is_user_chunk = v
+            .pointer("/params/update/sessionUpdate")
+            .and_then(|s| s.as_str())
+            == Some("user_message_chunk");
+        if is_user_chunk {
+            let (Some(ts), Some(chunk)) = (
+                v.get("timestamp").and_then(|t| t.as_u64()),
+                v.pointer("/params/update/content/text").and_then(|t| t.as_str()),
+            ) else {
+                break;
+            };
+            run.push((ts, chunk.to_string()));
+        } else if !run.is_empty() {
+            // Reached the end of the trailing user-chunk run (agent chunks
+            // and other session updates stream after it).
+            break;
+        }
+    }
+    if run.is_empty() {
+        return None;
+    }
+    let ts = run.last()?.0;
+    let msg: String = run.iter().rev().map(|(_, c)| c.as_str()).collect();
+    if msg.trim().is_empty() {
+        return None;
+    }
+    Some((ts * 1000, msg))
+}
+
+/// OpenHands conversations persist one JSON event per file under
+/// `events/`; a user turn is an event with `source:"user"` and a `message`.
+/// Scan the newest event files (bounded) until one carries a user message.
+fn openhands_last_prompt(dir: &Path) -> Option<(Option<u64>, String)> {
+    let events = dir.join("events");
+    let mut files = list_files(&events, |n| n.ends_with(".json"));
+    files.sort();
+    for file in files.iter().rev().take(8) {
+        let text = tail_read(file, TAIL_BYTES)?;
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(text.trim()) else {
+            continue;
+        };
+        if let Some(found) = generic_user_payload(&v) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 fn list_files(dir: &Path, predicate: impl Fn(&str) -> bool) -> Vec<PathBuf> {
     let Ok(entries) = fs::read_dir(dir) else {
         return Vec::new();
@@ -117,6 +385,9 @@ fn list_claude_like(harness: &str, root: &Path, subdir: &str, reader: ReaderKind
                 .file_stem()
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default();
+            let (last_prompt_at, last_prompt) = claude_like_last_prompt(&file)
+                .map(|(ts, text)| (Some(ts), Some(text)))
+                .unwrap_or((None, None));
             out.push(session(NativeSession {
                 harness: harness.to_string(),
                 session_id: id.clone(),
@@ -127,6 +398,8 @@ fn list_claude_like(harness: &str, root: &Path, subdir: &str, reader: ReaderKind
                 created_at: None,
                 fingerprint: fingerprint_path(&file),
                 last_event_id: Some(id),
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader,
                 projectable: true,
@@ -167,6 +440,9 @@ fn list_codex(root: &Path) -> Vec<NativeSession> {
         for dir in walk_dirs(&base_dir, 4) {
             for file in list_files(&dir, |n| rollout_id(n).is_some()) {
                 let Some(id) = rollout_id(&basename(&file)) else { continue };
+                let (last_prompt_at, last_prompt) = codex_last_prompt(&file)
+                    .map(|(ts, text)| (Some(ts), Some(text)))
+                    .unwrap_or((None, None));
                 out.push(session(NativeSession {
                     harness: "codex".to_string(),
                     session_id: id.clone(),
@@ -177,6 +453,8 @@ fn list_codex(root: &Path) -> Vec<NativeSession> {
                     created_at: None,
                     fingerprint: fingerprint_path(&file),
                     last_event_id: if base == "sessions" { Some(id) } else { None },
+                    last_prompt,
+                    last_prompt_at,
                     installed: false,
                     reader: ReaderKind::Jsonl,
                     projectable: true,
@@ -223,6 +501,9 @@ fn list_grok(root: &Path) -> Vec<NativeSession> {
             let cwd = cwd.or_else(|| {
                 percent_decode(&basename(&cwd_dir))
             });
+            let (last_prompt_at, last_prompt) = grok_last_prompt(&updates)
+                .map(|(ts, text)| (Some(ts), Some(text)))
+                .unwrap_or((None, None));
             let fp_targets: Vec<&Path> = [&summary, &updates]
                 .iter()
                 .filter(|p| p.exists())
@@ -238,6 +519,8 @@ fn list_grok(root: &Path) -> Vec<NativeSession> {
                 created_at: None,
                 fingerprint: fingerprint_paths(&fp_targets),
                 last_event_id: Some(id),
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader: ReaderKind::Directory,
                 projectable: true,
@@ -285,6 +568,8 @@ fn list_kimi_code(root: &Path) -> Vec<NativeSession> {
             let wire = dir.join("agents").join("main").join("wire.jsonl");
             let mut cwd = None;
             let mut updated_at = mtime_ms(&dir);
+            let mut state_updated_at = None;
+            let mut last_prompt = None;
             let mut id = basename(&dir).trim_start_matches("session_").to_string();
             if state_path.exists() {
                 if let Ok(state) = serde_json::from_slice::<serde_json::Value>(
@@ -302,9 +587,31 @@ fn list_kimi_code(root: &Path) -> Vec<NativeSession> {
                     }
                     if let Some(ms) = state.get("updatedAt").and_then(|v| v.as_u64()) {
                         updated_at = ms;
+                        state_updated_at = Some(ms);
                     }
+                    last_prompt = state
+                        .get("lastPrompt")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
                 }
             }
+            // The wire tail is authoritative for arrival time; state.json
+            // `lastPrompt` wins for text (it is the prompt the session
+            // actually accepted), with the wire event text as fallback.
+            let (last_prompt_at, last_prompt) = if wire.exists() {
+                match kimi_last_prompt(&wire) {
+                    Some((ts, wire_text)) => (
+                        Some(ts),
+                        last_prompt.or_else(|| {
+                            let t = wire_text;
+                            if t.trim().is_empty() { None } else { Some(t) }
+                        }),
+                    ),
+                    None => (state_updated_at, last_prompt),
+                }
+            } else {
+                (state_updated_at, last_prompt)
+            };
             let fp_targets: Vec<&Path> = [&state_path, &wire]
                 .iter()
                 .filter(|p| p.exists())
@@ -320,6 +627,8 @@ fn list_kimi_code(root: &Path) -> Vec<NativeSession> {
                 created_at: None,
                 fingerprint: fingerprint_paths(&fp_targets),
                 last_event_id: Some(id),
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader: ReaderKind::Directory,
                 projectable: true,
@@ -344,6 +653,9 @@ fn list_kimi_cli(root: &Path) -> Vec<NativeSession> {
                 continue;
             }
             let id = basename(&dir);
+            let (last_prompt_at, last_prompt) = generic_last_user_prompt(&ctx)
+                .map(|(ts, text)| (ts, Some(text)))
+                .unwrap_or((None, None));
             out.push(session(NativeSession {
                 harness: "kimi-cli".to_string(),
                 session_id: id.clone(),
@@ -354,6 +666,8 @@ fn list_kimi_cli(root: &Path) -> Vec<NativeSession> {
                 created_at: None,
                 fingerprint: fingerprint_path(&ctx),
                 last_event_id: None,
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader: ReaderKind::Jsonl,
                 projectable: true,
@@ -391,6 +705,9 @@ fn list_copilot(root: &Path) -> Vec<NativeSession> {
         if !events.exists() {
             continue;
         }
+        let (last_prompt_at, last_prompt) = generic_last_user_prompt(&events)
+            .map(|(ts, text)| (ts, Some(text)))
+            .unwrap_or((None, None));
         out.push(session(NativeSession {
             harness: "copilot".to_string(),
             session_id: id.clone(),
@@ -401,6 +718,8 @@ fn list_copilot(root: &Path) -> Vec<NativeSession> {
             created_at: None,
             fingerprint: fingerprint_path(&events),
             last_event_id: None,
+            last_prompt,
+            last_prompt_at,
             installed: false,
             reader: ReaderKind::Jsonl,
             projectable: true,
@@ -424,6 +743,9 @@ fn list_pi_like(harness: &str, root: &Path) -> Vec<NativeSession> {
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default();
             let id = stem.rsplit('_').next().unwrap_or(&stem).to_string();
+            let (last_prompt_at, last_prompt) = generic_last_user_prompt(&file)
+                .map(|(ts, text)| (ts, Some(text)))
+                .unwrap_or((None, None));
             out.push(session(NativeSession {
                 harness: harness.to_string(),
                 session_id: id.clone(),
@@ -434,6 +756,8 @@ fn list_pi_like(harness: &str, root: &Path) -> Vec<NativeSession> {
                 created_at: None,
                 fingerprint: fingerprint_path(&file),
                 last_event_id: None,
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader: ReaderKind::Jsonl,
                 projectable: true,
@@ -470,9 +794,16 @@ fn list_cursor(root: &Path) -> Vec<NativeSession> {
                 }
                 (entry.path(), name.strip_suffix(".jsonl").unwrap_or(&name).to_string())
             };
-            if !file.ends_with(".jsonl") || !file.exists() {
+            // `Path::ends_with` matches whole components, so a plain
+            // `file.ends_with(".jsonl")` would always be false here.
+            if !file.to_string_lossy().ends_with(".jsonl") || !file.exists() {
                 continue;
             }
+            // cursor-agent is a claude-code fork: same `type:"user"` transcript
+            // records (`message.content`, ISO `timestamp`).
+            let (last_prompt_at, last_prompt) = claude_like_last_prompt(&file)
+                .map(|(ts, text)| (Some(ts), Some(text)))
+                .unwrap_or((None, None));
             out.push(session(NativeSession {
                 harness: "cursor".to_string(),
                 session_id: id.clone(),
@@ -483,6 +814,8 @@ fn list_cursor(root: &Path) -> Vec<NativeSession> {
                 created_at: None,
                 fingerprint: fingerprint_path(&file),
                 last_event_id: None,
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader: ReaderKind::Jsonl,
                 projectable: true,
@@ -501,6 +834,9 @@ fn list_openhands(root: &Path) -> Vec<NativeSession> {
         .into_iter()
         .map(|dir| {
             let id = basename(&dir);
+            let (last_prompt_at, last_prompt) = openhands_last_prompt(&dir)
+                .map(|(ts, text)| (ts, Some(text)))
+                .unwrap_or((None, None));
             session(NativeSession {
                 harness: "openhands".to_string(),
                 session_id: id.clone(),
@@ -511,6 +847,8 @@ fn list_openhands(root: &Path) -> Vec<NativeSession> {
                 created_at: None,
                 fingerprint: fingerprint_path(&dir),
                 last_event_id: None,
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader: ReaderKind::Directory,
                 projectable: true,
@@ -533,6 +871,9 @@ fn list_muse(root: &Path) -> Vec<NativeSession> {
             continue;
         }
         let id = basename(&dir);
+        let (last_prompt_at, last_prompt) = generic_last_user_prompt(&file)
+            .map(|(ts, text)| (ts, Some(text)))
+            .unwrap_or((None, None));
         out.push(session(NativeSession {
             harness: "muse".to_string(),
             session_id: id.clone(),
@@ -543,6 +884,8 @@ fn list_muse(root: &Path) -> Vec<NativeSession> {
             created_at: None,
             fingerprint: fingerprint_path(&file),
             last_event_id: None,
+            last_prompt,
+            last_prompt_at,
             installed: false,
             reader: ReaderKind::Jsonl,
             projectable: true,
@@ -570,6 +913,9 @@ fn list_vibe(root: &Path) -> Vec<NativeSession> {
             .next()
             .unwrap_or(&name)
             .to_string();
+        let (last_prompt_at, last_prompt) = generic_last_user_prompt(&messages)
+            .map(|(ts, text)| (ts, Some(text)))
+            .unwrap_or((None, None));
         out.push(session(NativeSession {
             harness: "vibe".to_string(),
             session_id: id.clone(),
@@ -580,6 +926,8 @@ fn list_vibe(root: &Path) -> Vec<NativeSession> {
             created_at: None,
             fingerprint: fingerprint_path(&ses),
             last_event_id: None,
+            last_prompt,
+            last_prompt_at,
             installed: false,
             reader: ReaderKind::Directory,
             projectable: true,
@@ -607,6 +955,9 @@ fn list_gemini(root: &Path) -> Vec<NativeSession> {
                 .or_else(|| name.strip_suffix(".json"))
                 .unwrap_or(&name)
                 .to_string();
+            let (last_prompt_at, last_prompt) = generic_last_user_prompt(&file)
+                .map(|(ts, text)| (ts, Some(text)))
+                .unwrap_or((None, None));
             out.push(session(NativeSession {
                 harness: "gemini".to_string(),
                 session_id: id.clone(),
@@ -617,6 +968,8 @@ fn list_gemini(root: &Path) -> Vec<NativeSession> {
                 created_at: None,
                 fingerprint: fingerprint_path(&file),
                 last_event_id: None,
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader: ReaderKind::Jsonl,
                 projectable: true,
@@ -641,6 +994,9 @@ fn list_factory(root: &Path) -> Vec<NativeSession> {
                 .or_else(|| name.strip_suffix(".json"))
                 .unwrap_or(&name)
                 .to_string();
+            let (last_prompt_at, last_prompt) = generic_last_user_prompt(&file)
+                .map(|(ts, text)| (ts, Some(text)))
+                .unwrap_or((None, None));
             session(NativeSession {
                 harness: "droid".to_string(),
                 session_id: id.clone(),
@@ -651,6 +1007,8 @@ fn list_factory(root: &Path) -> Vec<NativeSession> {
                 created_at: None,
                 fingerprint: fingerprint_path(&file),
                 last_event_id: None,
+                last_prompt,
+                last_prompt_at,
                 installed: false,
                 reader: ReaderKind::Jsonl,
                 projectable: true,
@@ -674,6 +1032,8 @@ fn list_cline(root: &Path) -> Vec<NativeSession> {
         }
         let ui = task.join("ui_messages.json");
         let mut title = None;
+        let mut last_prompt = None;
+        let mut last_prompt_at = None;
         if let Ok(parsed) =
             serde_json::from_slice::<serde_json::Value>(&fs::read(&history).unwrap_or_default())
         {
@@ -687,6 +1047,20 @@ fn list_cline(root: &Path) -> Vec<NativeSession> {
                     .get("content")
                     .and_then(|c| c.as_str())
                     .map(|s| s.chars().take(120).collect());
+            }
+            // Reuse the same parse for the last prompt (the walker already
+            // reads this document for the title — no extra I/O).
+            if let Some(last) = parsed.as_array().and_then(|msgs| {
+                msgs.iter().rev().find(|m| {
+                    m.get("role").and_then(|r| r.as_str()) == Some("user")
+                        && m.get("content").and_then(|c| c.as_str()).is_some()
+                })
+            }) {
+                last_prompt = last
+                    .get("content")
+                    .and_then(|c| c.as_str())
+                    .map(|s| s.to_string());
+                last_prompt_at = last.get("ts").and_then(epoch_ms_value);
             }
         }
         let id = basename(&task);
@@ -705,6 +1079,8 @@ fn list_cline(root: &Path) -> Vec<NativeSession> {
             created_at: None,
             fingerprint: fingerprint_paths(&fp_targets),
             last_event_id: Some(id),
+            last_prompt,
+            last_prompt_at,
             installed: false,
             reader: ReaderKind::Directory,
             projectable: true,
@@ -725,6 +1101,8 @@ fn list_amp(root: &Path) -> Vec<NativeSession> {
         let id = basename(&file).strip_suffix(".json").unwrap_or(&basename(&file)).to_string();
         let mut title = None;
         let mut created_at = None;
+        let mut last_prompt = None;
+        let mut last_prompt_at = None;
         if let Ok(parsed) =
             serde_json::from_slice::<serde_json::Value>(&fs::read(&file).unwrap_or_default())
         {
@@ -741,6 +1119,18 @@ fn list_amp(root: &Path) -> Vec<NativeSession> {
             ) {
                 title = content_text(first.get("content")).map(|s| s.chars().take(120).collect());
             }
+            // Reuse the same parse for the last prompt (the walker already
+            // reads this document for the title/createdAt — no extra I/O).
+            // amp messages carry no per-message timestamp.
+            if let Some(last) = parsed.get("messages").and_then(|m| m.as_array()).and_then(
+                |msgs| {
+                    msgs.iter()
+                        .rev()
+                        .find(|m| m.get("role").and_then(|r| r.as_str()) == Some("user"))
+                },
+            ) {
+                last_prompt = content_text(last.get("content"));
+            }
         }
         out.push(session(NativeSession {
             harness: "amp".to_string(),
@@ -752,6 +1142,8 @@ fn list_amp(root: &Path) -> Vec<NativeSession> {
             created_at,
             fingerprint: fingerprint_path(&file),
             last_event_id: Some(id),
+            last_prompt,
+            last_prompt_at,
             installed: false,
             reader: ReaderKind::Directory,
             projectable: true,
@@ -1037,5 +1429,491 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let rows = list_native_sessions(home.path(), Some(&["kimi"]), None);
         assert_eq!(rows[0].join_key(), "kimi+x1");
+    }
+
+    #[test]
+    fn kimi_walker_extracts_last_prompt_and_wire_time() {
+        let home = fixture_home();
+        let dir = home
+            .path()
+            .join(".kimi-code")
+            .join("sessions")
+            .join("wd_p")
+            .join("session_s1");
+        std::fs::create_dir_all(dir.join("agents").join("main")).unwrap();
+        std::fs::write(
+            dir.join("state.json"),
+            r#"{"id":"session_s1","cwd":"/tmp/demo","updatedAt":1725974400000,"lastPrompt":"ship it"}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("agents").join("main").join("wire.jsonl"),
+            concat!(
+                r#"{"type":"prompt.accepted","agentId":"main","promptId":"a","content":[{"type":"text","text":"older"}],"time":1725974300000}"#,
+                "\n",
+                r#"{"type":"turn.ended","agentId":"main","time":1725974350000}"#,
+                "\n",
+                r#"{"type":"prompt.accepted","agentId":"main","promptId":"b","content":[{"type":"text","text":"ship it"}],"time":1725974401234}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["kimi"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("ship it"));
+        // Last prompt.accepted wins over state.json updatedAt.
+        assert_eq!(rows[0].last_prompt_at, Some(1725974401234));
+    }
+
+    #[test]
+    fn kimi_walker_falls_back_to_state_updated_at() {
+        let home = fixture_home();
+        let dir = home
+            .path()
+            .join(".kimi-code")
+            .join("sessions")
+            .join("wd_q")
+            .join("session_s2");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("state.json"),
+            r#"{"id":"session_s2","cwd":"/tmp/demo","updatedAt":1725974400000,"lastPrompt":"no wire events"}"#,
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["kimi"]), None);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("no wire events"));
+        assert_eq!(rows[0].last_prompt_at, Some(1725974400000));
+    }
+
+    #[test]
+    fn kimi_walker_falls_back_to_wire_text_without_state_last_prompt() {
+        let home = fixture_home();
+        let dir = home
+            .path()
+            .join(".kimi-code")
+            .join("sessions")
+            .join("wd_r")
+            .join("session_s3");
+        std::fs::create_dir_all(dir.join("agents").join("main")).unwrap();
+        // state.json has no lastPrompt.
+        std::fs::write(
+            dir.join("state.json"),
+            r#"{"id":"session_s3","cwd":"/tmp/demo","updatedAt":1725974400000}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("agents").join("main").join("wire.jsonl"),
+            concat!(
+                r#"{"type":"prompt.accepted","agentId":"main","promptId":"a","content":[{"type":"text","text":"wire only prompt"}],"time":1725974401234}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["kimi"]), None);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("wire only prompt"));
+        assert_eq!(rows[0].last_prompt_at, Some(1725974401234));
+    }
+
+    #[test]
+    fn claude_walker_extracts_last_user_message() {
+        let home = fixture_home();
+        let proj = home.path().join(".claude").join("projects").join("-tmp-demo");
+        std::fs::create_dir_all(&proj).unwrap();
+        std::fs::write(
+            proj.join("u1.jsonl"),
+            concat!(
+                r#"{"type":"user","timestamp":"2026-09-09T00:58:35.293Z","message":{"role":"user","content":"first ask"}}"#,
+                "\n",
+                r#"{"type":"assistant","timestamp":"2026-09-09T00:59:00.000Z","message":{"role":"assistant","content":[{"type":"text","text":"ok"}]}}"#,
+                "\n",
+                r#"{"type":"user","timestamp":"2026-09-09T01:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"part one "},{"type":"text","text":"part two"}]}}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["claude"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("part one part two"));
+        assert_eq!(rows[0].last_prompt_at, Some(1788915600000));
+    }
+
+    #[test]
+    fn codex_walker_extracts_last_user_message() {
+        let home = fixture_home();
+        let live = home.path().join(".codex").join("sessions").join("2026").join("09").join("10");
+        std::fs::create_dir_all(&live).unwrap();
+        let uuid = "123e4567-e89b-42d3-a456-426614174000";
+        std::fs::write(
+            live.join(format!("rollout-2026-09-10T00-00-00-{uuid}.jsonl")),
+            concat!(
+                r#"{"timestamp":"2026-05-07T13:42:00.571Z","type":"event_msg","payload":{"type":"user_message","message":"earlier"}}"#,
+                "\n",
+                r#"{"timestamp":"2026-05-07T13:43:00.571Z","type":"event_msg","payload":{"type":"agent_message","message":"working on it"}}"#,
+                "\n",
+                r#"{"timestamp":"2026-05-07T13:44:00.571Z","type":"event_msg","payload":{"type":"user_message","message":"its not renderignt in the platform"}}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["codex"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            rows[0].last_prompt.as_deref(),
+            Some("its not renderignt in the platform")
+        );
+        assert_eq!(rows[0].last_prompt_at, Some(1778161440571));
+    }
+
+    #[test]
+    fn qwen_walker_extracts_last_user_message_from_nested_chats() {
+        let home = fixture_home();
+        let chats = home
+            .path()
+            .join(".qwen")
+            .join("projects")
+            .join("-tmp-demo")
+            .join("chats");
+        std::fs::create_dir_all(&chats).unwrap();
+        std::fs::write(
+            chats.join("q1.jsonl"),
+            concat!(
+                r#"{"type":"user","timestamp":"2026-09-09T00:58:35.293Z","message":{"role":"user","content":"older qwen ask"}}"#,
+                "\n",
+                r#"{"type":"user","timestamp":"2026-09-09T01:00:00.000Z","message":{"role":"user","content":"newer qwen ask"}}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["qwen"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("newer qwen ask"));
+        assert_eq!(rows[0].last_prompt_at, Some(1788915600000));
+    }
+
+    #[test]
+    fn grok_walker_joins_user_message_chunks() {
+        let home = fixture_home();
+        let dir = home
+            .path()
+            .join(".grok")
+            .join("sessions")
+            .join("%2Ftmp%2Fdemo")
+            .join("01a07286-0714-7790-adc2-9dc39adcf562");
+        std::fs::create_dir_all(&dir).unwrap();
+        let chunk = |ts: u64, text: &str, update: &str| {
+            format!(
+                r#"{{"timestamp":{ts},"method":"session/update","params":{{"sessionId":"s","update":{{"sessionUpdate":"{update}","content":{{"type":"text","text":"{text}"}}}}}}}}"#
+            )
+        };
+        let updates = format!(
+            "{}\n{}\n{}\n",
+            chunk(1788627781, "Reply with ", "user_message_chunk"),
+            chunk(1788627782, "exactly GROK_BRAIN_OK", "user_message_chunk"),
+            chunk(1788627783, "GROK_BRAIN_OK", "agent_message_chunk"),
+        );
+        std::fs::write(dir.join("updates.jsonl"), updates).unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["grok"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            rows[0].last_prompt.as_deref(),
+            Some("Reply with exactly GROK_BRAIN_OK")
+        );
+        // epoch seconds → ms.
+        assert_eq!(rows[0].last_prompt_at, Some(1788627781000));
+    }
+
+    #[test]
+    fn kimi_cli_walker_extracts_last_user_line() {
+        let home = fixture_home();
+        let dir = home
+            .path()
+            .join(".kimi")
+            .join("sessions")
+            .join("6df21bdc83aa9a9b38cc257a95a02a1e")
+            .join("2c59bb21-4024-4751-afc9-e21258492f3a");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("context.jsonl"),
+            concat!(
+                r#"{"role":"_system_prompt","content":"You are Kimi CLI."}"#,
+                "\n",
+                r#"{"role":"user","content":"first ask"}"#,
+                "\n",
+                r#"{"role":"assistant","content":"answer"}"#,
+                "\n",
+                r#"{"role":"user","content":"last ask"}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["kimi-cli"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("last ask"));
+        // kimi-cli context lines carry no timestamp.
+        assert_eq!(rows[0].last_prompt_at, None);
+    }
+
+    #[test]
+    fn copilot_walker_extracts_last_user_message() {
+        let home = fixture_home();
+        let dir = home.path().join(".copilot").join("session-state").join("cp1");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("events.jsonl"),
+            concat!(
+                r#"{"type":"assistant_message","message":"working on it","timestamp":"2026-09-10T11:59:00.000Z"}"#,
+                "\n",
+                r#"{"type":"user_message","message":"ship the fix","timestamp":"2026-09-10T12:00:00.000Z"}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["copilot"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("ship the fix"));
+        assert_eq!(rows[0].last_prompt_at, Some(1789041600000));
+    }
+
+    #[test]
+    fn pi_walker_extracts_nested_user_message() {
+        let home = fixture_home();
+        let dir = home.path().join(".pi").join("agent").join("sessions").join("proj");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("sess_42.jsonl"),
+            concat!(
+                r#"{"type":"message","timestamp":1788627782000,"message":{"role":"assistant","content":[{"type":"text","text":"done"}]}}"#,
+                "\n",
+                r#"{"type":"message","timestamp":1788627790000,"message":{"role":"user","content":[{"type":"text","text":"now do the next thing"}]}}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["pi"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].session_id, "42");
+        assert_eq!(
+            rows[0].last_prompt.as_deref(),
+            Some("now do the next thing")
+        );
+        assert_eq!(rows[0].last_prompt_at, Some(1788627790000));
+    }
+
+    #[test]
+    fn cursor_walker_reuses_claude_shape() {
+        let home = fixture_home();
+        let transcripts = home
+            .path()
+            .join(".cursor")
+            .join("projects")
+            .join("-tmp-demo")
+            .join("agent-transcripts");
+        std::fs::create_dir_all(&transcripts).unwrap();
+        std::fs::write(
+            transcripts.join("c1.jsonl"),
+            concat!(
+                r#"{"type":"user","timestamp":"2026-09-09T01:00:00.000Z","message":{"role":"user","content":"cursor ask"}}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["cursor"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("cursor ask"));
+        assert_eq!(rows[0].last_prompt_at, Some(1788915600000));
+    }
+
+    #[test]
+    fn openhands_walker_scans_event_files() {
+        let home = fixture_home();
+        let events = home
+            .path()
+            .join(".openhands")
+            .join("conversations")
+            .join("oh1")
+            .join("events");
+        std::fs::create_dir_all(&events).unwrap();
+        std::fs::write(
+            events.join("1.json"),
+            r#"{"id":1,"source":"agent","message":"on it","timestamp":"2026-09-10T11:59:00.000Z"}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            events.join("2.json"),
+            r#"{"id":2,"source":"user","message":"run the tests","timestamp":"2026-09-10T12:00:00.000Z"}"#,
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["openhands"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("run the tests"));
+        assert_eq!(rows[0].last_prompt_at, Some(1789041600000));
+    }
+
+    #[test]
+    fn muse_walker_extracts_last_user_line() {
+        let home = fixture_home();
+        let dir = home
+            .path()
+            .join(".local")
+            .join("share")
+            .join("muse")
+            .join("sessions")
+            .join("x")
+            .join("y");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("session.jsonl"),
+            concat!(
+                r#"{"role":"user","content":"compose the melody","timestamp":1788627782000}"#,
+                "\n",
+                r#"{"role":"assistant","content":"here it is","timestamp":1788627783000}"#,
+                "\n",
+                r#"{"role":"user","content":"now transpose it","timestamp":1788627790000}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["muse"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("now transpose it"));
+        assert_eq!(rows[0].last_prompt_at, Some(1788627790000));
+    }
+
+    #[test]
+    fn vibe_walker_extracts_last_user_line() {
+        let home = fixture_home();
+        let ses = home
+            .path()
+            .join(".vibe")
+            .join("logs")
+            .join("session")
+            .join("session_1_2");
+        std::fs::create_dir_all(&ses).unwrap();
+        std::fs::write(
+            ses.join("messages.jsonl"),
+            concat!(
+                r#"{"role":"user","content":"earlier vibe ask","created_at":1788627782}"#,
+                "\n",
+                r#"{"role":"user","content":"latest vibe ask","created_at":1788627790}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["vibe"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].session_id, "2");
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("latest vibe ask"));
+        // epoch seconds → ms.
+        assert_eq!(rows[0].last_prompt_at, Some(1788627790000));
+    }
+
+    #[test]
+    fn gemini_walker_handles_single_line_json_array() {
+        let home = fixture_home();
+        let chats = home.path().join(".gemini").join("tmp").join("proj").join("chats");
+        std::fs::create_dir_all(&chats).unwrap();
+        std::fs::write(
+            chats.join("g1.json"),
+            concat!(
+                r#"[{"role":"user","parts":[{"text":"first gemini ask"}],"timestamp":"2026-09-09T01:00:00.000Z"},"#,
+                r#"{"role":"model","parts":[{"text":"ok"}],"timestamp":"2026-09-09T01:01:00.000Z"},"#,
+                r#"{"role":"user","parts":[{"text":"second gemini ask"}],"timestamp":"2026-09-09T01:02:00.000Z"}]"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["gemini"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("second gemini ask"));
+        assert_eq!(rows[0].last_prompt_at, Some(1788915720000));
+    }
+
+    #[test]
+    fn droid_walker_extracts_last_user_line() {
+        let home = fixture_home();
+        let sessions = home.path().join(".factory").join("sessions");
+        std::fs::create_dir_all(&sessions).unwrap();
+        std::fs::write(
+            sessions.join("d1.jsonl"),
+            concat!(
+                r#"{"role":"user","content":"old droid ask","ts":1788627782000}"#,
+                "\n",
+                r#"{"role":"assistant","content":"building","ts":1788627783000}"#,
+                "\n",
+                r#"{"role":"user","content":"new droid ask","ts":1788627790000}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["droid"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("new droid ask"));
+        assert_eq!(rows[0].last_prompt_at, Some(1788627790000));
+    }
+
+    #[test]
+    fn cline_walker_reuses_history_parse_for_last_prompt() {
+        let home = fixture_home();
+        let task = home
+            .path()
+            .join("Library")
+            .join("Application Support")
+            .join("Code")
+            .join("User")
+            .join("globalStorage")
+            .join("saoudrizwan.claude-dev")
+            .join("tasks")
+            .join("task-1");
+        std::fs::create_dir_all(&task).unwrap();
+        std::fs::write(
+            task.join("api_conversation_history.json"),
+            concat!(
+                r#"[{"role":"user","content":"cline first","ts":1725974400000},"#,
+                r#"{"role":"assistant","content":"on it"},"#,
+                r#"{"role":"user","content":"cline last","ts":1725974500000}]"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["cline"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].title.as_deref(), Some("cline first"));
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("cline last"));
+        assert_eq!(rows[0].last_prompt_at, Some(1725974500000));
+    }
+
+    #[test]
+    fn amp_walker_reuses_thread_parse_for_last_prompt() {
+        let home = fixture_home();
+        let threads = home.path().join(".local").join("share").join("amp").join("threads");
+        std::fs::create_dir_all(&threads).unwrap();
+        std::fs::write(
+            threads.join("T-abc.json"),
+            r#"{"created_at":"2026-09-01T00:00:00.000Z","messages":[{"role":"user","content":[{"type":"text","text":"amp first"}]},{"role":"assistant","content":[{"type":"text","text":"thinking"}]},{"role":"user","content":[{"type":"text","text":"amp last"}]}]}"#,
+        )
+        .unwrap();
+
+        let rows = list_native_sessions(home.path(), Some(&["amp"]), None);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].last_prompt.as_deref(), Some("amp last"));
+        // amp messages carry no per-message timestamp.
+        assert_eq!(rows[0].last_prompt_at, None);
     }
 }

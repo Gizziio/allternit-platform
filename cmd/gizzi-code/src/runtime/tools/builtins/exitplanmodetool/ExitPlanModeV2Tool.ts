@@ -31,6 +31,14 @@ import {
   getPlanFilePath,
   persistFileSnapshotIfRemote,
 } from '../../../../shared/utils/plans.js'
+import {
+  isRailsPeerMode,
+} from '@/runtime/gizzi-core/services/railsDag.js'
+import {
+  parsePlanTodos,
+  publishPlanToRails,
+  type RailsPlanPublishResult,
+} from '@/runtime/gizzi-core/services/railsPlan.js'
 import { jsonStringify } from '../../../../shared/utils/slowOperations.js'
 import {
   getAgentName,
@@ -144,6 +152,16 @@ export const outputSchema = lazySchema(() =>
 type OutputSchema = ReturnType<typeof outputSchema>
 
 export type Output = z.infer<OutputSchema>
+
+// Side-channel from call() to mapToolResultToToolResultBlockParam (same
+// pattern as FileReadTool's mtime channel): the Rails DAG publish result,
+// available only when the local gateway confirmed within the bounded wait.
+let lastRailsPlanPublish: RailsPlanPublishResult | null = null
+
+// Bounded wait for the localhost publish so the tool_result can carry the
+// dag reference. Plan exit is never delayed longer than this, and a dead
+// gateway still exits cleanly (publishPlanToRails returns null).
+const RAILS_PLAN_PUBLISH_WAIT_MS = 1_500
 
 export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
   name: EXIT_PLAN_MODE_V2_TOOL_NAME,
@@ -407,6 +425,48 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
       isAgentSwarmsEnabled() &&
       context.options.tools.some(t => toolMatchesName(t, AGENT_TOOL_NAME))
 
+    // Rails peer mode: publish the approved plan to the CommRails DAG so it
+    // shows in the Rails todo panel. Best-effort — bounded wait on the local
+    // gateway, never blocks plan exit longer than the deadline, failures
+    // only skip the dag line in the tool_result.
+    lastRailsPlanPublish = null
+    if (plan && isRailsPeerMode()) {
+      const parsed = parsePlanTodos(plan)
+      if (parsed.todos.length > 0) {
+        const publishPromise = publishPlanToRails(
+          parsed.title,
+          parsed.todos,
+        )
+          .then(result => {
+            if (!result) return null
+            try {
+              context.setAppState(prev => ({
+                ...prev,
+                railsDag: {
+                  ...prev.railsDag,
+                  planPublish: {
+                    dag_id: result.dag_id,
+                    node_count: result.node_count,
+                    publishedAt: Date.now(),
+                  },
+                },
+              }))
+            } catch {
+              // Best-effort state mirror; the tool_result line below is the
+              // authoritative signal.
+            }
+            return result
+          })
+          .catch(() => null)
+        lastRailsPlanPublish = await Promise.race([
+          publishPromise,
+          new Promise<null>(resolve =>
+            setTimeout(() => resolve(null), RAILS_PLAN_PUBLISH_WAIT_MS),
+          ),
+        ]).catch(() => null)
+      }
+    }
+
     return {
       data: {
         plan,
@@ -479,12 +539,16 @@ Request ID: ${requestId}`,
       ? 'Approved Plan (edited by user)'
       : 'Approved Plan'
 
+    const railsDagLine = lastRailsPlanPublish
+      ? `\n\nTracked as dag ${lastRailsPlanPublish.dag_id} (${lastRailsPlanPublish.node_count} nodes) — visible in the Rails todo panel.`
+      : ''
+
     return {
       type: 'tool_result',
       content: `User has approved your plan. You can now start coding. Start with updating your todo list if applicable
 
 Your plan has been saved to: ${filePath}
-You can refer back to it if needed during implementation.${teamHint}
+You can refer back to it if needed during implementation.${teamHint}${railsDagLine}
 
 ## ${planLabel}:
 ${plan}`,

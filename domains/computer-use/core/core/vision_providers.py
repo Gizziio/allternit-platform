@@ -96,6 +96,12 @@ class ActionPlan:
     # batch instead of step-by-step turns. ``immediate_action`` stays the first
     # step. Never required — the loop falls back to per-step when absent.
     batch: Optional[List["VisionAction"]] = None
+    # Optional code-mode request (core/code_mode.py): a validated, grant-bound
+    # code payload the loop may dispatch INSTEAD of immediate_action when the
+    # run explicitly opted in (PlanningLoopConfig.code_mode_enabled). Shape:
+    # {"language": "playwright-js", "code": str, "declaredTargets": [str]}.
+    # Never the default mode; refused payloads surface as observations.
+    code: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -926,6 +932,18 @@ ACTION_PLAN_JSON_SCHEMA: Dict[str, Any] = {
                 "required": ["type", "target"],
             },
         },
+        # Optional code-mode request (core/code_mode.py): validated grant-bound
+        # code payload, consumed only when the run explicitly enabled code
+        # mode. Omit — whitelist actions and batches remain the primary paths.
+        "code": {
+            "type": "object",
+            "properties": {
+                "language": {"type": "string"},
+                "code": {"type": "string"},
+                "declaredTargets": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["code"],
+        },
     },
     "required": ["immediate_action", "done"],
 }
@@ -1021,6 +1039,15 @@ def _parse_action_plan(raw: str) -> ActionPlan:
                     text=item.get("text"),
                 ))
             batch = parsed_batch or None
+        code = None
+        raw_code = data.get("code")
+        if isinstance(raw_code, dict) and isinstance(raw_code.get("code"), str):
+            raw_targets = raw_code.get("declaredTargets") or raw_code.get("declared_targets") or []
+            code = {
+                "language": str(raw_code.get("language") or "playwright-js"),
+                "code": raw_code["code"],
+                "declaredTargets": [str(t) for t in raw_targets if isinstance(t, (str, int, float))],
+            }
         return ActionPlan(
             reasoning=data.get("reasoning", ""),
             plan_steps=data.get("plan_steps", []),
@@ -1030,6 +1057,7 @@ def _parse_action_plan(raw: str) -> ActionPlan:
             risk_level=data.get("risk_level", "low"),
             done=bool(data.get("done", False)),
             batch=batch,
+            code=code,
         )
     except Exception:
         return ActionPlan(

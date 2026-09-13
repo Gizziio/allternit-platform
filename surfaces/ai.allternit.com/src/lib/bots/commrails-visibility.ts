@@ -14,6 +14,10 @@ export interface VisibilityPane {
   id: string;
   label: string;
   state: AoPaneState;
+  /** Last user prompt the pane's agent is working on (from native session files). */
+  lastMessage?: string;
+  /** Epoch ms when that prompt arrived. */
+  lastMessageAt?: number;
 }
 
 export interface VisibilityNeed {
@@ -87,6 +91,14 @@ function parseDto(raw: unknown): VisibilityDto {
         id: String(p.id ?? ''),
         label: String(p.label ?? p.id ?? 'pane'),
         state: mapAoPaneState(typeof p.state === 'string' ? p.state : undefined),
+        lastMessage:
+          typeof p.lastMessage === 'string' && p.lastMessage.length > 0
+            ? p.lastMessage
+            : undefined,
+        lastMessageAt:
+          typeof p.lastMessageAt === 'number' && Number.isFinite(p.lastMessageAt)
+            ? p.lastMessageAt
+            : undefined,
       }))
       .filter((p) => p.id.length > 0),
     machines: Array.isArray(rec.machines) ? rec.machines : [],
