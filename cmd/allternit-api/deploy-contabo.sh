@@ -64,6 +64,9 @@ for attempt in 1 2 3 4 5 6 7 8 9 10; do
     echo "waiting for health (attempt $attempt)..."
 done
 
+echo "HEALTH CHECK FAILED — dumping service logs before rollback" >&2
+journalctl -u allternit-api -n 60 --no-pager >&2 || true
+systemctl status allternit-api --no-pager -l >&2 || true
 echo "HEALTH CHECK FAILED — rolling back to previous binary" >&2
 systemctl stop allternit-api
 if [[ -f "$BAK" ]]; then
