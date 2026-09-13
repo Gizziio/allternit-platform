@@ -31,6 +31,7 @@ import {
 } from '../../cli/ui/ink-renderer/termio/osc.js'
 import { shutdownDatadog } from '../../runtime/services/analytics/datadog.js'
 import { shutdown1PEventLogging } from '../../runtime/services/analytics/firstPartyEventLogger.js'
+import { flushGizziUsageTelemetry } from '../../runtime/services/telemetry/gizziUsageTelemetry.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -503,7 +504,11 @@ export async function gracefulShutdown(
   // Lost analytics on slow networks are acceptable; a hanging exit is not.
   try {
     await Promise.race([
-      Promise.all([shutdown1PEventLogging(), shutdownDatadog()]),
+      Promise.all([
+        shutdown1PEventLogging(),
+        shutdownDatadog(),
+        flushGizziUsageTelemetry(),
+      ]),
       sleep(500),
     ])
   } catch {

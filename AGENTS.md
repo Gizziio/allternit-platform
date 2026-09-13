@@ -19,6 +19,8 @@
 
 Every agent session in this repo works in its OWN linked worktree — never in the shared main checkout. On your first prompt (or SessionStart), a hook injects the ritual: create-or-reuse `<repo>-session-<id>` on branch `session/<id>` and `cd` into it. A PreToolUse guard blocks `git commit/checkout/switch/merge/push/rebase/reset` and `branch -d` in the shared checkout (escape for human/orchestrator merges: `STEER_GUARD_OFF=1`). Rationale: concurrent sessions sharing one HEAD collide on branches, commits, and dirty files. gizzi-code additionally has native `--worktree` support (`src/shared/utils/worktree.ts`); making it default-on is tracked as phase W2. Linked worktrees pass all guards automatically (detected via the git dir path).
 
+**Local gateway port ownership.** `allternit-api` binds the production gateway port **8013 only when `ALLTERNIT_API_PORT=8013` is set explicitly** — the unset default is the dev port 18013. The packaged Desktop pins 8013 when it spawns its sidecar (and reclaims the port on launch); a dev desktop launched from a worktree binds 18013 instead. Never export `ALLTERNIT_API_PORT=8013` from a session shell or launch script unless you deliberately intend to replace the installed app's gateway — dev builds launched without the env var are safe by construction.
+
 **Worktree ownership is absolute.** A worktree belongs to the session that created it (or, for long-lived non-session worktrees like `allternit-desktop-preview`, to the machine/owner). Never run `git checkout`/`switch`/`reset`/`merge`/`rebase` in a worktree you did not create. To consume newer main in a worktree you don't own, move **forward only**: `git fetch origin && git checkout --detach origin/main` (or `git pull --ff-only` if it tracks main) — never sideways to another branch, never backwards to an older commit. Wiping a sibling session's uncommitted work by re-pointing its checkout is how the 2026-09-09 shell-rail session lost a full edit pass. If you believe a worktree needs a different state, write your findings in `.steering/checkpoint.md` and leave the checkout alone.
 
 ## Session lifecycle — the full repo process (do ALL of it, every session)
@@ -26,7 +28,7 @@ Every agent session in this repo works in its OWN linked worktree — never in t
 Agents that stop at "code works in my worktree" leave debt for the next session. A session is not done until all of this is done. Canonical example: session `0f55144a` (2026-09-07, PR #105).
 
 1. **Worktree.** Create `<repo>-session-<id>` on branch `session/<id>` from latest `main`; `cd` into it. Never edit the shared checkout (it may hold other sessions' uncommitted in-flight work — leave that untouched).
-2. **Plan.** After scoping with the owner, write a plan file with concrete, checkable todos. Update `.steering/checkpoint.md` (`Goal` / `Just did` / `Next` / `Open questions`) at every milestone.
+2. **Plan.** After scoping with the owner, enter the work into the CommRails WIH DAG (`allternit-commrails plan new`, then per-node `wih pickup`) — see "Planning and task tracking" below for the >2-step rule. A plan file may be drafted as scratch while scoping, but the DAG is the source of truth once it exists. Update `.steering/checkpoint.md` (`Goal` / `Just did` / `Next` / `Open questions`) at every milestone.
 3. **Implement and verify.** Every claim checked before you make it: typecheck, unit tests, `cargo check`/`cargo test` for Rust, and a live smoke test (run the server, `curl` the endpoints) for anything behavioral. Note pre-existing breakage as pre-existing; don't silently fix unrelated files.
 4. **Commit and push.** Logical commits (conventional-ish prefixes: `feat(...)`, `fix(...)`, `docs(ledger): ...`), push the session branch to origin. Never commit directly on main except step 7.
 5. **PR and merge.** `gh pr create` with a real summary + verification evidence, `gh pr merge <n> --merge` (merge commit, not squash — keeps session chunk history). Record the PR number and merge SHA.
@@ -66,13 +68,26 @@ This repo is wired for hook-based steering: when an agent session working here e
 
 ## Planning and task tracking
 
-Use a written plan as the source of truth for the session.
+Multi-step work is tracked in the CommRails WIH DAG, deterministically — not by
+agent discretion. Ratified per `commrails/spec/DAG_AS_DEFAULT_TASK_SYSTEM.md`.
 
-- **Create a plan file.** After scoping the feature or fix with the user, use plan mode to produce a plan file with detailed, checkable todos.
-- **Make todos concrete.** Each todo should describe a single deliverable or verification step that can be clearly marked done.
-- **Check off as you finish.** Update the plan file as work is completed. Checked items should coincide with commits, checkpoints in `.steering/checkpoint.md`, and cleanup milestones.
-- **Use the plan to verify work.** Before calling a task complete, review the plan and ensure every todo is either done or explicitly deferred with a reason.
-- **Clean up the plan file.** Remove or archive the plan file once the work is merged and the session is finished, unless the project requires keeping it.
+- **The rule.** If a session expects to take more than two steps, or its work
+  will be picked up, reviewed, or continued by another session, it must be
+  represented as DAG nodes under a `plan` before execution: `allternit-commrails
+  plan new "<goal>"`, broken into nodes. Work of two steps or less may stay
+  ephemeral (no DAG required).
+- **The DAG is the source of truth.** A markdown plan file is scratch for
+  drafting only; the moment the DAG exists, node statuses replace the
+  checklist. Session handoffs reference `dag:<dag_id>` / `wih:<wih_id>`, never
+  a plan-file path.
+- **Track by node status.** Todos live as DAG node statuses (`NEW` → `READY` →
+  `RUNNING` → `DONE`/`FAILED`); readiness comes from `ready_nodes`, not from a
+  checklist in a markdown file.
+- **Verify against the DAG.** Before calling a task complete, review the plan's
+  nodes and ensure every node is `DONE` or explicitly deferred with a reason.
+- **No dual tracking.** Do not maintain a parallel plan file alongside the DAG.
+  One source of truth; the temporal boundary is: plan file = pre-DAG scratch
+  only.
 
 ## Agent creation checklist
 

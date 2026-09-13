@@ -19,7 +19,7 @@ const GRAPH_NODES = {
   },
   categories: [
     {
-      id: 'platforms', label: 'Platforms', color: '#6366f1', textColor: '#fff',
+      id: 'platforms', label: 'Platforms', color: '#B08D6E', textColor: '#fff',
       desc: 'Platform-specific writing rules, tone, frequency, and format guides.',
       children: [
         { id: 'x',         label: 'X / Twitter', icon: <XIcon size={13} weight="bold" />,          desc: '280 chars max, contrarian takes, step-by-step threads. Post 5×/week.',          freq: '5×/week' },

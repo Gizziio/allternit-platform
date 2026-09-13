@@ -39,6 +39,11 @@ impl DbHandle {
         Connection::open(&self.path)
     }
 
+    /// Filesystem path backing this handle (for DB-size reporting).
+    pub fn path(&self) -> &std::path::Path {
+        &self.path
+    }
+
     /// Store the original frontend surface for a Gizzi session.
     pub fn set_session_origin_surface(
         &self,

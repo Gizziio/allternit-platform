@@ -85,7 +85,7 @@ test.describe('Mode switching smoke tests', () => {
   test('Design mode renders', async ({ page }) => {
     await clickModeButton(page, 'Design');
     await expect(page.locator('[data-active-view="design"]')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('heading', { name: 'New project' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'What should we create?' })).toBeVisible({ timeout: 5000 });
   });
 
   test('Browser mode renders', async ({ page }) => {

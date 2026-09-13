@@ -123,7 +123,7 @@ export function SkillsRegistryView() {
               padding: '6px 14px',
               borderRadius: 6,
               border: 'none',
-              background: modeFilter === mode ? 'var(--accent-chat)' : 'var(--bg-secondary)',
+              background: modeFilter === mode ? 'var(--accent-primary)' : 'var(--bg-secondary)',
               color: modeFilter === mode ? 'white' : 'var(--text-secondary)',
               fontSize: 12,
               fontWeight: 600,
@@ -171,7 +171,7 @@ export function SkillsRegistryView() {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 background: selectedSkill === skill.id ? 'rgba(255, 255, 255, 0.08)' : undefined,
-                borderColor: selectedSkill === skill.id ? 'var(--accent-chat)' : undefined
+                borderColor: selectedSkill === skill.id ? 'var(--accent-primary)' : undefined
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>

@@ -65,11 +65,18 @@ export const AGENT_MODELS: AgentModelOption[] = (generatedModels as readonly Gen
 /**
  * Platform-default model for new agents: `config.models.defaults.primary`,
  * falling back through the curated defaults to the first catalog entry.
+ *
+ * `kimi/kimi-for-coding` is the platform default but a virtual id — it is not
+ * in the generated gateway registry — so synthesize its option instead of
+ * silently falling through to the next curated entry.
  */
 export function getDefaultAgentModel(): AgentModelOption {
   for (const id of [config.models.defaults.primary, ...config.models.curatedDefaults]) {
     const hit = AGENT_MODELS.find((m) => m.id === id);
     if (hit) return hit;
+    if (id === config.models.defaults.primary && id.startsWith("kimi/")) {
+      return { id, name: "Kimi for Coding", provider: "custom" };
+    }
   }
   return AGENT_MODELS[0];
 }

@@ -14,7 +14,6 @@ import {
   Plus,
   ArrowSquareOut,
   Gear,
-  RocketLaunch,
   X,
   Terminal,
   ChatCenteredText,
@@ -111,8 +110,6 @@ export function CodeWorkspaceBar({
       <WorktreePill enabled={worktreeEnabled} onToggle={onToggleWorktree} />
 
       <CanvasTogglePill isOpen={terminalCanvasOpen} onToggle={onToggleTerminalCanvas} />
-
-      <RemoteControlPill />
 
       <SyncPill onRefresh={onRefresh} />
     </div>
@@ -571,181 +568,6 @@ function WorktreePill({
       )}
       <span>worktree</span>
     </Pill>
-  );
-}
-
-function RemoteControlPill() {
-  const [open, setOpen] = useState(false);
-  const [showSetup, setShowSetup] = useState(false);
-
-  return (
-    <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <span>
-            <Pill ariaLabel="Remote control" testId="code-workspace-bar-remote-control" isOpen={open}>
-              <IconWrapper><RocketLaunch size={14} /></IconWrapper>
-              <IconWrapper><CaretDown size={12} style={{ opacity: 0.7 }} /></IconWrapper>
-            </Pill>
-          </span>
-        </PopoverTrigger>
-        <PopoverContent
-          align="end"
-          side="top"
-          sideOffset={8}
-          className="w-64 p-2 rounded-xl border bg-popover shadow-xl"
-          style={{ background: 'var(--surface-floating)', borderColor: BORDER }}
-        >
-          <DropdownSection title="Remote Control">
-            <DropdownItem
-              icon={<RocketLaunch size={14} />}
-              label="Set up Remote Control"
-              description="Run claude rc on your machine to code from here."
-              onClick={() => {
-                setOpen(false);
-                setShowSetup(true);
-              }}
-            />
-            <DropdownItem disabled icon={<Plus size={14} />} label="Add SSH host…" />
-          </DropdownSection>
-        </PopoverContent>
-      </Popover>
-
-      <RemoteControlSetupDialog open={showSetup} onClose={() => setShowSetup(false)} />
-    </>
-  );
-}
-
-function RemoteControlSetupDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0, 0, 0, 0.45)',
-        padding: 20,
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 480,
-          maxHeight: '90vh',
-          overflow: 'auto',
-          borderRadius: 16,
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          background: 'var(--surface-floating, #1a1d21)',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.45)',
-          padding: '20px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: 'var(--text-primary)' }}>
-              Set up Remote Control
-            </h2>
-            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              Connect to a machine running the Allternit remote agent.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div
-            style={{
-              padding: 14,
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
-              fontFamily: 'var(--font-mono, monospace)',
-              fontSize: 13,
-              color: 'var(--text-primary)',
-            }}
-          >
-            claude rc --install
-          </div>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            Run the command above on the machine you want to control, then copy the pairing code into the field below.
-          </p>
-          <input
-            type="text"
-            placeholder="Pairing code"
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(255,255,255,0.03)',
-              color: 'var(--text-primary)',
-              fontSize: 13,
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.1)',
-                background: 'transparent',
-                color: 'var(--text-secondary)',
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 8,
-                border: 'none',
-                background: 'var(--text-primary)',
-                color: 'var(--surface-floating)',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Connect
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 

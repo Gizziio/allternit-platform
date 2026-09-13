@@ -25,12 +25,13 @@ use tracing::warn;
 use crate::auth::AuthUser;
 use crate::AppState;
 
-use super::{dlp_patterns, inference_hooks, router as policy_router};
+use super::{dlp_patterns, inference_hooks, llm_pricing, router as policy_router};
 
 pub fn gateway_admin_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/gateway/usage", get(get_usage))
         .route("/gateway/logs", get(get_logs))
+        .route("/gateway/caching", get(get_caching))
         .route("/gateway/routing/decisions", get(get_routing_decisions))
         .route(
             "/gateway/routing/policies",
@@ -276,6 +277,10 @@ struct UsageQuery {
     from: Option<String>,
     /// YYYY-MM-DD, exclusive. Defaults to tomorrow.
     to: Option<String>,
+    /// Aggregation mode. Default groups by day/provider/model/key.
+    /// `tag` explodes `llm_usage_events.tags` (json_each) and aggregates
+    /// spend/tokens per tag key+value (cost attribution, task G8).
+    group_by: Option<String>,
 }
 
 async fn get_usage(
@@ -297,47 +302,94 @@ async fn get_usage(
                 .to_string()
         });
 
-        // Spend bills off the recomputed cost when present (V27 single
-        // source of truth).
-        let sql = format!(
-            "SELECT date(e.created_at) AS day,
-                    COALESCE(e.provider_id, '') AS provider,
-                    COALESCE(e.model_id, '') AS model,
-                    COALESCE(e.virtual_key_id, '') AS key_id,
-                    k.key_prefix,
-                    COUNT(*) AS requests,
-                    SUM(e.prompt_tokens), SUM(e.completion_tokens),
-                    SUM(e.reasoning_tokens), SUM(e.cached_tokens),
-                    SUM(COALESCE(e.recomputed_cost_microdollars, e.cost_microdollars)) AS spend,
-                    SUM(e.cost_mismatch) AS mismatches
-             FROM llm_usage_events e
-             LEFT JOIN llm_virtual_keys k ON k.id = e.virtual_key_id
-             WHERE {} AND e.created_at >= ?2 AND e.created_at < ?3
-             GROUP BY day, provider, model, key_id
-             ORDER BY day DESC, spend DESC",
-            scope.usage_where(1, "e")
-        );
-        let mut stmt = conn.prepare(&sql).map_err(internal_error)?;
-        let rows = stmt
-            .query_map(params![scope.value(), from, to], |row| {
-                Ok(json!({
-                    "day": row.get::<_, String>(0)?,
-                    "provider_id": row.get::<_, String>(1)?,
-                    "model_id": row.get::<_, String>(2)?,
-                    "virtual_key_id": row.get::<_, String>(3)?,
-                    "key_prefix": row.get::<_, Option<String>>(4)?,
-                    "requests": row.get::<_, i64>(5)?,
-                    "prompt_tokens": row.get::<_, i64>(6)?,
-                    "completion_tokens": row.get::<_, i64>(7)?,
-                    "reasoning_tokens": row.get::<_, i64>(8)?,
-                    "cached_tokens": row.get::<_, i64>(9)?,
-                    "spend_microdollars": row.get::<_, i64>(10)?,
-                    "cost_mismatches": row.get::<_, i64>(11)?,
-                }))
-            })
-            .map_err(internal_error)?
-            .collect::<rusqlite::Result<Vec<_>>>()
-            .map_err(internal_error)?;
+        let group_by_tag = matches!(query.group_by.as_deref(), Some("tag"));
+        if query.group_by.is_some() && !group_by_tag {
+            return Err(bad_request(format!(
+                "`group_by` must be `tag` (got `{}`).",
+                query.group_by.as_deref().unwrap_or_default()
+            )));
+        }
+
+        let (rows, group_by) = if group_by_tag {
+            // Spend bills off the recomputed cost when present (V27 single
+            // source of truth). json_each skips NULL tags rows, so untagged
+            // spend simply does not appear in this mode.
+            let sql = format!(
+                "SELECT t.key, t.value,
+                        COUNT(*) AS requests,
+                        SUM(e.prompt_tokens), SUM(e.completion_tokens),
+                        SUM(e.reasoning_tokens), SUM(e.cached_tokens),
+                        SUM(COALESCE(e.recomputed_cost_microdollars, e.cost_microdollars)) AS spend,
+                        SUM(e.cost_mismatch) AS mismatches
+                 FROM llm_usage_events e, json_each(e.tags) t
+                 WHERE {} AND e.created_at >= ?2 AND e.created_at < ?3
+                 GROUP BY t.key, t.value
+                 ORDER BY spend DESC",
+                scope.usage_where(1, "e")
+            );
+            let mut stmt = conn.prepare(&sql).map_err(internal_error)?;
+            let rows = stmt
+                .query_map(params![scope.value(), from, to], |row| {
+                    Ok(json!({
+                        "tag_key": row.get::<_, String>(0)?,
+                        "tag_value": row.get::<_, String>(1)?,
+                        "requests": row.get::<_, i64>(2)?,
+                        "prompt_tokens": row.get::<_, i64>(3)?,
+                        "completion_tokens": row.get::<_, i64>(4)?,
+                        "reasoning_tokens": row.get::<_, i64>(5)?,
+                        "cached_tokens": row.get::<_, i64>(6)?,
+                        "spend_microdollars": row.get::<_, i64>(7)?,
+                        "cost_mismatches": row.get::<_, i64>(8)?,
+                    }))
+                })
+                .map_err(internal_error)?
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(internal_error)?;
+            (rows, "tag")
+        } else {
+            // Spend bills off the recomputed cost when present (V27 single
+            // source of truth).
+            let sql = format!(
+                "SELECT date(e.created_at) AS day,
+                        COALESCE(e.provider_id, '') AS provider,
+                        COALESCE(e.model_id, '') AS model,
+                        COALESCE(e.virtual_key_id, '') AS key_id,
+                        k.key_prefix,
+                        COUNT(*) AS requests,
+                        SUM(e.prompt_tokens), SUM(e.completion_tokens),
+                        SUM(e.reasoning_tokens), SUM(e.cached_tokens),
+                        SUM(COALESCE(e.recomputed_cost_microdollars, e.cost_microdollars)) AS spend,
+                        SUM(e.cost_mismatch) AS mismatches
+                 FROM llm_usage_events e
+                 LEFT JOIN llm_virtual_keys k ON k.id = e.virtual_key_id
+                 WHERE {} AND e.created_at >= ?2 AND e.created_at < ?3
+                 GROUP BY day, provider, model, key_id
+                 ORDER BY day DESC, spend DESC",
+                scope.usage_where(1, "e")
+            );
+            let mut stmt = conn.prepare(&sql).map_err(internal_error)?;
+            let rows = stmt
+                .query_map(params![scope.value(), from, to], |row| {
+                    Ok(json!({
+                        "day": row.get::<_, String>(0)?,
+                        "provider_id": row.get::<_, String>(1)?,
+                        "model_id": row.get::<_, String>(2)?,
+                        "virtual_key_id": row.get::<_, String>(3)?,
+                        "key_prefix": row.get::<_, Option<String>>(4)?,
+                        "requests": row.get::<_, i64>(5)?,
+                        "prompt_tokens": row.get::<_, i64>(6)?,
+                        "completion_tokens": row.get::<_, i64>(7)?,
+                        "reasoning_tokens": row.get::<_, i64>(8)?,
+                        "cached_tokens": row.get::<_, i64>(9)?,
+                        "spend_microdollars": row.get::<_, i64>(10)?,
+                        "cost_mismatches": row.get::<_, i64>(11)?,
+                    }))
+                })
+                .map_err(internal_error)?
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .map_err(internal_error)?;
+            (rows, "day")
+        };
 
         let mut totals = json!({
             "requests": 0, "prompt_tokens": 0, "completion_tokens": 0,
@@ -358,7 +410,7 @@ async fn get_usage(
         }
 
         Ok::<_, ApiError>(json!({
-            "from": from, "to": to,
+            "from": from, "to": to, "group_by": group_by,
             "usage": rows,
             "totals": totals,
         }))
@@ -379,6 +431,9 @@ struct LogsQuery {
     /// `created_at|id` of the last row of the previous page.
     cursor: Option<String>,
     status: Option<String>,
+    /// Filter to rows whose `tags` JSON contains this string as any key or
+    /// value (json_each match, task G8).
+    tag: Option<String>,
 }
 
 /// Split a `created_at|id` cursor.
@@ -419,12 +474,16 @@ async fn get_logs(
                     e.provider_id, e.model_id, e.fallback_from,
                     e.prompt_tokens, e.completion_tokens, e.reasoning_tokens, e.cached_tokens,
                     e.cost_microdollars, e.recomputed_cost_microdollars, e.cost_mismatch,
-                    e.latency_ms, e.ttft_ms, e.gizzi_session_id, k.key_prefix
+                    e.latency_ms, e.ttft_ms, e.gizzi_session_id, k.key_prefix,
+                    e.tags, e.batch_id, e.context_cache_id
              FROM llm_usage_events e
              LEFT JOIN llm_virtual_keys k ON k.id = e.virtual_key_id
              WHERE {}
                AND (?2 IS NULL OR e.status = ?2)
                AND (?3 IS NULL OR e.created_at < ?3 OR (e.created_at = ?3 AND e.id < ?4))
+               AND (?6 IS NULL OR EXISTS (
+                       SELECT 1 FROM json_each(e.tags) t
+                       WHERE t.value = ?6 OR t.key = ?6))
              ORDER BY e.created_at DESC, e.id DESC
              LIMIT ?5",
             scope.usage_where(1, "e")
@@ -436,8 +495,16 @@ async fn get_logs(
         let mut stmt = conn.prepare(&sql).map_err(internal_error)?;
         let mut rows = stmt
             .query_map(
-                params![scope.value(), query.status, cursor_ts, cursor_id, limit + 1],
+                params![
+                    scope.value(),
+                    query.status,
+                    cursor_ts,
+                    cursor_id,
+                    limit + 1,
+                    query.tag
+                ],
                 |row| {
+                    let tags: Option<String> = row.get(19)?;
                     Ok(json!({
                         "id": row.get::<_, String>(0)?,
                         "created_at": row.get::<_, String>(1)?,
@@ -458,6 +525,9 @@ async fn get_logs(
                         "ttft_ms": row.get::<_, Option<i64>>(16)?,
                         "gizzi_session_id": row.get::<_, Option<String>>(17)?,
                         "key_prefix": row.get::<_, Option<String>>(18)?,
+                        "tags": tags.and_then(|raw| serde_json::from_str::<Value>(&raw).ok()),
+                        "batch_id": row.get::<_, Option<String>>(20)?,
+                        "context_cache_id": row.get::<_, Option<String>>(21)?,
                     }))
                 },
             )
@@ -479,6 +549,202 @@ async fn get_logs(
         };
 
         Ok::<_, ApiError>(json!({ "logs": rows, "next_cursor": next_cursor }))
+    })
+    .await;
+
+    respond(result)
+}
+
+// ─── GET /gateway/caching ───────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+struct CachingQuery {
+    /// Rolling window, `<n>d` (e.g. `7d`, `30d`, `90d`). Default `30d`.
+    period: Option<String>,
+}
+
+/// Parse a `<n>d` period into a day count (1..=3650).
+fn parse_period_days(period: &str) -> Result<i64, ApiError> {
+    let days = period
+        .strip_suffix('d')
+        .ok_or_else(|| bad_request(format!("`period` must look like `30d` (got `{period}`).")))?
+        .parse::<i64>()
+        .map_err(|_| bad_request(format!("`period` must look like `30d` (got `{period}`).")))?;
+    if !(1..=3650).contains(&days) {
+        return Err(bad_request(format!(
+            "`period` must be between 1d and 3650d (got `{period}`)."
+        )));
+    }
+    Ok(days)
+}
+
+/// How the savings estimate is derived, surfaced in the response so API
+/// consumers (and the console UI) do not mistake it for a billed figure.
+const SAVINGS_BASIS: &str = "estimated_savings_microdollars = SUM(usage.cached_tokens × model input rate) from the models.dev cache. Upper bound: providers bill cache reads at a cheaper cache-read rate, and unpriced models are excluded and counted in savings_unpriced_models.";
+
+async fn get_caching(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Query(query): Query<CachingQuery>,
+) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+
+        let period = query.period.unwrap_or_else(|| "30d".to_string());
+        let days = parse_period_days(&period)?;
+        let since = format!("-{days} days");
+
+        // Period totals off the usage events (same scoping as /gateway/usage).
+        let totals_sql = format!(
+            "SELECT COUNT(*),
+                    COALESCE(SUM(CASE WHEN e.context_cache_id IS NOT NULL THEN 1 ELSE 0 END), 0),
+                    COALESCE(SUM(e.cached_tokens), 0)
+             FROM llm_usage_events e
+             WHERE {} AND e.created_at >= datetime('now', ?2)",
+            scope.usage_where(1, "e")
+        );
+        let (requests, requests_with_context_cache, cached_tokens): (i64, i64, i64) = conn
+            .query_row(&totals_sql, params![scope.value(), since], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })
+            .map_err(internal_error)?;
+
+        // Cached tokens per model → savings estimate (llm_pricing lookup, same
+        // source the B4 cost recompute uses).
+        let by_model_sql = format!(
+            "SELECT COALESCE(e.provider_id, ''), COALESCE(e.model_id, ''),
+                    SUM(e.cached_tokens)
+             FROM llm_usage_events e
+             WHERE {} AND e.created_at >= datetime('now', ?2) AND e.cached_tokens > 0
+             GROUP BY e.provider_id, e.model_id
+             ORDER BY SUM(e.cached_tokens) DESC",
+            scope.usage_where(1, "e")
+        );
+        let mut stmt = conn.prepare(&by_model_sql).map_err(internal_error)?;
+        let model_rows = stmt
+            .query_map(params![scope.value(), since], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?,
+                ))
+            })
+            .map_err(internal_error)?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(internal_error)?;
+
+        let pricing = llm_pricing::pricing_snapshot();
+        let mut estimated_savings_microdollars = 0i64;
+        let mut savings_unpriced_models = 0i64;
+        let mut by_model = Vec::new();
+        for (provider_id, model_id, tokens) in model_rows {
+            let row_savings =
+                llm_pricing::find_pricing(&pricing, &provider_id, &model_id).map(|pricing| {
+                    llm_pricing::cache_savings_microdollars(pricing, tokens)
+                });
+            match row_savings {
+                Some(savings) => estimated_savings_microdollars += savings,
+                None => savings_unpriced_models += 1,
+            }
+            by_model.push(json!({
+                "provider_id": provider_id,
+                "model_id": model_id,
+                "cached_tokens": tokens,
+                "estimated_savings_microdollars": row_savings,
+            }));
+        }
+
+        // Per-cache breakdown (lifetime counters — hits/last_used_at are not
+        // period-scoped). Scoped through the owning virtual key.
+        let cache_scope = match &scope {
+            Scope::Tenant(_) => "k.tenant_id = ?1".to_string(),
+            Scope::User(_) => "k.user_id = ?1".to_string(),
+        };
+        let context_sql = format!(
+            "SELECT c.id, c.name, c.hits, c.last_used_at,
+                    json_array_length(c.messages_json), LENGTH(c.messages_json),
+                    c.created_at, c.expires_at
+             FROM llm_context_caches c
+             JOIN llm_virtual_keys k ON k.id = c.virtual_key_id
+             WHERE {cache_scope}
+               AND (c.expires_at IS NULL OR c.expires_at > CURRENT_TIMESTAMP)
+             ORDER BY c.hits DESC, c.created_at DESC"
+        );
+        let mut stmt = conn.prepare(&context_sql).map_err(internal_error)?;
+        let context_caches = stmt
+            .query_map(params![scope.value()], |row| {
+                Ok(json!({
+                    "id": row.get::<_, String>(0)?,
+                    "name": row.get::<_, Option<String>>(1)?,
+                    "hits": row.get::<_, i64>(2)?,
+                    "last_used_at": row.get::<_, Option<String>>(3)?,
+                    "message_count": row.get::<_, i64>(4)?,
+                    "size_bytes": row.get::<_, i64>(5)?,
+                    "created_at": row.get::<_, String>(6)?,
+                    "expires_at": row.get::<_, Option<String>>(7)?,
+                }))
+            })
+            .map_err(internal_error)?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(internal_error)?;
+        let context_cache_hits: i64 = context_caches
+            .iter()
+            .map(|c| c["hits"].as_i64().unwrap_or(0))
+            .sum();
+
+        // Prompt-cache equivalent. There is no in-proxy read path for these
+        // (cache.rs is a storage API), so hits stay 0 until something real
+        // records them — the breakdown still lists entries.
+        let prompt_scope = match &scope {
+            Scope::Tenant(_) => "(p.tenant_id = ?1 OR p.tenant_id IS NULL)".to_string(),
+            Scope::User(_) => "p.tenant_id IS NULL".to_string(),
+        };
+        let prompt_sql = format!(
+            "SELECT p.id, p.name, p.hits, p.last_used_at, p.tokens, p.created_at, p.expires_at
+             FROM prompt_cache p
+             WHERE {prompt_scope} AND p.expires_at > ?2
+             ORDER BY p.hits DESC, p.created_at DESC"
+        );
+        let now = chrono::Utc::now().timestamp();
+        let mut stmt = conn.prepare(&prompt_sql).map_err(internal_error)?;
+        let prompt_caches = stmt
+            .query_map(params![scope.value(), now], |row| {
+                Ok(json!({
+                    "id": row.get::<_, String>(0)?,
+                    "name": row.get::<_, Option<String>>(1)?,
+                    "hits": row.get::<_, i64>(2)?,
+                    "last_used_at": row.get::<_, Option<i64>>(3)?,
+                    "tokens": row.get::<_, i64>(4)?,
+                    "created_at": row.get::<_, i64>(5)?,
+                    "expires_at": row.get::<_, i64>(6)?,
+                }))
+            })
+            .map_err(internal_error)?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(internal_error)?;
+        let prompt_cache_hits: i64 = prompt_caches
+            .iter()
+            .map(|c| c["hits"].as_i64().unwrap_or(0))
+            .sum();
+
+        Ok::<_, ApiError>(json!({
+            "period": period,
+            "totals": {
+                "requests": requests,
+                "requests_with_context_cache": requests_with_context_cache,
+                "context_cache_hits": context_cache_hits,
+                "prompt_cache_hits": prompt_cache_hits,
+                "cached_tokens": cached_tokens,
+                "estimated_savings_microdollars": estimated_savings_microdollars,
+                "savings_unpriced_models": savings_unpriced_models,
+            },
+            "savings_estimate_basis": SAVINGS_BASIS,
+            "by_model": by_model,
+            "context_caches": context_caches,
+            "prompt_caches": prompt_caches,
+        }))
     })
     .await;
 
@@ -1331,5 +1597,354 @@ mod tests {
         assert_eq!(tenant.usage_where(1, "e"), "e.tenant_id = ?1");
         let user = Scope::User("user_1".to_string());
         assert_eq!(user.usage_where(3, "e"), "e.user_id = ?3");
+    }
+
+    async fn tag_test_state() -> (Arc<AppState>, AuthUser) {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let user = AuthUser {
+            user_id: "user_1".to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        };
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO llm_usage_events
+             (id, virtual_key_id, user_id, status, prompt_tokens, completion_tokens,
+              cost_microdollars, tags, batch_id)
+             VALUES
+             ('e1', NULL, 'user_1', 'ok', 10, 5, 1000, '{\"team\":\"alpha\"}', NULL),
+             ('e2', NULL, 'user_1', 'ok', 20, 10, 2000, '{\"team\":\"beta\"}', 'batch_9'),
+             ('e3', NULL, 'user_1', 'error', 1, 0, 0, NULL, NULL)",
+            [],
+        )
+        .unwrap();
+        (state, user)
+    }
+
+    /// Seed an owner + virtual key, one context cache (2 hits), one prompt
+    /// cache, and usage events: one cached (context_cache_id + 500 cached
+    /// tokens on test/model), one uncached with 100 cached tokens.
+    async fn caching_test_state() -> (Arc<AppState>, AuthUser) {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let user = AuthUser {
+            user_id: "user_1".to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        };
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO users (id, email) VALUES ('user_1', 'u@example.com')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO llm_virtual_keys (id, user_id, key_hash, key_prefix)
+             VALUES ('vk1', 'user_1', 'hash', 'ak-test')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO llm_context_caches
+             (id, virtual_key_id, tenant_id, name, messages_json, ttl_seconds,
+              expires_at, hits, last_used_at)
+             VALUES ('ctx1', 'vk1', NULL, 'docs',
+                     '[{\"role\":\"system\",\"content\":\"a\"},{\"role\":\"user\",\"content\":\"b\"}]',
+                     3600, NULL, 2, '2026-09-11 12:00:00')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO prompt_cache
+             (id, content_hash, content, name, tokens, created_at, expires_at,
+              metadata_json, tenant_id, hits, last_used_at)
+             VALUES ('pc1', 'h1', 'prompt text', 'prompt-a', 42, 1757000000, 9999999999,
+                     NULL, NULL, 0, NULL)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO llm_usage_events
+             (id, virtual_key_id, user_id, status, provider_id, model_id,
+              prompt_tokens, completion_tokens, cached_tokens, context_cache_id)
+             VALUES
+             ('u1', 'vk1', 'user_1', 'ok', 'test', 'model', 100, 10, 500, 'ctx1'),
+             ('u2', 'vk1', 'user_1', 'ok', 'test', 'model', 50, 5, 100, NULL)",
+            [],
+        )
+        .unwrap();
+        (state, user)
+    }
+
+    async fn caching_body(state: Arc<AppState>, user: AuthUser, period: Option<String>) -> Value {
+        let response = get_caching(State(state), Extension(user), Query(CachingQuery { period }))
+            .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        serde_json::from_slice(&body).unwrap()
+    }
+
+    #[tokio::test]
+    async fn caching_aggregates_hits_tokens_and_breakdowns() {
+        let (state, user) = caching_test_state().await;
+        let body = caching_body(state, user, None).await;
+
+        assert_eq!(body["period"], "30d");
+        let totals = &body["totals"];
+        assert_eq!(totals["requests"], 2);
+        assert_eq!(totals["requests_with_context_cache"], 1);
+        assert_eq!(totals["context_cache_hits"], 2);
+        assert_eq!(totals["prompt_cache_hits"], 0);
+        assert_eq!(totals["cached_tokens"], 600);
+
+        // test/model is not in any real models.dev cache → unpriced, and the
+        // estimate never fabricates a number.
+        assert!(body["by_model"].as_array().unwrap().len() == 1);
+        assert_eq!(body["by_model"][0]["cached_tokens"], 600);
+        assert!(body["by_model"][0]["estimated_savings_microdollars"].is_null());
+        assert!(totals["estimated_savings_microdollars"].is_number());
+        assert_eq!(totals["savings_unpriced_models"], 1);
+        assert!(body["savings_estimate_basis"].as_str().unwrap().contains("cached_tokens"));
+
+        let context_caches = body["context_caches"].as_array().unwrap();
+        assert_eq!(context_caches.len(), 1);
+        assert_eq!(context_caches[0]["id"], "ctx1");
+        assert_eq!(context_caches[0]["hits"], 2);
+        assert_eq!(context_caches[0]["last_used_at"], "2026-09-11 12:00:00");
+        assert_eq!(context_caches[0]["message_count"], 2);
+        assert!(context_caches[0]["size_bytes"].as_i64().unwrap() > 0);
+
+        // Prompt-cache entry is listed; hits are honestly zero (no in-proxy
+        // read path records them yet).
+        let prompt_caches = body["prompt_caches"].as_array().unwrap();
+        assert_eq!(prompt_caches.len(), 1);
+        assert_eq!(prompt_caches[0]["id"], "pc1");
+        assert_eq!(prompt_caches[0]["hits"], 0);
+        assert_eq!(prompt_caches[0]["tokens"], 42);
+    }
+
+    #[tokio::test]
+    async fn caching_savings_estimate_math() {
+        // The handler prices models through llm_pricing's process cache; the
+        // pure math is pinned in llm_pricing tests (input rate × cached
+        // tokens, over-200k tier). Here we verify the handler hands back a
+        // consistent sum for whatever pricing exists: seed one event with
+        // zero cached tokens so totals stay zero regardless of the cache.
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let user = AuthUser {
+            user_id: "user_1".to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        };
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO llm_usage_events
+             (id, virtual_key_id, user_id, status, cached_tokens, context_cache_id)
+             VALUES ('z1', NULL, 'user_1', 'ok', 0, NULL)",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+        let body = caching_body(state, user, Some("7d".to_string())).await;
+        assert_eq!(body["period"], "7d");
+        assert_eq!(body["totals"]["cached_tokens"], 0);
+        assert_eq!(body["totals"]["estimated_savings_microdollars"], 0);
+        assert_eq!(body["totals"]["requests_with_context_cache"], 0);
+        assert_eq!(body["context_caches"].as_array().unwrap().len(), 0);
+        assert_eq!(body["prompt_caches"].as_array().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn caching_rejects_bad_period() {
+        let (state, user) = caching_test_state().await;
+        for bad in ["30", "days", "0d", "99999d"] {
+            let response = get_caching(
+                State(state.clone()),
+                Extension(user.clone()),
+                Query(CachingQuery {
+                    period: Some(bad.to_string()),
+                }),
+            )
+            .await;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST, "period={bad}");
+        }
+    }
+
+    #[tokio::test]
+    async fn caching_denied_for_non_admin_org_member() {
+        let (state, _user) = caching_test_state().await;
+        let outsider = AuthUser {
+            user_id: "user_2".to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: Some("org_x".to_string()),
+            organization_role: None,
+            organization_slug: None,
+        };
+        let response = get_caching(State(state), Extension(outsider), Query(CachingQuery {
+            period: None,
+        }))
+        .await;
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn logs_expose_context_cache_id() {
+        let (state, user) = caching_test_state().await;
+        let response = get_logs(
+            State(state),
+            Extension(user),
+            Query(LogsQuery {
+                limit: None,
+                cursor: None,
+                status: None,
+                tag: None,
+            }),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        let logs = body["logs"].as_array().unwrap();
+        assert_eq!(logs.len(), 2);
+        let cached = logs.iter().find(|l| l["id"] == "u1").unwrap();
+        assert_eq!(cached["context_cache_id"], "ctx1");
+        let uncached = logs.iter().find(|l| l["id"] == "u2").unwrap();
+        assert!(uncached["context_cache_id"].is_null());
+    }
+
+    #[tokio::test]
+    async fn usage_group_by_tag_aggregates_spend() {
+        let (state, user) = tag_test_state().await;
+        let response = get_usage(
+            State(state),
+            Extension(user),
+            Query(UsageQuery {
+                from: None,
+                to: None,
+                group_by: Some("tag".to_string()),
+            }),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["group_by"], "tag");
+        let usage = body["usage"].as_array().unwrap();
+        assert_eq!(usage.len(), 2);
+        // Ordered by spend DESC: beta (2000) before alpha (1000).
+        assert_eq!(usage[0]["tag_key"], "team");
+        assert_eq!(usage[0]["tag_value"], "beta");
+        assert_eq!(usage[0]["spend_microdollars"], 2000);
+        assert_eq!(usage[1]["tag_value"], "alpha");
+        assert_eq!(usage[1]["spend_microdollars"], 1000);
+        // Totals include both tagged rows (untagged e3 is excluded).
+        assert_eq!(body["totals"]["spend_microdollars"], 3000);
+        assert_eq!(body["totals"]["requests"], 2);
+    }
+
+    #[tokio::test]
+    async fn usage_rejects_unknown_group_by() {
+        let (state, user) = tag_test_state().await;
+        let response = get_usage(
+            State(state),
+            Extension(user),
+            Query(UsageQuery {
+                from: None,
+                to: None,
+                group_by: Some("nope".to_string()),
+            }),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn logs_filter_by_tag_and_expose_batch_id() {
+        let (state, user) = tag_test_state().await;
+        let response = get_logs(
+            State(state.clone()),
+            Extension(user.clone()),
+            Query(LogsQuery {
+                limit: None,
+                cursor: None,
+                status: None,
+                tag: Some("alpha".to_string()),
+            }),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        let logs = body["logs"].as_array().unwrap();
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0]["id"], "e1");
+        assert_eq!(logs[0]["tags"]["team"], "alpha");
+        assert!(logs[0]["batch_id"].is_null());
+
+        // Untagged rows are excluded; value-match works too.
+        let response = get_logs(
+            State(state.clone()),
+            Extension(user.clone()),
+            Query(LogsQuery {
+                limit: None,
+                cursor: None,
+                status: None,
+                tag: Some("beta".to_string()),
+            }),
+        )
+        .await;
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        let logs = body["logs"].as_array().unwrap();
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0]["batch_id"], "batch_9");
+
+        // No filter → all three rows.
+        let response = get_logs(
+            State(state),
+            Extension(user),
+            Query(LogsQuery {
+                limit: None,
+                cursor: None,
+                status: None,
+                tag: None,
+            }),
+        )
+        .await;
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["logs"].as_array().unwrap().len(), 3);
     }
 }

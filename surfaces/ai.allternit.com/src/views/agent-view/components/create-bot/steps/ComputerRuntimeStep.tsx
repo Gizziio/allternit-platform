@@ -52,7 +52,7 @@ const PROVIDER_COLORS: Record<string, string> = {
   openai: "#10a37f",
   anthropic: "#d97757",
   google: "#4285f4",
-  local: "#8b5cf6",
+  local: "#B08D6E",
   custom: "#64748b",
 };
 

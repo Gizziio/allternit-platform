@@ -12,6 +12,13 @@
 //! 3. Events are emitted with Allternit type names (`session.created`,
 //!    `user.message`, `agent.message`, …). The stored history keeps the
 //!    legacy vocabulary; translation happens on read.
+//! 4. Session permission modes (`always_allow` | `always_ask` | `auto`):
+//!    at create time the mode is merged with the agent's per-tool permission
+//!    map into `metadata.effective_permissions` (`allow`/`ask` per tool).
+//!    Enforcement is payload-and-flag based — the merged map ships to
+//!    workers in the lease payload (see `beta_work_routes`) and in-process
+//!    gating stamps `requires_approval` on stored `tool_calls` events (see
+//!    `beta_session_routes::append_event`).
 //!
 //! Completions/Responses (`agents_v1_routes`) are a separate Layer A surface
 //! and are untouched here. There is deliberately no public `/runtimes`
@@ -123,6 +130,8 @@ struct CreateCloudSessionBody {
     #[serde(default)]
     brain_id: Option<Value>,
     #[serde(default)]
+    memory_store_ids: Option<Value>,
+    #[serde(default)]
     parent_thread_id: Option<String>,
     #[serde(default)]
     permission: Option<String>,
@@ -215,6 +224,11 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
         .get("vault_ids")
         .cloned()
         .unwrap_or_else(|| json!([]));
+    let memory_store_ids = session
+        .metadata
+        .get("memory_store_ids")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
     json!({
         "id": session.id,
         "agent_id": session.agent_id,
@@ -228,13 +242,82 @@ fn public_session(session: &beta::SessionRow, in_flight: bool) -> Value {
         },
         "brain_id": session.brain_id,
         "vault_ids": vault_ids,
+        "memory_store_ids": memory_store_ids,
         "bot_id": session.metadata.get("bot_id"),
         "parent_thread_id": session.parent_thread_id,
         "permission": session.metadata.get("permission"),
+        "effective_permissions": session.metadata.get("effective_permissions"),
         "created_at": session.created_at,
         "updated_at": session.updated_at,
         "archived_at": session.archived_at,
     })
+}
+
+/// Collect tool names from an agent's `tools` JSON column (strings or
+/// `{name: …}` objects). Shared shape with `agent_routes::collect_tool_names`.
+fn collect_tool_names(value: Option<&Value>) -> Vec<String> {
+    let mut names = Vec::new();
+    let Some(items) = value.and_then(Value::as_array) else {
+        return names;
+    };
+    for item in items {
+        match item {
+            Value::String(s) => names.push(s.clone()),
+            Value::Object(map) => {
+                if let Some(name) = map.get("name").and_then(Value::as_str) {
+                    names.push(name.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    names
+}
+
+/// Merge an agent's per-tool permission map with the session permission
+/// mode into the effective permission map stored on session metadata:
+///
+/// * `always_allow` — every tool forced to `allow`.
+/// * `always_ask` — every tool forced to `ask`.
+/// * `auto` (and the no-mode default) — the per-tool map decides; a tool
+///   with no entry (or `auto`) defaults to `allow` (documented default).
+///
+/// Returns `{}` for agent-less sessions. Values are normalized to
+/// `allow`/`ask` so workers only ever see those two.
+fn compute_effective_permissions(
+    tools: Option<&str>,
+    tool_permissions: Option<&str>,
+    mode: Option<&str>,
+) -> Value {
+    let tools_value = tools.and_then(|raw| serde_json::from_str::<Value>(raw).ok());
+    let perms_value = tool_permissions.and_then(|raw| serde_json::from_str::<Value>(raw).ok());
+    let mut tool_names: Vec<String> = collect_tool_names(tools_value.as_ref());
+    if let Some(map) = perms_value.as_ref().and_then(Value::as_object) {
+        for key in map.keys() {
+            if !tool_names.contains(key) {
+                tool_names.push(key.clone());
+            }
+        }
+    }
+    let resolve = |tool: &str| -> &'static str {
+        match mode {
+            Some("always_allow") => "allow",
+            Some("always_ask") => "ask",
+            _ => match perms_value
+                .as_ref()
+                .and_then(|perms| perms.get(tool))
+                .and_then(Value::as_str)
+            {
+                Some("always_ask") => "ask",
+                _ => "allow",
+            },
+        }
+    };
+    let mut map = serde_json::Map::new();
+    for tool in tool_names {
+        map.insert(tool.clone(), json!(resolve(&tool)));
+    }
+    json!(map)
 }
 
 async fn bind_session_computer(
@@ -295,6 +378,29 @@ fn parse_vault_ids(value: &Option<Value>) -> Result<Vec<String>, ApiError> {
         }
         Some(_) => Err(ApiError::BadRequest(
             "vault_ids must be an array of strings".into(),
+        )),
+    }
+}
+
+fn parse_memory_store_ids(value: &Option<Value>) -> Result<Vec<String>, ApiError> {
+    match value {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(Value::Array(items)) => {
+            let mut ids = Vec::with_capacity(items.len());
+            for item in items {
+                match item.as_str() {
+                    Some(id) if !id.trim().is_empty() => ids.push(id.to_string()),
+                    _ => {
+                        return Err(ApiError::BadRequest(
+                            "memory_store_ids must be an array of strings".into(),
+                        ))
+                    }
+                }
+            }
+            Ok(ids)
+        }
+        Some(_) => Err(ApiError::BadRequest(
+            "memory_store_ids must be an array of strings".into(),
         )),
     }
 }
@@ -503,6 +609,7 @@ async fn create_cloud_session(
     let input_text = parse_input(&body.input)?;
     let brain_id = parse_brain_id(&body.brain_id)?;
     let vault_ids = parse_vault_ids(&body.vault_ids)?;
+    let memory_store_ids = parse_memory_store_ids(&body.memory_store_ids)?;
     let permission = match body.permission.as_deref() {
         None => None,
         Some("always_allow" | "always_ask" | "auto") => body.permission.clone(),
@@ -526,6 +633,7 @@ async fn create_cloud_session(
     let result_session_id = session_id.clone();
     let webhook_session_id = session_id.clone();
     let run_input = input_text.is_some();
+    let permission_for_db = permission.clone();
     let metadata = {
         let mut metadata = body.metadata.clone();
         let object = metadata
@@ -533,6 +641,9 @@ async fn create_cloud_session(
             .expect("metadata validated as object");
         if !vault_ids.is_empty() {
             object.insert("vault_ids".to_string(), json!(vault_ids.clone()));
+        }
+        if !memory_store_ids.is_empty() {
+            object.insert("memory_store_ids".to_string(), json!(memory_store_ids.clone()));
         }
         if let Some(brain_id) = &brain_id {
             object.insert("brain_id".to_string(), json!(brain_id));
@@ -558,6 +669,7 @@ async fn create_cloud_session(
     let session = tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
+        let mut metadata = metadata;
 
         if let Some(parent_id) = &parent_thread_id {
             let exists = tx.query_row(
@@ -592,6 +704,18 @@ async fn create_cloud_session(
             if !exists {
                 return Err(rusqlite::Error::InvalidParameterName(
                     "vault not found".to_string(),
+                ));
+            }
+        }
+        for store_id in &memory_store_ids {
+            let exists = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM beta_memory_stores WHERE id = ?1 AND user_id = ?2)",
+                params![store_id, user_id],
+                |row| row.get::<_, bool>(0),
+            )?;
+            if !exists {
+                return Err(rusqlite::Error::InvalidParameterName(
+                    "memory store not found".to_string(),
                 ));
             }
         }
@@ -652,6 +776,34 @@ async fn create_cloud_session(
                 Some(agent_id)
             }
         };
+
+        // Effective permissions: merge the agent's per-tool permission map
+        // with the session permission mode and store the result on metadata
+        // so both the session JSON and the worker lease payload can read it.
+        let effective_permissions = match agent_id.as_deref() {
+            Some(aid) => {
+                let agent_columns: Option<(Option<String>, Option<String>)> = tx
+                    .query_row(
+                        "SELECT tools, tool_permissions FROM agents WHERE id = ?1 AND user_id = ?2",
+                        params![aid, user_id],
+                        |row| Ok((row.get(0)?, row.get(1)?)),
+                    )
+                    .optional()?;
+                match agent_columns {
+                    Some((tools, tool_permissions)) => compute_effective_permissions(
+                        tools.as_deref(),
+                        tool_permissions.as_deref(),
+                        permission_for_db.as_deref(),
+                    ),
+                    None => json!({}),
+                }
+            }
+            None => json!({}),
+        };
+        metadata
+            .as_object_mut()
+            .expect("metadata validated as object")
+            .insert("effective_permissions".to_string(), effective_permissions);
 
         tx.execute(
             "INSERT INTO beta_sessions
@@ -832,6 +984,13 @@ async fn create_cloud_session(
         &json!({"type": "session.created", "session_id": result_session_id}),
     )
     .await;
+    webhook_subscription_routes::deliver_registered_event(
+        state.clone(),
+        organization_id.as_deref(),
+        webhook_subscription_routes::events::SESSION_CREATED,
+        json!({"session_id": result_session_id}),
+    )
+    .await;
 
     if body.stream {
         // SSE of this session's events, replayed from the beginning so the
@@ -858,6 +1017,8 @@ async fn archive_cloud_session(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
     let db = state.db.clone();
+    let webhook_org = user.organization_id.clone();
+    let webhook_session_id = id.clone();
     tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
@@ -881,6 +1042,13 @@ async fn archive_cloud_session(
             ApiError::DbError(e.to_string())
         }
     })?;
+    webhook_subscription_routes::deliver_registered_event(
+        state.clone(),
+        webhook_org.as_deref(),
+        webhook_subscription_routes::events::SESSION_ARCHIVED,
+        json!({"session_id": webhook_session_id}),
+    )
+    .await;
     Ok(Json(json!({ "archived": true })))
 }
 
@@ -1267,6 +1435,53 @@ mod tests {
         )
         .unwrap_or_else(|_| json!({}));
         (status, payload)
+    }
+
+    async fn send_json(
+        router: &Router,
+        method: &str,
+        path: &str,
+        body: &Value,
+        user: &str,
+    ) -> (StatusCode, Value) {
+        let response = router
+            .clone()
+            .oneshot(request(path, method, body, user))
+            .await
+            .unwrap();
+        let status = response.status();
+        let payload: Value = serde_json::from_slice(
+            &response.into_body().collect().await.unwrap().to_bytes(),
+        )
+        .unwrap_or_else(|_| json!({}));
+        (status, payload)
+    }
+
+    /// Insert an agents row directly (tools + per-tool permission map) so
+    /// session-create tests control the agent definition exactly.
+    fn insert_agent(
+        state: &Arc<AppState>,
+        user: &str,
+        tools: Value,
+        tool_permissions: Option<Value>,
+    ) -> String {
+        let id = uuid::Uuid::new_v4().to_string();
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO agents (id, user_id, name, model, provider, tools, tool_permissions)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                id,
+                user,
+                "perm-agent",
+                "kimi-k2",
+                "allternit",
+                tools.to_string(),
+                tool_permissions.map(|p| p.to_string())
+            ],
+        )
+        .unwrap();
+        id
     }
 
     #[tokio::test]
@@ -1714,6 +1929,90 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn unknown_memory_store_id_is_400() {
+        let temp = beta_test::temp_dir("cloud-store-miss");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state);
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "memory_store_ids": ["missing-store"]
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(
+            payload["error"]
+                .as_str()
+                .unwrap_or("")
+                .contains("memory store"),
+            "{payload}"
+        );
+    }
+
+    #[tokio::test]
+    async fn memory_store_ids_bind_and_echo_on_session() {
+        let temp = beta_test::temp_dir("cloud-store-hit");
+        let state = beta_test::test_app_state(&temp).await;
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO beta_memory_stores (id, user_id, name) VALUES (?1, ?2, ?3)",
+            params!["store-1", "user-a", "knowledge"],
+        )
+        .unwrap();
+        // Another user's store must not bind.
+        conn.execute(
+            "INSERT INTO beta_memory_stores (id, user_id, name) VALUES (?1, ?2, ?3)",
+            params!["store-other", "user-b", "foreign"],
+        )
+        .unwrap();
+        drop(conn);
+        let router = cloud_agents_router().with_state(state);
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "memory_store_ids": ["store-1"]
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        assert_eq!(payload["session"]["memory_store_ids"], json!(["store-1"]));
+        assert_eq!(
+            payload["session"]["metadata"]["memory_store_ids"],
+            json!(["store-1"])
+        );
+
+        // Session read echoes the binding.
+        let id = payload["session"]["id"].as_str().unwrap().to_string();
+        let (status, read_back) = get_json(&router, &format!("/sessions/{id}"), "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(read_back["session"]["memory_store_ids"], json!(["store-1"]));
+
+        // Cross-user binding is rejected.
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": {"model": "kimi-k2", "instructions": "hi"},
+                "computer": {"kind": "none"},
+                "memory_store_ids": ["store-other"]
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
     async fn fabric_and_desktop_without_driver_are_503() {
         let temp = beta_test::temp_dir("cloud-kind-400");
         let state = beta_test::test_app_state(&temp).await;
@@ -1833,5 +2132,223 @@ mod tests {
         )
         .await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+
+    // ── Phase 2 (G5): permission-mode enforcement ────────────────────────
+
+    #[tokio::test]
+    async fn session_create_always_ask_forces_all_tools_to_ask() {
+        let temp = beta_test::temp_dir("perm-ask");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state.clone());
+        let agent_id = insert_agent(&state, "user-a", json!(["web_search", "bash"]), None);
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": agent_id,
+                "computer": {"kind": "none"},
+                "permission": "always_ask"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{payload}");
+        assert_eq!(
+            payload["session"]["effective_permissions"],
+            json!({"web_search": "ask", "bash": "ask"})
+        );
+        // Echoed on the stored metadata too.
+        assert_eq!(
+            payload["session"]["metadata"]["effective_permissions"]["bash"],
+            "ask"
+        );
+    }
+
+    #[tokio::test]
+    async fn session_create_auto_merges_per_tool_permissions() {
+        let temp = beta_test::temp_dir("perm-auto");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state.clone());
+        let agent_id = insert_agent(
+            &state,
+            "user-a",
+            json!(["web_search", "bash"]),
+            Some(json!({"bash": "always_ask"})),
+        );
+
+        for mode in [json!("auto"), Value::Null] {
+            let mut body = json!({
+                "agent": agent_id,
+                "computer": {"kind": "none"}
+            });
+            if !mode.is_null() {
+                body["permission"] = mode;
+            }
+            let (status, payload) = post_json(&router, "/sessions", &body, "user-a").await;
+            assert_eq!(status, StatusCode::CREATED, "{payload}");
+            // Per-tool map decides under auto; unset tools default to allow.
+            assert_eq!(
+                payload["session"]["effective_permissions"],
+                json!({"web_search": "allow", "bash": "ask"})
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn session_create_always_allow_overrides_per_tool_map() {
+        let temp = beta_test::temp_dir("perm-allow");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router().with_state(state.clone());
+        let agent_id = insert_agent(
+            &state,
+            "user-a",
+            json!(["bash"]),
+            Some(json!({"bash": "always_ask"})),
+        );
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": agent_id,
+                "computer": {"kind": "none"},
+                "permission": "always_allow"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{payload}");
+        assert_eq!(
+            payload["session"]["effective_permissions"],
+            json!({"bash": "allow"})
+        );
+    }
+
+    #[tokio::test]
+    async fn lease_payload_carries_effective_permissions() {
+        let temp = beta_test::temp_dir("perm-lease");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router()
+            .merge(crate::beta_work_routes::beta_work_router())
+            .with_state(state.clone());
+        let agent_id = insert_agent(&state, "user-a", json!(["bash"]), None);
+
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": agent_id,
+                "computer": {"kind": "none"},
+                "input": "run something",
+                "permission": "always_ask"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{payload}");
+
+        let (status, payload) = get_json(&router, "/beta/work/queue?worker_id=w1", "user-a").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            payload["task"]["payload"]["effective_permissions"],
+            json!({"bash": "ask"})
+        );
+    }
+
+    #[tokio::test]
+    async fn tool_calls_event_is_flagged_and_enqueued_when_effective_ask() {
+        let temp = beta_test::temp_dir("perm-gating");
+        let state = beta_test::test_app_state(&temp).await;
+        let router = cloud_agents_router()
+            .merge(beta::beta_session_router())
+            .with_state(state.clone());
+        let agent_id = insert_agent(
+            &state,
+            "user-a",
+            json!(["web_search", "bash"]),
+            Some(json!({"bash": "always_ask"})),
+        );
+
+        // Mode always_ask: both tools gate.
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": agent_id,
+                "computer": {"kind": "none"},
+                "permission": "always_ask"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{payload}");
+        let ask_session = payload["session"]["id"].as_str().unwrap().to_string();
+
+        let (status, payload) = send_json(
+            &router,
+            "POST",
+            &format!("/beta/sessions/{ask_session}/events"),
+            &json!({
+                "type": "tool_calls",
+                "data": {"tool_calls": [{"name": "bash", "args": {"command": "ls"}}]}
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{payload}");
+        let event = &payload["event"];
+        assert_eq!(event["data"]["requires_approval"], true);
+        assert_eq!(event["data"]["tool_calls"][0]["requires_approval"], true);
+        let approval_id = event["data"]["tool_calls"][0]["approval_id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        // The approval landed in the shared store the approvals UI reads.
+        let approval = state.approval_store.get(&approval_id).unwrap();
+        assert_eq!(approval.tool, "bash");
+        assert_eq!(
+            approval.status,
+            crate::permission_policy::ApprovalStatus::Pending
+        );
+
+        // Mode auto with only bash → ask: web_search flows unflagged.
+        let (status, payload) = post_json(
+            &router,
+            "/sessions",
+            &json!({
+                "agent": agent_id,
+                "computer": {"kind": "none"},
+                "permission": "auto"
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{payload}");
+        let auto_session = payload["session"]["id"].as_str().unwrap().to_string();
+
+        let (status, payload) = send_json(
+            &router,
+            "POST",
+            &format!("/beta/sessions/{auto_session}/events"),
+            &json!({
+                "type": "tool_calls",
+                "data": {"tool_calls": [
+                    {"name": "bash", "args": {"command": "ls"}},
+                    {"name": "web_search", "args": {"query": "x"}}
+                ]}
+            }),
+            "user-a",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{payload}");
+        let data = &payload["event"]["data"];
+        assert_eq!(data["requires_approval"], true);
+        assert_eq!(data["tool_calls"][0]["requires_approval"], true);
+        assert!(
+            data["tool_calls"][1].get("requires_approval").is_none(),
+            "web_search should be unflagged: {data}"
+        );
     }
 }

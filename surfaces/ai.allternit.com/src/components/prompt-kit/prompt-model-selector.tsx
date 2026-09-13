@@ -262,7 +262,7 @@ export function PromptModelSelector({
                               <Check
                                 size={14}
                                 weight="bold"
-                                className="text-[var(--accent-chat)]"
+                                className="text-[var(--accent-primary)]"
                               />
                             )}
                           </button>
@@ -310,7 +310,7 @@ export function PromptModelSelector({
                 onOpenProviderConnect?.();
                 setOpen(false);
               }}
-              className="flex items-center justify-center gap-1.5 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--accent-chat)] transition-colors"
+              className="flex items-center justify-center gap-1.5 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--accent-primary)] transition-colors"
             >
               <Plus size={12} weight="bold" />
               Connect

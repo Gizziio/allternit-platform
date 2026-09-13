@@ -10,10 +10,21 @@
 //! instead of a broken redirect. Success/cancel URLs default to the platform billing page and can
 //! be overridden with STRIPE_CHECKOUT_SUCCESS_URL / STRIPE_CHECKOUT_CANCEL_URL.
 //!
-//! The Checkout Session metadata carries the credit-grant contract (clerk_user_id,
-//! allternit_credits_usd) that routes::billing_webhooks consumes when the payment completes
-//! (checkout.session.completed with mode = payment) — the two files define the two halves of the
-//! metadata contract; keep them in sync.
+//! The Checkout Session metadata carries the credit-grant contract that
+//! routes::billing_webhooks consumes when the payment completes
+//! (checkout.session.completed / checkout.session.async_payment_succeeded
+//! with mode = payment and payment_status = paid):
+//! - `clerk_user_id` — the Clerk user that owns the purchase.
+//! - `allternit_credits_usd` — the credit amount (two-decimal USD), from the
+//!   static server-side catalog never from the client.
+//! - `allternit_org_id` — the Clerk organization selected on the session,
+//!   i.e. the org the fabric ledger grant targets. Captured here because the
+//!   webhook has no Clerk session of its own. When the fabric-ledger bridge
+//!   is configured (ALLTERNIT_FABRIC_LEDGER_URL) an org is required: the
+//!   endpoint answers 400 rather than selling credits that cannot be routed.
+//!
+//! The two files define the two halves of the metadata contract; keep them
+//! in sync.
 
 use axum::{
     extract::State,
@@ -95,10 +106,12 @@ async fn create_checkout(
     headers: HeaderMap,
     Json(request): Json<CheckoutRequest>,
 ) -> Response {
-    let user_id = match crate::auth::resolve_user_scoped(&state.db, &headers, "billing").await {
-        Ok(user) => user.id,
+    let user = match crate::auth::resolve_user_scoped(&state.db, &headers, "billing").await {
+        Ok(user) => user,
         Err(error) => return error.into_response(),
     };
+    let user_id = user.id;
+    let organization_id = user.organization_id;
     let Some(pack) = find_pack(&request.pack_id) else {
         return ApiError::BadRequest(format!("Unknown credit pack: {:?}.", request.pack_id)).into_response();
     };
@@ -115,6 +128,17 @@ async fn create_checkout(
     ) {
         return error.into_response();
     }
+    // When the fabric-ledger bridge is configured every credit grant must be
+    // org-routable at webhook time (the webhook has no Clerk session of its
+    // own to resolve an org from). Refuse to sell an unrouteable pack
+    // instead of taking money the ledger can never deliver.
+    if crate::services::fabric_ledger::fabric_bridge_configured() && organization_id.is_none() {
+        return ApiError::BadRequest(
+            "Credit purchases require an active Clerk organization: sign in again with an organization selected."
+                .to_string(),
+        )
+        .into_response();
+    }
     let Ok(secret_key) = std::env::var("STRIPE_SECRET_KEY") else {
         return billing_not_configured_response();
     };
@@ -124,7 +148,17 @@ async fn create_checkout(
         .unwrap_or_else(|_| DEFAULT_CANCEL_URL.to_string());
     let checkout = ReqwestStripeCheckout::new();
 
-    match create_checkout_url(&checkout, &secret_key, pack, &user_id, &success_url, &cancel_url).await {
+    match create_checkout_url(
+        &checkout,
+        &secret_key,
+        pack,
+        &user_id,
+        organization_id.as_deref(),
+        &success_url,
+        &cancel_url,
+    )
+    .await
+    {
         Ok(url) => {
             crate::services::audit::write_audit_log(
                 &state.db,
@@ -199,24 +233,27 @@ async fn create_checkout_url(
     secret_key: &str,
     pack: &CreditPack,
     clerk_user_id: &str,
+    organization_id: Option<&str>,
     success_url: &str,
     cancel_url: &str,
 ) -> Result<String, ApiError> {
-    let form = checkout_form_params(pack, clerk_user_id, success_url, cancel_url);
+    let form = checkout_form_params(pack, clerk_user_id, organization_id, success_url, cancel_url);
     checkout.create_checkout_session(secret_key, &form).await
 }
 
 /// Form fields for POST /v1/checkout/sessions: one payment-mode line item at the pack price, with the
 /// credit-grant metadata contract on the session object itself — routes::billing_webhooks reads
-/// clerk_user_id and allternit_credits_usd out of event.data.object.metadata for completed
-/// payment-mode sessions, so both names must stay stable.
+/// clerk_user_id, allternit_credits_usd, and allternit_org_id out of
+/// event.data.object.metadata for completed payment-mode sessions, so those
+/// names must stay stable.
 fn checkout_form_params(
     pack: &CreditPack,
     clerk_user_id: &str,
+    organization_id: Option<&str>,
     success_url: &str,
     cancel_url: &str,
 ) -> Vec<(String, String)> {
-    vec![
+    let mut form = vec![
         ("mode".to_string(), "payment".to_string()),
         ("success_url".to_string(), success_url.to_string()),
         ("cancel_url".to_string(), cancel_url.to_string()),
@@ -241,7 +278,17 @@ fn checkout_form_params(
             "metadata[allternit_credits_usd]".to_string(),
             format!("{:.2}", pack.credits_usd),
         ),
-    ]
+    ];
+    // Org routing for the webhook grant. Only written when the session has an
+    // active Clerk org — absent means the bridge was off at purchase time and
+    // the grant falls back to the cloud wallet.
+    if let Some(organization_id) = organization_id {
+        form.push((
+            "metadata[allternit_org_id]".to_string(),
+            organization_id.to_string(),
+        ));
+    }
+    form
 }
 
 /// The production StripeCheckout: POSTs the form to the Stripe REST API with the secret key as the
@@ -345,7 +392,7 @@ mod tests {
     #[test]
     fn checkout_form_metadata_carries_the_credit_contract() {
         let pack = find_pack("credits_25").unwrap();
-        let form = checkout_form_params(pack, "user_123", "https://s.example", "https://c.example");
+        let form = checkout_form_params(pack, "user_123", Some("org_9"), "https://s.example", "https://c.example");
         let field = |key: &str| -> String {
             form.iter()
                 .find(|(k, _)| k == key)
@@ -354,11 +401,25 @@ mod tests {
         };
         assert_eq!(field("metadata[clerk_user_id]"), "user_123");
         assert_eq!(field("metadata[allternit_credits_usd]"), "25.00");
+        assert_eq!(field("metadata[allternit_org_id]"), "org_9");
         assert_eq!(field("line_items[0][price_data][unit_amount]"), "2500", "credits are priced 1:1 in cents");
         assert_eq!(field("line_items[0][price_data][currency]"), "usd");
         assert_eq!(field("mode"), "payment");
         assert_eq!(field("success_url"), "https://s.example");
         assert_eq!(field("cancel_url"), "https://c.example");
+    }
+
+    #[test]
+    fn checkout_form_omits_org_metadata_without_an_organization() {
+        let pack = find_pack("credits_10").unwrap();
+        let form = checkout_form_params(pack, "user_123", None, "s", "c");
+        assert!(
+            form.iter().all(|(key, _)| key != "metadata[allternit_org_id]"),
+            "no org metadata field may be sent when the session has no active org"
+        );
+        // The rest of the contract is unaffected.
+        assert!(form.contains(&("metadata[clerk_user_id]".to_string(), "user_123".to_string())));
+        assert!(form.contains(&("metadata[allternit_credits_usd]".to_string(), "10.00".to_string())));
     }
 
     #[test]
@@ -370,7 +431,7 @@ mod tests {
             ("credits_100", "100.00"),
         ] {
             let pack = find_pack(id).unwrap();
-            let form = checkout_form_params(pack, "user_1", "s", "c");
+            let form = checkout_form_params(pack, "user_1", None, "s", "c");
             let credits = form
                 .iter()
                 .find(|(k, _)| k == "metadata[allternit_credits_usd]")
@@ -413,7 +474,7 @@ mod tests {
             last_secret: std::sync::Mutex::new(None),
         };
         let pack = find_pack("credits_50").unwrap();
-        let url = create_checkout_url(&checkout, "sk_test_1", pack, "user_9", "https://s", "https://c")
+        let url = create_checkout_url(&checkout, "sk_test_1", pack, "user_9", Some("org_9"), "https://s", "https://c")
             .await
             .unwrap();
         assert_eq!(url, "https://checkout.stripe.com/c/pay/test_session");
@@ -424,6 +485,7 @@ mod tests {
         );
         assert!(form.contains(&("metadata[clerk_user_id]".to_string(), "user_9".to_string())));
         assert!(form.contains(&("metadata[allternit_credits_usd]".to_string(), "50.00".to_string())));
+        assert!(form.contains(&("metadata[allternit_org_id]".to_string(), "org_9".to_string())));
     }
 
     struct FailingCheckout;
@@ -450,7 +512,7 @@ mod tests {
     #[tokio::test]
     async fn checkout_creation_propagates_stripe_errors() {
         let pack = find_pack("credits_10").unwrap();
-        let error = create_checkout_url(&FailingCheckout, "sk_test_1", pack, "user_9", "s", "c")
+        let error = create_checkout_url(&FailingCheckout, "sk_test_1", pack, "user_9", None, "s", "c")
             .await
             .unwrap_err();
         assert!(error.to_string().contains("stripe declined"));

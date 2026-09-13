@@ -28,6 +28,8 @@ export interface DesignProject {
   isArchived: boolean;
   activeTabId: string;
   tabs: Array<{ id: string; label: string; type: string }>;
+  /** Bound design system (DESIGN_MARKETPLACE id) — survives reloads. */
+  designSystemId?: string;
 }
 
 interface DesignProjectState {
@@ -38,6 +40,7 @@ interface DesignProjectState {
   upsertProject: (project: Omit<DesignProject, 'createdAt' | 'updatedAt' | 'isFavorite' | 'isArchived'> & Partial<Pick<DesignProject, 'isFavorite' | 'isArchived'>>) => DesignProject;
   renameProject: (id: string, name: string) => void;
   updateProjectDetails: (id: string, details: { name?: string; description?: string }) => void;
+  setProjectDesignSystem: (id: string, designSystemId: string | null) => void;
   deleteProject: (id: string) => void;
   setActiveProject: (id: string | null) => void;
   toggleFavorite: (id: string) => void;
@@ -47,9 +50,8 @@ interface DesignProjectState {
 const DEFAULT_TABS: DesignProject['tabs'] = [
   { id: 'files', label: 'Files', type: 'files' },
   { id: 'questions', label: 'Discovery', type: 'questions' },
-  { id: 'sketch', label: 'Sketch', type: 'sketch' },
+  { id: 'sketch', label: 'Canvas', type: 'sketch' },
   { id: 'mobile', label: 'Mobile', type: 'mobile' },
-  { id: 'docs', label: 'Documents', type: 'docs' },
   { id: 'handoff', label: 'Handoff', type: 'handoff' },
   { id: 'team', label: 'Team', type: 'team' },
 ];
@@ -147,6 +149,19 @@ export const useDesignProjectStore = create<DesignProjectState>()(
                   ...p,
                   ...(details.name !== undefined ? { name: details.name } : {}),
                   ...(details.description !== undefined ? { description: details.description } : {}),
+                  updatedAt: Date.now(),
+                }
+              : p
+          ),
+        })),
+
+      setProjectDesignSystem: (id, designSystemId) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  ...(designSystemId ? { designSystemId } : { designSystemId: undefined }),
                   updatedAt: Date.now(),
                 }
               : p

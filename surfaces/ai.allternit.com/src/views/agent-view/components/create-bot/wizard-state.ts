@@ -127,7 +127,7 @@ export function buildDefaultCharacterLayer(
     avatar: {
       type: "mascot",
       mascot: { template: "bot" },
-      style: { primaryColor: "#6366f1", accentColor: "#1e1c1a" },
+      style: { primaryColor: '#B08D6E', accentColor: "#1e1c1a" },
     },
   };
 }
@@ -155,7 +155,7 @@ export function buildCreateBotPayload({ formData, avatar }: BuildPayloadArgs): C
     botProfile.tagline?.trim() ||
     formData.description?.trim() ||
     `${displayName} is a custom Allternit bot.`;
-  const accentColor = botProfile.accentColor || "#D4956A";
+  const accentColor = botProfile.accentColor || "#B08D6E";
 
   return {
     ...formData,

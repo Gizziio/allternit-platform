@@ -214,7 +214,7 @@ export function PromotionDashboardView() {
               onClick={() => setFilterStatus(status === 'All' ? 'All' : status)}
               className={`px-3.5 py-1.5 rounded-md border-none text-[12px] font-semibold cursor-pointer transition-all duration-200 capitalize ${
                 filterStatus === status
-                  ? 'bg-[var(--accent-chat)] text-[var(--ui-text-inverse)]'
+                  ? 'bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]'
                   : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
               }`}
             >

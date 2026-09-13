@@ -146,7 +146,7 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
   return (
     <div data-testid="code-aci-pane" style={{ position: fullscreen ? 'fixed' : 'relative', inset: fullscreen ? 10 : undefined, zIndex: fullscreen ? 80 : undefined, height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--surface-canvas)' }}>
       <div style={{ height: 40, display: 'flex', alignItems: 'center', gap: 7, padding: '0 7px 0 11px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-        <Monitor size={16} weight="duotone" style={{ color: 'var(--accent-code)' }} />
+        <Monitor size={16} weight="duotone" style={{ color: 'var(--accent-primary)' }} />
         <span style={{ fontSize: 12, fontWeight: 650, marginRight: 'auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Computer</span>
         <button type="button" aria-label="Annotate" title="Annotate" onClick={() => setTool((value) => value === 'annotate' ? null : 'annotate')} style={{ ...headerButton, background: tool === 'annotate' ? 'var(--surface-active)' : 'transparent' }}><NotePencil size={15} /></button>
         <button type="button" aria-label="Select element" title="Select element" onClick={() => setTool((value) => value === 'select' ? null : 'select')} style={{ ...headerButton, background: tool === 'select' ? 'var(--surface-active)' : 'transparent' }}><CursorClick size={15} /></button>
@@ -241,7 +241,7 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
                 letterSpacing: '0.06em',
               }}
             >
-              <TerminalIcon size={13} color="var(--accent-code)" />
+              <TerminalIcon size={13} color="var(--accent-primary)" />
               Dev server terminal
             </div>
             <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>

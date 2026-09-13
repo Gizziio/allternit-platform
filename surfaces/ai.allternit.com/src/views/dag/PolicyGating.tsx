@@ -48,7 +48,7 @@ const APPROVAL_TYPES: { value: ApprovalType; label: string; icon: React.ReactNod
   { value: 'tool_execution', label: 'Tool Execution', icon: <Code size={16} />, color: 'var(--status-info)' },
   { value: 'file_access', label: 'File Access', icon: <FileText size={16} />, color: 'var(--status-success)' },
   { value: 'policy_override', label: 'Policy Override', icon: <LockOpen size={16} />, color: 'var(--status-warning)' },
-  { value: 'deployment', label: 'Deployment', icon: <Globe size={16} />, color: '#8b5cf6' },
+  { value: 'deployment', label: 'Deployment', icon: <Globe size={16} />, color: 'var(--accent-primary)' },
   { value: 'data_export', label: 'Data Export', icon: <Database size={16} />, color: 'var(--status-error)' },
 ];
 

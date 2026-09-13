@@ -44,7 +44,7 @@ import type {
 const PURPOSE_CATEGORIES = [
   { value: 'data-analysis', label: 'Data Analysis', icon: <Database size={16} />, color: 'var(--status-info)' },
   { value: 'code-generation', label: 'Code Generation', icon: <FileCode size={16} />, color: 'var(--status-success)' },
-  { value: 'web-research', label: 'Web Research', icon: <Globe size={16} />, color: '#8b5cf6' },
+  { value: 'web-research', label: 'Web Research', icon: <Globe size={16} />, color: 'var(--accent-primary)' },
   { value: 'system-admin', label: 'System Administration', icon: <GearSix size={16} />, color: 'var(--status-warning)' },
   { value: 'security', label: 'Security Operations', icon: <Shield size={16} />, color: 'var(--status-error)' },
 ];

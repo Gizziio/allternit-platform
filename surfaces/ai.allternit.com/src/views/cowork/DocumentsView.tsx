@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FloppyDisk, PuzzlePiece } from '@phosphor-icons/react';
+import { openOfficeWindow } from '@/lib/open-office-window';
 import { installNativeDocumentSurfaceBridge } from '../documents/document-surface';
 import { listDocumentWorkflowDrafts, listPromotedDocumentWorkflows, promoteDocumentWorkflow } from '../documents/document-workflows';
 
 /**
- * Cowork Documents view — the Documents & Office launcher embed was retired
- * (the ACI "Office & Extensions" hub is the single office surface). This view
- * is now a simple pointer to that hub, plus the reusable-workflows surface it
+ * Cowork Documents view — the Documents & Office launcher embed was retired;
+ * the Allternit Office suite now lives in its own ACI-mode window. This view
+ * is a pointer to that window, plus the reusable-workflows surface it
  * always carried.
  */
-export const DocumentsView: React.FC<{ openView?: (viewType: string, context?: unknown) => void }> = ({ openView }) => {
+export const DocumentsView: React.FC<{ openView?: (viewType: string, context?: unknown) => void }> = ({ openView: _openView }) => {
   const [workflowRevision, setWorkflowRevision] = useState(0);
   const suggestedWorkflows = useMemo(() => listDocumentWorkflowDrafts().filter((workflow) => workflow.runCount >= 2), [workflowRevision]);
   const promotedWorkflows = useMemo(() => listPromotedDocumentWorkflows(), [workflowRevision]);
@@ -31,18 +32,18 @@ export const DocumentsView: React.FC<{ openView?: (viewType: string, context?: u
         >
           <div className="flex items-center gap-2 text-[var(--text-primary)]">
             <PuzzlePiece size={20} weight="duotone" />
-            <h2 className="m-0 text-base font-bold">Documents live in the Office &amp; Extensions hub</h2>
+            <h2 className="m-0 text-base font-bold">Documents live in Allternit Office</h2>
           </div>
           <p className="m-0 max-w-xl text-sm text-[var(--text-secondary)]">
             Create and edit Word, Excel, PowerPoint, and PDF files from the Allternit Office suite —
-            the single office surface, shared with the ACI browser.
+            the ACI mode window dedicated to office work.
           </p>
           <button
             type="button"
-            onClick={() => openView?.('browser-extensions')}
+            onClick={() => openOfficeWindow()}
             className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--border-hover)]"
           >
-            Open Office &amp; Extensions
+            Open Allternit Office
           </button>
         </section>
 

@@ -363,7 +363,7 @@ export function ResearchTab() {
                 else if (e.key === 'Escape') setNewNotebookTitle(null);
               }}
               placeholder="Notebook name…"
-              className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#6366f1)]"
+              className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#B08D6E)]"
             />
             <button type="button" onClick={() => handleCreateNotebook(newNotebookTitle)} className="research-btn-primary text-sm px-3 py-1.5">Create</button>
             <button type="button" onClick={() => setNewNotebookTitle(null)} className="research-btn-secondary text-sm px-3 py-1.5">Cancel</button>
@@ -398,7 +398,7 @@ export function ResearchTab() {
                   color: 'var(--text-primary, #e5e5e5)',
                 }}
               >
-                <BookOpen size={14} color="#a78bfa" />
+                <BookOpen size={14} color="#B08D6E" />
                 {activeNotebook?.title || 'Select Notebook'}
                 <ChevronDown size={12} color="var(--text-muted, #a1a1aa)" style={{ transform: showNotebookDropdown ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
               </button>
@@ -430,14 +430,14 @@ export function ResearchTab() {
                       }}
                       className="w-full text-left px-3 py-2 text-[13px]"
                       style={{
-                        color: nb.id === activeNotebookId ? '#a78bfa' : 'var(--text-primary, #e5e5e5)',
-                        background: nb.id === activeNotebookId ? 'rgba(167,139,250,.1)' : 'transparent',
+                        color: nb.id === activeNotebookId ? '#B08D6E' : 'var(--text-primary, #e5e5e5)',
+                        background: nb.id === activeNotebookId ? 'rgba(176,141,110,.1)' : 'transparent',
                         border: 'none',
                         cursor: 'pointer',
                         transition: 'background .12s',
                       }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.06)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = nb.id === activeNotebookId ? 'rgba(167,139,250,.1)' : 'transparent'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = nb.id === activeNotebookId ? 'rgba(176,141,110,.1)' : 'transparent'; }}
                     >
                       {nb.title}
                     </button>
@@ -456,7 +456,7 @@ export function ResearchTab() {
                     else if (e.key === 'Escape') setNewNotebookTitle(null);
                   }}
                   placeholder="Notebook name…"
-                  className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-2 py-0.5 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#6366f1)]"
+                  className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-2 py-0.5 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#B08D6E)]"
                 />
                 <button type="button" onClick={() => handleCreateNotebook(newNotebookTitle)} className="research-btn-primary text-[11px] px-2 py-0.5">Create</button>
                 <button type="button" onClick={() => setNewNotebookTitle(null)} className="research-btn-secondary text-[11px] px-2 py-0.5">✕</button>
@@ -475,7 +475,7 @@ export function ResearchTab() {
                 onClick={() => setShowToolsOnMobile(!showToolsOnMobile)}
                 className="research-btn-secondary"
                 style={{
-                  backgroundColor: showToolsOnMobile ? 'rgba(167, 139, 250, 0.15)' : undefined,
+                  backgroundColor: showToolsOnMobile ? 'rgba(176,141,110, 0.15)' : undefined,
                 }}
               >
                 Tools
@@ -519,7 +519,7 @@ export function ResearchTab() {
                   className="research-btn-icon"
                   style={{
                     background: inputValue.trim() && activeNotebook
-                      ? 'linear-gradient(135deg, #7c3aed, #a78bfa)'
+                      ? 'linear-gradient(135deg, #B08D6E, #B08D6E)'
                       : 'var(--bg-tertiary, #18181b)',
                     opacity: inputValue.trim() && activeNotebook ? 1 : 0.5,
                     cursor: inputValue.trim() && activeNotebook ? 'pointer' : 'not-allowed',
@@ -588,7 +588,7 @@ export function ResearchTab() {
                     className="research-btn-icon"
                     style={{
                       background: inputValue.trim() && activeNotebook
-                        ? 'linear-gradient(135deg, #7c3aed, #a78bfa)'
+                        ? 'linear-gradient(135deg, #B08D6E, #B08D6E)'
                         : 'var(--bg-tertiary, #18181b)',
                       opacity: inputValue.trim() && activeNotebook ? 1 : 0.5,
                       cursor: inputValue.trim() && activeNotebook ? 'pointer' : 'not-allowed',

@@ -140,6 +140,7 @@ declare global {
       shell?: {
         openExternal: (url: string) => Promise<void>;
         openDesign: () => Promise<void>;
+        openOfficeWindow: () => Promise<void>;
         openHud: () => Promise<void>;
         closeHud: () => Promise<void>;
         toggleHud: () => Promise<void>;

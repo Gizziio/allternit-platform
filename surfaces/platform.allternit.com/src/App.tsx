@@ -17,10 +17,36 @@ import { RunsPage } from "@/pages/RunsPage";
 import { SchedulesPage } from "@/pages/SchedulesPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { FabricPage } from "@/pages/FabricPage";
-import { AgentsPage } from "@/pages/AgentsPage";
 import { PortalLandingPage } from "@/pages/PortalLandingPage";
 import { ModelsPage } from "@/pages/ModelsPage";
 import { PlansPage } from "@/pages/PlansPage";
+import { PlaygroundPage } from "@/pages/console/PlaygroundPage";
+import { FilesPage } from "@/pages/console/FilesPage";
+import { BatchesPage } from "@/pages/console/BatchesPage";
+import { SkillsPage } from "@/pages/console/SkillsPage";
+import { BuilderPage } from "@/pages/console/BuilderPage";
+import { AgentsPage } from "@/pages/console/agents/AgentsPage";
+import { AgentDetailPage } from "@/pages/console/agents/AgentDetailPage";
+import { AgentFormPage } from "@/pages/console/agents/AgentFormPage";
+import { SessionsPage } from "@/pages/console/sessions/SessionsPage";
+import { SessionNewPage } from "@/pages/console/sessions/SessionNewPage";
+import { SessionDetailPage } from "@/pages/console/sessions/SessionDetailPage";
+import { DeploymentsPage } from "@/pages/console/deployments/DeploymentsPage";
+import { ComputersPage } from "@/pages/console/computers/ComputersPage";
+import { VaultsPage, VaultDetailPage } from "@/pages/console/vaults/VaultsPage";
+import { MemoryPage, MemoryStorePage } from "@/pages/console/memory/MemoryPage";
+import { UsagePage } from "@/pages/console/analytics/UsagePage";
+import { LogsPage } from "@/pages/console/analytics/LogsPage";
+import { CachingPage } from "@/pages/console/analytics/CachingPage";
+import { RateLimitsPage } from "@/pages/console/analytics/RateLimitsPage";
+import { CostPage } from "@/pages/console/analytics/CostPage";
+import { GizziUsagePage } from "@/pages/console/gizzi/GizziUsagePage";
+import { MembersPage } from "@/pages/console/manage/MembersPage";
+import { ServiceAccountsPage } from "@/pages/console/manage/ServiceAccountsPage";
+import { SpendLimitsPage } from "@/pages/console/manage/SpendLimitsPage";
+import { SecurityPage } from "@/pages/console/manage/SecurityPage";
+import { WebhooksPage } from "@/pages/console/manage/WebhooksPage";
+import { TagsPage } from "@/pages/console/manage/TagsPage";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -50,6 +76,13 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
     </RequireAuth>
   );
 }
+
+/** Phase 1 designed stubs — one per future console page. */
+const consoleStubRoutes: Array<{ path: string; element: React.ReactNode }> = [
+  // /manage/rate-limits content (caller snapshot + admin org limits) shipped
+  // with the Analytics surface at /analytics/rate-limits (Phase 4).
+  { path: "/manage/rate-limits/*", element: <Navigate to="/analytics/rate-limits" replace /> },
+];
 
 function HomeRoute() {
   const auth = usePlatformAuth();
@@ -123,10 +156,106 @@ export default function App() {
         }
       />
       <Route
-        path="/agents/*"
+        path="/agents"
         element={
           <ConsoleRoute>
             <AgentsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/agents/new"
+        element={
+          <ConsoleRoute>
+            <AgentFormPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/agents/:id"
+        element={
+          <ConsoleRoute>
+            <AgentDetailPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/agents/:id/edit"
+        element={
+          <ConsoleRoute>
+            <AgentFormPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/sessions"
+        element={
+          <ConsoleRoute>
+            <SessionsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/sessions/new"
+        element={
+          <ConsoleRoute>
+            <SessionNewPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/sessions/:id"
+        element={
+          <ConsoleRoute>
+            <SessionDetailPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/deployments"
+        element={
+          <ConsoleRoute>
+            <DeploymentsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/computers"
+        element={
+          <ConsoleRoute>
+            <ComputersPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/vaults"
+        element={
+          <ConsoleRoute>
+            <VaultsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/vaults/:id"
+        element={
+          <ConsoleRoute>
+            <VaultDetailPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/memory"
+        element={
+          <ConsoleRoute>
+            <MemoryPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/memory/:id"
+        element={
+          <ConsoleRoute>
+            <MemoryStorePage />
           </ConsoleRoute>
         }
       />
@@ -202,6 +331,153 @@ export default function App() {
           </ConsoleRoute>
         }
       />
+      {/* Phase 2 Build group — real pages on the console-ui kit. */}
+      <Route
+        path="/playground/*"
+        element={
+          <ConsoleRoute>
+            <PlaygroundPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/files/*"
+        element={
+          <ConsoleRoute>
+            <FilesPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/skills/*"
+        element={
+          <ConsoleRoute>
+            <SkillsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/batches/*"
+        element={
+          <ConsoleRoute>
+            <BatchesPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/builder/*"
+        element={
+          <ConsoleRoute>
+            <BuilderPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 4 Analytics group — real pages over the live gateway routes. */}
+      <Route
+        path="/analytics/usage/*"
+        element={
+          <ConsoleRoute>
+            <UsagePage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/logs/*"
+        element={
+          <ConsoleRoute>
+            <LogsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/caching/*"
+        element={
+          <ConsoleRoute>
+            <CachingPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/rate-limits/*"
+        element={
+          <ConsoleRoute>
+            <RateLimitsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/cost/*"
+        element={
+          <ConsoleRoute>
+            <CostPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 5 Manage group — real pages over the admin gateway routes. */}
+      <Route
+        path="/manage/members/*"
+        element={
+          <ConsoleRoute>
+            <MembersPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/service-accounts/*"
+        element={
+          <ConsoleRoute>
+            <ServiceAccountsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/spend-limits/*"
+        element={
+          <ConsoleRoute>
+            <SpendLimitsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/security/*"
+        element={
+          <ConsoleRoute>
+            <SecurityPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/webhooks/*"
+        element={
+          <ConsoleRoute>
+            <WebhooksPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/tags/*"
+        element={
+          <ConsoleRoute>
+            <TagsPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 6 — Gizzi Code usage over the admin analytics route. */}
+      <Route
+        path="/gizzi/usage/*"
+        element={
+          <ConsoleRoute>
+            <GizziUsagePage />
+          </ConsoleRoute>
+        }
+      />
+      {consoleStubRoutes.map((route) => (
+        <Route
+          key={route.path}
+          path={route.path}
+          element={<ConsoleRoute>{route.element}</ConsoleRoute>}
+        />
+      ))}
       {/* Fallback Clerk path-routed pages. Public marketing pages open the auth modal
           inline, but /sign-in and /sign-up remain available for direct navigation. */}
       <Route path="/sign-in/*" element={<SignInPage />} />

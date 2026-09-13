@@ -199,7 +199,7 @@ const DECK_CARDS = [
   {
     label: 'A:// chat',
     sub: 'Any AI model. One clean interface, every conversation.',
-    accent: '#6366f1',
+    accent: '#B08D6E',
     Icon: ChatCircle,
   },
   {
@@ -2313,7 +2313,7 @@ const MODE_TABS: Array<{
   color: string;
   bg: string;
 }> = [
-  { key: 'chat',    label: 'A:// Chat',    Icon: ChatCircle,  color: '#6366f1', bg: 'rgba(99,102,241,0.1)'  },
+  { key: 'chat',    label: 'A:// Chat',    Icon: ChatCircle,  color: '#B08D6E', bg: 'rgba(176,141,110,0.1)'  },
   { key: 'code',    label: 'A:// Code',    Icon: Code,        color: 'var(--status-success)', bg: 'rgba(16,185,129,0.1)'  },
   { key: 'browser', label: 'A:// ACI', Icon: Globe,       color: '#ec4899', bg: 'rgba(236,72,153,0.1)'  },
   { key: 'agents',  label: 'A:// Agents',  Icon: Robot,       color: 'var(--status-warning)', bg: 'var(--status-warning-bg)'  },

@@ -99,7 +99,7 @@ export function ArtifactCenter(): React.ReactNode {
             borderRadius: 7,
             border: '1px solid var(--border-subtle)',
             background: 'var(--surface-panel)',
-            color: 'var(--accent-code)',
+            color: 'var(--accent-primary)',
           }}
         >
           <Package size={14} weight="duotone" />
@@ -167,7 +167,7 @@ export function ArtifactCenter(): React.ReactNode {
                     color: 'var(--text-primary)',
                     textAlign: 'left',
                     cursor: 'pointer',
-                    boxShadow: active ? 'inset 2px 0 0 var(--accent-code)' : 'none',
+                    boxShadow: active ? 'inset 2px 0 0 var(--accent-primary)' : 'none',
                   }}
                 >
                   <ArtifactIcon kind={artifact.kind} />

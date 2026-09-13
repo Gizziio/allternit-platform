@@ -114,6 +114,23 @@ class PlanningLoopConfig:
     approval_policy: str = "on-risk"   # never | on-risk | always
     record: bool = True
     vision_provider: Optional[str] = None  # override env
+    # P2 batch dispatch (core/batch_dispatch.py): when a plan carries N≥2
+    # groundable whitelist actions, ship them as one grant-bound batch through
+    # the Rust /api/aci/batch surface instead of N step-by-step turns.
+    batch_enabled: bool = True
+    batch_mode: str = "batch"          # "batch" (one grant) | "per_step"
+    batch_headless: bool = True
+    # Optional operator-pinned page binding folded into the batch descriptor
+    # hash; wins over the auto-tracked URL (deferral B). When None, the loop
+    # observes the adapter's current URL after each step/batch and pins the
+    # NEXT batch's descriptor binding to it; surfaces with no URL keep the
+    # origin+session-only binding.
+    batch_page_url: Optional[str] = None
+    # C2 code mode (core/code_mode.py): the THIRD integration mode, explicitly
+    # opt-in per run — never the default. When False (the default), a plan
+    # carrying a `code` payload falls through to the whitelist/batch paths
+    # unchanged.
+    code_mode_enabled: bool = False
 
 
 @dataclass
@@ -134,6 +151,7 @@ class PlanningLoopResult:
     final_screenshot_b64: str = ""
     error: Optional[str] = None
     gif_path: Optional[str] = None
+    model_turns: int = 0                # planning-loop turns consumed (P3 turns-per-task substrate)
 
     def to_dict(self) -> Dict:
         return {
@@ -151,6 +169,7 @@ class PlanningLoopResult:
             "duration_ms": self.duration_ms,
             "error": self.error,
             "gif_path": self.gif_path,
+            "model_turns": self.model_turns,
         }
 
 
@@ -170,6 +189,7 @@ LOOP_EVENTS = [
     "element.targeted",
     "window.discovered",
     "notification.received",
+    "page.observed",
     "run.completed",
     "run.failed",
 ]
@@ -198,6 +218,9 @@ class PlanningLoop:
         approval_callback: Optional[Callable[[LoopStep], bool]] = None,
         history_preflight: Optional[Callable[[str], Awaitable[Optional[Dict]]]] = None,
         monitor: Optional[Any] = None,  # core.monitor.Monitor implementation
+        ledger: Optional[Callable[[str, Dict], None]] = None,  # canonical EventLedger writer (session/run bound by caller)
+        batch_client: Optional[Any] = None,  # AciBatchClient; default constructed lazily
+        code_client: Optional[Any] = None,   # AciCodeClient (core/code_mode.py); default constructed lazily
     ):
         self.vision_provider = vision_provider
         # Accept ComputerUseExecutor directly — it has the same execute() interface
@@ -209,8 +232,14 @@ class PlanningLoop:
         self.approval_callback = approval_callback
         self.history_preflight = history_preflight
         self.monitor = monitor
+        self.ledger = ledger
+        self.batch_client = batch_client
+        self.code_client = code_client
         self._cancelled = False
         self._monitor_history: List[Dict[str, Any]] = []
+        # Auto page binding (deferral B): current URL observed from the
+        # adapter after each step/batch; feeds the NEXT batch's descriptor.
+        self._observed_url: Optional[str] = None
 
     def cancel(self) -> None:
         """Cancel a running loop."""
@@ -230,6 +259,7 @@ class PlanningLoop:
         stop_reason = StopReason.ERROR
         error_msg: Optional[str] = None
         _consecutive_screenshots = 0
+        model_turns = 0
 
         # Inject scratchpad context — strategy + skills + lessons from prior runs
         try:
@@ -356,6 +386,7 @@ class PlanningLoop:
                 total_cost += step.cost_usd
                 total_input_tokens += int(getattr(plan, "input_tokens", 0) or 0)
                 total_output_tokens += int(getattr(plan, "output_tokens", 0) or 0)
+                model_turns += 1
 
                 self._emit({"type": "plan.created", "run_id": run_id, "step": step_num,
                            "reasoning": plan.reasoning, "action_type": plan.immediate_action.type,
@@ -412,30 +443,135 @@ class PlanningLoop:
                     except Exception:
                         pass
 
-                # ACT phase
-                self._emit({"type": "action.started", "run_id": run_id, "step": step_num,
-                           "action_type": step.action_type, "target": step.action_target})
+                # ACT phase — C2 code mode: when the run explicitly opted in
+                # AND the plan carries a code payload, ship it as ONE grant-
+                # bound payload through the Rust /api/aci/code surface. Never
+                # the default: code_mode_enabled=False leaves this path cold.
+                # A validation refusal surfaces as THIS step's observation and
+                # the loop re-plans with whitelist actions — the payload is
+                # never silently retried mutated (a mutation is a new
+                # descriptor needing a new grant).
+                code_outcome: Optional[Dict[str, Any]] = None
+                if self.config.code_mode_enabled and getattr(plan, "code", None):
+                    code_outcome = await self._dispatch_code(
+                        step=step,
+                        code_payload=plan.code,
+                        session_id=session_id,
+                        run_id=run_id,
+                        step_num=step_num,
+                    )
 
-                # Emit cursor position when coordinates available
-                if plan.immediate_action.coordinates and len(plan.immediate_action.coordinates) >= 2:
-                    cx, cy = plan.immediate_action.coordinates[0], plan.immediate_action.coordinates[1]
-                    effect = "ripple" if plan.immediate_action.type in ("click", "double_click") else \
-                             "glow" if plan.immediate_action.type == "hover" else "none"
-                    self._emit({"type": "cursor.moved", "run_id": run_id, "step": step_num,
-                               "x": cx, "y": cy, "agent_id": "primary", "effect": effect})
+                # ACT phase — P2 batch dispatch: when the plan grounds N≥2
+                # consecutive whitelist actions on the same session, ship them
+                # as ONE grant-bound batch through the Rust /api/aci/batch
+                # surface. Any batch failure (transport, refusal, declined
+                # grant) falls back to the existing step-by-step path — policy
+                # never gets decided here.
+                batch_outcome: Optional[Dict[str, Any]] = None
+                batch_steps: Optional[List[Dict[str, Any]]] = None
+                if code_outcome is None and self.config.batch_enabled and getattr(plan, "batch", None):
+                    from .batch_dispatch import actions_to_batch_steps
+                    candidates = [plan.immediate_action, *plan.batch]
+                    batch_steps = actions_to_batch_steps(candidates)
+                    if batch_steps is not None:
+                        batch_outcome = await self._dispatch_batch(
+                            step=step,
+                            batch_steps=batch_steps,
+                            session_id=session_id,
+                            run_id=run_id,
+                            step_num=step_num,
+                        )
+                        if batch_outcome is None:
+                            batch_steps = None  # fell back — run step-by-step below
 
-                try:
-                    result = await self._execute_action(plan.immediate_action, session_id)
-                    step.adapter_result = result
-                    step.action_succeeded = True
-                except Exception as act_err:
-                    step.error = str(act_err)
-                    step.action_succeeded = False
-                    logger.warning(f"Action failed at step {step_num}: {act_err}")
+                if code_outcome is not None:
+                    step.action_type = "code"
+                    step.action_target = f"code mode ({plan.code.get('language', 'playwright-js')})"
+                    if code_outcome.get("refused"):
+                        # Validation refusal: the observation the model re-
+                        # plans from. Recorded, not retried.
+                        refusal = {
+                            "class": code_outcome.get("class"),
+                            "message": code_outcome.get("message"),
+                        }
+                        step.action_params = {"code_refusal": refusal}
+                        step.adapter_result = {"code_refusal": refusal}
+                        step.action_succeeded = False
+                        step.error = (
+                            f"code refused ({refusal['class']}): {refusal['message']}"
+                        )
+                        self._emit({"type": "action.started", "run_id": run_id,
+                                    "step": step_num, "action_type": "code",
+                                    "target": step.action_target, "refused": True,
+                                    "refusal_class": refusal["class"]})
+                    else:
+                        envelope = code_outcome.get("envelope") or {}
+                        step.action_params = {
+                            "descriptor_hash": code_outcome.get("descriptor_hash"),
+                            "receipt_id": code_outcome.get("receipt_id"),
+                            "exit_status": envelope.get("exit_status"),
+                            "timed_out": envelope.get("timed_out", False),
+                        }
+                        step.adapter_result = {"code_envelope": envelope}
+                        step.action_succeeded = code_outcome.get("status") == "completed"
+                        if not step.action_succeeded:
+                            step.error = (
+                                f"code run {code_outcome.get('status')}"
+                                + (": timed out" if envelope.get("timed_out") else "")
+                            )
+                            logger.warning("Code outcome at step %s: %s", step_num, step.error)
+                        self._emit({"type": "action.started", "run_id": run_id,
+                                    "step": step_num, "action_type": "code",
+                                    "target": step.action_target,
+                                    "exit_status": envelope.get("exit_status")})
+                elif batch_outcome is not None:
+                    step.action_type = "batch"
+                    step.action_target = f"{len(batch_steps)} whitelisted steps"
+                    step.action_params = {
+                        "batch_steps": batch_steps,
+                        "descriptor_hash": batch_outcome.get("descriptor_hash"),
+                        "receipt_id": batch_outcome.get("receipt_id"),
+                        "enforcement": batch_outcome.get("enforcement"),
+                    }
+                    step.adapter_result = {"batch_receipt": batch_outcome.get("receipt")}
+                    step.action_succeeded = batch_outcome.get("status") == "completed"
+                    if not step.action_succeeded:
+                        halted = batch_outcome.get("halted_at")
+                        step.error = (
+                            f"batch {batch_outcome.get('status')}"
+                            + (f" at step {halted}" if halted is not None else "")
+                        )
+                        logger.warning("Batch outcome at step %s: %s", step_num, step.error)
+                    self._emit({"type": "action.started", "run_id": run_id, "step": step_num,
+                               "action_type": "batch", "target": step.action_target,
+                               "batch_steps": len(batch_steps)})
+                else:
+                    self._emit({"type": "action.started", "run_id": run_id, "step": step_num,
+                               "action_type": step.action_type, "target": step.action_target})
+
+                    # Emit cursor position when coordinates available
+                    if plan.immediate_action.coordinates and len(plan.immediate_action.coordinates) >= 2:
+                        cx, cy = plan.immediate_action.coordinates[0], plan.immediate_action.coordinates[1]
+                        effect = "ripple" if plan.immediate_action.type in ("click", "double_click") else \
+                                 "glow" if plan.immediate_action.type == "hover" else "none"
+                        self._emit({"type": "cursor.moved", "run_id": run_id, "step": step_num,
+                                   "x": cx, "y": cy, "agent_id": "primary", "effect": effect})
+
+                    try:
+                        result = await self._execute_action(plan.immediate_action, session_id)
+                        step.adapter_result = result
+                        step.action_succeeded = True
+                    except Exception as act_err:
+                        step.error = str(act_err)
+                        step.action_succeeded = False
+                        logger.warning(f"Action failed at step {step_num}: {act_err}")
 
                 # OBSERVE phase
                 new_screenshot = await self._capture_screenshot(session_id)
                 step.after_screenshot_b64 = _bytes_to_b64(new_screenshot) if new_screenshot else ""
+                # Deferral B: track the current page URL for the NEXT batch's
+                # descriptor binding (operator pin in config still wins).
+                await self._update_observed_url(step)
                 self._emit({"type": "screenshot.captured", "run_id": run_id, "step": step_num, "phase": "after_action",
                             "screenshot_b64": step.after_screenshot_b64})
                 self._emit({"type": "action.completed", "run_id": run_id, "step": step_num,
@@ -550,6 +686,7 @@ class PlanningLoop:
             duration_ms=duration_ms,
             final_screenshot_b64=_bytes_to_b64(current_screenshot) if current_screenshot else "",
             error=error_msg,
+            model_turns=model_turns,
         )
 
         event_type = "run.completed" if status in ("completed",) else "run.failed"
@@ -716,6 +853,298 @@ class PlanningLoop:
             result = await self.adapter.execute(req)
         return result.to_dict() if result else {}
 
+    def _batch_page_binding(self) -> Optional[str]:
+        """Effective page binding for the next batch descriptor: the operator
+        pin wins; otherwise the last URL observed from the adapter. None =
+        bind origin+session only (non-browser surface or nothing observed)."""
+        return self.config.batch_page_url or self._observed_url
+
+    async def _update_observed_url(self, step: LoopStep) -> None:
+        """Track the current page URL from the live adapter (deferral B).
+
+        Best-effort and silent: adapters without a URL surface (desktop
+        automation, host-display fallback) leave the binding unchanged. Also
+        scans the step's adapter result for a URL when the adapter carries
+        one there instead of behind ``get_url()``.
+        """
+        url: Optional[str] = None
+        try:
+            from .batch_dispatch import observe_adapter_page_url
+            url = await observe_adapter_page_url(self.adapter)
+        except Exception:
+            url = None
+        if not url:
+            url = _url_of_result(step.adapter_result)
+        if url:
+            if url != self._observed_url:
+                self._emit({"type": "page.observed", "run_id": step.run_id,
+                            "step": step.step, "url": url})
+            self._observed_url = url
+
+    async def _dispatch_batch(
+        self,
+        *,
+        step: LoopStep,
+        batch_steps: List[Dict[str, Any]],
+        session_id: str,
+        run_id: str,
+        step_num: int,
+    ) -> Optional[Dict[str, Any]]:
+        """Dispatch a grant-bound batch through the P1 Rust surface.
+
+        Returns the outcome dict when the batch executed (whatever the step
+        outcomes — halt-at-first-failure is reported honestly, not retried),
+        or ``None`` when the caller should fall back to step-by-step execution
+        (transport failure, declined grant, or an unexpected gate response).
+        Grant policy (which steps are risky, which mode applies) is decided
+        entirely Rust-side; this method only presents the batch and, on a
+        ``confirmation_required`` denial, routes the grant request through the
+        SAME human-approval flow as per-step risk approval.
+        """
+        from .batch_context import (
+            BatchContextRecord,
+            close_batch_context,
+            open_batch_context,
+        )
+        from .batch_dispatch import AciBatchClient, place_grant_for_retry
+
+        client = self.batch_client
+        if client is None:
+            try:
+                client = AciBatchClient()
+            except Exception as exc:
+                logger.warning("Batch client unavailable, falling back to step-by-step: %s", exc)
+                return None
+            self.batch_client = client
+
+        record = BatchContextRecord(
+            run_id=run_id,
+            session_id=session_id,
+            step_count=len(batch_steps),
+            step_methods=[s["method"] for s in batch_steps],
+            batch_mode=self.config.batch_mode,
+            page_url=self._batch_page_binding(),
+        )
+        # Contract §4: opened BEFORE the batch RPC (audit-before-act).
+        open_batch_context(self.ledger, record)
+
+        async def _try(approval_id=None, step_approval_ids=None):
+            return await client.execute_batch(
+                steps=batch_steps,
+                mode=self.config.batch_mode,
+                session=session_id,
+                page_url=self._batch_page_binding(),
+                approval_id=approval_id,
+                step_approval_ids=step_approval_ids,
+                headless=self.config.batch_headless,
+            )
+
+        attempt = await _try()
+
+        if attempt.confirmation_required:
+            record.batch_id = record.descriptor_hash = attempt.action_hash or "pending"
+            # Surface the grant request through the same approval flow as
+            # per-step risk approval; the SSE events distinguish it by reason.
+            self._emit({"type": "approval.required", "run_id": run_id, "step": step_num,
+                       "action_preview": {"kind": "batch", "descriptor_hash": attempt.action_hash,
+                                          "step_index": attempt.step_index,
+                                          "step_count": len(batch_steps)},
+                       "reason": f"batch grant required (hash={attempt.action_hash})"})
+            approved = await self._request_approval(step)
+            self._emit({"type": "approval.received", "run_id": run_id, "step": step_num,
+                       "approved": approved})
+            if not approved or not attempt.approval_id:
+                close_batch_context(self.ledger, record, status="denied",
+                                    model_turns_saved=0)
+                logger.info("Batch grant declined at step %s — step-by-step fallback", step_num)
+                return None
+            retry_kwargs = place_grant_for_retry(
+                self.config.batch_mode, attempt, attempt.approval_id, len(batch_steps)
+            )
+            attempt = await _try(**retry_kwargs)
+            if not attempt.executed:
+                close_batch_context(
+                    self.ledger, record,
+                    status="denied" if attempt.confirmation_required else "failed",
+                    model_turns_saved=0,
+                )
+                logger.warning("Batch grant retry did not execute (%s) — step-by-step fallback",
+                               attempt.error or "still confirmation_required")
+                return None
+
+        if not attempt.executed:
+            close_batch_context(self.ledger, record, status="failed", model_turns_saved=0)
+            logger.warning("Batch dispatch failed (%s) — step-by-step fallback", attempt.error)
+            return None
+
+        receipt = attempt.receipt
+        if not isinstance(receipt, dict) or not receipt.get("status"):
+            # Audit-before-act runs both ways: the gate always returns a
+            # receipt on success, so a 200 without one is not evidence of
+            # anything. Fail closed rather than report an unproven batch.
+            close_batch_context(self.ledger, record, status="failed", model_turns_saved=0)
+            logger.warning("Batch dispatch returned no receipt — failing closed, "
+                           "step-by-step fallback")
+            return None
+        status = receipt.get("status", "completed")
+        halted_at = receipt.get("halted_at")
+        steps_completed = sum(
+            1 for s in receipt.get("steps", []) if s.get("status") == "completed"
+        )
+        record.batch_id = record.descriptor_hash = attempt.descriptor_hash or "unknown"
+        close_batch_context(
+            self.ledger, record,
+            status=status,
+            halted_at=halted_at,
+            steps_completed=steps_completed,
+            receipt_id=attempt.receipt_id,
+            model_turns_saved=len(batch_steps) - 1,
+        )
+        return {
+            "status": status,
+            "halted_at": halted_at,
+            "descriptor_hash": attempt.descriptor_hash,
+            "receipt_id": attempt.receipt_id,
+            "enforcement": attempt.enforcement,
+            "receipt": receipt,
+        }
+
+    async def _dispatch_code(
+        self,
+        *,
+        step: LoopStep,
+        code_payload: Dict[str, Any],
+        session_id: str,
+        run_id: str,
+        step_num: int,
+    ) -> Optional[Dict[str, Any]]:
+        """Dispatch a grant-bound code payload through the C0 Rust surface.
+
+        Returns one of:
+          * ``{"executed": True, ...}`` — the payload ran; the fixed envelope
+            is the model-visible observation.
+          * ``{"refused": True, "class", "message"}`` — descriptor-time
+            validation refusal; the caller surfaces it as the step's
+            observation so the loop re-plans with whitelist actions. Never
+            retried mutated (a mutation is a new descriptor + new grant).
+          * ``None`` — declined/failed dispatch: the caller falls back to the
+            existing whitelist paths, exactly like a declined batch grant.
+
+        Grant policy (refuse-list, single-use, expiry) is decided entirely
+        Rust-side; this method only presents the payload and routes a
+        ``confirmation_required`` denial through the SAME human-approval flow
+        as per-step risk approval.
+        """
+        from .code_mode import (
+            AciCodeClient,
+            CodeContextRecord,
+            close_code_context,
+            open_code_context,
+        )
+
+        client = self.code_client
+        if client is None:
+            try:
+                client = AciCodeClient()
+            except Exception as exc:
+                logger.warning("Code client unavailable, falling back to whitelist: %s", exc)
+                return None
+            self.code_client = client
+
+        language = str(code_payload.get("language") or "playwright-js")
+        code = str(code_payload.get("code") or "")
+        declared_targets = [str(t) for t in (code_payload.get("declaredTargets") or [])]
+
+        record = CodeContextRecord(
+            run_id=run_id,
+            session_id=session_id,
+            language=language,
+            code_bytes=len(code.encode()),
+            declared_targets=declared_targets,
+        )
+        # Contract §8: opened BEFORE the code RPC (audit-before-act).
+        open_code_context(self.ledger, record)
+
+        async def _try(approval_id=None):
+            return await client.execute_code(
+                code=code,
+                language=language,
+                declared_targets=declared_targets,
+                session=session_id,
+                approval_id=approval_id,
+            )
+
+        attempt = await _try()
+
+        if attempt.refused:
+            close_code_context(self.ledger, record, status="refused")
+            return {
+                "refused": True,
+                "class": attempt.refusal_class,
+                "message": attempt.refusal_message,
+            }
+
+        if attempt.confirmation_required:
+            record.code_id = record.descriptor_hash = attempt.action_hash or "pending"
+            self._emit({"type": "approval.required", "run_id": run_id, "step": step_num,
+                        "action_preview": {"kind": "code", "descriptor_hash": attempt.action_hash,
+                                           "language": language,
+                                           "code_bytes": record.code_bytes},
+                        "reason": f"code grant required (hash={attempt.action_hash})"})
+            approved = await self._request_approval(step)
+            self._emit({"type": "approval.received", "run_id": run_id, "step": step_num,
+                        "approved": approved})
+            if not approved or not attempt.approval_id:
+                close_code_context(self.ledger, record, status="denied")
+                logger.info("Code grant declined at step %s — whitelist fallback", step_num)
+                return None
+            attempt = await _try(approval_id=attempt.approval_id)
+            if not attempt.executed:
+                close_code_context(
+                    self.ledger, record,
+                    status="denied" if attempt.confirmation_required else "failed",
+                )
+                logger.warning("Code grant retry did not execute (%s) — whitelist fallback",
+                               attempt.error or "still confirmation_required")
+                return None
+
+        if not attempt.executed:
+            close_code_context(self.ledger, record, status="failed")
+            logger.warning("Code dispatch failed (%s) — whitelist fallback", attempt.error)
+            return None
+
+        envelope = attempt.envelope
+        if not isinstance(envelope, dict):
+            # Audit-before-act runs both ways: the gate always returns the
+            # fixed envelope on success — a 200 without one is not evidence.
+            close_code_context(self.ledger, record, status="failed")
+            logger.warning("Code dispatch returned no envelope — failing closed")
+            return None
+
+        clean = (
+            envelope.get("exit_status") == 0
+            and not envelope.get("timed_out")
+            and not envelope.get("refused")
+            and not envelope.get("error")
+        )
+        record.code_id = record.descriptor_hash = attempt.descriptor_hash or "unknown"
+        close_code_context(
+            self.ledger,
+            record,
+            status="completed" if clean else "failed",
+            receipt_id=attempt.receipt_id,
+            exit_status=envelope.get("exit_status"),
+            timed_out=bool(envelope.get("timed_out")),
+        )
+        return {
+            "executed": True,
+            "status": "completed" if clean else "failed",
+            "descriptor_hash": attempt.descriptor_hash,
+            "receipt_id": attempt.receipt_id,
+            "envelope": envelope,
+            "receipt": attempt.receipt,
+        }
+
     async def _reflect(self, before: bytes, after: bytes, action, succeeded: bool) -> str:
         """Ask the vision provider to reflect on what changed."""
         if not before or not after:
@@ -870,3 +1299,21 @@ def _extracted_text_of(adapter_result: Optional[Dict]) -> str:
                 parts.append(value)
         return "\n".join(parts)
     return ""
+
+
+def _url_of_result(adapter_result: Optional[Dict]) -> Optional[str]:
+    """Pull a page URL out of an adapter result dict, when the surface carries
+    one (browser extract/navigate results). None otherwise."""
+    if not isinstance(adapter_result, dict):
+        return None
+    for key in ("url", "page_url", "newPageUrl"):
+        value = adapter_result.get(key)
+        if isinstance(value, str) and value.startswith(("http://", "https://")):
+            return value
+    content = adapter_result.get("extracted_content")
+    if isinstance(content, dict):
+        for key in ("url", "page_url", "newPageUrl"):
+            value = content.get(key)
+            if isinstance(value, str) and value.startswith(("http://", "https://")):
+                return value
+    return None

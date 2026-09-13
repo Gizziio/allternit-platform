@@ -225,7 +225,7 @@ export function EditAgentForm({ agent, onCancel, onSaved }: { agent: Agent; onCa
                       tagline: description,
                       welcomeMessage: `Hi, I'm ${name}. How can I help?`,
                       starterPrompts: [],
-                      accentColor: '#6366f1',
+                      accentColor: '#B08D6E',
                       groupChatEnabled: false,
                       botCategory: 'custom',
                     });
@@ -258,13 +258,13 @@ export function EditAgentForm({ agent, onCancel, onSaved }: { agent: Agent; onCa
                   <div className="flex items-center gap-2">
                     <Input
                       type="color"
-                      value={botProfile.accentColor || '#6366f1'}
+                      value={botProfile.accentColor || '#B08D6E'}
                       onChange={(e) => setBotProfile({ ...botProfile, accentColor: e.target.value })}
                       className="h-10 w-14"
                       style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle }}
                     />
                     <Input
-                      value={botProfile.accentColor || '#6366f1'}
+                      value={botProfile.accentColor || '#B08D6E'}
                       onChange={(e) => setBotProfile({ ...botProfile, accentColor: e.target.value })}
                       style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}
                     />

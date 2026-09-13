@@ -109,6 +109,7 @@ pub fn design_connector_router() -> Router<Arc<AppState>> {
         .route("/design/adapters/detect", post(detect_adapters))
         .route("/design/adapters/spawn", post(spawn_adapter))
         .route("/design/plugins/install", post(install_plugin))
+        .route("/design/import-url", post(import_url))
 }
 
 // ─── Open Design connector catalog (in-process) ───────────────────────────────
@@ -706,4 +707,683 @@ async fn install_plugin(
         target: target.to_string(),
         message: format!("Installed {} to {}", name, dir.to_string_lossy()),
     }))
+}
+
+// ─── Design Import from URL ──────────────────────────────────────────────────
+// POST /api/design/import-url
+// Fetches a public web page server-side, extracts its CSS custom properties,
+// color palette, and font families (plus up to 3 linked stylesheets), and
+// returns a DesignSystem-shaped document the design-registry frontend can
+// preview and save. The SSRF guard is load-bearing: literal IPs are rejected
+// before DNS, every resolved address is classified, and each redirect hop is
+// re-validated.
+
+use std::net::IpAddr;
+
+const IMPORT_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 AllternitDesignImporter/1.0";
+const IMPORT_MAX_REDIRECTS: usize = 3;
+const IMPORT_MAX_PAGE_BYTES: usize = 2 * 1024 * 1024;
+const IMPORT_MAX_STYLESHEET_BYTES: usize = 1024 * 1024;
+const IMPORT_MAX_STYLESHEETS: usize = 3;
+const IMPORT_FETCH_TIMEOUT: Duration = Duration::from_secs(10);
+const IMPORT_FALLBACK_COLORS: [&str; 4] = ["#111111", "#444444", "#888888", "#ffffff"];
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ImportUrlRequest {
+    pub url: String,
+}
+
+enum ImportError {
+    BadUrl(String),
+    ForbiddenTarget(String),
+    Fetch(String),
+    NotHtml(String),
+}
+
+impl ImportError {
+    fn message(&self) -> String {
+        match self {
+            ImportError::BadUrl(m) => m.clone(),
+            ImportError::ForbiddenTarget(m) => m.clone(),
+            ImportError::Fetch(m) => m.clone(),
+            ImportError::NotHtml(m) => m.clone(),
+        }
+    }
+}
+
+// ─── SSRF guard ──────────────────────────────────────────────────────────────
+
+/// True for loopback (127.0.0.0/8, ::1), private (10/8, 172.16/12, 192.168/16,
+/// fc00::/7), link-local (169.254/16, fe80::/10), unspecified (0.0.0.0, ::),
+/// and IPv4-mapped forms of any of the above (::ffff:127.0.0.1 etc).
+fn is_forbidden_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            v4.is_loopback()
+                || v4.is_private()
+                || v4.is_link_local()
+                || v4.is_unspecified()
+                // 100.64.0.0/10 CGNAT — not routable on the public internet.
+                // (Ipv4Addr::is_shared is unstable on this toolchain, so
+                // match the prefix explicitly.)
+                || (v4.octets()[0] == 100 && (v4.octets()[1] & 0xC0) == 0x40)
+        }
+        IpAddr::V6(v6) => {
+            if let Some(mapped) = v6.to_ipv4_mapped() {
+                return is_forbidden_ip(IpAddr::V4(mapped));
+            }
+            v6.is_loopback() || v6.is_unique_local() || v6.is_unicast_link_local() || v6.is_unspecified()
+        }
+    }
+}
+
+/// Rejects the URL when its host is a literal IP (v4 or v6, including
+/// IPv4-mapped v6) that classifies as local/private.
+fn host_ip_literal_is_forbidden(host: &str) -> bool {
+    host.parse::<IpAddr>().map(is_forbidden_ip).unwrap_or(false)
+}
+
+/// Validates scheme, literal-IP host, and every DNS-resolved address.
+async fn validate_target(url: &url::Url) -> Result<(), ImportError> {
+    let scheme = url.scheme();
+    if scheme != "http" && scheme != "https" {
+        return Err(ImportError::BadUrl(
+            "Only http:// and https:// URLs are supported".to_string(),
+        ));
+    }
+    let Some(host) = url.host_str() else {
+        return Err(ImportError::BadUrl("URL has no host".to_string()));
+    };
+    if host_ip_literal_is_forbidden(host) {
+        return Err(ImportError::ForbiddenTarget(
+            "URL points to a local or private address, which is not allowed".to_string(),
+        ));
+    }
+    if host.parse::<IpAddr>().is_ok() {
+        return Ok(());
+    }
+    let port = url.port_or_known_default().unwrap_or(80);
+    let addrs: Vec<_> = tokio::net::lookup_host((host, port))
+        .await
+        .map_err(|e| ImportError::Fetch(format!("Could not resolve {}: {}", host, e)))?
+        .collect();
+    if addrs.is_empty() {
+        return Err(ImportError::Fetch(format!("Could not resolve {}", host)));
+    }
+    if addrs.iter().any(|a| is_forbidden_ip(a.ip())) {
+        return Err(ImportError::ForbiddenTarget(
+            "URL resolves to a local or private address, which is not allowed".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+struct FetchedResource {
+    body: String,
+    content_type: String,
+    final_url: String,
+}
+
+/// Fetches a URL with a 10s timeout, no automatic redirects, a browser-ish
+/// User-Agent, and a byte cap. Redirects (max 3) are followed manually so
+/// every hop re-runs the SSRF validation.
+async fn guarded_fetch(start: &url::Url, max_bytes: usize) -> Result<FetchedResource, ImportError> {
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(IMPORT_FETCH_TIMEOUT)
+        .user_agent(IMPORT_USER_AGENT)
+        .build()
+        .map_err(|e| ImportError::Fetch(format!("Could not build HTTP client: {}", e)))?;
+
+    let mut current = start.clone();
+    let mut hops = 0usize;
+    loop {
+        validate_target(&current).await?;
+
+        let resp = client.get(current.as_str()).send().await.map_err(|e| {
+            if e.is_timeout() {
+                ImportError::Fetch("Timed out fetching the URL (10s limit)".to_string())
+            } else {
+                ImportError::Fetch(format!("Could not fetch URL: {}", e))
+            }
+        })?;
+
+        let status = resp.status();
+        if status.is_redirection() {
+            if hops >= IMPORT_MAX_REDIRECTS {
+                return Err(ImportError::Fetch("Too many redirects (max 3)".to_string()));
+            }
+            let Some(location) = resp
+                .headers()
+                .get(reqwest::header::LOCATION)
+                .and_then(|v| v.to_str().ok())
+            else {
+                return Err(ImportError::Fetch(format!(
+                    "Redirect (HTTP {}) without a Location header",
+                    status
+                )));
+            };
+            current = current
+                .join(location)
+                .map_err(|_| ImportError::Fetch("Invalid redirect Location header".to_string()))?;
+            hops += 1;
+            continue;
+        }
+        if !status.is_success() {
+            return Err(ImportError::Fetch(format!("URL returned HTTP {}", status)));
+        }
+
+        let content_type = resp
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+
+        use futures::StreamExt;
+        let mut stream = resp.bytes_stream();
+        let mut bytes: Vec<u8> = Vec::new();
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk
+                .map_err(|e| ImportError::Fetch(format!("Error reading response: {}", e)))?;
+            bytes.extend_from_slice(&chunk);
+            if bytes.len() > max_bytes {
+                return Err(ImportError::Fetch(
+                    "Response body is too large (2MB limit)".to_string(),
+                ));
+            }
+        }
+
+        return Ok(FetchedResource {
+            body: String::from_utf8_lossy(&bytes).into_owned(),
+            content_type,
+            final_url: current.to_string(),
+        });
+    }
+}
+
+// ─── HTML / CSS extraction (pure functions) ──────────────────────────────────
+
+#[derive(Debug, Clone, Default, PartialEq)]
+struct HtmlExtraction {
+    name: Option<String>,
+    stylesheet_hrefs: Vec<String>,
+    /// All CSS text found inline: `<style>` block contents plus `style="…"`
+    /// attribute values. Linked stylesheets are appended to this at fetch time.
+    css_text: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+struct CssTokens {
+    /// CSS custom properties (`--name: value`), deduped by name, first wins.
+    vars: Vec<(String, String)>,
+    /// Hex colors, deduped, ordered by frequency (ties keep first-seen order).
+    colors: Vec<String>,
+    /// Font families, deduped, first-seen order.
+    fonts: Vec<String>,
+}
+
+/// Collapses whitespace, decodes a few common HTML entities, truncates.
+fn clean_text(raw: &str, max_len: usize) -> String {
+    let decoded = raw
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'");
+    let collapsed: String = decoded.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut out: String = collapsed.chars().take(max_len).collect();
+    if collapsed.chars().count() > max_len {
+        out.push('…');
+    }
+    out
+}
+
+fn extract_from_html(html: &str) -> HtmlExtraction {
+    let mut out = HtmlExtraction::default();
+
+    // <title> first, og:site_name as fallback.
+    if let Ok(re) = regex::Regex::new(r"(?is)<title[^>]*>(.*?)</title>") {
+        if let Some(cap) = re.captures(html) {
+            let title = clean_text(cap.get(1).map(|m| m.as_str()).unwrap_or(""), 80);
+            if !title.is_empty() {
+                out.name = Some(title);
+            }
+        }
+    }
+    if out.name.is_none() {
+        if let Ok(meta_re) = regex::Regex::new(r"(?is)<meta\b[^>]*>") {
+            if let Ok(prop_re) = regex::Regex::new(r#"(?is)property\s*=\s*["']og:site_name["']"#) {
+                if let Ok(content_re) =
+                    regex::Regex::new(r#"(?is)content\s*=\s*["']([^"']*)["']"#)
+                {
+                    'outer: for tag in meta_re.find_iter(html) {
+                        if prop_re.find(tag.as_str()).is_none() {
+                            continue;
+                        }
+                        if let Some(cap) = content_re.captures(tag.as_str()) {
+                            let name = clean_text(cap.get(1).map(|m| m.as_str()).unwrap_or(""), 80);
+                            if !name.is_empty() {
+                                out.name = Some(name);
+                                break 'outer;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Inline <style> blocks.
+    if let Ok(style_re) = regex::Regex::new(r"(?is)<style[^>]*>(.*?)</style>") {
+        for cap in style_re.captures_iter(html) {
+            out.css_text.push_str(cap.get(1).map(|m| m.as_str()).unwrap_or(""));
+            out.css_text.push('\n');
+        }
+    }
+    // Inline style="…" attributes.
+    if let Ok(attr_re) = regex::Regex::new(r#"(?is)style\s*=\s*["']([^"']*)["']"#) {
+        for cap in attr_re.captures_iter(html) {
+            out.css_text.push_str(cap.get(1).map(|m| m.as_str()).unwrap_or(""));
+            out.css_text.push('\n');
+        }
+    }
+
+    // <link rel="stylesheet" href="…"> (attribute order tolerant).
+    if let Ok(link_re) = regex::Regex::new(r"(?is)<link\b[^>]*>") {
+        if let Ok(rel_re) = regex::Regex::new(r#"(?is)rel\s*=\s*["'][^"']*stylesheet[^"']*["']"#) {
+            if let Ok(href_re) = regex::Regex::new(r#"(?is)href\s*=\s*["']([^"']*)["']"#) {
+                for tag in link_re.find_iter(html) {
+                    if rel_re.find(tag.as_str()).is_none() {
+                        continue;
+                    }
+                    if let Some(cap) = href_re.captures(tag.as_str()) {
+                        if let Some(href) = cap.get(1).map(|m| m.as_str().trim().to_string()) {
+                            if !href.is_empty() && !href.starts_with("data:") {
+                                out.stylesheet_hrefs.push(href);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    out
+}
+
+/// Extracts CSS custom properties, hex colors, and font families from a CSS
+/// text blob (page inline CSS or a fetched stylesheet).
+fn extract_css_tokens(css: &str) -> CssTokens {
+    let mut out = CssTokens::default();
+
+    if let Ok(var_re) = regex::Regex::new(r"(?m)--([a-zA-Z0-9_-]+)\s*:\s*([^;}{]+)") {
+        for cap in var_re.captures_iter(css) {
+            let name = cap.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+            let value = cap
+                .get(2)
+                .map(|m| m.as_str().trim().to_string())
+                .unwrap_or_default();
+            if name.is_empty() || value.is_empty() {
+                continue;
+            }
+            if out.vars.iter().any(|(n, _)| *n == name) {
+                continue;
+            }
+            out.vars.push((name, value));
+        }
+    }
+
+    if let Ok(hex_re) = regex::Regex::new(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b") {
+        let mut seen: HashMap<String, usize> = HashMap::new();
+        let mut order: Vec<String> = Vec::new();
+        for cap in hex_re.captures_iter(css) {
+            let raw = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+            let normalized = format!(
+                "#{}",
+                if raw.len() == 3 {
+                    let mut s = String::with_capacity(6);
+                    for c in raw.chars() {
+                        s.push(c);
+                        s.push(c);
+                    }
+                    s
+                } else {
+                    raw.to_string()
+                }
+                .to_lowercase()
+            );
+            if !seen.contains_key(&normalized) {
+                order.push(normalized.clone());
+            }
+            *seen.entry(normalized).or_insert(0) += 1;
+        }
+        // Stable sort keeps first-seen order among equal frequencies.
+        let mut ranked = order;
+        ranked.sort_by(|a, b| seen[b].cmp(&seen[a]));
+        out.colors = ranked;
+    }
+
+    if let Ok(font_re) = regex::Regex::new(r"(?i)font-family\s*:\s*([^;}{]+)") {
+        for cap in font_re.captures_iter(css) {
+            let decl = cap.get(1).map(|m| m.as_str()).unwrap_or("");
+            for part in decl.split(',') {
+                let family = part
+                    .trim()
+                    .trim_matches(|c| c == '\'' || c == '"')
+                    .trim()
+                    .to_string();
+                if family.is_empty()
+                    || family.starts_with("var(")
+                    || out.fonts.iter().any(|f| f == &family)
+                {
+                    continue;
+                }
+                out.fonts.push(family);
+            }
+        }
+    }
+
+    out
+}
+
+// ─── design.md assembly ──────────────────────────────────────────────────────
+
+fn build_design_md(
+    name: &str,
+    source_url: &str,
+    tokens: &CssTokens,
+) -> String {
+    let mut md = String::new();
+    md.push_str(&format!("# Design System: {}\n\n", name));
+    md.push_str(&format!("Imported from {}\n\n", source_url));
+
+    md.push_str("## Colors\n\n");
+    if tokens.colors.is_empty() {
+        md.push_str("_No hex colors were detected._\n");
+    } else {
+        for color in tokens.colors.iter().take(12) {
+            md.push_str(&format!("- `{}`\n", color));
+        }
+    }
+    md.push('\n');
+
+    md.push_str("## Typography\n\n");
+    if tokens.fonts.is_empty() {
+        md.push_str("_No font-family declarations were detected._\n");
+    } else {
+        for font in tokens.fonts.iter().take(10) {
+            md.push_str(&format!("- {}\n", font));
+        }
+    }
+    md.push('\n');
+
+    md.push_str("## Tokens\n\n");
+    if tokens.vars.is_empty() {
+        md.push_str("No CSS custom properties were found on this page.\n");
+    } else {
+        for (var, value) in tokens.vars.iter().take(60) {
+            md.push_str(&format!("- `--{}`: {}\n", var, value));
+        }
+    }
+
+    md
+}
+
+// ─── Route handler ───────────────────────────────────────────────────────────
+
+async fn import_url(
+    State(_state): State<Arc<AppState>>,
+    Json(req): Json<ImportUrlRequest>,
+) -> impl IntoResponse {
+    match import_url_inner(&req.url).await {
+        Ok(design) => Json(json!({ "ok": true, "design": design })),
+        Err(err) => Json(json!({ "ok": false, "error": err.message() })),
+    }
+}
+
+async fn import_url_inner(url_str: &str) -> Result<serde_json::Value, ImportError> {
+    let trimmed = url_str.trim();
+    if trimmed.is_empty() {
+        return Err(ImportError::BadUrl("A URL is required".to_string()));
+    }
+    let start = url::Url::parse(trimmed).map_err(|_| {
+        ImportError::BadUrl(format!("Invalid URL: {}", trimmed))
+    })?;
+
+    let page = guarded_fetch(&start, IMPORT_MAX_PAGE_BYTES).await?;
+    let content_type = page.content_type.clone();
+    if !content_type.is_empty()
+        && !content_type.contains("text/html")
+        && !content_type.contains("application/xhtml")
+    {
+        return Err(ImportError::NotHtml(format!(
+            "not an HTML page (content-type: {})",
+            content_type
+        )));
+    }
+
+    let base = url::Url::parse(&page.final_url).unwrap_or(start);
+    let mut extracted = extract_from_html(&page.body);
+
+    // Follow up to 3 linked stylesheets through the same guarded fetcher.
+    let hrefs = extracted.stylesheet_hrefs.clone();
+    let mut fetched_sheets = 0usize;
+    for href in &hrefs {
+        if fetched_sheets >= IMPORT_MAX_STYLESHEETS {
+            break;
+        }
+        let Ok(abs) = base.join(href) else {
+            continue;
+        };
+        if abs.scheme() != "http" && abs.scheme() != "https" {
+            continue;
+        }
+        match guarded_fetch(&abs, IMPORT_MAX_STYLESHEET_BYTES).await {
+            Ok(sheet) => {
+                extracted.css_text.push_str(&sheet.body);
+                extracted.css_text.push('\n');
+                fetched_sheets += 1;
+            }
+            Err(_) => continue,
+        }
+    }
+
+    let tokens = extract_css_tokens(&extracted.css_text);
+
+    let host = base.host_str().unwrap_or("imported-site").to_string();
+    let name = extracted.name.clone().unwrap_or(host);
+    let preview_colors: Vec<String> = if tokens.colors.is_empty() {
+        IMPORT_FALLBACK_COLORS.iter().map(|s| s.to_string()).collect()
+    } else {
+        tokens.colors.iter().take(4).cloned().collect()
+    };
+    let description = format!(
+        "Imported from {} — {} colors, {} font families, {} CSS custom properties extracted.",
+        base,
+        tokens.colors.len(),
+        tokens.fonts.len(),
+        tokens.vars.len()
+    );
+    let design_md = build_design_md(&name, base.as_str(), &tokens);
+
+    Ok(json!({
+        "name": name,
+        "description": description,
+        "vibe": "Imported",
+        "author": "imported",
+        "tags": ["imported", "web"],
+        "designMd": design_md,
+        "previewColors": preview_colors,
+    }))
+}
+
+// ─── Tests ───────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod import_url_tests {
+    use super::*;
+    use std::net::{Ipv4Addr, Ipv6Addr};
+
+    const FIXTURE_HTML: &str = r#"<!DOCTYPE html>
+<html>
+<head>
+  <title>Acme &amp; Co — Home</title>
+  <meta property="og:site_name" content="Acme OG">
+  <link rel="stylesheet" href="/assets/app.css">
+  <link href="https://cdn.example.com/lib.css" rel="stylesheet">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root {
+      --color-primary: #FF6600;
+      --color-secondary: #3366ff;
+      --radius-base: 8px;
+    }
+    body { font-family: 'Inter', sans-serif; color: #f60; background: #ffffff; }
+    h1 { font-family: "Space Grotesk", 'Inter', sans-serif; color: #3366FF; }
+    .card { color: #fff; }
+  </style>
+</head>
+<body style="margin: 0; font-family: Georgia, serif;">
+  <h1 style="color: #FF6600;">Hello</h1>
+</body>
+</html>"#;
+
+    #[test]
+    fn extract_from_html_pulls_title_hrefs_and_inline_css() {
+        let ex = extract_from_html(FIXTURE_HTML);
+
+        // <title> wins over og:site_name, entities decoded, whitespace collapsed.
+        assert_eq!(ex.name.as_deref(), Some("Acme & Co — Home"));
+
+        // Both stylesheet links found (either attribute order), icon skipped.
+        assert_eq!(
+            ex.stylesheet_hrefs,
+            vec!["/assets/app.css", "https://cdn.example.com/lib.css"]
+        );
+
+        // Inline CSS (style block + style attributes) is collected.
+        assert!(ex.css_text.contains("--color-primary"));
+        assert!(ex.css_text.contains("margin: 0"));
+    }
+
+    #[test]
+    fn extract_from_html_falls_back_to_og_site_name() {
+        let html = r#"<html><head>
+          <meta property="og:site_name" content="OG Name Here">
+        </head><body></body></html>"#;
+        let ex = extract_from_html(html);
+        assert_eq!(ex.name.as_deref(), Some("OG Name Here"));
+        assert!(ex.css_text.is_empty());
+    }
+
+    #[test]
+    fn extract_css_tokens_orders_colors_by_frequency() {
+        let tokens = extract_css_tokens(&extract_from_html(FIXTURE_HTML).css_text);
+
+        // #ff6600 appears 3x (var + body + h1), #3366ff 2x, #ffffff/#fff 1x each.
+        assert_eq!(tokens.colors.first().map(String::as_str), Some("#ff6600"));
+        let pos_3366ff = tokens.colors.iter().position(|c| c == "#3366ff").unwrap();
+        let pos_ffffff = tokens.colors.iter().position(|c| c == "#ffffff").unwrap();
+        let pos_fff = tokens.colors.iter().position(|c| c == "#ffffff").unwrap();
+        assert!(pos_3366ff < pos_ffffff);
+        assert_eq!(pos_ffffff, pos_fff); // #fff normalized into #ffffff, deduped
+        assert_eq!(tokens.colors.iter().filter(|c| *c == "#ffffff").count(), 1);
+
+        // Custom properties deduped, first value wins.
+        assert!(tokens
+            .vars
+            .contains(&("color-primary".to_string(), "#FF6600".to_string())));
+        assert!(tokens
+            .vars
+            .contains(&("radius-base".to_string(), "8px".to_string())));
+
+        // Font families in first-seen order, quotes stripped, fallbacks kept.
+        assert_eq!(tokens.fonts.first().map(String::as_str), Some("Inter"));
+        assert!(tokens.fonts.contains(&"Space Grotesk".to_string()));
+        assert!(tokens.fonts.contains(&"Georgia".to_string()));
+    }
+
+    #[test]
+    fn extract_css_tokens_handles_empty_input() {
+        let tokens = extract_css_tokens("");
+        assert!(tokens.vars.is_empty());
+        assert!(tokens.colors.is_empty());
+        assert!(tokens.fonts.is_empty());
+    }
+
+    #[test]
+    fn is_forbidden_ip_blocks_local_and_private_addresses() {
+        let forbidden: Vec<IpAddr> = vec![
+            Ipv4Addr::new(127, 0, 0, 1).into(),
+            Ipv4Addr::new(127, 8, 9, 10).into(),
+            Ipv4Addr::new(10, 1, 2, 3).into(),
+            Ipv4Addr::new(172, 16, 5, 4).into(),
+            Ipv4Addr::new(172, 31, 255, 255).into(),
+            Ipv4Addr::new(192, 168, 1, 1).into(),
+            Ipv4Addr::new(169, 254, 1, 1).into(),
+            Ipv4Addr::new(0, 0, 0, 0).into(),
+            Ipv4Addr::new(100, 64, 0, 1).into(), // shared CGNAT — blocked too
+            Ipv6Addr::LOCALHOST.into(),
+            "fd00::1".parse::<IpAddr>().unwrap(),
+            "fe80::1".parse::<IpAddr>().unwrap(),
+            "::".parse::<IpAddr>().unwrap(),
+            // IPv4-mapped loopback/private must not slip through as v6.
+            "::ffff:127.0.0.1".parse::<IpAddr>().unwrap(),
+            "::ffff:10.0.0.1".parse::<IpAddr>().unwrap(),
+        ];
+        for ip in forbidden {
+            assert!(is_forbidden_ip(ip), "{} should be forbidden", ip);
+        }
+
+        let allowed: Vec<IpAddr> = vec![
+            Ipv4Addr::new(8, 8, 8, 8).into(),
+            Ipv4Addr::new(1, 1, 1, 1).into(),
+            Ipv4Addr::new(93, 184, 216, 34).into(), // example.com
+            "2606:4700:4700::1111".parse::<IpAddr>().unwrap(),
+        ];
+        for ip in allowed {
+            assert!(!is_forbidden_ip(ip), "{} should be allowed", ip);
+        }
+    }
+
+    #[test]
+    fn host_ip_literal_is_forbidden_classifies_url_hosts() {
+        assert!(host_ip_literal_is_forbidden("127.0.0.1"));
+        assert!(host_ip_literal_is_forbidden("0.0.0.0"));
+        assert!(host_ip_literal_is_forbidden("::1"));
+        assert!(host_ip_literal_is_forbidden("192.168.0.44"));
+        assert!(!host_ip_literal_is_forbidden("example.com"));
+        assert!(!host_ip_literal_is_forbidden("1.1.1.1"));
+    }
+
+    #[test]
+    fn build_design_md_notes_when_no_tokens_found() {
+        let tokens = CssTokens::default();
+        let md = build_design_md("Bare Site", "https://bare.example/", &tokens);
+        assert!(md.starts_with("# Design System: Bare Site"));
+        assert!(md.contains("## Colors"));
+        assert!(md.contains("## Typography"));
+        assert!(md.contains("## Tokens"));
+        assert!(md.contains("No CSS custom properties were found on this page."));
+    }
+
+    #[test]
+    fn build_design_md_stays_compact_with_many_tokens() {
+        let mut tokens = CssTokens::default();
+        for i in 0..200 {
+            tokens.vars.push((format!("var-{}", i), format!("{}px", i)));
+            tokens.colors.push(format!("#{:06x}", i));
+            tokens.fonts.push(format!("Font{}", i));
+        }
+        let md = build_design_md("Big Site", "https://big.example/", &tokens);
+        let lines = md.lines().count();
+        assert!(
+            lines <= 120,
+            "designMd should stay under 120 lines, got {}",
+            lines
+        );
+        assert!(md.contains("--var-0"));
+        assert!(!md.contains("--var-60"));
+    }
 }

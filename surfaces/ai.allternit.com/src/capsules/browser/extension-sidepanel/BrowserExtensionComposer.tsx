@@ -18,7 +18,7 @@ import { useBrowserCapture } from "./useBrowserCapture";
 import { useBrowserAgentStore } from "../browserAgent.store";
 import type { PageAgentActivity, PageAgentHistoricalEvent } from "../browserAgent.store";
 
-const browser = MODE_COLORS.browser;
+const browser = MODE_COLORS.design;
 
 // ============================================================================
 // ACI todo top deck — tray tucked behind the composer card, mirroring the

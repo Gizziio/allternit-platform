@@ -55,7 +55,7 @@ const InsightsView: React.FC = () => {
   // Document breakdown
   const documentBreakdown: DocumentBreakdown[] = [
     { type: 'Documents', percentage: 45, color: 'var(--status-info)' },
-    { type: 'Tables', percentage: 30, color: 'var(--accent-cowork)' },
+    { type: 'Tables', percentage: 30, color: 'var(--accent-primary)' },
     { type: 'Files', percentage: 25, color: 'var(--status-success)' },
   ];
 
@@ -141,7 +141,7 @@ const InsightsView: React.FC = () => {
               key={`heatmap-${idx}`}
               className="size-4 rounded-sm"
               style={{
-                backgroundColor: 'var(--accent-cowork)',
+                backgroundColor: 'var(--accent-primary)',
                 opacity: Math.max(0.1, intensity),
               }}
               title={`Intensity: ${Math.round(intensity * 100)}%`}

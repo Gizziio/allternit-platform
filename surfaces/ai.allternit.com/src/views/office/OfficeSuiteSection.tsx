@@ -101,8 +101,8 @@ function isPdfArtifact(artifact: ArtifactDto): boolean {
 
 /**
  * The Allternit Office suite section: the four editor cards plus open-a-file.
- * Shared by the standalone /office launcher and the shell's
- * "Office & Extensions" view so there is one source of truth for the suite.
+ * Shared by the popped-out /office desktop window and any other office
+ * surface so there is one source of truth for the suite.
  * Layout follows the platform's standard shell-view card recipe (same as
  * Artifacts Library / Automation Tasks) so it matches light and dark themes.
  */

@@ -164,7 +164,7 @@ export function KanbanBoard() {
             fontWeight: 700, 
             cursor: 'pointer', 
             border: 'none', 
-            background: view === 'board' ? 'var(--accent-chat)' : 'transparent', 
+            background: view === 'board' ? 'var(--accent-primary)' : 'transparent', 
             color: view === 'board' ? 'white' : 'var(--text-tertiary)' 
           }}
         >
@@ -179,7 +179,7 @@ export function KanbanBoard() {
             fontWeight: 700, 
             cursor: 'pointer', 
             border: 'none', 
-            background: view === 'dag' ? 'var(--accent-chat)' : 'transparent', 
+            background: view === 'dag' ? 'var(--accent-primary)' : 'transparent', 
             color: view === 'dag' ? 'white' : 'var(--text-tertiary)' 
           }}
         >
@@ -492,7 +492,7 @@ function TaskCard({ wih, isActive }: { wih: WihInfo; isActive: boolean }) {
       style={{ 
         padding: 12, 
         cursor: 'grab', 
-        border: isActive ? '1px solid var(--accent-chat)' : '1px solid var(--border-subtle)',
+        border: isActive ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
         background: isActive ? 'rgba(10, 132, 255, 0.05)' : 'var(--glass-bg-thick)',
         borderLeft: `3px solid ${column?.color || 'var(--ui-text-muted)'}`,
         borderRadius: 8

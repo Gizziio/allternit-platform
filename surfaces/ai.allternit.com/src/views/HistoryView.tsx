@@ -36,9 +36,9 @@ interface GroupedSessions {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const MODE_COLORS: Record<SessionMode, string> = {
-  chat: 'var(--accent-chat)',
+  chat: 'var(--accent-primary)',
   code: 'var(--accent-primary)',
-  cowork: 'var(--accent-cowork, var(--status-success))',
+  cowork: 'var(--accent-primary)',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

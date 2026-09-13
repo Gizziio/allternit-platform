@@ -10,71 +10,48 @@ import {
 } from './agentModeSurfaceTheme';
 
 describe('getAgentModeSurfaceTheme', () => {
-  it('returns chat theme by default when no surface is provided', () => {
+  // Amber-only law (2026-09-11): chat/cowork/code/browser all resolve to the
+  // shared amber surface theme.
+  const AMBER = {
+    accent: 'var(--accent-primary)',
+    glow: 'rgba(176,141,110,0.26)',
+    soft: 'rgba(176,141,110,0.14)',
+    wash: 'rgba(176,141,110,0.18)',
+    fog: 'rgba(122,89,61,0.2)',
+    edge: 'rgba(176,141,110,0.16)',
+    panelTint: 'rgba(176,141,110,0.08)',
+    shadow: 'rgba(83,51,24,0.12)',
+  };
+
+  it('returns amber theme by default when no surface is provided', () => {
     const theme = getAgentModeSurfaceTheme();
-    
-    expect(theme.accent).toBe('var(--accent-primary)');
-    expect(theme.glow).toBe('rgba(212,149,106,0.28)');
-    expect(theme.soft).toBe('rgba(212,149,106,0.14)');
+
+    expect(theme.accent).toBe(AMBER.accent);
+    expect(theme.glow).toBe(AMBER.glow);
+    expect(theme.soft).toBe(AMBER.soft);
   });
 
-  it('returns chat theme when null surface is provided', () => {
+  it('returns amber theme when null surface is provided', () => {
     const theme = getAgentModeSurfaceTheme(null);
 
-    expect(theme.accent).toBe('var(--accent-primary)');
-    expect(theme.glow).toBe('rgba(212,149,106,0.28)');
+    expect(theme.accent).toBe(AMBER.accent);
+    expect(theme.glow).toBe(AMBER.glow);
   });
 
-  it('returns correct theme for chat surface', () => {
-    const theme = getAgentModeSurfaceTheme('chat');
-
-    expect(theme.accent).toBe('var(--accent-primary)');
-    expect(theme.glow).toBe('rgba(212,149,106,0.28)');
-    expect(theme.soft).toBe('rgba(212,149,106,0.14)');
-    expect(theme.wash).toBe('rgba(212,149,106,0.18)');
-    expect(theme.fog).toBe('rgba(147,94,53,0.18)');
-    expect(theme.edge).toBe('rgba(212,149,106,0.14)');
-    expect(theme.panelTint).toBe('rgba(212,149,106,0.08)');
-    expect(theme.shadow).toBe('rgba(83,51,24,0.12)');
+  it('returns amber theme for chat surface', () => {
+    expect(getAgentModeSurfaceTheme('chat')).toEqual(AMBER);
   });
 
-  it('returns correct theme for cowork surface', () => {
-    const theme = getAgentModeSurfaceTheme('cowork');
-    
-    expect(theme.accent).toBe('#A78BFA');
-    expect(theme.glow).toBe('rgba(167,139,250,0.28)');
-    expect(theme.soft).toBe('rgba(167,139,250,0.14)');
-    expect(theme.wash).toBe('rgba(167,139,250,0.18)');
-    expect(theme.fog).toBe('rgba(93,74,166,0.2)');
-    expect(theme.edge).toBe('rgba(167,139,250,0.16)');
-    expect(theme.panelTint).toBe('rgba(167,139,250,0.08)');
-    expect(theme.shadow).toBe('rgba(58,42,113,0.14)');
+  it('returns amber theme for cowork surface', () => {
+    expect(getAgentModeSurfaceTheme('cowork')).toEqual(AMBER);
   });
 
-  it('returns correct theme for code surface', () => {
-    const theme = getAgentModeSurfaceTheme('code');
-    
-    expect(theme.accent).toBe('#79C47C');
-    expect(theme.glow).toBe('rgba(121,196,124,0.28)');
-    expect(theme.soft).toBe('rgba(121,196,124,0.14)');
-    expect(theme.wash).toBe('rgba(121,196,124,0.18)');
-    expect(theme.fog).toBe('rgba(67,129,71,0.2)');
-    expect(theme.edge).toBe('rgba(121,196,124,0.16)');
-    expect(theme.panelTint).toBe('rgba(121,196,124,0.08)');
-    expect(theme.shadow).toBe('rgba(34,78,37,0.14)');
+  it('returns amber theme for code surface', () => {
+    expect(getAgentModeSurfaceTheme('code')).toEqual(AMBER);
   });
 
-  it('returns correct theme for browser surface', () => {
-    const theme = getAgentModeSurfaceTheme('browser');
-    
-    expect(theme.accent).toBe('#69A8C8');
-    expect(theme.glow).toBe('rgba(105,168,200,0.26)');
-    expect(theme.soft).toBe('rgba(105,168,200,0.14)');
-    expect(theme.wash).toBe('rgba(105,168,200,0.18)');
-    expect(theme.fog).toBe('rgba(61,106,138,0.2)');
-    expect(theme.edge).toBe('rgba(105,168,200,0.16)');
-    expect(theme.panelTint).toBe('rgba(105,168,200,0.08)');
-    expect(theme.shadow).toBe('rgba(29,62,80,0.14)');
+  it('returns amber theme for browser surface', () => {
+    expect(getAgentModeSurfaceTheme('browser')).toEqual(AMBER);
   });
 
   it('returns a complete theme object for all surface types', () => {

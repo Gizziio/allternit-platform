@@ -64,6 +64,13 @@ pub struct PanelEngineAgent {
     /// `Some(join_key)` when this agent's `agent_session` matched a native
     /// catalog row (spec binding decision 6).
     pub joined_native: Option<String>,
+    /// Last user prompt text from the joined native catalog row (or the
+    /// peer-backed cwd join), when known.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_message: Option<String>,
+    /// Epoch ms when that prompt arrived.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_message_at: Option<u64>,
     pub agent_session: Option<AgentSessionJson>,
 }
 
@@ -240,6 +247,26 @@ pub fn joined_native_row<'a>(
     native.iter().find(|s| agent_session_matches(s, info))
 }
 
+/// Peer-backed fallback join: a peer registered from the same cwd as the
+/// agent's pane identifies the harness (`vendor`) and project (`cwd`); pick
+/// the freshest catalog row sharing that cwd (several sessions can live in
+/// one project). Used only when the `agent_session` join found nothing.
+fn joined_native_via_peer<'a>(
+    agent: &AgentInfo,
+    peers: &[Peer],
+    native: &'a [NativeSession],
+) -> Option<&'a NativeSession> {
+    let cwd = agent.cwd.as_deref()?;
+    let peer = peers
+        .iter()
+        .find(|p| p.cwd.to_string_lossy() == cwd)?;
+    let vendor = peer.vendor.strip_prefix("herdr:").unwrap_or(&peer.vendor);
+    native
+        .iter()
+        .filter(|s| s.harness == vendor && s.cwd.as_deref() == Some(cwd))
+        .max_by_key(|s| s.updated_at)
+}
+
 /// The full merged panel — what the overlay renders and `ao visibility`
 /// prints.
 #[derive(Debug, Clone, Serialize)]
@@ -277,17 +304,23 @@ pub fn build_panel(
 
     let mut panel_agents: Vec<PanelEngineAgent> = engine_agents
         .iter()
-        .map(|agent| PanelEngineAgent {
-            pane_id: agent.pane_id.clone(),
-            workspace_id: agent.workspace_id.clone(),
-            name: agent.name.clone(),
-            agent: agent.agent.clone(),
-            title: agent.title.clone(),
-            status: agent.agent_status,
-            state_change_seq: agent.state_change_seq,
-            cwd: agent.cwd.clone(),
-            joined_native: joined_native_row(agent, &sample.native).map(|s| s.join_key()),
-            agent_session: agent.agent_session.as_ref().map(Into::into),
+        .map(|agent| {
+            let joined = joined_native_row(agent, &sample.native)
+                .or_else(|| joined_native_via_peer(agent, &sample.peers, &sample.native));
+            PanelEngineAgent {
+                pane_id: agent.pane_id.clone(),
+                workspace_id: agent.workspace_id.clone(),
+                name: agent.name.clone(),
+                agent: agent.agent.clone(),
+                title: agent.title.clone(),
+                status: agent.agent_status,
+                state_change_seq: agent.state_change_seq,
+                cwd: agent.cwd.clone(),
+                joined_native: joined.map(|s| s.join_key()),
+                last_message: joined.and_then(|s| s.last_prompt.clone()),
+                last_message_at: joined.and_then(|s| s.last_prompt_at),
+                agent_session: agent.agent_session.as_ref().map(Into::into),
+            }
         })
         .collect();
     panel_agents.sort_by(|a, b| {
@@ -414,6 +447,8 @@ mod tests {
             created_at: None,
             fingerprint: "f".repeat(64),
             last_event_id: Some(id.to_string()),
+            last_prompt: None,
+            last_prompt_at: None,
             installed: true,
             reader: crate::ao::native::ReaderKind::Directory,
             projectable: true,
@@ -572,6 +607,27 @@ mod tests {
             panel.engine.agents[0].joined_native.as_deref(),
             Some("kimi+aaa-bbb")
         );
+    }
+
+    #[test]
+    fn joined_native_row_flows_last_prompt_to_engine_agent() {
+        let mut agent = agent_info("p1", AgentStatus::Working, 1);
+        agent.agent_session = Some(session_info("kimi", AgentSessionRefKind::Id, "aaa-bbb"));
+        let mut session = kimi_session("aaa-bbb");
+        session.last_prompt = Some("fix the login bug".to_string());
+        session.last_prompt_at = Some(1725974400000);
+        let sample = FeedSample {
+            engine: Ok(vec![agent]),
+            native: vec![session],
+            peers: vec![],
+        };
+        let mut waiting = WaitingList::new();
+        let agents = sample.engine.as_ref().unwrap().clone();
+        waiting.observe(&agents, 0);
+        let panel = build_panel(sample, &waiting, vec![], 0);
+        let row = &panel.engine.agents[0];
+        assert_eq!(row.last_message.as_deref(), Some("fix the login bug"));
+        assert_eq!(row.last_message_at, Some(1725974400000));
     }
 
     #[test]

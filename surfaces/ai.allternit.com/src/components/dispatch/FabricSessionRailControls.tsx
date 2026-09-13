@@ -8,10 +8,10 @@ import { FabricKindIcon } from '@/components/dispatch/FabricSessionDriveViews';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 const KIND_ACCENT: Record<Exclude<FabricDriveKind, 'desktop'>, string> = {
-  chat: 'var(--accent-chat)',
+  chat: 'var(--accent-primary)',
   bot: 'var(--accent-bot)',
-  code: 'var(--accent-code)',
-  aci: 'var(--accent-browser)',
+  code: 'var(--accent-primary)',
+  aci: 'var(--accent-primary)',
 };
 
 const SESSION_TABS = FABRIC_DRIVE_KINDS.filter((tab) => tab.id !== 'desktop');

@@ -24,7 +24,7 @@ interface GraphEdge {
 const NODE_COLORS: Record<string, string> = {
   live: 'var(--status-success)',
   stale: 'var(--status-error)',
-  file: '#8b5cf6',
+  file: '#B08D6E',
   summary: 'var(--status-warning)',
 };
 

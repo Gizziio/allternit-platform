@@ -202,7 +202,7 @@ function PreviewContent({ url, projectName }: { url: string; projectName: string
       </div>
 
       {/* Hero card */}
-      <div style={{ borderRadius: 16, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', padding: '20px 18px', marginBottom: 14, color: '#fff' }}>
+      <div style={{ borderRadius: 16, background: 'linear-gradient(135deg, #B08D6E, #C4A684)', padding: '20px 18px', marginBottom: 14, color: '#fff' }}>
         <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.8, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Overview</div>
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>Welcome back</div>
         <div style={{ fontSize: 12, opacity: 0.75 }}>Your project is ready to preview.</div>
@@ -223,7 +223,7 @@ function PreviewContent({ url, projectName }: { url: string; projectName: string
         {['Dashboard', 'Analytics', 'Settings', 'Profile'].map(item => (
           <div key={item} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 14px', borderRadius: 12, background: '#f5f5f7' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{item}</span>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366f1' }} />
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#B08D6E' }} />
           </div>
         ))}
       </div>

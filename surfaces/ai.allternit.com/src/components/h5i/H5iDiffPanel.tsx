@@ -46,7 +46,7 @@ const sideConfig = {
 
 const typeConfig = {
   OBSERVE: { color: 'var(--status-info)' },
-  THINK: { color: '#8b5cf6' },
+  THINK: { color: '#B08D6E' },
   ACT: { color: 'var(--status-success)' },
   NOTE: { color: 'var(--status-warning)' },
 };

@@ -51,7 +51,7 @@ import type {
 // Policy type configurations
 const POLICY_TYPES: { value: PolicyType; label: string; color: string; icon: React.ReactNode }[] = [
   { value: 'security', label: 'Security', color: 'var(--status-error)', icon: <Shield size={14} /> },
-  { value: 'compliance', label: 'Compliance', color: '#8b5cf6', icon: <CheckCircle size={14} /> },
+  { value: 'compliance', label: 'Compliance', color: 'var(--accent-primary)', icon: <CheckCircle size={14} /> },
   { value: 'operational', label: 'Operational', color: 'var(--status-info)', icon: <Clock size={14} /> },
   { value: 'data', label: 'Data', color: 'var(--status-success)', icon: <FileText size={14} /> },
   { value: 'access', label: 'Access', color: 'var(--status-warning)', icon: <Lock size={14} /> },

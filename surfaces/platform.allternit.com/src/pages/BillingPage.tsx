@@ -23,6 +23,7 @@ import { SkeletonRow } from "@/components/settings/SkeletonRow";
 import { QUIET_BUTTON_CLASS } from "@/components/settings/buttonStyles";
 import { formatApiError } from "@/lib/api-client";
 import { PlanPicker, type LiveBillingPlan, type PlanId } from "@/components/PlanPicker";
+import { TransferToOrgPanel } from "@/components/billing/TransferToOrgPanel";
 
 function formatHours(seconds: number): string {
   if (seconds < 3600) return `${Math.max(0, Math.round(seconds / 60))} min`;
@@ -650,6 +651,8 @@ export function BillingPage() {
               </>
             )}
           </div>
+
+          <TransferToOrgPanel onTransferred={() => void load()} />
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {packs.map((pack) => (

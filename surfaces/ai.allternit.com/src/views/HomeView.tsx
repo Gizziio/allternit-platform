@@ -147,7 +147,7 @@ export function HomeView({ onAction, context: _context }: HomeViewProps) {
     <div className="p-10 h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.05),transparent_400px)] flex flex-col gap-12">
       <div className="flex justify-between items-end">
         <div>
-          <div className="flex items-center gap-2 text-[var(--accent-chat)] mb-2">
+          <div className="flex items-center gap-2 text-[var(--accent-primary)] mb-2">
             <Sparkle size={20} weight="fill" />
             <span className="text-[12px] font-bold uppercase tracking-wider">Allternit</span>
           </div>

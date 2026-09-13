@@ -107,7 +107,7 @@ export function BrowserFindBar({ iframeRef, onClose }: BrowserFindBarProps) {
               fragment.appendChild(doc.createTextNode(text.slice(lastIndex, idx)));
             }
             const mark = doc.createElement("span");
-            mark.style.backgroundColor = "rgba(105,168,200,0.4)";
+            mark.style.backgroundColor = "rgba(176,141,110,0.4)";
             mark.style.color = "#fff";
             mark.style.borderRadius = "2px";
             mark.style.padding = "0 2px";
@@ -147,7 +147,7 @@ export function BrowserFindBar({ iframeRef, onClose }: BrowserFindBarProps) {
       const el = highlightsRef.current[next - 1];
       if (el) {
         highlightsRef.current.forEach((h, i) => {
-          h.style.backgroundColor = i === next - 1 ? "rgba(105,168,200,0.8)" : "rgba(105,168,200,0.4)";
+          h.style.backgroundColor = i === next - 1 ? "rgba(176,141,110,0.8)" : "rgba(176,141,110,0.4)";
         });
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }

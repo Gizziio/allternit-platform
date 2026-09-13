@@ -3,6 +3,10 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod aci_approvals;
+pub mod aci_batch;
+#[cfg(test)]
+mod aci_batch_adversarial;
+pub mod aci_code;
 pub mod aci_credentials;
 pub mod aci_routes;
 pub mod aci_safety;
@@ -15,6 +19,7 @@ pub mod federation_routes;
 pub mod outcome_rubric_routes;
 pub mod page_agent_routes;
 pub mod quickstart_routes;
+pub mod admin_rate_limit_routes;
 pub mod admin_spend_limit_routes;
 pub mod admin_workspace_routes;
 pub mod agent_execution;
@@ -81,6 +86,7 @@ pub mod computer_audit;
 pub mod computer_ws;
 pub mod vnc_auth;
 pub mod vnc_readonly;
+pub mod wallet;
 pub mod computer_embed;
 pub mod desktop_template_build;
 pub mod template_catalog;
@@ -89,6 +95,11 @@ pub mod data_residency_routes;
 pub mod device_attestation_routes;
 pub mod config;
 pub mod connector_routes;
+pub mod content_artifact_file_routes;
+pub mod content_artifact_publish;
+pub mod content_artifact_relay;
+pub mod content_artifact_routes;
+pub mod console_announcement_routes;
 pub mod conversation_routes;
 pub mod cors;
 pub mod credits;
@@ -98,6 +109,7 @@ pub mod cowork_routes;
 pub mod cowork_team_routes;
 pub mod cron_lite;
 pub mod db;
+pub mod deployment_scheduler;
 pub mod desktop_host_registry;
 pub mod desktop_host_provisioner;
 pub mod desktop_host_admin;
@@ -154,6 +166,7 @@ pub mod memory_reconstruction_routes;
 pub mod memory_routes;
 pub mod memory_kernel_service;
 pub mod metrics;
+pub mod monitor_routes;
 pub mod oauth_routes;
 pub mod passkey_routes;
 pub mod office_cli_mcp;
@@ -182,6 +195,7 @@ pub mod rbac;
 pub mod rbac_routes;
 pub mod runtime_backend_routes;
 pub mod runtime_discover_routes;
+pub mod runtime_settings_routes;
 pub mod sandbox_routes;
 pub mod sandbox_template_routes;
 pub mod scim_routes;
@@ -194,6 +208,7 @@ pub mod ssh_routes;
 pub mod status_routes;
 pub mod stream;
 pub mod swarm_routes;
+pub mod tag_routes;
 pub mod task_routes;
 pub mod team_skill_routes;
 // Unix-only: talks to allternit-mux over a UDS (tokio::net::UnixStream).
@@ -260,6 +275,39 @@ pub mod test_helpers {
             company: config::CompanyConfig::default(),
             user: config::UserConfig::default(),
         };
+        app_state_with_config_and_os(temp, config, vm_driver, os_control_plane).await
+    }
+
+    /// Like `app_state`, with an explicit config — for tests that exercise
+    /// config-gated behavior (e.g. the credits-purchase honesty gate).
+    pub async fn app_state_with_config(
+        temp: &Path,
+        config: AppConfig,
+    ) -> Arc<AppState> {
+        app_state_with_config_and_os(temp, config, None, None).await
+    }
+
+    /// Serialize tests that mutate the process-wide
+    /// `ALLTERNIT_COMPUTER_USE_DIR` env var. The audit/grant/run-buffer paths
+    /// read that var at call time, so a concurrent `set_var` from another
+    /// test redirects rows/files between temp dirs — the root cause of the
+    /// `audit_api_returns_rows_with_bot_filter` flake (1-in-N under default
+    /// test threading). Same mutex as `policy_config::POLICY_TEST_LOCK`
+    /// (policy-seat and policy-audit tests already serialize on it); tests
+    /// holding that lock must NOT take this guard again — std `Mutex` is not
+    /// reentrant and the same-thread second lock deadlocks.
+    pub fn computer_use_dir_test_lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::policy_config::POLICY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+    }
+
+    async fn app_state_with_config_and_os(
+        temp: &Path,
+        config: AppConfig,
+        vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
+        os_control_plane: Option<crate::fabric::os_client::OsControlPlaneClient>,
+    ) -> Arc<AppState> {
         let db = db::DbHandle::new(temp.join("test.db")).expect("test db");
         let auth_config = auth::AuthConfig::from_app_config(&config);
         let jwks = auth::JwksManager::new(&auth_config);
@@ -316,6 +364,9 @@ pub mod test_helpers {
             fabric_price_cache,
             os_control_plane,
             dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
+            deployment_scheduler: Arc::new(
+                crate::deployment_scheduler::DeploymentSchedulerState::new(),
+            ),
         })
     }
 }
@@ -443,6 +494,9 @@ pub struct AppState {
     /// resource creation is routed through the OS `POST /v1/leases/issue`
     /// endpoint instead of the internal Cloud scheduler.
     pub os_control_plane: Option<crate::fabric::os_client::OsControlPlaneClient>,
+    /// Deployment scheduler counters (last tick, total runs fired) surfaced
+    /// in `GET /monitor/system`.
+    pub deployment_scheduler: Arc<crate::deployment_scheduler::DeploymentSchedulerState>,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

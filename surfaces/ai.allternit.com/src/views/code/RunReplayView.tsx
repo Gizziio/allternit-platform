@@ -226,7 +226,7 @@ export function RunReplayView({ sessionId }: { sessionId?: string } = {}) {
                             padding: '4px 8px',
                             fontSize: 12,
                             fontWeight: 600,
-                            color: 'var(--accent-chat)',
+                            color: 'var(--accent-primary)',
                             background: 'transparent',
                             border: 'none',
                             cursor: 'pointer'

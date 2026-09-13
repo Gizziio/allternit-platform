@@ -28,7 +28,7 @@ export function VideoEditorView() {
       icon: <MonitorPlay size={16} />,
       items: [
         { id: '1', type: 'ui_render', start: 5, duration: 10, label: 'Render Banking Dashboard', color: 'var(--status-info)' },
-        { id: '2', type: 'transition', start: 15, duration: 2, label: 'Glass Morph Transition', color: '#8b5cf6' },
+        { id: '2', type: 'transition', start: 15, duration: 2, label: 'Glass Morph Transition', color: '#B08D6E' },
         { id: '3', type: 'ui_render', start: 17, duration: 10, label: 'Apply Dark Mode Tokens', color: 'var(--status-info)' },
       ],
     },
@@ -140,7 +140,7 @@ export function VideoEditorView() {
             <div className="flex flex-col gap-2">
               <AssetItem icon={<TextT size={16} />} title="Auto-Type Prompt" type="Animation" color="var(--accent-primary)" />
               <AssetItem icon={<Cursor size={16} />} title="Smooth Cursor" type="Animation" color="#10b981" />
-              <AssetItem icon={<Sparkle size={16} />} title="Glass Morph" type="Transition" color="#8b5cf6" />
+              <AssetItem icon={<Sparkle size={16} />} title="Glass Morph" type="Transition" color="#B08D6E" />
             </div>
           </div>
         </div>

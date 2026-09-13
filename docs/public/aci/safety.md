@@ -61,6 +61,152 @@ Two honest caveats on the measured rows:
   they are conformance checks, not adversarial or long-horizon task
   evaluations.
 
+### Batch dispatch (measured 2026-09-12; real-model campaign 2026-09-13)
+
+Grant-bound batch dispatch (spec `stagehand-batch-fork`, P1–P2) is measured
+outside `conformance/suites.py` — the suites live in the Rust crate and the
+pytest tree, so they are recorded here instead of in `adapter_grades.json`:
+
+| Component | Suite | Pass rate | Grade |
+|-----------|-------|-----------|-------|
+| Batch grant gate (Rust `aci_batch`) | `cargo test -p allternit-api --lib aci_batch` (28 tests: descriptor hashing, tamper/expiry/replay rejection, per-step fallback, receipts) | 28/28 = 100% | `production` |
+| Adversarial batch-grant recall (Rust `aci_batch_adversarial`) | `cargo test -p allternit-api --lib aci_batch -- --nocapture` (35 scripted attack cases across 6 classes: descriptor tampering, replay, scope widening, mixed-risk routing, expiration, receipt-chain integrity) | 35/35 = 100% blocked | `production` |
+| Engine batch dispatch | `tests/test_batch_dispatch.py` (21 tests: plan→grant→batch→observation, halt-at-first-failure, fallback paths, attribute-selector and select grounding) + `tests/test_batch_adversarial.py` (engine-side attack assertions) | 21/21 and 5/5 tests = 100% | `production` |
+| Live gated batch (real stack) | 3-step batch → `confirmation_required` → handoff approve → real Chrome executed all steps → receipt `completed` 3/3, `one_grant` | 16/16 = 100% | `production` |
+
+Adversarial recall, honestly scoped: the attack cases are **scripted** — a
+hand-enumerated adversary (per-field descriptor mutations, grant replay and
+cross-user redemption, scope widening, TTL races, offline receipt-trail
+tampering), not a trained attacking model. Every scripted attack is blocked:
+each mutation or widening changes the SHA-256-bound descriptor hash and is
+denied `approval_denied`, grants are single-use and owner-bound, expired
+grants are refused with a denied receipt on the trail, and the batch-receipt
+JSONL carries a SHA-256 hash chain — `verify_batch_receipt_chain` detects an
+altered, dropped, reordered, or injected record. Reproduce:
+
+```bash
+# Rust gate + adversarial suite (per-class tallies with --nocapture)
+cargo test -p allternit-api --lib aci_batch -- --nocapture
+# Engine dispatch + engine adversarial suite
+cd domains/computer-use/core && PYTHONPATH="." python -m pytest \
+  tests/test_batch_dispatch.py tests/test_batch_adversarial.py -q
+```
+
+#### Real-model validation campaign (2026-09-13, session cu22)
+
+The "wired but unexercised" deferral is now exercised: a frontier vision
+model (**gpt-6-astra**, via the platform's CLI-brain provider path — the
+ak- LLM gateway has no provider key in the dev environment, so inference ran
+through the authenticated codex CLI; one real call logged at 31,608 in / 70
+out tokens, 7.3 s latency) drove the planning loop over five task shapes on a
+local multi-page site, each run twice (batched vs forced per-step). Ground
+truth came from server-side submission state, independent of any browser.
+
+| Task shape | Batched (turns / grants / task ok) | Per-step (turns / task ok) |
+|------------|-----------------------------------|----------------------------|
+| Form fill (fill+fill+submit) | 8 turns / 6 grants / ✅ | 4 turns / ✅ |
+| Multi-click navigation (3 pages) | 4 turns / 0 grants / ✅ (correctly never batched — cross-page) | 4 turns / ✅ |
+| Select + submit | 4 turns / 2 grants / ✅ | 3 turns / ❌ (no per-step select action) |
+| Extract-then-act (read code, type it) | 12 turns / **12 grants** / ✅ | 2 turns / ✅ |
+| Conditional branch | not completed — model-backend stall (3 hung CLI calls >15 min) | 2 turns / ✅ (earlier run) |
+
+Step success across the campaign: batched 28/29 steps, per-step 13/14.
+**Turns were not saved end-to-end** (28 batched vs 13 per-step on completed
+runs): the post-batch observation is captured from the operator-facing
+adapter browser, while the batch executes in the grant gate's own sidecar
+browser — the model re-plans against a stale screen and re-batches,
+amplifying grant requests (12 grants on extract-then-act, a task per-step
+finishes in 2 turns). That observation disconnect is the campaign's headline
+finding and the next wiring target; the 2026-09-12 canned-task measurement
+(4 → 2 turns) used a scripted provider that declared done from the receipt,
+which real models do not do reliably.
+
+Campaign-found fixes landed in this repo: attribute selectors
+(`input[placeholder=…]`) now ground as batch targets (frontier models prefer
+them even when ids exist), and `select` plans ground to
+`selectOptionFromDropdown`. Named, still-open gaps: the per-step executor
+vocabulary rejects plan types `click`/`select` (the campaign shimmed
+click→left_click; product translation is TODO); the 60 s brain timeout in
+`SubprocessVisionProvider` is too tight for real CLI backends; and CLI-brain
+timeouts orphan the model grandchild process (kill the process tree).
+
+No got-through safety event occurred: every batch execution in the campaign
+was bound to a SHA-256 descriptor grant with a receipt on the trail, and the
+instrumented reruns account for every executed action.
+
+Remaining caveats: small *n* (five task shapes, one model, one run each);
+the model backend stalled on the conditional-branch shape (infrastructure,
+not a gate failure); recall against an *adaptive* (model-driven) adversary is
+still unmeasured — the scripted suite covers the known attack surface, not
+novel attacks. Record→teach→batch workflow compilation has since landed
+(PR #447) — the caveat predates it.
+
+### Code mode (measured 2026-09-13, session cu23)
+
+Sandboxed code execution (spec `code-mode-execution`, C0–C3) is the **third
+integration mode** — strictly opt-in per run, never the default. One
+SHA-256-bound grant per exact code payload; the refuse-list (credential
+patterns, destructive/nested calls, undeclared network targets, host paths
+outside the run sandbox) is enforced at descriptor time, so a refused payload
+can never be granted, only rewritten as whitelist actions. Execution is a
+`node:vm` context whose entire surface is scoped handles: declared-target-
+checked `page`/`fetch` (fail-closed egress), sandbox-dir-rooted `sandboxFs`,
+and a `process.env` containing only the run's `sandbox_env` allowlist — the
+only credential path. Hard caps: 30 s wall clock (kill), memory rlimit, no
+nested code mode. The fixed result envelope (truncated+scrubbed stdout, exit
+status, screenshot hash+ref) is the only thing that crosses back.
+
+| Component | Suite | Pass rate | Grade |
+|-----------|-------|-----------|-------|
+| Code grant gate (Rust `aci_code`) | `cargo test -p allternit-api --lib aci_code` (17 tests: hash binding, grant/redeem/replay/tamper/expiry, every refusal class, receipt ordering) | 17/17 = 100% | `production` |
+| Execution sandbox (Python + vm runner) | `tests/test_code_execution.py` (17 tests: egress refusal, filesystem escape refusal, credential non-leakage canary, timeout kill, envelope containment, harness second-line defense) | 17/17 = 100% | `production` |
+| Engine code-mode dispatch | `tests/test_code_mode.py` (10 tests: strictly opt-in, one grant-bound run, approval flow, refusal-as-observation + re-plan, declined-grant fallback, contract §8 records) | 10/10 = 100% | `production` |
+| Live end-to-end (real stack, scripted operator) | `scripts/code_mode_smoke.sh` — payload → `confirmation_required` → handoff approve → real sandboxed run → fixed envelope → receipt; plus pending-grant block, single-use replay denial, tamper hash-mismatch denial, credential + undeclared-egress descriptor refusals, runtime refusal envelope | 12/12 = 100% | `production` |
+
+Measured on the live run: the descriptor hash survived the round trip
+(grant bound `aa2cd820…`, executed descriptor identical); the credential
+canary fired — a payload that echoed its `sandbox_env` value returned
+`smoke: ***` in stdout, the plaintext never crossing back; a runtime page op
+with no browser bridge refused honestly with exit 13 instead of hanging or
+falling back to host execution.
+
+Honest caveats, same discipline as the batch section:
+
+- **Placement, not just containment.** The measured run executed the sandbox
+  runner as a local child process behind an explicit operator env gate
+  (`ALLTERNIT_CODE_EXECUTOR=node-sandbox`; default = 502, never a host
+  fallback). The production target is the same runner microVM-side with the
+  payload crossing the sidecar/VM channel — that channel is not wired
+  end-to-end yet, so kernel-level isolation (VM network policy, VM fs) is
+  asserted by design, not yet measured. The vm-context containment layers
+  (no host `require`/`process`, scoped fs, fail-closed egress checks, env
+  allowlist) ARE measured, above.
+- **Descriptor-time network checks are literal-based.** URL literals in the
+  payload must match declared targets; dynamically constructed URLs
+  (string concatenation) are caught at runtime by the runner's egress checks
+  — descriptor-time refusal of obfuscated targets is a known gap, same class
+  as the batch suite's scripted-not-adaptive caveat.
+- **No adaptive adversary.** The refuse-list is hand-enumerated; a trained
+  attacking model has not been run against the gate. The pyautogui-python
+  language is allowlisted but its executor is not wired in this build —
+  presenting one is refused honestly, never executed best-effort.
+- **Screenshot fields are null in this placement** (no browser bridge in the
+  dev harness); the loop's normal post-step observation supplies the screen
+  evidence, and the envelope shape reserves the fields.
+
+Reproduce:
+
+```bash
+# Gate + sandbox + engine suites
+cargo test -p allternit-api --lib aci_code
+cd domains/computer-use/core && PYTHONPATH="." python -m pytest \
+  tests/test_code_execution.py tests/test_code_mode.py -q
+# Live end-to-end (server with the operator env gate; dev port, never 8013)
+ALLTERNIT_CODE_EXECUTOR=node-sandbox ALLTERNIT_CODE_SANDBOX_ENV_KEYS=CODE_USER \
+  CODE_USER=demo ./target/debug/allternit-api &
+ALLTERNIT_API_URL=http://localhost:18013 bash scripts/code_mode_smoke.sh
+```
+
 ## Safety architecture
 
 ### Confirmation taxonomy and approval grants
@@ -88,7 +234,10 @@ Risky and irreversible actions require an approval grant minted by
   `ALLTERNIT_ACI_GRANT_TTL_SECS`, aligned with the planning loop's approval
   timeout).
 - **Receipted** — every redemption attempt, allowed or denied, is recorded as
-  an immutable receipt for audit (retention capped at 10,000 entries).
+  an immutable receipt for audit (retention capped at 10,000 entries). Batch
+  receipts additionally carry a SHA-256 hash chain — an altered, dropped,
+  reordered, or injected trail record is detectable offline (see the batch
+  dispatch section).
 
 Enforcement is entirely server-side; a compromised or modified client cannot
 approve its own actions. The TypeScript SDK's approval predicates are a UX
@@ -282,6 +431,17 @@ Rust safety enforcement:
 
 ```bash
 cargo test -p allternit-api aci_   # aci_safety, aci_approvals, aci_credentials
+
+# Batch grant gate (batch descriptors, tamper/expiry/replay, per-step fallback)
+cargo test -p allternit-api --lib aci_batch
+
+# Adversarial batch-grant recall (scripted adversary; per-class tallies)
+cargo test -p allternit-api --lib aci_batch -- --nocapture
+
+# Engine batch dispatch (plan→grant→batch→observation, halt-on-failure)
+# + engine adversarial suite (denied retries fail closed, no-receipt fails closed)
+cd domains/computer-use/core && PYTHONPATH="." python -m pytest \
+  tests/test_batch_dispatch.py tests/test_batch_adversarial.py -q
 ```
 
 As of this writing the Python suites above pass in full, the Rust `aci_`

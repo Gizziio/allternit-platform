@@ -290,7 +290,7 @@ export function HarnessStep({ formData, setFormData, isBotMode }: HarnessStepPro
                           tagline: prev.description || '',
                           welcomeMessage: `Hi, I'm ${prev.name || 'My Bot'}. How can I help?`,
                           starterPrompts: [],
-                          accentColor: '#6366f1',
+                          accentColor: '#B08D6E',
                           groupChatEnabled: true,
                           botCategory: (prev.category || 'custom') as BotCategory,
                         }
@@ -351,7 +351,7 @@ export function HarnessStep({ formData, setFormData, isBotMode }: HarnessStepPro
                 <div className="flex items-center gap-2">
                   <Input
                     type="color"
-                    value={formData.botProfile?.accentColor || '#6366f1'}
+                    value={formData.botProfile?.accentColor || '#B08D6E'}
                     onChange={(e) => setFormData((prev) => ({
                       ...prev,
                       botProfile: { ...(prev.botProfile || {}), accentColor: e.target.value } as BotProfile,
@@ -359,12 +359,12 @@ export function HarnessStep({ formData, setFormData, isBotMode }: HarnessStepPro
                     className="h-10 w-14 bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)]"
                   />
                   <Input
-                    value={formData.botProfile?.accentColor || '#6366f1'}
+                    value={formData.botProfile?.accentColor || '#B08D6E'}
                     onChange={(e) => setFormData((prev) => ({
                       ...prev,
                       botProfile: { ...(prev.botProfile || {}), accentColor: e.target.value } as BotProfile,
                     }))}
-                    placeholder="#6366f1"
+                    placeholder="#B08D6E"
                     className="flex-1 bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]"
                   />
                 </div>

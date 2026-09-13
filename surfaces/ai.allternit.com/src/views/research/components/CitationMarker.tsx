@@ -22,7 +22,7 @@ export function CitationMarker({ citation, onClick }: CitationMarkerProps) {
         type="button"
         onClick={handleClick}
         className="cursor-pointer font-semibold text-[12px] ml-0.5 select-none bg-transparent border-none p-0 align-super"
-        style={{ color: '#a78bfa' }}
+        style={{ color: '#B08D6E' }}
         title={`Source ${citation.index}${citation.page_number ? `, Page ${citation.page_number}` : ''}`}
       >
         [{citation.index}]

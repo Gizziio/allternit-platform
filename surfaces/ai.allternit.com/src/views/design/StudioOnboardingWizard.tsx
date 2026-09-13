@@ -141,12 +141,12 @@ function VideoPlayer() {
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPlaying((p) => !p); }}
     >
       {/* Gradient bg */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_30%_40%,rgba(226,124,89,0.12),transparent_55%),radial-gradient(circle_at_70%_60%,rgba(59,130,246,0.08),transparent_55%)]" />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_30%_40%,rgba(176,141,110,0.12),transparent_55%),radial-gradient(circle_at_70%_60%,rgba(59,130,246,0.08),transparent_55%)]" />
 
       {/* Simulated UI frames */}
       {!playing && (
         <div className="absolute inset-0 flex items-center justify-center gap-4 p-8">
-          {[{ h: "60%", bg: "bg-white/5" }, { h: "80%", bg: "bg-[var(--accent-primary,#e27c59)]/10" }, { h: "50%", bg: "bg-white/5" }].map((f, i) => (
+          {[{ h: "60%", bg: "bg-white/5" }, { h: "80%", bg: "bg-[var(--accent-primary,#B08D6E)]/10" }, { h: "50%", bg: "bg-white/5" }].map((f, i) => (
             <motion.div key={`studioonboardingwizard-${i}`} animate={{ y: [0, -6, 0] }} transition={{ duration: 3, repeat: Infinity, delay: i * 0.6 }} className={cn("flex-1 rounded-xl border border-solid border-white/5", f.h === "60%" ? "h-[60%]" : f.h === "80%" ? "h-[80%]" : "h-[50%]", f.bg)} />
           ))}
         </div>
@@ -154,7 +154,7 @@ function VideoPlayer() {
 
       {/* Playing scan-line */}
       {playing && (
-        <motion.div animate={{ x: [`${progress - 2}%`, `${progress}%`] }} className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent-primary,#e27c59)] opacity-50 z-[2]" />
+        <motion.div animate={{ x: [`${progress - 2}%`, `${progress}%`] }} className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent-primary,#B08D6E)] opacity-50 z-[2]" />
       )}
 
       {/* Center play/pause */}
@@ -162,7 +162,7 @@ function VideoPlayer() {
         {(!playing || hovered) && (
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-[3]">
             <div className="w-[60px] h-[60px] rounded-full bg-black/50 backdrop-blur-md border border-solid border-white/15 flex items-center justify-center">
-              {playing ? <div className="w-3.5 h-3.5 flex gap-1"><div className="flex-1 bg-white rounded-sm" /><div className="flex-1 bg-white rounded-sm" /></div> : <PlayCircle size={32} className="text-[var(--accent-primary,#e27c59)] ml-1" weight="fill" />}
+              {playing ? <div className="w-3.5 h-3.5 flex gap-1"><div className="flex-1 bg-white rounded-sm" /><div className="flex-1 bg-white rounded-sm" /></div> : <PlayCircle size={32} className="text-[var(--accent-primary,#B08D6E)] ml-1" weight="fill" />}
             </div>
             {!playing && <span className="text-[12px] font-semibold text-white/50">Featured Walkthrough — 3:03</span>}
           </motion.div>
@@ -172,7 +172,7 @@ function VideoPlayer() {
       {/* Bottom bar */}
       <div className="absolute bottom-0 left-0 right-0 p-[8px_16px_12px] bg-gradient-to-t from-black/70 to-transparent z-[4]">
         <div role="button" tabIndex={0} className="h-0.5 bg-white/10 rounded-full mb-2 relative cursor-pointer group" onClick={(e) => { e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); setProgress(((e.clientX - rect.left) / rect.width) * 100); }}>
-          <div className="h-full bg-[var(--accent-primary,#e27c59)] rounded-full transition-all" style={{ width: `${progress}%` }} />
+          <div className="h-full bg-[var(--accent-primary,#B08D6E)] rounded-full transition-all" style={{ width: `${progress}%` }} />
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[12px] font-bold text-[var(--text-secondary)] tabular-nums">{fmt(elapsed)} / 3:03</span>

@@ -139,7 +139,7 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
         {/* Header */}
         <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border-subtle, rgba(0,0,0,0.08))", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ width: "32px", height: "32px", borderRadius: "10px", background: "var(--accent-primary, #e27c59)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "32px", height: "32px", borderRadius: "10px", background: "var(--accent-primary, #B08D6E)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Plug size={16} color="#fff" weight="bold" />
             </div>
             <div>
@@ -187,7 +187,7 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary, #111)" }}>{c.name}</span>
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 999, background: "rgba(226,124,89,0.12)", color: "var(--accent-primary, #e27c59)" }}>Allternit</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 999, background: "rgba(176,141,110,0.12)", color: "var(--accent-primary, #B08D6E)" }}>Allternit</span>
                             <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, background: "var(--bg-secondary, #f0f0f0)", color: "var(--text-tertiary, #777)" }}>{c.auth_type}</span>
                             {c.category && <span style={{ fontSize: 10, color: "var(--text-tertiary, #999)" }}>{c.category}</span>}
                           </div>
@@ -212,7 +212,7 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
                               </button>
                             </div>
                           ) : (
-                            <button type="button" onClick={() => handleConnect(c)} disabled={busy === c.id} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "var(--accent-primary, #e27c59)", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, opacity: busy === c.id ? 0.6 : 1 }}>
+                            <button type="button" onClick={() => handleConnect(c)} disabled={busy === c.id} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "var(--accent-primary, #B08D6E)", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, opacity: busy === c.id ? 0.6 : 1 }}>
                               {busy === c.id ? "…" : <Circle size={12} />} Connect
                             </button>
                           )}

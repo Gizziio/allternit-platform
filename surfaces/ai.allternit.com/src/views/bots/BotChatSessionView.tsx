@@ -133,12 +133,19 @@ export function BotChatSessionView({
     return null;
   }, [sessions, sessionIdProp, botId, bot?.name]);
 
+  // Deliberately no bot.provider/bot.model fallback: that pair is the agent
+  // *catalog* default (config.models.defaults.primary), which on desktop is
+  // frequently a provider gizzi does not serve (ProviderModelNotFoundError,
+  // silent no-reply). Session metadata is also skipped: older builds stamped
+  // every bot session with the broken catalog default at create time, and
+  // restoring it on reopen re-pins a model the runtime cannot serve. The
+  // bot-level config pin (bot.config.runtimeModelId) is the only deliberate
+  // default. With nothing pinned, the composer falls back to the persisted
+  // picker choice and the send path resolves the local Kimi brain
+  // (resolveAgentChatRuntimeModelId → kimi-cli/kimi-k3).
   const runtimeModelId = useMemo(
-    () =>
-      (session?.metadata?.runtimeModelId as string | undefined) ??
-      (bot?.config?.runtimeModelId as string | undefined) ??
-      (bot?.provider && bot?.model ? `${bot.provider}/${bot.model}` : undefined),
-    [session?.metadata, bot?.config, bot?.provider, bot?.model]
+    () => bot?.config?.runtimeModelId as string | undefined,
+    [bot?.config]
   );
 
   const defaultSelection = useMemo(
@@ -200,6 +207,9 @@ function BotChatSessionContent({
   const isStreaming = streamingState?.isStreaming ?? false;
   const messages = session?.messages ?? [];
   const [transcript, setTranscript] = useState<BotChatTranscript>(() => initTranscript());
+  // Bumped on every successful user send so the transcript jumps to the
+  // current message even when the viewport was scrolled up in history.
+  const [sendCount, setSendCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { older: olderMessages, recent: recentMessages } = useMemo(
@@ -232,6 +242,7 @@ function BotChatSessionContent({
     getBotThreadNotifyMode(session?.id)
   );
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
+  const sessionHasLocalMode = Boolean(session?.metadata?.agentModeId);
 
   useEffect(() => {
     setNotifyMode(getBotThreadNotifyMode(session?.id));
@@ -255,12 +266,22 @@ function BotChatSessionContent({
 
       setSendError(null);
       applyFold(userSendEvent(text.trim()));
+      setSendCount((count) => count + 1);
 
       const modelId = modelSelection
         ? `${modelSelection.providerId}/${modelSelection.modelId}`
         : undefined;
 
       let sid = sessionId;
+      // A persisted temp- session is a zombie from a failed backend create:
+      // no backend id and (for bot chats) no local mode executor, so streaming
+      // always fails with "Cannot stream a message before a live session
+      // exists". When the backend is reachable now, create a real session
+      // instead of sending into the void. Local-mode sessions (agentModeId)
+      // are legitimately temp and must keep working offline.
+      if (sid?.startsWith("temp-") && !sessionHasLocalMode) {
+        sid = null;
+      }
       if (!sid && botId) {
         sid = await createSession({
           name: bot ? getBotDisplayName(bot) : "Bot Chat",
@@ -296,7 +317,7 @@ function BotChatSessionContent({
         );
       }
     },
-    [isStreaming, sessionId, botId, bot, modelSelection, createSession, setActiveSession, sendMessageStream, applyFold]
+    [isStreaming, sessionId, sessionHasLocalMode, botId, bot, modelSelection, createSession, setActiveSession, sendMessageStream, applyFold]
   );
 
   const handleStop = useCallback(() => {
@@ -587,6 +608,7 @@ function BotChatSessionContent({
         <BotTranscript
           transcript={transcript}
           className="flex-1 overflow-y-auto px-1 py-2"
+          jumpKey={sendCount}
           onApprovalAnswer={onApprovalAnswer}
           onApprovalGrant={onApprovalGrant}
         />

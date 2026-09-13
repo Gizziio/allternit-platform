@@ -206,7 +206,7 @@ export function TerminalWorkspace(): React.ReactNode {
               borderRadius: 999,
               border: '1px solid var(--border-subtle)',
               background: 'var(--surface-panel-muted)',
-              color: 'var(--accent-code)',
+              color: 'var(--accent-primary)',
               fontSize: 11,
               fontWeight: 600,
               cursor: 'pointer',
@@ -578,7 +578,7 @@ function WorkspaceTileCard({
           borderRadius: 3,
           cursor: 'ns-resize',
           touchAction: 'none',
-          background: dragHeight !== null ? 'var(--accent-code)' : 'transparent',
+          background: dragHeight !== null ? 'var(--accent-primary)' : 'transparent',
           opacity: dragHeight !== null ? 0.6 : 1,
           transition: 'background 120ms ease',
         }}
@@ -689,7 +689,7 @@ function TileHeaderBar({
               fontWeight: 600,
               color: 'var(--text-primary)',
               background: 'var(--surface-panel)',
-              border: '1px solid var(--accent-code)',
+              border: '1px solid var(--accent-primary)',
               borderRadius: 5,
               padding: '1px 6px',
               outline: 'none',
@@ -783,9 +783,9 @@ function NewTileCard({ onClick }: { onClick: () => void }): React.ReactNode {
         transition: 'all 0.15s ease',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--accent-code)';
-        e.currentTarget.style.color = 'var(--accent-code)';
-        e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-code) 6%, transparent)';
+        e.currentTarget.style.borderColor = 'var(--accent-primary)';
+        e.currentTarget.style.color = 'var(--accent-primary)';
+        e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-primary) 6%, transparent)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = 'var(--border-subtle)';
@@ -888,7 +888,7 @@ function WorkspaceEmptyState({
             borderRadius: 999,
             border: '1px solid var(--border-subtle)',
             background: 'var(--surface-panel)',
-            color: 'var(--accent-code)',
+            color: 'var(--accent-primary)',
             fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',

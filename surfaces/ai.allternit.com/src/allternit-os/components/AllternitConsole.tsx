@@ -305,7 +305,7 @@ const KanbanBoard: React.FC = () => {
       {/* Board Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-3">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent-code)]/10 text-[var(--accent-code)]">
+          <div className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
             <Kanban size={18} weight="duotone" />
           </div>
           <h2 className="font-semibold text-[var(--text-primary)]">Kanban Board</h2>
@@ -314,7 +314,7 @@ const KanbanBoard: React.FC = () => {
         <button
           type="button"
           onClick={() => setShowAddTask(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded-lg text-sm font-medium hover:bg-[var(--accent-code)]/90 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-primary)] text-[var(--text-inverse)] rounded-lg text-sm font-medium hover:bg-[var(--accent-primary)]/90 transition-colors"
         >
           <Plus size={16} />
           Add Task
@@ -586,7 +586,7 @@ const AutomationHub: React.FC = () => {
         <button
           type="button"
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded-lg text-sm font-medium hover:bg-[var(--accent-code)]/90 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-primary)] text-[var(--text-inverse)] rounded-lg text-sm font-medium hover:bg-[var(--accent-primary)]/90 transition-colors"
         >
           <Plus size={16} />
           New Sequence
@@ -711,7 +711,7 @@ const AutomationHub: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded-lg hover:bg-[var(--accent-code)]/90 transition-colors"
+                className="px-4 py-2 bg-[var(--accent-primary)] text-[var(--text-inverse)] rounded-lg hover:bg-[var(--accent-primary)]/90 transition-colors"
               >
                 Open WorkflowBuilder
               </button>
@@ -743,7 +743,7 @@ export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onCl
       {/* Drawer Header with Tabs */}
       <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface-panel)]/50 backdrop-blur-md border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-4">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent-code)]/10 text-[var(--accent-code)]">
+          <div className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
             <Robot size={18} weight="duotone" />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">Allternit Console</span>
@@ -760,7 +760,7 @@ export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onCl
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-[var(--accent-code)] text-[var(--text-inverse)] shadow-sm'
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-inverse)] shadow-sm'
                       : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                   }`}
                 >
@@ -801,7 +801,7 @@ export const AllternitConsoleToggle: React.FC<{ onClick?: () => void }> = ({ onC
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded-lg hover:bg-[var(--accent-code)]/90 transition-all shadow-sm"
+      className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-primary)] text-[var(--text-inverse)] rounded-lg hover:bg-[var(--accent-primary)]/90 transition-all shadow-sm"
     >
       <Robot size={20} weight="duotone" />
       <span className="font-medium">Allternit</span>

@@ -22,7 +22,7 @@ interface ExtensionCardProps {
 
 /**
  * Extension card — same recipe as the Allternit Office suite cards (rounded-xl,
- * elevated surface, hover border) so the Office & Extensions page reads as one
+ * elevated surface, hover border) so the ACI Extensions page reads as one
  * coherent screen in light and dark themes.
  */
 export const ExtensionCard: React.FC<ExtensionCardProps> = ({
@@ -66,7 +66,7 @@ export const ExtensionCard: React.FC<ExtensionCardProps> = ({
                 title={extension.isEnabled ? "Disable extension" : "Enable extension"}
               >
                 {extension.isEnabled ? (
-                  <ToggleRight size={28} weight="fill" className="text-[var(--accent-browser)]" />
+                  <ToggleRight size={28} weight="fill" className="text-[var(--accent-primary)]" />
                 ) : (
                   <ToggleLeft size={28} weight="fill" />
                 )}

@@ -1673,7 +1673,7 @@ async fn list_approvals(
     headers: HeaderMap,
     Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
-    let _user = match get_user(&headers) {
+    let user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
     };
@@ -1683,6 +1683,7 @@ async fn list_approvals(
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
+        // A:// §8.18 / §16: approvals are per-user; never return other users' rows.
         let mut stmt = prepare_approvals_list_stmt(&conn)?;
         let rows = stmt
             .query_map(params![user_id, limit, offset], |row| {

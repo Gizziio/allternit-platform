@@ -35,6 +35,17 @@ function copyDir(from, to) {
 }
 
 copyDir(path.join(src, "assets"), path.join(out, "assets"));
+// Brand marks (matrix logo etc.) referenced by the ACI browser panes and the
+// onboarding/connect pages live in public/brand and are NOT part of the Vite
+// build output — copy them explicitly or the hosted PWA shows broken images.
+copyDir(path.join(root, "public", "brand"), path.join(out, "brand"));
+// Pages Functions: the public web proxy that browser iframes load through
+// (ports cmd/allternit-api/src/web_proxy_routes.rs for the hosted PWA, which
+// has no local gateway to serve /api/web-proxy).
+copyDir(
+  path.join(root, "fabric-session-pwa-functions"),
+  path.join(out, "functions"),
+);
 
 let html = fs.readFileSync(path.join(src, "fabric-session.html"), "utf8");
 html = html.replace("/fabric-session.webmanifest", "/manifest.webmanifest");
@@ -88,6 +99,7 @@ fs.writeFileSync(
 /fabric-session / 308
 /fabric-session/ / 308
 /assets/* /assets/:splat 200
+/brand/* /brand/:splat 200
 /fabric-session-service-worker.js /fabric-session-service-worker.js 200
 /manifest.webmanifest /manifest.webmanifest 200
 /favicon.png /favicon.png 200
@@ -123,6 +135,17 @@ fs.writeFileSync(
   Content-Type: application/javascript
   Service-Worker-Allowed: /
   Cache-Control: public, max-age=0, must-revalidate
+
+# The web-proxy Pages Function response is loaded inside an iframe by the ACI
+# browser capsule. It must be frameable (the /* rule denies framing) and the
+# proxied upstream HTML carries inline scripts/styles, so the restrictive
+# site-wide CSP cannot apply. Parity with the Rust route: CORS * and no
+# frame-ancestors restriction beyond Allternit origins.
+/api/web-proxy*
+  Content-Security-Policy: default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'self' https://ai.allternit.com https://*.allternit.com
+  X-Frame-Options: SAMEORIGIN
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-store
 `,
 );
 

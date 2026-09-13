@@ -46,11 +46,11 @@ const defaultTheme: AllternitTheme = {
     idle: "#666666",
     connecting: "#f59e0b",
     hydrating: "#3b82f6",
-    planning: "#8b5cf6",
+    planning: "#C4A684",
     web: "#10b981",
     executing: "#f59e0b",
     responding: "#3b82f6",
-    compacting: "#8b5cf6",
+    compacting: "#C4A684",
   },
   
   glyph: {
@@ -71,11 +71,11 @@ const lightTheme: AllternitTheme = {
     idle: "#888888",
     connecting: "#d97706",
     hydrating: "#2563eb",
-    planning: "#7c3aed",
+    planning: "#B08D6E",
     web: "#059669",
     executing: "#d97706",
     responding: "#2563eb",
-    compacting: "#7c3aed",
+    compacting: "#B08D6E",
   },
   
   glyph: {

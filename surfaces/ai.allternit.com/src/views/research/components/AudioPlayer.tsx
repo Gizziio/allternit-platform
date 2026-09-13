@@ -112,7 +112,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
           style={{
             flex: 1,
             height: 4,
-            accentColor: '#a78bfa',
+            accentColor: '#B08D6E',
             cursor: isLoaded ? 'pointer' : 'not-allowed',
           }}
         />
@@ -147,7 +147,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
             width: 36,
             height: 36,
             borderRadius: '50%',
-            background: isLoaded ? 'linear-gradient(135deg, #7c3aed, #a78bfa)' : 'var(--bg-secondary, #111113)',
+            background: isLoaded ? 'linear-gradient(135deg, #B08D6E, #B08D6E)' : 'var(--bg-secondary, #111113)',
             border: 'none',
             color: '#fff',
             cursor: isLoaded ? 'pointer' : 'not-allowed',
@@ -189,7 +189,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
               setVolume(v);
               if (audioRef.current) audioRef.current.volume = v;
             }}
-            style={{ width: 60, height: 3, accentColor: '#a78bfa' }}
+            style={{ width: 60, height: 3, accentColor: '#B08D6E' }}
           />
         </div>
       </div>

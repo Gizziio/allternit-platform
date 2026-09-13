@@ -168,7 +168,7 @@ function StatusPill({ status }: { status: ExtStatus }) {
   if (status === 'connected') {
     return (
       <p className="mb-2 text-xs text-[#C9BBA9]">
-        <Dot color="#79C47C" /> Extension connected
+        <Dot color="var(--status-success)" /> Extension connected
       </p>
     );
   }

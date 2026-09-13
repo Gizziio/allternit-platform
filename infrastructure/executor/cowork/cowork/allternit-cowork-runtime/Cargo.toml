@@ -29,6 +29,9 @@ allternit-vm-executor = { workspace = true }
 
 # Additional dependencies
 sqlx = { workspace = true, features = ['chrono', 'uuid'] }
+rusqlite = { version = "0.31", features = ["bundled", "chrono"] }
+sha2 = { workspace = true }
+hex = "0.4"
 reqwest = { workspace = true }
 futures = { workspace = true }
 tokio-stream = { workspace = true }

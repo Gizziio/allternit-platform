@@ -328,10 +328,10 @@ const COLOR_PALETTES = {
     outline: ['#0E7490', '#155E75', '#164E63', '#0C4A6E', '#075985']
   },
   creative: {
-    primary: ['#8B5CF6', '#7C3AED', '#6D28D9', '#EC4899', '#DB2777'],
+    primary: ['#8B5CF6', '#B08D6E', '#6D28D9', '#EC4899', '#DB2777'],
     secondary: ['#F472B6', '#F9A8D4', '#E879F9', '#F0ABFC', '#F5D0FE'],
     glow: ['#E879F9', '#F0ABFC', '#F5D0FE', '#FAE8FF', '#FDF4FF'],
-    outline: ['#7C3AED', '#6B21A8', '#86198F', '#9F1239', '#BE185D']
+    outline: ['#B08D6E', '#6B21A8', '#86198F', '#9F1239', '#BE185D']
   },
   research: {
     primary: ['#F59E0B', '#D97706', '#B45309', '#1E40AF', '#1E3A8A'],

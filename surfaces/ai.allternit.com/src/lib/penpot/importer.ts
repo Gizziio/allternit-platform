@@ -85,7 +85,7 @@ export async function importPenpotFile(
         label: shape.name,
         componentType: 'custom',
         fill: firstFillColor(shape.fills),
-        stroke: shape.strokes?.[0]?.strokeColor ?? '#818cf8',
+        stroke: shape.strokes?.[0]?.strokeColor ?? '#C4A684',
         radius: (shape as any).rx ?? 8,
         fills: shape.fills ?? [],
         strokes: shape.strokes ?? [],

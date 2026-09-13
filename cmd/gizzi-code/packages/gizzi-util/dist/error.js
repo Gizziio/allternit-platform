@@ -40,6 +40,11 @@ const NamedError = {
     }
 
     Object.defineProperty(SpecificNamedError, "name", { value: name })
+    // Consumers (MessageV2 RetryPart, openapi error resolvers) read the data
+    // schema off the class as `.Schema`; without it the shape is undefined and
+    // zod v4 throws "Invalid element at key …: expected a Zod schema" the first
+    // time a schema carrying it is parsed (e.g. sessions with retry parts).
+    SpecificNamedError.Schema = schema
     return SpecificNamedError
   },
 }

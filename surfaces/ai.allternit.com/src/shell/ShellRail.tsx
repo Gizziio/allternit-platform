@@ -47,6 +47,7 @@ import { useChatStore } from '../views/chat/ChatStore';
 
 import { useCoworkStore } from '../views/cowork/CoworkStore';
 
+import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 
 import { useSurfaceAgentModeEnabled } from '../lib/agents/surface-agent-context';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -80,13 +81,14 @@ import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
 import { useCommRailsMailStore } from '@/lib/bots/commrails-mail.store';
 import { useCommRailSections } from '@/lib/bots/use-commrail-sections';
-import { useBotStatus } from '@/lib/bots/bot-operational-state.store';
+
 import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import type { GroupChat } from '@/lib/bots/group-chat.types';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { BotAvatar } from '@/views/bots/BotAvatar';
-import { GroupChatAvatar } from '@/views/bots/GroupChatAvatar';
+
+import { BotGroupRailRow, BotRailRow } from '@/views/bots/BotRailRows';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
@@ -220,6 +222,8 @@ interface ShellRailProps {
   onSidecarToggle?: () => void;
   sidecarOpen?: boolean;
   onOpenCustomize?: (tab?: string) => void;
+  /** Open the popped-out Allternit Office window (footer rail entry, all modes). */
+  onOpenOfficeWindow?: () => void;
   sessionOnlyId?: string;
 }
 
@@ -231,6 +235,7 @@ export function ShellRail({
   isCollapsed,
   onModeChange,
   onOpenCustomize,
+  onOpenOfficeWindow,
   sessionOnlyId,
 }: ShellRailProps): React.ReactNode | null {
   // Determine current surface for agent mode glow
@@ -1006,7 +1011,7 @@ export function ShellRail({
             {browserRailTabs['browser-extensions'] && (
               <RailItem
                 icon={PuzzlePiece}
-                label="Office & Extensions"
+                label="ACI Extensions"
                 isActive={browserSticky.isTabActive('browser-extensions')}
                 onClick={() => {
                   browserSticky.selectTab('browser-extensions');
@@ -1028,7 +1033,7 @@ export function ShellRail({
             <MoreDropdown
               tabs={[
                 { id: 'mini-apps-store', label: 'Mini-apps Store', icon: AppWindow, visible: browserRailTabs['mini-apps-store'] },
-                { id: 'browser-extensions', label: 'Office & Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
+                { id: 'browser-extensions', label: 'ACI Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
                 { id: 'site-apis', label: 'Teach', icon: Record, visible: browserRailTabs['site-apis'] },
               ]}
               onToggle={toggleBrowserRailTab}
@@ -1320,15 +1325,27 @@ export function ShellRail({
               sessionsSection?.items.map((item) => (
                 <div
                   key={item.id}
-                  className="w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--shell-item-fg)]"
+                  className="w-full flex flex-col gap-0.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--shell-item-fg)]"
                 >
-                  <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                    {item.label}
-                  </span>
-                  {item.status ? (
-                    <span className="shrink-0 text-[11px] text-[var(--shell-item-muted)]">
-                      {item.status}
+                  <div className="flex items-center gap-2.5">
+                    <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {item.label}
                     </span>
+                    {item.status ? (
+                      <span className="shrink-0 text-[11px] text-[var(--shell-item-muted)]">
+                        {item.status}
+                      </span>
+                    ) : null}
+                  </div>
+                  {item.lastMessage ? (
+                    <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
+                      <span className="truncate flex-1">{item.lastMessage}</span>
+                      {item.lastMessageAt ? (
+                        <span className="shrink-0 text-[10px] opacity-60">
+                          {formatRelativeTime(item.lastMessageAt)}
+                        </span>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               ))
@@ -1892,13 +1909,33 @@ export function ShellRail({
       <div className="flex flex-col border-t border-solid border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] shrink-0">
         <button
           type="button"
+          data-testid="rail-open-office"
+          onClick={() => {
+            onOpenOfficeWindow?.();
+          }}
+          title="Allternit Office"
+          className="w-full flex items-center gap-2.5 p-[10px_16px] text-[var(--shell-item-fg)] cursor-pointer hover:bg-[var(--shell-item-hover)] border-none bg-transparent font-semibold text-[13px] text-left transition-colors"
+        >
+          {showSidebarLabels ? (
+            <span className="text-[var(--shell-item-muted)]" data-testid="rail-office-wordmark">
+              <AProtocolWordmark suffix="OFFICE" height={12} theme="adaptive" />
+            </span>
+          ) : (
+            <span className="text-[var(--shell-item-muted)] inline-flex" data-testid="rail-office-mark">
+              <AProtocolWordmark collapsed height={12} theme="adaptive" />
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          data-testid="rail-open-design"
+          title="Design"
           onClick={() => {
             onModeChange?.('design');
           }}
           className="w-full flex items-center gap-2.5 p-[10px_16px] text-[var(--shell-item-fg)] cursor-pointer hover:bg-[var(--shell-item-hover)] border-none bg-transparent font-semibold text-[13px] text-left transition-colors"
         >
-          <Palette size={18} weight="bold" className="text-[var(--shell-item-muted)]" />
-          <span>Design</span>
+          <AProtocolWordmark theme="adaptive" height={12} suffix="DESIGN" />
         </button>
 
         <div className="h-px bg-[var(--shell-divider)] w-full" />
@@ -1911,7 +1948,7 @@ export function ShellRail({
                 title={currentUserDisplayName ?? 'Account'}
                 className="w-full min-w-0 flex items-center gap-2 border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors rounded-lg p-[6px_8px] -ml-1"
               >
-                <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
+                <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
                   {accountInitial}
                 </div>
                 <div className="min-w-0 flex-1 overflow-hidden flex items-center gap-1 text-[var(--shell-item-fg)] text-[13px] font-semibold">
@@ -2674,99 +2711,6 @@ function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
           <PushPinSlash size={12} />
         </button>
       )}
-    </div>
-  );
-}
-
-function BotNeedsYouHint({ botId }: { botId: string }): React.ReactNode {
-  const { needsAttention, hasPendingApprovals } = useBotStatus(botId);
-  if (!needsAttention && !hasPendingApprovals) return null;
-  return (
-    <span className="shrink-0 text-[10px] font-medium text-[var(--accent-primary)]">
-      Needs you
-    </span>
-  );
-}
-
-function BotRailRow({ bot, isActive, disabled, onOpen, onUnpin, draggable, onDragStart, onDragEnd }: {
-  bot: Agent;
-  isActive?: boolean;
-  disabled?: boolean;
-  onOpen: () => void;
-  onUnpin?: () => void;
-  draggable?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragEnd?: (e: React.DragEvent) => void;
-}): React.ReactNode {
-  return (
-    <div
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      className={cn(
-        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
-        isActive
-          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
-          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-      )}
-    >
-      <button
-        type="button"
-        onClick={onOpen}
-        disabled={disabled}
-        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium disabled:opacity-60"
-      >
-        <BotAvatar bot={bot} size={22} />
-        <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
-          {getBotDisplayName(bot)}
-        </span>
-        <BotNeedsYouHint botId={bot.id} />
-      </button>
-      {onUnpin && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
-          title="Unpin from rail"
-          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 shrink-0 -ml-1 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
-        >
-          <PushPinSlash size={13} />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function BotGroupRailRow({ group, unread, isActive, onOpen }: {
-  group: GroupChat;
-  unread: number;
-  isActive?: boolean;
-  onOpen: () => void;
-}): React.ReactNode {
-  return (
-    <div
-      data-rail-item={`group-${group.id}`}
-      className={cn(
-        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
-        isActive
-          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
-          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-      )}
-    >
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
-      >
-        <GroupChatAvatar name={group.name} members={group.members} size={22} />
-        <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
-          {group.name}
-        </span>
-        {unread > 0 && (
-          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--accent-primary)] px-1.5 text-[11px] font-semibold text-[var(--ui-text-inverse)]">
-            {unread > 99 ? '99+' : unread}
-          </span>
-        )}
-      </button>
     </div>
   );
 }

@@ -83,7 +83,7 @@ function LiveExecutionMonitor({
   onStop,
   onRestart,
 }: LiveExecutionMonitorProps) {
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
+  const modeColors = MODE_COLORS.design as typeof MODE_COLORS.design;
   const [activeTab, setActiveTab] = useState<'logs' | 'dag' | 'wihs'>('logs');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLive, setIsLive] = useState(true);
@@ -241,7 +241,7 @@ function LiveExecutionMonitor({
         setActiveTab={setActiveTab}
         onStop={onStop}
         onRestart={onRestart}
-        modeColors={modeColors as typeof MODE_COLORS.code}
+        modeColors={modeColors as typeof MODE_COLORS.design}
       />
 
       {/* Tab Content */}
@@ -258,19 +258,19 @@ function LiveExecutionMonitor({
             logsEndRef={logsEndRef}
             logsContainerRef={logsContainerRef}
             onScroll={handleScroll}
-            modeColors={modeColors as typeof MODE_COLORS.code}
+            modeColors={modeColors as typeof MODE_COLORS.design}
           />
         )}
         {activeTab === 'dag' && dag && (
           <DagPanel
             dag={dag}
-            modeColors={modeColors as typeof MODE_COLORS.code}
+            modeColors={modeColors as typeof MODE_COLORS.design}
           />
         )}
         {activeTab === 'wihs' && (
           <WihsPanel
             wihs={wihs}
-            modeColors={modeColors as typeof MODE_COLORS.code}
+            modeColors={modeColors as typeof MODE_COLORS.design}
           />
         )}
       </div>
@@ -299,7 +299,7 @@ function MonitorHeader({
   setActiveTab: (tab: 'logs' | 'dag' | 'wihs') => void;
   onStop?: () => void;
   onRestart?: () => void;
-  modeColors: typeof MODE_COLORS.code;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   const tabs = [
     { id: 'logs', label: 'Logs', icon: Terminal },
@@ -432,7 +432,7 @@ function LogsPanel({
   logsEndRef: React.RefObject<HTMLDivElement>;
   logsContainerRef: React.RefObject<HTMLDivElement>;
   onScroll: () => void;
-  modeColors: typeof MODE_COLORS.code;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   const levelColors = {
     debug: { bg: 'var(--surface-hover)', color: TEXT.tertiary },
@@ -553,7 +553,7 @@ function DagPanel({
   modeColors,
 }: {
   dag: DagExecution;
-  modeColors: typeof MODE_COLORS.code;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   const statusColors = {
     pending: { bg: 'var(--surface-hover)', border: 'var(--ui-border-default)', icon: Clock },
@@ -688,7 +688,7 @@ function WihsPanel({
   modeColors,
 }: {
   wihs: WihInfo[];
-  modeColors: typeof MODE_COLORS.code;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   const statusColors = {
     ready: { bg: 'var(--surface-hover)', color: TEXT.tertiary },

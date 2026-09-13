@@ -138,11 +138,10 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.9);
   --glass-border: rgba(154, 118, 88, 0.15);
 
-  --accent-chat: #B08D6E;
-  --accent-cowork: #9A7BAA;
+  /* LOCKED 2026-09-11 (Eoj): the per-mode accent palettes (chat/cowork/code/
+     browser) are removed — amber is the only accent, via --accent-primary.
+     --accent-bot is retained for the bot surface. */
   --accent-bot: #B08D6E;
-  --accent-code: #6B9A7B;
-  --accent-browser: #6B8FA0;
   --accent-primary: #B08D6E;
   --accent-secondary: #D4B08C;
 
@@ -174,14 +173,14 @@
   --shell-floating-border: var(--ui-border-muted);
   --shell-divider: var(--ui-border-muted);
   --shell-item-hover: var(--surface-hover);
-  --shell-item-active-bg: color-mix(in srgb, var(--accent-chat) 14%, var(--surface-panel));
+  --shell-item-active-bg: color-mix(in srgb, var(--accent-primary) 14%, var(--surface-panel));
   --shell-item-active-fg: var(--accent-primary);
   --shell-item-fg: var(--ui-text-primary);
   --shell-item-muted: var(--ui-text-muted);
   --shell-menu-bg: var(--surface-floating);
   --shell-menu-border: var(--ui-border-default);
   --shell-control-bg: color-mix(in srgb, var(--surface-panel) 68%, transparent);
-  --shell-control-active-bg: var(--accent-chat);
+  --shell-control-active-bg: var(--accent-primary);
   --shell-control-fg: var(--ui-text-primary);
   --shell-control-muted-fg: var(--ui-text-secondary);
   --shell-control-active-fg: var(--ui-text-inverse);
@@ -197,16 +196,16 @@
   --shell-vision-target: var(--status-error);
   --shell-vision-label-bg: color-mix(in srgb, var(--surface-overlay) 88%, transparent);
   --shell-vision-label-fg: var(--ui-text-primary);
-  --shell-mode-chat-soft: color-mix(in srgb, var(--accent-chat) 16%, var(--surface-panel));
-  --shell-mode-cowork-soft: color-mix(in srgb, var(--accent-cowork) 16%, var(--surface-panel));
+  --shell-mode-chat-soft: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
+  --shell-mode-cowork-soft: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
   --shell-mode-bot-soft: color-mix(in srgb, var(--accent-bot) 16%, var(--surface-panel));
-  --shell-mode-code-soft: color-mix(in srgb, var(--accent-code) 16%, var(--surface-panel));
-  --shell-mode-browser-soft: color-mix(in srgb, var(--accent-browser) 16%, var(--surface-panel));
-  --shell-mode-chat-strong: color-mix(in srgb, var(--accent-chat) 56%, var(--surface-panel-muted));
-  --shell-mode-cowork-strong: color-mix(in srgb, var(--accent-cowork) 56%, var(--surface-panel-muted));
+  --shell-mode-code-soft: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
+  --shell-mode-browser-soft: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
+  --shell-mode-chat-strong: color-mix(in srgb, var(--accent-primary) 56%, var(--surface-panel-muted));
+  --shell-mode-cowork-strong: color-mix(in srgb, var(--accent-primary) 56%, var(--surface-panel-muted));
   --shell-mode-bot-strong: color-mix(in srgb, var(--accent-bot) 56%, var(--surface-panel-muted));
-  --shell-mode-code-strong: color-mix(in srgb, var(--accent-code) 56%, var(--surface-panel-muted));
-  --shell-mode-browser-strong: color-mix(in srgb, var(--accent-browser) 56%, var(--surface-panel-muted));
+  --shell-mode-code-strong: color-mix(in srgb, var(--accent-primary) 56%, var(--surface-panel-muted));
+  --shell-mode-browser-strong: color-mix(in srgb, var(--accent-primary) 56%, var(--surface-panel-muted));
   --chat-composer-bg: color-mix(in srgb, var(--surface-floating) 94%, var(--surface-panel) 6%);
   --chat-composer-glass-bg: rgba(255, 255, 255, 0.5);
   --chat-composer-glass-border: rgba(255, 255, 255, 0.4);
@@ -219,27 +218,27 @@
   --chat-composer-disabled: color-mix(in srgb, var(--ui-text-muted) 88%, transparent);
   --chat-mode-pill-bg: color-mix(in srgb, var(--surface-panel-muted) 88%, transparent);
   --chat-mode-pill-fg: var(--ui-text-primary);
-  --chat-mode-pill-active-bg: color-mix(in srgb, var(--accent-chat) 20%, var(--surface-panel));
-  --chat-mode-pill-active-fg: var(--accent-chat);
+  --chat-mode-pill-active-bg: color-mix(in srgb, var(--accent-primary) 20%, var(--surface-panel));
+  --chat-mode-pill-active-fg: var(--accent-primary);
   --an-background: var(--surface-canvas);
   --an-background-secondary: color-mix(in srgb, var(--surface-panel) 88%, transparent);
   --an-background-tertiary: color-mix(in srgb, var(--surface-panel-muted) 84%, transparent);
   --an-foreground: var(--ui-text-primary);
   --an-foreground-muted: var(--ui-text-secondary);
   --an-border-color: var(--ui-border-default);
-  --an-primary-color: var(--accent-chat);
-  --an-send-button-bg: var(--accent-chat);
+  --an-primary-color: var(--accent-primary);
+  --an-send-button-bg: var(--accent-primary);
   --an-send-button-color: var(--ui-text-inverse);
   --an-input-background: var(--chat-composer-bg);
   --an-input-placeholder-color: color-mix(in srgb, var(--ui-text-muted) 82%, transparent);
-  --an-input-focus-outline: color-mix(in srgb, var(--accent-chat) 42%, transparent);
+  --an-input-focus-outline: color-mix(in srgb, var(--accent-primary) 42%, transparent);
   --an-input-border-radius: 20px;
   --an-tool-background: color-mix(in srgb, var(--surface-panel) 92%, transparent);
-  --an-tool-border-color: color-mix(in srgb, var(--accent-chat) 18%, var(--ui-border-default));
+  --an-tool-border-color: color-mix(in srgb, var(--accent-primary) 18%, var(--ui-border-default));
   --an-tool-border-radius: 18px;
   --an-tool-color: var(--ui-text-primary);
   --an-tool-color-muted: var(--ui-text-secondary);
-  --an-user-message-bg: color-mix(in srgb, var(--accent-chat) 18%, var(--surface-panel));
+  --an-user-message-bg: color-mix(in srgb, var(--accent-primary) 18%, var(--surface-panel));
   --an-user-message-text: var(--ui-text-primary);
   --an-context-padding: 10px;
   --an-shimmer-duration: 2s;
@@ -339,12 +338,10 @@
   --glass-bg-hover: rgba(45, 35, 28, 0.92);
   --glass-border: rgba(212, 176, 140, 0.16);
 
-  --accent-chat: #D97757; /* Coral/Orange accent from screenshot */
+  /* Per-mode accent palettes removed 2026-09-11 (amber-only law); --accent-bot
+     retained for the bot surface. */
   --font-serif: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
-  --accent-cowork: #B08BC0;
   --accent-bot: #2DD4BF;
-  --accent-code: #7BB08B;
-  --accent-browser: #69A8C8;
   --accent-primary: #D4B08C;
   --accent-secondary: #B08D6E;
 
@@ -376,14 +373,14 @@
   --shell-floating-border: var(--ui-border-muted);
   --shell-divider: var(--ui-border-muted);
   --shell-item-hover: var(--surface-hover);
-  --shell-item-active-bg: color-mix(in srgb, var(--accent-chat) 16%, var(--surface-panel));
+  --shell-item-active-bg: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
   --shell-item-active-fg: #f0c8aa;
   --shell-item-fg: var(--ui-text-primary);
   --shell-item-muted: var(--ui-text-muted);
   --shell-menu-bg: var(--surface-floating);
   --shell-menu-border: var(--ui-border-default);
   --shell-control-bg: color-mix(in srgb, var(--surface-panel) 74%, transparent);
-  --shell-control-active-bg: var(--accent-chat);
+  --shell-control-active-bg: var(--accent-primary);
   --shell-control-fg: var(--ui-text-primary);
   --shell-control-muted-fg: var(--ui-text-secondary);
   --shell-control-active-fg: #ffffff;
@@ -399,16 +396,16 @@
   --shell-vision-target: var(--status-error);
   --shell-vision-label-bg: color-mix(in srgb, var(--surface-overlay) 88%, transparent);
   --shell-vision-label-fg: var(--ui-text-primary);
-  --shell-mode-chat-soft: color-mix(in srgb, var(--accent-chat) 16%, var(--surface-panel));
-  --shell-mode-cowork-soft: color-mix(in srgb, var(--accent-cowork) 16%, var(--surface-panel));
+  --shell-mode-chat-soft: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
+  --shell-mode-cowork-soft: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
   --shell-mode-bot-soft: color-mix(in srgb, var(--accent-bot) 16%, var(--surface-panel));
-  --shell-mode-code-soft: color-mix(in srgb, var(--accent-code) 16%, var(--surface-panel));
-  --shell-mode-browser-soft: color-mix(in srgb, var(--accent-browser) 16%, var(--surface-panel));
-  --shell-mode-chat-strong: color-mix(in srgb, var(--accent-chat) 50%, var(--surface-panel-muted));
-  --shell-mode-cowork-strong: color-mix(in srgb, var(--accent-cowork) 50%, var(--surface-panel-muted));
+  --shell-mode-code-soft: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
+  --shell-mode-browser-soft: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel));
+  --shell-mode-chat-strong: color-mix(in srgb, var(--accent-primary) 50%, var(--surface-panel-muted));
+  --shell-mode-cowork-strong: color-mix(in srgb, var(--accent-primary) 50%, var(--surface-panel-muted));
   --shell-mode-bot-strong: color-mix(in srgb, var(--accent-bot) 50%, var(--surface-panel-muted));
-  --shell-mode-code-strong: color-mix(in srgb, var(--accent-code) 50%, var(--surface-panel-muted));
-  --shell-mode-browser-strong: color-mix(in srgb, var(--accent-browser) 50%, var(--surface-panel-muted));
+  --shell-mode-code-strong: color-mix(in srgb, var(--accent-primary) 50%, var(--surface-panel-muted));
+  --shell-mode-browser-strong: color-mix(in srgb, var(--accent-primary) 50%, var(--surface-panel-muted));
   --chat-composer-bg: color-mix(in srgb, var(--surface-floating) 96%, var(--surface-panel) 4%);
   --chat-composer-glass-bg: rgba(30, 26, 22, 0.45);
   --chat-composer-glass-border: rgba(255, 255, 255, 0.1);
@@ -421,7 +418,7 @@
   --chat-composer-disabled: color-mix(in srgb, var(--ui-text-muted) 84%, transparent);
   --chat-mode-pill-bg: color-mix(in srgb, var(--surface-panel-muted) 82%, transparent);
   --chat-mode-pill-fg: var(--ui-text-primary);
-  --chat-mode-pill-active-bg: color-mix(in srgb, var(--accent-chat) 24%, var(--surface-panel));
+  --chat-mode-pill-active-bg: color-mix(in srgb, var(--accent-primary) 24%, var(--surface-panel));
   --chat-mode-pill-active-fg: var(--shell-item-active-fg);
   --an-background: var(--surface-canvas);
   --an-background-secondary: color-mix(in srgb, var(--surface-panel) 82%, transparent);
@@ -429,19 +426,19 @@
   --an-foreground: var(--ui-text-primary);
   --an-foreground-muted: var(--ui-text-secondary);
   --an-border-color: var(--ui-border-default);
-  --an-primary-color: var(--accent-chat);
-  --an-send-button-bg: var(--accent-chat);
+  --an-primary-color: var(--accent-primary);
+  --an-send-button-bg: var(--accent-primary);
   --an-send-button-color: #1a1612;
   --an-input-background: var(--chat-composer-bg);
   --an-input-placeholder-color: color-mix(in srgb, var(--ui-text-muted) 84%, transparent);
-  --an-input-focus-outline: color-mix(in srgb, var(--accent-chat) 50%, transparent);
+  --an-input-focus-outline: color-mix(in srgb, var(--accent-primary) 50%, transparent);
   --an-input-border-radius: 20px;
   --an-tool-background: color-mix(in srgb, var(--surface-panel) 92%, transparent);
-  --an-tool-border-color: color-mix(in srgb, var(--accent-chat) 22%, var(--ui-border-default));
+  --an-tool-border-color: color-mix(in srgb, var(--accent-primary) 22%, var(--ui-border-default));
   --an-tool-border-radius: 18px;
   --an-tool-color: var(--ui-text-primary);
   --an-tool-color-muted: var(--ui-text-secondary);
-  --an-user-message-bg: color-mix(in srgb, var(--accent-chat) 22%, var(--surface-panel));
+  --an-user-message-bg: color-mix(in srgb, var(--accent-primary) 22%, var(--surface-panel));
   --an-user-message-text: var(--ui-text-primary);
   --an-context-padding: 10px;
   --an-shimmer-duration: 2s;
@@ -614,7 +611,7 @@
    FOCUS STYLES (Accessibility)
    ========================================================================== */
 *:focus-visible {
-  outline: 2px solid var(--accent-chat);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
   transition: outline-offset var(--transition-fast);
 }
@@ -686,7 +683,7 @@ body {
 :root {
   --prose-body: var(--text-primary);
   --prose-headings: var(--text-primary);
-  --prose-links: var(--accent-chat);
+  --prose-links: var(--accent-primary);
   --prose-code: var(--text-primary);
   --prose-pre-bg: var(--bg-secondary);
   --prose-pre-code: var(--text-primary);

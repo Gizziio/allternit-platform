@@ -21,7 +21,7 @@ import { deriveHandle, hasDisplayName } from "../wizard-state";
 import { AvatarEditor, type AvatarEditorState } from "./AvatarEditor";
 
 const ACCENT_COLORS = [
-  "#D4956A",
+  "#B08D6E",
   "#6366f1",
   "#8b5cf6",
   "#ec4899",
@@ -65,7 +65,7 @@ export function IdentityStep({
 }: IdentityStepProps) {
   const copy = WIZARD_COPY.steps.identity;
   const botProfile = formData.botProfile!;
-  const accentColor = botProfile.accentColor || "#D4956A";
+  const accentColor = botProfile.accentColor || "#B08D6E";
   const nameValid = hasDisplayName(formData);
 
   return (

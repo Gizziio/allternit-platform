@@ -90,7 +90,7 @@ export const Interactive: Story = {
         <Fade in={visible}>
           <div style={{
             padding: '32px',
-            background: 'var(--accent-chat)',
+            background: 'var(--accent-primary)',
             borderRadius: '12px',
             color: 'white',
             fontWeight: 600,
@@ -286,7 +286,7 @@ export const Staggered: Story = {
             <Fade key={`${key}-${index}`} in={true} delay={index * 0.1} direction="up">
               <div style={{
                 padding: '12px 16px',
-                background: 'var(--accent-chat)',
+                background: 'var(--accent-primary)',
                 borderRadius: '8px',
                 color: 'white',
               }}>

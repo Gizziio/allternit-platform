@@ -49,7 +49,7 @@ function statusColor(status: string): string {
     case "paused":
       return "text-[var(--status-warning)] bg-[var(--status-warning)]/10";
     case "completed":
-      return "text-[var(--accent-secondary)] bg-[var(--accent-secondary)]/10";
+      return "text-[var(--accent-primary)] bg-[var(--accent-primary)]/10";
     case "failed":
     case "cancelled":
       return "text-[var(--status-error)] bg-[var(--status-error)]/10";

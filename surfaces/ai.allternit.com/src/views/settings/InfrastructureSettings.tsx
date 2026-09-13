@@ -1074,7 +1074,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           description="VS Code remote containers spec. Works with any IDE supporting the spec."
         />
         <InfoCard
-          icon={<Cube size={24} className="text-[var(--accent-cowork)]" />}
+          icon={<Cube size={24} className="text-[var(--accent-primary)]" />}
           title="Nix Flakes"
           description="Reproducible, declarative environments. Pin exact dependency versions."
         />
@@ -1184,7 +1184,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                   </div>
                 )}
                 {instance.gpu_available && (
-                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--accent-cowork)]">
+                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--accent-primary)]">
                     <Sparkle size={14} />
                     GPU
                   </div>
@@ -1445,7 +1445,7 @@ function TemplateCard({
 }) {
   const typeColors: Record<EnvironmentType, string> = {
     devcontainer: 'var(--accent-primary)',
-    nix: '#7c3aed',
+    nix: '#B08D6E',
     sandbox: 'var(--status-success)',
     platform: 'var(--status-info)',
   };
@@ -1611,7 +1611,7 @@ function EnvironmentRow({
   
   const typeColors: Record<EnvironmentType, string> & { [key: string]: string } = {
     devcontainer: 'var(--accent-primary)',
-    nix: '#7c3aed',
+    nix: '#B08D6E',
     sandbox: 'var(--status-success)',
     platform: 'var(--status-info)',
   };

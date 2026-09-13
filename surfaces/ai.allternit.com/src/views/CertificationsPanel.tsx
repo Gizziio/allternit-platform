@@ -102,7 +102,7 @@ export function CertificationsPanel() {
     <Fade in direction="up" distance={20}>
       <div style={{ padding: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #B08D6E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Award size={22} color="#fff" />
           </div>
           <div>

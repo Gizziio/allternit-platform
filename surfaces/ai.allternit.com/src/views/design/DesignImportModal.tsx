@@ -177,7 +177,7 @@ export function DesignImportModal({ onClose, onImport }: Props) {
         {/* Header */}
         <div className="p-[20px_24px] border-b border-solid border-[var(--border-subtle,rgba(0,0,0,0.08))] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-[10px] bg-[var(--accent-primary,#e27c59)] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-[10px] bg-[var(--accent-primary,#B08D6E)] flex items-center justify-center">
               <Link size={16} color="#fff" weight="bold" />
             </div>
             <div>
@@ -194,25 +194,25 @@ export function DesignImportModal({ onClose, onImport }: Props) {
         <div className="flex border-b border-solid border-[var(--border-subtle,rgba(0,0,0,0.08))]">
           <button type="button"
             onClick={() => setActiveTab("url")}
-            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "url" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#e27c59)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
+            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "url" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#B08D6E)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
           >
             From URL
           </button>
           <button type="button"
             onClick={() => setActiveTab("tokens")}
-            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "tokens" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#e27c59)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
+            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "tokens" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#B08D6E)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
           >
             Extract Tokens
           </button>
           <button type="button"
             onClick={() => setActiveTab("local")}
-            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "local" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#e27c59)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
+            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "local" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#B08D6E)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
           >
             Local DESIGN.md
           </button>
           <button type="button"
             onClick={() => setActiveTab("claude-zip")}
-            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "claude-zip" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#e27c59)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
+            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "claude-zip" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#B08D6E)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
           >
             Claude ZIP
           </button>
@@ -237,7 +237,7 @@ export function DesignImportModal({ onClose, onImport }: Props) {
                         onChange={e => setUrl(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && handleFetch()}
                         placeholder="https://linear.app"
-                        className="flex-1 p-[10px_14px] rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] text-[13px] outline-none font-inherit bg-[var(--bg-secondary,#f9f9f9)] focus:border-[var(--accent-primary,#e27c59)] transition-colors"
+                        className="flex-1 p-[10px_14px] rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] text-[13px] outline-none font-inherit bg-[var(--bg-secondary,#f9f9f9)] focus:border-[var(--accent-primary,#B08D6E)] transition-colors"
                       />
                       <button type="button"
                         onClick={handleFetch}
@@ -265,7 +265,7 @@ export function DesignImportModal({ onClose, onImport }: Props) {
                 {phase === "loading" && (
                   <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-4 py-8">
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
-                      <Spinner size={32} className="text-[var(--accent-primary,#e27c59)]" />
+                      <Spinner size={32} className="text-[var(--accent-primary,#B08D6E)]" />
                     </motion.div>
                     <div className="text-[13px] text-[var(--text-secondary,#666)] text-center">
                       Fetching {url}<br />
@@ -307,7 +307,7 @@ export function DesignImportModal({ onClose, onImport }: Props) {
                       </div>
                       <input aria-label="Input" value={customName}
                         onChange={e => setCustomName(e.target.value)}
-                        className="w-full p-[10px_14px] rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] text-[13px] font-semibold outline-none font-inherit box-border focus:border-[var(--accent-primary,#e27c59)] transition-colors"
+                        className="w-full p-[10px_14px] rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] text-[13px] font-semibold outline-none font-inherit box-border focus:border-[var(--accent-primary,#B08D6E)] transition-colors"
                       />
                     </div>
 
@@ -364,7 +364,7 @@ export function DesignImportModal({ onClose, onImport }: Props) {
                       onClick={() => { setSourceType(opt.id); setExtractedTokens([]); }}
                       className={cn(
                         "flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-solid text-[11px] font-bold cursor-pointer transition-colors duration-200",
-                        sourceType === opt.id ? "border-[var(--accent-primary,#e27c59)] bg-[#e27c5914] text-[var(--accent-primary,#e27c59)]" : "border-[var(--border-subtle,rgba(0,0,0,0.08))] bg-transparent text-[var(--text-secondary,#666)] hover:bg-black/5"
+                        sourceType === opt.id ? "border-[var(--accent-primary,#B08D6E)] bg-[#B08D6E14] text-[var(--accent-primary,#B08D6E)]" : "border-[var(--border-subtle,rgba(0,0,0,0.08))] bg-transparent text-[var(--text-secondary,#666)] hover:bg-black/5"
                       )}
                     >
                       {opt.icon} {opt.label}
@@ -375,7 +375,7 @@ export function DesignImportModal({ onClose, onImport }: Props) {
                 <textarea aria-label="Text Area" value={pasteInput}
                   onChange={e => setPasteInput(e.target.value)}
                   placeholder={sourceType === "css" ? ":root { --color-primary: #3b82f6; --radius-base: 12px; }" : sourceType === "tailwind" ? '{ "colors": { "primary": "#3b82f6", "secondary": "#64748b" } }' : '{ "token-name": { "$value": "#3b82f6", "$type": "color" } }'}
-                  className="w-full h-[140px] p-[10px_14px] rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] text-[12px] outline-none font-mono bg-[var(--bg-secondary,#f9f9f9)] resize-y box-border focus:border-[var(--accent-primary,#e27c59)] transition-colors"
+                  className="w-full h-[140px] p-[10px_14px] rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] text-[12px] outline-none font-mono bg-[var(--bg-secondary,#f9f9f9)] resize-y box-border focus:border-[var(--accent-primary,#B08D6E)] transition-colors"
                 />
 
                 <div className="flex gap-2 mt-3">
@@ -411,7 +411,7 @@ export function DesignImportModal({ onClose, onImport }: Props) {
                     </div>
                     <button type="button"
                       onClick={handleApplyTokens}
-                      className="w-full p-2.5 rounded-[10px] bg-[var(--accent-primary,#e27c59)] text-white border-none text-[13px] font-bold cursor-pointer hover:opacity-90 transition-opacity"
+                      className="w-full p-2.5 rounded-[10px] bg-[var(--accent-primary,#B08D6E)] text-white border-none text-[13px] font-bold cursor-pointer hover:opacity-90 transition-opacity"
                     >
                       Apply to project
                     </button>

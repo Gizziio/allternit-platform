@@ -21,7 +21,7 @@
 }
 
 .rail-item-active .rail-icon {
-  filter: drop-shadow(0 0 8px var(--accent-chat));
+  filter: drop-shadow(0 0 8px var(--accent-primary));
 }
 
 /* Tooltip-like behavior for collapsed state */
@@ -48,7 +48,7 @@
 }
 
 .dropdown-item-hover:focus { 
-  background: var(--accent-chat) !important; 
+  background: var(--accent-primary) !important; 
   color: white !important; 
 }
 

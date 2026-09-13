@@ -17,9 +17,9 @@
   --r-heading-text-transform: none;
   --r-heading-text-shadow: none;
   --r-heading-font-weight: 600;
-  --r-link-color: #D4956A;
+  --r-link-color: #B08D6E;
   --r-link-color-hover: #E5B080;
-  --r-selection-background-color: rgba(212, 149, 106, 0.3);
+  --r-selection-background-color: rgba(176,141,110, 0.3);
   --r-selection-color: #ECECEC;
 }
 
@@ -32,7 +32,7 @@
   --r-heading-color: #1a1a1a;
   --r-link-color: #D97757;
   --r-link-color-hover: #E08E6D;
-  --r-selection-background-color: rgba(212, 149, 106, 0.3);
+  --r-selection-background-color: rgba(176,141,110, 0.3);
 }
 
 .reveal.allternit-deck-amber {
@@ -41,10 +41,10 @@
   --r-heading-font: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --r-main-font-size: 28px;
   --r-main-color: #ECECEC;
-  --r-heading-color: #D4956A;
+  --r-heading-color: #B08D6E;
   --r-link-color: #E5B080;
   --r-link-color-hover: #F0C8AA;
-  --r-selection-background-color: rgba(212, 149, 106, 0.3);
+  --r-selection-background-color: rgba(176,141,110, 0.3);
 }
 
 /* ===== Slide Container ===== */
@@ -77,7 +77,7 @@
 .reveal h3 {
   font-size: 1.3em;
   font-weight: 600;
-  color: #D4956A;
+  color: #B08D6E;
   margin-bottom: 0.5em;
 }
 
@@ -109,7 +109,7 @@
   top: 0.5em;
   width: 6px;
   height: 6px;
-  background: #D4956A;
+  background: #B08D6E;
   border-radius: 50%;
 }
 
@@ -158,19 +158,19 @@
 
 /* ===== Links ===== */
 .reveal a {
-  color: #D4956A;
+  color: #B08D6E;
   text-decoration: none;
-  border-bottom: 1px solid rgba(212, 149, 106, 0.3);
+  border-bottom: 1px solid rgba(176,141,110, 0.3);
   transition: border-color 0.2s ease;
 }
 
 .reveal a:hover {
-  border-bottom-color: #D4956A;
+  border-bottom-color: #B08D6E;
 }
 
 /* ===== Selection ===== */
 .reveal ::selection {
-  background: rgba(212, 149, 106, 0.3);
+  background: rgba(176,141,110, 0.3);
   color: #ECECEC;
 }
 
@@ -181,7 +181,7 @@
 }
 
 .reveal .progress span {
-  background: #D4956A;
+  background: #B08D6E;
   transition: width 0.3s ease;
 }
 
@@ -266,7 +266,7 @@
 }
 
 .reveal.overview .slides section:hover {
-  outline: 2px solid #D4956A;
+  outline: 2px solid #B08D6E;
   outline-offset: 4px;
 }
 
@@ -290,7 +290,7 @@
 }
 
 .allternit-slide-accent {
-  border-left: 4px solid #D4956A;
+  border-left: 4px solid #B08D6E;
 }
 
 /* ===== Responsive ===== */

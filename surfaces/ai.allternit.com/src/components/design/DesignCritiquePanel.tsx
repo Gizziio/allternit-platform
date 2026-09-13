@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Sparkle, CircleNotch, Warning, CheckCircle, XCircle, UsersThree } from '@phosphor-icons/react';
 import { gizziBaseUrl } from '@/lib/agents/api-config';
 
@@ -29,6 +29,8 @@ interface Panelist {
 interface CritiqueState {
   status: 'idle' | 'running' | 'done' | 'error';
   model?: { providerID: string; modelID: string };
+  /** True when the brain received images as real multimodal parts. */
+  vision?: boolean;
   roster: string[];
   panelists: Panelist[];
   verdict?: Verdict;
@@ -105,11 +107,15 @@ async function consumeSSE(
   }
 }
 
-export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) {
+export function DesignCritiquePanel({ artifactHtml, artifactImages }: { artifactHtml: string; artifactImages?: string[] }) {
   const [state, setState] = useState<CritiqueState>(INITIAL);
   const [panelistCount, setPanelistCount] = useState(3);
   const abortRef = useRef<AbortController | null>(null);
   const hasArtifact = Boolean(artifactHtml && artifactHtml.trim().length > 0);
+  const images = useMemo(
+    () => (artifactImages ?? []).filter((u) => typeof u === 'string' && u.trim().length > 0).slice(0, 6),
+    [artifactImages],
+  );
 
   const run = useCallback(async () => {
     if (!hasArtifact) return;
@@ -122,7 +128,7 @@ export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) 
       const res = await fetch(`${gizziBaseUrl()}/v1/critique/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: artifactHtml, panelists: panelistCount }),
+        body: JSON.stringify({ html: artifactHtml, panelists: panelistCount, ...(images.length ? { images } : {}) }),
         signal: ctrl.signal,
       });
       if (!res.ok) {
@@ -137,6 +143,7 @@ export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) 
             setState((s) => ({
               ...s,
               model: props.model,
+              vision: props.vision === true,
               roster: props.panelists ?? [],
               panelists: (props.panelists ?? []).map((role: string) => ({
                 role,
@@ -176,7 +183,7 @@ export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) 
       if (e?.name === 'AbortError') return;
       setState((s) => ({ ...s, status: 'error', error: e?.message ?? String(e) }));
     }
-  }, [artifactHtml, hasArtifact, panelistCount]);
+  }, [artifactHtml, hasArtifact, panelistCount, images]);
 
   const orderedPanelists = state.roster.length
     ? state.roster.map((role) => state.panelists.find((p: any) => p.role === role)).filter(Boolean) as any[]
@@ -188,7 +195,7 @@ export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Sparkle size={20} weight="fill" style={{ color: 'var(--accent, #8b5cf6)' }} />
+            <Sparkle size={20} weight="fill" style={{ color: 'var(--accent, var(--accent-primary, #B08D6E))' }} />
             <div>
               <div style={{ fontSize: 16, fontWeight: 700 }}>Allternit Design Critique</div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -228,7 +235,7 @@ export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) 
                 padding: '7px 14px',
                 borderRadius: 8,
                 border: 'none',
-                background: !hasArtifact ? 'var(--surface-hover)' : 'var(--accent, #8b5cf6)',
+                background: !hasArtifact ? 'var(--surface-hover)' : 'var(--accent, var(--accent-primary, #B08D6E))',
                 color: '#fff',
                 fontSize: 12,
                 fontWeight: 700,
@@ -255,6 +262,44 @@ export function DesignCritiquePanel({ artifactHtml }: { artifactHtml: string }) 
           >
             Generate a design artifact on the Canvas tab first, then run a critique. The review analyzes the latest HTML
             artifact from this session.
+          </div>
+        )}
+
+        {images.length > 0 && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: 12,
+              borderRadius: 10,
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--bg-secondary)',
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
+              Attached from the latest turn — {images.length} image{images.length > 1 ? 's' : ''} the panelists will review alongside the HTML
+              {state.status !== 'idle' && (
+                <span style={{ fontWeight: 400 }}>
+                  {' '}· {state.vision ? 'forwarded to the brain as vision parts' : 'referenced as markdown (text-only brain path)'}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {images.map((src, i) => (
+                <img
+                  key={`${src.slice(0, 64)}-${i}`}
+                  src={src}
+                  alt={`Turn image ${i + 1}`}
+                  style={{
+                    width: 96,
+                    height: 72,
+                    objectFit: 'cover',
+                    borderRadius: 6,
+                    border: '1px solid var(--border-subtle)',
+                    background: '#fff',
+                  }}
+                />
+              ))}
+            </div>
           </div>
         )}
 

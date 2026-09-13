@@ -30,7 +30,7 @@ Integration of BlockNote, AG-Grid, and Reveal.js as Allternit-native editors for
   - `allternit-deck-theme.css` - Reveal.js Allternit theme
 - ✅ **Task 3.2:** Allternit-native naming applied ("Allternit Document", "Allternit Data", "Allternit Deck")
 - ✅ **Task 3.3:** Icons use Lucide React icon set
-- ✅ **Task 3.4:** Color scheme matches Allternit palette (#D4956A amber accent)
+- ✅ **Task 3.4:** Color scheme matches Allternit palette (#B08D6E amber accent)
 
 ### Phase 4: Connect to Mode Tabs (2 days) ✅
 

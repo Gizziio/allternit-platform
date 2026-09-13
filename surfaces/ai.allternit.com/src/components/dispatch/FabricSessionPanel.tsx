@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow } from '@phosphor-icons/react';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, Plus, TerminalWindow, Code } from '@phosphor-icons/react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type { RuntimeViewModel } from '@/components/dispatch/useRuntimes';
 import { cn } from '@/lib/utils';
@@ -19,10 +19,15 @@ import {
   type FabricQuestionRequest,
   type PushSubscriptionJSON,
 } from '@/lib/dispatch/fabric-session-client';
-import { FABRIC_DRIVE_KINDS, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
-import { extractAciScreenshot, FabricAciDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive } from '@/components/dispatch/FabricSessionDriveViews';
-import { FabricBotModeCanvas, FabricBotModeRail } from '@/components/dispatch/FabricBotMode';
+import { FABRIC_DRIVE_KINDS, fabricAppModeKind, fabricKindAppMode, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
+import { FabricCodeDrive, FabricKindIcon, isFabricKeepalive, latestComputerFrame, partImageSrc } from '@/components/dispatch/FabricSessionDriveViews';
+import { FabricAciModeCanvas } from '@/components/dispatch/FabricAciModeCanvas';
+import { FabricChatModeCanvas, FabricCoworkRailSection, type FabricChatView } from '@/components/dispatch/FabricChatModeCanvas';
+import { FabricCodeModeCanvas } from '@/components/dispatch/FabricCodeModeCanvas';
+import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
+import { FabricBotModeCanvas, FabricBotModeRail, type FabricBotView } from '@/components/dispatch/FabricBotMode';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
+import { useMode } from '@/providers/mode-provider';
 
 export interface FabricSessionPanelProps {
   runtimeId: string;
@@ -66,7 +71,51 @@ export function FabricSessionPanel({
   const [driveKindState, setDriveKindState] = useState<FabricDriveKind>('chat');
   const driveKind = driveKindProp ?? driveKindState;
   const setDriveKind = onDriveKindChange ?? setDriveKindState;
-  const [codePane, setCodePane] = useState<'terminal' | 'chat'>('terminal');
+  // Code mode: the desktop code surface is the default canvas; the
+  // Termius-style terminal is the alternate full-pane view.
+  const [codePane, setCodePane] = useState<'desktop' | 'terminal'>('desktop');
+  // Chat mode: the desktop chat surface is the default canvas; selecting a
+  // cowork session switches the canvas to the desktop cowork surface.
+  const [chatView, setChatView] = useState<FabricChatView>('chat');
+  const applyChatView = useCallback((next: { view: FabricChatView }) => {
+    setChatView(next.view);
+    if (next.view === 'cowork') setSelectedSessionId(null);
+  }, []);
+
+  // The fabric drive kind is the source of truth; mirror it into the
+  // platform app mode so desktop views mounted here (bot composer dock,
+  // mode-accented chrome) behave exactly as they do on the desktop shell.
+  const { setMode } = useMode();
+  useEffect(() => {
+    // Reflect the cowork canvas into the app mode too, so the composer
+    // dock's Chat/Cowork/Bots toggle highlights the matching segment.
+    setMode(chatView === 'cowork' ? 'cowork' : fabricKindAppMode(driveKind));
+  }, [driveKind, chatView, setMode]);
+
+  // The composer dock's Chat/Cowork/Bots toggle routes through this event on
+  // the desktop shell; map it back onto the fabric drive kind and chat canvas
+  // so the toggle switches views here exactly like the desktop shell. Fabric
+  // has no cowork drive kind — cowork lives as a canvas inside chat mode.
+  useEffect(() => {
+    const onSwitchMode = (event: Event) => {
+      const mode = (event as CustomEvent<{ mode?: string }>).detail?.mode;
+      if (!mode) return;
+      if (mode === 'cowork') {
+        setDriveKind('chat');
+        setSelectedSessionId(null);
+        setChatView('cowork');
+        return;
+      }
+      // Any non-cowork mode leaves the cowork canvas — otherwise the stale
+      // chatView keeps mirroring 'cowork' into the app mode and the dock
+      // toggle highlights Cowork while e.g. Bots is active.
+      setChatView('chat');
+      const next = fabricAppModeKind(mode);
+      if (next) setDriveKind(next);
+    };
+    window.addEventListener('allternit:switch-mode', onSwitchMode);
+    return () => window.removeEventListener('allternit:switch-mode', onSwitchMode);
+  }, [setDriveKind]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [railCollapsedState, setRailCollapsedState] = useState(() => {
@@ -94,6 +143,9 @@ export function FabricSessionPanel({
   });
   const pickSession = useCallback((id: string | null) => {
     setSelectedSessionId(id);
+    // Selecting a fabric node session leaves the cowork canvas for the
+    // fabric session detail (desktop chat view shows when nothing is picked).
+    if (id) setChatView('chat');
     if (id && typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
       if (onToggleRail && !railCollapsed) onToggleRail();
       else setRailCollapsedState(true);
@@ -108,10 +160,25 @@ export function FabricSessionPanel({
   const [brainsLoading, setBrainsLoading] = useState(true);
   const [selectedBrain, setSelectedBrain] = useState<FabricModelRef | null>(() => loadFabricBrain(runtimeId));
   const [bots, setBots] = useState<FabricBot[]>([]);
-  const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
+  const [botView, setBotView] = useState<FabricBotView>('hub');
+  const [botViewBotId, setBotViewBotId] = useState<string | null>(null);
+  const [botViewSessionId, setBotViewSessionId] = useState<string | null>(null);
+  const [botViewGroupId, setBotViewGroupId] = useState<string | null>(null);
+  const applyBotView = useCallback(
+    (next: {
+      view: FabricBotView;
+      botId?: string | null;
+      sessionId?: string | null;
+      groupId?: string | null;
+    }) => {
+      setBotView(next.view);
+      if ('botId' in next) setBotViewBotId(next.botId ?? null);
+      if ('sessionId' in next) setBotViewSessionId(next.sessionId ?? null);
+      if ('groupId' in next) setBotViewGroupId(next.groupId ?? null);
+    },
+    [],
+  );
   const [aciRunId, setAciRunId] = useState<string | null>(null);
-  const [aciScreenshot, setAciScreenshot] = useState<string | null>(null);
-  const [aciOpening, setAciOpening] = useState(false);
   const [localWatching, setLocalWatching] = useState(false);
   const aciWatching = watchingProp ?? localWatching;
   const toggleAciWatch = onToggleWatch ?? (() => setLocalWatching((v) => !v));
@@ -190,10 +257,28 @@ export function FabricSessionPanel({
   }, [fetchDetail]);
 
   useEffect(() => {
-    setAciScreenshot(null);
     setAciRunId(null);
-    setAciOpening(false);
+    useBrowserAgentStore.setState({
+      screenshot: null,
+      status: 'Idle',
+      currentAction: null,
+      lastEventMessage: null,
+      currentAdapterId: null,
+      currentLayer: null,
+    });
   }, [selectedSessionId]);
+
+  // No live stream yet (not watching / run finished): show the session's
+  // last computer frame in the ACI viewport instead of a blank idle state.
+  useEffect(() => {
+    if (driveKind !== 'aci') return;
+    const store = useBrowserAgentStore.getState();
+    if (store.screenshot || store.status === 'Running' || store.status === 'WaitingApproval') return;
+    const frame = latestComputerFrame(detail, events);
+    if (!frame) return;
+    const b64 = frame.replace(/^data:image\/[a-z0-9+]+;base64,/i, '');
+    useBrowserAgentStore.setState({ screenshot: b64 });
+  }, [driveKind, detail, events, selectedSessionId]);
 
   useEffect(() => {
     if (!selectedSessionId) return;
@@ -239,22 +324,35 @@ export function FabricSessionPanel({
   }, [fabricClient, selectedSessionId, addToast, fetchSessions]);
 
   const openComputer = useCallback(async (goal: string) => {
-    setAciOpening(true);
+    useBrowserAgentStore.setState({
+      goal,
+      status: 'Running',
+      currentAction: null,
+      screenshot: null,
+      lastEventMessage: null,
+    });
     try {
       const run = await fabricClient.startAci({
         goal,
         model: selectedBrain ? `${selectedBrain.providerID}/${selectedBrain.modelID}` : undefined,
       });
-      if (run.sessionId) setAciRunId(run.sessionId);
+      if (run.sessionId) {
+        setAciRunId(run.sessionId);
+        // Open the run in the ACI rail and start watching it live, the same
+        // way the desktop shell lands an ACI run in browser mode.
+        setDriveKind('aci');
+        pickSession(run.sessionId);
+        if (!aciWatching) toggleAciWatch();
+      }
     } catch (error) {
       addToast({
         title: 'Could not open computer',
         description: error instanceof Error ? error.message : 'ACI run failed',
         type: 'error',
       });
-      setAciOpening(false);
+      useBrowserAgentStore.setState({ status: 'Done' });
     }
-  }, [addToast, fabricClient, selectedBrain]);
+  }, [addToast, fabricClient, selectedBrain, setDriveKind, pickSession, aciWatching, toggleAciWatch]);
 
   useEffect(() => {
     const onVis = () => setPageVisible(document.visibilityState === "visible");
@@ -271,11 +369,7 @@ export function FabricSessionPanel({
       try {
         for await (const frame of fabricClient.streamAci(runId)) {
           if (!active) break;
-          const shot = extractAciScreenshot(frame);
-          if (shot) {
-            setAciScreenshot(shot);
-            setAciOpening(false);
-          }
+          useBrowserAgentStore.getState().ingestAciStreamEvent(frame);
           if (frame.type === 'done') break;
         }
       } catch {
@@ -297,9 +391,14 @@ export function FabricSessionPanel({
     [sessions, driveKind]
   );
 
+  // Code mode full-pane drive: the Termius-style terminal owns the whole
+  // canvas (no message list) when the Terminal view is active.
+
   useEffect(() => {
     setDriveKind('chat');
     setSelectedSessionId(null);
+    setChatView('chat');
+    setCodePane('desktop');
   }, [runtimeId]);
 
   useEffect(() => {
@@ -366,9 +465,6 @@ export function FabricSessionPanel({
     setSending(true);
     const text = composerText.trim();
     try {
-      if (driveKind === 'aci') {
-        await openComputer(text);
-      }
       await fabricClient.sendMessage(selectedSessionId, {
         text,
         model: selectedBrain ?? undefined,
@@ -560,14 +656,77 @@ export function FabricSessionPanel({
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {driveKind === 'bot' ? (
             <FabricBotModeRail
-              selectedBotId={selectedBotId}
-              hubOpen={!selectedBotId}
-              onSelectBot={(id) => {
-                setSelectedBotId(id);
+              view={botView}
+              selectedBotId={botViewBotId}
+              selectedGroupId={botViewGroupId}
+              onOpenHub={() => applyBotView({ view: 'hub', botId: null, sessionId: null })}
+              onOpenGroups={() => applyBotView({ view: 'groups' })}
+              onCloseDrawer={() => {
                 if (isMobile && !railCollapsed) toggleRail();
               }}
-              onOpenHub={() => setSelectedBotId(null)}
             />
+          ) : driveKind === 'chat' ? (
+            <>
+              <FabricCoworkRailSection
+                active={chatView === 'cowork'}
+                onOpen={() => {
+                  setSelectedSessionId(null);
+                  setChatView('cowork');
+                  if (isMobile && !railCollapsed) toggleRail();
+                }}
+              />
+              {kindSessions.length > 0 && (
+                <div className="px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--shell-item-muted)]">
+                  Node sessions
+                </div>
+              )}
+              {kindSessions.length === 0 ? (
+                <div className="px-2 py-6 text-center">
+                  <p className="text-[12px] font-medium text-[var(--shell-item-fg)] m-0 mb-1">No {driveKind} sessions</p>
+                  <p className="text-[11px] text-[var(--shell-item-muted)] m-0 mb-3">
+                    {FABRIC_DRIVE_KINDS.find((tab) => tab.id === driveKind)?.hint}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handleStartSession()}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border-none cursor-pointer bg-[var(--bg-primary)] text-[var(--accent-primary)]"
+                  >
+                    <Plus size={12} weight="bold" />
+                    New session
+                  </button>
+                </div>
+              ) : kindSessions.map(({ session, status }) => {
+                const active = selectedSessionId === session.id;
+                const updated = session.time?.updated ? new Date(session.time.updated).toLocaleString() : null;
+                return (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => pickSession(session.id)}
+                className={cn(
+                  'w-full text-left rounded-xl border-none px-3 py-2.5 mb-1 cursor-pointer transition-colors',
+                  active
+                    ? 'bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)]'
+                    : 'bg-transparent text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <FabricKindIcon kind={fabricSessionKind(session)} size={13} />
+                  <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{session.title}</span>
+                  <StatusDot status={status.type} />
+                </div>
+                <div className={cn('mt-1 text-[10px] truncate', active ? 'text-[var(--shell-item-active-fg)]' : 'text-[var(--shell-item-muted)]')}>
+                  {status.type}
+                  {session.agentID ? ` · ${session.agentID}` : ''}
+                  {session.directory ? ` · ${session.directory}` : ''}
+                </div>
+                {updated && (
+                  <div className="mt-0.5 text-[10px] text-[var(--shell-item-muted)] truncate">{updated}</div>
+                )}
+              </button>
+            );
+          })}
+            </>
           ) : kindSessions.length === 0 ? (
             <div className="px-2 py-6 text-center">
               <p className="text-[12px] font-medium text-[var(--shell-item-fg)] m-0 mb-1">No {driveKind} sessions</p>
@@ -623,6 +782,13 @@ export function FabricSessionPanel({
               <span className="text-[12px] font-semibold truncate">{runtime.name}</span>
             </div>
             <div className="mt-1 text-[11px] text-[var(--shell-item-muted)] truncate">{runtime.host}</div>
+            {runtime.relayConnections && runtime.relayConnections.length > 0 && (
+              <div className="mt-0.5 text-[10px] text-[var(--shell-item-muted)] truncate">
+                {runtime.relayConnections.map((connection) =>
+                  connection.client === 'allternit-node' ? 'Node daemon (node.core)' : 'Desktop app',
+                ).join(' + ')}
+              </div>
+            )}
             {runtime.lastHeartbeatAt && (
               <div className="mt-0.5 text-[10px] text-[var(--shell-item-muted)]">
                 Heartbeat {new Date(runtime.lastHeartbeatAt).toLocaleString()}
@@ -645,32 +811,60 @@ export function FabricSessionPanel({
       <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-[var(--shell-view-bg)]">
         {driveKind === 'bot' ? (
           <FabricBotModeCanvas
-            selectedBotId={selectedBotId}
-            onSelectBot={(id) => {
-              setSelectedBotId(id);
-              if (isMobile && !railCollapsed) toggleRail();
-            }}
-            onBack={() => setSelectedBotId(null)}
+            view={botView}
+            botId={botViewBotId}
+            sessionId={botViewSessionId}
+            groupId={botViewGroupId}
+            onView={applyBotView}
           />
-        ) : !selectedSession ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
-            <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
-              <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
-              <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">
-                {driveKind === 'bot' ? 'Select a bot' : `Select a ${sessionTabs.find((tab) => tab.id === driveKind)?.label ?? 'chat'} session`}
-              </p>
-              <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
-                {sessionTabs.find((tab) => tab.id === driveKind)?.hint ?? 'Regular agent sessions'}
-              </p>
-              <button
-                type="button"
-                onClick={() => void handleStartSession()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
-              >
-                Start a session
-              </button>
-            </div>
+        ) : driveKind === 'aci' ? (
+          <FabricAciModeCanvas
+            session={selectedSession ?? null}
+            hostName={runtime?.name || runtime?.host}
+            onRunGoal={(goal) => void openComputer(goal)}
+            onStopRun={() => {
+              const runId = aciRunId ?? selectedSessionId;
+              if (runId) void fabricClient.abortSession(runId);
+            }}
+          />
+        ) : driveKind === 'code' ? (
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            {codePane === 'terminal' ? (
+              <div className="flex-1 min-h-0 p-2">
+                <FabricCodeDrive
+                  detail={null}
+                  events={[]}
+                  session={selectedSession ?? undefined}
+                  terminalSessionId={selectedSession ? undefined : `fabric-terminals:${runtimeId}`}
+                  terminalWorkingDir={undefined}
+                />
+              </div>
+            ) : (
+              <FabricCodeModeCanvas />
+            )}
+            <button
+              type="button"
+              onClick={() => setCodePane((pane) => (pane === 'terminal' ? 'desktop' : 'terminal'))}
+              title={codePane === 'terminal' ? 'Back to Code' : 'Termius-style terminal sessions on this node'}
+              className="absolute top-2 right-2 z-20 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-semibold border border-solid border-[var(--border-subtle)] rounded-lg cursor-pointer bg-[var(--shell-view-bg)] text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] transition-colors"
+            >
+              {codePane === 'terminal' ? (
+                <>
+                  <Code size={12} weight="bold" />
+                  Code
+                </>
+              ) : (
+                <>
+                  <TerminalWindow size={12} weight="bold" />
+                  Terminal
+                </>
+              )}
+            </button>
           </div>
+        ) : chatView === 'cowork' ? (
+          <FabricChatModeCanvas view="cowork" onView={applyChatView} />
+        ) : !selectedSession ? (
+          <FabricChatModeCanvas view="chat" onView={applyChatView} />
         ) : (
           <>
             <div className="h-10 px-4 border-b border-solid border-[var(--border-subtle)] flex items-center justify-between gap-4 bg-[var(--shell-view-bg)]">
@@ -688,31 +882,6 @@ export function FabricSessionPanel({
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                {driveKind === 'code' && (
-                  <div className="flex p-0.5 rounded-lg bg-[var(--surface-hover)] border border-solid border-[var(--border-subtle)]">
-                    <button
-                      type="button"
-                      onClick={() => setCodePane('terminal')}
-                      className={cn(
-                        'px-2.5 py-1.5 text-[12px] font-semibold border-none cursor-pointer rounded-md',
-                        codePane === 'terminal' ? 'bg-[var(--bg-primary)] text-[var(--accent-primary)]' : 'bg-transparent text-[var(--shell-item-muted)]'
-                      )}
-                    >
-                      <TerminalWindow size={12} className="inline mr-1" />
-                      Terminal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCodePane('chat')}
-                      className={cn(
-                        'px-2.5 py-1.5 text-[12px] font-semibold border-none cursor-pointer rounded-md',
-                        codePane === 'chat' ? 'bg-[var(--bg-primary)] text-[var(--accent-primary)]' : 'bg-transparent text-[var(--shell-item-muted)]'
-                      )}
-                    >
-                      Chat
-                    </button>
-                  </div>
-                )}
                 {selectedSession.status.type === 'busy' && (
                   <button
                     type="button"
@@ -727,30 +896,14 @@ export function FabricSessionPanel({
               </div>
             </div>
 
-            <div className={cn('flex-1 min-h-0 p-4 space-y-3', (driveKind === 'code' && codePane === 'terminal') || driveKind === 'aci' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto')}>
-              {driveKind === 'code' && codePane === 'terminal' && selectedSession ? (
-                <FabricCodeDrive session={selectedSession} detail={detail} events={events} />
-              ) : null}
-              {driveKind === 'aci' && selectedSession ? (
-                <FabricAciDrive
-                  session={selectedSession}
-                  detail={detail}
-                  events={events}
-                  hostName={runtime?.name || runtime?.host}
-                  screenshot={aciScreenshot}
-                  opening={aciOpening}
-                  onOpenComputer={() => void openComputer('Open the desktop so I can see the screen.')}
-                  watching={aciWatching}
-                  onToggleWatch={toggleAciWatch}
-                />
-              ) : null}
-              {driveKind !== 'aci' && !(driveKind === 'code' && codePane === 'terminal') && detailLoading && (
+            <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
+              {detailLoading && (
                 <div className="flex items-center text-xs text-[var(--text-tertiary)]">
                   <Spinner className="animate-spin mr-2" size={14} />
                   Loading messages…
                 </div>
               )}
-              {driveKind !== 'aci' && !(driveKind === 'code' && codePane === 'terminal') && detail?.messages.map((msg) => (
+              {detail?.messages.map((msg) => (
                 <div
                   key={msg.info.id}
                   className={cn(
@@ -761,11 +914,21 @@ export function FabricSessionPanel({
                   )}
                   style={msg.info.role === 'user' ? { background: 'var(--accent-primary)', color: 'var(--bg-primary)' } : undefined}
                 >
-                  {msg.parts
-                    .filter((p) => p.type === 'text')
-                    .map((p: any, i: number) => (
-                      <div key={i}>{p.text}</div>
-                    ))}
+                  {msg.parts.map((p: any, i: number) => {
+                    if (p.type === 'text') return <div key={i}>{p.text}</div>;
+                    const src = partImageSrc(p as Record<string, unknown>);
+                    if (src) {
+                      return (
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          className="mt-1 max-w-full rounded-lg border border-solid border-[var(--border-subtle)]"
+                        />
+                      );
+                    }
+                    return null;
+                  })}
                 </div>
               ))}
 
@@ -798,7 +961,6 @@ export function FabricSessionPanel({
               )}
             </div>
 
-            {!(driveKind === 'code' && codePane === 'terminal') && (
             <div className="p-3 border-t border-solid border-[var(--border-subtle)] bg-[var(--shell-view-bg)]">
               <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] px-3 pt-2.5 pb-2">
                 <textarea
@@ -834,7 +996,6 @@ export function FabricSessionPanel({
                 </div>
               </div>
             </div>
-            )}
           </>
         )}
       </div>

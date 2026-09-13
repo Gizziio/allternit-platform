@@ -733,35 +733,41 @@ async fn list_runtime_devices(
     .bind(&user.id)
     .fetch_all(&state.db)
     .await?;
-    let devices = devices
-        .into_iter()
-        .map(|device| {
-            let effective_status = if device.status == "online"
-                && device.last_seen_at
-                    .map(|seen| seen < Utc::now() - Duration::minutes(10))
-                    .unwrap_or(true)
-            {
-                "offline".to_string()
-            } else {
-                device.status.clone()
-            };
-            serde_json::json!({
-                "id": device.id,
-                "name": device.name,
-                "runtimeType": device.runtime_type,
-                "hostname": device.hostname,
-                "platform": device.platform,
-                "version": device.version,
-                "capabilities": serde_json::from_str::<Vec<String>>(&device.capabilities).unwrap_or_default(),
-                "publicKeyFingerprint": device.public_key_fingerprint,
-                "status": effective_status,
-                "lastSeenAt": device.last_seen_at,
-                "createdAt": device.created_at,
-                "credentialExpiresAt": device.credential_expires_at,
-            })
-        })
-        .collect::<Vec<_>>();
-    Ok(Json(serde_json::json!({ "runtimes": devices })))
+    let mut serialized = Vec::with_capacity(devices.len());
+    for device in devices {
+        let effective_status = if device.status == "online"
+            && device.last_seen_at
+                .map(|seen| seen < Utc::now() - Duration::minutes(10))
+                .unwrap_or(true)
+        {
+            "offline".to_string()
+        } else {
+            device.status.clone()
+        };
+        // Live relay connections (multi-connection mode only; empty in
+        // single-connection mode so the flag-off response is unchanged).
+        let relay_connections =
+            crate::routes::runtime_relay::relay_connection_presence(&device.id).await;
+        let mut value = serde_json::json!({
+            "id": device.id,
+            "name": device.name,
+            "runtimeType": device.runtime_type,
+            "hostname": device.hostname,
+            "platform": device.platform,
+            "version": device.version,
+            "capabilities": serde_json::from_str::<Vec<String>>(&device.capabilities).unwrap_or_default(),
+            "publicKeyFingerprint": device.public_key_fingerprint,
+            "status": effective_status,
+            "lastSeenAt": device.last_seen_at,
+            "createdAt": device.created_at,
+            "credentialExpiresAt": device.credential_expires_at,
+        });
+        if !relay_connections.is_empty() {
+            value["relayConnections"] = serde_json::Value::Array(relay_connections);
+        }
+        serialized.push(value);
+    }
+    Ok(Json(serde_json::json!({ "runtimes": serialized })))
 }
 
 async fn revoke_runtime_device(

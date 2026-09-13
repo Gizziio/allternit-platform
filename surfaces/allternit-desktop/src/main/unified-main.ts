@@ -240,6 +240,7 @@ const isMac = process.platform === 'darwin';
 
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
+let officeWindow: BrowserWindow | null = null;
 let hudWindow: BrowserWindow | null = null;
 let annotationWindow: BrowserWindow | null = null;
 let remoteControlWindow: BrowserWindow | null = null;
@@ -254,6 +255,17 @@ let hudSessionId: string | null = null;
 const pendingOfficeDeliveries: { channel: string; payload: unknown }[] = [];
 let splashWindow: BrowserWindow | null = null;
 
+// Send to the startup window only while it is alive. A destroyed BrowserWindow
+// is not null — accessing .webContents throws "Object has been destroyed" —
+// and an unguarded throw inside startup init (or its error path) used to skip
+// the error dialog + quit, leaving a windowless zombie app ("app not
+// rendering"). Every splash send goes through here.
+function sendToSplash(channel: string, ...args: unknown[]): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send(channel, ...args);
+  }
+}
+
 // Service state for splash screen progress (module-level so IPC handlers can update it)
 let serviceState = {
   api: { status: 'pending', detail: 'Starting…' },
@@ -264,7 +276,7 @@ let serviceState = {
   research: { status: 'pending', detail: 'Waiting…' },
 };
 let pushServiceState = () => {
-  splashWindow?.webContents.send('services', serviceState);
+  sendToSplash('services', serviceState);
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -766,9 +778,32 @@ function createMainWindow(): BrowserWindow {
 // App Initialization (Unified Flow)
 // ============================================================================
 
+// Initialize the app exactly once. `app.on('activate')` fires on every macOS
+// launch (not just dock clicks) and can race `whenReady().then(initializeApp)`:
+// if it lands before the startup window exists, window count is 0 and a second
+// concurrent initializeApp ran — two initializeBundledMode passes fighting over
+// the singleton BackendManager (spawn/kill/re-spawn ping-pong on :8013,
+// destroyed startup window, "did not start within 30s" wedges). Guard all
+// entry points through this single promise.
+let initPromise: Promise<void> | null = null;
+function initializeAppOnce(): Promise<void> {
+  if (!initPromise) {
+    initPromise = initializeApp()
+      .catch((error) => {
+        log.error('[Main] initializeApp failed:', error);
+      })
+      .finally(() => {
+        // Reset once settled so a later dock-click with no windows can revive
+        // the app (the original activate behavior) — only concurrent calls
+        // during boot share the in-flight promise.
+        initPromise = null;
+      });
+  }
+  return initPromise;
+}
+
 async function initializeApp(): Promise<void> {
   log.info('[Main] Initializing Allternit Desktop v' + PLATFORM_MANIFEST.version);
-
   // Voice is an optional local capability: start it automatically, but never
   // prevent the rest of the desktop from opening if model initialization fails.
   if (!process.env.ALLTERNIT_DISABLE_VOICE) {
@@ -820,9 +855,9 @@ async function initializeBundledMode(): Promise<void> {
     ? authManager.waitForStartupSignIn(splashWindow)
     : Promise.resolve(null);
   const updateSplash = (status: string, progress?: number) => {
-    splashWindow?.webContents.send('status', status);
+    sendToSplash('status', status);
     if (progress !== undefined) {
-      splashWindow?.webContents.send('progress', progress);
+      sendToSplash('progress', progress);
     }
   };
   // Reset service state at start of bundled mode initialization
@@ -835,7 +870,7 @@ async function initializeBundledMode(): Promise<void> {
     research: { status: 'pending', detail: 'Waiting…' },
   };
   pushServiceState = () => {
-    splashWindow?.webContents.send('services', serviceState);
+    sendToSplash('services', serviceState);
   };
   pushServiceState();
   
@@ -1055,10 +1090,12 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     // Complete
-    splashWindow?.webContents.send('complete');
+    sendToSplash('complete');
     await new Promise(r => setTimeout(r, 400));
 
-    splashWindow?.close();
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close();
+    }
     splashWindow = null;
 
     mainWindow = createMainWindow();
@@ -1194,8 +1231,8 @@ async function initializeBundledMode(): Promise<void> {
     
   } catch (error) {
     log.error('[Main] Failed to initialize bundled mode:', error);
-    splashWindow?.webContents.send('error', (error as Error).message);
-    
+    sendToSplash('error', (error as Error).message);
+
     dialog.showErrorBox(
       'Allternit Desktop Initialization Error',
       `Failed to start Allternit Backend:\n${(error as Error).message}\n\nPlease try again or contact support.`
@@ -1605,9 +1642,8 @@ async function updateTrayMenu(): Promise<void> {
     ...(permItem ? [permItem, { type: 'separator' as const }] : []),
     { label: 'Show Window', click: () => mainWindow?.show() },
     {
-      // The standalone office launcher is gone — the single office surface is
-      // the shell's ACI "Office & Extensions" hub. This menu opens it in the
-      // main window.
+      // Opens the popped-out Allternit Office window (the ACI rail's bottom
+      // tab) — the renderer routes the 'launcher' target there.
       label: 'Allternit Office',
       click: () => openOfficeTarget('launcher'),
     },
@@ -1666,6 +1702,23 @@ async function handleProtocolCallback(url: string | null): Promise<void> {
   // Platform deep links handled directly by the desktop shell.
   if (url === 'allternit://hud' || url === 'allternit://open/hud') {
     toggleHudWindow();
+    return;
+  }
+
+  // A:// Studio (Design mode) deep link from gizzi-code's `/design` command:
+  // allternit://design?prompt=... (allternit-dev:// in dev builds). Opens the
+  // design window at /design, carrying the prompt into the studio composer.
+  if (
+    url.startsWith('allternit://design') ||
+    url.startsWith('allternit-dev://design')
+  ) {
+    let prompt: string | null = null;
+    try {
+      prompt = new URL(url).searchParams.get('prompt');
+    } catch {
+      prompt = null;
+    }
+    openDesignStudio(prompt);
     return;
   }
 
@@ -1936,7 +1989,7 @@ app.whenReady().then(async () => {
     workerBus.register('shell-path', new URL('shell-path-worker.js', workerBase));
   }
 
-  initializeApp();
+  initializeAppOnce();
   createTray();
   startExtensionBridge();
   startAcuExtensionRelay();
@@ -1963,7 +2016,7 @@ app.whenReady().then(async () => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      initializeApp();
+      initializeAppOnce();
     } else {
       mainWindow?.show();
     }
@@ -2143,9 +2196,12 @@ ipcMain.handle('app:get-platform-url', () => activePlatformUrl);
 handleGuarded('shell:open-external', (_event, url: string) => {
   openExternalAllowlisted(url);
 });
-ipcMain.handle('shell:open-design', () => {
+function openDesignStudio(prompt?: string | null): void {
+  const target = new URL('/design', activePlatformUrl);
+  if (prompt) target.searchParams.set('prompt', prompt);
+  const targetUrl = target.toString();
   if (designWindow && !designWindow.isDestroyed()) {
-    void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
+    void designWindow.loadURL(targetUrl);
     designWindow.show();
     designWindow.focus();
     return;
@@ -2177,7 +2233,50 @@ ipcMain.handle('shell:open-design', () => {
   });
   designWindow.once('ready-to-show', () => designWindow?.show());
   designWindow.on('closed', () => { designWindow = null; });
-  void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
+  void designWindow.loadURL(targetUrl);
+}
+
+ipcMain.handle('shell:open-design', () => {
+  openDesignStudio();
+});
+
+// The Allternit Office window — the ACI rail's bottom-tab surface. Same
+// window profile as Design above (the popped-out office suite host).
+ipcMain.handle('shell:open-office-window', () => {
+  if (officeWindow && !officeWindow.isDestroyed()) {
+    void officeWindow.loadURL(new URL('/office', activePlatformUrl).toString());
+    officeWindow.show();
+    officeWindow.focus();
+    return;
+  }
+
+  officeWindow = new BrowserWindow({
+    width: 1440,
+    height: 960,
+    minWidth: 960,
+    minHeight: 640,
+    title: 'Allternit Office',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  installWillNavigateGuard(officeWindow.webContents);
+
+  officeWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void openExternalAllowlisted(url);
+    return { action: 'deny' };
+  });
+  officeWindow.once('ready-to-show', () => officeWindow?.show());
+  officeWindow.on('closed', () => { officeWindow = null; });
+  void officeWindow.loadURL(new URL('/office', activePlatformUrl).toString());
 });
 
 // HUD mode defaults — a chrome-free floating panel anchored near the bottom

@@ -46,6 +46,13 @@ use crate::db::DbHandle;
 const DESKTOP_ACCESS_TOKEN_HEADER: &str = "x-allternit-desktop-access-token";
 const SELF_HOSTED_SETUP_TOKEN_HEADER: &str = "x-allternit-self-hosted-token";
 const INTERNAL_SERVICE_TOKEN_HEADER: &str = "x-allternit-internal-token";
+
+/// User id synthesized by `extract_internal_service_user` for requests that
+/// authenticated with the internal service token. Routes that accept
+/// server-to-server calls (e.g. the Stripe-webhook credit grant in
+/// fabric_credits_routes) key off this identity; it is only ever injected by
+/// auth_middleware AFTER the token is verified, never from request input.
+pub const INTERNAL_SERVICE_USER_ID: &str = "internal-service";
 const USER_ID_HEADER: &str = "x-allternit-user-id";
 const USER_EMAIL_HEADER: &str = "x-allternit-user-email";
 const USER_NAME_HEADER: &str = "x-allternit-user-name";
@@ -759,7 +766,7 @@ fn extract_internal_service_user(
         return None;
     }
     Some(AuthUser {
-        user_id: "internal-service".to_string(),
+        user_id: INTERNAL_SERVICE_USER_ID.to_string(),
         email: Some("internal@allternit.local".to_string()),
         name: Some("Internal Service".to_string()),
         avatar_url: None,

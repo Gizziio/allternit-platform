@@ -194,7 +194,8 @@ impl Scheduler {
     /// 2. Record the resource as `provisioning`.
     /// 3. Place a credit hold for the estimated retail price.
     /// 4. Provision the selected offer.
-    /// 5. On success: record the placement, mark active, and charge the hold.
+    /// 5. On success: record the placement and mark active. The hold stays
+    ///    open for the placement's lifetime (metered usage is the sole charge).
     /// 6. On failure: release the hold and mark the resource terminated.
     pub async fn schedule(
         &self,
@@ -250,13 +251,12 @@ impl Scheduler {
                     let _ = recorder.mark_terminated(&req.id, "activate_failed");
                     return Err(e);
                 }
-                match ledger.charge_hold(&hold.id, estimated_cents, "fabric provisioning", Some("placement"), Some(&req.id)) {
-                    Ok(_) => info!(resource_id = %req.id, hold_id = %hold.id, "charged hold for provisioning"),
-                    Err(e) => {
-                        warn!(resource_id = %req.id, hold_id = %hold.id, error = %e, "failed to charge hold");
-                        // Keep the placement; a background reconciler can settle.
-                    }
-                }
+                // The hold stays open for the placement's lifetime: it reduces
+                // available_cents (blocking new provisioning) but is not
+                // charged. Metered usage via the usage worker is the sole
+                // balance charge; the hold is released on terminate (and by
+                // the hardening reaper for orphans).
+                info!(resource_id = %req.id, hold_id = %hold.id, "hold open for placement lifetime; metered usage charges apply");
                 Ok(scheduled)
             }
             Err(e) => {
@@ -651,14 +651,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn scheduler_provisions_selected_offer_and_charges_hold() {
+    async fn scheduler_provisions_selected_offer_and_opens_hold() {
         let org_id = "org-sched-1";
         let db = test_db(org_id);
         let ledger = CreditsLedger::new(db.clone());
         ledger
             .credit(org_id, 10_000, TransactionType::Purchase, Some("top-up"), None, None, None)
             .unwrap();
-        let recorder = PlacementRecorder::new(db);
+        let recorder = PlacementRecorder::new(db.clone());
         let scheduler = Scheduler::new(CostEngine::default_engine());
         let catalog = ResourceClassCatalog::builtin();
         let registry = registry_with_fake();
@@ -669,8 +669,30 @@ mod tests {
             .unwrap();
         assert_eq!(scheduled.provider_kind, "fake");
         assert!(!scheduled.provider_resource_id.is_empty());
-        assert!(ledger.held_cents(org_id).unwrap() == 0);
-        assert!(ledger.balance_cents(org_id).unwrap() < 10_000);
+
+        // The hold stays open for the placement lifetime (blocking available
+        // credits) and the balance is untouched — metered usage is the sole
+        // charge, so provisioning must not double-bill.
+        let held = ledger.held_cents(org_id).unwrap();
+        assert!(held > 0);
+        assert_eq!(ledger.balance_cents(org_id).unwrap(), 10_000);
+        assert_eq!(ledger.available_cents(org_id).unwrap(), 10_000 - held);
+
+        // Simulate the terminate path: release the placement's open holds.
+        let conn = db.connect().unwrap();
+        let hold_ids: Vec<String> = conn
+            .prepare("SELECT id FROM fabric_credit_holds WHERE resource_id = ?1 AND status = 'held'")
+            .unwrap()
+            .query_map(rusqlite::params![req.id], |row| row.get(0))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
+        drop(conn);
+        for hold_id in hold_ids {
+            ledger.release_hold(&hold_id).unwrap();
+        }
+        assert_eq!(ledger.held_cents(org_id).unwrap(), 0);
+        assert_eq!(ledger.available_cents(org_id).unwrap(), 10_000);
     }
 
     #[tokio::test]

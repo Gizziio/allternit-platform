@@ -2,7 +2,8 @@
  * Allternit Backend Manager
  *
  * Spawns and manages the unified Rust API backend.
- *   - Rust API on port 8013 (allternit-api binary)
+ *   - Rust API on port 8013 (allternit-api binary) in the packaged app,
+ *     port 18013 in dev launches (see API_PORT below)
  *
  * The legacy Python gateway and Memory Agent sidecars have been removed;
  * the Rust API now proxies directly to Gizzi (port 4096).
@@ -12,6 +13,7 @@ import { app } from 'electron';
 import { spawn, execFileSync, ChildProcess } from 'child_process';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -20,12 +22,49 @@ import { PORTS, URLS, webhookReceiverUrl } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const API_PORT = PORTS.API;
-// Debug builds of allternit-api can edge past 30s under a cold start; allow
-// an env override and default to a more generous window in development.
+/**
+ * Computer Cloud (tart host) credentials. Operators keep them in
+ * ~/.allternit/tart-host.env — the same file the e2e harness reads. When the
+ * process environment does not set them, inject from that file so bot-computer
+ * provisioning works on a plain app launch instead of 503ing with
+ * "Configure INCUS_URL or TART_HOST_URL for Computer Cloud." Never logged.
+ */
+export function loadTartHostEnv(env: Record<string, string>, file = path.join(os.homedir(), '.allternit', 'tart-host.env')): void {
+  if (env.TART_HOST_URL && env.TART_HOST_TOKEN) return;
+  try {
+    const parsed: Record<string, string> = {};
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line);
+      if (!m) continue;
+      parsed[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+    if (!env.TART_HOST_URL && parsed.TART_HOST_URL) env.TART_HOST_URL = parsed.TART_HOST_URL;
+    if (!env.TART_HOST_TOKEN && parsed.TART_HOST_TOKEN) env.TART_HOST_TOKEN = parsed.TART_HOST_TOKEN;
+    if (env.TART_HOST_URL && parsed.TART_HOST_URL) {
+      log.info('[BackendManager] Tart host config loaded from ~/.allternit/tart-host.env');
+    }
+  } catch {
+    // tart-host.env absent — Computer Cloud stays unconfigured; the API
+    // already surfaces an actionable 503 for that case.
+  }
+}
+
+// Port ownership: the packaged app owns the production gateway port (8013)
+// and reclaims it on launch. A dev desktop (worktree Electron, npm run dev)
+// binds the dev port instead, so a dev build can run side by side with the
+// installed app without displacing its gateway. An explicit
+// ALLTERNIT_API_PORT export always wins.
+const API_PORT = app.isPackaged
+  ? PORTS.API
+  : process.env.ALLTERNIT_API_PORT
+    ? Number(process.env.ALLTERNIT_API_PORT)
+    : PORTS.API_DEV;
+// Cold starts can edge past 30s (JWKS fetch against Clerk on a slow link,
+// gizzi/voice sidecar bring-up all serialize before /health answers); the
+// packaged app must survive that too, not just dev. Env override wins.
 const HEALTH_TIMEOUT_MS = process.env.ALLTERNIT_API_HEALTH_TIMEOUT_MS
   ? Number(process.env.ALLTERNIT_API_HEALTH_TIMEOUT_MS)
-  : (!app.isPackaged ? 90_000 : 30_000);
+  : 90_000;
 
 export interface BackendStatus {
   installed: boolean;
@@ -55,6 +94,8 @@ export class BackendManager {
   private static readonly BACKOFF_STEPS_MS = [1000, 2000, 5000, 10000, 30000];
   private static readonly STABLE_RUN_MS = 60_000;
   private respawnAttempts = 0;
+  /** One-shot self-heal: restart the sidecar if it came up without the platform static export. */
+  private staticRespawnAttempted = false;
   private spawnTimestamp = 0;
   private respawnTimer: ReturnType<typeof setTimeout> | null = null;
   /** True while a shutdown was requested — exit events from that kill must not respawn. */
@@ -94,12 +135,19 @@ export class BackendManager {
       return this.getUrl();
     }
     if (existing === 'misbehaving') {
-      log.warn(
-        '[BackendManager] Existing allternit-api is healthy but is not serving the platform UI ' +
-          '(GET / is not HTML). Replacing it so the shell does not boot onto a 501 JSON stub.',
-      );
-      this.terminateListenerOnPort();
-      await new Promise((r) => setTimeout(r, 400));
+      if (app.isPackaged) {
+        log.warn(
+          '[BackendManager] Existing allternit-api is healthy but is not serving the platform UI ' +
+            '(GET / is not HTML). Replacing it so the shell does not boot onto a 501 JSON stub.',
+        );
+        this.terminateListenerOnPort();
+        await new Promise((r) => setTimeout(r, 400));
+      } else {
+        log.warn(
+          `[BackendManager] Existing process on ${this.getUrl()} is not serving the platform UI, ` +
+            'but a dev desktop does not own the gateway port — leaving it alone and starting our own on the dev port.',
+        );
+      }
     }
 
     let binaryPath = this.resolveBinaryPath();
@@ -160,6 +208,7 @@ export class BackendManager {
       NODE_ENV: 'production',
       ...(config.extraEnv ?? {}),
     };
+    loadTartHostEnv(env);
 
     log.info(`[BackendManager] Starting allternit-api on port ${API_PORT} from ${binaryPath}`);
     const spawned = spawn(binaryPath, developmentCargoProject ? ['run', '--manifest-path', path.join(developmentCargoProject, 'Cargo.toml')] : [], {
@@ -211,6 +260,28 @@ export class BackendManager {
     });
 
     await this.waitForUrl(`${this.getUrl()}/health`, 'allternit-api');
+
+    // Self-heal a missed platform static export (seen on the first launch
+    // after a fresh install): the api answers /health but serves the 501 stub
+    // at / because ALLTERNIT_PLATFORM_STATIC resolved empty at spawn time.
+    // If a static export is resolvable now, restart the sidecar once with it.
+    if (!this.staticRespawnAttempted && !(await this.servesPlatformStatic())) {
+      const staticPath = this.resolvePlatformStaticPath();
+      if (staticPath) {
+        this.staticRespawnAttempted = true;
+        log.warn(
+          `[BackendManager] allternit-api is up but serves no platform UI at /; ` +
+            `restarting once with static export from ${staticPath}`,
+        );
+        this.intentionalStop = true;
+        this.kernelProc?.kill('SIGTERM');
+        this.kernelProc = null;
+        this.apiKey = null;
+        await new Promise((r) => setTimeout(r, 500));
+        this.intentionalStop = false;
+        return this.ensureBackend(config);
+      }
+    }
 
     log.info(`[BackendManager] Ready at ${this.getUrl()}`);
     return this.getUrl();
@@ -283,7 +354,11 @@ export class BackendManager {
     }
   }
 
-  /** SIGTERM whatever is listening on the operator API port. Packaged Desktop owns :8013. */
+  /**
+   * SIGTERM whatever is listening on the operator API port. Packaged Desktop
+   * owns :8013 and is the only caller — dev desktops must never kill the
+   * installed app's gateway listener.
+   */
   private terminateListenerOnPort(): void {
     try {
       const out = execFileSync(

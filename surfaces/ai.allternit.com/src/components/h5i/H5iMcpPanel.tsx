@@ -73,7 +73,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Plugs size={18} color="#8b5cf6" />
+          <Plugs size={18} color="#B08D6E" />
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
             h5i MCP Server
           </span>

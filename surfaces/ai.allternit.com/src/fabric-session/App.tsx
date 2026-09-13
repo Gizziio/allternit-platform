@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { DashboardPage } from './pages/DashboardPage';
+import { BotPickerHost } from '@/views/bots/BotPickerHost';
 import { BotsChatPage } from './pages/BotsChatPage';
 import type { ApprovalRequest } from '@/components/bot-chat/types';
 import type { BeforeInstallPromptEvent } from './types';
@@ -69,27 +70,33 @@ export function FabricSessionApp(): React.ReactNode {
 
   if (view === 'chat' && selectedBotId) {
     return (
-      <BotsChatPage
-        botId={selectedBotId}
-        onBack={() => {
-          setView('dashboard');
-          setSelectedBotId(null);
-        }}
-        onApprovalsChange={handleApprovalsChange}
-        watching={watching}
-        onToggleWatch={() => setWatching((v) => !v)}
-      />
+      <>
+        <BotPickerHost />
+        <BotsChatPage
+          botId={selectedBotId}
+          onBack={() => {
+            setView('dashboard');
+            setSelectedBotId(null);
+          }}
+          onApprovalsChange={handleApprovalsChange}
+          watching={watching}
+          onToggleWatch={() => setWatching((v) => !v)}
+        />
+      </>
     );
   }
 
   return (
-    <DashboardPage
-      installPrompt={installPrompt}
-      onInstallClick={handleInstall}
-      onSelectBot={handleSelectBot}
-      pendingByBot={pendingByBot}
-      watching={watching}
-      onToggleWatch={() => setWatching((v) => !v)}
-    />
+    <>
+      <BotPickerHost />
+      <DashboardPage
+        installPrompt={installPrompt}
+        onInstallClick={handleInstall}
+        onSelectBot={handleSelectBot}
+        pendingByBot={pendingByBot}
+        watching={watching}
+        onToggleWatch={() => setWatching((v) => !v)}
+      />
+    </>
   );
 }

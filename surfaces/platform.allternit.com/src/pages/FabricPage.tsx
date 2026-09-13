@@ -9,6 +9,9 @@ import {
   CheckCircle,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
+import { Coins } from "@phosphor-icons/react";
+import { formatCreditsUsd, getOrgCreditsBalance, type OrgCreditsBalance } from "@/lib/credits";
 import {
   type NodeRecord,
   type LeaseRecord,
@@ -29,6 +32,78 @@ function formatLastSeen(iso?: string | null): string {
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} hr ago`;
   return date.toLocaleDateString();
+}
+
+/** Organization compute-credits balance (fabric ledger) with a top-up link. */
+function OrgCreditsCard() {
+  const [balance, setBalance] = useState<OrgCreditsBalance | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getOrgCreditsBalance()
+      .then((result) => {
+        if (!active) return;
+        if (result === null) setUnavailable(true);
+        else setBalance(result);
+      })
+      .catch(() => {
+        if (active) setUnavailable(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (unavailable || !balance) return null;
+
+  return (
+    <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="size-9 shrink-0 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">
+            <Coins size={18} />
+          </div>
+          <div>
+            <div className="text-[14px] font-semibold text-[var(--text-primary)]">
+              Organization compute credits
+            </div>
+            <div className="text-[12px] text-[var(--text-secondary)]">
+              Provisioning holds and metered usage charge this balance.
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 ml-auto">
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Balance</div>
+            <div className="text-[16px] font-semibold font-mono text-[var(--text-primary)]">
+              {formatCreditsUsd(balance.balance_cents / 100)}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Available</div>
+            <div className="text-[16px] font-semibold font-mono text-[var(--text-primary)]">
+              {formatCreditsUsd(balance.available_cents / 100)}
+            </div>
+          </div>
+          {balance.held_cents > 0 && (
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Held</div>
+              <div className="text-[16px] font-semibold font-mono text-[var(--text-primary)]">
+                {formatCreditsUsd(balance.held_cents / 100)}
+              </div>
+            </div>
+          )}
+          <Link
+            to="/billing"
+            className={QUIET_BUTTON_CLASS}
+          >
+            Top up
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function FabricPage() {
@@ -90,6 +165,8 @@ export function FabricPage() {
           Inspect AllternitOS nodes, capability leases, and charge events.
         </p>
       </div>
+
+      <OrgCreditsCard />
 
       {error && (
         <div className="rounded-xl border border-solid border-[var(--status-error)]/30 bg-[var(--status-error)]/10 p-3 text-[13px] text-[var(--status-error)]">

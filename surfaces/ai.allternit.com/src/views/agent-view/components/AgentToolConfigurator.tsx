@@ -254,11 +254,11 @@ export function AgentToolConfigurator({
                       borderRadius: "10px",
                       border: `1px solid ${
                         isEnabled
-                          ? "rgba(212,149,106,0.25)"
+                          ? "rgba(176,141,110,0.25)"
                           : "var(--ui-border-muted)"
                       }`,
                       background: isEnabled
-                        ? "rgba(212,149,106,0.08)"
+                        ? "rgba(176,141,110,0.08)"
                         : "var(--surface-hover)",
                       cursor: "pointer",
                       transition: "all 0.15s ease",

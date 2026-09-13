@@ -5,9 +5,9 @@ import { AgentModeGizzi } from './AgentModeGizzi';
 
 describe('AgentModeGizzi', () => {
   const theme = {
-    accent: '#d4956a',
-    glow: 'rgba(212,149,106,0.28)',
-    soft: 'rgba(212,149,106,0.14)',
+    accent: '#b08d6e',
+    glow: 'rgba(176,141,110,0.28)',
+    soft: 'rgba(176,141,110,0.14)',
   };
 
   it('starts with peeking animation when activated', () => {
