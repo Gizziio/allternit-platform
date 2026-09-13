@@ -232,6 +232,7 @@ function BotChatSessionContent({
     getBotThreadNotifyMode(session?.id)
   );
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
+  const sessionHasLocalMode = Boolean(session?.metadata?.agentModeId);
 
   useEffect(() => {
     setNotifyMode(getBotThreadNotifyMode(session?.id));
@@ -261,6 +262,15 @@ function BotChatSessionContent({
         : undefined;
 
       let sid = sessionId;
+      // A persisted temp- session is a zombie from a failed backend create:
+      // no backend id and (for bot chats) no local mode executor, so streaming
+      // always fails with "Cannot stream a message before a live session
+      // exists". When the backend is reachable now, create a real session
+      // instead of sending into the void. Local-mode sessions (agentModeId)
+      // are legitimately temp and must keep working offline.
+      if (sid?.startsWith("temp-") && !sessionHasLocalMode) {
+        sid = null;
+      }
       if (!sid && botId) {
         sid = await createSession({
           name: bot ? getBotDisplayName(bot) : "Bot Chat",
@@ -296,7 +306,7 @@ function BotChatSessionContent({
         );
       }
     },
-    [isStreaming, sessionId, botId, bot, modelSelection, createSession, setActiveSession, sendMessageStream, applyFold]
+    [isStreaming, sessionId, sessionHasLocalMode, botId, bot, modelSelection, createSession, setActiveSession, sendMessageStream, applyFold]
   );
 
   const handleStop = useCallback(() => {
@@ -364,13 +374,9 @@ function BotChatSessionContent({
       {
         id: "watch",
         icon: <Broadcast className="size-4" />,
-        title: computerOpen ? "Stop watching" : "Watch computer",
-        subtitle: hasVm ? "Show or hide the computer pane" : "This bot has no computer attached",
+        title: computerOpen ? "Hide computer" : "Open computer",
+        subtitle: hasVm ? "Show or hide the computer pane" : "Attach or provision a computer",
         onSelect: () => {
-          if (!hasVm) {
-            setSendError("This bot has no computer attached.");
-            return;
-          }
           setComputerOpen((open) => !open);
         },
       },
@@ -496,7 +502,7 @@ function BotChatSessionContent({
           >
             {modelSelection?.modelName ?? "Model"}
           </Button>
-          {hasVm && (
+          {bot && (
             <Button
               type="button"
               variant={computerOpen ? "secondary" : "outline"}
@@ -504,9 +510,13 @@ function BotChatSessionContent({
               onClick={() => setComputerOpen((open) => !open)}
               className="gap-1.5 shrink-0"
               aria-pressed={computerOpen}
+              title={hasVm ? "Toggle computer viewport" : "Open bot computer"}
             >
               <Desktop size={14} />
               Computer
+              {activeVM?.status === "running" && (
+                <span className="h-2 w-2 rounded-full bg-[var(--status-success)] animate-pulse" />
+              )}
             </Button>
           )}
         </div>
