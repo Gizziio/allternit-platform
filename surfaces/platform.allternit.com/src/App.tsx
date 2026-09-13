@@ -40,10 +40,7 @@ import { LogsPage } from "@/pages/console/analytics/LogsPage";
 import { CachingPage } from "@/pages/console/analytics/CachingPage";
 import { RateLimitsPage } from "@/pages/console/analytics/RateLimitsPage";
 import { CostPage } from "@/pages/console/analytics/CostPage";
-import {
-  GizziUsageStubPage,
-  ManageRateLimitsStubPage,
-} from "@/pages/stubs/consoleStubs";
+import { GizziUsagePage } from "@/pages/console/gizzi/GizziUsagePage";
 import { MembersPage } from "@/pages/console/manage/MembersPage";
 import { ServiceAccountsPage } from "@/pages/console/manage/ServiceAccountsPage";
 import { SpendLimitsPage } from "@/pages/console/manage/SpendLimitsPage";
@@ -82,8 +79,9 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
 
 /** Phase 1 designed stubs — one per future console page. */
 const consoleStubRoutes: Array<{ path: string; element: React.ReactNode }> = [
-  { path: "/gizzi/usage/*", element: <GizziUsageStubPage /> },
-  { path: "/manage/rate-limits/*", element: <ManageRateLimitsStubPage /> },
+  // /manage/rate-limits content (caller snapshot + admin org limits) shipped
+  // with the Analytics surface at /analytics/rate-limits (Phase 4).
+  { path: "/manage/rate-limits/*", element: <Navigate to="/analytics/rate-limits" replace /> },
 ];
 
 function HomeRoute() {
@@ -461,6 +459,15 @@ export default function App() {
         element={
           <ConsoleRoute>
             <TagsPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 6 — Gizzi Code usage over the admin analytics route. */}
+      <Route
+        path="/gizzi/usage/*"
+        element={
+          <ConsoleRoute>
+            <GizziUsagePage />
           </ConsoleRoute>
         }
       />
