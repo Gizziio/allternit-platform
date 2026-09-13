@@ -56,6 +56,53 @@ Defines the relationship between:
 - memory/connector boundaries;
 - model and compute independence.
 
+## Second-pass references (2026-09-13)
+
+Added after a grounding pass against the implementation (V152–V158, transport
+code, conformance tests). These are **reference** documents: they cite code
+and mark anything not yet built as **Specified / Planned** — they do not
+change the normative contracts above.
+
+### `A_PROTOCOL_SCHEMA.md`
+
+**Reference (wire shapes).** Exact JSON for Principal, LeaseGrant,
+ApprovalBinding, Result, every standardized §8.22 event, the risk policy, the
+`A_*` error table, the full `/api/v1/fabric/transport/*` HTTP surface with
+per-endpoint auth, and the IntentEnvelope (marked Specified / Planned — the
+open scorecard item).
+
+### `COWORK_RUNTIME_STATE_MACHINES.md`
+
+**Reference (state machines).** Every RunState/JobState/ApprovalBinding
+transition, what causes it (endpoint, sweeper CAS, boot recovery), its
+persistence effects, and how Cowork/UI must project canonical state.
+
+### `BOT_AUTHORING_SPEC.md`
+
+**Spec with honest status.** The two-record bot contract (`agents` +
+`cowork_principals`), per-area Implemented/Partial/Planned status for roles,
+capabilities, model/router, compute, approvals, memory, connectors, triggers,
+budget — plus the authoring checklist that works today.
+
+### `AL_IMPLEMENTATION_SPEC.md`
+
+**Spec / build-out plan.** What Al owns vs never owns, orchestration policy,
+delegation rules, the §12 never-inherit list — sharply separating what Al does
+in code today (mostly: nothing yet) from what this spec defines.
+
+### `GIZZI_WORKER_SPEC.md`
+
+**Spec with honest status.** Gizzi's role, implemented sandbox posture
+(bubblewrap on Linux, vfkit VM mode on macOS), the specified
+fabric-transport capability set, and the not-yet-wired claim path.
+
+### `A_PROTOCOL_CONFORMANCE_MATRIX.md`
+
+**Proof index.** Maps every worker/control conformance claim, every §8.24
+step, and the four locks to its concrete proof (test name, endpoint behavior,
+live-demo evidence) — plus the adjacent-plumbing inventory of things that
+store `a://`-shaped data without participating in the lifecycle.
+
 ## Developer guide
 
 See:
