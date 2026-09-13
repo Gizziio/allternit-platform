@@ -16,6 +16,10 @@ cargo build -p allternit-commrails
 
 Every spawned session is registered as a Rails peer under `.allternit/peers/`, with a per-session UDS inbox. That lets other local agents discover it (`allternit-commrails peer list`, `/list-agents` in gizzi-code) and send plain-text messages to it (`allternit-commrails peer send`, `/send-message`).
 
+## Gate 0 — Enter the DAG first
+
+Per the ratified DAG-as-default rule (`commrails/spec/DAG_AS_DEFAULT_TASK_SYSTEM.md`), orchestrated work is multi-step and cross-session by definition. Before spawning anything: `allternit-commrails plan new "<scope>"` at the workspace root, then `wih pickup` on the node. The spawned executor works against that `dag:<dag_id>` / `wih:<wih_id>`; handoffs and steering reference those ids. Skip only for provably ≤2-step work.
+
 ## Phase 0 — Detect agents
 
 ```bash
