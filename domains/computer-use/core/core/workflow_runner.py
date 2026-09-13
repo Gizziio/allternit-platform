@@ -16,16 +16,26 @@ Behavior:
     by an empty string; denying abandons the run.
   - Steps whose kind appears in ``safety.requiresApprovalFor`` pause for
     approval before executing.
+  - Record→teach→batch (stagehand-batch-fork deferral A): when every step is
+    batch-mappable (whitelist vocabulary, selector-like targets, no
+    ``requiresApprovalFor`` kind), the whole spec compiles to ONE grant-bound
+    batch dispatched through ``core/batch_dispatch.py`` at run start. A
+    declined/failed grant or a halted batch falls back to the per-step runner
+    mid-workflow (resuming at the failed step; completed steps are never
+    silently retried). Set ``ALLTERNIT_WORKFLOW_BATCH=0`` (or pass
+    ``batch_enabled=False``) to keep the per-step path byte-for-byte.
   - Each step is dispatched through the adapter layer exactly like
     ReplayEngine does (executor signature when the adapter has
     ``registered_adapters``, plain ``execute(req)`` otherwise).
-  - Emits ``workflow.*`` events: started / step / approval.* / finished.
+  - Emits ``workflow.*`` events: started / step / batch / approval.* /
+    finished.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -226,6 +236,12 @@ class WorkflowRunner:
         on_event: Optional[EventCallback] = None,
         cancel_event: Optional[asyncio.Event] = None,
         params: Optional[Dict[str, Any]] = None,
+        batch_client: Optional[Any] = None,      # AciBatchClient; default constructed lazily
+        ledger: Optional[Callable[[str, Dict[str, Any]], None]] = None,  # canonical EventLedger writer
+        batch_enabled: Optional[bool] = None,    # None → env ALLTERNIT_WORKFLOW_BATCH (default on)
+        batch_mode: str = "batch",               # "batch" (one grant) | "per_step"
+        batch_page_url: Optional[str] = None,    # operator-pinned page binding; else observed
+        batch_headless: bool = True,
     ) -> None:
         self.adapter = adapter
         self.session_id = session_id
@@ -233,6 +249,12 @@ class WorkflowRunner:
         self.on_event = on_event
         self.cancel_event = cancel_event
         self.params = dict(params or {})
+        self.batch_client = batch_client
+        self.ledger = ledger
+        self._batch_enabled_override = batch_enabled
+        self.batch_mode = batch_mode
+        self.batch_page_url = batch_page_url
+        self.batch_headless = batch_headless
 
     async def run(self, spec: Dict[str, Any]) -> WorkflowRunResult:
         spec = load_workflow_spec(spec)
@@ -256,7 +278,312 @@ class WorkflowRunner:
             "total_steps": len(spec["steps"]),
         })
 
+        # Record→teach→batch: a fully batch-mappable spec runs as ONE
+        # grant-bound batch. Any non-committal outcome (no compile, declined
+        # grant, failed dispatch) falls through to the unchanged per-step
+        # path; a halted batch resumes per-step at the failed step only.
+        resume_index = 0
+        batch_finished = False
+        if self._batch_enabled() and self.adapter is not None:
+            batch_steps = self._compile_batch(spec, requires_approval_for)
+            if batch_steps is not None:
+                outcome, resume_at = await self._run_batch(
+                    spec, batch_steps, workflow_id, run_id, steps_out, pauses
+                )
+                if outcome == "done":
+                    batch_finished = True
+                elif outcome == "resume":
+                    # Drop the halted-step placeholder; the per-step runner
+                    # re-attempts from that index. Completed steps stay out.
+                    del steps_out[resume_at:]
+                    resume_index = resume_at
+
+        if not batch_finished:
+            status = await self._run_steps(
+                spec, resume_index, requires_approval_for,
+                steps_out, pauses, workflow_id, run_id,
+            )
+
+        result = WorkflowRunResult(
+            workflow_id=workflow_id,
+            title=title,
+            run_id=run_id,
+            session_id=self.session_id,
+            status=status,
+            steps=steps_out,
+            pauses=pauses,
+        )
+        await self._emit({
+            "type": "workflow.finished",
+            "workflow_id": workflow_id,
+            "run_id": run_id,
+            "status": status,
+            "completed_steps": sum(1 for s in steps_out if s.status == "ok"),
+            "total_steps": len(spec["steps"]),
+        })
+        return result
+
+    # ── batch compilation / dispatch (record→teach→batch) ────────────────
+
+    def _batch_enabled(self) -> bool:
+        if self._batch_enabled_override is not None:
+            return self._batch_enabled_override
+        return os.environ.get("ALLTERNIT_WORKFLOW_BATCH", "1").strip().lower() \
+            not in ("0", "false", "off", "no")
+
+    def _compile_batch(
+        self,
+        spec: Dict[str, Any],
+        requires_approval_for: set,
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Compile the spec's steps to one batch descriptor's step list.
+
+        Returns ``None`` when any step cannot ride the batch (out-of-
+        vocabulary kind, non-selector target, approval-required kind) or when
+        a ``{{param}}`` is unresolved — in the latter case the per-step path
+        must run first so its input pause stays the contract.
+        """
+        try:
+            from .batch_dispatch import workflow_steps_to_batch_steps
+
+            substituted: List[Dict[str, Any]] = []
+            for step in spec["steps"]:
+                input_data, missing = _substitute(dict(step.get("input") or {}), self.params)
+                target = step.get("target") or {}
+                ref, ref_missing = _substitute(
+                    str(target.get("ref") or target.get("description") or ""), self.params
+                )
+                if missing or ref_missing:
+                    return None
+                substituted.append({
+                    "kind": step.get("kind"),
+                    "input": input_data,
+                    "target": {"ref": ref},
+                })
+            return workflow_steps_to_batch_steps(substituted, requires_approval_for)
+        except Exception as exc:
+            logger.warning("[workflow] batch compilation skipped: %s", exc)
+            return None
+
+    async def _run_batch(
+        self,
+        spec: Dict[str, Any],
+        batch_steps: List[Dict[str, Any]],
+        workflow_id: str,
+        run_id: str,
+        steps_out: List[WorkflowStepResult],
+        pauses: List[WorkflowPause],
+    ) -> Tuple[str, int]:
+        """Dispatch the compiled workflow as ONE grant-bound batch.
+
+        Returns ``("done", 0)`` when every step completed, ``("resume", i)``
+        when the batch halted (caller resumes the per-step runner at i), or
+        ``("fallback", 0)`` when nothing executed through the batch path
+        (declined grant / failed dispatch). ``steps_out`` receives one result
+        per step from the receipt.
+        """
+        from .batch_context import (
+            BatchContextRecord,
+            close_batch_context,
+            open_batch_context,
+        )
+        from .batch_dispatch import (
+            AciBatchClient,
+            observe_adapter_page_url,
+            place_grant_for_retry,
+        )
+
+        # Page binding: operator pin wins; otherwise observe the adapter's
+        # current URL (non-browser surfaces yield None → origin+session only).
+        page_url = self.batch_page_url
+        if not page_url:
+            page_url = await observe_adapter_page_url(self.adapter)
+
+        record = BatchContextRecord(
+            run_id=run_id,
+            session_id=self.session_id,
+            step_count=len(batch_steps),
+            step_methods=[s["method"] for s in batch_steps],
+            origin="aci.workflow",
+            page_url=page_url,
+            batch_mode=self.batch_mode,
+        )
+        # Contract §4: opened BEFORE the batch RPC (audit-before-act).
+        open_batch_context(self.ledger, record)
+
+        client = self.batch_client
+        if client is None:
+            try:
+                client = AciBatchClient()
+            except Exception as exc:
+                logger.warning("[workflow] batch client unavailable, per-step fallback: %s", exc)
+                close_batch_context(self.ledger, record, status="failed", model_turns_saved=0)
+                return ("fallback", 0)
+            self.batch_client = client
+
+        await self._emit({
+            "type": "workflow.batch",
+            "workflow_id": workflow_id,
+            "run_id": run_id,
+            "phase": "compiled",
+            "step_count": len(batch_steps),
+            "step_methods": list(record.step_methods),
+            "page_url": page_url,
+        })
+
+        async def _try(approval_id=None, step_approval_ids=None):
+            return await client.execute_batch(
+                steps=batch_steps,
+                mode=self.batch_mode,
+                origin="aci.workflow",
+                session=self.session_id or None,
+                page_url=page_url,
+                approval_id=approval_id,
+                step_approval_ids=step_approval_ids,
+                headless=self.batch_headless,
+            )
+
+        attempt = await _try()
+
+        if attempt.confirmation_required:
+            record.batch_id = record.descriptor_hash = attempt.action_hash or "pending"
+            pause = WorkflowPause(
+                kind="workflow.batch_grant",
+                step=str(batch_steps[0].get("selector") or "batch"),
+                step_index=0,
+                reason=f"batch grant required (hash={attempt.action_hash})",
+            )
+            pauses.append(pause)
+            await self._emit({
+                "type": "approval.required",
+                "kind": pause.kind,
+                "workflow_id": workflow_id,
+                "step": pause.step,
+                "step_index": 0,
+                "reason": pause.reason,
+            })
+            approved = False
+            if self.approval_callback is not None:
+                approved = await self._ask_approval(pause)
+            await self._emit({
+                "type": "approval.resolved",
+                "kind": pause.kind,
+                "workflow_id": workflow_id,
+                "step": pause.step,
+                "approved": approved,
+            })
+            if not approved or not attempt.approval_id:
+                close_batch_context(self.ledger, record, status="denied", model_turns_saved=0)
+                logger.info("[workflow] batch grant declined — per-step fallback")
+                return ("fallback", 0)
+            retry_kwargs = place_grant_for_retry(
+                self.batch_mode, attempt, attempt.approval_id, len(batch_steps)
+            )
+            attempt = await _try(**retry_kwargs)
+            if not attempt.executed:
+                close_batch_context(
+                    self.ledger, record,
+                    status="denied" if attempt.confirmation_required else "failed",
+                    model_turns_saved=0,
+                )
+                logger.warning(
+                    "[workflow] batch grant retry did not execute (%s) — per-step fallback",
+                    attempt.error or "still confirmation_required",
+                )
+                return ("fallback", 0)
+
+        if not attempt.executed:
+            close_batch_context(self.ledger, record, status="failed", model_turns_saved=0)
+            logger.warning("[workflow] batch dispatch failed (%s) — per-step fallback", attempt.error)
+            return ("fallback", 0)
+
+        receipt = attempt.receipt or {}
+        receipt_status = receipt.get("status", "completed")
+        halted_at = receipt.get("halted_at")
+        outcomes: Dict[int, Dict[str, Any]] = {}
+        for position, entry in enumerate(receipt.get("steps") or []):
+            if isinstance(entry, dict):
+                outcomes[int(entry.get("index", position))] = entry
+
+        steps_completed = 0
         for index, step in enumerate(spec["steps"]):
+            kind = str(step["kind"])
+            method = batch_steps[index]["method"]
+            entry = outcomes.get(index)
+            if entry is None:
+                result = WorkflowStepResult(
+                    step_id=str(step["id"]), kind=kind, action_type=method,
+                    status="skipped", error=f"batch halted before step {index}",
+                )
+            elif entry.get("status") == "completed":
+                steps_completed += 1
+                result = WorkflowStepResult(
+                    step_id=str(step["id"]), kind=kind, action_type=method, status="ok",
+                )
+            else:
+                detail = entry.get("error") or entry.get("detail") or "batch step failed"
+                result = WorkflowStepResult(
+                    step_id=str(step["id"]), kind=kind, action_type=method,
+                    status="error", error=str(detail),
+                )
+            steps_out.append(result)
+            await self._emit({
+                "type": "workflow.step",
+                "workflow_id": workflow_id,
+                "step": str(step["id"]),
+                "step_index": index,
+                "kind": kind,
+                "action_type": method,
+                "status": result.status,
+                "error": result.error,
+                "via": "batch",
+            })
+
+        record.batch_id = record.descriptor_hash = attempt.descriptor_hash or "unknown"
+        close_batch_context(
+            self.ledger, record,
+            status=receipt_status,
+            halted_at=halted_at,
+            steps_completed=steps_completed,
+            receipt_id=attempt.receipt_id,
+            model_turns_saved=max(len(batch_steps) - 1, 0),
+        )
+        await self._emit({
+            "type": "workflow.batch",
+            "workflow_id": workflow_id,
+            "run_id": run_id,
+            "phase": "executed",
+            "status": receipt_status,
+            "halted_at": halted_at,
+            "descriptor_hash": attempt.descriptor_hash,
+            "receipt_id": attempt.receipt_id,
+        })
+
+        if receipt_status == "completed" and halted_at is None:
+            return ("done", 0)
+        resume_at = halted_at if isinstance(halted_at, int) else steps_completed
+        return ("resume", min(max(resume_at, 0), len(spec["steps"]) - 1))
+
+    async def _run_steps(
+        self,
+        spec: Dict[str, Any],
+        start_index: int,
+        requires_approval_for: set,
+        steps_out: List[WorkflowStepResult],
+        pauses: List[WorkflowPause],
+        workflow_id: str,
+        run_id: str,
+    ) -> str:
+        """The per-step runner, unchanged from the pre-batch behavior.
+
+        Starts at ``start_index`` so a halted batch resumes at the failed
+        step without re-running completed ones.
+        """
+        status = "completed"
+
+        for index, step in enumerate(spec["steps"]):
+            if index < start_index:
+                continue
             if self.cancel_event is not None and self.cancel_event.is_set():
                 status = "cancelled"
                 break
@@ -375,24 +702,7 @@ class WorkflowRunner:
                 "error": error,
             })
 
-        result = WorkflowRunResult(
-            workflow_id=workflow_id,
-            title=title,
-            run_id=run_id,
-            session_id=self.session_id,
-            status=status,
-            steps=steps_out,
-            pauses=pauses,
-        )
-        await self._emit({
-            "type": "workflow.finished",
-            "workflow_id": workflow_id,
-            "run_id": run_id,
-            "status": status,
-            "completed_steps": sum(1 for s in steps_out if s.status == "ok"),
-            "total_steps": len(spec["steps"]),
-        })
-        return result
+        return status
 
     # ── internals ────────────────────────────────────────────────────────────
 

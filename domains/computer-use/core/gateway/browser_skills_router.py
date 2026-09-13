@@ -177,6 +177,24 @@ async def run_workflow(
         _emit_canonical_workflow_event(body, event)
 
     async def run_workflow_impl() -> None:
+        # Canonical ledger writer for run-scoped batch records
+        # (batch.context.* per the session-preservation contract). Session/run
+        # bound here so the runner stays testable with a plain collector.
+        def ledger(event_type: str, payload: Dict[str, Any]) -> None:
+            try:
+                try:
+                    from canonical_router import _events as events
+                except ImportError:
+                    from gateway.canonical_router import _events as events  # type: ignore
+                events.append(
+                    event_type,
+                    session_id=body.session_id,
+                    run_id=body.run_id,
+                    payload=payload,
+                )
+            except Exception as exc:
+                logger.debug("canonical batch ledger emission failed: %s", exc)
+
         runner = WorkflowRunner(
             adapter=adapter,
             session_id=body.session_id,
@@ -184,6 +202,7 @@ async def run_workflow(
             on_event=on_event,
             cancel_event=run_state.cancel_event,
             params=body.params,
+            ledger=ledger,
         )
         try:
             result = await runner.run(spec_source)

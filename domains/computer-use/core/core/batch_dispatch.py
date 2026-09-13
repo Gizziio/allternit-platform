@@ -24,6 +24,7 @@ per-step outcomes live in the Rust receipt this response points to.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -93,6 +94,100 @@ def actions_to_batch_steps(actions: List[Any]) -> Optional[List[Dict[str, Any]]]
             return None
         steps.append(step)
     return steps
+
+
+# BrowserWorkflowSpec step kinds (record→teach) → whitelist methods. This is
+# deliberately smaller than EXECUTOR_ACTION_MAP in core/workflow_runner.py:
+# navigate would rebind the page mid-batch (violating the single page binding),
+# and wait/extract/screenshot/download are outside the 11-action vocabulary.
+_WORKFLOW_METHOD_MAP = {
+    "click": "click",
+    "type": "fill",
+    "press": "press",
+    "scroll": "scrollTo",
+    "select": "selectOptionFromDropdown",
+    "hover": "hover",
+}
+
+# Workflow step input keys that carry the single text argument, per method.
+_WORKFLOW_TEXT_KEYS = {
+    "fill": ("text", "value"),
+    "press": ("key", "text", "value"),
+    "selectOptionFromDropdown": ("value", "option", "text"),
+}
+
+
+def workflow_step_to_batch_step(step: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Map one BrowserWorkflowSpec step (``{id, kind, input, target}``) to a
+    whitelist batch step. Assumes the caller already applied ``{{param}}``
+    substitution. Returns ``None`` when the kind is outside the batch
+    vocabulary or the target ref is not selector-like — the caller then keeps
+    the existing per-step runner for the whole workflow.
+    """
+    method = _WORKFLOW_METHOD_MAP.get(str(step.get("kind") or ""))
+    if method is None or method not in WHITELIST_METHODS:
+        return None
+    target = step.get("target") or {}
+    selector = str(target.get("ref") or target.get("description") or "").strip()
+    if not _SELECTOR_LIKE.match(selector):
+        return None
+    input_data = step.get("input") or {}
+    arguments: List[str] = []
+    for key in _WORKFLOW_TEXT_KEYS.get(method, ()):
+        value = input_data.get(key)
+        if value is not None and str(value) != "":
+            arguments.append(str(value))
+            break
+    return {"method": method, "selector": selector, "arguments": arguments}
+
+
+def workflow_steps_to_batch_steps(
+    steps: List[Dict[str, Any]],
+    requires_approval_for: Optional[Any] = None,
+) -> Optional[List[Dict[str, Any]]]:
+    """Compile a full workflow step list to ONE batch descriptor's steps.
+
+    Returns ``None`` (caller falls back to per-step, unchanged) when any step
+    is not batchable: fewer than MIN_BATCH_STEPS, an out-of-vocabulary kind, a
+    non-selector target, or a kind named in the spec's
+    ``safety.requiresApprovalFor`` (those pauses stay on the per-step path).
+    """
+    requires_approval_for = requires_approval_for or set()
+    if len(steps) < MIN_BATCH_STEPS:
+        return None
+    batch_steps: List[Dict[str, Any]] = []
+    for step in steps:
+        if str(step.get("kind") or "") in requires_approval_for:
+            return None
+        batch_step = workflow_step_to_batch_step(step)
+        if batch_step is None:
+            return None
+        batch_steps.append(batch_step)
+    return batch_steps
+
+
+async def observe_adapter_page_url(adapter: Any) -> Optional[str]:
+    """Best-effort current page URL from a live adapter.
+
+    Browser adapters (playwright/CDP family) expose ``get_url()``; plain
+    adapters may not. Returns ``None`` when the surface carries no URL
+    (non-browser adapter, closed page, transport hiccup) — callers then keep
+    whatever binding they already had.
+    """
+    if adapter is None:
+        return None
+    get_url = getattr(adapter, "get_url", None)
+    if get_url is None:
+        return None
+    try:
+        url = get_url()
+        if asyncio.iscoroutine(url):
+            url = await url
+        url = str(url or "").strip()
+        return url or None
+    except Exception as exc:
+        logger.debug("adapter get_url() unavailable: %s", exc)
+        return None
 
 
 @dataclass
