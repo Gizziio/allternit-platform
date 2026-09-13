@@ -70,6 +70,9 @@ futures-util = "0.3"
 # links the workspace commrails crate for Peer/PeerEnvelope/send_envelope parity.
 allternit-commrails = { workspace = true }
 
+# P6a Bus mailbox (src/ao/mailbox.rs): durable SQLite Bus + Ledger shim crate.
+allternit-agent-system-rails = { workspace = true }
+
 # P6a UHP gateway (src/ao/serve.rs): `ao serve` mounts the UHP HTTP surface
 # in-process (not a sidecar); the gateway drives the engine over the socket API.
 uhp-gateway = { path = "../uhp-gateway" }

@@ -1318,15 +1318,27 @@ export function ShellRail({
               sessionsSection?.items.map((item) => (
                 <div
                   key={item.id}
-                  className="w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--shell-item-fg)]"
+                  className="w-full flex flex-col gap-0.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--shell-item-fg)]"
                 >
-                  <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                    {item.label}
-                  </span>
-                  {item.status ? (
-                    <span className="shrink-0 text-[11px] text-[var(--shell-item-muted)]">
-                      {item.status}
+                  <div className="flex items-center gap-2.5">
+                    <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {item.label}
                     </span>
+                    {item.status ? (
+                      <span className="shrink-0 text-[11px] text-[var(--shell-item-muted)]">
+                        {item.status}
+                      </span>
+                    ) : null}
+                  </div>
+                  {item.lastMessage ? (
+                    <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
+                      <span className="truncate flex-1">{item.lastMessage}</span>
+                      {item.lastMessageAt ? (
+                        <span className="shrink-0 text-[10px] opacity-60">
+                          {formatRelativeTime(item.lastMessageAt)}
+                        </span>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               ))
