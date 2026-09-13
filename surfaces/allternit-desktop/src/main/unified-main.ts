@@ -255,6 +255,17 @@ let hudSessionId: string | null = null;
 const pendingOfficeDeliveries: { channel: string; payload: unknown }[] = [];
 let splashWindow: BrowserWindow | null = null;
 
+// Send to the startup window only while it is alive. A destroyed BrowserWindow
+// is not null — accessing .webContents throws "Object has been destroyed" —
+// and an unguarded throw inside startup init (or its error path) used to skip
+// the error dialog + quit, leaving a windowless zombie app ("app not
+// rendering"). Every splash send goes through here.
+function sendToSplash(channel: string, ...args: unknown[]): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send(channel, ...args);
+  }
+}
+
 // Service state for splash screen progress (module-level so IPC handlers can update it)
 let serviceState = {
   api: { status: 'pending', detail: 'Starting…' },
@@ -265,7 +276,7 @@ let serviceState = {
   research: { status: 'pending', detail: 'Waiting…' },
 };
 let pushServiceState = () => {
-  splashWindow?.webContents.send('services', serviceState);
+  sendToSplash('services', serviceState);
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -821,9 +832,9 @@ async function initializeBundledMode(): Promise<void> {
     ? authManager.waitForStartupSignIn(splashWindow)
     : Promise.resolve(null);
   const updateSplash = (status: string, progress?: number) => {
-    splashWindow?.webContents.send('status', status);
+    sendToSplash('status', status);
     if (progress !== undefined) {
-      splashWindow?.webContents.send('progress', progress);
+      sendToSplash('progress', progress);
     }
   };
   // Reset service state at start of bundled mode initialization
@@ -836,7 +847,7 @@ async function initializeBundledMode(): Promise<void> {
     research: { status: 'pending', detail: 'Waiting…' },
   };
   pushServiceState = () => {
-    splashWindow?.webContents.send('services', serviceState);
+    sendToSplash('services', serviceState);
   };
   pushServiceState();
   
@@ -1056,10 +1067,12 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     // Complete
-    splashWindow?.webContents.send('complete');
+    sendToSplash('complete');
     await new Promise(r => setTimeout(r, 400));
 
-    splashWindow?.close();
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close();
+    }
     splashWindow = null;
 
     mainWindow = createMainWindow();
@@ -1195,8 +1208,8 @@ async function initializeBundledMode(): Promise<void> {
     
   } catch (error) {
     log.error('[Main] Failed to initialize bundled mode:', error);
-    splashWindow?.webContents.send('error', (error as Error).message);
-    
+    sendToSplash('error', (error as Error).message);
+
     dialog.showErrorBox(
       'Allternit Desktop Initialization Error',
       `Failed to start Allternit Backend:\n${(error as Error).message}\n\nPlease try again or contact support.`
