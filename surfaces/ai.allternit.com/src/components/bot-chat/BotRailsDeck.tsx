@@ -12,13 +12,14 @@
 import React, { useState } from "react";
 import { CaretDown, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { useRailsAgentId, useRailsDags } from "@/lib/rails/use-rails-dags";
+import { useRailsAgentId, useRailsDags, useRailsNeedsYouCount } from "@/lib/rails/use-rails-dags";
 import RailsTaskList from "@/components/rails/RailsTaskList";
 
 export function BotRailsDeck() {
   const agentId = useRailsAgentId();
   const mine = useRailsDags("mine");
   const ready = useRailsDags("ready");
+  const blocked = useRailsNeedsYouCount();
   const [open, setOpen] = useState(true);
 
   const mineCount = mine.data?.dags.length ?? 0;
@@ -46,6 +47,14 @@ export function BotRailsDeck() {
         )}
         <span className="text-[11px] font-medium text-[var(--text-secondary)]">Rails work</span>
         <span className="text-[10px] text-[var(--text-tertiary)]">{readyCount} ready</span>
+        {blocked > 0 && (
+          <span
+            title="agents waiting — see Needs you in the rail"
+            className="shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--status-warning)]"
+          >
+            {blocked} blocked
+          </span>
+        )}
       </button>
       {open && (
         <div className="min-w-0">
