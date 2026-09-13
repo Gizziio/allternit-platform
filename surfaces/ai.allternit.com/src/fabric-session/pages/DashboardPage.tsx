@@ -14,6 +14,13 @@ import {
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { FabricDesktopDrive, useVisualViewportRect } from "@/components/dispatch/FabricDesktopDrive";
 import {
+  hasDesktopConnection,
+  hasNodeDaemon,
+  useRuntimes,
+  type RuntimeViewModel,
+} from "@/components/dispatch/useRuntimes";
+import { cloudApiUrl } from "@/lib/cloud-api";
+import {
   FabricAppHeader,
   FabricHeaderControl,
   FabricStatusCluster,
@@ -176,6 +183,38 @@ export function DashboardPage({
     return Boolean(new URLSearchParams(window.location.search).get("runtime"));
   });
   const [desktopOpen, setDesktopOpen] = React.useState(false);
+  const [startingDesktop, setStartingDesktop] = React.useState(false);
+
+  // Daemon-only node: the Monitor affordance degrades to "Start desktop",
+  // which asks the daemon (node.launch) to bring Allternit Desktop up. The
+  // live viewer lights up once the app connects and claims its capabilities.
+  const startDesktop = useCallback(async () => {
+    if (!selected) return;
+    const token = await auth.getToken().catch(() => null);
+    if (!token) return;
+    setStartingDesktop(true);
+    try {
+      await fetch(
+        cloudApiUrl(`/api/v1/runtime-devices/${encodeURIComponent(selected.id)}/proxy`),
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            method: "POST",
+            path: "/api/v1/node/launch",
+            body: JSON.stringify({ action: "start" }),
+            bodyEncoding: "utf8",
+          }),
+        },
+      ).catch(() => {});
+      setDesktopOpen(true);
+    } finally {
+      setStartingDesktop(false);
+    }
+  }, [selected, auth]);
   const [driveKind, setDriveKind] = React.useState<FabricDriveKind>("chat");
   const [railCollapsed, setRailCollapsed] = React.useState(() => {
     if (typeof window === "undefined") return false;
@@ -388,9 +427,19 @@ export function DashboardPage({
       pendingQuestions={pendingQuestions}
     >
       {sessionOpen && selected ? (
-        <FabricHeaderControl onClick={() => setDesktopOpen(true)} title="Live desktop" active={desktopOpen}>
-          <Monitor size={16} weight="bold" />
-        </FabricHeaderControl>
+        hasNodeDaemon(selected) && !hasDesktopConnection(selected) ? (
+          <FabricHeaderControl
+            onClick={() => void startDesktop()}
+            title={startingDesktop ? "Starting desktop…" : "Start desktop on this node"}
+            active={false}
+          >
+            <DesktopTower size={16} weight="bold" />
+          </FabricHeaderControl>
+        ) : (
+          <FabricHeaderControl onClick={() => setDesktopOpen(true)} title="Live desktop" active={desktopOpen}>
+            <Monitor size={16} weight="bold" />
+          </FabricHeaderControl>
+        )
       ) : null}
       <FabricHeaderControl onClick={cycleTheme} title="Toggle theme">
         {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}

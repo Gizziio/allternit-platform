@@ -134,6 +134,15 @@ export function PlaygroundPage(): React.ReactNode {
     }
   }, [persisted]);
 
+  // Deep link from dashboard model cards: /playground?model=<id> preselects
+  // that model once, without touching localStorage beyond the normal sync.
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get("model");
+    if (param) {
+      setPersisted((prev) => (prev.model === param ? prev : { ...prev, model: param }));
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
     fetchConsoleModels()

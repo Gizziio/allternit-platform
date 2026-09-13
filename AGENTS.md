@@ -28,7 +28,7 @@ Every agent session in this repo works in its OWN linked worktree — never in t
 Agents that stop at "code works in my worktree" leave debt for the next session. A session is not done until all of this is done. Canonical example: session `0f55144a` (2026-09-07, PR #105).
 
 1. **Worktree.** Create `<repo>-session-<id>` on branch `session/<id>` from latest `main`; `cd` into it. Never edit the shared checkout (it may hold other sessions' uncommitted in-flight work — leave that untouched).
-2. **Plan.** After scoping with the owner, write a plan file with concrete, checkable todos. Update `.steering/checkpoint.md` (`Goal` / `Just did` / `Next` / `Open questions`) at every milestone.
+2. **Plan.** After scoping with the owner, enter the work into the CommRails WIH DAG (`allternit-commrails plan new`, then per-node `wih pickup`) — see "Planning and task tracking" below for the >2-step rule. A plan file may be drafted as scratch while scoping, but the DAG is the source of truth once it exists. Update `.steering/checkpoint.md` (`Goal` / `Just did` / `Next` / `Open questions`) at every milestone.
 3. **Implement and verify.** Every claim checked before you make it: typecheck, unit tests, `cargo check`/`cargo test` for Rust, and a live smoke test (run the server, `curl` the endpoints) for anything behavioral. Note pre-existing breakage as pre-existing; don't silently fix unrelated files.
 4. **Commit and push.** Logical commits (conventional-ish prefixes: `feat(...)`, `fix(...)`, `docs(ledger): ...`), push the session branch to origin. Never commit directly on main except step 7.
 5. **PR and merge.** `gh pr create` with a real summary + verification evidence, `gh pr merge <n> --merge` (merge commit, not squash — keeps session chunk history). Record the PR number and merge SHA.
@@ -68,13 +68,26 @@ This repo is wired for hook-based steering: when an agent session working here e
 
 ## Planning and task tracking
 
-Use a written plan as the source of truth for the session.
+Multi-step work is tracked in the CommRails WIH DAG, deterministically — not by
+agent discretion. Ratified per `commrails/spec/DAG_AS_DEFAULT_TASK_SYSTEM.md`.
 
-- **Create a plan file.** After scoping the feature or fix with the user, use plan mode to produce a plan file with detailed, checkable todos.
-- **Make todos concrete.** Each todo should describe a single deliverable or verification step that can be clearly marked done.
-- **Check off as you finish.** Update the plan file as work is completed. Checked items should coincide with commits, checkpoints in `.steering/checkpoint.md`, and cleanup milestones.
-- **Use the plan to verify work.** Before calling a task complete, review the plan and ensure every todo is either done or explicitly deferred with a reason.
-- **Clean up the plan file.** Remove or archive the plan file once the work is merged and the session is finished, unless the project requires keeping it.
+- **The rule.** If a session expects to take more than two steps, or its work
+  will be picked up, reviewed, or continued by another session, it must be
+  represented as DAG nodes under a `plan` before execution: `allternit-commrails
+  plan new "<goal>"`, broken into nodes. Work of two steps or less may stay
+  ephemeral (no DAG required).
+- **The DAG is the source of truth.** A markdown plan file is scratch for
+  drafting only; the moment the DAG exists, node statuses replace the
+  checklist. Session handoffs reference `dag:<dag_id>` / `wih:<wih_id>`, never
+  a plan-file path.
+- **Track by node status.** Todos live as DAG node statuses (`NEW` → `READY` →
+  `RUNNING` → `DONE`/`FAILED`); readiness comes from `ready_nodes`, not from a
+  checklist in a markdown file.
+- **Verify against the DAG.** Before calling a task complete, review the plan's
+  nodes and ensure every node is `DONE` or explicitly deferred with a reason.
+- **No dual tracking.** Do not maintain a parallel plan file alongside the DAG.
+  One source of truth; the temporal boundary is: plan file = pre-DAG scratch
+  only.
 
 ## Agent creation checklist
 

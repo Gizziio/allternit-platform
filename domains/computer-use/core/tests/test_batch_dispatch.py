@@ -61,6 +61,19 @@ class TestActionMapping:
         assert action_to_batch_step(_action("scroll", "main"))["method"] == "scrollTo"
         assert action_to_batch_step(_action("key", "#name", text="Enter"))["method"] == "press"
 
+    def test_attribute_selectors_are_selector_like(self):
+        # Frontier grounding models prefer attribute selectors even when ids
+        # exist (cu22 real-model campaign); they resolve deterministically
+        # via querySelector, so they ground like #id or bare-tag selectors.
+        step = action_to_batch_step(_action("fill", 'input[placeholder="Full name"]', text="Ada"))
+        assert step == {"method": "fill",
+                        "selector": 'input[placeholder="Full name"]',
+                        "arguments": ["Ada"]}
+        assert action_to_batch_step(_action("click", "button[type='submit']"))["method"] == "click"
+        assert action_to_batch_step(_action("select", "#plan", text="pro")) == {
+            "method": "selectOptionFromDropdown", "selector": "#plan", "arguments": ["pro"],
+        }
+
     def test_non_selector_targets_are_not_batchable(self):
         # Free-text element descriptions cannot be resolved by the in-browser
         # runtime — these keep the coordinate-based step-by-step path.
