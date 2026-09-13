@@ -21,6 +21,30 @@ import { AgentsPage } from "@/pages/AgentsPage";
 import { PortalLandingPage } from "@/pages/PortalLandingPage";
 import { ModelsPage } from "@/pages/ModelsPage";
 import { PlansPage } from "@/pages/PlansPage";
+import {
+  PlaygroundStubPage,
+  FilesStubPage,
+  SkillsStubPage,
+  BatchesStubPage,
+  SessionsStubPage,
+  DeploymentsStubPage,
+  ComputersStubPage,
+  VaultsStubPage,
+  MemoryStubPage,
+  AnalyticsUsageStubPage,
+  AnalyticsLogsStubPage,
+  AnalyticsCachingStubPage,
+  AnalyticsRateLimitsStubPage,
+  AnalyticsCostStubPage,
+  GizziUsageStubPage,
+  ManageRateLimitsStubPage,
+  ManageSpendLimitsStubPage,
+  ManageMembersStubPage,
+  ManageServiceAccountsStubPage,
+  ManageSecurityStubPage,
+  ManageWebhooksStubPage,
+  ManageTagsStubPage,
+} from "@/pages/stubs/consoleStubs";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -50,6 +74,32 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
     </RequireAuth>
   );
 }
+
+/** Phase 1 designed stubs — one per future console page. */
+const consoleStubRoutes: Array<{ path: string; element: React.ReactNode }> = [
+  { path: "/playground/*", element: <PlaygroundStubPage /> },
+  { path: "/files/*", element: <FilesStubPage /> },
+  { path: "/skills/*", element: <SkillsStubPage /> },
+  { path: "/batches/*", element: <BatchesStubPage /> },
+  { path: "/sessions/*", element: <SessionsStubPage /> },
+  { path: "/deployments/*", element: <DeploymentsStubPage /> },
+  { path: "/computers/*", element: <ComputersStubPage /> },
+  { path: "/vaults/*", element: <VaultsStubPage /> },
+  { path: "/memory/*", element: <MemoryStubPage /> },
+  { path: "/analytics/usage/*", element: <AnalyticsUsageStubPage /> },
+  { path: "/analytics/logs/*", element: <AnalyticsLogsStubPage /> },
+  { path: "/analytics/caching/*", element: <AnalyticsCachingStubPage /> },
+  { path: "/analytics/rate-limits/*", element: <AnalyticsRateLimitsStubPage /> },
+  { path: "/analytics/cost/*", element: <AnalyticsCostStubPage /> },
+  { path: "/gizzi/usage/*", element: <GizziUsageStubPage /> },
+  { path: "/manage/rate-limits/*", element: <ManageRateLimitsStubPage /> },
+  { path: "/manage/spend-limits/*", element: <ManageSpendLimitsStubPage /> },
+  { path: "/manage/members/*", element: <ManageMembersStubPage /> },
+  { path: "/manage/service-accounts/*", element: <ManageServiceAccountsStubPage /> },
+  { path: "/manage/security/*", element: <ManageSecurityStubPage /> },
+  { path: "/manage/webhooks/*", element: <ManageWebhooksStubPage /> },
+  { path: "/manage/tags/*", element: <ManageTagsStubPage /> },
+];
 
 function HomeRoute() {
   const auth = usePlatformAuth();
@@ -202,6 +252,13 @@ export default function App() {
           </ConsoleRoute>
         }
       />
+      {consoleStubRoutes.map((route) => (
+        <Route
+          key={route.path}
+          path={route.path}
+          element={<ConsoleRoute>{route.element}</ConsoleRoute>}
+        />
+      ))}
       {/* Fallback Clerk path-routed pages. Public marketing pages open the auth modal
           inline, but /sign-in and /sign-up remain available for direct navigation. */}
       <Route path="/sign-in/*" element={<SignInPage />} />

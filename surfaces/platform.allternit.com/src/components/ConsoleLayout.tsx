@@ -1,15 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  LayoutDashboardIcon,
-  TeamWorkIcon,
-  CpuIcon,
-  DeviceAccessIcon,
   Wallet01Icon,
-  Key01Icon,
-  BotIcon,
-  Setting07Icon,
   Search01Icon,
   Notification01Icon,
   Rocket01Icon,
@@ -20,105 +13,134 @@ import {
   ScrollIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  RocketIcon,
-  Calendar02Icon,
-  ShieldCheckIcon,
-  CloudIcon,
   PanelLeftIcon,
   BookOpen02Icon,
 } from "@hugeicons/core-free-icons";
-import { UserButton } from "@clerk/clerk-react";
+import { OrganizationSwitcher, UserButton } from "@clerk/clerk-react";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api-client";
 import {
-  PlatformOrganizationSwitcher,
   usePlatformOrganization,
   usePlatformUser,
   usePlatformAuth,
   useClerk,
 } from "@/lib/platform-auth-client";
-import { getCreditsBalance, formatCreditsUsd } from "@/lib/credits";
+import {
+  consoleNav,
+  consoleNavLabelForPath,
+  type ConsoleNavGroup,
+} from "@/components/console-ui/navConfig";
+import { CommandPalette } from "@/components/console-ui/CommandPalette";
+import { AnnouncementModal } from "@/components/console-ui/AnnouncementModal";
 import { AllternitWordmark } from "@/components/AllternitWordmark";
 
-type IconData = typeof LayoutDashboardIcon;
-
-interface NavItem {
-  to: string;
-  label: string;
-}
-
-interface TopNavItem extends NavItem {
-  icon: IconData;
-}
-
-interface NavGroup {
-  label: string;
-  icon: IconData;
-  defaultOpen?: boolean;
-  items: NavItem[];
-}
-
-const topNavItems: TopNavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboardIcon },
-  { to: "/api-keys", label: "API keys", icon: Key01Icon },
-];
-
-const navGroups: NavGroup[] = [
-  {
-    label: "Agents",
-    icon: BotIcon,
-    defaultOpen: true,
-    items: [
-      { to: "/agents", label: "Agents" },
-      { to: "/runs", label: "Runs" },
-      { to: "/schedules", label: "Schedules" },
-      { to: "/approvals", label: "Approvals" },
-    ],
-  },
-  {
-    label: "Cloud",
-    icon: CloudIcon,
-    defaultOpen: true,
-    items: [
-      { to: "/compute", label: "Compute" },
-      { to: "/devices", label: "Devices" },
-      { to: "/fabric", label: "Fabric" },
-      { to: "/cloud-accounts", label: "Cloud accounts" },
-    ],
-  },
-  {
-    label: "Organization",
-    icon: TeamWorkIcon,
-    items: [
-      { to: "/organizations", label: "Organizations" },
-      { to: "/billing", label: "Billing" },
-    ],
-  },
-];
-
-const settingsItem: TopNavItem = {
-  to: "/settings",
-  label: "Settings",
-  icon: Setting07Icon,
-};
-
-const flatNavItems = [
-  ...topNavItems,
-  ...navGroups.flatMap((g) => g.items),
-  settingsItem,
-];
-
-function groupContainsPath(group: NavGroup, pathname: string): boolean {
+function groupContainsPath(group: ConsoleNavGroup, pathname: string): boolean {
   return group.items.some(
-    (item) => pathname === item.to || pathname.startsWith(`${item.to}/`),
-  );
-}
-
-function currentPageLabel(pathname: string): string {
-  if (pathname === "/") return "Dashboard";
-  const match = flatNavItems.find(
     (item) => pathname === item.to || pathname.startsWith(`${item.to}/`)
   );
-  return match?.label || "Console";
+}
+
+/** Error boundary that renders nothing when Clerk organization features fail. */
+class ClerkSilentBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch() {
+    // Clerk orgs unavailable (e.g. personal workspaces disabled) — stay silent.
+  }
+
+  render() {
+    return this.state.hasError ? null : this.props.children;
+  }
+}
+
+function SidebarOrgSwitcher() {
+  const auth = usePlatformAuth();
+  if (!auth.isSignedIn) return null;
+  return (
+    <ClerkSilentBoundary>
+      <OrganizationSwitcher
+        hidePersonal={false}
+        appearance={{
+          elements: {
+            rootBox: { width: "100%" },
+            organizationSwitcherTrigger: {
+              width: "100%",
+              justifyContent: "space-between",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "10px",
+              padding: "7px 10px",
+              background: "var(--bg-primary)",
+              color: "var(--text-primary)",
+              boxShadow: "none",
+              fontSize: "13px",
+            },
+          },
+        }}
+      />
+    </ClerkSilentBoundary>
+  );
+}
+
+/**
+ * Credits balance chip. Fetched via the platform api client on mount and on
+ * org change. Failure is hidden — the chip renders nothing rather than a
+ * broken balance.
+ */
+function CreditsChip() {
+  const { organization } = usePlatformOrganization();
+  const [balance, setBalance] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const data = await api.get<{
+          balance_usd?: number;
+          balance_cents?: number;
+        }>("/api/v1/credits/balance");
+        if (!active) return;
+        const usd =
+          typeof data.balance_usd === "number"
+            ? data.balance_usd
+            : (data.balance_cents ?? 0) / 100;
+        setBalance(`$${usd.toFixed(2)}`);
+      } catch {
+        // Fail hidden: never render a broken chip.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [organization?.id]);
+
+  if (!balance) return null;
+
+  return (
+    <NavLink
+      to="/billing"
+      className={({ isActive }) =>
+        cn(
+          "flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors",
+          isActive
+            ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+            : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+        )
+      }
+    >
+      <span className="flex items-center gap-3">
+        <HugeiconsIcon icon={Wallet01Icon} size={17} />
+        Credits
+      </span>
+      <span className="text-[12px] text-[var(--text-tertiary)]">{balance}</span>
+    </NavLink>
+  );
 }
 
 function RailUserCard({ collapsed }: { collapsed: boolean }) {
@@ -194,68 +216,17 @@ function SidebarContent({
   onNavigate,
   collapsed,
   onExpand,
+  onOpenPalette,
 }: {
   onNavigate?: () => void;
   collapsed: boolean;
   onExpand?: () => void;
+  onOpenPalette: () => void;
 }) {
   const location = useLocation();
-  const navigate = useNavigate();
-  const auth = usePlatformAuth();
-  const [query, setQuery] = useState("");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const [creditsBalance, setCreditsBalance] = useState<string | null>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!auth.isSignedIn) return;
-    const controller = new AbortController();
-    let active = true;
-    (async () => {
-      try {
-        const token = await auth.getToken();
-        if (!token || !active) return;
-        const balance = await getCreditsBalance(token, controller.signal);
-        if (active) setCreditsBalance(formatCreditsUsd(balance.balance_usd));
-      } catch {
-        // Balance stays hidden; the row still links to billing.
-      }
-    })();
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [auth.isSignedIn, auth.getToken]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        searchRef.current?.focus();
-        searchRef.current?.select();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  const q = query.trim().toLowerCase();
-  const matches = (label: string) => !q || label.toLowerCase().includes(q);
-
-  const visibleGroups = useMemo(
-    () =>
-      navGroups
-        .map((group) => ({ ...group, items: group.items.filter((item) => matches(item.label)) }))
-        .filter((group) => group.items.length > 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [q]
-  );
-
-  const visibleTop = topNavItems.filter((item) => matches(item.label));
-  const settingsVisible = matches(settingsItem.label);
-
-  const isGroupOpen = (group: NavGroup) => {
-    if (q) return true;
+  const isGroupOpen = (group: ConsoleNavGroup) => {
     if (groupContainsPath(group, location.pathname)) return true;
     return openGroups[group.label] ?? group.defaultOpen ?? false;
   };
@@ -263,19 +234,18 @@ function SidebarContent({
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({
       ...prev,
-      [label]: !(prev[label] ?? navGroups.find((g) => g.label === label)?.defaultOpen ?? false),
+      [label]:
+        !(prev[label] ??
+          consoleNav.groups.find((g) => g.label === label)?.defaultOpen ??
+          false),
     }));
   };
-
-  const firstFiltered = q
-    ? visibleTop[0] ?? visibleGroups[0]?.items[0] ?? null
-    : null;
 
   if (collapsed) {
     return (
       <>
         <div className="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2 py-3">
-          {visibleTop.map((item) => (
+          {consoleNav.top.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -292,7 +262,7 @@ function SidebarContent({
               <HugeiconsIcon icon={item.icon} size={19} />
             </NavLink>
           ))}
-          {visibleGroups.map((group) => (
+          {consoleNav.groups.map((group) => (
             <button
               key={group.label}
               type="button"
@@ -303,22 +273,6 @@ function SidebarContent({
               <HugeiconsIcon icon={group.icon} size={19} />
             </button>
           ))}
-          {settingsVisible && (
-            <NavLink
-              to={settingsItem.to}
-              title={settingsItem.label}
-              className={({ isActive }) =>
-                cn(
-                  "flex size-10 items-center justify-center rounded-lg transition-colors",
-                  isActive
-                    ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-                )
-              }
-            >
-              <HugeiconsIcon icon={settingsItem.icon} size={19} />
-            </NavLink>
-          )}
         </div>
         <div className="border-t border-[var(--border-subtle)] py-2">
           <RailUserCard collapsed />
@@ -329,39 +283,26 @@ function SidebarContent({
 
   return (
     <>
-      {/* Search */}
+      {/* Search — opens the command palette */}
       <div className="px-3 pt-3">
-        <div className="flex items-center gap-2 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[var(--text-secondary)] focus-within:border-[var(--border-default)] transition-colors">
+        <button
+          type="button"
+          onClick={onOpenPalette}
+          className="flex w-full items-center gap-2 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-default)]"
+        >
           <HugeiconsIcon icon={Search01Icon} size={15} />
-          <input
-            ref={searchRef}
-            id="console-rail-search"
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                setQuery("");
-                searchRef.current?.blur();
-              }
-              if (event.key === "Enter" && firstFiltered) {
-                navigate(firstFiltered.to);
-                setQuery("");
-                onNavigate?.();
-              }
-            }}
-            placeholder="Search Console..."
-            className="flex-1 bg-transparent text-[13px] placeholder:text-[var(--text-tertiary)] outline-none text-[var(--text-primary)]"
-          />
+          <span className="flex-1 text-left text-[13px] text-[var(--text-tertiary)]">
+            Search Console...
+          </span>
           <kbd className="inline-flex items-center rounded border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-1.5 py-0.5 text-[10px] text-[var(--text-tertiary)]">
             ⌘K
           </kbd>
-        </div>
+        </button>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-3">
-        {visibleTop.map((item) => (
+        {consoleNav.top.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -380,7 +321,7 @@ function SidebarContent({
           </NavLink>
         ))}
 
-        {visibleGroups.map((group) => {
+        {consoleNav.groups.map((group) => {
           const open = isGroupOpen(group);
           return (
             <div key={group.label} className="mb-1">
@@ -389,13 +330,18 @@ function SidebarContent({
                 onClick={() => toggleGroup(group.label)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                  groupContainsPath(group, location.pathname) && !q
+                  groupContainsPath(group, location.pathname)
                     ? "text-[var(--text-primary)]"
                     : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                 )}
               >
                 <HugeiconsIcon icon={group.icon} size={17} />
                 <span className="flex-1 text-left">{group.label}</span>
+                {group.badge && (
+                  <span className="rounded-md bg-[var(--accent-highlight-subtle)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent-highlight)]">
+                    {group.badge}
+                  </span>
+                )}
                 <HugeiconsIcon
                   icon={open ? ChevronDownIcon : ChevronRightIcon}
                   size={14}
@@ -426,34 +372,13 @@ function SidebarContent({
             </div>
           );
         })}
-
-        {settingsVisible && (
-          <NavLink
-            to={settingsItem.to}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                "mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                isActive
-                  ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-              )
-            }
-          >
-            <HugeiconsIcon icon={settingsItem.icon} size={17} />
-            {settingsItem.label}
-          </NavLink>
-        )}
-
-        {q && visibleTop.length === 0 && !settingsVisible && visibleGroups.length === 0 && (
-          <p className="px-3 py-4 text-[12px] text-[var(--text-tertiary)]">
-            No matches for “{query}”.
-          </p>
-        )}
       </nav>
 
-      {/* Bottom block */}
+      {/* Footer — always visible above the collapse control */}
       <div className="border-t border-[var(--border-subtle)] p-2.5">
+        <div className="mb-1.5">
+          <SidebarOrgSwitcher />
+        </div>
         <NavLink
           to="/docs"
           onClick={onNavigate}
@@ -469,26 +394,7 @@ function SidebarContent({
           <HugeiconsIcon icon={BookOpen02Icon} size={17} />
           Documentation
         </NavLink>
-        <NavLink
-          to="/billing"
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              "flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors",
-              isActive
-                ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
-                : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-            )
-          }
-        >
-          <span className="flex items-center gap-3">
-            <HugeiconsIcon icon={Wallet01Icon} size={17} />
-            Credits
-          </span>
-          <span className="text-[12px] text-[var(--text-tertiary)]">
-            {creditsBalance ?? "—"}
-          </span>
-        </NavLink>
+        <CreditsChip />
         <RailUserCard collapsed={false} />
         <div className="mt-1 flex items-center gap-1 px-2.5">
           <a
@@ -527,9 +433,20 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(
     () => typeof window !== "undefined" && window.localStorage.getItem("console-rail-collapsed") === "1"
   );
-  const { organization } = usePlatformOrganization();
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
-  const pageLabel = location.pathname === "/" ? "Overview" : currentPageLabel(location.pathname);
+  const pageLabel = location.pathname === "/" ? "Overview" : consoleNavLabelForPath(location.pathname);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -537,6 +454,21 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
       return !prev;
     });
   };
+
+  const sidebar = (
+    onNavigate: (() => void) | undefined,
+    onExpand: (() => void) | undefined
+  ) => (
+    <SidebarContent
+      collapsed={false}
+      onNavigate={onNavigate}
+      onExpand={onExpand}
+      onOpenPalette={() => {
+        setPaletteOpen(true);
+        setMobileOpen(false);
+      }}
+    />
+  );
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -564,20 +496,11 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        {!collapsed && (
-          <div className="px-3 pt-3">
-            {organization ? (
-              <PlatformOrganizationSwitcher />
-            ) : (
-              <div className="flex items-center gap-2.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[13px] text-[var(--text-secondary)]">
-                <HugeiconsIcon icon={TeamWorkIcon} size={15} />
-                Personal workspace
-              </div>
-            )}
-          </div>
-        )}
-
-        <SidebarContent collapsed={collapsed} onExpand={() => setCollapsed(false)} />
+        <SidebarContent
+          collapsed={collapsed}
+          onExpand={() => setCollapsed(false)}
+          onOpenPalette={() => setPaletteOpen(true)}
+        />
       </aside>
 
       {/* Mobile drawer */}
@@ -600,10 +523,7 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
                 <HugeiconsIcon icon={Cancel01Icon} size={20} />
               </button>
             </div>
-            <SidebarContent
-              collapsed={false}
-              onNavigate={() => setMobileOpen(false)}
-            />
+            {sidebar(() => setMobileOpen(false), undefined)}
           </aside>
         </>
       )}
@@ -629,6 +549,15 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="relative p-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors"
+              aria-label="Search"
+            >
+              <HugeiconsIcon icon={Search01Icon} size={20} />
+            </button>
+
             <button
               type="button"
               className="relative p-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors"
@@ -658,6 +587,9 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <AnnouncementModal />
     </div>
   );
 }
