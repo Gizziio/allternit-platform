@@ -1,13 +1,13 @@
-# Checkpoint — session/cu20-teachbatch
+# Steering checkpoint — session/console-fe-p3
 
-**Goal:** Land spec `stagehand-batch-fork` deferrals A/B/C. All code + smoke done; landing in progress.
+**Goal:** Frontend console port Phase 3 — Managed Agents: Agents list + Create agent form (toolset permissions), Sessions list + detail (SSE), Deployments, Computers relocation, Vaults, Memory stores; retire AgentStudioView stub in ai surface.
 
-**Done:**
-- A `c7c2e50c3` record→teach→batch compilation; B `45f5e280b` auto page binding + contract v1.1; C `f57a81859` flake fix (`audit_api_returns_rows_with_bot_filter`: unguarded ALLTERNIT_COMPUTER_USE_DIR mutations now hold the shared test lock; note origin/main independently locked the snapshot test — resolved taking theirs) + approval_id surfaced on batch-grant events + RunWorkflowBody.batch_page_url.
-- Merge origin/main landed `fc13b21e7` (checkpoint restored from /tmp/cu20-checkpoint-mine.md).
-- **Live smoke 8/8 + 5/5 PASS** (tmp-cu20-smoke/smoke.py): leg 1 compiled batch — ONE grant (approval_id surfaced, handoff-approved at /api/aci/handoff/:id/approve), sidecar executed 3/3 in real Chrome, Rust receipt `completed` 3/3 via /api/aci/batch/receipts/:id, ledger opened/closed, steps via=batch. Leg 2 under ALLTERNIT_WORKFLOW_BATCH=0 — no batch events, no approvals, 3 per-step steps ok via browser.cdp. Env notes: venv needed `playwright` pip install; runtime needed `pnpm install && pnpm run build`; routes are under /api.
-- Python suites post-merge: 69 passed, 0 failed.
+**Just did:** All Phase 3 pages implemented and verified in worktree `allternit-session-console-fe-p3` on `session/console-fe-p3` (no git commit/push per subagent instructions — parent owns the ritual). Platform `tsc --noEmit` 0 errors, `pnpm build` green, `vite preview` curl 200 on /agents, /agents/new, /sessions, /sessions/new, /sessions/:id, /deployments, /computers, /vaults, /memory (+ detail/edit routes). ai surface `tsc --noEmit`: 7 pre-existing errors (missing workspace modules in office packages), identical before/after the AgentStudioView retirement — none from this change. `node scripts/release-preflight.mjs` 35 passed, 0 failed.
 
-**Next:** aci_ x4 background run finishing (bash-eszu44ju), then ≥3 clean post-merge runs → push → PR → merge → attestation+LEDGER via detached worktree → cleanup (worktrees incl. allternit-cu20-baseline, branch local+remote, tmp-cu20-smoke).
+**Backend shapes confirmed (file:line):** agents CRUD/toolset/subagents `cmd/allternit-api/src/agent_routes.rs:39-92,154-199,388-439,1210-1370,1653-1926` (tool permissions are `auto|always_allow|always_ask`, NOT `auto/allow/ask/deny`); session facade `cloud_agents_routes.rs:46-59,114-161,221-254,1094-1383` (follow-up + interrupt both POST /sessions/:id/events; SSE GET /events/stream); deployments `beta_deployment_routes.rs:30-111` (body = agent_id/cron/metadata only — name/environment/vault persist in metadata); computers `computer_routes.rs:36-44,66-93,125-133,153-186` (kind filter values are `local|byo_vps|managed|byoc|cloud_desktop`, NOT the session kinds none/sandbox/desktop/fabric); vaults `allternit_vault.rs:103-145,210-220,433-634` (no status field; secrets never round-trip); memory stores `beta_memory_store_routes.rs:60-120,278-514` (entries cursor-paginated `created_at|id`).
+
+**Deviations to know about:** (1) api.stream() extended to honor `options.method: "GET"` — SSE session events are a GET stream; POST remains default so Playground is unaffected. (2) Old `src/pages/AgentsPage.tsx` (inline session runner) deleted; its capability preserved as QuickStartPanel on the new Agents list. (3) Vault list has no Status column (backend has no status field). (4) `pnpm-lock.yaml` noise from local `pnpm install` was reverted; node_modules in both surfaces were installed locally for verification only.
+
+**Next:** Parent: review, commit/push session branch, PR + merge, attest, cleanup per session ritual.
 
 **Open questions:** None.

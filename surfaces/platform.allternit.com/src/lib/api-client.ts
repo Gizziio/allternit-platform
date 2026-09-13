@@ -190,7 +190,8 @@ class AllternitApiClient {
   }
 
   /**
-   * POST `body` as JSON and yield each SSE `data:` payload, parsed.
+   * POST `body` as JSON (or GET when `options.method: "GET"`) and yield each
+   * SSE `data:` payload, parsed.
    * Callers pass an explicit bearer override via `options.headers.Authorization`
    * when targeting virtual-key routes (`/v1/*`) with an `ak-…` key.
    * The returned generator throws AllternitApiError on a non-OK response and
@@ -203,19 +204,25 @@ class AllternitApiClient {
     options: RequestInit = {}
   ): AsyncGenerator<T> {
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const method = (options.method as string | undefined) ?? 'POST';
     const token = await this.resolveToken();
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       Accept: 'text/event-stream',
+      ...(method === 'GET'
+        ? {}
+        : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers as Record<string, string> || {}),
     };
 
     const response = await fetch(`${this.gatewayBase()}${normalizedPath}`, {
       ...options,
-      method: 'POST',
+      method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        method === 'GET' || body === undefined
+          ? undefined
+          : JSON.stringify(body),
       signal: options.signal ?? null,
     });
 
