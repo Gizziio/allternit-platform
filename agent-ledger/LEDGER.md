@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-13 16:10 — kimi — desktop owns the phone-remote cast server
+
+- **Session ID / Branch:** `session/phone-remote-owner`
+- **Agent:** kimi-code
+- **Summary:** Merged PR #479 (c3bbb8a84) — closes the phone-remote lifecycle hole behind the Sept-13 stale-cast incident: frame-freshness watchdog (freeze → one restart → exit non-zero), honest `/hello` stale flag, desktop PhoneRemoteManager spawns/supervises the bundled 8477 server (adopt-don't-kill foreign listeners), server bundled via extraResources + release-preflight gate (36 checks).
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/479 · c3bbb8a84
+- **How it works:** Desktop probes /healthz on launch, spawns the bundled server with ELECTRON_RUN_AS_NODE, respawns with backoff on exit, SIGTERM→SIGKILL on quit (own child only). Watchdog pairs with supervision: a frozen capture becomes a full server restart. Manual dev starts still work — the app adopts them and says so in the log.
+- **Verification:** 38 phone-remote checks pass incl. live sckit freeze-recovery smoke on a throwaway port; typecheck clean; release-preflight 36/0; production :8477 untouched; CI green (Vercel previews fail repo-wide on rate limit, pre-existing).
+- **Outstanding work:** Desktop rebuild from merged main + live verify (spawn, freeze recovery, quit-frees-port).
+- **Summary file:** [2026-09-13-1610-phone-remote-owner-kimi-phone-remote-lifecycle.md](./summaries/2026-09-13-1610-phone-remote-owner-kimi-phone-remote-lifecycle.md)
+
 ### 2026-09-13 14:28 — kimi — bot-mode deck persistence + create-bot wizard overhaul
 
 - **Session ID / Branch:** `session/bote2e-0913`
