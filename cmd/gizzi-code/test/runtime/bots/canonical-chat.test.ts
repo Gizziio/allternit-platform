@@ -276,4 +276,25 @@ describe("persona injection", () => {
     expect(injection).toContain("hooked")
     expect(readBotJson("hook").capabilityEpoch).toMatch(/^[0-9a-f]{8}$/)
   })
+
+  test("first-response preamble is opt-in via the preamble flag", async () => {
+    await createBot({ name: "pre", title: "Pre" })
+    await pinCanonicalSession("pre", { projectPath: "/p", sessionId: "ses_pre" })
+
+    // Default (routine/internal turn shape): no preamble section.
+    const plain = await botChatSystemPrompt("ses_pre")
+    expect(plain).not.toContain("## First response")
+
+    // Interactive turn (user chat / teammate DM): preamble section present.
+    const withPreamble = await botChatSystemPrompt("ses_pre", { preamble: true })
+    expect(withPreamble).toContain("## First response")
+    expect(withPreamble).toContain("25 words max")
+    expect(withPreamble).toContain("before your first tool call")
+
+    // buildPersonaInjection honors the flag directly too.
+    const direct = await buildPersonaInjection(await getBot("pre"), { preamble: true })
+    expect(direct).toContain("## First response")
+    const directOff = await buildPersonaInjection(await getBot("pre"))
+    expect(directOff).not.toContain("## First response")
+  })
 })

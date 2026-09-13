@@ -364,9 +364,9 @@ mod attacks {
                 &store,
                 move |_| {
                     executions.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                    Ok(Box::new(|steps: &[BatchStep]| {
+                    Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
                         steps.iter().map(|_| StepResult::Completed(None)).collect()
-                    }) as BatchExecutor)
+                    }) as BatchExecutor))
                 },
             )
             .await;
@@ -457,9 +457,9 @@ mod attacks {
         let mut executor_invocations = 0usize;
         let resp = run_gated_batch(&state, "adv-pipe-scope", &three_step, &store, |_| {
             executor_invocations += 1;
-            Ok(Box::new(|steps: &[BatchStep]| {
+            Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
                 steps.iter().map(|_| StepResult::Completed(None)).collect()
-            }) as BatchExecutor)
+            }) as BatchExecutor))
         })
         .await;
         assert_eq!(resp.status(), axum::http::StatusCode::FORBIDDEN);
@@ -613,9 +613,9 @@ mod attacks {
         let mut executor_invocations = 0usize;
         let resp = run_gated_batch(&state, user, &granted_body, &store, |_| {
             executor_invocations += 1;
-            Ok(Box::new(|steps: &[BatchStep]| {
+            Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
                 steps.iter().map(|_| StepResult::Completed(None)).collect()
-            }) as BatchExecutor)
+            }) as BatchExecutor))
         })
         .await;
         assert_eq!(resp.status(), axum::http::StatusCode::FORBIDDEN);

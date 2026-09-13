@@ -203,8 +203,15 @@ function formatRoster(bot: Bot, roster: Bot[]): string[] {
  * Build the standing-instruction block injected into every turn of the
  * bot's canonical chat: identity line (never claim to be a different
  * assistant), SOUL.md, bounded memory notes, and the teammate roster.
+ *
+ * `preamble` opts the turn into the first-response nudge: turns that came
+ * from a person (user chat or teammate DM) get a short "what I'm about to
+ * do" sentence before the first tool call; routine/internal turns skip it.
  */
-export async function buildPersonaInjection(bot: Bot): Promise<string> {
+export async function buildPersonaInjection(
+  bot: Bot,
+  opts?: { preamble?: boolean },
+): Promise<string> {
   const [soul, notes, roster] = await Promise.all([readSoul(bot.name), readMemoryNotes(bot), listBots()])
 
   const sections: string[] = [
@@ -240,6 +247,14 @@ export async function buildPersonaInjection(bot: Bot): Promise<string> {
   }
 
   sections.push(...formatRoster(bot, roster))
+  if (opts?.preamble) {
+    sections.push(
+      "",
+      "## First response",
+      "",
+      "When this turn came from a person (a chat message or a teammate DM), begin your reply with one short sentence (25 words max, plain text, no emoji) naming what you are about to do, before your first tool call. Skip this for routine runs and internal turns.",
+    )
+  }
   return sections.join("\n")
 }
 
@@ -279,11 +294,18 @@ export async function ensureCapabilityEpoch(bot: Bot): Promise<string> {
  * otherwise return undefined. Called once per model step from
  * `SessionPrompt` — the fs reads below mirror what `InstructionPrompt`
  * already does per step, so the cost is in line with existing behavior.
+ *
+ * `preamble` marks turns that originated from a person (user chat or
+ * teammate DM pickup); routine deliveries and internal/subagent turns call
+ * without it so the first-response nudge stays off.
  */
-export async function botChatSystemPrompt(sessionID: string): Promise<string | undefined> {
+export async function botChatSystemPrompt(
+  sessionID: string,
+  opts?: { preamble?: boolean },
+): Promise<string | undefined> {
   const bot = await findBotByCanonicalSession(sessionID)
   if (!bot) return undefined
-  const injection = await buildPersonaInjection(bot)
+  const injection = await buildPersonaInjection(bot, opts)
   await ensureCapabilityEpoch(bot).catch(() => {
     // Stamping is best-effort — never break the turn on a store write failure.
   })

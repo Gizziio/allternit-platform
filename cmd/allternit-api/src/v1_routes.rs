@@ -1144,6 +1144,9 @@ async fn agent_chat_bridge(
         // so reasoning streams can be forwarded as thinking deltas instead
         // of being flattened into the visible reply text.
         let mut reasoning_parts = std::collections::HashSet::<String>::new();
+        // Newest assistant usage seen on the bus (message.updated carries the
+        // full message info incl. tokens) — attached to the finish frame.
+        let mut last_usage: Option<serde_json::Value> = None;
 
         'event_loop: while let Some(chunk_result) = byte_stream.next().await {
             let chunk = match chunk_result {
@@ -1178,6 +1181,25 @@ async fn agent_chat_bridge(
                 }
 
                 match event_type {
+                    "message.updated" => {
+                        // message.updated carries the full message info;
+                        // keep the newest assistant usage so the finish frame
+                        // can report real tokens (exact tok/s client-side).
+                        let info = &props["info"];
+                        let role = info.get("role").and_then(|v| v.as_str()).unwrap_or("");
+                        let info_session = info.get("sessionID").and_then(|v| v.as_str()).unwrap_or("");
+                        if role == "assistant" && info_session == session_id {
+                            let tokens = &info["tokens"];
+                            let input = tokens.get("input").and_then(|v| v.as_u64());
+                            let output = tokens.get("output").and_then(|v| v.as_u64());
+                            if input.is_some() || output.is_some() {
+                                last_usage = Some(json!({
+                                    "inputTokens": input.unwrap_or(0),
+                                    "outputTokens": output.unwrap_or(0),
+                                }));
+                            }
+                        }
+                    }
                     "message.part.updated" => {
                         let part = &props["part"];
                         let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
@@ -1219,6 +1241,15 @@ async fn agent_chat_bridge(
                         } else if status_type == "idle" && was_busy {
                             break 'event_loop;
                         }
+                    }
+                    "session.compacted" => {
+                        // Context compaction ran on this session mid-turn —
+                        // forward it so the chat can render a divider instead
+                        // of going silent (mirrors gizzi's agent-compat route).
+                        yield Ok(Event::default().data(json!({
+                            "type": "context_compacted",
+                            "messageId": msg_id,
+                        }).to_string()));
                     }
                     "permission.asked" => {
                         // The tool guard parked the turn on this approval.
@@ -1286,12 +1317,16 @@ async fn agent_chat_bridge(
         }
 
         settle_chat_run(&chat_run, true, None).await;
-        yield Ok(Event::default().data(json!({
+        let mut finish_frame = json!({
             "type": "finish",
             "messageId": msg_id,
             "status": "complete",
             "metadata": { "status": "complete" },
-        }).to_string()));
+        });
+        if let Some(usage) = &last_usage {
+            finish_frame["usage"] = usage.clone();
+        }
+        yield Ok(Event::default().data(finish_frame.to_string()));
     };
 
     Sse::new(stream)

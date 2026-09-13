@@ -60,6 +60,7 @@ import { HookDispatcher } from "@/runtime/hooks/dispatcher"
 import { Scratchpad } from "@/runtime/session/scratchpad"
 import * as BotChat from "@/runtime/bots/canonical-chat"
 import * as BotInbox from "@/runtime/bots/bot-inbox"
+import { isRoutineTurnText } from "@/runtime/bots/bot-routines"
 import { isMessageAgentSession, MessageAgentTool } from "@/runtime/tools/builtins/message-agent"
 
 // @ts-ignore — suppress ai-sdk stdout warnings (see server.ts for details)
@@ -269,7 +270,14 @@ const message = await createUserMessage(input)
       return message
     }
 
-    return loop({ sessionID: input.sessionID, fallbackModels: input.fallbackModels })
+    // Bot Mode: interactive turns (user chat or teammate DM pickup) carry the
+    // first-response preamble in the persona injection; routine deliveries
+    // (`[routine: …]` marker) and delegated subtask turns stay quiet.
+    const botPreamble = !input.parts.some(
+      (p) => (p.type === "text" && isRoutineTurnText(p.text)) || p.type === "subtask",
+    )
+
+    return loop({ sessionID: input.sessionID, fallbackModels: input.fallbackModels, botPreamble })
   })
 
   /** Retry the latest durable user turn without appending a duplicate prompt. */
@@ -371,6 +379,12 @@ const message = await createUserMessage(input)
   export const LoopInput = z.object({
     sessionID: Identifier.schema("session"),
     resume_existing: z.boolean().optional(),
+    botPreamble: z
+      .boolean()
+      .optional()
+      .describe(
+        "Bot Mode: true when the turn originated from a person (user chat or teammate DM pickup), enabling the first-response preamble in the bot persona injection. Routine deliveries and internal turns omit it.",
+      ),
     fallbackModels: z
       .array(
         z.object({
@@ -829,7 +843,9 @@ const message = await createUserMessage(input)
       // bot's identity + SOUL + memory as standing instructions. This builder
       // runs inside the runtime session pipeline, so both the TUI (worker /
       // server) and headless (`gizzi run --print`) paths get the injection.
-      const botSystemPrompt = await BotChat.botChatSystemPrompt(sessionID).catch((error) => {
+      const botSystemPrompt = await BotChat.botChatSystemPrompt(sessionID, {
+        preamble: input.botPreamble,
+      }).catch((error) => {
         log.warn("failed to build bot persona prompt", { sessionID, error })
         return undefined
       })
