@@ -40,6 +40,13 @@ pub struct CreatedSession {
     pub session_id: String,
 }
 
+/// Kill a session's PTY child and reap it (wait), so it never outlives the
+/// daemon as a zombie.
+fn kill_and_reap(session: &TerminalSession) {
+    let _ = session.child.lock().unwrap().kill();
+    let _ = session.child.lock().unwrap().wait();
+}
+
 impl TerminalStore {
     pub fn new() -> Self {
         Self::default()
@@ -164,10 +171,21 @@ impl TerminalStore {
     pub fn close(&self, session_id: &str) -> anyhow::Result<()> {
         let session = self.sessions.lock().unwrap().remove(session_id);
         if let Some(session) = session {
-            let _ = session.child.lock().unwrap().kill();
-            let _ = session.child.lock().unwrap().wait();
+            kill_and_reap(&session);
         }
         Ok(())
+    }
+
+    /// Kill and reap every tracked session. Called once at process shutdown
+    /// (SIGTERM/SIGINT) so the service never leaks PTY children as zombies
+    /// across restarts.
+    pub fn shutdown_all(&self) {
+        let sessions: Vec<(String, Arc<TerminalSession>)> =
+            self.sessions.lock().unwrap().drain().collect();
+        for (session_id, session) in sessions {
+            kill_and_reap(&session);
+            tracing::info!(%session_id, "terminal session shut down");
+        }
     }
 
     /// Snapshot of the scrollback a new subscriber starts with.
@@ -241,5 +259,26 @@ mod tests {
         );
         assert_eq!(store.session_count(), 0);
         assert!(!store.alive(&created.session_id));
+    }
+
+    #[tokio::test]
+    async fn shutdown_all_kills_and_reaps_live_sessions() {
+        let store = TerminalStore::new();
+        let shell = if cfg!(target_os = "windows") {
+            "cmd.exe"
+        } else {
+            "/bin/sh"
+        };
+        let first = store.create(shell, None, 80, 24).unwrap();
+        let second = store.create(shell, None, 80, 24).unwrap();
+        assert_eq!(store.session_count(), 2);
+        assert!(store.alive(&first.session_id));
+        assert!(store.alive(&second.session_id));
+
+        store.shutdown_all();
+
+        assert_eq!(store.session_count(), 0);
+        assert!(!store.alive(&first.session_id));
+        assert!(!store.alive(&second.session_id));
     }
 }

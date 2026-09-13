@@ -5,6 +5,7 @@
 //! launching the desktop app) regardless of whether Allternit Desktop runs.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use allternit_node_daemon::handlers::DaemonState;
 use allternit_node_daemon::{config, identity, relay, service};
@@ -45,6 +46,43 @@ fn default_config_path() -> PathBuf {
         .join("node-config.json")
 }
 
+/// SIGTERM (launchd shutdown) + SIGINT (Ctrl-C): kill and reap every tracked
+/// terminal child, then exit 0. The signal task owns the whole sequence, so a
+/// dying daemon never leaves PTY children behind as zombies.
+#[cfg(unix)]
+fn install_shutdown_handler(state: Arc<DaemonState>) {
+    use tokio::signal::unix::{signal, SignalKind};
+
+    tokio::spawn(async move {
+        let mut terminate = match signal(SignalKind::terminate()) {
+            Ok(stream) => stream,
+            Err(error) => {
+                tracing::warn!(%error, "SIGTERM handler unavailable; shutdown cleanup disabled");
+                return;
+            }
+        };
+        let mut interrupt = match signal(SignalKind::interrupt()) {
+            Ok(stream) => stream,
+            Err(error) => {
+                tracing::warn!(%error, "SIGINT handler unavailable; shutdown cleanup disabled");
+                return;
+            }
+        };
+        tokio::select! {
+            _ = terminate.recv() => {},
+            _ = interrupt.recv() => {},
+        }
+        tracing::info!("shutdown signal received; killing terminal sessions");
+        state.terminals.shutdown_all();
+        std::process::exit(0);
+    });
+}
+
+#[cfg(not(unix))]
+fn install_shutdown_handler(_state: Arc<DaemonState>) {
+    // Non-unix platforms: no signal-based shutdown path yet.
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -66,6 +104,7 @@ async fn main() -> anyhow::Result<()> {
                 "allternit-node {} starting (node.core: health, exec, fs, processes, metrics, launch, terminal)",
                 env!("CARGO_PKG_VERSION"),
             );
+            install_shutdown_handler(state.clone());
             relay::run(config, identity, state).await;
             Ok(())
         }
@@ -97,11 +136,13 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Command::Status => {
-            println!("{}", service::status());
+            let config = config::NodeConfig::load().unwrap_or_default();
+            println!("{}", service::status(&config.identity_path));
             Ok(())
         }
         Command::Logs => {
-            println!("{}", service::logs());
+            let config = config::NodeConfig::load().unwrap_or_default();
+            println!("{}", service::logs(&config.identity_path));
             Ok(())
         }
     }
