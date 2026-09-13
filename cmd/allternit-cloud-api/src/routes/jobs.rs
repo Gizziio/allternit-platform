@@ -24,7 +24,7 @@ pub struct ListJobsQuery {
 pub struct CreateJobRequest {
     pub name: String,
     pub description: Option<String>,
-    pub priority: Option<i32>,
+    pub priority: Option<i64>,
     pub config: JobConfig,
 }
 
@@ -121,16 +121,16 @@ pub async fn create_job(
     .bind(&request.description)
     .bind(JobStatus::Pending)
     .bind(priority)
-    .bind(None::<i32>) // queue_position
+    .bind(None::<i64>) // queue_position
     .bind(sqlx::types::Json(request.config.clone()))
     .bind(None::<chrono::DateTime<chrono::Utc>>) // scheduled_at
     .bind(None::<chrono::DateTime<chrono::Utc>>) // started_at
     .bind(None::<chrono::DateTime<chrono::Utc>>) // completed_at
-    .bind(None::<i32>) // exit_code
+    .bind(None::<i64>) // exit_code
     .bind(None::<sqlx::types::Json<serde_json::Value>>) // result
     .bind(None::<String>) // error_message
-    .bind(0i32) // retry_count
-    .bind(0i32) // max_retries
+    .bind(0i64) // retry_count
+    .bind(0i64) // max_retries
     .bind(now)
     .bind(now)
     .fetch_one(&state.db)
@@ -298,7 +298,7 @@ pub async fn complete_job(
     )
     .bind(JobStatus::Completed)
     .bind(now)
-    .bind(0i32) // exit_code 0 = success
+    .bind(0i64) // exit_code 0 = success
     .bind(sqlx::types::Json(result))
     .bind(now)
     .bind(&job_id)
@@ -383,7 +383,7 @@ pub async fn fail_job(
 /// Fail job request
 #[derive(Debug, Deserialize)]
 pub struct FailJobRequest {
-    pub exit_code: Option<i32>,
+    pub exit_code: Option<i64>,
     pub error_message: String,
 }
 

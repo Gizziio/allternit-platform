@@ -440,44 +440,58 @@ impl RunService for RunServiceImpl {
             "SELECT id, name, mode, status, completed_steps, total_steps, created_at, updated_at FROM runs"
         );
         let mut conditions = Vec::new();
+        // Postgres placeholders are numbered $n in bind order; keep `next`
+        // in sync with the bind sequence below.
+        let mut next = 1;
 
         if let Some(statuses) = &filter.status {
             if !statuses.is_empty() {
-                let placeholders: Vec<String> =
-                    (0..statuses.len()).map(|_| "?".to_string()).collect();
+                let placeholders: Vec<String> = (0..statuses.len())
+                    .map(|i| format!("${}", next + i))
+                    .collect();
+                next += statuses.len();
                 conditions.push(format!("status IN ({})", placeholders.join(", ")));
             }
         }
 
         if let Some(modes) = &filter.mode {
             if !modes.is_empty() {
-                let placeholders: Vec<String> = (0..modes.len()).map(|_| "?".to_string()).collect();
+                let placeholders: Vec<String> = (0..modes.len())
+                    .map(|i| format!("${}", next + i))
+                    .collect();
+                next += modes.len();
                 conditions.push(format!("mode IN ({})", placeholders.join(", ")));
             }
         }
 
         if filter.owner_id.is_some() {
-            conditions.push("owner_id = ?".to_string());
+            conditions.push(format!("owner_id = ${}", next));
+            next += 1;
         }
 
         if filter.tenant_id.is_some() {
-            conditions.push("tenant_id = ?".to_string());
+            conditions.push(format!("tenant_id = ${}", next));
+            next += 1;
         }
 
         if filter.schedule_id.is_some() {
-            conditions.push("schedule_id = ?".to_string());
+            conditions.push(format!("schedule_id = ${}", next));
+            next += 1;
         }
 
         if filter.runtime_id.is_some() {
-            conditions.push("runtime_id = ?".to_string());
+            conditions.push(format!("runtime_id = ${}", next));
+            next += 1;
         }
 
         if filter.since.is_some() {
-            conditions.push("created_at >= ?".to_string());
+            conditions.push(format!("created_at >= ${}", next));
+            next += 1;
         }
 
         if filter.until.is_some() {
-            conditions.push("created_at <= ?".to_string());
+            conditions.push(format!("created_at <= ${}", next));
+            next += 1;
         }
 
         if !conditions.is_empty() {
@@ -485,7 +499,7 @@ impl RunService for RunServiceImpl {
             query.push_str(&conditions.join(" AND "));
         }
 
-        query.push_str(" ORDER BY created_at DESC LIMIT $1 OFFSET $2");
+        query.push_str(&format!(" ORDER BY created_at DESC LIMIT ${} OFFSET ${}", next, next + 1));
 
         let mut sql_query = sqlx::query_as::<_, RunSummary>(&query);
 
