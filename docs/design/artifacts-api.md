@@ -117,7 +117,7 @@ diff tooling later.
 Indexes: `(artifact_id, version)` unique; `(user_id, created_at)` for list;
 `(type)`; `(project_id)`.
 
-### `content_artifact_files` — per-artifact project file tree (V157, 2026-09-12)
+### `content_artifact_files` — per-artifact project file tree (V159, 2026-09-12)
 
 Mirrors a design project's whole file tree per artifact so the web store's
 read-through cache works for every file, not just `/index.html` (§3 file
@@ -256,7 +256,7 @@ Sets `deleted_at`; list/get exclude it. Hard purge is a retention concern
 
 Design-mode projects are a flat per-project tree of files; until this session
 only `/index.html` synced to the gateway (as the artifact version body).
-`content_artifact_file_routes.rs` (migration V157, table
+`content_artifact_file_routes.rs` (migration V159, table
 `content_artifact_files`) mirrors the whole tree per artifact:
 
 - `GET /api/v1/content-artifacts/:id/files` — index: `[{path, sha256, updatedAt}]` (no bodies)
