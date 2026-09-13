@@ -42,6 +42,7 @@ import {
   ShieldCheckIcon,
   Wallet01Icon,
   BookOpen02Icon,
+  MagicWandIcon,
 } from "@hugeicons/core-free-icons";
 
 export type ConsoleNavIcon = typeof LayoutDashboardIcon;
@@ -89,6 +90,7 @@ export const consoleNav: ConsoleNavConfig = {
       defaultOpen: true,
       items: [
         { to: "/agents", label: "Overview", icon: BotIcon },
+        { to: "/builder", label: "Builder", icon: MagicWandIcon },
         { to: "/sessions", label: "Sessions", icon: ComputerIcon },
         { to: "/deployments", label: "Deployments", icon: RocketIcon },
         { to: "/computers", label: "Computers", icon: MonitorIcon },

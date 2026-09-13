@@ -1,9 +1,16 @@
-# Steering checkpoint — session/console-fe-p1
+# Steering checkpoint — session/console-fe-p2
 
-**Goal:** Frontend console port Phase 1 — rebuild `surfaces/platform.allternit.com` shell nav to the Anthropic console IA + build the `src/components/console-ui/` kit (ListPage/FormPage/StatCard/GaugeCard/ModelCard/ResourceCard/CodeTemplateBlock/CommandPalette/AnnouncementModal + skeleton/badge/monochip), with route stubs for every Phase 2–5 page. Plan file: `~/.kimi-code/sessions/wd_joe_db5f68cf8615/session_956ff32a-8463-4b88-893e-e3919348a8df/agents/main/plans/lockjaw-supergirl-x-23.md`.
+**Goal:** Frontend console port Phase 2 — Build group: consolidated Playground (Form/Code toggle, compare mode, template rail), Files page, Skills page, Batches page, Builder v1. Replaces Phase 1 stubs at /playground, /files, /skills, /batches (+ new /builder).
 
-**Just did:** Worktree `allternit-session-console-fe-p1` on `session/console-fe-p1` from `origin/main` (097bbb531).
+**Just did:** Implemented all five Build-group pages in `surfaces/platform.allternit.com` on the Phase 1 console-ui kit. Key design decisions:
+- `/v1/*` gateway routes (chat completions, files, batches) authenticate with virtual `ak-…` keys, not Clerk — added `lib/console-gateway.ts` which auto-creates a user-scoped "Console" key via `POST /api/v1/gateway/keys` and caches it in localStorage, sent as an explicit Authorization override.
+- Extended `api-client.ts` with a documented `stream()` SSE method (async generator over `data:` payloads, AbortSignal for Stop). Playground streams `/v1/chat/completions`.
+- Model catalog from Clerk-authed `GET /v1/models` (fabric); `model=auto` resolves client-side via `lib/model-auto-policy.ts` (same localStorage key `allternit:model-gateway:auto-policy` as the ai surface donor).
+- Skills page talks to real cloud routes `/api/v1/skills*` (task recipes) — the donor's mode/confidence registry is local-only and intentionally not faked; UI notes this.
+- Builder hits `POST /api/v1/agents/prototype` and `GET /api/v1/agent-templates` + `POST /api/v1/agents/from-template`; removed replaced stubs; added Builder to nav.
 
-**Next:** Implement shell + kit (coder subagent), verify typecheck+build+preflight+preview smoke, PR/merge/attest per ritual.
+**Verified:** `npx tsc --noEmit` 0 errors; `pnpm build` success; `pnpm preview` + curl /playground /files /batches /builder /skills all 200; repo-root `node scripts/release-preflight.mjs` → 35 passed, 0 failed.
 
-**Open questions:** None — design decisions locked in the plan (platform-internal kit, not a workspace package; donors restyled onto platform tokens).
+**Next:** PR/merge/attest per ritual (parent/orchestrator owns git verbs; work is uncommitted in the worktree).
+
+**Open questions:** None.
