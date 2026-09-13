@@ -40,8 +40,9 @@ this run = verification, live evidence, and live-path bug fixes)
   trigger rebuilds on new migration files — touch db.rs.
 
 ## Next
-1. Conventional commits per item (grouped), push session branch.
-2. Open PR (no merge); owner reviews.
+1. Owner reviews PR #491 (https://github.com/Gizziio/allternit-platform/pull/491).
+   No merge by this session; no attestation (post-merge step).
+2. Worktree left in place per instructions.
 
 ## Open questions
 - P-T2 doc said "vfkit machinery" but the vfkit manager was deleted in the
