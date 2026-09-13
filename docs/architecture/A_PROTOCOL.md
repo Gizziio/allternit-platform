@@ -298,11 +298,17 @@ Transport does not redefine principal identity, run state, attribution, or appro
 - stale lease-generation protection
 - typed result storage on jobs
 - Fabric Transport terminology and `/api/v1/fabric/transport/*` routes
+- approval↔lease bindings scoped to (executor, capability, target, run, job, lease_generation), invalidated on lease expiry
+- approval request timeout with sweeper-driven expiry and late-grant rejection
+- single risk-policy evaluation path shared with the cowork-engine rule model
+- boot-time downtime lease recovery and full run/job rehydration
+- client-supplied event idempotency keys on the run-events API
 
 ### Partial / still needs hardening
 
 - full IntentEnvelope as a first-class canonical type/store
-- approval-to-lease binding across all protected tools/connectors
+- approval-to-lease binding coverage across all protected tools/connectors
+  (the binding mechanism is implemented; tool/connector coverage is not universal)
 - principal-scoped memory and connector brokerage
 - canonical multi-store consolidation beyond the proof slice
 - delegation-depth / causation-chain enforcement across every execution path

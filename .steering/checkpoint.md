@@ -1,9 +1,17 @@
-# Steering checkpoint — session/console-fe-p5
+# Steering checkpoint — session/adocs2-0913
 
-**Goal:** Frontend console port Phase 5 — Manage: Members, Service accounts, Spend limits (approval flow), Security (retention + residency), Webhooks (subscriptions + triggers tabs), Tags, gateway-keys tab on ApiKeysPage.
+## Goal
+Second documentation pass per owner directive: (0) fresh worktree [done];
+(1) grounding check of the owner's five A:// docs against the implementation,
+correcting drift; (2) six new second-pass documents grounded in code;
+(3) index update + verification; PR opened, NOT merged; no attestation.
 
-**Just did:** Implemented all Phase 5 pages in `surfaces/platform.allternit.com/src/pages/console/manage/` (6 pages) + `pages/console/api-keys/GatewayKeysPanel.tsx`, six typed lib clients under `src/lib/`, routes wired in App.tsx, stubs retired from consoleStubs.tsx. Verified: `npx tsc --noEmit` 0 errors, `pnpm build` success, `pnpm preview` + curl all 7 routes → 200, `node scripts/release-preflight.mjs` 35 passed / 0 failed. pnpm-lock.yaml churn restored.
+## Just did
+- Read all five owner docs (A_PROTOCOL, FABRIC_TRANSPORT, COWORK_A_PROTOCOL_ARCHITECTURE, A_PROTOCOL_DEVELOPER_GUIDE, README index).
+- Grounding pass in progress.
 
-**Next:** Parent/orchestrator: review, commit/PR per ritual (agent forbidden from git commit/push/merge).
+## Next
+- Verify claims (migration numbers, routes, error codes, fields), correct owner docs, write the six docs.
 
-**Open questions:** Skipped admin access-tokens surface (not in Phase 5 scope list beyond "include if trivially additive" — service accounts cover the same UI pattern; flag if wanted). Governance/threat-stats from the ai SecurityPanel donor NOT ported — /api/v1/policies|security|purposes routes don't exist on this gateway.
+## Open questions
+- llms.txt pattern? (checking)

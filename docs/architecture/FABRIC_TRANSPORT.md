@@ -9,10 +9,17 @@
 - `cmd/allternit-api/src/rails/fabric_transport_routes.rs`
 - `infrastructure/executor/cowork/cowork/allternit-cowork-runtime/src/transport.rs`
 - `infrastructure/executor/cowork/cowork/allternit-cowork-runtime/src/sqlite_store.rs`
-- `cmd/allternit-api/migrations/V149__cowork_principals.sql`
-- `cmd/allternit-api/migrations/V150__cowork_job_lease_columns.sql`
-- `cmd/allternit-api/migrations/V151__cowork_event_attribution.sql`
+- `cmd/allternit-api/migrations/V152__cowork_principals.sql`
+- `cmd/allternit-api/migrations/V153__cowork_job_lease_columns.sql`
+- `cmd/allternit-api/migrations/V154__cowork_event_attribution.sql`
 - `cmd/allternit-api/migrations/V155__cowork_approval_bindings.sql`
+- `cmd/allternit-api/migrations/V156__cowork_approval_expiry.sql`
+- `cmd/allternit-api/migrations/V157__cowork_event_idempotency.sql`
+- `cmd/allternit-api/migrations/V158__cowork_approval_policy.sql`
+
+> Migration numbering note: these were renumbered from V149–V151 to
+> V152–V154 when main took V149 for an unrelated feature; historical prose
+> may cite the old numbers.
 
 ## 1. What Fabric Transport is
 
@@ -148,6 +155,10 @@ Completion is accepted only from the authenticated executor holding the current 
 
 The endpoint is idempotent for already committed terminal work and returns the canonical existing result instead of creating duplicate effects.
 
+Event delivery is idempotent too: `POST /api/v1/runs/:id/events` accepts an
+optional client-supplied `event_id` (V157) and returns the canonical existing
+event (`duplicated: true`) on retry instead of double-writing.
+
 ## 5. Approval binding
 
 Protected execution can use lease-scoped approval bindings.
@@ -178,6 +189,19 @@ Approval scope includes:
 - lease generation
 
 When a lease generation expires, its approval bindings are invalidated. A replacement worker under a new generation must re-obtain approval for the protected action.
+
+Requests carry a server-clock `expires_at` (V156; `approval_ttl_secs` on the
+request, default 300s). The sweeper and boot pass expire stale requests with
+attributed `approval.expired` events; a grant arriving after expiry is rejected
+(`A_APPROVAL_INVALID`) and an expired binding checks as `A_APPROVAL_REQUIRED`
+(recovery policy: re-request, deny-by-default).
+
+Whether a protected action needs a binding at all is decided by one risk-policy
+evaluation (`allternit-cowork-runtime/src/risk_policy.rs`, V158
+`cowork_approval_policy`): the same rule model as the cowork-engine
+`ApprovalGate` — first match on action-type prefix + risk level, low-risk
+auto-approve by default. Auto-decisions are attributed in the ledger
+(`decided_by: risk-rule (…)`); `check` is read-only and writes no events.
 
 ## 6. Atomic claim rule
 

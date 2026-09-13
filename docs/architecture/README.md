@@ -101,10 +101,13 @@ cmd/allternit-api/src/main.rs
 ### Schema migrations
 
 ```text
-cmd/allternit-api/migrations/V149__cowork_principals.sql
-cmd/allternit-api/migrations/V150__cowork_job_lease_columns.sql
-cmd/allternit-api/migrations/V151__cowork_event_attribution.sql
+cmd/allternit-api/migrations/V152__cowork_principals.sql
+cmd/allternit-api/migrations/V153__cowork_job_lease_columns.sql
+cmd/allternit-api/migrations/V154__cowork_event_attribution.sql
 cmd/allternit-api/migrations/V155__cowork_approval_bindings.sql
+cmd/allternit-api/migrations/V156__cowork_approval_expiry.sql
+cmd/allternit-api/migrations/V157__cowork_event_idempotency.sql
+cmd/allternit-api/migrations/V158__cowork_approval_policy.sql
 ```
 
 ## Runtime truth hierarchy
