@@ -36,6 +36,8 @@ use allternit_commrails::tickets::{
     TicketUpdate,
 };
 use allternit_commrails::wait_gates::WaitGateStore;
+use allternit_commrails::wih::{WihState, active_wihs};
+use allternit_commrails::work::{DagNode, ready_nodes};
 use allternit_commrails::{
     Actor, ActorType, AllternitEvent, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
     DagMutation, Gate, GateOptions, Index, IndexOptions, LeaseRecord, Leases, LeasesOptions,
@@ -267,7 +269,9 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         )
         // Plan (unscoped planning data plane; mirrors the standalone /v1/plan* surface)
         .route("/plans", get(list_plans))
+        .route("/dags", get(dags_view))
         .route("/plan", post(plan_new))
+        .route("/plan/from-text", post(plan_from_text))
         .route("/plan/refine", post(plan_refine))
         .route("/plan/:dag_id", get(plan_show))
         .route("/dags/:dag_id/render", get(dag_render))
@@ -749,6 +753,8 @@ struct WihInfoResponse {
     blocked_by: Vec<String>,
     created_at: Option<String>,
     updated_at: Option<String>,
+    execution_mode: Option<String>,
+    picked_up_at: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1693,8 +1699,34 @@ async fn list_wihs(
     (StatusCode::OK, Json(WihListResponse { wihs: Vec::new() }))
 }
 
-async fn list_wihs_get(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
-    (StatusCode::OK, Json(WihListResponse { wihs: Vec::new() }))
+async fn list_wihs_get(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let wihs = active_wihs(&events)
+                .into_iter()
+                .map(|wih| WihInfoResponse {
+                    wih_id: wih.wih_id,
+                    node_id: wih.node_id,
+                    dag_id: Some(wih.dag_id),
+                    status: wih.status,
+                    title: None,
+                    description: None,
+                    assignee: wih.agent_id,
+                    blocked_by: Vec::new(),
+                    created_at: wih.picked_up_at.clone(),
+                    updated_at: wih.last_heartbeat,
+                    execution_mode: wih.execution_mode,
+                    picked_up_at: wih.picked_up_at,
+                })
+                .collect();
+            (StatusCode::OK, Json(WihListResponse { wihs })).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
 }
 
 async fn pickup_wih(
@@ -2214,6 +2246,21 @@ struct PlanRefineRequest {
 }
 
 #[derive(Debug, Deserialize)]
+struct PlanFromTextRequest {
+    title: String,
+    todos: Vec<PlanFromTextTodo>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PlanFromTextTodo {
+    title: String,
+    #[serde(default)]
+    depth: u32,
+    #[serde(default)]
+    done: bool,
+}
+
+#[derive(Debug, Deserialize)]
 struct UiDagMutation {
     action: String,
     node_id: Option<String>,
@@ -2370,6 +2417,129 @@ async fn list_plans(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct DagsViewQuery {
+    view: Option<String>,
+    dag_id: Option<String>,
+    agent: Option<String>,
+}
+
+fn wih_json(wih: &WihState) -> serde_json::Value {
+    json!({
+        "wih_id": wih.wih_id,
+        "dag_id": wih.dag_id,
+        "node_id": wih.node_id,
+        "agent_id": wih.agent_id,
+        "status": wih.status,
+        "execution_mode": wih.execution_mode,
+        "picked_up_at": wih.picked_up_at,
+    })
+}
+
+fn dag_node_json(node: &DagNode, ready: bool, wih: Option<&WihState>) -> serde_json::Value {
+    json!({
+        "node_id": node.node_id,
+        "parent_node_id": node.parent_node_id,
+        "title": node.title,
+        "status": node.status,
+        "ready": ready,
+        "assignee": wih.and_then(|w| w.agent_id.clone()),
+        "current_wih_id": wih.map(|w| w.wih_id.clone()),
+    })
+}
+
+async fn dags_view(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<DagsViewQuery>,
+) -> impl IntoResponse {
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let view = params.view.clone().unwrap_or_else(|| "all".to_string());
+            let agent = params.agent.clone();
+            let matches_agent = |wih: &&WihState| {
+                agent.is_none() || wih.agent_id.as_deref() == agent.as_deref()
+            };
+            let active = active_wihs(&events);
+            let active_wihs_json: Vec<serde_json::Value> = active
+                .iter()
+                .filter(matches_agent)
+                .map(wih_json)
+                .collect();
+            let wih_by_node: std::collections::HashMap<&str, &WihState> = active
+                .iter()
+                .filter(matches_agent)
+                .map(|w| (w.node_id.as_str(), w))
+                .collect();
+
+            let dag_ids: Vec<String> = match &params.dag_id {
+                Some(id) => vec![id.clone()],
+                None => collect_dag_ids(&events),
+            };
+            let mut dags = Vec::new();
+            for dag_id in dag_ids {
+                let dag_events: Vec<_> = events
+                    .iter()
+                    .filter(|e| {
+                        e.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id.as_str())
+                    })
+                    .cloned()
+                    .collect();
+                let dag = project_dag(&dag_events, &dag_id);
+                let ready_set: std::collections::HashSet<String> =
+                    ready_nodes(&dag).into_iter().collect();
+                let ready_count = ready_set.len();
+                let done_count = dag.nodes.values().filter(|n| n.status == "DONE").count();
+                let include_dag = match view.as_str() {
+                    "ready" => ready_count > 0,
+                    "mine" => dag
+                        .nodes
+                        .values()
+                        .any(|n| wih_by_node.contains_key(n.node_id.as_str())),
+                    _ => true,
+                };
+                if !include_dag {
+                    continue;
+                }
+                let mut nodes: Vec<&DagNode> = dag.nodes.values().collect();
+                nodes.sort_by(|a, b| a.node_id.cmp(&b.node_id));
+                let node_jsons: Vec<serde_json::Value> = nodes
+                    .into_iter()
+                    .filter(|n| match view.as_str() {
+                        "ready" => n.status == "READY" || n.status == "RUNNING",
+                        _ => true,
+                    })
+                    .map(|n| {
+                        let wih = wih_by_node.get(n.node_id.as_str()).copied();
+                        dag_node_json(n, ready_set.contains(&n.node_id), wih)
+                    })
+                    .collect();
+                let root_title = dag
+                    .nodes
+                    .values()
+                    .find(|n| n.parent_node_id.is_none())
+                    .map(|n| n.title.clone());
+                dags.push(json!({
+                    "dag_id": dag_id,
+                    "root_title": root_title,
+                    "nodes": node_jsons,
+                    "ready_count": ready_count,
+                    "done_count": done_count,
+                }));
+            }
+            (
+                StatusCode::OK,
+                Json(json!({ "dags": dags, "active_wihs": active_wihs_json })),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
 async fn plan_new(
     State(state): State<Arc<AppState>>,
     Json(request): Json<PlanNewRequest>,
@@ -2432,6 +2602,113 @@ async fn plan_refine(
             };
             (status, Json(json!({ "error": e.to_string() }))).into_response()
         }
+    }
+}
+
+async fn plan_from_text(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<PlanFromTextRequest>,
+) -> impl IntoResponse {
+    let title = request.title.trim();
+    if title.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "title must not be empty" })),
+        )
+            .into_response();
+    }
+    if request.todos.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "todos must not be empty" })),
+        )
+            .into_response();
+    }
+    if request.todos.len() > 200 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "todos capped at 200" })),
+        )
+            .into_response();
+    }
+    if request.todos.iter().any(|t| t.title.trim().is_empty()) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "todo titles must not be empty" })),
+        )
+            .into_response();
+    }
+
+    let (_, dag_id, root_node_id) = match state.rails.gate.plan_new(title, None).await {
+        Ok(ids) => ids,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let mut mutations = Vec::new();
+    let mut stack: Vec<(u32, String)> = Vec::new();
+    for todo in &request.todos {
+        let node_id = format!("n_{}", rand::random::<u32>() % 10_000);
+        while stack.last().map(|(d, _)| *d) >= Some(todo.depth) {
+            stack.pop();
+        }
+        let parent = if todo.depth == 0 {
+            root_node_id.clone()
+        } else {
+            stack
+                .last()
+                .map(|(_, id)| id.clone())
+                .unwrap_or_else(|| root_node_id.clone())
+        };
+        mutations.push(DagMutation::CreateNode {
+            node_id: node_id.clone(),
+            node_kind: "task".to_string(),
+            title: todo.title.trim().to_string(),
+            parent_node_id: Some(parent),
+            execution_mode: "shared".to_string(),
+        });
+        if todo.done {
+            mutations.push(DagMutation::ChangeStatus {
+                node_id: node_id.clone(),
+                from: "NEW".to_string(),
+                to: "DONE".to_string(),
+                reason: Some("marked done at import".to_string()),
+            });
+        }
+        stack.push((todo.depth, node_id));
+    }
+    let node_count = request.todos.len();
+
+    match state
+        .rails
+        .gate
+        .plan_refine(
+            &dag_id,
+            "plan from gizzi-code ExitPlanMode",
+            "gizzi",
+            mutations,
+        )
+        .await
+    {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(json!({
+                "dag_id": dag_id,
+                "root_node_id": root_node_id,
+                "node_count": node_count,
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
     }
 }
 

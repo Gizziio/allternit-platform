@@ -59,6 +59,8 @@ enum Commands {
     #[command(subcommand)]
     Plan(PlanCmd),
     #[command(subcommand)]
+    Node(NodeCmd),
+    #[command(subcommand)]
     Dag(DagCmd),
     #[command(subcommand)]
     Wih(WihCmd),
@@ -240,6 +242,22 @@ enum PlanCmd {
     },
     Show {
         dag_id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum NodeCmd {
+    Add {
+        #[arg(long = "dag")]
+        dag_id: String,
+        #[arg(long)]
+        parent: String,
+        #[arg(long)]
+        title: String,
+        #[arg(long, default_value = "task")]
+        kind: String,
+        #[arg(long, default_value = "shared")]
+        mode: String,
     },
 }
 
@@ -554,6 +572,32 @@ async fn main() -> Result<()> {
             PlanCmd::Show { dag_id } => {
                 let dag = resolve_dag(&ledger, &root, &dag_id).await?;
                 println!("{}", serde_json::to_string_pretty(&dag)?);
+            }
+        },
+        Commands::Node(cmd) => match cmd {
+            NodeCmd::Add {
+                dag_id,
+                parent,
+                title,
+                kind,
+                mode,
+            } => {
+                let gate = stores.gate().await?;
+                let node_id = format!("n_{}", rand::random::<u32>() % 10_000);
+                gate.plan_refine(
+                    &dag_id,
+                    &format!("node add via CLI: {title}"),
+                    "cli",
+                    vec![DagMutation::CreateNode {
+                        node_id: node_id.clone(),
+                        node_kind: kind,
+                        title,
+                        parent_node_id: Some(parent),
+                        execution_mode: mode,
+                    }],
+                )
+                .await?;
+                println!("node_id: {node_id}");
             }
         },
         Commands::Dag(cmd) => match cmd {

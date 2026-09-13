@@ -20,6 +20,7 @@ import { asSessionId } from './types/ids'
 import { Log } from '../../../shared/util/log'
 import { registerRailsPeer } from '../../../runtime/gizzi-core/services/railsPeer.js'
 import { RailsInboxBridge } from './components/RailsInboxBridge'
+import { RailsDagBridge } from './components/RailsDagBridge'
 import { getSessionId } from './bootstrap/state.js'
 
 export async function tui(options?: any): Promise<void> {
@@ -79,6 +80,7 @@ export async function tui(options?: any): Promise<void> {
             thinkingConfig={{ enabled: false, budgetTokens: 0 }}
           />
           <RailsInboxBridge />
+          <RailsDagBridge />
         </>
       </App>
     )
