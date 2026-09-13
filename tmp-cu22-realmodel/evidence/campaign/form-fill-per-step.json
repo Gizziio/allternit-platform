@@ -1,0 +1,19 @@
+{
+  "task": "form-fill",
+  "mode": "per-step",
+  "status": "completed",
+  "stop_reason": "StopReason.MAX_STEPS",
+  "model_turns": 12,
+  "steps_attempted": 12,
+  "steps_completed": 12,
+  "total_tokens": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "wall_s": 90.5,
+  "grants": [],
+  "n_grants": 0,
+  "batch_events": [],
+  "receipt_ids": [],
+  "ground_truth_success": false,
+  "error": null
+}

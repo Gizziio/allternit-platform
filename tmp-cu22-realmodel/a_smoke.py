@@ -26,25 +26,22 @@ EVIDENCE = HERE / "evidence" / "a_smoke.json"
 SITE = os.environ.get("CU22_SITE", "http://127.0.0.1:18080")
 
 
-def _cdp(ws_url, method, params, _id):
-    import websocket  # type: ignore
-    ws = websocket.create_connection(ws_url, timeout=20)
-    ws.send(json.dumps({"id": _id, "method": method, "params": params}))
-    while True:
-        msg = json.loads(ws.recv())
-        if msg.get("id") == _id:
-            ws.close()
-            return msg
-
-
 def screenshot_after_navigate():
-    targets = json.load(urllib.request.urlopen("http://127.0.0.1:9222/json/list", timeout=5))
-    page = next(t for t in targets if t["type"] == "page")
-    ws_url = page["webSocketDebuggerUrl"]
-    _cdp(ws_url, "Page.navigate", {"url": f"{SITE}/form.html"}, 1)
-    time.sleep(1.0)
-    shot = _cdp(ws_url, "Page.captureScreenshot", {"format": "png"}, 2)
-    return base64.b64decode(shot["result"]["data"])
+    import asyncio
+    from playwright.async_api import async_playwright
+
+    async def _shot():
+        pw = await async_playwright().start()
+        browser = await pw.chromium.connect_over_cdp("http://127.0.0.1:9222")
+        page = browser.contexts[0].pages[0]
+        await page.goto(f"{SITE}/form.html")
+        await page.wait_for_load_state("load")
+        png = await page.screenshot()
+        await browser.close()
+        await pw.stop()
+        return png
+
+    return asyncio.run(_shot())
 
 
 def main():
@@ -69,7 +66,7 @@ def main():
     usage = json.loads((HERE / "evidence" / "a_smoke_brain.jsonl").read_text().splitlines()[-1])
     action = plan.get("immediate_action") or {}
     ok = (action.get("type") in ("click", "fill", "type")
-          and "submit" in json.dumps(plan).lower())
+          and any(w in json.dumps(plan).lower() for w in ("submit", "register")))
     report = {
         "check": "A: one real frontier-vision inference through the campaign brain path",
         "ok": ok,

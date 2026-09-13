@@ -36,10 +36,12 @@ Return EXACTLY one JSON object (no prose, no markdown fences) with keys:
 - "plan_steps": remaining high-level steps (array of strings)
 - "immediate_action": {"type", "target", "reason", "text"?} — the ONE next action.
   type is one of: click, type, fill, scroll, screenshot, done, navigate.
-  target is a CSS selector (preferred) or a precise element description.
-  For type/fill include "text". Use type "done" with done=true when the task
-  is complete. Use type "navigate" with target = the URL when the task needs
-  a different page. NEVER invent actions outside this vocabulary.
+  target MUST be a CSS selector when one is visible/derivable (e.g.
+  "#submit", "button#register", "a#next", "select#plan", "#name") — a bare
+  element description is only a last resort. For type/fill include "text".
+  Use type "done" with done=true when the task is complete. Use type
+  "navigate" with target = the URL when the task needs a different page.
+  NEVER invent actions outside this vocabulary.
 - "confidence": 0..1
 - "done": true only when the task is fully complete on this page
 - "requires_approval": false
@@ -60,18 +62,19 @@ def main() -> int:
         img = Path(tmp) / "screen.png"
         if screenshot_b64:
             img.write_bytes(base64.b64decode(screenshot_b64))
-        args = [
-            "codex", "exec", "--skip-git-repo-check", "--json",
-            "-o", str(Path(tmp) / "out.txt"),
-        ]
+        args = ["codex", "exec", "--skip-git-repo-check", "--json"]
         if MODEL:
             args += ["-m", MODEL]
         if screenshot_b64:
+            # NOTE: --image must precede -o — with `-o` first, codex 0.154
+            # silently drops the positional prompt and reads stdin instead.
             args += ["--image", str(img)]
+        args += ["-o", str(Path(tmp) / "out.txt")]
         args.append(prompt + PLAN_INSTRUCTIONS)
 
         started = time.time()
-        proc = subprocess.run(args, capture_output=True, text=True, timeout=180)
+        proc = subprocess.run(args, capture_output=True, text=True, timeout=180,
+                              stdin=subprocess.DEVNULL)
         evidence["latency_s"] = round(time.time() - started, 3)
 
         input_tokens = output_tokens = 0

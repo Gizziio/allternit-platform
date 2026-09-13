@@ -108,6 +108,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         url = urlparse(self.path)
+        if url.path == "/state.json":
+            body = STATE.read_text() if STATE.exists() else "[]"
+            return self._send(body.encode(), "application/json")
         if url.path == "/":
             url = url._replace(path="/index.html")
         if url.path == "/branch.html":

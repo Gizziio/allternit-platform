@@ -91,6 +91,35 @@ TASKS = [
 ]
 
 
+# ── Vocabulary shim ─────────────────────────────────────────────────────────
+class PerStepVocabularyAdapter:
+    """Translate the plan/whitelist vocabulary (click/press) to the executor's
+    native action types (left_click/key) for the per-step leg.
+
+    Campaign harness shim, not product code: it papers over a real gap the
+    campaign surfaces — the planning loop passes vision-action types straight
+    to the executor, whose supported set is the Claude 9 + extension list, so
+    a plan saying 'click' is rejected as unsupported per-step while the same
+    plan batch-grounds fine. Named in the attestation.
+    """
+
+    _MAP = {"click": "left_click", "press": "key", "double_click": "double_click"}
+
+    def __init__(self, inner):
+        self._inner = inner
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+    async def execute(self, action, session_id=None, run_id=None, **kwargs):
+        mapped = self._MAP.get(action.action_type)
+        if mapped:
+            action = type("ActionRequest", (), dict(vars(action)))()
+            action.action_type = mapped
+        return await self._inner.execute(action, session_id=session_id,
+                                         run_id=run_id or "cu22", **kwargs)
+
+
 # ── Grant-recording batch client (plays the human on the Rust gate) ─────────
 class CampaignBatchClient:
     """Wraps AciBatchClient; auto-approves grant requests via the handoff
@@ -114,6 +143,29 @@ class CampaignBatchClient:
             _post_json(f"/api/aci/handoff/{result.approval_id}/approve", {})
             self.grants[-1]["phase"] = "approved"
         return result
+
+
+def _step_ok(step) -> bool:
+    result = getattr(step, "adapter_result", None) or {}
+    if not isinstance(result, dict):
+        return bool(getattr(step, "action_succeeded", False))
+    receipt = result.get("batch_receipt")
+    if isinstance(receipt, dict):
+        return receipt.get("status") == "completed"
+    status = result.get("status")
+    if status is not None:
+        return status == "completed"
+    return bool(getattr(step, "action_succeeded", False))
+
+
+def _brain_delta(log: Path, pos: int):
+    if not log.exists():
+        return 0, (0, 0)
+    with log.open() as f:
+        f.seek(pos)
+        calls = [json.loads(l) for l in f if l.strip()]
+    return len(calls), (sum(c.get("input_tokens", 0) for c in calls),
+                        sum(c.get("output_tokens", 0) for c in calls))
 
 
 def _post_json(path, body):
@@ -166,6 +218,9 @@ async def run_one(task, mode, executor, session_id):
     client = CampaignBatchClient()
     events = []
 
+    brain_log = Path(os.environ.get("CU22_EVIDENCE", "evidence/brain_calls.jsonl"))
+    brain_pos = brain_log.stat().st_size if brain_log.exists() else 0
+
     async def approval_callback(step):
         events.append({"type": "approval.auto", "step": getattr(step, "step", None)})
         return True  # the campaign harness plays the human
@@ -181,9 +236,10 @@ async def run_one(task, mode, executor, session_id):
         timeout_ms=600_000,
         max_cost_usd=50.0,
     )
+    loop_adapter = executor if mode == "batched" else PerStepVocabularyAdapter(executor)
     loop = PlanningLoop(
         vision_provider=provider,
-        adapter=executor,
+        adapter=loop_adapter,
         config=config,
         recorder=None,
         event_callback=lambda e: events.append(e),
@@ -201,15 +257,29 @@ async def run_one(task, mode, executor, session_id):
     wall_s = round(time.time() - started, 1)
 
     state = _site_state()
+    brain_calls, brain_tokens = _brain_delta(brain_log, brain_pos)
+    step_details = [{
+        "step": s.step,
+        "action_type": s.action_type,
+        "target": s.action_target,
+        # per-step success is NOT step.action_succeeded (the loop sets it
+        # unconditionally) — read the adapter/batch result instead.
+        "ok": _step_ok(s),
+        "error": s.error,
+        "receipt_id": (s.action_params or {}).get("receipt_id"),
+    } for s in result.steps]
     return {
         "task": task["name"],
         "mode": mode,
         "status": result.status,
         "stop_reason": str(result.stop_reason),
         "model_turns": getattr(result, "model_turns", None),
+        "brain_calls": brain_calls,
+        "brain_input_tokens": brain_tokens[0],
+        "brain_output_tokens": brain_tokens[1],
         "steps_attempted": len(result.steps),
-        "steps_completed": sum(1 for s in result.steps
-                               if getattr(s, "action_succeeded", False)),
+        "steps_completed": sum(1 for d in step_details if d["ok"]),
+        "step_details": step_details,
         "total_tokens": result.total_tokens,
         "input_tokens": result.total_input_tokens,
         "output_tokens": result.total_output_tokens,
@@ -267,8 +337,7 @@ def main():
         for t in TASKS:
             print(t["name"], "—", t["start"])
         return
-    os.environ.setdefault("ALLTERNIT_BRAIN_CMD",
-                          str(REPO / ".venv/bin/python"))
+    os.environ.setdefault("ALLTERNIT_BRAIN_CMD", sys.executable)
     os.environ.setdefault("ALLTERNIT_BRAIN_ARGS",
                           str(Path(__file__).parent / "brain_wrapper.py"))
     EVIDENCE_DIR.mkdir(exist_ok=True)
