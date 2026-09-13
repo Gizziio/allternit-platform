@@ -32,7 +32,7 @@ def screenshot_after_navigate():
 
     async def _shot():
         pw = await async_playwright().start()
-        browser = await pw.chromium.connect_over_cdp("http://127.0.0.1:9223")
+        browser = await pw.chromium.connect_over_cdp("http://127.0.0.1:9333")
         page = browser.contexts[0].pages[0]
         await page.goto(f"{SITE}/form.html")
         await page.wait_for_load_state("load")

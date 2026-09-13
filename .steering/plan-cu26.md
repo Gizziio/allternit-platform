@@ -7,7 +7,7 @@ end-to-end with gpt-6-astra via the codex-CLI brain path. Same five tasks as cu2
 ## Todos
 - [x] Worktree `allternit-cu26` from origin/main (branch session/cu26-realmodel-rerun)
 - [x] Adapt cu22 harness → tmp-cu26-realmodel (own ports 18081/9223/18113; per-arm evidence)
-- [ ] Stack: cargo build allternit-api (bg), site :18081, Chrome CDP :9223, api :18113
+- [ ] Stack: cargo build allternit-api (bg), site :18081, Chrome CDP :9333, api :18113
 - [ ] A: real-model smoke (a_smoke.py) — one logged frontier inference
 - [ ] B: arm (c) batched+f1 all 5 tasks; arm (a) per-step all 5 tasks; arm (b) pre-f1
       (strip post_batch_observation client-side) at least extract-then-act + form-fill

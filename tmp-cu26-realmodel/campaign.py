@@ -23,7 +23,7 @@ Deltas vs the cu22 harness, all campaign-side (no product code touched):
       * CampaignVisionProvider 170 s override — F3 made the brain timeout
         configurable (ALLTERNIT_BRAIN_TIMEOUT_S, default 240 s CLI path).
   - Own ports/profile so this campaign never touches the cu22 leftovers:
-    site :18081, CDP :9223, API :18113, /tmp/cu26-chrome-profile.
+    site :18081, CDP :9333, API :18113, /tmp/cu26-chrome-profile.
   - Per-arm evidence dirs: evidence/<arm>/brain_calls.jsonl + campaign/.
 
 Usage:
@@ -49,7 +49,7 @@ sys.path.insert(0, str(CORE))
 
 API = os.environ.get("ALLTERNIT_API_URL", "http://127.0.0.1:18113")
 SITE = os.environ.get("CU26_SITE", "http://127.0.0.1:18081")
-CDP_PORT = int(os.environ.get("ACU_CDP_PORT", "9223"))
+CDP_PORT = int(os.environ.get("ACU_CDP_PORT", "9333"))
 ARM = os.environ.get("CU26_ARM", "f1")
 EVIDENCE_DIR = Path(__file__).parent / "evidence" / ARM
 
