@@ -170,13 +170,84 @@ export function registerAiIpc(): void {
   })
 }
 
+// ── Allternit media plane image generation ─────────────────────────────
+//
+// The vendored Genspark image path is stubbed in this build (hasGskAuth() is
+// always false), which left generate_image permanently failing. When the
+// slides app runs inside the Allternit platform (browser bridge) or next to a
+// local gateway (desktop sidecar), the media plane can generate images with a
+// configured provider instead. Best-effort: any failure returns null and the
+// caller falls back to the gsk path / the existing fail-closed error.
+
+const MEDIA_GENERATE_TIMEOUT_MS = 120_000
+
+function resolveAllternitGatewayBase(): string | null {
+  const win = typeof window !== 'undefined' ? (window as unknown as Record<string, unknown>) : undefined
+  const fromWindow =
+    (win?.__ALLTERNIT_GATEWAY_URL__ as string | undefined) ??
+    ((win?.__ALLTERNIT_RUNTIME_BACKEND__ as { resolved_gateway_url?: string } | undefined)?.resolved_gateway_url)
+  if (fromWindow) return String(fromWindow).replace(/\/$/, '')
+  if (typeof process !== 'undefined' && process.env?.ALLTERNIT_API_URL) {
+    return String(process.env.ALLTERNIT_API_URL).replace(/\/$/, '')
+  }
+  const winLocation = win?.location as { origin?: string } | undefined
+  if (winLocation?.origin) return winLocation.origin
+  return 'http://127.0.0.1:8013'
+}
+
+async function generateImageViaAllternitMediaPlane(op: {
+  prompt: string
+  aspectRatio?: string
+  imageSize?: string
+}): Promise<{ url: string } | null> {
+  const prompt = String(op.prompt ?? '').trim()
+  if (!prompt) return null
+  try {
+    const size =
+      op.imageSize === '1024x1024' || op.imageSize === '1024x1536' || op.imageSize === '1536x1024'
+        ? op.imageSize
+        : op.aspectRatio === '16:9'
+          ? '1536x1024'
+          : op.aspectRatio === '9:16'
+            ? '1024x1536'
+            : '1024x1024'
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), MEDIA_GENERATE_TIMEOUT_MS)
+    try {
+      const response = await fetch(`${resolveAllternitGatewayBase()}/api/v1/media/image/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        signal: controller.signal,
+        body: JSON.stringify({ provider: 'gpt-image', prompt, size, quality: 'medium', n: 1 }),
+      })
+      if (!response.ok) return null
+      const payload = (await response.json().catch(() => null)) as {
+        images?: Array<{ artifact_url?: string }>
+      } | null
+      const url = payload?.images?.[0]?.artifact_url
+      if (!url) return null
+      // Relative artifact URLs need the gateway base to be loadable by the renderer.
+      return { url: url.startsWith('http') ? url : `${resolveAllternitGatewayBase()}${url}` }
+    } finally {
+      clearTimeout(timer)
+    }
+  } catch {
+    return null
+  }
+}
+
 // ── ai:* handlers unique to slides ──────────────────────────────────────
 // Must be registered inside registerSlidesIpc (not registerAiIpc): in shell aggregate mode the
 // generic ai:* channels are registered by docs-main.registerAiIpc, and slides' registerAiIpc is
 // never called; docs does not have these channels, so putting them in the wrong place raises
 // "No handler registered".
 export function registerSlidesOnlyAiIpc(): void {
-  // gsk (Genspark CLI) capabilities: AI image generation / media analysis. Returns an error prompt when not logged in.
+  // ai:generate-image — resolve through the Allternit media plane when it is
+  // reachable and a provider is configured (BYOK via Settings → Media
+  // providers, or the operator-funded lane). Fall back to the gsk (Genspark)
+  // path, then fail closed. The media plane runs the provider protocols
+  // server-side; no key ever reaches this process.
   ipcMain.handle(
     'ai:generate-image',
     async (
@@ -189,6 +260,8 @@ export function registerSlidesOnlyAiIpc(): void {
         imageSize?: string
       },
     ) => {
+      const mediaPlane = await generateImageViaAllternitMediaPlane(op)
+      if (mediaPlane) return mediaPlane
       if (!hasGskAuth()) return { error: tm('errGskCli') }
       try {
         const r = await gskGenerateImage({
