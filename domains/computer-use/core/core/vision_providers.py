@@ -1290,13 +1290,28 @@ class SubprocessVisionProvider(VisionProvider):
     return a JSON action plan on stdout.
 
     Env vars:
-        ALLTERNIT_BRAIN_CMD   — command to invoke (e.g. "claude", "codex", "gemini")
-        ALLTERNIT_BRAIN_ARGS  — space-separated extra args (optional)
+        ALLTERNIT_BRAIN_CMD         — command to invoke (e.g. "claude", "codex", "gemini")
+        ALLTERNIT_BRAIN_ARGS        — space-separated extra args (optional)
+        ALLTERNIT_BRAIN_TIMEOUT_S   — per-call wall-clock cap in seconds
+                                      (default DEFAULT_BRAIN_TIMEOUT_S; the cu22
+                                      real-model campaign hit the old fixed 60 s
+                                      with gpt-6-astra via the codex CLI)
     """
 
-    def __init__(self):
-        self._cmd = os.environ.get("ALLTERNIT_BRAIN_CMD", "claude")
-        self._args = os.environ.get("ALLTERNIT_BRAIN_ARGS", "").split() or []
+    def __init__(self, cmd: Optional[str] = None, args: Optional[List[str]] = None,
+                 timeout_s: Optional[float] = None):
+        self._cmd = cmd or os.environ.get("ALLTERNIT_BRAIN_CMD", "claude")
+        self._args = list(args) if args is not None else (
+            os.environ.get("ALLTERNIT_BRAIN_ARGS", "").split() or []
+        )
+        # F3: one sourced timeout for the CLI-brain path (constructor wins,
+        # then env, then default). Fast gateway providers use their own
+        # transport timeouts and are unaffected.
+        if timeout_s is not None:
+            self._timeout_s = float(timeout_s)
+        else:
+            env_timeout = os.environ.get("ALLTERNIT_BRAIN_TIMEOUT_S", "").strip()
+            self._timeout_s = float(env_timeout) if env_timeout else DEFAULT_BRAIN_TIMEOUT_S
 
     def is_available(self) -> bool:
         import shutil, subprocess as _sp
@@ -1331,12 +1346,12 @@ class SubprocessVisionProvider(VisionProvider):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(stdin_payload.encode()), timeout=60)
+            stdout, stderr = await asyncio.wait_for(proc.communicate(stdin_payload.encode()), timeout=self._timeout_s)
             if proc.returncode != 0:
                 raise VisionAPIError(f"Brain subprocess exited {proc.returncode}: {stderr.decode()[:200]}", provider="subprocess")
             return _parse_action_plan(stdout.decode())
         except asyncio.TimeoutError:
-            raise VisionAPIError("Brain subprocess timed out after 60s", provider="subprocess")
+            raise VisionAPIError(f"Brain subprocess timed out after {self._timeout_s:g}s", provider="subprocess")
         except FileNotFoundError:
             raise VisionConfigError(
                 f"Brain command not found: {self._cmd!r}. "
@@ -1344,6 +1359,13 @@ class SubprocessVisionProvider(VisionProvider):
                 f"or set ALLTERNIT_BRAIN_CMD to a valid command."
             )
 
+
+# Default per-call wall-clock cap for the CLI-brain path. Real models via
+# real CLIs routinely exceed 60 s (the cu22 campaign hit the old fixed 60 s
+# cap with gpt-6-astra through the codex CLI); fast gateway providers use
+# their own transport timeouts and never see this value. Overridable per
+# deployment via ALLTERNIT_BRAIN_TIMEOUT_S or the provider constructor.
+DEFAULT_BRAIN_TIMEOUT_S = 240.0
 
 # Production computer-use always uses the Gizzi platform brain. Direct API
 # keys, ak- virtual keys, and CLI subprocesses are not auto-selected.
