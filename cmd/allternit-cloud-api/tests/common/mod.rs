@@ -113,6 +113,13 @@ impl TestApp {
     /// shared bookkeeping). The same embedded `migrations_pg` set the
     /// library applies is used here — the legacy SQLite-dialect `migrations/`
     /// tree it replaced cannot run against Postgres.
+    ///
+    /// Note: the migrations_pg DDL is `public.`-schema-qualified (pg_dump
+    /// style), so tables and enum types land in `public` regardless of
+    /// search_path. The per-test schema therefore only holds bookkeeping;
+    /// `public` must stay on the search_path or unqualified enum casts in
+    /// app queries (`$1::runmode`) fail with `type "runmode" does not
+    /// exist` — that is what broke all 32 integration_tests.
     async fn init_test_db() -> PgPool {
         let database_url = std::env::var("TEST_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test".to_string());
@@ -127,7 +134,7 @@ impl TestApp {
                     sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
                         .execute(&mut *conn)
                         .await?;
-                    sqlx::query(&format!("SET search_path TO {}", schema))
+                    sqlx::query(&format!("SET search_path TO {}, public", schema))
                         .execute(&mut *conn)
                         .await?;
                     Ok(())
