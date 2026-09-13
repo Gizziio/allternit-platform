@@ -27,9 +27,12 @@ import {
   Copy,
   X,
   ClockCounterClockwise,
+  Pulse,
 } from '@phosphor-icons/react';
 import type { ChatMessage } from '@/lib/ai/rust-stream-adapter';
 import { useTaskStore } from './useTaskStore';
+import { useRailsAgentId, useRailsDags } from '@/lib/rails/use-rails-dags';
+import RailsTaskList from '@/components/rails/RailsTaskList';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -484,6 +487,26 @@ function ContextSection({ connectors, skills }: { connectors: string[]; skills: 
   );
 }
 
+// ─── Rails work section (CommRails WIH DAG) ───────────────────────────────────
+
+function RailsWorkSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const agentId = useRailsAgentId();
+  const { data } = useRailsDags('ready');
+  if (!data || data.dags.length === 0) return null;
+  return (
+    <Section
+      title="Rails work"
+      icon={<Pulse size={11} style={{ color:RAIL_MUTED }} />}
+      open={open}
+      onToggle={onToggle}
+    >
+      <div style={{ maxHeight: 240, overflowY:'auto', margin:'0 -4px', padding:'0 4px' }}>
+        <RailsTaskList view="ready" agentId={agentId} maxDags={2} />
+      </div>
+    </Section>
+  );
+}
+
 // ─── Artifacts section ────────────────────────────────────────────────────────
 
 const LANG_COLORS: Record<string, string> = {
@@ -640,7 +663,7 @@ export const CoworkRightRail = memo(function CoworkRightRail({
   const completedCount = todos.filter(t => t.status === 'completed').length;
   const totalCount     = todos.length;
 
-  const [open, setOpen] = useState({ folder: true, context: true, artifacts: false, audit: false });
+  const [open, setOpen] = useState({ folder: true, context: true, artifacts: false, audit: false, rails: true });
   const toggle = useCallback((k: keyof typeof open) => setOpen(o => ({ ...o, [k]: !o[k] })), []);
 
   return (
@@ -677,6 +700,9 @@ export const CoworkRightRail = memo(function CoworkRightRail({
 
         {/* Numbered steps — primary content, always visible */}
         <StepList todos={todos} isStreaming={liveIsStreaming} />
+
+        {/* Rails work — CommRails WIH DAG ready nodes */}
+        <RailsWorkSection open={open.rails} onToggle={() => toggle('rails')} />
 
         {/* Working folder */}
         <Section
