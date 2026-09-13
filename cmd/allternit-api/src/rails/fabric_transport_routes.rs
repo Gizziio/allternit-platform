@@ -386,6 +386,8 @@ pub struct ApprovalScopeRequest {
     pub lease_generation: i64,
     pub capability: String,
     pub target: String,
+    /// Server-clock lifetime of the approval request (default 300s).
+    pub approval_ttl_secs: Option<u64>,
 }
 
 async fn request_approval(
@@ -404,6 +406,7 @@ async fn request_approval(
         req.lease_generation,
         &req.capability,
         &req.target,
+        req.approval_ttl_secs.map(Duration::from_secs),
     )
     .map_err(transport_err)?;
     Ok(Json(binding))

@@ -69,7 +69,15 @@ pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
             executor TEXT NOT NULL, capability TEXT NOT NULL, target TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            decided_at DATETIME, decided_by TEXT);",
+            decided_at DATETIME, decided_by TEXT, expires_at DATETIME);
+         ALTER TABLE cowork_run_events ADD COLUMN client_event_id TEXT;
+         CREATE UNIQUE INDEX IF NOT EXISTS idx_cowork_run_events_client_id
+             ON cowork_run_events(run_id, client_event_id);
+         CREATE TABLE IF NOT EXISTS cowork_approval_policy (
+            workspace TEXT PRIMARY KEY,
+            capability_risk TEXT NOT NULL DEFAULT '{}',
+            rules TEXT NOT NULL DEFAULT '[]',
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);",
     )
     .map_err(store_err)
 }
@@ -1065,7 +1073,7 @@ pub fn get_job_view(
 fn load_binding(conn: &Connection, approval_id: &str) -> Result<Option<ApprovalBinding>, TransportError> {
     conn.query_row(
         "SELECT id, run_id, job_id, lease_id, lease_generation, executor,
-                capability, target, status, decided_by
+                capability, target, status, decided_by, expires_at
          FROM cowork_approval_bindings WHERE id = ?1",
         params![approval_id],
         |row| {
@@ -1080,6 +1088,7 @@ fn load_binding(conn: &Connection, approval_id: &str) -> Result<Option<ApprovalB
                 target: row.get(7)?,
                 status: row.get(8)?,
                 decided_by: row.get(9)?,
+                expires_at: row.get(10)?,
             })
         },
     )
@@ -1087,9 +1096,91 @@ fn load_binding(conn: &Connection, approval_id: &str) -> Result<Option<ApprovalB
     .map_err(store_err)
 }
 
+/// Load the approval policy for a workspace (global default when unset).
+pub fn load_policy(conn: &Connection, workspace: &str) -> Result<crate::risk_policy::ApprovalPolicy, TransportError> {
+    let row = conn
+        .query_row(
+            "SELECT capability_risk, rules FROM cowork_approval_policy WHERE workspace = ?1",
+            params![workspace],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .optional()
+        .map_err(store_err)?;
+    match row {
+        Some((risk, rules)) => Ok(crate::risk_policy::ApprovalPolicy {
+            capability_risk: serde_json::from_str(&risk).unwrap_or_default(),
+            rules: serde_json::from_str(&rules).unwrap_or_default(),
+        }),
+        None => Ok(crate::risk_policy::ApprovalPolicy::default()),
+    }
+}
+
+/// Store (or replace) a workspace approval policy.
+pub fn set_policy(
+    conn: &mut Connection,
+    workspace: &str,
+    policy: &crate::risk_policy::ApprovalPolicy,
+) -> Result<(), TransportError> {
+    conn.execute(
+        "INSERT INTO cowork_approval_policy (workspace, capability_risk, rules, updated_at)
+         VALUES (?1, ?2, ?3, CURRENT_TIMESTAMP)
+         ON CONFLICT(workspace) DO UPDATE SET
+             capability_risk = excluded.capability_risk,
+             rules = excluded.rules,
+             updated_at = CURRENT_TIMESTAMP",
+        params![
+            workspace,
+            serde_json::to_string(&policy.capability_risk).unwrap(),
+            serde_json::to_string(&policy.rules).unwrap(),
+        ],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+fn run_workspace(conn: &Connection, run_id: &str) -> Result<String, TransportError> {
+    conn.query_row(
+        "SELECT workspace_id FROM cowork_runs WHERE id = ?1",
+        params![run_id],
+        |row| row.get(0),
+    )
+    .map_err(store_err)
+}
+
+fn synthetic_auto_binding(
+    conn: &Connection,
+    job: &JobRow,
+    principal: &PrincipalRecord,
+    capability: &str,
+    target: &str,
+    granted: bool,
+    reason: &str,
+) -> Result<(), TransportError> {
+    let attr = load_run_attribution(conn, &job.run_id)?;
+    insert_event(
+        conn,
+        &job.run_id,
+        if granted { "approval.granted" } else { "approval.denied" },
+        serde_json::json!({
+            "approval_id": format!("risk-rule:{}", if granted { "approve" } else { "reject" }),
+            "job_id": job.id,
+            "capability": capability,
+            "target": target,
+            "decided_by": format!("risk-rule ({reason})"),
+        }),
+        attr.initiator.as_deref(),
+        attr.delegator.as_deref(),
+        Some(principal.id.as_str()),
+    )
+}
+
 /// Request an approval for a protected action under the caller's current
-/// lease. Idempotent per (job, capability, target, generation): an existing
-/// pending/granted binding for the same scope is returned.
+/// lease. Single policy path: risk rules first decide whether an approval is
+/// needed at all — auto-approve returns a synthetic granted binding (no row,
+/// attributed `approval.granted` ledger event), auto-deny is rejected with an
+/// attributed `approval.denied` event, and only genuinely protected actions
+/// create a binding scoped to (job, capability, target, generation) with a
+/// server-clock `expires_at`. Idempotent per scope+generation.
 pub fn request_approval(
     conn: &mut Connection,
     principal: &PrincipalRecord,
@@ -1098,8 +1189,38 @@ pub fn request_approval(
     generation: i64,
     capability: &str,
     target: &str,
+    ttl: Option<Duration>,
 ) -> Result<ApprovalBinding, TransportError> {
     let job = validate_lease(conn, principal, job_id, lease_id, generation)?;
+    let workspace = run_workspace(conn, &job.run_id)?;
+    let policy = load_policy(conn, &workspace)?;
+
+    match crate::risk_policy::evaluate_protection(&policy, capability) {
+        crate::risk_policy::ProtectionDecision::AutoApprove(reason) => {
+            synthetic_auto_binding(conn, &job, principal, capability, target, true, &reason)?;
+            return Ok(ApprovalBinding {
+                id: format!("auto:approve:{capability}"),
+                run_id: job.run_id.clone(),
+                job_id: job_id.to_string(),
+                lease_id: lease_id.to_string(),
+                lease_generation: generation,
+                executor: principal.id.clone(),
+                capability: capability.to_string(),
+                target: target.to_string(),
+                status: "granted".to_string(),
+                decided_by: Some(format!("risk-rule ({reason})")),
+                expires_at: None,
+            });
+        }
+        crate::risk_policy::ProtectionDecision::AutoDeny(reason) => {
+            synthetic_auto_binding(conn, &job, principal, capability, target, false, &reason)?;
+            return Err(TransportError::new(
+                Code::PermissionDenied,
+                format!("risk policy auto-denies {capability}: {reason}"),
+            ));
+        }
+        crate::risk_policy::ProtectionDecision::RequiresApproval => {}
+    }
 
     if let Some(existing) = conn
         .query_row(
@@ -1118,13 +1239,14 @@ pub fn request_approval(
     }
 
     let id = format!("appr_{}", Uuid::new_v4());
+    let expires_at = (Utc::now() + ttl.unwrap_or(Duration::from_secs(300))).to_rfc3339();
     let tx = conn
         .transaction_with_behavior(TransactionBehavior::Immediate)
         .map_err(store_err)?;
     tx.execute(
         "INSERT INTO cowork_approval_bindings
-            (id, run_id, job_id, lease_id, lease_generation, executor, capability, target, status)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'pending')",
+            (id, run_id, job_id, lease_id, lease_generation, executor, capability, target, status, expires_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'pending', ?9)",
         params![
             id,
             job.run_id,
@@ -1134,6 +1256,7 @@ pub fn request_approval(
             principal.id,
             capability,
             target,
+            expires_at,
         ],
     )
     .map_err(store_err)?;
@@ -1148,6 +1271,7 @@ pub fn request_approval(
             "capability": capability,
             "target": target,
             "lease_generation": generation,
+            "expires_at": expires_at,
         }),
         attr.initiator.as_deref(),
         attr.delegator.as_deref(),
@@ -1168,6 +1292,16 @@ pub fn decide_approval(
 ) -> Result<ApprovalBinding, TransportError> {
     let binding = load_binding(conn, approval_id)?
         .ok_or_else(|| TransportError::new(Code::JobNotFound, format!("approval {approval_id} not found")))?;
+    // Server clock: a decision arriving after expires_at is dead on arrival —
+    // the requester has already been told to re-request (A_APPROVAL_REQUIRED).
+    if let Some(exp) = binding.expires_at.as_deref() {
+        if parse_time(exp).map(|e| e < Utc::now()).unwrap_or(false) {
+            return Err(TransportError::new(
+                Code::ApprovalInvalid,
+                format!("approval {approval_id} expired at {exp}; a new request is required"),
+            ));
+        }
+    }
     match binding.status.as_str() {
         "granted" if grant => return Ok(binding),
         "denied" if !grant => return Ok(binding),
@@ -1226,6 +1360,34 @@ pub fn check_approval(
 ) -> Result<ApprovalBinding, TransportError> {
     let job = validate_lease(conn, principal, job_id, lease_id, generation)?;
 
+    // Single policy path: risk rules decide whether an approval is needed.
+    let workspace = run_workspace(conn, &job.run_id)?;
+    let policy = load_policy(conn, &workspace)?;
+    match crate::risk_policy::evaluate_protection(&policy, capability) {
+        crate::risk_policy::ProtectionDecision::AutoApprove(reason) => {
+            return Ok(ApprovalBinding {
+                id: format!("auto:approve:{capability}"),
+                run_id: job.run_id.clone(),
+                job_id: job_id.to_string(),
+                lease_id: lease_id.to_string(),
+                lease_generation: generation,
+                executor: principal.id.clone(),
+                capability: capability.to_string(),
+                target: target.to_string(),
+                status: "granted".to_string(),
+                decided_by: Some(format!("risk-rule ({reason})")),
+                expires_at: None,
+            });
+        }
+        crate::risk_policy::ProtectionDecision::AutoDeny(reason) => {
+            return Err(TransportError::new(
+                Code::PermissionDenied,
+                format!("risk policy auto-denies {capability}: {reason}"),
+            ));
+        }
+        crate::risk_policy::ProtectionDecision::RequiresApproval => {}
+    }
+
     let latest = conn
         .query_row(
             "SELECT id FROM cowork_approval_bindings
@@ -1255,17 +1417,40 @@ pub fn check_approval(
             ),
         ));
     }
-    match binding.status.as_str() {
-        "granted" => Ok(binding),
-        "pending" => Err(TransportError::new(
+    // Server clock: a pending binding past expires_at is treated as expired
+    // here even before the sweeper marks it — the worker must re-request.
+    let expired = binding.status == "pending"
+        && binding
+            .expires_at
+            .as_deref()
+            .and_then(parse_time)
+            .map(|e| e < Utc::now())
+            .unwrap_or(false);
+
+    match (binding.status.as_str(), expired) {
+        ("granted", _) => Ok(binding),
+        ("pending", false) => Err(TransportError::new(
             Code::ApprovalRequired,
             format!("approval {} is still pending for {capability}/{target}", binding.id),
         )),
-        "denied" => Err(TransportError::new(
+        ("pending", true) => Err(TransportError::new(
+            Code::ApprovalRequired,
+            format!(
+                "approval {} expired un-acted; re-request per recovery policy",
+                binding.id
+            ),
+        )),
+        ("denied", _) => Err(TransportError::new(
             Code::ApprovalRequired,
             format!("approval {} was denied; a new approval must be obtained", binding.id),
         )),
-        other => Err(TransportError::new(
+        // Expired (sweeper or server-clock): the worker must re-request —
+        // recovery policy is re-request, deny-by-default.
+        ("expired", _) => Err(TransportError::new(
+            Code::ApprovalRequired,
+            format!("approval {} expired un-acted; re-request per recovery policy", binding.id),
+        )),
+        (other, _) => Err(TransportError::new(
             Code::ApprovalInvalid,
             format!("approval {} is {other} and cannot be reused", binding.id),
         )),
@@ -1278,4 +1463,158 @@ pub fn get_approval(
     approval_id: &str,
 ) -> Result<Option<ApprovalBinding>, TransportError> {
     load_binding(conn, approval_id)
+}
+
+/// Expire stale approval requests (server clock): pending bindings past
+/// `expires_at` become `expired` with an attributed `approval.expired` event.
+/// The sweeper and the boot pass both run this so an approval can never be
+/// granted late after a worker has already been told to re-request.
+pub fn expire_approvals(
+    conn: &mut Connection,
+    now: DateTime<Utc>,
+) -> Result<Vec<String>, TransportError> {
+    let stale: Vec<(String, String, String, String)> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT b.id, b.run_id, b.executor, b.capability
+                 FROM cowork_approval_bindings b
+                 WHERE b.status = 'pending' AND b.expires_at IS NOT NULL",
+            )
+            .map_err(store_err)?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            })
+            .map_err(store_err)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(store_err)?;
+        rows
+    };
+
+    let mut expired = Vec::new();
+    for (id, run_id, executor, capability) in stale {
+        let is_stale = conn
+            .query_row(
+                "SELECT expires_at FROM cowork_approval_bindings WHERE id = ?1",
+                params![id],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .optional()
+            .map_err(store_err)?
+            .flatten()
+            .and_then(|e| parse_time(&e))
+            .map(|e| e < now)
+            .unwrap_or(false);
+        if !is_stale {
+            continue;
+        }
+        let tx = conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(store_err)?;
+        let updated = tx
+            .execute(
+                "UPDATE cowork_approval_bindings SET status = 'expired'
+                 WHERE id = ?1 AND status = 'pending'",
+                params![id],
+            )
+            .map_err(store_err)?;
+        if updated == 0 {
+            tx.rollback().map_err(store_err)?;
+            continue;
+        }
+        let attr = load_run_attribution(&tx, &run_id)?;
+        insert_event(
+            &tx,
+            &run_id,
+            "approval.expired",
+            serde_json::json!({
+                "approval_id": id,
+                "capability": capability,
+                "expired_at": now.to_rfc3339(),
+            }),
+            attr.initiator.as_deref(),
+            attr.delegator.as_deref(),
+            Some(executor.as_str()),
+        )?;
+        tx.commit().map_err(store_err)?;
+        expired.push(id);
+    }
+    Ok(expired)
+}
+
+/// Idempotent event insert (A:// §5): a client-supplied `client_event_id`
+/// dedupes retries — duplicate delivery returns the canonical existing event
+/// id instead of double-writing. `None` keeps the legacy always-insert path.
+pub enum EventInsertOutcome {
+    /// A new event row was written.
+    Inserted(String),
+    /// The idempotency key already exists; canonical existing event id.
+    Duplicate(String),
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn insert_event_idempotent(
+    conn: &mut Connection,
+    run_id: &str,
+    event_type: &str,
+    payload: serde_json::Value,
+    initiator: Option<&str>,
+    delegator: Option<&str>,
+    executor: Option<&str>,
+    client_event_id: Option<&str>,
+) -> Result<EventInsertOutcome, TransportError> {
+    if let Some(key) = client_event_id {
+        if let Some(existing) = conn
+            .query_row(
+                "SELECT id FROM cowork_run_events
+                 WHERE run_id = ?1 AND client_event_id = ?2",
+                params![run_id, key],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(store_err)?
+        {
+            return Ok(EventInsertOutcome::Duplicate(existing));
+        }
+        let id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO cowork_run_events
+                (id, run_id, event_type, payload, initiator, delegator, executor, client_event_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                id,
+                run_id,
+                event_type,
+                payload.to_string(),
+                initiator,
+                delegator,
+                executor,
+                key,
+            ],
+        )
+        .map_err(store_err)?;
+        return Ok(EventInsertOutcome::Inserted(id));
+    }
+
+    let id = Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO cowork_run_events (id, run_id, event_type, payload, initiator, delegator, executor)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            id,
+            run_id,
+            event_type,
+            payload.to_string(),
+            initiator,
+            delegator,
+            executor,
+        ],
+    )
+    .map_err(store_err)?;
+    Ok(EventInsertOutcome::Inserted(id))
 }
