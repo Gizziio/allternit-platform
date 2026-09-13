@@ -1943,16 +1943,15 @@ mod credential_binding_http_tests {
 
     #[tokio::test]
     async fn run_binds_credentials_into_sandbox_env_and_leaks_nowhere() {
-        // Serializes against policy-seat tests: this test POSTs /aci/run,
-        // which a concurrently installed policy could deny.
-        let _policy_guard = crate::policy_config::POLICY_TEST_LOCK
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        // Serializes against policy-seat tests (this test POSTs /aci/run,
+        // which a concurrently installed policy could deny) AND against every
+        // other test that reads/writes the process-wide
+        // ALLTERNIT_COMPUTER_USE_DIR. Both purposes share ONE guard:
+        // `computer_use_dir_test_lock()` is the same mutex
+        // (`policy_config::POLICY_TEST_LOCK`), and std `Mutex` is not
+        // reentrant — acquiring both on this thread self-deadlocks.
+        let _guard = crate::test_helpers::computer_use_dir_test_lock();
         ensure_e2e_key();
-        // Mutates the process-wide ALLTERNIT_COMPUTER_USE_DIR — serialize
-        // against every other test that reads/writes through it (this lock
-        // replaces the previously unguarded race noted below).
-        let _dir_guard = crate::test_helpers::computer_use_dir_test_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         // Redirect gateway state (run buffers, credential vault) at the temp
         // dir before the run. Left in place for the whole test.
