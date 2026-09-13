@@ -137,3 +137,15 @@ export function organizeDagNodes(dto: RailsDagsDto, opts: OrganizeOptions = {}):
       : [...dto.dags];
   return dags.map(organizeOneDag);
 }
+
+/**
+ * node_id of the dag's root (parentless) node — the target parent for
+ * add-task. Deterministic (lowest node_id) when a view surfaces multiple
+ * parentless nodes; null when the dag has no parentless node.
+ */
+export function findRootNodeId(dag: RailsDagSummary): string | null {
+  const roots = dag.nodes.filter((n) => !n.parent_node_id);
+  if (roots.length === 0) return null;
+  roots.sort((a, b) => a.node_id.localeCompare(b.node_id));
+  return roots[0].node_id;
+}

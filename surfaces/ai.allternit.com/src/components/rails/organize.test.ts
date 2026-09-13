@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { organizeDagNodes, selectDags, type OrganizedDoneRow, type OrganizedNodeRow } from './organize';
+import {
+  findRootNodeId,
+  organizeDagNodes,
+  selectDags,
+  type OrganizedDoneRow,
+  type OrganizedNodeRow,
+} from './organize';
 import type { RailsDagNode, RailsDagsDto } from '@/lib/rails/use-rails-dags';
 
 function node(partial: Partial<RailsDagNode> & { node_id: string }): RailsDagNode {
@@ -179,5 +185,41 @@ describe('selectDags / maxDags', () => {
         : d
     );
     expect(selectDags(other, 1, 'web-user')[0].dag_id).toBe('rich');
+  });
+});
+
+
+describe('findRootNodeId', () => {
+  const dag = (nodes: RailsDagNode[]) => ({
+    dag_id: 'dag1',
+    root_title: null,
+    nodes,
+    ready_count: 0,
+    done_count: 0,
+  });
+
+  it('returns the parentless node id', () => {
+    expect(
+      findRootNodeId(
+        dag([
+          node({ node_id: 'child', parent_node_id: 'root' }),
+          node({ node_id: 'root' }),
+        ])
+      )
+    ).toBe('root');
+  });
+
+  it('returns null when every node has a parent (filtered view)', () => {
+    expect(findRootNodeId(dag([node({ node_id: 'child', parent_node_id: 'gone' })]))).toBeNull();
+  });
+
+  it('is deterministic when multiple parentless nodes exist', () => {
+    expect(
+      findRootNodeId(dag([node({ node_id: 'b-root' }), node({ node_id: 'a-root' })]))
+    ).toBe('a-root');
+  });
+
+  it('treats empty-string parents as parentless', () => {
+    expect(findRootNodeId(dag([node({ node_id: 'root', parent_node_id: '' })]))).toBe('root');
   });
 });

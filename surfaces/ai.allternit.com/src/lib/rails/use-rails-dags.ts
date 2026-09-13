@@ -9,6 +9,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GATEWAY_BASE_URL } from '@/lib/agents/api-config';
 import { usePlatformUser } from '@/lib/platform-auth-client';
+import { fetchVisibility } from '@/lib/bots/commrails-visibility';
 
 /** Fallback agent identity when no platform user is signed in. */
 export const DEFAULT_RAILS_AGENT_ID = 'web-user';
@@ -61,9 +62,16 @@ export interface PickupWihInput {
 
 export interface CloseWihInput {
   wih_id: string;
-  status: string;
+  /** Server whitelists DONE | FAILED (case-normalized). */
+  status: 'DONE' | 'FAILED';
   evidence?: string[];
   agent_id: string;
+}
+
+export interface CreateDagNodeInput {
+  dag_id: string;
+  title: string;
+  parent_node_id: string;
 }
 
 function railsUrl(path: string): string {
@@ -178,6 +186,34 @@ export function useCloseWih() {
       }>,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: RAILS_DAGS_QUERY_KEY }),
   });
+}
+
+export function useCreateDagNode() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateDagNodeInput) =>
+      postJson(
+        `/api/commrails/dags/${encodeURIComponent(input.dag_id)}/nodes`,
+        { title: input.title, parent_node_id: input.parent_node_id }
+      ) as Promise<{ node_id: string }>,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: RAILS_DAGS_QUERY_KEY }),
+  });
+}
+
+const NEEDS_YOU_QUERY_KEY = ['rails-needs-you'] as const;
+
+/**
+ * Count of agents waiting on the user (CommRails visibility needsYou array).
+ * Fail-closed: fetchVisibility already returns an empty DTO on error → 0.
+ */
+export function useRailsNeedsYouCount(): number {
+  const { data } = useQuery({
+    queryKey: NEEDS_YOU_QUERY_KEY,
+    queryFn: () => fetchVisibility(),
+    refetchInterval: 10_000,
+    retry: false,
+  });
+  return data?.needsYou.length ?? 0;
 }
 
 /**
