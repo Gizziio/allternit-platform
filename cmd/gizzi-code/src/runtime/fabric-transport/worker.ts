@@ -3,10 +3,22 @@
  *
  * Gizzi authenticates as `a://workspace/{ws}/principal/gizzi` with its
  * provisioned bearer token, long-polls the claim endpoint, executes the
- * job's deterministic shell/code steps inside the existing sandbox posture
- * (Sandbox.wrap → bwrap on Linux / sandbox-exec on macOS; vfkit VM mode is
- * a separate surface and out of scope here), heartbeats, checkpoints at
+ * job's deterministic shell/code steps, heartbeats, checkpoints at
  * committed boundaries, and completes with the typed Result envelope.
+ *
+ * Execution posture (P-T2 compute placement):
+ *   - `GIZZI_COMPUTE_MODE=local` (default): `Sandbox.wrap` — bubblewrap on
+ *     Linux / sandbox-exec on macOS (falls back to an unsandboxed shell,
+ *     loudly logged, when no driver exists).
+ *   - `GIZZI_COMPUTE_MODE=vm`: steps run inside the Lima VM via
+ *     `executeInVM` (the repo's current VM machinery — `limactl shell
+ *     allternit`; Lima runs on macOS and Linux hosts). The operator must
+ *     also declare `compute.vm` on the worker's principal so placement
+ *     (§8.8) routes vm-required jobs here:
+ *       PUT /api/v1/fabric/transport/principals/<id>/capabilities
+ *         { "capabilities": [..., "compute.vm"] }
+ *     Identity/attribution are unchanged: the executor remains
+ *     `a://workspace/{ws}/principal/gizzi` wherever the steps run.
  *
  * Operator flow for the token (provisioned once, V162):
  *   POST /api/v1/fabric/transport/principals/<url-encoded principal>/provision-token
@@ -17,11 +29,13 @@
 
 import { spawn } from "node:child_process"
 import { Sandbox } from "../integrations/shell/sandbox"
+import { executeInVM } from "../vm"
 
 const API = (process.env.ALLTERNIT_API_URL ?? "http://127.0.0.1:8013").replace(/\/+$/, "")
 const TOKEN = process.env.ALLTERNIT_GIZZI_TOKEN ?? readTokenFile()
 const LEASE_SECS = Number(process.env.ALLTERNIT_GIZZI_LEASE_SECS ?? "60")
 const HEARTBEAT_MS = Math.max(1000, Math.floor((LEASE_SECS / 3) * 1000))
+const COMPUTE_MODE = process.env.GIZZI_COMPUTE_MODE ?? "local"
 
 function readTokenFile(): string | null {
   const path = process.env.ALLTERNIT_GIZZI_TOKEN_FILE
@@ -58,7 +72,7 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-async function runStep(command: string, cwd: string, sessionId: string): Promise<{ code: number; output: string }> {
+async function runStepLocal(command: string, cwd: string, sessionId: string): Promise<{ code: number; output: string }> {
   const policy = {
     allowWritePaths: [] as string[],
     allowNetwork: false,
@@ -80,29 +94,85 @@ async function runStep(command: string, cwd: string, sessionId: string): Promise
   })
 }
 
-export async function runFabricWorker(opts: { cwd?: string } = {}): Promise<void> {
+async function runStep(command: string, cwd: string, sessionId: string): Promise<{ code: number; output: string }> {
+  if (COMPUTE_MODE !== "vm") {
+    return runStepLocal(command, cwd, sessionId)
+  }
+  // VM mode (P-T2): run the step inside the Lima VM. The working directory is
+  // interpreted inside the guest; jobs aimed at a VM worker should use guest
+  // paths (the VM mounts the host home by default via allternit.yaml).
+  try {
+    const result = await executeInVM("bash", ["-c", command], { workingDir: cwd })
+    return { code: result.exitCode, output: (result.stdout + result.stderr).slice(-4000) }
+  } catch (err) {
+    return { code: 1, output: `vm step failed: ${String(err)}`.slice(-4000) }
+  }
+}
+
+export interface FabricWorkerDaemonHooks {
+  /** Structured log sink (daemon mode). `event` is a stable snake_case name. */
+  log: (level: "info" | "warn" | "error", event: string, fields?: Record<string, unknown>) => void
+  /** Graceful-stop check, evaluated before each claim. */
+  shouldStop: () => boolean
+}
+
+export interface RunFabricWorkerOptions {
+  cwd?: string
+  /** Daemon mode (P-T3): exponential claim backoff, structured logs,
+   *  graceful stop between jobs. Claim protocol unchanged. */
+  daemon?: FabricWorkerDaemonHooks
+}
+
+export async function runFabricWorker(opts: RunFabricWorkerOptions = {}): Promise<void> {
   const cwd = opts.cwd ?? process.cwd()
+  const daemon = opts.daemon
+  const log = (level: "info" | "warn" | "error", event: string, fields?: Record<string, unknown>) => {
+    if (daemon) {
+      daemon.log(level, event, fields)
+    } else {
+      const line = `[gizzi-worker] ${event}${fields ? " " + JSON.stringify(fields) : ""}`
+      if (level === "error") console.error(line)
+      else if (level === "warn") console.warn(line)
+      else console.log(line)
+    }
+  }
   if (!TOKEN) {
     throw new Error(
       "ALLTERNIT_GIZZI_TOKEN (or ALLTERNIT_GIZZI_TOKEN_FILE) is required — provision it via " +
         "POST /api/v1/fabric/transport/principals/<principal>/provision-token",
     )
   }
-  // eslint-disable-next-line no-constant-condition
+  if (COMPUTE_MODE === "vm") {
+    log("info", "worker.vm_mode", {
+      note: "steps run inside the Lima VM; declare compute.vm on this worker's principal " +
+        "(PUT /fabric/transport/principals/<id>/capabilities) so vm-required jobs route here",
+    })
+  }
+
+  // Daemon backoff state (reset on every successful claim).
+  let backoffMs = 1000
+  const BACKOFF_MAX_MS = 30_000
+
   while (true) {
+    if (daemon?.shouldStop()) {
+      log("info", "worker.stopping", { reason: "shutdown signal" })
+      return
+    }
     let grant: LeaseGrant
     try {
       grant = await api<LeaseGrant>("/fabric/transport/claim", {
         method: "POST",
         body: JSON.stringify({ wait_secs: 25, lease_ttl_secs: LEASE_SECS }),
       })
+      backoffMs = 1000
     } catch (e) {
-      console.warn(`[gizzi-worker] claim failed: ${(e as Error).message}`)
-      await sleep(2000)
+      log("warn", "worker.claim_failed", { error: (e as Error).message, backoff_ms: daemon ? backoffMs : 2000 })
+      await sleep(daemon ? backoffMs + Math.floor(Math.random() * 250) : 2000)
+      if (daemon) backoffMs = Math.min(backoffMs * 2, BACKOFF_MAX_MS)
       continue
     }
 
-    console.log(`[gizzi-worker] claimed job ${grant.job_id} gen ${grant.lease_generation}`)
+    log("info", "worker.claimed", { job_id: grant.job_id, lease_generation: grant.lease_generation })
     const steps: string[] = Array.isArray(grant.payload?.steps) ? (grant.payload.steps as string[]) : []
     const stepResults: Array<{ step: number; code: number }> = []
     let heartbeat: ReturnType<typeof setInterval> | null = null
@@ -150,6 +220,10 @@ export async function runFabricWorker(opts: { cwd?: string } = {}): Promise<void
         }),
       },
     ).catch((e) => ({ outcome: "error", result: undefined, error: (e as Error).message }))
-    console.log(`[gizzi-worker] complete: ${outcome.outcome}`)
+    log(failed ? "error" : "info", "worker.completed", {
+      job_id: grant.job_id,
+      outcome: outcome.outcome,
+      steps: stepResults.length,
+    })
   }
 }

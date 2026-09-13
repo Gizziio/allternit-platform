@@ -353,9 +353,18 @@ Execution engine for runs with local, remote, cloud, and VM modes.
 | `src/runtime/cowork/cowork.runtime.ts` | `execute()`, `executeLocal()`, `executeVM()`, `triggerSchedule()` |
 | `src/runtime/cowork/cowork.service.ts` | `RunService`, `ScheduleService`, `ApprovalService`, `CheckpointService` |
 | `src/runtime/cowork/cowork.sql.ts` | Drizzle schema for runs, events, schedules, approvals, checkpoints |
+| `src/runtime/cowork/store-boundary.ts` | A:// P-T1 consolidation boundary: gates Cowork store writes when paired with a canonical Allternit API |
 | `src/cli/commands/cowork.ts` | CLI: `list`, `start`, `attach`, `stop`, `schedule`, `approval`, `checkpoint` |
 
 Event sequence counter is per-`run_id` (`COALESCE(MAX(sequence), 0) + 1`), not global.
+
+**Store boundary (P-T1):** the Drizzle cowork tables are the legacy projection
+under the A:// consolidation boundary. `GIZZI_COWORK_STORE=canonical` (or
+`ALLTERNIT_COWORK_CANONICAL=1`) refuses all local run/event/schedule/approval/
+checkpoint writes with `CoworkStoreBoundaryError`, pointing at the
+fabric-transport endpoints; default `legacy` mode (standalone gizzi) allows
+writes with a one-time deprecation warning. Tests:
+`test/runtime/cowork-store-boundary.test.ts`. See `docs/architecture/A_STORE_BOUNDARY.md`.
 
 ---
 
