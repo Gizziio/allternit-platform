@@ -76,3 +76,22 @@ Sibling file-ownership split respected: no edits to `content-artifact-sync.ts`,
   subsequent agent surgical-edit prompts in the same view.
 - Desktop rebuild was REQUIRED by the spec and is performed after this
   attestation (see LEDGER follow-up if the DMG build failed).
+
+## Update 2026-09-12 ~20:20 — desktop rebuild DONE (was listed as pending above)
+
+- Fresh `gizzi-code` binary built from the merged tree (`cmd/gizzi-code`
+  `bun run script/build-production.js`, sdk dist rebuilt first) and staged
+  into `surfaces/allternit-desktop/resources/bin/gizzi-code`; other 5
+  sidecars verified current (`allternit-api` rebuilt fresh from merged main
+  during the run).
+- First build attempt from the SHARED checkout failed at electron-builder
+  (`NpmNodeModulesCollector` — that checkout's desktop `node_modules` is a
+  stale standalone npm install). Re-ran from the session worktree
+  (`pm=pnpm` collector succeeded there), as the botmode-0912 session did.
+- Result: **build b2379**, 8 files (arm64/x64 × dmg/zip + blockmaps),
+  copied to the shared `surfaces/allternit-desktop/release/`.
+- Bundle verification: `grep -rl applyElementEdit` →
+  `platform/assets/ArtifactRenderer-CkCWa5PQ.js` inside
+  `release/mac-arm64/Allternit Desktop.app`.
+- Retired ONLY the previous latest set: **b2313** (8 files). DMG is
+  unsigned/unnotarized (no APPLE_ID creds), expected for local builds.
