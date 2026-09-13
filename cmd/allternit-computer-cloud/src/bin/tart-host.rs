@@ -149,6 +149,71 @@ const PROBE_READ_TIMEOUT: Duration = Duration::from_millis(1500);
 const FIRST_PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 const MAX_SSH_BACKOFF: Duration = Duration::from_secs(5);
 
+// Hard bounds on every `tart`/ssh subprocess a request handler can trigger.
+// Live incident (bote2e-0913): unbounded `tart list` / `tart ip` calls (each
+// tens of seconds under load, occasionally minutes) piled up behind handlers
+// and wedged the whole API — status polls returned zero bytes for 180s+ and
+// the api's provision call never completed. Timeouts turn "wedged forever"
+// into a bounded, honest error; the slow calls remain slow but can no longer
+// block the server indefinitely.
+const TART_QUERY_TIMEOUT: Duration = Duration::from_secs(30); // list / ip
+const TART_SET_TIMEOUT: Duration = Duration::from_secs(60); // tart set
+const TART_STOP_TIMEOUT: Duration = Duration::from_secs(120); // guest shutdown grace
+const TART_DELETE_TIMEOUT: Duration = Duration::from_secs(60);
+const TART_CLONE_TIMEOUT: Duration = Duration::from_secs(600); // full-disk copy
+const EXEC_TIMEOUT: Duration = Duration::from_secs(90); // guest agent or ssh exec
+
+/// Kills and reaps a child process if its owning future is abandoned (e.g. by
+/// `tokio::time::timeout`). Without this, a wedged `tart` subprocess would
+/// keep running — and keep holding its VM-directory locks — after the request
+/// that spawned it has already failed.
+struct KillOnDrop(Option<tokio::process::Child>);
+
+impl Drop for KillOnDrop {
+    fn drop(&mut self) {
+        if let Some(mut child) = self.0.take() {
+            let _ = child.start_kill();
+            // Reap asynchronously so the killed child does not linger as a zombie.
+            tokio::spawn(async move {
+                let _ = child.wait().await;
+            });
+        }
+    }
+}
+
+/// Run a child process with a hard deadline; kill it (and report an error)
+/// when the deadline passes instead of waiting forever on a wedged `tart`
+/// subprocess.
+async fn output_with_timeout(
+    cmd: &mut Command,
+    timeout: Duration,
+) -> Result<std::process::Output, TartError> {
+    let mut guard = KillOnDrop(Some(
+        cmd.stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| TartError::Internal(format!("failed to spawn process: {}", e)))?,
+    ));
+    let wait = async {
+        // wait_with_output consumes the child; take it so a timeout can still
+        // kill it via the guard.
+        let child = guard
+            .0
+            .take()
+            .expect("child present until wait_with_output");
+        child.wait_with_output().await
+    };
+    match tokio::time::timeout(timeout, wait).await {
+        Ok(Ok(output)) => Ok(output),
+        Ok(Err(e)) => Err(TartError::Internal(format!("process wait failed: {}", e))),
+        Err(_) => Err(TartError::Internal(format!(
+            "command timed out after {}s",
+            timeout.as_secs()
+        ))),
+    }
+}
+
 #[derive(Clone)]
 struct VncForwardManager {
     inner: Arc<std::sync::Mutex<HashMap<String, ForwardEntry>>>,
@@ -409,11 +474,9 @@ impl VncForwardManager {
     }
 
     async fn resolve_vm_ip(&self, name: &str) -> Option<String> {
-        let out = Command::new(&self.tart_bin)
-            .args(["ip", name])
-            .output()
-            .await
-            .ok()?;
+        let mut cmd = Command::new(&self.tart_bin);
+        cmd.args(["ip", name]);
+        let out = output_with_timeout(&mut cmd, TART_QUERY_TIMEOUT).await.ok()?;
         if !out.status.success() {
             return None;
         }
@@ -496,7 +559,7 @@ async fn create_vm(
     Path(name): Path<String>,
     Json(body): Json<CreateVmRequest>,
 ) -> Response {
-    if let Err(e) = run_tart(&state, &["clone", &body.image, &name]).await {
+    if let Err(e) = run_tart(&state, &["clone", &body.image, &name], TART_CLONE_TIMEOUT).await {
         return e.into_response();
     }
     let mut set_args = vec!["set".to_string(), name.clone()];
@@ -509,7 +572,7 @@ async fn create_vm(
         set_args.push(mem.to_string());
     }
     if set_args.len() > 2 {
-        if let Err(e) = run_tart(&state, &set_args).await {
+        if let Err(e) = run_tart(&state, &set_args, TART_SET_TIMEOUT).await {
             return e.into_response();
         }
     }
@@ -536,7 +599,7 @@ async fn start_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) 
 }
 
 async fn stop_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
-    let result = run_tart(&state, &["stop", &name]).await;
+    let result = run_tart(&state, &["stop", &name], TART_STOP_TIMEOUT).await;
     state.vnc.drop_forward(&name).await;
     match result {
         Ok(_) => Json(json!({"name": name, "status": "stopped"})).into_response(),
@@ -546,9 +609,9 @@ async fn stop_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) -
 
 async fn delete_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) -> Response {
     // Tart refuses to delete a running VM; stop it first (ignore already-stopped).
-    let _ = run_tart(&state, &["stop", &name, "--timeout", "5"]).await;
+    let _ = run_tart(&state, &["stop", &name, "--timeout", "5"], TART_STOP_TIMEOUT).await;
     state.vnc.drop_forward(&name).await;
-    match run_tart(&state, &["delete", &name]).await {
+    match run_tart(&state, &["delete", &name], TART_DELETE_TIMEOUT).await {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => e.into_response(),
     }
@@ -582,7 +645,7 @@ async fn list_vms(State(state): State<Arc<AppState>>) -> Response {
 }
 
 async fn vm_list(state: &AppState) -> Result<Vec<VmInfo>, TartError> {
-    let list = run_tart_output(state, &["list", "--format", "json"]).await?;
+    let list = run_tart_output(state, &["list", "--format", "json"], TART_QUERY_TIMEOUT).await?;
     let vms: Vec<serde_json::Value> = serde_json::from_str(&list).unwrap_or_default();
     let mut out = Vec::new();
     for vm in vms {
@@ -607,7 +670,7 @@ async fn vm_list(state: &AppState) -> Result<Vec<VmInfo>, TartError> {
 }
 
 async fn vm_status(state: &AppState, name: &str) -> Result<VmInfo, TartError> {
-    let list = run_tart_output(state, &["list", "--format", "json"]).await?;
+    let list = run_tart_output(state, &["list", "--format", "json"], TART_QUERY_TIMEOUT).await?;
     let vms: Vec<serde_json::Value> = serde_json::from_str(&list).unwrap_or_default();
     let found = vms.into_iter().find(|v| {
         v.get("Name")
@@ -624,7 +687,7 @@ async fn vm_status(state: &AppState, name: &str) -> Result<VmInfo, TartError> {
         .map(|s| s == "running")
         .unwrap_or(false);
     let ip = if running {
-        run_tart_output(state, &["ip", name])
+        run_tart_output(state, &["ip", name], TART_QUERY_TIMEOUT)
             .await
             .ok()
             .map(|s| s.trim().to_string())
@@ -696,11 +759,13 @@ async fn run_tart_exec(
     wrapped.extend(command.iter().cloned());
     args.extend(wrapped);
 
-    let out = Command::new(&state.tart_bin)
-        .args(&args)
-        .output()
-        .await
-        .map_err(|e| TartError::Internal(format!("exec failed: {}", e)))?;
+    let out = {
+        let mut cmd = Command::new(&state.tart_bin);
+        cmd.args(&args);
+        output_with_timeout(&mut cmd, EXEC_TIMEOUT)
+            .await
+            .map_err(|e| TartError::Internal(format!("exec failed: {}", e)))?
+    };
 
     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
@@ -726,7 +791,7 @@ async fn run_ssh_exec(
     command: &[String],
     env: &std::collections::HashMap<String, String>,
 ) -> Result<ExecResponse, TartError> {
-    let ip = run_tart_output(state, &["ip", name]).await?;
+    let ip = run_tart_output(state, &["ip", name], TART_QUERY_TIMEOUT).await?;
     let ip = ip.trim();
     if ip.is_empty() {
         return Err(TartError::Internal("VM has no IP for SSH fallback".to_string()));
@@ -759,14 +824,16 @@ async fn run_ssh_exec(
         remote_cmd,
     ];
 
-    let out = Command::new("sshpass")
-        .arg("-p")
-        .arg(&state.ssh_password)
-        .arg("ssh")
-        .args(&ssh_args)
-        .output()
-        .await
-        .map_err(|e| TartError::Internal(format!("ssh exec failed: {}", e)))?;
+    let out = {
+        let mut cmd = Command::new("sshpass");
+        cmd.arg("-p")
+            .arg(&state.ssh_password)
+            .arg("ssh")
+            .args(&ssh_args);
+        output_with_timeout(&mut cmd, EXEC_TIMEOUT)
+            .await
+            .map_err(|e| TartError::Internal(format!("ssh exec failed: {}", e)))?
+    };
 
     Ok(ExecResponse {
         exit_code: out.status.code().unwrap_or(-1),
@@ -883,12 +950,14 @@ fn service_error(msg: String) -> Response {
         .into_response()
 }
 
-async fn run_tart(state: &AppState, args: &[impl AsRef<std::ffi::OsStr>]) -> Result<(), TartError> {
-    let output = Command::new(&state.tart_bin)
-        .args(args)
-        .output()
-        .await
-        .map_err(|e| TartError::Internal(format!("tart failed: {}", e)))?;
+async fn run_tart(
+    state: &AppState,
+    args: &[impl AsRef<std::ffi::OsStr>],
+    timeout: Duration,
+) -> Result<(), TartError> {
+    let mut cmd = Command::new(&state.tart_bin);
+    cmd.args(args);
+    let output = output_with_timeout(&mut cmd, timeout).await?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(TartError::CommandFailed(stderr.to_string()));
@@ -899,12 +968,11 @@ async fn run_tart(state: &AppState, args: &[impl AsRef<std::ffi::OsStr>]) -> Res
 async fn run_tart_output(
     state: &AppState,
     args: &[impl AsRef<std::ffi::OsStr>],
+    timeout: Duration,
 ) -> Result<String, TartError> {
-    let output = Command::new(&state.tart_bin)
-        .args(args)
-        .output()
-        .await
-        .map_err(|e| TartError::Internal(format!("tart failed: {}", e)))?;
+    let mut cmd = Command::new(&state.tart_bin);
+    cmd.args(args);
+    let output = output_with_timeout(&mut cmd, timeout).await?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(TartError::CommandFailed(stderr.to_string()));
@@ -916,6 +984,37 @@ async fn run_tart_output(
 mod tests {
     use super::*;
     use tokio::io::AsyncWriteExt;
+
+    #[tokio::test]
+    async fn output_with_timeout_bounds_and_kills_slow_children() {
+        let start = std::time::Instant::now();
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg("sleep 30");
+        let err = output_with_timeout(&mut cmd, Duration::from_millis(400))
+            .await
+            .expect_err("a 30s sleep must hit the 400ms deadline");
+        assert!(
+            err.to_string().contains("timed out"),
+            "unexpected error: {}",
+            err
+        );
+        assert!(
+            start.elapsed() < Duration::from_secs(5),
+            "timeout did not bound the wait ({:?})",
+            start.elapsed()
+        );
+    }
+
+    #[tokio::test]
+    async fn output_with_timeout_returns_output_for_fast_children() {
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg("printf hello");
+        let out = output_with_timeout(&mut cmd, Duration::from_secs(5))
+            .await
+            .expect("fast command must complete");
+        assert!(out.status.success());
+        assert_eq!(String::from_utf8_lossy(&out.stdout), "hello");
+    }
 
     /// Fake "ssh -N -L" for tests: binds the given port and answers every
     /// connection with an RFB greeting, like a real guest VNC server behind
