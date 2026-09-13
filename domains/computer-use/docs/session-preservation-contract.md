@@ -1,6 +1,8 @@
 # Session-Preservation Contract — Computer-Use Batches
 
-**Status:** v1 (P2, 2026-09-12) — binding for `stagehand-batch-fork` phase P2 and later.
+**Status:** v1.1 (2026-09-12) — binding for `stagehand-batch-fork` phase P2 and later.
+v1.1 appends §7 (automatic page binding, deferral B); v1 (P2, 2026-09-12) is
+preserved below unchanged.
 **Gate:** this contract is written and landed *before* the planning loop consumes
 batches (spec deliverable gate). The planning loop's batch path (`core/batch_dispatch.py`)
 implements exactly the record type defined here — no more, no less.
@@ -130,3 +132,44 @@ turns to the exact granted batch it dispatched.
   vocabulary in a batch is the 11-action whitelist.
 - No implicit persistence through module globals, provider instances, or browser
   scratch beyond the batch context's own discard rule.
+
+## 7. Automatic page binding (v1.1, 2026-09-12)
+
+**What changed:** in v1 the planning loop never tracked the browser URL, so
+`page_url` in the batch descriptor (and the `page_url` field of the
+batch-context record) was operator-pinned only (`PlanningLoopConfig.batch_page_url`).
+v1.1 fills it automatically from observation, with the operator pin still
+overriding.
+
+**Mechanics (binding):**
+
+1. After each ACT/OBSERVE cycle — step-by-step or post-batch alike — the loop
+   asks the live adapter for its current page URL
+   (`core/batch_dispatch.observe_adapter_url`, which awaits `adapter.get_url()`
+   on browser adapters), and falls back to a URL found in the step's adapter
+   result (`extracted_content.url` / `url` / `newPageUrl`).
+2. The most recently observed URL is pinned into the **next** batch's
+   descriptor binding (both the grant hash input and the ledger record's
+   `page_url`). The first batch of a run observes nothing, so it keeps the
+   origin+session-only binding — same as a v1 run with no operator pin.
+3. `PlanningLoopConfig.batch_page_url`, when set, always wins; auto-tracking
+   never overrides an operator pin.
+4. When the observation carries no URL (non-browser surface, adapter without a
+   `get_url`, closed page), the binding stays at whatever it already was —
+   i.e. origin+session only unless the operator pinned one.
+5. The observation is surfaced as a `page.observed` loop event (url + run/step),
+   so the binding decision is visible in the SSE stream.
+
+**Why this is not a new cross-batch state carrier:** the URL is read from the
+browser itself (outside the batch), never from batch scratch or REPL state, and
+it only feeds the *next grant's* descriptor — which the grant hash then binds.
+It adds no persistence channel beyond what §2 already lists: the observation
+flowing into the next plan call.
+
+**Same mechanics for taught workflows:** the record→teach→batch runner
+(`core/workflow_runner.py`) observes the adapter URL the same way when no
+operator `batch_page_url` is passed to it.
+
+**Versioning note:** payload schema unchanged (`contract_version` stays `1` —
+no fields added or re-meaned); §7 documents a change in *how the engine fills an
+existing field*, which is a minor revision per §5.
