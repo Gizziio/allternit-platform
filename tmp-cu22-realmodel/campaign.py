@@ -107,6 +107,9 @@ class _LogCapture(logging.Handler):
 
 
 # ── Vocabulary shim ─────────────────────────────────────────────────────────
+from core.vision_providers import SubprocessVisionProvider  # noqa: E402
+
+
 class PerStepVocabularyAdapter:
     """Translate the plan/whitelist vocabulary (click/press) to the executor's
     native action types (left_click/key) for the per-step leg.
@@ -261,7 +264,6 @@ async def _navigate_adapter(executor, session_id, url):
 
 async def run_one(task, mode, executor, session_id):
     from core.planning_loop import PlanningLoop, PlanningLoopConfig
-    from core.vision_providers import SubprocessVisionProvider  # noqa: F401
 
     provider = CampaignVisionProvider()
     client = CampaignBatchClient()
