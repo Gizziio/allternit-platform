@@ -376,3 +376,30 @@ order is enforced by implementation sequence.
 A:// docs (A_PROTOCOL.md §16, A_PROTOCOL_CONFORMANCE_MATRIX.md §6) for proof
 per item. No A:// protocol items remain open; future work is product depth
 (UI rendering, connector breadth), not protocol conformance.
+
+---
+
+## A:// Product-Depth Task DAG (session/aproduct-0913, 2026-09-13)
+
+Product-depth items the docs re-scoped, worked in dependency order. Same
+conventions as the protocol DAG above: id, definition of done, dependencies.
+Statuses updated as items land; owner reviews and merges — no self-merge.
+
+| ID | Item | Definition of done | Depends on |
+|----|------|--------------------|-----------|
+| P-T1 | Multi-store consolidation boundary | All run/job/event writes flow only through the canonical fabric-transport store (Rust cowork-runtime SQLite); cloud-api Postgres/sqlx and gizzi Drizzle cowork stores become read-only consumers or explicitly-marked legacy projections (write paths redirect/gate with clear errors); per-store change doc; removable stores removed, others honestly marked | — (protocol v0.1 landed) |
+| P-T2 | Non-local compute placement | Job declaring `compute: vm` (or policy auto-resolve) claimed only by a VM-capable worker; gizzi worker gains VM execution mode via existing vfkit machinery (bubblewrap Linux / vfkit macOS documented); placement resolves per contract §8.8; identity/attribution unchanged; live proof: vm-required job claimed by VM-capable worker, local-only worker claim refused | P-T1 (claim boundary canonical) |
+| P-T3 | Gizzi worker daemon packaging | Source-run `bun worker-entry.ts` packaged as installable daemon: daemon mode (auto-reconnect/backoff, structured logs, graceful shutdown releasing leases), launchd plist (macOS) + systemd unit (Linux), end-to-end install docs incl. operator-provisioned token; claim protocol unchanged | P-T2 (worker execution modes stable) |
+| P-T4 | Connector breadth | Two real connectors through the broker beyond webhook: GitHub (repo read/write via env token, approval-gated writes) and files/local (scoped folder read/write, path confinement); invariants hold: secrets never in worker payloads, scoped short-lived sessions, approval gating, attributed invocations | P-T1 (broker sessions canonical); ∥ P-T2/P-T3 |
+| P-T5 | Al persona runtime v0.1 | Conversational surface (API + minimal Cowork integration) over the orchestrator: user talks to Al → canonical intent via delegation rules → narrates status (delegation, run state, approvals) → reports typed result; reuses existing model router/gateway (no new LLM path); Al acts under `a://principal/al`, zero-capability posture (plans/delegates only); scope guard: persona runtime, not orchestrator redesign | A-T3 (orchestration loop, landed) + P-T4 (narration surface exercised) |
+| P-T6 | Richer Cowork protocol rendering | Control surface upgrade: principals/bots management view (list, roles, capabilities, token provisioning), delegation rules editor, connector sessions view, run detail view rendering event timeline with attribution triple + approval states per state-machine reference; frontend typecheck clean; wired to real endpoints only | P-T1..P-T5 (real data model stable) |
+
+**Sequence:** P-T1 → P-T2 → P-T3 ∥ P-T4 → P-T5 → P-T6.
+
+**Status:** all OPEN as of DAG creation. Each item closes with: Rust
+`cargo test -p allternit-cowork-runtime` green, `cargo build -p allternit-api`,
+clippy clean, gizzi typecheck clean where touched, live behavioral evidence
+captured, docs updated (AL_IMPLEMENTATION_SPEC, GIZZI_WORKER_SPEC,
+BOT_AUTHORING_SPEC if touched, A_PROTOCOL_SCHEMA for new endpoints/types,
+conformance matrix, re-scoped product-depth lists), changelog entries,
+conventional commits pushed, PR opened (no merge).
