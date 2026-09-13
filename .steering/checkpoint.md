@@ -1,11 +1,11 @@
 # Checkpoint — session/cu22-realmodel
 
-**Goal:** D3 — real-model (frontier vision) end-to-end validation campaign for batch dispatch (spec deferral from stagehand-batch-fork).
+**Goal:** D3 — real-model (frontier vision) end-to-end validation campaign for batch dispatch.
 
-**Just did:** Worktree `allternit-cu22` created on `session/cu22-realmodel` from origin/main (a0e615fd4, includes cu21 adversarial recall). Plan written to `.steering/plan-cu22.md`.
+**Just did:** Campaign complete (9/10 runs; conditional-branch stalled on codex backend — infra, documented). Deliverable C landed: `docs/public/aci/safety.md` real-model campaign section + Brain spec deferral updated (both pushed). Product fixes: attribute-selector + select grounding in `batch_dispatch.py` (21/21 tests). Verification: cargo aci_batch 28/28, python batch suites 49+21 passed, preflight 35/0.
 
-**Next:** Find prior tmp-*-smoke scripts + read batch_dispatch.py / planning_loop.py / vision_providers.py / gateway model config to plan the real-model smoke.
+**Headline finding:** turns NOT saved end-to-end (28 batched vs 13 per-step) — post-batch observation reads the adapter browser, batch executes in the sidecar browser → stale observation → re-batching → grant amplification (12 grants on extract-then-act). No got-through; every batch execution hash-grant-bound with receipts.
 
-**Open questions:**
-- Does the local gateway have a working provider key for a frontier vision model? (A decides; stop if none.)
-- Which model id does model-routing.json / the gateway serve for vision tasks?
+**Next:** PR → checks → merge → attestation + LEDGER (detached worktree push to main) → cleanup worktrees/processes.
+
+**Open questions:** none blocking.
