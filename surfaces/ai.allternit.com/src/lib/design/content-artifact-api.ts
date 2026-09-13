@@ -13,12 +13,35 @@
 
 import { api } from '@/integration/api-client';
 
+/** One hop of the org-relay chain — which gateway held the artifact. */
+export interface ContentArtifactRelayHop {
+  gateway?: string;
+  artifactId?: string;
+  version?: number;
+}
+
+/**
+ * Relay provenance (org relay tier, artifacts-api.md §6) — present on
+ * artifacts this gateway RECEIVED from a peer. The local id is minted on
+ * receive; the origin id + relay path are recorded here for display.
+ */
+export interface ContentArtifactRelayProvenance {
+  originGateway?: string;
+  originArtifactId?: string;
+  originVersion?: number;
+  originSandboxPolicy?: string;
+  relayPath?: ContentArtifactRelayHop[];
+  bundleHash?: string;
+  receivedAt?: string;
+}
+
 export interface ContentArtifactProvenance {
   prompt?: string;
   designSystemId?: string;
   skillId?: string;
   skillName?: string;
   sourceSessionId?: string;
+  relay?: ContentArtifactRelayProvenance;
 }
 
 export interface ContentArtifactRecord {
