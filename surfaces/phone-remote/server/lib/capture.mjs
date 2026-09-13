@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { FrameWatchdog } from './watchdog.mjs';
 
 const execFileP = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -33,7 +34,7 @@ export async function buildSwiftHelper() {
 }
 
 export class Capture extends EventEmitter {
-  constructor({ mode = 'sckit', fps = 10, scale = 0.5, quality = 0.6, log = console.error } = {}) {
+  constructor({ mode = 'sckit', fps = 10, scale = 0.5, quality = 0.6, log = console.error, watchdogMs = 5000 } = {}) {
     super();
     this.mode = mode;
     this.fps = fps;
@@ -45,6 +46,18 @@ export class Capture extends EventEmitter {
     this.actualMode = null;
     this.lastFrame = null;
     this.lastInfo = { width: 0, height: 0 };
+    // In-process sckit restart attempts used (watchdog trip or unexpected
+    // child exit). Exactly one is tried before the capture is declared dead
+    // — a supervisor restarts the whole server after that.
+    this.sckitRestarts = 0;
+    // null while alive; string reason once the capture is unrecoverable
+    // in-process. Surfaced by /hello (stale/error) and 'fatal' (server exit).
+    this.dead = null;
+    this.watchdog = new FrameWatchdog({
+      staleMs: watchdogMs,
+      log,
+      onStale: () => this.#onWatchdogTrip(),
+    });
   }
 
   async start() {
@@ -88,6 +101,7 @@ export class Capture extends EventEmitter {
         const jpeg = buf.subarray(4, 4 + n);
         this.lastFrame = jpeg;
         this.emit('frame', jpeg);
+        this.watchdog.reset();
         buf = buf.subarray(4 + n);
       }
     });
@@ -104,7 +118,12 @@ export class Capture extends EventEmitter {
             this.lastInfo = { width: msg.width, height: msg.height };
             this.emit('info', this.lastInfo);
           }
-          else if (msg.type === 'started') this.log(`[capture] sckit started ${msg.captureWidth}x${msg.captureHeight} @${msg.fps}fps`);
+          else if (msg.type === 'started') {
+            this.log(`[capture] sckit started ${msg.captureWidth}x${msg.captureHeight} @${msg.fps}fps`);
+            // Frames follow within one frame period of 'started'; from here a
+            // silent gap means the helper hung.
+            this.watchdog.arm();
+          }
           else if (msg.type === 'error') this.emit('captureError', msg);
         } catch {
           this.log(`[capture] helper: ${line}`);
@@ -112,6 +131,13 @@ export class Capture extends EventEmitter {
       }
     });
     child.on('exit', (code) => {
+      // An in-process restart (#restartSckit) supersedes this child before its
+      // exit event lands — the new child owns the watchdog and the running
+      // flag. A stale exit must not disarm the new child's watchdog or count
+      // as a second death.
+      if (this.child !== child) return;
+      this.watchdog.disarm();
+      if (!this.running) return; // stop() already tore us down
       this.running = false;
       // 3 = Screen Recording TCC denied — surfaced, never faked.
       this.emit('exit', code);
@@ -119,8 +145,44 @@ export class Capture extends EventEmitter {
         this.log('[capture] Screen Recording permission denied for this process tree — see README TCC runbook; falling back to screencapture loop');
         this.running = true;
         this.#startScreencaptureLoop();
+        return;
+      }
+      if (this.actualMode === 'sckit') {
+        this.#restartSckit(`sc_capture exited unexpectedly (code ${code})`);
       }
     });
+  }
+
+  /** One in-process sckit restart after a watchdog trip or unexpected exit. */
+  #restartSckit(reason) {
+    if (this.dead) return;
+    if (this.sckitRestarts >= 1) {
+      this.#die(`${reason}; in-process restart already attempted`);
+      return;
+    }
+    this.sckitRestarts += 1;
+    this.log(`[capture] ${reason} — attempting in-process sckit restart (${this.sckitRestarts}/1)`);
+    // The frozen-helper case needs a hard kill; SIGTERM can hang on a wedged
+    // ScreenCaptureKit stream.
+    try { this.child?.kill('SIGKILL'); } catch { /* already gone */ }
+    this.child = null;
+    this.running = true;
+    this.#startSckit().catch((err) => this.#die(`sckit restart failed: ${err.message}`));
+  }
+
+  #onWatchdogTrip() {
+    if (!this.running || this.dead) return;
+    this.#restartSckit(`frozen: no frame for >${this.watchdog.staleMs}ms (sckit)`);
+  }
+
+  #die(reason) {
+    if (this.dead) return;
+    this.dead = reason;
+    this.watchdog.disarm();
+    this.log(`[capture] FATAL: ${reason}`);
+    // The server exits non-zero on 'fatal' so a supervisor (the desktop app)
+    // restarts the whole process — in-process recovery is exhausted.
+    this.emit('fatal', reason);
   }
 
   #startX11Loop() {
@@ -194,6 +256,7 @@ export class Capture extends EventEmitter {
 
   stop() {
     this.running = false;
+    this.watchdog.disarm();
     if (this.timer) clearTimeout(this.timer);
     if (this.child) this.child.kill('SIGTERM');
     this.child = null;

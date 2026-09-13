@@ -20,6 +20,7 @@ import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Capture, checkScreenRecordingPermission } from './lib/capture.mjs';
 import { InputBridge } from './lib/input.mjs';
+import { helloBody } from './lib/status.mjs';
 import { upgrade } from './lib/ws.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -37,7 +38,9 @@ const MIME = {
 
 function parseArgs(argv) {
   const cfg = {
-    port: 8477,
+    // PORT env wins as the default so a supervisor (the desktop app) can pin
+    // the port without argv surgery; --port still wins over the env.
+    port: process.env.PORT ? Number(process.env.PORT) : 8477,
     bind: null, // null → auto tailscale ip -4
     token: null,
     capture: 'sckit', // sckit | screencapture | none
@@ -200,6 +203,14 @@ async function main() {
     if (viewer) sendJSON(viewer, { type: 'error', error: `capture: ${e.error}` });
   });
   capture?.on('exit', (code) => console.error(`[capture] exited (${code})`));
+  capture?.on('fatal', (reason) => {
+    // In-process recovery is exhausted (watchdog tripped twice or the helper
+    // is gone). Exit non-zero so a supervisor — the desktop app supervises
+    // its own child — restarts the whole server instead of serving a stale
+    // frame forever.
+    console.error(`[server] capture unrecoverable: ${reason} — exiting non-zero for supervisor restart`);
+    process.exit(1);
+  });
 
   if (input) {
     input.on('ready', ({ display }) => {
@@ -218,12 +229,10 @@ async function main() {
       if (!trustedLocal && !tokenMatches(cfg, presentedToken(req, url))) {
         res.writeHead(403, { 'content-type': 'text/plain' }); return res.end('403\n');
       }
-      const body = Buffer.from(JSON.stringify({
-        capture: { mode: capture?.actualMode ?? cfg.capture, fps: cfg.fps, ...((capture?.lastInfo) || {}) },
-        input: input ? { enabled: true, dryRun: cfg.inputDryRun, accessibilityTrusted: input.ready?.accessibilityTrusted ?? null } : { enabled: false },
-        display: input?.display ?? null,
-        hasFrame: Boolean(capture?.lastFrame),
-      }));
+      const body = Buffer.from(JSON.stringify(helloBody({
+        capture, captureMode: cfg.capture, fps: cfg.fps,
+        input, inputDryRun: cfg.inputDryRun, display: input?.display ?? null,
+      })));
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'content-length': body.length });
       return res.end(body);
     }
