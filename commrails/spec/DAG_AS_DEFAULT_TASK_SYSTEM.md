@@ -85,7 +85,11 @@ option (b) (merge/remove) reopens — but as of ratification, (a) is the law.
 - [x] Decision recorded: ticket system **(a)** — out-of-scope tooling, 2026-09-13.
 - [x] `AGENTS.md` planning section rewritten. (Amended in this change: planning
       section + session-lifecycle step 2.)
-- [ ] One queue (Research) projected into DAG nodes as the pilot.
+- [x] One queue (Research) projected into DAG nodes as the pilot.
+      Done 2026-09-13: `dag_505836` in the Allternit Brain workspace root —
+      38 open item nodes, all READY. Memo:
+      `Allternit Brain/Research/memos/dag-pilot-2026-09-13.md` (mapping
+      convention, reproduction steps, limitations).
 - [ ] At least one full multi-session work item completed end-to-end via
       plan → pickup → gates → vault with no parallel plan file.
 - [x] Status changed to RATIFIED with the date (decision ratified; the two
