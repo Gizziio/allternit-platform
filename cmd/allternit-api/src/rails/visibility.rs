@@ -61,6 +61,12 @@ pub fn visibility_from_ao_json(raw: &Value, peers: &PeerRegistry) -> VisibilityD
                 id: id.clone(),
                 label: label_from(obj, &id),
                 state: map_ao_status(status).to_string(),
+                last_message: obj
+                    .get("lastMessage")
+                    .and_then(Value::as_str)
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string()),
+                last_message_at: obj.get("lastMessageAt").and_then(Value::as_u64),
             });
         }
     }
@@ -100,6 +106,8 @@ pub fn visibility_from_ao_json(raw: &Value, peers: &PeerRegistry) -> VisibilityD
                 allternit_commrails::peer::PeerStatus::Active => "working".to_string(),
                 _ => "idle".to_string(),
             },
+            last_message: None,
+            last_message_at: None,
         });
     }
 
@@ -122,6 +130,8 @@ pub fn visibility_from_peers(peers: &PeerRegistry) -> VisibilityDto {
                 allternit_commrails::peer::PeerStatus::Active => "working".to_string(),
                 _ => "idle".to_string(),
             },
+            last_message: None,
+            last_message_at: None,
         })
         .collect();
     VisibilityDto {
@@ -175,7 +185,9 @@ mod tests {
                         {
                             "paneId": "pane-2",
                             "name": "kimi",
-                            "status": "working"
+                            "status": "working",
+                            "lastMessage": "fix the flaky test",
+                            "lastMessageAt": 1725974400000u64
                         }
                     ]
                 },
@@ -189,6 +201,9 @@ mod tests {
         assert_eq!(dto.panes[0].id, "pane-1");
         assert_eq!(dto.panes[0].state, "blocked");
         assert_eq!(dto.panes[1].state, "working");
+        assert_eq!(dto.panes[1].last_message.as_deref(), Some("fix the flaky test"));
+        assert_eq!(dto.panes[1].last_message_at, Some(1725974400000));
+        assert!(dto.panes[0].last_message.is_none());
         assert_eq!(dto.needs_you.len(), 1);
         assert_eq!(dto.needs_you[0].id, "pane-1");
         assert_eq!(dto.needs_you[0].reason, "blocked");

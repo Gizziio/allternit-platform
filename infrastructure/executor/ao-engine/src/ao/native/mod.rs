@@ -55,6 +55,12 @@ pub struct NativeSession {
     pub fingerprint: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_event_id: Option<String>,
+    /// Text of the last user prompt the session is (or was last) working on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_prompt: Option<String>,
+    /// Epoch ms when that prompt arrived.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_prompt_at: Option<u64>,
     pub installed: bool,
     pub reader: ReaderKind,
     pub projectable: bool,

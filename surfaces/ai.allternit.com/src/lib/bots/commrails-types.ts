@@ -35,6 +35,10 @@ export interface CommRailItem {
   badge?: number;
   accentColor?: string;
   metadata?: Record<string, unknown>;
+  /** Last user prompt the session's agent is working on (visibility DTO). */
+  lastMessage?: string;
+  /** Epoch ms when that prompt arrived. */
+  lastMessageAt?: number;
 }
 
 export interface CommRailSection {

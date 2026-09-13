@@ -415,6 +415,10 @@ pub(crate) struct VisibilityPane {
     pub(crate) id: String,
     pub(crate) label: String,
     pub(crate) state: String,
+    #[serde(rename = "lastMessage", skip_serializing_if = "Option::is_none")]
+    pub(crate) last_message: Option<String>,
+    #[serde(rename = "lastMessageAt", skip_serializing_if = "Option::is_none")]
+    pub(crate) last_message_at: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]

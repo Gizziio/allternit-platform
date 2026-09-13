@@ -13,7 +13,7 @@ export function FabricViewTitle({
   return (
     <div className="min-w-0">
       <h1
-        className="text-3xl font-medium tracking-tight m-0"
+        className="text-2xl sm:text-3xl font-medium tracking-tight m-0"
         style={{ fontFamily: 'var(--font-serif)' }}
       >
         {title}
@@ -75,7 +75,7 @@ export function FabricStatusCluster({
 }): React.ReactNode {
   return (
     <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
-      <span className="hidden sm:inline text-[12px] font-semibold text-[var(--shell-item-muted)] whitespace-nowrap">
+      <span className="text-[12px] font-semibold text-[var(--shell-item-muted)] whitespace-nowrap">
         {onlineCount}/{runtimeCount} online
       </span>
       <span className="hidden sm:inline text-[12px] font-semibold text-[var(--shell-item-muted)] whitespace-nowrap">
