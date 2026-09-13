@@ -43,13 +43,13 @@ import { CostPage } from "@/pages/console/analytics/CostPage";
 import {
   GizziUsageStubPage,
   ManageRateLimitsStubPage,
-  ManageSpendLimitsStubPage,
-  ManageMembersStubPage,
-  ManageServiceAccountsStubPage,
-  ManageSecurityStubPage,
-  ManageWebhooksStubPage,
-  ManageTagsStubPage,
 } from "@/pages/stubs/consoleStubs";
+import { MembersPage } from "@/pages/console/manage/MembersPage";
+import { ServiceAccountsPage } from "@/pages/console/manage/ServiceAccountsPage";
+import { SpendLimitsPage } from "@/pages/console/manage/SpendLimitsPage";
+import { SecurityPage } from "@/pages/console/manage/SecurityPage";
+import { WebhooksPage } from "@/pages/console/manage/WebhooksPage";
+import { TagsPage } from "@/pages/console/manage/TagsPage";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -84,12 +84,6 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
 const consoleStubRoutes: Array<{ path: string; element: React.ReactNode }> = [
   { path: "/gizzi/usage/*", element: <GizziUsageStubPage /> },
   { path: "/manage/rate-limits/*", element: <ManageRateLimitsStubPage /> },
-  { path: "/manage/spend-limits/*", element: <ManageSpendLimitsStubPage /> },
-  { path: "/manage/members/*", element: <ManageMembersStubPage /> },
-  { path: "/manage/service-accounts/*", element: <ManageServiceAccountsStubPage /> },
-  { path: "/manage/security/*", element: <ManageSecurityStubPage /> },
-  { path: "/manage/webhooks/*", element: <ManageWebhooksStubPage /> },
-  { path: "/manage/tags/*", element: <ManageTagsStubPage /> },
 ];
 
 function HomeRoute() {
@@ -418,6 +412,55 @@ export default function App() {
         element={
           <ConsoleRoute>
             <CostPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 5 Manage group — real pages over the admin gateway routes. */}
+      <Route
+        path="/manage/members/*"
+        element={
+          <ConsoleRoute>
+            <MembersPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/service-accounts/*"
+        element={
+          <ConsoleRoute>
+            <ServiceAccountsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/spend-limits/*"
+        element={
+          <ConsoleRoute>
+            <SpendLimitsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/security/*"
+        element={
+          <ConsoleRoute>
+            <SecurityPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/webhooks/*"
+        element={
+          <ConsoleRoute>
+            <WebhooksPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/tags/*"
+        element={
+          <ConsoleRoute>
+            <TagsPage />
           </ConsoleRoute>
         }
       />
