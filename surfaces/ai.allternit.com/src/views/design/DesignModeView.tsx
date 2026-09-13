@@ -25,6 +25,7 @@ import { SkillParameterPanel } from '../../components/design/SkillParameterPanel
 import { SurgicalEditPanel } from '../../components/design/SurgicalEditPanel';
 import ArtifactRenderer from '../../components/artifact/ArtifactRenderer';
 import { buildAioTargetDescription, type AioTargetPayload } from '../../lib/design/aio-targeting';
+import { applyElementEdit, type AstElementEdit } from '../../lib/design/ast-binding';
 import { extractTurnImages } from '../../lib/design/turn-images';
 import { reportDesignPromptConsumed } from '../../lib/design/design-prompt-ack';
 import { DesignCritiquePanel } from '../../components/design/DesignCritiquePanel';
@@ -333,8 +334,16 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   // postMessage; the resolved description seeds the surgical-edit target.
   const [aioTargeting, setAioTargeting] = useState(false);
   const [targetSeed, setTargetSeed] = useState<{ target: string; nonce: number } | null>(null);
+  // AST two-way binding (onlook-ast-0912): the most recently click-targeted
+  // element, offered for in-place source edits.
+  const [aioTarget, setAioTarget] = useState<{ aioId: string; tag: string; nonce: number } | null>(null);
+  // In-place patched source. `baseHtml` is the agent-produced artifact the
+  // patch was applied on top of; the patch is only in effect while it still
+  // matches the latest artifact (a new agent artifact invalidates it).
+  const [astPatch, setAstPatch] = useState<{ baseHtml: string; html: string } | null>(null);
   const handleAioTarget = React.useCallback((payload: AioTargetPayload) => {
     setTargetSeed({ target: buildAioTargetDescription(payload), nonce: Date.now() });
+    setAioTarget({ aioId: payload.aioId, tag: payload.tag, nonce: Date.now() });
     setAioTargeting(false);
   }, []);
   const { selectedAgent } = useSurfaceAgentSelection('design');
@@ -389,6 +398,31 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     }
     return '';
   }, [backendMessages]);
+
+  // Effective artifact source: the in-place AST patch when it still applies
+  // to the latest agent artifact, otherwise the latest artifact itself. All
+  // consumers (preview, surgical panel, HyperFrames, critique, surgical
+  // prompt) read from this so edits compound deterministically.
+  const artifactHtml = astPatch && astPatch.baseHtml === latestArtifactHtml
+    ? astPatch.html
+    : latestArtifactHtml;
+
+  // Apply an in-place (AST) surgical edit: patch the artifact source and
+  // re-render immediately, without round-tripping through the agent.
+  function handleApplyInPlace(edit: AstElementEdit): { ok: boolean; error?: string } {
+    if (!aioTarget) return { ok: false, error: 'No element targeted.' };
+    const base = astPatch && astPatch.baseHtml === latestArtifactHtml
+      ? astPatch.html
+      : latestArtifactHtml;
+    if (!base) return { ok: false, error: 'No artifact to edit.' };
+    try {
+      const next = applyElementEdit(base, aioTarget.aioId, edit);
+      setAstPatch({ baseHtml: latestArtifactHtml, html: next });
+      return { ok: true, error: 'Applied in place.' };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
 
   // Images produced during the design turn (artifact blocks, markdown embeds,
   // image-tool outputs) — attached to the critique panel so the review covers
@@ -889,13 +923,13 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   {activeTab === 'hyperframes' && (
                     <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
                       <Suspense fallback={<TabLoadingState label="Loading HyperFrames timeline…" />}>
-                        <HyperFramesTimelineEditor projectId={activeProject.id} artifactHtml={latestArtifactHtml} />
+                        <HyperFramesTimelineEditor projectId={activeProject.id} artifactHtml={artifactHtml} />
                       </Suspense>
                     </div>
                   )}
                   {activeTab === 'critique' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <DesignCritiquePanel artifactHtml={latestArtifactHtml} artifactImages={latestTurnImages} />
+                      <DesignCritiquePanel artifactHtml={artifactHtml} artifactImages={latestTurnImages} />
                     </div>
                   )}
                   </ErrorBoundary>
@@ -992,7 +1026,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                 </button>
               </div>
               <ArtifactRenderer
-                content={latestArtifactHtml}
+                content={artifactHtml}
                 type="text/html"
                 height="240px"
                 aioTargeting={aioTargeting}
@@ -1004,12 +1038,14 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
             <SurgicalEditPanel
               comments={surgicalComments}
               agent={selectedAgent ?? undefined}
-              artifactHtml={latestArtifactHtml}
+              artifactHtml={artifactHtml}
               targetSeed={targetSeed}
+              inPlaceTarget={aioTarget}
+              onApplyInPlace={handleApplyInPlace}
               onChange={setSurgicalComments}
               onApply={() => {
                 if (!activeSessionId) return;
-                const prompt = buildSurgicalEditPrompt(latestArtifactHtml, surgicalComments);
+                const prompt = buildSurgicalEditPrompt(artifactHtml, surgicalComments);
                 if (prompt) sendMessageStream(activeSessionId, { text: prompt });
               }}
             />

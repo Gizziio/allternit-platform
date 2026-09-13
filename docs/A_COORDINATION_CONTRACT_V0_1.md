@@ -262,6 +262,13 @@ This requirement applies across HTTP, CommRails, WebSocket, scheduler delivery, 
 
 At-least-once transport delivery MUST NOT become at-least-once side effects.
 
+**Implemented for the event API (migration V157).** `POST /runs/:id/events`
+accepts an optional client-supplied `event_id` idempotency key
+(`client_event_id`, unique per run): retries return the canonical existing
+event (`{id, duplicated: true}`) instead of double-writing. Store-level:
+`sqlite_store::insert_event_idempotent`. System-generated fabric-transport
+events remain single-writer by construction.
+
 ---
 
 ## 6. Intent lifecycle
@@ -688,6 +695,26 @@ humans decide via `.../approvals/:id/grant|deny` (user auth). Lease expiry
 invalidates all bindings of the expired generation (`approval.invalidated` event,
 executor-attributed), so a replacement worker under a new generation must
 re-obtain approval — enforced in the §8.24 conformance test.
+
+**Timeout / auto-deny (implemented).** Every binding carries a server-clock
+`expires_at` (request-selectable TTL, default 300s; migration V156). The sweeper
+and the boot pass expire stale requests with attributed `approval.expired`
+events; `decide` after expiry is rejected (`A_APPROVAL_INVALID`) and `check` on
+an expired binding returns `A_APPROVAL_REQUIRED`. Recovery policy for an
+expired approval is **re-request** (deny-by-default): a late human grant can
+never authorize execution that was already told to re-request.
+
+**Single policy path (implemented).** Risk rules and bindings are one system:
+`allternit-cowork-runtime/src/risk_policy.rs` implements the same rule model as
+the cowork-engine `ApprovalGate` (first-match on actionType + riskLevel,
+low-risk auto-approve default; workspace overrides in `cowork_approval_policy`,
+migration V158). Risk rules decide WHETHER a protected action needs an
+approval at all; bindings scope the approval when one is required. Auto-decide
+via the request path is ledgered (`approval.granted`/`approval.denied`,
+decided_by=`risk-rule (...)`); `check` is read-only and writes nothing, so
+polling cannot flood the ledger. The TS `ApprovalGate` remains the UI-side
+request manager; it does not gate execution — fabric transport's evaluation is
+the single execution-gating path.
 
 ## 8.15 Delegation chain
 
@@ -1257,11 +1284,14 @@ Rust runtime already nails this: `cowork_runs` (initiator, mode, state, entrypoi
 
 Scoped bindings landed: `cowork_approval_bindings` (V155) with
 (executor, capability, target, run, job, lease_generation) scope, request/check/grant/deny
-protocol under `/api/v1/fabric/transport/*`, and expiry invalidation (§8.14) — see the
-§8.14 implementation note. The unscoped listing bug (`cmd/allternit-api/src/cowork_routes.rs`
-`GET /cowork/approvals`) is fixed (user-filtered). Still open: approval
-timeout/auto-deny semantics, and unifying this with the older `ApprovalGate`
-risk-rules engine.
+protocol under `/api/v1/fabric/transport/*`, expiry invalidation (§8.14), server-clock
+request expiry with auto-deny (V156), and one policy evaluation path shared with
+the cowork-engine ApprovalGate rule model (`risk_policy.rs`, workspace overrides in
+`cowork_approval_policy`, V158) — see the §8.14 implementation notes. The unscoped
+listing bug (`cmd/allternit-api/src/cowork_routes.rs` `GET /cowork/approvals`) is
+fixed (user-filtered). Still open: unifying the older `ApprovalGate` UI request
+manager's pending-set with the binding table (single table), approval
+auto-deny *reasons* surfaced in Cowork.
 
 ### Event/Attribution — conformant for material events
 
@@ -1291,7 +1321,7 @@ policy beyond requeue, CommRails push wake-up.
 ```text
 Run                = conformant
 Event/Transport    = conformant (attribution triple on material events)
-Approval           = binding conformant (§8.14; scoped + invalidated on expiry)
+Approval           = conformant (scoped, expiry-invalidated, timeout auto-deny, single risk-policy path)
 Principal          = auth conformant (bearer-token, hashed)
 Lease/Fabric-transport = proof slice conformant (§8.24 test passes)
 Intent             = not yet (envelope type; run creation is the current entry)
@@ -1322,4 +1352,4 @@ Target: the §8.24 test with the simplest real job (a shell step sequence, not a
 
 ---
 
-*Changelog: 2026-09-12 — v0.1 internal draft (third update): approval↔lease binding (§8.14) implemented — `cowork_approval_bindings` (V155), request/check/grant/deny protocol, expiry invalidation; boot-time recovery (§8.20) implemented — downtime lease expiry pass + full run/job rehydration; `start_run` now stops at `queued` (RUNNING = lease held, §8.2); full §8.24 conformance test including approval steps passes. 2026-09-12 — v0.1 internal draft. Merged dispatcher/lease protocol as §8, superseding the original §8 "Lease / claim semantics". Folded in the four architectural locks (§8.0). Added Appendix A (codebase type mapping) and Appendix B (proof-slice plan). 2026-09-12 (later) — terminology locked: "dispatcher"/"dispatch" renamed to **fabric transport** throughout §7/§8 and the appendices (lifecycle `DISPATCHED` → `TRANSPORTED`); `A_DISPATCH_FAILED` → `A_TRANSPORT_FAILED`; HTTP surface `/api/v1/dispatch/*` → `/api/v1/fabric/transport/*`; env `ALLTERNIT_DISPATCH_*` → `ALLTERNIT_FABRIC_TRANSPORT_*`. Behavior, CAS mechanism, and the four locks unchanged.*
+*Changelog: 2026-09-12 — v0.1 internal draft (fourth update): approval request timeout/auto-deny (V156, sweeper `approval.expired`, late-grant rejection, recovery policy = re-request); event POST idempotency on client-supplied `event_id` (V157, canonical-return on retry); single approval policy path — Rust `risk_policy.rs` mirrors the cowork-engine ApprovalGate rule model, workspace overrides (V158); conformance tests for expiry, idempotency, risk policy. 2026-09-12 — v0.1 internal draft (third update): approval↔lease binding (§8.14) implemented — `cowork_approval_bindings` (V155), request/check/grant/deny protocol, expiry invalidation; boot-time recovery (§8.20) implemented — downtime lease expiry pass + full run/job rehydration; `start_run` now stops at `queued` (RUNNING = lease held, §8.2); full §8.24 conformance test including approval steps passes. 2026-09-12 — v0.1 internal draft. Merged dispatcher/lease protocol as §8, superseding the original §8 "Lease / claim semantics". Folded in the four architectural locks (§8.0). Added Appendix A (codebase type mapping) and Appendix B (proof-slice plan). 2026-09-12 (later) — terminology locked: "dispatcher"/"dispatch" renamed to **fabric transport** throughout §7/§8 and the appendices (lifecycle `DISPATCHED` → `TRANSPORTED`); `A_DISPATCH_FAILED` → `A_TRANSPORT_FAILED`; HTTP surface `/api/v1/dispatch/*` → `/api/v1/fabric/transport/*`; env `ALLTERNIT_DISPATCH_*` → `ALLTERNIT_FABRIC_TRANSPORT_*`. Behavior, CAS mechanism, and the four locks unchanged.*
