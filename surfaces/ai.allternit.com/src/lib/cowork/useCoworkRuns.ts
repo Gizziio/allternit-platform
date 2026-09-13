@@ -75,10 +75,6 @@ export function useCoworkRuns(workspaceId?: string, options?: { enabled?: boolea
   // True when the cloud API does not serve the cowork runs endpoints at all
   // (404). Callers should hide the feature UI instead of showing errors.
   const [unsupported, setUnsupported] = useState(false);
-  // Set when a specific sub-endpoint 404s — recover and handoffs are not
-  // implemented in cloud-api; detect once and hide those controls.
-  const [recoverUnavailable, setRecoverUnavailable] = useState(false);
-  const [handoffsUnavailable, setHandoffsUnavailable] = useState(false);
 
   const coworkFetch = useCallback(
     async (path: string, init?: RequestInit): Promise<Response> => {
@@ -156,10 +152,6 @@ export function useCoworkRuns(workspaceId?: string, options?: { enabled?: boolea
   const recoverRun = useCallback(
     async (id: string) => {
       const res = await coworkFetch(`/api/v1/runs/${id}/recover`, { method: 'POST' });
-      if (res.status === 404) {
-        setRecoverUnavailable(true);
-        return;
-      }
       if (!res.ok) throw new Error(`Failed to recover run: ${res.status}`);
       refresh();
     },
@@ -172,10 +164,6 @@ export function useCoworkRuns(workspaceId?: string, options?: { enabled?: boolea
         method: 'POST',
         body: JSON.stringify(req),
       });
-      if (res.status === 404) {
-        setHandoffsUnavailable(true);
-        return undefined as unknown as CoworkHandoff;
-      }
       if (!res.ok) throw new Error(`Failed to create handoff: ${res.status}`);
       refresh();
       return (await res.json()) as CoworkHandoff;
@@ -188,8 +176,6 @@ export function useCoworkRuns(workspaceId?: string, options?: { enabled?: boolea
     loading,
     error,
     unsupported,
-    recoverUnavailable,
-    handoffsUnavailable,
     refresh,
     createRun,
     startRun,
