@@ -6,6 +6,7 @@ members = [
     "cmd/allternit-api",
     "cmd/allternit-mux",
     "cmd/allternit-cloud-api",
+    "cmd/allternit-node",
     "cmd/allternit-cloud-wizard",
     "cmd/allternit-computer-cloud",
     "cmd/launcher",
