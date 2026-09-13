@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-12 21:20 — kimi — gateway port ownership: 8013 owned, not defaulted (#445)
+
+- **Session ID / Branch:** `session/portowner-0912`
+- **Agent:** kimi
+- **Summary:** Structural fix for the recurring Fabric Transport "relay offline" class: `allternit-api` defaulted to 8013 with unset env, so any worktree/dev build squatted the installed app's gateway (a dev Electron even SIGTERM'd the installed app's listener on launch). Unset default now moves to dev 18013; production launchers pin 8013 explicitly (packaged Desktop already did; Contabo deploy writes a systemd drop-in; launcher pins its 3010); API logs port+source at boot; dev desktops bind 18013 and never kill the 8013 listener. `cargo check` ✅, `cargo test -p allternit-api` 1039 passed with 8 failures proven pre-existing (identical repro with change reverted) ✅, launcher check ✅, desktop typecheck + backend-manager tests ✅, release-preflight 35/0 ✅. Desktop binary rebuild deferred — swapping the app restarts the live relay; Eoj to choose timing.
+- **PR / Commit:** #445, merge commit `032f81cfa9563d0b40f15d557d9353114805d164`
+- **Full summary:** [agent-ledger/summaries/2026-09-12-2120-portowner-0912-kimi-code-gateway-port-ownership.md](agent-ledger/summaries/2026-09-12-2120-portowner-0912-kimi-code-gateway-port-ownership.md)
+
 ### 2026-09-12 12:52 — kimi — desktop runtime relay heartbeat watchdog (#423)
 
 - **Session ID / Branch:** `ao/desktop-relay-watchdog-0912`
