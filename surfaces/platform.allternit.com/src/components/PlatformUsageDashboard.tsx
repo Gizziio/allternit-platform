@@ -307,7 +307,7 @@ export function PlatformUsageDashboard() {
   );
 }
 
-const PIE_COLORS = [ACCENT, "#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#a855f7"];
+const PIE_COLORS = [ACCENT, "#B08D6E", "#22c55e", "#f59e0b", "#ef4444", "#a855f7"];
 
 function UsagePanelShell({ children }: { children: React.ReactNode }) {
   return (

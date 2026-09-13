@@ -91,7 +91,7 @@ import { TaskBar } from './components/TaskBar';
 import { ModeDock } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
-import { ComposerPlusSheet, type ToolAccessLevel, type ResponseStyle } from './components/ComposerPlusSheet';
+import { ComposerPlusSheet } from './components/ComposerPlusSheet';
 import { ConnectorMarketplaceDialog } from './components/ConnectorMarketplaceDialog';
 import { MiroFishPanel } from './panels/MiroFishPanel';
 import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
@@ -109,7 +109,7 @@ const THEME = {
   textPrimary: 'var(--ui-text-primary)',
   textSecondary: 'var(--chat-composer-muted)',
   textMuted: 'var(--ui-text-muted)',
-  accent: 'var(--accent-chat)',
+  accent: 'var(--accent-primary)',
   hoverBg: 'var(--chat-composer-hover)',
   menuBg: 'var(--chat-composer-menu-bg)',
   menuBorder: 'var(--chat-composer-menu-border)',
@@ -425,8 +425,6 @@ export function ChatComposer({
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [researchEnabled, setResearchEnabled] = useState(false);
-  const [toolAccess, setToolAccess] = useState<ToolAccessLevel>('all');
-  const [activeStyle, setActiveStyle] = useState<ResponseStyle | null>(null);
   const chatProjects = useChatStore((s) => s.projects);
   const chatActiveProjectId = useChatStore((s) => s.activeProjectId);
   const chatSetActiveProject = useChatStore((s) => s.setActiveProject);
@@ -983,12 +981,8 @@ export function ChatComposer({
     const parts: string[] = [];
     if (webSearchEnabled) parts.push('[web_search_enabled]');
     if (researchEnabled) parts.push('[research_enabled]');
-    if (toolAccess !== 'all') parts.push(`[tool_access:${toolAccess}]`);
-    const stylePrefix = activeStyle
-      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
-      : '';
-    return `${parts.join(' ')}${parts.length > 0 ? ' ' : ''}${stylePrefix}${baseInput}`.trim();
-  }, [activeStyle, researchEnabled, toolAccess, webSearchEnabled]);
+    return `${parts.join(' ')}${parts.length > 0 ? ' ' : ''}${baseInput}`.trim();
+  }, [researchEnabled, webSearchEnabled]);
 
   const enterVoiceMode = useCallback(async () => {
     clearVoiceTranscript();
@@ -1631,7 +1625,7 @@ export function ChatComposer({
               className={cn(
                 'flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg text-sm border backdrop-blur-md transition-all',
                 activeCategory === cat.id
-                  ? 'bg-[var(--accent-chat)]/15 border-[var(--accent-chat)]/30 text-[var(--text-primary)] font-semibold'
+                  ? 'bg-[var(--accent-primary)]/15 border-[var(--accent-primary)]/30 text-[var(--text-primary)] font-semibold'
                   : 'bg-[var(--surface-panel)]/30 border-[var(--border-subtle)]/40 text-[var(--text-primary)] font-medium hover:bg-[var(--surface-panel)]/50'
               )}
               onMouseEnter={() => {
@@ -1766,7 +1760,7 @@ export function ChatComposer({
                     return (
                       <span
                         key={index}
-                        className="w-[3px] rounded-full bg-[var(--accent-chat)] transition-[height,opacity] duration-100 animate-pulse"
+                        className="w-[3px] rounded-full bg-[var(--accent-primary)] transition-[height,opacity] duration-100 animate-pulse"
                         style={{
                           height: `${height}px`,
                           opacity: Math.max(0.35, 1 - distance * 0.065),
@@ -1788,7 +1782,7 @@ export function ChatComposer({
                 type="button"
                 onClick={() => voiceError ? void enterVoiceMode() : stopVoiceRecording()}
                 aria-label={voiceError ? 'Retry voice input' : 'Finish voice input'}
-                className="size-9 shrink-0 rounded-full border-none bg-[var(--accent-chat)] text-white flex items-center justify-center cursor-pointer shadow-[var(--shadow-glow)] transition-transform hover:scale-105"
+                className="size-9 shrink-0 rounded-full border-none bg-[var(--accent-primary)] text-white flex items-center justify-center cursor-pointer shadow-[var(--shadow-glow)] transition-transform hover:scale-105"
               >
                 {voiceError
                   ? <Waveform size={17} weight="bold" />
@@ -2289,20 +2283,15 @@ export function ChatComposer({
                 setWebSearchEnabled={setWebSearchEnabled}
                 researchEnabled={researchEnabled}
                 setResearchEnabled={setResearchEnabled}
-                activeStyle={activeStyle}
-                setActiveStyle={setActiveStyle}
-                toolAccess={toolAccess}
-                setToolAccess={setToolAccess}
                 projects={chatProjects.map((p) => ({ id: p.id, title: p.title }))}
                 activeProjectId={chatActiveProjectId}
                 setActiveProjectId={(id) => chatSetActiveProject(id)}
                 onCreateProject={() => { void chatCreateProject('New Project'); }}
                 onOpenConnectors={() => setShowConnectorMarketplace(true)}
-                onOpenFormSurfaces={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'form-surfaces' } }))}
                 onOpenBrainCapture={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'brain' } }))}
-                onOpenCoworkTasks={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'cowork-tasks' } }))}
-                onOpenAgentActivity={() => window.dispatchEvent(new CustomEvent('allternit:open-agent-activity'))}
                 onOpenPermissions={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'permissions' } }))}
+                onOpenPlugins={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'apps-extensions' } }))}
+                onOpenSkills={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'skills' } }))}
               />
 
               <ConnectorMarketplaceDialog
@@ -2316,13 +2305,6 @@ export function ChatComposer({
                 <button type="button" onClick={() => setWebSearchEnabled(false)} title="Web search on — click to remove" className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-accent/12 border border-accent/35 text-accent text-xs font-semibold cursor-pointer whitespace-nowrap transition-all">
                   <Globe size={11} />
                   Web
-                  <X size={10} className="opacity-60" />
-                </button>
-              )}
-              {activeStyle && (
-                <button type="button" onClick={() => setActiveStyle(null)} title="Style active — click to remove" className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-accent/12 border border-accent/35 text-accent text-xs font-semibold cursor-pointer whitespace-nowrap transition-all">
-                  <PenTool size={11} />
-                  {activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}
                   <X size={10} className="opacity-60" />
                 </button>
               )}
@@ -2565,7 +2547,7 @@ export function ChatComposer({
       }}>
         <DialogContent className="max-w-xl max-h-[65vh] overflow-y-auto p-0 rounded-2xl border-none bg-transparent">
           <div className="rounded-2xl border border-menu-border bg-shell-dialog-bg shadow-xl overflow-hidden">
-            <div className="p-4 border-b border-input-border bg-gradient-to-r from-accent-chat/12 via-status-info/5 to-surface-floating/20">
+            <div className="p-4 border-b border-input-border bg-gradient-to-r from-accent-primary/12 via-status-info/5 to-surface-floating/20">
               <DialogHeader>
                 <DialogTitle className="text-shell-dialog-title text-lg font-semibold">
                   Import OpenClaw Agent
@@ -2592,7 +2574,7 @@ export function ChatComposer({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-accent-chat/12 border border-accent-chat/25 text-accent-primary py-1 px-2 text-xs font-bold tracking-wider uppercase">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent-primary/12 border border-accent-primary/25 text-accent-primary py-1 px-2 text-xs font-bold tracking-wider uppercase">
                             <Robot size={10} />
                             OpenClaw
                           </span>
@@ -2608,7 +2590,7 @@ export function ChatComposer({
                         type="button"
                         onClick={() => void handleImportOpenClawAgent(candidate)}
                         disabled={importingOpenClawAgentId === candidate.agent_id}
-                        className="flex-shrink-0 rounded-full border border-accent-chat/25 bg-accent-chat/10 text-accent-primary text-xs font-bold py-2 px-3 cursor-pointer whitespace-nowrap disabled:cursor-wait"
+                        className="flex-shrink-0 rounded-full border border-accent-primary/25 bg-accent-primary/10 text-accent-primary text-xs font-bold py-2 px-3 cursor-pointer whitespace-nowrap disabled:cursor-wait"
                       >
                         {importingOpenClawAgentId === candidate.agent_id ? 'Importing...' : 'Import'}
                       </button>

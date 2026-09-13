@@ -113,7 +113,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
           {/* Category Tag */}
           {course.category && (
             <div className="mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--info-bg,#1e1b4b)] border border-solid border-[var(--info-border,#4338ca)] rounded-full text-[12px] font-semibold text-[#818cf8]">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--info-bg,#4A3826)] border border-solid border-[var(--info-border,#9A7658)] rounded-full text-[12px] font-semibold text-[#C4A684]">
                 <Info size={12} />
                 {course.category}
               </span>
@@ -147,7 +147,7 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
                 onClose();
               }}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-none text-white font-bold text-[14px] cursor-pointer transition-all hover:opacity-90"
-              style={{ background: isCurated ? 'var(--status-success)' : 'var(--accent,#7c3aed)' }}
+              style={{ background: isCurated ? 'var(--status-success)' : 'var(--accent,#B08D6E)' }}
             >
               {isCurated ? <Check size={16} /> : <Plus size={16} />}
               {isCurated ? 'Curated for A://Labs' : 'Add to A://Labs'}

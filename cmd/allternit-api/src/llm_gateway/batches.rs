@@ -616,7 +616,10 @@ impl BatchProviderError {
 
 #[async_trait::async_trait]
 pub trait BatchProvider: Send + Sync {
-    async fn submit(&self, requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError>;
+    /// `batch_id` is the local `llm_batches.id`; providers that execute
+    /// through the local gateway (native) forward it so each sub-request's
+    /// usage row is attributable to the batch (task G10).
+    async fn submit(&self, batch_id: &str, requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError>;
     async fn poll(&self, provider_batch_id: &str) -> Result<ProviderBatchStatus, BatchProviderError>;
 }
 
@@ -652,7 +655,7 @@ impl HttpBatchProvider {
 
 #[async_trait::async_trait]
 impl BatchProvider for HttpBatchProvider {
-    async fn submit(&self, requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError> {
+    async fn submit(&self, batch_id: &str, requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError> {
         let url = format!("{}/v1/batches", self.base_url);
         let body = json!({
             "endpoint": "/v1/chat/completions",
@@ -662,6 +665,9 @@ impl BatchProvider for HttpBatchProvider {
         if let Some(key) = &self.api_key {
             req = req.header("Authorization", format!("Bearer {key}"));
         }
+        // Forward the local batch id so a chained Allternit gateway can meter
+        // sub-requests against it (task G10).
+        req = req.header("x-allternit-batch-id", batch_id);
         let resp = req.send().await.map_err(|err| {
             if err.is_timeout() || err.is_connect() {
                 BatchProviderError::transient("provider_unavailable", err.to_string())
@@ -822,7 +828,7 @@ impl BatchWorker {
         let request_count = requests.len().max(1);
 
         match batch.status.as_str() {
-            "validating" => match self.provider.submit(&requests).await {
+            "validating" => match self.provider.submit(&batch.id, &requests).await {
                 Ok(job) => {
                     if BatchJobStatus::from_wire(&job.status) == BatchJobStatus::Completed {
                         // Some providers complete synchronously; fetch results now.
@@ -1029,10 +1035,13 @@ impl NativeBatchProvider {
 
 #[async_trait::async_trait]
 impl BatchProvider for NativeBatchProvider {
-    async fn submit(&self, requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError> {
+    async fn submit(&self, batch_id: &str, requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError> {
         // Native batches complete synchronously; we execute all requests now
-        // and store the results for the first poll to return.
-        let results = self.run_requests(requests).await;
+        // and store the results for the first poll to return. Every
+        // sub-request goes through the local /v1/chat/completions, so each
+        // one is metered by the gateway's record_usage_event choke point with
+        // batch attribution (task G10) — batch spend is no longer invisible.
+        let results = self.run_requests(batch_id, requests).await;
         let id = format!("native_{}", uuid::Uuid::new_v4().simple());
         let results_json = serde_json::to_string(&results)
             .map_err(|err| BatchProviderError::permanent("serialize_error", err.to_string()))?;
@@ -1059,13 +1068,16 @@ impl BatchProvider for NativeBatchProvider {
 }
 
 impl NativeBatchProvider {
-    async fn run_requests(&self, requests: &[Value]) -> Vec<Value> {
+    async fn run_requests(&self, batch_id: &str, requests: &[Value]) -> Vec<Value> {
         let mut results = Vec::with_capacity(requests.len());
         for (index, body) in requests.iter().enumerate() {
             let mut req = self
                 .client
                 .post(format!("{}/v1/chat/completions", self.base_url))
-                .json(body);
+                .json(body)
+                // Batch attribution: the gateway copies this onto the usage
+                // row it records for the sub-request (task G10).
+                .header("x-allternit-batch-id", batch_id);
             if let Some(key) = &self.api_key {
                 req = req.header("Authorization", format!("Bearer {key}"));
             }
@@ -1148,6 +1160,8 @@ mod tests {
     struct MockProvider {
         submit_results: Mutex<Vec<Result<ProviderBatchJob, BatchProviderError>>>,
         poll_results: Mutex<Vec<Result<ProviderBatchStatus, BatchProviderError>>>,
+        /// Every (batch_id, request_count) pair handed to submit.
+        submits: Arc<Mutex<Vec<(String, usize)>>>,
     }
 
     impl MockProvider {
@@ -1158,13 +1172,18 @@ mod tests {
             Self {
                 submit_results: Mutex::new(submit_results),
                 poll_results: Mutex::new(poll_results),
+                submits: Arc::new(Mutex::new(Vec::new())),
             }
         }
     }
 
     #[async_trait::async_trait]
     impl BatchProvider for MockProvider {
-        async fn submit(&self, _requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError> {
+        async fn submit(&self, batch_id: &str, requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError> {
+            self.submits
+                .lock()
+                .unwrap()
+                .push((batch_id.to_string(), requests.len()));
             self.submit_results.lock().unwrap().remove(0)
         }
 
@@ -1201,6 +1220,7 @@ mod tests {
             monthly_budget_cents: None,
             rate_limit_rpm: None,
             allowed_models: None,
+            tags: None,
         }
     }
 
@@ -1489,5 +1509,103 @@ mod tests {
         assert_eq!(value["request_counts"]["total"], 2);
         assert!(value.get("output_file_id").is_none());
         assert_eq!(value["metadata"]["env"], "test");
+    }
+
+    #[tokio::test]
+    async fn worker_passes_local_batch_id_to_provider() {
+        let (db, _dir) = test_db();
+        let key = insert_test_key(&db);
+        let service = BatchesService::new(db.clone());
+        let batch = service.create(&key, &sample_requests()).unwrap();
+
+        let provider = Arc::new(MockProvider::new(
+            vec![Ok(ProviderBatchJob {
+                id: "prov_1".to_string(),
+                status: "in_progress".to_string(),
+            })],
+            vec![],
+        ));
+        let captured = provider.submits.clone();
+        let worker = BatchWorker::new(db.clone(), provider);
+        worker.process_once().await.unwrap();
+
+        let submits = captured.lock().unwrap().clone();
+        assert_eq!(submits, vec![(batch.id, 2)]);
+    }
+
+    /// Minimal TCP stub of the local gateway's /v1/chat/completions that
+    /// records request headers. Proves the native provider stamps
+    /// `x-allternit-batch-id` on every sub-request (task G10), which is what
+    /// makes the gateway's usage rows attributable to the batch.
+    #[tokio::test]
+    async fn native_provider_stamps_batch_id_header() {
+        use std::sync::Arc as StdArc;
+        use std::sync::Mutex as StdMutex;
+
+        let seen: StdArc<StdMutex<Vec<Option<String>>>> = StdArc::new(StdMutex::new(Vec::new()));
+        let seen_state = seen.clone();
+        let app = axum::Router::new().route(
+            "/v1/chat/completions",
+            axum::routing::post(
+                move |headers: axum::http::HeaderMap| {
+                    let seen = seen_state.clone();
+                    async move {
+                        seen.lock().unwrap().push(
+                            headers
+                                .get("x-allternit-batch-id")
+                                .and_then(|v| v.to_str().ok())
+                                .map(str::to_string),
+                        );
+                        axum::Json(json!({"id": "chatcmpl-stub", "choices": []}))
+                    }
+                },
+            ),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        let provider = NativeBatchProvider::new(format!("http://127.0.0.1:{port}"), None);
+        let results = provider
+            .run_requests("batch_42", &sample_requests())
+            .await;
+        assert_eq!(results.len(), 2);
+
+        let seen = seen.lock().unwrap().clone();
+        assert_eq!(
+            seen,
+            vec![Some("batch_42".to_string()), Some("batch_42".to_string())]
+        );
+    }
+
+    #[tokio::test]
+    async fn native_provider_marks_failed_sub_requests() {
+        let app = axum::Router::new().route(
+            "/v1/chat/completions",
+            axum::routing::post(|| async {
+                (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    axum::Json(json!({"error": {"message": "boom"}})),
+                )
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        let provider = NativeBatchProvider::new(format!("http://127.0.0.1:{port}"), None);
+        let results = provider
+            .run_requests("batch_7", &sample_requests())
+            .await;
+        assert_eq!(results.len(), 2);
+        // Error results are wrapped with their index so callers can tell
+        // which sub-request failed.
+        assert_eq!(results[0]["index"], 0);
+        assert!(results[0].get("error").is_some());
+        assert_eq!(results[1]["index"], 1);
     }
 }

@@ -42,7 +42,7 @@ export function CanvasHUD({ tiles }: CanvasHUDProps) {
           width: 7,
           height: 7,
           borderRadius: '50%',
-          background: streamingCount > 0 ? 'var(--accent-secondary)' : terminalTiles.length > 0 ? 'var(--accent-cowork)' : 'var(--text-muted)',
+          background: streamingCount > 0 ? 'var(--accent-secondary)' : terminalTiles.length > 0 ? 'var(--accent-primary)' : 'var(--text-muted)',
           boxShadow: streamingCount > 0 || terminalTiles.length > 0 ? 'var(--shadow-glow)' : 'none',
         }}
       />

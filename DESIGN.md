@@ -1,8 +1,20 @@
 # DESIGN.md — Allternit Design System
 
-Version: v2.0  
+Version: v2.1  
 Brand: Allternit PBC / A://TERNIT  
-Last Updated: 2026-05-09
+Last Updated: 2026-09-11
+
+**Changelog**
+
+- **2026-09-11 (v2.1)** — Locked design-law amendment (Eoj, 2026-09-11): the color
+  system adopts the ivory/graphite/amber families from the Allternit redesign spec
+  (`allternit-redesign-spec.md`). The legacy purple/violet accent system is
+  removed. The four per-mode accent palettes (chat terracotta, cowork violet,
+  code mint, browser steel) are removed entirely — **amber is the only accent**;
+  no replacement mode colors. Coral is deprecated under the amber-only law.
+  Mode distinction by color is no longer part of the system (typography/
+  iconography follow-up is tracked separately). Typography, spacing, elevation,
+  motion, and accessibility sections are unchanged.
 
 ---
 
@@ -144,32 +156,39 @@ Forbidden:
 
 ## 2. Color System
 
+> **Law (2026-09-11):** Amber is the only accent. The former per-mode accent
+> palettes (chat/cowork/code/browser) are removed — surfaces distinguish modes
+> by typography and iconography, not color. Coral `#D97757` is deprecated; do
+> not introduce it in new work.
+
 ### 2.1 Semantic Surface Tokens
+
+Ivory family (light) / graphite family (dark), per the redesign spec.
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `--surface-canvas` | `#fafafa` | `#0a0a0b` | Page background |
-| `--surface-panel` | `#ffffff` | `#141416` | Cards, panels, modals |
-| `--surface-floating` | `#ffffff` | `#1c1c1f` | Elevated elements, dropdowns |
-| `--surface-active` | `#f3f4f6` | `#222225` | Hover/selected states |
-| `--surface-hover` | `#e5e7eb` | `#2a2a2e` | Active press states |
+| `--surface-canvas` | `#FAF8F4` | `#0F0F0F` | Page background |
+| `--surface-panel` | `#F5F3EE` | `#1A1A1A` | Cards, panels, modals |
+| `--surface-floating` | `#F5F3EE` | `#1A1A1A` | Elevated elements, dropdowns |
+| `--surface-active` | `#EBE7DF` | `#262626` | Hover/selected states |
+| `--surface-hover` | `#DDD8CD` | `#262626` | Active press states |
 
 ### 2.2 Text Tokens
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `--ui-text-primary` | `#111111` | `#f0f0f0` | Headings, primary text |
-| `--ui-text-secondary` | `#4b5563` | `#a1a1aa` | Body, descriptions |
-| `--ui-text-muted` | `#9ca3af` | `#52525b` | Captions, placeholders |
-| `--ui-text-inverse` | `#ffffff` | `#0a0a0b` | Text on dark/accent backgrounds |
+| `--ui-text-primary` | `#1F1B16` | `#F5F3EE` | Headings, primary text |
+| `--ui-text-secondary` | `#5C4F42` | `#C6BAA9` | Body, descriptions |
+| `--ui-text-muted` | `#8F7A66` | `#8C8172` | Captions, placeholders |
+| `--ui-text-inverse` | `#FFFFFF` | `#0F0F0F` | Text on dark/accent backgrounds |
 
 ### 2.3 Border Tokens
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `--ui-border-muted` | `#e5e7eb` | `#27272a` | Subtle dividers |
-| `--ui-border-default` | `#d1d5db` | `#3f3f46` | Standard borders |
-| `--ui-border-strong` | `#9ca3af` | `#52525b` | Focus rings, emphasis |
+| `--ui-border-muted` | `#DDD8CD` | `#262626` | Subtle dividers |
+| `--ui-border-default` | `#D2C9B8` | `#3A3A3A` | Standard borders |
+| `--ui-border-strong` | `#B3A78F` | `#555555` | Focus rings, emphasis |
 
 ### 2.4 Status Tokens
 
@@ -191,10 +210,18 @@ Forbidden:
 
 ### 2.6 Accent Token
 
+Amber scale — the only accent in the system (light and dark).
+
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `--accent-primary` | `#7c3aed` | `#a78bfa` | Primary accent, CTAs, highlights |
-| `--accent-secondary` | `#d97706` | `#fbbf24` | Secondary accent, warnings |
+| `--accent-primary` | `#B08D6E` | `#B08D6E` | Primary accent, CTAs, highlights |
+| `--accent-hover` | `#C4A684` | `#C4A684` | Hover accent |
+| `--accent-muted` | `#9A7658` | `#9A7658` | Active/muted accent |
+
+Removed: the legacy purple/violet `--accent-primary` scale, the old orange
+`--accent-secondary` scale, and all per-mode accent palettes. The focus-ring,
+button, input-focus, and badge states in Sections 4 and 7 resolve through
+`var(--accent-primary)` and therefore render amber.
 
 ---
 

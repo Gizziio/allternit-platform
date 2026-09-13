@@ -280,7 +280,7 @@ export function SourcePanel({
                 }
               }}
               placeholder="https://..."
-              className="flex-1 rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#6366f1)]"
+              className="flex-1 rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#B08D6E)]"
             />
             <button type="button"
               onClick={() => {
@@ -289,7 +289,7 @@ export function SourcePanel({
                 }
                 setAddUrlInput(null);
               }}
-              className="rounded bg-[var(--accent-primary,#6366f1)] px-2 py-1 text-[11px] text-white"
+              className="rounded bg-[var(--accent-primary,#B08D6E)] px-2 py-1 text-[11px] text-white"
             >Add</button>
             <button type="button"
               onClick={() => setAddUrlInput(null)}

@@ -210,7 +210,7 @@ export function WorkspaceSessionCatalog({
                       e.currentTarget.style.background = 'var(--surface-panel)';
                     }}
                   >
-                    <TerminalIcon size={14} style={{ color: 'var(--accent-code)', flexShrink: 0 }} />
+                    <TerminalIcon size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <span
                         style={{

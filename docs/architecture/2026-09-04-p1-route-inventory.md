@@ -1360,7 +1360,7 @@ Counts of distinct client-called paths per namespace and owner.
 | `/api/design/connectors/linear` | ✓ | — | **8013** | 8013 `design_connector_routes.rs` |
 | `/api/design/connectors/notion` | ✓ | — | **8013** | 8013 `design_connector_routes.rs` |
 | `/api/design/connectors/slack` | ✓ | — | **8013** | 8013 `design_connector_routes.rs` |
-| `/api/design/import-url` | — | — | **orphan** | — |
+| `/api/design/import-url` | ✓ | — | **8013** | 8013 `design_connector_routes.rs` (added 2026-09-11, session/dmp1-0911) |
 | `/api/design/plugins/install` | ✓ | — | **8013** | 8013 `design_connector_routes.rs` |
 | `/api/design/skills/discover` | ✓ | — | **8013** | 8013 `design_connector_routes.rs` |
 | `/api/design/skills/discover?{X}` | ✓ | — | **8013** | 8013 `design_connector_routes.rs` |
@@ -1868,7 +1868,7 @@ Counts of distinct client-called paths per namespace and owner.
 - `/api/chat?chatId={X}` (lib/ai/rust-stream-adapter.ts:1945)
 - `/api/coding` (components/onboarding/OnboardingFlow.tsx:1691)
 - `/api/create-personal-access-token` (views/cloud-deploy/data/providers.ts:108)
-- `/api/design/import-url` (views/design/DesignImportModal.tsx:43)
+- `/api/design/import-url` (views/design/DesignImportModal.tsx:43) — **implemented** 2026-09-11 (session/dmp1-0911): `POST` in 8013 `design_connector_routes.rs`
 - `/api/dev/openclaw/agents/discovery` (lib/agents/openclaw-discovery.ts:109)
 - `/api/h5i/files-touched-stream?workspacePath={X}` (components/h5i/useFilesTouched.ts:28)
 - `/api/infrastructure` (shell/EnvironmentSelector.tsx:28)

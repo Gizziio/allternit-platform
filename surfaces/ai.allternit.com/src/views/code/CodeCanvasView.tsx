@@ -773,7 +773,7 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
                   justifyContent: 'space-between',
                   padding: '0 12px 0 16px',
                   borderBottom: '1px solid var(--border-subtle)',
-                  background: 'color-mix(in srgb, var(--accent-code) 8%, transparent)',
+                  background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)',
                 }}
               >
                 <div
@@ -883,7 +883,7 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
               borderBottom: '1px solid var(--border-subtle)',
             }}
           >
-            <TerminalIcon size={15} color="var(--accent-code)" />
+            <TerminalIcon size={15} color="var(--accent-primary)" />
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
               Terminal sessions
             </span>

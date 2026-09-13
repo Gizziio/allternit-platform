@@ -168,6 +168,7 @@ fn extract_ui_assets(temp_dir: &PathBuf) -> Result<()> {
 /// Start the Rust API server
 fn start_api_server(api_path: &PathBuf) -> Result<Child> {
     let child = Command::new(api_path)
+        .env("ALLTERNIT_API_PORT", API_PORT.to_string())
         .env("ALLTERNIT_OPERATOR_URL", format!("http://127.0.0.1:{}", API_PORT))
         .env("ALLTERNIT_DATA_DIR", api_path.parent().unwrap().join("data"))
         .env("RUST_LOG", "info")

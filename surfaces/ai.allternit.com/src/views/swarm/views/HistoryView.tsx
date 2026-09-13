@@ -70,7 +70,7 @@ const METRICS: MetricConfig[] = [
   {
     key: 'throughput',
     label: 'Throughput',
-    color: '#a78bfa',
+    color: '#B08D6E',
     unit: 't/s',
     formatter: (v) => `${v.toFixed(1)} t/s`,
   },

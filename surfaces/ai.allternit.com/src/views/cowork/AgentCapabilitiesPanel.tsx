@@ -21,11 +21,11 @@ const THEME = {
   bg: 'var(--surface-canvas)',
   bgElevated: 'var(--surface-panel)',
   accent: 'var(--accent-primary)',
-  accentMuted: 'color-mix(in srgb, var(--accent-cowork) 15%, transparent)',
+  accentMuted: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
   textPrimary: 'var(--ui-text-primary)',
   textSecondary: 'var(--ui-text-secondary)',
   textTertiary: 'var(--ui-text-muted)',
-  border: 'color-mix(in srgb, var(--accent-cowork) 10%, transparent)',
+  border: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
 };
 
 interface AgentCapabilitiesPanelProps {

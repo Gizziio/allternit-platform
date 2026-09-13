@@ -274,6 +274,13 @@ export interface BrowserAgentState {
   connectedBotId: string | null;
   setConnectedBotId: (botId: string | null) => void;
   startAciSession: (goal: string) => void;
+  /**
+   * Inject one relayed `/api/aci/stream` frame from a paired node (Fabric
+   * Transport). Applies the same parsing as the desktop EventSource consumer
+   * and marks the engine reachable once frames arrive. Used instead of
+   * startAciSession when the run is started via the fabric session client.
+   */
+  ingestAciStreamEvent: (event: AciStreamEvent) => void;
 
   // BrowserCapsule mount tracking — used by ACIComputerUseSidecar to suppress
   // the global portal panel when the capsule is already showing its own viewport
@@ -370,8 +377,128 @@ export interface BrowserAgentState {
 }
 
 // ============================================================================
+// Shared ACI stream-frame parser
+// ============================================================================
+
+export interface AciStreamEvent {
+  type: string;
+  data?: unknown;
+  ts?: number;
+}
+
+/**
+ * Apply one `/api/aci/stream` envelope frame (state | screenshot | trace |
+ * done) to a BrowserAgentState patch setter.
+ *
+ * Shared by the desktop EventSource consumer (runGoal) and the Fabric
+ * Transport relay feed, which receives the same frames from a paired node
+ * through the fabric session client and injects them via
+ * `ingestAciStreamEvent`.
+ */
+export function applyAciStreamEvent(
+  apply: (update: Partial<BrowserAgentState>) => void,
+  event: AciStreamEvent,
+): void {
+  if (event.type === 'state') {
+    // RunState shape from lib/aci/types.ts
+    const s = event.data as {
+      status?: string;
+      lastMessage?: string | null;
+      adapterId?: string;
+      stepIndex?: number;
+      totalSteps?: number | null;
+      currentAction?: {
+        type?: string;
+        label?: string;
+        selector?: string;
+        x?: number;
+        y?: number;
+        risk?: number;
+      } | null;
+    };
+
+    const update: Partial<BrowserAgentState> = {};
+
+    if (s.status !== undefined) update.status = s.status as BrowserAgentStatus;
+    if (s.lastMessage != null) update.lastEventMessage = s.lastMessage;
+    if (s.adapterId) update.currentAdapterId = s.adapterId;
+
+    // Map AciAction → BrowserAgentState.currentAction
+    if ('currentAction' in s) {
+      if (!s.currentAction) {
+        update.currentAction = null;
+      } else {
+        const a = s.currentAction;
+        update.currentAction = {
+          action: { type: a.type } as BrowserAction,
+          stepIndex: s.stepIndex ?? 0,
+          totalSteps: s.totalSteps ?? 0,
+          label: a.label,
+          selector: a.selector,
+          type: a.type,
+          boundingBox:
+            a.x != null && a.y != null
+              ? { x: a.x, y: a.y, width: 40, height: 20 }
+              : null,
+        };
+      }
+    }
+
+    // Derive approval state from status
+    const isWaiting = s.status === 'WaitingApproval';
+    update.requiresApproval = isWaiting;
+    if (isWaiting && s.currentAction) {
+      update.approvalActionSummary = s.currentAction.label ?? s.currentAction.type;
+      update.approvalRiskTier = (s.currentAction.risk ?? 3) as RiskTier;
+    }
+
+    apply(update);
+    return;
+  }
+
+  if (event.type === 'screenshot') {
+    // runner sends { screenshot: base64 }
+    const d = event.data as { screenshot?: string };
+    if (d.screenshot) apply({ screenshot: d.screenshot });
+    return;
+  }
+
+  if (event.type === 'trace') {
+    const t = event.data as { message?: string; adapterId?: string };
+    if (t.message) apply({ lastEventMessage: t.message });
+    if (t.adapterId) apply({ currentAdapterId: t.adapterId });
+    return;
+  }
+
+  if (event.type === 'done') {
+    apply({ status: 'Done', requiresApproval: false });
+  }
+}
+
+// ============================================================================
 // Store Creation
 // ============================================================================
+
+/**
+ * Fabric ACI runner — when set (fabric session surface driving a paired
+ * node), ACI run starts/stops from the browser capsule's agent bar delegate
+ * to the fabric session client instead of the local engine endpoints
+ * (/api/aci/*), which don't exist on the hosted PWA.
+ */
+export interface FabricAciRunner {
+  start: (goal: string) => void;
+  stop: () => void;
+}
+
+let fabricAciRunner: FabricAciRunner | null = null;
+
+export function setFabricAciRunner(runner: FabricAciRunner | null): void {
+  fabricAciRunner = runner;
+}
+
+export function getFabricAciRunner(): FabricAciRunner | null {
+  return fabricAciRunner;
+}
 
 export const useBrowserAgentStore = create<BrowserAgentState>()(
   persist(subscribeWithSelector((set, get) => ({
@@ -504,6 +631,18 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     connectedBotId: null,
     setConnectedBotId: (botId) => set({ connectedBotId: botId }),
     startAciSession: (goal) => {
+      if (fabricAciRunner) {
+        set({
+          goal,
+          status: 'Running',
+          currentAction: null,
+          screenshot: null,
+          lastEventMessage: null,
+          aciSessionId: null,
+        });
+        fabricAciRunner.start(goal);
+        return;
+      }
       if (get().connectedBotId) {
         // Bot computers are the cloud-desktop viewport. Do not start a local
         // CUA run against this Mac while that view is connected.
@@ -590,73 +729,9 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
 
           es.onmessage = (e) => {
             try {
-              const event = JSON.parse(e.data) as { type: string; data: unknown; ts: number };
-
-              if (event.type === 'state') {
-                // RunState shape from lib/aci/types.ts
-                const s = event.data as {
-                  status?: string;
-                  lastMessage?: string | null;
-                  adapterId?: string;
-                  stepIndex?: number;
-                  totalSteps?: number | null;
-                  currentAction?: {
-                    type?: string;
-                    label?: string;
-                    selector?: string;
-                    x?: number;
-                    y?: number;
-                    risk?: number;
-                  } | null;
-                };
-
-                const update: Partial<BrowserAgentState> = {};
-
-                if (s.status !== undefined) update.status = s.status as BrowserAgentStatus;
-                if (s.lastMessage != null) update.lastEventMessage = s.lastMessage;
-                if (s.adapterId) update.currentAdapterId = s.adapterId;
-
-                // Map AciAction → BrowserAgentState.currentAction
-                if ('currentAction' in s) {
-                  if (!s.currentAction) {
-                    update.currentAction = null;
-                  } else {
-                    const a = s.currentAction;
-                    update.currentAction = {
-                      action: { type: a.type } as BrowserAction,
-                      stepIndex: s.stepIndex ?? 0,
-                      totalSteps: s.totalSteps ?? 0,
-                      label: a.label,
-                      selector: a.selector,
-                      type: a.type,
-                      boundingBox:
-                        a.x != null && a.y != null
-                          ? { x: a.x, y: a.y, width: 40, height: 20 }
-                          : null,
-                    };
-                  }
-                }
-
-                // Derive approval state from status
-                const isWaiting = s.status === 'WaitingApproval';
-                update.requiresApproval = isWaiting;
-                if (isWaiting && s.currentAction) {
-                  update.approvalActionSummary = s.currentAction.label ?? s.currentAction.type;
-                  update.approvalRiskTier = (s.currentAction.risk ?? 3) as RiskTier;
-                }
-
-                set(update);
-              } else if (event.type === 'screenshot') {
-                // runner sends { screenshot: base64 }
-                const d = event.data as { screenshot?: string };
-                if (d.screenshot) set({ screenshot: d.screenshot });
-              } else if (event.type === 'trace') {
-                const t = event.data as { message?: string; adapterId?: string };
-                if (t.message) set({ lastEventMessage: t.message });
-                if (t.adapterId) set({ currentAdapterId: t.adapterId });
-              } else if (event.type === 'done') {
-                es.close();
-              }
+              const event = JSON.parse(e.data) as AciStreamEvent;
+              applyAciStreamEvent((update) => set(update), event);
+              if (event.type === 'done') es.close();
             } catch {
               // ignore malformed events
             }
@@ -671,7 +746,14 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
           set({ status: 'Done' });
         });
     },
-    
+
+    ingestAciStreamEvent: (event) => {
+      applyAciStreamEvent((update) => set(update), event);
+      if (get().engineHealthy !== true) {
+        set({ engineHealthy: true, engineRuntimeStatus: 'connected' });
+      }
+    },
+
     // Run goal via the gizzi brain (page-agent path)
     runPageAgentGoal: (goal, config) => {
       const brain = resolveGizziBrain();
@@ -897,8 +979,12 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     },
 
     stopAcuTask: () => {
-      const { currentRunId } = get();
       set({ status: 'Done', currentAction: null, requiresApproval: false });
+      if (fabricAciRunner) {
+        fabricAciRunner.stop();
+        return;
+      }
+      const { currentRunId } = get();
       if (currentRunId) {
         void getPlatformComputerUseClient().cancelRun(currentRunId).catch(() => {});
       }
@@ -942,9 +1028,14 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
 
     // Stop execution
     stopExecution: () => {
-      const { aciSessionId } = get();
       set({ status: 'Done', currentAction: null, requiresApproval: false });
 
+      if (fabricAciRunner) {
+        fabricAciRunner.stop();
+        return;
+      }
+
+      const { aciSessionId } = get();
       if (aciSessionId) {
         fetch(`/api/aci/stop/${aciSessionId}`, { method: 'POST' }).catch(() => {});
       }

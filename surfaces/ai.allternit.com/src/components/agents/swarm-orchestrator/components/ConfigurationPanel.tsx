@@ -46,7 +46,7 @@ interface ConfigurationPanelProps {
   setRoutingConfig: (config: RoutingConfig) => void;
   onClose: () => void;
   canEdit: boolean;
-  modeColors: (typeof MODE_COLORS)['chat'];
+  modeColors: (typeof MODE_COLORS)['design'];
 }
 
 export function ConfigurationPanel({

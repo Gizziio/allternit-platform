@@ -103,3 +103,4 @@ test/commands/doctor.test.ts
 test/commands/uninstall-plan.test.ts
 test/automation/cron-supervision.test.ts
 test/shared/gizziEnv.test.ts
+test/telemetry/gizziUsageTelemetry.test.ts

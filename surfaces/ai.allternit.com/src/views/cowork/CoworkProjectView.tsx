@@ -153,7 +153,7 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
           <button
             type="button"
             onClick={handleBack}
-            className="mt-4 px-4 py-2 rounded-lg bg-[var(--accent-cowork)] text-white cursor-pointer"
+            className="mt-4 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white cursor-pointer"
           >
             Go Back
           </button>

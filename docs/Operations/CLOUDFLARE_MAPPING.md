@@ -38,6 +38,19 @@ Quick reference for Cloudflare Pages projects and their domains.
 | **allternit-robotics** | robotics.allternit.com | |
 | **gizzi-brawl** | gizzi-brawl.pages.dev, brawl.allternit.com | Static Gizzi Brawl game; deployed from `basement-temp/public/games/kombat` |
 
+## One project, one deploy source
+
+**Only `surfaces/platform.allternit.com/dist` may deploy to the
+`allternit-platform` Pages project** (via `deploy-cloudflare-pages.yml`,
+job `deploy-platform`). The legacy `sync-platform-export.yml` workflow —
+which rsynced the ai.allternit.com static export into the Allternit
+Websites repo and let that repo's `deploy-platform` job push it to the
+same Pages project — was retired **2026-09-11**. It caused a
+last-write-wins inversion where platform.allternit.com served the AI
+shell. The synced copy under
+`Allternit Websites/projects/platform.allternit.com/source/` is a stale
+reference snapshot and must not be deployed.
+
 ## Retired / renamed
 
 - ~~`platform-allternit`~~ → the live project is **`allternit-platform`**.

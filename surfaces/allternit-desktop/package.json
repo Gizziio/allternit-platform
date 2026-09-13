@@ -4,11 +4,13 @@
   "description": "Allternit Desktop — Electron shell loading the Allternit platform with local VM management via Apple Virtualization.framework.",
   "main": "dist/main/unified-main.js",
   "type": "module",
+  "packageManager": "pnpm@10.28.0",
   "keywords": [
     "allternit",
     "desktop",
     "electron"
   ],
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "dev": "npm run build:auth-renderer && NODE_ENV=development electron .",
     "dev:auth-renderer": "vite --config vite.auth-renderer.config.ts --port 5174",
@@ -56,6 +58,7 @@
     "@types/electron-store": "^1.3.1",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@types/ws": "^8.18.0",
     "@vitejs/plugin-react": "^4.3.0",
     "concurrently": "^8.2.2",
     "electron": "^41.10.3",

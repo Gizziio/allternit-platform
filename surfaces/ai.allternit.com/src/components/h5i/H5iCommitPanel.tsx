@@ -283,7 +283,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
               style={{
                 fontSize: 11,
                 fontWeight: 600,
-                color: 'var(--accent-code)',
+                color: 'var(--accent-primary)',
                 background: 'transparent',
                 border: 'none',
                 cursor: diffLoading ? 'default' : 'pointer',

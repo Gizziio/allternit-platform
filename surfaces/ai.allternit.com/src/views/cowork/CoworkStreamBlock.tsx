@@ -20,6 +20,8 @@
 import React, { memo } from 'react';
 import { Markdown } from '@/components/agent-elements/markdown';
 import { ToolRenderer as AgentElementToolRenderer } from '@/components/agent-elements/tools/tool-renderer';
+import ArtifactAddressCard from '@/components/artifact/ArtifactAddressCard';
+import { splitArtifactAddressText } from '@/lib/design/content-artifact-api';
 import {
   FileText,
   GitDiff,
@@ -122,9 +124,26 @@ type AnyPart =
 
 const TextBlock = memo(function TextBlock({ part }: { part: TextPart }) {
   if (!part.text) return null;
+  // A:// Artifacts API Phase 2: a://artifact/<id> addresses in cowork output
+  // resolve to local-gateway cards instead of rendering as dead text.
+  const segments = splitArtifactAddressText(part.text);
+  const hasAddress = segments.some((s) => s.kind === 'address');
+  if (!hasAddress) {
+    return (
+      <div className="text-sm text-white/80 leading-relaxed">
+        <Markdown content={part.text} className="[&_p]:text-[15px] [&_p]:leading-7 [&_p]:text-[var(--ui-text-primary)] [&_ul]:text-[var(--ui-text-primary)] [&_ol]:text-[var(--ui-text-primary)]" />
+      </div>
+    );
+  }
   return (
-    <div className="text-sm text-white/80 leading-relaxed">
-      <Markdown content={part.text} className="[&_p]:text-[15px] [&_p]:leading-7 [&_p]:text-[var(--ui-text-primary)] [&_ul]:text-[var(--ui-text-primary)] [&_ol]:text-[var(--ui-text-primary)]" />
+    <div className="text-sm text-white/80 leading-relaxed flex flex-col gap-1.5">
+      {segments.map((seg, i) =>
+        seg.kind === 'address' ? (
+          <ArtifactAddressCard key={`addr-${i}`} address={seg.address} />
+        ) : seg.text.trim() ? (
+          <Markdown key={`text-${i}`} content={seg.text} className="[&_p]:text-[15px] [&_p]:leading-7 [&_p]:text-[var(--ui-text-primary)] [&_ul]:text-[var(--ui-text-primary)] [&_ol]:text-[var(--ui-text-primary)]" />
+        ) : null,
+      )}
     </div>
   );
 });

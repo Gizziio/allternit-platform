@@ -48,7 +48,7 @@ export function ChangeSetReview({ changeSetId }: ChangeSetReviewProps) {
         background: 'var(--bg-secondary)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <GitDiff size={20} color="var(--accent-chat)" />
+          <GitDiff size={20} color="var(--accent-primary)" />
           <div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>Review Changes</div>
             <div style={{ fontSize: 12, opacity: 0.6 }}>{changeSet.changes.length} files modified</div>
@@ -70,7 +70,7 @@ export function ChangeSetReview({ changeSetId }: ChangeSetReviewProps) {
           <button type="button" onClick={handleApplyAll} style={{
             padding: '6px 12px',
             borderRadius: 6,
-            background: 'var(--accent-chat)',
+            background: 'var(--accent-primary)',
             color: 'white',
             border: 'none',
             fontSize: 12,

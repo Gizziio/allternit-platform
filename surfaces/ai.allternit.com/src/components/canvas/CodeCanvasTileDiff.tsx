@@ -352,7 +352,7 @@ export function CodeCanvasTileDiff({
                 zIndex: 1,
               }}
             >
-              <FileCode size={12} color="var(--accent-code)" />
+              <FileCode size={12} color="var(--accent-primary)" />
               {displayPath}
             </div>
 

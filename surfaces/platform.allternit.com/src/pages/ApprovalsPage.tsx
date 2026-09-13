@@ -58,7 +58,7 @@ function priorityColor(priority: ApprovalPriority): string {
     case "high":
       return "text-[var(--status-warning)] bg-[var(--status-warning)]/10";
     case "low":
-      return "text-[var(--accent-secondary)] bg-[var(--accent-secondary)]/10";
+      return "text-[var(--accent-primary)] bg-[var(--accent-primary)]/10";
     default:
       return "text-[var(--text-secondary)] bg-[var(--bg-primary)]";
   }

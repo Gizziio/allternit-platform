@@ -65,6 +65,29 @@ describe("streamCallbacksToEvents", () => {
     const err = t.rows.find((r) => r.kind === "error");
     expect(err?.kind === "error" && err.text).toBe("stream dropped");
   });
+
+  it("maps onArtifact callback to artifact.created event and row", () => {
+    let t = initTranscript();
+    const cb = streamCallbacksToEvents((e) => {
+      t = applyEvent(t, e);
+    }, { turnId: "a3", now: () => T0 });
+
+    cb.onArtifact?.({
+      artifactId: "art-1",
+      kind: "html",
+      title: "Interactive Preview",
+      content: "<h1>Hello World</h1>",
+    });
+
+    const artRow = t.rows.find((r) => r.kind === "artifact");
+    expect(artRow).toBeDefined();
+    if (artRow?.kind === "artifact") {
+      expect(artRow.artifact.id).toBe("art-1");
+      expect(artRow.artifact.kind).toBe("html");
+      expect(artRow.artifact.title).toBe("Interactive Preview");
+      expect(artRow.artifact.content).toBe("<h1>Hello World</h1>");
+    }
+  });
 });
 
 describe("approval mappers", () => {
@@ -164,5 +187,34 @@ describe("messagesToTranscript", () => {
       .map((r) => (r.kind === "message" ? r.message.text : ""));
     expect(texts).toEqual(["hi", "hello"]);
     expect(t.activeTurn).toBeNull();
+  });
+});
+
+describe("empty tool input containers", () => {
+  it("falls back to the tool name instead of rendering bare brackets", () => {
+    let t = applyEvent(initTranscript(), userSendEvent("go", { id: "u5", createdAt: T0 }));
+    const cb = streamCallbacksToEvents((e) => {
+      t = applyEvent(t, e);
+    }, { turnId: "a5", now: () => T0 });
+
+    cb.onToolCall?.({ toolCallId: "tc-empty", toolName: "GetGoal", input: {} });
+    cb.onToolResult?.({ toolCallId: "tc-empty", toolName: "GetGoal", result: [] });
+
+    const callRow = t.rows.find((r) => r.kind === "toolCall");
+    expect(callRow?.kind === "toolCall" && callRow.call.inputSummary).toBe("GetGoal");
+    const resultRow = t.rows.find((r) => r.kind === "toolCall");
+    expect(resultRow?.kind === "toolCall" && resultRow.call.outputSummary).toBe("");
+  });
+
+  it("keeps real input summaries untouched", () => {
+    let t = applyEvent(initTranscript(), userSendEvent("go", { id: "u6", createdAt: T0 }));
+    const cb = streamCallbacksToEvents((e) => {
+      t = applyEvent(t, e);
+    }, { turnId: "a6", now: () => T0 });
+
+    cb.onToolCall?.({ toolCallId: "tc-real", toolName: "read", input: { path: "/tmp/x" } });
+
+    const row = t.rows.find((r) => r.kind === "toolCall");
+    expect(row?.kind === "toolCall" && row.call.inputSummary).toContain("/tmp/x");
   });
 });

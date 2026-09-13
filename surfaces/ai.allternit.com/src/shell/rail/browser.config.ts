@@ -59,7 +59,7 @@ export const BROWSER_RAIL_CONFIG: RailConfigSection[] = [
     items: [
       {
         id: 'br-extensions-hub',
-        label: 'Office & Extensions',
+        label: 'ACI Extensions',
         icon: PuzzlePiece,
         payload: 'browser-extensions',
       },

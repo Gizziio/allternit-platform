@@ -70,7 +70,7 @@ export function OrchestrationView(): React.ReactNode {
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
-                color: 'var(--accent-chat)',
+                color: 'var(--accent-primary)',
                 border: `2px solid ${getStatusColor(agent.status)}`
               }}>
                 <Robot size={24} />

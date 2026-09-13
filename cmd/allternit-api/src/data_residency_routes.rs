@@ -181,6 +181,9 @@ async fn set_policy(
             params![org, pinned_json, body.default_region, enforce],
         )
         .map_err(internal)?;
+        // The gateway caches residency policies per org; drop this org's entry
+        // so the pin (or its removal) applies from the very next request.
+        crate::llm_gateway::data_residency::invalidate_policy_cache(&org);
         conn.query_row(
             "SELECT org_id, pinned_regions, default_region, enforce_region_pinning, created_at, updated_at
              FROM data_residency_policies WHERE org_id = ?1",

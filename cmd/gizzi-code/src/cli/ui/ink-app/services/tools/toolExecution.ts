@@ -1,5 +1,8 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
+import {
+  recordRejectedToolCall,
+} from '@/runtime/services/telemetry/gizziUsageTelemetry.js'
 import type {
   ContentBlockParam,
   ToolResultBlockParam,
@@ -986,6 +989,12 @@ async function checkPermissionsAndCallTool(
   ) {
     const decision =
       permissionDecision.behavior === 'allow' ? 'accept' : 'reject'
+    // Opt-in gizzi-code usage telemetry (GIZZI_TELEMETRY=1): headless-mode
+    // rejections — interactive decisions already flow through
+    // logPermissionDecision.
+    if (decision === 'reject') {
+      recordRejectedToolCall()
+    }
     const source = decisionReasonToOTelSource(
       permissionDecision.decisionReason,
       permissionDecision.behavior,

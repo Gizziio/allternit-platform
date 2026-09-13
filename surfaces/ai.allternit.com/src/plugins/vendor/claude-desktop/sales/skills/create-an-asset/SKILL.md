@@ -854,7 +854,7 @@ If brand colors cannot be extracted:
 
 | Industry | Primary | Secondary |
 |----------|---------|-----------|
-| Technology | #2563eb | #7c3aed |
+| Technology | #2563eb | #B08D6E |
 | Finance | #0f172a | #3b82f6 |
 | Healthcare | #0891b2 | #06b6d4 |
 | Manufacturing | #ea580c | #f97316 |

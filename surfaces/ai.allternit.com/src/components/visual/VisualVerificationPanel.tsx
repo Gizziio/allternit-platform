@@ -203,7 +203,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
             <>
               <span style={{ fontSize: '13px', color: 'var(--ui-text-muted)' }}>Analyzing…</span>
               <div style={{ width: '100px', height: '4px', background: 'var(--surface-hover)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ width: '60%', height: '100%', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', transition: 'width 0.3s ease' }} />
+                <div style={{ width: '60%', height: '100%', background: 'linear-gradient(90deg, #3b82f6, #B08D6E)', transition: 'width 0.3s ease' }} />
               </div>
             </>
           )}

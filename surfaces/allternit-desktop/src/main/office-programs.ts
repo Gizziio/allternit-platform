@@ -1,9 +1,10 @@
 /**
  * Office program registry for the desktop shell.
  *
- * One BrowserWindow per editor type, each loading the Allternit Office-backed
- * editor on the platform surface (same pattern as the /design window).
- * Kept as a pure module so the routing logic is unit-testable.
+ * Editor opens are delivered to the main window as in-shell views (or editor
+ * routes); the suite itself lives in the popped-out Allternit Office window
+ * (same BrowserWindow pattern as /design). Kept as a pure module so the
+ * routing logic is unit-testable.
  */
 
 export type OfficeEditor = 'docs' | 'sheets' | 'slides' | 'pdf';

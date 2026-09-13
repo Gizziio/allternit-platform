@@ -29,6 +29,8 @@ pub struct CreateRunRequest {
     pub tenant_id: String,
     pub workspace_id: String,
     pub initiator: String,
+    /// A:// delegating principal (§8.18), e.g. a://principal/al
+    pub delegator: Option<String>,
     pub mode: RunMode,
     pub entrypoint: String,
     pub policy_profile: Option<String>,
@@ -405,6 +407,13 @@ async fn create_run(
 
     let conn = state.db.connect().map_err(db_error)?;
     persist_run(&conn, &run).map_err(db_error)?;
+    if let Some(delegator) = &req.delegator {
+        conn.execute(
+            "UPDATE cowork_runs SET delegator = ?1 WHERE id = ?2",
+            rusqlite::params![delegator, run.id.to_string()],
+        )
+        .map_err(db_error)?;
+    }
     insert_run_event(
         &conn,
         &run.id.to_string(),
@@ -425,21 +434,21 @@ async fn start_run(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
+    // §8.2 honesty: RUNNING means a worker holds a valid lease. start_run only
+    // makes the run dispatchable (queued); fabric transport moves it to
+    // running atomically with the first lease grant.
     manager
         .transition_run_state(run_id, RunState::Planned)
         .await?;
     manager
         .transition_run_state(run_id, RunState::Queued)
         .await?;
-    manager
-        .transition_run_state(run_id, RunState::Running)
-        .await?;
 
     let conn = state.db.connect().map_err(db_error)?;
-    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Running).map_err(db_error)?;
-    insert_run_event(&conn, &run_id.to_string(), "run_started", json!({})).map_err(db_error)?;
+    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Queued).map_err(db_error)?;
+    insert_run_event(&conn, &run_id.to_string(), "run_queued", json!({})).map_err(db_error)?;
 
-    Ok(Json(json!({ "started": true })))
+    Ok(Json(json!({ "started": true, "state": "queued" })))
 }
 
 /// List runs
@@ -535,6 +544,8 @@ pub struct CreateJobRequest {
     pub payload: serde_json::Value,
     pub max_retries: i32,
     pub timeout_sec: i32,
+    /// Mandatory capability strings for A:// fabric-transport eligibility (§8.6–8.7)
+    pub required_capabilities: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -586,9 +597,24 @@ async fn create_job(
 
     let job = manager.create_job(spec).await?;
     manager.set_current_job(run_id, Some(job.id)).await?;
+    // New jobs enter the fabric-transport queue immediately; fabric transport only
+    // claims persisted rows in state 'queued'.
+    manager.transition_job_state(job.id, JobState::Queued).await.ok();
 
     let conn = state.db.connect().map_err(db_error)?;
     persist_job(&conn, &job).map_err(db_error)?;
+    conn.execute(
+        "UPDATE cowork_jobs SET state = 'queued', required_capabilities = ?1,
+            initiator = (SELECT initiator FROM cowork_runs WHERE id = ?2),
+            delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2)
+         WHERE id = ?3",
+        rusqlite::params![
+            serde_json::to_string(&req.required_capabilities.unwrap_or_default()).unwrap(),
+            run_id.to_string(),
+            job.id.to_string(),
+        ],
+    )
+    .map_err(db_error)?;
     conn.execute(
         "UPDATE cowork_runs SET current_job_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
         rusqlite::params![job.id.to_string(), run_id.to_string()],
@@ -1073,6 +1099,9 @@ async fn get_run_events(
 pub struct PostEventRequest {
     pub event_type: String,
     pub payload: serde_json::Value,
+    /// Client-supplied idempotency key (A:// §5): retries with the same
+    /// event_id return the canonical existing event instead of double-writing.
+    pub event_id: Option<String>,
 }
 
 async fn post_run_event(
@@ -1080,13 +1109,27 @@ async fn post_run_event(
     Path(run_id): Path<String>,
     Json(req): Json<PostEventRequest>,
 ) -> Result<Json<serde_json::Value>, ErrorResponse> {
-    let conn = state.db.connect().map_err(db_error)?;
-    let id = uuid::Uuid::new_v4().to_string();
-    conn.execute(
-        "INSERT INTO cowork_run_events (id, run_id, event_type, payload) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![&id, &run_id, &req.event_type, &req.payload.to_string(),],
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let outcome = allternit_cowork_runtime::sqlite_store::insert_event_idempotent(
+        &mut conn,
+        &run_id,
+        &req.event_type,
+        req.payload,
+        None,
+        None,
+        None,
+        req.event_id.as_deref(),
     )
-    .map_err(db_error)?;
-
-    Ok(Json(json!({ "id": id })))
+    .map_err(|e| ErrorResponse {
+        error: format!("{}: {}", e.wire(), e.message),
+        code: e.http_status(),
+    })?;
+    match outcome {
+        allternit_cowork_runtime::sqlite_store::EventInsertOutcome::Inserted(id) => {
+            Ok(Json(json!({ "id": id, "duplicated": false })))
+        }
+        allternit_cowork_runtime::sqlite_store::EventInsertOutcome::Duplicate(id) => {
+            Ok(Json(json!({ "id": id, "duplicated": true })))
+        }
+    }
 }

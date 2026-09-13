@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import React, { memo } from "react";
 import { MessageResponse } from "@/components/ai-elements/message";
 import { cn } from "@/lib/utils";
 

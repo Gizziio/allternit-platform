@@ -1,0 +1,218 @@
+# Session-Preservation Contract — Computer-Use Batches
+
+**Status:** v1.2 (2026-09-13) — binding for `stagehand-batch-fork` P2+ and
+`code-mode-execution` C2+. v1.2 appends §8 (code execution, C2); v1.1 (§7
+automatic page binding, 2026-09-12) and v1 (P2, 2026-09-12) are preserved
+unchanged.
+**Gate:** this contract is written and landed *before* the planning loop consumes
+batches (spec deliverable gate). The planning loop's batch path (`core/batch_dispatch.py`)
+implements exactly the record type defined here — no more, no less.
+
+## 1. What state exists per run today
+
+A computer-use run (one `PlanningLoop.run()` invocation, run id `cu-<hex>`) currently
+owns or touches four state surfaces:
+
+| Surface | Location | Lifetime | Written by |
+|---|---|---|---|
+| Run record | `runs.sqlite3` (`RunPersistence`) | Durable, terminal-status rows kept until TTL | Gateway router, at run start/finalize |
+| Canonical event ledger | `events.sqlite3` (`EventLedger`, `canonical_events` table) | Durable, append-only | Gateway router (`_emit_canonical`) |
+| Recording | `ActionRecorder` artifacts + `recordings_index` table | Durable files + index row | Recorder, per step |
+| Sandbox env | `os.environ` injection via `sandbox_env_context` | Run-scoped, restored after | Gateway router around the run |
+
+The browser/page itself lives outside the Python process: the batch executor
+(P1, `cmd/allternit-api/src/aci_batch.rs`) spawns the vendored runtime sidecar,
+which owns a Chrome tab over CDP. The page, its cookies, localStorage, and DOM
+state belong to that browser session, not to the run.
+
+## 2. What survives a batch boundary
+
+A **batch** is a grant-bound descriptor of N ordered whitelisted actions executed
+back-to-back in one transport call (`POST /api/aci/batch`, spec §P1).
+
+**Survives a batch boundary** (because it lives in the browser, which outlives any
+single batch):
+
+- The browser process and tab (microVM/host Chrome owned by the sidecar session).
+- Page state: DOM, cookies, localStorage/sessionStorage, scroll position — whatever
+  the granted steps changed or left alone.
+- The run's durable records (runs table, event ledger, recordings) — these are
+  run-scoped, not batch-scoped, and persist regardless.
+
+**Does NOT survive a batch boundary:**
+
+- Any implicit model "scratch" state — chain-of-thought, working memory, partial
+  reasoning. The model is stateless between turns; nothing here changes that.
+- Per-batch scratch context (spec REPL semantics, ADOPT #1): the in-browser scratch
+  context the runtime may create at batch start is **discarded when the batch
+  completes**. Nothing in the Python engine reads or writes it; if scratch state
+  ever escapes the batch context, that is a bug, not a feature.
+- Grant state: batch grants are single-use and consumed at dispatch.
+
+**Rule (binding): cross-batch state is carried only as explicit ledger/receipt
+writes.** If the model or engine needs something from batch k to inform batch k+1,
+the only legitimate carriers are:
+
+1. The batch receipt (`batch-receipts.jsonl`, Rust side) — descriptor hash, per-step
+   outcomes, halt position. Pointed at by the batch-context record (§4).
+2. The batch-context record on the canonical event ledger (§4).
+3. The observation returned to the planning loop (`LoopStep.after_screenshot_b64`,
+   AX snapshot, extracted text) which flows into the next plan call as history.
+
+Anything else — REPL variables, module globals, undocumented caches — is not a
+persistence channel and must not become one without a contract revision.
+
+## 3. Concurrent-run isolation — the named os.environ tradeoff
+
+Run-scoped sandbox env is injected by mutating the process-wide `os.environ`
+(`core/sandbox_env.py`, `sandbox_env_context`). Concurrent runs in one gateway
+process therefore share one environment namespace: **overlapping runs that set the
+same variable name see last-writer-wins values for the overlap window.** This is a
+known v1 tradeoff, documented in `sandbox_env.py`; per-run OS-environment isolation
+is a v2 concern. Batches do not change it — a batch inherits whatever environment
+the enclosing run established, and batch steps never receive env material the run
+did not already have. This contract names the tradeoff; it does not pretend it is
+solved.
+
+Batch-specific concurrency note: two batches against the **same** browser session
+execute sequentially behind the run's own loop; two batches against *different*
+sessions are isolated by the sidecar's per-dispatch browser. The engine must not
+interleave two batches within one run — the planning loop issues at most one batch
+per plan turn.
+
+## 4. The batch-context record (the one new record type)
+
+To make "what happened across the boundary" explicit and durable, every batch
+dispatched by the planning loop writes exactly two canonical ledger events through
+the existing `EventLedger` surface (no new tables, no new stores):
+
+- `batch.context.opened` — written **before** the batch RPC is sent
+  (audit-before-act, matching the Rust receipt ordering).
+- `batch.context.closed` — written after the batch response returns, carrying the
+  outcome.
+
+Payload schema (both events; `closed` adds the outcome fields):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `batch_id` | string | The descriptor SHA-256 — the same hash the grant binds (from the dispatch response; `pending` in `opened` when not yet known from a denial). |
+| `descriptor_hash` | string | Same value, named for the grant surface. |
+| `run_id` / `session_id` | string | Owning run and browser/session binding. |
+| `step_count` | int | Number of descriptor steps. |
+| `step_methods` | string[] | Whitelisted method names only (e.g. `["click","fill"]`). **Arguments are never recorded here** — typed text can be secret material; the Rust receipt owns outcome detail under its own rules. |
+| `origin` / `page_url` | string | Descriptor binding. |
+| `batch_mode` | string | Grant mode requested by the engine (`batch` one-grant / `per_step`). |
+| `receipt_id` | string, closed only | Pointer to the Rust batch receipt — the per-step outcomes live there, not here. |
+
+`closed` outcome fields: `status` (`completed` | `completed_halted` | `denied` |
+`failed`), `halted_at` (int or null), `steps_completed`, `model_turns_saved`
+(number of plan turns this batch replaced, for the P3 turns-per-task substrate).
+
+This is deliberately a *pointer record*, not a duplicate receipt: the authoritative
+per-step outcomes stay in the Rust `batch-receipts.jsonl` (single writer, hash-bound),
+and the canonical ledger carries the run-scoped context that links a run's model
+turns to the exact granted batch it dispatched.
+
+## 5. Versioning
+
+- The contract version is the `contract_version` field recorded in each
+  `batch.context.*` payload, starting at `1`.
+- Adding fields is a minor revision (allowed freely; old readers ignore new fields).
+- Changing the meaning of an existing field, or adding a new *kind* of cross-batch
+  state carrier, is a major revision and requires updating this document and the
+  spec's REPL-semantics section in the same PR.
+- The record type in code is `core/batch_context.py` (`BatchContextRecord`,
+  `open_batch_context` / `close_batch_context`). If this doc and that code disagree,
+  the doc is wrong — fix the doc in the same PR.
+
+## 6. What this contract explicitly rejects (v1)
+
+- No live model-mutable REPL with host-reachable state across batches
+  (spec REPL semantics REJECT #1).
+- No model-authored code in the state context (REJECT #2); the model's only output
+  vocabulary in a batch is the 11-action whitelist.
+- No implicit persistence through module globals, provider instances, or browser
+  scratch beyond the batch context's own discard rule.
+
+## 7. Automatic page binding (v1.1, 2026-09-12)
+
+**What changed:** in v1 the planning loop never tracked the browser URL, so
+`page_url` in the batch descriptor (and the `page_url` field of the
+batch-context record) was operator-pinned only (`PlanningLoopConfig.batch_page_url`).
+v1.1 fills it automatically from observation, with the operator pin still
+overriding.
+
+**Mechanics (binding):**
+
+1. After each ACT/OBSERVE cycle — step-by-step or post-batch alike — the loop
+   asks the live adapter for its current page URL
+   (`core/batch_dispatch.observe_adapter_url`, which awaits `adapter.get_url()`
+   on browser adapters), and falls back to a URL found in the step's adapter
+   result (`extracted_content.url` / `url` / `newPageUrl`).
+2. The most recently observed URL is pinned into the **next** batch's
+   descriptor binding (both the grant hash input and the ledger record's
+   `page_url`). The first batch of a run observes nothing, so it keeps the
+   origin+session-only binding — same as a v1 run with no operator pin.
+3. `PlanningLoopConfig.batch_page_url`, when set, always wins; auto-tracking
+   never overrides an operator pin.
+4. When the observation carries no URL (non-browser surface, adapter without a
+   `get_url`, closed page), the binding stays at whatever it already was —
+   i.e. origin+session only unless the operator pinned one.
+5. The observation is surfaced as a `page.observed` loop event (url + run/step),
+   so the binding decision is visible in the SSE stream.
+
+**Why this is not a new cross-batch state carrier:** the URL is read from the
+browser itself (outside the batch), never from batch scratch or REPL state, and
+it only feeds the *next grant's* descriptor — which the grant hash then binds.
+It adds no persistence channel beyond what §2 already lists: the observation
+flowing into the next plan call.
+
+**Same mechanics for taught workflows:** the record→teach→batch runner
+(`core/workflow_runner.py`) observes the adapter URL the same way when no
+operator `batch_page_url` is passed to it.
+
+**Versioning note:** payload schema unchanged (`contract_version` stays `1` —
+no fields added or re-meaned); §7 documents a change in *how the engine fills an
+existing field*, which is a minor revision per §5.
+
+## 8. Code execution (v1.2, 2026-09-13)
+
+Code mode (spec `code-mode-execution`, third integration mode, opt-in per run)
+inherits the batch state rules wholesale — a code run is a degenerate
+single-"step" batch whose step body is a grant-bound payload:
+
+**Survives a code run:** the browser/page state the payload changed (the page
+outlives the run), the run's durable records, and the explicit ledger carriers
+below. **Does NOT survive:** any in-context variable, REPL binding, or scratch
+state created while the payload ran — the runner's vm context is discarded when
+the process exits. Nothing in the Python engine reads or writes it.
+
+**Rule (binding, same as §2): cross-run state is carried only as explicit
+ledger/receipt writes.** The legitimate carriers for code mode are exactly:
+
+1. The code receipt (`code-receipts.jsonl`, Rust side) — descriptor hash,
+   grant id, envelope metadata (stdout byte length, exit status, screenshot
+   hash+ref). stdout CONTENT lives only in the loop step's observation, never
+   in the receipt.
+2. The code-context record on the canonical event ledger (below).
+3. The fixed envelope returned to the planning loop
+   (`step.adapter_result["code_envelope"]`) which flows into the next plan
+   call as history — the same observation channel as §2.3.
+
+**The code-context record:** every code dispatch by the planning loop writes
+exactly two canonical ledger events through the existing `EventLedger` surface:
+
+- `code.context.opened` — BEFORE the code RPC is sent (audit-before-act).
+- `code.context.closed` — after the response, carrying the outcome.
+
+Payload schema (`contract_version: "1"`, independent of the batch record's
+version): `code_id`/`descriptor_hash` (the descriptor SHA-256 the grant binds),
+`run_id`/`session_id`, `language`, `code_bytes` (length only — payload content
+never enters the ledger), `declared_targets` (hosts only), `origin`;
+`closed` adds `status` (`completed` | `failed` | `denied` | `refused`),
+`receipt_id`, `exit_status`, `timed_out`. Record type: `core/code_mode.py`
+(`CodeContextRecord`, `open_code_context` / `close_code_context`).
+
+**Versioning:** adding the code-context record type is the major-revision case
+from §5 — this section is that revision, landed in the same PR as the code
+that consumes it.

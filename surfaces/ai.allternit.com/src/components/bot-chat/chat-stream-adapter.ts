@@ -26,6 +26,7 @@ export interface StreamCallbacks {
   onToolCall?: (toolCall: unknown) => void;
   onToolResult?: (toolResult: unknown) => void;
   onToolError?: (toolError: unknown) => void;
+  onArtifact?: (artifact: unknown) => void;
   onDone?: () => void;
   onError?: (error: Error) => void;
 }
@@ -40,7 +41,11 @@ function clip(value: unknown, fallback = ""): string {
   if (value == null) return fallback;
   if (typeof value === "string") return value.slice(0, 240);
   try {
-    return JSON.stringify(value).slice(0, 240);
+    const json = JSON.stringify(value);
+    // An empty container stringifies to "[]" or "{}" — rendering that as the
+    // tool input summary looks like brackets with no text content.
+    if (json === "[]" || json === "{}") return fallback;
+    return json.slice(0, 240);
   } catch {
     return fallback;
   }
@@ -143,6 +148,30 @@ export function streamCallbacksToEvents(
         outputSummary: err,
         status: "error",
         error: err,
+        createdAt: now(),
+      });
+    },
+    onArtifact: (artifact: unknown) => {
+      const rec = asRecord(artifact);
+      const id =
+        (typeof rec.artifactId === "string" && rec.artifactId) ||
+        (typeof rec.id === "string" && rec.id) ||
+        `art-${Date.now()}`;
+      const title = typeof rec.title === "string" ? rec.title : "Artifact";
+      const kind = typeof rec.kind === "string" ? rec.kind : "html";
+      const content = typeof rec.content === "string" ? rec.content : "";
+      const url = typeof rec.url === "string" ? rec.url : undefined;
+      onEvent({
+        type: "artifact.created",
+        id,
+        artifact: {
+          id,
+          title,
+          kind,
+          content,
+          url,
+          createdAt: now(),
+        },
         createdAt: now(),
       });
     },

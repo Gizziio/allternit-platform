@@ -38,6 +38,8 @@ pub struct CostSummaryQuery {
 /// Query parameters for cost breakdown endpoint
 #[derive(Debug, Deserialize, Default)]
 pub struct CostBreakdownQuery {
+    /// Filter by month (YYYY-MM format)
+    pub month: Option<String>,
     /// Group by field (provider, region, instance_type)
     pub group_by: Option<String>,
 }
@@ -189,21 +191,34 @@ pub async fn get_run_cost(
 ) -> Result<Json<RunCostResponse>, ApiError> {
     debug!("Fetching cost for run: {}", run_id);
 
-    // Verify user has access to this run
-    let run: crate::db::cowork_models::Run = sqlx::query_as("SELECT * FROM runs WHERE id = $1")
-        .bind(&run_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(ApiError::DatabaseError)?
-        .ok_or_else(|| ApiError::NotFound(format!("Run not found: {}", run_id)))?;
+    // Only the ownership columns are needed for the access check — a full
+    // `Run` decode trips on schema drift (the operator DB has
+    // `completed_steps BIGINT` while some scratch DDL uses INTEGER).
+    let (owner_id, tenant_id): (Option<String>, Option<String>) =
+        sqlx::query_as("SELECT owner_id, tenant_id FROM runs WHERE id = $1")
+            .bind(&run_id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(ApiError::DatabaseError)?
+            .ok_or_else(|| ApiError::NotFound(format!("Run not found: {}", run_id)))?;
 
-    // Check ownership (simplified - in production, check tenant/organization access too)
-    if let Some(owner_id) = &run.owner_id {
-        if owner_id != &auth.user.user_id {
-            return Err(ApiError::Forbidden(
-                "You don't have access to this run's cost data".to_string(),
-            ));
-        }
+    // Tenant scoping follows the crate pattern (routes/tasks.rs,
+    // services/run_service.rs): runs created through the API carry
+    // `tenant_id` = the authenticated user; legacy rows may only have
+    // `owner_id`. Either one grants access; a run with neither is denied
+    // rather than world-readable.
+    let allowed = owner_id
+        .as_deref()
+        .map(|owner| owner == auth.user.user_id)
+        .unwrap_or(false)
+        || tenant_id
+            .as_deref()
+            .map(|tenant| tenant == auth.user.user_id)
+            .unwrap_or(false);
+    if !allowed {
+        return Err(ApiError::Forbidden(
+            "You don't have access to this run's cost data".to_string(),
+        ));
     }
 
     let service = CostServiceImpl::new(state.db.clone());
@@ -219,12 +234,14 @@ pub async fn get_run_cost(
 pub async fn get_cost_summary(
     State(state): State<Arc<ApiState>>,
     Extension(auth): Extension<AuthContext>,
-    Query(_query): Query<CostSummaryQuery>,
+    Query(query): Query<CostSummaryQuery>,
 ) -> Result<Json<CostSummaryResponse>, ApiError> {
     info!("Fetching cost summary for user: {}", auth.user.user_id);
 
     let service = CostServiceImpl::new(state.db.clone());
-    let summary = service.get_user_cost_summary(&auth.user.user_id).await?;
+    let summary = service
+        .get_user_cost_summary(&auth.user.user_id, query.month.clone())
+        .await?;
 
     Ok(Json(summary.into()))
 }
@@ -235,12 +252,14 @@ pub async fn get_cost_summary(
 pub async fn get_cost_breakdown(
     State(state): State<Arc<ApiState>>,
     Extension(auth): Extension<AuthContext>,
-    Query(_query): Query<CostBreakdownQuery>,
+    Query(query): Query<CostBreakdownQuery>,
 ) -> Result<Json<Vec<CostBreakdown>>, ApiError> {
     debug!("Fetching cost breakdown for user: {}", auth.user.user_id);
 
     let service = CostServiceImpl::new(state.db.clone());
-    let breakdown = service.get_user_cost_breakdown(&auth.user.user_id).await?;
+    let breakdown = service
+        .get_user_cost_breakdown(&auth.user.user_id, query.month.clone(), query.group_by.clone())
+        .await?;
 
     Ok(Json(breakdown))
 }

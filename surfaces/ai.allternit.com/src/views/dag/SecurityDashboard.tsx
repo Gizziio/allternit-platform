@@ -44,7 +44,7 @@ import type {
 // Event type configurations
 const EVENT_TYPES: { value: SecurityEventType; label: string; color: string; icon: React.ReactNode }[] = [
   { value: 'authentication', label: 'Auth', color: 'var(--status-info)', icon: <Lock size={14} /> },
-  { value: 'authorization', label: 'Access', color: '#8b5cf6', icon: <LockOpen size={14} /> },
+  { value: 'authorization', label: 'Access', color: 'var(--accent-primary)', icon: <LockOpen size={14} /> },
   { value: 'policy_violation', label: 'Policy', color: 'var(--status-error)', icon: <Warning size={14} /> },
   { value: 'anomaly', label: 'Anomaly', color: 'var(--status-warning)', icon: <Activity size={14} /> },
   { value: 'threat', label: 'Threat', color: 'var(--status-error)', icon: <Warning size={14} /> },

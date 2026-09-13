@@ -47,10 +47,8 @@ export function StreamingBubble({ text, status = "streaming", className }: Strea
     <div className={cn("flex w-full justify-start", className)}>
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-3 text-sm leading-relaxed",
-          status === "error"
-            ? "bg-[var(--bg-elevated)] text-orange-400"
-            : "bg-[var(--accent-primary)] text-white",
+          "max-w-[85%] rounded-2xl rounded-bl-sm border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3 text-sm leading-relaxed text-[var(--text-primary)]",
+          status === "error" && "text-orange-500",
         )}
       >
         {streaming && <style>{CARET_CSS}</style>}

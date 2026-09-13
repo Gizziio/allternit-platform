@@ -90,7 +90,7 @@ const ORG_SEEDS: AgentDefinition[] = [
     description: 'Design and build complex system architectures with best practices.',
     capabilities: ['architecture', 'design', 'documentation'],
   },
-].map((seed) => ({ ...seed, type: 'specialist' as const, temperature: 0.4, source: 'organization' as const, character: { primaryColor: '#8b5cf6' } }));
+].map((seed) => ({ ...seed, type: 'specialist' as const, temperature: 0.4, source: 'organization' as const, character: { primaryColor: '#B08D6E' } }));
 
 // Every name the bootstrap owns. Maps lowercase name → the client-stable id
 // of the row that should survive dedupe. Rows under these names were seeded

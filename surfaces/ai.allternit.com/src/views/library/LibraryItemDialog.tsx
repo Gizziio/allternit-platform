@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { DocumentRenderer } from '@/views/canvas/renderers/DocumentRenderer';
 import { CodeRenderer } from '@/views/canvas/renderers/CodeRenderer';
-import ArtifactRenderer, { injectSandboxStorageShim } from '@/components/artifact/ArtifactRenderer';
+import ArtifactRenderer, { injectSandboxCsp, injectSandboxStorageShim } from '@/components/artifact/ArtifactRenderer';
 import ReactMarkdown from 'react-markdown';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { ViewType } from '@/nav/nav.types';
@@ -229,10 +229,12 @@ function VideoPreview({ item }: { item: LibraryItem }) {
   );
 }
 
-function WebsitePreview({ item }: { item: LibraryItem }) {
+export function WebsitePreview({ item }: { item: LibraryItem }) {
   const html = item.content || '';
   const url = item.url && /^https?:\/\//i.test(item.url) ? item.url : undefined;
-  const srcDoc = url ? undefined : injectSandboxStorageShim(html);
+  // CSP first so the meta precedes everything else in the srcdoc (including
+  // the storage-shim script) and actually governs it.
+  const srcDoc = url ? undefined : injectSandboxCsp(injectSandboxStorageShim(html));
   const iframeSrc = url || undefined;
 
   return (
@@ -255,7 +257,11 @@ function WebsitePreview({ item }: { item: LibraryItem }) {
       </div>
       <div className="flex-1 min-h-0">
         <iframe
-          sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
+          // No allow-same-origin: a srcdoc iframe that kept it would inherit
+          // the host origin and could read the parent document. Artifact
+          // content runs fine on an opaque origin (same flags as
+          // ArtifactRenderer, issue #396 class).
+          sandbox="allow-scripts allow-forms allow-modals allow-popups"
           src={iframeSrc}
           srcDoc={srcDoc}
           className="w-full h-full border-0 bg-white"

@@ -16,7 +16,7 @@ const COLOR_TOKENS = [
   { name: '--text-secondary',   label: 'Text Secondary',        group: 'Text' },
   { name: '--text-tertiary',    label: 'Text Tertiary',         group: 'Text' },
   { name: '--accent-primary',   label: 'Accent Primary',        group: 'Accent' },
-  { name: '--accent-chat',      label: 'Accent Chat',           group: 'Accent' },
+  { name: '--accent-secondary', label: 'Accent Secondary',      group: 'Accent' },
   { name: '--border-subtle',    label: 'Border Subtle',         group: 'Border' },
   { name: '--border-default',   label: 'Border Default',        group: 'Border' },
 ];

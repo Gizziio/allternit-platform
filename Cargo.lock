@@ -717,9 +717,12 @@ dependencies = [
  "async-trait",
  "chrono",
  "futures 0.3.32",
+ "hex",
  "reqwest",
+ "rusqlite",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "tempfile",
  "thiserror 1.0.69",
@@ -1422,6 +1425,27 @@ dependencies = [
  "url",
  "uuid",
  "wiremock",
+]
+
+[[package]]
+name = "allternit-node-daemon"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "futures-util",
+ "portable-pty 0.8.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-tungstenite 0.21.0",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

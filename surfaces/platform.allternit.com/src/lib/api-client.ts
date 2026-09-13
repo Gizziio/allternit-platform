@@ -3,6 +3,14 @@
  *
  * Uses the gateway at VITE_ALLTERNIT_GATEWAY_URL (default https://api.allternit.com).
  * Bearer tokens are set from the Clerk session sync in PlatformAuthProvider.
+ *
+ * Phase 2 extension — `stream()`:
+ * The `/v1/*` LLM gateway accepts `stream: true` on chat completions and
+ * returns an SSE (`text/event-stream`) response. `stream()` POSTs a JSON body
+ * through the same gateway base + token plumbing as `request()` and yields
+ * each parsed `data:` payload as an async iterable. Pass an AbortSignal to
+ * stop the stream (the console's Run/Stop button). HTTP errors are raised
+ * before the first event, with the same error shape as `request()`.
  */
 
 export class AllternitApiError extends Error {
@@ -133,7 +141,7 @@ class AllternitApiClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new AllternitApiError(
-        errorData.message || `HTTP ${response.status}`,
+        errorData.error || errorData.message || `HTTP ${response.status}`,
         response.status,
         errorData.code,
         errorData.details
@@ -165,6 +173,94 @@ class AllternitApiClient {
 
   delete<T>(path: string, options?: RequestInit): Promise<T> {
     return this.request<T>('DELETE', path, undefined, options);
+  }
+
+  async raw(path: string, options: RequestInit = {}): Promise<Response> {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const token = await this.resolveToken();
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers as Record<string, string> || {}),
+    };
+    return fetch(`${this.gatewayBase()}${normalizedPath}`, {
+      ...options,
+      headers,
+    });
+  }
+
+  /**
+   * POST `body` as JSON (or GET when `options.method: "GET"`) and yield each
+   * SSE `data:` payload, parsed.
+   * Callers pass an explicit bearer override via `options.headers.Authorization`
+   * when targeting virtual-key routes (`/v1/*`) with an `ak-…` key.
+   * The returned generator throws AllternitApiError on a non-OK response and
+   * stops when the stream ends or `[DONE]` is received. Aborting `signal`
+   * terminates the stream with an AbortError.
+   */
+  async *stream<T = unknown>(
+    path: string,
+    body?: unknown,
+    options: RequestInit = {}
+  ): AsyncGenerator<T> {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const method = (options.method as string | undefined) ?? 'POST';
+    const token = await this.resolveToken();
+    const headers: Record<string, string> = {
+      Accept: 'text/event-stream',
+      ...(method === 'GET'
+        ? {}
+        : { 'Content-Type': 'application/json' }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    const response = await fetch(`${this.gatewayBase()}${normalizedPath}`, {
+      ...options,
+      method,
+      headers,
+      body:
+        method === 'GET' || body === undefined
+          ? undefined
+          : JSON.stringify(body),
+      signal: options.signal ?? null,
+    });
+
+    if (!response.ok || !response.body) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new AllternitApiError(
+        errorData.error || errorData.message || `HTTP ${response.status}`,
+        response.status,
+        errorData.code,
+        errorData.details
+      );
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let newline: number;
+        while ((newline = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, newline).trim();
+          buffer = buffer.slice(newline + 1);
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim();
+          if (payload === '[DONE]') return;
+          try {
+            yield JSON.parse(payload) as T;
+          } catch {
+            // Skip malformed keep-alive/comment payloads rather than killing the stream.
+          }
+        }
+      }
+    } finally {
+      reader.cancel().catch(() => undefined);
+    }
   }
 }
 

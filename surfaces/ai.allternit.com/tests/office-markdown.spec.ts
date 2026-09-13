@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { buildBlankDocx, parseDocx, saveDocx } from '@allternit/office-docx-engine';
-import { openOfficeHub } from './helpers/office-hub';
+import { openOfficeSurface } from './helpers/office-surface';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 
@@ -51,14 +51,15 @@ test('launcher hands a .rtf to the markdown preview', async ({ page }) => {
   test.setTimeout(180_000);
   await proxyMarkdownToEngine(page);
 
-  await openOfficeHub(page);
+  await openOfficeSurface(page);
   await page.getByTestId('office-launcher-file-input').setInputFiles({
     name: 'memo.rtf',
     mimeType: 'application/rtf',
     buffer: makeSampleRtf(),
   });
 
-  // In-shell: the preview mounts without route navigation.
+  // The preview mounts with the handed-off file (browser: full-page route;
+  // desktop: the office window navigates internally for handoffs).
   await expect(page.getByTestId('markdown-preview')).toBeVisible({ timeout: 60000 });
   await expect(page.getByTestId('markdown-preview-filename')).toHaveText('memo.rtf', { timeout: 60000 });
   await expect(page.getByTestId('markdown-preview-format')).toHaveText('rtf');
@@ -69,7 +70,7 @@ test('launcher hands a .rtf to the markdown preview', async ({ page }) => {
 
 test('a .docx still opens in Allternit Docs (routing not hijacked)', async ({ page }) => {
   test.setTimeout(180_000);
-  await openOfficeHub(page);
+  await openOfficeSurface(page);
   await page.getByTestId('office-launcher-file-input').setInputFiles({
     name: 'report.docx',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -113,7 +114,7 @@ test('save-as-artifact posts the converted markdown as a section', async ({ page
     await route.fallback();
   });
 
-  await openOfficeHub(page);
+  await openOfficeSurface(page);
   await page.getByTestId('office-launcher-file-input').setInputFiles({
     name: 'memo.rtf',
     mimeType: 'application/rtf',
@@ -163,7 +164,7 @@ test('open URL as Markdown posts the url and renders the converted page', async 
     });
   });
 
-  await openOfficeHub(page);
+  await openOfficeSurface(page);
   await page.getByTestId('office-launcher-open-url').click();
 
   await expect(page.getByTestId('markdown-preview-url-input')).toBeVisible({ timeout: 60000 });

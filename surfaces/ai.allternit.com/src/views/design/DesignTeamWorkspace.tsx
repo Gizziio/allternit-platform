@@ -171,6 +171,21 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
 
   return (
     <div className="size-full bg-white dark:bg-black text-black dark:text-white font-sans flex flex-col overflow-hidden">
+      {/* Honesty banner: this workspace is mock data, not wired to any backend. */}
+      <div
+        role="status"
+        style={{
+          padding: '8px 24px',
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--text-primary, #1F1B16)',
+          background: 'color-mix(in srgb, #B08D6E 12%, transparent)',
+          borderBottom: '1px solid color-mix(in srgb, #B08D6E 25%, transparent)',
+        }}
+      >
+        Preview — collaboration is not wired up yet. Team members, presence, review links,
+        and activity shown here are mock data: nothing is shared, sent, or synced.
+      </div>
       {/* Header */}
       <div className="p-[20px_24px] border-b border-solid border-black/5 dark:border-white/5 flex items-center justify-between">
         <div>
@@ -190,7 +205,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
             Share for review
           </button>
           <button type="button"
-            className="flex items-center gap-1.5 p-[8px_16px] rounded-xl bg-[var(--accent-primary,#e27c59)] border-none text-white text-[13px] font-bold cursor-pointer hover:opacity-90 transition-opacity"
+            className="flex items-center gap-1.5 p-[8px_16px] rounded-xl bg-[var(--accent-primary,#B08D6E)] border-none text-white text-[13px] font-bold cursor-pointer hover:opacity-90 transition-opacity"
           >
             <Plus size={16} />
             New workspace
@@ -208,7 +223,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
             transition={{ duration: 0.3 }}
             className="overflow-hidden border-b border-solid border-black/5 dark:border-white/5"
           >
-            <div className="p-[16px_24px] flex items-center gap-4 bg-[color-mix(in_srgb,var(--accent-primary,#e27c59)_4%,transparent)]">
+            <div className="p-[16px_24px] flex items-center gap-4 bg-[color-mix(in_srgb,var(--accent-primary,#B08D6E)_4%,transparent)]">
               <div className="flex-1">
                 <div className="text-[12px] font-bold text-zinc-600 dark:text-white/70 mb-1.5">
                   Client review link
@@ -256,7 +271,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                 key={member.id}
                 className={cn(
                   "flex items-center gap-2.5 p-[8px_10px] rounded-xl transition-colors",
-                  member.role === "owner" ? "bg-[color-mix(in_srgb,var(--accent-primary,#e27c59)_8%,transparent)] border border-solid border-[color-mix(in_srgb,var(--accent-primary,#e27c59)_12%,transparent)]" : "bg-transparent border border-solid border-transparent"
+                  member.role === "owner" ? "bg-[color-mix(in_srgb,var(--accent-primary,#B08D6E)_8%,transparent)] border border-solid border-[color-mix(in_srgb,var(--accent-primary,#B08D6E)_12%,transparent)]" : "bg-transparent border border-solid border-transparent"
                 )}
               >
                 <div className="relative">
@@ -274,7 +289,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                   <div className="text-[13px] font-bold text-zinc-900 dark:text-white truncate">
                     {member.name}
                     {member.role === "owner" && (
-                      <Star size={10} weight="fill" className="text-[var(--accent-primary,#e27c59)] ml-1 inline" />
+                      <Star size={10} weight="fill" className="text-[var(--accent-primary,#B08D6E)] ml-1 inline" />
                     )}
                   </div>
                   <div className="text-[12px] text-zinc-400 dark:text-white/30 truncate">{member.handle}</div>
@@ -412,8 +427,8 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
           </div>
 
           {/* Quick Actions */}
-          <div className="p-4 rounded-2xl bg-[color-mix(in_srgb,var(--accent-primary,#e27c59)_6%,transparent)] border border-solid border-[color-mix(in_srgb,var(--accent-primary,#e27c59)_12%,transparent)] flex flex-col gap-2.5">
-            <div className="text-[12px] font-extrabold text-[var(--accent-primary,#e27c59)] uppercase tracking-wider mb-1">Quick Actions</div>
+          <div className="p-4 rounded-2xl bg-[color-mix(in_srgb,var(--accent-primary,#B08D6E)_6%,transparent)] border border-solid border-[color-mix(in_srgb,var(--accent-primary,#B08D6E)_12%,transparent)] flex flex-col gap-2.5">
+            <div className="text-[12px] font-extrabold text-[var(--accent-primary,#B08D6E)] uppercase tracking-wider mb-1">Quick Actions</div>
             <QuickAction icon={<Link size={14} />} label="Copy review link" />
             <QuickAction icon={<CheckCircle size={14} />} label="Mark all as read" />
             <QuickAction icon={<Pencil size={14} />} label="Edit permissions" />

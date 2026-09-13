@@ -103,7 +103,7 @@ class FrameShapeUtil extends ShapeUtil<IFrameShape> {
 // ─── ComponentShapeUtil ───────────────────────────────────────────────────────
 
 const COMPONENT_COLORS: Record<IComponentShape['props']['componentType'], { fill: string; stroke: string }> = {
-  custom:  { fill: '#f8f9ff', stroke: '#818cf8' },
+  custom:  { fill: '#f8f9ff', stroke: '#C4A684' },
   button:  { fill: '#eff6ff', stroke: '#3b82f6' },
   input:   { fill: '#f0fdf4', stroke: '#22c55e' },
   card:    { fill: '#fff7ed', stroke: '#f97316' },
@@ -119,9 +119,9 @@ class ComponentShapeUtil extends ShapeUtil<IComponentShape> {
   override getDefaultProps(): IComponentShape['props'] {
     return {
       w: 200, h: 120, label: 'Component', componentType: 'custom',
-      fill: '#f8f9ff', stroke: '#818cf8', radius: 8,
+      fill: '#f8f9ff', stroke: '#C4A684', radius: 8,
       fills: [{ fillType: 'plain', fillColor: '#f8f9ff', fillOpacity: 1 }],
-      strokes: [{ strokeColor: '#818cf8', strokeOpacity: 1, strokeStyle: 'solid', strokeWidth: 1.5, strokeAlignment: 'center' }],
+      strokes: [{ strokeColor: '#C4A684', strokeOpacity: 1, strokeStyle: 'solid', strokeWidth: 1.5, strokeAlignment: 'center' }],
       opacity: 1, componentId: null, componentFile: null,
     };
   }
@@ -223,7 +223,7 @@ function renderUIBlock(variant: IUIBlockShape['props']['variant'], w: number, h:
     case 'avatar':
       return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: Math.min(w, h) - 4, height: Math.min(w, h) - 4, borderRadius: '50%', background: 'linear-gradient(135deg, #818cf8, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: Math.min(w, h) - 4, height: Math.min(w, h) - 4, borderRadius: '50%', background: 'linear-gradient(135deg, #C4A684, #B08D6E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>A</span>
           </div>
         </div>

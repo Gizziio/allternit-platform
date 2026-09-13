@@ -149,7 +149,7 @@ export function RecentSessionsStrip({ onResume, maxItems = 4 }: RecentSessionsSt
                   {hasSave && (
                     <>
                       <span style={{ opacity: 0.4 }}>·</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--accent-cowork)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: 'var(--accent-primary)' }}>
                         <ClockCountdown size={10} weight="fill" />
                         saved
                       </span>

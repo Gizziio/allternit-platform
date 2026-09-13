@@ -11,7 +11,7 @@ import {
 } from "@/design/allternit.tokens";
 import { cn } from "@/lib/utils";
 
-const browser = MODE_COLORS.browser;
+const browser = MODE_COLORS.design;
 
 export interface MentionOption {
   name: string;
@@ -37,7 +37,7 @@ export const MENTION_OPTIONS: MentionOption[] = [
     name: "deep",
     description: "Deep capture (full DOM + assets)",
     icon: "🔍",
-    color: "#A78BFA",
+    color: "#B08D6E",
   },
 ];
 
@@ -134,10 +134,10 @@ export function MentionAutocomplete({
   return (
     <div
       ref={containerRef}
-      className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-[var(--bg-secondary)] backdrop-blur-xl border border-solid border-[var(--accent-browser-border)] rounded-md shadow-[0_8px_32px_var(--surface-panel),0_0_0_1px_var(--accent-browser-panel-tint)] py-1 overflow-hidden"
+      className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-[var(--bg-secondary)] backdrop-blur-xl border border-solid border-[var(--accent-primary-border)] rounded-md shadow-[0_8px_32px_var(--surface-panel),0_0_0_1px_var(--accent-primary-panel-tint)] py-1 overflow-hidden"
       style={{
-        ['--accent-browser-border' as string]: browser.border,
-        ['--accent-browser-panel-tint' as string]: browser.panelTint,
+        ['--accent-primary-border' as string]: browser.border,
+        ['--accent-primary-panel-tint' as string]: browser.panelTint,
       }}
     >
       {filtered.map((option, i) => (
@@ -146,10 +146,10 @@ export function MentionAutocomplete({
           onClick={() => onSelect(option)}
           className={cn(
             "flex items-center gap-2.5 w-full p-[8px_12px] border-none cursor-pointer text-left transition-all duration-150",
-            i === selectedIndex ? "bg-[var(--accent-browser-panel-tint)]" : "bg-transparent"
+            i === selectedIndex ? "bg-[var(--accent-primary-panel-tint)]" : "bg-transparent"
           )}
           style={{
-            ['--accent-browser-panel-tint' as string]: browser.panelTint,
+            ['--accent-primary-panel-tint' as string]: browser.panelTint,
           }}
           onMouseEnter={() => setSelectedIndex(i)}
         >

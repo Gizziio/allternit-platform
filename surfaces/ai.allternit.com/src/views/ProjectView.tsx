@@ -571,9 +571,9 @@ interface ProjectCardProps {
 
 const MODE_ACCENT: Record<ProjectCategory, string> = {
   all: 'var(--accent-primary)',
-  chat: 'var(--accent-chat)',
-  cowork: 'var(--accent-cowork)',
-  code: 'var(--accent-code)',
+  chat: 'var(--accent-primary)',
+  cowork: 'var(--accent-primary)',
+  code: 'var(--accent-primary)',
   design: 'var(--accent-primary)',
   bb: 'var(--accent-primary)',
 };

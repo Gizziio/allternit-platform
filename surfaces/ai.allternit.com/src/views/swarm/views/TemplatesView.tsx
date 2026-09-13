@@ -37,7 +37,7 @@ interface TemplatesViewProps {
 const ROLE_COLORS: Record<AgentRole, string> = {
   orchestrator: '#c17817',
   worker: STATUS.info,
-  specialist: '#a78bfa',
+  specialist: '#B08D6E',
   reviewer: STATUS.success,
 };
 

@@ -170,14 +170,14 @@ const styles = `
 .permission-card-icon {
   width: 14px;
   height: 14px;
-  color: var(--accent-cowork, #c8a96e);
+  color: var(--accent-primary, #c8a96e);
   flex-shrink: 0;
 }
 
 .permission-card-title {
   font-size: 11px;
   font-weight: 700;
-  color: var(--accent-cowork, #c8a96e);
+  color: var(--accent-primary, #c8a96e);
   text-transform: uppercase;
   letter-spacing: 0.07em;
   flex: 1;

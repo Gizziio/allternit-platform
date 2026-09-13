@@ -40,25 +40,25 @@ html, body {
     --card-foreground: var(--text-primary);
     --popover: var(--glass-bg-thick);
     --popover-foreground: var(--text-primary);
-    --primary: var(--accent-chat);
+    --primary: var(--accent-primary);
     --primary-foreground: var(--text-primary);
     --secondary: var(--bg-secondary);
     --secondary-foreground: var(--text-primary);
     --muted: var(--bg-tertiary);
     --muted-foreground: var(--text-tertiary);
-    --accent: var(--accent-chat);
+    --accent: var(--accent-primary);
     --accent-foreground: var(--text-primary);
     --border: var(--border-default);
     --input: var(--border-default);
-    --ring: var(--accent-chat);
+    --ring: var(--accent-primary);
     --sidebar-background: var(--rail-bg);
     --sidebar-foreground: var(--rail-fg);
-    --sidebar-primary: var(--accent-chat);
+    --sidebar-primary: var(--accent-primary);
     --sidebar-primary-foreground: var(--text-primary);
     --sidebar-accent: var(--rail-hover);
     --sidebar-accent-foreground: var(--rail-fg);
     --sidebar-border: var(--border-subtle);
-    --sidebar-ring: var(--accent-chat);
+    --sidebar-ring: var(--accent-primary);
   }
 
   [data-theme='dark'],
@@ -69,25 +69,25 @@ html, body {
     --card-foreground: var(--text-primary);
     --popover: var(--glass-bg-thick);
     --popover-foreground: var(--text-primary);
-    --primary: var(--accent-chat);
+    --primary: var(--accent-primary);
     --primary-foreground: var(--bg-primary);
     --secondary: var(--bg-secondary);
     --secondary-foreground: var(--text-primary);
     --muted: var(--bg-tertiary);
     --muted-foreground: var(--text-tertiary);
-    --accent: var(--accent-chat);
+    --accent: var(--accent-primary);
     --accent-foreground: var(--text-primary);
     --border: var(--border-default);
     --input: var(--border-default);
-    --ring: var(--accent-chat);
+    --ring: var(--accent-primary);
     --sidebar-background: var(--rail-bg);
     --sidebar-foreground: var(--rail-fg);
-    --sidebar-primary: var(--accent-chat);
+    --sidebar-primary: var(--accent-primary);
     --sidebar-primary-foreground: var(--bg-primary);
     --sidebar-accent: var(--rail-hover);
     --sidebar-accent-foreground: var(--rail-fg);
     --sidebar-border: var(--border-subtle);
-    --sidebar-ring: var(--accent-chat);
+    --sidebar-ring: var(--accent-primary);
   }
 
   body {
@@ -206,7 +206,7 @@ html, body {
   }
   .research-btn-primary {
     @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer transition-all;
-    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    background: linear-gradient(135deg, #B08D6E, #C4A684);
   }
   .research-btn-primary:hover {
     opacity: 0.92;
@@ -232,8 +232,8 @@ html, body {
     border: 1px solid transparent;
   }
   .research-source-item.highlighted {
-    background-color: rgba(167, 139, 250, 0.12);
-    border-color: rgba(167, 139, 250, 0.4);
+    background-color: rgba(176,141,110, 0.12);
+    border-color: rgba(176,141,110, 0.4);
   }
   .research-empty-state {
     @apply flex-1 flex flex-col items-center justify-center text-center gap-3 p-8;
@@ -241,11 +241,11 @@ html, body {
   }
   .research-message-user {
     @apply w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5;
-    background-color: var(--accent, #7c3aed);
+    background-color: var(--accent, #B08D6E);
   }
   .research-message-assistant {
     @apply w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5;
-    background-color: rgba(167, 139, 250, 0.15);
+    background-color: rgba(176,141,110, 0.15);
   }
   .research-citation-popover {
     @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[280px] p-3 rounded-lg z-50;
@@ -255,8 +255,8 @@ html, body {
   }
   .research-badge {
     @apply text-[12px] font-semibold px-1.5 py-0.5 rounded;
-    background-color: rgba(167, 139, 250, 0.15);
-    color: #a78bfa;
+    background-color: rgba(176,141,110, 0.15);
+    color: #B08D6E;
   }
 }
 

@@ -1,7 +1,7 @@
 # Vendor Notes (Harvest)
 
-This folder documents **reverse-engineered behavior** from:
-- Beads (issue tracking)
+This folder documents **reverse-engineered behavior** from upstream tools:
+- An issue-tracking CLI (dependency graphs, readiness, issue state)
 - MCP Agent Mail (logistics)
 
 We capture algorithms and patterns here, then reimplement them in this system.

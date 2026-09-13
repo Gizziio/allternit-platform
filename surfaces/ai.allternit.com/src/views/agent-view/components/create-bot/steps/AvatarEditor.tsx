@@ -30,7 +30,7 @@ export const GIZZI_EMOTIONS: GizziEmotion[] = [
 const MASCOT_TEMPLATE_IDS = Object.keys(MASCOT_TEMPLATES) as MascotTemplate[];
 
 const GIZZI_COLORS = [
-  "#D4956A",
+  "#B08D6E",
   "#6366f1",
   "#8b5cf6",
   "#ec4899",

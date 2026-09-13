@@ -112,23 +112,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 async function fetchDriverStatus(
   driverType: RuntimeDriverType,
-): Promise<RuntimeDriverStatus | null> {
-  try {
-    const response = await fetch(
-      `${DRIVERS_ENDPOINT}/${encodeURIComponent(driverType)}/status`,
-    );
-    return await handleResponse<RuntimeDriverStatus>(response);
-  } catch (error) {
-    return {
-      driver_type: driverType,
-      status: "unavailable",
-      active_instances: 0,
-      pool_size: 0,
-      healthy: false,
-      message:
-        error instanceof Error ? error.message : "Failed to load driver status",
-    };
-  }
+): Promise<RuntimeDriverStatus> {
+  const response = await fetch(
+    `${DRIVERS_ENDPOINT}/${encodeURIComponent(driverType)}/status`,
+  );
+  return await handleResponse<RuntimeDriverStatus>(response);
 }
 
 async function fetchDriverRecords(

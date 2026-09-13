@@ -23,7 +23,7 @@ import {
   CaretLeft as ChevronLeftIcon,
   CaretRight as ChevronRightIcon,
 } from '@phosphor-icons/react';
-import {
+import React, {
   createContext,
   memo,
   useCallback,

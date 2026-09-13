@@ -1,9 +1,8 @@
 //! Ephemeral work units for the Rails CLI.
 //!
-//! Echoes are the Rails equivalent of Beads wisps: short-lived tickets
-//! used for heartbeats, pings, patrols, error reports, escalations, and
-//! other transient agent signals. They auto-expire and can be garbage
-//! collected.
+//! Echoes are short-lived tickets used for heartbeats, pings, patrols,
+//! error reports, escalations, and other transient agent signals. They
+//! auto-expire and can be garbage collected.
 
 use std::path::{Path, PathBuf};
 

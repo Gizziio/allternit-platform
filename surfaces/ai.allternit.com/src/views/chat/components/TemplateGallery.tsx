@@ -101,7 +101,7 @@ function TemplateCard({
     <button
       type="button"
       onClick={() => onClick?.(prompt)}
-      className="group relative flex flex-col overflow-hidden bg-[color-mix(in_srgb,var(--surface-panel)_86%,transparent)] border border-white/[0.08] rounded-2xl cursor-pointer text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-white/[0.18] hover:shadow-[0_18px_42px_rgba(0,0,0,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-chat)]"
+      className="group relative flex flex-col overflow-hidden bg-[color-mix(in_srgb,var(--surface-panel)_86%,transparent)] border border-white/[0.08] rounded-2xl cursor-pointer text-left transition-all duration-300 ease-out hover:-translate-y-1 hover:border-white/[0.18] hover:shadow-[0_18px_42px_rgba(0,0,0,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = color)}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
     >

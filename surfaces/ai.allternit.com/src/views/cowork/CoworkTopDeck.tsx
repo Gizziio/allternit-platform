@@ -76,7 +76,7 @@ function TopDeckDropdown({ label, value, icon, options, onSelect, isOpen, onTogg
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-1.5">
-                    {value === option.label && <Check size={12} className="text-[var(--accent-chat)]" />}
+                    {value === option.label && <Check size={12} className="text-[var(--accent-primary)]" />}
                     {option.label}
                   </div>
                   {option.description ? (

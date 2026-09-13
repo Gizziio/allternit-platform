@@ -376,8 +376,8 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'browser-extensions': () => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Office & Extensions" />}>
-        <BrowserExtensionsView openView={open} />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="ACI Extensions" />}>
+        <BrowserExtensionsView />
       </ErrorBoundary>
     ),
     terminal: ({ context }: { context?: ViewContext }) => (
@@ -809,11 +809,14 @@ export function getShellViewRegistry(handlers: {
         <DesktopCloudAdminView />
       </ErrorBoundary>
     ),
-    "cloud-console": ({ context }: { context?: ViewContext }) => (
+    "cloud-console": ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { tab?: string; sessionId?: string } | undefined;
+      return (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cloud Console" />}>
-        <CloudConsoleView />
+        <CloudConsoleView initialTab={ctx?.tab} sessionId={ctx?.sessionId} />
       </ErrorBoundary>
-    ),
+      );
+    },
     "model-gateway": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Model Gateway" />}>
         <ModelGatewayView />

@@ -29,7 +29,6 @@
   /* Accent */
   --accent-primary: var(--ad-accent);
   --accent-secondary: var(--ad-accent-strong);
-  --accent-chat: var(--ad-accent);
 
   /* Surfaces */
   --surface-panel: var(--ad-bg-panel);

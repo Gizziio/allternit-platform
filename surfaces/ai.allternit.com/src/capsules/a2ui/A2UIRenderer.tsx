@@ -325,7 +325,7 @@ function ButtonRenderer({ node, context }: ComponentRendererProps) {
   const isLoading = resolveValue(props.loading, context.dataModel, false);
 
   const variantClasses: Record<string, string> = {
-    primary: 'bg-[var(--accent-chat)] text-white hover:opacity-90',
+    primary: 'bg-[var(--accent-primary)] text-white hover:opacity-90',
     secondary: 'bg-[var(--glass-bg-elevated)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:bg-[var(--glass-bg-hover)]',
     ghost: 'text-[var(--text-secondary)] hover:bg-[var(--glass-bg-hover)] hover:text-[var(--text-primary)]',
     danger: 'bg-red-500 text-white hover:bg-red-600',
@@ -341,7 +341,7 @@ function ButtonRenderer({ node, context }: ComponentRendererProps) {
     <button type="button"
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-[var(--accent-chat)]/20',
+        'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         variantClasses[props.variant || 'secondary'],
         sizeClasses[props.size || 'md'],
@@ -405,7 +405,7 @@ function TextFieldRenderer({ node, context }: ComponentRendererProps) {
           className={cn(
             'w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border',
             'text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]',
-            'focus:outline-none focus:ring-2 focus:ring-[var(--accent-chat)]/20 focus:border-[var(--accent-chat)]',
+            'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20 focus:border-[var(--accent-primary)]',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
             'resize-y min-h-[80px]'
@@ -422,7 +422,7 @@ function TextFieldRenderer({ node, context }: ComponentRendererProps) {
           className={cn(
             'w-full h-10 px-3 rounded-lg bg-[var(--bg-secondary)] border',
             'text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]',
-            'focus:outline-none focus:ring-2 focus:ring-[var(--accent-chat)]/20 focus:border-[var(--accent-chat)]',
+            'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20 focus:border-[var(--accent-primary)]',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
           )}
@@ -445,7 +445,7 @@ function BadgeRenderer({ node, context }: ComponentRendererProps) {
 
   const variantClasses: Record<string, string> = {
     default: 'bg-[var(--glass-bg-elevated)] text-[var(--text-secondary)]',
-    primary: 'bg-[var(--accent-chat)]/10 text-[var(--accent-chat)]',
+    primary: 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]',
     success: 'bg-green-500/10 text-green-600',
     warning: 'bg-yellow-500/10 text-yellow-600',
     danger: 'bg-red-500/10 text-red-600',
@@ -487,7 +487,7 @@ function SpinnerRenderer({ node, context }: ComponentRendererProps) {
       className={cn(
         'animate-spin',
         sizeClasses[props.size || 'md'],
-        props.variant === 'primary' && 'text-[var(--accent-chat)]',
+        props.variant === 'primary' && 'text-[var(--accent-primary)]',
         props.className
       )}
       style={props.style}
@@ -585,8 +585,8 @@ function TabsRenderer({ node, context }: ComponentRendererProps) {
               'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]',
               'data-[state=active]:text-[var(--text-primary)]',
               props.variant === 'pills' && 'rounded-full data-[state=active]:bg-[var(--glass-bg-elevated)]',
-              props.variant === 'underline' && 'border-b-2 border-transparent data-[state=active]:border-[var(--accent-chat)] -mb-[1px]',
-              props.variant === 'default' && 'data-[state=active]:border-b-2 data-[state=active]:border-[var(--accent-chat)] -mb-[1px]'
+              props.variant === 'underline' && 'border-b-2 border-transparent data-[state=active]:border-[var(--accent-primary)] -mb-[1px]',
+              props.variant === 'default' && 'data-[state=active]:border-b-2 data-[state=active]:border-[var(--accent-primary)] -mb-[1px]'
             )}
           >
             <div className="flex items-center gap-2">

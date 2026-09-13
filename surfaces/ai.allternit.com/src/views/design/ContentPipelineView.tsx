@@ -385,7 +385,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
         <div className="grid grid-cols-2 gap-1.5 p-[10px_10px_8px]">
           {([
             ['draft', counts.draft, '#f59e0b'],
-            ['scheduled', counts.scheduled, '#6366f1'],
+            ['scheduled', counts.scheduled, 'var(--status-info)'],
             ['published', counts.published, '#22c55e'],
             ['generating', counts.generating, 'var(--accent-primary)'],
           ] as const).map(([key, count, color]) => (
@@ -401,7 +401,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
           {PLATFORMS.map(p => {
             const pPost = posts[p.id];
             const isActive = selected === p.id;
-            const statusColor = pPost.status === 'published' ? '#22c55e' : pPost.status === 'scheduled' ? '#6366f1' : pPost.status === 'draft' ? '#f59e0b' : pPost.status === 'generating' ? 'var(--accent-primary)' : 'var(--border-default)';
+            const statusColor = pPost.status === 'published' ? '#22c55e' : pPost.status === 'scheduled' ? 'var(--status-info)' : pPost.status === 'draft' ? '#f59e0b' : pPost.status === 'generating' ? 'var(--accent-primary)' : 'var(--border-default)';
             return (
               <button type="button"
                 key={p.id}
@@ -519,7 +519,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
               {/* Status chip */}
               {post.status !== 'idle' && (
                 <div className="flex items-center gap-1.5 p-[8px_12px] rounded-lg bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)]">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: post.status === 'published' ? '#22c55e' : post.status === 'scheduled' ? '#6366f1' : post.status === 'generating' ? 'var(--accent-primary)' : '#f59e0b' }} />
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: post.status === 'published' ? '#22c55e' : post.status === 'scheduled' ? 'var(--status-info)' : post.status === 'generating' ? 'var(--accent-primary)' : '#f59e0b' }} />
                   <span className="text-[12px] font-semibold text-[var(--text-secondary)] capitalize">
                     {post.status === 'scheduled' ? `Scheduled · Day ${(post.scheduledDay ?? 0) + 1} at ${post.scheduledTime}` : post.status}
                   </span>

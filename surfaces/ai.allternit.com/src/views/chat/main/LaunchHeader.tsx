@@ -36,7 +36,7 @@ export function LaunchHeader({
       style={{ height: LAUNCH_HEADER_ZONE_HEIGHT, marginBottom: LAUNCH_SECTION_GAP }}
     >
       <div className="relative group cursor-pointer mb-12 inline-flex items-center justify-center p-5 transition-all duration-[600ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
-        <div className="absolute inset-0 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[color-mix(in_srgb,var(--accent-chat)_8%,transparent)]" />
+        <div className="absolute inset-0 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[color-mix(in_srgb,var(--accent-primary)_8%,transparent)]" />
         <div className="relative z-10 transition-transform duration-500 group-hover:scale-110">
           {effectiveLogo === 'matrix' || effectiveLogo === 'allternit' ? (
             <img

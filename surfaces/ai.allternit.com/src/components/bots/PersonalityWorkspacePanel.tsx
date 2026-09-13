@@ -280,7 +280,7 @@ export function PersonalityWorkspacePanel({
           <div className="flex items-center gap-2">
             <Input
               type="color"
-              value={profile.accentColor ?? "#6366f1"}
+              value={profile.accentColor ?? "#B08D6E"}
               onChange={(e) => updateBotProfile({ accentColor: e.target.value })}
               className="w-12 h-9 p-1 bg-[var(--bg-primary)] border-[var(--border-subtle)]"
             />

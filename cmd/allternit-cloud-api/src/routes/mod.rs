@@ -7,6 +7,7 @@ pub mod auth;
 pub mod billing_credits;
 pub mod billing_checkout;
 pub mod billing_subscriptions;
+pub mod billing_transfer;
 pub mod billing_webhooks;
 pub mod beta;
 pub mod canvases;

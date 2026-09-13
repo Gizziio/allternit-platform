@@ -100,7 +100,7 @@ function AgentTestingPlayground({
   onSaveTest,
   onDeploy,
 }: AgentTestingPlaygroundProps) {
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
+  const modeColors = MODE_COLORS.design as typeof MODE_COLORS.design;
   const [messages, setMessages] = useState<TestMessage[]>([]);
   const [input, setInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -242,7 +242,7 @@ function AgentTestingPlayground({
         isRunning={isRunning}
         onReset={handleReset}
         onDeploy={onDeploy}
-        modeColors={modeColors as typeof MODE_COLORS.chat}
+        modeColors={modeColors as typeof MODE_COLORS.design}
       />
 
       {/* Main Content */}
@@ -252,7 +252,7 @@ function AgentTestingPlayground({
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 ? (
-              <EmptyState agent={agent} modeColors={modeColors as typeof MODE_COLORS.chat} />
+              <EmptyState agent={agent} modeColors={modeColors as typeof MODE_COLORS.design} />
             ) : (
               <>
                 {messages.map((message, index) => (
@@ -260,10 +260,10 @@ function AgentTestingPlayground({
                     key={message.id}
                     message={message}
                     isLast={index === messages.length - 1}
-                    modeColors={modeColors as typeof MODE_COLORS.chat}
+                    modeColors={modeColors as typeof MODE_COLORS.design}
                   />
                 ))}
-                {isRunning && <TypingIndicator modeColors={modeColors as typeof MODE_COLORS.chat} />}
+                {isRunning && <TypingIndicator modeColors={modeColors as typeof MODE_COLORS.design} />}
                 <div ref={messagesEndRef} />
               </>
             )}
@@ -276,7 +276,7 @@ function AgentTestingPlayground({
             isRunning={isRunning}
             onSend={handleSend}
             onKeyDown={handleKeyDown}
-            modeColors={modeColors as typeof MODE_COLORS.chat}
+            modeColors={modeColors as typeof MODE_COLORS.design}
           />
         </div>
 
@@ -289,7 +289,7 @@ function AgentTestingPlayground({
           setVariables={setVariables}
           showVariables={showVariables}
           setShowVariables={setShowVariables}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
         />
       </div>
     </div>
@@ -311,7 +311,7 @@ function PlaygroundHeader({
   isRunning: boolean;
   onReset: () => void;
   onDeploy?: () => void;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   return (
     <div 
@@ -381,7 +381,7 @@ function EmptyState({
   modeColors,
 }: {
   agent: Agent;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   const suggestions = [
     `Hi ${agent.name}, what can you help me with?`,
@@ -435,7 +435,7 @@ function MessageBubble({
 }: {
   message: TestMessage;
   isLast: boolean;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   const isUser = message.role === 'user';
   const isTool = message.role === 'tool';
@@ -508,7 +508,7 @@ function ToolCallDisplay({
   modeColors,
 }: {
   toolCall: ToolCall;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -584,7 +584,7 @@ function ToolCallDisplay({
 function TypingIndicator({
   modeColors,
 }: {
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   return (
     <div className="flex justify-start">
@@ -629,7 +629,7 @@ function InputArea({
   isRunning: boolean;
   onSend: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   return (
     <div 
@@ -697,7 +697,7 @@ function PlaygroundSidebar({
   setVariables: (vars: Variable[]) => void;
   showVariables: boolean;
   setShowVariables: (show: boolean) => void;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   const avgLatency = metrics.messageCount > 0 
     ? Math.round(metrics.totalLatency / metrics.messageCount)
@@ -844,7 +844,7 @@ function MetricCard({
   label: string;
   value: string;
   icon: React.ComponentType<{size?: number | string; style?: React.CSSProperties}>;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
 }) {
   return (
     <div 

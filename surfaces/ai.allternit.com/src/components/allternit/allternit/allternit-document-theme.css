@@ -45,7 +45,7 @@
 .allternit-document-theme h3.bn-block-content {
   font-size: 1.25em !important;
   font-weight: 600 !important;
-  color: #D4956A !important; /* Allternit accent */
+  color: #B08D6E !important; /* Allternit accent */
   margin-top: 20px !important;
   margin-bottom: 10px !important;
 }
@@ -64,7 +64,7 @@
 
 .allternit-document-theme .bn-bullet-list-item::before,
 .allternit-document-theme .bn-numbered-list-item::before {
-  color: #D4956A !important; /* Allternit accent for bullets */
+  color: #B08D6E !important; /* Allternit accent for bullets */
 }
 
 /* ===== Code Blocks ===== */
@@ -97,8 +97,8 @@
 
 /* ===== Blockquotes ===== */
 .allternit-document-theme .bn-blockquote {
-  border-left: 3px solid #D4956A !important; /* Allternit accent */
-  background: rgba(212, 149, 106, 0.05) !important;
+  border-left: 3px solid #B08D6E !important; /* Allternit accent */
+  background: rgba(176,141,110, 0.05) !important;
   padding: 12px 16px !important;
   margin: 16px 0 !important;
   border-radius: 0 6px 6px 0 !important;
@@ -125,8 +125,8 @@
 
 .allternit-document-theme .bn-suggestion-menu-item:hover,
 .allternit-document-theme .bn-suggestion-menu-item[aria-selected="true"] {
-  background: rgba(212, 149, 106, 0.15) !important; /* Allternit accent tint */
-  color: #D4956A !important;
+  background: rgba(176,141,110, 0.15) !important; /* Allternit accent tint */
+  color: #B08D6E !important;
 }
 
 .allternit-document-theme .bn-suggestion-menu-item-icon {
@@ -135,7 +135,7 @@
 
 .allternit-document-theme .bn-suggestion-menu-item:hover .bn-suggestion-menu-item-icon,
 .allternit-document-theme .bn-suggestion-menu-item[aria-selected="true"] .bn-suggestion-menu-item-icon {
-  color: #D4956A !important;
+  color: #B08D6E !important;
 }
 
 /* ===== Formatting Toolbar ===== */
@@ -161,8 +161,8 @@
 }
 
 .allternit-document-theme .bn-toolbar-button[data-active="true"] {
-  background: rgba(212, 149, 106, 0.2) !important;
-  color: #D4956A !important;
+  background: rgba(176,141,110, 0.2) !important;
+  color: #B08D6E !important;
 }
 
 /* ===== Link Menu ===== */
@@ -184,7 +184,7 @@
 }
 
 .allternit-document-theme .bn-link-menu input:focus {
-  border-color: #D4956A !important;
+  border-color: #B08D6E !important;
   outline: none !important;
 }
 
@@ -218,7 +218,7 @@
 
 /* ===== Block Selection ===== */
 .allternit-document-theme .bn-block-selected .bn-block-content {
-  background: rgba(212, 149, 106, 0.08) !important;
+  background: rgba(176,141,110, 0.08) !important;
   border-radius: 4px !important;
 }
 
@@ -234,7 +234,7 @@
 
 .allternit-document-theme .bn-inline-content code {
   background: #2a2a2a !important;
-  color: #D4956A !important; /* Allternit accent */
+  color: #B08D6E !important; /* Allternit accent */
   padding: 2px 6px !important;
   border-radius: 4px !important;
   font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, monospace !important;
@@ -242,14 +242,14 @@
 }
 
 .allternit-document-theme .bn-inline-content a {
-  color: #D4956A !important; /* Allternit accent */
+  color: #B08D6E !important; /* Allternit accent */
   text-decoration: none !important;
-  border-bottom: 1px solid rgba(212, 149, 106, 0.3) !important;
+  border-bottom: 1px solid rgba(176,141,110, 0.3) !important;
   transition: border-color 0.15s ease !important;
 }
 
 .allternit-document-theme .bn-inline-content a:hover {
-  border-bottom-color: #D4956A !important;
+  border-bottom-color: #B08D6E !important;
 }
 
 /* ===== Images ===== */
@@ -271,15 +271,15 @@
 
 /* ===== Table of Contents (if enabled) ===== */
 .allternit-document-theme .bn-table-of-contents {
-  background: rgba(212, 149, 106, 0.05) !important;
-  border: 1px solid rgba(212, 149, 106, 0.15) !important;
+  background: rgba(176,141,110, 0.05) !important;
+  border: 1px solid rgba(176,141,110, 0.15) !important;
   border-radius: 8px !important;
   padding: 16px !important;
   margin: 16px 0 !important;
 }
 
 .allternit-document-theme .bn-table-of-contents-title {
-  color: #D4956A !important;
+  color: #B08D6E !important;
   font-weight: 600 !important;
   margin-bottom: 12px !important;
 }
@@ -292,7 +292,7 @@
 }
 
 .allternit-document-theme .bn-table-of-contents-item:hover {
-  color: #D4956A !important;
+  color: #B08D6E !important;
 }
 
 /* ===== Scrollbar Styling ===== */

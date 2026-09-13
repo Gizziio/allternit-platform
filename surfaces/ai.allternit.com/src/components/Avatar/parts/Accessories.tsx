@@ -26,9 +26,9 @@ const ACCESSORY_DEFINITIONS: Record<string, {
     layer: 'front',
     render: (colors, size) => (
       <g transform={`scale(${size / 100})`}>
-        <circle cx="38" cy="42" r="8" fill="none" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="2" opacity="0.8" />
-        <circle cx="62" cy="42" r="8" fill="none" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="2" opacity="0.8" />
-        <line x1="46" y1="42" x2="54" y2="42" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="2" opacity="0.8" />
+        <circle cx="38" cy="42" r="8" fill="none" stroke={colors?.outline ?? '#4A3826'} strokeWidth="2" opacity="0.8" />
+        <circle cx="62" cy="42" r="8" fill="none" stroke={colors?.outline ?? '#4A3826'} strokeWidth="2" opacity="0.8" />
+        <line x1="46" y1="42" x2="54" y2="42" stroke={colors?.outline ?? '#4A3826'} strokeWidth="2" opacity="0.8" />
       </g>
     ),
   },
@@ -37,9 +37,9 @@ const ACCESSORY_DEFINITIONS: Record<string, {
     layer: 'front',
     render: (colors, size) => (
       <g transform={`scale(${size / 100})`}>
-        <rect x="30" y="36" width="16" height="12" rx="2" fill="none" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="2" opacity="0.8" />
-        <rect x="54" y="36" width="16" height="12" rx="2" fill="none" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="2" opacity="0.8" />
-        <line x1="46" y1="42" x2="54" y2="42" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="2" opacity="0.8" />
+        <rect x="30" y="36" width="16" height="12" rx="2" fill="none" stroke={colors?.outline ?? '#4A3826'} strokeWidth="2" opacity="0.8" />
+        <rect x="54" y="36" width="16" height="12" rx="2" fill="none" stroke={colors?.outline ?? '#4A3826'} strokeWidth="2" opacity="0.8" />
+        <line x1="46" y1="42" x2="54" y2="42" stroke={colors?.outline ?? '#4A3826'} strokeWidth="2" opacity="0.8" />
       </g>
     ),
   },
@@ -49,8 +49,8 @@ const ACCESSORY_DEFINITIONS: Record<string, {
     layer: 'back',
     render: (colors, size) => (
       <g transform={`scale(${size / 100})`}>
-        <path d="M 25 25 L 75 25 L 70 15 L 30 15 Z" fill={colors?.secondary ?? '#8b5cf6'} />
-        <rect x="20" y="25" width="60" height="5" rx="2" fill={colors?.primary ?? '#6366f1'} />
+        <path d="M 25 25 L 75 25 L 70 15 L 30 15 Z" fill={colors?.secondary ?? '#C4A684'} />
+        <rect x="20" y="25" width="60" height="5" rx="2" fill={colors?.primary ?? '#B08D6E'} />
       </g>
     ),
   },
@@ -59,8 +59,8 @@ const ACCESSORY_DEFINITIONS: Record<string, {
     layer: 'back',
     render: (colors, size) => (
       <g transform={`scale(${size / 100})`}>
-        <path d="M 50 5 L 75 30 L 25 30 Z" fill={colors?.secondary ?? '#8b5cf6'} />
-        <ellipse cx="50" cy="30" rx="25" ry="5" fill={colors?.primary ?? '#6366f1'} />
+        <path d="M 50 5 L 75 30 L 25 30 Z" fill={colors?.secondary ?? '#C4A684'} />
+        <ellipse cx="50" cy="30" rx="25" ry="5" fill={colors?.primary ?? '#B08D6E'} />
       </g>
     ),
   },
@@ -70,9 +70,9 @@ const ACCESSORY_DEFINITIONS: Record<string, {
     layer: 'front',
     render: (colors, size) => (
       <g transform={`scale(${size / 100})`}>
-        <path d="M 45 60 L 35 55 L 35 65 Z" fill={colors?.secondary ?? '#8b5cf6'} />
-        <path d="M 55 60 L 65 55 L 65 65 Z" fill={colors?.secondary ?? '#8b5cf6'} />
-        <circle cx="50" cy="60" r="3" fill={colors?.primary ?? '#6366f1'} />
+        <path d="M 45 60 L 35 55 L 35 65 Z" fill={colors?.secondary ?? '#C4A684'} />
+        <path d="M 55 60 L 65 55 L 65 65 Z" fill={colors?.secondary ?? '#C4A684'} />
+        <circle cx="50" cy="60" r="3" fill={colors?.primary ?? '#B08D6E'} />
       </g>
     ),
   },
@@ -82,9 +82,9 @@ const ACCESSORY_DEFINITIONS: Record<string, {
     layer: 'front',
     render: (colors, size) => (
       <g transform={`scale(${size / 100})`}>
-        <path d="M 20 40 Q 15 25 50 20 Q 85 25 80 40" fill="none" stroke={colors?.outline ?? '#1e1b4b'} strokeWidth="3" />
-        <rect x="15" y="35" width="10" height="15" rx="3" fill={colors?.secondary ?? '#8b5cf6'} />
-        <rect x="75" y="35" width="10" height="15" rx="3" fill={colors?.secondary ?? '#8b5cf6'} />
+        <path d="M 20 40 Q 15 25 50 20 Q 85 25 80 40" fill="none" stroke={colors?.outline ?? '#4A3826'} strokeWidth="3" />
+        <rect x="15" y="35" width="10" height="15" rx="3" fill={colors?.secondary ?? '#C4A684'} />
+        <rect x="75" y="35" width="10" height="15" rx="3" fill={colors?.secondary ?? '#C4A684'} />
       </g>
     ),
   },
@@ -97,7 +97,7 @@ export const Accessories: React.FC<AccessoriesProps> = ({
   size,
 }) => {
   // Default colors if not provided
-  const safeColors = colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' };
+  const safeColors = colors ?? { primary: '#B08D6E', secondary: '#C4A684', glow: '#B08D6E', outline: '#4A3826' };
   
   // Filter accessories for this layer
   const layerAccessories = accessories.filter(id => {

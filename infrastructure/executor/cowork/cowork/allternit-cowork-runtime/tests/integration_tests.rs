@@ -91,6 +91,8 @@ fn test_config(data_dir: std::path::PathBuf) -> RunManagerConfig {
         attachment_timeout_secs: 300,
         lease_duration_secs: 60,
         max_checkpoint_age_hours: 24,
+        store_path: None,
+        lease_sweep_interval_secs: 5,
     }
 }
 

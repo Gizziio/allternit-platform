@@ -2,6 +2,13 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
+  // Match the app build (@vitejs/plugin-react): automatic JSX runtime.
+  // Without this, components that omit the React import (allowed under
+  // `jsx: preserve` + automatic transform in the real build) blow up in
+  // tests with "React is not defined".
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     environment: 'jsdom',
     globals: true,

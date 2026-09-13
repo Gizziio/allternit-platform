@@ -159,7 +159,7 @@ function AskUserQuestionWizard({
     description,
     steps,
     allowReview = true,
-    accentColor = "#D4956A",
+    accentColor = "#B08D6E",
     onComplete,
     onCancel,
     onStepChange,
@@ -489,7 +489,7 @@ function QuestionInput({
             onClick={() => onChange(true)}
             className={cn(
               "flex-1 flex items-center justify-center gap-2 p-[14px_20px] rounded-[10px] border border-solid text-[14px] font-semibold cursor-pointer transition-all",
-              value === true ? "bg-[rgba(121,196,124,0.15)] border-[#79C47C] text-[#79C47C]" : "bg-[var(--surface-hover)] border-[var(--ui-border-default)] text-[#a8998c]"
+              value === true ? "bg-[var(--status-success-bg)] border-[var(--status-success)] text-[var(--status-success)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-default)] text-[#a8998c]"
             )}
           >
             <Check size={18} />
@@ -677,10 +677,10 @@ function OptionPreview({ preview }: { preview: QuestionOptionPreview }) {
 
 function Annotation({ annotation }: { annotation: QuestionAnnotation }) {
   const types = {
-    info: { bg: "bg-[rgba(105,168,200,0.1)]", border: "border-[rgba(105,168,200,0.3)]", iconColor: "text-[#69A8C8]", Icon: Info },
+    info: { bg: "bg-[var(--status-info-bg)]", border: "border-[color-mix(in_srgb,var(--status-info)_30%,transparent)]", iconColor: "text-[var(--status-info)]", Icon: Info },
     warning: { bg: "bg-[rgba(244,162,97,0.1)]", border: "border-[rgba(244,162,97,0.3)]", iconColor: "text-[#f4a261]", Icon: Warning },
-    tip: { bg: "bg-[rgba(121,196,124,0.1)]", border: "border-[rgba(121,196,124,0.3)]", iconColor: "text-[#79C47C]", Icon: Sparkle },
-    example: { bg: "bg-[rgba(167,139,250,0.1)]", border: "border-[rgba(167,139,250,0.3)]", iconColor: "text-[#A78BFA]", Icon: Code },
+    tip: { bg: "bg-[var(--status-success-bg)]", border: "border-[color-mix(in_srgb,var(--status-success)_30%,transparent)]", iconColor: "text-[var(--status-success)]", Icon: Sparkle },
+    example: { bg: "bg-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)]", border: "border-[color-mix(in_srgb,var(--accent-primary)_30%,transparent)]", iconColor: "text-[var(--accent-primary)]", Icon: Code },
   };
 
   const { bg, border, iconColor, Icon } = types[annotation.type];
@@ -704,10 +704,10 @@ function Annotation({ annotation }: { annotation: QuestionAnnotation }) {
 
 function MiniAnnotation({ annotation }: { annotation: QuestionAnnotation }) {
   const colors = {
-    info: "text-[#69A8C8]",
+    info: "text-[var(--status-info)]",
     warning: "text-[#f4a261]",
-    tip: "text-[#79C47C]",
-    example: "text-[#A78BFA]",
+    tip: "text-[var(--status-success)]",
+    example: "text-[var(--accent-primary)]",
   };
 
   const Icons = { info: Info, warning: Warning, tip: Sparkle, example: Code };

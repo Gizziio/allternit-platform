@@ -122,11 +122,11 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
       className="w-full rounded-[16px] bg-[var(--glass-bg-thick)] border border-[var(--border-strong)] shadow-lg overflow-hidden relative"
     >
       {/* Side indicator bar */}
-      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--accent-chat)]" />
+      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--accent-primary)]" />
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-2">
-          <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--accent-chat)]">
+          <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
             Question
           </span>
           {!isSingle && (
@@ -159,7 +159,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                 className={cn(
                   "shrink-0 px-3 h-7 rounded-[8px] text-[12px] font-medium transition-colors",
                   isActive
-                    ? "bg-[var(--accent-chat)] text-white"
+                    ? "bg-[var(--accent-primary)] text-white"
                     : isAnswered
                       ? "bg-[var(--bg-active)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
                       : "bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]",
@@ -175,7 +175,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
             className={cn(
               "shrink-0 px-3 h-7 rounded-[8px] text-[12px] font-medium transition-colors",
               isConfirmTab
-                ? "bg-[var(--accent-chat)] text-white"
+                ? "bg-[var(--accent-primary)] text-white"
                 : "bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]",
             )}
           >
@@ -246,7 +246,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                     className={cn(
                       "w-full text-left rounded-[10px] px-3 py-2 transition-colors group",
                       isPicked
-                        ? "bg-[var(--accent-chat)]/15 border border-[var(--accent-chat)]/40"
+                        ? "bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]/40"
                         : "bg-[var(--bg-hover)] border border-transparent hover:border-[var(--border-default)] hover:bg-[var(--bg-active)]",
                     )}
                   >
@@ -256,7 +256,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                           className={cn(
                             "text-[12px] font-mono shrink-0",
                             isPicked
-                              ? "text-[var(--accent-chat)]"
+                              ? "text-[var(--accent-primary)]"
                               : "text-[var(--text-tertiary)]",
                           )}
                         >
@@ -266,7 +266,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                           className={cn(
                             "text-[13px] font-medium",
                             isPicked
-                              ? "text-[var(--accent-chat)]"
+                              ? "text-[var(--accent-primary)]"
                               : "text-[var(--text-primary)]",
                           )}
                         >
@@ -276,7 +276,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                                 className={cn(
                                   "inline-flex items-center justify-center size-3.5  rounded-sm border text-xs",
                                   isPicked
-                                    ? "bg-[var(--accent-chat)] border-[var(--accent-chat)] text-white"
+                                    ? "bg-[var(--accent-primary)] border-[var(--accent-primary)] text-white"
                                     : "border-[var(--border-strong)] text-transparent",
                                 )}
                               >
@@ -290,7 +290,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                         </span>
                       </span>
                       {!isMulti && isPicked && (
-                        <Check size={13} className="text-[var(--accent-chat)] shrink-0" />
+                        <Check size={13} className="text-[var(--accent-primary)] shrink-0" />
                       )}
                     </div>
                     {opt.description && (
@@ -343,7 +343,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                         </button>
                         <button type="button"
                           onClick={() => confirmCustom(st.customInputs[st.tab] ?? "")}
-                          className="text-[12px] text-[var(--accent-chat)] font-medium hover:opacity-80 transition-opacity"
+                          className="text-[12px] text-[var(--accent-primary)] font-medium hover:opacity-80 transition-opacity"
                         >
                           confirm
                         </button>
@@ -407,7 +407,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
               className={cn(
                 "h-8 px-4 text-[12px] font-medium rounded-[10px] transition-colors",
                 allAnswered
-                  ? "bg-[var(--accent-chat)] text-white hover:opacity-90"
+                  ? "bg-[var(--accent-primary)] text-white hover:opacity-90"
                   : "bg-[var(--bg-hover)] text-[var(--text-tertiary)] border border-[var(--border-default)] cursor-not-allowed opacity-50",
               )}
             >

@@ -86,7 +86,7 @@ impl ModelGateway {
         let (model, cost_cents) =
             self.estimate_cost(full_model_id, input_tokens, output_tokens)?;
 
-        let entry = self.ledger.charge(
+        let entry = self.ledger.charge_overdraft(
             organization_id,
             cost_cents,
             &format!("{} inference: {}/{}", model.provider_kind, model.provider_kind, model.model_id),
@@ -199,14 +199,17 @@ mod tests {
     }
 
     #[test]
-    fn insufficient_credits_fails() {
+    fn insufficient_credits_records_debt() {
+        // Inference was already served upstream, so the charge is recorded as
+        // overdraft debt instead of failing.
         let db = test_db();
         let gateway = ModelGateway::new(db);
         gateway.catalog.seed_builtin().unwrap();
 
-        let err = gateway
+        let result = gateway
             .charge_usage("org-1", "openai/gpt-4o", 10_000_000, 10_000_000, "req-2")
-            .unwrap_err();
-        assert!(matches!(err, ModelGatewayError::Credits(CreditsError::InsufficientCredits { .. })));
+            .unwrap();
+        assert!(result.cost_cents > 0);
+        assert!(gateway.ledger.balance_cents("org-1").unwrap() < 0);
     }
 }

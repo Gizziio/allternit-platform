@@ -176,7 +176,7 @@ function SessionAnalyticsDashboard({
   mode = 'chat',
   dateRange,
 }: SessionAnalyticsDashboardProps) {
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
+  const modeColors = MODE_COLORS.design as typeof MODE_COLORS.design;
   const [selectedView, setSelectedView] = useState<'overview' | 'tools' | 'models' | 'topics'>('overview');
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
@@ -203,7 +203,7 @@ function SessionAnalyticsDashboard({
     >
       {/* Header */}
       <DashboardHeader
-        modeColors={modeColors as typeof MODE_COLORS.chat}
+        modeColors={modeColors as typeof MODE_COLORS.design}
         selectedView={selectedView}
         setSelectedView={setSelectedView}
         timeRange={timeRange}
@@ -218,7 +218,7 @@ function SessionAnalyticsDashboard({
           change="+12.5%"
           trend="up"
           icon={Chat}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
         />
         <MetricCard
           title="Tokens Used"
@@ -226,7 +226,7 @@ function SessionAnalyticsDashboard({
           change="+8.3%"
           trend="up"
           icon={Lightning}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
         />
         <MetricCard
           title="Tool Calls"
@@ -234,7 +234,7 @@ function SessionAnalyticsDashboard({
           change="-2.1%"
           trend="down"
           icon={Wrench}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
         />
         <MetricCard
           title="Avg Latency"
@@ -242,7 +242,7 @@ function SessionAnalyticsDashboard({
           change="-5.4%"
           trend="down"
           icon={Clock}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
           invertTrend
         />
       </div>
@@ -254,7 +254,7 @@ function SessionAnalyticsDashboard({
           title="Message Volume & Tokens"
           subtitle="Daily message count and token consumption"
           icon={Activity}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
         >
           <ResponsiveContainer width="100%" height={250} minWidth={8} minHeight={8} debounce={200}>
             <AreaChart data={analytics.messagesOverTime}>
@@ -310,7 +310,7 @@ function SessionAnalyticsDashboard({
           title="Tool Usage"
           subtitle="Most frequently used tools"
           icon={Wrench}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
         >
           <ResponsiveContainer width="100%" height={250} minWidth={8} minHeight={8} debounce={200}>
             <BarChart data={analytics.toolUsage} layout="vertical">
@@ -349,7 +349,7 @@ function SessionAnalyticsDashboard({
           title="Activity by Hour"
           subtitle="Message distribution throughout the day"
           icon={Clock}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
         >
           <ResponsiveContainer width="100%" height={250} minWidth={8} minHeight={8} debounce={200}>
             <AreaChart data={analytics.hourlyDistribution}>
@@ -398,7 +398,7 @@ function SessionAnalyticsDashboard({
           title="Model Usage"
           subtitle="Token consumption by model"
           icon={ChartPie}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
         >
           <div className="flex items-center">
             <ResponsiveContainer width="50%" height={250} minWidth={8} minHeight={8} debounce={200}>
@@ -465,7 +465,7 @@ function SessionAnalyticsDashboard({
           title="Response Latency"
           subtitle="Average and P95 latency over time"
           icon={TrendUp}
-          modeColors={modeColors as typeof MODE_COLORS.chat}
+          modeColors={modeColors as typeof MODE_COLORS.design}
           className="lg:col-span-2"
         >
           <ResponsiveContainer width="100%" height={200} minWidth={8} minHeight={8} debounce={200}>
@@ -566,7 +566,7 @@ function DashboardHeader({
   timeRange,
   setTimeRange,
 }: {
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
   selectedView: string;
   setSelectedView: (view: 'overview' | 'tools' | 'models' | 'topics') => void;
   timeRange: string;
@@ -673,7 +673,7 @@ function MetricCard({
   change: string;
   trend: 'up' | 'down';
   icon: React.ComponentType<{size?: number | string; style?: React.CSSProperties}>;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
   invertTrend?: boolean;
 }) {
   const isPositive = invertTrend 
@@ -731,7 +731,7 @@ function ChartCard({
   subtitle: string;
   icon: React.ComponentType<{size?: number | string; style?: React.CSSProperties}>;
   children: React.ReactNode;
-  modeColors: typeof MODE_COLORS.chat;
+  modeColors: typeof MODE_COLORS.design;
   className?: string;
 }) {
   return (

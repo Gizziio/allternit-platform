@@ -36,6 +36,16 @@ pub fn aci_router() -> Router<Arc<AppState>> {
         .route("/aci/handoff/:id", get(aci_handoff_status))
         .route("/aci/handoff/:id/approve", post(aci_handoff_approve))
         .route("/aci/handoff/:id/deny", post(aci_handoff_deny))
+        .route("/aci/batch", post(crate::aci_batch::aci_batch_execute))
+        .route(
+            "/aci/batch/receipts/:id",
+            get(crate::aci_batch::aci_batch_receipt),
+        )
+        .route("/aci/code", post(crate::aci_code::aci_code_execute))
+        .route(
+            "/aci/code/receipts/:id",
+            get(crate::aci_code::aci_code_receipt),
+        )
         .route("/aci/policy/audit", get(aci_policy_audit))
         .merge(crate::aci_credentials::credential_routes())
 }
@@ -1137,6 +1147,14 @@ mod tests {
 
     #[test]
     fn snapshot_throttle_writes_immediately_when_due_and_on_done() {
+        // This test mutates ALLTERNIT_COMPUTER_USE_DIR, which the policy-seat
+        // tests read at request time (audit log, approvals). Take the same
+        // env-var lock they do, or a parallel policy test sees this test's
+        // temp dir (or the unset fallback) mid-request and flakes.
+        let _guard = crate::policy_config::POLICY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let prior_dir = std::env::var("ALLTERNIT_COMPUTER_USE_DIR").ok();
         let dir = tempfile::tempdir().unwrap();
         // Point the snapshot writer at a temp dir for this test.
         std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", dir.path());
@@ -1169,7 +1187,12 @@ mod tests {
         assert_eq!(parsed.frames.len(), 2);
         assert!(parsed.done);
         assert!(!buf.dirty);
-        std::env::remove_var("ALLTERNIT_COMPUTER_USE_DIR");
+        // Restore the prior value (don't leave the var unset for tests that
+        // expect the policy-seat default resolution).
+        match prior_dir {
+            Some(value) => std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", value),
+            None => std::env::remove_var("ALLTERNIT_COMPUTER_USE_DIR"),
+        }
     }
 
     #[test]
@@ -1920,16 +1943,18 @@ mod credential_binding_http_tests {
 
     #[tokio::test]
     async fn run_binds_credentials_into_sandbox_env_and_leaks_nowhere() {
-        // Serializes against policy-seat tests: this test POSTs /aci/run,
-        // which a concurrently installed policy could deny.
-        let _policy_guard = crate::policy_config::POLICY_TEST_LOCK
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        // Serializes against policy-seat tests (this test POSTs /aci/run,
+        // which a concurrently installed policy could deny) AND against every
+        // other test that reads/writes the process-wide
+        // ALLTERNIT_COMPUTER_USE_DIR. Both purposes share ONE guard:
+        // `computer_use_dir_test_lock()` is the same mutex
+        // (`policy_config::POLICY_TEST_LOCK`), and std `Mutex` is not
+        // reentrant — acquiring both on this thread self-deadlocks.
+        let _guard = crate::test_helpers::computer_use_dir_test_lock();
         ensure_e2e_key();
         let temp = tempfile::tempdir().unwrap().keep();
         // Redirect gateway state (run buffers, credential vault) at the temp
-        // dir before the run. Left in place for the whole test (races with
-        // the remove_var in older tests are pre-existing behavior).
+        // dir before the run. Left in place for the whole test.
         std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
 
         // The global store persists across test processes on this machine;

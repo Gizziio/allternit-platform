@@ -34,7 +34,7 @@ function baseFormData(patch: Partial<CreateAgentInput> = {}): Partial<CreateAgen
       tagline: '',
       welcomeMessage: '',
       starterPrompts: [],
-      accentColor: '#D4956A',
+      accentColor: '#B08D6E',
       groupChatEnabled: true,
       botCategory: 'custom',
     },

@@ -349,6 +349,37 @@ impl CreditsLedger {
                 required: amount_cents,
             });
         }
+        self.insert_charge(organization_id, amount_cents, description, reference_type, reference_id)
+    }
+
+    /// Charge credits even when the balance cannot cover the full amount.
+    ///
+    /// Used for metered usage that has already been consumed: the charge is
+    /// recorded regardless, so the balance goes negative (debt) instead of the
+    /// cost silently disappearing. New provisioning is still blocked by
+    /// `available_cents` until the org tops up.
+    pub fn charge_overdraft(
+        &self,
+        organization_id: &str,
+        amount_cents: i64,
+        description: &str,
+        reference_type: Option<&str>,
+        reference_id: Option<&str>,
+    ) -> Result<CreditLedgerEntry, CreditsError> {
+        if amount_cents <= 0 {
+            return Err(CreditsError::InvalidAmount(amount_cents));
+        }
+        self.insert_charge(organization_id, amount_cents, description, reference_type, reference_id)
+    }
+
+    fn insert_charge(
+        &self,
+        organization_id: &str,
+        amount_cents: i64,
+        description: &str,
+        reference_type: Option<&str>,
+        reference_id: Option<&str>,
+    ) -> Result<CreditLedgerEntry, CreditsError> {
         let id = Uuid::new_v4().to_string();
         let balance_after = self.balance_cents(organization_id)? - amount_cents;
         let conn = self.db.connect()?;
@@ -652,6 +683,60 @@ mod tests {
     }
 
     #[test]
+    fn credit_with_idempotency_replays_return_the_first_entry() {
+        let ledger = test_ledger();
+        let org = "org-1";
+
+        let first = ledger
+            .credit_with_idempotency(
+                org,
+                1000,
+                TransactionType::Purchase,
+                Some("stripe pack"),
+                Some("stripe_checkout"),
+                Some("evt_1"),
+                None,
+                Some("stripe-evt_1"),
+            )
+            .unwrap();
+        assert_eq!(ledger.balance_cents(org).unwrap(), 1000);
+
+        // Same key (a Stripe webhook retry) must replay the first entry,
+        // not credit again — even with a different amount.
+        let replay = ledger
+            .credit_with_idempotency(
+                org,
+                9999,
+                TransactionType::Purchase,
+                Some("stripe pack"),
+                Some("stripe_checkout"),
+                Some("evt_1"),
+                None,
+                Some("stripe-evt_1"),
+            )
+            .unwrap();
+        assert_eq!(first.id, replay.id);
+        assert_eq!(replay.amount_cents, 1000, "the replayed entry is the original");
+        assert_eq!(ledger.balance_cents(org).unwrap(), 1000);
+        assert_eq!(ledger.list(org, 10).unwrap().len(), 1);
+
+        // A different key credits normally.
+        ledger
+            .credit_with_idempotency(
+                org,
+                500,
+                TransactionType::Purchase,
+                None,
+                None,
+                None,
+                None,
+                Some("stripe-evt_2"),
+            )
+            .unwrap();
+        assert_eq!(ledger.balance_cents(org).unwrap(), 1500);
+    }
+
+    #[test]
     fn purchase_and_balance() {
         let ledger = test_ledger();
         let org = "org-1";
@@ -684,6 +769,22 @@ mod tests {
             .unwrap();
         let err = ledger.charge(org, 200, "compute usage", None, None).unwrap_err();
         assert!(matches!(err, CreditsError::InsufficientCredits { .. }));
+    }
+
+    #[test]
+    fn charge_overdraft_records_debt() {
+        let ledger = test_ledger();
+        let org = "org-1";
+        ledger
+            .credit(org, 100, TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+        let entry = ledger
+            .charge_overdraft(org, 250, "metered usage", Some("usage"), Some("u-1"))
+            .unwrap();
+        assert_eq!(entry.amount_cents, -250);
+        assert_eq!(ledger.balance_cents(org).unwrap(), -150);
+        // The debt is visible in the ledger, not dropped.
+        assert_eq!(ledger.list(org, 10).unwrap().len(), 2);
     }
 
     #[test]

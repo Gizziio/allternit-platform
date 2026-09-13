@@ -99,7 +99,7 @@ export function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId
           <div
             className={cn(
               "text-[12px] flex items-center gap-1",
-              toolsEnabled ? "text-[#79C47C]" : "text-[var(--text-secondary)]"
+              toolsEnabled ? "text-[var(--status-success)]" : "text-[var(--text-secondary)]"
             )}
           >
             {toolsEnabled ? (
@@ -283,7 +283,7 @@ function RegistryToolItem({
           onClick={() => onToggle(!tool.isEnabled)}
           className={cn(
             "w-9 h-5 rounded-[10px] border-none relative cursor-pointer transition-colors duration-200",
-            tool.isEnabled ? "bg-[#79C47C]" : "bg-[#444]"
+            tool.isEnabled ? "bg-[var(--status-success)]" : "bg-[#444]"
           )}
         >
           <div

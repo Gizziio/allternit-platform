@@ -209,7 +209,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
     >
       {/* Primary horizontal usage bar */}
       <div className="flex items-center gap-3 px-3 py-2 h-[72px]">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-code)]/10 text-[var(--accent-code)]">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
           <ChartBar size={20} weight="duotone" />
         </div>
         <div className="min-w-0 hidden sm:block">
@@ -287,7 +287,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                     <div
                       key={cell.date}
                       title={`${cell.date}: ${cell.count} messages`}
-                      className="flex-1 rounded-sm bg-[var(--accent-code)]/80 hover:bg-[var(--accent-code)] transition-colors"
+                      className="flex-1 rounded-sm bg-[var(--accent-primary)]/80 hover:bg-[var(--accent-primary)] transition-colors"
                       style={{ height: `${height}%`, minHeight: 3 }}
                     />
                   );
@@ -307,7 +307,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                     className="h-full rounded-full transition-all"
                     style={{
                       width: `${metrics.budgetUsed}%`,
-                      backgroundColor: metrics.budgetUsed >= 90 ? "var(--status-error)" : "var(--accent-code)",
+                      backgroundColor: metrics.budgetUsed >= 90 ? "var(--status-error)" : "var(--accent-primary)",
                     }}
                   />
                 </div>
@@ -338,7 +338,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
 function MiniPill({ value, label, icon: Icon }: { value: string; label: string; icon?: PhosphorIcon }) {
   return (
     <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] shrink-0">
-      {Icon ? <Icon size={12} weight="duotone" className="text-[var(--accent-code)] shrink-0" /> : null}
+      {Icon ? <Icon size={12} weight="duotone" className="text-[var(--accent-primary)] shrink-0" /> : null}
       <div className="flex items-baseline gap-1.5">
         <span className="text-xs font-bold text-[var(--text-primary)]">{value}</span>
         <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">{label}</span>
@@ -360,7 +360,7 @@ function InsightTile({ label, value, icon: Icon }: { label: string; value: strin
   return (
     <div className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1.5">
       {Icon ? (
-        <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[var(--accent-code)]/10 text-[var(--accent-code)]">
+        <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
           <Icon size={12} weight="duotone" />
         </div>
       ) : null}

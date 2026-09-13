@@ -188,6 +188,26 @@ async fn create_response(
         )
     })?;
 
+    // Pre-dispatch gate: with no spendable balance the request is refused
+    // upfront rather than accruing synchronous debt. (Overspend past zero
+    // from a balance drained mid-request is still recorded as debt by the
+    // metered charge — usage that already happened is never dropped.)
+    let db = state.db.clone();
+    let org_for_gate = org.clone();
+    let spendable = tokio::task::spawn_blocking(move || {
+        CreditsLedger::new(db).available_cents(&org_for_gate)
+    })
+    .await
+    .map_err(internal)?
+    .map_err(internal)?;
+    if spendable <= 0 {
+        return Err(error(
+            StatusCode::PAYMENT_REQUIRED,
+            "insufficient_credits",
+            format!("Balance {spendable} cents available; top up organization credits to run inference."),
+        ));
+    }
+
     let request_id = Uuid::new_v4().to_string();
 
     // Build the Cloud product ModelRequest. This is the input to the OS planner
@@ -433,14 +453,11 @@ async fn schedule_model_resource_via_os(
         return Err(map_scheduler_error(e));
     }
 
-    let charge_cents = placement
-        .retail_price_per_hour
-        .as_ref()
-        .map(|m| m.minor_units as i64)
-        .unwrap_or(estimated_cents)
-        .min(estimated_cents);
-    if let Err(e) = ledger.charge_hold(&hold.id, charge_cents, "model inference capacity", Some("placement"), Some(request_id)) {
-        warn!(resource_id = %request_id, hold_id = %hold.id, error = %e, "failed to charge hold after os model placement");
+    // Model capacity is billed per-token via ModelGateway::charge_usage, so
+    // the provisioning hold is released instead of charged — charging the
+    // estimate here would double-bill against the metered token charge.
+    if let Err(e) = ledger.release_hold(&hold.id) {
+        warn!(resource_id = %request_id, hold_id = %hold.id, error = %e, "failed to release hold after os model placement");
     }
 
     // Return the Cloud resource id, Cloud placement id, and the canonical OS

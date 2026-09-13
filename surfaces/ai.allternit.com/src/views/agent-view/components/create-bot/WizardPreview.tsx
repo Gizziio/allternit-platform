@@ -30,7 +30,7 @@ export function WizardPreview({ formData, avatar }: WizardPreviewProps) {
       tagline: botProfile?.tagline || "",
       welcomeMessage: botProfile?.welcomeMessage || "",
       starterPrompts: botProfile?.starterPrompts || [],
-      accentColor: botProfile?.accentColor || "#D4956A",
+      accentColor: botProfile?.accentColor || "#B08D6E",
       groupChatEnabled: botProfile?.groupChatEnabled ?? true,
       botCategory: botProfile?.botCategory || "custom",
     };

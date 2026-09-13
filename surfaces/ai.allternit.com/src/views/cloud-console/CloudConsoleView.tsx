@@ -15,7 +15,9 @@ import {
   XCircle,
   Clock,
   Key,
+  Robot,
 } from "@phosphor-icons/react";
+import { AgentsConsoleView } from "@/views/agent-cloud/AgentsConsoleView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GlassSurface } from "@/design/GlassSurface";
@@ -129,8 +131,14 @@ function StatusChip({ status, text }: { status: string; text?: string }) {
   );
 }
 
-export function CloudConsoleView(): React.ReactNode {
-  const [activeTab, setActiveTab] = useState("resources");
+export function CloudConsoleView({
+  initialTab = "resources",
+  sessionId,
+}: {
+  initialTab?: string;
+  sessionId?: string;
+} = {}): React.ReactNode {
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Resources
   const [resourceClasses, setResourceClasses] = useState<Loadable<ResourceClass[]>>(initialLoadable([]));
@@ -421,6 +429,10 @@ export function CloudConsoleView(): React.ReactNode {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
+            <TabsTrigger value="agents">
+              <Robot size={16} className="mr-2" />
+              Agents
+            </TabsTrigger>
             <TabsTrigger value="resources">
               <HardDrives size={16} className="mr-2" />
               Resources
@@ -439,6 +451,12 @@ export function CloudConsoleView(): React.ReactNode {
             </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {activeTab === "agents" && (
+          <div className="min-h-[520px]">
+            <AgentsConsoleView sessionId={sessionId} />
+          </div>
+        )}
 
         {activeTab === "resources" && (
           <div className="space-y-6">

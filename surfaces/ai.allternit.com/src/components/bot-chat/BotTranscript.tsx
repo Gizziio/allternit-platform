@@ -7,6 +7,9 @@
  * the active-turn chrome (working chamber → typing dots → streaming bubble)
  * below them. Follow-scroll is keyed on total character count and
  * unanimated; it only follows when the viewport is already near the bottom.
+ * The owner bumps `jumpKey` when the user sends a message, which forces a
+ * scroll to the newest row regardless of the current position, and a sticky
+ * "Jump to latest" pill appears whenever the viewport is scrolled away.
  * Tapping the transcript dismisses the keyboard through the optional
  * `onDismissKeyboard` prop.
  *
@@ -16,7 +19,7 @@
  * @module bot-chat/BotTranscript
  */
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BotChatTranscript, TranscriptRow } from "./types";
 import { deriveRung } from "./transcript";
 import { SettledBubble } from "./SettledBubble";
@@ -28,6 +31,7 @@ import { ToolRunCapsule } from "./ToolRunCapsule";
 import { GapTimestamp } from "./GapTimestamp";
 import { ErrorRow } from "./ErrorRow";
 import { ApprovalCard } from "./ApprovalCard";
+import { InlineArtifactRenderer } from "./InlineArtifactRenderer";
 
 const FOLLOW_THRESHOLD_PX = 80;
 
@@ -35,6 +39,8 @@ function rowChars(row: TranscriptRow): number {
   switch (row.kind) {
     case "message":
       return row.message.text.length;
+    case "artifact":
+      return row.artifact.content.length + row.artifact.title.length;
     case "toolCall":
       return row.call.inputSummary.length + (row.call.outputSummary?.length ?? 0);
     case "toolRun":
@@ -66,6 +72,8 @@ function TranscriptRowView({
           className={row.message.status === "error" ? "opacity-90" : undefined}
         />
       );
+    case "artifact":
+      return <InlineArtifactRenderer artifact={row.artifact} />;
     case "toolCall":
       return <ToolReceiptChip call={row.call} />;
     case "toolRun":
@@ -90,6 +98,11 @@ export interface BotTranscriptProps {
   className?: string;
   onDismissKeyboard?: () => void;
   /**
+   * Bumped by the owner when the user sends a message. Each change forces a
+   * scroll to the newest row even when the viewport is scrolled far up.
+   */
+  jumpKey?: number;
+  /**
    * Approval answers pass straight through to the owner of the wire adapter
    * (1C); the fold does not change on answer — the resolved event does.
    */
@@ -101,12 +114,29 @@ export function BotTranscript({
   transcript,
   className,
   onDismissKeyboard,
+  jumpKey,
   onApprovalAnswer,
   onApprovalGrant,
 }: BotTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rung = deriveRung(transcript);
   const turn = transcript.activeTurn;
+  const [atBottom, setAtBottom] = useState(true);
+
+  const jumpToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    setAtBottom(true);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAtBottom(
+      el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX,
+    );
+  }, []);
 
   // Follow key: character count only. Grows monotonically while streaming,
   // so scrolling stays unanimated and cheap.
@@ -128,9 +158,17 @@ export function BotTranscript({
     }
   }, [charCount]);
 
+  // A fresh user send always jumps to the current message, no matter where
+  // the viewport was (history review, compacted older messages, etc.).
+  useEffect(() => {
+    if (jumpKey === undefined) return;
+    jumpToBottom();
+  }, [jumpKey, jumpToBottom]);
+
   return (
     <div
       ref={scrollRef}
+      onScroll={handleScroll}
       onClick={() => onDismissKeyboard?.()}
       style={{ touchAction: "pan-y" }}
       className={className}
@@ -158,6 +196,20 @@ export function BotTranscript({
           </>
         )}
       </div>
+
+      {!atBottom && (
+        <button
+          type="button"
+          aria-label="Jump to latest message"
+          onClick={(event) => {
+            event.stopPropagation();
+            jumpToBottom();
+          }}
+          className="sticky bottom-3 float-right mr-3 flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] shadow-lg"
+        >
+          <span aria-hidden>↓</span> Jump to latest
+        </button>
+      )}
     </div>
   );
 }

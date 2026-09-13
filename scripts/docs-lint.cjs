@@ -128,6 +128,9 @@ for (const mdxPath of collectMdxFiles(DOCS_DIR)) {
     if (COMPETITOR_NAMES.test(line)) {
       // Allow the OpenAI migration guide to mention OpenAI in the title/body.
       if (mdxPath.endsWith('guides/openai-migration.mdx')) continue;
+      // Native session pickup names the other CLIs; that page is the catalog.
+      if (mdxPath.endsWith('cli/native-sessions.mdx')) continue;
+      if (mdxPath.endsWith('cli/session.mdx')) continue;
       fail(
         `competitor mention in ${path.relative(ROOT, mdxPath)}:${i + 1}: ${line.trim()}`
       );

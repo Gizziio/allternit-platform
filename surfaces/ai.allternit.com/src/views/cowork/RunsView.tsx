@@ -37,7 +37,7 @@ function getStatusColor(state: string): string {
   switch (state) {
     case 'running':
     case 'recovering':
-      return 'var(--accent-cowork)';
+      return 'var(--accent-primary)';
     case 'completed':
       return 'var(--status-success)';
     case 'failed':
@@ -90,7 +90,7 @@ export const RunsView: React.FC = () => {
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <Play size={24} color="var(--accent-cowork)" weight="fill" />
+          <Play size={24} color="var(--accent-primary)" weight="fill" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Pipeline Runs</h1>
         </div>
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>
@@ -114,7 +114,7 @@ export const RunsView: React.FC = () => {
                 fontWeight: 500,
                 cursor: 'pointer',
                 backgroundColor:
-                  activeFilter === filter ? 'var(--accent-cowork)' : 'var(--bg-secondary)',
+                  activeFilter === filter ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                 color: activeFilter === filter ? '#fff' : 'var(--text-secondary)',
                 transition: 'all 0.2s ease',
               }}
@@ -383,7 +383,7 @@ function RunDetail({
       {/* Controls */}
       <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap', marginBottom: 'var(--spacing-md)' }}>
         {canStart && (
-          <ActionButton onClick={handleStart} color="var(--accent-cowork)" icon={<Play size={14} weight="fill" />}>
+          <ActionButton onClick={handleStart} color="var(--accent-primary)" icon={<Play size={14} weight="fill" />}>
             Start
           </ActionButton>
         )}
@@ -415,7 +415,7 @@ function RunDetail({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 'var(--spacing-sm)' }}>
             {handoffs.map((h) => (
               <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', fontSize: '12px', padding: '4px 8px', background: 'var(--bg-secondary)', borderRadius: 4 }}>
-                <ArrowRight size={12} color="var(--accent-cowork)" />
+                <ArrowRight size={12} color="var(--accent-primary)" />
                 <span style={{ color: 'var(--text-secondary)' }}>to {h.to_agent_id}</span>
                 {h.task_id && <span style={{ color: 'var(--text-tertiary)' }}>task {h.task_id}</span>}
                 <span style={{ color: getStatusColor(h.status), fontWeight: 500 }}>{h.status}</span>
@@ -447,7 +447,7 @@ function RunDetail({
               padding: '6px 12px',
               borderRadius: 6,
               border: 'none',
-              background: 'var(--accent-cowork)',
+              background: 'var(--accent-primary)',
               color: '#fff',
               fontSize: '13px',
               fontWeight: 500,

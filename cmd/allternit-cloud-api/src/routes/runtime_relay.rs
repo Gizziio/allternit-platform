@@ -45,6 +45,17 @@
 //! route such as `POST /api/v1/beta/sessions/:id/events/ws-ticket`) and then
 //! connects with `?ticket=…`; the upgrade is redeemed by
 //! [`upgrade_with_socket_ticket`].
+//!
+//! ## Multi-connection registry (feature-flagged, default OFF)
+//!
+//! By default a runtime holds one relay connection; a new authenticate
+//! replaces it. With `ALLTERNIT_RELAY_MULTI_CONNECTION=1` the hub keeps one
+//! connection per advertised `client` identity and each request is routed to
+//! a connection granting its `required_capability` (see
+//! [`select_connection`]): the desktop app (legacy, full pairing surface) and
+//! the `allternit-node` daemon (scoped `node.core` subset) can then be
+//! connected at once. Flag off preserves the legacy single-connection
+//! behavior exactly.
 
 use axum::{
     body::Body,
@@ -85,6 +96,15 @@ enum RuntimeMessage {
     Authenticate {
         runtime_id: String,
         device_token: String,
+        /// Relay client identity, e.g. `allternit-node` for the node daemon.
+        /// Absent means a legacy full-surface client (desktop app / agent
+        /// daemon) — it grants every pairing capability, exactly as before.
+        #[serde(default)]
+        client: Option<String>,
+        /// Capability subset this connection serves. Absent means the
+        /// connection grants the full pairing capability set (legacy).
+        #[serde(default)]
+        capabilities: Option<Vec<String>>,
     },
     Response {
         request_id: String,
@@ -219,14 +239,137 @@ struct SocketTicketQuery {
 pub(crate) struct SocketTicket {
     pub(crate) runtime_id: String,
     pub(crate) path: String,
+    /// The capability the ticketed path requires; the socket pump routes the
+    /// tunnel to a connection granting it (multi-connection mode).
+    pub(crate) required_capability: String,
     expires_at: Instant,
 }
 
-type RelayHub = RwLock<HashMap<String, Arc<RuntimeConnection>>>;
+/// One live relay connection for a runtime, with the identity it advertised
+/// at `authenticate` time. `capabilities == None` is the legacy full-surface
+/// connection (desktop app / agent-daemon): it grants every pairing
+/// capability the runtime was paired with.
+pub(crate) struct RelayConnectionEntry {
+    pub(crate) connection: Arc<RuntimeConnection>,
+    pub(crate) client: String,
+    pub(crate) capabilities: Option<Vec<String>>,
+}
+
+/// Per-runtime relay connections, most recently attached last. With the
+/// multi-connection flag off each runtime holds at most one entry and the
+/// first slot is simply replaced — byte-for-byte the old
+/// one-connection-per-runtime behavior.
+type RelayHub = RwLock<HashMap<String, Vec<RelayConnectionEntry>>>;
 
 fn relay_hub() -> &'static RelayHub {
     static HUB: OnceLock<RelayHub> = OnceLock::new();
     HUB.get_or_init(|| RwLock::new(HashMap::new()))
+}
+
+/// Feature flag for capability-scoped concurrent relay connections
+/// (default OFF = single connection per runtime, replaced on reconnect).
+fn multi_connection_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        matches!(
+            std::env::var("ALLTERNIT_RELAY_MULTI_CONNECTION")
+                .unwrap_or_default()
+                .to_ascii_lowercase()
+                .as_str(),
+            "1" | "true" | "yes" | "on"
+        )
+    })
+}
+
+/// Attach a freshly authenticated connection to the hub. `multi` mirrors
+/// [`multi_connection_enabled`] but is a parameter so tests can exercise both
+/// modes without mutating process-global flag state.
+async fn attach_connection(
+    runtime_id: &str,
+    entry: RelayConnectionEntry,
+    multi: bool,
+) {
+    let mut hub = relay_hub().write().await;
+    let entries = hub.entry(runtime_id.to_string()).or_default();
+    if !multi {
+        entries.clear();
+    } else {
+        // One live connection per client identity: a reconnecting client
+        // replaces its own previous entry instead of stacking duplicates.
+        entries.retain(|existing| existing.client != entry.client);
+    }
+    entries.push(entry);
+}
+
+/// Detach a dead connection; returns true when the runtime has no live
+/// connections left (the caller then clears the liveness stamp).
+async fn detach_connection(runtime_id: &str, connection: &Arc<RuntimeConnection>) -> bool {
+    let mut hub = relay_hub().write().await;
+    let Some(entries) = hub.get_mut(runtime_id) else {
+        return true;
+    };
+    entries.retain(|entry| !Arc::ptr_eq(&entry.connection, connection));
+    if entries.is_empty() {
+        hub.remove(runtime_id);
+        true
+    } else {
+        false
+    }
+}
+
+/// Pick the connection that should serve a request needing `required`:
+/// explicitly scoped connections beat legacy full connections, the smallest
+/// granting set wins (most specific surface — the node daemon over the
+/// desktop app for shared core capabilities), and the most recently attached
+/// connection breaks ties. Returns exactly one connection, never a fan-out,
+/// so requests are never duplicated across connections.
+fn select_connection(
+    entries: &[RelayConnectionEntry],
+    required: &str,
+) -> Option<Arc<RuntimeConnection>> {
+    entries
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| match &entry.capabilities {
+            Some(caps) => caps.iter().any(|cap| cap == required),
+            // Legacy clients grant the full pairing surface.
+            None => true,
+        })
+        .max_by_key(|(index, entry)| {
+            (
+                usize::from(entry.capabilities.is_some()),
+                entry
+                    .capabilities
+                    .as_ref()
+                    .map_or(0, |caps| usize::MAX.saturating_sub(caps.len())),
+                *index,
+            )
+        })
+        .map(|(_, entry)| entry.connection.clone())
+}
+
+/// Live relay connections for a runtime as presence metadata (PWA node
+/// rail). Empty unless multi-connection mode is on.
+pub(crate) async fn relay_connection_presence(runtime_id: &str) -> Vec<serde_json::Value> {
+    if !multi_connection_enabled() {
+        return Vec::new();
+    }
+    relay_hub()
+        .read()
+        .await
+        .get(runtime_id)
+        .map(|entries| {
+            entries
+                .iter()
+                .map(|entry| {
+                    serde_json::json!({
+                        "client": entry.client,
+                        "capabilities": entry.capabilities,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Result of resolving a runtime's relay connection, with wake-on-demand.
@@ -240,15 +383,23 @@ enum RelayConnect {
     Offline,
 }
 
-/// Look up the runtime's relay connection, starting its hosted machine first
-/// when the device maps to a stopped hosted runtime instance.
+/// Look up a relay connection for the runtime that grants `required`
+/// (any connection when the multi-connection flag is off), starting its
+/// hosted machine first when the device maps to a stopped hosted runtime
+/// instance.
 async fn connect_or_wake_runtime(
     db: &sqlx::PgPool,
     contabo_runtime_service: &std::sync::Arc<crate::services::ContaboRuntimeService>,
     quota_service: &crate::services::SharedQuotaService,
     runtime_id: &str,
+    required: &str,
 ) -> Result<RelayConnect, ApiError> {
-    if let Some(connection) = relay_hub().read().await.get(runtime_id).cloned() {
+    if let Some(connection) = relay_hub()
+        .read()
+        .await
+        .get(runtime_id)
+        .and_then(|entries| select_connection(entries, required))
+    {
         return Ok(RelayConnect::Connected(connection));
     }
     let outcome = crate::services::wake_hosted_runtime_for_device(
@@ -269,7 +420,12 @@ async fn connect_or_wake_runtime(
     // reconnects, bounded so a wedged boot does not pin the request.
     let deadline = Instant::now() + WAKE_WAIT_TIMEOUT;
     loop {
-        if let Some(connection) = relay_hub().read().await.get(runtime_id).cloned() {
+        if let Some(connection) = relay_hub()
+            .read()
+            .await
+            .get(runtime_id)
+            .and_then(|entries| select_connection(entries, required))
+        {
             return Ok(RelayConnect::Connected(connection));
         }
         if Instant::now() >= deadline {
@@ -339,8 +495,8 @@ pub(crate) async fn issue_socket_ticket(
         body_encoding: "utf8".to_string(),
     };
     validate_proxy_request(&validation)?;
-    let required = required_capability(&validation.path, "GET");
-    if !capabilities.iter().any(|capability| capability == required) {
+    let required = required_capability(&validation.path, "GET").to_string();
+    if !capabilities.iter().any(|capability| capability == &required) {
         return Err(ApiError::Forbidden(format!(
             "Runtime pairing does not grant {required}"
         )));
@@ -350,6 +506,7 @@ pub(crate) async fn issue_socket_ticket(
         &state.contabo_runtime_service,
         &state.quota_service,
         runtime_id,
+        &required,
     )
     .await?
     {
@@ -376,6 +533,7 @@ pub(crate) async fn issue_socket_ticket(
         SocketTicket {
             runtime_id: runtime_id.to_string(),
             path,
+            required_capability: required,
             expires_at,
         },
     );
@@ -424,6 +582,7 @@ pub(crate) async fn upgrade_with_socket_ticket(
             socket,
             ticket.runtime_id,
             ticket.path,
+            ticket.required_capability,
             relay_socket_id,
             quota_service,
             db,
@@ -435,10 +594,28 @@ pub(crate) async fn upgrade_with_socket_ticket(
 /// outbound envelope stream, so tests can drive the socket tunnel without a
 /// real daemon on the other end. Returns the connection (its `sockets` map
 /// carries the per-tunnel frame channels the pump registers) and the receiver
-/// for every cloud → node envelope.
+/// for every cloud → node envelope. Legacy semantics: a full-surface
+/// `desktop` client that grants every capability, replacing any previous
+/// connection for the runtime (flag-off behavior).
 #[cfg(test)]
 pub(crate) async fn register_test_connection(
     runtime_id: &str,
+) -> (
+    Arc<RuntimeConnection>,
+    mpsc::UnboundedReceiver<CloudMessage>,
+) {
+    register_test_connection_with(runtime_id, "desktop", None, false).await
+}
+
+/// Like [`register_test_connection`] but with an explicit client identity and
+/// capability scope. `multi = true` keeps existing connections for the
+/// runtime (flag-on behavior); `multi = false` replaces them.
+#[cfg(test)]
+pub(crate) async fn register_test_connection_with(
+    runtime_id: &str,
+    client: &str,
+    capabilities: Option<Vec<String>>,
+    multi: bool,
 ) -> (
     Arc<RuntimeConnection>,
     mpsc::UnboundedReceiver<CloudMessage>,
@@ -449,10 +626,16 @@ pub(crate) async fn register_test_connection(
         pending: Mutex::new(HashMap::new()),
         sockets: Mutex::new(HashMap::new()),
     });
-    relay_hub()
-        .write()
-        .await
-        .insert(runtime_id.to_string(), connection.clone());
+    attach_connection(
+        runtime_id,
+        RelayConnectionEntry {
+            connection: connection.clone(),
+            client: client.to_string(),
+            capabilities,
+        },
+        multi,
+    )
+    .await;
     (connection, outgoing)
 }
 
@@ -525,11 +708,16 @@ async fn browser_socket(
     socket: WebSocket,
     runtime_id: String,
     path: String,
+    required_capability: String,
     relay_socket_id: String,
     quota_service: crate::services::SharedQuotaService,
     db: sqlx::PgPool,
 ) {
-    let connection = relay_hub().read().await.get(&runtime_id).cloned();
+    let connection = relay_hub()
+        .read()
+        .await
+        .get(&runtime_id)
+        .and_then(|entries| select_connection(entries, &required_capability));
     let Some(connection) = connection else {
         let _ = quota_service.close_relay_socket(&relay_socket_id, 0).await;
         return;
@@ -621,11 +809,18 @@ async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: St
         Ok(Some(Ok(Message::Text(text)))) => serde_json::from_str::<RuntimeMessage>(&text).ok(),
         _ => None,
     };
-    let (runtime_id, device_token) = match auth_message {
+    let (runtime_id, device_token, client, capabilities) = match auth_message {
         Some(RuntimeMessage::Authenticate {
             runtime_id,
             device_token,
-        }) if runtime_id == expected_id => (runtime_id, device_token),
+            client,
+            capabilities,
+        }) if runtime_id == expected_id => (
+            runtime_id,
+            device_token,
+            client.unwrap_or_else(|| "desktop".to_string()),
+            capabilities,
+        ),
         _ => {
             let _ = sink.send(Message::Close(None)).await;
             return;
@@ -662,20 +857,32 @@ async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: St
         pending: Mutex::new(HashMap::new()),
         sockets: Mutex::new(HashMap::new()),
     });
-    relay_hub()
-        .write()
-        .await
-        .insert(runtime_id.clone(), connection.clone());
+    let multi = multi_connection_enabled();
+    let became_first = relay_hub().read().await.get(&runtime_id).map_or(true, Vec::is_empty);
+    attach_connection(
+        &runtime_id,
+        RelayConnectionEntry {
+            connection: connection.clone(),
+            client,
+            capabilities,
+        },
+        multi,
+    )
+    .await;
     // Stamp the relay attach so DB-side liveness signals reflect it:
     // migration 011 added runtime_devices.relay_connected_at for exactly this
     // ("last outbound WS relay attach") but nothing wrote it until now. It is
-    // cleared on detach below.
-    let _ = sqlx::query(
-        "UPDATE runtime_devices SET relay_connected_at = CURRENT_TIMESTAMP WHERE id = $1",
-    )
-    .bind(&runtime_id)
-    .execute(&state.db)
-    .await;
+    // cleared on detach when the runtime's last connection drops. Single-
+    // connection mode always re-stamps (legacy behavior); multi-connection
+    // mode only when the first live connection attaches.
+    if became_first || !multi {
+        let _ = sqlx::query(
+            "UPDATE runtime_devices SET relay_connected_at = CURRENT_TIMESTAMP WHERE id = $1",
+        )
+        .bind(&runtime_id)
+        .execute(&state.db)
+        .await;
+    }
     let authenticated = CloudMessage::Authenticated {
         runtime_id: runtime_id.clone(),
     };
@@ -770,21 +977,16 @@ async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: St
         }
     }
 
-    let mut hub = relay_hub().write().await;
-    if hub
-        .get(&runtime_id)
-        .map(|current| Arc::ptr_eq(current, &connection))
-        .unwrap_or(false)
-    {
-        hub.remove(&runtime_id);
+    let last_connection = detach_connection(&runtime_id, &connection).await;
+    if last_connection {
+        // Relay fully detached: clear the liveness stamp (best-effort; the
+        // timestamp is advisory, the in-memory hub remains the authoritative
+        // lookup).
+        let _ = sqlx::query("UPDATE runtime_devices SET relay_connected_at = NULL WHERE id = $1")
+            .bind(&runtime_id)
+            .execute(&state.db)
+            .await;
     }
-    drop(hub);
-    // Relay detached: clear the liveness stamp (best-effort; the timestamp is
-    // advisory, the in-memory hub remains the authoritative lookup).
-    let _ = sqlx::query("UPDATE runtime_devices SET relay_connected_at = NULL WHERE id = $1")
-        .bind(&runtime_id)
-        .execute(&state.db)
-        .await;
     connection.pending.lock().await.clear();
     let sockets = std::mem::take(&mut *connection.sockets.lock().await);
     for (_, sender) in sockets {
@@ -872,6 +1074,7 @@ pub(crate) async fn relay_request_to_runtime(
         contabo_runtime_service,
         quota_service,
         runtime_id,
+        &required_capability,
     )
     .await?
     {
@@ -1451,5 +1654,227 @@ mod tests {
         assert!(filtered.contains_key("authorization"));
         assert!(filtered.contains_key("accept"));
         assert!(!filtered.contains_key("cookie"));
+    }
+
+    fn test_entry(client: &str, capabilities: Option<Vec<String>>) -> RelayConnectionEntry {
+        let (sender, _outgoing) = mpsc::unbounded_channel();
+        RelayConnectionEntry {
+            connection: Arc::new(RuntimeConnection {
+                sender,
+                pending: Mutex::new(HashMap::new()),
+                sockets: Mutex::new(HashMap::new()),
+            }),
+            client: client.to_string(),
+            capabilities,
+        }
+    }
+
+    #[test]
+    fn authenticate_envelope_carries_client_and_capability_scope() {
+        // The allternit-node daemon authenticates with its client identity
+        // and an explicit capability subset; legacy clients omit both.
+        let scoped: RuntimeMessage = serde_json::from_str(
+            r#"{"type":"authenticate","runtime_id":"rt_1","device_token":"tok",
+                "client":"allternit-node",
+                "capabilities":["node.core","runtime:connect","runtime:execute"]}"#,
+        )
+        .unwrap();
+        match scoped {
+            RuntimeMessage::Authenticate {
+                runtime_id,
+                client,
+                capabilities,
+                ..
+            } => {
+                assert_eq!(runtime_id, "rt_1");
+                assert_eq!(client.as_deref(), Some("allternit-node"));
+                assert_eq!(
+                    capabilities.unwrap(),
+                    vec!["node.core", "runtime:connect", "runtime:execute"]
+                );
+            }
+            other => panic!("expected authenticate, got {other:?}"),
+        }
+
+        let legacy: RuntimeMessage = serde_json::from_str(
+            r#"{"type":"authenticate","runtime_id":"rt_1","device_token":"tok"}"#,
+        )
+        .unwrap();
+        match legacy {
+            RuntimeMessage::Authenticate {
+                client, capabilities, ..
+            } => {
+                assert!(client.is_none());
+                assert!(capabilities.is_none());
+            }
+            other => panic!("expected authenticate, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn select_connection_prefers_smallest_granting_scope() {
+        // Desktop (legacy full surface) + daemon (scoped node.core subset):
+        // shared core capabilities route to the most specific connection —
+        // the daemon — while capture-only traffic stays on the desktop.
+        let entries = vec![
+            test_entry("desktop", None),
+            test_entry(
+                "allternit-node",
+                Some(vec![
+                    "node.core".to_string(),
+                    "runtime:connect".to_string(),
+                    "runtime:execute".to_string(),
+                    "runtime:terminal".to_string(),
+                    "runtime:files".to_string(),
+                ]),
+            ),
+        ];
+        let daemon = select_connection(&entries, "runtime:terminal")
+            .expect("daemon grants runtime:terminal");
+        assert!(
+            entries
+                .iter()
+                .find(|e| e.client == "allternit-node")
+                .map(|e| Arc::ptr_eq(&e.connection, &daemon))
+                .unwrap()
+        );
+        let desktop = select_connection(&entries, "runtime:remote_control")
+            .expect("desktop grants runtime:remote_control");
+        assert!(
+            entries
+                .iter()
+                .find(|e| e.client == "desktop")
+                .map(|e| Arc::ptr_eq(&e.connection, &desktop))
+                .unwrap()
+        );
+        // The node.core advertisement is inert for routing: no path maps to
+        // it, and it must not make the daemon grant what it did not claim.
+        let providers = select_connection(&entries, "providers:use")
+            .expect("desktop grants providers:use");
+        assert!(
+            entries
+                .iter()
+                .find(|e| e.client == "desktop")
+                .map(|e| Arc::ptr_eq(&e.connection, &providers))
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn select_connection_never_duplicates_and_falls_back() {
+        // Two daemon-grade connections granting the same capability: exactly
+        // one is picked (most recently attached wins the tie), never both —
+        // no duplicate delivery.
+        let entries = vec![
+            test_entry("allternit-node", Some(vec!["runtime:execute".to_string()])),
+            test_entry(
+                "allternit-node-2",
+                Some(vec!["runtime:execute".to_string()]),
+            ),
+        ];
+        let first = select_connection(&entries, "runtime:execute").unwrap();
+        let second = select_connection(&entries, "runtime:execute").unwrap();
+        assert!(Arc::ptr_eq(&first, &second));
+        assert!(
+            entries
+                .iter()
+                .find(|e| e.client == "allternit-node-2")
+                .map(|e| Arc::ptr_eq(&e.connection, &first))
+                .unwrap()
+        );
+
+        // No connection grants the capability → no candidate at all.
+        assert!(select_connection(
+            &entries,
+            "runtime:remote_control"
+        )
+        .is_none());
+        // Legacy full connections always remain candidates.
+        let legacy = vec![test_entry("desktop", None)];
+        assert!(select_connection(&legacy, "providers:connect").is_some());
+    }
+
+    #[tokio::test]
+    async fn flag_off_attach_replaces_single_connection() {
+        let runtime_id = format!("rt-flagoff-{}", uuid::Uuid::new_v4().simple());
+        let (first, _rx1) = register_test_connection(&runtime_id).await;
+        let (second, _rx2) = register_test_connection(&runtime_id).await;
+        let hub = relay_hub().read().await;
+        let entries = hub.get(&runtime_id).expect("runtime registered");
+        assert_eq!(entries.len(), 1, "flag off: one connection per runtime");
+        assert!(
+            Arc::ptr_eq(&entries[0].connection, &second),
+            "flag off: the new connection replaces the old"
+        );
+        drop(hub);
+        // Detach of the replaced socket must not drop the replacement
+        // (the old ptr_eq guard, preserved).
+        assert!(!detach_connection(&runtime_id, &first).await);
+        let hub = relay_hub().read().await;
+        assert_eq!(hub.get(&runtime_id).unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn flag_on_attach_keeps_one_connection_per_client() {
+        let runtime_id = format!("rt-flagon-{}", uuid::Uuid::new_v4().simple());
+        let (_desktop, _rx1) =
+            register_test_connection_with(&runtime_id, "desktop", None, true).await;
+        let (daemon, _rx2) = register_test_connection_with(
+            &runtime_id,
+            "allternit-node",
+            Some(vec!["runtime:execute".to_string()]),
+            true,
+        )
+        .await;
+        let hub = relay_hub().read().await;
+        let entries = hub.get(&runtime_id).expect("runtime registered");
+        assert_eq!(entries.len(), 2, "flag on: desktop and daemon coexist");
+
+        // A reconnect from the same client identity replaces its own entry.
+        drop(hub);
+        let (daemon2, _rx3) = register_test_connection_with(
+            &runtime_id,
+            "allternit-node",
+            Some(vec!["runtime:execute".to_string()]),
+            true,
+        )
+        .await;
+        let hub = relay_hub().read().await;
+        let entries = hub.get(&runtime_id).unwrap();
+        assert_eq!(entries.len(), 2, "same-client reconnect does not stack");
+        assert!(entries.iter().any(|e| Arc::ptr_eq(&e.connection, &daemon2)));
+        drop(hub);
+
+        // Routing: core to the daemon, capture to the desktop, and a single
+        // deterministic target on repeat (no cross-talk, no duplication).
+        let hub = relay_hub().read().await;
+        let entries = hub.get(&runtime_id).unwrap();
+        let to_daemon = select_connection(entries, "runtime:execute").unwrap();
+        assert!(Arc::ptr_eq(&to_daemon, &daemon2));
+        let again = select_connection(entries, "runtime:execute").unwrap();
+        assert!(Arc::ptr_eq(&again, &to_daemon));
+        let to_desktop = select_connection(entries, "runtime:remote_control").unwrap();
+        assert!(
+            entries
+                .iter()
+                .find(|e| e.client == "desktop")
+                .map(|e| Arc::ptr_eq(&e.connection, &to_desktop))
+                .unwrap()
+        );
+        drop(hub);
+
+        // Daemon drops → desktop keeps serving everything; when the last
+        // connection detaches the runtime is fully offline.
+        assert!(!detach_connection(&runtime_id, &daemon2).await);
+        assert!(!detach_connection(&runtime_id, &daemon).await);
+        let hub = relay_hub().read().await;
+        let entries = hub.get(&runtime_id).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert!(
+            select_connection(entries, "runtime:execute")
+                .map(|c| !Arc::ptr_eq(&c, &daemon2))
+                .unwrap()
+        );
+        drop(hub);
     }
 }

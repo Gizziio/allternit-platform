@@ -416,7 +416,7 @@ function CoworkRootContent() {
                                 <span style={{
                                   fontSize: 12,
                                   fontWeight: 600,
-                                  color: 'var(--accent-cowork)',
+                                  color: 'var(--accent-primary)',
                                   textTransform: 'uppercase',
                                   letterSpacing: '0.05em',
                                 }}>
@@ -525,7 +525,7 @@ function CoworkRootContent() {
                                   width: 6,
                                   height: 6,
                                   borderRadius: '50%',
-                                  background: 'var(--accent-cowork, #c8a96e)',
+                                  background: 'var(--accent-primary, #c8a96e)',
                                   flexShrink: 0,
                                 }} />
                               )}
@@ -650,7 +650,7 @@ const coworkStyles = `
 }
 
 .coworkRailHandle:hover .coworkRailHandleLine {
-  background: var(--accent-cowork);
+  background: var(--accent-primary);
 }
 
 @media (max-width: 768px) {
@@ -1356,7 +1356,7 @@ function EmbeddedCoworkAgentRail({ onClose }: { onClose: () => void }) {
             return (
               <div key={msg.id} style={S.msgRow(msg.role)}>
                 <div style={S.msgBubble(msg.role)}>
-                  <div style={{ ...S.msgRole, color: isUser ? 'var(--accent-cowork)' : 'var(--ui-text-muted)' }}>
+                  <div style={{ ...S.msgRole, color: isUser ? 'var(--accent-primary)' : 'var(--ui-text-muted)' }}>
                     {isUser ? 'You' : 'Agent'}
                   </div>
                   <div style={S.msgText}>{preview}</div>

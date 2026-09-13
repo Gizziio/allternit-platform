@@ -31,9 +31,9 @@ import {
   routinesToComposerProps,
   transcriptToShareText,
 } from "@/lib/bots/bot-chat-composer";
-import { getBotDisplayName } from "@/lib/bots/bot-profile";
+import { getBots, getBotDisplayName } from "@/lib/bots/bot-profile";
 import { useBotApprovalBridge } from "@/lib/bots/use-bot-approval-bridge";
-import { useUnifiedRoster } from "@/lib/bots/use-unified-roster";
+import { useAgentStore } from "@/lib/agents/agent.store";
 import { useBotActiveVm } from "@/views/bots/useBotActiveVm";
 import { BotWatchStrip } from "@/views/bots/BotWatchStrip";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
@@ -75,10 +75,10 @@ export function BotsChatPage({
   watching = false,
   onToggleWatch,
 }: BotsChatPageProps) {
-  const roster = useUnifiedRoster();
-  const bot = useMemo(() => roster.find((b) => b.id === botId) ?? null, [roster, botId]);
-  const botName = bot ? bot.displayName : "Bot";
-  const accent = bot?.accentColor ?? "var(--accent-primary)";
+  const agents = useAgentStore((s) => s.agents);
+  const bot = useMemo(() => getBots(agents).find((b) => b.id === botId) ?? null, [agents, botId]);
+  const botName = bot ? getBotDisplayName(bot) : "Bot";
+  const accent = bot?.botProfile?.accentColor ?? "var(--accent-primary)";
 
   const sessions = useChatSessionStore((s) => s.sessions);
   const createSession = useChatSessionStore((s) => s.createSession);
@@ -93,14 +93,14 @@ export function BotsChatPage({
         .filter(
           (s) =>
             s.metadata?.isBot === true &&
-            (s.metadata?.agentId === botId || s.metadata?.agentName === bot?.agent.name),
+            (s.metadata?.agentId === botId || s.metadata?.agentName === bot?.name),
         )
         .sort(
           (a, b) =>
             new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime(),
         )[0] ?? null
     );
-  }, [sessions, botId, bot?.agent.name]);
+  }, [sessions, botId, bot?.name]);
 
   const sessionId = session?.id ?? null;
   const isStreaming = sessionId ? Boolean(streamingBySession?.[sessionId]?.isStreaming) : false;
@@ -155,13 +155,13 @@ export function BotsChatPage({
         let sid = sessionId;
         if (!sid) {
           sid = await createSession({
-            name: bot ? getBotDisplayName(bot.agent) : botName,
+            name: bot ? getBotDisplayName(bot) : botName,
             sessionMode: "agent",
             agentId: botId,
             metadata: {
               isBot: true,
               agentId: botId,
-              botProfile: bot?.agent.botProfile,
+              botProfile: bot?.botProfile,
               originSurface: "fabric-session",
             },
           });
@@ -300,8 +300,8 @@ export function BotsChatPage({
           </button>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[15px] font-semibold">{botName}</div>
-            {bot?.tagline ? (
-              <div className="truncate text-[12px] text-[var(--text-secondary)]">{bot.tagline}</div>
+            {bot?.botProfile?.tagline ? (
+              <div className="truncate text-[12px] text-[var(--text-secondary)]">{bot.botProfile?.tagline}</div>
             ) : null}
           </div>
           {pending.length > 0 ? <WaitingOnYouPill accentColor={accent} /> : null}

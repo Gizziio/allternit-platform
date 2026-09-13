@@ -187,7 +187,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
           <clipPath id={`body-clip-${config.baseShape ?? 'rounded'}`}>
             <Body 
               shape={config.baseShape ?? 'round'}
-              colors={config.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' }}
+              colors={config.colors ?? { primary: '#B08D6E', secondary: '#C4A684', glow: '#B08D6E', outline: '#4A3826' }}
               size={100}
               renderForClipPath
             />
@@ -197,7 +197,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         {/* Glow layer */}
         {showGlow && (
           <Glow
-            color={config.colors?.glow ?? '#6366f1'}
+            color={config.colors?.glow ?? '#B08D6E'}
             size={100}
             intensity={getGlowIntensity()}
             pulse={isAnimating && (config.personality?.breathing ?? false)}
@@ -208,7 +208,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         <g className="agent-avatar__body-layer">
           <Body
             shape={config.baseShape ?? 'round'}
-            colors={config.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' }}
+            colors={config.colors ?? { primary: '#B08D6E', secondary: '#C4A684', glow: '#B08D6E', outline: '#4A3826' }}
             size={100}
             emotion={currentEmotion}
             isAnimating={isAnimating}
@@ -220,7 +220,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
           <Accessories
             accessories={config.accessories ?? []}
             layer="back"
-            colors={config.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' }}
+            colors={config.colors ?? { primary: '#B08D6E', secondary: '#C4A684', glow: '#B08D6E', outline: '#4A3826' }}
             size={100}
           />
         </g>
@@ -241,7 +241,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
           <Accessories
             accessories={config.accessories ?? []}
             layer="front"
-            colors={config.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' }}
+            colors={config.colors ?? { primary: '#B08D6E', secondary: '#C4A684', glow: '#B08D6E', outline: '#4A3826' }}
             size={100}
           />
         </g>

@@ -4022,7 +4022,7 @@ function createAgentFromTemplate(
       roleCard: { domain: template.role, inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
       voice: { style: '', rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
       progression: { class: template.role, relevantStats: [], level: { maxLevel: 99, xpFormula: 'linear' } },
-      avatar: { type: 'mascot', mascot: { template: 'bot' }, style: { primaryColor: '#6366f1', accentColor: '#1e1c1a' } },
+      avatar: { type: 'mascot', mascot: { template: 'bot' }, style: { primaryColor: '#B08D6E', accentColor: '#1e1c1a' } },
     },
     ...overrides,
   };

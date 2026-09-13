@@ -45,7 +45,7 @@ export function WorkspaceBackground(): React.ReactNode {
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'radial-gradient(circle at center, color-mix(in srgb, var(--accent-chat) 6%, transparent) 0%, transparent 80%)',
+                background: 'radial-gradient(circle at center, color-mix(in srgb, var(--accent-primary) 6%, transparent) 0%, transparent 80%)',
               }}
             />
           </>
@@ -80,7 +80,7 @@ export function WorkspaceBackground(): React.ReactNode {
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'radial-gradient(circle at center, color-mix(in srgb, var(--accent-chat) 6%, transparent) 0%, transparent 80%)',
+              background: 'radial-gradient(circle at center, color-mix(in srgb, var(--accent-primary) 6%, transparent) 0%, transparent 80%)',
             }}
           />
         )}

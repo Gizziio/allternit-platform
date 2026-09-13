@@ -1516,20 +1516,22 @@ async fn list_approvals(
     Extension(_user): Extension<AuthUser>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let _user = match get_user(&headers) {
+    let user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
     };
     let db = state.db.clone();
+    let user_id = user.user_id;
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
+        // A:// §8.18 / §16: approvals are per-user; never return other users' rows.
         let mut stmt = conn.prepare(
             "SELECT id, user_id, content, source, dismissed, created_at
-             FROM cowork_approvals ORDER BY created_at DESC",
+             FROM cowork_approvals WHERE user_id = ?1 ORDER BY created_at DESC",
         )?;
         let rows = stmt
-            .query_map([], |row| {
+            .query_map(rusqlite::params![user_id], |row| {
                 Ok(SuggestionRow {
                     id: row.get(0)?,
                     user_id: row.get(1)?,

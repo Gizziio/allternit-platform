@@ -106,8 +106,8 @@ export function DataCard({
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#333] bg-[#1e1e1e] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="size-8  rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-            <Table2 className="size-4  text-[#D4956A]" />
+          <div className="size-8  rounded-lg bg-[#B08D6E]/10 flex items-center justify-center">
+            <Table2 className="size-4  text-[#B08D6E]" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
@@ -130,7 +130,7 @@ export function DataCard({
           <div className="flex items-center gap-2">
             <div className="w-24 h-1.5 bg-[#333] rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-[#D4956A]"
+                className="h-full bg-[#B08D6E]"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.3 }}
@@ -225,8 +225,8 @@ export function DataCard({
         {/* Summary Stats */}
         {summaryStat && (
           <div className="flex items-center gap-4 p-3 rounded-lg bg-[#1e1e1e] border border-[#333] mb-4">
-            <div className="size-10  rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-              <TrendUp className="size-5  text-[#D4956A]" />
+            <div className="size-10  rounded-lg bg-[#B08D6E]/10 flex items-center justify-center">
+              <TrendUp className="size-5  text-[#B08D6E]" />
             </div>
             <div>
               <p className="text-xs text-[#666] uppercase tracking-wide">
@@ -243,7 +243,7 @@ export function DataCard({
         {visualization && (
           <div className="p-3 rounded-lg bg-[#1e1e1e] border border-[#333] mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <ChartBar className="size-4  text-[#D4956A]" />
+              <ChartBar className="size-4  text-[#B08D6E]" />
               <span className="text-xs font-medium text-[#888]">
                 {visualization.title || 'Visualization Preview'}
               </span>
@@ -262,7 +262,7 @@ export function DataCard({
                     className="flex-1 flex flex-col items-center gap-1"
                   >
                     <div
-                      className="w-full max-w-[20px] bg-[#D4956A]/30 rounded-t"
+                      className="w-full max-w-[20px] bg-[#B08D6E]/30 rounded-t"
                       style={{ height: `${height}%`, minHeight: '4px' }}
                     />
                   </div>

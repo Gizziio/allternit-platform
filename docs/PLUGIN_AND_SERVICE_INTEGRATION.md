@@ -14,7 +14,6 @@
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  PLUGINS (Layer 3 — Universal Plugin SDK)                                   │
-│  ├── verceldeploy-plugin        → Deploy to Vercel via CLI/API              │
 │  ├── remotioncard-plugin        → Generate videos with Remotion             │
 │  └── iosappbuild-plugin         → Build iOS apps with xcodebuild            │
 │                                                                             │
@@ -36,7 +35,7 @@
 │                                 → Zod-typed HTTP client to the service      │
 │                                                                             │
 │  REGISTRY                                                                   │
-│  ├── .mcp.json                  → MCP server configs for 3 plugins          │
+│  ├── .mcp.json                  → MCP server configs for 2 plugins          │
 │  ├── tools/agent-swarm/tool_registry.json                           │
 │  └── ~/.allternit/plugin-manager/ui-state.json                              │
 │                                                                             │
@@ -49,45 +48,7 @@
 
 Plugins use `@allternit/plugin-sdk` and expose 3 adapters: **CLI**, **HTTP**, **MCP**.
 
-### 1.1 Vercel Deploy Plugin
-
-**Path:** `plugins/verceldeploy-plugin/`
-
-**What it does:**
-Takes a local project directory and deploys it to Vercel. Supports both preview and production deployments.
-
-**Entry point:** `src/index.ts` → `execute(host, params)`
-
-**Parameters:**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `path` | string | ✅ | Absolute path to project directory |
-| `projectName` | string | ❌ | Vercel project name |
-| `prod` | boolean | ❌ | Deploy to production (default: false) |
-
-**How it works:**
-1. Reads `VERCEL_TOKEN` from `host.config.get('VERCEL_TOKEN')` or `process.env.VERCEL_TOKEN`
-2. Checks if `vercel` CLI is installed via `which vercel`
-3. If CLI exists, runs: `vercel --yes --cwd <path> [--prod] [--name <name>]`
-4. If CLI is missing, returns the exact command for the user to run manually
-
-**Configuration:**
-```bash
-export VERCEL_TOKEN="your_token_here"
-```
-
-**Usage:**
-```bash
-# CLI adapter
-node plugins/verceldeploy-plugin/adapters/cli.js --path ./my-app --prod
-
-# MCP adapter (Claude Desktop)
-# Registered in .mcp.json as "verceldeploy"
-```
-
----
-
-### 1.2 Remotion Video Plugin
+### 1.1 Remotion Video Plugin
 
 **Path:** `plugins/remotioncard-plugin/`
 
@@ -127,7 +88,7 @@ node plugins/remotioncard-plugin/adapters/cli.js --prompt "A dark intro with log
 
 ---
 
-### 1.3 iOS App Builder Plugin
+### 1.2 iOS App Builder Plugin
 
 **Path:** `plugins/iosappbuild-plugin/`
 
@@ -385,11 +346,10 @@ const API_KEY = process.env.DOCUMENT_GENERATOR_API_KEY || "your-secret-api-key";
 
 **File:** `.mcp.json`
 
-Claude Desktop / Cursor can call all 3 plugins via MCP:
+Claude Desktop / Cursor can call both plugins via MCP:
 ```json
 {
   "mcpServers": {
-    "verceldeploy": { "command": "node", "args": ["plugins/verceldeploy-plugin/adapters/mcp.js"] },
     "remotioncard": { "command": "node", "args": ["plugins/remotioncard-plugin/adapters/mcp.js"] },
     "iosappbuild": { "command": "node", "args": ["plugins/iosappbuild-plugin/adapters/mcp.js"] }
   }
@@ -454,31 +414,12 @@ Response: { file_name, sharepoint_file_url }
 Agent returns file path + summary to user
 ```
 
-### Vercel Deploy Example
-
-```
-User asks: "Deploy this Next.js app to production"
-  ↓
-Agent reads plugin manifest
-  ↓
-Agent calls verceldeploy-plugin execute()
-  ↓
-Plugin checks VERCEL_TOKEN, validates path
-  ↓
-Plugin spawns: vercel --yes --cwd ./my-app --prod
-  ↓
-Vercel CLI deploys → returns deployment URL
-  ↓
-Agent returns URL to user
-```
-
 ---
 
 ## 7. File Locations Summary
 
 | Component | Path |
 |-----------|------|
-| Vercel Plugin | `plugins/verceldeploy-plugin/` |
 | Remotion Plugin | `plugins/remotioncard-plugin/` |
 | iOS Builder Plugin | `plugins/iosappbuild-plugin/` |
 | Docx Skill | `.agents/skills/docx/SKILL.md` |
@@ -498,14 +439,13 @@ Agent returns URL to user
 
 1. **Install plugin dependencies** (when ready):
    ```bash
-   for d in verceldeploy-plugin remotioncard-plugin iosappbuild-plugin; do
+   for d in remotioncard-plugin iosappbuild-plugin; do
      (cd plugins/$d && npm install)
    done
    ```
 
 2. **Set secrets:**
    ```bash
-   export VERCEL_TOKEN="..."
    export DOCUMENT_GENERATOR_API_KEY="..."
    ```
 

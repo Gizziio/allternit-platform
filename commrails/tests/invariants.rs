@@ -9,6 +9,7 @@ use allternit_commrails::{
     Gate, GateOptions, Index, IndexOptions, Leases, Ledger, LedgerQuery, ReceiptStore,
     ReceiptStoreOptions, Vault, VaultOptions,
 };
+use allternit_commrails::wih::active_wihs;
 use tempfile::TempDir;
 
 fn test_root() -> TempDir {
@@ -395,4 +396,69 @@ async fn authoritative_stores_are_created() {
     assert!(receipts.blob_path(&blob_id).exists());
 
     assert!(receipts.receipt_path(&receipt.receipt_id).exists());
+}
+
+#[tokio::test]
+async fn active_wihs_tracks_pickup_and_close() {
+    let tmp = test_root();
+    let root = PathBuf::from(tmp.path());
+
+    let ledger = Arc::new(Ledger::new(LedgerOptions {
+        root_dir: Some(root.clone()),
+        ledger_dir: Some(PathBuf::from(".allternit/ledger")),
+    }));
+
+    let leases = Arc::new(
+        Leases::new(LeasesOptions {
+            root_dir: Some(root.clone()),
+            leases_dir: Some(PathBuf::from(".allternit/leases")),
+            event_sink: Some(ledger.clone()),
+            actor_id: Some("gate".to_string()),
+            auto_renewal_enabled: true,
+            auto_renewal_threshold_seconds: 300,
+            auto_renewal_interval_seconds: 60,
+            auto_renewal_extend_seconds: 600,
+        })
+        .await
+        .unwrap(),
+    );
+
+    let receipts = Arc::new(
+        ReceiptStore::new(ReceiptStoreOptions {
+            root_dir: Some(root.clone()),
+            receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+            blobs_dir: Some(PathBuf::from(".allternit/blobs")),
+        })
+        .unwrap(),
+    );
+
+    let gate = Gate::new(GateOptions {
+        ledger: ledger.clone(),
+        leases,
+        receipts,
+        index: None,
+        vault: None,
+        oauth_vault: None,
+        root_dir: Some(root.clone()),
+        actor_id: Some("gate".to_string()),
+        strict_provenance: None,
+        visual_provider: None,
+        visual_config: None,
+    });
+
+    let (_, dag_id, node_id) = gate.plan_new("Tracked Task", None).await.unwrap();
+    let wih_id = gate.wih_pickup(&dag_id, &node_id, "agent-1").await.unwrap();
+
+    let events = ledger.query(LedgerQuery::default()).await.unwrap();
+    let active = active_wihs(&events);
+    assert_eq!(active.len(), 1);
+    assert_eq!(active[0].wih_id, wih_id);
+    assert_eq!(active[0].status, "ACTIVE");
+
+    gate.wih_close(&wih_id, "done", &["evidence".to_string()])
+        .await
+        .unwrap();
+
+    let events = ledger.query(LedgerQuery::default()).await.unwrap();
+    assert_eq!(active_wihs(&events).len(), 0);
 }

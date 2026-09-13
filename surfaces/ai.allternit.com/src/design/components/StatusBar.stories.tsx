@@ -244,7 +244,7 @@ const FullDemoTemplate = () => {
               padding: '6px 12px',
               borderRadius: '6px',
               border: '1px solid var(--border-default)',
-              background: currentState === state ? 'var(--accent-chat)' : 'var(--bg-secondary)',
+              background: currentState === state ? 'var(--accent-primary)' : 'var(--bg-secondary)',
               color: currentState === state ? 'white' : 'inherit',
               cursor: 'pointer',
               fontSize: '12px',

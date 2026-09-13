@@ -4,11 +4,22 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Bell,
   BellSlash,
+  CaretLeft,
   DesktopTower,
   DownloadSimple,
+  Monitor,
   Moon,
   Sun,
 } from "@phosphor-icons/react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { FabricDesktopDrive, useVisualViewportRect } from "@/components/dispatch/FabricDesktopDrive";
+import {
+  hasDesktopConnection,
+  hasNodeDaemon,
+  useRuntimes,
+  type RuntimeViewModel,
+} from "@/components/dispatch/useRuntimes";
+import { cloudApiUrl } from "@/lib/cloud-api";
 import {
   FabricAppHeader,
   FabricHeaderControl,
@@ -22,7 +33,8 @@ import { useToast } from "@/hooks/use-toast";
 import { MachinesPanel } from "@/components/dispatch/MachinesPanel";
 import { FabricOperatorKeys } from "@/components/dispatch/FabricOperatorKeys";
 import { FabricSessionPanel } from "@/components/dispatch/FabricSessionPanel";
-import { useRuntimes, type RuntimeViewModel } from "@/components/dispatch/useRuntimes";
+import { FabricSessionRailControls } from "@/components/dispatch/FabricSessionRailControls";
+import type { FabricDriveKind } from "@/lib/fabric-session-kind";
 import { useRuntimeSelection } from "@/components/dispatch/useRuntimeSelection";
 import { useFabricPendingCounts } from "@/components/dispatch/useFabricPendingCounts";
 import {
@@ -31,7 +43,7 @@ import {
 } from "@/fabric-session/theme/FabricSessionThemeStore";
 import type { BeforeInstallPromptEvent } from "../types";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import { useUnifiedRoster } from "@/lib/bots/use-unified-roster";
+import { getBots } from "@/lib/bots/bot-profile";
 import { BotsRosterSection } from "./BotsRosterSection";
 
 interface DashboardPageProps {
@@ -45,7 +57,7 @@ interface DashboardPageProps {
 
 const PUSH_WORKER_URL =
   env("VITE_FABRIC_SESSION_PUSH_URL") || env("VITE_REMOTE_CONTROL_PUSH_URL") || "https://push.fabrictransport.allternit.com";
-const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_PLATFORM_URL") ?? "https://platform.allternit.com";
+
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -150,7 +162,8 @@ export function DashboardPage({
     return () => window.clearTimeout(timer);
   }, [auth.isLoaded]);
 
-  const roster = useUnifiedRoster();
+  const agents = useAgentStore((s) => s.agents);
+  const roster = React.useMemo(() => getBots(agents), [agents]);
 
   React.useEffect(() => {
     if (!auth.isSignedIn) return;
@@ -159,6 +172,8 @@ export function DashboardPage({
     });
   }, [auth.isSignedIn]);
 
+  const isLandscape = useMediaQuery("(orientation: landscape) and (pointer: coarse)");
+  const vv = useVisualViewportRect();
   const { runtimes, loading } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
@@ -166,15 +181,75 @@ export function DashboardPage({
     if (typeof window === "undefined") return false;
     return Boolean(new URLSearchParams(window.location.search).get("runtime"));
   });
+  const [desktopOpen, setDesktopOpen] = React.useState(false);
+  const [startingDesktop, setStartingDesktop] = React.useState(false);
+
+  // Daemon-only node: the Monitor affordance degrades to "Start desktop",
+  // which asks the daemon (node.launch) to bring Allternit Desktop up. The
+  // live viewer lights up once the app connects and claims its capabilities.
+  const startDesktop = useCallback(async () => {
+    if (!selected) return;
+    const token = await auth.getToken().catch(() => null);
+    if (!token) return;
+    setStartingDesktop(true);
+    try {
+      await fetch(
+        cloudApiUrl(`/api/v1/runtime-devices/${encodeURIComponent(selected.id)}/proxy`),
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            method: "POST",
+            path: "/api/v1/node/launch",
+            body: JSON.stringify({ action: "start" }),
+            bodyEncoding: "utf8",
+          }),
+        },
+      ).catch(() => {});
+      setDesktopOpen(true);
+    } finally {
+      setStartingDesktop(false);
+    }
+  }, [selected, auth]);
+  const [driveKind, setDriveKind] = React.useState<FabricDriveKind>("chat");
+  const [railCollapsed, setRailCollapsed] = React.useState(() => {
+    if (typeof window === "undefined") return false;
+    if (window.matchMedia("(max-width: 768px)").matches) return true;
+    try {
+      return window.localStorage.getItem("fabric-session:rail-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const toggleRail = useCallback(() => {
+    setRailCollapsed((current) => {
+      const next = !current;
+      if (typeof window !== "undefined" && !window.matchMedia("(max-width: 768px)").matches) {
+        try {
+          window.localStorage.setItem("fabric-session:rail-collapsed", String(next));
+        } catch {
+          /* ignore */
+        }
+      }
+      return next;
+    });
+  }, []);
 
   const openSession = useCallback(
     (id: string) => {
+      setDesktopOpen(false);
+      setDriveKind("chat");
+      setRailCollapsed(typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches);
       setSelectedId(id);
       setSessionOpen(true);
     },
     [setSelectedId],
   );
   const closeSession = useCallback(() => {
+    setDesktopOpen(false);
     setSessionOpen(false);
     setSelectedId(null);
   }, [setSelectedId]);
@@ -350,6 +425,21 @@ export function DashboardPage({
       pendingPermissions={pendingPermissions}
       pendingQuestions={pendingQuestions}
     >
+      {sessionOpen && selected ? (
+        hasNodeDaemon(selected) && !hasDesktopConnection(selected) ? (
+          <FabricHeaderControl
+            onClick={() => void startDesktop()}
+            title={startingDesktop ? "Starting desktop…" : "Start desktop on this node"}
+            active={false}
+          >
+            <DesktopTower size={16} weight="bold" />
+          </FabricHeaderControl>
+        ) : (
+          <FabricHeaderControl onClick={() => setDesktopOpen(true)} title="Live desktop" active={desktopOpen}>
+            <Monitor size={16} weight="bold" />
+          </FabricHeaderControl>
+        )
+      ) : null}
       <FabricHeaderControl onClick={cycleTheme} title="Toggle theme">
         {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
       </FabricHeaderControl>
@@ -359,8 +449,8 @@ export function DashboardPage({
         </FabricHeaderControl>
       )}
       <FabricHeaderControl
-        href={`${PLATFORM_HUB_URL}/shell`}
-        title="Open Allternit Shell"
+        href={env("VITE_ALLTERNIT_WEB_URL") || "https://ai.allternit.com"}
+        title="Open Allternit"
         className="hidden sm:inline-flex"
       >
         Shell
@@ -369,9 +459,46 @@ export function DashboardPage({
   );
 
   if (sessionOpen && selected) {
+    if (desktopOpen) {
+      return (
+        <div
+          className="z-50 bg-[#0b0b0a] text-white overflow-hidden"
+          style={{
+            position: "fixed",
+            top: vv.height ? vv.top : 0,
+            left: vv.height ? vv.left : 0,
+            width: vv.height ? vv.width : "100%",
+            height: vv.height ? vv.height : "100%",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setDesktopOpen(false)}
+            className="absolute z-30 left-2 inline-flex items-center gap-1 rounded-full border-none bg-black/55 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
+            style={{ top: "max(8px, env(safe-area-inset-top))" }}
+            title="Back to sessions"
+          >
+            <CaretLeft size={16} weight="bold" />
+            {!isLandscape ? "Sessions" : null}
+          </button>
+          <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
+        </div>
+      );
+    }
     return (
-      <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
-        <FabricAppHeader title={selected.name} onBack={closeSession}>
+      <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
+        <FabricAppHeader
+          title={selected.name}
+          onBack={closeSession}
+          leading={(
+            <FabricSessionRailControls
+              railCollapsed={railCollapsed}
+              driveKind={driveKind}
+              onToggleRail={toggleRail}
+              onDriveKindChange={setDriveKind}
+            />
+          )}
+        >
           {headerActions}
         </FabricAppHeader>
         <main className="flex-1 min-h-0">
@@ -381,6 +508,10 @@ export function DashboardPage({
             getToken={auth.getToken}
             watching={watching}
             onToggleWatch={onToggleWatch}
+            driveKind={driveKind}
+            onDriveKindChange={setDriveKind}
+            railCollapsed={railCollapsed}
+            onToggleRail={toggleRail}
           />
         </main>
       </div>

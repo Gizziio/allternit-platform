@@ -149,7 +149,7 @@ export function AllternitDocumentEditor({
       {showToolbar && (
         <div className="h-12 border-b border-[#333] flex items-center justify-between px-4 bg-[#1e1e1e]">
           <div className="flex items-center gap-3">
-            <FileText className="size-4  text-[#D4956A]" />
+            <FileText className="size-4  text-[#B08D6E]" />
             
             {/* Editable title */}
             {isEditingTitle ? (
@@ -166,7 +166,7 @@ export function AllternitDocumentEditor({
             ) : (
               <button type="button"
                 onClick={() => !readOnly && setIsEditingTitle(true)}
-                className="text-sm font-medium text-[#ECECEC] hover:text-[#D4956A] transition-colors flex items-center gap-2"
+                className="text-sm font-medium text-[#ECECEC] hover:text-[#B08D6E] transition-colors flex items-center gap-2"
               >
                 {documentTitle}
                 {!readOnly && <PencilSimple className="size-3  opacity-50" />}

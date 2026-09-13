@@ -1,4 +1,4 @@
-//! `rails` — the Rails CLI port of Beads capabilities.
+//! `rails` — the Rails CLI: ticket/DAG workflow capabilities for Allternit.
 //!
 //! This binary provides the ticket/DAG workflow surface for Allternit:
 //! ticket management, typed dependencies, ready-list derivation, and

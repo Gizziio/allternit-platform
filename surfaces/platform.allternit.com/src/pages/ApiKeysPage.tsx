@@ -21,6 +21,7 @@ import {
 import { formatApiError } from "@/lib/api-client";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from "@/components/settings/buttonStyles";
+import { GatewayKeysPanel } from "@/pages/console/api-keys/GatewayKeysPanel";
 
 const AVAILABLE_SCOPES = [
   { value: "read", label: "Read" },
@@ -39,6 +40,7 @@ function formatDate(iso?: string | null): string {
 }
 
 export function ApiKeysPage() {
+  const [tab, setTab] = useState<"scoped" | "gateway">("scoped");
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +68,8 @@ export function ApiKeysPage() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (tab === "scoped") void load();
+  }, [load, tab]);
 
   const handleCreate = useCallback(async () => {
     if (!newName.trim()) return;
@@ -118,9 +120,32 @@ export function ApiKeysPage() {
             API Keys
           </h1>
           <p className="text-[13px] text-[var(--text-secondary)] mt-1">
-            Create scoped keys for the Allternit cloud API and platform webhooks.
+            Create scoped keys for the Allternit cloud API and gateway keys for the LLM gateway.
           </p>
+          <div className="mt-3 inline-flex rounded-lg border border-solid border-[var(--border-subtle)] p-0.5">
+            {(
+              [
+                { id: "scoped", label: "Scoped keys" },
+                { id: "gateway", label: "Gateway keys" },
+              ] as const
+            ).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTab(item.id)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors",
+                  tab === item.id
+                    ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
+        {tab === "scoped" && (
         <button
           type="button"
           onClick={() => {
@@ -131,8 +156,13 @@ export function ApiKeysPage() {
         >
           <Plus size={14} /> Create key
         </button>
+        )}
       </div>
 
+      {tab === "gateway" ? (
+        <GatewayKeysPanel />
+      ) : (
+        <>
       {showCreate && (
         <div className="rounded-xl border border-solid border-[var(--accent-primary)]/25 bg-[var(--accent-primary)]/[0.03] p-4">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -368,6 +398,8 @@ export function ApiKeysPage() {
           </button>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

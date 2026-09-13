@@ -156,7 +156,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
           ? 'rgba(255, 59, 48, 0.5)' 
           : success 
             ? 'rgba(52, 199, 89, 0.5)' 
-            : 'var(--accent-chat)'
+            : 'var(--accent-primary)'
       }, 0 0 0 4px ${
         darkMode 
           ? 'rgba(212, 176, 140, 0.1)' 
@@ -166,7 +166,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
         ? 'rgba(255, 59, 48, 0.5)' 
         : success 
           ? 'rgba(52, 199, 89, 0.5)' 
-          : 'var(--accent-chat)',
+          : 'var(--accent-primary)',
     } : {};
 
     // Container styles

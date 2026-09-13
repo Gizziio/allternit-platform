@@ -1,0 +1,242 @@
+/**
+ * Rails Task List
+ *
+ * Renders the CommRails WIH DAGs mirrored into AppState (railsDag slice,
+ * written by RailsDagBridge) using the same visual language as TaskListV2:
+ * figures-style glyphs, 30s recent-completion TTL with a collapse summary
+ * row, and the same terminal-height display budget. Self-hides when Rails
+ * peer mode is off (no updatedAt) or there are no dags.
+ */
+
+import * as React from 'react'
+import { Box, Text } from '@/ink.js'
+import { useAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
+import { useTerminalSize } from '../hooks/useTerminalSize.js'
+import { truncateToWidth } from '../../../../shared/utils/format.js'
+
+// Same budget rule as TaskListV2: rows<=10 hides the panel entirely, else
+// min(10, max(3, rows-14)) lines — dag headers count against it.
+function maxDisplayForRows(rows: number): number {
+  return rows <= 10 ? 0 : Math.min(10, Math.max(3, rows - 14))
+}
+
+const RECENT_DONE_TTL_MS = 30_000
+const MAX_TIMEOUT_MS = 2_147_483_647
+
+// Frontier-first status ordering: READY → RUNNING → FAILED → NEW → DONE.
+// Unknown statuses (the server can emit non-canonical values, e.g. lowercase
+// legacy 'done') fall back to the NEW rank so they still render.
+const STATUS_RANK: Record<string, number> = {
+  READY: 0,
+  RUNNING: 1,
+  FAILED: 2,
+  NEW: 3,
+  DONE: 4,
+}
+const UNKNOWN_STATUS_RANK = 3
+
+function glyphFor(status: string): {
+  icon: string
+  color: 'success' | 'gizzi' | 'error' | undefined
+  dim: boolean
+} {
+  switch (String(status).toUpperCase()) {
+    case 'DONE':
+      return { icon: '✔', color: 'success', dim: true }
+    case 'RUNNING':
+      return { icon: '◐', color: 'gizzi', dim: false }
+    case 'READY':
+      return { icon: '○', color: undefined, dim: false }
+    case 'FAILED':
+      return { icon: '✖', color: 'error', dim: false }
+    case 'NEW':
+    default:
+      return { icon: '·', color: undefined, dim: true }
+  }
+}
+
+/** Tree depth from parent_node_id chains, capped at 3. */
+type RailsDag = AppState['railsDag']['dags'][number]
+type RailsDagNode = RailsDag['nodes'][number]
+
+/** Normalized (uppercase) node status — the server can emit legacy
+ * lowercase values like 'done'. */
+function statusOf(node: RailsDagNode): string {
+  return String(node.status).toUpperCase()
+}
+
+function nodeDepths(dag: RailsDag): Map<string, number> {
+  const byParent = new Map<string, string>() // node_id -> parent_node_id
+  for (const node of dag.nodes) {
+    if (node.parent_node_id) byParent.set(node.node_id, node.parent_node_id)
+  }
+  const depths = new Map<string, number>()
+  for (const node of dag.nodes) {
+    let depth = 0
+    let cur: string | null = node.parent_node_id
+    while (cur && depth < 3) {
+      depth += 1
+      cur = byParent.get(cur) ?? null
+    }
+    depths.set(node.node_id, depth)
+  }
+  return depths
+}
+
+type DagLine =
+  | { kind: 'header'; key: string; dag: RailsDag }
+  | { kind: 'node'; key: string; dagId: string; node: RailsDagNode; depth: number }
+  | { kind: 'done-summary'; key: string; dagId: string; count: number }
+
+export function RailsTaskList(): React.ReactElement | null {
+  const railsDag = useAppState(s => s.railsDag)
+  const { rows, columns } = useTerminalSize()
+  const [, forceUpdate] = React.useState(0)
+
+  // Track when each node was last observed transitioning to DONE.
+  const doneTimestampsRef = React.useRef(new Map<string, number>())
+  const previousDoneIdsRef = React.useRef<Set<string> | null>(null)
+
+  const dags = railsDag?.dags ?? []
+  const currentDoneIds = new Set<string>()
+  for (const dag of dags) {
+    for (const node of dag.nodes) {
+      if (statusOf(node) === 'DONE') currentDoneIds.add(`${dag.dag_id}:${node.node_id}`)
+    }
+  }
+  if (previousDoneIdsRef.current === null) {
+    // First render: treat everything already DONE as old (collapsed).
+    previousDoneIdsRef.current = currentDoneIds
+  }
+  const now = Date.now()
+  for (const id of currentDoneIds) {
+    if (!previousDoneIdsRef.current.has(id)) {
+      doneTimestampsRef.current.set(id, now)
+    }
+  }
+  for (const id of doneTimestampsRef.current.keys()) {
+    if (!currentDoneIds.has(id)) doneTimestampsRef.current.delete(id)
+  }
+  previousDoneIdsRef.current = currentDoneIds
+
+  // Re-render when the next recent DONE expires (same TTL pattern as
+  // TaskListV2).
+  React.useEffect(() => {
+    if (doneTimestampsRef.current.size === 0) return
+    const currentNow = Date.now()
+    let earliestExpiry = Infinity
+    for (const ts of doneTimestampsRef.current.values()) {
+      const expiry = ts + RECENT_DONE_TTL_MS
+      if (expiry > currentNow && expiry < earliestExpiry) {
+        earliestExpiry = expiry
+      }
+    }
+    if (earliestExpiry === Infinity) return
+    const delay = Math.max(0, Math.min(earliestExpiry - currentNow, MAX_TIMEOUT_MS))
+    const timer = setTimeout(
+      force => force((n: number) => n + 1),
+      delay,
+      forceUpdate,
+    )
+    return () => clearTimeout(timer)
+  }, [dags])
+
+  if (!railsDag || railsDag.updatedAt === null || dags.length === 0) {
+    return null
+  }
+
+  const maxDisplay = maxDisplayForRows(rows)
+  if (maxDisplay === 0) return null
+
+  // Build display lines: one header per dag, then nodes frontier-first with
+  // children indented under parents; DONE nodes past the TTL collapse into a
+  // single `✔ N done ▸` summary row per dag.
+  const lines: DagLine[] = []
+  for (const dag of dags) {
+    lines.push({ kind: 'header', key: `h:${dag.dag_id}`, dag })
+    const depths = nodeDepths(dag)
+    const sorted = dag.nodes
+      .map((node, index) => ({ node, index }))
+      .sort((a, b) => {
+        const rankDiff =
+          (STATUS_RANK[statusOf(a.node)] ?? UNKNOWN_STATUS_RANK) -
+          (STATUS_RANK[statusOf(b.node)] ?? UNKNOWN_STATUS_RANK)
+        return rankDiff !== 0 ? rankDiff : a.index - b.index
+      })
+    let collapsedDone = 0
+    for (const { node } of sorted) {
+      if (statusOf(node) === 'DONE') {
+        const ts = doneTimestampsRef.current.get(`${dag.dag_id}:${node.node_id}`)
+        if (!ts || now - ts >= RECENT_DONE_TTL_MS) {
+          collapsedDone += 1
+          continue
+        }
+      }
+      lines.push({
+        kind: 'node',
+        key: `n:${dag.dag_id}:${node.node_id}`,
+        dagId: dag.dag_id,
+        node,
+        depth: depths.get(node.node_id) ?? 0,
+      })
+    }
+    if (collapsedDone > 0) {
+      lines.push({
+        kind: 'done-summary',
+        key: `s:${dag.dag_id}`,
+        dagId: dag.dag_id,
+        count: collapsedDone,
+      })
+    }
+  }
+
+  const visibleLines = lines.slice(0, maxDisplay)
+  const hiddenCount = lines.length - visibleLines.length
+
+  const planPublish = railsDag.planPublish
+  const maxTitleWidth = Math.max(15, columns - 20)
+
+  return (
+    <Box flexDirection="column" marginTop={1} marginLeft={2}>
+      {planPublish && (
+        <Text dimColor>
+          Plan tracked as dag {planPublish.dag_id} ({planPublish.node_count}{' '}
+          nodes)
+        </Text>
+      )}
+      {visibleLines.map(line => {
+        if (line.kind === 'header') {
+          return (
+            <Text key={line.key} dimColor>
+              <Text bold>{truncateToWidth(line.dag.root_title, maxTitleWidth)}</Text>
+              {` — ${line.dag.ready_count} ready, ${line.dag.done_count} done`}
+            </Text>
+          )
+        }
+        if (line.kind === 'done-summary') {
+          return (
+            <Text key={line.key} dimColor>
+              {`✔ ${line.count} done ▸`}
+            </Text>
+          )
+        }
+        const { icon, color, dim } = glyphFor(statusOf(line.node))
+        const title = truncateToWidth(line.node.title, maxTitleWidth)
+        return (
+          <Box key={line.key}>
+            <Text>{'  '.repeat(line.depth)}</Text>
+            <Text color={color}>{icon} </Text>
+            <Text bold={statusOf(line.node) === 'RUNNING'} dimColor={dim}>
+              {title}
+            </Text>
+            {statusOf(line.node) === 'RUNNING' && line.node.assignee && (
+              <Text dimColor> ({line.node.assignee})</Text>
+            )}
+          </Box>
+        )
+      })}
+      {hiddenCount > 0 && <Text dimColor>{` … +${hiddenCount} more`}</Text>}
+    </Box>
+  )
+}

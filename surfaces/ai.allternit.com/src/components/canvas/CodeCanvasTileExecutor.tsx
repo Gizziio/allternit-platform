@@ -439,7 +439,7 @@ export function CodeCanvasTileExecutor({
             padding: '6px 10px',
             opacity: isTerminal || !prompt.trim() ? 0.45 : 1,
           }}
-          className="border border-[var(--border-subtle)] bg-transparent text-[var(--accent-code)] hover:bg-[var(--surface-hover)] cursor-pointer"
+          className="border border-[var(--border-subtle)] bg-transparent text-[var(--accent-primary)] hover:bg-[var(--surface-hover)] cursor-pointer"
         >
           <PaperPlaneRight size={13} />
         </button>

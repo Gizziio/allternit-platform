@@ -41,7 +41,7 @@ export function FabricHeaderControl({
   className?: string;
 }): React.ReactNode {
   const classes =
-    'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-solid border-[var(--border-subtle)] text-[12px] font-semibold cursor-pointer no-underline ' +
+    'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-solid border-[var(--border-subtle)] text-[12px] font-semibold cursor-pointer no-underline shrink-0 ' +
     (active
       ? 'bg-[var(--shell-control-active-bg)] text-[var(--shell-control-active-fg)]'
       : 'bg-[var(--shell-control-bg)] text-[var(--shell-control-fg)]') +
@@ -74,7 +74,7 @@ export function FabricStatusCluster({
   children?: React.ReactNode;
 }): React.ReactNode {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+    <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
       <span className="text-[12px] font-semibold text-[var(--shell-item-muted)] whitespace-nowrap">
         {onlineCount}/{runtimeCount} online
       </span>
@@ -93,28 +93,32 @@ export function FabricAppHeader({
   title,
   onBack,
   backLabel = 'Home',
+  leading,
   children,
 }: {
   title?: string;
   onBack?: () => void;
   backLabel?: string;
+  leading?: React.ReactNode;
   children?: React.ReactNode;
 }): React.ReactNode {
   return (
-    <header className="min-h-11 shrink-0 flex items-center justify-between gap-2 px-3 sm:px-4 border-b border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]">
-      <div className="flex items-center gap-3 min-w-0">
+    <header className="min-h-11 shrink-0 flex items-center justify-between gap-2 px-3 sm:px-4 border-b border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] overflow-hidden">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         {onBack ? (
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--shell-control-bg)] text-[12px] font-semibold text-[var(--shell-control-fg)] cursor-pointer"
+            aria-label={backLabel}
+            className="inline-flex items-center gap-1.5 h-8 px-2 sm:px-2.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--shell-control-bg)] text-[12px] font-semibold text-[var(--shell-control-fg)] cursor-pointer shrink-0"
           >
             <CaretLeft size={16} weight="bold" />
-            {backLabel}
+            <span className="hidden sm:inline">{backLabel}</span>
           </button>
         ) : null}
+        {leading}
         {title ? (
-          <span className="text-[15px] font-medium tracking-tight truncate" style={{ fontFamily: 'var(--font-ui)' }}>
+          <span className="text-[14px] sm:text-[15px] font-medium tracking-tight truncate" style={{ fontFamily: 'var(--font-ui)' }}>
             {title}
           </span>
         ) : null}

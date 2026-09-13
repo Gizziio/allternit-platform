@@ -16,6 +16,11 @@ example_name: "数据报告 · 周报"
 example_format: csv
 example_tagline: "KPI 卡 + Chart.js 图表 + 表格"
 example_desc: "9 个月增长数据自动渲染成可视化报告, 内联 Chart.js"
+triggers:
+  - "data report"
+  - "visual report"
+  - "data visualization"
+  - "weekly report"
 od:
   mode: prototype
   surface: web

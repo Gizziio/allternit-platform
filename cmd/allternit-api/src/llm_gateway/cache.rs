@@ -86,7 +86,9 @@ fn ensure_tables(db: &crate::db::DbHandle) -> rusqlite::Result<()> {
             created_at INTEGER NOT NULL,
             expires_at INTEGER NOT NULL,
             metadata_json TEXT,
-            tenant_id TEXT
+            tenant_id TEXT,
+            hits INTEGER NOT NULL DEFAULT 0,
+            last_used_at INTEGER
         )",
         [],
     )?;

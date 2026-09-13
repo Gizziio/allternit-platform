@@ -19,7 +19,7 @@ export const CatalogViewFilters: React.FC<CatalogViewFiltersProps> = ({
   priceFilter,
   setPriceFilter,
 }) => {
-  const selectStyles = "p-1.5 px-3 bg-[var(--bg-tertiary,#18181b)] border border-solid border-[var(--border-subtle,#27272a)] rounded-md text-[var(--text-primary,#e5e5e5)] text-[13px] outline-none transition-colors focus:border-[var(--accent,#7c3aed)]";
+  const selectStyles = "p-1.5 px-3 bg-[var(--bg-tertiary,#18181b)] border border-solid border-[var(--border-subtle,#27272a)] rounded-md text-[var(--text-primary,#e5e5e5)] text-[13px] outline-none transition-colors focus:border-[var(--accent,#B08D6E)]";
 
   return (
     <div className="p-3 px-8 border-b border-solid border-[var(--border-subtle,#27272a)] flex gap-3 items-center bg-[var(--bg-secondary,#111113)]">

@@ -19,7 +19,7 @@ interface AgentPaletteProps {
   onAddAgent: (agent: Agent, role: AgentRole) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  modeColors: (typeof MODE_COLORS)['chat'];
+  modeColors: (typeof MODE_COLORS)['design'];
 }
 
 export function AgentPalette({

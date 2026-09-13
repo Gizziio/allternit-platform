@@ -137,7 +137,9 @@
 
   --accent-primary: var(--sand-500);
   --accent-secondary: var(--nude-400);
-  --accent-chat: var(--sand-500);
+  /* Amber-only law (2026-09-11): the per-mode/chat accent is deprecated —
+     aliased to the amber accent token. */
+  --accent-chat: var(--accent-primary);
 
   /* Semantic UI surface contract (DESIGN.md) */
   --surface-canvas: var(--bg-primary);
@@ -214,7 +216,9 @@
 
   --accent-primary: var(--nude-400);
   --accent-secondary: var(--sand-500);
-  --accent-chat: #d97757;
+  /* Amber-only law (2026-09-11): coral #d97757 deprecated — aliased to the
+     amber accent token. */
+  --accent-chat: var(--accent-primary);
 
   --surface-canvas: var(--bg-primary);
   --surface-panel: var(--bg-secondary);

@@ -58,6 +58,8 @@ import {
   ChainOfThoughtStep,
 } from './chain-of-thought';
 import { Plan, PlanHeader, PlanTitle, PlanContent, PlanTrigger } from './plan';
+import ArtifactAddressCard from '@/components/artifact/ArtifactAddressCard';
+import { splitArtifactAddressText } from '@/lib/design/content-artifact-api';
 import {
   Queue,
   QueueList,
@@ -658,13 +660,31 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
     }
 
     // ==================== TEXT (Main Response - Largest) ====================
-    case 'text':
+    case 'text': {
+      // A:// Artifacts API Phase 2: a://artifact/<id> addresses resolve to
+      // local-gateway cards instead of rendering as dead text (cowork runs
+      // reference artifacts by address rather than embedding bodies).
+      const addressSegments = splitArtifactAddressText(part.text);
+      if (addressSegments.some((s) => s.kind === 'address')) {
+        return (
+          <div className="text-[16px] leading-[1.75] text-foreground my-3 relative flex flex-col gap-2">
+            {addressSegments.map((seg, i) =>
+              seg.kind === 'address' ? (
+                <ArtifactAddressCard key={`addr-${i}`} address={seg.address} />
+              ) : seg.text.trim() ? (
+                <Markdown key={`text-${i}`} isStreaming={isStreaming && isLast}>{seg.text}</Markdown>
+              ) : null,
+            )}
+          </div>
+        );
+      }
       return (
         <div className="text-[16px] leading-[1.75] text-foreground my-3 relative">
           {/* isStreaming && isLast → Markdown renders cursor inside the last <p> inline with text */}
           <Markdown isStreaming={isStreaming && isLast}>{part.text}</Markdown>
         </div>
       );
+    }
 
     // ==================== REASONING (Thought Trace - Smaller, Structured) ====================
     case 'reasoning': {

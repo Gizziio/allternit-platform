@@ -1,8 +1,8 @@
 //! Ticket model and event-sourced store for the Rails CLI.
 //!
-//! A ticket is the Rails equivalent of a Beads issue: the primary unit of
-//! tracked work. Tickets are stored as an append-only event log in the
-//! workspace and projected into current state on read.
+//! A ticket is the primary unit of tracked work. Tickets are stored as an
+//! append-only event log in the workspace and projected into current state
+//! on read.
 
 use std::collections::HashMap;
 use std::io;

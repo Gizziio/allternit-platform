@@ -228,7 +228,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
                         tagline: '',
                         welcomeMessage: '',
                         starterPrompts: [],
-                        accentColor: '#6366f1',
+                        accentColor: '#B08D6E',
                         groupChatEnabled: true,
                         botCategory: 'custom',
                       },

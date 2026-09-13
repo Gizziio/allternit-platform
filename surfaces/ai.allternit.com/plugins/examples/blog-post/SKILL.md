@@ -27,6 +27,7 @@ od:
     sections: [color, typography, layout, components]
   craft:
     requires: [typography, typography-hierarchy, typography-hierarchy-editorial, rtl-and-bidi]
+  example_prompt: "Write a blog post for my topic."
 ---
 
 # Blog Post Skill

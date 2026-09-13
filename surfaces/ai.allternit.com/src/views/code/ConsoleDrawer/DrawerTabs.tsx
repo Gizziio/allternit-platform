@@ -86,8 +86,8 @@ export function DrawerTabs({
             display: 'grid',
             placeItems: 'center',
             borderRadius: 6,
-            background: 'linear-gradient(135deg, var(--accent-code), color-mix(in srgb, var(--accent-code) 55%, #000))',
-            boxShadow: '0 0 12px color-mix(in srgb, var(--accent-code) 45%, transparent)',
+            background: 'linear-gradient(135deg, var(--accent-primary), color-mix(in srgb, var(--accent-primary) 55%, #000))',
+            boxShadow: '0 0 12px color-mix(in srgb, var(--accent-primary) 45%, transparent)',
           }}
         >
           <Command size={13} weight="fill" color="#fff" />
@@ -188,7 +188,7 @@ function Tab({
         alignItems: 'center',
         gap: 6,
         padding: '0 11px',
-        background: active && isOpen ? 'color-mix(in srgb, var(--accent-code) 12%, transparent)' : 'transparent',
+        background: active && isOpen ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'transparent',
         border: 'none',
         color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
         fontSize: 11,
@@ -202,7 +202,7 @@ function Tab({
       <Icon
         size={13}
         weight={active ? 'fill' : 'regular'}
-        color={active ? 'var(--accent-code, #60a5fa)' : undefined}
+        color={active ? 'var(--accent-primary, #60a5fa)' : undefined}
       />
       {label}
       {active && (
@@ -215,8 +215,8 @@ function Tab({
             bottom: 0,
             height: 2,
             borderRadius: '2px 2px 0 0',
-            background: 'var(--accent-code, #60a5fa)',
-            boxShadow: '0 0 10px color-mix(in srgb, var(--accent-code, #60a5fa) 45%, transparent)',
+            background: 'var(--accent-primary, #60a5fa)',
+            boxShadow: '0 0 10px color-mix(in srgb, var(--accent-primary, #60a5fa) 45%, transparent)',
           }}
         />
       )}

@@ -41,6 +41,7 @@ import { BrainCommand } from "@/cli/commands/brain"
 import { BotCommand } from "@/cli/commands/bot"
 import { ProductsCommand } from "@/cli/commands/products"
 import { HtmlArtifactCommand } from "@/cli/commands/html-artifact"
+import { ArtifactCommand } from "@/cli/commands/artifact"
 import { ProgramsCommand } from "@/cli/commands/programs"
 import { OrgCommand } from "@/cli/commands/org"
 import { LabsCommand } from "@/cli/commands/labs"
@@ -119,6 +120,7 @@ export const COMMANDS: RegisteredCommand[] = [
   BrainCommand,
   BotCommand,
   HtmlArtifactCommand,
+  ArtifactCommand,
   ProgramsCommand,
   OrgCommand,
   ProductsCommand,

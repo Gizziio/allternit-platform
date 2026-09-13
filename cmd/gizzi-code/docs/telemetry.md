@@ -87,6 +87,37 @@ Standard OpenTelemetry (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_METRICS_EXPORTER`,
 etc.). Nothing is exported unless you configure it yourself. The endpoint and
 headers are entirely under your control.
 
+### 6. Usage telemetry for self-hosted/BYOC operators (opt-in only, default OFF)
+
+Sink: `POST {ALLTERNIT_API_URL}/api/v1/analytics/gizzi-code/events` on the
+operator's own allternit-api (backend: `cmd/allternit-api` —
+`gizzi_code_usage_events` table). Client:
+`src/runtime/services/telemetry/gizziUsageTelemetry.ts`.
+
+**Default: OFF.** Enable per session with:
+
+```bash
+GIZZI_TELEMETRY=1 gizzi
+```
+
+Note the shared name: `GIZZI_TELEMETRY` is also the upstream kill switch
+(`=off` disables everything, see the consent model below). This client turns
+on only when the value is explicitly truthy (`1`/`true`/`yes`/`on`) AND the
+global privacy level permits telemetry — every opt-out in the table below
+(`GIZZI_TELEMETRY=off`, `GIZZI_DISABLE_TELEMETRY=1`, `gizzi config telemetry
+off`, …) keeps it silent.
+
+One event per session, flushed fire-and-forget at shutdown (short timeout,
+≤1 retry, never blocks exit, never crashes the CLI). Fields: session id,
+model(s) used, tokens in/out, cost (when known), tool-call accepted/rejected
+counts, and `lines_accepted` — the count of added (`+`) lines in edit/write
+patches actually applied to disk (whole-file creations count all lines; pure
+deletions count 0). No file paths, no prompt content, no tool arguments —
+only what fits the backend schema. Target URL and auth follow
+`src/runtime/services/api/allternitApi.ts` (`ALLTERNIT_API_URL`,
+`ALLTERNIT_API_TOKEN` bearer, `x-allternit-user-id` for local dev).
+
+
 ## Disabled sinks
 
 ### Datadog (upstream vendor account) — disabled by default

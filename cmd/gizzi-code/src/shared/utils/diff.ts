@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { type StructuredPatchHunk, structuredPatch } from 'diff'
 import { logEvent } from '@/services/analytics/index.js'
+import { recordAcceptedEdit } from '@/runtime/services/telemetry/gizziUsageTelemetry.js'
 import { getLocCounter } from '@/bootstrap/state.js'
 import { addToTotalLinesChanged } from '../cost-tracker.js'
 import type { FileEdit } from '../../runtime/tools/builtins/file-edit/types.js'
@@ -69,6 +70,11 @@ export function countLinesChanged(
   }
 
   addToTotalLinesChanged(numAdditions, numRemovals)
+
+  // Opt-in gizzi-code usage telemetry (GIZZI_TELEMETRY=1): this call site is
+  // reached only when an edit/write patch was actually applied to disk —
+  // i.e. after acceptance — so numAdditions is the lines_accepted count.
+  recordAcceptedEdit(numAdditions)
 
   getLocCounter()?.add(numAdditions, { type: 'added' })
   getLocCounter()?.add(numRemovals, { type: 'removed' })

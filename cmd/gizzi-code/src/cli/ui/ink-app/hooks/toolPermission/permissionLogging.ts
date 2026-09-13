@@ -4,6 +4,9 @@
 // which fans out to Statsig analytics, OTel telemetry, and code-edit metrics.
 import { feature } from 'bun:bundle'
 import {
+  recordRejectedToolCall,
+} from '@/runtime/services/telemetry/gizziUsageTelemetry.js'
+import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from './../../services/analytics/index.ts'
@@ -210,6 +213,12 @@ function logPermissionDecision(
   }
 
   const sourceString = source === 'config' ? 'config' : sourceToString(source)
+
+  // Opt-in gizzi-code usage telemetry (GIZZI_TELEMETRY=1): declined
+  // permission decisions feed the tool_calls_rejected counter.
+  if (decision === 'reject') {
+    recordRejectedToolCall()
+  }
 
   // Track code editing tool metrics
   if (isCodeEditingTool(tool.name)) {

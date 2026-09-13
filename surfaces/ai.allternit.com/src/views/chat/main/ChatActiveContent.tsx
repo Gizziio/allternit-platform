@@ -91,7 +91,7 @@ export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
               setShouldAutoScroll(true);
               scrollToBottom('smooth');
             }}
-            className="fixed bottom-[120px] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[var(--accent-chat)] text-white text-[13px] font-semibold flex items-center gap-1.5 border-none shadow-[0_4px_12px_var(--surface-panel)] cursor-pointer"
+            className="fixed bottom-[120px] left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[var(--accent-primary)] text-white text-[13px] font-semibold flex items-center gap-1.5 border-none shadow-[0_4px_12px_var(--surface-panel)] cursor-pointer"
           >
             <ArrowDown size={14} />
             Jump to present

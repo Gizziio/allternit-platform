@@ -28,7 +28,7 @@ export function ComposerPermissionInfoBar({
       }}
     >
       <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
-        <LockSimple size={14} weight="fill" style={{ color: "var(--accent-chat)", flexShrink: 0 }} />
+        <LockSimple size={14} weight="fill" style={{ color: "var(--accent-primary)", flexShrink: 0 }} />
         <div style={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
           <span style={{ color: "var(--ui-text-primary)", fontSize: 12, fontWeight: 600 }}>
             Permission required
@@ -125,7 +125,7 @@ export function ComposerQuestionBar({ request }: ComposerQuestionBarProps) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <Sparkle size={14} style={{ color: "var(--accent-chat)", flexShrink: 0 }} />
+          <Sparkle size={14} style={{ color: "var(--accent-primary)", flexShrink: 0 }} />
           <span style={{ color: "var(--ui-text-primary)", fontSize: 12, fontWeight: 600 }}>
             Agent question
           </span>
@@ -256,7 +256,7 @@ function InfoPill({ icon, label }: { icon: React.ReactNode; label: string }) {
         fontSize: 12,
       }}
     >
-      <span style={{ display: "inline-flex", alignItems: "center", color: "var(--accent-chat)" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", color: "var(--accent-primary)" }}>
         {icon}
       </span>
       <span
@@ -287,8 +287,8 @@ const ghostButtonStyle: React.CSSProperties = {
 
 const primaryButtonStyle: React.CSSProperties = {
   ...ghostButtonStyle,
-  border: "1px solid color-mix(in srgb, var(--accent-chat) 36%, transparent)",
-  background: "color-mix(in srgb, var(--accent-chat) 14%, transparent)",
+  border: "1px solid color-mix(in srgb, var(--accent-primary) 36%, transparent)",
+  background: "color-mix(in srgb, var(--accent-primary) 14%, transparent)",
   color: "var(--ui-text-primary)",
 };
 

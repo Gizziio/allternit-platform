@@ -65,10 +65,10 @@ function ConsoleTab() {
         alignItems: 'center',
         gap: 6,
         padding: '0 9px',
-        border: `1px solid ${isOpen ? 'color-mix(in srgb, var(--accent-code) 45%, transparent)' : BORDER}`,
+        border: `1px solid ${isOpen ? 'color-mix(in srgb, var(--accent-primary) 45%, transparent)' : BORDER}`,
         borderRadius: 999,
         background: isOpen
-          ? 'color-mix(in srgb, var(--accent-code) 12%, transparent)'
+          ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)'
           : 'rgba(255, 255, 255, 0.025)',
         color: isOpen ? TEXT_PRIMARY : TEXT_SECONDARY,
         fontSize: 12,

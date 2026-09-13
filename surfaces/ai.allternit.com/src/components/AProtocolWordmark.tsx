@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 
 /**
- * AProtocolWordmark — the A:// protocol mark that expands into the full
- * A://TERNIT wordmark (the :// stands in for the "ll" of Allternit).
- * Office surface copy — adds an optional pixel-letter `suffix` (e.g. "OFFICE")
- * rendered on the same grid so product names match the wordmark style.
- *
- * Pixel-construct geometry shared with the brand assets in
- * public/brand/a-protocol/: 10-unit cells, 8.5 blocks, rx 1.5.
- * The A:// mark occupies cols 0–14, letters run at pitch 6 from col 16.
+ * AProtocolWordmark — the pixel A:// protocol mark followed by the full
+ * A://TERNIT wordmark (the :// stands in for the "ll" of Allternit), with an
+ * optional pixel-letter `suffix` (e.g. "OFFICE", "DESIGN") on the same grid
+ * so product names match the wordmark style. Identical geometry to the
+ * office.allternit.com surface copy: the A:// mark is drawn as pixel blocks
+ * (cols 0–14), letters run at pitch 6 from col 16; 10-unit cells, 8.5
+ * blocks, rx 1.5; the A core block renders in Allternit coral (#D97757).
  *
  * Behavior mirrors the Anthropic logotype → logomark collapse: pass
  * `collapsed` (e.g. from `useScrollCollapse`) and the letters cascade away
@@ -53,6 +52,7 @@ const GLYPHS: Record<string, ReadonlyArray<readonly [number, number]>> = {
   B: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 0], [2, 0], [3, 0], [4, 1], [1, 2], [2, 2], [3, 2], [4, 3], [1, 4], [2, 4], [3, 4]],
   F: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [1, 2], [2, 2], [3, 2], [0, 3], [0, 4]],
   C: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
+  G: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [0, 1], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [0, 3], [4, 3], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
 };
 
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
@@ -73,23 +73,30 @@ function layout(word: string): { letters: LetterSpec[]; totalCols: number } {
       continue;
     }
     const cells = GLYPHS[ch];
-    if (!cells) continue;
-    letters.push({ cells, col });
+    if (cells) letters.push({ cells, col });
     col += PITCH;
   }
   return { letters, totalCols: col - 1 };
 }
 
 export interface AProtocolWordmarkProps {
-  /** true = show only the A:// mark; false = full wordmark */
+  /** true = show only the pixel-A mark; false = full wordmark */
   collapsed?: boolean;
   /** rendered height in px */
   height?: number;
   /** extra pixel-letter word after TERNIT (e.g. "OFFICE") */
   suffix?: string;
-  /** ink = dark on light bg, light = cream on dark bg, mono = currentColor,
-   *  adaptive = currentColor ink with coral core (follows the host theme) */
+  /** ink = dark letters on light bg, light = cream letters on dark bg,
+   *  mono = currentColor letters, adaptive = currentColor ink (follows the
+   *  host theme). The pixel A:// mark follows the same ink rules. */
   theme?: 'ink' | 'light' | 'mono' | 'adaptive';
+  /**
+   * @deprecated No-op — the PNG mark variants were removed when the mark
+   * became pixel blocks (office-parity geometry). Kept so existing callers
+   * compile; the pixel mark already follows `theme` (currentColor under
+   * adaptive/mono).
+   */
+  markVariant?: 'cream' | 'current';
   className?: string;
 }
 
@@ -98,6 +105,7 @@ export function AProtocolWordmark({
   height = 20,
   suffix = '',
   theme = 'ink',
+  markVariant: _markVariant,
   className,
 }: AProtocolWordmarkProps) {
   const ink = theme === 'light' ? '#F0EEE6'
@@ -184,7 +192,7 @@ export function AProtocolWordmark({
 
 /**
  * Anthropic-style scroll trigger: full wordmark at the top of the page,
- * collapsed to the A:// mark once scrolled past `threshold` px.
+ * collapsed to the pixel-A mark once scrolled past `threshold` px.
  */
 export function useScrollCollapse(threshold = 24): boolean {
   const [collapsed, setCollapsed] = useState(false);

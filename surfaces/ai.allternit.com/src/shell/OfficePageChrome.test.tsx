@@ -79,4 +79,12 @@ describe('OfficePageChrome', () => {
 
     expect(backSpy).not.toHaveBeenCalled();
   });
+
+  it('carries the A://TERNIT OFFICE wordmark', () => {
+    stubHistoryIdx(0);
+    renderChrome(['/docs']);
+
+    expect(screen.getByTestId('office-chrome-wordmark')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Allternit OFFICE' })).toBeInTheDocument();
+  });
 });

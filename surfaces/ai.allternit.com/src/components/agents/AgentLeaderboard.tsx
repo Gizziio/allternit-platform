@@ -57,7 +57,7 @@ export function AgentLeaderboard({ agents, benchmarkId, onSelectAgent }: AgentLe
                 ? "linear-gradient(90deg, rgba(212,176,140,0.08) 0%, transparent 100%)"
                 : "transparent",
               border: "1px solid",
-              borderColor: isTop3 ? "var(--accent-chat)" : "var(--ui-border-muted)",
+              borderColor: isTop3 ? "var(--accent-primary)" : "var(--ui-border-muted)",
               cursor: onSelectAgent ? "pointer" : "default",
               transition: "all 0.15s ease",
             }}
@@ -73,7 +73,7 @@ export function AgentLeaderboard({ agents, benchmarkId, onSelectAgent }: AgentLe
                 justifyContent: "center",
                 fontSize: 13,
                 fontWeight: 800,
-                background: isTop3 ? "var(--accent-chat)" : "var(--chat-composer-soft)",
+                background: isTop3 ? "var(--accent-primary)" : "var(--chat-composer-soft)",
                 color: isTop3 ? "#000" : "var(--ui-text-secondary)",
                 flexShrink: 0,
               }}
@@ -86,7 +86,7 @@ export function AgentLeaderboard({ agents, benchmarkId, onSelectAgent }: AgentLe
               {avatarConfig ? (
                 <AgentAvatar config={avatarConfig as any} size={36} emotion="steady" isAnimating={false} showGlow={false} />
               ) : (
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--accent-chat)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 700 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--accent-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 700 }}>
                   {agent.name.charAt(0).toUpperCase()}
                 </div>
               )}

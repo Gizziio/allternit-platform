@@ -98,7 +98,7 @@ const ProviderLogos: Record<string, React.FC<{ size?: number }>> = {
       <defs>
         <linearGradient id="deepseekGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#4F46E5"/>
-          <stop offset="100%" stopColor="#7C3AED"/>
+          <stop offset="100%" stopColor="#B08D6E"/>
         </linearGradient>
       </defs>
       <circle cx="12" cy="12" r="9" stroke="url(#deepseekGrad)" strokeWidth="2" fill="none"/>

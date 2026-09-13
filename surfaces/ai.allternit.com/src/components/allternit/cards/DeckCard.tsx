@@ -94,8 +94,8 @@ export function DeckCard({
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#333] bg-[#1e1e1e] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="size-8  rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-            <Presentation className="size-4  text-[#D4956A]" />
+          <div className="size-8  rounded-lg bg-[#B08D6E]/10 flex items-center justify-center">
+            <Presentation className="size-4  text-[#B08D6E]" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
@@ -120,7 +120,7 @@ export function DeckCard({
           <div className="flex items-center gap-2">
             <div className="w-24 h-1.5 bg-[#333] rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-[#D4956A]"
+                className="h-full bg-[#B08D6E]"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.3 }}
@@ -191,7 +191,7 @@ export function DeckCard({
               ) : slide?.layout === 'two-column' ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-[#D4956A] mb-2">
+                    <h3 className="text-sm font-semibold text-[#B08D6E] mb-2">
                       {slide.title}
                     </h3>
                   </div>
@@ -202,8 +202,8 @@ export function DeckCard({
               ) : slide?.layout === 'image' ? (
                 <div className="flex items-center justify-center">
                   <div className="text-center">
-                    <div className="size-16  rounded-lg bg-[#D4956A]/20 mx-auto mb-2 flex items-center justify-center">
-                      <Eye className="size-8  text-[#D4956A]" />
+                    <div className="size-16  rounded-lg bg-[#B08D6E]/20 mx-auto mb-2 flex items-center justify-center">
+                      <Eye className="size-8  text-[#B08D6E]" />
                     </div>
                     <p className="text-sm text-[#888]">{slide.title}</p>
                   </div>
@@ -213,7 +213,7 @@ export function DeckCard({
                   <blockquote className="text-lg text-[#b8b8b8] italic">
                     "{slide?.content?.slice(0, 100)}..."
                   </blockquote>
-                  <cite className="text-sm text-[#D4956A] mt-2 block">
+                  <cite className="text-sm text-[#B08D6E] mt-2 block">
                     — {slide?.title}
                   </cite>
                 </div>
@@ -234,7 +234,7 @@ export function DeckCard({
               className={cn(
                 "size-8  rounded-full bg-[#1e1e1e]/80 border border-[#333] flex items-center justify-center pointer-events-auto transition-colors",
                 hasPrev 
-                  ? "text-[#ECECEC] hover:bg-[#D4956A] hover:border-[#D4956A]" 
+                  ? "text-[#ECECEC] hover:bg-[#B08D6E] hover:border-[#B08D6E]" 
                   : "text-[#666] opacity-50 cursor-not-allowed"
               )}
             >
@@ -246,7 +246,7 @@ export function DeckCard({
               className={cn(
                 "size-8  rounded-full bg-[#1e1e1e]/80 border border-[#333] flex items-center justify-center pointer-events-auto transition-colors",
                 hasNext 
-                  ? "text-[#ECECEC] hover:bg-[#D4956A] hover:border-[#D4956A]" 
+                  ? "text-[#ECECEC] hover:bg-[#B08D6E] hover:border-[#B08D6E]" 
                   : "text-[#666] opacity-50 cursor-not-allowed"
               )}
             >
@@ -264,7 +264,7 @@ export function DeckCard({
               className={cn(
                 "flex-shrink-0 w-16 aspect-video rounded border overflow-hidden transition-all",
                 currentSlide === idx
-                  ? "border-[#D4956A] ring-1 ring-[#D4956A]"
+                  ? "border-[#B08D6E] ring-1 ring-[#B08D6E]"
                   : "border-[#333] hover:border-[#666]"
               )}
             >

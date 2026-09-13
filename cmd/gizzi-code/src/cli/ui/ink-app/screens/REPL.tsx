@@ -151,6 +151,7 @@ import { useSkillsChange } from '../hooks/useSkillsChange';
 import { useManagePlugins } from '../hooks/useManagePlugins';
 import { Messages } from '../components/Messages';
 import { TaskListV2 } from '../components/TaskListV2';
+import { RailsTaskList } from '../components/RailsTaskList';
 import { TeammateViewHeader } from '../components/TeammateViewHeader';
 import { useTasksV2WithCollapseEffect } from '../hooks/useTasksV2';
 import { maybeMarkProjectOnboardingComplete } from '../projectOnboardingState';
@@ -5060,6 +5061,10 @@ export function REPL({
                 {!showSpinner && !toolJSX?.isLocalJSXCommand && showExpandedTodos && tasksV2 && tasksV2.length > 0 && <Box width="100%" flexDirection="column">
                       <TaskListV2 tasks={tasksV2} isStandalone={true} />
                     </Box>}
+                {/* Rails DAG todo panel: self-hides when Rails peer mode is
+                  off or the DAG view is empty. Sibling of TaskListV2 so it
+                  renders even when there are no local tasksV2. */}
+                {!showSpinner && !toolJSX?.isLocalJSXCommand && showExpandedTodos && <RailsTaskList />}
                 {focusedInputDialog === 'sandbox-permission' && <SandboxPermissionRequest key={sandboxPermissionRequestQueue[0]!.hostPattern.host} hostPattern={sandboxPermissionRequestQueue[0]!.hostPattern} onUserResponse={(response: {
             allow: boolean;
             persistToSettings: boolean;

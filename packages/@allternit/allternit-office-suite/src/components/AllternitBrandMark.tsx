@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 
 /**
  * AllternitBrandMark — the Allternit pixel-A brand mark (the matrix
- * construct from surfaces/ai.allternit.com/public/favicon.svg), self-contained
+ * construct from surfaces/ai.allternit.com/public/brand/a-only-cream-squircle.png),
+ * self-contained
  * so hosts (platform, standalone office surface, desktop) render the real
  * brand without depending on the platform surface's component tree.
  *

@@ -907,6 +907,23 @@ interface StoreConfig {
   chatApi?: ChatApi;
 }
 
+/**
+ * Zombie guard for optimistic temp sessions. A temp session survives reloads
+ * only when it can actually execute locally (executionPersistence 'local'
+ * AND an agentModeId the client-side mode executor can run). Older builds
+ * marked failed bot session creates as executionPersistence 'local' with no
+ * agentModeId; those can never send or stream (sendMessageStream rejects
+ * non-backend ids without a local mode), and once persisted they shadow the
+ * bot's real session on every reopen — so they are dropped on both persist
+ * and rehydrate.
+ */
+export function shouldRetainPersistedSession(
+  session: Pick<ModeSession, 'id' | 'metadata'>,
+): boolean {
+  if (!session.id.startsWith('temp-')) return true;
+  return session.metadata?.executionPersistence === 'local' && Boolean(session.metadata?.agentModeId);
+}
+
 interface StreamingSessionState {
   isStreaming: boolean;
   error: string | null;
@@ -1170,7 +1187,11 @@ export function createModeSessionStore(config: StoreConfig) {
               // Bot sessions must keep a working local session when the
               // backend is unreachable — deleting the optimistic session and
               // re-throwing orphans every bot chat click.
-              const canRunLocally = (Boolean(localModeId) || isBotSession) && (
+              // Local retention requires an executable mode: a temp session
+              // with no agentModeId can never stream or run (sendMessageStream
+              // rejects non-backend ids without a local mode), so keeping it
+              // only creates zombie rows that shadow real sessions after reload.
+              const canRunLocally = Boolean(localModeId) && (
                 options.sessionMode === 'agent' || config.originSurface === 'code' || isBotSession
               );
               if (canRunLocally) {
@@ -2391,7 +2412,7 @@ export function createModeSessionStore(config: StoreConfig) {
             // Local-only sessions retained after backend failure are the exception:
             // they must survive reloads and detached windows.
             sessions: state.sessions
-              .filter((s) => !s.id.startsWith('temp-') || s.metadata.executionPersistence === 'local')
+              .filter(shouldRetainPersistedSession)
               .map((s) => ({
                 id: s.id,
                 name: s.name,
@@ -2416,7 +2437,7 @@ export function createModeSessionStore(config: StoreConfig) {
           // Sweep any zombie temp sessions persisted by older builds.
           onRehydrateStorage: () => (state) => {
             if (!state) return;
-            state.sessions = state.sessions.filter((s) => !s.id.startsWith('temp-') || s.metadata.executionPersistence === 'local');
+            state.sessions = state.sessions.filter(shouldRetainPersistedSession);
             if (state.activeSessionId?.startsWith('temp-')) {
               const active = state.sessions.find((s) => s.id === state.activeSessionId);
               if (!active) state.activeSessionId = null;

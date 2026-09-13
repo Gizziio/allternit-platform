@@ -22,7 +22,7 @@ export function DesignModeAgentSession({
   onClose,
 }: DesignModeAgentSessionProps) {
   const mode = 'design';
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.design;
+  const modeColors = MODE_COLORS.design as typeof MODE_COLORS.design;
 
   const activeSessionId = useDesignSessionStore((s) => s.activeSessionId);
   const sessionId = sessionIdProp ?? activeSessionId;

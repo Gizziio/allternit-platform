@@ -409,7 +409,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                 <button
                   type="button"
                   onClick={() => installCli(currentMeta)}
-                  className="flex items-center gap-1 text-xs font-semibold text-[var(--accent-chat)] hover:underline"
+                  className="flex items-center gap-1 text-xs font-semibold text-[var(--accent-primary)] hover:underline"
                 >
                   <Download size={12} />
                   Install
@@ -418,7 +418,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                 <button
                   type="button"
                   onClick={() => copyCommand(installCommand, "install")}
-                  className="flex items-center gap-1 text-xs text-[var(--accent-chat)] hover:underline"
+                  className="flex items-center gap-1 text-xs text-[var(--accent-primary)] hover:underline"
                 >
                   {copied && copiedCommand === "install" ? <Check size={12} /> : <Copy size={12} />}
                   {copied && copiedCommand === "install" ? "Copied" : "Copy"}
@@ -447,7 +447,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
               <button
                 type="button"
                 onClick={() => copyCommand(authCmd, "auth")}
-                className="flex items-center gap-1 text-xs text-[var(--accent-chat)] hover:underline"
+                className="flex items-center gap-1 text-xs text-[var(--accent-primary)] hover:underline"
               >
                 {copied && copiedCommand === "auth" ? <Check size={12} /> : <Copy size={12} />}
                 {copied && copiedCommand === "auth" ? "Copied" : "Copy"}
@@ -490,7 +490,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
               href={page}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[var(--accent-chat)] hover:underline"
+              className="inline-flex items-center gap-1 text-[var(--accent-primary)] hover:underline"
             >
               {currentMeta.name}
               <ArrowSquareOut className="size-3" />
@@ -509,7 +509,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
             placeholder={`Enter your ${currentMeta.name} API key…`}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            className="w-full bg-[var(--surface-panel)] border border-[var(--ui-border-default)] rounded-xl px-4 py-3 text-sm text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)] outline-none focus:border-[var(--accent-chat)]/50 transition-all"
+            className="w-full bg-[var(--surface-panel)] border border-[var(--ui-border-default)] rounded-xl px-4 py-3 text-sm text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)] outline-none focus:border-[var(--accent-primary)]/50 transition-all"
           />
           <p className="text-[12px] text-[var(--ui-text-muted)] flex items-center gap-1.5 mt-1.5 px-1">
             <Shield size={12} />
@@ -680,7 +680,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                           onClick={() => handleConfirm(selectedProvider)}
                           className="w-full"
                           style={{
-                            background: "var(--accent-chat)",
+                            background: "var(--accent-primary)",
                             color: "var(--ui-text-inverse)",
                           }}
                         >
@@ -716,7 +716,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                 {/* Polling / busy */}
                 {(phase.phase === "busy" || phase.phase === "polling") && (
                   <div className="flex flex-col items-center justify-center py-6 gap-3">
-                    <CircleNotch className="size-8 animate-spin text-[var(--accent-chat)]" />
+                    <CircleNotch className="size-8 animate-spin text-[var(--accent-primary)]" />
                     <p className="text-sm text-[var(--ui-text-muted)] text-center">
                       {phase.phase === "polling"
                         ? `Waiting for ${phase.label} authentication…`

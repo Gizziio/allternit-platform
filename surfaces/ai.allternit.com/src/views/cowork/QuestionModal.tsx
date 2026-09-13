@@ -236,7 +236,7 @@ const styles = `
   height: 16px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--accent-cowork, #c8a96e);
+  color: var(--accent-primary, #c8a96e);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -246,7 +246,7 @@ const styles = `
 .question-card-title {
   font-size: 11px;
   font-weight: 700;
-  color: var(--accent-cowork, #c8a96e);
+  color: var(--accent-primary, #c8a96e);
   text-transform: uppercase;
   letter-spacing: 0.07em;
   flex: 1;
@@ -346,7 +346,7 @@ const styles = `
 }
 
 .question-option-active .question-option-label {
-  color: var(--accent-cowork, #c8a96e);
+  color: var(--accent-primary, #c8a96e);
 }
 
 .question-option-desc {
