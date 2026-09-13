@@ -5,6 +5,15 @@
 //! exclusivity of ownership is decided by SQLite, never by an in-process lock.
 //! Eligibility is computed here in fabric transport; the CAS makes the winner
 //! single. Lease times are server-authoritative RFC3339 UTC (lock 3).
+//!
+//! Consolidation boundary (P-T1): within a deployment, this module is the
+//! only writer of `cowork_runs`, `cowork_jobs`, and `cowork_run_events`.
+//! Product surfaces (e.g. the Rails cowork REST API in `cmd/allternit-api`)
+//! persist their RunManager state through the projection helpers in the
+//! "Consolidation boundary projections" section below — never through raw
+//! SQL — so a product projection can never clobber fabric-transport lease
+//! ownership. Only `enqueue_job` / `claim_job` / `record_heartbeat` /
+//! `renew_lease` / `complete_job` / `expire_leases` may write lease columns.
 
 use std::path::Path;
 use std::time::Duration;
@@ -41,7 +50,7 @@ pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
             entrypoint TEXT NOT NULL, dag_id TEXT NOT NULL,
             current_job_id TEXT, current_checkpoint_id TEXT, policy_profile TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            completed_at DATETIME, delegator TEXT);
+            completed_at DATETIME, delegator TEXT, user_id TEXT);
          CREATE TABLE IF NOT EXISTS cowork_jobs (
             id TEXT PRIMARY KEY, run_id TEXT NOT NULL, dag_node_id TEXT NOT NULL DEFAULT '',
             job_type TEXT NOT NULL DEFAULT 'task', priority INTEGER NOT NULL DEFAULT 0,
@@ -116,9 +125,46 @@ pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
             capability TEXT PRIMARY KEY, secret_env TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
          INSERT OR IGNORE INTO cowork_connector_secrets (capability, secret_env)
-         VALUES ('connector.webhook.send', 'ALLTERNIT_BROKER_WEBHOOK_URL');",
+         VALUES ('connector.webhook.send', 'ALLTERNIT_BROKER_WEBHOOK_URL');
+        INSERT OR IGNORE INTO cowork_connector_secrets (capability, secret_env)
+         VALUES ('connector.github.read', 'ALLTERNIT_BROKER_GITHUB_TOKEN');
+        INSERT OR IGNORE INTO cowork_connector_secrets (capability, secret_env)
+         VALUES ('connector.github.write', 'ALLTERNIT_BROKER_GITHUB_TOKEN');
+        INSERT OR IGNORE INTO cowork_connector_secrets (capability, secret_env)
+         VALUES ('connector.files.read', 'ALLTERNIT_BROKER_FILES_ROOT');
+        INSERT OR IGNORE INTO cowork_connector_secrets (capability, secret_env)
+         VALUES ('connector.files.write', 'ALLTERNIT_BROKER_FILES_ROOT');",
     )
-    .map_err(store_err)
+    .map_err(store_err)?;
+    // V142 ownership columns — present on API-managed stores via refinery
+    // migrations; ensured here so test/tooling stores match the API schema.
+    // Guarded because the batch ALTERs above are not re-entrant.
+    ensure_column(conn, "cowork_runs", "user_id", "ALTER TABLE cowork_runs ADD COLUMN user_id TEXT")?;
+    ensure_column(conn, "cowork_jobs", "user_id", "ALTER TABLE cowork_jobs ADD COLUMN user_id TEXT")?;
+    ensure_column(conn, "cowork_run_events", "user_id", "ALTER TABLE cowork_run_events ADD COLUMN user_id TEXT")?;
+    Ok(())
+}
+
+/// Add a column to a table when missing (idempotent ALTER).
+fn ensure_column(
+    conn: &mut Connection,
+    table: &str,
+    column: &str,
+    ddl: &str,
+) -> Result<(), TransportError> {
+    let exists = conn
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .and_then(|mut stmt| {
+            let rows = stmt
+                .query_map([], |row| row.get::<_, String>(1))?
+                .collect::<std::result::Result<Vec<String>, _>>()?;
+            Ok(rows.iter().any(|c| c == column))
+        })
+        .map_err(store_err)?;
+    if !exists {
+        conn.execute_batch(ddl).map_err(store_err)?;
+    }
+    Ok(())
 }
 
 // ─── Principals (§8.3–8.4) ───────────────────────────────────────────────────
@@ -133,6 +179,12 @@ pub fn register_principal(
     roles: &[String],
     token: &str,
 ) -> Result<(), TransportError> {
+    // Canonical workspace ids are stripped (`evidence`), matching the
+    // built-in seeds and `cowork_runs.workspace_id`; callers may pass the
+    // full A:// URI (`a://workspace/evidence`).
+    let workspace = workspace
+        .strip_prefix("a://workspace/")
+        .unwrap_or(workspace);
     conn.execute(
         "INSERT INTO cowork_principals
             (id, workspace, capabilities, roles, token_hash, status, updated_at)
@@ -227,6 +279,7 @@ pub const GIZZI_CAPABILITIES: &[&str] = &[
     "artifact.modify",
     "memory.read",
     "memory.write",
+    "compute.local",
 ];
 
 /// Seed the default Al and Gizzi principals for every workspace that has
@@ -270,6 +323,51 @@ pub fn seed_default_principals(conn: &mut Connection) -> Result<Vec<String>, Tra
         touched.push(gizzi);
     }
     Ok(touched)
+}
+
+/// Compute placement resolution (§8.8, P-T2): an explicit compute policy on
+/// the intent becomes a mandatory job capability; claim eligibility then
+/// restricts the job to workers that declared that capability.
+/// `auto`/absent stays capability-neutral — placement resolves by
+/// capability intersection at claim time. Placement never rewrites
+/// identity or attribution.
+pub fn compute_requirements(compute: &Option<serde_json::Value>) -> Vec<String> {
+    let Some(c) = compute else { return Vec::new() };
+    let policy = c
+        .as_str()
+        .or_else(|| c.get("policy").and_then(|p| p.as_str()))
+        .unwrap_or("auto");
+    match policy {
+        "vm" => vec!["compute.vm".to_string()],
+        "local" => vec!["compute.local".to_string()],
+        "byo" => vec!["compute.byo".to_string()],
+        "cloud" => vec!["compute.cloud".to_string()],
+        _ => Vec::new(),
+    }
+}
+
+/// Replace a principal's declared capability set (operator action, P-T2):
+/// a worker running in VM mode declares `compute.vm` here and placement
+/// routes vm-required jobs to it. Roles and status are untouched.
+pub fn set_principal_capabilities(
+    conn: &Connection,
+    principal_id: &str,
+    capabilities: &[String],
+) -> Result<(), TransportError> {
+    let n = conn
+        .execute(
+            "UPDATE cowork_principals SET capabilities = ?1, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?2",
+            params![serde_json::to_string(capabilities).unwrap(), principal_id],
+        )
+        .map_err(store_err)?;
+    if n == 0 {
+        return Err(TransportError::new(
+            Code::PrincipalNotFound,
+            format!("principal {principal_id} not found"),
+        ));
+    }
+    Ok(())
 }
 
 /// Authenticate a bearer token to a principal identity.
@@ -334,12 +432,13 @@ pub fn enqueue_job(
     let job_id = Uuid::new_v4().to_string();
     conn.execute(
         "INSERT INTO cowork_jobs
-            (id, run_id, job_type, state, payload, required_capabilities, timeout_sec,
+            (id, run_id, dag_node_id, job_type, state, payload, required_capabilities, timeout_sec,
              max_retries, initiator, delegator)
-         VALUES (?1, ?2, ?3, 'queued', ?4, ?5, ?6, ?7, ?8, ?9)",
+         VALUES (?1, ?2, ?3, ?4, 'queued', ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             job_id,
             run_id,
+            format!("dag-{job_id}"),
             job_type,
             payload.to_string(),
             serde_json::to_string(required_capabilities).unwrap(),
@@ -1343,6 +1442,7 @@ fn synthetic_auto_binding(
 /// attributed `approval.denied` event, and only genuinely protected actions
 /// create a binding scoped to (job, capability, target, generation) with a
 /// server-clock `expires_at`. Idempotent per scope+generation.
+#[allow(clippy::too_many_arguments)]
 pub fn request_approval(
     conn: &mut Connection,
     principal: &PrincipalRecord,
@@ -1719,6 +1819,9 @@ pub enum EventInsertOutcome {
     Duplicate(String),
 }
 
+/// Insert a run event with a client-supplied idempotency key (§5): retries
+/// with the same `event_id` return the canonical existing event instead of
+/// double-writing. Returns `InsertEventOutcome::Inserted` or `Duplicate`.
 #[allow(clippy::too_many_arguments)]
 pub fn insert_event_idempotent(
     conn: &mut Connection,
@@ -1779,6 +1882,240 @@ pub fn insert_event_idempotent(
     )
     .map_err(store_err)?;
     Ok(EventInsertOutcome::Inserted(id))
+}
+
+// ─── Consolidation boundary projections (P-T1) ───────────────────────────────
+//
+// The Rails cowork REST surface (`cmd/allternit-api/src/rails/routes_cowork.rs`)
+// mirrors RunManager state into the canonical tables through these helpers.
+// Rules enforced here:
+//   * lease columns (`lease_owner`, `lease_id`, `lease_generation`,
+//     `lease_expires_at`, `claimed_at`) are never touched by a projection;
+//   * a projection state write is refused (returns `Ok(false)`) when the job
+//     is currently leased — the transport (complete/expire) owns that state;
+//   * run events go through the idempotent insert (A:// §5).
+
+use crate::types::{Job, Run};
+
+/// Persist a RunManager run as a canonical `cowork_runs` projection row.
+/// Upserts run state columns only; never touches attribution written by the
+/// transport (`delegator` is set once via [`set_run_delegator`]).
+pub fn persist_run_record(
+    conn: &Connection,
+    run: &Run,
+    user_id: &str,
+) -> Result<(), TransportError> {
+    conn.execute(
+        "INSERT INTO cowork_runs (id, tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id, current_job_id, current_checkpoint_id, policy_profile, created_at, updated_at, completed_at, user_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+         ON CONFLICT(id) DO UPDATE SET
+            state=excluded.state,
+            current_job_id=excluded.current_job_id,
+            current_checkpoint_id=excluded.current_checkpoint_id,
+            updated_at=excluded.updated_at,
+            completed_at=excluded.completed_at",
+        params![
+            run.id.to_string(),
+            run.tenant_id,
+            run.workspace_id,
+            run.initiator,
+            run.mode.to_string(),
+            run.state.to_string(),
+            run.entrypoint,
+            run.dag_id,
+            run.current_job_id.map(|j| j.to_string()),
+            run.current_checkpoint_id,
+            run.policy_profile,
+            run.created_at.to_rfc3339(),
+            run.updated_at.to_rfc3339(),
+            run.completed_at.map(|dt| dt.to_rfc3339()),
+            user_id,
+        ],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+/// Record the A:// delegator attribution (§8.18) on a run, once.
+pub fn set_run_delegator(
+    conn: &Connection,
+    run_id: &str,
+    delegator: &str,
+) -> Result<(), TransportError> {
+    conn.execute(
+        "UPDATE cowork_runs SET delegator = ?1 WHERE id = ?2",
+        params![delegator, run_id],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+/// Persist a RunManager job as a canonical `cowork_jobs` projection row.
+/// Lease-safe: the upsert never overwrites lease columns, and a stored row
+/// that currently holds a fabric-transport lease keeps its `state` — only
+/// the transport (`complete_job` / `expire_leases`) may move a leased job.
+pub fn persist_job_record(
+    conn: &Connection,
+    job: &Job,
+    user_id: &str,
+) -> Result<(), TransportError> {
+    conn.execute(
+        "INSERT INTO cowork_jobs (id, run_id, dag_node_id, job_type, priority, state, lease_owner, retry_count, max_retries, timeout_sec, payload, created_at, updated_at, started_at, completed_at, user_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+         ON CONFLICT(id) DO UPDATE SET
+            state = CASE WHEN cowork_jobs.lease_id IS NOT NULL
+                         THEN cowork_jobs.state ELSE excluded.state END,
+            retry_count=excluded.retry_count,
+            updated_at=excluded.updated_at,
+            started_at=excluded.started_at,
+            completed_at=excluded.completed_at",
+        params![
+            job.id.to_string(),
+            job.run_id.to_string(),
+            job.dag_node_id,
+            job.job_type,
+            job.priority,
+            job.state.to_string(),
+            job.lease_owner,
+            job.retry_count,
+            job.max_retries,
+            job.timeout_sec,
+            job.payload.to_string(),
+            job.created_at.to_rfc3339(),
+            job.updated_at.to_rfc3339(),
+            job.started_at.map(|dt| dt.to_rfc3339()),
+            job.completed_at.map(|dt| dt.to_rfc3339()),
+            user_id,
+        ],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+/// Move a freshly-created job into the fabric-transport queue: state
+/// `queued`, mandatory capabilities (§8.6–8.7), attribution inherited from
+/// the parent run, and the validated causation chain (§8.15). Refused
+/// (`Ok(false)`) if the job already holds a lease — the transport owns it.
+pub fn mark_job_queued_for_transport(
+    conn: &Connection,
+    job_id: &str,
+    run_id: &str,
+    required_capabilities_json: &str,
+    causation_chain_json: &str,
+) -> Result<bool, TransportError> {
+    let leased: bool = conn
+        .query_row(
+            "SELECT lease_id IS NOT NULL FROM cowork_jobs WHERE id = ?1",
+            params![job_id],
+            |row| row.get(0),
+        )
+        .map_err(store_err)?;
+    if leased {
+        return Ok(false);
+    }
+    conn.execute(
+        "UPDATE cowork_jobs SET state = 'queued', required_capabilities = ?1,
+            initiator = (SELECT initiator FROM cowork_runs WHERE id = ?2),
+            delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2),
+            causation_chain = ?4
+         WHERE id = ?3",
+        params![required_capabilities_json, run_id, job_id, causation_chain_json],
+    )
+    .map_err(store_err)?;
+    Ok(true)
+}
+
+/// Projection state transition for a RunManager job. Refused (`Ok(false)`)
+/// when the job currently holds a fabric-transport lease: a product surface
+/// must not move leased work — only `complete_job` / `expire_leases` may.
+pub fn transition_job_record(
+    conn: &Connection,
+    job_id: &str,
+    state: &str,
+    started_at: Option<String>,
+    completed_at: Option<String>,
+) -> Result<bool, TransportError> {
+    let leased: bool = conn
+        .query_row(
+            "SELECT lease_id IS NOT NULL FROM cowork_jobs WHERE id = ?1",
+            params![job_id],
+            |row| row.get(0),
+        )
+        .map_err(store_err)?;
+    if leased {
+        return Ok(false);
+    }
+    conn.execute(
+        "UPDATE cowork_jobs SET state = ?1, updated_at = CURRENT_TIMESTAMP, started_at = COALESCE(?2, started_at), completed_at = COALESCE(?3, completed_at) WHERE id = ?4",
+        params![state, started_at, completed_at, job_id],
+    )
+    .map_err(store_err)?;
+    Ok(true)
+}
+
+/// Point a run's `current_job_id` at a (newly created) job.
+pub fn set_current_run_job(conn: &Connection, run_id: &str, job_id: &str) -> Result<(), TransportError> {
+    conn.execute(
+        "UPDATE cowork_runs SET current_job_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+        params![job_id, run_id],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+/// Record a run's latest checkpoint pointer.
+pub fn set_run_checkpoint(
+    conn: &Connection,
+    run_id: &str,
+    checkpoint_id: &str,
+) -> Result<(), TransportError> {
+    conn.execute(
+        "UPDATE cowork_runs SET current_checkpoint_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+        params![checkpoint_id, run_id],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+/// Projection state transition for a run (runs carry no lease; the transport
+/// mirrors terminal run state itself via `submit_intent` bookkeeping).
+/// `completed_at` is caller-computed for terminal states.
+pub fn update_run_state_record(
+    conn: &Connection,
+    run_id: &str,
+    state: &str,
+    completed_at: Option<String>,
+) -> Result<(), TransportError> {
+    conn.execute(
+        "UPDATE cowork_runs SET state = ?1, updated_at = CURRENT_TIMESTAMP, completed_at = COALESCE(?2, completed_at) WHERE id = ?3",
+        params![state, completed_at, run_id],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+/// Append a product-surface run event through the canonical idempotent
+/// insert, preserving V142 ownership attribution. Returns the event id.
+pub fn record_run_event_projection(
+    conn: &mut Connection,
+    run_id: &str,
+    event_type: &str,
+    payload: serde_json::Value,
+    user_id: &str,
+) -> Result<String, TransportError> {
+    let outcome = insert_event_idempotent(conn, run_id, event_type, payload, None, None, None, None)?;
+    let id = match outcome {
+        EventInsertOutcome::Inserted(id) => {
+            conn.execute(
+                "UPDATE cowork_run_events SET user_id = ?1 WHERE id = ?2",
+                params![user_id, id],
+            )
+            .map_err(store_err)?;
+            id
+        }
+        EventInsertOutcome::Duplicate(id) => id,
+    };
+    Ok(id)
 }
 
 // ─── Delegation chains (§8.15) and canonical intents (§5) ────────────────────
@@ -1899,6 +2236,45 @@ pub fn submit_intent(
         ],
     )
     .map_err(store_err)?;
+    // P-T2: enqueue the run's canonical job with the compute policy resolved
+    // to mandatory capabilities (§8.8), completing Intent → Run → Job →
+    // queue. Intents targeted at Al are the exception: the parent is planned,
+    // not executed, by Al — the orchestrator's child intent carries the
+    // claimable job, so a parent job here would let a worker bypass
+    // delegation.
+    let targeted_at_al = envelope
+        .target
+        .as_deref()
+        .map(|t| t.ends_with("/principal/al"))
+        .unwrap_or(false);
+    if !targeted_at_al {
+        let req = compute_requirements(&envelope.compute);
+        let job_id = Uuid::new_v4().to_string();
+        tx.execute(
+            "INSERT INTO cowork_jobs
+                (id, run_id, dag_node_id, job_type, state, payload, required_capabilities, timeout_sec,
+                 max_retries, initiator, delegator)
+             VALUES (?1, ?2, ?3, ?4, 'queued', ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![
+                job_id,
+                run_id,
+                format!("dag-{job_id}"),
+                envelope.action.action_type,
+                envelope
+                    .action
+                    .payload
+                    .clone()
+                    .unwrap_or(serde_json::json!({}))
+                    .to_string(),
+                serde_json::to_string(&req).unwrap(),
+                3600,
+                3,
+                envelope.initiator,
+                envelope.delegator,
+            ],
+        )
+        .map_err(store_err)?;
+    }
     insert_event(
         &tx,
         &run_id,
@@ -1919,6 +2295,23 @@ pub fn submit_intent(
         run_id,
         created: true,
     })
+}
+
+/// Stamp the authenticated owner on a canonical run (P-T1 boundary). The
+/// Rails cowork REST surface scopes every read/mutation to `user_id`
+/// (V169); fabric-transport run creation goes through this helper so
+/// intent-created runs are visible to their owner there. Idempotent.
+pub fn set_run_owner(
+    conn: &mut Connection,
+    run_id: &str,
+    user_id: &str,
+) -> Result<(), TransportError> {
+    conn.execute(
+        "UPDATE cowork_runs SET user_id = ?2 WHERE id = ?1",
+        params![run_id, user_id],
+    )
+    .map_err(store_err)?;
+    Ok(())
 }
 
 /// Acknowledge a handoff (A-T1): marks the handoff completed and terminates
@@ -2047,8 +2440,7 @@ pub fn search_memory_entries(
     limit: i64,
 ) -> Result<Vec<serde_json::Value>, TransportError> {
     let like = query.map(|q| format!("%{q}%"));
-    let mut out;
-    match (principal, like) {
+    let out = match (principal, like) {
         (Some(p), Some(q)) => {
             let mut stmt = conn
                 .prepare(&format!(
@@ -2064,7 +2456,7 @@ pub fn search_memory_entries(
                 .map_err(store_err)?
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(store_err)?;
-            out = rows;
+            rows
         }
         (Some(p), None) => {
             let mut stmt = conn
@@ -2081,7 +2473,7 @@ pub fn search_memory_entries(
                 .map_err(store_err)?
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(store_err)?;
-            out = rows;
+            rows
         }
         (None, Some(q)) => {
             let mut stmt = conn
@@ -2097,7 +2489,7 @@ pub fn search_memory_entries(
                 .map_err(store_err)?
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(store_err)?;
-            out = rows;
+            rows
         }
         (None, None) => {
             let mut stmt = conn
@@ -2112,9 +2504,9 @@ pub fn search_memory_entries(
                 .map_err(store_err)?
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(store_err)?;
-            out = rows;
+            rows
         }
-    }
+    };
     Ok(out)
 }
 
@@ -2164,9 +2556,13 @@ pub fn check_memory_write(
 /// One orchestration action, reported for logging/mirror sync.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct OrchestrationAction {
+    /// Canonical intent the action advanced.
     pub intent_id: String,
+    /// Parent (Al-targeted) run being orchestrated.
     pub parent_run_id: String,
+    /// Action outcome, e.g. `delegated`, `rejected`.
     pub outcome: String,
+    /// Human-readable detail for logs/mirror sync.
     pub detail: String,
 }
 
@@ -2179,6 +2575,30 @@ fn al_principal_id(workspace: &str) -> String {
 /// submit the child intent with the extended chain, and record attributed
 /// `delegation.created` / `delegation.rejected` events. Deterministic — no
 /// model involvement (§8.25 keeps model reasoning out of eligibility).
+/// Resolve the delegation target for an action type (first matching rule by
+/// priority). Shared by the Al orchestration loop and the P-T5 persona
+/// runtime so both resolve targets identically.
+pub fn resolve_delegation_rule(
+    conn: &Connection,
+    workspace: &str,
+    action_type: &str,
+) -> Result<Option<String>, TransportError> {
+    let rule: Option<(String,)> = conn
+        .query_row(
+            "SELECT target_principal FROM cowork_delegation_rules
+             WHERE workspace = ?1 AND ?2 LIKE action_type || '%'
+             ORDER BY priority ASC, created_at ASC LIMIT 1",
+            params![workspace, action_type],
+            |row| Ok((row.get(0)?,)),
+        )
+        .optional()
+        .map_err(store_err)?;
+    Ok(rule.map(|(t,)| t))
+}
+
+/// Deterministic Al orchestration tick: for each pending Al-targeted intent,
+/// resolve the delegation rule, submit the child intent with the extended
+/// causation chain, and record attributed events. Returns the actions taken.
 pub fn orchestrate_pending_intents(
     conn: &mut Connection,
 ) -> Result<Vec<OrchestrationAction>, TransportError> {
@@ -2223,18 +2643,9 @@ pub fn orchestrate_pending_intents(
         let initiator = Some(envelope.initiator.as_str());
 
         // Resolve the delegation target (first matching rule by priority).
-        let rule: Option<(String,)> = conn
-            .query_row(
-                "SELECT target_principal FROM cowork_delegation_rules
-                 WHERE workspace = ?1 AND ?2 LIKE action_type || '%'
-                 ORDER BY priority ASC, created_at ASC LIMIT 1",
-                params![workspace, envelope.action.action_type],
-                |row| Ok((row.get(0)?,)),
-            )
-            .optional()
-            .map_err(store_err)?;
-
-        let Some((target,)) = rule else {
+        let target: Option<String> =
+            resolve_delegation_rule(conn, &workspace, &envelope.action.action_type)?;
+        let Some(target) = target else {
             let tx = conn
                 .transaction_with_behavior(TransactionBehavior::Immediate)
                 .map_err(store_err)?;
@@ -2505,6 +2916,213 @@ pub fn request_connector_session(
     }))
 }
 
+/// Outcome of a brokered connector invocation (the external call the SYSTEM
+/// performs with the registered secret — never the worker).
+struct ConnectorInvokeOutcome {
+    delivered: bool,
+    detail: String,
+}
+
+/// Confine a connector-supplied relative path under the configured root
+/// (P-T4 files connector). Rejects absolute paths, NULs, and `..` escapes.
+fn confine_under_root(root: &std::path::Path, rel: &str) -> Result<std::path::PathBuf, String> {
+    if rel.contains('\0') {
+        return Err("path contains NUL".to_string());
+    }
+    let rel_path = std::path::Path::new(rel);
+    if rel_path.is_absolute() {
+        return Err("absolute paths are not allowed".to_string());
+    }
+    let root_canon = root
+        .canonicalize()
+        .map_err(|e| format!("root not usable: {e}"))?;
+    // Lexical normalization: resolve `.`/`..` components without requiring
+    // the target to exist (writes create new files).
+    let mut out = root_canon.clone();
+    for comp in rel_path.components() {
+        match comp {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                if !out.pop() {
+                    return Err("path escapes connector root".to_string());
+                }
+            }
+            std::path::Component::Normal(c) => out.push(c),
+            _ => return Err("unsupported path component".to_string()),
+        }
+    }
+    if !out.starts_with(&root_canon) {
+        return Err("path escapes connector root".to_string());
+    }
+    Ok(out)
+}
+
+/// Dispatch a brokered invocation by capability family (P-T4). The `secret`
+/// is the env-registered value: a webhook URL, a GitHub token, or the files
+/// root directory. The worker never sees any of these.
+async fn dispatch_connector_invoke(
+    capability: &str,
+    secret: &str,
+    payload: &serde_json::Value,
+) -> ConnectorInvokeOutcome {
+    match capability {
+        "connector.github.read" | "connector.github.write" => {
+            github_connector_invoke(capability, secret, payload).await
+        }
+        "connector.files.read" | "connector.files.write" => {
+            files_connector_invoke(capability, secret, payload)
+        }
+        _ => {
+            // Reference webhook connector: POST the payload to the secret URL.
+            let client = reqwest::Client::new();
+            match client
+                .post(secret)
+                .header("X-Allternit-Connector", capability)
+                .json(payload)
+                .send()
+                .await
+            {
+                Ok(resp) if resp.status().is_success() => ConnectorInvokeOutcome {
+                    delivered: true,
+                    detail: format!("HTTP {}", resp.status()),
+                },
+                Ok(resp) => ConnectorInvokeOutcome {
+                    delivered: false,
+                    detail: format!("HTTP {}", resp.status()),
+                },
+                Err(e) => ConnectorInvokeOutcome {
+                    delivered: false,
+                    detail: format!("transport error: {e}"),
+                },
+            }
+        }
+    }
+}
+
+/// GitHub connector (P-T4): repo read/write via a token from the operator's
+/// env (`ALLTERNIT_BROKER_GITHUB_TOKEN`). Payloads:
+///   read:  `{repo: "owner/name", path?: "dir/file", ref?: "main"}`
+///   write: `{repo, path, content, message}` (write is approval-gated)
+async fn github_connector_invoke(
+    capability: &str,
+    token: &str,
+    payload: &serde_json::Value,
+) -> ConnectorInvokeOutcome {
+    let repo = payload
+        .get("repo")
+        .and_then(|r| r.as_str())
+        .unwrap_or_default();
+    if repo.is_empty() || !repo.contains('/') {
+        return ConnectorInvokeOutcome {
+            delivered: false,
+            detail: "payload.repo must be 'owner/name'".to_string(),
+        };
+    }
+    let path = payload.get("path").and_then(|p| p.as_str()).unwrap_or("");
+    let client = reqwest::Client::new();
+    let url = format!(
+        "https://api.github.com/repos/{repo}/contents/{}",
+        path.trim_start_matches('/')
+    );
+    let mut req = client
+        .request(
+            if capability == "connector.github.write" {
+                reqwest::Method::PUT
+            } else {
+                reqwest::Method::GET
+            },
+            &url,
+        )
+        .header("Authorization", format!("Bearer {token}"))
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .header("User-Agent", "allternit-fabric-transport");
+    if capability == "connector.github.write" {
+        let content = payload.get("content").and_then(|c| c.as_str()).unwrap_or("");
+        let message = payload
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("allternit connector write");
+        req = req.json(&serde_json::json!({
+            "message": message,
+            "content": base64::Engine::encode(
+                &base64::engine::general_purpose::STANDARD,
+                content.as_bytes(),
+            ),
+        }));
+    }
+    match req.send().await {
+        Ok(resp) if resp.status().is_success() => ConnectorInvokeOutcome {
+            delivered: true,
+            detail: format!("HTTP {}", resp.status()),
+        },
+        Ok(resp) => ConnectorInvokeOutcome {
+            delivered: false,
+            detail: format!("HTTP {}", resp.status()),
+        },
+        Err(e) => ConnectorInvokeOutcome {
+            delivered: false,
+            detail: format!("transport error: {e}"),
+        },
+    }
+}
+
+/// Files/local connector (P-T4): scoped folder read/write. The secret is the
+/// operator-configured root directory (`ALLTERNIT_BROKER_FILES_ROOT`); every
+/// payload path is confined under it (`..`/absolute escapes refused).
+fn files_connector_invoke(
+    capability: &str,
+    root: &str,
+    payload: &serde_json::Value,
+) -> ConnectorInvokeOutcome {
+    let rel = match payload.get("path").and_then(|p| p.as_str()) {
+        Some(p) if !p.is_empty() => p,
+        _ => {
+            return ConnectorInvokeOutcome {
+                delivered: false,
+                detail: "payload.path is required".to_string(),
+            }
+        }
+    };
+    let target = match confine_under_root(std::path::Path::new(root), rel) {
+        Ok(t) => t,
+        Err(e) => return ConnectorInvokeOutcome { delivered: false, detail: e },
+    };
+    match capability {
+        "connector.files.read" => match std::fs::read(&target) {
+            Ok(bytes) => ConnectorInvokeOutcome {
+                delivered: true,
+                detail: format!("read {} bytes", bytes.len()),
+            },
+            Err(e) => ConnectorInvokeOutcome {
+                delivered: false,
+                detail: format!("read error: {e}"),
+            },
+        },
+        _ => {
+            let content = payload.get("content").and_then(|c| c.as_str()).unwrap_or("");
+            if let Some(parent) = target.parent() {
+                if let Err(e) = std::fs::create_dir_all(parent) {
+                    return ConnectorInvokeOutcome {
+                        delivered: false,
+                        detail: format!("mkdir error: {e}"),
+                    };
+                }
+            }
+            match std::fs::write(&target, content) {
+                Ok(()) => ConnectorInvokeOutcome {
+                    delivered: true,
+                    detail: format!("wrote {} bytes", content.len()),
+                },
+                Err(e) => ConnectorInvokeOutcome {
+                    delivered: false,
+                    detail: format!("write error: {e}"),
+                },
+            }
+        }
+    }
+}
+
 /// Invoke a brokered connector session: the SYSTEM performs the external call
 /// with the registered secret (read from the env var at invoke time, server
 /// side). The worker never sees the secret. When the env var is unset the
@@ -2572,28 +3190,12 @@ pub async fn invoke_connector_session(
     let mut delivered = false;
     let mut simulated = true;
     let mut detail = "env unset".to_string();
-    if let Ok(target) = std::env::var(&secret_env) {
-        if !target.is_empty() {
+    if let Ok(secret) = std::env::var(&secret_env) {
+        if !secret.is_empty() {
             simulated = false;
-            let client = reqwest::Client::new();
-            match client
-                .post(&target)
-                .header("X-Allternit-Connector", capability.clone())
-                .json(&payload)
-                .send()
-                .await
-            {
-                Ok(resp) if resp.status().is_success() => {
-                    delivered = true;
-                    detail = format!("HTTP {}", resp.status());
-                }
-                Ok(resp) => {
-                    detail = format!("HTTP {}", resp.status());
-                }
-                Err(e) => {
-                    detail = format!("transport error: {e}");
-                }
-            }
+            let outcome = dispatch_connector_invoke(&capability, &secret, &payload).await;
+            delivered = outcome.delivered;
+            detail = outcome.detail;
         }
     }
 
@@ -2627,6 +3229,149 @@ pub async fn invoke_connector_session(
         "simulated": simulated,
         "detail": detail,
     }))
+}
+
+/// List principals (P-T6 control surface). Optional workspace filter; token
+/// hashes are never returned.
+pub fn list_principals(
+    conn: &Connection,
+    workspace: Option<&str>,
+) -> Result<Vec<serde_json::Value>, TransportError> {
+    let (sql, ws) = match workspace {
+        Some(w) => (
+            "SELECT id, workspace, capabilities, roles, status, created_at
+             FROM cowork_principals WHERE workspace = ?1 ORDER BY id",
+            Some(w.to_string()),
+        ),
+        None => (
+            "SELECT id, workspace, capabilities, roles, status, created_at
+             FROM cowork_principals ORDER BY workspace, id",
+            None,
+        ),
+    };
+    let mut stmt = conn.prepare(sql).map_err(store_err)?;
+    let rows = match &ws {
+        Some(w) => stmt
+            .query_map(params![w], principal_row)
+            .map_err(store_err)?,
+        None => stmt.query_map([], principal_row).map_err(store_err)?,
+    };
+    rows.collect::<Result<Vec<_>, _>>().map_err(store_err)
+}
+
+fn principal_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<serde_json::Value> {
+    let caps: String = row.get(2)?;
+    let roles: String = row.get(3)?;
+    Ok(serde_json::json!({
+        "id": row.get::<_, String>(0)?,
+        "workspace": row.get::<_, String>(1)?,
+        "capabilities": serde_json::from_str::<serde_json::Value>(&caps).unwrap_or(serde_json::json!([])),
+        "roles": serde_json::from_str::<serde_json::Value>(&roles).unwrap_or(serde_json::json!([])),
+        "status": row.get::<_, String>(4)?,
+        "created_at": row.get::<_, String>(5)?,
+    }))
+}
+
+/// List delegation rules for a workspace (P-T6 control surface).
+pub fn list_delegation_rules(
+    conn: &Connection,
+    workspace: &str,
+) -> Result<Vec<serde_json::Value>, TransportError> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT workspace, action_type, target_principal, priority, created_at
+             FROM cowork_delegation_rules WHERE workspace = ?1
+             ORDER BY priority ASC, action_type ASC",
+        )
+        .map_err(store_err)?;
+    let rows = stmt
+        .query_map(params![workspace], |row| {
+            Ok(serde_json::json!({
+                "workspace": row.get::<_, String>(0)?,
+                "action_type": row.get::<_, String>(1)?,
+                "target_principal": row.get::<_, String>(2)?,
+                "priority": row.get::<_, i64>(3)?,
+                "created_at": row.get::<_, String>(4)?,
+            }))
+        })
+        .map_err(store_err)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(store_err)
+}
+
+/// Upsert a delegation rule (P-T6). The rule takes effect on the next
+/// orchestrator tick / persona resolution.
+pub fn upsert_delegation_rule(
+    conn: &Connection,
+    workspace: &str,
+    action_type: &str,
+    target_principal: &str,
+    priority: i64,
+) -> Result<(), TransportError> {
+    conn.execute(
+        "INSERT INTO cowork_delegation_rules (workspace, action_type, target_principal, priority, created_at)
+         VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP)
+         ON CONFLICT(workspace, action_type) DO UPDATE SET
+            target_principal = excluded.target_principal,
+            priority = excluded.priority",
+        params![workspace, action_type, target_principal, priority],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+/// Delete a delegation rule; returns false when no row matched.
+pub fn delete_delegation_rule(
+    conn: &Connection,
+    workspace: &str,
+    action_type: &str,
+) -> Result<bool, TransportError> {
+    let n = conn
+        .execute(
+            "DELETE FROM cowork_delegation_rules WHERE workspace = ?1 AND action_type = ?2",
+            params![workspace, action_type],
+        )
+        .map_err(store_err)?;
+    Ok(n > 0)
+}
+
+/// List connector sessions (P-T6 control surface): short-lived brokered
+/// sessions, optionally filtered by run.
+pub fn list_connector_sessions(
+    conn: &Connection,
+    run_id: Option<&str>,
+    limit: i64,
+) -> Result<Vec<serde_json::Value>, TransportError> {
+    let (sql, rid) = match run_id {
+        Some(r) => (
+            "SELECT id, principal, run_id, job_id, capability, status, expires_at, created_at
+             FROM cowork_connector_sessions WHERE run_id = ?1
+             ORDER BY created_at DESC LIMIT ?2",
+            Some(r.to_string()),
+        ),
+        None => (
+            "SELECT id, principal, run_id, job_id, capability, status, expires_at, created_at
+             FROM cowork_connector_sessions ORDER BY created_at DESC LIMIT ?1",
+            None,
+        ),
+    };
+    let mut stmt = conn.prepare(sql).map_err(store_err)?;
+    let map = |row: &rusqlite::Row<'_>| {
+        Ok(serde_json::json!({
+            "id": row.get::<_, String>(0)?,
+            "principal": row.get::<_, String>(1)?,
+            "run_id": row.get::<_, String>(2)?,
+            "job_id": row.get::<_, String>(3)?,
+            "capability": row.get::<_, String>(4)?,
+            "status": row.get::<_, String>(5)?,
+            "expires_at": row.get::<_, String>(6)?,
+            "created_at": row.get::<_, String>(7)?,
+        }))
+    };
+    let rows = match &rid {
+        Some(r) => stmt.query_map(params![r, limit], map).map_err(store_err)?,
+        None => stmt.query_map(params![limit], map).map_err(store_err)?,
+    };
+    rows.collect::<Result<Vec<_>, _>>().map_err(store_err)
 }
 
 /// Read back a submitted intent (idempotent observe).

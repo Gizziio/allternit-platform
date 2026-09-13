@@ -15,9 +15,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum RiskLevel {
+    /// Low risk: routine, reversible actions.
     Low,
+    /// Medium risk: bounded side effects.
     Medium,
+    /// High risk: consequential or externally visible effects.
     High,
+    /// Critical risk: protected capabilities needing explicit approval.
     Critical,
 }
 
@@ -93,6 +97,13 @@ pub fn canonical_risk(capability: &str) -> RiskLevel {
     let c = capability;
     if c.starts_with("connector.bank.") || c.ends_with(".submit") || c == "gui.control" {
         RiskLevel::Critical
+    } else if c == "connector.github.write" || c == "connector.files.write" {
+        // P-T4: connector writes are approval-gated (High).
+        RiskLevel::High
+    } else if c == "connector.github.read" || c == "connector.files.read" {
+        // P-T4: scoped reads auto-approve by default (workspace policy may
+        // elevate); confinement is enforced at invocation, not by risk.
+        RiskLevel::Low
     } else if c.starts_with("connector.")
         || c.starts_with("files.system.")
         || c == "gui.observe"
