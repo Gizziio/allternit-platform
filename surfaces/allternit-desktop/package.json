@@ -165,6 +165,15 @@
         "to": "connector-sidecar/dist"
       },
       {
+        "from": "../phone-remote/server",
+        "to": "phone-remote/server",
+        "filter": [
+          "index.mjs",
+          "lib/**",
+          "capture/sc_capture.swift"
+        ]
+      },
+      {
         "from": "../allternit-extensions/allternit-office-addin/manifests/",
         "to": "office-addins/manifests/",
         "filter": [
