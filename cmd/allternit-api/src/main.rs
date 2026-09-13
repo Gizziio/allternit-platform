@@ -698,6 +698,7 @@ async fn main() {
         .merge(board_router())
         .merge(cowork_router())
         .merge(cowork_preferences_router())
+        .merge(allternit_api::al_persona_routes::al_persona_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(allternit_api::rails::fabric_transport_routes::fabric_transport_routes())
         .merge(agent_router())

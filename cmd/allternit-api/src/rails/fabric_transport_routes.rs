@@ -8,7 +8,7 @@
 use axum::{
     extract::{Path, Query, State},
     http::HeaderMap,
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
 use rusqlite::OptionalExtension;
@@ -30,6 +30,7 @@ use super::routes_cowork::ErrorResponse;
 pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/fabric/transport/principals", post(create_principal))
+        .route("/fabric/transport/principals", get(list_principals))
         .route("/fabric/transport/claim", post(claim))
         .route("/fabric/transport/jobs/:job_id", get(get_job))
         .route("/fabric/transport/jobs/:job_id/heartbeat", post(heartbeat))
@@ -58,6 +59,10 @@ pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
             "/fabric/transport/principals/:principal_id/provision-token",
             post(provision_principal_token),
         )
+        .route(
+            "/fabric/transport/principals/:principal_id/capabilities",
+            put(update_principal_capabilities),
+        )
         .route("/fabric/transport/intents", post(submit_intent))
         .route("/fabric/transport/intents/:intent_id", get(get_intent))
         .route("/fabric/transport/approvals", get(list_approvals))
@@ -68,6 +73,18 @@ pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
         .route(
             "/fabric/transport/connector-sessions/:session_id/invoke",
             post(invoke_connector_session),
+        )
+        .route(
+            "/fabric/transport/delegation-rules",
+            get(list_delegation_rules).put(upsert_delegation_rule),
+        )
+        .route(
+            "/fabric/transport/delegation-rules/:workspace/:action_type",
+            axum::routing::delete(delete_delegation_rule),
+        )
+        .route(
+            "/fabric/transport/connector-sessions",
+            get(list_connector_sessions),
         )
 }
 
@@ -530,6 +547,191 @@ async fn provision_principal_token(
     Ok(Json(json!({ "principal_id": principal_id, "token": token })))
 }
 
+/// Replace a principal's declared capabilities (operator action, P-T2):
+/// workers declare `compute.vm` here when running VM mode so placement
+/// (§8.8) routes vm-required jobs to them.
+#[derive(Debug, serde::Deserialize)]
+pub struct UpdateCapabilitiesRequest {
+    pub capabilities: Vec<String>,
+}
+
+async fn update_principal_capabilities(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(principal_id): Path<String>,
+    Json(req): Json<UpdateCapabilitiesRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    if crate::auth::get_user(&headers).is_none() {
+        return Err(ErrorResponse {
+            error: "authentication required to update principal capabilities".to_string(),
+            code: 401,
+        });
+    }
+    let conn = state.db.connect().map_err(db_error)?;
+    sqlite_store::set_principal_capabilities(&conn, &principal_id, &req.capabilities)
+        .map_err(transport_err)?;
+    info!(principal = %principal_id, capabilities = ?req.capabilities, "Updated principal capabilities");
+    Ok(Json(json!({ "principal_id": principal_id, "capabilities": req.capabilities })))
+}
+
+/// List principals (P-T6 control surface: principals/bots management view).
+/// Token hashes are never returned.
+async fn list_principals(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(q): Query<PrincipalListQuery>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    if crate::auth::get_user(&headers).is_none() {
+        return Err(ErrorResponse {
+            error: "authentication required to list principals".to_string(),
+            code: 401,
+        });
+    }
+    let conn = state.db.connect().map_err(db_error)?;
+    let workspace = q
+        .workspace
+        .as_deref()
+        .map(|w| w.strip_prefix("a://workspace/").unwrap_or(w).to_string());
+    let principals = sqlite_store::list_principals(&conn, workspace.as_deref())
+        .map_err(transport_err)?;
+    Ok(Json(json!({ "principals": principals })))
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct PrincipalListQuery {
+    pub workspace: Option<String>,
+}
+
+/// List delegation rules for a workspace (P-T6).
+async fn list_delegation_rules(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(q): Query<RulesQuery>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    if crate::auth::get_user(&headers).is_none() {
+        return Err(ErrorResponse {
+            error: "authentication required".to_string(),
+            code: 401,
+        });
+    }
+    let workspace = q.workspace.unwrap_or_else(|| "default".to_string());
+    let workspace = workspace
+        .strip_prefix("a://workspace/")
+        .unwrap_or(&workspace)
+        .to_string();
+    let conn = state.db.connect().map_err(db_error)?;
+    let rules = sqlite_store::list_delegation_rules(&conn, &workspace).map_err(transport_err)?;
+    Ok(Json(json!({ "workspace": workspace, "rules": rules })))
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct RulesQuery {
+    pub workspace: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct UpsertRuleRequest {
+    pub workspace: String,
+    pub action_type: String,
+    pub target_principal: String,
+    pub priority: Option<i64>,
+}
+
+/// Upsert a delegation rule (P-T6 editor). Takes effect on the next
+/// orchestrator tick / persona resolution.
+async fn upsert_delegation_rule(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(req): Json<UpsertRuleRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    if crate::auth::get_user(&headers).is_none() {
+        return Err(ErrorResponse {
+            error: "authentication required".to_string(),
+            code: 401,
+        });
+    }
+    if req.action_type.is_empty() || req.target_principal.is_empty() {
+        return Err(ErrorResponse {
+            error: "action_type and target_principal are required".to_string(),
+            code: 400,
+        });
+    }
+    let workspace = req
+        .workspace
+        .strip_prefix("a://workspace/")
+        .unwrap_or(&req.workspace)
+        .to_string();
+    let conn = state.db.connect().map_err(db_error)?;
+    sqlite_store::upsert_delegation_rule(
+        &conn,
+        &workspace,
+        &req.action_type,
+        &req.target_principal,
+        req.priority.unwrap_or(100),
+    )
+    .map_err(transport_err)?;
+    info!(workspace = %workspace, action_type = %req.action_type, target = %req.target_principal, "Upserted delegation rule");
+    Ok(Json(json!({
+        "workspace": workspace,
+        "action_type": req.action_type,
+        "target_principal": req.target_principal,
+        "priority": req.priority.unwrap_or(100),
+    })))
+}
+
+/// Delete a delegation rule (P-T6 editor).
+async fn delete_delegation_rule(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path((workspace, action_type)): Path<(String, String)>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    if crate::auth::get_user(&headers).is_none() {
+        return Err(ErrorResponse {
+            error: "authentication required".to_string(),
+            code: 401,
+        });
+    }
+    let workspace = workspace
+        .strip_prefix("a://workspace/")
+        .unwrap_or(&workspace)
+        .to_string();
+    let conn = state.db.connect().map_err(db_error)?;
+    let deleted = sqlite_store::delete_delegation_rule(&conn, &workspace, &action_type)
+        .map_err(transport_err)?;
+    if !deleted {
+        return Err(ErrorResponse {
+            error: format!("no delegation rule for {workspace}/{action_type}"),
+            code: 404,
+        });
+    }
+    Ok(Json(json!({ "deleted": true })))
+}
+
+/// List brokered connector sessions (P-T6 control surface). User auth;
+/// optionally filtered by run.
+async fn list_connector_sessions(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(q): Query<ConnectorSessionQuery>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    if crate::auth::get_user(&headers).is_none() {
+        return Err(ErrorResponse {
+            error: "authentication required".to_string(),
+            code: 401,
+        });
+    }
+    let conn = state.db.connect().map_err(db_error)?;
+    let sessions = sqlite_store::list_connector_sessions(&conn, q.run_id.as_deref(), q.limit.unwrap_or(50).min(200))
+        .map_err(transport_err)?;
+    Ok(Json(json!({ "sessions": sessions })))
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ConnectorSessionQuery {
+    pub run_id: Option<String>,
+    pub limit: Option<i64>,
+}
+
 /// Submit a canonical IntentEnvelope (§5). User auth (the initiator side).
 /// Idempotent on intent_id; the created run is mirrored into the runtime
 /// manager best-effort.
@@ -548,6 +750,12 @@ async fn submit_intent(
     let submission =
         sqlite_store::submit_intent(&mut conn, &envelope).map_err(transport_err)?;
     if submission.created {
+        // Stamp the authenticated owner so the owner-scoped Rails cowork
+        // reads (ensure_run_owner, V169) see intent-created runs.
+        if let Some(user) = crate::auth::get_user(&headers) {
+            sqlite_store::set_run_owner(&mut conn, &submission.run_id, &user.user_id)
+                .map_err(transport_err)?;
+        }
         // Mirror the intent-created run into the in-memory manager so the
         // legacy run/job routes (which consult the mirror) see it.
         if let (Ok(manager), Ok(run_uuid)) = (

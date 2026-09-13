@@ -42,9 +42,9 @@ pub fn router() -> Router<Arc<AppState>> {
 }
 
 #[derive(Debug)]
-struct ApiError {
-    status: StatusCode,
-    body: Json<Value>,
+pub(crate) struct ApiError {
+    pub(crate) status: StatusCode,
+    pub(crate) body: Json<Value>,
 }
 
 impl ApiError {
@@ -188,12 +188,59 @@ async fn create_response(
         )
     })?;
 
+    let request_id = Uuid::new_v4().to_string();
+    let (result, generated_text, os_resource_id) =
+        run_completion(&state, &org, &user, &request_id, &model, &req).await?;
+
+    let now = Utc::now().timestamp();
+    let mut response = json!({
+        "id": request_id,
+        "object": "chat.completion",
+        "created": now,
+        "model": format!("{}/{}", model.provider_kind, model.model_id),
+        "choices": [{
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": generated_text,
+            },
+            "finish_reason": "stop",
+        }],
+        "usage": {
+            "prompt_tokens": result.input_tokens,
+            "completion_tokens": result.output_tokens,
+            "total_tokens": result.input_tokens + result.output_tokens,
+        },
+        "cost_cents": result.cost_cents,
+        "organization_id": org,
+    });
+
+    if let Some(resource_id) = os_resource_id {
+        response["resource_id"] = json!(resource_id);
+    }
+
+    Ok(Json(response))
+}
+
+/// Run one chat completion through the existing model router/gateway
+/// machinery: catalog-priced, credit-gated, OS-scheduled inference when a
+/// control plane is configured, deterministic MVP fallback otherwise.
+/// Shared by `POST /v1/responses` and the Al persona runtime (P-T5) — no new
+/// LLM path is introduced.
+pub(crate) async fn run_completion(
+    state: &AppState,
+    org: &str,
+    user: &AuthUser,
+    request_id: &str,
+    model: &crate::fabric::model_catalog::FabricModelRecord,
+    req: &ResponsesRequest,
+) -> Result<(crate::fabric::model_gateway::ModelUsageResult, String, Option<String>), ApiError> {
     // Pre-dispatch gate: with no spendable balance the request is refused
     // upfront rather than accruing synchronous debt. (Overspend past zero
     // from a balance drained mid-request is still recorded as debt by the
     // metered charge — usage that already happened is never dropped.)
     let db = state.db.clone();
-    let org_for_gate = org.clone();
+    let org_for_gate = org.to_string();
     let spendable = tokio::task::spawn_blocking(move || {
         CreditsLedger::new(db).available_cents(&org_for_gate)
     })
@@ -208,28 +255,26 @@ async fn create_response(
         ));
     }
 
-    let request_id = Uuid::new_v4().to_string();
-
     // Build the Cloud product ModelRequest. This is the input to the OS planner
     // and resource scheduler: it decides which canonical resource class is needed
     // to run the selected model.
-    let model_request = ModelRequest::from_responses_request(&request_id, &req, Some(&model));
+    let model_request = ModelRequest::from_responses_request(request_id, req, Some(model));
 
     // Optional Phase-4 OS scheduling + execution hop: when an AllternitOS
     // control plane is configured, acquire a canonical lease, run inference on
     // the returned placement, and charge for actual token usage.
-    let (result, generated_text, os_resource_id) = if let Some(os_client) = state.os_control_plane.as_ref() {
+    if let Some(os_client) = state.os_control_plane.as_ref() {
         let (resource_id, placement_id, canonical_placement) = schedule_model_resource_via_os(
-            &state,
-            &org,
-            &user,
-            &request_id,
+            state,
+            org,
+            user,
+            request_id,
             &model_request,
             os_client,
         )
         .await?;
 
-        let inference_result = execute_on_placement(&canonical_placement, &req)
+        let inference_result = execute_on_placement(&canonical_placement, req)
             .await
             .map_err(|e| {
                 let (status, message) = e.to_api_error();
@@ -238,9 +283,9 @@ async fn create_response(
 
         // Charge for actual token usage observed from the backend.
         let db = state.db.clone();
-        let org_for_charge = org.clone();
+        let org_for_charge = org.to_string();
         let model_id_for_charge = req.model.clone();
-        let request_id_for_charge = request_id.clone();
+        let request_id_for_charge = request_id.to_string();
         let result = tokio::task::spawn_blocking(move || {
             let gateway = ModelGateway::new(db);
             gateway.charge_usage(
@@ -277,7 +322,7 @@ async fn create_response(
         .await
         .map_err(internal)?;
 
-        (result, inference_result.generated_text, Some(resource_id))
+        Ok((result, inference_result.generated_text, Some(resource_id)))
     } else {
         // No OS control plane configured: fall back to deterministic MVP
         // behavior so existing unit tests stay green.
@@ -285,9 +330,9 @@ async fn create_response(
         let output_tokens = req.max_tokens.unwrap_or(150).clamp(1, model.context_tokens.max(1));
 
         let db = state.db.clone();
-        let org_for_charge = org.clone();
+        let org_for_charge = org.to_string();
         let model_id_for_charge = req.model.clone();
-        let request_id_for_charge = request_id.clone();
+        let request_id_for_charge = request_id.to_string();
         let result = tokio::task::spawn_blocking(move || {
             let gateway = ModelGateway::new(db);
             gateway.charge_usage(
@@ -306,37 +351,8 @@ async fn create_response(
             "This is a deterministic MVP response from {}/{}. In production this route proxies to the provider and streams the real output.",
             model.provider_kind, model.model_id
         );
-        (result, content, None)
-    };
-
-    let now = Utc::now().timestamp();
-    let mut response = json!({
-        "id": request_id,
-        "object": "chat.completion",
-        "created": now,
-        "model": format!("{}/{}", model.provider_kind, model.model_id),
-        "choices": [{
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": generated_text,
-            },
-            "finish_reason": "stop",
-        }],
-        "usage": {
-            "prompt_tokens": result.input_tokens,
-            "completion_tokens": result.output_tokens,
-            "total_tokens": result.input_tokens + result.output_tokens,
-        },
-        "cost_cents": result.cost_cents,
-        "organization_id": org,
-    });
-
-    if let Some(resource_id) = os_resource_id {
-        response["resource_id"] = json!(resource_id);
+        Ok((result, content, None))
     }
-
-    Ok(Json(response))
 }
 
 /// Schedule inference capacity for a model request through the canonical OS
