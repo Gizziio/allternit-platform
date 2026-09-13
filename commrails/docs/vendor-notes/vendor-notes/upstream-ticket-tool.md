@@ -1,11 +1,11 @@
-# Beads Harvest Notes
+# Upstream Ticket Tool — Harvest Notes
 
 Goal: reimplement dependency graph and issue state mechanics inside Allternit rails.
 
-Initial scan pointers (vendor repo):
-- `beads.go` (core entry)
-- `cmd/bd/*` (CLI behavior for graph, list, ready)
-- `docs/` and `CHANGELOG.md` (behavioral notes)
+Initial scan pointers (upstream repo):
+- core entry package
+- CLI behavior for graph, list, ready
+- docs and changelog (behavioral notes)
 
 Planned extractions:
 - Cycle detection for dependency edges

@@ -35,21 +35,18 @@ import { DeploymentsPage } from "@/pages/console/deployments/DeploymentsPage";
 import { ComputersPage } from "@/pages/console/computers/ComputersPage";
 import { VaultsPage, VaultDetailPage } from "@/pages/console/vaults/VaultsPage";
 import { MemoryPage, MemoryStorePage } from "@/pages/console/memory/MemoryPage";
-import {
-  AnalyticsUsageStubPage,
-  AnalyticsLogsStubPage,
-  AnalyticsCachingStubPage,
-  AnalyticsRateLimitsStubPage,
-  AnalyticsCostStubPage,
-  GizziUsageStubPage,
-  ManageRateLimitsStubPage,
-  ManageSpendLimitsStubPage,
-  ManageMembersStubPage,
-  ManageServiceAccountsStubPage,
-  ManageSecurityStubPage,
-  ManageWebhooksStubPage,
-  ManageTagsStubPage,
-} from "@/pages/stubs/consoleStubs";
+import { UsagePage } from "@/pages/console/analytics/UsagePage";
+import { LogsPage } from "@/pages/console/analytics/LogsPage";
+import { CachingPage } from "@/pages/console/analytics/CachingPage";
+import { RateLimitsPage } from "@/pages/console/analytics/RateLimitsPage";
+import { CostPage } from "@/pages/console/analytics/CostPage";
+import { GizziUsagePage } from "@/pages/console/gizzi/GizziUsagePage";
+import { MembersPage } from "@/pages/console/manage/MembersPage";
+import { ServiceAccountsPage } from "@/pages/console/manage/ServiceAccountsPage";
+import { SpendLimitsPage } from "@/pages/console/manage/SpendLimitsPage";
+import { SecurityPage } from "@/pages/console/manage/SecurityPage";
+import { WebhooksPage } from "@/pages/console/manage/WebhooksPage";
+import { TagsPage } from "@/pages/console/manage/TagsPage";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -82,19 +79,9 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
 
 /** Phase 1 designed stubs — one per future console page. */
 const consoleStubRoutes: Array<{ path: string; element: React.ReactNode }> = [
-  { path: "/analytics/usage/*", element: <AnalyticsUsageStubPage /> },
-  { path: "/analytics/logs/*", element: <AnalyticsLogsStubPage /> },
-  { path: "/analytics/caching/*", element: <AnalyticsCachingStubPage /> },
-  { path: "/analytics/rate-limits/*", element: <AnalyticsRateLimitsStubPage /> },
-  { path: "/analytics/cost/*", element: <AnalyticsCostStubPage /> },
-  { path: "/gizzi/usage/*", element: <GizziUsageStubPage /> },
-  { path: "/manage/rate-limits/*", element: <ManageRateLimitsStubPage /> },
-  { path: "/manage/spend-limits/*", element: <ManageSpendLimitsStubPage /> },
-  { path: "/manage/members/*", element: <ManageMembersStubPage /> },
-  { path: "/manage/service-accounts/*", element: <ManageServiceAccountsStubPage /> },
-  { path: "/manage/security/*", element: <ManageSecurityStubPage /> },
-  { path: "/manage/webhooks/*", element: <ManageWebhooksStubPage /> },
-  { path: "/manage/tags/*", element: <ManageTagsStubPage /> },
+  // /manage/rate-limits content (caller snapshot + admin org limits) shipped
+  // with the Analytics surface at /analytics/rate-limits (Phase 4).
+  { path: "/manage/rate-limits/*", element: <Navigate to="/analytics/rate-limits" replace /> },
 ];
 
 function HomeRoute() {
@@ -382,6 +369,105 @@ export default function App() {
         element={
           <ConsoleRoute>
             <BuilderPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 4 Analytics group — real pages over the live gateway routes. */}
+      <Route
+        path="/analytics/usage/*"
+        element={
+          <ConsoleRoute>
+            <UsagePage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/logs/*"
+        element={
+          <ConsoleRoute>
+            <LogsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/caching/*"
+        element={
+          <ConsoleRoute>
+            <CachingPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/rate-limits/*"
+        element={
+          <ConsoleRoute>
+            <RateLimitsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/cost/*"
+        element={
+          <ConsoleRoute>
+            <CostPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 5 Manage group — real pages over the admin gateway routes. */}
+      <Route
+        path="/manage/members/*"
+        element={
+          <ConsoleRoute>
+            <MembersPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/service-accounts/*"
+        element={
+          <ConsoleRoute>
+            <ServiceAccountsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/spend-limits/*"
+        element={
+          <ConsoleRoute>
+            <SpendLimitsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/security/*"
+        element={
+          <ConsoleRoute>
+            <SecurityPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/webhooks/*"
+        element={
+          <ConsoleRoute>
+            <WebhooksPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/manage/tags/*"
+        element={
+          <ConsoleRoute>
+            <TagsPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 6 — Gizzi Code usage over the admin analytics route. */}
+      <Route
+        path="/gizzi/usage/*"
+        element={
+          <ConsoleRoute>
+            <GizziUsagePage />
           </ConsoleRoute>
         }
       />

@@ -1,7 +1,7 @@
 //! Wait-gates for the Rails CLI.
 //!
 //! Wait-gates block a ticket from being ready until an external or temporal
-//! condition is satisfied. They are the Rails equivalent of Beads wait-gates.
+//! condition is satisfied.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

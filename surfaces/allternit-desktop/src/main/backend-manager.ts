@@ -59,11 +59,12 @@ const API_PORT = app.isPackaged
   : process.env.ALLTERNIT_API_PORT
     ? Number(process.env.ALLTERNIT_API_PORT)
     : PORTS.API_DEV;
-// Debug builds of allternit-api can edge past 30s under a cold start; allow
-// an env override and default to a more generous window in development.
+// Cold starts can edge past 30s (JWKS fetch against Clerk on a slow link,
+// gizzi/voice sidecar bring-up all serialize before /health answers); the
+// packaged app must survive that too, not just dev. Env override wins.
 const HEALTH_TIMEOUT_MS = process.env.ALLTERNIT_API_HEALTH_TIMEOUT_MS
   ? Number(process.env.ALLTERNIT_API_HEALTH_TIMEOUT_MS)
-  : (!app.isPackaged ? 90_000 : 30_000);
+  : 90_000;
 
 export interface BackendStatus {
   installed: boolean;

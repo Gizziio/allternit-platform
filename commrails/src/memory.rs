@@ -1,8 +1,7 @@
 //! Persistent memory for the Rails CLI.
 //!
 //! Memories are long-lived facts, conventions, or project context that
-//! agents can recall and inject into their session context. They are the
-//! Rails equivalent of Beads `bd remember` / `bd prime` / `bd forget`.
+//! agents can recall and inject into their session context.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};

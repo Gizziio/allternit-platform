@@ -19,7 +19,7 @@ allternit-commrails/
   docs/
     architecture/      # layered breakdown + CLI command mapping
     runner/            # runner mutation catalog + README
-    vendor-notes/      # harvested behavior from Beads/MCP Mail
+    vendor-notes/      # harvested behavior from upstream ticket/mail tooling
   src/                 # implementation
   spec/                # locked invariants and contracts
   schemas/             # JSON schemas (event envelope + event payloads)
@@ -28,8 +28,9 @@ allternit-commrails/
 
 ## Scope
 
-This system **reimplements** the best logic from Beads + MCP Agent Mail.
-We reference their behavior for correctness but **do not** depend on them at runtime.
+This system **reimplements** proven ticket-tracking and agent-mail workflow logic.
+We reference upstream behavior for correctness but **do not** depend on any external
+tool at runtime.
 
 ### Advanced Capabilities (V2)
 The system has been enhanced with enterprise-grade features for swarm coordination, human-in-the-loop interaction, and deep observability.
@@ -43,7 +44,7 @@ See [spec/agent-system-rails/Allternit_AGENT_SYSTEM_RAILS_CAPABILITIES.md](../..
 
 ## `commrails` CLI
 
-The `commrails` binary (the `rails` bin name remains as a one-release shim) is the Beads-ported ticket/DAG workflow CLI:
+The `commrails` binary (the `rails` bin name remains as a one-release shim) is the ticket/DAG workflow CLI:
 
 ```bash
 cargo run -p allternit-commrails --bin commrails -- init
