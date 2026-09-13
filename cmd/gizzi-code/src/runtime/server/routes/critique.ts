@@ -216,7 +216,7 @@ export function panelistMessage(
       user,
       content: [
         { type: "text", text: `${system}\n\n${user}` },
-        ...usableImages.map((u) => ({ type: "image", image: u })),
+        ...usableImages.map((u) => ({ type: "image" as const, image: u })),
       ],
     }
   }
