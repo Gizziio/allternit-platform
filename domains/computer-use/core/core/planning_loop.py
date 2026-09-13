@@ -120,9 +120,11 @@ class PlanningLoopConfig:
     batch_enabled: bool = True
     batch_mode: str = "batch"          # "batch" (one grant) | "per_step"
     batch_headless: bool = True
-    # Optional page binding folded into the batch descriptor hash. The loop
-    # does not track the browser URL itself; operators pin it per run (the
-    # runtime navigates there before dispatch). None = bind origin+session only.
+    # Optional operator-pinned page binding folded into the batch descriptor
+    # hash; wins over the auto-tracked URL (deferral B). When None, the loop
+    # observes the adapter's current URL after each step/batch and pins the
+    # NEXT batch's descriptor binding to it; surfaces with no URL keep the
+    # origin+session-only binding.
     batch_page_url: Optional[str] = None
 
 
@@ -182,6 +184,7 @@ LOOP_EVENTS = [
     "element.targeted",
     "window.discovered",
     "notification.received",
+    "page.observed",
     "run.completed",
     "run.failed",
 ]
@@ -227,6 +230,9 @@ class PlanningLoop:
         self.batch_client = batch_client
         self._cancelled = False
         self._monitor_history: List[Dict[str, Any]] = []
+        # Auto page binding (deferral B): current URL observed from the
+        # adapter after each step/batch; feeds the NEXT batch's descriptor.
+        self._observed_url: Optional[str] = None
 
     def cancel(self) -> None:
         """Cancel a running loop."""
@@ -498,6 +504,9 @@ class PlanningLoop:
                 # OBSERVE phase
                 new_screenshot = await self._capture_screenshot(session_id)
                 step.after_screenshot_b64 = _bytes_to_b64(new_screenshot) if new_screenshot else ""
+                # Deferral B: track the current page URL for the NEXT batch's
+                # descriptor binding (operator pin in config still wins).
+                await self._update_observed_url(step)
                 self._emit({"type": "screenshot.captured", "run_id": run_id, "step": step_num, "phase": "after_action",
                             "screenshot_b64": step.after_screenshot_b64})
                 self._emit({"type": "action.completed", "run_id": run_id, "step": step_num,
@@ -779,6 +788,34 @@ class PlanningLoop:
             result = await self.adapter.execute(req)
         return result.to_dict() if result else {}
 
+    def _batch_page_binding(self) -> Optional[str]:
+        """Effective page binding for the next batch descriptor: the operator
+        pin wins; otherwise the last URL observed from the adapter. None =
+        bind origin+session only (non-browser surface or nothing observed)."""
+        return self.config.batch_page_url or self._observed_url
+
+    async def _update_observed_url(self, step: LoopStep) -> None:
+        """Track the current page URL from the live adapter (deferral B).
+
+        Best-effort and silent: adapters without a URL surface (desktop
+        automation, host-display fallback) leave the binding unchanged. Also
+        scans the step's adapter result for a URL when the adapter carries
+        one there instead of behind ``get_url()``.
+        """
+        url: Optional[str] = None
+        try:
+            from .batch_dispatch import observe_adapter_page_url
+            url = await observe_adapter_page_url(self.adapter)
+        except Exception:
+            url = None
+        if not url:
+            url = _url_of_result(step.adapter_result)
+        if url:
+            if url != self._observed_url:
+                self._emit({"type": "page.observed", "run_id": step.run_id,
+                            "step": step.step, "url": url})
+            self._observed_url = url
+
     async def _dispatch_batch(
         self,
         *,
@@ -821,7 +858,7 @@ class PlanningLoop:
             step_count=len(batch_steps),
             step_methods=[s["method"] for s in batch_steps],
             batch_mode=self.config.batch_mode,
-            page_url=self.config.batch_page_url,
+            page_url=self._batch_page_binding(),
         )
         # Contract §4: opened BEFORE the batch RPC (audit-before-act).
         open_batch_context(self.ledger, record)
@@ -831,7 +868,7 @@ class PlanningLoop:
                 steps=batch_steps,
                 mode=self.config.batch_mode,
                 session=session_id,
-                page_url=self.config.batch_page_url,
+                page_url=self._batch_page_binding(),
                 approval_id=approval_id,
                 step_approval_ids=step_approval_ids,
                 headless=self.config.batch_headless,
@@ -1053,3 +1090,21 @@ def _extracted_text_of(adapter_result: Optional[Dict]) -> str:
                 parts.append(value)
         return "\n".join(parts)
     return ""
+
+
+def _url_of_result(adapter_result: Optional[Dict]) -> Optional[str]:
+    """Pull a page URL out of an adapter result dict, when the surface carries
+    one (browser extract/navigate results). None otherwise."""
+    if not isinstance(adapter_result, dict):
+        return None
+    for key in ("url", "page_url", "newPageUrl"):
+        value = adapter_result.get(key)
+        if isinstance(value, str) and value.startswith(("http://", "https://")):
+            return value
+    content = adapter_result.get("extracted_content")
+    if isinstance(content, dict):
+        for key in ("url", "page_url", "newPageUrl"):
+            value = content.get(key)
+            if isinstance(value, str) and value.startswith(("http://", "https://")):
+                return value
+    return None

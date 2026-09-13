@@ -1944,10 +1944,13 @@ mod credential_binding_http_tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         ensure_e2e_key();
+        // Mutates the process-wide ALLTERNIT_COMPUTER_USE_DIR — serialize
+        // against every other test that reads/writes through it (this lock
+        // replaces the previously unguarded race noted below).
+        let _dir_guard = crate::test_helpers::computer_use_dir_test_lock();
         let temp = tempfile::tempdir().unwrap().keep();
         // Redirect gateway state (run buffers, credential vault) at the temp
-        // dir before the run. Left in place for the whole test (races with
-        // the remove_var in older tests are pre-existing behavior).
+        // dir before the run. Left in place for the whole test.
         std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
 
         // The global store persists across test processes on this machine;

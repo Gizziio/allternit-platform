@@ -1,16 +1,13 @@
-# Steering checkpoint — session/console-fe-p2
+# Checkpoint — session/cu20-teachbatch
 
-**Goal:** Frontend console port Phase 2 — Build group: consolidated Playground (Form/Code toggle, compare mode, template rail), Files page, Skills page, Batches page, Builder v1. Replaces Phase 1 stubs at /playground, /files, /skills, /batches (+ new /builder).
+**Goal:** Land spec `stagehand-batch-fork` deferrals A/B/C. All code + smoke done; landing in progress.
 
-**Just did:** Implemented all five Build-group pages in `surfaces/platform.allternit.com` on the Phase 1 console-ui kit. Key design decisions:
-- `/v1/*` gateway routes (chat completions, files, batches) authenticate with virtual `ak-…` keys, not Clerk — added `lib/console-gateway.ts` which auto-creates a user-scoped "Console" key via `POST /api/v1/gateway/keys` and caches it in localStorage, sent as an explicit Authorization override.
-- Extended `api-client.ts` with a documented `stream()` SSE method (async generator over `data:` payloads, AbortSignal for Stop). Playground streams `/v1/chat/completions`.
-- Model catalog from Clerk-authed `GET /v1/models` (fabric); `model=auto` resolves client-side via `lib/model-auto-policy.ts` (same localStorage key `allternit:model-gateway:auto-policy` as the ai surface donor).
-- Skills page talks to real cloud routes `/api/v1/skills*` (task recipes) — the donor's mode/confidence registry is local-only and intentionally not faked; UI notes this.
-- Builder hits `POST /api/v1/agents/prototype` and `GET /api/v1/agent-templates` + `POST /api/v1/agents/from-template`; removed replaced stubs; added Builder to nav.
+**Done:**
+- A `c7c2e50c3` record→teach→batch compilation; B `45f5e280b` auto page binding + contract v1.1; C `f57a81859` flake fix (`audit_api_returns_rows_with_bot_filter`: unguarded ALLTERNIT_COMPUTER_USE_DIR mutations now hold the shared test lock; note origin/main independently locked the snapshot test — resolved taking theirs) + approval_id surfaced on batch-grant events + RunWorkflowBody.batch_page_url.
+- Merge origin/main landed `fc13b21e7` (checkpoint restored from /tmp/cu20-checkpoint-mine.md).
+- **Live smoke 8/8 + 5/5 PASS** (tmp-cu20-smoke/smoke.py): leg 1 compiled batch — ONE grant (approval_id surfaced, handoff-approved at /api/aci/handoff/:id/approve), sidecar executed 3/3 in real Chrome, Rust receipt `completed` 3/3 via /api/aci/batch/receipts/:id, ledger opened/closed, steps via=batch. Leg 2 under ALLTERNIT_WORKFLOW_BATCH=0 — no batch events, no approvals, 3 per-step steps ok via browser.cdp. Env notes: venv needed `playwright` pip install; runtime needed `pnpm install && pnpm run build`; routes are under /api.
+- Python suites post-merge: 69 passed, 0 failed.
 
-**Verified:** `npx tsc --noEmit` 0 errors; `pnpm build` success; `pnpm preview` + curl /playground /files /batches /builder /skills all 200; repo-root `node scripts/release-preflight.mjs` → 35 passed, 0 failed.
-
-**Next:** PR/merge/attest per ritual (parent/orchestrator owns git verbs; work is uncommitted in the worktree).
+**Next:** aci_ x4 background run finishing (bash-eszu44ju), then ≥3 clean post-merge runs → push → PR → merge → attestation+LEDGER via detached worktree → cleanup (worktrees incl. allternit-cu20-baseline, branch local+remote, tmp-cu20-smoke).
 
 **Open questions:** None.
