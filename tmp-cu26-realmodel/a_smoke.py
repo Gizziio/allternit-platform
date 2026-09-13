@@ -47,7 +47,7 @@ def screenshot_after_navigate():
 def main():
     png = screenshot_after_navigate()
     env = dict(os.environ)
-    env["CU22_EVIDENCE"] = str(HERE / "evidence" / "a_smoke_brain.jsonl")
+    env["CU26_EVIDENCE"] = str(HERE / "evidence" / "a_smoke_brain.jsonl")
     started = time.time()
     proc = subprocess.run(
         [sys.executable, str(HERE / "brain_wrapper.py")],
