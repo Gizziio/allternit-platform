@@ -6,55 +6,9 @@ import { ComingSoonPage } from "./ComingSoonPage";
  * a ComingSoonPage with copy appropriate to the surface it stands in for.
  * Phase 2 landed Playground, Files, Skills, Batches, and Builder; Phase 3
  * landed the Managed Agents group (Agents/Sessions/Deployments/Computers/
- * Vaults/Memory) and retired their stubs.
+ * Vaults/Memory); Phase 4 landed the Analytics group (Usage/Logs/Caching/
+ * Rate limits/Cost) — all their stubs are retired.
  */
-
-export function AnalyticsUsageStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Usage"
-      description="Token and request volume across every model, broken down by workspace, project tag, and API key. Usage analytics land in a later phase."
-      cta={{ label: "View current usage dashboard", to: "/" }}
-    />
-  );
-}
-
-export function AnalyticsLogsStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Logs"
-      description="Structured request logs with latency, status, token counts, and cost per call. Filter, search, and export your API traffic."
-    />
-  );
-}
-
-export function AnalyticsCachingStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Caching"
-      description="Prompt-cache hit rates, savings, and cache TTL performance. See where context caching is cutting your bill — and where it could."
-    />
-  );
-}
-
-export function AnalyticsRateLimitsStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Rate limits"
-      description="Observed throughput against your organization rate limits — RPM, TPM, and concurrent request usage over time."
-    />
-  );
-}
-
-export function AnalyticsCostStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Cost"
-      description="Spend by model, feature, and project tag, with forecasts against your budget. Cost analytics land alongside the usage pipeline in a later phase."
-      cta={{ label: "View billing", to: "/billing" }}
-    />
-  );
-}
 
 export function GizziUsageStubPage(): React.ReactNode {
   return (

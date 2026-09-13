@@ -35,12 +35,12 @@ import { DeploymentsPage } from "@/pages/console/deployments/DeploymentsPage";
 import { ComputersPage } from "@/pages/console/computers/ComputersPage";
 import { VaultsPage, VaultDetailPage } from "@/pages/console/vaults/VaultsPage";
 import { MemoryPage, MemoryStorePage } from "@/pages/console/memory/MemoryPage";
+import { UsagePage } from "@/pages/console/analytics/UsagePage";
+import { LogsPage } from "@/pages/console/analytics/LogsPage";
+import { CachingPage } from "@/pages/console/analytics/CachingPage";
+import { RateLimitsPage } from "@/pages/console/analytics/RateLimitsPage";
+import { CostPage } from "@/pages/console/analytics/CostPage";
 import {
-  AnalyticsUsageStubPage,
-  AnalyticsLogsStubPage,
-  AnalyticsCachingStubPage,
-  AnalyticsRateLimitsStubPage,
-  AnalyticsCostStubPage,
   GizziUsageStubPage,
   ManageRateLimitsStubPage,
   ManageSpendLimitsStubPage,
@@ -82,11 +82,6 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
 
 /** Phase 1 designed stubs — one per future console page. */
 const consoleStubRoutes: Array<{ path: string; element: React.ReactNode }> = [
-  { path: "/analytics/usage/*", element: <AnalyticsUsageStubPage /> },
-  { path: "/analytics/logs/*", element: <AnalyticsLogsStubPage /> },
-  { path: "/analytics/caching/*", element: <AnalyticsCachingStubPage /> },
-  { path: "/analytics/rate-limits/*", element: <AnalyticsRateLimitsStubPage /> },
-  { path: "/analytics/cost/*", element: <AnalyticsCostStubPage /> },
   { path: "/gizzi/usage/*", element: <GizziUsageStubPage /> },
   { path: "/manage/rate-limits/*", element: <ManageRateLimitsStubPage /> },
   { path: "/manage/spend-limits/*", element: <ManageSpendLimitsStubPage /> },
@@ -382,6 +377,47 @@ export default function App() {
         element={
           <ConsoleRoute>
             <BuilderPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 4 Analytics group — real pages over the live gateway routes. */}
+      <Route
+        path="/analytics/usage/*"
+        element={
+          <ConsoleRoute>
+            <UsagePage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/logs/*"
+        element={
+          <ConsoleRoute>
+            <LogsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/caching/*"
+        element={
+          <ConsoleRoute>
+            <CachingPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/rate-limits/*"
+        element={
+          <ConsoleRoute>
+            <RateLimitsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/analytics/cost/*"
+        element={
+          <ConsoleRoute>
+            <CostPage />
           </ConsoleRoute>
         }
       />
