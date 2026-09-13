@@ -2,7 +2,7 @@
 
 This lists the vendor behaviors we mirrored in Allternit and where they live.
 
-## Beads (bd)
+## Upstream issue-tracking CLI
 
 - Dependency model (blocked_by edges) → `work/types.rs`, `work/projection.rs`
 - Cycle detection → `work/graph.rs::would_create_cycle`

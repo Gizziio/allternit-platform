@@ -1,7 +1,7 @@
 //! Workflow templates for the Rails CLI.
 //!
-//! Templates are the Rails equivalent of Beads molecules/formulas: reusable
-//! plans that can be instantiated into a set of tickets with dependencies.
+//! Templates are reusable plans that can be instantiated into a set of
+//! tickets with dependencies.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
