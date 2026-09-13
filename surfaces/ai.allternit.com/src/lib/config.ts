@@ -14,14 +14,17 @@ export const config = {
     disabledModels: [] as string[],
     providerOrder: ["openai", "anthropic", "google", "alibaba", "amazon"],
     curatedDefaults: [
+      "kimi/kimi-for-coding",
       "openai/gpt-5-mini",
       "openai/gpt-5-nano",
       "anthropic/claude-haiku-4.5",
       "google/gemini-2.5-flash-lite",
-      "kimi/kimi-for-coding",
     ] as string[],
     defaults: {
-      primary: "openai/gpt-5-mini" as string,
+      // Kimi is the platform's canonical chat default (see lib/ai/app-models.ts);
+      // openai/gpt-5-mini is frequently unprovisioned on desktop gizzi, where it
+      // yields ProviderModelNotFoundError and a silent no-reply.
+      primary: "kimi/kimi-for-coding" as string,
       image: "openai/dall-e-3" as string,
       followupSuggestions: "google/gemini-2.5-flash-lite" as string,
     },

@@ -7,15 +7,19 @@
 
 pub mod attachment;
 pub mod checkpoint;
-pub mod transport;
 pub mod error;
+pub mod risk_policy;
 pub mod run;
 pub mod sqlite_store;
+pub mod transport;
 pub mod types;
 
 // Re-export common types
 pub use crate::attachment::AttachmentRegistry;
 pub use crate::checkpoint::CheckpointManager;
+pub use crate::risk_policy::{
+    evaluate_protection, ApprovalPolicy, ProtectionDecision, RiskLevel, RiskRule,
+};
 pub use crate::transport::{
     hash_token, ApprovalBinding, CompleteOutcome, ExpiryAction, LeaseGrant, PrincipalRecord,
     TransportError, TransportErrorCode,
