@@ -13,9 +13,16 @@ Wired in-place edit box into SurgicalEditPanel (Text/Attribute/Inner HTML modes)
 agent produces a new artifact). Verified: pnpm typecheck 0 errors; vitest src/lib/design
 src/components/artifact src/views/design 155/155; release-preflight 35/0.
 
-Next: commit + push, merge newest origin/main, PR with gh pr merge --merge, ledger attestation via
-own branch/PR, then desktop rebuild (fresh gizzi-code binary staged from this worktree, background
-npm run dist, bundle-grep applyElementEdit, preserve 8-file set, retire only previous latest).
+Next: commit + push, PR with gh pr merge --merge, ledger attestation via own branch/PR, then
+desktop rebuild (fresh gizzi-code binary staged from this worktree, background npm run dist,
+bundle-grep applyElementEdit, preserve 8-file set, retire only previous latest).
 
 Open questions: none. Siblings untouched (no edits to content-artifact-sync, gallery-store,
 project-file-store, DesignCritiquePanel, critique routes, LibraryItemDialog, Rust).
+
+---
+
+## Checkpoint rotation note
+
+Incoming checkpoint from main (session/botmode-0912, already merged there) rotated out during
+merge; see git history for its content.

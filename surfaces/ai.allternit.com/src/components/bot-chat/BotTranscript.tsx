@@ -28,6 +28,7 @@ import { ToolRunCapsule } from "./ToolRunCapsule";
 import { GapTimestamp } from "./GapTimestamp";
 import { ErrorRow } from "./ErrorRow";
 import { ApprovalCard } from "./ApprovalCard";
+import { InlineArtifactRenderer } from "./InlineArtifactRenderer";
 
 const FOLLOW_THRESHOLD_PX = 80;
 
@@ -35,6 +36,8 @@ function rowChars(row: TranscriptRow): number {
   switch (row.kind) {
     case "message":
       return row.message.text.length;
+    case "artifact":
+      return row.artifact.content.length + row.artifact.title.length;
     case "toolCall":
       return row.call.inputSummary.length + (row.call.outputSummary?.length ?? 0);
     case "toolRun":
@@ -66,6 +69,8 @@ function TranscriptRowView({
           className={row.message.status === "error" ? "opacity-90" : undefined}
         />
       );
+    case "artifact":
+      return <InlineArtifactRenderer artifact={row.artifact} />;
     case "toolCall":
       return <ToolReceiptChip call={row.call} />;
     case "toolRun":

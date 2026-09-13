@@ -28,6 +28,7 @@ import {
   type ToolCallRecord,
   type ToolRunGroup,
   type TranscriptRow,
+  type InlineArtifact,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -72,6 +73,12 @@ export type TranscriptEvent =
       type: "approval.resolved";
       id: string;
       outcome: "approved" | "denied" | "expired";
+    }
+  | {
+      type: "artifact.created";
+      id: string;
+      artifact: InlineArtifact;
+      createdAt?: number;
     }
   | { type: "turn.completed"; id: string; createdAt?: number }
   | { type: "error"; id: string; text: string; createdAt?: number };
@@ -550,6 +557,17 @@ export function applyEvent(
         return row;
       });
       return { rows, activeTurn: transcript.activeTurn };
+    }
+
+    case "artifact.created": {
+      const ts = event.createdAt ?? lastContentTs(transcript.rows) ?? 0;
+      return {
+        rows: [
+          ...withGapRow(transcript.rows, ts),
+          { kind: "artifact", id: event.id, createdAt: ts, artifact: event.artifact },
+        ],
+        activeTurn: transcript.activeTurn,
+      };
     }
 
     case "turn.completed": {
