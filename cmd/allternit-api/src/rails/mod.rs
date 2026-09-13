@@ -271,6 +271,7 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/plans", get(list_plans))
         .route("/dags", get(dags_view))
         .route("/plan", post(plan_new))
+        .route("/plan/from-text", post(plan_from_text))
         .route("/plan/refine", post(plan_refine))
         .route("/plan/:dag_id", get(plan_show))
         .route("/dags/:dag_id/render", get(dag_render))
@@ -2245,6 +2246,21 @@ struct PlanRefineRequest {
 }
 
 #[derive(Debug, Deserialize)]
+struct PlanFromTextRequest {
+    title: String,
+    todos: Vec<PlanFromTextTodo>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PlanFromTextTodo {
+    title: String,
+    #[serde(default)]
+    depth: u32,
+    #[serde(default)]
+    done: bool,
+}
+
+#[derive(Debug, Deserialize)]
 struct UiDagMutation {
     action: String,
     node_id: Option<String>,
@@ -2586,6 +2602,113 @@ async fn plan_refine(
             };
             (status, Json(json!({ "error": e.to_string() }))).into_response()
         }
+    }
+}
+
+async fn plan_from_text(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<PlanFromTextRequest>,
+) -> impl IntoResponse {
+    let title = request.title.trim();
+    if title.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "title must not be empty" })),
+        )
+            .into_response();
+    }
+    if request.todos.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "todos must not be empty" })),
+        )
+            .into_response();
+    }
+    if request.todos.len() > 200 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "todos capped at 200" })),
+        )
+            .into_response();
+    }
+    if request.todos.iter().any(|t| t.title.trim().is_empty()) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "todo titles must not be empty" })),
+        )
+            .into_response();
+    }
+
+    let (_, dag_id, root_node_id) = match state.rails.gate.plan_new(title, None).await {
+        Ok(ids) => ids,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let mut mutations = Vec::new();
+    let mut stack: Vec<(u32, String)> = Vec::new();
+    for todo in &request.todos {
+        let node_id = format!("n_{}", rand::random::<u32>() % 10_000);
+        while stack.last().map(|(d, _)| *d) >= Some(todo.depth) {
+            stack.pop();
+        }
+        let parent = if todo.depth == 0 {
+            root_node_id.clone()
+        } else {
+            stack
+                .last()
+                .map(|(_, id)| id.clone())
+                .unwrap_or_else(|| root_node_id.clone())
+        };
+        mutations.push(DagMutation::CreateNode {
+            node_id: node_id.clone(),
+            node_kind: "task".to_string(),
+            title: todo.title.trim().to_string(),
+            parent_node_id: Some(parent),
+            execution_mode: "shared".to_string(),
+        });
+        if todo.done {
+            mutations.push(DagMutation::ChangeStatus {
+                node_id: node_id.clone(),
+                from: "NEW".to_string(),
+                to: "DONE".to_string(),
+                reason: Some("marked done at import".to_string()),
+            });
+        }
+        stack.push((todo.depth, node_id));
+    }
+    let node_count = request.todos.len();
+
+    match state
+        .rails
+        .gate
+        .plan_refine(
+            &dag_id,
+            "plan from gizzi-code ExitPlanMode",
+            "gizzi",
+            mutations,
+        )
+        .await
+    {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(json!({
+                "dag_id": dag_id,
+                "root_node_id": root_node_id,
+                "node_count": node_count,
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
     }
 }
 
