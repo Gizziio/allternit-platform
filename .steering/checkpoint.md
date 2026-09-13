@@ -7,7 +7,12 @@ Resumed 2026-09-12 ~20:50 local: all four deliverables + wrangler smoke already 
 Just did (resume):
 - Merged origin/main (siblings #441/#442 landed): checkpoint.md conflict resolved (ours); **migration renumbered V159→V160** — relay-0912 also picked V159 on main (`V159__content_artifact_relay.sql`), collision resolved by renumbering mine to `V160__content_artifact_files.sql`. Merge commit 599cde5a5. Both file + relay routers mounted in main.rs.
 - release-preflight 35/0 on merged state; vitest artifact+design+library 17 files/168 tests green (incl. LibraryItemDialog CSP 5/5); bun critique tests 8/8; gizzi typecheck clean; ai.allternit.com tsc clean; root pnpm typecheck red ONLY on pre-existing office-pptx-engine replaceAll errors (file untouched since 84b09178b, zero diff vs main).
-- In flight: cargo release build (bash-plupq1ye), cargo test content_artifact (bash-y1fu21y0).
+- Fixed merge-hygiene regression: auto-merge had kept stale base side of BotChatSessionView.tsx (silently reverting main's botdefault-0912 fix); restored main's version (64fe57ae0).
+- Pushed; PR #444 open: https://github.com/Gizziio/allternit-platform/pull/444
+
+In flight: full `cargo test -p allternit-api` (bash-3bixqdp1) — merge PR after it lands.
+
+Next: `gh pr merge 444 --merge` → shared checkout pull --ff-only → ledger attestation (STEER_GUARD_OFF=1) → desktop rebuild (gizzi-code dist already built fresh from worktree; stage sidecars; background npm run dist; bundle-grep markers; preserve 8-file set, retire then-latest) → cleanup (worktree remove, branch delete local+remote).
 
 Just did (pre-resume):
 - (1) LibraryItemDialog CSP: WebsitePreview srcdoc now `injectSandboxCsp(injectSandboxStorageShim(html))` (CSP first); removed `allow-same-origin` from the srcdoc iframe (same hole class as #396); exported WebsitePreview; 5/5 new vitest green.
