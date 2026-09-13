@@ -258,6 +258,10 @@ bearer token.
 | `GET /intents/:intent_id` | open (read-only) | → `{intent_id, run_id, envelope}` |
 | `GET /approvals` | user | `?workspace=&status=` → approval inbox (control surface) |
 | `POST /principals/:principal_id/provision-token` | user | rotate/provision a principal token (returned once) |
+| `POST /jobs/:job_id/connector-sessions` | worker | `{lease_id, lease_generation, capability, ttl_secs?}` → ConnectorBrokerSession |
+| `POST /connector-sessions/:session_id/invoke` | worker | `{job_id, lease_id, lease_generation, payload}` → `{delivered, simulated, detail}` |
+| `POST /runs/:run_id/handoffs` | user | `{to_agent_id, task_id?, note?, causation_chain?}` → handoff (chain validated) |
+| `POST /runs/:run_id/handoffs/:handoff_id/ack` | user | `{note?}` → completes the handoff + linked job |
 | `POST /jobs/:job_id/approvals/request` | worker | `{lease_id, lease_generation, capability, target, approval_ttl_secs?}` → ApprovalBinding |
 | `POST /jobs/:job_id/approvals/check` | worker | same body → `{ok, approval_id, status}` or approval error |
 | `GET /approvals/:approval_id` | worker (executor-scoped) | → ApprovalBinding (poll for the human decision) |
@@ -266,6 +270,32 @@ bearer token.
 
 Env knobs (`main.rs`): `ALLTERNIT_FABRIC_TRANSPORT_LEASE_SECS` (default 60),
 `ALLTERNIT_FABRIC_TRANSPORT_SWEEP_SECS` (default 5). Operational tuning only.
+
+## 8a. ConnectorBrokerSession — **Implemented (v0.1, §8.5)**
+
+```json
+{
+  "session_id": "cs_4bdb7502-d917-491c-b03b-e3e66c25ae02",
+  "capability": "connector.webhook.send",
+  "expires_at": "2026-09-13T20:26:25.498140+00:00"
+}
+```
+
+Issued by `POST /fabric/transport/jobs/:job_id/connector-sessions` (worker
+bearer auth; lease-validated; risk policy enforced — protected capabilities
+require a granted approval for the current generation). **No secret is ever
+returned or embedded in job payloads.** Invocation is system-side:
+`POST /fabric/transport/connector-sessions/:id/invoke` (worker bearer auth,
+principal-bound session, server-clock expiry) performs the external call with
+the registered secret read from its env var at invoke time; the result and an
+attributed `connector.invoked` event report delivered/simulated honestly.
+
+## 8b. MemoryGrant — **Implemented (v0.1)**
+
+Memory entries carry `owner_principal` (nullable) + `grants` (JSON string
+array). Visibility rule: unowned entries (legacy) OR owned by the caller OR
+explicitly granted; everything else is default-deny. Write access uses the
+same check (`A_PERMISSION_DENIED` otherwise).
 
 ## 9. IntentEnvelope — **Implemented**
 

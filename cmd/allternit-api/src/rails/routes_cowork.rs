@@ -718,6 +718,8 @@ pub struct CreateHandoffRequest {
     pub to_agent_id: String,
     pub task_id: Option<String>,
     pub note: Option<String>,
+    /// Append-only delegation causation chain (§8.15); validated (cycle/depth).
+    pub causation_chain: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -758,9 +760,23 @@ async fn create_handoff(
     manager.set_current_job(_run_id, Some(job.id)).await?;
 
     let handoff_id = uuid::Uuid::new_v4().to_string();
+    let chain = req.causation_chain.clone().unwrap_or_default();
+    if !chain.is_empty() {
+        let run_ws = conn_ws(&state, _run_id)?;
+        allternit_cowork_runtime::sqlite_store::validate_delegation_chain(
+            &state.db.connect().map_err(db_error)?,
+            &run_ws,
+            &chain,
+        )
+        .map_err(|e| ErrorResponse {
+            error: format!("{}: {}", e.wire(), e.message),
+            code: e.http_status(),
+        })?;
+    }
     let conn = state.db.connect().map_err(db_error)?;
     conn.execute(
-        "INSERT INTO cowork_handoffs (id, run_id, to_agent_id, task_id, note, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO cowork_handoffs (id, run_id, to_agent_id, task_id, note, status, job_id, causation_chain)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         rusqlite::params![
             &handoff_id,
             &run_id_str,
@@ -768,6 +784,8 @@ async fn create_handoff(
             req.task_id,
             req.note,
             "pending",
+            job.id.to_string(),
+            serde_json::to_string(&chain).unwrap(),
         ],
     ).map_err(db_error)?;
     persist_job(&conn, &job).map_err(db_error)?;
@@ -826,6 +844,31 @@ async fn list_handoffs(
         .map_err(db_error)?;
 
     Ok(Json(rows))
+}
+
+/// Acknowledge a handoff: completes the handoff and its linked job (A-T1).
+#[derive(Debug, Deserialize)]
+pub struct AckHandoffRequest {
+    pub note: Option<String>,
+}
+
+async fn ack_handoff(
+    State(state): State<Arc<AppState>>,
+    Path((_run_id, handoff_id)): Path<(String, String)>,
+    Json(req): Json<AckHandoffRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let outcome = allternit_cowork_runtime::sqlite_store::ack_handoff(
+        &mut conn,
+        &handoff_id,
+        "user",
+        req.note,
+    )
+    .map_err(|e| ErrorResponse {
+        error: format!("{}: {}", e.wire(), e.message),
+        code: e.http_status(),
+    })?;
+    Ok(Json(outcome))
 }
 
 /// Attach to a run
@@ -991,6 +1034,7 @@ pub fn cowork_routes() -> Router<Arc<AppState>> {
         // Handoffs
         .route("/runs/:run_id/handoffs", post(create_handoff))
         .route("/runs/:run_id/handoffs", get(list_handoffs))
+        .route("/runs/:run_id/handoffs/:handoff_id/ack", post(ack_handoff))
         // Attachments
         .route("/runs/:run_id/attach", post(attach))
         .route("/reattach", post(reattach))

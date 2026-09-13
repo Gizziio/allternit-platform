@@ -75,13 +75,24 @@ in the lifecycle. Per §16 they must not be cited as A:// conformance:
 | `cowork_memory_entries`, schedules DB | Scoped data/trigger substrate; durable but not execution-ownership state | — |
 | CommRails ledger mirroring of runtime events | Transport substrate carrying already-attributed events; carries semantics, does not define them | `A_PROTOCOL.md` §15 |
 
+## 5b. Task-DAG items A-T1–A-T5 (closed)
+
+| Item | Proof |
+|---|---|
+| A-T1 handoff chains + ack | `test_handoff_ack_completes_linked_job` (linked job terminated with typed result, executor attribution, idempotent replay); cyclic handoff chains rejected at the route; `POST /runs/:id/handoffs/:hid/ack` |
+| A-T2 per-principal memory grants | `test_memory_principal_grants` (owner/grantee/stranger visibility, default-deny write check); `/cowork/memory` with `principal`/`grants` |
+| A-T3 Al orchestration loop v0.1 | `test_al_orchestration_loop` (rule-based delegation, attributed delegation.created/rejected/completed, parent-run mirroring, no double delegation); boot tick in `main.rs` |
+| A-T4 Gizzi claim loop | `cmd/gizzi-code/src/runtime/fabric-transport/worker.ts` — long-poll claim, `Sandbox.wrap` posture, heartbeat, checkpoints, typed Result; typechecked; live demo evidence |
+| A-T5 connector broker v0.1 | `test_connector_broker_sessions` (secret-free sessions, principal-bound, approval-gated critical capabilities, honest simulated invoke, attributed connector.invoked); live demo evidence |
+
 ## 6. Honest gaps in the conformance story
 
 - **Non-local compute** — all conformance proofs run `compute: local`;
   placement is out of scope for v0.1 (lock 1, §8.8).
-- **Al/Gizzi as live workers** — principals are minted with roles and
-  capabilities, but neither has an implemented claim loop; no conformance
-  claim until they hold leases as themselves.
+- **Al/Gizzi as live workers** — Gizzi's claim loop is implemented
+  (`fabric-transport/worker.ts`) but runs on-demand (bun entry), not as an
+  installed service; Al's loop is the deterministic orchestrator (no persona
+  runtime yet). Conformance claims attach when they operate continuously.
 - **UI conformance depth** — the `/fabric-transport` control view satisfies
   the §17 control list minimally; rich protocol-entity rendering (leases,
   DAG graphs, timelines) remains ongoing product work.

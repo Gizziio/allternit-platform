@@ -89,8 +89,16 @@ leases, bindings, attributed events) independently of Al's narration
 
 1. ~~Workspace provisioning mints the Al principal~~ **Done** (boot seeding).
 2. Orchestration-role checks in policy evaluation (roles exist; enforcement Planned).
-3. Al orchestration loop bound to the principal: plan → intent submission
-   (attribution triple + causation chain) → monitor → approval requests →
-   result reports.
-4. Principal-scoped memory grants.
+3. ~~Al orchestration loop~~ **Done (v0.1, deterministic)** — an
+   orchestrator tick loop (`main.rs`, 2s) processes intents targeted at
+   `principal/al`: resolves the delegation target from
+   `cowork_delegation_rules` (V166; action-type prefix, priority-ordered),
+   submits the child intent with the chain extended by Al, writes attributed
+   `delegation.created` / `delegation.rejected` events, monitors the child
+   run to terminal, mirrors the state onto the parent run, and records
+   `delegation.completed` / `delegation.failed`. No model involvement.
+   (`test_al_orchestration_loop`.)
+4. ~~Principal-scoped memory grants~~ **Done** (V165; owner+grants with
+   default-deny — `test_memory_principal_grants`). Persona-level memory
+   continuity for Al remains product work.
 5. ~~Causation chain column + depth/cycle enforcement~~ **Done** (V164).

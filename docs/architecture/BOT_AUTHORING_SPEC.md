@@ -77,7 +77,15 @@ workspace policy and available compute.
 - A bot's protected actions gate on `check_approval` under its lease; expiry
   and invalidation semantics are the recovery contract, not suggestions.
 
-## 7. Memory scope — **Partial**
+## 7. Memory scope — **Implemented (v0.1 grants)**
+
+- Entries carry `owner_principal` + `grants` (V165); `/cowork/memory` read/
+  search/write accept a `principal` scope and enforce owner+grants server-
+  side with default-deny (`A_PERMISSION_DENIED` on cross-principal writes
+  without a grant). Legacy unowned entries stay visible (back-compat).
+- Persona-level "Al's memory" continuity remains product work.
+
+
 
 - Memory stores exist (`memory_router`/`memory_kernel`, sessions memory,
   `cowork_memory_entries`), all user/workspace-scoped today.
@@ -86,7 +94,7 @@ workspace policy and available compute.
   `run`) with read grants evaluated at retrieval; Al's memory is never
   implicitly readable by bots (§9 of `COWORK_A_PROTOCOL_ARCHITECTURE.md`).
 
-## 8. Connectors — **Partial**
+## 8. Connectors — **Partial (broker v0.1 landed)**
 
 - Connectors and a credential vault exist (`connector_routes`,
   `allternit_vault`, `cloud_credentials_routes`); the broker flow of §8.5

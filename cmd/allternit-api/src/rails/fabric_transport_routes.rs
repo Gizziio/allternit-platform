@@ -61,6 +61,14 @@ pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
         .route("/fabric/transport/intents", post(submit_intent))
         .route("/fabric/transport/intents/:intent_id", get(get_intent))
         .route("/fabric/transport/approvals", get(list_approvals))
+        .route(
+            "/fabric/transport/jobs/:job_id/connector-sessions",
+            post(request_connector_session),
+        )
+        .route(
+            "/fabric/transport/connector-sessions/:session_id/invoke",
+            post(invoke_connector_session),
+        )
 }
 
 fn db_error(e: rusqlite::Error) -> ErrorResponse {
@@ -696,4 +704,65 @@ fn approval_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<serde_json::Value> 
         "lease_generation": row.get::<_, i64>(8)?,
         "created_at": row.get::<_, String>(9)?,
     }))
+}
+
+// ─── Connector broker (§8.5, A-T5) ──────────────────────────────────────────
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ConnectorSessionRequest {
+    pub lease_id: String,
+    pub lease_generation: i64,
+    pub capability: String,
+    pub ttl_secs: Option<u64>,
+}
+
+async fn request_connector_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(job_id): Path<String>,
+    Json(req): Json<ConnectorSessionRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    let principal = authenticate(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let session = sqlite_store::request_connector_session(
+        &mut conn,
+        &principal,
+        &job_id,
+        &req.lease_id,
+        req.lease_generation,
+        &req.capability,
+        req.ttl_secs.map(Duration::from_secs),
+    )
+    .map_err(transport_err)?;
+    Ok(Json(session))
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ConnectorInvokeRequest {
+    pub job_id: String,
+    pub lease_id: String,
+    pub lease_generation: i64,
+    pub payload: serde_json::Value,
+}
+
+async fn invoke_connector_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+    Json(req): Json<ConnectorInvokeRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    let principal = authenticate(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let outcome = sqlite_store::invoke_connector_session(
+        &mut conn,
+        &principal,
+        &req.job_id,
+        &req.lease_id,
+        req.lease_generation,
+        &session_id,
+        req.payload,
+    )
+    .await
+    .map_err(transport_err)?;
+    Ok(Json(outcome))
 }

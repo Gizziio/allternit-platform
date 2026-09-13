@@ -365,6 +365,9 @@ async fn main() {
     // §3: every workspace in the store gets the default Al and Gizzi
     // principals (idempotent; credentials are provisioned separately, once).
     seed_default_principals(&db).await;
+    // A-T3: deterministic Al orchestration loop — processes intents targeted
+    // at principal/al (delegation rules → child intent → monitor → record).
+    spawn_al_orchestrator(db.clone());
 
     // Initialize office runtime state (load from disk or start empty)
     let office_runtime = Arc::new(tokio::sync::RwLock::new(
@@ -1461,6 +1464,59 @@ async fn load_persisted_cowork_jobs(db: &allternit_api::db::DbHandle, manager: &
     }
 
     info!("Loaded persisted cowork jobs into run manager");
+}
+
+/// Spawn the deterministic Al orchestrator tick loop (A-T3). No model
+/// involvement: delegation targets come from cowork_delegation_rules.
+fn spawn_al_orchestrator(db: allternit_api::db::DbHandle) {
+    tokio::spawn(async move {
+        let mut interval =
+            tokio::time::interval(std::time::Duration::from_secs(2));
+        loop {
+            interval.tick().await;
+            let result = tokio::task::spawn_blocking({
+                let db = db.clone();
+                move || {
+                    let mut conn =
+                        allternit_cowork_runtime::sqlite_store::open_store(db.path())?;
+                    let delegated =
+                        allternit_cowork_runtime::sqlite_store::orchestrate_pending_intents(
+                            &mut conn,
+                        )?;
+                    let recorded =
+                        allternit_cowork_runtime::sqlite_store::record_orchestration_results(
+                            &mut conn,
+                        )?;
+                    Ok::<_, allternit_cowork_runtime::TransportError>((
+                        delegated,
+                        recorded,
+                    ))
+                }
+            })
+            .await;
+            match result {
+                Ok(Ok((delegated, recorded))) => {
+                    for a in delegated {
+                        info!(
+                            intent_id = %a.intent_id,
+                            outcome = %a.outcome,
+                            detail = %a.detail,
+                            "Al orchestration: delegation"
+                        );
+                    }
+                    for a in recorded {
+                        info!(
+                            intent_id = %a.intent_id,
+                            outcome = %a.outcome,
+                            "Al orchestration: result recorded"
+                        );
+                    }
+                }
+                Ok(Err(e)) => warn!("Al orchestrator tick failed: {e}"),
+                Err(e) => warn!("Al orchestrator task failed: {e}"),
+            }
+        }
+    });
 }
 
 /// Mint default Al/Gizzi principals for every known workspace (idempotent;

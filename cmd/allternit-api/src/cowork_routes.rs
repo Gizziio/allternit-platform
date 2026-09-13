@@ -1215,36 +1215,35 @@ async fn delete_project_file(
 
 // ─── Memory ───────────────────────────────────────────────────────────────────
 
+#[derive(Debug, serde::Deserialize)]
+pub struct MemoryPrincipalQuery {
+    /// Principal scope (A-T2): when set, only entries owned by or granted to
+    /// this principal are returned (default-deny cross-principal).
+    pub principal: Option<String>,
+}
+
 async fn get_memory(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
+    Query(query): Query<MemoryPrincipalQuery>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let principal = query.principal;
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, user_id, project_id, session_id, content, type, tags, source, created_at
-             FROM cowork_memory_entries WHERE user_id = ?1 ORDER BY created_at DESC",
-        )?;
-        let rows = stmt
-            .query_map(params![user_id], |row| {
-                Ok(MemoryEntryRow {
-                    id: row.get(0)?,
-                    user_id: row.get(1)?,
-                    project_id: row.get(2)?,
-                    session_id: row.get(3)?,
-                    content: row.get(4)?,
-                    type_: row.get(5)?,
-                    tags: row.get(6)?,
-                    source: row.get(7)?,
-                    created_at: row.get(8)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok::<_, rusqlite::Error>(rows)
+        // Principal-scoped path enforces owner+grants (A-T2); unscoped keeps
+        // the legacy user-filtered behavior.
+        allternit_cowork_runtime::sqlite_store::search_memory_entries(
+            &conn,
+            &user_id,
+            principal.as_deref(),
+            None,
+            200,
+        )
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
     })
     .await;
 
@@ -1281,6 +1280,10 @@ struct StoreMemoryBody {
     type_: Option<String>,
     tags: Option<String>,
     source: Option<String>,
+    /// Owning principal (A-T2); writes are attributed to this principal.
+    principal: Option<String>,
+    /// Principals explicitly granted access (default-deny otherwise).
+    grants: Option<Vec<String>>,
 }
 
 async fn store_memory(
@@ -1289,33 +1292,30 @@ async fn store_memory(
     _headers: HeaderMap,
     Json(body): Json<StoreMemoryBody>,
 ) -> impl IntoResponse {
-    let id = uuid::Uuid::new_v4().to_string();
     let db = state.db.clone();
-    let id2 = id.clone();
     let user_id = user.user_id;
+    let type_ = body.type_.clone().unwrap_or_else(|| "fact".to_string());
 
     let result = tokio::task::spawn_blocking(move || {
-        let conn = db.connect()?;
-        conn.execute(
-            "INSERT INTO cowork_memory_entries (id, user_id, project_id, session_id, content, type, tags, source)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![
-                id2,
-                user_id,
-                body.project_id,
-                body.session_id,
-                body.content,
-                body.type_.unwrap_or_else(|| "fact".to_string()),
-                body.tags,
-                body.source,
-            ],
-        )?;
-        Ok::<_, rusqlite::Error>(())
+        let mut conn = db.connect()?;
+        allternit_cowork_runtime::sqlite_store::store_memory_entry(
+            &mut conn,
+            &user_id,
+            body.project_id.as_deref(),
+            body.session_id.as_deref(),
+            &body.content,
+            &type_,
+            body.tags.as_deref(),
+            body.source.as_deref(),
+            body.principal.as_deref(),
+            &body.grants.clone().unwrap_or_default(),
+        )
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
     })
     .await;
 
     match result {
-        Ok(Ok(())) => {
+        Ok(Ok(id)) => {
             (StatusCode::CREATED, Json(json!({ "memory": { "id": id } }))).into_response()
         }
         Ok(Err(e)) => {

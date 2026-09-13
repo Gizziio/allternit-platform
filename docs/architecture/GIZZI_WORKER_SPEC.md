@@ -75,27 +75,27 @@ require explicit workspace policy + approval bindings.
 
 ## 5. How Gizzi claims work over Fabric Transport
 
-**Specified / Planned — not wired today.** Gizzi-code currently executes via
-its own session runtime and cron executor, not through
-`/api/v1/fabric/transport/*`. The target contract, when wired:
+**Implemented (A-T4).** `cmd/gizzi-code/src/runtime/fabric-transport/worker.ts`
+(+ `worker-entry.ts`) is the claim loop; it runs on-demand via bun (installed
+service packaging is product work). Operator token flow: provision once via
+`POST /api/v1/fabric/transport/principals/<principal>/provision-token`, then
+`ALLTERNIT_GIZZI_TOKEN=atok_… bun src/runtime/fabric-transport/worker-entry.ts`
+(or `ALLTERNIT_GIZZI_TOKEN_FILE`). The loop:
 
-1. Gizzi authenticates as `a://workspace/{ws}/principal/gizzi` (bearer token
-   in its local secret store, never in the repo or prompts).
-2. Long-poll claim (`POST /fabric/transport/claim`) with its capability set;
-   eligibility = job `required_capabilities` ⊆ Gizzi's.
-3. Execute the deterministic step sequence; heartbeat at `lease_ttl/3`;
-   renew before `lease_expires_at`; checkpoint at committed boundaries via
-   `POST /runs/:id/checkpoints`.
-4. Protected actions (e.g. `files.system.write` under a critical policy)
-   gate on `approvals/check` under the current generation; on re-assignment
-   the replacement Gizzi re-obtains approval — the gen-N approval is dead.
-5. Complete with a typed Result; exactly-once; the ledger attributes
+1. Authenticates as `a://workspace/{ws}/principal/gizzi` (env-provided token).
+2. Long-poll claim (`POST /fabric/transport/claim`, `lease_ttl_secs` from
+   `ALLTERNIT_GIZZI_LEASE_SECS`); eligibility = job `required_capabilities` ⊆
+   the seeded Gizzi capability set.
+3. Executes `payload.steps` via `Sandbox.wrap` (bwrap on Linux /
+   sandbox-exec on macOS — the existing posture; falls back to an unsandboxed
+   shell only when no driver exists, loudly logged by `Sandbox.wrap`).
+4. Heartbeats at `lease_ttl/3`; checkpoints after each committed step.
+5. Completes with the typed Result envelope (per-step exit codes in
+   `outputs.steps`); exactly-once; ledger attributes
    `executor = …/principal/gizzi`, never Al.
 
-Until this lands, Gizzi→cowork work enters through the existing run/job
-routes (`POST /runs`, `POST /runs/:id/jobs`) without lease ownership — which
-means no failover guarantee for Gizzi-driven steps. That gap is the reason
-this spec exists.
+Protected actions gate on `approvals/check` under the current generation (not
+yet exercised by the worker — see honest status).
 
 ## 6. Attribution rule (normative)
 

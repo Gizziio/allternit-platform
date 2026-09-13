@@ -87,7 +87,36 @@ pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
          ALTER TABLE cowork_runs ADD COLUMN causation_chain TEXT NOT NULL DEFAULT '[]';
          ALTER TABLE cowork_jobs ADD COLUMN causation_chain TEXT NOT NULL DEFAULT '[]';
-         CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, workspace_id TEXT);",
+         CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, workspace_id TEXT);
+         CREATE TABLE IF NOT EXISTS cowork_handoffs (
+            id TEXT PRIMARY KEY, run_id TEXT NOT NULL, to_agent_id TEXT NOT NULL,
+            task_id TEXT, note TEXT, status TEXT NOT NULL DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP, completed_at DATETIME);
+         ALTER TABLE cowork_handoffs ADD COLUMN job_id TEXT;
+         ALTER TABLE cowork_handoffs ADD COLUMN causation_chain TEXT NOT NULL DEFAULT '[]';
+         CREATE TABLE IF NOT EXISTS cowork_memory_entries (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, project_id TEXT,
+            session_id TEXT, content TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'fact',
+            tags TEXT, source TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+         ALTER TABLE cowork_memory_entries ADD COLUMN owner_principal TEXT;
+         ALTER TABLE cowork_memory_entries ADD COLUMN grants TEXT NOT NULL DEFAULT '[]';
+         CREATE TABLE IF NOT EXISTS cowork_delegation_rules (
+            workspace TEXT NOT NULL, action_type TEXT NOT NULL,
+            target_principal TEXT NOT NULL, priority INTEGER NOT NULL DEFAULT 100,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (workspace, action_type));
+         ALTER TABLE cowork_intents ADD COLUMN child_run_id TEXT;
+         ALTER TABLE cowork_intents ADD COLUMN orchestration_status TEXT NOT NULL DEFAULT 'pending';
+         CREATE TABLE IF NOT EXISTS cowork_connector_sessions (
+            id TEXT PRIMARY KEY, principal TEXT NOT NULL, run_id TEXT NOT NULL,
+            job_id TEXT NOT NULL, capability TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active', expires_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+         CREATE TABLE IF NOT EXISTS cowork_connector_secrets (
+            capability TEXT PRIMARY KEY, secret_env TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+         INSERT OR IGNORE INTO cowork_connector_secrets (capability, secret_env)
+         VALUES ('connector.webhook.send', 'ALLTERNIT_BROKER_WEBHOOK_URL');",
     )
     .map_err(store_err)
 }
@@ -1890,6 +1919,714 @@ pub fn submit_intent(
         run_id,
         created: true,
     })
+}
+
+/// Acknowledge a handoff (A-T1): marks the handoff completed and terminates
+/// its linked job with a typed result. The handoff job was never leased, so
+/// this is the contract-conformant completion path for handoffs.
+pub fn ack_handoff(
+    conn: &mut Connection,
+    handoff_id: &str,
+    responder: &str,
+    note: Option<String>,
+) -> Result<serde_json::Value, TransportError> {
+    let handoff: Option<(String, Option<String>, String)> = conn
+        .query_row(
+            "SELECT run_id, job_id, status FROM cowork_handoffs WHERE id = ?1",
+            params![handoff_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()
+        .map_err(store_err)?;
+    let Some((run_id, job_id, status)) = handoff else {
+        return Err(TransportError::new(
+            Code::JobNotFound,
+            format!("handoff {handoff_id} not found"),
+        ));
+    };
+    if status == "completed" {
+        return Ok(serde_json::json!({ "handoff_id": handoff_id, "status": "completed", "duplicated": true }));
+    }
+
+    let now = Utc::now().to_rfc3339();
+    let result = serde_json::json!({
+        "result_id": format!("result_handoff_{}", Uuid::new_v4()),
+        "status": "completed",
+        "summary": note.unwrap_or_else(|| "handoff acknowledged".to_string()),
+        "executor": responder,
+        "completed_at": now,
+    });
+
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(store_err)?;
+    tx.execute(
+        "UPDATE cowork_handoffs SET status = 'completed', completed_at = ?1 WHERE id = ?2 AND status != 'completed'",
+        params![now, handoff_id],
+    )
+    .map_err(store_err)?;
+    if let Some(jid) = &job_id {
+        tx.execute(
+            "UPDATE cowork_jobs SET state = 'completed', result = ?1, completed_at = ?2, updated_at = ?2
+             WHERE id = ?3 AND state NOT IN ('completed','failed','dead_letter','cancelled')",
+            params![result.to_string(), now, jid],
+        )
+        .map_err(store_err)?;
+    }
+    let attr = load_run_attribution(&tx, &run_id)?;
+    insert_event(
+        &tx,
+        &run_id,
+        "handoff.completed",
+        serde_json::json!({
+            "handoff_id": handoff_id,
+            "job_id": job_id,
+            "result_id": result["result_id"],
+        }),
+        attr.initiator.as_deref(),
+        attr.delegator.as_deref(),
+        Some(responder),
+    )?;
+    tx.commit().map_err(store_err)?;
+
+    Ok(serde_json::json!({ "handoff_id": handoff_id, "status": "completed", "duplicated": false }))
+}
+
+/// Store a memory entry with principal ownership + grant list (A-T2).
+#[allow(clippy::too_many_arguments)]
+pub fn store_memory_entry(
+    conn: &mut Connection,
+    user_id: &str,
+    project_id: Option<&str>,
+    session_id: Option<&str>,
+    content: &str,
+    type_: &str,
+    tags: Option<&str>,
+    source: Option<&str>,
+    owner_principal: Option<&str>,
+    grants: &[String],
+) -> Result<String, TransportError> {
+    let id = format!("mem_{}", Uuid::new_v4());
+    conn.execute(
+        "INSERT INTO cowork_memory_entries
+            (id, user_id, project_id, session_id, content, type, tags, source, owner_principal, grants)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![
+            id,
+            user_id,
+            project_id,
+            session_id,
+            content,
+            type_,
+            tags,
+            source,
+            owner_principal,
+            serde_json::to_string(grants).unwrap(),
+        ],
+    )
+    .map_err(store_err)?;
+    Ok(id)
+}
+
+/// Memory entries visible to a principal: unowned (legacy/user-scoped),
+/// owned by the principal, or explicitly granted. Default-deny otherwise.
+/// `idx` is the positional placeholder bound to the principal id.
+fn memory_principal_filter(idx: usize) -> String {
+    format!(
+        "(owner_principal IS NULL OR owner_principal = ?{idx}
+          OR EXISTS (SELECT 1 FROM json_each(cowork_memory_entries.grants) WHERE value = ?{idx}))"
+    )
+}
+
+/// Read/search memory for a user + optional principal scope (A-T2).
+pub fn search_memory_entries(
+    conn: &Connection,
+    user_id: &str,
+    principal: Option<&str>,
+    query: Option<&str>,
+    limit: i64,
+) -> Result<Vec<serde_json::Value>, TransportError> {
+    let like = query.map(|q| format!("%{q}%"));
+    let mut out;
+    match (principal, like) {
+        (Some(p), Some(q)) => {
+            let mut stmt = conn
+                .prepare(&format!(
+                    "SELECT id, content, type, tags, source, owner_principal, grants, created_at
+                     FROM cowork_memory_entries
+                     WHERE user_id = ?1 AND content LIKE ?2 AND {}
+                     ORDER BY created_at DESC LIMIT ?3",
+                    memory_principal_filter(4),
+                ))
+                .map_err(store_err)?;
+            let rows = stmt
+                .query_map(params![user_id, q, limit, p.to_string()], memory_row)
+                .map_err(store_err)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(store_err)?;
+            out = rows;
+        }
+        (Some(p), None) => {
+            let mut stmt = conn
+                .prepare(&format!(
+                    "SELECT id, content, type, tags, source, owner_principal, grants, created_at
+                     FROM cowork_memory_entries
+                     WHERE user_id = ?1 AND {}
+                     ORDER BY created_at DESC LIMIT ?2",
+                    memory_principal_filter(3),
+                ))
+                .map_err(store_err)?;
+            let rows = stmt
+                .query_map(params![user_id, limit, p.to_string()], memory_row)
+                .map_err(store_err)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(store_err)?;
+            out = rows;
+        }
+        (None, Some(q)) => {
+            let mut stmt = conn
+                .prepare(
+                    "SELECT id, content, type, tags, source, owner_principal, grants, created_at
+                     FROM cowork_memory_entries
+                     WHERE user_id = ?1 AND content LIKE ?2
+                     ORDER BY created_at DESC LIMIT ?3",
+                )
+                .map_err(store_err)?;
+            let rows = stmt
+                .query_map(params![user_id, q, limit], memory_row)
+                .map_err(store_err)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(store_err)?;
+            out = rows;
+        }
+        (None, None) => {
+            let mut stmt = conn
+                .prepare(
+                    "SELECT id, content, type, tags, source, owner_principal, grants, created_at
+                     FROM cowork_memory_entries
+                     WHERE user_id = ?1 ORDER BY created_at DESC LIMIT ?2",
+                )
+                .map_err(store_err)?;
+            let rows = stmt
+                .query_map(params![user_id, limit], memory_row)
+                .map_err(store_err)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(store_err)?;
+            out = rows;
+        }
+    }
+    Ok(out)
+}
+
+fn memory_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<serde_json::Value> {
+    Ok(serde_json::json!({
+        "id": row.get::<_, String>(0)?,
+        "content": row.get::<_, String>(1)?,
+        "type": row.get::<_, String>(2)?,
+        "tags": row.get::<_, Option<String>>(3)?,
+        "source": row.get::<_, Option<String>>(4)?,
+        "owner_principal": row.get::<_, Option<String>>(5)?,
+        "grants": row.get::<_, String>(6)?,
+        "created_at": row.get::<_, String>(7)?,
+    }))
+}
+
+/// Write-time access check (A-T2): a principal may write only entries it
+/// owns, unowned entries, or entries explicitly granted to it. Default-deny.
+pub fn check_memory_write(
+    conn: &Connection,
+    entry_id: &str,
+    principal: &str,
+) -> Result<(), TransportError> {
+    let allowed: Option<bool> = conn
+        .query_row(
+            &format!(
+                "SELECT 1 FROM cowork_memory_entries
+                 WHERE id = ?1 AND {}",
+                memory_principal_filter(2),
+            ),
+            params![entry_id, principal.to_string()],
+            |_| Ok(true),
+        )
+        .optional()
+        .map_err(store_err)?;
+    if allowed.is_none() {
+        return Err(TransportError::new(
+            Code::PermissionDenied,
+            format!("principal {principal} has no grant on memory entry {entry_id}"),
+        ));
+    }
+    Ok(())
+}
+
+// ─── Al orchestration loop v0.1 (A-T3; deterministic, AL_IMPLEMENTATION_SPEC §7) ──
+
+/// One orchestration action, reported for logging/mirror sync.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct OrchestrationAction {
+    pub intent_id: String,
+    pub parent_run_id: String,
+    pub outcome: String,
+    pub detail: String,
+}
+
+fn al_principal_id(workspace: &str) -> String {
+    format!("a://workspace/{workspace}/principal/al")
+}
+
+/// Process intents targeted at Al: resolve the delegation target from
+/// `cowork_delegation_rules` (first match by priority, action-type prefix),
+/// submit the child intent with the extended chain, and record attributed
+/// `delegation.created` / `delegation.rejected` events. Deterministic — no
+/// model involvement (§8.25 keeps model reasoning out of eligibility).
+pub fn orchestrate_pending_intents(
+    conn: &mut Connection,
+) -> Result<Vec<OrchestrationAction>, TransportError> {
+    let pending: Vec<(String, String)> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT intent_id, run_id FROM cowork_intents
+                 WHERE orchestration_status = 'pending'
+                   AND json_extract(envelope, '$.target') LIKE '%/principal/al'",
+            )
+            .map_err(store_err)?;
+        let rows = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .map_err(store_err)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(store_err)?;
+        rows
+    };
+
+    let mut actions = Vec::new();
+    for (intent_id, parent_run_id) in pending {
+        let envelope_json: Option<String> = conn
+            .query_row(
+                "SELECT envelope FROM cowork_intents WHERE intent_id = ?1",
+                params![intent_id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(store_err)?;
+        let Some(env_raw) = envelope_json else { continue };
+        let Ok(envelope) =
+            serde_json::from_str::<crate::transport::IntentEnvelope>(&env_raw)
+        else {
+            continue;
+        };
+        let workspace = envelope
+            .workspace
+            .strip_prefix("a://workspace/")
+            .unwrap_or(envelope.workspace.as_str())
+            .to_string();
+        let al = al_principal_id(&workspace);
+        let initiator = Some(envelope.initiator.as_str());
+
+        // Resolve the delegation target (first matching rule by priority).
+        let rule: Option<(String,)> = conn
+            .query_row(
+                "SELECT target_principal FROM cowork_delegation_rules
+                 WHERE workspace = ?1 AND ?2 LIKE action_type || '%'
+                 ORDER BY priority ASC, created_at ASC LIMIT 1",
+                params![workspace, envelope.action.action_type],
+                |row| Ok((row.get(0)?,)),
+            )
+            .optional()
+            .map_err(store_err)?;
+
+        let Some((target,)) = rule else {
+            let tx = conn
+                .transaction_with_behavior(TransactionBehavior::Immediate)
+                .map_err(store_err)?;
+            tx.execute(
+                "UPDATE cowork_intents SET orchestration_status = 'rejected' WHERE intent_id = ?1",
+                params![intent_id],
+            )
+            .map_err(store_err)?;
+            insert_event(
+                &tx,
+                &parent_run_id,
+                "delegation.rejected",
+                serde_json::json!({
+                    "intent_id": intent_id,
+                    "action_type": envelope.action.action_type,
+                    "reason": "no delegation rule matched",
+                }),
+                initiator,
+                Some(al.as_str()),
+                None,
+            )?;
+            tx.commit().map_err(store_err)?;
+            actions.push(OrchestrationAction {
+                intent_id,
+                parent_run_id,
+                outcome: "rejected".to_string(),
+                detail: "no delegation rule matched".to_string(),
+            });
+            continue;
+        };
+
+        // Canonicalize the target principal id.
+        let target_principal = if target.contains("://") {
+            target
+        } else if target.starts_with("bot/") || target.contains('/') {
+            format!("a://workspace/{workspace}/{target}")
+        } else {
+            format!("a://workspace/{workspace}/principal/{target}")
+        };
+
+        // Build the child intent: same action, chain extended with Al.
+        let mut child_chain = envelope.causation_chain.clone();
+        child_chain.push(al.clone());
+        let child = crate::transport::IntentEnvelope {
+            version: "a/0.1".to_string(),
+            intent_id: format!("{intent_id}:child:{}", Uuid::new_v4()),
+            workspace: envelope.workspace.clone(),
+            initiator: envelope.initiator.clone(),
+            delegator: Some(al.clone()),
+            target: Some(target_principal.clone()),
+            action: envelope.action.clone(),
+            permissions: envelope.permissions.clone(),
+            compute: envelope.compute.clone(),
+            model: envelope.model.clone(),
+            approval: envelope.approval.clone(),
+            return_channel: envelope.return_channel.clone(),
+            causation_chain: child_chain,
+        };
+        let submission = submit_intent(conn, &child)?;
+
+        let tx = conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(store_err)?;
+        tx.execute(
+            "UPDATE cowork_intents SET child_run_id = ?1, orchestration_status = 'delegated'
+             WHERE intent_id = ?2",
+            params![submission.run_id, intent_id],
+        )
+        .map_err(store_err)?;
+        insert_event(
+            &tx,
+            &parent_run_id,
+            "delegation.created",
+            serde_json::json!({
+                "intent_id": intent_id,
+                "child_intent_id": submission.intent_id,
+                "child_run_id": submission.run_id,
+                "action_type": envelope.action.action_type,
+            }),
+            initiator,
+            Some(al.as_str()),
+            Some(target_principal.as_str()),
+        )?;
+        tx.commit().map_err(store_err)?;
+        actions.push(OrchestrationAction {
+            intent_id,
+            parent_run_id,
+            outcome: "delegated".to_string(),
+            detail: target_principal,
+        });
+    }
+    Ok(actions)
+}
+
+/// Record orchestration results: when a delegated child run reaches a
+/// terminal state, mirror it onto the parent run and write an attributed
+/// `delegation.completed` / `delegation.failed` event.
+pub fn record_orchestration_results(
+    conn: &mut Connection,
+) -> Result<Vec<OrchestrationAction>, TransportError> {
+    let delegated: Vec<(String, String, String)> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT intent_id, run_id, child_run_id FROM cowork_intents
+                 WHERE orchestration_status = 'delegated' AND child_run_id IS NOT NULL",
+            )
+            .map_err(store_err)?;
+        let rows = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .map_err(store_err)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(store_err)?;
+        rows
+    };
+
+    let mut actions = Vec::new();
+    for (intent_id, parent_run_id, child_run_id) in delegated {
+        let child: Option<(String, Option<String>)> = conn
+            .query_row(
+                "SELECT state, completed_at FROM cowork_runs WHERE id = ?1",
+                params![child_run_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()
+            .map_err(store_err)?;
+        let Some((child_state, child_completed)) = child else { continue };
+        if !matches!(child_state.as_str(), "completed" | "failed" | "cancelled") {
+            continue;
+        }
+
+        let envelope_json: Option<String> = conn
+            .query_row(
+                "SELECT envelope FROM cowork_intents WHERE intent_id = ?1",
+                params![intent_id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(store_err)?;
+        let envelope: Option<crate::transport::IntentEnvelope> = envelope_json
+            .and_then(|raw| serde_json::from_str(&raw).ok());
+        let al = envelope
+            .as_ref()
+            .map(|e| {
+                let ws = e
+                    .workspace
+                    .strip_prefix("a://workspace/")
+                    .unwrap_or(e.workspace.as_str());
+                al_principal_id(ws)
+            })
+            .unwrap_or_default();
+        let executor = envelope.as_ref().and_then(|e| e.target.clone());
+
+        let now = Utc::now().to_rfc3339();
+        let tx = conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(store_err)?;
+        tx.execute(
+            "UPDATE cowork_intents SET orchestration_status = ?1 WHERE intent_id = ?2",
+            params![if child_state == "completed" { "completed" } else { "failed" }, intent_id],
+        )
+        .map_err(store_err)?;
+        // Mirror the terminal state onto the parent run (§6 lifecycle honesty).
+        tx.execute(
+            "UPDATE cowork_runs SET state = ?1, completed_at = COALESCE(?2, ?3), updated_at = ?3
+             WHERE id = ?4 AND state NOT IN ('completed','failed','cancelled')",
+            params![child_state, child_completed, now, parent_run_id],
+        )
+        .map_err(store_err)?;
+        let attr = load_run_attribution(&tx, &parent_run_id)?;
+        insert_event(
+            &tx,
+            &parent_run_id,
+            if child_state == "completed" { "delegation.completed" } else { "delegation.failed" },
+            serde_json::json!({
+                "intent_id": intent_id,
+                "child_run_id": child_run_id,
+                "child_state": child_state,
+            }),
+            attr.initiator.as_deref().or(envelope.as_ref().map(|e| e.initiator.as_str())),
+            Some(al.as_str()).filter(|s| !s.is_empty()).or(attr.delegator.as_deref()),
+            executor.as_deref(),
+        )?;
+        tx.commit().map_err(store_err)?;
+        actions.push(OrchestrationAction {
+            intent_id,
+            parent_run_id,
+            outcome: child_state,
+            detail: child_run_id,
+        });
+    }
+    Ok(actions)
+}
+
+// ─── Connector broker v0.1 (A-T5; A:// §8.5) ────────────────────────────────
+
+/// Request a brokered connector session (A:// §8.5). Validates the caller's
+/// lease, the risk policy (protected capabilities require a granted approval
+/// for the current generation), and that the capability is registered. Issues
+/// a short-lived session id — raw secrets are NEVER returned or embedded in
+/// job payloads; the SYSTEM performs the external call at invoke time.
+pub fn request_connector_session(
+    conn: &mut Connection,
+    principal: &PrincipalRecord,
+    job_id: &str,
+    lease_id: &str,
+    generation: i64,
+    capability: &str,
+    ttl: Option<Duration>,
+) -> Result<serde_json::Value, TransportError> {
+    let job = validate_lease(conn, principal, job_id, lease_id, generation)?;
+
+    let secret_env: Option<String> = conn
+        .query_row(
+            "SELECT secret_env FROM cowork_connector_secrets WHERE capability = ?1",
+            params![capability],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(store_err)?;
+    if secret_env.is_none() {
+        return Err(TransportError::new(
+            Code::PermissionDenied,
+            format!("no connector registered for capability {capability}"),
+        ));
+    }
+
+    // Risk policy: protected capabilities require a granted approval binding.
+    let workspace = run_workspace(conn, &job.run_id)?;
+    let policy = load_policy(conn, &workspace)?;
+    if matches!(
+        crate::risk_policy::evaluate_protection(&policy, capability),
+        crate::risk_policy::ProtectionDecision::RequiresApproval
+    ) {
+        check_approval(conn, principal, job_id, lease_id, generation, capability, "*")?;
+    }
+
+    let id = format!("cs_{}", Uuid::new_v4());
+    let expires_at = (Utc::now() + ttl.unwrap_or(Duration::from_secs(300))).to_rfc3339();
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(store_err)?;
+    tx.execute(
+        "INSERT INTO cowork_connector_sessions (id, principal, run_id, job_id, capability, status, expires_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, 'active', ?6)",
+        params![id, principal.id, job.run_id, job_id, capability, expires_at],
+    )
+    .map_err(store_err)?;
+    let attr = load_run_attribution(&tx, &job.run_id)?;
+    insert_event(
+        &tx,
+        &job.run_id,
+        "connector.session_created",
+        serde_json::json!({
+            "session_id": id,
+            "capability": capability,
+            "expires_at": expires_at,
+        }),
+        attr.initiator.as_deref(),
+        attr.delegator.as_deref(),
+        Some(principal.id.as_str()),
+    )?;
+    tx.commit().map_err(store_err)?;
+
+    Ok(serde_json::json!({
+        "session_id": id,
+        "capability": capability,
+        "expires_at": expires_at,
+    }))
+}
+
+/// Invoke a brokered connector session: the SYSTEM performs the external call
+/// with the registered secret (read from the env var at invoke time, server
+/// side). The worker never sees the secret. When the env var is unset the
+/// invocation is recorded as simulated (delivered: false) — honest, never
+/// silent.
+pub async fn invoke_connector_session(
+    conn: &mut Connection,
+    principal: &PrincipalRecord,
+    job_id: &str,
+    lease_id: &str,
+    generation: i64,
+    session_id: &str,
+    payload: serde_json::Value,
+) -> Result<serde_json::Value, TransportError> {
+    let job = validate_lease(conn, principal, job_id, lease_id, generation)?;
+    let session: Option<(String, String, String, String)> = conn
+        .query_row(
+            "SELECT capability, status, expires_at, principal FROM cowork_connector_sessions
+             WHERE id = ?1",
+            params![session_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(store_err)?;
+    let Some((capability, status, expires_at, session_principal)) = session else {
+        return Err(TransportError::new(
+            Code::JobNotFound,
+            format!("connector session {session_id} not found"),
+        ));
+    };
+    if session_principal != principal.id {
+        return Err(TransportError::new(
+            Code::PermissionDenied,
+            "connector session belongs to another principal",
+        ));
+    }
+    if status != "active" {
+        return Err(TransportError::new(
+            Code::InvalidLease,
+            format!("connector session is {status}"),
+        ));
+    }
+    if parse_time(&expires_at).map(|e| e < Utc::now()).unwrap_or(true) {
+        return Err(TransportError::new(
+            Code::LeaseExpired,
+            format!("connector session expired at {expires_at}"),
+        ));
+    }
+
+    let secret_env: String = conn
+        .query_row(
+            "SELECT secret_env FROM cowork_connector_secrets WHERE capability = ?1",
+            params![capability],
+            |row| row.get(0),
+        )
+        .map_err(store_err)?;
+
+    let mut delivered = false;
+    let mut simulated = true;
+    let mut detail = "env unset".to_string();
+    if let Ok(target) = std::env::var(&secret_env) {
+        if !target.is_empty() {
+            simulated = false;
+            let client = reqwest::Client::new();
+            match client
+                .post(&target)
+                .header("X-Allternit-Connector", capability.clone())
+                .json(&payload)
+                .send()
+                .await
+            {
+                Ok(resp) if resp.status().is_success() => {
+                    delivered = true;
+                    detail = format!("HTTP {}", resp.status());
+                }
+                Ok(resp) => {
+                    detail = format!("HTTP {}", resp.status());
+                }
+                Err(e) => {
+                    detail = format!("transport error: {e}");
+                }
+            }
+        }
+    }
+
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(store_err)?;
+    let attr = load_run_attribution(&tx, &job.run_id)?;
+    insert_event(
+        &tx,
+        &job.run_id,
+        "connector.invoked",
+        serde_json::json!({
+            "session_id": session_id,
+            "capability": capability,
+            "invoked_by": "broker",
+            "delivered": delivered,
+            "simulated": simulated,
+            "detail": detail,
+            "payload_keys": payload.as_object().map(|o| o.keys().cloned().collect::<Vec<_>>()).unwrap_or_default(),
+        }),
+        attr.initiator.as_deref(),
+        attr.delegator.as_deref(),
+        Some(principal.id.as_str()),
+    )?;
+    tx.commit().map_err(store_err)?;
+
+    Ok(serde_json::json!({
+        "session_id": session_id,
+        "capability": capability,
+        "delivered": delivered,
+        "simulated": simulated,
+        "detail": detail,
+    }))
 }
 
 /// Read back a submitted intent (idempotent observe).
