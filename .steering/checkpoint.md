@@ -1,12 +1,13 @@
 # Checkpoint — session/cu20-teachbatch
 
-**Goal:** Land spec `stagehand-batch-fork` deferrals: A) record→teach→batch (commit c7c2e50c3), B) auto page binding (commit 45f5e280b), C) aci flake fix (uncommitted). Then live smoke, PR/merge/attest/cleanup.
+**Goal:** Land spec `stagehand-batch-fork` deferrals A/B/C. All code + smoke done; landing in progress.
 
-**Just did (this resume):**
-- C fix applied: `test_helpers::computer_use_dir_test_lock()` (alias of POLICY_TEST_LOCK, documented non-reentrant) added in lib.rs; the two unguarded `ALLTERNIT_COMPUTER_USE_DIR` mutators in aci_routes.rs (snapshot_throttle test, credential_binding e2e) now hold it. The other 11 mutation sites already serialize on the same mutex. Root cause of the named flake `aci_routes::policy_seat_tests::audit_api_returns_rows_with_bot_filter`.
-- aci_batch 19/19 with the fix compiled. Full aci_ suite x4 running (background bash-z7wxkfhl); API binary build queued behind it (bash-iykhk16h).
-- Smoke infra restarted: page :18080, headless Chrome CDP :9222.
+**Done:**
+- A `c7c2e50c3` record→teach→batch compilation; B `45f5e280b` auto page binding + contract v1.1; C `f57a81859` flake fix (`audit_api_returns_rows_with_bot_filter`: unguarded ALLTERNIT_COMPUTER_USE_DIR mutations now hold the shared test lock; note origin/main independently locked the snapshot test — resolved taking theirs) + approval_id surfaced on batch-grant events + RunWorkflowBody.batch_page_url.
+- Merge origin/main landed `fc13b21e7` (checkpoint restored from /tmp/cu20-checkpoint-mine.md).
+- **Live smoke 8/8 + 5/5 PASS** (tmp-cu20-smoke/smoke.py): leg 1 compiled batch — ONE grant (approval_id surfaced, handoff-approved at /api/aci/handoff/:id/approve), sidecar executed 3/3 in real Chrome, Rust receipt `completed` 3/3 via /api/aci/batch/receipts/:id, ledger opened/closed, steps via=batch. Leg 2 under ALLTERNIT_WORKFLOW_BATCH=0 — no batch events, no approvals, 3 per-step steps ok via browser.cdp. Env notes: venv needed `playwright` pip install; runtime needed `pnpm install && pnpm run build`; routes are under /api.
+- Python suites post-merge: 69 passed, 0 failed.
 
-**Next:** full aci_ x4 clean → commit C → live smoke leg 1 (compiled batch, one grant, approve, receipt 3/3) + leg 2 (ALLTERNIT_WORKFLOW_BATCH=0 per-step) via tmp-cu20-smoke/smoke.py against API :18113 → merge origin/main → push/PR/merge → attestation+LEDGER → cleanup.
+**Next:** aci_ x4 background run finishing (bash-eszu44ju), then ≥3 clean post-merge runs → push → PR → merge → attestation+LEDGER via detached worktree → cleanup (worktrees incl. allternit-cu20-baseline, branch local+remote, tmp-cu20-smoke).
 
 **Open questions:** None.
