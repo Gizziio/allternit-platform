@@ -6,6 +6,7 @@ pub mod aci_approvals;
 pub mod aci_batch;
 #[cfg(test)]
 mod aci_batch_adversarial;
+pub mod aci_code;
 pub mod aci_credentials;
 pub mod aci_routes;
 pub mod aci_safety;

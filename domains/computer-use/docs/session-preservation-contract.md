@@ -1,8 +1,9 @@
 # Session-Preservation Contract — Computer-Use Batches
 
-**Status:** v1.1 (2026-09-12) — binding for `stagehand-batch-fork` phase P2 and later.
-v1.1 appends §7 (automatic page binding, deferral B); v1 (P2, 2026-09-12) is
-preserved below unchanged.
+**Status:** v1.2 (2026-09-13) — binding for `stagehand-batch-fork` P2+ and
+`code-mode-execution` C2+. v1.2 appends §8 (code execution, C2); v1.1 (§7
+automatic page binding, 2026-09-12) and v1 (P2, 2026-09-12) are preserved
+unchanged.
 **Gate:** this contract is written and landed *before* the planning loop consumes
 batches (spec deliverable gate). The planning loop's batch path (`core/batch_dispatch.py`)
 implements exactly the record type defined here — no more, no less.
@@ -173,3 +174,45 @@ operator `batch_page_url` is passed to it.
 **Versioning note:** payload schema unchanged (`contract_version` stays `1` —
 no fields added or re-meaned); §7 documents a change in *how the engine fills an
 existing field*, which is a minor revision per §5.
+
+## 8. Code execution (v1.2, 2026-09-13)
+
+Code mode (spec `code-mode-execution`, third integration mode, opt-in per run)
+inherits the batch state rules wholesale — a code run is a degenerate
+single-"step" batch whose step body is a grant-bound payload:
+
+**Survives a code run:** the browser/page state the payload changed (the page
+outlives the run), the run's durable records, and the explicit ledger carriers
+below. **Does NOT survive:** any in-context variable, REPL binding, or scratch
+state created while the payload ran — the runner's vm context is discarded when
+the process exits. Nothing in the Python engine reads or writes it.
+
+**Rule (binding, same as §2): cross-run state is carried only as explicit
+ledger/receipt writes.** The legitimate carriers for code mode are exactly:
+
+1. The code receipt (`code-receipts.jsonl`, Rust side) — descriptor hash,
+   grant id, envelope metadata (stdout byte length, exit status, screenshot
+   hash+ref). stdout CONTENT lives only in the loop step's observation, never
+   in the receipt.
+2. The code-context record on the canonical event ledger (below).
+3. The fixed envelope returned to the planning loop
+   (`step.adapter_result["code_envelope"]`) which flows into the next plan
+   call as history — the same observation channel as §2.3.
+
+**The code-context record:** every code dispatch by the planning loop writes
+exactly two canonical ledger events through the existing `EventLedger` surface:
+
+- `code.context.opened` — BEFORE the code RPC is sent (audit-before-act).
+- `code.context.closed` — after the response, carrying the outcome.
+
+Payload schema (`contract_version: "1"`, independent of the batch record's
+version): `code_id`/`descriptor_hash` (the descriptor SHA-256 the grant binds),
+`run_id`/`session_id`, `language`, `code_bytes` (length only — payload content
+never enters the ledger), `declared_targets` (hosts only), `origin`;
+`closed` adds `status` (`completed` | `failed` | `denied` | `refused`),
+`receipt_id`, `exit_status`, `timed_out`. Record type: `core/code_mode.py`
+(`CodeContextRecord`, `open_code_context` / `close_code_context`).
+
+**Versioning:** adding the code-context record type is the major-revision case
+from §5 — this section is that revision, landed in the same PR as the code
+that consumes it.

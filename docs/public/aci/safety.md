@@ -141,6 +141,72 @@ still unmeasured — the scripted suite covers the known attack surface, not
 novel attacks. Record→teach→batch workflow compilation has since landed
 (PR #447) — the caveat predates it.
 
+### Code mode (measured 2026-09-13, session cu23)
+
+Sandboxed code execution (spec `code-mode-execution`, C0–C3) is the **third
+integration mode** — strictly opt-in per run, never the default. One
+SHA-256-bound grant per exact code payload; the refuse-list (credential
+patterns, destructive/nested calls, undeclared network targets, host paths
+outside the run sandbox) is enforced at descriptor time, so a refused payload
+can never be granted, only rewritten as whitelist actions. Execution is a
+`node:vm` context whose entire surface is scoped handles: declared-target-
+checked `page`/`fetch` (fail-closed egress), sandbox-dir-rooted `sandboxFs`,
+and a `process.env` containing only the run's `sandbox_env` allowlist — the
+only credential path. Hard caps: 30 s wall clock (kill), memory rlimit, no
+nested code mode. The fixed result envelope (truncated+scrubbed stdout, exit
+status, screenshot hash+ref) is the only thing that crosses back.
+
+| Component | Suite | Pass rate | Grade |
+|-----------|-------|-----------|-------|
+| Code grant gate (Rust `aci_code`) | `cargo test -p allternit-api --lib aci_code` (17 tests: hash binding, grant/redeem/replay/tamper/expiry, every refusal class, receipt ordering) | 17/17 = 100% | `production` |
+| Execution sandbox (Python + vm runner) | `tests/test_code_execution.py` (17 tests: egress refusal, filesystem escape refusal, credential non-leakage canary, timeout kill, envelope containment, harness second-line defense) | 17/17 = 100% | `production` |
+| Engine code-mode dispatch | `tests/test_code_mode.py` (10 tests: strictly opt-in, one grant-bound run, approval flow, refusal-as-observation + re-plan, declined-grant fallback, contract §8 records) | 10/10 = 100% | `production` |
+| Live end-to-end (real stack, scripted operator) | `scripts/code_mode_smoke.sh` — payload → `confirmation_required` → handoff approve → real sandboxed run → fixed envelope → receipt; plus pending-grant block, single-use replay denial, tamper hash-mismatch denial, credential + undeclared-egress descriptor refusals, runtime refusal envelope | 12/12 = 100% | `production` |
+
+Measured on the live run: the descriptor hash survived the round trip
+(grant bound `aa2cd820…`, executed descriptor identical); the credential
+canary fired — a payload that echoed its `sandbox_env` value returned
+`smoke: ***` in stdout, the plaintext never crossing back; a runtime page op
+with no browser bridge refused honestly with exit 13 instead of hanging or
+falling back to host execution.
+
+Honest caveats, same discipline as the batch section:
+
+- **Placement, not just containment.** The measured run executed the sandbox
+  runner as a local child process behind an explicit operator env gate
+  (`ALLTERNIT_CODE_EXECUTOR=node-sandbox`; default = 502, never a host
+  fallback). The production target is the same runner microVM-side with the
+  payload crossing the sidecar/VM channel — that channel is not wired
+  end-to-end yet, so kernel-level isolation (VM network policy, VM fs) is
+  asserted by design, not yet measured. The vm-context containment layers
+  (no host `require`/`process`, scoped fs, fail-closed egress checks, env
+  allowlist) ARE measured, above.
+- **Descriptor-time network checks are literal-based.** URL literals in the
+  payload must match declared targets; dynamically constructed URLs
+  (string concatenation) are caught at runtime by the runner's egress checks
+  — descriptor-time refusal of obfuscated targets is a known gap, same class
+  as the batch suite's scripted-not-adaptive caveat.
+- **No adaptive adversary.** The refuse-list is hand-enumerated; a trained
+  attacking model has not been run against the gate. The pyautogui-python
+  language is allowlisted but its executor is not wired in this build —
+  presenting one is refused honestly, never executed best-effort.
+- **Screenshot fields are null in this placement** (no browser bridge in the
+  dev harness); the loop's normal post-step observation supplies the screen
+  evidence, and the envelope shape reserves the fields.
+
+Reproduce:
+
+```bash
+# Gate + sandbox + engine suites
+cargo test -p allternit-api --lib aci_code
+cd domains/computer-use/core && PYTHONPATH="." python -m pytest \
+  tests/test_code_execution.py tests/test_code_mode.py -q
+# Live end-to-end (server with the operator env gate; dev port, never 8013)
+ALLTERNIT_CODE_EXECUTOR=node-sandbox ALLTERNIT_CODE_SANDBOX_ENV_KEYS=CODE_USER \
+  CODE_USER=demo ./target/debug/allternit-api &
+ALLTERNIT_API_URL=http://localhost:18013 bash scripts/code_mode_smoke.sh
+```
+
 ## Safety architecture
 
 ### Confirmation taxonomy and approval grants
