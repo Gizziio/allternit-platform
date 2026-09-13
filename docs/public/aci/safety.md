@@ -138,7 +138,8 @@ Remaining caveats: small *n* (five task shapes, one model, one run each);
 the model backend stalled on the conditional-branch shape (infrastructure,
 not a gate failure); recall against an *adaptive* (model-driven) adversary is
 still unmeasured — the scripted suite covers the known attack surface, not
-novel attacks. Record→teach→batch workflow compilation is deferred.
+novel attacks. Record→teach→batch workflow compilation has since landed
+(PR #447) — the caveat predates it.
 
 ## Safety architecture
 
