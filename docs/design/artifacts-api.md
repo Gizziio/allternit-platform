@@ -117,6 +117,21 @@ diff tooling later.
 Indexes: `(artifact_id, version)` unique; `(user_id, created_at)` for list;
 `(type)`; `(project_id)`.
 
+### `content_artifact_files` — per-artifact project file tree (V159, 2026-09-12)
+
+Mirrors a design project's whole file tree per artifact so the web store's
+read-through cache works for every file, not just `/index.html` (§3 file
+tree). Upsert-keyed on `(artifact_id, path)`; bodies inline.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `artifact_id` | TEXT NOT NULL | FK → `content_artifacts.id`, cascade delete; PK part |
+| `path` | TEXT NOT NULL | canonical `/segment/…` project path; PK part |
+| `body` / `body_sha256` | TEXT NOT NULL | full file content + content hash |
+| `created_at` / `updated_at` | DATETIME | updated bumps on every upsert |
+
+Index: `(artifact_id)`.
+
 ### 2.1 Type system (DECIDED shape, typed renderers DECIDED 2026-09-12)
 
 `type` is a MIME-style string. Html-first, per row 1:
@@ -236,6 +251,25 @@ memory-store work — no OFFSET paging.
 
 Sets `deleted_at`; list/get exclude it. Hard purge is a retention concern
 (§8.3), not an API concern.
+
+### File tree (Phase 2 multi-file sync, IMPLEMENTED 2026-09-12 — session `artpolish-0912`)
+
+Design-mode projects are a flat per-project tree of files; until this session
+only `/index.html` synced to the gateway (as the artifact version body).
+`content_artifact_file_routes.rs` (migration V159, table
+`content_artifact_files`) mirrors the whole tree per artifact:
+
+- `GET /api/v1/content-artifacts/:id/files` — index: `[{path, sha256, updatedAt}]` (no bodies)
+- `GET /api/v1/content-artifacts/:id/files/*path` — read one file `{path, body, sha256, updatedAt}`
+- `PUT /api/v1/content-artifacts/:id/files/*path` — upsert write-through `{body}` → `{path, sha256, updatedAt}` (200; natural idempotency via the PK upsert)
+- `DELETE /api/v1/content-artifacts/:id/files/*path` — remove one file
+
+Paths are canonical `/segment/…` (no `..`, empty, or trailing-slash segments;
+404 cross-user like every route, soft-deleted artifacts unreadable). Bodies are
+inline — design project files are small source files; the disk-spill machinery
+stays reserved for version bodies. The web store
+(`project-file-store.ts`) writes through every save/delete/rename and
+read-through-fills a cache-cold browser's whole tree from the index.
 
 ### Publish tier (Phase 3, IMPLEMENTED 2026-09-12 — session `artphase3-0912`)
 
