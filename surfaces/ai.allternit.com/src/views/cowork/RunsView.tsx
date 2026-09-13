@@ -59,11 +59,14 @@ export const RunsView: React.FC = () => {
     useCoworkRuns();
 
   useEffect(() => {
+    // A deployment without the runs API (404 → unsupported) must not 404
+    // every 5s — only poll while the endpoint exists.
+    if (unsupported) return;
     const interval = setInterval(() => {
       refresh();
     }, 5000);
     return () => clearInterval(interval);
-  }, [refresh]);
+  }, [refresh, unsupported]);
 
   const filteredRuns = runs.filter((run) => {
     if (activeFilter === 'All') return true;
@@ -272,6 +275,10 @@ export const RunsView: React.FC = () => {
                   onChange={refresh}
                   recoverUnavailable={recoverUnavailable}
                   handoffsUnavailable={handoffsUnavailable}
+                  startRun={startRun}
+                  cancelRun={cancelRun}
+                  recoverRun={recoverRun}
+                  createHandoff={createHandoff}
                 />
               )}
             </div>
@@ -302,13 +309,22 @@ function RunDetail({
   onChange,
   recoverUnavailable,
   handoffsUnavailable,
+  startRun,
+  cancelRun,
+  recoverRun,
+  createHandoff,
 }: {
   run: CoworkRun;
   onChange: () => void;
   recoverUnavailable: boolean;
   handoffsUnavailable: boolean;
+  // Lifted from the parent's useCoworkRuns() so expanding a run does not spin
+  // up a second hook instance (and a second mount fetch) per expansion.
+  startRun: (id: string) => Promise<void>;
+  cancelRun: (id: string) => Promise<void>;
+  recoverRun: (id: string) => Promise<void>;
+  createHandoff: (runId: string, req: { to_agent_id: string; task_id?: string; note?: string }) => Promise<unknown>;
 }) {
-  const { startRun, cancelRun, recoverRun, createHandoff } = useCoworkRuns();
   const { jobs } = useCoworkRunJobs(run.id);
   const { handoffs } = useCoworkRunHandoffs(run.id);
   const { events, connected } = useCoworkRunEvents(run.id);

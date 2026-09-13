@@ -114,7 +114,10 @@ function useCoworkSessionActions() {
 export async function createCoworkSession(options?: CreateModeSessionOptions): Promise<string> {
   const sessionId = await useCoworkSessionStore.getState().createSession(options);
 
-  // Sync to Prisma cowork sessions table (fire-and-forget, non-blocking)
+  // Sync to Prisma cowork sessions table (fire-and-forget, non-blocking).
+  // The backend mints its own row id, so remember it on the session record —
+  // the unmount checkpoint PATCH must target this server id, not the local
+  // mode-session id, which the cowork_sessions table never contains.
   fetch('/api/v1/cowork/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -124,7 +127,18 @@ export async function createCoworkSession(options?: CreateModeSessionOptions): P
       status: 'active',
       mode: options?.sessionMode === 'agent' ? 'agent' : 'regular',
     }),
-  }).catch((err) => { logger.error({ err: err }, 'Failed to persist session to server'); });
+  })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+    .then(async (data: { session?: { id?: string } }) => {
+      const serverId = data?.session?.id;
+      if (!serverId) return;
+      // updateSession merges metadata, so only the new key is passed — a full
+      // snapshot here could clobber memoryContext written by the fetch below.
+      await useCoworkSessionStore.getState().updateSession(sessionId, {
+        metadata: { coworkServerId: serverId },
+      });
+    })
+    .catch((err) => { logger.error({ err: err }, 'Failed to persist session to server'); });
 
   // Inject memory context — use semantic search when we have a task name, else formatted context list
   const taskName = options?.name;
@@ -144,9 +158,10 @@ export async function createCoworkSession(options?: CreateModeSessionOptions): P
         memoryContext = data.entries.map((e) => e.content).join('\n---\n');
       }
       if (!memoryContext) return;
-      const existing = useCoworkSessionStore.getState().sessions.find((s) => s.id === sessionId)?.metadata;
+      // No metadata snapshot spread here: updateSession already merges, and a
+      // stale snapshot could drop keys written concurrently (coworkServerId).
       useCoworkSessionStore.getState().updateSession(sessionId, {
-        metadata: { ...existing, originSurface: 'cowork', memoryContext },
+        metadata: { originSurface: 'cowork', memoryContext },
       });
     })
     .catch((err) => { logger.error({ err: err }, 'Failed to fetch memory context'); });

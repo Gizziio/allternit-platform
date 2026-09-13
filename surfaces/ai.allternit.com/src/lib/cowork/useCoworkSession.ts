@@ -1,6 +1,11 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import {
+  detectRuntimeUnavailable,
+  markRuntimeAvailable,
+  markRuntimeUnavailable,
+} from './useRuntimeAvailable';
 
 export interface CoworkSessionRecord {
   id: string;
@@ -26,7 +31,20 @@ export function useCoworkSessionList() {
     setLoading(true);
     setError(null);
     fetch('/api/v1/cowork/sessions?limit=30')
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          const runtime = await detectRuntimeUnavailable(r);
+          if (runtime.unavailable) {
+            // No paired runtime — surface it in the shared store instead of
+            // silently rendering an empty "recent sessions" list.
+            markRuntimeUnavailable(runtime.reason);
+            return { sessions: [] } as { sessions?: CoworkSessionRecord[] };
+          }
+          throw new Error(`Failed to load sessions (HTTP ${r.status})`);
+        }
+        markRuntimeAvailable();
+        return r.json() as Promise<{ sessions?: CoworkSessionRecord[] }>;
+      })
       .then((data: { sessions?: CoworkSessionRecord[] }) => {
         setSessions(data.sessions ?? []);
       })

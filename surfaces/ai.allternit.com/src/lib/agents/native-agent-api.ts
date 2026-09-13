@@ -23,6 +23,10 @@ import { buildAuthHeaders } from "@/lib/agents/api-config";
 import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
 import { getCloudApiBaseUrl, isAgentSessionsApiEnabled, isDesktopOperatorShell } from "@/lib/env";
 import { createCloudApiEventSource } from "@/lib/cloud-api";
+import {
+  detectRuntimeUnavailable,
+  markRuntimeUnavailable,
+} from "@/lib/cowork/useRuntimeAvailable";
 
 /**
  * Wrapper around fetch that injects the user's bearer token / desktop session
@@ -750,6 +754,19 @@ export const chatApi = {
     });
 
     if (!response.ok) {
+      // A non-ok chat response may be the interceptor's synthetic 503 from an
+      // unpaired runtime. Name that cause in the thrown error so the session
+      // store's visible ⚠️ message tells the user what to do, and feed the
+      // shared runtime-availability store.
+      const runtime = await detectRuntimeUnavailable(response);
+      if (runtime.unavailable) {
+        markRuntimeUnavailable(runtime.reason);
+        throw new NativeAgentApiError(
+          'Runtime offline — connect your Allternit runtime to continue',
+          response.status,
+          'runtime_unavailable',
+        );
+      }
       throw new NativeAgentApiError(
         `Chat stream failed: ${response.statusText}`,
         response.status,

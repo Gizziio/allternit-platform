@@ -21,7 +21,9 @@ const API_BASE = env(
 const EVENTS_POLL_MS = 4000;
 
 export function useCoworkRunEvents(runId: string | null) {
-  const auth = usePlatformAuth();
+  // Depend on getToken, not the auth object: useAuth() returns a fresh object
+  // every render, and depending on it reset events/connected each render.
+  const { getToken } = usePlatformAuth();
   const [events, setEvents] = useState<CoworkRunEvent[]>([]);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function useCoworkRunEvents(runId: string | null) {
 
     const poll = async () => {
       try {
-        const token = await auth.getToken().catch(() => null);
+        const token = await getToken().catch(() => null);
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         const res = await fetch(`${API_BASE}/api/v1/runs/${runId}/events?limit=200`, { headers });
         if (!res.ok) throw new Error(`Failed to fetch events: ${res.status}`);
@@ -71,7 +73,7 @@ export function useCoworkRunEvents(runId: string | null) {
         timerRef.current = null;
       }
     };
-  }, [auth, runId]);
+  }, [getToken, runId]);
 
   return { events, connected, error };
 }

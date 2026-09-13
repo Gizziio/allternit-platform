@@ -4,6 +4,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Folder, ShieldCheck, CaretDown, Check } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useCoworkStore } from './CoworkStore';
+import { useCoworkSessionStore } from './CoworkSessionStore';
+
+// Same mode vocabulary the code surface uses: CodeCanvas persists the choice
+// on session.metadata.codePermissionMode and the runtime (mode-session-store)
+// reads it at stream time. The cowork dropdown speaks the same field so the
+// selection is real, persisted session state — not a dead local useState.
+type CodePermissionMode = 'default' | 'acceptEdits' | 'plan';
 
 const PERMISSION_OPTIONS = [
   { id: 'auto-approve', label: 'Auto-approve', description: 'Agent can run tools and edits freely' },
@@ -12,6 +19,18 @@ const PERMISSION_OPTIONS = [
 ] as const;
 
 type PermissionId = (typeof PERMISSION_OPTIONS)[number]['id'];
+
+const PERMISSION_TO_CODE_MODE: Record<PermissionId, CodePermissionMode> = {
+  'auto-approve': 'acceptEdits',
+  'ask': 'default',
+  'read-only': 'plan',
+};
+
+const CODE_MODE_TO_PERMISSION: Record<CodePermissionMode, PermissionId> = {
+  'acceptEdits': 'auto-approve',
+  'default': 'ask',
+  'plan': 'read-only',
+};
 
 interface DropdownProps {
   label: string;
@@ -97,7 +116,14 @@ export function CoworkTopDeck(): React.ReactNode {
   const activeProjectId = useCoworkStore((s) => s.activeProjectId);
   const setActiveProject = useCoworkStore((s) => s.setActiveProject);
 
-  const [permission, setPermission] = useState<PermissionId>('ask');
+  const activeSessionId = useCoworkSessionStore((s) => s.activeSessionId);
+  const activeSession = useCoworkSessionStore((s) =>
+    s.activeSessionId
+      ? s.sessions.find((sess) => sess.id === s.activeSessionId) ?? null
+      : null,
+  );
+  const updateSession = useCoworkSessionStore((s) => s.updateSession);
+
   const [openDropdown, setOpenDropdown] = useState<'project' | 'permission' | null>(null);
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
@@ -108,6 +134,24 @@ export function CoworkTopDeck(): React.ReactNode {
 
   const handleProjectSelect = (id: string) => {
     setActiveProject(id === '__none__' ? null : id);
+  };
+
+  // Initialize from the current session's persisted mode (same read path the
+  // runtime uses) and write back through the same updateSession action the
+  // code surface calls from CodeCanvas.
+  const sessionCodeMode = activeSession?.metadata.codePermissionMode;
+  const permission: PermissionId = CODE_MODE_TO_PERMISSION[
+    (typeof sessionCodeMode === 'string' ? sessionCodeMode : 'default') as CodePermissionMode
+  ] ?? 'ask';
+
+  const handlePermissionSelect = (id: string) => {
+    const mode = PERMISSION_TO_CODE_MODE[id as PermissionId];
+    if (!mode || !activeSessionId) return;
+    void updateSession(activeSessionId, {
+      metadata: { codePermissionMode: mode },
+    }).catch(() => {
+      // Non-blocking: the store keeps the optimistic metadata merge.
+    });
   };
 
   const selectedPermission = PERMISSION_OPTIONS.find((p) => p.id === permission) ?? PERMISSION_OPTIONS[1];
@@ -135,7 +179,7 @@ export function CoworkTopDeck(): React.ReactNode {
         value={selectedPermission.label}
         icon={<ShieldCheck size={14} className="text-status-warning" />}
         options={PERMISSION_OPTIONS.map((p) => ({ id: p.id, label: p.label, description: p.description }))}
-        onSelect={(id) => setPermission(id as PermissionId)}
+        onSelect={handlePermissionSelect}
         isOpen={openDropdown === 'permission'}
         onToggle={() => setOpenDropdown((prev) => (prev === 'permission' ? null : 'permission'))}
         onClose={() => setOpenDropdown(null)}

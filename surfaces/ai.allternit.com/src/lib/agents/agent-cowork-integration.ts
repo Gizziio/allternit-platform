@@ -77,7 +77,7 @@ function syncHeartbeatToCoworkTask(
   
   // Auto-start session if configured
   if (fullConfig.autoStartSession && heartbeatTask.frequency === 'startup') {
-    startCoworkSessionForTask(customTask.id, heartbeatTask.action);
+    void startCoworkSessionForTask(customTask.id, heartbeatTask.action);
   }
   
   return customTask;
@@ -137,23 +137,44 @@ function updateCoworkTaskWithResult(
 }
 
 /**
- * Start a cowork session for a task
+ * Start a cowork session for a task.
+ *
+ * Uses the real session-creation path (mode-session-store via
+ * createCoworkSession — the same path CoworkRoot's handleStartCowork uses).
+ * The previous CoworkStore.startSession returned a fabricated id that no
+ * store ever created, leaving dangling session ids in task bindings.
  */
-function startCoworkSessionForTask(
+async function startCoworkSessionForTask(
   taskId: string,
   context?: string
-): string | null {
+): Promise<string | null> {
   const coworkStore = useCoworkStore.getState();
-  
+
   // Set the task as active
   coworkStore.setActiveTask(taskId);
-  
-  // Start a session
-  const sessionId = coworkStore.startSession('desktop', context || 'HEARTBEAT task execution');
-  
-  logger.debug(`Started cowork session ${sessionId} for task ${taskId}`);
-  
-  return sessionId;
+
+  try {
+    // Imported lazily: a top-level import of CoworkSessionStore would create
+    // a module cycle (mode-session-store → agent-cowork-integration →
+    // CoworkSessionStore → mode-session-store) and leave
+    // createModeSessionStore undefined at evaluation time.
+    const { createCoworkSession, useCoworkSessionStore } = await import(
+      '@/views/cowork/CoworkSessionStore'
+    );
+    const sessionId = await createCoworkSession({
+      name: context || 'HEARTBEAT task execution',
+      sessionMode: 'regular',
+    });
+    useCoworkSessionStore.getState().setActiveSession(sessionId);
+    // Bind the new session to the task so the task-status sync in CoworkRoot
+    // can observe streaming + replies for it.
+    useTaskStore.getState().bindSessionToTask(taskId, sessionId);
+    logger.debug(`Started cowork session ${sessionId} for task ${taskId}`);
+    return sessionId;
+  } catch (err) {
+    logger.error({ err: err }, `Failed to start cowork session for task ${taskId}`);
+    return null;
+  }
 }
 
 /**

@@ -11,6 +11,8 @@ import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { coworkTransitionController } from '@/lib/agents/session-transition-controller';
 import type { ChatMessage } from '@/lib/ai/rust-stream-adapter';
 import type { AnyCoworkEvent } from './cowork.types';
+import { useCoworkRuns } from '@/lib/cowork/useCoworkRuns';
+import { useCoworkRunEvents, type CoworkRunEvent } from '@/lib/cowork/useCoworkRunEvents';
 import { ChatThreadInlineGate } from '@/views/chat/components/ChatThreadInlineGate';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
 
@@ -42,7 +44,14 @@ function getCurrentRunningTool(messages: ChatMessage[]): string | null {
     if (m.role !== 'assistant' || !Array.isArray(m.content)) continue;
     const parts = m.content as any[];
     const running = [...parts].reverse().find(
-      (p: any) => p.type === 'dynamic-tool' && (p.state === 'input-available' || p.state === 'running')
+      (p: any) =>
+        p.type === 'dynamic-tool' &&
+        // Live native parts stream as 'input-streaming' and settle into
+        // 'output-available'/'output-error' (mode-session-store); the legacy
+        // rust-stream-adapter marks tool input 'input-available'.
+        (p.state === 'input-available' ||
+          p.state === 'input-streaming' ||
+          p.state === 'running')
     );
     if (running) return running.toolName as string;
   }
@@ -93,13 +102,105 @@ function LiveToolBadge({ toolName }: { toolName: string }) {
 // Work event types that should render as inline blocks
 const INLINE_WORK_TYPES = [
   'cowork.action',
-  'cowork.command', 
+  'cowork.command',
   'cowork.file',
   'cowork.observation',
   'cowork.checkpoint',
   'cowork.tool_call',
   'cowork.tool_result',
 ];
+
+// Slow cadence for refreshing the run list while a cowork transcript is
+// mounted — the events themselves poll every 4s via useCoworkRunEvents once a
+// run is bound.
+const RUNS_REFRESH_MS = 15_000;
+
+/**
+ * Map cloud run events ({ event_type, payload }) onto the AnyCoworkEvent
+ * shapes CoworkWorkBlock renders. Payloads from the runs API vary, so every
+ * field the blocks dereference gets a default instead of crashing on a
+ * missing key.
+ */
+const RUN_EVENT_DEFAULTS: Record<
+  string,
+  (payload: Record<string, unknown>) => Record<string, unknown>
+> = {
+  'cowork.action': (p) => ({
+    actionId: String(p.actionId ?? ''),
+    actionType: p.actionType ?? 'click',
+    target: p.target,
+    args: p.args,
+    humanReadable: String(p.humanReadable ?? ''),
+    frameId: String(p.frameId ?? ''),
+  }),
+  'cowork.command': (p) => ({
+    commandId: String(p.commandId ?? ''),
+    commands: Array.isArray(p.commands)
+      ? (p.commands as string[])
+      : typeof p.command === 'string'
+        ? [p.command]
+        : [],
+    cwd: p.cwd,
+    env: p.env,
+    result: p.result,
+  }),
+  'cowork.file': (p) => ({
+    operation: (p.operation as 'read' | 'edit' | 'create' | 'delete') ?? 'read',
+    files: Array.isArray(p.files) ? p.files : [],
+  }),
+  'cowork.observation': (p) => ({
+    frameId: String(p.frameId ?? ''),
+    imageRef: String(p.imageRef ?? ''),
+    metadata: (p.metadata as Record<string, unknown>) ?? {},
+    ocr: p.ocr,
+    labels: p.labels,
+  }),
+  'cowork.checkpoint': (p) => ({
+    checkpointId: String(p.checkpointId ?? ''),
+    label: String(p.label ?? ''),
+    state: (p.state as Record<string, unknown>) ?? {},
+  }),
+  'cowork.tool_call': (p) => ({
+    toolCallId: String(p.toolCallId ?? ''),
+    toolName: String(p.toolName ?? 'tool'),
+    args: (p.args as Record<string, unknown>) ?? {},
+  }),
+  'cowork.tool_result': (p) => ({
+    toolCallId: String(p.toolCallId ?? ''),
+    result: p.result ?? null,
+    error: p.error as string | undefined,
+  }),
+};
+
+function mapRunEventsToCoworkEvents(
+  runEvents: CoworkRunEvent[],
+  runId: string,
+  sessionId: string | undefined,
+): AnyCoworkEvent[] {
+  return runEvents
+    .filter((ev) => INLINE_WORK_TYPES.includes(ev.event_type))
+    .map((ev, index) => {
+      const payload = ev.payload ?? {};
+      const timestamp =
+        typeof payload.timestamp === 'number'
+          ? payload.timestamp
+          : typeof payload.time === 'number'
+            ? payload.time
+            : Date.now();
+      const base = {
+        id: typeof payload.id === 'string' ? payload.id : `${runId}:${index}`,
+        type: ev.event_type,
+        timestamp,
+        sessionId:
+          typeof payload.sessionId === 'string' ? payload.sessionId : (sessionId ?? runId),
+      };
+      const defaults = RUN_EVENT_DEFAULTS[ev.event_type];
+      return {
+        ...base,
+        ...(defaults ? defaults(payload) : {}),
+      } as unknown as AnyCoworkEvent;
+    });
+}
 
 /**
  * Merge messages and work events into a unified timeline
@@ -249,9 +350,35 @@ export const CoworkTranscript = memo(function CoworkTranscript({
     [messages, isLoading]
   );
 
-  // Legacy cowork events are no longer stored in CoworkStore.
-  // Events come from the active session in CoworkSessionStore or are empty.
-  const events: AnyCoworkEvent[] = [];
+  // Run/work events for the inline work blocks. Mode sessions don't carry a
+  // cloud run id (see cowork.types.ts / CoworkSessionStore — no runId field
+  // exists on either side), so we bind to the most recent cowork-mode
+  // pipeline run from the cloud runs API and poll its event stream. The
+  // events hook degrades to [] when the runs API is unavailable, so the
+  // transcript never breaks on a missing backend.
+  const { runs: coworkRuns, refresh: refreshCoworkRuns, unsupported: runsUnsupported } =
+    useCoworkRuns(undefined, { enabled: Boolean(sessionId) });
+  useEffect(() => {
+    if (!sessionId || runsUnsupported) return;
+    void refreshCoworkRuns();
+    const id = window.setInterval(() => void refreshCoworkRuns(), RUNS_REFRESH_MS);
+    return () => window.clearInterval(id);
+  }, [sessionId, runsUnsupported, refreshCoworkRuns]);
+
+  const activeRunId = useMemo(() => {
+    if (!sessionId) return null;
+    const sorted = coworkRuns
+      .filter((r) => r.mode === 'cowork')
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+    return sorted[0]?.id ?? null;
+  }, [coworkRuns, sessionId]);
+
+  const { events: runEvents } = useCoworkRunEvents(activeRunId);
+
+  const events = useMemo(
+    () => (activeRunId ? mapRunEventsToCoworkEvents(runEvents, activeRunId, sessionId) : []),
+    [runEvents, activeRunId, sessionId],
+  );
 
   // Pagination: large transcripts render only the most recent messages to keep
   // DOM weight and render time bounded. A "load more" button reveals earlier
@@ -264,9 +391,6 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   );
   const timeline = mergeTimeline(displayedMessages, events);
 
-  // Native streaming parts come from mode-session-store, not CoworkStore.
-  const nativePartsByMessage: Record<string, Record<string, unknown>[]> = {};
-
   // Subscribe to transition controller for session-switch loading states
   const [transitionState, setTransitionState] = useState(coworkTransitionController.getState());
   useEffect(() => {
@@ -274,10 +398,10 @@ export const CoworkTranscript = memo(function CoworkTranscript({
     return unsub;
   }, []);
 
-  // Reset pagination when the conversation changes.
+  // Reset pagination when the conversation or session changes.
   useEffect(() => {
     setRenderLimit(PAGE_SIZE);
-  }, [conversationId]);
+  }, [conversationId, sessionId]);
 
   // Merge transition loading into isLoading
   const isTransitioning =
@@ -328,7 +452,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
           );
         }
 
-        // Legacy cowork event work block
+        // Inline work block from the bound cloud run's event stream
         return (
           <div key={item.id} className="max-w-2xl mx-auto">
             <CoworkWorkBlock

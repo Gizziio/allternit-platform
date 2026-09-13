@@ -28,7 +28,6 @@ rails/reference/beads/
 .env
 .env.*
 !.env.example
-!.env.production
 !.env.local.example
 /debug/
 release/

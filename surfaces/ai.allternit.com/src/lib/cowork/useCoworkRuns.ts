@@ -61,8 +61,14 @@ export interface CreateRunRequest {
   policy_profile?: string;
 }
 
-export function useCoworkRuns(workspaceId?: string) {
-  const auth = usePlatformAuth();
+export function useCoworkRuns(workspaceId?: string, options?: { enabled?: boolean }) {
+  // Destructure getToken: the whole auth object is a fresh reference every
+  // render (Clerk's useAuth), which would re-create every callback and
+  // refetch in a storm. getToken is the stable primitive Clerk memoizes.
+  const { getToken } = usePlatformAuth();
+  // Callers that only bind runs conditionally (e.g. cowork transcripts without
+  // an active session) can disable the mount fetch entirely.
+  const enabled = options?.enabled ?? true;
   const [runs, setRuns] = useState<CoworkRun[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,13 +82,13 @@ export function useCoworkRuns(workspaceId?: string) {
 
   const coworkFetch = useCallback(
     async (path: string, init?: RequestInit): Promise<Response> => {
-      const token = await auth.getToken().catch(() => null);
+      const token = await getToken().catch(() => null);
       const headers = new Headers(init?.headers);
       if (token) headers.set('Authorization', `Bearer ${token}`);
       if (init?.body) headers.set('Content-Type', 'application/json');
       return fetch(`${API_BASE}${path}`, { ...init, headers });
     },
-    [auth],
+    [getToken],
   );
 
   const refresh = useCallback(async () => {
@@ -111,8 +117,9 @@ export function useCoworkRuns(workspaceId?: string) {
   }, [coworkFetch, workspaceId]);
 
   useEffect(() => {
+    if (!enabled) return;
     refresh();
-  }, [refresh]);
+  }, [refresh, enabled]);
 
   const createRun = useCallback(
     async (req: CreateRunRequest) => {
@@ -193,7 +200,7 @@ export function useCoworkRuns(workspaceId?: string) {
 }
 
 export function useCoworkRunJobs(runId: string | null) {
-  const auth = usePlatformAuth();
+  const { getToken } = usePlatformAuth();
   const [jobs, setJobs] = useState<CoworkJob[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -204,7 +211,7 @@ export function useCoworkRunJobs(runId: string | null) {
     }
     setLoading(true);
     try {
-      const token = await auth.getToken().catch(() => null);
+      const token = await getToken().catch(() => null);
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       const res = await fetch(`${API_BASE}/api/v1/runs/${runId}/jobs`, { headers });
       if (!res.ok) throw new Error(`Failed to fetch jobs: ${res.status}`);
@@ -215,7 +222,7 @@ export function useCoworkRunJobs(runId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [auth, runId]);
+  }, [getToken, runId]);
 
   useEffect(() => {
     refresh();
@@ -225,7 +232,7 @@ export function useCoworkRunJobs(runId: string | null) {
 }
 
 export function useCoworkRunHandoffs(runId: string | null) {
-  const auth = usePlatformAuth();
+  const { getToken } = usePlatformAuth();
   const [handoffs, setHandoffs] = useState<CoworkHandoff[]>([]);
 
   const refresh = useCallback(async () => {
@@ -234,7 +241,7 @@ export function useCoworkRunHandoffs(runId: string | null) {
       return;
     }
     try {
-      const token = await auth.getToken().catch(() => null);
+      const token = await getToken().catch(() => null);
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       const res = await fetch(`${API_BASE}/api/v1/runs/${runId}/handoffs`, { headers });
       if (!res.ok) throw new Error(`Failed to fetch handoffs: ${res.status}`);
@@ -243,16 +250,11 @@ export function useCoworkRunHandoffs(runId: string | null) {
       console.error('[useCoworkRunHandoffs]', e);
       setHandoffs([]);
     }
-  }, [auth, runId]);
+  }, [getToken, runId]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   return { handoffs, refresh };
-}
-
-export interface CoworkRunEvent {
-  event_type: string;
-  payload: Record<string, unknown>;
 }

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment, react-hooks/exhaustive-deps */
-// @ts-nocheck
 /**
  * CoworkRoot.tsx
  * Claude-style Cowork Mode: Chat-first layout with inline work blocks + right rail
@@ -57,6 +55,7 @@ import {
   mapNativeMessagesToStreamMessages,
 } from '@/lib/agents';
 import { useCoworkSessionStore, createCoworkSession } from './CoworkSessionStore';
+import { useCoworkCheckpointOnUnmount } from './useCoworkCheckpointOnUnmount';
 import { useCoworkMode } from './CoworkModeTabs';
 import { WorkflowPipeline, type CoworkAgent } from './components/WorkflowPipeline';
 import { BrowserAgentWorkspace } from './components/BrowserAgentWorkspace';
@@ -72,6 +71,12 @@ import { useModeCanvasBridge } from '@/hooks/useModeCanvasBridge';
 import { ACIComputerUseBar } from '@/capsules/browser/ACIComputerUseSidecar';
 import { usePermissionGuide } from '@/lib/usePermissionGuide';
 import { usePlatformAuth } from '@/lib/platform-auth-client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  detectRuntimeUnavailable,
+  markRuntimeAvailable,
+  markRuntimeUnavailable,
+} from '@/lib/cowork/useRuntimeAvailable';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -201,26 +206,7 @@ function CoworkRootContent() {
   }, []);
 
   // Save checkpoint to Prisma when the session is active and the component unmounts
-  const coworkSessionIdRef = useRef(coworkSessionId);
-  coworkSessionIdRef.current = coworkSessionId;
-  useEffect(() => {
-    return () => {
-      const sid = coworkSessionIdRef.current;
-      if (!sid) return;
-      const messages = useCoworkSessionStore.getState().sessions.find((s) => s.id === sid)?.messages ?? [];
-      const lastMsg = messages[messages.length - 1];
-      const checkpoint = {
-        savedAt: new Date().toISOString(),
-        lastMessage: lastMsg ? String(lastMsg.content ?? '').slice(0, 200) : '',
-        messageCount: messages.length,
-      };
-      fetch(`/api/v1/cowork/sessions/${sid}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checkpoint, status: 'paused' }),
-      }).catch(() => {});
-    };
-  }, []);
+  useCoworkCheckpointOnUnmount(coworkSessionId);
 
   // Auto-open the right rail when a cowork session becomes active so the
   // session panel is visible without needing a manual click.
@@ -258,6 +244,12 @@ function CoworkRootContent() {
   // Register as drop target for cowork
   useDropTarget('cowork', handleDroppedFiles);
   const { isLoaded: isAuthLoaded, isSignedIn } = usePlatformAuth();
+  const { addToast } = useToast();
+  // Personas-fetch toast dedup: the effect can re-run (auth state, retry) and
+  // a hosted deployment without a paired runtime 503s every time — surface the
+  // failure toast once per outage, not per attempt. Cleared on success so a
+  // recovered runtime re-arms it.
+  const personasToastShownRef = useRef(false);
 
   // Fetch personas and map to CoworkAgent format for WorkflowPipeline / BrowserAgentWorkspace
   useEffect(() => {
@@ -266,9 +258,20 @@ function CoworkRootContent() {
       return;
     }
 
+    let active = true;
     fetch('/api/v1/cowork/personas')
-      .then((r) => r.json())
-      .then((data: { personas?: Array<{ id: string; name: string; description?: string; systemPrompt: string; tools?: string[] }> }) => {
+      .then(async (r) => {
+        if (!r.ok) {
+          const runtime = await detectRuntimeUnavailable(r);
+          if (runtime.unavailable) markRuntimeUnavailable(runtime.reason);
+          throw new Error(`HTTP ${r.status}`);
+        }
+        return r.json() as Promise<{ personas?: Array<{ id: string; name: string; description?: string; systemPrompt: string; tools?: string[] }> }>;
+      })
+      .then((data) => {
+        if (!active) return;
+        personasToastShownRef.current = false;
+        markRuntimeAvailable();
         const agents: CoworkAgent[] = (data.personas ?? []).map((p) => ({
           agent_id: p.id,
           type: 'developer_agent',
@@ -277,12 +280,25 @@ function CoworkRootContent() {
           tasks: [],
         }));
         setCoworkAgents(agents);
-        if (agents.length > 0 && !selectedWebAgent) {
-          setSelectedWebAgent(agents[0]);
-        }
+        // Functional update: picks the first agent only when none is selected,
+        // without reading state outside the effect deps.
+        setSelectedWebAgent((current) => current ?? agents[0] ?? null);
       })
-      .catch(() => {});
-  }, [isAuthLoaded, isSignedIn]);
+      .catch((err) => {
+        logger.error({ err: err }, 'Failed to load agents');
+        if (active && !personasToastShownRef.current) {
+          personasToastShownRef.current = true;
+          addToast({
+            title: "Couldn't load agents",
+            description: 'The agent directory failed to load. Refresh to try again.',
+            type: 'error',
+          });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [isAuthLoaded, isSignedIn, addToast]);
 
   const handleAgentTakeover = useCallback((agentId: string) => {
     const agent = coworkAgents.find((a) => a.agent_id === agentId) ?? null;
@@ -334,8 +350,13 @@ function CoworkRootContent() {
       setInitialMessage(task);
     } catch (err) {
       logger.error({ err: err }, 'Failed to create cowork session');
+      addToast({
+        title: "Couldn't start session",
+        description: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+        type: 'error',
+      });
     }
-  }, []);
+  }, [addToast]);
 
   // If there's an active project, show CoworkProjectView instead.
   // Placed after all hooks so hook count is stable regardless of activeProjectId.
@@ -746,17 +767,22 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
       ? state.streamingBySession[activeTaskSessionId]?.isStreaming ?? false
       : false,
   );
+  // Count only successful assistant replies: failed runs insert an
+  // error message with role 'assistant' + metadata.isError (mode-session-store
+  // onError path), and counting those would mark the bound task completed
+  // even though the run failed.
   const boundSessionReplyCount = useCoworkSessionStore((state) =>
     activeTaskSessionId
       ? state.sessions
           .find((sess) => sess.id === activeTaskSessionId)
-          ?.messages.filter((m) => m.role === 'assistant').length ?? 0
+          ?.messages.filter((m) => m.role === 'assistant' && !m.metadata?.isError).length ?? 0
       : 0,
   );
 
   // Keep the bound task's status in sync with the runtime session lifecycle:
-  // pending → in_progress while the runtime is streaming, → completed once an
-  // assistant reply has landed. Without this, tasks stayed 'pending' forever
+  // pending → in_progress while the runtime is streaming, → completed once a
+  // non-error assistant reply has landed (error replies don't count — see
+  // boundSessionReplyCount above). Without this, tasks stayed 'pending' forever
   // even after the runtime answered.
   useEffect(() => {
     if (!activeTaskId || !activeTaskSessionId) return;
@@ -882,9 +908,11 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
         void sendNativeMessageStream(embeddedAgentSession.sessionId, {
           text: normalizedInitialMessage,
           modelId: runtimeModelId,
-        }).finally(() => {
-          onInitialMessageSent?.();
-        });
+        })
+          .finally(() => {
+            onInitialMessageSent?.();
+          })
+          .catch(() => {});
         return;
       }
 
@@ -899,7 +927,8 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
           })
           .finally(() => {
             onInitialMessageSent?.();
-          });
+          })
+          .catch(() => {});
         return;
       }
 
@@ -1018,7 +1047,9 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
 
       if (detail?.send) {
         setComposerInputValue('');
-        void handleSend(text);
+        // The store already inserts a visible ⚠️ error message on failure —
+        // just keep a rejection from reaching the console as unhandled.
+        void handleSend(text).catch(() => {});
         return;
       }
 
@@ -1036,7 +1067,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
     if (lastUserMsg && typeof lastUserMsg.content === "string") {
       if (embeddedAgentSession?.isEmbedded && embeddedAgentSession?.sessionId) {
         setActiveNativeSession(embeddedAgentSession?.sessionId);
-        void sendNativeMessageStream(embeddedAgentSession?.sessionId, { text: lastUserMsg.content });
+        void sendNativeMessageStream(embeddedAgentSession?.sessionId, { text: lastUserMsg.content }).catch(() => {});
         return;
       }
 

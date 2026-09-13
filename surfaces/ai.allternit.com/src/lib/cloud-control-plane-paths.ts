@@ -15,6 +15,13 @@ export const CLOUD_CONTROL_PLANE_PATH_PREFIXES = [
   '/api/v1/billing',
   '/api/v1/api-keys',
   '/api/v1/hosted-runtimes',
+  // cloud-api task control plane (see cmd/allternit-cloud-api/src/routes/tasks.rs)
+  // and workspace management. Cowork task lists (hooks/useTasksAPI.ts,
+  // useTaskStore.fetchTasks, useTaskRealtime) and the workspace store call
+  // these same-origin; without the entries below they were hijacked into the
+  // paired-runtime relay and answered with a synthetic "no paired runtime" 503.
+  '/api/v1/tasks',
+  '/api/v1/workspaces',
 ] as const;
 
 export function isCloudControlPlanePath(pathname: string): boolean {

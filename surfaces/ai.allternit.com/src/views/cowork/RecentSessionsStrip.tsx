@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Play, ClockCountdown, ChatTeardrop } from '@phosphor-icons/react';
+import { Play, ClockCountdown, ChatTeardrop, CloudSlash, GearSix } from '@phosphor-icons/react';
 import { useCoworkSessionList, extractCheckpointContext, type CoworkSessionRecord } from '@/lib/cowork/useCoworkSession';
+import { openRuntimeSettings, useRuntimeAvailable } from '@/lib/cowork/useRuntimeAvailable';
 import { createCoworkSession, useCoworkSessionStore } from './CoworkSessionStore';
 
 import { createModuleLogger } from '@/lib/logger';
@@ -25,25 +26,95 @@ function formatRelative(iso: string | null): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+interface ParsedCheckpoint {
+  summary?: string;
+  lastMessage?: string;
+  taskTitles?: string[];
+  messageCount?: number;
+}
+
+/**
+ * checkpoint is a JSON string column on CoworkSessionRecord. Parse it once
+ * here; on any failure return null so callers omit the count/excerpt instead
+ * of rendering the raw JSON.
+ */
+export function parseCheckpoint(checkpointJson: string | null): ParsedCheckpoint | null {
+  if (!checkpointJson) return null;
+  try {
+    const cp = JSON.parse(checkpointJson) as ParsedCheckpoint;
+    return cp && typeof cp === 'object' ? cp : null;
+  } catch {
+    return null;
+  }
+}
+
 function getExcerpt(session: CoworkSessionRecord): string | null {
-  const ctx = extractCheckpointContext(session.checkpoint);
-  if (!ctx) return null;
-  // extractCheckpointContext returns a string or object; grab a readable snippet
-  const raw = typeof ctx === 'string' ? ctx : (ctx as any)?.lastMessage ?? JSON.stringify(ctx);
-  const trimmed = raw.trim().replace(/\s+/g, ' ');
-  return trimmed.length > 72 ? trimmed.slice(0, 72) + '…' : trimmed;
+  const cp = parseCheckpoint(session.checkpoint);
+  if (!cp) return null;
+  const parts: string[] = [];
+  if (cp.summary) parts.push(`Previous session summary: ${cp.summary}`);
+  if (cp.lastMessage) parts.push(`Last message: ${cp.lastMessage}`);
+  if (cp.taskTitles?.length) parts.push(`Tasks in progress: ${cp.taskTitles.join(', ')}`);
+  const raw = parts.join('\n').trim().replace(/\s+/g, ' ');
+  if (!raw) return null;
+  return raw.length > 72 ? raw.slice(0, 72) + '…' : raw;
 }
 
 function getMessageCount(session: CoworkSessionRecord): number | null {
-  const cp = session.checkpoint as any;
-  if (cp && typeof cp.messageCount === 'number') return cp.messageCount;
-  return null;
+  const cp = parseCheckpoint(session.checkpoint);
+  return cp && typeof cp.messageCount === 'number' ? cp.messageCount : null;
 }
 
 export function RecentSessionsStrip({ onResume, maxItems = 4 }: RecentSessionsStripProps) {
   const { sessions, loading } = useCoworkSessionList();
+  const { runtimeAvailable, runtimeUnavailableReason } = useRuntimeAvailable();
   const [resumingId, setResumingId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  if (!runtimeAvailable) {
+    return (
+      <div style={{ marginTop: 36 }}>
+        <div style={{
+          fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: '0.08em', color: 'var(--ui-text-muted)', marginBottom: 10,
+        }}>
+          Recent Sessions
+        </div>
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 6,
+          padding: '12px 14px',
+          background: 'rgba(255,255,255,0.025)',
+          border: '1px solid var(--ui-border-muted)',
+          borderRadius: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: 'var(--ui-text-primary)' }}>
+            <CloudSlash size={13} color="var(--status-warning, #f59e0b)" />
+            Runtime offline
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', lineHeight: 1.5 }}>
+            {runtimeUnavailableReason ?? 'Connect your runtime to see recent sessions.'}
+          </div>
+          <button type="button"
+            onClick={openRuntimeSettings}
+            style={{
+              alignSelf: 'flex-start',
+              display: 'flex', alignItems: 'center', gap: 5,
+              marginTop: 4, padding: '5px 10px',
+              background: 'transparent',
+              border: '1px solid var(--ui-border-muted)',
+              borderRadius: 7,
+              color: 'var(--ui-text-secondary)',
+              fontSize: 12, fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <GearSix size={11} />
+            Connect your runtime
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || sessions.length === 0) return null;
 
@@ -53,15 +124,21 @@ export function RecentSessionsStrip({ onResume, maxItems = 4 }: RecentSessionsSt
     if (resumingId) return;
     setResumingId(session.id);
     try {
-      const checkpointContext = extractCheckpointContext(session.checkpoint);
+      // Only build memory context when the checkpoint parses — the raw JSON
+      // fallback would inject garbage into the resumed session's context.
+      const checkpointContext = parseCheckpoint(session.checkpoint)
+        ? extractCheckpointContext(session.checkpoint)
+        : null;
       const newSessionId = await createCoworkSession({
         name: `Resume: ${session.title ?? 'Session'}`,
         sessionMode: 'regular',
       });
       if (checkpointContext) {
-        const existing = useCoworkSessionStore.getState().sessions.find((s) => s.id === newSessionId)?.metadata;
+        // Merge-only write: updateSession deep-merges metadata, so pass just
+        // the new keys — spreading a fetched snapshot here could drop
+        // metadata.coworkServerId written by the creation POST.
         useCoworkSessionStore.getState().updateSession(newSessionId, {
-          metadata: { ...existing, originSurface: 'cowork', resumedFrom: session.id, memoryContext: checkpointContext },
+          metadata: { originSurface: 'cowork', resumedFrom: session.id, memoryContext: checkpointContext },
         });
       }
       useCoworkSessionStore.getState().setActiveSession(newSessionId);

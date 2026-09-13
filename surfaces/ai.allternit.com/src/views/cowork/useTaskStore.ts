@@ -197,7 +197,14 @@ export const useTaskStore = create<TaskState>()(
             workspace_id: task.workspaceId || 'default',
             status: mapStoreStatusToApiStatus(task.status),
           }).catch(() => {
-            set({ tasks: previousTasks });
+            // Roll back only this task: a failed create removes it without
+            // touching concurrent mutations to other tasks.
+            const prior = previousTasks.find((t) => t.id === task.id);
+            set((state) => ({
+              tasks: prior
+                ? state.tasks.map((t) => (t.id === task.id ? prior : t))
+                : state.tasks.filter((t) => t.id !== task.id),
+            }));
           }).finally(() => {
             set((state) => ({
               pendingMutations: state.pendingMutations.filter(
@@ -248,7 +255,14 @@ export const useTaskStore = create<TaskState>()(
 
         if (get().apiEnabled) {
           syncTaskToApi(`/api/v1/tasks/${id}`, 'PUT', { title }).catch(() => {
-            set({ tasks: previousTasks });
+            // Roll back only this task: restore its pre-mutation snapshot
+            // without clobbering concurrent mutations to other tasks.
+            const prior = previousTasks.find((t) => t.id === id);
+            set((state) => ({
+              tasks: prior
+                ? state.tasks.map((t) => (t.id === id ? prior : t))
+                : state.tasks.filter((t) => t.id !== id),
+            }));
           }).finally(() => {
             set((state) => ({
               pendingMutations: state.pendingMutations.filter(
@@ -275,7 +289,14 @@ export const useTaskStore = create<TaskState>()(
           syncTaskToApi(`/api/v1/tasks/${id}`, 'PUT', {
             status: mapStoreStatusToApiStatus(status),
           }).catch(() => {
-            set({ tasks: previousTasks });
+            // Roll back only this task: restore its pre-mutation snapshot
+            // without clobbering concurrent mutations to other tasks.
+            const prior = previousTasks.find((t) => t.id === id);
+            set((state) => ({
+              tasks: prior
+                ? state.tasks.map((t) => (t.id === id ? prior : t))
+                : state.tasks.filter((t) => t.id !== id),
+            }));
           }).finally(() => {
             set((state) => ({
               pendingMutations: state.pendingMutations.filter(
@@ -399,7 +420,14 @@ export const useTaskStore = create<TaskState>()(
             assignee_id: assigneeId,
             assignee_name: assigneeName,
           }).catch(() => {
-            set({ tasks: previousTasks });
+            // Roll back only this task: restore its pre-mutation snapshot
+            // without clobbering concurrent mutations to other tasks.
+            const prior = previousTasks.find((t) => t.id === taskId);
+            set((state) => ({
+              tasks: prior
+                ? state.tasks.map((t) => (t.id === taskId ? prior : t))
+                : state.tasks.filter((t) => t.id !== taskId),
+            }));
           }).finally(() => {
             set((state) => ({
               pendingMutations: state.pendingMutations.filter(
@@ -430,7 +458,14 @@ export const useTaskStore = create<TaskState>()(
             assignee_id: null,
             assignee_name: null,
           }).catch(() => {
-            set({ tasks: previousTasks });
+            // Roll back only this task: restore its pre-mutation snapshot
+            // without clobbering concurrent mutations to other tasks.
+            const prior = previousTasks.find((t) => t.id === taskId);
+            set((state) => ({
+              tasks: prior
+                ? state.tasks.map((t) => (t.id === taskId ? prior : t))
+                : state.tasks.filter((t) => t.id !== taskId),
+            }));
           }).finally(() => {
             set((state) => ({
               pendingMutations: state.pendingMutations.filter(
@@ -467,7 +502,14 @@ export const useTaskStore = create<TaskState>()(
           syncTaskToApi(`/api/v1/tasks/${taskId}/comments`, 'POST', {
             body,
           }).catch(() => {
-            set({ tasks: previousTasks });
+            // Roll back only this task: restore its pre-mutation snapshot
+            // without clobbering concurrent mutations to other tasks.
+            const prior = previousTasks.find((t) => t.id === taskId);
+            set((state) => ({
+              tasks: prior
+                ? state.tasks.map((t) => (t.id === taskId ? prior : t))
+                : state.tasks.filter((t) => t.id !== taskId),
+            }));
           }).finally(() => {
             set((state) => ({
               pendingMutations: state.pendingMutations.filter(
@@ -610,7 +652,14 @@ export const useTaskStore = create<TaskState>()(
                   tags: apiTask.tags ? apiTask.tags.split(',') : undefined,
                 };
               });
-              set({ tasks: mappedTasks });
+              // Merge instead of replace: server tasks win on id conflicts,
+              // but local-only tasks (e.g. HEARTBEAT-injected heartbeat_* tasks
+              // written via setState) are not returned by the API and must
+              // survive the fetch with all their fields intact.
+              set((state) => {
+                const remoteIds = new Set(mappedTasks.map((t) => t.id));
+                return { tasks: [...mappedTasks, ...state.tasks.filter((t) => !remoteIds.has(t.id))] };
+              });
             }
           }
         } catch (err) {
@@ -620,6 +669,20 @@ export const useTaskStore = create<TaskState>()(
     }),
     {
       name: 'allternit-task-storage',
+      version: 1,
+      // Stale or corrupt persisted shape (missing fields, pre-version blob,
+      // hand-edited JSON) resets to empty rather than crashing the store on
+      // first access. Unparseable JSON never reaches migrate — zustand's
+      // hydration catch keeps the in-memory defaults instead.
+      migrate: (persistedState) => {
+        const s = persistedState as
+          | Partial<Pick<TaskState, 'tasks' | 'projects' | 'activeProjectId' | 'activeTaskId' | 'taskTimers'>>
+          | undefined;
+        if (!s || typeof s !== 'object' || !Array.isArray(s.tasks)) {
+          return { tasks: [], projects: [], activeProjectId: null, activeTaskId: null, taskTimers: {} };
+        }
+        return s;
+      },
       storage: createBrowserJSONStorage(),
       partialize: (state) => ({
         tasks: state.tasks,

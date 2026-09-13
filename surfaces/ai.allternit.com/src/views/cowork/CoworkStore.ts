@@ -99,9 +99,6 @@ interface CoworkState {
   toggleOcr: () => void;
   toggleLabels: () => void;
 
-  // === Session (backward compat) ===
-  startSession: (type: string, context: string) => string;
-
 }
 
 
@@ -244,9 +241,5 @@ export const useCoworkStore = create<CoworkState>()((set, get) => {
     toggleLabels: () => useCoworkUIStore.getState().toggleLabels(),
     setActiveTab: (tab) => useCoworkUIStore.getState().setActiveTab(tab as CoworkTab),
     setApiEnabled: (enabled) => useTaskStore.getState().setApiEnabled(enabled),
-    startSession: (_type: string, _context: string) => {
-      return `cowork-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    },
-
   };
 });

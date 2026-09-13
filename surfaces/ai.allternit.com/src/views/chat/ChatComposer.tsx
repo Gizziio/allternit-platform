@@ -1050,7 +1050,10 @@ export function ChatComposer({
     } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
       onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
     } else {
-      onSend(enrichedInput);
+      // Absorb rejections here — async onSend implementations (e.g.
+      // CoworkRoot.handleSend) already surface a visible error message in the
+      // transcript, so nothing but the console would hear an unhandled one.
+      void Promise.resolve(onSend(enrichedInput)).catch(() => {});
     }
   }, [
     agentModeEnabled,

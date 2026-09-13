@@ -683,6 +683,24 @@ async function streamMessageWithContext(
     }
   }
 
+  // Session memory context (saved checkpoint / resume context) — written by
+  // createCoworkSession and the recent-sessions resume flow. The context-pack
+  // parser only understands the "# Brain Configuration" format, so this raw
+  // memory must be appended here to actually reach the model.
+  if (!skipContext && session.metadata.memoryContext) {
+    const raw = session.metadata.memoryContext;
+    const memoryText = typeof raw === 'string' ? raw : JSON.stringify(raw);
+    if (memoryText) {
+      const memoryBlock = `Session Memory Context (prior saved state — treat as background):\n${memoryText}`;
+      agentContext = {
+        ...(agentContext ?? {}),
+        systemPrompt: agentContext?.systemPrompt
+          ? `${agentContext.systemPrompt}\n\n${memoryBlock}`
+          : memoryBlock,
+      };
+    }
+  }
+
   // A plugin/connector @-mention rides along with the message, even for
   // regular (non-agent) sessions — AgentContext is spread verbatim into the
   // POST body by chatApi.streamChat.
@@ -2381,6 +2399,23 @@ export function createModeSessionStore(config: StoreConfig) {
         }),
         {
           name: config.storageKey,
+          version: 1,
+          // Stale or corrupt persisted shape (missing fields, pre-version
+          // blob) resets to empty rather than crashing session lookups.
+          // Unparseable JSON never reaches migrate — zustand's hydration
+          // catch keeps the in-memory defaults instead.
+          migrate: (persistedState) => {
+            const s = persistedState as
+              | { sessions?: unknown; activeSessionId?: unknown }
+              | undefined;
+            if (!s || typeof s !== 'object' || !Array.isArray(s.sessions)) {
+              return { sessions: [], activeSessionId: null };
+            }
+            return {
+              sessions: s.sessions,
+              activeSessionId: typeof s.activeSessionId === 'string' ? s.activeSessionId : null,
+            };
+          },
           storage: createBrowserJSONStorage(),
           partialize: (state) => ({
             // Only persist session metadata, NOT messages or streaming state.

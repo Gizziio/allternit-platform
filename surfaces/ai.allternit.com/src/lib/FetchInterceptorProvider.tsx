@@ -10,11 +10,23 @@ import {
   getRuntimeExecutionTarget,
 } from '@/lib/runtime-target';
 
+// Install the fetch patch at module scope so it is in place BEFORE any child
+// component's effects run. Mounting it in useEffect let first-mount fetches
+// escape interception and hit the SPA catch-all (a real HTML 200). Until the
+// auth effect below supplies the Clerk token getter, the interceptor falls
+// back to localStorage for the bearer token.
+// installFetchInterceptor is idempotent (guarded by
+// __allternitFetchInterceptorInstalled), so StrictMode double-render and
+// repeated calls only refresh the token getter.
+if (typeof window !== 'undefined') {
+  applyRuntimeIdFromSearch();
+  installFetchInterceptor();
+}
+
 export function FetchInterceptorProvider({ children }: { children: React.ReactNode }) {
   const { getToken, isLoaded, isSignedIn } = usePlatformAuth();
 
   useEffect(() => {
-    applyRuntimeIdFromSearch();
     installFetchInterceptor(getToken)
   }, [getToken])
 

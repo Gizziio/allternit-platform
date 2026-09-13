@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * CoworkRightRail — Progress panel matching claude.ai Cowork reference UI.
  *
