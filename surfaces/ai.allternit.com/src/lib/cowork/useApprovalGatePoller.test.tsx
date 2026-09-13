@@ -9,7 +9,7 @@
 
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { useApprovalGatePoller } from './useApprovalGatePoller';
+import { parseGateApprovalRow, useApprovalGatePoller } from './useApprovalGatePoller';
 
 // Keep in sync with POLL_INTERVAL_MS in useApprovalGatePoller.ts.
 const POLL_INTERVAL_MS = 5_000;
@@ -189,5 +189,147 @@ describe('useApprovalGatePoller', () => {
     await vi.advanceTimersByTimeAsync(3 * POLL_INTERVAL_MS);
 
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('parses the gate payload out of raw cowork_approvals rows (content JSON)', async () => {
+    activeSession({ metadata: { executionStatus: 'running' } });
+    // The real /api/v1/cowork/approvals response: raw rows with the payload
+    // serialized into the content column.
+    const row = (id: string) => ({
+      id,
+      user_id: 'user-a',
+      source: 'approval-gate',
+      dismissed: 0,
+      created_at: '2026-09-13T00:00:00.000Z',
+      content: JSON.stringify(pendingApproval(id)),
+    });
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({ approvals: [row('c1')] })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useApprovalGatePoller(true));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(Object.keys(h.requests)).toEqual(['c1']);
+    expect(h.requests['c1']).toMatchObject({
+      requestId: 'c1',
+      sessionId: 'ses_1',
+      metadata: expect.objectContaining({ source: 'approval-gate', riskLevel: 'high' }),
+    });
+  });
+
+  it('marks agent-chat bridge rows as gizzi-permission', async () => {
+    activeSession({ metadata: { executionStatus: 'running' } });
+    const content = {
+      actionId: 'perm_9',
+      sessionId: 'ses_9',
+      riskLevel: 'medium',
+      summary: 'bash requested by Bash',
+      details: { actionType: 'bash', target: 'rm -rf tmp', consequence: 'parked turn' },
+      toolName: 'Bash',
+      patterns: ['rm -rf tmp'],
+      requestId: 'perm_9',
+      always: [],
+      messageId: 'msg_1',
+    };
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse({
+          pending: [
+            {
+              id: 'perm_9',
+              user_id: 'user-a',
+              source: 'gizzi-permission',
+              dismissed: 0,
+              created_at: '2026-09-13T00:00:00.000Z',
+              content: JSON.stringify(content),
+            },
+          ],
+        }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useApprovalGatePoller(true));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(Object.keys(h.requests)).toEqual(['perm_9']);
+    expect(h.requests['perm_9']).toMatchObject({
+      requestId: 'perm_9',
+      sessionId: 'ses_9',
+      permission: 'bash',
+      patterns: ['rm -rf tmp'],
+      metadata: expect.objectContaining({ source: 'gizzi-permission', riskLevel: 'medium' }),
+    });
+  });
+
+  it('skips rows whose content is malformed or missing an actionId', async () => {
+    activeSession({ metadata: { executionStatus: 'running' } });
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse({
+          pending: [
+            { id: 'bad-1', content: '{not json', source: 'gizzi-permission' },
+            { id: 'bad-2', content: '{"requestId": 42}', source: 'gizzi-permission' },
+            { id: 'bad-3' },
+            null,
+            'garbage',
+            pendingApproval('good-1'),
+          ],
+        }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderHook(() => useApprovalGatePoller(true));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(Object.keys(h.requests)).toEqual(['good-1']);
+  });
+});
+
+describe('parseGateApprovalRow', () => {
+  it('parses content-JSON rows', () => {
+    const row = {
+      id: 'perm_1',
+      source: 'gizzi-permission',
+      content: JSON.stringify({
+        actionId: 'perm_1',
+        sessionId: 'ses_1',
+        riskLevel: 'medium',
+        summary: 'bash requested by Bash',
+        details: { actionType: 'bash', target: 't', consequence: 'c' },
+        requestId: 'perm_1',
+      }),
+    };
+    expect(parseGateApprovalRow(row)).toEqual({
+      actionId: 'perm_1',
+      sessionId: 'ses_1',
+      riskLevel: 'medium',
+      summary: 'bash requested by Bash',
+      details: { actionType: 'bash', target: 't', consequence: 'c' },
+      requestedAt: '',
+    });
+  });
+
+  it('accepts already-projected rows', () => {
+    expect(parseGateApprovalRow(pendingApproval('a1'))?.actionId).toBe('a1');
+  });
+
+  it('guards malformed content and non-record rows', () => {
+    expect(parseGateApprovalRow({ content: '{oops' })).toBeNull();
+    expect(parseGateApprovalRow({ content: '{"noAction":true}' })).toBeNull();
+    expect(parseGateApprovalRow({ content: '{"actionId":""}' })).toBeNull();
+    expect(parseGateApprovalRow(null)).toBeNull();
+    expect(parseGateApprovalRow('nope')).toBeNull();
+    expect(parseGateApprovalRow(42)).toBeNull();
+  });
+
+  it('defaults a missing riskLevel and stringifies only string fields', () => {
+    const parsed = parseGateApprovalRow({
+      content: JSON.stringify({ actionId: 'x', riskLevel: 7, sessionId: 's' }),
+    });
+    expect(parsed?.riskLevel).toBe('medium');
+    expect(parsed?.sessionId).toBe('s');
+    expect(parsed?.details).toEqual({ actionType: '', target: '', consequence: '' });
   });
 });

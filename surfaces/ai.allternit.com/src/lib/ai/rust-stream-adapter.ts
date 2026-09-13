@@ -21,8 +21,22 @@ import type {
 import { createModuleLogger } from "@/lib/logger";
 import { emitArtifact } from "@/lib/canvas/canvas-artifact-events";
 import { buildAuthHeaders } from "@/lib/agents/api-config";
+import { useCoworkSessionStore } from "@/views/cowork/CoworkSessionStore";
 
 const logger = createModuleLogger("rust-stream-adapter");
+
+/**
+ * Resolve the server-side permission mode for a cloud chat: the cowork
+ * session's `metadata.codePermissionMode` (the same field the TopDeck writes)
+ * if it is one of the modes the agent-chat bridge accepts, else "default".
+ * Chat surfaces without a cowork session record always get "default".
+ */
+function readCodePermissionMode(chatId: string): "default" | "acceptEdits" | "plan" {
+  const sessions = useCoworkSessionStore.getState().sessions ?? [];
+  const session = sessions.find((s) => s.id === chatId);
+  const mode = session?.metadata?.codePermissionMode;
+  return mode === "acceptEdits" || mode === "plan" ? mode : "default";
+}
 
 // ============================================================================
 // Rust API Event Types (existing contract)
@@ -1890,6 +1904,10 @@ export function useRustStreamAdapter(
         agentFallbackModels,
         agentSessionKey,
         mode,  // Pass execution mode for system prompt injection
+        // Server-side permission enforcement: the agent-chat bridge pins the
+        // gizzi session's permission mode before streaming (accepts
+        // codePermissionMode as an alias; anything invalid → "default").
+        permissionMode: readCodePermissionMode(chatId),
         gatewayUrl: runtimeConfig?.gatewayUrl,
         gatewayWsUrl: runtimeConfig?.gatewayWsUrl,
         gatewayToken: runtimeConfig?.token,

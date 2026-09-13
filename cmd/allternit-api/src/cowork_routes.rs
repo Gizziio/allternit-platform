@@ -6,7 +6,7 @@ use axum::{
     routing::{delete, get, post},
     Json, Router,
 };
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
@@ -14,6 +14,8 @@ use tracing::warn;
 
 use crate::auth::get_user;
 use crate::auth::AuthUser;
+use crate::agent_session_routes::gizzi_client;
+use crate::v1_routes::gizzi_base;
 use crate::AppState;
 
 fn unauthorized() -> axum::response::Response {
@@ -1809,6 +1811,18 @@ fn apply_approval_decision(
     })
 }
 
+/// Pull the gizzi permission request id out of a cowork_approvals content
+/// payload written by the agent-chat bridge (see
+/// `v1_routes::gizzi_permission_approval_content`). Only `gizzi-permission`
+/// rows carry it; returns None for gate rows and malformed content.
+fn extract_gizzi_request_id(content: &str) -> Option<String> {
+    serde_json::from_str::<serde_json::Value>(content)
+        .ok()?
+        .get("requestId")?
+        .as_str()
+        .map(str::to_string)
+}
+
 async fn decide_approval(
     State(state): State<Arc<AppState>>,
     Extension(_user): Extension<AuthUser>,
@@ -1860,6 +1874,13 @@ async fn decide_approval(
         ApprovalOutcome::Rejected => "rejected",
         ApprovalOutcome::Dismissed => "dismissed",
     };
+    // Relay mapping to the gizzi permission reply endpoint: approving answers
+    // the ask once; rejecting denies it. Dismissals are local-only.
+    let gizzi_reply = match outcome {
+        ApprovalOutcome::Approved => Some("once"),
+        ApprovalOutcome::Rejected => Some("reject"),
+        ApprovalOutcome::Dismissed => None,
+    };
     let db = state.db.clone();
     let user_id = user.user_id;
     let id_for_response = approval_id.clone();
@@ -1867,23 +1888,95 @@ async fn decide_approval(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
+        // Read the row before deciding: its content carries the gizzi
+        // request id we must relay to, and its dismissed flag guarantees a
+        // single relay per row (a re-decide must not re-answer the runtime).
+        let prior: Option<(String, i64)> = conn
+            .query_row(
+                "SELECT content, dismissed FROM cowork_approvals
+                 WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+                params![approval_id, user_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .or_else(|e| {
+                // Pre-V143 schema without the dismissed column.
+                if e.to_string().contains("no such column") {
+                    conn.query_row(
+                        "SELECT content FROM cowork_approvals
+                         WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+                        params![approval_id, user_id],
+                        |row| Ok((row.get(0)?, 0i64)),
+                    )
+                } else {
+                    Err(e)
+                }
+            })
+            .optional()?;
         let updated = apply_approval_decision(&conn, &approval_id, &outcome, &user_id)?;
-        Ok::<_, rusqlite::Error>(updated)
+        Ok::<_, rusqlite::Error>((updated, prior))
     })
     .await;
 
     match result {
-        Ok(Ok(0)) => (
+        Ok(Ok((0, _))) => (
             StatusCode::NOT_FOUND,
             Json(json!({"error": "approval not found"})),
         )
             .into_response(),
-        Ok(Ok(_)) => Json(json!({
-            "ok": true,
-            "id": id_for_response,
-            "decision": label_for_response,
-        }))
-            .into_response(),
+        Ok(Ok((_, prior))) => {
+            // Relay to the gizzi runtime when this decision answers one of
+            // its permission asks. A 4xx means the ask is unanswerable
+            // (unknown/expired request id) — surface that to the caller; a
+            // transient transport failure only warns so a briefly unreachable
+            // runtime never blocks the local decision.
+            if let (Some(reply), Some((content, dismissed))) = (gizzi_reply, prior) {
+                if dismissed == 0 {
+                    if let Some(request_id) = extract_gizzi_request_id(&content) {
+                        let gizzi = gizzi_base();
+                        let client = gizzi_client(&headers);
+                        match client
+                            .post(format!("{}/permission/{}/reply", gizzi, request_id))
+                            .json(&json!({ "reply": reply }))
+                            .send()
+                            .await
+                        {
+                            Ok(resp) if resp.status().is_success() => {}
+                            Ok(resp) => {
+                                let status = resp.status();
+                                warn!(
+                                    status = %status,
+                                    request_id = %request_id,
+                                    "gizzi rejected permission reply relay"
+                                );
+                                return (
+                                    StatusCode::BAD_GATEWAY,
+                                    Json(json!({
+                                        "error": format!(
+                                            "agent runtime rejected the permission reply ({})",
+                                            status
+                                        ),
+                                    })),
+                                )
+                                    .into_response();
+                            }
+                            Err(e) => {
+                                warn!(
+                                    error = %e,
+                                    request_id = %request_id,
+                                    "failed to relay permission reply to gizzi"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            Json(json!({
+                "ok": true,
+                "id": id_for_response,
+                "decision": label_for_response,
+            }))
+            .into_response()
+        }
         Ok(Err(e)) => {
             warn!("DB error deciding approval: {}", e);
             (
@@ -2454,6 +2547,43 @@ mod tests {
         let cross = apply_approval_decision(&conn, "other", &ApprovalOutcome::Approved, "user-a")
             .expect("cross update");
         assert_eq!(cross, 0, "fallback path must keep user scoping");
+    }
+
+    #[test]
+    fn extract_gizzi_request_id_reads_bridge_content() {
+        let content = serde_json::json!({
+            "actionId": "perm_1",
+            "sessionId": "ses_1",
+            "riskLevel": "medium",
+            "summary": "bash requested by Bash",
+            "details": { "actionType": "bash", "target": "rm -rf tmp", "consequence": "…" },
+            "requestId": "perm_1",
+            "toolName": "Bash",
+            "patterns": ["rm -rf tmp"],
+            "always": [],
+            "messageId": "msg_1",
+        })
+        .to_string();
+        assert_eq!(extract_gizzi_request_id(&content).as_deref(), Some("perm_1"));
+    }
+
+    #[test]
+    fn extract_gizzi_request_id_ignores_gate_rows_and_malformed_content() {
+        // Plain-text gate rows have no JSON requestId.
+        assert_eq!(extract_gizzi_request_id("still pending"), None);
+        // Malformed JSON must not panic.
+        assert_eq!(extract_gizzi_request_id("{not json"), None);
+        // Valid JSON without a requestId (approval-gate payload).
+        let gate = serde_json::json!({
+            "actionId": "act_1", "sessionId": "ses_1", "riskLevel": "high",
+            "summary": "Approve act_1?",
+            "details": { "actionType": "bash", "target": "x", "consequence": "y" },
+        })
+        .to_string();
+        assert_eq!(extract_gizzi_request_id(&gate), None);
+        // Non-string requestId is ignored.
+        let numeric = serde_json::json!({ "requestId": 42 }).to_string();
+        assert_eq!(extract_gizzi_request_id(&numeric), None);
     }
 
     // ── update_session SET-clause semantics (scratch DB over V1 DDL) ─────────
