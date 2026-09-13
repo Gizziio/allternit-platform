@@ -184,7 +184,7 @@ fn is_no_such_table(err: &rusqlite::Error) -> bool {
 const LIST_DEFAULT_LIMIT: i64 = 100;
 const LIST_MAX_LIMIT: i64 = 1000;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ListQuery {
     limit: Option<i64>,
     offset: Option<i64>,
@@ -1329,8 +1329,8 @@ pub struct MemoryPrincipalQuery {
     /// this principal are returned (default-deny cross-principal).
     pub principal: Option<String>,
     /// List window bounds, clamped the same way as every other list endpoint.
-    pub limit: Option<i64>,
-    pub offset: Option<i64>,
+    #[serde(flatten)]
+    pub window: ListQuery,
 }
 
 async fn get_memory(
@@ -1342,30 +1342,21 @@ async fn get_memory(
     let db = state.db.clone();
     let user_id = user.user_id;
     let principal = query.principal;
-    // The runtime helper has no OFFSET parameter, so bound an over-fetch and
-    // skip in memory to preserve the paginated window.
-    let limit = query
-        .limit
-        .unwrap_or(LIST_DEFAULT_LIMIT)
-        .clamp(1, LIST_MAX_LIMIT);
-    let offset = query.offset.unwrap_or(0).max(0).min(100_000);
-    let fetch = limit + offset;
+    let (limit, offset) = clamp_list_window(&query.window);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         // Principal-scoped path enforces owner+grants (A-T2); unscoped keeps
         // the legacy user-filtered behavior.
-        let mut memories = allternit_cowork_runtime::sqlite_store::search_memory_entries(
+        let memories = allternit_cowork_runtime::sqlite_store::search_memory_entries(
             &conn,
             &user_id,
             principal.as_deref(),
             None,
-            fetch,
+            limit,
+            offset,
         )
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-        if offset > 0 {
-            memories = memories.into_iter().skip(offset as usize).collect();
-        }
         Ok::<_, rusqlite::Error>(memories)
     })
     .await;

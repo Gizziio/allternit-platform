@@ -1275,14 +1275,14 @@ async fn test_memory_principal_grants() {
 
     // Al sees: own + unowned (NOT gizzi's).
     let al_view = sqlite_store::search_memory_entries(
-        &conn, "user-1", Some("a://ws/principal/al"), None, 50).unwrap();
+        &conn, "user-1", Some("a://ws/principal/al"), None, 50, 0).unwrap();
     let al_ids: Vec<String> = al_view.iter().map(|e| e["id"].as_str().unwrap().to_string()).collect();
     assert!(al_ids.contains(&al_entry));
     assert!(!al_ids.contains(&gizzi_entry), "default-deny: Al cannot read Gizzi's entry");
 
     // Gizzi sees: own + granted + unowned.
     let g_view = sqlite_store::search_memory_entries(
-        &conn, "user-1", Some("a://ws/principal/gizzi"), None, 50).unwrap();
+        &conn, "user-1", Some("a://ws/principal/gizzi"), None, 50, 0).unwrap();
     let g_ids: Vec<String> = g_view.iter().map(|e| e["id"].as_str().unwrap().to_string()).collect();
     assert!(g_ids.contains(&gizzi_entry));
     assert!(g_ids.contains(&al_entry), "granted principal can read Al's entry");
@@ -1293,6 +1293,60 @@ async fn test_memory_principal_grants() {
     assert_eq!(denied.code, TransportErrorCode::PermissionDenied);
     sqlite_store::check_memory_write(&conn, &al_entry, "a://ws/principal/gizzi")
         .expect("granted principal may write");
+}
+
+/// A-T2 pagination: offset skips N entries within the principal-filtered,
+/// recency-ordered window, and limit + offset compose for page two.
+#[tokio::test]
+async fn test_memory_principal_search_offset_pagination() {
+    let tmp = tempfile::tempdir().unwrap();
+    let db_path = tmp.path().join("mem.db");
+    let mut conn = open(&db_path);
+    sqlite_store::apply_store_ddl(&mut conn).unwrap();
+
+    // Five unowned entries; one cross-principal entry that must never leak
+    // into the owner's pages.
+    let mut expected = Vec::new();
+    for i in 0..5 {
+        let id = sqlite_store::store_memory_entry(
+            &mut conn, "user-1", None, None,
+            &format!("note {i}"), "fact", None, None, None, &[],
+        ).unwrap();
+        expected.push(id);
+    }
+    // created_at only has second resolution — backdate explicitly so the
+    // recency ordering the pagination asserts against is deterministic.
+    for (i, id) in expected.iter().enumerate() {
+        conn.execute(
+            "UPDATE cowork_memory_entries SET created_at = ?2 WHERE id = ?1",
+            rusqlite::params![id, format!("2026-09-13 12:00:0{i}")],
+        ).unwrap();
+    }
+    let private_id = sqlite_store::store_memory_entry(
+        &mut conn, "user-1", None, None, "al private", "fact",
+        None, None, Some("a://ws/principal/al"), &[],
+    ).unwrap();
+
+    let principal = Some("a://ws/principal/gizzi");
+    let ids = |limit: i64, offset: i64| -> Vec<String> {
+        sqlite_store::search_memory_entries(&conn, "user-1", principal, None, limit, offset)
+            .unwrap()
+            .iter()
+            .map(|e| e["id"].as_str().unwrap().to_string())
+            .collect()
+    };
+
+    // Recency order is newest-first, so page 1 is the reverse of insertion.
+    let mut newest_first = expected.clone();
+    newest_first.reverse();
+    assert_eq!(ids(50, 0), newest_first, "offset 0 returns the full window");
+    assert_eq!(ids(2, 0), newest_first[0..2], "limit caps page 1");
+    assert_eq!(ids(2, 2), newest_first[2..4], "limit + offset compose for page 2");
+    assert_eq!(ids(2, 4), newest_first[4..5], "offset skips N entries");
+    assert!(ids(2, 5).is_empty(), "offset at the window end is empty");
+    // Cross-principal entry stays default-deny at every page.
+    let all_pages: Vec<String> = (0..5).flat_map(|o| ids(1, o)).collect();
+    assert!(!all_pages.contains(&private_id));
 }
 
 /// A-T3 — Al orchestration loop: an intent targeted at Al is delegated per
