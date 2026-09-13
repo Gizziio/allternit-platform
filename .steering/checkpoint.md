@@ -13,6 +13,16 @@ Just did:
 
 In flight: gizzi typecheck (bash-2ddk01wl); cargo release build (bash-wwrb9y9h, includes V157 + merged main).
 
-Next: full cargo test -p allternit-api → wrangler smoke with release binary → release-preflight 35/0 → push + PR → ledger → desktop rebuild → cleanup.
+Next: full cargo test -p allternit-api (bash-0jo87pwc, running) → final release build on merged code → push + PR → ledger → desktop rebuild → cleanup.
 
 Open questions: re-check relay's migration number right before PR in case they add more.
+
+## Wrangler smoke — COMPLETE (all times UTC, 2026-09-13)
+- Gateway: worktree release binary, ALLTERNIT_ARTIFACT_PUBLISHER=wrangler, ALLTERNIT_ARTIFACT_PAGES_PROJECT=allternit-artifacts-smoke, ALLTERNIT_LOCAL_DEV_BYPASS=1, port 18099, data dir /tmp/artpolish-smoke-data. OAuth: allternitpbc@gmail.com.
+- 00:48:25Z artifact created art_3563fb72-089b-45e2-b244-ade4cbdcc569 ("A:// artifacts publish smoke").
+- 00:50:06→00:50:17Z POST /publish (v1 snapshot) → real wrangler deploy, deployment https://579dc6ff.allternit-artifacts-smoke.pages.dev, route u-b544b0406548/art_3563fb72-089b-45e2-b244-ade4cbdcc569/.
+- 00:50:29Z route HTTP 200, body contains SMOKE_V1. URL: https://allternit-artifacts-smoke.pages.dev/u-b544b0406548/art_3563fb72-089b-45e2-b244-ade4cbdcc569/
+- 00:50:38Z appended v2 (SMOKE_V2) → 00:50:43Z route STILL serves SMOKE_V1 (snapshot semantics, decision 2 proven live).
+- 00:50:52→00:51:04Z DELETE /publish ok → 00:51:36Z route HTTP 404 (edge cache stale ~30s, then consistently 404 six checks to 00:52:38Z).
+- Bonus live check of new file routes on the same server: PUT/GET/INDEX /files/styles.css round-trip OK (sha256 ee49b0e9…).
+- Only the smoke Pages project was touched; no production project deployed.
