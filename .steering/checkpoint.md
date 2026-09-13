@@ -1,15 +1,16 @@
-# Steering checkpoint — session/media-plugins-v1 (dag_309296 / wih_3745)
+# Checkpoint — session/cu26-realmodel-rerun
 
-**Goal:** MEDIA_PLUGINS Phase 1 — MiniMax H3 + fal Seedance video backends, gpt-image + FLUX-via-fal image backends, wired through V134 BYOK, cost preview before metered calls, slides AiPanel fail-closed resolution.
+Goal: verify F1 (observation-disconnect fix, PR #480) delivers batch turn savings
+end-to-end with gpt-6-astra via the codex-CLI brain path; same 5 tasks as cu22.
 
-**Just did:** Full recon. Read plugins (video/image), mode services, V134 (route_credentials.rs — generic provider_id+key store, sealed, no client decrypt), provider_routes.rs, admin_routes (route-credentials GET/PUT/DELETE), gateway images.rs placeholders, AiPanel gap (`ai:generate-image` is a Genspark stub — `hasGskAuth()` always false → always fails), gizzi media drivers, platform-bridge (slides app runs in-browser inside ai.allternit.com). Verified MiniMax H3 = V2 API (`POST /v2/video_generation`, poll `GET /v2/query/video_generation/<task_id>`, `task.content.url`; Bearer auth; $0.08/s @768P) and fal queue API (`POST https://queue.fal.run/<endpoint>`, `Authorization: Key`, poll status_url, response has `video.url`/`images[].url`; Seedance 2.0 endpoints under `bytedance/seedance-2.0/…`; $0.2419/s fast / $0.3034/s std @720p) from official docs via subagent.
+Just did:
+- Worktree allternit-cu26 from origin/main (branch session/cu26-realmodel-rerun)
+- Adapted cu22 harness → tmp-cu26-realmodel/ (3 arms: per-step / batched+f1 /
+  batched+pre-f1 via client-side observation strip; own ports 18081/9223/18113;
+  cu22 shims dropped — F2/F3 landed product-side; codex CLI auth verified live)
+- cargo build -p allternit-api running in background (pid 64793, task bash-joxbrnkn)
 
-**Design decision (key architectural choice):** Provider protocols live SERVER-SIDE in cmd/allternit-api (new `media` module). V134 never returns decrypted keys to the browser, so client-side generation against fal/MiniMax directly is impossible without a decrypt endpoint — and adding one would break the "keys never leave the server" property. New API surface mirrors the job protocol: `POST /api/v1/media/video/jobs` → `GET …/jobs/:id` → `GET …/jobs/:id/download`, plus `POST /api/v1/media/image/generate` + `GET /api/v1/media/artifacts/:id`. Key resolution: per-user V134 credential (provider_id `minimax`/`fal`/`openai`) → else platform env keys (`MINIMAX_API_KEY`/`FAL_KEY`/`OPENAI_API_KEY`) gated by `ALLTERNIT_MEDIA_PLATFORM_FUNDED` (ships false). No V134 migration needed (provider_id validation already accepts these ids). Migration V171 for media_jobs + media_artifacts tables (renumbered past PR #484's V168-V170 collision fix after the branch fast-forwarded to origin/main).
+Next: start site :18081 + Chrome CDP :9223; a_smoke real-model check; run arms;
+safety.md update; PR/merge/attestation/cleanup.
 
-**Gateway decision (deliverable 5):** DEFER replacing `llm_gateway/images.rs` placeholders. Plugins own generation via the new /api/v1/media routes; the /v1/images gateway surface serves external OpenAI-compatible API consumers and stays text-gateway scope for Phase 1. Reason recorded for PR.
-
-**Next (updated mid-flight):** TS side COMPLETE: media-cost.ts, video-generation.ts (minimax-h3/fal-seedance submit→poll→download vs /api/v1/media/video/jobs, i2v, cost preview, honest failures), image-generation.ts (gpt-image/flux-fal via /api/v1/media/image/generate), plugin config + cost-preview events, MediaProvidersCard (BYOK via /api/v1/gateway/route-credentials) mounted in Settings → API keys, slides ai-ipc generate_image resolves via media plane before failing closed. Tests: vitest 10/10 new contract tests + pluginStandards green; surface tsc --noEmit clean (one pre-existing storybook module error from partial node_modules); slides ai-ipc.ts tsc-clean (full package typecheck impossible here — no vite in partial install; remaining errors pre-existing). docs/MEDIAPLUG1_NOTES.md drafted. Rust media module (V168 + clients/catalog/routes/tests) running as subagent.
-
-**Remaining:** cargo test green → release-preflight (cmd/allternit-api is a desktop sidecar) → finalize notes → commit gate → push → PR (stop before merge; orchestrator merges/attests/closes wih_3745).
-
-**Open questions:** None blocking. (2K MiniMax price $0.13/s is corroborated but not directly quoted from official paygo table — will mark it as such in the catalog.)
+Open questions: none — cu22 evidence + cu24 attestation are the comparators.

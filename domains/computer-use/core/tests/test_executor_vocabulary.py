@@ -147,3 +147,45 @@ class TestPlanVocabularyAlignment:
                 f"PLAN_ACTION_MAP[{plan_type!r}] = {native!r} is not an "
                 f"accepted executor action"
             )
+
+
+class TestPlanningLoopIntegrationShape:
+    """cu26 real-model campaign finding: planning_loop._execute_action builds
+    a plain ActionRequest-like object (type(\"ActionRequest\", (), {...})()),
+    not a dataclass — the F2 dataclasses.replace translation crashed on every
+    mapped plan type (\"replace() should be called on dataclass instances\")
+    and the per-step arm could not run at all. These tests pin the plain-object
+    path (dataclass callers are covered above)."""
+
+    @pytest.mark.asyncio
+    async def test_mapped_plan_type_on_plain_object_translates(self):
+        adapter = _RecordingAdapter()
+        executor = ComputerUseExecutor()
+        executor.register(adapter.adapter_id, adapter)
+
+        req = type("ActionRequest", (), {
+            "action_type": "click",
+            "target": "#next",
+            "parameters": {},
+        })()
+        result = await executor.execute(req, session_id="s-1", run_id="r-1")
+        assert result.status == "completed"
+        assert adapter.calls[-1] == "left_click"
+        # The caller's object must not be mutated (the loop keeps it on the
+        # step record).
+        assert req.action_type == "click"
+
+    @pytest.mark.asyncio
+    async def test_mapped_select_on_plain_object_translates(self):
+        adapter = _RecordingAdapter()
+        executor = ComputerUseExecutor()
+        executor.register(adapter.adapter_id, adapter)
+
+        req = type("ActionRequest", (), {
+            "action_type": "select",
+            "target": "#plan",
+            "parameters": {"text": "pro"},
+        })()
+        result = await executor.execute(req, session_id="s-1", run_id="r-1")
+        assert result.status == "completed"
+        assert adapter.calls[-1] == "fill"

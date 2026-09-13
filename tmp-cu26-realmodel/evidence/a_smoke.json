@@ -1,0 +1,15 @@
+{
+  "check": "A: one real frontier-vision inference through the campaign brain path",
+  "ok": true,
+  "model": "codex-default(gpt-6-astra)",
+  "input_tokens": 31758,
+  "output_tokens": 60,
+  "latency_s": 12.87,
+  "screenshot_bytes": 15651,
+  "plan_action": {
+    "type": "click",
+    "target": "button",
+    "reason": "Press the Register button."
+  },
+  "evidence": "evidence/a_smoke_brain.jsonl"
+}
