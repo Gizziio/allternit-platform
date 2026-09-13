@@ -778,9 +778,32 @@ function createMainWindow(): BrowserWindow {
 // App Initialization (Unified Flow)
 // ============================================================================
 
+// Initialize the app exactly once. `app.on('activate')` fires on every macOS
+// launch (not just dock clicks) and can race `whenReady().then(initializeApp)`:
+// if it lands before the startup window exists, window count is 0 and a second
+// concurrent initializeApp ran — two initializeBundledMode passes fighting over
+// the singleton BackendManager (spawn/kill/re-spawn ping-pong on :8013,
+// destroyed startup window, "did not start within 30s" wedges). Guard all
+// entry points through this single promise.
+let initPromise: Promise<void> | null = null;
+function initializeAppOnce(): Promise<void> {
+  if (!initPromise) {
+    initPromise = initializeApp()
+      .catch((error) => {
+        log.error('[Main] initializeApp failed:', error);
+      })
+      .finally(() => {
+        // Reset once settled so a later dock-click with no windows can revive
+        // the app (the original activate behavior) — only concurrent calls
+        // during boot share the in-flight promise.
+        initPromise = null;
+      });
+  }
+  return initPromise;
+}
+
 async function initializeApp(): Promise<void> {
   log.info('[Main] Initializing Allternit Desktop v' + PLATFORM_MANIFEST.version);
-
   // Voice is an optional local capability: start it automatically, but never
   // prevent the rest of the desktop from opening if model initialization fails.
   if (!process.env.ALLTERNIT_DISABLE_VOICE) {
@@ -1966,7 +1989,7 @@ app.whenReady().then(async () => {
     workerBus.register('shell-path', new URL('shell-path-worker.js', workerBase));
   }
 
-  initializeApp();
+  initializeAppOnce();
   createTray();
   startExtensionBridge();
   startAcuExtensionRelay();
@@ -1993,7 +2016,7 @@ app.whenReady().then(async () => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      initializeApp();
+      initializeAppOnce();
     } else {
       mainWindow?.show();
     }
