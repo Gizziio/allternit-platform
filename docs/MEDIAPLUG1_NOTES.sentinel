@@ -1,0 +1,27 @@
+# MEDIAPLUG1 sentinel — executor closeout (kimi, 2026-09-13)
+
+## Files touched
+- `cmd/allternit-api/migrations/V171__media_jobs.sql` (new)
+- `cmd/allternit-api/src/media/{mod,clients,catalog,handlers,tests}.rs` (new)
+- `cmd/allternit-api/src/lib.rs`, `cmd/allternit-api/src/provider_routes.rs`
+- `surfaces/ai.allternit.com/src/lib/agents/modes/{media-cost.ts,media-plane.test.ts,video-generation.ts,image-generation.ts}`
+- `surfaces/ai.allternit.com/src/plugins/built-in/{video,image}/plugin.ts`
+- `surfaces/ai.allternit.com/src/views/settings/{MediaProvidersCard.tsx,SettingsView.tsx}`
+- `packages/@allternit/office-slides-app/src/main/ai-ipc.ts`
+- `docs/MEDIA_PLUGINS_MAP.md`, `docs/MEDIAPLUG1_NOTES.md`
+
+## Deviations
+- Migration numbered V171 (branch fast-forwarded to origin/main; PR #484 took V168-V170 for a pre-existing collision fix — no commits created by the ff).
+- Provider protocols run server-side in allternit-api (new `/api/v1/media/*` surface) because V134 never returns decrypted keys to the browser; client drives submit→poll→download.
+- Gateway `llm_gateway/images.rs` placeholders explicitly DEFERRED (recorded in notes + PR).
+- fal i2v uses the separate `bytedance/seedance-2.0/{tier}/image-to-video` endpoint (fixed post-review, test added).
+
+## Verification (fresh, this session)
+- `cargo test -p allternit-api --lib media` → 22 media-module tests passed, 0 failed (cargo's "24 passed" line includes 2 unrelated name matches: `aci_routes`/`llm_gateway::batches`).
+- `vitest run src/lib/agents/modes/media-plane.test.ts` → 10/10; `pluginStandards.test.ts` → 3/3.
+- `tsc --noEmit` (surfaces/ai.allternit.com) → clean except pre-existing `@storybook/test` module error (partial node_modules, unrelated).
+- office-slides-app `tsc --noEmit --types react,react-dom` → ai-ipc.ts clean; remaining errors pre-existing missing modules.
+- `node scripts/release-preflight.mjs` → 36 passed, 0 failed.
+
+## Remaining (orchestrator's job, per task)
+Merge --merge → attestation + LEDGER.md → close wih_3745 → worktree/branch cleanup. Do NOT do these here.
