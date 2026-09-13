@@ -102,3 +102,21 @@ leases, bindings, attributed events) independently of Al's narration
    default-deny — `test_memory_principal_grants`). Persona-level memory
    continuity for Al remains product work.
 5. ~~Causation chain column + depth/cycle enforcement~~ **Done** (V164).
+6. ~~Al orchestration loop (deterministic)~~ **Done** (A-T3, V166).
+7. **Al persona runtime v0.1 — Done (P-T5, 2026-09-13).** The
+   conversational surface over the orchestrator
+   (`cmd/allternit-api/src/al_persona_routes.rs`):
+   `POST /cowork/al/chat` normalizes the user's message toward a canonical
+   intent (model-assisted extraction through the existing model
+   router/gateway — `run_completion`, the same machinery as
+   `/v1/responses` — with a deterministic fallback when no OS control
+   plane is configured), resolves the execution target via the workspace
+   delegation rules (the same `resolve_delegation_rule` the orchestrator
+   loop uses), submits the intent under `a://…/principal/al`
+   (`initiator = user`, `delegator = al`, chain `[user, al]`), and
+   narrates against canonical state (run state, pending approval count).
+   `GET /cowork/al/sessions/:id` returns the transcript with observed run
+   states. Posture per §5: Al plans and delegates only — zero capabilities,
+   never an executor, never holds connector secrets. Transcript table
+   `cowork_al_messages` (V168). Scope guard held: persona runtime only, no
+   orchestrator redesign.

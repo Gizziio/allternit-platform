@@ -396,10 +396,63 @@ Statuses updated as items land; owner reviews and merges — no self-merge.
 
 **Sequence:** P-T1 → P-T2 → P-T3 ∥ P-T4 → P-T5 → P-T6.
 
-**Status:** all OPEN as of DAG creation. Each item closes with: Rust
-`cargo test -p allternit-cowork-runtime` green, `cargo build -p allternit-api`,
-clippy clean, gizzi typecheck clean where touched, live behavioral evidence
-captured, docs updated (AL_IMPLEMENTATION_SPEC, GIZZI_WORKER_SPEC,
-BOT_AUTHORING_SPEC if touched, A_PROTOCOL_SCHEMA for new endpoints/types,
-conformance matrix, re-scoped product-depth lists), changelog entries,
-conventional commits pushed, PR opened (no merge).
+**Status (2026-09-13, end of session/aproduct-0913):**
+- **P-T1 CLOSED** — canonical lease-safe projection helpers in
+  `allternit-cowork-runtime::sqlite_store`; Rails cowork REST routes write
+  only through them; cloud-api marked product-local projection
+  (`store_boundary.rs`, not removable this pass — documented); gizzi
+  Cowork writes gated (`store-boundary.ts`, 11 write paths). Proof:
+  `store_boundary_tests.rs` (6) + `cowork-store-boundary.test.ts` (11);
+  `A_STORE_BOUNDARY.md`.
+- **P-T2 CLOSED** — `compute_requirements` (vm/local/byo/cloud → mandatory
+  caps; auto neutral) + canonical job enqueue in `submit_intent` (Al-targeted
+  parents excepted); `PUT /fabric/transport/principals/:id/capabilities`;
+  gizzi worker `GIZZI_COMPUTE_MODE=vm` via the Lima executor (vfkit manager
+  was removed in the 2026-09 cleanup — Lima is the current VM surface,
+  re-scoped and documented). Proof: `compute_placement_tests.rs` (5) + live
+  claim evidence in the session notes.
+- **P-T3 CLOSED** — daemon mode (`worker-daemon-entry.ts`): structured JSON
+  logs, exponential claim backoff, SIGTERM/SIGINT graceful stop (in-flight
+  job finishes; abandoned leases requeue via the sweeper — no protocol
+  change); launchd plist + systemd unit + `docs/FABRIC_WORKER_DAEMON.md`
+  end-to-end install (token provisioning, capability declaration).
+- **P-T4 CLOSED** — GitHub connector (`connector.github.read/write`,
+  `ALLTERNIT_BROKER_GITHUB_TOKEN`, write approval-gated) + files/local
+  connector (`connector.files.read/write`, `ALLTERNIT_BROKER_FILES_ROOT`,
+  path confinement, write approval-gated) through the existing broker;
+  secrets system-side only; attributed `connector.invoked`. Proof:
+  `connector_breadth_tests.rs` (3 tests, escapes refused on disk).
+- **P-T5 CLOSED** — `al_persona_routes.rs`: `POST /cowork/al/chat` +
+  `GET /cowork/al/sessions/:id` (V168 transcript); model-assisted extraction
+  reusing `run_completion` (extracted from `/v1/responses`, same catalog /
+  credit gate / OS inference — no new LLM path) with deterministic
+  fallback; target resolution via `resolve_delegation_rule` (shared with the
+  orchestrator); Al zero-capability posture. Proof: 4 unit tests in-module.
+- **P-T6 CLOSED** — `GET /principals`, delegation-rules CRUD,
+  `GET /connector-sessions`, attribution triple on `GET /runs/:id/events`;
+  FabricTransportView: principals/bots management (roles, capability chips,
+  token provisioning), delegation rules editor, connector sessions view,
+  run-detail timeline interleaving attributed events + approval states.
+  Frontend typecheck clean.
+
+Each item closes with: Rust `cargo test -p allternit-cowork-runtime` green,
+`cargo build -p allternit-api`, clippy clean, gizzi typecheck clean where
+touched, live behavioral evidence captured, docs updated, conventional
+commits pushed, PR opened (no merge).
+
+**Live evidence (2026-09-13, dev port 18013, fresh-migrated scratch DB):**
+all six items exercised end-to-end against the running API — vm-required job
+claimed by the VM-capable worker (`A_CAPABILITY_MISSING` refusal for the
+local-only worker), boundary `projection_applied: false` on a leased-job
+write, brokered files read + approval-gated write + path-escape refusal with
+on-disk proof, Al chat (deterministic fallback + transcript) and a full
+Al → delegation-rule → intent → daemon-worker claim/execute/complete cycle,
+and every P-T6 control-surface endpoint. Evidence: `tmp/aproduct-evidence/LIVE_EVIDENCE.md`
+(rerun: `tmp/aproduct-evidence/run.sh`).
+
+**Pre-existing main breakage fixed in this session (required for the
+above):** duplicate migration versions V142/V143/V144 (cowork pass collided
+with earlier migrations) panicked every fresh DB — renumbered V169–V171;
+plus live-path fixes in the fabric submit/claim/read paths (dag_node_id NOT
+NULL, run owner stamping, workspace URI normalization, canonical fallbacks
+for mirror-only reads) — see CHANGELOG [Unreleased] → Fixed.

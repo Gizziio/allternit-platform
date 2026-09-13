@@ -85,17 +85,29 @@ in the lifecycle. Per §16 they must not be cited as A:// conformance:
 | A-T4 Gizzi claim loop | `cmd/gizzi-code/src/runtime/fabric-transport/worker.ts` — long-poll claim, `Sandbox.wrap` posture, heartbeat, checkpoints, typed Result; typechecked; live demo evidence |
 | A-T5 connector broker v0.1 | `test_connector_broker_sessions` (secret-free sessions, principal-bound, approval-gated critical capabilities, honest simulated invoke, attributed connector.invoked); live demo evidence |
 
+## 5c. Product-depth items (P-T1 closed; P-T2…P-T6 tracked in MASTER_TRACKING)
+
+| Item | Proof |
+|---|---|
+| P-T1 multi-store consolidation boundary | `store_boundary_tests.rs` (6 tests: projection preserves active lease, leased transition refused + transport completes, unleased projection applies, queue marking sets caps/attribution, run roundtrip + delegator, event ownership); Rails cowork REST routes write only via canonical `sqlite_store` projection helpers (lease-clobbering raw upserts removed; `transition_job` reports `projection_applied`); cloud-api `store_boundary.rs` + `cowork_models.rs` header mark the Postgres tables product-local projection (not removable this pass — documented); gizzi `store-boundary.ts` gates all 11 Cowork write paths (`cowork-store-boundary.test.ts`, 11 tests); `A_STORE_BOUNDARY.md` per-store status |
+| P-T2 non-local compute placement | `compute_placement_tests.rs` (5 tests: policy→capability mapping, vm job refuses local worker / wins on vm worker, local policy refuses vm-only worker, `submit_intent` enqueues claimable job with caps + idempotent replay, Al-targeted parent creates no bypass job, `set_principal_capabilities` update + missing error); `PUT /fabric/transport/principals/:id/capabilities`; gizzi worker `GIZZI_COMPUTE_MODE=vm` (Lima executor); live claim evidence in session notes |
+| P-T3 worker daemon packaging | `worker-daemon-entry.ts` (structured JSON logs, exponential claim backoff + jitter, SIGTERM/SIGINT graceful stop — in-flight job finishes, abandoned leases requeue via the sweeper, no protocol change); `packaging/launchd/com.allternit.gizzi-worker.plist`; `packaging/systemd/gizzi-worker.service`; `docs/FABRIC_WORKER_DAEMON.md` end-to-end install |
+| P-T4 connector breadth | `connector_breadth_tests.rs` (3 tests: seeded capabilities, GitHub read auto-approves / write approval-gated + payload validation without network, files confined write/read on disk + `..`/absolute escapes refused + attribution on every invocation + honest simulation when root unset); secrets read system-side from env at invoke time only |
+| P-T5 Al persona runtime v0.1 | `al_persona_routes.rs` unit tests (fallback extraction, model JSON parsing, target canonicalization, envelope posture: delegator=al, chain [user, al], never executor); `POST /cowork/al/chat` + `GET /cowork/al/sessions/:id` (V168); model extraction reuses `run_completion` (shared with `/v1/responses`) — no new LLM path; `resolve_delegation_rule` shared with the orchestrator |
+| P-T6 Cowork protocol rendering | New control endpoints: `GET /principals`, delegation-rules CRUD, `GET /connector-sessions`, attribution triple on `GET /runs/:id/events`; `FabricTransportView.tsx`: principals/bots management (roles, capability chips, one-time token provisioning), delegation rules editor, connector sessions view, run-detail timeline interleaving attributed events with approval states (grant/deny inline); frontend typecheck clean |
+
 ## 6. Honest gaps in the conformance story
 
-- **Non-local compute** — all conformance proofs run `compute: local`;
-  placement is out of scope for v0.1 (lock 1, §8.8).
-- **Al/Gizzi as live workers** — Gizzi's claim loop is implemented
-  (`fabric-transport/worker.ts`) but runs on-demand (bun entry), not as an
-  installed service; Al's loop is the deterministic orchestrator (no persona
-  runtime yet). Conformance claims attach when they operate continuously.
-- **UI conformance depth** — the `/fabric-transport` control view satisfies
-  the §17 control list minimally; rich protocol-entity rendering (leases,
-  DAG graphs, timelines) remains ongoing product work.
+- **Non-local compute** — ✅ closed by P-T2: placement resolves through
+  required capabilities (`compute.vm` etc.); conformance proofs above.
+- **Al/Gizzi as live workers** — Gizzi's claim loop ships and is daemon
+  packaged (P-T3; launchd/systemd), but continuous operation is an operator
+  install, not a CI claim. Al's deterministic loop (A-T3) plus the persona
+  runtime (P-T5) both delegate through the same canonical path.
+- **UI conformance depth** — ✅ substantially closed by P-T6: principals
+  management, delegation rules editor, connector sessions, and the
+  attributed + approvals-interleaved run timeline all render canonical
+  state. DAG visualization remains future work.
 - **Delegation chain enforcement coverage** — chains are validated on intent
   submission and job creation; enforcement on other write paths (handoffs)
   is not universal.
