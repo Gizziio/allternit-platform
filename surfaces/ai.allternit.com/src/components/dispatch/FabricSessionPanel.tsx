@@ -782,6 +782,13 @@ export function FabricSessionPanel({
               <span className="text-[12px] font-semibold truncate">{runtime.name}</span>
             </div>
             <div className="mt-1 text-[11px] text-[var(--shell-item-muted)] truncate">{runtime.host}</div>
+            {runtime.relayConnections && runtime.relayConnections.length > 0 && (
+              <div className="mt-0.5 text-[10px] text-[var(--shell-item-muted)] truncate">
+                {runtime.relayConnections.map((connection) =>
+                  connection.client === 'allternit-node' ? 'Node daemon (node.core)' : 'Desktop app',
+                ).join(' + ')}
+              </div>
+            )}
             {runtime.lastHeartbeatAt && (
               <div className="mt-0.5 text-[10px] text-[var(--shell-item-muted)]">
                 Heartbeat {new Date(runtime.lastHeartbeatAt).toLocaleString()}

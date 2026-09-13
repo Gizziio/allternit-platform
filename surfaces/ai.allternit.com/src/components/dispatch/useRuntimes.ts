@@ -6,6 +6,14 @@ import { env } from '@/lib/env';
 import { allternitCloudOrigin } from '@/lib/cloud-api';
 import { buildAuthHeaders } from '@/lib/agents/api-config';
 
+export interface RuntimeRelayConnection {
+  /** Relay client identity — 'allternit-node' for the node daemon, 'desktop'
+   * for the desktop app / legacy full-surface clients. */
+  client: string;
+  /** Capability subset the connection serves; null = full pairing surface. */
+  capabilities: string[] | null;
+}
+
 export interface RuntimeViewModel {
   id: string;
   name: string;
@@ -13,6 +21,9 @@ export interface RuntimeViewModel {
   status: 'online' | 'offline' | 'busy';
   lastHeartbeatAt?: number;
   capabilities: string[];
+  /** Live relay connections (cloud multi-connection mode only; undefined
+   * when the relay flag is off, i.e. production today). */
+  relayConnections?: RuntimeRelayConnection[];
 }
 
 interface CloudRuntimeDevice {
@@ -25,6 +36,27 @@ interface CloudRuntimeDevice {
   capabilities: string[];
   status: string;
   lastSeenAt: string | null;
+  relayConnections?: RuntimeRelayConnection[];
+}
+
+/** True when a live desktop-app connection holds the full surface (or
+ * explicitly grants screen capture). The Monitor affordance is live only in
+ * that case; a daemon-only node offers "Start desktop" instead. */
+export function hasDesktopConnection(runtime: RuntimeViewModel | null | undefined): boolean {
+  const connections = runtime?.relayConnections;
+  if (!connections || connections.length === 0) return true;
+  return connections.some(
+    (connection) =>
+      connection.capabilities === null ||
+      (connection.capabilities ?? []).includes('runtime:remote_control'),
+  );
+}
+
+/** True when the always-on node daemon holds (at least part of) the relay. */
+export function hasNodeDaemon(runtime: RuntimeViewModel | null | undefined): boolean {
+  return (runtime?.relayConnections ?? []).some(
+    (connection) => connection.client === 'allternit-node',
+  );
 }
 
 async function thisDesktopRuntime(): Promise<RuntimeViewModel | null> {
@@ -85,7 +117,14 @@ const MOCK_RUNTIMES: RuntimeViewModel[] = [
 // PWA does not flap between heartbeats.
 const HEARTBEAT_ONLINE_GRACE_MS = 10 * 60 * 1000;
 
-function deviceStatus(device: CloudRuntimeDevice): RuntimeViewModel['status'] {
+function deviceStatus(
+  device: CloudRuntimeDevice,
+  relayConnections?: RuntimeRelayConnection[],
+): RuntimeViewModel['status'] {
+  // A live relay connection means the node is reachable right now even when
+  // the DB heartbeat has gone stale (the daemon holds the relay with the
+  // desktop app fully quit).
+  if (relayConnections && relayConnections.length > 0) return 'online';
   if (device.status === 'busy') return 'busy';
   if (device.status === 'online') return 'online';
   const seen = device.lastSeenAt ? Date.now() - new Date(device.lastSeenAt).getTime() : NaN;
@@ -98,9 +137,10 @@ function deviceToViewModel(device: CloudRuntimeDevice): RuntimeViewModel {
     id: device.id,
     name: device.name || device.hostname || 'Unnamed machine',
     host: `${device.platform ?? 'Unknown'} · ${device.hostname ?? device.runtimeType}`,
-    status: deviceStatus(device),
+    status: deviceStatus(device, device.relayConnections),
     lastHeartbeatAt: device.lastSeenAt ? new Date(device.lastSeenAt).getTime() : undefined,
     capabilities: device.capabilities ?? [],
+    relayConnections: device.relayConnections,
   };
 }
 
