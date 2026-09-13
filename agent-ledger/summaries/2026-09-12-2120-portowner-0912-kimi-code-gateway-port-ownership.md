@@ -67,11 +67,13 @@ packaged desktops can now run side by side on one machine.
 
 ## Incidents / honest deferrals
 
-- **Desktop binary rebuild (ritual step 8) deferred pending Eoj go-ahead.**
-  The change does not alter packaged-app runtime behavior (same 8013 pin, same
-  reclaim), but swapping `/Applications/Allternit Desktop.app` restarts the
-  app and would drop the live Fabric Transport relay session Eoj is using.
-  DMG build from merged main is queued; install timing is Eoj's call.
+- **Desktop binary rebuilt; install deferred to Eoj's go-ahead.** The unsigned
+  DMG (`Allternit-Desktop-1.1.1-local-arm64.dmg`, 438M) was built from merged
+  main and verified — `app.asar` contains the port-ownership change and all
+  six `resources/bin/` sidecars are present. It is preserved in the shared
+  checkout `surfaces/allternit-desktop/release/`. Swapping `/Applications/
+  Allternit Desktop.app` restarts the app and would drop the live Fabric
+  Transport relay session, so installation was intentionally not performed.
 - Shared checkout was on `ao/platform-console-agents` with uncommitted work
   from another session, so the ledger commit lands via a detached
   `origin/main` in the session worktree instead of the shared checkout.
