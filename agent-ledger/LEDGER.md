@@ -21,6 +21,15 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-12 23:58 — kimi — initializeApp race: app initialized twice on macOS launch (#457)
+
+- **Session ID / Branch:** `session/desktopfix-0912`
+- **Agent:** kimi
+- **Summary:** Root cause of tonight's repeated 'app not rendering' wedges: `app.on('activate')` fires on every macOS launch and, landing before the startup window existed, ran a second concurrent `initializeApp()` — two `initializeBundledMode` passes fought over the singleton BackendManager (five api spawn/kill cycles in 20s on :8013, destroyed splash window, 'did not start within 30s'). All entry points now route through `initializeAppOnce()` (shared in-flight promise, reset after settling so dock-click revival still works). Typecheck ✅ (re-run post-rebase over #455), backend-manager tests 4/4 ✅, release-preflight 35/0 ✅, full build:electron:dmg pipeline with verify-packaged-resources all-green ✅. **Incident:** argument-less `gh pr merge` during a TCC permission revocation accidentally merged another session's PR #455 (tartenv) — disclosed in #457's body; no revert (finished, mergeable PR). Desktop TCC Desktop-folder access was revoked mid-session twice tonight — recurring TCC resets need investigation if they continue.
+- **PR / Commit:** #457, merge commit `3a53730ebf189dfa4c89f2ad523af04f1fe65d0a`
+- **Full summary:** [agent-ledger/summaries/2026-09-12-2358-desktopfix-0912-kimi-code-init-race.md](agent-ledger/summaries/2026-09-12-2358-desktopfix-0912-kimi-code-init-race.md)
+
+
 ### 2026-09-12 23:25 — kimi — desktop startup lifecycle hardening (#453)
 
 - **Session ID / Branch:** `session/desktopfix-0912`
