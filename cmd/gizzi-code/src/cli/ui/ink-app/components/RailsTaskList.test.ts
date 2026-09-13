@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   actionableKindFor,
   clampSelectionIndex,
+  closeEvidenceFor,
 } from './RailsTaskList.js'
 
 describe('actionableKindFor', () => {
@@ -34,6 +35,29 @@ describe('actionableKindFor', () => {
     expect(actionableKindFor('DONE', null, me)).toBeNull()
     expect(actionableKindFor('FAILED', null, me)).toBeNull()
     expect(actionableKindFor('BLOCKED', null, me)).toBeNull()
+  })
+})
+
+describe('closeEvidenceFor', () => {
+  test('DONE maps to a closed evidence line', () => {
+    expect(closeEvidenceFor('DONE', 'gizzi-session-1')).toBe(
+      'closed from gizzi-code todo panel by gizzi-session-1',
+    )
+  })
+
+  test('FAILED (x key) maps to a failed evidence line', () => {
+    expect(closeEvidenceFor('FAILED', 'gizzi-session-1')).toBe(
+      'failed from gizzi-code todo panel by gizzi-session-1',
+    )
+  })
+
+  test('unknown agent falls back to a literal', () => {
+    expect(closeEvidenceFor('FAILED', null)).toBe(
+      'failed from gizzi-code todo panel by unknown',
+    )
+    expect(closeEvidenceFor('DONE', null)).toBe(
+      'closed from gizzi-code todo panel by unknown',
+    )
   })
 })
 

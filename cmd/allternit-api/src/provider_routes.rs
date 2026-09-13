@@ -51,6 +51,27 @@ pub fn provider_router() -> Router<Arc<AppState>> {
         )
         .route("/providers/auth/status", get(list_provider_auth_status))
         .route("/providers/video/generate", post(generate_video))
+        .route("/media/catalog", get(crate::media::handlers::get_media_catalog))
+        .route(
+            "/media/video/jobs",
+            post(crate::media::handlers::submit_video_job),
+        )
+        .route(
+            "/media/video/jobs/:job_id",
+            get(crate::media::handlers::get_video_job),
+        )
+        .route(
+            "/media/video/jobs/:job_id/download",
+            get(crate::media::handlers::download_video_job),
+        )
+        .route(
+            "/media/image/generate",
+            post(crate::media::handlers::generate_image),
+        )
+        .route(
+            "/media/artifacts/:artifact_id",
+            get(crate::media::handlers::get_media_artifact),
+        )
         .route("/media/providers", get(list_media_providers))
         .route("/media/:mode/providers", get(list_media_providers_for_mode))
         .route("/media/:mode/generate", post(generate_media))

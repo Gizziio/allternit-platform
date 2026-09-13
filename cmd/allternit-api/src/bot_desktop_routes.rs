@@ -876,8 +876,15 @@ async fn deprovision_desktop(
     };
 
     // Release this bot's screen. Only destroy the shared VM when no screens remain.
-    if let Ok(Some(computer)) = crate::computer_screens::find_user_computer(&state.db, &user.user_id)
-    {
+    let shared_computer =
+        match crate::computer_screens::find_user_computer(&state.db, &user.user_id) {
+            Ok(c) => c,
+            Err(e) => {
+                warn!(bot_id, error = %e, "Failed to look up shared user computer");
+                None
+            }
+        };
+    if let Some(computer) = &shared_computer {
         let _ = crate::computer_screens::delete_screen(&state.db, &computer.id, &bot_id);
         if let Ok(remaining) = crate::computer_screens::screen_count(&state.db, &computer.id) {
             if remaining > 0 {
@@ -909,7 +916,14 @@ async fn deprovision_desktop(
     }
 
     let sandbox_id = record.sandbox_id.clone();
+    // When the destroyed sandbox IS the shared account computer (attach path),
+    // its computers row must not outlive the VM — otherwise the next provision
+    // attaches to a ghost row whose VM no longer exists on any substrate.
+    let shared_computer_id = shared_computer
+        .filter(|c| c.native_id == sandbox_id)
+        .map(|c| c.id);
     let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
+    let db = state.db.clone();
     tokio::spawn(async move {
         match driver.destroy(&handle).await {
             Ok(()) => info!(bot_id, sandbox_id, "Bot desktop sandbox destroyed"),
@@ -918,6 +932,11 @@ async fn deprovision_desktop(
             }
             Err(e) => {
                 warn!(bot_id, sandbox_id, error = %e, "Failed to destroy bot desktop sandbox");
+            }
+        }
+        if let Some(computer_id) = shared_computer_id {
+            if let Err(e) = crate::computer_screens::mark_user_computer_deleted(&db, &computer_id) {
+                warn!(bot_id, %computer_id, error = %e, "Failed to mark shared computer deleted");
             }
         }
     });
@@ -1221,6 +1240,19 @@ async fn destroy_desktop(
 
     if let Err(e) = delete_bot_sandbox(&state.db, &bot_id) {
         warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to delete desktop sandbox record");
+    }
+
+    // If the destroyed sandbox was the shared account computer, retire its row
+    // (and screens) so future provisions do not attach to a ghost VM.
+    if let Ok(Some(computer)) = crate::computer_screens::find_user_computer(&state.db, &user.user_id)
+    {
+        if computer.native_id == sandbox_id {
+            if let Err(e) =
+                crate::computer_screens::mark_user_computer_deleted(&state.db, &computer.id)
+            {
+                warn!(bot_id, %computer.id, error = %e, "Failed to mark shared computer deleted");
+            }
+        }
     }
 
     {
@@ -1822,6 +1854,150 @@ mod tests {
 
         let sessions = state.bot_desktop_sessions.read().await;
         assert!(!sessions.contains_key("bot-1"));
+    }
+
+    /// Regression (bote2e-0913): deprovision of the shared account computer
+    /// destroyed the VM but left the computers row at status='running', so the
+    /// next provision attached to a ghost and reported "running" for a sandbox
+    /// that did not exist on any substrate. The row (and its screens) must be
+    /// retired alongside the VM.
+    #[tokio::test]
+    async fn deprovision_marks_shared_computer_deleted() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        let state = test_app_state(&temp, driver.clone()).await;
+        {
+            let conn = state.db.connect().expect("conn");
+            conn.execute(
+                "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, name, native_id)
+                 VALUES ('shared-1', 'cloud_desktop', 'incus', 'running', 'user', 'user-1', 'Account computer', 'sandbox-abc')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO computer_screens (id, computer_id, bot_id, display_index, status)
+                 VALUES ('screen-1', 'shared-1', 'bot-1', 0, 'running')",
+                [],
+            )
+            .unwrap();
+        }
+        let app = bot_desktop_router().with_state(state.clone());
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/bots/bot-1/desktop/deprovision")
+                    .extension(test_user("user-1"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // Row cleanup runs in the background task alongside the destroy.
+        let mut retired = false;
+        for _ in 0..50 {
+            let conn = state.db.connect().expect("conn");
+            let status: String = conn
+                .query_row(
+                    "SELECT status FROM computers WHERE id = 'shared-1'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            if status == "deleted" {
+                retired = true;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        assert!(retired, "shared computer row was not marked deleted");
+
+        let conn = state.db.connect().expect("conn");
+        let screens: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM computer_screens WHERE computer_id = 'shared-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(screens, 0, "screens of the destroyed shared computer must be removed");
+    }
+
+    /// When other bots still hold screens on the shared computer, deprovision
+    /// only releases this bot's screen — the computer row must stay running.
+    #[tokio::test]
+    async fn deprovision_keeps_shared_computer_while_screens_remain() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        let state = test_app_state(&temp, driver.clone()).await;
+        {
+            let conn = state.db.connect().expect("conn");
+            conn.execute(
+                "INSERT INTO agents (id, user_id, name, type, model, provider)
+                 VALUES ('bot-2', 'user-1', 'Other Bot', 'worker', 'gpt-4', 'openai')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, name, native_id)
+                 VALUES ('shared-1', 'cloud_desktop', 'incus', 'running', 'user', 'user-1', 'Account computer', 'sandbox-abc')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO computer_screens (id, computer_id, bot_id, display_index, status)
+                 VALUES ('screen-1', 'shared-1', 'bot-1', 0, 'running')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO computer_screens (id, computer_id, bot_id, display_index, status)
+                 VALUES ('screen-2', 'shared-1', 'bot-2', 1, 'running')",
+                [],
+            )
+            .unwrap();
+        }
+        let app = bot_desktop_router().with_state(state.clone());
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/bots/bot-1/desktop/deprovision")
+                    .extension(test_user("user-1"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // The shared computer row must survive while another bot has a screen.
+        let conn = state.db.connect().expect("conn");
+        let status: String = conn
+            .query_row(
+                "SELECT status FROM computers WHERE id = 'shared-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(status, "running");
+        let remaining: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM computer_screens WHERE computer_id = 'shared-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(remaining, 1, "bot-2's screen must remain");
+        // No destroy: the VM is still in use by bot-2.
+        assert!(
+            !driver.recorded().iter().any(|r| r.starts_with("destroy:")),
+            "shared VM must not be destroyed while screens remain"
+        );
     }
 
     #[tokio::test]

@@ -135,12 +135,14 @@ export function pickupWih(
 }
 
 /**
- * Close a WIH we own (status DONE, auto-evidence v1). 403 when the WIH is
- * owned by a different agent; 400 when evidence is empty.
+ * Close a WIH we own (status DONE or FAILED, auto-evidence v1). 403 when
+ * the WIH is owned by a different agent; 400 when evidence is empty or the
+ * status is outside DONE|FAILED (the server normalizes case).
  */
 export function closeWih(
   wihId: string,
   evidence: string[],
+  status: 'DONE' | 'FAILED' = 'DONE',
 ): Promise<WihMutationResult> {
   const agentId = railsPeerAgentId()
   if (!agentId) {
@@ -148,7 +150,7 @@ export function closeWih(
   }
   return postWihMutation(
     `/api/commrails/wihs/${encodeURIComponent(wihId)}/close`,
-    { status: 'DONE', evidence, agent_id: agentId },
+    { status, evidence, agent_id: agentId },
   )
 }
 

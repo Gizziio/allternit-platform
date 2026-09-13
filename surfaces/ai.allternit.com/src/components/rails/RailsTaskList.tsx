@@ -15,6 +15,7 @@ import {
   Circle,
   CircleHalf,
   MinusCircle,
+  Plus,
   XCircle,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -22,13 +23,20 @@ import { GATEWAY_BASE_URL } from "@/lib/agents/api-config";
 import {
   DEFAULT_RAILS_AGENT_ID,
   useCloseWih,
+  useCreateDagNode,
   usePickupWih,
   useRailsDags,
   type RailsDagNode,
+  type RailsDagSummary,
   type RailsDagView,
   type RailsNodeStatus,
 } from "@/lib/rails/use-rails-dags";
-import { organizeDagNodes, type OrganizedDag, type OrganizedRow } from "./organize";
+import {
+  findRootNodeId,
+  organizeDagNodes,
+  type OrganizedDag,
+  type OrganizedRow,
+} from "./organize";
 
 export interface RailsTaskListProps {
   view: RailsDagView;
@@ -70,6 +78,7 @@ function DagRow({
   pending,
   onTake,
   onCloseDone,
+  onFail,
   compact,
 }: {
   row: OrganizedRow;
@@ -80,6 +89,7 @@ function DagRow({
   pending: boolean;
   onTake: (node: RailsDagNode) => void;
   onCloseDone: (node: RailsDagNode) => void;
+  onFail: (node: RailsDagNode) => void;
   compact: boolean;
 }) {
   const pad = { paddingLeft: row.depth * 16 };
@@ -149,16 +159,90 @@ function DagRow({
         node.status === "RUNNING" &&
         node.assignee === agentId &&
         node.current_wih_id && (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => onCloseDone(node)}
-            className="shrink-0 text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
-          >
-            Done…
-          </button>
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onCloseDone(node)}
+              className="shrink-0 text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
+            >
+              Done…
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onFail(node)}
+              className="shrink-0 text-[10px] font-medium text-[var(--status-error)] hover:opacity-80 disabled:opacity-40"
+            >
+              Fail…
+            </button>
+          </>
         )}
     </li>
+  );
+}
+
+function AddTaskRow({
+  dag,
+  pending,
+  onAdd,
+}: {
+  dag: RailsDagSummary;
+  pending: boolean;
+  onAdd: (title: string, parentNodeId: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const rootId = findRootNodeId(dag);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  if (rootId === null) return null;
+
+  const submit = () => {
+    const title = value.trim();
+    if (title.length === 0) return;
+    onAdd(title, rootId);
+    setValue("");
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => setEditing(true)}
+        className="mt-0.5 flex w-full items-center gap-1.5 rounded px-1 py-1 text-[10px] font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
+      >
+        <Plus size={11} />
+        Add task
+      </button>
+    );
+  }
+
+  return (
+    <input
+      ref={inputRef}
+      value={value}
+      disabled={pending}
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") submit();
+        if (e.key === "Escape") {
+          setValue("");
+          setEditing(false);
+        }
+      }}
+      onBlur={() => {
+        if (value.trim().length === 0) setEditing(false);
+      }}
+      placeholder="Task title — Enter to add, Esc to cancel"
+      className="mt-0.5 w-full rounded border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-1.5 py-1 text-[11px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]"
+    />
   );
 }
 
@@ -173,6 +257,7 @@ export function RailsTaskList({
   const { data } = useRailsDags(view);
   const pickup = usePickupWih();
   const close = useCloseWih();
+  const create = useCreateDagNode();
   const [expandedDone, setExpandedDone] = useState<Record<string, boolean>>({});
   // Write-back probe: if the pickup endpoint is unsupported (405/5xx/network),
   // silently degrade to read-only. 404 means the route answered (unknown node).
@@ -220,7 +305,7 @@ export function RailsTaskList({
   if (organized.length === 0) return null;
 
   const canAct = interactive && writeBackOk;
-  const pending = pickup.isPending || close.isPending;
+  const pending = pickup.isPending || close.isPending || create.isPending;
 
   return (
     <div className={cn("flex min-w-0 flex-col", compact ? "gap-1" : "gap-2")}>
@@ -255,8 +340,19 @@ export function RailsTaskList({
                   if (input == null || input.trim().length === 0) return;
                   close.mutate({
                     wih_id: node.current_wih_id,
-                    status: "done",
+                    status: "DONE",
                     evidence: [input],
+                    agent_id: agent,
+                  });
+                }}
+                onFail={(node) => {
+                  if (!node.current_wih_id) return;
+                  const reason = window.prompt(`Reason for failing ${node.title}`);
+                  if (reason == null) return;
+                  close.mutate({
+                    wih_id: node.current_wih_id,
+                    status: "FAILED",
+                    evidence: [reason.trim().length > 0 ? reason : "failed from web panel"],
                     agent_id: agent,
                   });
                 }}
@@ -264,6 +360,15 @@ export function RailsTaskList({
               />
             ))}
           </ul>
+          {canAct && (
+            <AddTaskRow
+              dag={dag}
+              pending={pending}
+              onAdd={(title, parentNodeId) =>
+                create.mutate({ dag_id: dag.dag_id, title, parent_node_id: parentNodeId })
+              }
+            />
+          )}
         </section>
       ))}
     </div>

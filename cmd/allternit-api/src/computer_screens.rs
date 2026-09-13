@@ -175,6 +175,28 @@ pub fn screen_count(db: &crate::db::DbHandle, computer_id: &str) -> Result<i64, 
     )
 }
 
+/// Mark a shared user computer (and its screens) as deleted after its backing
+/// VM has been destroyed. Live-smoke defect (bote2e-0913): deprovision
+/// destroyed the VM but left the computers row at status='running', so the
+/// next provision's `attach_bot_to_user_computer` attached the bot to a ghost
+/// and reported "running" for a sandbox that did not exist on any substrate.
+pub fn mark_user_computer_deleted(
+    db: &crate::db::DbHandle,
+    computer_id: &str,
+) -> Result<(), rusqlite::Error> {
+    let conn = db.connect()?;
+    conn.execute(
+        "UPDATE computers SET status = 'deleted', updated_at = CURRENT_TIMESTAMP \
+         WHERE id = ?1 AND status != 'deleted'",
+        rusqlite::params![computer_id],
+    )?;
+    conn.execute(
+        "DELETE FROM computer_screens WHERE computer_id = ?1",
+        rusqlite::params![computer_id],
+    )?;
+    Ok(())
+}
+
 pub fn delete_screen(
     db: &crate::db::DbHandle,
     computer_id: &str,
