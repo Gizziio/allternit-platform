@@ -86,3 +86,50 @@ class TestBrainTimeoutConfig:
         )
         plan = await provider.ground_and_reason("aGk=", "task")
         assert plan is not None
+
+
+@pytest.mark.skipif(os.name != "posix", reason="process-group kill is POSIX-only")
+class TestBrainOrphanProcesses:
+    """F4: a timed-out/cancelled CLI brain must not orphan its children."""
+
+    @staticmethod
+    def _tree_script(pidfile: Path) -> str:
+        # Spawns a sleeping grandchild, records its pid, then blocks — so the
+        # provider's timeout/cancellation fires while the whole tree is alive.
+        return f"sleep 30 & echo $! > {pidfile}; wait"
+
+    @staticmethod
+    async def _wait_dead(pid: int, timeout_s: float = 5.0) -> bool:
+        deadline = time.monotonic() + timeout_s
+        while _pid_alive(pid) and time.monotonic() < deadline:
+            await asyncio.sleep(0.05)
+        return not _pid_alive(pid)
+
+    @pytest.mark.asyncio
+    async def test_timeout_reaps_the_grandchild(self, tmp_path):
+        pidfile = tmp_path / "grandchild.pid"
+        provider = SubprocessVisionProvider(
+            cmd="/bin/sh", args=["-c", self._tree_script(pidfile)], timeout_s=0.5,
+        )
+        with pytest.raises(VisionAPIError, match="timed out"):
+            await provider.ground_and_reason("aGk=", "task")
+        grandchild = int(pidfile.read_text().strip())
+        assert await self._wait_dead(grandchild), (
+            f"grandchild {grandchild} survived the brain timeout kill"
+        )
+
+    @pytest.mark.asyncio
+    async def test_cancellation_reaps_the_grandchild(self, tmp_path):
+        pidfile = tmp_path / "grandchild.pid"
+        provider = SubprocessVisionProvider(
+            cmd="/bin/sh", args=["-c", self._tree_script(pidfile)], timeout_s=30.0,
+        )
+        task = asyncio.create_task(provider.ground_and_reason("aGk=", "task"))
+        await asyncio.sleep(0.5)  # let the tree come up
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        grandchild = int(pidfile.read_text().strip())
+        assert await self._wait_dead(grandchild), (
+            f"grandchild {grandchild} survived the brain cancellation kill"
+        )

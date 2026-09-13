@@ -14,6 +14,7 @@ Supports: OpenAI GPT-4o, Anthropic Claude (as a provider option), Azure OpenAI.
 import os
 import base64
 import json
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -1281,6 +1282,37 @@ class AllternitGatewayProvider(VisionProvider):
             raise VisionAPIError(f"Gizzi brain error: {e}", provider="allternit")
 
 
+async def _kill_process_tree(proc: asyncio.subprocess.Process) -> None:
+    """Kill a brain subprocess AND its descendants, then reap the direct child.
+
+    CLI brains spawn their own children (the actual model process); killing
+    only the spawned CLI left the grandchild orphaned (cu22 follow-up F4).
+    ``start_new_session=True`` put the child in its own process group, so on
+    POSIX ``killpg`` reaps the whole tree; platforms without process groups
+    fall back to the direct kill. Best effort throughout — never raise.
+    """
+    import signal
+
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+        else:
+            proc.kill()
+    except (ProcessLookupError, PermissionError):
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    except Exception:
+        pass
+    # Reap the direct child so no zombie lingers.
+    try:
+        if proc.returncode is None:
+            await asyncio.wait_for(proc.wait(), timeout=5)
+    except Exception:
+        pass
+
+
 class SubprocessVisionProvider(VisionProvider):
     """
     Subprocess brain provider — invokes a CLI agent as a subprocess.
@@ -1340,13 +1372,25 @@ class SubprocessVisionProvider(VisionProvider):
         prompt = _build_planning_prompt(task, history_text, (1280, 720))
         stdin_payload = json.dumps({"prompt": prompt, "screenshot_b64": screenshot_b64})
         try:
+            # F4: start_new_session puts the CLI in its own process group so a
+            # timeout/cancellation can kill the whole tree — CLI brains spawn
+            # their own children (the model process), and killing only the
+            # direct child orphaned the grandchild (cu22 campaign finding).
             proc = await asyncio.create_subprocess_exec(
                 self._cmd, *self._args,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
             )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(stdin_payload.encode()), timeout=self._timeout_s)
+            try:
+                stdout, stderr = await asyncio.wait_for(proc.communicate(stdin_payload.encode()), timeout=self._timeout_s)
+            except asyncio.CancelledError:
+                await _kill_process_tree(proc)
+                raise  # cancellation must propagate
+            except asyncio.TimeoutError:
+                await _kill_process_tree(proc)
+                raise VisionAPIError(f"Brain subprocess timed out after {self._timeout_s:g}s", provider="subprocess")
             if proc.returncode != 0:
                 raise VisionAPIError(f"Brain subprocess exited {proc.returncode}: {stderr.decode()[:200]}", provider="subprocess")
             return _parse_action_plan(stdout.decode())
