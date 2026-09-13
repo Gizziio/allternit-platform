@@ -353,3 +353,26 @@ Future slices can add mTLS client certificates and store the certificate fingerp
 > scope the next phase from the strategy gameplan (e.g. multi-provider
 > fallback / Fabric Exchange / mTLS node identity — see **Risks** and
 > **Own cloud service catalog** above) in a new tracker, and retire this one.
+
+---
+
+## A:// Protocol Task DAG (session/adocs2-0913, 2026-09-13)
+
+Tracked work items from the A:// conformance docs' remaining-gaps list. Format
+follows this file's conventions: id, definition of done, dependencies. The DAG
+order is enforced by implementation sequence.
+
+| ID | Item | Definition of done | Depends on |
+|----|------|--------------------|-----------|
+| A-T1 | Delegation chains on handoff paths | `create_handoff` validates + carries `causation_chain` (cycle/depth, same rules as intents/jobs); handoff ack route exists (`cowork_handoffs.status` can reach `completed`); attribution on the handoff job + events | — (V162–V164 landed) |
+| A-T2 | Per-principal memory grants | `cowork_memory_entries` carry `owner_principal` + `grants`; memory read/search/write routes enforce owner+grants server-side; default-deny cross-principal | V162/V163 principals (landed) |
+| A-T3 | Al orchestration loop v0.1 (deterministic) | Intent targeted at `principal/al` is processed by an orchestrator service: delegation rules pick the target, child intent submitted with extended chain, run monitored to terminal, attributed `delegation.*` events, result recorded on the parent intent | A-T1 (chain discipline), V164 intents (landed) |
+| A-T4 | Gizzi claim-loop wiring | gizzi-code ships a fabric-transport worker client (token via env, long-poll claim, sandboxed step execution, heartbeat, typed Result); typechecks | V162 Gizzi principal + provisioning (landed) |
+| A-T5 | Connector broker v0.1 | `cowork_connector_sessions`: broker validates (principal, run, capability, policy), issues short-lived session; the SYSTEM invokes the external call with the brokered secret (never in worker payload); one reference connector proven end-to-end | V155 approvals (landed) |
+
+**Sequence:** A-T1 → A-T2 ∥ A-T3 (after T1) ∥ A-T4 ∥ A-T5.
+
+**Status:** A-T1…A-T5 all CLOSED in session/adocs2-0913 (PR #473) — see the
+A:// docs (A_PROTOCOL.md §16, A_PROTOCOL_CONFORMANCE_MATRIX.md §6) for proof
+per item. No A:// protocol items remain open; future work is product depth
+(UI rendering, connector breadth), not protocol conformance.

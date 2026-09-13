@@ -6,7 +6,7 @@
 //! `allternit_cowork_runtime::sqlite_store` (lock 2).
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::HeaderMap,
     routing::{get, post},
     Json, Router,
@@ -53,6 +53,21 @@ pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
         .route(
             "/fabric/transport/approvals/:approval_id/deny",
             post(decide_approval_deny),
+        )
+        .route(
+            "/fabric/transport/principals/:principal_id/provision-token",
+            post(provision_principal_token),
+        )
+        .route("/fabric/transport/intents", post(submit_intent))
+        .route("/fabric/transport/intents/:intent_id", get(get_intent))
+        .route("/fabric/transport/approvals", get(list_approvals))
+        .route(
+            "/fabric/transport/jobs/:job_id/connector-sessions",
+            post(request_connector_session),
+        )
+        .route(
+            "/fabric/transport/connector-sessions/:session_id/invoke",
+            post(invoke_connector_session),
         )
 }
 
@@ -132,6 +147,9 @@ pub struct CreatePrincipalRequest {
     pub id: String,
     pub workspace: String,
     pub capabilities: Vec<String>,
+    /// Role vocabulary (§3): orchestrator, worker, reviewer, observer, human, system.
+    #[serde(default)]
+    pub roles: Vec<String>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -163,6 +181,7 @@ async fn create_principal(
         &req.id,
         &req.workspace,
         &req.capabilities,
+        &req.roles,
         &token,
     )
     .map_err(transport_err)?;
@@ -488,4 +507,262 @@ async fn decide_approval(
         sqlite_store::decide_approval(&mut conn, &approval_id, grant, &user.user_id)
             .map_err(transport_err)?;
     Ok(Json(binding))
+}
+
+// ─── Default principals, intents, approval inbox (§3 / §5 / §8.15) ──────────
+
+/// Provision or rotate a principal's bearer token. Requires user auth; the
+/// raw token is returned exactly once (hashed at rest).
+async fn provision_principal_token(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(principal_id): Path<String>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    let user = crate::auth::get_user(&headers).ok_or_else(|| ErrorResponse {
+        error: "authentication required to provision principal tokens".to_string(),
+        code: 401,
+    })?;
+    let _ = user;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let token = sqlite_store::provision_principal_token(&mut conn, &principal_id)
+        .map_err(transport_err)?;
+    info!(principal = %principal_id, "Provisioned fabric-transport token (returned once)");
+    Ok(Json(json!({ "principal_id": principal_id, "token": token })))
+}
+
+/// Submit a canonical IntentEnvelope (§5). User auth (the initiator side).
+/// Idempotent on intent_id; the created run is mirrored into the runtime
+/// manager best-effort.
+async fn submit_intent(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(envelope): Json<allternit_cowork_runtime::IntentEnvelope>,
+) -> Result<Json<allternit_cowork_runtime::IntentSubmission>, ErrorResponse> {
+    if crate::auth::get_user(&headers).is_none() {
+        return Err(ErrorResponse {
+            error: "authentication required to submit intents".to_string(),
+            code: 401,
+        });
+    }
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let submission =
+        sqlite_store::submit_intent(&mut conn, &envelope).map_err(transport_err)?;
+    if submission.created {
+        // Mirror the intent-created run into the in-memory manager so the
+        // legacy run/job routes (which consult the mirror) see it.
+        if let (Ok(manager), Ok(run_uuid)) = (
+            run_manager(&state),
+            uuid::Uuid::parse_str(&submission.run_id),
+        ) {
+            let row = {
+                let conn = state.db.connect().map_err(db_error)?;
+                conn.query_row(
+                "SELECT tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id,
+                        policy_profile, created_at
+                 FROM cowork_runs WHERE id = ?1",
+                rusqlite::params![submission.run_id],
+                |r| {
+                    Ok((
+                        r.get::<_, String>(0)?,
+                        r.get::<_, String>(1)?,
+                        r.get::<_, String>(2)?,
+                        r.get::<_, String>(3)?,
+                        r.get::<_, String>(4)?,
+                        r.get::<_, String>(5)?,
+                        r.get::<_, String>(6)?,
+                        r.get::<_, String>(7)?,
+                        r.get::<_, String>(8)?,
+                    ))
+                },
+                )
+                .ok()
+            };
+            if let Some(row) = row {
+                let parse = |v: &str| {
+                    chrono::DateTime::parse_from_rfc3339(v)
+                        .map(|dt| dt.with_timezone(&chrono::Utc))
+                        .unwrap_or_else(|_| chrono::Utc::now())
+                };
+                let run = allternit_cowork_runtime::Run {
+                    id: RunId(run_uuid),
+                    tenant_id: row.0,
+                    workspace_id: row.1,
+                    initiator: row.2,
+                    mode: row.3.parse().unwrap_or(allternit_cowork_runtime::RunMode::Cowork),
+                    state: row.4.parse().unwrap_or(allternit_cowork_runtime::RunState::Queued),
+                    entrypoint: row.5,
+                    dag_id: row.6,
+                    current_job_id: None,
+                    current_checkpoint_id: None,
+                    policy_profile: row.7,
+                    created_at: parse(&row.8),
+                    updated_at: parse(&row.8),
+                    completed_at: None,
+                };
+                let _ = manager.load_run(run).await;
+            }
+        }
+    }
+    Ok(Json(submission))
+}
+
+async fn get_intent(
+    State(state): State<Arc<AppState>>,
+    Path(intent_id): Path<String>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    let conn = state.db.connect().map_err(db_error)?;
+    sqlite_store::get_intent(&conn, &intent_id)
+        .map_err(transport_err)?
+        .ok_or_else(|| ErrorResponse {
+            error: "A_JOB_NOT_FOUND: intent not found".to_string(),
+            code: 404,
+        })
+        .map(Json)
+}
+
+/// Approval inbox for the control surface (Cowork): pending/granted/denied/
+/// expired/invalidated bindings for a workspace, newest first. User auth.
+#[derive(Debug, serde::Deserialize)]
+pub struct ListApprovalsQuery {
+    pub workspace: Option<String>,
+    pub status: Option<String>,
+}
+
+async fn list_approvals(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(query): Query<ListApprovalsQuery>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    if crate::auth::get_user(&headers).is_none() {
+        return Err(ErrorResponse {
+            error: "authentication required".to_string(),
+            code: 401,
+        });
+    }
+    let conn = state.db.connect().map_err(db_error)?;
+    let (sql, filter) = match (&query.workspace, &query.status) {
+        (Some(w), Some(st)) => (
+            "SELECT id, run_id, job_id, executor, capability, target, status, decided_by, lease_generation, created_at
+             FROM cowork_approval_bindings WHERE run_id IN (SELECT id FROM cowork_runs WHERE workspace_id = ?1) AND status = ?2
+             ORDER BY created_at DESC, rowid DESC",
+            Some((w.clone(), st.clone())),
+        ),
+        (Some(w), None) => (
+            "SELECT id, run_id, job_id, executor, capability, target, status, decided_by, lease_generation, created_at
+             FROM cowork_approval_bindings WHERE run_id IN (SELECT id FROM cowork_runs WHERE workspace_id = ?1)
+             ORDER BY created_at DESC, rowid DESC",
+            Some((w.clone(), String::new())),
+        ),
+        (None, Some(st)) => (
+            "SELECT id, run_id, job_id, executor, capability, target, status, decided_by, lease_generation, created_at
+             FROM cowork_approval_bindings WHERE status = ?1
+             ORDER BY created_at DESC, rowid DESC",
+            Some((String::new(), st.clone())),
+        ),
+        (None, None) => (
+            "SELECT id, run_id, job_id, executor, capability, target, status, decided_by, lease_generation, created_at
+             FROM cowork_approval_bindings ORDER BY created_at DESC, rowid DESC LIMIT 200",
+            None,
+        ),
+    };
+    let mut stmt = conn.prepare(sql).map_err(db_error)?;
+    let rows: Vec<serde_json::Value> = match filter {
+        Some((w, st)) if !w.is_empty() && !st.is_empty() => stmt
+            .query_map(rusqlite::params![w, st], approval_row)
+            .map_err(db_error)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(db_error)?,
+        Some((w, _)) if !w.is_empty() => stmt
+            .query_map(rusqlite::params![w], approval_row)
+            .map_err(db_error)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(db_error)?,
+        Some((_, st)) if !st.is_empty() => stmt
+            .query_map(rusqlite::params![st], approval_row)
+            .map_err(db_error)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(db_error)?,
+        _ => stmt
+            .query_map([], approval_row)
+            .map_err(db_error)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(db_error)?,
+    };
+    Ok(Json(json!({ "approvals": rows })))
+}
+
+fn approval_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<serde_json::Value> {
+    Ok(json!({
+        "id": row.get::<_, String>(0)?,
+        "run_id": row.get::<_, String>(1)?,
+        "job_id": row.get::<_, String>(2)?,
+        "executor": row.get::<_, String>(3)?,
+        "capability": row.get::<_, String>(4)?,
+        "target": row.get::<_, String>(5)?,
+        "status": row.get::<_, String>(6)?,
+        "decided_by": row.get::<_, Option<String>>(7)?,
+        "lease_generation": row.get::<_, i64>(8)?,
+        "created_at": row.get::<_, String>(9)?,
+    }))
+}
+
+// ─── Connector broker (§8.5, A-T5) ──────────────────────────────────────────
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ConnectorSessionRequest {
+    pub lease_id: String,
+    pub lease_generation: i64,
+    pub capability: String,
+    pub ttl_secs: Option<u64>,
+}
+
+async fn request_connector_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(job_id): Path<String>,
+    Json(req): Json<ConnectorSessionRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    let principal = authenticate(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let session = sqlite_store::request_connector_session(
+        &mut conn,
+        &principal,
+        &job_id,
+        &req.lease_id,
+        req.lease_generation,
+        &req.capability,
+        req.ttl_secs.map(Duration::from_secs),
+    )
+    .map_err(transport_err)?;
+    Ok(Json(session))
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ConnectorInvokeRequest {
+    pub job_id: String,
+    pub lease_id: String,
+    pub lease_generation: i64,
+    pub payload: serde_json::Value,
+}
+
+async fn invoke_connector_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+    Json(req): Json<ConnectorInvokeRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    let principal = authenticate(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let outcome = sqlite_store::invoke_connector_session(
+        &mut conn,
+        &principal,
+        &req.job_id,
+        &req.lease_id,
+        req.lease_generation,
+        &session_id,
+        req.payload,
+    )
+    .await
+    .map_err(transport_err)?;
+    Ok(Json(outcome))
 }

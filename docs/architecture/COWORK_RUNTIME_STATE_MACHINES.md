@@ -30,6 +30,7 @@ created → planned → queued → running → paused
 
 | Transition | Caused by | Persistence effect |
 |---|---|---|
+| (none) → `created` → `queued` | `POST /api/v1/fabric/transport/intents` — `submit_intent` inserts the run directly at `queued` (V164; §8.2 honesty: intents queue, leases make running) | run row + `cowork_intents` mapping + `intent.accepted` event; idempotent on intent_id |
 | `created → planned` | `POST /runs/:id/start` step 1 (`transition_run_state`) | `UPDATE cowork_runs.state` (route mirrors) |
 | `planned → queued` | `POST /runs/:id/start` step 2 | state=`queued`; event `run_queued` |
 | `queued → running` | **claim CAS** (`sqlite_store::claim_job`): first lease grant sets `state='running'` atomically in the same transaction as the lease | `UPDATE cowork_runs ... WHERE state='queued'` |

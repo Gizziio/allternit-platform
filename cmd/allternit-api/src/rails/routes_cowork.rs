@@ -624,6 +624,16 @@ async fn cancel_run(
     Ok(Json(json!({ "cancelled": true })))
 }
 
+fn conn_ws(state: &AppState, run_id: RunId) -> Result<String, ErrorResponse> {
+    let conn = state.db.connect().map_err(db_error)?;
+    conn.query_row(
+        "SELECT workspace_id FROM cowork_runs WHERE id = ?1",
+        rusqlite::params![run_id.to_string()],
+        |row| row.get(0),
+    )
+    .map_err(db_error)
+}
+
 /// Create a job within a run
 #[derive(Debug, Deserialize)]
 pub struct CreateJobRequest {
@@ -634,6 +644,8 @@ pub struct CreateJobRequest {
     pub timeout_sec: i32,
     /// Mandatory capability strings for A:// fabric-transport eligibility (§8.6–8.7)
     pub required_capabilities: Option<Vec<String>>,
+    /// Append-only delegation causation chain (§8.15); validated (cycle/depth).
+    pub causation_chain: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -693,16 +705,33 @@ async fn create_job(
     // claims persisted rows in state 'queued'.
     manager.transition_job_state(job.id, JobState::Queued).await.ok();
 
+    // Validate the delegation causation chain (§8.15) before persisting: the
+    // chain must be well-formed within the run's workspace.
+    let chain = req.causation_chain.clone().unwrap_or_default();
+    if !chain.is_empty() {
+        let run_ws: String = conn_ws(&state, run_id)?;
+        allternit_cowork_runtime::sqlite_store::validate_delegation_chain(
+            &conn,
+            &run_ws,
+            &chain,
+        )
+        .map_err(|e| ErrorResponse {
+            error: format!("{}: {}", e.wire(), e.message),
+            code: e.http_status(),
+        })?;
+    }
     persist_job(&conn, &job, &user.user_id).map_err(db_error)?;
     conn.execute(
         "UPDATE cowork_jobs SET state = 'queued', required_capabilities = ?1,
             initiator = (SELECT initiator FROM cowork_runs WHERE id = ?2),
-            delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2)
+            delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2),
+            causation_chain = ?4
          WHERE id = ?3",
         rusqlite::params![
             serde_json::to_string(&req.required_capabilities.unwrap_or_default()).unwrap(),
             run_id.to_string(),
             job.id.to_string(),
+            serde_json::to_string(&chain).unwrap(),
         ],
     )
     .map_err(db_error)?;
@@ -790,6 +819,8 @@ pub struct CreateHandoffRequest {
     pub to_agent_id: String,
     pub task_id: Option<String>,
     pub note: Option<String>,
+    /// Append-only delegation causation chain (§8.15); validated (cycle/depth).
+    pub causation_chain: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -834,8 +865,23 @@ async fn create_handoff(
     manager.set_current_job(_run_id, Some(job.id)).await?;
 
     let handoff_id = uuid::Uuid::new_v4().to_string();
+    // Validate the delegation causation chain (§8.15) before persisting.
+    let chain = req.causation_chain.clone().unwrap_or_default();
+    if !chain.is_empty() {
+        let run_ws = conn_ws(&state, _run_id)?;
+        allternit_cowork_runtime::sqlite_store::validate_delegation_chain(
+            &conn,
+            &run_ws,
+            &chain,
+        )
+        .map_err(|e| ErrorResponse {
+            error: format!("{}: {}", e.wire(), e.message),
+            code: e.http_status(),
+        })?;
+    }
     conn.execute(
-        "INSERT INTO cowork_handoffs (id, run_id, to_agent_id, task_id, note, status, user_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO cowork_handoffs (id, run_id, to_agent_id, task_id, note, status, user_id, job_id, causation_chain)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         rusqlite::params![
             &handoff_id,
             &run_id_str,
@@ -844,6 +890,8 @@ async fn create_handoff(
             req.note,
             "pending",
             user.user_id,
+            job.id.to_string(),
+            serde_json::to_string(&chain).unwrap(),
         ],
     ).map_err(db_error)?;
     persist_job(&conn, &job, &user.user_id).map_err(db_error)?;
@@ -905,6 +953,36 @@ async fn list_handoffs(
         .map_err(db_error)?;
 
     Ok(Json(rows))
+}
+
+/// Acknowledge a handoff: completes the handoff and its linked job (A-T1).
+#[derive(Debug, Deserialize)]
+pub struct AckHandoffRequest {
+    pub note: Option<String>,
+}
+
+async fn ack_handoff(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path((run_id, handoff_id)): Path<(String, String)>,
+    Json(req): Json<AckHandoffRequest>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    // Only the run's owner may ack its handoffs (same 404-not-403 oracle
+    // rule as every other run-scoped mutation).
+    let conn = state.db.connect().map_err(db_error)?;
+    ensure_run_owner(&conn, &run_id, &user.user_id)?;
+    let mut conn = conn;
+    let outcome = allternit_cowork_runtime::sqlite_store::ack_handoff(
+        &mut conn,
+        &handoff_id,
+        &user.user_id,
+        req.note,
+    )
+    .map_err(|e| ErrorResponse {
+        error: format!("{}: {}", e.wire(), e.message),
+        code: e.http_status(),
+    })?;
+    Ok(Json(outcome))
 }
 
 /// Attach to a run
@@ -1092,6 +1170,7 @@ pub fn cowork_routes() -> Router<Arc<AppState>> {
         // Handoffs
         .route("/runs/:run_id/handoffs", post(create_handoff))
         .route("/runs/:run_id/handoffs", get(list_handoffs))
+        .route("/runs/:run_id/handoffs/:handoff_id/ack", post(ack_handoff))
         // Attachments
         .route("/runs/:run_id/attach", post(attach))
         .route("/reattach", post(reattach))

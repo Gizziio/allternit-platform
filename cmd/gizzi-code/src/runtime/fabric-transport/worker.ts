@@ -1,0 +1,155 @@
+/**
+ * Fabric Transport worker client for Gizzi (A-T4; GIZZI_WORKER_SPEC §5).
+ *
+ * Gizzi authenticates as `a://workspace/{ws}/principal/gizzi` with its
+ * provisioned bearer token, long-polls the claim endpoint, executes the
+ * job's deterministic shell/code steps inside the existing sandbox posture
+ * (Sandbox.wrap → bwrap on Linux / sandbox-exec on macOS; vfkit VM mode is
+ * a separate surface and out of scope here), heartbeats, checkpoints at
+ * committed boundaries, and completes with the typed Result envelope.
+ *
+ * Operator flow for the token (provisioned once, V162):
+ *   POST /api/v1/fabric/transport/principals/<url-encoded principal>/provision-token
+ * then start the worker with:
+ *   ALLTERNIT_GIZZI_TOKEN=atok_… bun src/runtime/fabric-transport/worker-entry.ts
+ * (or ALLTERNIT_GIZZI_TOKEN_FILE=/path/to/file for mode-0600 token files).
+ */
+
+import { spawn } from "node:child_process"
+import { Sandbox } from "../integrations/shell/sandbox"
+
+const API = (process.env.ALLTERNIT_API_URL ?? "http://127.0.0.1:8013").replace(/\/+$/, "")
+const TOKEN = process.env.ALLTERNIT_GIZZI_TOKEN ?? readTokenFile()
+const LEASE_SECS = Number(process.env.ALLTERNIT_GIZZI_LEASE_SECS ?? "60")
+const HEARTBEAT_MS = Math.max(1000, Math.floor((LEASE_SECS / 3) * 1000))
+
+function readTokenFile(): string | null {
+  const path = process.env.ALLTERNIT_GIZZI_TOKEN_FILE
+  if (!path) return null
+  try {
+    // Lazy require keeps bun/node parity.
+    return require("node:fs").readFileSync(path, "utf8").trim() as string
+  } catch {
+    return null
+  }
+}
+
+interface LeaseGrant {
+  job_id: string
+  run_id: string
+  lease_id: string
+  lease_generation: number
+  lease_expires_at: string
+  payload: { steps?: string[]; [k: string]: unknown }
+  current_checkpoint_id?: string | null
+}
+
+async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers)
+  headers.set("Content-Type", "application/json")
+  if (TOKEN) headers.set("Authorization", `Bearer ${TOKEN}`)
+  const res = await fetch(`${API}/api/v1${path}`, { ...init, headers })
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`${res.status} ${path}: ${body.slice(0, 300)}`)
+  }
+  return (await res.json()) as T
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+async function runStep(command: string, cwd: string, sessionId: string): Promise<{ code: number; output: string }> {
+  const policy = {
+    allowWritePaths: [] as string[],
+    allowNetwork: false,
+    allowedDomains: [] as string[],
+  }
+  // Existing sandbox posture: bwrap (Linux) / sandbox-exec (macOS); null when
+  // no driver is available — then we run unsandboxed but never silently claim
+  // otherwise (Sandbox.wrap logs loudly).
+  const wrapped = await Sandbox.wrap({ command, shell: "/bin/bash", cwd, sessionID: sessionId, policy })
+  const bin = wrapped?.bin ?? "/bin/bash"
+  const args = wrapped?.args ?? ["-c", command]
+  return new Promise((resolve) => {
+    const child = spawn(bin, args, { cwd })
+    let output = ""
+    child.stdout.on("data", (d) => (output += String(d)))
+    child.stderr.on("data", (d) => (output += String(d)))
+    child.on("close", (code) => resolve({ code: code ?? 1, output: output.slice(-4000) }))
+    child.on("error", (err) => resolve({ code: 1, output: String(err) }))
+  })
+}
+
+export async function runFabricWorker(opts: { cwd?: string } = {}): Promise<void> {
+  const cwd = opts.cwd ?? process.cwd()
+  if (!TOKEN) {
+    throw new Error(
+      "ALLTERNIT_GIZZI_TOKEN (or ALLTERNIT_GIZZI_TOKEN_FILE) is required — provision it via " +
+        "POST /api/v1/fabric/transport/principals/<principal>/provision-token",
+    )
+  }
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    let grant: LeaseGrant
+    try {
+      grant = await api<LeaseGrant>("/fabric/transport/claim", {
+        method: "POST",
+        body: JSON.stringify({ wait_secs: 25, lease_ttl_secs: LEASE_SECS }),
+      })
+    } catch (e) {
+      console.warn(`[gizzi-worker] claim failed: ${(e as Error).message}`)
+      await sleep(2000)
+      continue
+    }
+
+    console.log(`[gizzi-worker] claimed job ${grant.job_id} gen ${grant.lease_generation}`)
+    const steps: string[] = Array.isArray(grant.payload?.steps) ? (grant.payload.steps as string[]) : []
+    const stepResults: Array<{ step: number; code: number }> = []
+    let heartbeat: ReturnType<typeof setInterval> | null = null
+    let failed = false
+
+    try {
+      heartbeat = setInterval(() => {
+        api(`/fabric/transport/jobs/${grant.job_id}/heartbeat`, {
+          method: "POST",
+          body: JSON.stringify({ lease_id: grant.lease_id, lease_generation: grant.lease_generation }),
+        }).catch(() => {})
+      }, HEARTBEAT_MS)
+
+      for (let i = 0; i < steps.length; i++) {
+        const { code } = await runStep(steps[i], cwd, grant.job_id)
+        stepResults.push({ step: i, code })
+        if (code !== 0) {
+          failed = true
+          break
+        }
+        await api(`/runs/${grant.run_id}/checkpoints`, {
+          method: "POST",
+          body: JSON.stringify({
+            step_index: i,
+            cursor_state: { completed_steps: i + 1, by: "a://principal/gizzi" },
+          }),
+        }).catch(() => {})
+      }
+    } finally {
+      if (heartbeat) clearInterval(heartbeat)
+    }
+
+    const outcome = await api<{ outcome: string; result?: { result_id?: string } }>(
+      `/fabric/transport/jobs/${grant.job_id}/complete`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          lease_id: grant.lease_id,
+          lease_generation: grant.lease_generation,
+          success: !failed,
+          summary: failed
+            ? `gizzi: step failed (${stepResults.at(-1)?.step})`
+            : `gizzi: ${steps.length} steps executed`,
+          outputs: { worker: "a://principal/gizzi", steps: stepResults },
+        }),
+      },
+    ).catch((e) => ({ outcome: "error", result: undefined, error: (e as Error).message }))
+    console.log(`[gizzi-worker] complete: ${outcome.outcome}`)
+  }
+}
