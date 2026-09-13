@@ -39,6 +39,7 @@ EVIDENCE_DIR = Path(__file__).parent / "evidence"
 TASKS = [
     {
         "name": "form-fill",
+        "state_key": "form",
         "start": f"{SITE}/form.html",
         "prompt": (
             "On this page there is a registration form. Fill the name field with "
@@ -53,6 +54,7 @@ TASKS = [
     },
     {
         "name": "multi-click-nav",
+        "state_key": "nav",
         "start": f"{SITE}/nav.html",
         "prompt": (
             "Navigate this 3-step wizard: click the link to go to step 2, then the "
@@ -62,6 +64,7 @@ TASKS = [
     },
     {
         "name": "select-submit",
+        "state_key": "select",
         "start": f"{SITE}/select.html",
         "prompt": (
             "On this page choose the 'pro' option in the plan dropdown, then press "
@@ -72,6 +75,7 @@ TASKS = [
     },
     {
         "name": "extract-then-act",
+        "state_key": "extract",
         "start": f"{SITE}/extract.html",
         "prompt": (
             "This page shows a one-time code. Read the code, type it into the entry "
@@ -82,6 +86,7 @@ TASKS = [
     },
     {
         "name": "conditional-branch",
+        "state_key": "branch",
         "start": f"{SITE}/branch.html?weather=rain",
         "prompt": (
             "Check the weather status on this page. If it says rainy, press the "
@@ -131,6 +136,37 @@ class PerStepVocabularyAdapter:
             action = type("ActionRequest", (), fields)()
         return await self._inner.execute(action, session_id=session_id,
                                          run_id=run_id or "cu22", **kwargs)
+
+
+class CampaignVisionProvider(SubprocessVisionProvider):
+    """SubprocessVisionProvider with a brain timeout that fits a real CLI
+    model — the base class's 60s is too tight for codex cold calls."""
+
+    async def ground_and_reason(self, screenshot_b64: str, task: str,
+                                history=None, **kwargs):
+        import asyncio
+        from core.vision_providers import _build_planning_prompt, VisionAPIError
+        history_text = "\n".join(str(h) for h in (history or []))
+        prompt = _build_planning_prompt(task, history_text, (1280, 720))
+        stdin_payload = json.dumps({"prompt": prompt, "screenshot_b64": screenshot_b64})
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                self._cmd, *self._args,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(stdin_payload.encode()), timeout=170)
+        except asyncio.TimeoutError:
+            proc.kill()
+            raise VisionAPIError("Brain subprocess timed out after 170s", provider="subprocess")
+        from core.vision_providers import _parse_action_plan
+        if proc.returncode != 0:
+            raise VisionAPIError(
+                f"Brain subprocess exited {proc.returncode}: {stderr.decode()[:200]}",
+                provider="subprocess")
+        return _parse_action_plan(stdout.decode())
 
 
 # ── Grant-recording batch client (plays the human on the Rust gate) ─────────
@@ -196,8 +232,8 @@ def _site_state():
     return json.loads(resp.read() or b"[]")
 
 
-def _reset_task_state(task_name):
-    state = [s for s in _site_state() if s.get("task") != task_name]
+def _reset_task_state(state_key):
+    state = [s for s in _site_state() if s.get("task") != state_key]
     (Path(__file__).parent / "site" / "state.json").write_text(json.dumps(state))
 
 
@@ -225,9 +261,9 @@ async def _navigate_adapter(executor, session_id, url):
 
 async def run_one(task, mode, executor, session_id):
     from core.planning_loop import PlanningLoop, PlanningLoopConfig
-    from core.vision_providers import SubprocessVisionProvider
+    from core.vision_providers import SubprocessVisionProvider  # noqa: F401
 
-    provider = SubprocessVisionProvider()
+    provider = CampaignVisionProvider()
     client = CampaignBatchClient()
     events = []
 
@@ -252,7 +288,11 @@ async def run_one(task, mode, executor, session_id):
         timeout_ms=600_000,
         max_cost_usd=50.0,
     )
-    loop_adapter = executor if mode == "batched" else PerStepVocabularyAdapter(executor)
+    # Vocabulary shim in BOTH modes: it only translates per-step plan
+    # vocabulary (click→left_click) for the executor; the batch dispatch
+    # path is identical either way. Without it the batched leg's per-step
+    # fallback would be crippled and the comparison unfair.
+    loop_adapter = PerStepVocabularyAdapter(executor)
     capture = _LogCapture()
     capture.lines = log_lines
     for logger_name in ("core.computer_use_executor", "core.planning_loop",
@@ -337,7 +377,7 @@ async def main_async(args):
     results = []
     for task in tasks:
         for mode in modes:
-            _reset_task_state(task["name"])
+            _reset_task_state(task["state_key"])
             session = f"cu22-{task['name']}-{mode}"
             print(f"--- {task['name']} [{mode}] ---", flush=True)
             try:

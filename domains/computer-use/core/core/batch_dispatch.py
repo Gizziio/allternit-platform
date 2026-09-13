@@ -48,6 +48,7 @@ _ACTION_METHOD_MAP = {
     "double_click": "doubleClick",
     "fill": "fill",
     "type": "fill",
+    "select": "selectOptionFromDropdown",
     "scroll": "scrollTo",
     "key": "press",
 }
@@ -81,7 +82,7 @@ def action_to_batch_step(action: Any) -> Optional[Dict[str, Any]]:
         return None
     arguments: List[str] = []
     text = getattr(action, "text", None)
-    if text and method in ("fill", "press"):
+    if text and method in ("fill", "press", "selectOptionFromDropdown"):
         arguments.append(str(text))
     return {"method": method, "selector": target, "arguments": arguments}
 

@@ -70,6 +70,9 @@ class TestActionMapping:
                         "selector": 'input[placeholder="Full name"]',
                         "arguments": ["Ada"]}
         assert action_to_batch_step(_action("click", "button[type='submit']"))["method"] == "click"
+        assert action_to_batch_step(_action("select", "#plan", text="pro")) == {
+            "method": "selectOptionFromDropdown", "selector": "#plan", "arguments": ["pro"],
+        }
 
     def test_non_selector_targets_are_not_batchable(self):
         # Free-text element descriptions cannot be resolved by the in-browser
