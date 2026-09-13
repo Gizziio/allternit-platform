@@ -96,8 +96,19 @@ export interface ToolRunGroup {
   expanded: boolean;
 }
 
+/** Inline artifact produced by the bot. */
+export interface InlineArtifact {
+  id: string;
+  kind: string;
+  title: string;
+  content: string;
+  url?: string;
+  createdAt?: number;
+}
+
 export type TranscriptRow =
   | { kind: "message"; id: string; createdAt: number; message: BotChatMessage }
+  | { kind: "artifact"; id: string; createdAt: number; artifact: InlineArtifact }
   | { kind: "toolCall"; id: string; createdAt: number; call: ToolCallRecord }
   | { kind: "toolRun"; id: string; createdAt: number; run: ToolRunGroup }
   | { kind: "approval"; id: string; createdAt: number; approval: ApprovalRequest }
