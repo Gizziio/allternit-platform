@@ -20,6 +20,9 @@ pub struct TestApp {
     pub router: axum::Router,
     pub temp_dir: TempDir,
     pub event_tx: broadcast::Sender<allternit_cloud_api::DeploymentEvent>,
+    /// Per-test schema this app's tables live in. Dropped (CASCADE) when the
+    /// TestApp is dropped so test runs do not accumulate leftover schemas.
+    schema: String,
 }
 
 impl TestApp {
@@ -29,7 +32,7 @@ impl TestApp {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
 
         // Initialize database
-        let db = Self::init_test_db().await;
+        let (db, schema) = Self::init_test_db().await;
 
         // Create broadcast channel for events
         let (event_tx, _event_rx) = broadcast::channel::<allternit_cloud_api::DeploymentEvent>(100);
@@ -101,28 +104,26 @@ impl TestApp {
             router,
             temp_dir,
             event_tx,
+            schema,
         }
     }
 
     /// Initialize test database with migrations
     ///
-    /// Migrations run in a fresh, uniquely-named schema on the shared test
-    /// database (search_path-scoped per connection), so the harness gets its
-    /// own `_sqlx_migrations` bookkeeping table and never collides with the
-    /// `public` schema's operator-managed history (`VersionMismatch` on
-    /// shared bookkeeping). The same embedded `migrations_pg` set the
-    /// library applies is used here — the legacy SQLite-dialect `migrations/`
-    /// tree it replaced cannot run against Postgres.
+    /// Migrations run in a fresh, uniquely-named schema (`it_<uuid>`) on the
+    /// shared test database, and every connection is pinned to that schema
+    /// via `search_path` — no `public` fallback — so parallel test binaries
+    /// each see only their own tables and enum types.
     ///
-    /// Note: the migrations_pg DDL is `public.`-schema-qualified (pg_dump
-    /// style), so tables and enum types land in `public` regardless of
-    /// search_path. The per-test schema therefore only holds bookkeeping;
-    /// `public` must stay on the search_path or unqualified enum casts in
-    /// app queries (`$1::runmode`) fail with `type "runmode" does not
-    /// exist` — that is what broke all 32 integration_tests.
-    async fn init_test_db() -> PgPool {
-        let database_url = std::env::var("TEST_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test".to_string());
+    /// The embedded `sqlx::migrate!` path is deliberately NOT used here: all
+    /// migrations_pg DDL is `public.`-qualified (pg_dump style), which would
+    /// land every object in the shared `public` schema regardless of
+    /// search_path. Instead [`Self::apply_migrations`] reads the files at
+    /// runtime and rewrites them to be schema-agnostic (see its docs). The
+    /// legacy SQLite-dialect `migrations/` tree this replaced cannot run
+    /// against Postgres at all.
+    async fn init_test_db() -> (PgPool, String) {
+        let database_url = test_database_url();
 
         let schema = format!("it_{}", uuid::Uuid::new_v4().simple());
         let schema_for_hook = schema.clone();
@@ -134,7 +135,11 @@ impl TestApp {
                     sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
                         .execute(&mut *conn)
                         .await?;
-                    sqlx::query(&format!("SET search_path TO {}, public", schema))
+                    // Schema only. The migration DDL is rewritten to drop its
+                    // `public.` qualifiers, so tables and enum types are
+                    // created inside the per-test schema and unqualified
+                    // casts in app queries (`$1::runmode`) resolve there.
+                    sqlx::query(&format!("SET search_path TO {}", schema))
                         .execute(&mut *conn)
                         .await?;
                     Ok(())
@@ -144,13 +149,52 @@ impl TestApp {
             .await
             .expect("Failed to connect to test database");
 
-        // Run migrations
-        sqlx::migrate!("./migrations_pg")
-            .run(&pool)
-            .await
-            .expect("Failed to run migrations");
+        Self::apply_migrations(&pool).await;
 
-        pool
+        (pool, schema)
+    }
+
+    /// Apply `migrations_pg/` to the per-test schema.
+    ///
+    /// Each file is read from `CARGO_MANIFEST_DIR/migrations_pg` at runtime
+    /// (tests run with the crate root as the working directory's anchor, and
+    /// `env!` bakes the path in at compile time), rewritten, split into
+    /// statements, and executed in order:
+    ///
+    ///   * `n.nspname = 'public'` → `n.nspname = current_schema()` — the
+    ///     existence guards inside the DO blocks must look in the fresh
+    ///     schema, not at the shared `public` objects, or they skip creation
+    ///     and unqualified enum casts fail with `type "runmode" does not
+    ///     exist`;
+    ///   * `public.` qualifiers are stripped, so CREATE TABLE / CREATE TYPE /
+    ///     ALTER TABLE land wherever search_path points (the per-test schema).
+    ///
+    /// No `_sqlx_migrations` bookkeeping: the schema is unique per run and
+    /// dropped on teardown, so there is no migration history to track — the
+    /// schema itself is the isolation.
+    async fn apply_migrations(pool: &PgPool) {
+        let mut dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        dir.push("migrations_pg");
+        let mut entries: Vec<std::path::PathBuf> = std::fs::read_dir(&dir)
+            .expect("read migrations_pg directory")
+            .map(|entry| entry.expect("migrations_pg entry").path())
+            .filter(|path| path.extension().is_some_and(|ext| ext == "sql"))
+            .collect();
+        entries.sort();
+
+        for path in entries {
+            let sql = std::fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+            let rewritten = sql
+                .replace("n.nspname = 'public'", "n.nspname = current_schema()")
+                .replace("public.", "");
+            for statement in split_sql_statements(&rewritten) {
+                sqlx::query(&statement)
+                    .execute(pool)
+                    .await
+                    .unwrap_or_else(|e| panic!("apply {}: {e}", path.display()));
+            }
+        }
     }
 
     /// Make a GET request
@@ -487,6 +531,279 @@ impl TestApp {
 /// Test context that cleans up after tests
 impl Drop for TestApp {
     fn drop(&mut self) {
-        // Database is cleaned up automatically when temp_dir is dropped
+        // Best-effort schema teardown on a dedicated thread: Drop is
+        // synchronous and the pool's connections are pinned to the schema,
+        // so use a short-lived runtime on a fresh connection. Without this,
+        // every run leaves an `it_<uuid>` schema behind on the dev database.
+        let schema = self.schema.clone();
+        let database_url = test_database_url();
+        std::thread::spawn(move || {
+            let Ok(rt) = tokio::runtime::Runtime::new() else {
+                return;
+            };
+            let _ = rt.block_on(async move {
+                if let Ok(pool) = sqlx::postgres::PgPool::connect(&database_url).await {
+                    let _ = sqlx::query(&format!("DROP SCHEMA IF EXISTS {} CASCADE", schema))
+                        .execute(&pool)
+                        .await;
+                }
+            });
+        })
+        .join()
+        .ok();
+    }
+}
+
+fn test_database_url() -> String {
+    std::env::var("TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test".to_string())
+}
+
+/// Split a PostgreSQL script into individual statements.
+///
+/// A statement boundary is a `;` in normal state only. The scanner tracks
+/// `'`/`"` quoting (with doubled-character escapes), `--` line comments,
+/// nested `/* */` block comments, and dollar-quoted blocks (`$$ … $$`,
+/// `$tag$ … $tag$`) — a naive `;` split breaks on the DO blocks and enum
+/// literals in 001/002. Comment bodies are replaced with a single space so
+/// they cannot bleed tokens into neighboring statements.
+fn split_sql_statements(script: &str) -> Vec<String> {
+    enum State {
+        Normal,
+        SingleQuote,
+        DoubleQuote,
+        LineComment,
+        BlockComment(usize),
+        DollarQuote(String), // full tag, e.g. "$$" or "$body$"
+    }
+
+    let mut statements = Vec::new();
+    let mut current = String::new();
+    let mut state = State::Normal;
+    let mut chars = script.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        match state {
+            State::Normal => match c {
+                ';' => {
+                    let trimmed = current.trim();
+                    if !trimmed.is_empty() {
+                        statements.push(trimmed.to_string());
+                    }
+                    current.clear();
+                }
+                '\'' => {
+                    current.push(c);
+                    state = State::SingleQuote;
+                }
+                '"' => {
+                    current.push(c);
+                    state = State::DoubleQuote;
+                }
+                '-' if chars.peek() == Some(&'-') => {
+                    chars.next();
+                    current.push(' ');
+                    state = State::LineComment;
+                }
+                '/' if chars.peek() == Some(&'*') => {
+                    chars.next();
+                    current.push(' ');
+                    state = State::BlockComment(1);
+                }
+                '$' => {
+                    // Opening a dollar quote requires a valid tag: an
+                    // optional identifier between two `$`. Otherwise `$` is
+                    // just an operator character (e.g. `cost $1`).
+                    let mut lookahead = chars.clone();
+                    let mut tag = String::from("$");
+                    while let Some(&nc) = lookahead.peek() {
+                        if nc.is_alphanumeric() || nc == '_' {
+                            tag.push(nc);
+                            lookahead.next();
+                        } else {
+                            break;
+                        }
+                    }
+                    if lookahead.peek() == Some(&'$') {
+                        tag.push('$');
+                        for _ in 0..tag.len() - 1 {
+                            chars.next();
+                        }
+                        current.push_str(&tag);
+                        state = State::DollarQuote(tag);
+                    } else {
+                        current.push(c);
+                    }
+                }
+                _ => current.push(c),
+            },
+            State::SingleQuote => {
+                current.push(c);
+                if c == '\'' {
+                    if chars.peek() == Some(&'\'') {
+                        current.push(chars.next().unwrap());
+                    } else {
+                        state = State::Normal;
+                    }
+                }
+            }
+            State::DoubleQuote => {
+                current.push(c);
+                if c == '"' {
+                    if chars.peek() == Some(&'"') {
+                        current.push(chars.next().unwrap());
+                    } else {
+                        state = State::Normal;
+                    }
+                }
+            }
+            State::LineComment => {
+                if c == '\n' {
+                    current.push(c);
+                    state = State::Normal;
+                }
+            }
+            State::BlockComment(depth) => match (c, chars.peek()) {
+                ('*', Some(&'/')) => {
+                    chars.next();
+                    if depth == 1 {
+                        state = State::Normal;
+                    } else {
+                        state = State::BlockComment(depth - 1);
+                    }
+                }
+                ('/', Some(&'*')) => {
+                    chars.next();
+                    state = State::BlockComment(depth + 1);
+                }
+                _ => {}
+            },
+            State::DollarQuote(ref tag) => {
+                if c == '$' {
+                    // Candidate closing tag starting at this `$`.
+                    let ident_len = tag.len() - 2; // tag is `$<idents>$`
+                    let mut matches = true;
+                    for (i, tc) in tag[1..tag.len() - 1].chars().enumerate() {
+                        match chars.clone().nth(i) {
+                            Some(nc) if nc == tc => {}
+                            _ => {
+                                matches = false;
+                                break;
+                            }
+                        }
+                    }
+                    if matches {
+                        for _ in 0..ident_len {
+                            chars.next();
+                        }
+                        // Closing `$` still sits in the iterator.
+                        if chars.next() == Some('$') {
+                            current.push_str(tag);
+                            state = State::Normal;
+                            continue;
+                        }
+                        // Not a real closing tag after all; fall through and
+                        // emit the `$` we already consumed.
+                    }
+                    current.push(c);
+                } else {
+                    current.push(c);
+                }
+            }
+        }
+    }
+
+    let trimmed = current.trim();
+    if !trimmed.is_empty() {
+        statements.push(trimmed.to_string());
+    }
+    statements
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_sql_statements;
+
+    #[test]
+    fn splits_simple_statements() {
+        let sql = "CREATE TABLE a (id INT);\nCREATE TABLE b (id INT);";
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].starts_with("CREATE TABLE a"));
+        assert!(statements[1].starts_with("CREATE TABLE b"));
+    }
+
+    #[test]
+    fn keeps_semicolons_inside_single_quotes() {
+        let sql = "INSERT INTO t (v) VALUES ('a;b'); UPDATE t SET v = 'it''s;x';";
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].contains("'a;b'"));
+        assert!(statements[1].contains("'it''s;x'"));
+    }
+
+    #[test]
+    fn keeps_semicolons_inside_double_quotes() {
+        let sql = r#"CREATE TABLE t ("a;b" TEXT); SELECT 1;"#;
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].contains(r#""a;b""#));
+    }
+
+    #[test]
+    fn keeps_semicolons_inside_dollar_quoted_blocks() {
+        let sql = "DO $$\nBEGIN\n    IF x THEN RAISE NOTICE 'a;b'; END IF;\nEND\n$$;\nCREATE TYPE mood AS ENUM ('ok');";
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].starts_with("DO $$"));
+        assert!(statements[0].ends_with("$$"));
+        assert!(statements[1].starts_with("CREATE TYPE mood"));
+    }
+
+    #[test]
+    fn supports_tagged_dollar_quotes() {
+        let sql = "DO $body$\nBEGIN\n    PERFORM 1; PERFORM 2;\nEND\n$body$; SELECT 3;";
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].contains("PERFORM 1; PERFORM 2;"));
+    }
+
+    #[test]
+    fn ignores_semicolons_in_line_and_block_comments() {
+        let sql = "SELECT 1; -- trailing; comment\nSELECT 2 /* block; comment */ + 1; /* unterminated-looking; ";
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].starts_with("SELECT 1"));
+        assert!(statements[1].starts_with("SELECT 2"));
+    }
+
+    #[test]
+    fn handles_nested_block_comments() {
+        let sql = "SELECT 1 /* outer /* inner ; */ still outer */ + 2; SELECT 3;";
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 2);
+        // Comment bodies (including everything after the nested close) are
+        // dropped, but the `;` inside the nesting must not split, and the
+        // surviving SQL on both sides of the comment is one statement.
+        assert!(statements[0].contains("SELECT 1"));
+        assert!(statements[0].contains("+ 2"));
+        assert!(!statements[0].contains("outer"));
+    }
+
+    #[test]
+    fn dollar_operator_is_not_a_dollar_quote() {
+        // `$1` is a parameter, not the opening of a dollar-quoted string.
+        let sql = "SELECT cost $1 FROM t; SELECT $2;";
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].contains("$1"));
+    }
+
+    #[test]
+    fn drops_empty_and_comment_only_statements() {
+        let sql = "; -- just a comment\n;\nSELECT 1;;\n";
+        let statements = split_sql_statements(sql);
+        assert_eq!(statements.len(), 1);
+        assert_eq!(statements[0], "SELECT 1");
     }
 }
