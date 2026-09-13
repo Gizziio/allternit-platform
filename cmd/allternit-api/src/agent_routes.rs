@@ -732,9 +732,12 @@ async fn create_agent(
     let identity_channels = body.identity_channels.clone();
     let webhook_org = user.organization_id.clone();
     let webhook_name = body.name.clone();
+    let link_workspace_id = body.workspace_id.clone();
+    let link_capabilities = body.capabilities.clone();
+    let link_agent_type = body.agent_type.clone();
 
     let result = tokio::task::spawn_blocking(move || {
-        let conn = db.connect()?;
+        let mut conn = db.connect()?;
 
         // Idempotency: a renderer re-registering a seeded bot must not 500 on
         // the UNIQUE(id) constraint — return the existing row instead.
@@ -747,7 +750,7 @@ async fn create_agent(
                 )
                 .ok();
             if let Some(existing_id) = existing {
-                return Ok(existing_id);
+                return Ok((existing_id, None));
             }
         }
 
@@ -795,12 +798,40 @@ async fn create_agent(
         )?;
         persist_agent_secrets(&conn, &final_id, &user_id_for_db, secret_refs.as_ref())?;
         persist_agent_identity_channels(&conn, &final_id, &user_id_for_db, identity_channels.as_ref())?;
-        Ok::<_, rusqlite::Error>(final_id)
+
+        // A:// bot linkage (BOT_AUTHORING_SPEC §0): a bot with a workspace
+        // gets its fabric-transport principal in the same transaction. The
+        // credential is generated here and returned exactly once.
+        let mut token_out: Option<String> = None;
+        if let Some(ws) = link_workspace_id.as_deref() {
+            let principal_id = format!("a://workspace/{ws}/bot/{final_id}");
+            let caps: Vec<String> = link_capabilities
+                .as_ref()
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let agent_type = link_agent_type.clone().unwrap_or_else(|| "worker".to_string());
+            let token = format!("atok_{}", uuid::Uuid::new_v4());
+            allternit_cowork_runtime::sqlite_store::register_principal(
+                &mut conn,
+                &principal_id,
+                ws,
+                &caps,
+                &[agent_type],
+                &token,
+            )
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+            conn.execute(
+                "UPDATE agents SET principal_id = ?1 WHERE id = ?2",
+                params![principal_id, final_id],
+            )?;
+            token_out = Some(token);
+        }
+        Ok::<_, rusqlite::Error>((final_id, token_out))
     })
     .await;
 
     match result {
-        Ok(Ok(id)) => {
+        Ok(Ok((id, principal_token))) => {
             // Append agent creation event to Rails ledger for audit/traceability
             let ledger_event = allternit_commrails::AllternitEvent {
                 event_id: String::new(),
@@ -860,11 +891,12 @@ async fn create_agent(
             )
             .await;
 
-            (
-                StatusCode::CREATED,
-                Json(json!({ "agent": { "id": id, "is_bot": is_bot } })),
-            )
-                .into_response()
+            let mut resp = json!({ "agent": { "id": id, "is_bot": is_bot } });
+            if let Some(token) = principal_token {
+                // Fabric-transport bearer token — surfaced exactly once.
+                resp["principal_token"] = json!(token);
+            }
+            (StatusCode::CREATED, Json(resp)).into_response()
         }
         Ok(Err(e)) => {
             warn!("DB error creating agent: {}", e);

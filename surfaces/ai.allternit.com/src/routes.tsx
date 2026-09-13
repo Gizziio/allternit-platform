@@ -53,6 +53,7 @@ const SettingsPreviewPage = lazy(() =>
   }))
 )
 const SessionsPage = lazy(() => import('./pages/SessionsPage'))
+const FabricTransportView = lazy(() => import('./views/FabricTransportView'))
 const SignInPage = lazy(() => import('./pages/SignInPage'))
 const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 const SignOutPage = lazy(() => import('./pages/SignOutPage'))
@@ -116,6 +117,7 @@ export default function AppRoutes() {
         <Route path="/hud" element={<ShellPage />} />
         <Route path="/settings-preview" element={<SettingsPreviewPage />} />
         <Route path="/shell/sessions" element={<SessionsPage />} />
+        <Route path="/fabric-transport" element={<FabricTransportView />} />
         <Route path="/shell/recents" element={<ShellPage />} />
         <Route path="/shell/new" element={<Navigate to="/shell" replace />} />
         {/* Clerk's path-routed <SignIn>/<SignUp> components navigate to
