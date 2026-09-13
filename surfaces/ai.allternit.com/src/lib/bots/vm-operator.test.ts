@@ -43,7 +43,7 @@ describe('vm-operator', () => {
   }
 
   describe('ensureBotComputer (atomic Create Bot bind)', () => {
-    it('defaults to a persistent 2 vCPU / 4 GB / 100 GB cloud desktop with autoStart off', () => {
+    it('defaults to a persistent 2 vCPU / 4 GB / 20 GB cloud desktop with autoStart off', () => {
       const config = defaultBotVMOperatorConfig();
       expect(config).toMatchObject({
         enabled: true,
@@ -51,7 +51,7 @@ describe('vm-operator', () => {
         computerKind: 'cloud_desktop',
         persistence: 'persistent',
         autoStart: false,
-        resources: { cpu: '2', memory: '4096', disk: '102400' },
+        resources: { cpu: '2', memory: '4096', disk: '20480' },
       });
     });
 
