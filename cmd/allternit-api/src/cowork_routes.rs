@@ -66,7 +66,7 @@ pub fn cowork_router() -> Router<Arc<AppState>> {
         )
         .route("/cowork/memory/health", get(memory_health))
         .route("/cowork/connectors", get(list_connectors))
-        .route("/cowork/approvals", get(list_approvals))
+        .route("/cowork/approvals", get(list_approvals).post(decide_approval))
         .route(
             "/cowork/suggestions",
             get(list_suggestions).post(create_suggestion),
@@ -179,25 +179,50 @@ fn is_no_such_table(err: &rusqlite::Error) -> bool {
     }
 }
 
+// ─── List window (pagination) ────────────────────────────────────────────────
+
+const LIST_DEFAULT_LIMIT: i64 = 100;
+const LIST_MAX_LIMIT: i64 = 1000;
+
+#[derive(Deserialize)]
+struct ListQuery {
+    limit: Option<i64>,
+    offset: Option<i64>,
+}
+
+/// Bound an unbounded list query: caller-provided limit wins when under the
+/// cap, otherwise the default; offset is clamped non-negative.
+fn clamp_list_window(q: &ListQuery) -> (i64, i64) {
+    let limit = q
+        .limit
+        .unwrap_or(LIST_DEFAULT_LIMIT)
+        .clamp(1, LIST_MAX_LIMIT);
+    let offset = q.offset.unwrap_or(0).max(0);
+    (limit, offset)
+}
+
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 
 async fn list_sessions(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
+    Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let (limit, offset) = clamp_list_window(&q);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, user_id, project_id, title, status, mode, checkpoint, metadata,
                     started_at, completed_at, created_at, updated_at
-             FROM cowork_sessions WHERE user_id = ?1 ORDER BY updated_at DESC",
+             FROM cowork_sessions WHERE user_id = ?1 ORDER BY updated_at DESC
+             LIMIT ?2 OFFSET ?3",
         )?;
         let rows = stmt
-            .query_map(params![user_id], |row| {
+            .query_map(params![user_id, limit, offset], |row| {
                 Ok(SessionRow {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -224,7 +249,7 @@ async fn list_sessions(
             warn!("DB error listing sessions: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -295,7 +320,7 @@ async fn create_session(
             warn!("DB error creating session: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -355,7 +380,7 @@ async fn get_session(
             warn!("DB error getting session: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -372,11 +397,38 @@ async fn get_session(
 
 #[derive(Deserialize)]
 struct UpdateSessionBody {
-    status: Option<String>,
-    title: Option<String>,
-    checkpoint: Option<String>,
-    metadata: Option<String>,
-    completed_at: Option<String>,
+    // Option<Option<T>> patch semantics: outer None = field absent from the
+    // request (skip), inner Some(v) = set column to v, where v may be an
+    // explicit null that CLEARS the column. Plain values still deserialize as
+    // Some(Some(v)), so existing clients are unaffected.
+    status: Option<Option<String>>,
+    title: Option<Option<String>>,
+    checkpoint: Option<Option<String>>,
+    metadata: Option<Option<String>>,
+    completed_at: Option<Option<String>>,
+}
+
+/// Build the SET-clause pieces for update_session from the fields present in
+/// the request. Outer None = field absent (skip); inner Some(v) sets the
+/// column, where v may be an explicit null that CLEARS the column.
+fn session_update_sets(body: &UpdateSessionBody) -> Vec<(&'static str, Option<String>)> {
+    let mut sets = Vec::new();
+    if let Some(v) = &body.status {
+        sets.push(("status = ?", v.clone()));
+    }
+    if let Some(v) = &body.title {
+        sets.push(("title = ?", v.clone()));
+    }
+    if let Some(v) = &body.checkpoint {
+        sets.push(("checkpoint = ?", v.clone()));
+    }
+    if let Some(v) = &body.metadata {
+        sets.push(("metadata = ?", v.clone()));
+    }
+    if let Some(v) = &body.completed_at {
+        sets.push(("completed_at = ?", v.clone()));
+    }
+    sets
 }
 
 async fn update_session(
@@ -391,25 +443,28 @@ async fn update_session(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        conn.execute(
-            "UPDATE cowork_sessions SET
-                status = COALESCE(?1, status),
-                title = COALESCE(?2, title),
-                checkpoint = COALESCE(?3, checkpoint),
-                metadata = COALESCE(?4, metadata),
-                completed_at = COALESCE(?5, completed_at),
-                updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?6 AND user_id = ?7",
-            params![
-                body.status,
-                body.title,
-                body.checkpoint,
-                body.metadata,
-                body.completed_at,
-                id,
-                user_id
-            ],
-        )?;
+        // Build the SET clause only from fields present in the request so an
+        // explicit null can clear a column (COALESCE(?, col) made that
+        // impossible before).
+        let sets = session_update_sets(&body);
+        if !sets.is_empty() {
+            let clause = sets
+                .iter()
+                .map(|(column, _)| *column)
+                .collect::<Vec<_>>()
+                .join(", ");
+            let sql = format!(
+                "UPDATE cowork_sessions SET {}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+                clause
+            );
+            let mut all: Vec<&dyn rusqlite::ToSql> = sets
+                .iter()
+                .map(|(_, value)| value as &dyn rusqlite::ToSql)
+                .collect();
+            all.push(&id);
+            all.push(&user_id);
+            conn.execute(&sql, rusqlite::params_from_iter(all))?;
+        }
         Ok::<_, rusqlite::Error>(())
     })
     .await;
@@ -420,7 +475,7 @@ async fn update_session(
             warn!("DB error updating session: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -460,7 +515,7 @@ async fn delete_session(
             warn!("DB error deleting session: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -481,17 +536,20 @@ async fn list_personas(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
+    Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let (limit, offset) = clamp_list_window(&q);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, user_id, name, description, system_prompt, tools, is_default, created_at, updated_at
-             FROM cowork_personas WHERE user_id = ?1 ORDER BY updated_at DESC"
+             FROM cowork_personas WHERE user_id = ?1 ORDER BY updated_at DESC
+             LIMIT ?2 OFFSET ?3"
         )?;
-        let rows = stmt.query_map(params![user_id], |row| {
+        let rows = stmt.query_map(params![user_id, limit, offset], |row| {
             Ok(PersonaRow {
                 id: row.get(0)?,
                 user_id: row.get(1)?,
@@ -515,7 +573,7 @@ async fn list_personas(
             warn!("DB error listing personas: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -580,7 +638,7 @@ async fn create_persona(
             warn!("DB error creating persona: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -636,7 +694,7 @@ async fn get_persona(
             warn!("DB error getting persona: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -653,10 +711,12 @@ async fn get_persona(
 
 #[derive(Deserialize)]
 struct UpdatePersonaBody {
-    name: Option<String>,
-    description: Option<String>,
-    system_prompt: Option<String>,
-    tools: Option<String>,
+    // Option<Option<T>> patch semantics: outer None = absent (skip), inner
+    // Some(v) = set (explicit null clears the column).
+    name: Option<Option<String>>,
+    description: Option<Option<String>>,
+    system_prompt: Option<Option<String>>,
+    tools: Option<Option<String>>,
     #[serde(rename = "isDefault")]
     is_default: Option<bool>,
 }
@@ -673,25 +733,46 @@ async fn update_persona(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        conn.execute(
-            "UPDATE cowork_personas SET
-                name = COALESCE(?1, name),
-                description = COALESCE(?2, description),
-                system_prompt = COALESCE(?3, system_prompt),
-                tools = COALESCE(?4, tools),
-                is_default = COALESCE(?5, is_default),
-                updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?6 AND user_id = ?7",
-            params![
-                body.name,
-                body.description,
-                body.system_prompt,
-                body.tools,
-                body.is_default.map(|b| if b { 1 } else { 0 }),
-                id,
-                user_id,
-            ],
-        )?;
+        // Build the SET clause only from fields present in the request so an
+        // explicit null can clear a column (COALESCE(?, col) made that
+        // impossible before). is_default stays plain Option<bool> since the
+        // column is NOT NULL; present = set, absent = skip.
+        let mut sets: Vec<&str> = Vec::new();
+        let mut vals: Vec<Option<String>> = Vec::new();
+        if let Some(v) = body.name {
+            sets.push("name = ?");
+            vals.push(v);
+        }
+        if let Some(v) = body.description {
+            sets.push("description = ?");
+            vals.push(v);
+        }
+        if let Some(v) = body.system_prompt {
+            sets.push("system_prompt = ?");
+            vals.push(v);
+        }
+        if let Some(v) = body.tools {
+            sets.push("tools = ?");
+            vals.push(v);
+        }
+        let flag: Option<i64> = body.is_default.map(|b| if b { 1 } else { 0 });
+        if flag.is_some() {
+            sets.push("is_default = ?");
+        }
+        if !sets.is_empty() {
+            let sql = format!(
+                "UPDATE cowork_personas SET {}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+                sets.join(", ")
+            );
+            let mut all: Vec<&dyn rusqlite::ToSql> =
+                vals.iter().map(|v| v as &dyn rusqlite::ToSql).collect();
+            if let Some(ref f) = flag {
+                all.push(f);
+            }
+            all.push(&id);
+            all.push(&user_id);
+            conn.execute(&sql, rusqlite::params_from_iter(all))?;
+        }
         Ok::<_, rusqlite::Error>(())
     })
     .await;
@@ -702,7 +783,7 @@ async fn update_persona(
             warn!("DB error updating persona: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -742,7 +823,7 @@ async fn delete_persona(
             warn!("DB error deleting persona: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -763,17 +844,20 @@ async fn list_projects(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
+    Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let (limit, offset) = clamp_list_window(&q);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, user_id, title, description, instructions, metadata, git_remote, default_branch, created_at, updated_at
-             FROM cowork_projects WHERE user_id = ?1 ORDER BY updated_at DESC"
+             FROM cowork_projects WHERE user_id = ?1 ORDER BY updated_at DESC
+             LIMIT ?2 OFFSET ?3"
         )?;
-        let rows = stmt.query_map(params![user_id], |row| {
+        let rows = stmt.query_map(params![user_id, limit, offset], |row| {
             Ok(ProjectRow {
                 id: row.get(0)?,
                 user_id: row.get(1)?,
@@ -798,7 +882,7 @@ async fn list_projects(
             warn!("DB error listing projects: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -864,7 +948,7 @@ async fn create_project(
             warn!("DB error creating project: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -921,7 +1005,7 @@ async fn get_project(
             warn!("DB error getting project: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -938,12 +1022,14 @@ async fn get_project(
 
 #[derive(Deserialize)]
 struct UpdateProjectBody {
-    title: Option<String>,
-    description: Option<String>,
-    instructions: Option<String>,
-    metadata: Option<String>,
-    git_remote: Option<String>,
-    default_branch: Option<String>,
+    // Option<Option<T>> patch semantics: outer None = absent (skip), inner
+    // Some(v) = set (explicit null clears the column).
+    title: Option<Option<String>>,
+    description: Option<Option<String>>,
+    instructions: Option<Option<String>>,
+    metadata: Option<Option<String>>,
+    git_remote: Option<Option<String>>,
+    default_branch: Option<Option<String>>,
 }
 
 async fn update_project(
@@ -958,27 +1044,46 @@ async fn update_project(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        conn.execute(
-            "UPDATE cowork_projects SET
-                title = COALESCE(?1, title),
-                description = COALESCE(?2, description),
-                instructions = COALESCE(?3, instructions),
-                metadata = COALESCE(?4, metadata),
-                git_remote = COALESCE(?5, git_remote),
-                default_branch = COALESCE(?6, default_branch),
-                updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?7 AND user_id = ?8",
-            params![
-                body.title,
-                body.description,
-                body.instructions,
-                body.metadata,
-                body.git_remote,
-                body.default_branch,
-                id,
-                user_id,
-            ],
-        )?;
+        // Build the SET clause only from fields present in the request so an
+        // explicit null can clear a column (COALESCE(?, col) made that
+        // impossible before).
+        let mut sets: Vec<&str> = Vec::new();
+        let mut vals: Vec<Option<String>> = Vec::new();
+        if let Some(v) = body.title {
+            sets.push("title = ?");
+            vals.push(v);
+        }
+        if let Some(v) = body.description {
+            sets.push("description = ?");
+            vals.push(v);
+        }
+        if let Some(v) = body.instructions {
+            sets.push("instructions = ?");
+            vals.push(v);
+        }
+        if let Some(v) = body.metadata {
+            sets.push("metadata = ?");
+            vals.push(v);
+        }
+        if let Some(v) = body.git_remote {
+            sets.push("git_remote = ?");
+            vals.push(v);
+        }
+        if let Some(v) = body.default_branch {
+            sets.push("default_branch = ?");
+            vals.push(v);
+        }
+        if !sets.is_empty() {
+            let sql = format!(
+                "UPDATE cowork_projects SET {}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+                sets.join(", ")
+            );
+            let mut all: Vec<&dyn rusqlite::ToSql> =
+                vals.iter().map(|v| v as &dyn rusqlite::ToSql).collect();
+            all.push(&id);
+            all.push(&user_id);
+            conn.execute(&sql, rusqlite::params_from_iter(all))?;
+        }
         Ok::<_, rusqlite::Error>(())
     })
     .await;
@@ -989,7 +1094,7 @@ async fn update_project(
             warn!("DB error updating project: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1029,7 +1134,7 @@ async fn delete_project(
             warn!("DB error deleting project: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1055,18 +1160,21 @@ async fn list_project_files(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
     Path(id): Path<String>,
+    Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let (limit, offset) = clamp_list_window(&q);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, project_id, user_id, name, url, upload_id, media_type, created_at
-             FROM cowork_project_files WHERE project_id = ?1 AND user_id = ?2 ORDER BY created_at DESC",
+             FROM cowork_project_files WHERE project_id = ?1 AND user_id = ?2 ORDER BY created_at DESC
+             LIMIT ?3 OFFSET ?4",
         )?;
         let rows = stmt
-            .query_map(params![id, user_id], |row| {
+            .query_map(params![id, user_id, limit, offset], |row| {
                 Ok(ProjectFileRow {
                     id: row.get(0)?,
                     project_id: row.get(1)?,
@@ -1094,7 +1202,7 @@ async fn list_project_files(
             warn!("DB error listing project files: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1158,7 +1266,7 @@ async fn create_project_file(
             warn!("DB error creating project file: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1198,7 +1306,7 @@ async fn delete_project_file(
             warn!("DB error deleting project file: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1219,18 +1327,21 @@ async fn get_memory(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
+    Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let (limit, offset) = clamp_list_window(&q);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, user_id, project_id, session_id, content, type, tags, source, created_at
-             FROM cowork_memory_entries WHERE user_id = ?1 ORDER BY created_at DESC",
+             FROM cowork_memory_entries WHERE user_id = ?1 ORDER BY created_at DESC
+             LIMIT ?2 OFFSET ?3",
         )?;
         let rows = stmt
-            .query_map(params![user_id], |row| {
+            .query_map(params![user_id, limit, offset], |row| {
                 Ok(MemoryEntryRow {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -1257,7 +1368,7 @@ async fn get_memory(
             warn!("DB error getting memories: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1322,7 +1433,7 @@ async fn store_memory(
             warn!("DB error storing memory: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1340,6 +1451,7 @@ async fn store_memory(
 #[derive(Deserialize)]
 struct SearchMemoryBody {
     query: String,
+    limit: Option<i64>,
 }
 
 async fn search_memory(
@@ -1350,6 +1462,10 @@ async fn search_memory(
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let limit = body
+        .limit
+        .unwrap_or(LIST_DEFAULT_LIMIT)
+        .clamp(1, LIST_MAX_LIMIT);
     let pattern = format!("%{}%", body.query.replace('%', "\\%").replace('_', "\\_"));
 
     let rows = tokio::task::spawn_blocking(move || {
@@ -1358,10 +1474,11 @@ async fn search_memory(
             "SELECT id, user_id, project_id, session_id, content, type, tags, source, created_at
              FROM cowork_memory_entries
              WHERE user_id = ?1 AND content LIKE ?2 ESCAPE '\\'
-             ORDER BY created_at DESC",
+             ORDER BY created_at DESC
+             LIMIT ?3",
         )?;
         let rows = stmt
-            .query_map(params![user_id, pattern], |row| {
+            .query_map(params![user_id, pattern, limit], |row| {
                 Ok(MemoryEntryRow {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -1388,7 +1505,7 @@ async fn search_memory(
             warn!("DB error searching memories: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1406,7 +1523,6 @@ async fn search_memory(
 #[derive(Deserialize)]
 struct SearchMemoryQuery {
     query: Option<String>,
-    #[allow(dead_code)]
     limit: Option<i64>,
 }
 
@@ -1416,7 +1532,10 @@ async fn search_memory_get(
     Query(params): Query<SearchMemoryQuery>,
 ) -> impl IntoResponse {
     let query = params.query.unwrap_or_default();
-    let body = SearchMemoryBody { query };
+    let body = SearchMemoryBody {
+        query,
+        limit: params.limit,
+    };
     search_memory(State(state), Extension(user), HeaderMap::new(), Json(body)).await
 }
 
@@ -1459,18 +1578,21 @@ async fn list_connectors(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
+    Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let (limit, offset) = clamp_list_window(&q);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, user_id, name, enabled, config, last_used, created_at, updated_at
-             FROM cowork_connectors WHERE user_id = ?1 ORDER BY updated_at DESC",
+             FROM cowork_connectors WHERE user_id = ?1 ORDER BY updated_at DESC
+             LIMIT ?2 OFFSET ?3",
         )?;
         let rows = stmt
-            .query_map(params![user_id], |row| {
+            .query_map(params![user_id, limit, offset], |row| {
                 Ok(ConnectorRow {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -1496,7 +1618,7 @@ async fn list_connectors(
             warn!("DB error listing connectors: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1511,25 +1633,59 @@ async fn list_connectors(
     }
 }
 
+/// Prepare the approvals list statement, filtering out decided rows.
+///
+/// Prefers the V143+ filter (`dismissed = 0`) so decided/dismissed approvals
+/// leave the pending set; on schemas where the dismissed column does not
+/// exist yet, degrades to the unfiltered select rather than erroring. A
+/// missing table surfaces as a prepare error and is handled by the caller's
+/// is_no_such_table fallback.
+fn prepare_approvals_list_stmt(
+    conn: &rusqlite::Connection,
+) -> rusqlite::Result<rusqlite::Statement<'_>> {
+    conn.prepare(
+        "SELECT id, user_id, content, source, dismissed, created_at
+         FROM cowork_approvals
+         WHERE (user_id = ?1 OR user_id IS NULL) AND dismissed = 0
+         ORDER BY created_at DESC
+         LIMIT ?2 OFFSET ?3",
+    )
+    .or_else(|e| {
+        if e.to_string().contains("no such column") {
+            // The fallback cannot project `dismissed` either on a pre-V143
+            // schema; substitute a literal 0 (never dismissed) instead.
+            conn.prepare(
+                "SELECT id, user_id, content, source, 0 AS dismissed, created_at
+                 FROM cowork_approvals
+                 WHERE (user_id = ?1 OR user_id IS NULL)
+                 ORDER BY created_at DESC
+                 LIMIT ?2 OFFSET ?3",
+            )
+        } else {
+            Err(e)
+        }
+    })
+}
+
 async fn list_approvals(
     State(state): State<Arc<AppState>>,
     Extension(_user): Extension<AuthUser>,
     headers: HeaderMap,
+    Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
     };
     let db = state.db.clone();
+    let user_id = _user.user_id;
+    let (limit, offset) = clamp_list_window(&q);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, user_id, content, source, dismissed, created_at
-             FROM cowork_approvals ORDER BY created_at DESC",
-        )?;
+        let mut stmt = prepare_approvals_list_stmt(&conn)?;
         let rows = stmt
-            .query_map([], |row| {
+            .query_map(params![user_id, limit, offset], |row| {
                 Ok(SuggestionRow {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -1545,15 +1701,181 @@ async fn list_approvals(
     .await;
 
     match rows {
-        Ok(Ok(approvals)) => Json(json!({ "approvals": approvals })).into_response(),
-        Ok(Err(e)) if is_no_such_table(&e) => {
-            Json(json!({ "approvals": Vec::<SuggestionRow>::new() })).into_response()
-        }
+        Ok(Ok(approvals)) => Json(json!({
+            "approvals": &approvals,
+            "pending": &approvals,
+        }))
+            .into_response(),
+        Ok(Err(e)) if is_no_such_table(&e) => Json(json!({
+            "approvals": Vec::<SuggestionRow>::new(),
+            "pending": Vec::<SuggestionRow>::new(),
+        }))
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing approvals: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ─── Approval decisions ───────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct ApprovalDecisionBody {
+    /// Frontend sends `actionId` (the cowork_approvals row id).
+    #[serde(rename = "actionId")]
+    action_id: Option<String>,
+    /// Tolerated alias for non-gate callers.
+    id: Option<String>,
+    /// Frontend sends `decision`; `action` is accepted as an alias.
+    decision: Option<String>,
+    action: Option<String>,
+}
+
+enum ApprovalOutcome {
+    Approved,
+    Rejected,
+    Dismissed,
+}
+
+fn normalize_approval_decision(raw: &str) -> Option<ApprovalOutcome> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "approved" | "approve" | "allow" | "grant" => Some(ApprovalOutcome::Approved),
+        "rejected" | "reject" | "deny" | "denied" => Some(ApprovalOutcome::Rejected),
+        "dismissed" | "dismiss" => Some(ApprovalOutcome::Dismissed),
+        _ => None,
+    }
+}
+
+/// Apply an approval decision to a cowork_approvals row, scoped to the
+/// requesting user (NULL-user rows are global and match anyone). Returns the
+/// number of rows updated — 0 means the row is missing or owned by someone
+/// else, which the caller maps to 404.
+fn apply_approval_decision(
+    conn: &rusqlite::Connection,
+    approval_id: &str,
+    outcome: &ApprovalOutcome,
+    user_id: &str,
+) -> rusqlite::Result<usize> {
+    let stored: Option<&str> = match outcome {
+        ApprovalOutcome::Approved => Some("approved"),
+        ApprovalOutcome::Rejected => Some("rejected"),
+        ApprovalOutcome::Dismissed => None,
+    };
+    conn.execute(
+        "UPDATE cowork_approvals
+         SET dismissed = 1, decision = ?2, decided_at = CURRENT_TIMESTAMP
+         WHERE id = ?1 AND (user_id = ?3 OR user_id IS NULL)",
+        params![approval_id, stored, user_id],
+    )
+    .or_else(|e| {
+        // Schema predating V144 has no decision/decided_at columns;
+        // degrade to a plain dismiss so the endpoint still resolves.
+        if e.to_string().contains("no such column") {
+            conn.execute(
+                "UPDATE cowork_approvals
+                 SET dismissed = 1
+                 WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+                params![approval_id, user_id],
+            )
+        } else {
+            Err(e)
+        }
+    })
+}
+
+async fn decide_approval(
+    State(state): State<Arc<AppState>>,
+    Extension(_user): Extension<AuthUser>,
+    headers: HeaderMap,
+    body: Result<Json<ApprovalDecisionBody>, axum::extract::rejection::JsonRejection>,
+) -> impl IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => return unauthorized(),
+    };
+    let Json(body) = match body {
+        Ok(b) => b,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "invalid request body"})),
+            )
+                .into_response()
+        }
+    };
+    let raw_decision = body
+        .decision
+        .as_deref()
+        .or(body.action.as_deref())
+        .unwrap_or("");
+    let outcome = match normalize_approval_decision(raw_decision) {
+        Some(o) => o,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "invalid decision"})),
+            )
+                .into_response()
+        }
+    };
+    let approval_id = match body.action_id.as_deref().or(body.id.as_deref()) {
+        Some(id) if !id.trim().is_empty() => id.to_string(),
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "actionId is required"})),
+            )
+                .into_response()
+        }
+    };
+
+    let decision_label = match outcome {
+        ApprovalOutcome::Approved => "approved",
+        ApprovalOutcome::Rejected => "rejected",
+        ApprovalOutcome::Dismissed => "dismissed",
+    };
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let id_for_response = approval_id.clone();
+    let label_for_response = decision_label.to_string();
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let updated = apply_approval_decision(&conn, &approval_id, &outcome, &user_id)?;
+        Ok::<_, rusqlite::Error>(updated)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(0)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "approval not found"})),
+        )
+            .into_response(),
+        Ok(Ok(_)) => Json(json!({
+            "ok": true,
+            "id": id_for_response,
+            "decision": label_for_response,
+        }))
+            .into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error deciding approval: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1572,9 +1894,11 @@ async fn list_suggestions(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
+    Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let (limit, offset) = clamp_list_window(&q);
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -1582,10 +1906,11 @@ async fn list_suggestions(
             "SELECT id, user_id, content, source, dismissed, created_at
              FROM cowork_suggestions
              WHERE (user_id = ?1 OR user_id IS NULL) AND dismissed = 0
-             ORDER BY created_at DESC",
+             ORDER BY created_at DESC
+             LIMIT ?2 OFFSET ?3",
         )?;
         let rows = stmt
-            .query_map(params![user_id], |row| {
+            .query_map(params![user_id, limit, offset], |row| {
                 Ok(SuggestionRow {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -1609,7 +1934,7 @@ async fn list_suggestions(
             warn!("DB error listing suggestions: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1628,8 +1953,9 @@ async fn list_suggestions(
 struct CreateSuggestionBody {
     content: String,
     source: Option<String>,
-    #[serde(alias = "userId")]
-    user_id: Option<String>,
+    // NOTE: a client-supplied user_id used to be accepted here and allowed
+    // forging the owning user. It was removed; the owner always comes from
+    // the authenticated AuthUser extension.
 }
 
 async fn create_suggestion(
@@ -1641,7 +1967,7 @@ async fn create_suggestion(
     let db = state.db.clone();
     let id = uuid::Uuid::new_v4().to_string();
     let id2 = id.clone();
-    let user_id = body.user_id.unwrap_or_else(|| user.user_id.clone());
+    let user_id = user.user_id;
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -1665,7 +1991,7 @@ async fn create_suggestion(
             warn!("DB error creating suggestion: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1729,7 +2055,7 @@ async fn team_execute(
             warn!("DB error creating team execution: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1803,7 +2129,7 @@ async fn run_agent(
             warn!("DB error creating agent execution: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -1823,4 +2149,380 @@ async fn cowork_status() -> impl IntoResponse {
         "status": "ok",
         "service": "cowork",
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn normalize(s: &str) -> Option<ApprovalOutcome> {
+        normalize_approval_decision(s)
+    }
+
+    #[test]
+    fn normalize_approval_decision_frontend_values() {
+        assert!(matches!(normalize("approved"), Some(ApprovalOutcome::Approved)));
+        assert!(matches!(normalize("rejected"), Some(ApprovalOutcome::Rejected)));
+    }
+
+    #[test]
+    fn normalize_approval_decision_aliases_and_case() {
+        assert!(matches!(normalize("Approve"), Some(ApprovalOutcome::Approved)));
+        assert!(matches!(normalize(" deny "), Some(ApprovalOutcome::Rejected)));
+        assert!(matches!(normalize("dismiss"), Some(ApprovalOutcome::Dismissed)));
+    }
+
+    #[test]
+    fn normalize_approval_decision_approved_aliases() {
+        for alias in ["approve", "allow", "grant", "APPROVED", " Allow "] {
+            assert!(
+                matches!(normalize(alias), Some(ApprovalOutcome::Approved)),
+                "expected {alias:?} to normalize to Approved"
+            );
+        }
+    }
+
+    #[test]
+    fn normalize_approval_decision_rejected_aliases() {
+        for alias in ["reject", "deny", "denied", "REJECTED", " Deny "] {
+            assert!(
+                matches!(normalize(alias), Some(ApprovalOutcome::Rejected)),
+                "expected {alias:?} to normalize to Rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn normalize_approval_decision_dismissed_aliases() {
+        for alias in ["dismissed", "DISMISS"] {
+            assert!(
+                matches!(normalize(alias), Some(ApprovalOutcome::Dismissed)),
+                "expected {alias:?} to normalize to Dismissed"
+            );
+        }
+    }
+
+    #[test]
+    fn normalize_approval_decision_rejects_unknown() {
+        assert!(normalize("").is_none());
+        assert!(normalize("maybe").is_none());
+        assert!(normalize("approved!").is_none());
+    }
+
+    // ── Scratch-DB tests over the cowork_approvals table ─────────────────────
+    //
+    // V143 DDL + the V144 decision columns, matching the production schema a
+    // migrated node ends up with.
+
+    const APPROVALS_DDL_V144: &str = "
+        CREATE TABLE cowork_approvals (
+            id         TEXT PRIMARY KEY,
+            user_id    TEXT,
+            content    TEXT NOT NULL,
+            source     TEXT NOT NULL DEFAULT 'system',
+            dismissed  INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            decision   TEXT,
+            decided_at DATETIME
+        );
+    ";
+
+    fn scratch_approvals_db() -> rusqlite::Connection {
+        let conn = rusqlite::Connection::open_in_memory().expect("in-memory db");
+        conn.execute_batch(APPROVALS_DDL_V144).expect("ddl");
+        conn
+    }
+
+    fn insert_approval(conn: &rusqlite::Connection, id: &str, user_id: Option<&str>, content: &str) {
+        conn.execute(
+            "INSERT INTO cowork_approvals (id, user_id, content) VALUES (?1, ?2, ?3)",
+            params![id, user_id, content],
+        )
+        .expect("insert");
+    }
+
+    /// Mirror of list_approvals' row mapping, fed by prepare_approvals_list_stmt.
+    fn list_pending_ids(
+        conn: &rusqlite::Connection,
+        user_id: &str,
+    ) -> Vec<(String, Option<String>)> {
+        let mut stmt = prepare_approvals_list_stmt(conn).expect("prepare");
+        stmt.query_map(params![user_id, 100, 0], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
+        })
+        .expect("query")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("rows")
+    }
+
+    #[test]
+    fn list_approvals_excludes_decided_rows_from_pending() {
+        let conn = scratch_approvals_db();
+        insert_approval(&conn, "a-pending", Some("user-a"), "still pending");
+        insert_approval(&conn, "a-decided", Some("user-a"), "decided");
+        apply_approval_decision(&conn, "a-decided", &ApprovalOutcome::Approved, "user-a")
+            .expect("decide");
+
+        let ids = list_pending_ids(&conn, "user-a");
+        assert_eq!(ids.len(), 1, "decided rows must leave the pending set");
+        assert_eq!(ids[0].0, "a-pending");
+    }
+
+    #[test]
+    fn list_approvals_scopes_to_user_and_null_rows() {
+        let conn = scratch_approvals_db();
+        insert_approval(&conn, "own", Some("user-a"), "own");
+        insert_approval(&conn, "global", None, "global");
+        insert_approval(&conn, "other", Some("user-b"), "other user");
+
+        let ids = list_pending_ids(&conn, "user-a");
+        let keys: Vec<String> = ids.iter().map(|(id, _)| id.clone()).collect();
+        assert!(keys.contains(&"own".to_string()));
+        assert!(keys.contains(&"global".to_string()));
+        assert!(!keys.contains(&"other".to_string()));
+    }
+
+    #[test]
+    fn list_approvals_falls_back_when_dismissed_column_missing() {
+        // Pre-V143 schema: no dismissed column. The statement builder must
+        // degrade to the unfiltered select instead of erroring.
+        let conn = rusqlite::Connection::open_in_memory().expect("in-memory db");
+        conn.execute_batch(
+            "CREATE TABLE cowork_approvals (
+                id         TEXT PRIMARY KEY,
+                user_id    TEXT,
+                content    TEXT NOT NULL,
+                source     TEXT NOT NULL DEFAULT 'system',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );",
+        )
+        .expect("ddl");
+        insert_approval(&conn, "legacy-1", Some("user-a"), "legacy");
+        insert_approval(&conn, "legacy-2", Some("user-a"), "legacy");
+
+        let ids = list_pending_ids(&conn, "user-a");
+        assert_eq!(ids.len(), 2, "fallback select must still return rows");
+    }
+
+    #[test]
+    fn list_approvals_missing_table_errors_for_caller_fallback() {
+        let conn = rusqlite::Connection::open_in_memory().expect("in-memory db");
+        let err = prepare_approvals_list_stmt(&conn).unwrap_err();
+        assert!(is_no_such_table(&err));
+    }
+
+    #[test]
+    fn decide_approval_does_not_touch_another_users_row() {
+        let conn = scratch_approvals_db();
+        insert_approval(&conn, "row-a", Some("user-a"), "A");
+        insert_approval(&conn, "row-b", Some("user-b"), "B");
+
+        // user-b tries to decide user-a's row: 0 rows updated, row untouched.
+        let updated = apply_approval_decision(&conn, "row-a", &ApprovalOutcome::Approved, "user-b")
+            .expect("update");
+        assert_eq!(updated, 0, "cross-user decide must update nothing");
+
+        let dismissed: i64 = conn
+            .query_row(
+                "SELECT dismissed FROM cowork_approvals WHERE id = 'row-a'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("select");
+        assert_eq!(dismissed, 0, "row-a must remain pending");
+    }
+
+    #[test]
+    fn decide_approval_null_user_row_is_global() {
+        let conn = scratch_approvals_db();
+        insert_approval(&conn, "global", None, "global");
+        let updated = apply_approval_decision(&conn, "global", &ApprovalOutcome::Rejected, "user-a")
+            .expect("update");
+        assert_eq!(updated, 1);
+        let (dismissed, decision): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT dismissed, decision FROM cowork_approvals WHERE id = 'global'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("select");
+        assert_eq!(dismissed, 1);
+        assert_eq!(decision.as_deref(), Some("rejected"));
+    }
+
+    #[test]
+    fn decide_approval_records_decision_columns() {
+        let conn = scratch_approvals_db();
+        insert_approval(&conn, "own", Some("user-a"), "A");
+        apply_approval_decision(&conn, "own", &ApprovalOutcome::Approved, "user-a").expect("update");
+        let (dismissed, decision): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT dismissed, decision FROM cowork_approvals WHERE id = 'own'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("select");
+        assert_eq!(dismissed, 1);
+        assert_eq!(decision.as_deref(), Some("approved"));
+    }
+
+    #[test]
+    fn decide_approval_falls_back_without_decision_columns() {
+        // Pre-V144 schema: no decision/decided_at columns.
+        let conn = rusqlite::Connection::open_in_memory().expect("in-memory db");
+        conn.execute_batch(
+            "CREATE TABLE cowork_approvals (
+                id         TEXT PRIMARY KEY,
+                user_id    TEXT,
+                content    TEXT NOT NULL,
+                source     TEXT NOT NULL DEFAULT 'system',
+                dismissed  INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );",
+        )
+        .expect("ddl");
+        insert_approval(&conn, "own", Some("user-a"), "A");
+        insert_approval(&conn, "other", Some("user-b"), "B");
+
+        let updated = apply_approval_decision(&conn, "own", &ApprovalOutcome::Approved, "user-a")
+            .expect("fallback update");
+        assert_eq!(updated, 1);
+        let cross = apply_approval_decision(&conn, "other", &ApprovalOutcome::Approved, "user-a")
+            .expect("cross update");
+        assert_eq!(cross, 0, "fallback path must keep user scoping");
+    }
+
+    // ── update_session SET-clause semantics (scratch DB over V1 DDL) ─────────
+
+    const SESSIONS_DDL_V1: &str = "
+        CREATE TABLE cowork_sessions (
+            id           TEXT PRIMARY KEY,
+            user_id      TEXT NOT NULL,
+            project_id   TEXT,
+            title        TEXT,
+            status       TEXT NOT NULL DEFAULT 'idle',
+            mode         TEXT NOT NULL DEFAULT 'agent',
+            checkpoint   TEXT,
+            metadata     TEXT,
+            started_at   DATETIME,
+            completed_at DATETIME,
+            created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    ";
+
+    fn scratch_sessions_db() -> rusqlite::Connection {
+        let conn = rusqlite::Connection::open_in_memory().expect("in-memory db");
+        conn.execute_batch(SESSIONS_DDL_V1).expect("ddl");
+        conn
+    }
+
+    fn insert_session(conn: &rusqlite::Connection, id: &str, user_id: &str) {
+        conn.execute(
+            "INSERT INTO cowork_sessions (id, user_id, title, status, checkpoint)
+             VALUES (?1, ?2, 'orig-title', 'idle', 'cp-1')",
+            params![id, user_id],
+        )
+        .expect("insert");
+    }
+
+    /// Apply update_session's SET-clause builder + UPDATE to a scratch DB,
+    /// exactly as the handler does.
+    fn apply_session_update(
+        conn: &rusqlite::Connection,
+        id: &str,
+        user_id: &str,
+        body: &UpdateSessionBody,
+    ) {
+        let sets = session_update_sets(body);
+        if sets.is_empty() {
+            return;
+        }
+        let clause = sets
+            .iter()
+            .map(|(column, _)| *column)
+            .collect::<Vec<_>>()
+            .join(", ");
+        let sql = format!(
+            "UPDATE cowork_sessions SET {}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+            clause
+        );
+        let mut all: Vec<&dyn rusqlite::ToSql> = sets
+            .iter()
+            .map(|(_, value)| value as &dyn rusqlite::ToSql)
+            .collect();
+        all.push(&id);
+        all.push(&user_id);
+        conn.execute(&sql, rusqlite::params_from_iter(all))
+            .expect("update");
+    }
+
+    fn session_field(conn: &rusqlite::Connection, id: &str, column: &str) -> Option<String> {
+        conn.query_row(
+            &format!("SELECT {column} FROM cowork_sessions WHERE id = ?1"),
+            params![id],
+            |row| row.get(0),
+        )
+        .expect("select")
+    }
+
+    #[test]
+    fn update_session_absent_field_leaves_value() {
+        let conn = scratch_sessions_db();
+        insert_session(&conn, "s1", "user-a");
+        // Only title present: status and checkpoint must be untouched.
+        let body = UpdateSessionBody {
+            status: None,
+            title: Some(Some("new-title".to_string())),
+            checkpoint: None,
+            metadata: None,
+            completed_at: None,
+        };
+        apply_session_update(&conn, "s1", "user-a", &body);
+
+        assert_eq!(session_field(&conn, "s1", "title").as_deref(), Some("new-title"));
+        assert_eq!(session_field(&conn, "s1", "status").as_deref(), Some("idle"));
+        assert_eq!(session_field(&conn, "s1", "checkpoint").as_deref(), Some("cp-1"));
+    }
+
+    #[test]
+    fn update_session_explicit_null_clears_value() {
+        let conn = scratch_sessions_db();
+        insert_session(&conn, "s1", "user-a");
+        let body = UpdateSessionBody {
+            status: None,
+            title: Some(None),
+            checkpoint: Some(None),
+            metadata: None,
+            completed_at: None,
+        };
+        apply_session_update(&conn, "s1", "user-a", &body);
+
+        assert_eq!(session_field(&conn, "s1", "title"), None);
+        assert_eq!(session_field(&conn, "s1", "checkpoint"), None);
+        assert_eq!(session_field(&conn, "s1", "status").as_deref(), Some("idle"));
+    }
+
+    #[test]
+    fn update_session_plain_value_sets_and_scopes_to_user() {
+        let conn = scratch_sessions_db();
+        insert_session(&conn, "s1", "user-a");
+        insert_session(&conn, "s2", "user-b");
+
+        // user-b attempts to update user-a's session: WHERE clause blocks it.
+        let body = UpdateSessionBody {
+            status: Some(Some("running".to_string())),
+            title: None,
+            checkpoint: None,
+            metadata: None,
+            completed_at: None,
+        };
+        apply_session_update(&conn, "s1", "user-b", &body);
+        assert_eq!(session_field(&conn, "s1", "status").as_deref(), Some("idle"));
+
+        // Own session updates fine.
+        apply_session_update(&conn, "s1", "user-a", &body);
+        assert_eq!(session_field(&conn, "s1", "status").as_deref(), Some("running"));
+        assert_eq!(session_field(&conn, "s2", "status").as_deref(), Some("idle"));
+    }
 }

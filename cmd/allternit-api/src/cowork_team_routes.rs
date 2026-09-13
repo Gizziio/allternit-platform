@@ -147,13 +147,35 @@ async fn create_team_workspace(
     let slug_for_db = slug.clone();
     let description = body.description;
 
+    enum CreateWsError {
+        Db(rusqlite::Error),
+        SlugTaken,
+    }
+    impl From<rusqlite::Error> for CreateWsError {
+        fn from(e: rusqlite::Error) -> Self {
+            CreateWsError::Db(e)
+        }
+    }
+
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
+        // Uniqueness pre-check: a slug collision must surface as a clear 409,
+        // not a raw 500 from the UNIQUE constraint.
+        let slug_taken: bool = conn
+            .query_row(
+                "SELECT 1 FROM workspaces WHERE slug = ?1",
+                params![slug_for_db],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+        if slug_taken {
+            return Err(CreateWsError::SlugTaken);
+        }
         conn.execute(
             "INSERT INTO workspaces (id, name, slug, owner_id, description) VALUES (?1, ?2, ?3, ?4, ?5)",
             params![id2, name_for_db, slug_for_db, user_id, description],
         )?;
-        Ok::<_, rusqlite::Error>(())
+        Ok::<_, CreateWsError>(())
     }).await;
 
     match result {
@@ -162,11 +184,16 @@ async fn create_team_workspace(
             Json(json!({"workspace": {"id": id, "name": name, "slug": slug}})),
         )
             .into_response(),
-        Ok(Err(e)) => {
+        Ok(Err(CreateWsError::SlugTaken)) => (
+            StatusCode::CONFLICT,
+            Json(json!({"error": "workspace_slug_taken", "message": "A workspace with this slug already exists"})),
+        )
+            .into_response(),
+        Ok(Err(CreateWsError::Db(e))) => {
             warn!("DB error creating team workspace: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -406,7 +433,7 @@ async fn add_workspace_member(
             warn!("DB error adding member: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -454,6 +481,19 @@ async fn list_team_skills2(
         let mut stmt;
         let rows: Vec<TeamSkillRow2>;
         if let Some(ref ws) = ws_id {
+            // Same membership scope as the no-workspaceId branch below: the
+            // requesting user must own or belong to the workspace, otherwise
+            // return an empty list (mirrors the error fallback at the bottom).
+            let is_member: bool = conn.query_row(
+                "SELECT 1 FROM workspaces WHERE id = ?1 AND (owner_id = ?2 OR EXISTS (
+                    SELECT 1 FROM workspace_members WHERE workspace_id = ?1 AND user_id = ?2
+                ))",
+                params![ws, user_id],
+                |_| Ok(true),
+            ).unwrap_or(false);
+            if !is_member {
+                return Ok(Vec::new());
+            }
             stmt = conn.prepare(
                 "SELECT id, workspace_id, name, description, manifest, source_repo, version, installed_by, installed_at
                  FROM team_skills WHERE workspace_id = ?1 ORDER BY installed_at DESC"
@@ -566,7 +606,7 @@ async fn create_team_skill2(
             warn!("DB error creating team skill: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -740,6 +780,19 @@ async fn list_team_agents(
         let mut stmt;
         let rows: Vec<serde_json::Value>;
         if let Some(ref ws) = ws_id {
+            // Membership check mirroring the no-workspaceId branch's scope:
+            // only workspaces the user owns or belongs to. Non-members get an
+            // empty list (same shape as the error fallback below).
+            let is_member: bool = conn.query_row(
+                "SELECT 1 FROM workspaces WHERE id = ?1 AND (owner_id = ?2 OR EXISTS (
+                    SELECT 1 FROM workspace_members WHERE workspace_id = ?1 AND user_id = ?2
+                ))",
+                params![ws, user_id],
+                |_| Ok(true),
+            ).unwrap_or(false);
+            if !is_member {
+                return Ok(Vec::new());
+            }
             stmt = conn.prepare(
                 "SELECT id, name, description, type, model, provider, capabilities, status, workspace_id, created_at
                  FROM agents WHERE workspace_id = ?1 ORDER BY created_at DESC"
@@ -964,7 +1017,7 @@ async fn create_team_runtime(
             warn!("DB error creating team runtime: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "internal error"})),
             )
                 .into_response()
         }
@@ -985,11 +1038,82 @@ async fn create_team_runtime(
 struct ParsePRDBody {
     description: String,
     #[serde(alias = "existingTitles")]
-    _existing_titles: Option<Vec<String>>,
+    existing_titles: Option<Vec<String>>,
     #[serde(alias = "maxTasks")]
     max_tasks: Option<i64>,
     #[serde(alias = "modelId")]
-    _model_id: Option<String>,
+    model_id: Option<String>,
+}
+
+/// One task as requested from the model. `priority` accepts either a number
+/// (1-5) or a string ("low" | "medium" | "high"); `depends_on` accepts
+/// 0-based task indexes as numbers or numeric strings.
+#[derive(Deserialize)]
+struct ParsedPrdTask {
+    title: String,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    priority: Option<serde_json::Value>,
+    #[serde(default, alias = "dependsOn", alias = "depends_on")]
+    depends_on: Option<Vec<serde_json::Value>>,
+}
+
+/// Locate the first JSON array in model output, tolerating surrounding prose
+/// and ```json code fences. Returns the slice from `[` through `]`.
+fn extract_json_array(text: &str) -> Option<&str> {
+    let start = text.find('[')?;
+    let end = text.rfind(']')?;
+    if end > start {
+        Some(&text[start..=end])
+    } else {
+        None
+    }
+}
+
+/// Normalize the model's priority into the 1-5 number the board store uses.
+fn normalize_priority(value: Option<&serde_json::Value>) -> i64 {
+    match value {
+        Some(serde_json::Value::Number(n)) => {
+            n.as_i64().unwrap_or(2).clamp(1, 5)
+        }
+        Some(serde_json::Value::String(s)) => match s.to_lowercase().as_str() {
+            "low" => 1,
+            "medium" | "normal" => 2,
+            "high" => 3,
+            "urgent" | "critical" => 4,
+            _ => 2,
+        },
+        _ => 2,
+    }
+}
+
+fn build_prd_parse_prompt(
+    description: &str,
+    existing_titles: Option<&[String]>,
+    max_tasks: i64,
+) -> String {
+    let mut prompt = format!(
+        "Break the following product requirements into at most {max_tasks} concrete, actionable implementation tasks.\n\n\
+         Requirements:\n{description}\n\n"
+    );
+    if let Some(titles) = existing_titles.filter(|t| !t.is_empty()) {
+        prompt.push_str("Tasks that already exist on the board (do not duplicate them):\n");
+        for title in titles {
+            prompt.push_str(&format!("- {title}\n"));
+        }
+        prompt.push('\n');
+    }
+    prompt.push_str(
+        "Respond with ONLY a JSON array (no prose, no code fences) of objects with this shape:\n\
+         [{{\"title\": \"short imperative title\", \"description\": \"1-3 sentences of concrete detail\", \
+         \"priority\": \"low\" | \"medium\" | \"high\", \"depends_on\": [<0-based indexes of earlier tasks this task depends on>]}}]\n\
+         Rules:\n\
+         - Order tasks so dependencies point backwards (a task only depends on lower indexes).\n\
+         - Each task must be independently actionable by a coding agent.\n\
+         - Keep titles under 80 characters.",
+    );
+    prompt
 }
 
 async fn parse_prd(
@@ -1002,20 +1126,111 @@ async fn parse_prd(
         None => return unauthorized(),
     };
 
-    // Stub: return mock parsed tasks
-    let max = body.max_tasks.unwrap_or(5).max(1).min(20);
-    let items: Vec<serde_json::Value> = (1..=max).map(|i| {
-        json!({
-            "title": format!("Task {} from PRD", i),
-            "description": format!("Auto-generated task based on PRD description: {}...", &body.description[..body.description.len().min(50)]),
-            "priority": if i == 1 { "high" } else { "medium" },
-        })
-    }).collect();
+    let max = body.max_tasks.unwrap_or(8).clamp(1, 20);
+    let prompt = build_prd_parse_prompt(
+        &body.description,
+        body.existing_titles.as_deref(),
+        max,
+    );
+    let system = "You are a precise technical project planner. You decompose product requirements into actionable engineering tasks. You output ONLY valid JSON — a single array of task objects — with no prose and no markdown fences.";
 
+    // Route through the Gizzi runtime completion helper (same path ALabs
+    // lesson generation uses) so parse-prd inherits the platform's
+    // brain/provider configuration instead of calling a provider directly.
+    let completion = match body
+        .model_id
+        .as_deref()
+        .and_then(|m| m.split_once('/'))
+        .map(|(p, m)| (p.to_string(), m.to_string()))
+    {
+        Some(model) => {
+            crate::gizzi_completion::complete(&prompt, Some(system), Some(&model)).await
+        }
+        None => crate::gizzi_completion::complete(&prompt, Some(system), None).await,
+    };
+
+    let text = match completion {
+        Some(text) if !text.trim().is_empty() => text,
+        _ => {
+            warn!("parse-prd: gizzi completion unavailable");
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({
+                    "error": "runtime_unavailable",
+                    "message": "AI runtime unavailable, try again later",
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    let Some(raw) = extract_json_array(&text) else {
+        warn!("parse-prd: model output contained no JSON array");
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({
+                "error": "parse_failed",
+                "message": "AI response did not contain a JSON task array",
+            })),
+        )
+            .into_response();
+    };
+    let parsed: Vec<ParsedPrdTask> = match serde_json::from_str(raw) {
+        Ok(tasks) => tasks,
+        Err(e) => {
+            warn!("parse-prd: failed to parse model JSON: {}", e);
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({
+                    "error": "parse_failed",
+                    "message": "AI response was not valid JSON",
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    // Honor max_tasks by truncating, then map to the board-item contract the
+    // coworkTeamBridge consumes: positional tempIds plus resolved
+    // dependencyTempIds (tempId of each referenced task).
+    let total = parsed.len().min(max as usize);
+    let mut items: Vec<serde_json::Value> = Vec::with_capacity(total);
+    for (i, task) in parsed.into_iter().take(total).enumerate() {
+        let temp_id = format!("task-{}", i + 1);
+        let dependency_temp_ids: Vec<String> = task
+            .depends_on
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|v| {
+                v.as_u64()
+                    .or_else(|| v.as_str().and_then(|s| s.parse::<u64>().ok()))
+            })
+            .filter(|idx| (*idx as usize) < total)
+            .map(|idx| format!("task-{}", idx + 1))
+            .collect();
+        // Char-safe truncation: slicing at a byte index would panic on a
+        // multibyte UTF-8 boundary.
+        let description: String = task
+            .description
+            .unwrap_or_default()
+            .chars()
+            .take(500)
+            .collect();
+        items.push(json!({
+            "tempId": temp_id,
+            "dependencyTempIds": dependency_temp_ids,
+            "title": task.title.chars().take(80).collect::<String>(),
+            "description": description,
+            "priority": normalize_priority(task.priority.as_ref()),
+            "status": "backlog",
+        }));
+    }
+
+    let count = items.len();
     Json(json!({
         "items": items,
-        "summary": format!("Parsed {} tasks from PRD description", max),
-        "task_count": max,
+        "summary": format!("Parsed {count} tasks from PRD description"),
+        "task_count": count,
     }))
     .into_response()
 }

@@ -940,17 +940,40 @@ async fn main() {
     let combined = combined.nest("/terminal", terminal_router());
     let mut app = combined.with_state(state.clone());
 
-    // Mount cowork scheduler routes if scheduler is active
+    // Mount cowork scheduler routes if scheduler is active. These routes
+    // create/update/delete schedules and self-gate nothing, so they must be
+    // authenticated like the background router below. The scheduler router
+    // carries its own state (ApiState), which auth_middleware does not use,
+    // so the layer is a from_fn closure invoking auth_middleware rather than
+    // from_fn_with_state (which would force a state-type match).
     if let Some(sstate) = scheduler_state {
+        let scheduler_auth_state = state.clone();
         app = app.nest(
             "/cowork/scheduler",
-            allternit_cowork_scheduler::api::api_router(sstate),
+            allternit_cowork_scheduler::api::api_router(sstate).layer(
+                axum::middleware::from_fn(
+                    move |request: axum::extract::Request, next: axum::middleware::Next| {
+                        let state = scheduler_auth_state.clone();
+                        async move {
+                            auth_middleware(axum::extract::State(state), request, next).await
+                        }
+                    },
+                ),
+            ),
         );
     }
 
-    // Mount cowork background service routes if service is active
+    // Mount cowork background service routes if service is active. These
+    // routes (including the settings-mutating PUT) must be authenticated:
+    // wrap them with the same Clerk auth_middleware used elsewhere (e.g. the
+    // fabric model router below) instead of merging them unprotected.
     if let Some(bstate) = bg_state {
-        app = app.merge(background_router(Arc::new(bstate)));
+        app = app.merge(
+            background_router(Arc::new(bstate)).layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                auth_middleware,
+            )),
+        );
     }
 
     // Apply the CORS policy (see allternit_api::cors for the matrix). The
