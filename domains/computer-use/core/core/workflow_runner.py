@@ -461,6 +461,10 @@ class WorkflowRunner:
                 "step": pause.step,
                 "step_index": 0,
                 "reason": pause.reason,
+                # Operators redeem this through the Rust handoff surface
+                # (POST /aci/handoff/:approval_id/approve) before resolving
+                # the run-level approval.
+                "approval_id": attempt.approval_id,
             })
             approved = False
             if self.approval_callback is not None:
@@ -471,6 +475,7 @@ class WorkflowRunner:
                 "workflow_id": workflow_id,
                 "step": pause.step,
                 "approved": approved,
+                "approval_id": attempt.approval_id,
             })
             if not approved or not attempt.approval_id:
                 close_batch_context(self.ledger, record, status="denied", model_turns_saved=0)

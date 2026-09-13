@@ -66,6 +66,10 @@ class RunWorkflowBody(BaseModel):
     run_id: str = Field(default_factory=lambda: f"wf-{uuid.uuid4().hex[:12]}")
     target_scope: str = "browser"
     wait: bool = False
+    # Operator-pinned page binding for a compiled batch's descriptor hash
+    # (session-preservation contract §7). None = the runner observes the
+    # adapter's current URL, else the batch binds origin+session only.
+    batch_page_url: Optional[str] = None
 
     @model_validator(mode="after")
     def _require_workflow_or_skill_id(self) -> "RunWorkflowBody":
@@ -203,6 +207,7 @@ async def run_workflow(
             cancel_event=run_state.cancel_event,
             params=body.params,
             ledger=ledger,
+            batch_page_url=body.batch_page_url,
         )
         try:
             result = await runner.run(spec_source)

@@ -282,6 +282,21 @@ pub mod test_helpers {
         app_state_with_config_and_os(temp, config, None, None).await
     }
 
+    /// Serialize tests that mutate the process-wide
+    /// `ALLTERNIT_COMPUTER_USE_DIR` env var. The audit/grant/run-buffer paths
+    /// read that var at call time, so a concurrent `set_var` from another
+    /// test redirects rows/files between temp dirs — the root cause of the
+    /// `audit_api_returns_rows_with_bot_filter` flake (1-in-N under default
+    /// test threading). Same mutex as `policy_config::POLICY_TEST_LOCK`
+    /// (policy-seat and policy-audit tests already serialize on it); tests
+    /// holding that lock must NOT take this guard again — std `Mutex` is not
+    /// reentrant and the same-thread second lock deadlocks.
+    pub fn computer_use_dir_test_lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::policy_config::POLICY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+    }
+
     async fn app_state_with_config_and_os(
         temp: &Path,
         config: AppConfig,
