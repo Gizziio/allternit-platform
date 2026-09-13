@@ -65,6 +65,7 @@ import { mcpHostManager } from './mcp-host-manager.js';
 import { isLimaInstalled, installLima, startVM, stopVM, getVMStatus } from './lima.js';
 import { computerUseDriverManager } from './computer-use-driver-manager.js';
 import { acuGatewayManager } from './acu-gateway-manager.js';
+import { phoneRemoteManager } from './phone-remote-manager.js';
 import {
   createCaptureSession,
   stopCaptureSession,
@@ -812,6 +813,18 @@ async function initializeApp(): Promise<void> {
     });
   } else {
     log.info('[Main] Voice service disabled via ALLTERNIT_DISABLE_VOICE');
+  }
+
+  // phone-remote server (Fabric desktop viewer proxies /frame + /hello to
+  // 127.0.0.1:8477). Independent of auth — the viewer needs the server
+  // regardless of sign-in state. Non-fatal: the app must still render if it
+  // cannot start; a foreign :8477 listener is adopted, never killed.
+  if (!process.env.ALLTERNIT_DISABLE_PHONE_REMOTE) {
+    void phoneRemoteManager.ensureStarted().catch((error) => {
+      log.warn('[Main] phone-remote unavailable; continuing without it:', error);
+    });
+  } else {
+    log.info('[Main] phone-remote disabled via ALLTERNIT_DISABLE_PHONE_REMOTE');
   }
   
   const backendConfig = store.get('backend');
@@ -2081,6 +2094,7 @@ app.on('before-quit', async () => {
   bonsaiCompanion.stop();
   computerUseDriverManager.stop();
   acuGatewayManager.stop();
+  phoneRemoteManager.stop();
   stopVM().catch(() => {}); // best-effort Lima VM shutdown
   // Remove dev session credentials file so stale credentials don't persist across restarts
   if (isDev) {
