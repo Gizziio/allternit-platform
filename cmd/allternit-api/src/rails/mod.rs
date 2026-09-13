@@ -14,6 +14,7 @@ use axum::{
     Json, Router,
 };
 pub mod routes_cowork;
+pub mod fabric_transport_routes;
 mod visibility;
 use serde::{Deserialize, Serialize};
 use serde_json::json;

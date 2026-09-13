@@ -227,6 +227,30 @@ impl JobState {
     }
 }
 
+impl std::str::FromStr for JobState {
+    type Err = crate::error::CoworkError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "scheduled" => Ok(JobState::Scheduled),
+            "queued" => Ok(JobState::Queued),
+            "leased" => Ok(JobState::Leased),
+            "starting" => Ok(JobState::Starting),
+            "running" => Ok(JobState::Running),
+            "checkpointing" => Ok(JobState::Checkpointing),
+            "awaiting_approval" => Ok(JobState::AwaitingApproval),
+            "retry_backoff" => Ok(JobState::RetryBackoff),
+            "completed" => Ok(JobState::Completed),
+            "failed" => Ok(JobState::Failed),
+            "dead_letter" => Ok(JobState::DeadLetter),
+            "cancelled" => Ok(JobState::Cancelled),
+            _ => Err(crate::error::CoworkError::Initialization(format!(
+                "Invalid job state: {s}"
+            ))),
+        }
+    }
+}
+
 /// A cowork run (maps to Rails DAG)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Run {
@@ -277,6 +301,12 @@ pub struct Job {
     pub state: JobState,
     /// Worker that currently holds the lease
     pub lease_owner: Option<String>,
+    /// Opaque lease token (A:// §8.9); store-authoritative
+    pub lease_id: Option<String>,
+    /// Monotonic lease ownership counter (A:// §8.9)
+    pub lease_generation: i64,
+    /// Mandatory capability strings for fabric-transport eligibility (§8.6–8.7)
+    pub required_capabilities: Vec<String>,
     /// Lease expiration timestamp
     pub lease_expires_at: Option<DateTime<Utc>>,
     /// Number of failed attempts

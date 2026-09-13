@@ -98,6 +98,58 @@ consistently on both sides).
 3. **`browserbase.fetch` / `browserbase.search` add-ons** — SDK `browser/browserbaseServices.ts`
    deleted; the `search`/`fetch` methods are removed from the `browserbase` browser
    factory and their schemas/exports removed from `clientSchemas.ts` / `index.ts`.
+4. **Upstream Browserbase URL constant (P1)** — `DEFAULT_BROWSERBASE_URL`
+   (`https://api.browserbase.com`) removed from `packages/sdk-ts/src/clientSchemas.ts`;
+   the inert `browserbase` session factory's schemas now require an explicit `baseUrl`
+   (parse-time fail-closed). The constant previously survived into the built service
+   worker because the extension imports SDK source cross-package; after the scrub,
+   `grep -r browserbase.com packages/sdk-ts/dist` returns nothing (verified 2026-09-12
+   after rebuild).
+
+## Sidecar model modes (P1)
+
+The stdio sidecar (`packages/sdk-ts/sidecar/allternit-browser-runtime-sidecar.mjs`)
+implements the client-model callback two ways:
+
+- `model.mode: "mock"` — canned structured outputs; the smoke-test default. No external
+  inference.
+- `model.mode: "gateway"` — all inference goes through the allternit gateway's
+  OpenAI-compatible surface: `POST {ALLTERNIT_GATEWAY_URL}/v1/chat/completions`
+  (default `http://127.0.0.1:8013`) with the `ALLTERNIT_GATEWAY_KEY` Bearer virtual
+  key, `response_format` mapped from the extension's JSON-schema request. The model
+  defaults to `ALLTERNIT_BROWSER_RUNTIME_MODEL` or `claude-sonnet-5` (the A://C
+  backend per `Allternit Brain/Infra/model-routing.md` — browser act/observe/extract
+  is routine-execution class). Fail-closed: unreachable gateway, missing key, or
+  non-JSON structured output is an error. There is no direct-provider-key mode and no
+  path to the Browserbase Model Gateway.
+
+`@allternit/browser`'s `StagehandSidecarProvider` mirrors this: `modelMode: 'mock' |
+'gateway'`; the P0 direct-provider `modelMode: 'provider'` was removed in P1.
+
+## Sidecar host methods (P1)
+
+Beyond the model-driven act/observe/extract surface, the sidecar exposes the
+substrate the grant gate and the ActionIntent vocabulary consume:
+
+- `actBatch` — deterministic structured-step batch ({selector, method,
+  arguments} whitelisted steps, one `experimentalBatch` transport call,
+  halt-at-first-failure, zero model calls). Transport behind
+  `POST /api/aci/batch`.
+- `tabOpen` / `tabList` / `tabSwitch` / `tabClose` — the vendored SDK's
+  `BrowserContext` page surface (`pageId` IS the CDP targetId on both sides).
+- `dialog` — host-side raw CDP on the page target (`Page.enable` →
+  `Page.javascriptDialogOpening` → `Page.handleJavaScriptDialog`). The
+  upstream extension protocol has no dialog operation (PageEventName is
+  `["console"]`); rather than invent an action the extension cannot execute,
+  dialogs are answered by trusted host code.
+- `upload` — `locator.setInputFiles`; path entries are resolved and
+  containment-checked against the run-scoped `sandboxDir` (escapes refused),
+  base64 payloads are accepted inline.
+- `downloads` — lists the launch-configured `downloadsPath` (Chrome is pinned
+  there via `Browser.setDownloadBehavior` at launch; downloads can never land
+  at an arbitrary path).
+- `screenshot` — returns the PNG plus a SHA-256 captured at the same moment,
+  so receipt metadata can bind the exact pixels observed.
 
 Everything stripped was best-effort/add-on functionality; no core act/observe/extract/
 batch path depended on it.

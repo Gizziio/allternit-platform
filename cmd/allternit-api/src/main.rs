@@ -126,7 +126,8 @@ use allternit_api::workflow_routes::workflow_router;
 use allternit_api::workspace_routes::workspace_router;
 use allternit_api::AppState;
 use allternit_cowork_runtime::{
-    JobId, Run as CoworkRun, RunId, RunManager, RunManagerConfig, RunMode, RunState,
+    Job as CoworkJob, JobId, JobState, Run as CoworkRun, RunId, RunManager, RunManagerConfig,
+    RunMode, RunState,
 };
 use allternit_cowork_scheduler::{api::ApiState as SchedulerApiState, Scheduler};
 use tokio::sync::RwLock;
@@ -346,9 +347,20 @@ async fn main() {
 
     // Initialize cowork runtime run manager (Rails-backed DAG/WIH lifecycle)
     let cowork_run_manager =
-        initialize_cowork_run_manager(&data_dir, rails.clone(), &app_config).await;
+        initialize_cowork_run_manager(
+            &data_dir,
+            rails.clone(),
+            &app_config,
+            Some(db.path().to_path_buf()),
+        )
+        .await;
     if let Some(ref manager) = cowork_run_manager {
+        // §8.20 recovery on restart: expire leases that died during downtime
+        // (server clock decides), then rehydrate runs and jobs so no queued
+        // or leased work is silently lost.
+        expire_downtime_leases(&db).await;
         load_persisted_cowork_runs(&db, manager).await;
+        load_persisted_cowork_jobs(&db, manager).await;
     }
 
     // Initialize office runtime state (load from disk or start empty)
@@ -681,6 +693,7 @@ async fn main() {
         .merge(cowork_router())
         .merge(cowork_preferences_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
+        .merge(allternit_api::rails::fabric_transport_routes::fabric_transport_routes())
         .merge(agent_router())
         .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
@@ -784,6 +797,12 @@ async fn main() {
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(allternit_api::content_artifact_routes::content_artifact_router())
+        .merge(allternit_api::content_artifact_publish::content_artifact_publish_router())
+        .merge(allternit_api::console_announcement_routes::console_announcement_router())
+        // Analytics on the /api/v1 surface too — the gizzi-code telemetry
+        // client and admin console call /api/v1/analytics/* (the historical
+        // /api mount below stays for backward compatibility).
+        .merge(analytics_router())
         .merge(conversation_router())
         .merge(office_router())
         .merge(office_cli_router())
@@ -1118,10 +1137,14 @@ async fn initialize_cowork_background(
 }
 
 /// Initialize the cowork runtime run manager backed by Rails DAGs/WIHs.
+///
+/// `store_path` points at the canonical SQLite store; when present the
+/// RunManager runs the A:// lease-expiry sweeper against it (lock 1/3).
 async fn initialize_cowork_run_manager(
     data_dir: &std::path::Path,
     rails: allternit_api::rails::RailsState,
     app_config: &allternit_api::config::AppConfig,
+    store_path: Option<std::path::PathBuf>,
 ) -> Option<Arc<RunManager>> {
     let runtime_dir = data_dir.join("cowork-runtime");
     if let Err(e) = std::fs::create_dir_all(&runtime_dir) {
@@ -1131,12 +1154,23 @@ async fn initialize_cowork_run_manager(
     let rails_url = app_config.rails_url();
     let workspace_id = app_config.rails_workspace_id();
 
+    let lease_duration_secs = std::env::var("ALLTERNIT_FABRIC_TRANSPORT_LEASE_SECS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(60);
+    let lease_sweep_interval_secs = std::env::var("ALLTERNIT_FABRIC_TRANSPORT_SWEEP_SECS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5);
+
     let config = RunManagerConfig {
         data_dir: runtime_dir,
         rails_base_url: rails_url,
         attachment_timeout_secs: 300,
-        lease_duration_secs: 60,
+        lease_duration_secs,
         max_checkpoint_age_hours: 24,
+        store_path,
+        lease_sweep_interval_secs,
     };
 
     let rails_client = create_local_rails_client(rails, workspace_id);
@@ -1259,6 +1293,149 @@ async fn load_persisted_cowork_runs(db: &allternit_api::db::DbHandle, manager: &
     }
 
     info!("Loaded persisted cowork runs into run manager");
+}
+
+/// Expire leases that died while the server was down (§8.20). Server clock is
+/// authoritative: any lease whose `lease_expires_at` is in the past gets the
+/// same requeue/dead-letter recovery policy the sweeper applies at runtime.
+async fn expire_downtime_leases(db: &allternit_api::db::DbHandle) {
+    let path = db.path().to_path_buf();
+    let result = tokio::task::spawn_blocking(move || {
+        let mut conn = allternit_cowork_runtime::sqlite_store::open_store(&path)?;
+        allternit_cowork_runtime::sqlite_store::expire_leases(&mut conn, chrono::Utc::now())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(actions)) => {
+            for action in actions {
+                info!(
+                    job_id = %action.job_id,
+                    lease_generation = action.lease_generation,
+                    outcome = %action.outcome,
+                    "Downtime lease expiry applied at boot"
+                );
+            }
+        }
+        Ok(Err(e)) => warn!("Downtime lease expiry failed at boot: {e}"),
+        Err(e) => warn!("Downtime lease expiry task failed at boot: {e}"),
+    }
+}
+
+/// Load previously persisted cowork jobs (all states — queued and leased) from
+/// SQLite into the runtime manager, so work present before a restart remains
+/// visible to fabric transport and the in-memory mirror.
+async fn load_persisted_cowork_jobs(db: &allternit_api::db::DbHandle, manager: &Arc<RunManager>) {
+    let conn = match db.connect() {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to connect to DB to load cowork jobs: {e}");
+            return;
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT id, run_id, dag_node_id, job_type, priority, state, lease_owner,
+                lease_id, lease_generation, required_capabilities,
+                retry_count, max_retries, timeout_sec, payload,
+                created_at, updated_at, started_at, completed_at, lease_expires_at
+         FROM cowork_jobs"
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            warn!("Failed to prepare cowork jobs load query: {e}");
+            return;
+        }
+    };
+
+    let rows = match stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, String>(3)?,
+            row.get::<_, i32>(4)?,
+            row.get::<_, String>(5)?,
+            row.get::<_, Option<String>>(6)?,
+            row.get::<_, Option<String>>(7)?,
+            row.get::<_, i64>(8)?,
+            row.get::<_, String>(9)?,
+            row.get::<_, i32>(10)?,
+            row.get::<_, i32>(11)?,
+            row.get::<_, i32>(12)?,
+            row.get::<_, String>(13)?,
+            row.get::<_, String>(14)?,
+            row.get::<_, String>(15)?,
+            row.get::<_, Option<String>>(16)?,
+            row.get::<_, Option<String>>(17)?,
+            row.get::<_, Option<String>>(18)?,
+        ))
+    }) {
+        Ok(iter) => iter.filter_map(|r| r.ok()).collect::<Vec<_>>(),
+        Err(e) => {
+            warn!("Failed to load persisted cowork jobs: {e}");
+            return;
+        }
+    };
+
+    for (
+        id,
+        run_id,
+        dag_node_id,
+        job_type,
+        priority,
+        state_str,
+        lease_owner,
+        lease_id,
+        lease_generation,
+        required_capabilities,
+        retry_count,
+        max_retries,
+        timeout_sec,
+        payload,
+        created_at,
+        updated_at,
+        started_at,
+        completed_at,
+        lease_expires_at,
+    ) in rows
+    {
+        let Ok(job_uuid) = uuid::Uuid::parse_str(&id) else { continue };
+        let Ok(run_uuid) = uuid::Uuid::parse_str(&run_id) else { continue };
+        let parse = |s: &str| {
+            chrono::DateTime::parse_from_rfc3339(s)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(|_| chrono::Utc::now())
+        };
+        let job = CoworkJob {
+            id: JobId(job_uuid),
+            run_id: RunId(run_uuid),
+            dag_node_id,
+            job_type,
+            priority,
+            state: state_str.parse().unwrap_or(JobState::Queued),
+            lease_owner,
+            lease_id,
+            lease_generation,
+            required_capabilities: serde_json::from_str(&required_capabilities)
+                .unwrap_or_default(),
+            lease_expires_at: lease_expires_at.as_deref().map(|s| parse(s)),
+            retry_count,
+            max_retries,
+            timeout_sec,
+            payload: serde_json::from_str(&payload).unwrap_or(serde_json::json!({})),
+            created_at: parse(&created_at),
+            updated_at: parse(&updated_at),
+            started_at: started_at.as_deref().map(|s| parse(s)),
+            completed_at: completed_at.as_deref().map(|s| parse(s)),
+        };
+
+        if let Err(e) = manager.load_job(job).await {
+            warn!("Failed to load job {id} into run manager: {e}");
+        }
+    }
+
+    info!("Loaded persisted cowork jobs into run manager");
 }
 
 /// Initialize the cowork task scheduler backed by SQLite.

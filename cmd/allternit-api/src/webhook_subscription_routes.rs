@@ -928,7 +928,10 @@ mod tests {
 
     async fn test_app_state(temp: &FsPath) -> Arc<AppState> {
         let config = crate::AppConfig {
-            company: Default::default(),
+            company: crate::config::CompanyConfig {
+                internal_service_token: Some("webhook-test-internal-token".to_string()),
+                ..Default::default()
+            },
             user: Default::default(),
         };
         let db = crate::db::DbHandle::new(temp.join("test.db")).expect("test db");
@@ -2149,14 +2152,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn credit_purchase_emits_billing_webhook() {
+    async fn stripe_webhook_grant_emits_billing_webhook() {
         let temp = temp_dir("billing-emitter");
         let state = test_app_state(&temp).await;
         let app = crate::fabric_credits_routes::router().with_state(state.clone());
         let org = "org-billing-emitter";
         let secret = "billing-secret";
 
-        // Seed an owner (rbac is_org_admin reads organization_members).
+        // Seed the org the internal (cloud-api Stripe webhook) grant targets.
         let conn = state.db.connect().unwrap();
         conn.execute(
             "INSERT OR IGNORE INTO organizations (id, name) VALUES (?1, 'Test Org')",
@@ -2180,18 +2183,24 @@ mod tests {
         let url = start_receiver(received.clone()).await;
         insert_subscription(&state, org, &url, &[events::BILLING_CREDIT_PURCHASE], secret);
 
+        // The cloud-api webhook path: internal service token + synthetic
+        // internal identity, org and Stripe-event idempotency key in the body.
+        let mut internal_user = org_user("user-a", org);
+        internal_user.user_id = crate::auth::INTERNAL_SERVICE_USER_ID.to_string();
+        internal_user.organization_id = None;
         let resp = app
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/credits/purchase")
+                    .uri("/admin/credits/grant")
                     .header("content-type", "application/json")
-                    .extension(org_user("user-a", org))
+                    .header("x-allternit-internal-token", "webhook-test-internal-token")
+                    .extension(internal_user)
                     .body(json_body(&json!({
                         "amount_cents": 2500,
-                        "method": "stripe",
-                        "reference_id": "pi_test",
-                        "idempotency_key": "idem-1"
+                        "organization_id": org,
+                        "idempotency_key": "stripe-evt_emit_1",
+                        "reference_id": "evt_emit_1"
                     })))
                     .unwrap(),
             )

@@ -157,6 +157,51 @@ export async function deleteContentArtifact(id: string): Promise<void> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Hosted publish (docs/design/artifacts-api.md §6 publish tier, Phase 3)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ContentArtifactPublishStatus {
+  published: boolean;
+  artifactId?: string;
+  /** Snapshot semantics: the immutable version that is live (decision 2). */
+  version?: number;
+  routePath?: string;
+  url?: string;
+  deploymentId?: string;
+  deploymentUrl?: string;
+  publisher?: string;
+  publishedAt?: string;
+  unpublishedAt?: string;
+}
+
+/** Publish a version snapshot (default: current version) to the shared Pages project. */
+export async function publishContentArtifact(
+  id: string,
+  options: { version?: number } = {},
+): Promise<ContentArtifactPublishStatus> {
+  return (await api.post(
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}/publish`,
+    options.version != null ? { version: options.version } : {},
+  )) as ContentArtifactPublishStatus;
+}
+
+/** Unpublish: removes the route only; the deployment stays immutable (decision 3). */
+export async function unpublishContentArtifact(id: string): Promise<{ ok?: boolean; routePath?: string }> {
+  return (await api.delete(
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}/publish`,
+  )) as { ok?: boolean; routePath?: string };
+}
+
+/** Publish status for one artifact. */
+export async function getContentArtifactPublishStatus(
+  id: string,
+): Promise<ContentArtifactPublishStatus> {
+  return (await api.get(
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}/publish`,
+  )) as ContentArtifactPublishStatus;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Chat persist step (docs/design/artifacts-api.md §5 "Chat")
 // ═══════════════════════════════════════════════════════════════════════════
 

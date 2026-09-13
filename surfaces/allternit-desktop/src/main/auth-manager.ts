@@ -193,6 +193,8 @@ export class DesktopAuthManager {
   private relaySocket: any = null;
   private relayReconnectTimer: NodeJS.Timeout | null = null;
   private relayReconnectDelayMs = 1_000;
+  private relayWatchdogTimer: NodeJS.Timeout | null = null;
+  private relayLastMessageAt = 0;
   private relayLocalSockets = new Map<string, WebSocket>();
   private refreshInFlight: Promise<void> | null = null;
   private readonly identityPath = path.join(app.getPath('userData'), 'auth', 'runtime-identity.json');
@@ -1188,6 +1190,7 @@ export class DesktopAuthManager {
       clearTimeout(this.relayReconnectTimer);
       this.relayReconnectTimer = null;
     }
+    this.stopRelayWatchdog();
     if (this.relaySocket) {
       this.relaySocket.close();
       this.relaySocket = null;
@@ -1202,6 +1205,8 @@ export class DesktopAuthManager {
     relayUrl.protocol = relayUrl.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(relayUrl.toString());
     this.relaySocket = socket;
+    this.relayLastMessageAt = Date.now();
+    this.startRelayWatchdog();
 
     socket.addEventListener('open', () => {
       if (!this.session || this.session.runtimeId !== runtimeId) return socket.close();
@@ -1212,6 +1217,7 @@ export class DesktopAuthManager {
       }));
     });
     socket.addEventListener('message', (event: { data: unknown }) => {
+      this.relayLastMessageAt = Date.now();
       const text = typeof event.data === 'string' ? event.data : Buffer.from(event.data as ArrayBuffer).toString('utf8');
       let message: any;
       try { message = JSON.parse(text); } catch { return; }
@@ -1232,6 +1238,7 @@ export class DesktopAuthManager {
     });
     socket.addEventListener('close', () => {
       if (this.relaySocket === socket) this.relaySocket = null;
+      this.stopRelayWatchdog();
       for (const local of this.relayLocalSockets.values()) local.close(1012, 'Relay disconnected');
       this.relayLocalSockets.clear();
       if (this.session) this.scheduleRelayReconnect();
@@ -1239,6 +1246,35 @@ export class DesktopAuthManager {
     socket.addEventListener('error', (error: unknown) => {
       log.warn('[Auth] Runtime relay connection error:', error);
     });
+  }
+
+  /**
+   * Heartbeat watchdog for the runtime relay socket. The cloud relay pings
+   * every 25s; a silently dead connection (laptop sleep without a TCP reset,
+   * network change, NAT timeout) never fires `close`, so without this the
+   * node could stay dark until an app restart. Closing the stale socket
+   * triggers the `close` handler, which schedules the normal reconnect.
+   */
+  private startRelayWatchdog(): void {
+    this.stopRelayWatchdog();
+    this.relayWatchdogTimer = setInterval(() => {
+      if (!this.relaySocket) {
+        this.stopRelayWatchdog();
+        return;
+      }
+      if (Date.now() - this.relayLastMessageAt > 75_000) {
+        log.warn('[Auth] Runtime relay heartbeat timed out; reconnecting');
+        this.relaySocket.close(4000, 'Relay heartbeat timeout');
+      }
+    }, 30_000);
+    this.relayWatchdogTimer.unref?.();
+  }
+
+  private stopRelayWatchdog(): void {
+    if (this.relayWatchdogTimer) {
+      clearInterval(this.relayWatchdogTimer);
+      this.relayWatchdogTimer = null;
+    }
   }
 
   private async handleRelayRequest(socket: any, message: any): Promise<void> {

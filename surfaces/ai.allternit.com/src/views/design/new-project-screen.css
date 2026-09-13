@@ -105,3 +105,15 @@
 .ad-gallery-card__meta b { font-size: 10px; }
 .ad-gallery-card__meta small { color: var(--launch-muted); font-size: 8px; }
 @media (max-width: 760px) { .ad-launch__main { width: calc(100% - 24px); padding-top: 34px; }.ad-templates > div { grid-template-columns: repeat(2,1fr); }.ad-library-systems { grid-template-columns: repeat(2,1fr); }.ad-toolbar-button { min-width: 0; }.ad-toolbar-button small { display: none; }.ad-composer__agent { display: none; }.ad-gallery__masonry { columns: 2; } }
+
+/* ── Gallery publish actions (A:// Artifacts Phase 3, §6 publish tier) ── */
+.ad-gallery-card-wrap { break-inside: avoid; }
+.ad-gallery-card-wrap .ad-gallery-card { margin-bottom: 0; }
+.ad-gallery-publish { display: flex; align-items: center; gap: 8px; padding: 4px 10px 8px; font-size: 9px; }
+.ad-gallery-publish__status { color: var(--launch-accent); }
+.ad-gallery-publish__link { color: var(--launch-accent); text-decoration: none; }
+.ad-gallery-publish__link:hover { text-decoration: underline; }
+.ad-gallery-publish__btn { padding: 2px 8px; border: 1px solid var(--launch-border); border-radius: 6px; background: transparent; color: var(--launch-muted); font-size: 9px; cursor: pointer; }
+.ad-gallery-publish__btn:hover:not(:disabled) { border-color: var(--launch-accent); color: var(--launch-text); }
+.ad-gallery-publish__btn:disabled { opacity: 0.5; cursor: default; }
+.ad-gallery-publish__notice { color: var(--launch-muted); }
