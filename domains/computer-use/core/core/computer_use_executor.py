@@ -161,9 +161,20 @@ class ComputerUseExecutor:
         # before the whitelist check (e.g. the model's `click` plan becomes
         # the adapters' `left_click`). The envelope reports the action that
         # actually executed.
+        #
+        # The integration caller (planning_loop._execute_action) builds a
+        # plain ActionRequest-like object, not a dataclass, so only use
+        # dataclasses.replace on real dataclasses; copy anything else
+        # (shallow copy — the caller may still hold the original for its
+        # step record).
         native_type = PLAN_ACTION_MAP.get(action.action_type, action.action_type)
         if native_type != action.action_type:
-            action = dataclasses.replace(action, action_type=native_type)
+            if dataclasses.is_dataclass(action):
+                action = dataclasses.replace(action, action_type=native_type)
+            else:
+                import copy
+                action = copy.copy(action)
+                action.action_type = native_type
 
         # Plan-vocabulary members whose mapping is the identity (e.g. hover)
         # are accepted as-is; adapters that can't handle them report
