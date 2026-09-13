@@ -43,6 +43,11 @@ import {
 import { useBotApprovalBridge } from "@/lib/bots/use-bot-approval-bridge";
 import type { BotChatTranscript } from "@/components/bot-chat/types";
 import {
+  StreamMetricsTracker,
+  formatStreamMetrics,
+  type StreamMetrics,
+} from "@/components/bot-chat/stream-metrics";
+import {
   routinesToComposerProps,
   transcriptToShareText,
 } from "@/lib/bots/bot-chat-composer";
@@ -63,9 +68,11 @@ import {
 import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
 import {
   botSessionStatus,
+  nextRoutineLabel,
   splitCompactMessages,
   summarizeOlderMessages,
 } from "@/lib/bots/bot-session-chrome";
+import { useBotRoutineStore } from "@/lib/bots/bot-routine.service";
 
 export interface BotChatSessionViewProps {
   sessionId?: string;
@@ -239,6 +246,7 @@ function BotChatSessionContent({
   const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const [computerOpen, setComputerOpen] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [streamMetrics, setStreamMetrics] = useState<StreamMetrics | null>(null);
   const [notifyMode, setNotifyMode] = useState<BotThreadNotifyMode>(() =>
     getBotThreadNotifyMode(session?.id)
   );
@@ -266,6 +274,7 @@ function BotChatSessionContent({
       if (!text.trim() || isStreaming) return;
 
       setSendError(null);
+      setStreamMetrics(null);
       applyFold(userSendEvent(text.trim()));
       setSendCount((count) => count + 1);
 
@@ -302,10 +311,36 @@ function BotChatSessionContent({
 
       try {
         const turnId = `a-${Date.now()}`;
+        // Per-turn stream metrics (TTFT + windowed tok/s): derived from the
+        // live deltas only, cleared when the turn settles.
+        const metrics = new StreamMetricsTracker();
+        metrics.markSent();
+        const streamCallbacks = streamCallbacksToEvents(applyFold, { turnId });
         await sendMessageStream(sid, {
           text,
           modelId,
-          callbacks: streamCallbacksToEvents(applyFold, { turnId }),
+          callbacks: {
+            ...streamCallbacks,
+            onChunk: (content) => {
+              metrics.noteTextDelta(content);
+              setStreamMetrics(metrics.snapshot());
+              streamCallbacks.onChunk?.(content);
+            },
+            onDone: (usage) => {
+              // Real output tokens from the finish frame replace the chars/4
+              // estimate for the final rate. TTFT folds away with the turn;
+              // the final tok/s stays in the status line until the next send.
+              if (usage && typeof usage.outputTokens === "number" && usage.outputTokens > 0) {
+                metrics.noteUsage(usage.outputTokens);
+              }
+              setStreamMetrics({ ...metrics.snapshot(), ttftMs: null });
+              streamCallbacks.onDone?.();
+            },
+            onError: (error) => {
+              setStreamMetrics(null);
+              streamCallbacks.onError?.(error);
+            },
+          },
         });
       } catch (err) {
         // Never leave this as an unhandled rejection — the message silently
@@ -423,6 +458,13 @@ function BotChatSessionContent({
       }),
     [botName, isStreaming, sendError, computerOpen]
   );
+  const metricsLabel = streamMetrics ? formatStreamMetrics(streamMetrics) : "";
+  // Nearest enabled routine for this bot (client-local schedule store; no
+  // endpoint needed). Recomputes when the routine store changes.
+  const botRoutines = useBotRoutineStore((s) =>
+    botId ? s.getRoutinesForBot(botId) : [],
+  );
+  const routineLabel = useMemo(() => nextRoutineLabel(botRoutines), [botRoutines]);
   const statusDot =
     sessionStatus.tone === "running"
       ? "var(--status-warning)"
@@ -486,6 +528,8 @@ function BotChatSessionContent({
             </div>
             <p className="truncate text-xs text-[var(--text-secondary)]">
               {sessionStatus.label}
+              {metricsLabel ? ` · ${metricsLabel}` : ""}
+              {routineLabel ? ` · ${routineLabel}` : ""}
               {botTagline ? ` · ${botTagline}` : ""}
             </p>
           </div>

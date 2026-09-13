@@ -32,6 +32,41 @@ export function botSessionStatus(opts: {
   return { label: "session open", tone: "idle" };
 }
 
+/** Minimal routine shape the status line needs (BotRoutine satisfies it). */
+export interface RoutineLike {
+  title: string;
+  enabled: boolean;
+  /** Epoch ms of the next scheduled run. */
+  nextRunAt: number;
+}
+
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+function formatRoutineDelta(ms: number): string {
+  if (ms < MINUTE_MS) return "in <1m";
+  if (ms < HOUR_MS) return `in ${Math.round(ms / MINUTE_MS)}m`;
+  if (ms < DAY_MS) return `in ${(ms / HOUR_MS).toFixed(1)}h`;
+  return `in ${Math.round(ms / DAY_MS)}d`;
+}
+
+/**
+ * Status-line label for the bot's nearest enabled routine, or null when the
+ * bot has none. "routine \"x\" due" once the run is overdue; otherwise
+ * "next routine \"x\" in 2h". Pure; `now` is injectable for tests.
+ */
+export function nextRoutineLabel(routines: RoutineLike[], now = Date.now()): string | null {
+  const next = routines
+    .filter((r) => r.enabled && Number.isFinite(r.nextRunAt))
+    .sort((a, b) => a.nextRunAt - b.nextRunAt)[0];
+  if (!next) return null;
+  const delta = next.nextRunAt - now;
+  return delta <= 0
+    ? `routine "${next.title}" due`
+    : `next routine "${next.title}" ${formatRoutineDelta(delta)}`;
+}
+
 export function messageDayKey(timestamp: string | number | undefined, now = Date.now()): string {
   if (timestamp == null) return "unknown";
   const t = typeof timestamp === "string" ? new Date(timestamp).getTime() : timestamp;

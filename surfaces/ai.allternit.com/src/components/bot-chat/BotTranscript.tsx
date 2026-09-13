@@ -28,6 +28,8 @@ import { TypingDots } from "./TypingDots";
 import { WorkingChamber } from "./WorkingChamber";
 import { ToolReceiptChip } from "./ToolReceiptChip";
 import { ToolRunCapsule } from "./ToolRunCapsule";
+import { ActivityLine } from "./ActivityLine";
+import { SystemLine } from "./SystemLine";
 import { GapTimestamp } from "./GapTimestamp";
 import { ErrorRow } from "./ErrorRow";
 import { ApprovalCard } from "./ApprovalCard";
@@ -49,6 +51,8 @@ function rowChars(row: TranscriptRow): number {
       return row.approval.title.length;
     case "timestamp-gap":
       return 0;
+    case "system":
+      return row.text.length;
     case "error":
       return row.text.length;
   }
@@ -80,6 +84,8 @@ function TranscriptRowView({
       return <ToolRunCapsule run={row.run} />;
     case "timestamp-gap":
       return <GapTimestamp from={row.from} to={row.to} />;
+    case "system":
+      return <SystemLine text={row.text} />;
     case "error":
       return <ErrorRow text={row.text} />;
     case "approval":
@@ -187,6 +193,7 @@ export function BotTranscript({
           <WorkingChamber thinking={turn.thinkingBuffer} rung={rung} />
         )}
         {turn && rung === "typing" && <TypingDots />}
+        {turn && turn.activity && <ActivityLine activity={turn.activity} />}
         {turn && rung === "streaming" && (
           <>
             <StreamingBubble text={turn.partialText} status="streaming" />

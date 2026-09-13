@@ -46,6 +46,8 @@ const {
   botRoutineLabel,
   botRoutinePrefix,
   parseBotRoutineJobName,
+  isRoutineTurnText,
+  ROUTINE_MARKER_PREFIX,
   addBotRoutine,
   listBotRoutines,
   removeBotRoutine,
@@ -125,6 +127,13 @@ describe("[bot:<name>] namespace", () => {
   test("botRoutineLabel strips the namespace, falls back to the full name", () => {
     expect(botRoutineLabel("[bot:alice] morning check")).toBe("morning check")
     expect(botRoutineLabel("plain job")).toBe("plain job")
+  })
+
+  test("isRoutineTurnText detects the delivery marker", () => {
+    expect(isRoutineTurnText(`${ROUTINE_MARKER_PREFIX}morning check] sweep the inbox`)).toBe(true)
+    expect(isRoutineTurnText("[routine: ] edge")).toBe(true)
+    expect(isRoutineTurnText("hello there")).toBe(false)
+    expect(isRoutineTurnText(" [routine: indented] not a marker")).toBe(false)
   })
 })
 

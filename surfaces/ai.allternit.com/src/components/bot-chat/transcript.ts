@@ -80,6 +80,13 @@ export type TranscriptEvent =
       artifact: InlineArtifact;
       createdAt?: number;
     }
+  | {
+      /** Non-interactive system divider (e.g. context compaction notice). */
+      type: "system.notice";
+      id: string;
+      text: string;
+      createdAt?: number;
+    }
   | { type: "turn.completed"; id: string; createdAt?: number }
   | { type: "error"; id: string; text: string; createdAt?: number };
 
@@ -369,6 +376,7 @@ function openTurn(id: string, startedAt: number, rung: BotChatRung): ActiveTurn 
     thinkingBuffer: "",
     partialText: "",
     pendingToolCalls: [],
+    activity: null,
     startedAt,
   };
 }
@@ -498,6 +506,13 @@ export function applyEvent(
           ? {
               ...turn,
               pendingToolCalls: [...turn.pendingToolCalls, callWithTs],
+              activity: {
+                callId: callWithTs.id,
+                tool: callWithTs.tool,
+                inputSummary: callWithTs.inputSummary,
+                status: "running",
+                startedAt: ts,
+              },
             }
           : turn,
       };
@@ -513,6 +528,7 @@ export function applyEvent(
         createdAt: event.createdAt ?? call.createdAt,
       }));
       const turn = transcript.activeTurn;
+      const status = event.status ?? "success";
       return {
         rows: updated,
         activeTurn: turn
@@ -524,11 +540,17 @@ export function applyEvent(
                       ...c,
                       outputSummary: event.outputSummary,
                       durationMs: event.durationMs ?? c.durationMs,
-                      status: event.status ?? "success",
+                      status,
                       error: event.error,
                     }
                   : c,
               ),
+              activity:
+                // A result for an older call must not overwrite the status of
+                // a newer one the bot is already running.
+                turn.activity?.callId === event.id
+                  ? { ...turn.activity, status }
+                  : turn.activity,
             }
           : turn,
       };
@@ -559,12 +581,15 @@ export function applyEvent(
       return { rows, activeTurn: transcript.activeTurn };
     }
 
-    case "artifact.created": {
+    case "artifact.created":
+    case "system.notice": {
       const ts = event.createdAt ?? lastContentTs(transcript.rows) ?? 0;
       return {
         rows: [
           ...withGapRow(transcript.rows, ts),
-          { kind: "artifact", id: event.id, createdAt: ts, artifact: event.artifact },
+          event.type === "artifact.created"
+            ? { kind: "artifact", id: event.id, createdAt: ts, artifact: event.artifact }
+            : { kind: "system", id: event.id, createdAt: ts, text: event.text },
         ],
         activeTurn: transcript.activeTurn,
       };

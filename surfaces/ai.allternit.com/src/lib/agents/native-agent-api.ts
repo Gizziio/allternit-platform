@@ -721,8 +721,31 @@ export interface ChatStreamCallbacks {
     error: string;
   }) => void;
   onArtifact?: (artifact: ArtifactUIPart) => void;
+  /** Context compaction ran mid-turn (server `context_compacted` frame). */
+  onCompaction?: () => void;
   onError?: (error: Error) => void;
-  onDone?: () => void;
+  /**
+   * Terminal stream event. Carries real token usage when the finish frame
+   * ships it (gizzi agent-compat / Rust bridge); absent otherwise.
+   */
+  onDone?: (usage?: ChatFinishUsage) => void;
+}
+
+/** Token usage attached to a finish frame by the chat bridges. */
+export interface ChatFinishUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+function parseFinishUsage(parsed: Record<string, unknown>): ChatFinishUsage | undefined {
+  const usage = parsed.usage;
+  if (!usage || typeof usage !== "object") return undefined;
+  const rec = usage as Record<string, unknown>;
+  const inputTokens = typeof rec.inputTokens === "number" ? rec.inputTokens : undefined;
+  const outputTokens = typeof rec.outputTokens === "number" ? rec.outputTokens : undefined;
+  return inputTokens === undefined && outputTokens === undefined
+    ? undefined
+    : { inputTokens, outputTokens };
 }
 
 export const chatApi = {
@@ -781,10 +804,10 @@ export const chatApi = {
     const decoder = new TextDecoder();
     let buffer = "";
     let sawDone = false;
-    const markDone = () => {
+    const markDone = (usage?: ChatFinishUsage) => {
       if (sawDone) return;
       sawDone = true;
-      callbacks.onDone?.();
+      callbacks.onDone?.(usage);
     };
 
     try {
@@ -903,7 +926,9 @@ export const chatApi = {
                 error: String(parsed.error ?? "Tool execution failed"),
               });
             } else if (parsed.type === "finish" || parsed.type === "message_stop") {
-              markDone();
+              markDone(parseFinishUsage(parsed));
+            } else if (parsed.type === "context_compacted") {
+              callbacks.onCompaction?.();
             } else if (parsed.type === "error") {
               callbacks.onError?.(new Error((parsed.error as string) ?? "Stream error"));
             } else if (parsed.type === "artifact" || parsed.type === "artifact.created" || parsed.type === "artifact-created") {
