@@ -70,14 +70,7 @@ export function SettledBubble({ role, text, className }: SettledBubbleProps) {
   return (
     <div className={cn("flex w-full flex-col justify-start gap-2", className)}>
       {textContent ? (
-        <div
-          className={cn(
-            "rounded-2xl rounded-bl-sm px-4 py-3 text-sm leading-relaxed",
-            artifacts.length > 0
-              ? "max-w-[95%] bg-[var(--surface-panel)] text-[var(--text-primary)] border border-[var(--border-subtle)]"
-              : "max-w-[85%] bg-[var(--accent-primary)] text-white"
-          )}
-        >
+        <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3 text-sm leading-relaxed text-[var(--text-primary)]">
           <Markdown>{textContent}</Markdown>
         </div>
       ) : null}
