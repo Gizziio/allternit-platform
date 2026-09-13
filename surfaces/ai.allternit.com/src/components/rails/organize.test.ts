@@ -1,0 +1,183 @@
+import { describe, expect, it } from 'vitest';
+import { organizeDagNodes, selectDags, type OrganizedDoneRow, type OrganizedNodeRow } from './organize';
+import type { RailsDagNode, RailsDagsDto } from '@/lib/rails/use-rails-dags';
+
+function node(partial: Partial<RailsDagNode> & { node_id: string }): RailsDagNode {
+  return {
+    parent_node_id: null,
+    title: partial.node_id,
+    status: 'NEW',
+    ready: false,
+    assignee: null,
+    current_wih_id: null,
+    ...partial,
+  };
+}
+
+function dto(dags: RailsDagsDto['dags']): RailsDagsDto {
+  return { dags, active_wihs: [] };
+}
+
+describe('organizeDagNodes', () => {
+  it('orders children frontier-first: READY → RUNNING → FAILED → NEW → DONE, title within status', () => {
+    const input = dto([
+      {
+        dag_id: 'dag1',
+        root_title: 'Root',
+        nodes: [
+          node({ node_id: 'root' }),
+          node({ node_id: 'b-new', parent_node_id: 'root', status: 'NEW' }),
+          node({ node_id: 'a-ready', parent_node_id: 'root', status: 'READY' }),
+          node({ node_id: 'z-ready', parent_node_id: 'root', status: 'READY' }),
+          node({ node_id: 'c-done', parent_node_id: 'root', status: 'DONE' }),
+          node({ node_id: 'd-failed', parent_node_id: 'root', status: 'FAILED' }),
+          node({ node_id: 'e-running', parent_node_id: 'root', status: 'RUNNING' }),
+        ],
+        ready_count: 2,
+        done_count: 1,
+      },
+    ]);
+    const [out] = organizeDagNodes(input);
+    const ids = out.rows
+      .filter((r): r is OrganizedNodeRow => r.kind === 'node')
+      .map((r) => r.node.node_id);
+    expect(ids).toEqual(['root', 'a-ready', 'z-ready', 'e-running', 'd-failed', 'b-new']);
+  });
+
+  it('treats nodes whose parent is missing (filtered view) as roots', () => {
+    const input = dto([
+      {
+        dag_id: 'dag1',
+        root_title: null,
+        nodes: [
+          node({ node_id: 'orphan', parent_node_id: 'gone', status: 'READY' }),
+          node({ node_id: 'also-ready', status: 'READY' }),
+        ],
+        ready_count: 2,
+        done_count: 0,
+      },
+    ]);
+    const [out] = organizeDagNodes(input);
+    const roots = out.rows.filter(
+      (r): r is OrganizedNodeRow => r.kind === 'node' && r.depth === 1
+    );
+    expect(roots.map((r) => r.node.node_id).sort()).toEqual(['also-ready', 'orphan']);
+  });
+
+  it('caps depth at 3 (deeper nodes flattened to depth 3)', () => {
+    const nodes: RailsDagNode[] = [
+      node({ node_id: 'n1' }),
+      node({ node_id: 'n2', parent_node_id: 'n1', status: 'READY' }),
+      node({ node_id: 'n3', parent_node_id: 'n2', status: 'READY' }),
+      node({ node_id: 'n4', parent_node_id: 'n3', status: 'READY' }),
+      node({ node_id: 'n5', parent_node_id: 'n4', status: 'READY' }),
+    ];
+    const [out] = organizeDagNodes(dto([{ dag_id: 'd', root_title: null, nodes, ready_count: 4, done_count: 0 }]));
+    const depths = Object.fromEntries(
+      out.rows
+        .filter((r): r is OrganizedNodeRow => r.kind === 'node')
+        .map((r) => [r.node.node_id, r.depth])
+    );
+    expect(depths).toEqual({ n1: 1, n2: 2, n3: 3, n4: 3, n5: 3 });
+  });
+
+  it('collapses DONE children into a count row with the done nodes attached', () => {
+    const input = dto([
+      {
+        dag_id: 'dag1',
+        root_title: 'Root',
+        nodes: [
+          node({ node_id: 'root' }),
+          node({ node_id: 'done-a', parent_node_id: 'root', status: 'DONE' }),
+          node({ node_id: 'done-b', parent_node_id: 'root', status: 'DONE' }),
+          node({ node_id: 'open', parent_node_id: 'root', status: 'READY' }),
+        ],
+        ready_count: 1,
+        done_count: 2,
+      },
+    ]);
+    const [out] = organizeDagNodes(input);
+    const doneRows = out.rows.filter((r): r is OrganizedDoneRow => r.kind === 'done');
+    expect(doneRows).toHaveLength(1);
+    expect(doneRows[0].count).toBe(2);
+    expect(doneRows[0].parentKey).toBe('root');
+    expect(doneRows[0].nodes.map((n) => n.node_id).sort()).toEqual(['done-a', 'done-b']);
+    // The open child still renders as a normal row.
+    const open = out.rows.find(
+      (r): r is OrganizedNodeRow => r.kind === 'node' && r.node.node_id === 'open'
+    );
+    expect(open).toBeDefined();
+  });
+
+  it('collapses DONE roots under the __roots__ toggle', () => {
+    const input = dto([
+      {
+        dag_id: 'dag1',
+        root_title: null,
+        nodes: [node({ node_id: 'done-root', status: 'DONE' })],
+        ready_count: 0,
+        done_count: 1,
+      },
+    ]);
+    const [out] = organizeDagNodes(input);
+    expect(out.rows.every((r) => r.kind === 'done')).toBe(true);
+    const doneRow = out.rows[0] as OrganizedDoneRow;
+    expect(doneRow.parentKey).toBe('__roots__');
+    expect(doneRow.count).toBe(1);
+  });
+});
+
+describe('selectDags / maxDags', () => {
+  const dags = [
+    {
+      dag_id: 'stale',
+      root_title: null,
+      nodes: [node({ node_id: 's1', status: 'READY' })],
+      ready_count: 1,
+      done_count: 0,
+    },
+    {
+      dag_id: 'mine-running',
+      root_title: null,
+      nodes: [node({ node_id: 'm1', status: 'RUNNING', assignee: 'web-user' })],
+      ready_count: 0,
+      done_count: 0,
+    },
+    {
+      dag_id: 'rich',
+      root_title: null,
+      nodes: [
+        node({ node_id: 'r1', status: 'READY' }),
+        node({ node_id: 'r2', status: 'READY' }),
+        node({ node_id: 'r3', status: 'READY' }),
+      ],
+      ready_count: 3,
+      done_count: 0,
+    },
+  ];
+
+  it('puts dags with my RUNNING nodes first, then most ready_count', () => {
+    expect(selectDags(dags, 3, 'web-user').map((d) => d.dag_id)).toEqual([
+      'mine-running',
+      'rich',
+      'stale',
+    ]);
+  });
+
+  it('caps client-side at maxDags', () => {
+    const [out] = organizeDagNodes(dto(dags), { agentId: 'web-user', maxDags: 2 });
+    expect(out.dag.dag_id).toBe('mine-running');
+    const all = organizeDagNodes(dto(dags), { agentId: 'web-user', maxDags: 2 });
+    expect(all).toHaveLength(2);
+    expect(all[1].dag.dag_id).toBe('rich');
+  });
+
+  it('ignores RUNNING nodes assigned to other agents', () => {
+    const other = dags.map((d) =>
+      d.dag_id === 'mine-running'
+        ? { ...d, nodes: d.nodes.map((n) => ({ ...n, assignee: 'someone-else' })) }
+        : d
+    );
+    expect(selectDags(other, 1, 'web-user')[0].dag_id).toBe('rich');
+  });
+});
