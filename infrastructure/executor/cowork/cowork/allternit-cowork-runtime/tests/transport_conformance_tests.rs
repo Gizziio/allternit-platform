@@ -118,12 +118,12 @@ async fn setup_with_payload(payload: serde_json::Value) -> Fixture {
     {
         let mut conn = open(&db_path);
         sqlite_store::apply_store_ddl(&mut conn).unwrap();
-        sqlite_store::register_principal(&mut conn, WORKER_A, WORKSPACE, &caps(), "token-a")
+        sqlite_store::register_principal(&mut conn, WORKER_A, WORKSPACE, &caps(), &["worker".to_string()], "token-a")
             .unwrap();
-        sqlite_store::register_principal(&mut conn, WORKER_B, WORKSPACE, &caps(), "token-b")
+        sqlite_store::register_principal(&mut conn, WORKER_B, WORKSPACE, &caps(), &["worker".to_string()], "token-b")
             .unwrap();
         // A principal without shell.exec — must be filtered by eligibility.
-        sqlite_store::register_principal(&mut conn, "a://bot/no-shell", WORKSPACE, &[], "token-c")
+        sqlite_store::register_principal(&mut conn, "a://bot/no-shell", WORKSPACE, &[], &["worker".to_string()], "token-c")
             .unwrap();
 
         let run_id = uuid::Uuid::new_v4().to_string();
@@ -495,7 +495,7 @@ fn test_concurrent_claims_single_winner() {
     {
         let mut conn = open(&db_path);
         sqlite_store::apply_store_ddl(&mut conn).unwrap();
-        sqlite_store::register_principal(&mut conn, "w", WORKSPACE, &["shell.exec".to_string()], "t")
+        sqlite_store::register_principal(&mut conn, "w", WORKSPACE, &["shell.exec".to_string()], &["worker".to_string()], "t")
             .unwrap();
         conn.execute(
             "INSERT INTO cowork_runs
@@ -776,7 +776,7 @@ async fn test_downtime_expiry_recovers_at_boot() {
     let (run_id, job_id) = {
         let mut conn = open(&db_path);
         sqlite_store::apply_store_ddl(&mut conn).unwrap();
-        sqlite_store::register_principal(&mut conn, WORKER_A, WORKSPACE, &caps(), "token-a")
+        sqlite_store::register_principal(&mut conn, WORKER_A, WORKSPACE, &caps(), &["worker".to_string()], "token-a")
             .unwrap();
         let run_id = uuid::Uuid::new_v4().to_string();
         conn.execute(
@@ -1028,4 +1028,178 @@ async fn test_risk_policy_single_evaluation_path() {
     )
     .expect("policy still auto-approves web.read");
     assert_eq!(still_auto.status, "granted");
+}
+
+/// Gap 1 — default principals: Al and Gizzi are minted per workspace,
+/// idempotently, without credentials; tokens are provisioned exactly once.
+#[tokio::test]
+async fn test_default_principal_seeding_and_token_provisioning() {
+    let fx = setup().await; // fixture creates a ws-allternit run row
+    let mut conn = open(&fx.db_path);
+
+    let first = sqlite_store::seed_default_principals(&mut conn).unwrap();
+    assert!(first.contains(&format!("a://workspace/{WORKSPACE}/principal/al")));
+    assert!(first.contains(&format!("a://workspace/{WORKSPACE}/principal/gizzi")));
+
+    // Idempotent: second pass touches the same rows without duplicating.
+    let second = sqlite_store::seed_default_principals(&mut conn).unwrap();
+    assert_eq!(second.len(), first.len());
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM cowork_principals WHERE id LIKE '%principal/al'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(count, 1, "exactly one Al per workspace");
+
+    // Seeded principals have roles and (for Gizzi) capabilities, no token.
+    let al = conn
+        .query_row(
+            "SELECT roles, token_hash FROM cowork_principals WHERE id = ?1",
+            rusqlite::params![format!("a://workspace/{WORKSPACE}/principal/al")],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?)),
+        )
+        .unwrap();
+    assert!(al.0.contains("orchestrator"));
+    assert!(al.1.is_none(), "minting never carries a credential");
+
+    // Token provisioned exactly once; rotation kills the old token.
+    let gizzi_id = format!("a://workspace/{WORKSPACE}/principal/gizzi");
+    let token1 = sqlite_store::provision_principal_token(&mut conn, &gizzi_id).unwrap();
+    let g = auth(&conn, &token1);
+    assert_eq!(g.id, gizzi_id);
+    assert!(g.roles.contains(&"worker".to_string()));
+    assert!(!g.capabilities.is_empty(), "Gizzi carries its capability set");
+
+    let token2 = sqlite_store::provision_principal_token(&mut conn, &gizzi_id).unwrap();
+    assert_ne!(token1, token2);
+    let old_dead = sqlite_store::authenticate_principal(&conn, &token1);
+    assert!(old_dead.is_err(), "rotated token is dead");
+    auth(&conn, &token2);
+}
+
+/// Gap 3 — delegation chains: cycles and depth are rejected (§8.15), depth
+/// is workspace-configurable (default 4, reducible).
+#[tokio::test]
+async fn test_delegation_chain_cycle_and_depth() {
+    let fx = setup().await;
+    let mut conn = open(&fx.db_path);
+
+    // Valid chain of 4 (at the default limit) passes.
+    let ok_chain: Vec<String> = ["u", "al", "research", "browser"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    sqlite_store::validate_delegation_chain(&conn, WORKSPACE, &ok_chain).unwrap();
+
+    // Depth 5 exceeds the default of 4.
+    let deep: Vec<String> = (0..5).map(|i| format!("p{i}")).collect();
+    let depth_err = sqlite_store::validate_delegation_chain(&conn, WORKSPACE, &deep)
+        .expect_err("depth over limit rejected");
+    assert_eq!(depth_err.code, TransportErrorCode::DelegationDepthExceeded);
+
+    // Cycle A→B→A rejected.
+    let cyc = vec!["a".to_string(), "b".to_string(), "a".to_string()];
+    let cycle_err = sqlite_store::validate_delegation_chain(&conn, WORKSPACE, &cyc)
+        .expect_err("cycle rejected");
+    assert_eq!(cycle_err.code, TransportErrorCode::DelegationCycle);
+
+    // Workspace policy may reduce the limit.
+    use allternit_cowork_runtime::{ApprovalPolicy, RiskRule};
+    let mut policy = ApprovalPolicy::default();
+    policy.rules.push(RiskRule {
+        action_type: None,
+        risk_level: vec![],
+        decision: "require".to_string(),
+        reason: None,
+    });
+    // set depth via a dedicated policy write (column rides along with the policy upsert)
+    conn.execute(
+        "INSERT INTO cowork_approval_policy (workspace, max_delegation_depth)
+         VALUES (?1, 2) ON CONFLICT(workspace) DO UPDATE SET max_delegation_depth = 2",
+        rusqlite::params![WORKSPACE],
+    )
+    .unwrap();
+    let three: Vec<String> = (0..3).map(|i| format!("p{i}")).collect();
+    let reduced = sqlite_store::validate_delegation_chain(&conn, WORKSPACE, &three)
+        .expect_err("reduced workspace limit enforced");
+    assert_eq!(reduced.code, TransportErrorCode::DelegationDepthExceeded);
+    sqlite_store::validate_delegation_chain(&conn, WORKSPACE, &ok_chain[0..2]).unwrap();
+}
+
+/// Gap 4 — canonical intents: idempotent on intent_id (§5), validated
+/// (version, chain), and resolve to a canonical queued run.
+#[tokio::test]
+async fn test_intent_submission_idempotent() {
+    let fx = setup().await;
+    let mut conn = open(&fx.db_path);
+
+    let envelope = allternit_cowork_runtime::IntentEnvelope {
+        version: "a/0.1".to_string(),
+        intent_id: "intent_demo_001".to_string(),
+        workspace: format!("a://workspace/{WORKSPACE}"),
+        initiator: INITIATOR.to_string(),
+        delegator: Some(DELEGATOR.to_string()),
+        target: Some(WORKER_A.to_string()),
+        action: allternit_cowork_runtime::IntentAction {
+            action_type: "shell_steps".to_string(),
+            description: "demo intent".to_string(),
+            payload: Some(serde_json::json!({"steps": ["echo hi"]})),
+        },
+        permissions: vec!["shell.exec".to_string()],
+        compute: None,
+        model: None,
+        approval: None,
+        return_channel: Some(serde_json::json!({"channel": "cowork"})),
+        causation_chain: vec![INITIATOR.to_string(), DELEGATOR.to_string(), WORKER_A.to_string()],
+    };
+
+    let first = sqlite_store::submit_intent(&mut conn, &envelope).unwrap();
+    assert!(first.created);
+    assert_eq!(job_state(&conn, &fx.job_id), "queued", "pre-existing job untouched");
+
+    // Same intent_id → same canonical run, created=false (§5 idempotency).
+    let replay = sqlite_store::submit_intent(&mut conn, &envelope).unwrap();
+    assert!(!replay.created);
+    assert_eq!(replay.run_id, first.run_id);
+
+    // The run row carries the attribution triple and the chain.
+    let run: (String, Option<String>, String) = conn
+        .query_row(
+            "SELECT state, delegator, causation_chain FROM cowork_runs WHERE id = ?1",
+            rusqlite::params![first.run_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(run.0, "queued", "§8.2 honesty: intents queue, leases make running");
+    assert_eq!(run.1.as_deref(), Some(DELEGATOR));
+    assert_eq!(
+        serde_json::from_str::<Vec<String>>(&run.2).unwrap(),
+        vec![INITIATOR.to_string(), DELEGATOR.to_string(), WORKER_A.to_string()]
+    );
+
+    // Observe path round-trips the envelope.
+    let view = sqlite_store::get_intent(&conn, "intent_demo_001").unwrap().unwrap();
+    assert_eq!(view["run_id"], first.run_id);
+    assert_eq!(view["envelope"]["action"]["action_type"], "shell_steps");
+
+    // intent.accepted event is attributed.
+    let rows = event_rows(&conn, &first.run_id);
+    let accepted = rows.iter().find(|r| r.0 == "intent.accepted").unwrap();
+    assert_eq!(accepted.1, INITIATOR);
+    assert_eq!(accepted.2, DELEGATOR);
+    assert_eq!(accepted.3, WORKER_A);
+
+    // Bad version and cyclic chains are rejected.
+    let mut bad_version = envelope.clone();
+    bad_version.intent_id = "intent_demo_002".to_string();
+    bad_version.version = "a/9.9".to_string();
+    assert!(sqlite_store::submit_intent(&mut conn, &bad_version).is_err());
+
+    let mut cyclic = envelope.clone();
+    cyclic.intent_id = "intent_demo_003".to_string();
+    cyclic.causation_chain = vec!["x".to_string(), "y".to_string(), "x".to_string()];
+    let err = sqlite_store::submit_intent(&mut conn, &cyclic).expect_err("cycle rejected");
+    assert_eq!(err.code, TransportErrorCode::DelegationCycle);
 }

@@ -536,6 +536,16 @@ async fn cancel_run(
     Ok(Json(json!({ "cancelled": true })))
 }
 
+fn conn_ws(state: &AppState, run_id: RunId) -> Result<String, ErrorResponse> {
+    let conn = state.db.connect().map_err(db_error)?;
+    conn.query_row(
+        "SELECT workspace_id FROM cowork_runs WHERE id = ?1",
+        rusqlite::params![run_id.to_string()],
+        |row| row.get(0),
+    )
+    .map_err(db_error)
+}
+
 /// Create a job within a run
 #[derive(Debug, Deserialize)]
 pub struct CreateJobRequest {
@@ -546,6 +556,8 @@ pub struct CreateJobRequest {
     pub timeout_sec: i32,
     /// Mandatory capability strings for A:// fabric-transport eligibility (§8.6–8.7)
     pub required_capabilities: Option<Vec<String>>,
+    /// Append-only delegation causation chain (§8.15); validated (cycle/depth).
+    pub causation_chain: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -601,17 +613,32 @@ async fn create_job(
     // claims persisted rows in state 'queued'.
     manager.transition_job_state(job.id, JobState::Queued).await.ok();
 
+    let chain = req.causation_chain.clone().unwrap_or_default();
+    if !chain.is_empty() {
+        let run_ws: String = conn_ws(&state, run_id)?;
+        allternit_cowork_runtime::sqlite_store::validate_delegation_chain(
+            &state.db.connect().map_err(db_error)?,
+            &run_ws,
+            &chain,
+        )
+        .map_err(|e| ErrorResponse {
+            error: format!("{}: {}", e.wire(), e.message),
+            code: e.http_status(),
+        })?;
+    }
     let conn = state.db.connect().map_err(db_error)?;
     persist_job(&conn, &job).map_err(db_error)?;
     conn.execute(
         "UPDATE cowork_jobs SET state = 'queued', required_capabilities = ?1,
             initiator = (SELECT initiator FROM cowork_runs WHERE id = ?2),
-            delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2)
+            delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2),
+            causation_chain = ?4
          WHERE id = ?3",
         rusqlite::params![
             serde_json::to_string(&req.required_capabilities.unwrap_or_default()).unwrap(),
             run_id.to_string(),
             job.id.to_string(),
+            serde_json::to_string(&chain).unwrap(),
         ],
     )
     .map_err(db_error)?;

@@ -362,6 +362,9 @@ async fn main() {
         load_persisted_cowork_runs(&db, manager).await;
         load_persisted_cowork_jobs(&db, manager).await;
     }
+    // §3: every workspace in the store gets the default Al and Gizzi
+    // principals (idempotent; credentials are provisioned separately, once).
+    seed_default_principals(&db).await;
 
     // Initialize office runtime state (load from disk or start empty)
     let office_runtime = Arc::new(tokio::sync::RwLock::new(
@@ -1458,6 +1461,28 @@ async fn load_persisted_cowork_jobs(db: &allternit_api::db::DbHandle, manager: &
     }
 
     info!("Loaded persisted cowork jobs into run manager");
+}
+
+/// Mint default Al/Gizzi principals for every known workspace (idempotent;
+/// never rotates existing credentials).
+async fn seed_default_principals(db: &allternit_api::db::DbHandle) {
+    let result = tokio::task::spawn_blocking({
+        let db = db.clone();
+        move || {
+            let mut conn = allternit_cowork_runtime::sqlite_store::open_store(db.path())?;
+            allternit_cowork_runtime::sqlite_store::seed_default_principals(&mut conn)
+        }
+    })
+    .await;
+    match result {
+        Ok(Ok(ids)) => {
+            if !ids.is_empty() {
+                info!(count = ids.len(), "Seeded default Al/Gizzi principals");
+            }
+        }
+        Ok(Err(e)) => warn!("Default principal seeding failed: {e}"),
+        Err(e) => warn!("Default principal seeding task failed: {e}"),
+    }
 }
 
 /// Initialize the cowork task scheduler backed by SQLite.

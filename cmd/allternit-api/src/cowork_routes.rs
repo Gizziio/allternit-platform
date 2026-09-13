@@ -1697,34 +1697,60 @@ async fn team_execute(
     _headers: HeaderMap,
     Json(body): Json<TeamExecuteBody>,
 ) -> impl IntoResponse {
-    let id = uuid::Uuid::new_v4().to_string();
+    // A:// §5: this endpoint now submits a canonical IntentEnvelope instead
+    // of the dead-end cowork_executions insert (the table was written and
+    // never read). The intent resolves to a real queued run.
+    let intent_id = format!("intent_{}", uuid::Uuid::new_v4());
     let db = state.db.clone();
-    let id2 = id.clone();
     let user_id = user.user_id;
+    let description = body
+        .prompt
+        .clone()
+        .or_else(|| body.command.clone())
+        .unwrap_or_else(|| "team execution".to_string());
+    let envelope = allternit_cowork_runtime::IntentEnvelope {
+        version: "a/0.1".to_string(),
+        intent_id: intent_id.clone(),
+        workspace: "a://workspace/default".to_string(),
+        initiator: user_id.clone(),
+        delegator: None,
+        target: body.agent_id.clone(),
+        action: allternit_cowork_runtime::IntentAction {
+            action_type: "team_execute".to_string(),
+            description,
+            payload: Some(json!({
+                "command": body.command,
+                "prompt": body.prompt,
+            })),
+        },
+        permissions: vec![],
+        compute: None,
+        model: None,
+        approval: None,
+        return_channel: None,
+        causation_chain: body
+            .agent_id
+            .clone()
+            .map(|a| vec![user_id.clone(), a])
+            .unwrap_or_default(),
+    };
 
     let result = tokio::task::spawn_blocking(move || {
-        let conn = db.connect()?;
-        conn.execute(
-            "INSERT INTO cowork_executions (id, user_id, kind, agent_id, command, prompt, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![
-                id2,
-                user_id,
-                "team",
-                body.agent_id,
-                body.command,
-                body.prompt,
-                "queued",
-            ],
-        )?;
-        Ok::<_, rusqlite::Error>(())
+        let mut conn = db.connect()?;
+        allternit_cowork_runtime::sqlite_store::submit_intent(&mut conn, &envelope)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
     })
     .await;
 
     match result {
-        Ok(Ok(())) => (
+        Ok(Ok(submission)) => (
             StatusCode::OK,
-            Json(json!({"execution_id": id, "status": "queued"})),
+            Json(json!({
+                "intent_id": submission.intent_id,
+                "run_id": submission.run_id,
+                "created": submission.created,
+                "status": "queued",
+            })),
         )
             .into_response(),
         Ok(Err(e)) => {
@@ -1760,45 +1786,70 @@ async fn run_agent(
     _headers: HeaderMap,
     Json(body): Json<RunAgentBody>,
 ) -> impl IntoResponse {
-    let id = uuid::Uuid::new_v4().to_string();
+    // A:// §5: canonical intent submission replaces the dead-end
+    // cowork_executions insert.
+    let intent_id = format!("intent_{}", uuid::Uuid::new_v4());
     let db = state.db.clone();
-    let id2 = id.clone();
     let user_id = user.user_id;
+    let agent_id = body.agent_id.or_else(|| {
+        body.spec
+            .as_ref()
+            .and_then(|s| s.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()))
+    });
+    let prompt = body.prompt.or_else(|| {
+        body.spec.as_ref().and_then(|s| {
+            s.get("prompt")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
+    });
+    let command = body.role.or_else(|| {
+        body.spec.as_ref().and_then(|s| {
+            s.get("role")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
+    });
+    let description = prompt.clone().or_else(|| command.clone()).unwrap_or_else(|| "agent run".to_string());
+    let envelope = allternit_cowork_runtime::IntentEnvelope {
+        version: "a/0.1".to_string(),
+        intent_id: intent_id.clone(),
+        workspace: "a://workspace/default".to_string(),
+        initiator: user_id.clone(),
+        delegator: None,
+        target: agent_id.clone(),
+        action: allternit_cowork_runtime::IntentAction {
+            action_type: "agent_run".to_string(),
+            description,
+            payload: Some(json!({ "command": command, "prompt": prompt })),
+        },
+        permissions: vec![],
+        compute: None,
+        model: None,
+        approval: None,
+        return_channel: None,
+        causation_chain: agent_id
+            .clone()
+            .map(|a| vec![user_id.clone(), a])
+            .unwrap_or_default(),
+    };
 
     let result = tokio::task::spawn_blocking(move || {
-        let conn = db.connect()?;
-        let agent_id = body.agent_id.or_else(|| {
-            body.spec
-                .as_ref()
-                .and_then(|s| s.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()))
-        });
-        let prompt = body.prompt.or_else(|| {
-            body.spec.as_ref().and_then(|s| {
-                s.get("prompt")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-            })
-        });
-        let command = body.role.or_else(|| {
-            body.spec.as_ref().and_then(|s| {
-                s.get("role")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-            })
-        });
-        conn.execute(
-            "INSERT INTO cowork_executions (id, user_id, kind, agent_id, command, prompt, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![id2, user_id, "agent", agent_id, command, prompt, "running",],
-        )?;
-        Ok::<_, rusqlite::Error>(())
+        let mut conn = db.connect()?;
+        allternit_cowork_runtime::sqlite_store::submit_intent(&mut conn, &envelope)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
     })
     .await;
 
     match result {
-        Ok(Ok(())) => (
+        Ok(Ok(submission)) => (
             StatusCode::OK,
-            Json(json!({"execution_id": id, "status": "running"})),
+            Json(json!({
+                "intent_id": submission.intent_id,
+                "run_id": submission.run_id,
+                "created": submission.created,
+                "status": "queued",
+            })),
         )
             .into_response(),
         Ok(Err(e)) => {

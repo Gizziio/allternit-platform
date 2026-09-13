@@ -77,7 +77,17 @@ pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
             workspace TEXT PRIMARY KEY,
             capability_risk TEXT NOT NULL DEFAULT '{}',
             rules TEXT NOT NULL DEFAULT '[]',
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);",
+            max_delegation_depth INTEGER NOT NULL DEFAULT 4,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+         ALTER TABLE cowork_principals ADD COLUMN roles TEXT NOT NULL DEFAULT '[]';
+         CREATE TABLE IF NOT EXISTS cowork_intents (
+            intent_id TEXT PRIMARY KEY, run_id TEXT NOT NULL, envelope TEXT NOT NULL,
+            initiator TEXT, delegator TEXT,
+            causation_chain TEXT NOT NULL DEFAULT '[]',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+         ALTER TABLE cowork_runs ADD COLUMN causation_chain TEXT NOT NULL DEFAULT '[]';
+         ALTER TABLE cowork_jobs ADD COLUMN causation_chain TEXT NOT NULL DEFAULT '[]';
+         CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, workspace_id TEXT);",
     )
     .map_err(store_err)
 }
@@ -85,19 +95,23 @@ pub fn apply_store_ddl(conn: &mut Connection) -> Result<(), TransportError> {
 // ─── Principals (§8.3–8.4) ───────────────────────────────────────────────────
 
 /// Register a principal; the bearer token is stored only as a SHA-256 hash.
+#[allow(clippy::too_many_arguments)]
 pub fn register_principal(
     conn: &mut Connection,
     id: &str,
     workspace: &str,
     capabilities: &[String],
+    roles: &[String],
     token: &str,
 ) -> Result<(), TransportError> {
     conn.execute(
-        "INSERT INTO cowork_principals (id, workspace, capabilities, token_hash, status, updated_at)
-         VALUES (?1, ?2, ?3, ?4, 'active', CURRENT_TIMESTAMP)
+        "INSERT INTO cowork_principals
+            (id, workspace, capabilities, roles, token_hash, status, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, 'active', CURRENT_TIMESTAMP)
          ON CONFLICT(id) DO UPDATE SET
              workspace = excluded.workspace,
              capabilities = excluded.capabilities,
+             roles = excluded.roles,
              token_hash = excluded.token_hash,
              status = 'active',
              updated_at = CURRENT_TIMESTAMP",
@@ -105,11 +119,128 @@ pub fn register_principal(
             id,
             workspace,
             serde_json::to_string(capabilities).unwrap(),
+            serde_json::to_string(roles).unwrap(),
             crate::transport::hash_token(token),
         ],
     )
     .map_err(store_err)?;
     Ok(())
+}
+
+/// Mint a principal with no credential (token_hash NULL). Used by linkage
+/// and default-principal seeding; the credential is provisioned separately
+/// exactly once via `provision_principal_token`.
+pub fn mint_principal(
+    conn: &mut Connection,
+    id: &str,
+    workspace: &str,
+    capabilities: &[String],
+    roles: &[String],
+) -> Result<(), TransportError> {
+    conn.execute(
+        "INSERT INTO cowork_principals
+            (id, workspace, capabilities, roles, token_hash, status, updated_at)
+         VALUES (?1, ?2, ?3, ?4, NULL, 'active', CURRENT_TIMESTAMP)
+         ON CONFLICT(id) DO UPDATE SET
+             capabilities = excluded.capabilities,
+             roles = excluded.roles,
+             status = 'active',
+             updated_at = CURRENT_TIMESTAMP",
+        params![
+            id,
+            workspace,
+            serde_json::to_string(capabilities).unwrap(),
+            serde_json::to_string(roles).unwrap(),
+        ],
+    )
+    .map_err(store_err)?;
+    Ok(())
+}
+
+/// Provision (or rotate) a principal's bearer token. Returns the raw token
+/// exactly once; only its SHA-256 hash is persisted. User-auth endpoint.
+pub fn provision_principal_token(
+    conn: &mut Connection,
+    principal_id: &str,
+) -> Result<String, TransportError> {
+    let exists = conn
+        .query_row(
+            "SELECT COUNT(*) FROM cowork_principals WHERE id = ?1",
+            params![principal_id],
+            |row| row.get::<_, i64>(0),
+        )
+        .map_err(store_err)?;
+    if exists == 0 {
+        return Err(TransportError::new(
+            Code::PrincipalNotFound,
+            format!("principal {principal_id} not found"),
+        ));
+    }
+    let token = format!("atok_{}", Uuid::new_v4());
+    conn.execute(
+        "UPDATE cowork_principals SET token_hash = ?1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?2",
+        params![crate::transport::hash_token(&token), principal_id],
+    )
+    .map_err(store_err)?;
+    Ok(token)
+}
+
+/// Canonical default capabilities for the Gizzi worker principal
+/// (GIZZI_WORKER_SPEC.md §3).
+pub const GIZZI_CAPABILITIES: &[&str] = &[
+    "shell.exec",
+    "git.read",
+    "git.write",
+    "files.project.read",
+    "files.project.write",
+    "artifact.create",
+    "artifact.modify",
+    "memory.read",
+    "memory.write",
+];
+
+/// Seed the default Al and Gizzi principals for every workspace that has
+/// runs, agents, or intents (idempotent upsert; never touches credentials —
+/// provision those via `provision_principal_token`). Returns the ids minted
+/// or updated this pass.
+pub fn seed_default_principals(conn: &mut Connection) -> Result<Vec<String>, TransportError> {
+    let mut workspaces: Vec<String> = Vec::new();
+    for sql in [
+        "SELECT DISTINCT workspace_id FROM cowork_runs",
+        "SELECT DISTINCT workspace_id FROM agents WHERE workspace_id IS NOT NULL",
+        "SELECT DISTINCT workspace FROM cowork_principals",
+    ] {
+        let mut stmt = conn.prepare(sql).map_err(store_err)?;
+        let rows = stmt
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(store_err)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(store_err)?;
+        for w in rows {
+            if !w.is_empty() && !workspaces.contains(&w) {
+                workspaces.push(w);
+            }
+        }
+    }
+
+    let mut touched = Vec::new();
+    for ws in workspaces {
+        let al = format!("a://workspace/{ws}/principal/al");
+        mint_principal(conn, &al, &ws, &[], &["orchestrator".into(), "user-interface".into()])?;
+        touched.push(al);
+
+        let gizzi = format!("a://workspace/{ws}/principal/gizzi");
+        mint_principal(
+            conn,
+            &gizzi,
+            &ws,
+            &GIZZI_CAPABILITIES.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+            &["worker".into(), "code".into(), "terminal".into()],
+        )?;
+        touched.push(gizzi);
+    }
+    Ok(touched)
 }
 
 /// Authenticate a bearer token to a principal identity.
@@ -120,7 +251,7 @@ pub fn authenticate_principal(
     let hash = crate::transport::hash_token(token);
     let row = conn
         .query_row(
-            "SELECT id, workspace, capabilities, status FROM cowork_principals
+            "SELECT id, workspace, capabilities, status, roles FROM cowork_principals
              WHERE token_hash = ?1",
             params![hash],
             |row| {
@@ -129,6 +260,7 @@ pub fn authenticate_principal(
                     row.get::<_, String>(1)?,
                     row.get::<_, String>(2)?,
                     row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
                 ))
             },
         )
@@ -140,13 +272,14 @@ pub fn authenticate_principal(
             Code::AuthenticationFailed,
             "bearer token does not map to any principal",
         )),
-        Some((id, workspace, caps, status)) if status == "active" => Ok(PrincipalRecord {
+        Some((id, workspace, caps, status, roles)) if status == "active" => Ok(PrincipalRecord {
             id,
             workspace,
             capabilities: serde_json::from_str(&caps).unwrap_or_default(),
+            roles: serde_json::from_str(&roles).unwrap_or_default(),
             status,
         }),
-        Some((id, _, _, status)) => Err(TransportError::new(
+        Some((id, _, _, status, _)) => Err(TransportError::new(
             Code::PermissionDenied,
             format!("principal {id} is not active (status={status})"),
         )),
@@ -1617,4 +1750,173 @@ pub fn insert_event_idempotent(
     )
     .map_err(store_err)?;
     Ok(EventInsertOutcome::Inserted(id))
+}
+
+// ─── Delegation chains (§8.15) and canonical intents (§5) ────────────────────
+
+/// Validate a causation chain (§8.15): reject cycles and depth over the
+/// workspace limit (default 4; workspace policy may reduce it).
+pub fn validate_delegation_chain(
+    conn: &Connection,
+    workspace: &str,
+    chain: &[String],
+) -> Result<(), TransportError> {
+    let max_depth: i64 = conn
+        .query_row(
+            "SELECT max_delegation_depth FROM cowork_approval_policy WHERE workspace = ?1",
+            params![workspace],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(store_err)?
+        .unwrap_or(4);
+    if chain.len() as i64 > max_depth {
+        return Err(TransportError::new(
+            Code::DelegationDepthExceeded,
+            format!(
+                "delegation chain length {} exceeds workspace limit {max_depth} (§8.15)",
+                chain.len()
+            ),
+        ));
+    }
+    let mut seen = std::collections::HashSet::new();
+    for principal in chain {
+        if !seen.insert(principal) {
+            return Err(TransportError::new(
+                Code::DelegationCycle,
+                format!("delegation cycle: {principal} appears twice in the chain"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Submit an IntentEnvelope (§5). Idempotent on `intent_id`: resubmission
+/// resolves to the canonical existing run. Creates the run row directly in
+/// the store (state `queued`, §8.2 honesty) with the attribution triple and
+/// causation chain; callers mirror it into the in-memory manager.
+pub fn submit_intent(
+    conn: &mut Connection,
+    envelope: &crate::transport::IntentEnvelope,
+) -> Result<crate::transport::IntentSubmission, TransportError> {
+    if envelope.version != "a/0.1" {
+        return Err(TransportError::new(
+            Code::PermissionDenied,
+            format!("unsupported intent version {} (A_UNSUPPORTED_VERSION)", envelope.version),
+        ));
+    }
+    if envelope.intent_id.is_empty() || envelope.initiator.is_empty() {
+        return Err(TransportError::new(
+            Code::PermissionDenied,
+            "intent_id and initiator are required",
+        ));
+    }
+    let workspace = envelope
+        .workspace
+        .strip_prefix("a://workspace/")
+        .unwrap_or(envelope.workspace.as_str())
+        .to_string();
+    validate_delegation_chain(conn, &workspace, &envelope.causation_chain)?;
+
+    // Idempotency: same intent_id → same canonical run (§5).
+    if let Some(existing_run) = conn
+        .query_row(
+            "SELECT run_id FROM cowork_intents WHERE intent_id = ?1",
+            params![envelope.intent_id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(store_err)?
+    {
+        return Ok(crate::transport::IntentSubmission {
+            intent_id: envelope.intent_id.clone(),
+            run_id: existing_run,
+            created: false,
+        });
+    }
+
+    let run_id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(store_err)?;
+    tx.execute(
+        "INSERT INTO cowork_runs
+            (id, tenant_id, workspace_id, initiator, delegator, mode, state,
+             entrypoint, dag_id, policy_profile, created_at, updated_at, causation_chain)
+         VALUES (?1, 'local', ?2, ?3, ?4, 'cowork', 'queued', ?5, ?6, 'default', ?7, ?7, ?8)",
+        params![
+            run_id,
+            workspace,
+            envelope.initiator,
+            envelope.delegator,
+            envelope.action.action_type,
+            format!("dag-{run_id}"),
+            now,
+            serde_json::to_string(&envelope.causation_chain).unwrap(),
+        ],
+    )
+    .map_err(store_err)?;
+    tx.execute(
+        "INSERT INTO cowork_intents (intent_id, run_id, envelope, initiator, delegator, causation_chain)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![
+            envelope.intent_id,
+            run_id,
+            serde_json::to_string(envelope).unwrap(),
+            envelope.initiator,
+            envelope.delegator,
+            serde_json::to_string(&envelope.causation_chain).unwrap(),
+        ],
+    )
+    .map_err(store_err)?;
+    insert_event(
+        &tx,
+        &run_id,
+        "intent.accepted",
+        serde_json::json!({
+            "intent_id": envelope.intent_id,
+            "action_type": envelope.action.action_type,
+            "target": envelope.target,
+        }),
+        Some(envelope.initiator.as_str()),
+        envelope.delegator.as_deref(),
+        envelope.target.as_deref(),
+    )?;
+    tx.commit().map_err(store_err)?;
+
+    Ok(crate::transport::IntentSubmission {
+        intent_id: envelope.intent_id.clone(),
+        run_id,
+        created: true,
+    })
+}
+
+/// Read back a submitted intent (idempotent observe).
+pub fn get_intent(
+    conn: &Connection,
+    intent_id: &str,
+) -> Result<Option<serde_json::Value>, TransportError> {
+    let row = conn
+        .query_row(
+            "SELECT run_id, envelope, created_at FROM cowork_intents WHERE intent_id = ?1",
+            params![intent_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(store_err)?;
+    Ok(row.map(|(run_id, envelope, created_at)| {
+        serde_json::json!({
+            "intent_id": intent_id,
+            "run_id": run_id,
+            "envelope": serde_json::from_str::<serde_json::Value>(&envelope).unwrap_or(serde_json::Value::Null),
+            "created_at": created_at,
+        })
+    }))
 }
