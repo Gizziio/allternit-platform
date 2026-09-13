@@ -798,6 +798,7 @@ async fn main() {
         .merge(artifact_router())
         .merge(allternit_api::content_artifact_routes::content_artifact_router())
         .merge(allternit_api::content_artifact_publish::content_artifact_publish_router())
+        .merge(allternit_api::content_artifact_relay::content_artifact_relay_router())
         .merge(allternit_api::console_announcement_routes::console_announcement_router())
         // Analytics on the /api/v1 surface too — the gizzi-code telemetry
         // client and admin console call /api/v1/analytics/* (the historical
@@ -904,6 +905,10 @@ async fn main() {
         // session, so these are gated by internal_auth::require_internal_token
         // per-handler instead of the Clerk auth_middleware layer above.
         .merge(allternit_api::internal_routes::internal_router())
+        // Org relay tier (artifacts-api.md §6): inbound artifact bundles from
+        // peer gateways carry the internal service token, not a Clerk JWT —
+        // the inbox handler gates itself per-handler, same as internal_routes.
+        .merge(allternit_api::content_artifact_relay::content_artifact_relay_inbox_router())
         // Desktop Cloud host self-registration from bootstrap cloud-init.
         .merge(allternit_api::desktop_host_admin::public_router())
         // Private Fabric node daemon enrollment and heartbeat.

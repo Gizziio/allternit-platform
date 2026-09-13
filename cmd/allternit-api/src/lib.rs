@@ -93,6 +93,7 @@ pub mod device_attestation_routes;
 pub mod config;
 pub mod connector_routes;
 pub mod content_artifact_publish;
+pub mod content_artifact_relay;
 pub mod content_artifact_routes;
 pub mod console_announcement_routes;
 pub mod conversation_routes;
