@@ -285,7 +285,8 @@ Transport does not redefine principal identity, run state, attribution, or appro
 
 ### Implemented / backed by code
 
-- workspace-scoped `cowork_principals`
+- workspace-scoped `cowork_principals` (incl. `roles`, V162)
+- default Al/Gizzi principal minting per workspace, idempotent, credential-provisioned once
 - bearer token hash authentication for Fabric Transport proof slice
 - principal capability storage
 - job lease ID / generation / expiry / claimed-at fields
@@ -303,17 +304,19 @@ Transport does not redefine principal identity, run state, attribution, or appro
 - single risk-policy evaluation path shared with the cowork-engine rule model
 - boot-time downtime lease recovery and full run/job rehydration
 - client-supplied event idempotency keys on the run-events API
+- bot product/agent record ↔ execution principal linkage (agents.principal_id, V163)
+- delegation causation chains with cycle rejection and configurable depth (default 4, V164)
+- canonical IntentEnvelope submission, idempotent on intent_id (cowork_intents, V164)
 
 ### Partial / still needs hardening
 
-- full IntentEnvelope as a first-class canonical type/store
 - approval-to-lease binding coverage across all protected tools/connectors
   (the binding mechanism is implemented; tool/connector coverage is not universal)
 - principal-scoped memory and connector brokerage
 - canonical multi-store consolidation beyond the proof slice
-- delegation-depth / causation-chain enforcement across every execution path
+- Cowork visualization depth (a control surface now exists at
+  `/fabric-transport`; full protocol-entity rendering is ongoing)
 - complete capability vocabulary across all workers
-- cross-surface Cowork visualization of the protocol entities
 
 ### Planned / not implied by v0.1
 

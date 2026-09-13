@@ -1,492 +1,257 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+/**
+ * Fabric Transport control surface (A:// §17 control conformance).
+ *
+ * One tight panel, wired to canonical state only:
+ *   - create/observe intents (idempotent submission + resolve)
+ *   - observe canonical run/job state (store rows, never narration)
+ *   - approvals inbox with grant/deny and auto-decision reasons
+ *   - attributed event stream (initiator/delegator/executor)
+ *   - terminal results
+ */
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { usePlatformAuth } from '@/lib/platform-auth-client';
 import {
-  ArrowSquareOut,
-  ArrowsClockwise,
-  CheckCircle,
-  DesktopTower,
-  Plugs,
-  Warning,
-  WifiHigh,
-  Cpu,
-} from "@phosphor-icons/react";
-import { openFabricSessionWindow } from "@/lib/open-fabric-session-window";
-import { FabricSessionQrCard } from "@/components/dispatch/FabricSessionQrCard";
-import { fabricSessionPwaUrl } from "@/lib/fabric-session-pwa";
-import { RemotePeersPanel } from "@/lib/peers/RemotePeersPanel";
+  listRuns, listRunEvents, listRunJobs, getJob,
+  listApprovals, decideApproval, submitIntent, getIntent,
+  type TransportRun, TransportEvent, ApprovalRow, IntentSubmission,
+} from '@/lib/fabric-transport-api';
+import { cn } from '@/lib/utils';
 
-type FabricEndpoint = {
-  transport?: string;
-  url?: string;
-  priority?: number;
-};
+const POLL_MS = 5000;
 
-type FabricCapability = string | { id?: string; name?: string; description?: string; kind?: string };
-
-type FabricResource = {
-  kind?: string;
-  name?: string;
-  value?: string | number;
-  unit?: string;
-};
-
-type FabricPeer = {
-  id?: string;
-  nodeId?: string;
-  name?: string;
-  hostname?: string;
-  endpoints?: FabricEndpoint[];
-  capabilities?: FabricCapability[];
-  resources?: FabricResource[];
-  status?: string;
-  runtimeType?: string;
-  platform?: string;
-  version?: string;
-};
-
-type WorkerManifest = {
-  name?: string;
-  version?: string;
-  capabilities?: FabricCapability[];
-};
-
-type LoadState<T> = {
-  loading: boolean;
-  error: string | null;
-  data: T | null;
-};
-
-async function fabricGet<T>(path: string): Promise<T> {
-  const response = await fetch(`/api/v1${path}`, {
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(
-      payload.message || payload.error || `Fabric request failed (${response.status})`,
-    );
-  }
-  return payload as T;
-}
-
-function capabilityLabel(value: FabricCapability): string {
-  if (typeof value === "string") return value;
-  return value.name || value.id || "capability";
-}
-
-function nodeLabel(peer: FabricPeer | null | undefined): string {
-  return peer?.name || peer?.hostname || "This desktop";
-}
-
-function nodeId(peer: FabricPeer | null | undefined): string {
-  return peer?.nodeId || peer?.id || "local";
-}
-
-function StatusDot({ ok }: { ok: boolean }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <span
-      className={`inline-block size-2 rounded-full ${ok ? "bg-emerald-500" : "bg-red-500"}`}
-      aria-hidden
-    />
+    <section className="rounded-lg border border-[var(--border-default)] p-4 space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{title}</h2>
+      {children}
+    </section>
   );
 }
 
-export function FabricTransportView(): React.ReactNode {
-  const [localPeer, setLocalPeer] = useState<LoadState<FabricPeer>>({
-    loading: true,
-    error: null,
-    data: null,
-  });
-  const [peers, setPeers] = useState<LoadState<FabricPeer[]>>({
-    loading: true,
-    error: null,
-    data: null,
-  });
-  const [directory, setDirectory] = useState<LoadState<Record<string, unknown>>>({
-    loading: true,
-    error: null,
-    data: null,
-  });
-  const [worker, setWorker] = useState<LoadState<WorkerManifest>>({
-    loading: true,
-    error: null,
-    data: null,
-  });
-  const [runtimeId, setRuntimeId] = useState<string | undefined>();
+function Mono({ children }: { children: React.ReactNode }) {
+  return <code className="text-xs break-all">{children}</code>;
+}
+
+function statusColor(status: string): string {
+  if (status === 'completed' || status === 'granted') return 'text-emerald-500';
+  if (status === 'failed' || status === 'denied' || status === 'dead_letter') return 'text-red-500';
+  if (status === 'queued' || status === 'pending') return 'text-amber-500';
+  if (status === 'leased' || status === 'running') return 'text-blue-500';
+  return 'text-[var(--text-muted)]';
+}
+
+export function FabricTransportView() {
+  const auth = usePlatformAuth();
+  const getToken = useCallback(() => auth.getToken(), [auth]);
+
+  const [workspace, setWorkspace] = useState('ws-allternit');
+  const [runs, setRuns] = useState<TransportRun[]>([]);
+  const [selectedRun, setSelectedRun] = useState<string | null>(null);
+  const [events, setEvents] = useState<TransportEvent[]>([]);
+  const [jobs, setJobs] = useState<Array<{ id: string; state: string; job_type: string }>>([]);
+  const [jobView, setJobView] = useState<Awaited<ReturnType<typeof getJob>> | null>(null);
+  const [approvals, setApprovals] = useState<ApprovalRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Intent form
+  const [initiator, setInitiator] = useState('a://workspace/ws-allternit/user/joe');
+  const [delegator, setDelegator] = useState('a://workspace/ws-allternit/principal/al');
+  const [target, setTarget] = useState('a://workspace/ws-allternit/principal/gizzi');
+  const [actionType, setActionType] = useState('shell_steps');
+  const [description, setDescription] = useState('');
+  const [chainInput, setChainInput] = useState('');
+  const [intentResult, setIntentResult] = useState<IntentSubmission | null>(null);
 
   const refresh = useCallback(async () => {
-    setLocalPeer((s) => ({ ...s, loading: true, error: null }));
-    setPeers((s) => ({ ...s, loading: true, error: null }));
-    setDirectory((s) => ({ ...s, loading: true, error: null }));
-    setWorker((s) => ({ ...s, loading: true, error: null }));
-
-    const [localResult, peersResult, directoryResult, workerResult] = await Promise.allSettled([
-      fabricGet<FabricPeer>("/fabric/peers/local"),
-      fabricGet<FabricPeer[] | { peers?: FabricPeer[] }>("/fabric/peers"),
-      fabricGet<Record<string, unknown>>("/fabric/directory"),
-      fabricGet<WorkerManifest>("/fabric/workers/self"),
-    ]);
-
-    if (localResult.status === "fulfilled") {
-      setLocalPeer({ loading: false, error: null, data: localResult.value });
-    } else {
-      setLocalPeer({
-        loading: false,
-        error: localResult.reason instanceof Error ? localResult.reason.message : String(localResult.reason),
-        data: null,
-      });
+    try {
+      setError(null);
+      const [runList, approvalList] = await Promise.all([
+        listRuns(getToken),
+        listApprovals(getToken, workspace),
+      ]);
+      setRuns((runList as TransportRun[]).slice(0, 25));
+      setApprovals(approvalList.approvals);
+    } catch (e) {
+      setError((e as Error).message);
     }
-
-    if (peersResult.status === "fulfilled") {
-      const value = peersResult.value;
-      const list = Array.isArray(value) ? value : value.peers ?? [];
-      setPeers({ loading: false, error: null, data: list });
-    } else {
-      setPeers({
-        loading: false,
-        error: peersResult.reason instanceof Error ? peersResult.reason.message : String(peersResult.reason),
-        data: [],
-      });
-    }
-
-    if (directoryResult.status === "fulfilled") {
-      setDirectory({ loading: false, error: null, data: directoryResult.value });
-    } else {
-      setDirectory({
-        loading: false,
-        error:
-          directoryResult.reason instanceof Error
-            ? directoryResult.reason.message
-            : String(directoryResult.reason),
-        data: null,
-      });
-    }
-
-    if (workerResult.status === "fulfilled") {
-      setWorker({ loading: false, error: null, data: workerResult.value });
-    } else {
-      setWorker({
-        loading: false,
-        error: workerResult.reason instanceof Error ? workerResult.reason.message : String(workerResult.reason),
-        data: null,
-      });
-    }
-  }, []);
+  }, [getToken, workspace]);
 
   useEffect(() => {
-    void refresh();
+    refresh();
+    const t = setInterval(refresh, POLL_MS);
+    return () => clearInterval(t);
   }, [refresh]);
 
   useEffect(() => {
-    let cancelled = false;
-    void window.allternit?.auth
-      ?.getSession?.()
-      .then((session) => {
-        if (!cancelled && session?.runtimeId) setRuntimeId(session.runtimeId);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (!selectedRun) return;
+    (async () => {
+      try {
+        const [evs, jbs] = await Promise.all([
+          listRunEvents(getToken, selectedRun),
+          listRunJobs(getToken, selectedRun),
+        ]);
+        setEvents(evs);
+        setJobs(jbs);
+        const withJob = jbs.find((j) => j.id);
+        if (withJob) setJobView(await getJob(getToken, withJob.id));
+      } catch {
+        /* run may have been pruned; keep last state */
+      }
+    })();
+  }, [getToken, selectedRun, approvals]);
 
-  const endpoints = localPeer.data?.endpoints ?? [];
-  const capabilities = localPeer.data?.capabilities ?? worker.data?.capabilities ?? [];
-  const resources = localPeer.data?.resources ?? [];
-  const peerList = useMemo(() => {
-    const list = peers.data ?? [];
-    const selfId = nodeId(localPeer.data);
-    return list.filter((peer) => nodeId(peer) !== selfId);
-  }, [peers.data, localPeer.data]);
-  const online = Boolean(localPeer.data) && !localPeer.error;
-  const transportLabel = endpoints[0]?.transport || (online ? "local" : "offline");
+  const submit = async () => {
+    try {
+      setError(null);
+      const chain = chainInput
+        ? chainInput.split(',').map((s) => s.trim()).filter(Boolean)
+        : [initiator, delegator, target].filter(Boolean);
+      const sub = await submitIntent(getToken, {
+        workspace, initiator, delegator, target, actionType, description,
+        causationChain: chain,
+      });
+      setIntentResult(sub);
+      await refresh();
+      setSelectedRun(sub.run_id);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const decide = async (id: string, d: 'grant' | 'deny') => {
+    try {
+      setError(null);
+      await decideApproval(getToken, id, d);
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-white text-[var(--text-primary)]">
-      <div className="mx-auto w-full max-w-6xl px-8 pt-10 pb-14">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1
-              className="m-0 text-3xl font-medium tracking-tight"
-              style={{ fontFamily: "var(--font-serif)" }}
-            >
-              Fabric Transport
-            </h1>
-            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">
-              This desktop is a fabric node. Scan the QR to open the standalone
-              Fabric Session app on your phone.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => openFabricSessionWindow()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-solid border-[var(--border-default)] bg-white px-3.5 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
-            >
-              <ArrowSquareOut size={14} />
-              Open session
-            </button>
-            <a
-              href={fabricSessionPwaUrl(runtimeId)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-solid border-[var(--border-default)] bg-white px-3.5 text-[13px] font-medium text-[var(--text-secondary)] no-underline transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
-            >
-              <ArrowSquareOut size={14} />
-              Open on the web
-            </a>
-            <button
-              type="button"
-              onClick={() => void refresh()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-solid border-[var(--border-default)] bg-white px-3.5 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
-            >
-              <ArrowsClockwise size={14} />
-              Refresh
-            </button>
-          </div>
+    <div className="mx-auto max-w-5xl space-y-4 p-4 text-sm">
+      <header className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold">Fabric Transport</h1>
+        <div className="flex items-center gap-2">
+          <input
+            className="rounded border border-[var(--border-default)] bg-transparent px-2 py-1 text-xs"
+            value={workspace}
+            onChange={(e) => setWorkspace(e.target.value)}
+            aria-label="Workspace"
+          />
+          <button className="rounded border px-2 py-1 text-xs" onClick={refresh}>Refresh</button>
         </div>
+      </header>
+      {error && <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-500">{error}</div>}
 
-        <div className="mt-6">
-          <FabricSessionQrCard runtimeId={runtimeId} />
+      <Section title="Submit intent (create / observe)">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          <label className="text-xs">Initiator<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={initiator} onChange={(e) => setInitiator(e.target.value)} /></label>
+          <label className="text-xs">Delegator<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={delegator} onChange={(e) => setDelegator(e.target.value)} /></label>
+          <label className="text-xs">Target (executor)<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={target} onChange={(e) => setTarget(e.target.value)} /></label>
+          <label className="text-xs">Action type<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={actionType} onChange={(e) => setActionType(e.target.value)} /></label>
+          <label className="text-xs md:col-span-2">Description<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+          <label className="text-xs md:col-span-2">Delegation chain (comma-separated; empty = initiator→delegator→target)<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={chainInput} onChange={(e) => setChainInput(e.target.value)} /></label>
         </div>
-
-        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            icon={<DesktopTower size={16} />}
-            label="This node"
-            value={localPeer.loading ? "Loading…" : online ? nodeLabel(localPeer.data) : "Unreachable"}
-            detail={online ? nodeId(localPeer.data) : localPeer.error || "Waiting for gateway"}
-            ok={online}
-            capitalize={false}
-          />
-          <StatCard
-            icon={<WifiHigh size={16} />}
-            label="Transport"
-            value={localPeer.loading ? "Loading…" : transportLabel}
-            detail={endpoints[0]?.url || "Loopback until mesh or tunnel joins"}
-            ok={online}
-          />
-          <StatCard
-            icon={<Cpu size={16} />}
-            label="Capabilities"
-            value={String(capabilities.length)}
-            detail={worker.data?.name ? `Worker ${worker.data.name}` : "Session worker"}
-            ok={capabilities.length > 0}
-          />
-          <StatCard
-            icon={<Plugs size={16} />}
-            label="Peers"
-            value={String(peerList.length)}
-            detail={peerList.length === 0 ? "Only this desktop so far" : "Other fabric nodes"}
-            ok={!peers.error}
-          />
-        </div>
-
-        <section className="mt-6 rounded-2xl border border-solid border-[var(--border-default)] bg-white p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[13px] font-semibold">
-              <DesktopTower size={16} />
-              This node
-            </div>
-            <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--text-secondary)]">
-              <StatusDot ok={online} />
-              {online ? localPeer.data?.status || "online" : "offline"}
+        <div className="flex items-center gap-2">
+          <button className="rounded bg-blue-600 px-3 py-1 text-white" onClick={submit}>Submit intent</button>
+          {intentResult && (
+            <span className="text-xs">
+              <Mono>{intentResult.intent_id}</Mono> → run <Mono>{intentResult.run_id}</Mono>{' '}
+              {intentResult.created ? '(created)' : '(canonical existing — idempotent replay)'}
             </span>
-          </div>
-          {localPeer.loading && (
-            <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">Reading local fabric identity…</p>
           )}
-          {localPeer.error && (
-            <p className="mt-3 flex items-start gap-2 text-[13px] text-red-500">
-              <Warning size={14} className="mt-0.5 shrink-0" />
-              {localPeer.error}
-            </p>
-          )}
-          {localPeer.data && (
-            <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 text-[13px] sm:grid-cols-2">
-              <InfoRow label="Name" value={nodeLabel(localPeer.data)} />
-              <InfoRow label="Node id" value={nodeId(localPeer.data)} mono />
-              <InfoRow label="Runtime" value={localPeer.data.runtimeType || "desktop"} />
-              <InfoRow label="Platform" value={localPeer.data.platform || "local"} />
-              <InfoRow label="Version" value={localPeer.data.version || "—"} />
-              <InfoRow
-                label="Worker"
-                value={
-                  worker.data?.name
-                    ? `${worker.data.name}${worker.data.version ? ` ${worker.data.version}` : ""}`
-                    : "Harness runtime"
-                }
-              />
-            </dl>
-          )}
-        </section>
-
-        <section className="mt-4 rounded-2xl border border-solid border-[var(--border-default)] bg-white p-5">
-          <div className="flex items-center gap-2 text-[13px] font-semibold">
-            <Plugs size={16} />
-            Transports
-          </div>
-          {endpoints.length === 0 ? (
-            <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">
-              Local loopback is the active transport until Tailscale mesh or a tunnel joins.
-            </p>
-          ) : (
-            <ul className="mt-3 divide-y divide-[var(--border-subtle)]">
-              {endpoints.map((endpoint, index) => (
-                <li key={`${endpoint.transport}-${index}`} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <div>
-                    <div className="flex items-center gap-2 text-[13px] font-medium capitalize">
-                      <CheckCircle size={14} className="text-emerald-500" />
-                      {endpoint.transport || "local"}
-                    </div>
-                    <div className="mt-1 break-all font-mono text-[12px] text-[var(--text-tertiary)]">
-                      {endpoint.url}
-                    </div>
-                  </div>
-                  {typeof endpoint.priority === "number" && (
-                    <span className="shrink-0 text-[11px] text-[var(--text-tertiary)]">
-                      priority {endpoint.priority}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {resources.length > 0 && (
-          <section className="mt-4 rounded-2xl border border-solid border-[var(--border-default)] bg-white p-5">
-            <div className="text-[13px] font-semibold">Resources</div>
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {resources.map((resource, index) => (
-                <div
-                  key={`${resource.kind}-${index}`}
-                  className="rounded-xl border border-solid border-[var(--border-subtle)] px-3 py-2.5"
-                >
-                  <div className="text-[11px] uppercase tracking-wide text-[var(--text-tertiary)]">
-                    {resource.name || resource.kind || "resource"}
-                  </div>
-                  <div className="mt-1 text-[14px] font-medium">
-                    {resource.value}
-                    {resource.unit ? ` ${resource.unit}` : ""}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="mt-4 rounded-2xl border border-solid border-[var(--border-default)] bg-white p-5">
-          <div className="text-[13px] font-semibold">Capabilities</div>
-          {capabilities.length === 0 ? (
-            <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">
-              No advertised capabilities yet. The session worker publishes them once this node is live.
-            </p>
-          ) : (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {capabilities.map((cap, index) => (
-                <span
-                  key={`${capabilityLabel(cap)}-${index}`}
-                  className="rounded-full border border-solid border-[var(--border-default)] bg-white px-2.5 py-1 text-[12px]"
-                  title={typeof cap === "object" ? cap.description : undefined}
-                >
-                  {capabilityLabel(cap)}
-                </span>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="mt-4 rounded-2xl border border-solid border-[var(--border-default)] bg-white p-5">
-          <div className="text-[13px] font-semibold">Peers</div>
-          {peers.loading && (
-            <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">Resolving fabric peers…</p>
-          )}
-          {peers.error && (
-            <p className="mt-3 flex items-start gap-2 text-[13px] text-red-500">
-              <Warning size={14} className="mt-0.5 shrink-0" />
-              {peers.error}
-            </p>
-          )}
-          {!peers.loading && peerList.length === 0 && !peers.error && (
-            <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">
-              No other fabric peers yet. This desktop is the local node.
-            </p>
-          )}
-          {peerList.length > 0 && (
-            <ul className="mt-3 divide-y divide-[var(--border-subtle)]">
-              {peerList.map((peer, index) => (
-                <li key={nodeId(peer) || String(index)} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                  <div>
-                    <div className="text-[13px] font-medium">{nodeLabel(peer)}</div>
-                    <div className="mt-0.5 font-mono text-[11px] text-[var(--text-tertiary)]">
-                      {nodeId(peer)}
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--text-secondary)]">
-                    <StatusDot ok={(peer.status || "online") === "online"} />
-                    {peer.status || "online"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <div className="mt-4">
-          <RemotePeersPanel />
         </div>
+      </Section>
 
-        {directory.data && (
-          <details className="mt-4 rounded-2xl border border-solid border-[var(--border-default)] bg-white p-5">
-            <summary className="cursor-pointer text-[13px] font-semibold">Node directory</summary>
-            <pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-[#F7F7F7] p-3 text-[11px] leading-relaxed">
-              {JSON.stringify(directory.data, null, 2)}
-            </pre>
-          </details>
-        )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Section title="Runs (canonical store)">
+          <ul className="space-y-1">
+            {runs.map((r) => (
+              <li key={r.id}>
+                <button
+                  className={cn('w-full rounded border px-2 py-1 text-left', selectedRun === r.id ? 'border-blue-500' : 'border-[var(--border-default)]')}
+                  onClick={() => setSelectedRun(r.id)}
+                >
+                  <div className="flex justify-between">
+                    <Mono>{r.id.slice(0, 8)}</Mono>
+                    <span className={statusColor(r.state)}>{r.state}</span>
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)]">
+                    {r.initiator}{r.delegator ? ` ← ${r.delegator}` : ''}
+                  </div>
+                </button>
+              </li>
+            ))}
+            {runs.length === 0 && <li className="text-xs text-[var(--text-muted)]">No runs.</li>}
+          </ul>
+        </Section>
+
+        <Section title="Approvals inbox (grant / deny)">
+          <ul className="space-y-2">
+            {approvals.map((a) => (
+              <li key={a.id} className="rounded border border-[var(--border-default)] p-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <Mono>{a.capability}</Mono>
+                  <span className={statusColor(a.status)}>{a.status}</span>
+                </div>
+                <div className="mt-1 text-[var(--text-muted)]">
+                  target <Mono>{a.target}</Mono> · executor <Mono>{a.executor}</Mono> · gen {a.lease_generation}
+                </div>
+                {/* Auto-decision reasons must be visible, not silent (§8). */}
+                {a.decided_by && (
+                  <div className="mt-1 text-[var(--text-muted)]">decided by <Mono>{a.decided_by}</Mono></div>
+                )}
+                {a.status === 'pending' && (
+                  <div className="mt-2 flex gap-2">
+                    <button className="rounded bg-emerald-600 px-2 py-0.5 text-white" onClick={() => decide(a.id, 'grant')}>Grant</button>
+                    <button className="rounded bg-red-600 px-2 py-0.5 text-white" onClick={() => decide(a.id, 'deny')}>Deny</button>
+                  </div>
+                )}
+              </li>
+            ))}
+            {approvals.length === 0 && <li className="text-xs text-[var(--text-muted)]">No approval bindings for this workspace.</li>}
+          </ul>
+        </Section>
       </div>
-    </div>
-  );
-}
 
-function StatCard({
-  icon,
-  label,
-  value,
-  detail,
-  ok,
-  capitalize = true,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  detail: string;
-  ok: boolean;
-  capitalize?: boolean;
-}) {
-  return (
-    <div className="rounded-2xl border border-solid border-[var(--border-default)] bg-white p-4">
-      <div className="flex items-center justify-between gap-2 text-[12px] text-[var(--text-secondary)]">
-        <span className="inline-flex items-center gap-1.5">
-          {icon}
-          {label}
-        </span>
-        <StatusDot ok={ok} />
-      </div>
-      <div className={`mt-2 truncate text-[15px] font-medium ${capitalize ? "capitalize" : ""}`}>{value}</div>
-      <div className="mt-1 truncate font-mono text-[11px] text-[var(--text-tertiary)]">{detail}</div>
-    </div>
-  );
-}
-
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="grid grid-cols-[96px_1fr] gap-3">
-      <dt className="text-[var(--text-tertiary)]">{label}</dt>
-      <dd className={`m-0 break-all ${mono ? "font-mono text-[12px]" : ""}`}>{value}</dd>
+      {selectedRun && (
+        <Section title={`Run detail — ${selectedRun.slice(0, 8)}`}>
+          <div className="text-xs text-[var(--text-muted)]">
+            Jobs: {jobs.map((j) => `${j.job_type}(${j.state})`).join(', ') || 'none created yet'}
+          </div>
+          {jobView && (
+            <div className="rounded border border-[var(--border-default)] p-2 text-xs">
+              <div className="flex justify-between">
+                <span>Job <Mono>{jobView.job_id.slice(0, 8)}</Mono></span>
+                <span className={statusColor(jobView.state)}>{jobView.state}</span>
+              </div>
+              {jobView.result?.result_id && (
+                <div className="mt-1">
+                  Result <Mono>{jobView.result.result_id}</Mono> — {jobView.result.summary}
+                  <span className="text-[var(--text-muted)]"> (executor {jobView.result.executor})</span>
+                </div>
+              )}
+            </div>
+          )}
+          <ul className="max-h-64 space-y-1 overflow-y-auto text-xs">
+            {events.map((e) => (
+              <li key={e.id} className="flex flex-wrap items-baseline gap-x-2">
+                <span className="text-[var(--text-muted)]">{e.created_at?.slice(11, 19)}</span>
+                <span className="font-medium">{e.event_type}</span>
+                <span className="text-[var(--text-muted)]">
+                  {e.initiator && <>initiator <Mono>{e.initiator}</Mono></>}
+                  {e.delegator && <> · delegator <Mono>{e.delegator}</Mono></>}
+                  {e.executor && <> · executor <Mono>{e.executor}</Mono></>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
     </div>
   );
 }

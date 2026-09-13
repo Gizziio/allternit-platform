@@ -539,14 +539,59 @@ async fn submit_intent(
     let mut conn = state.db.connect().map_err(db_error)?;
     let submission =
         sqlite_store::submit_intent(&mut conn, &envelope).map_err(transport_err)?;
-    drop(conn);
     if submission.created {
-        if let (Ok(manager), Ok(run_id)) = (
+        // Mirror the intent-created run into the in-memory manager so the
+        // legacy run/job routes (which consult the mirror) see it.
+        if let (Ok(manager), Ok(run_uuid)) = (
             run_manager(&state),
-            uuid::Uuid::parse_str(&submission.run_id).map(RunId),
+            uuid::Uuid::parse_str(&submission.run_id),
         ) {
-            if let Ok(run) = manager.get_run(run_id).await {
-                let _ = run;
+            let row = {
+                let conn = state.db.connect().map_err(db_error)?;
+                conn.query_row(
+                "SELECT tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id,
+                        policy_profile, created_at
+                 FROM cowork_runs WHERE id = ?1",
+                rusqlite::params![submission.run_id],
+                |r| {
+                    Ok((
+                        r.get::<_, String>(0)?,
+                        r.get::<_, String>(1)?,
+                        r.get::<_, String>(2)?,
+                        r.get::<_, String>(3)?,
+                        r.get::<_, String>(4)?,
+                        r.get::<_, String>(5)?,
+                        r.get::<_, String>(6)?,
+                        r.get::<_, String>(7)?,
+                        r.get::<_, String>(8)?,
+                    ))
+                },
+                )
+                .ok()
+            };
+            if let Some(row) = row {
+                let parse = |v: &str| {
+                    chrono::DateTime::parse_from_rfc3339(v)
+                        .map(|dt| dt.with_timezone(&chrono::Utc))
+                        .unwrap_or_else(|_| chrono::Utc::now())
+                };
+                let run = allternit_cowork_runtime::Run {
+                    id: RunId(run_uuid),
+                    tenant_id: row.0,
+                    workspace_id: row.1,
+                    initiator: row.2,
+                    mode: row.3.parse().unwrap_or(allternit_cowork_runtime::RunMode::Cowork),
+                    state: row.4.parse().unwrap_or(allternit_cowork_runtime::RunState::Queued),
+                    entrypoint: row.5,
+                    dag_id: row.6,
+                    current_job_id: None,
+                    current_checkpoint_id: None,
+                    policy_profile: row.7,
+                    created_at: parse(&row.8),
+                    updated_at: parse(&row.8),
+                    completed_at: None,
+                };
+                let _ = manager.load_run(run).await;
             }
         }
     }

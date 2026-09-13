@@ -19,13 +19,15 @@ roles: [orchestrator, user-interface]
 pronunciation: "Al"; branded mark A://
 ```
 
-- **Today:** the address appears only in documentation and test fixtures
-  (e.g. `transport_conformance_tests.rs` uses
-  `a://workspace/allternit/principal/al` as the delegator attribution). It is
-  not minted at install; nothing stops a workspace from having no Al.
-- **Spec:** on workspace provisioning, register the Al principal
-  (`cowork_principals`, V152) with capabilities `[]` — Al's power is
-  delegation, not execution. Roles column: **Planned** (see Bot spec §2).
+- **Implemented (identity):** boot seeding mints
+  `a://workspace/{ws}/principal/al` for every known workspace, idempotently
+  (`sqlite_store::seed_default_principals`, wired in `main.rs`; roles column
+  V162). Al carries roles `[orchestrator, user-interface]` and **no
+  capabilities** — Al's power is delegation, not execution. The credential is
+  provisioned separately, exactly once:
+  `POST /api/v1/fabric/transport/principals/:id/provision-token` (user auth).
+- **Still Planned:** the Al orchestration loop (see §7) and the persona
+  runtime binding.
 
 ## 2. What Al owns
 
@@ -85,9 +87,10 @@ leases, bindings, attributed events) independently of Al's narration
 
 ## 7. What to build next (sequenced)
 
-1. Workspace provisioning mints the Al principal (registration + status).
-2. Roles column + orchestration-role checks in policy evaluation.
-3. Al orchestration loop bound to the principal: plan → run create (attribution
-   triple) → monitor → approval requests → result reports.
+1. ~~Workspace provisioning mints the Al principal~~ **Done** (boot seeding).
+2. Orchestration-role checks in policy evaluation (roles exist; enforcement Planned).
+3. Al orchestration loop bound to the principal: plan → intent submission
+   (attribution triple + causation chain) → monitor → approval requests →
+   result reports.
 4. Principal-scoped memory grants.
-5. Causation chain column + depth/cycle enforcement (§8.15).
+5. ~~Causation chain column + depth/cycle enforcement~~ **Done** (V164).

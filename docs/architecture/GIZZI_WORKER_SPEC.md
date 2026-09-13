@@ -18,11 +18,11 @@ roles: [worker, code, terminal]   # repository, filesystem, build, debug, develo
 
 - Gizzi is the default technical worker under Al (§13 of `A_PROTOCOL.md`),
   **not** the Coworker identity and not a security root.
-- **Today:** the address appears in docs/fixtures only; no install step mints
-  a `principal/gizzi` record in `cowork_principals`, and gizzi-code sessions
-  do not authenticate as an A:// principal (they use their own session auth).
-- **Specified:** workspace provisioning registers Gizzi as a principal with
-  its runtime capability set (§3) and no orchestration privileges.
+- **Implemented (identity):** boot seeding mints
+  `a://workspace/{ws}/principal/gizzi` with roles `[worker, code, terminal]`
+  and the §3 capability set (`seed_default_principals`; credential via
+  provision-token, once). gizzi-code sessions do not yet authenticate as
+  this principal — the claim path below is still the work to wire.
 
 ## 2. What Gizzi does today (implemented)
 

@@ -232,6 +232,8 @@ Grounded in `TransportErrorCode` (`transport.rs`). Branch on wire codes, never p
 | `A_STALE_LEASE_GENERATION` | 409 | presented generation ≠ current (rejected even for terminal jobs) |
 | `A_LEASE_EXPIRED` | 409 | server clock passed lease_expires_at |
 | `A_RUN_CANCELLED` | 409 | run/job cancelled |
+| `A_DELEGATION_CYCLE` | 409 | causation chain repeats a principal (§8.15) |
+| `A_DELEGATION_DEPTH_EXCEEDED` | 409 | chain longer than workspace limit (default 4) |
 | `A_APPROVAL_REQUIRED` | 403 | no binding / pending / expired / denied → re-request |
 | `A_APPROVAL_INVALID` | 409 | stale-generation or invalidated binding; late grant |
 | `A_RESULT_ALREADY_COMMITTED` | — | code reserved; the wire returns `already_committed` outcome (200) |
@@ -252,6 +254,10 @@ bearer token.
 | `POST /jobs/:job_id/heartbeat` | worker | `{lease_id, lease_generation, worker_time?}` → `{ok}` |
 | `POST /jobs/:job_id/renew` | worker | `{lease_id, lease_generation, lease_ttl_secs?}` → `{ok, lease_expires_at}` |
 | `POST /jobs/:job_id/complete` | worker | `{lease_id, lease_generation, success, summary?, outputs?}` → CompleteOutcome |
+| `POST /intents` | user | IntentEnvelope → IntentSubmission (idempotent on intent_id) |
+| `GET /intents/:intent_id` | open (read-only) | → `{intent_id, run_id, envelope}` |
+| `GET /approvals` | user | `?workspace=&status=` → approval inbox (control surface) |
+| `POST /principals/:principal_id/provision-token` | user | rotate/provision a principal token (returned once) |
 | `POST /jobs/:job_id/approvals/request` | worker | `{lease_id, lease_generation, capability, target, approval_ttl_secs?}` → ApprovalBinding |
 | `POST /jobs/:job_id/approvals/check` | worker | same body → `{ok, approval_id, status}` or approval error |
 | `GET /approvals/:approval_id` | worker (executor-scoped) | → ApprovalBinding (poll for the human decision) |
@@ -261,25 +267,39 @@ bearer token.
 Env knobs (`main.rs`): `ALLTERNIT_FABRIC_TRANSPORT_LEASE_SECS` (default 60),
 `ALLTERNIT_FABRIC_TRANSPORT_SWEEP_SECS` (default 5). Operational tuning only.
 
-## 9. IntentEnvelope — **Specified / Planned**
+## 9. IntentEnvelope — **Implemented**
 
-§5/§17 of `A_PROTOCOL.md` define the envelope; it is **not yet a canonical
-type**. The open scorecard item ("Intent") stands. Today work enters via
-`POST /api/v1/runs` (`CreateRunRequest`: tenant_id, workspace_id, initiator,
-delegator?, mode, entrypoint, policy_profile?) — a partial intent (initiator +
-delegator + workspace, no envelope idempotency, no normalized action/permissions
-blocks). Planned shape (do not treat as implemented):
+Grounded in `transport.rs::IntentEnvelope` and `sqlite_store::submit_intent`
+(store `cowork_intents`, V164). Submission: `POST /api/v1/fabric/transport/intents`
+(user auth); observe: `GET /api/v1/fabric/transport/intents/:intent_id`.
 
-```yaml
-version: a/0.1
-intent_id: intent_01J...        # idempotent submission key (§5)
-workspace: a://workspace/acme
-initiator: { principal: a://workspace/acme/user/joe }
-target: { principal: a://workspace/acme/bot/research }
-action: { type: research, description: "..." }
-permissions: { requested: [web.read] }
-compute: { policy: auto }
-model: { policy: router:auto }
-approval: { policy: risk-gated }
-return: { channel: cowork }
+**Idempotent on `intent_id` (§5):** resubmitting the same `intent_id` returns
+the canonical existing `run_id` with `created: false` — at-least-once delivery
+never becomes duplicate runs. Validation: version must be `a/0.1`; the
+`causation_chain` is cycle- and depth-checked (§8.15, workspace-configurable,
+default 4 — violations: `A_DELEGATION_CYCLE` / `A_DELEGATION_DEPTH_EXCEEDED`).
+The created run starts `queued` (§8.2 honesty) with the attribution triple and
+chain persisted; an attributed `intent.accepted` event is written.
+
+```json
+{
+  "version": "a/0.1",
+  "intent_id": "intent_01J...",
+  "workspace": "a://workspace/acme",
+  "initiator": "a://workspace/acme/user/joe",
+  "delegator": "a://workspace/acme/principal/al",
+  "target": "a://workspace/acme/bot/research",
+  "action": { "action_type": "research", "description": "Compare three vendors." },
+  "permissions": ["web.read"],
+  "compute": { "policy": "auto" },
+  "model": { "policy": "router:auto" },
+  "approval": { "policy": "risk-gated" },
+  "return_channel": { "channel": "cowork" },
+  "causation_chain": ["a://workspace/acme/user/joe", "a://workspace/acme/principal/al"]
+}
 ```
+
+→ `{ "intent_id": "...", "run_id": "<uuid>", "created": true|false }`
+
+The legacy `POST /cowork/run-agent` and `/cowork/team-execute` endpoints now
+submit canonical intents (the `cowork_executions` dead-end inserts are gone).

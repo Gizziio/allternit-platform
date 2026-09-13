@@ -8,7 +8,7 @@ Companion: `AL_IMPLEMENTATION_SPEC.md`, `GIZZI_WORKER_SPEC.md`, `A_PROTOCOL_SCHE
 
 ## 0. The two records every bot has
 
-A bot today spans **two records that are not yet linked**:
+A bot spans **two records, now linked at creation** (V163):
 
 1. **Product/agent record** — `agents` table
    (`cmd/allternit-api/migrations/V1__baseline_schema.sql`; API:
@@ -21,11 +21,12 @@ A bot today spans **two records that are not yet linked**:
    `POST /api/v1/fabric/transport/principals`, `fabric_transport_routes.rs`).
    Fields and auth: `A_PROTOCOL_SCHEMA.md` §1.
 
-**Honest gap (Partial):** nothing foreign-keys `agents.id` to
-`cowork_principals.id`. A bot that chats is not automatically a bot that can
-hold a lease. Until the linkage lands, authoring a fully A://-participating
-bot means creating both records with the same canonical address and keeping
-them in sync manually.
+**Implemented invariant (V163):** creating an agent with a `workspace_id`
+mints the fabric principal `a://workspace/{ws}/bot/{agent_id}` in the same
+transaction (`agent_routes.rs::create_agent`), records it on
+`agents.principal_id`, and returns the bearer token **exactly once** in the
+creation response (`principal_token`). Rotations go through
+`POST /api/v1/fabric/transport/principals/:id/provision-token` (user auth).
 
 ## 1. Identity — **Implemented (dual record) / Partial (linkage)**
 
@@ -115,10 +116,13 @@ per-organization at the gateway (org rate limits, admin routes), not per-bot.
 
 ## 11. Authoring checklist (today)
 
-1. Create the product record (`POST /api/v1/agents` family, `agent_routes.rs`) — name, model/provider, system prompt, capabilities, workspace.
-2. Register the execution principal (`POST /api/v1/fabric/transport/principals`) with the same canonical `a://workspace/{ws}/bot/{id}` and the runtime capability set.
-3. Store the bearer token in the bot's runtime secret store — never in the prompt, repo, or `config` JSON.
-4. Declare the workspace risk policy if the bot has protected actions (`cowork_approval_policy`, V158).
+1. Create the product record (`POST /api/v1/agents` family, `agent_routes.rs`)
+   with a `workspace_id` — the execution principal is minted automatically
+   and the token returned once. Store it in the bot's runtime secret store —
+   never in the prompt, repo, or `config` JSON.
+2. (Standalone principals, no agent record:) `POST /api/v1/fabric/transport/principals`.
+3. Declare the workspace risk policy if the bot has protected actions (`cowork_approval_policy`, V158) and set `max_delegation_depth` if delegation chains apply (V164).
+4. Submit work as canonical intents (`POST /api/v1/fabric/transport/intents`) or create runs/jobs directly with a `causation_chain` when delegating (§8.15; cycles/depth rejected at write).
 5. Give the bot a claim loop per `FABRIC_TRANSPORT.md` §16.
 6. Emit events with stable `event_id`s for any client-originated events (V157).
-7. Surface state through Cowork from canonical run/job rows — never from the bot's own narration.
+7. Surface state through Cowork (the `/fabric-transport` control view or the API) from canonical run/job rows — never from the bot's own narration.
