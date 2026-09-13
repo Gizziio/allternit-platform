@@ -1,7 +1,9 @@
 # DAG as the Default Task System (Spec Delta)
 
-Status: DRAFT — proposed 2026-09-13. Not yet ratified. Supersedes nothing until
-the ratification checklist at the bottom is complete.
+Status: **RATIFIED (decision) 2026-09-13, rollout in progress.** The decision
+below is final; the rollout checklist at the bottom tracks adoption. Owner
+decisions on file: ticket-system identity resolved as **(a)**; `AGENTS.md`
+planning rules amended in the same change.
 
 ## Problem
 
@@ -54,20 +56,18 @@ extends the boundary outward so work must *enter* the system to count.
 - No automatic executor. `ready_nodes` stays derived-on-demand; runners and
   orchestrators keep driving execution per-WIH.
 
-## Open question that must be resolved before ratification
+## Ticket-system identity — RESOLVED (a), 2026-09-13
 
 The Work Identity Law (`spec/SPEC_OVERVIEW.md:9`) says `dag_id` is the
 canonical work ID with **no separate ticket entity**, yet the crate ships a
-full standalone ticket DAG (`src/tickets/`, `cli/`). Routing all work through
-the WIH DAG forces a decision:
+full standalone ticket DAG (`src/tickets/`, `cli/`).
 
-- **(a) Ticket system is out-of-scope tooling** — a standalone CLI usable in
-  foreign repos, documented as such, and never used inside this tree; or
-- **(b) Ticket system is removed/merged** — its dependency analytics move onto
-  WIH edges, and `cli/` is retired.
-
-This delta assumes (a) is sufficient. If (b) is chosen instead, ratification
-waits on the merge.
+**Decision (owner, 2026-09-13): (a)** — the ticket system is out-of-scope
+tooling: a standalone CLI usable in foreign repos, documented as such, and
+never used for work tracking inside this tree. Work tracking inside this tree
+is WIH DAG only. The ticket system stays in the crate as the portable CLI
+surface; it is not an alternative work-tracking channel. If that ever changes,
+option (b) (merge/remove) reopens — but as of ratification, (a) is the law.
 
 ## Failure modes to guard against
 
@@ -82,9 +82,11 @@ waits on the merge.
 
 ## Ratification checklist
 
-- [ ] Decision recorded: ticket system (a) or (b).
-- [ ] `AGENTS.md` planning section rewritten.
+- [x] Decision recorded: ticket system **(a)** — out-of-scope tooling, 2026-09-13.
+- [x] `AGENTS.md` planning section rewritten. (Amended in this change: planning
+      section + session-lifecycle step 2.)
 - [ ] One queue (Research) projected into DAG nodes as the pilot.
 - [ ] At least one full multi-session work item completed end-to-end via
       plan → pickup → gates → vault with no parallel plan file.
-- [ ] This file's Status changed to RATIFIED with the date.
+- [x] Status changed to RATIFIED with the date (decision ratified; the two
+      remaining items are rollout validation, tracked here).
