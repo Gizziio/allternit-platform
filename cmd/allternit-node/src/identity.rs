@@ -38,6 +38,14 @@ impl RuntimeIdentity {
         Ok(identity)
     }
 
+    /// True when `other` carries the same credential (device token + expiry).
+    /// The desktop app is the single writer of the identity file; when it
+    /// rotates the token the daemon adopts the new file on the next reconnect,
+    /// and anything unchanged is left alone.
+    pub fn same_credential(&self, other: &RuntimeIdentity) -> bool {
+        self.device_token == other.device_token && self.expires_at == other.expires_at
+    }
+
     /// Seconds until the device credential expires, when the file records an
     /// expiry. `None` means unknown (treat as fresh).
     pub fn seconds_until_expiry(&self) -> Option<i64> {

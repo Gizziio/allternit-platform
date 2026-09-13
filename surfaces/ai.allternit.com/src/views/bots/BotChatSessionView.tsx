@@ -207,6 +207,9 @@ function BotChatSessionContent({
   const isStreaming = streamingState?.isStreaming ?? false;
   const messages = session?.messages ?? [];
   const [transcript, setTranscript] = useState<BotChatTranscript>(() => initTranscript());
+  // Bumped on every successful user send so the transcript jumps to the
+  // current message even when the viewport was scrolled up in history.
+  const [sendCount, setSendCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { older: olderMessages, recent: recentMessages } = useMemo(
@@ -263,6 +266,7 @@ function BotChatSessionContent({
 
       setSendError(null);
       applyFold(userSendEvent(text.trim()));
+      setSendCount((count) => count + 1);
 
       const modelId = modelSelection
         ? `${modelSelection.providerId}/${modelSelection.modelId}`
@@ -604,6 +608,7 @@ function BotChatSessionContent({
         <BotTranscript
           transcript={transcript}
           className="flex-1 overflow-y-auto px-1 py-2"
+          jumpKey={sendCount}
           onApprovalAnswer={onApprovalAnswer}
           onApprovalGrant={onApprovalGrant}
         />

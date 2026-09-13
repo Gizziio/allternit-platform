@@ -101,10 +101,16 @@ fn relay_url(config: &NodeConfig, runtime_id: &str) -> String {
 }
 
 /// Run the connect → serve → reconnect loop forever (until the process is
-/// signalled).
+/// signalled). Before every connect attempt the identity file is re-read: the
+/// desktop app rotates the device token in place, and the daemon adopts the
+/// rotated credential without a restart. A missing or unreadable file keeps
+/// the last-known in-memory identity — a transient disk issue must not kill a
+/// healthy relay.
 pub async fn run(config: NodeConfig, identity: RuntimeIdentity, state: Arc<DaemonState>) {
+    let mut identity = identity;
     let mut backoff = BACKOFF_INITIAL;
     loop {
+        identity = reload_identity(&config.identity_path, &identity);
         match serve(&config, &identity, &state).await {
             Ok(()) => tracing::info!("relay connection closed; reconnecting"),
             Err(error) => tracing::warn!("relay connection failed: {error:#}"),
@@ -112,6 +118,29 @@ pub async fn run(config: NodeConfig, identity: RuntimeIdentity, state: Arc<Daemo
         state.relay.reconnects.fetch_add(1, Ordering::Relaxed);
         tokio::time::sleep(backoff).await;
         backoff = (backoff * 2).min(BACKOFF_MAX);
+    }
+}
+
+/// Re-read the identity file and adopt it when the credential changed.
+/// Returns `current` untouched when the file is missing, unreadable, or
+/// carries the same token/expiry.
+fn reload_identity(identity_path: &std::path::Path, current: &RuntimeIdentity) -> RuntimeIdentity {
+    match RuntimeIdentity::load(identity_path) {
+        Ok(latest) if latest.same_credential(current) => current.clone(),
+        Ok(latest) => {
+            tracing::info!(
+                "adopted rotated identity from {}",
+                identity_path.display()
+            );
+            latest
+        }
+        Err(error) => {
+            tracing::warn!(
+                "identity reload from {} failed ({error}); keeping last-known identity",
+                identity_path.display()
+            );
+            current.clone()
+        }
     }
 }
 
@@ -314,6 +343,74 @@ fn base64_decode(body: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    fn test_identity(token: &str) -> RuntimeIdentity {
+        RuntimeIdentity {
+            runtime_id: "rt_1".to_string(),
+            device_token: token.to_string(),
+            user_id: "u_1".to_string(),
+            expires_at: Some("2027-01-01T00:00:00Z".to_string()),
+        }
+    }
+
+    fn write_identity(path: &std::path::Path, token: &str) {
+        std::fs::write(
+            path,
+            serde_json::to_string(&json!({
+                "runtimeId": "rt_1",
+                "deviceToken": token,
+                "userId": "u_1",
+                "expiresAt": "2027-01-01T00:00:00Z",
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn reload_adopts_swapped_token() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("runtime-identity.json");
+        let current = test_identity("tok_old");
+        write_identity(&path, "tok_new");
+
+        let adopted = reload_identity(&path, &current);
+        assert_eq!(adopted.device_token, "tok_new");
+        assert_eq!(adopted.runtime_id, "rt_1");
+    }
+
+    #[test]
+    fn reload_keeps_last_known_identity_when_file_is_missing() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("runtime-identity.json");
+        let current = test_identity("tok_old");
+
+        let kept = reload_identity(&path, &current);
+        assert_eq!(kept.device_token, "tok_old");
+    }
+
+    #[test]
+    fn reload_keeps_last_known_identity_when_file_is_invalid() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("runtime-identity.json");
+        let current = test_identity("tok_old");
+        std::fs::write(&path, "{not json").unwrap();
+
+        let kept = reload_identity(&path, &current);
+        assert_eq!(kept.device_token, "tok_old");
+    }
+
+    #[test]
+    fn reload_keeps_current_when_credential_is_unchanged() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("runtime-identity.json");
+        let current = test_identity("tok_same");
+        write_identity(&path, "tok_same");
+
+        let kept = reload_identity(&path, &current);
+        assert_eq!(kept.device_token, "tok_same");
+    }
 
     #[test]
     fn relay_url_upgrades_to_secure_websocket() {

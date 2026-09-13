@@ -196,7 +196,8 @@ For payment, email send, booking, write, deployment, or other non-idempotent act
 - persist the external action reference before advancing;
 - checkpoint after committed side effects;
 - bind approval to the current execution context;
-- make completion idempotent.
+- make completion idempotent;
+- give client-emitted events a stable `event_id` (the events API dedupes on it, V157).
 
 ## 12. Protected actions and approvals
 
@@ -226,6 +227,14 @@ Current route family:
 ```
 
 Worker operations use worker bearer auth. Human decisions use normal user auth.
+
+Requests take an optional `approval_ttl_secs` (default 300s). Expired requests
+are swept to `expired` with attributed `approval.expired` events; late grants
+fail `A_APPROVAL_INVALID`; `check` on an expired binding returns
+`A_APPROVAL_REQUIRED` (recovery policy: re-request). Whether a binding is
+needed at all is a risk-policy decision (`risk_policy.rs`, V158), not a
+per-call choice — low-risk capabilities auto-approve with an attributed
+ledger event; auto-deny fails `A_PERMISSION_DENIED`.
 
 ## 13. Attribution requirements
 
@@ -435,11 +444,17 @@ infrastructure/executor/cowork/cowork/allternit-cowork-runtime/src/run.rs
 Schema:
 
 ```text
-cmd/allternit-api/migrations/V149__cowork_principals.sql
-cmd/allternit-api/migrations/V150__cowork_job_lease_columns.sql
-cmd/allternit-api/migrations/V151__cowork_event_attribution.sql
+cmd/allternit-api/migrations/V152__cowork_principals.sql
+cmd/allternit-api/migrations/V153__cowork_job_lease_columns.sql
+cmd/allternit-api/migrations/V154__cowork_event_attribution.sql
 cmd/allternit-api/migrations/V155__cowork_approval_bindings.sql
+cmd/allternit-api/migrations/V156__cowork_approval_expiry.sql
+cmd/allternit-api/migrations/V157__cowork_event_idempotency.sql
+cmd/allternit-api/migrations/V158__cowork_approval_policy.sql
 ```
+
+(Numbering note: the cowork set was renumbered V149–V151 → V152–V154 when an
+unrelated migration took V149; older prose may cite the old numbers.)
 
 Startup/rehydration/sweeper wiring:
 
