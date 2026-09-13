@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, CircleNotch, Sparkle, Warning, X } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, CircleNotch, Sparkle, Warning, X } from "@phosphor-icons/react";
 import type {
   AvatarConfig,
   BotCategory,
@@ -22,12 +22,10 @@ import { defaultBotVMOperatorConfig } from "@/lib/bots/vm-operator";
 import { api } from "@/integration/api-client";
 import { voiceService, type Voice } from "@/lib/agents/voice.service";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { createModuleLogger } from "@/lib/logger";
 import { WIZARD_COPY } from "./wizard-copy";
 import {
   WIZARD_STEPS,
-  canNavigateTo,
   createChecklistFor,
   deriveHandle,
   stepGateMet,
@@ -35,12 +33,12 @@ import {
 } from "./wizard-state";
 import { useCreateBotSubmit } from "./useCreateBotSubmit";
 import { describeBot, refineSystemPrompt } from "./describeBot";
-import { WizardPreview } from "./WizardPreview";
 import { StartStep, BLANK_TEMPLATE_ID } from "./steps/StartStep";
 import { IdentityStep } from "./steps/IdentityStep";
 import { JobStep } from "./steps/JobStep";
 import { ComputerRuntimeStep } from "./steps/ComputerRuntimeStep";
 import { type AvatarEditorState } from "./steps/AvatarEditor";
+import { AVATAR_PACKS } from "./avatar-packs";
 
 const logger = createModuleLogger("CreateBotWizard");
 
@@ -116,6 +114,8 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [describing, setDescribing] = useState(false);
   const [refining, setRefining] = useState(false);
+  const [describeError, setDescribeError] = useState<string | null>(null);
+  const [refineError, setRefineError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<CreateAgentInput>>(() => buildInitialFormData());
 
@@ -128,6 +128,10 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
   const [gizziEmotion, setGizziEmotion] = useState<AvatarEditorState["gizziEmotion"]>("pleased");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [petUrl, setPetUrl] = useState("");
+  const [packSelection, setPackSelection] = useState<AvatarEditorState["packSelection"]>(() => {
+    const firstPack = AVATAR_PACKS[0];
+    return { packId: firstPack.id, spriteId: firstPack.sprites[0].id };
+  });
 
   const [brains, setBrains] = useState<BrainSummary[]>([]);
   const [brainsLoading, setBrainsLoading] = useState(false);
@@ -166,6 +170,31 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
           uri: imageDataUrl || undefined,
           colors: { primary: accent, secondary: "#ffffff", glow: accent },
         } as AvatarConfig;
+      case "packs": {
+        const pack = AVATAR_PACKS.find((p) => p.id === packSelection.packId);
+        const sprite = pack?.sprites.find((s) => s.id === packSelection.spriteId);
+        // Animated-capable sprites ride the pet renderer (Codex-carry sheet
+        // format); portrait-only sprites fall back to a static image avatar.
+        if (pack && sprite?.sheetUrl) {
+          return {
+            type: "mascot",
+            mascotTemplate: "pet",
+            colors: { primary: accent, secondary: "#ffffff", glow: accent },
+            pet: {
+              spriteUrl: sprite.sheetUrl,
+              frameWidth: 192,
+              frameHeight: 208,
+              columns: 8,
+              rows: 9,
+            },
+          } as AvatarConfig;
+        }
+        return {
+          type: "image",
+          uri: sprite?.portraitUrl,
+          colors: { primary: accent, secondary: "#ffffff", glow: accent },
+        } as AvatarConfig;
+      }
       case "pet":
         return {
           type: "mascot",
@@ -196,7 +225,7 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
           currentEmotion: gizziEmotion,
         } as AvatarConfig;
     }
-  }, [avatarMode, avatarPicker, gizziColor, gizziEmotion, imageDataUrl, mascotTemplate, petUrl]);
+  }, [avatarMode, avatarPicker, gizziColor, gizziEmotion, imageDataUrl, mascotTemplate, packSelection, petUrl]);
 
   const buildAvatarConfigRef = useRef(buildAvatarConfig);
   buildAvatarConfigRef.current = buildAvatarConfig;
@@ -215,8 +244,14 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
     setGizziEmotion("pleased");
     setImageDataUrl(null);
     setPetUrl("");
+    setPackSelection({
+      packId: AVATAR_PACKS[0].id,
+      spriteId: AVATAR_PACKS[0].sprites[0].id,
+    });
     setDescribing(false);
     setRefining(false);
+    setDescribeError(null);
+    setRefineError(null);
     submit.reset();
   }, [isOpen, draft, submit.reset]);
 
@@ -345,15 +380,20 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
    * Describe-to-prefill (milestone 5): one LLM call, then seed the wizard
    * from the parsed result. The suggested template's defaults (accent,
    * avatar color, category tools) are applied underneath first; parsed
-   * fields win on top. No match → blank card. Null result → silent no-op,
-   * the selected template's state is untouched.
+   * fields win on top. No match → blank card. Null result → inline error
+   * on the Start step ("Couldn't prefill — try again"); the selected
+   * template's state is untouched.
    */
   const handleDescribe = async (text: string) => {
     if (describing) return;
     setDescribing(true);
+    setDescribeError(null);
     try {
       const result = await describeBot({ description: text });
-      if (!result) return;
+      if (!result) {
+        setDescribeError(WIZARD_COPY.errors.describeFailed);
+        return;
+      }
       const suggested = result.suggestedTemplateId
         ? getBotTemplate(result.suggestedTemplateId)
         : undefined;
@@ -378,7 +418,7 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
         }));
       }
     } catch {
-      // Silent by contract — never block the wizard on the accelerator.
+      setDescribeError(WIZARD_COPY.errors.describeFailed);
     } finally {
       setDescribing(false);
     }
@@ -388,17 +428,22 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
   const handleRefine = async () => {
     if (refining) return;
     setRefining(true);
+    setRefineError(null);
     try {
       const result = await refineSystemPrompt({
         description: formData.description || formData.botProfile?.tagline || "",
         displayName: formData.botProfile?.displayName || undefined,
         currentSystemPrompt: formData.systemPrompt || undefined,
       });
-      if (result?.systemPrompt) {
+      if (!result) {
+        setRefineError(WIZARD_COPY.errors.refineFailed);
+        return;
+      }
+      if (result.systemPrompt) {
         setFormData((prev) => ({ ...prev, systemPrompt: result.systemPrompt! }));
       }
     } catch {
-      // Silent by contract.
+      setRefineError(WIZARD_COPY.errors.refineFailed);
     } finally {
       setRefining(false);
     }
@@ -455,12 +500,6 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
     if (step > 0) setStep((s) => s - 1);
   };
 
-  const gotoStep = (index: number) => {
-    if (index === step) return;
-    if (!canNavigateTo(index, formData)) return;
-    setStep(index);
-  };
-
   const avatarState: AvatarEditorState = {
     avatarMode,
     setAvatarMode,
@@ -476,133 +515,93 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
     setImageDataUrl,
     petUrl,
     setPetUrl,
+    packSelection,
+    setPackSelection,
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      {/* Header — A:// brand mark, serif like the Bot Hub header */}
-      <header className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
-        <div className="flex items-baseline gap-3">
-          <span className="text-[15px] font-semibold text-[var(--accent-primary)]">
-            {WIZARD_COPY.header.brandMark}
-          </span>
-          <h1
-            className="text-2xl font-medium tracking-tight text-[var(--text-primary)]"
-            style={{ fontFamily: "var(--font-serif)" }}
-          >
-            {WIZARD_COPY.header.title}
-          </h1>
-          <span className="text-[13px] text-[var(--text-muted)]">
-            {WIZARD_COPY.footer.stepCounter(step + 1, WIZARD_STEPS.length)}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={busy}
-          aria-label={WIZARD_COPY.header.closeLabel}
-          className="size-8 inline-flex items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors disabled:opacity-50"
-        >
-          <X size={14} weight="bold" />
-        </button>
-      </header>
-
-      <div className="flex flex-1 min-h-0">
-        {/* Left step rail */}
-        <nav className="hidden lg:flex w-60 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
-          <ul className="space-y-1">
-            {WIZARD_STEPS.map((s, idx) => {
-              const selected = idx === step;
-              const reachable = canNavigateTo(idx, formData);
-              const satisfied = idx < step || stepGateMet(s.id, formData);
-              return (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => gotoStep(idx)}
-                    disabled={!reachable}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
-                      selected
-                        ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
-                        : "border-transparent",
-                      reachable ? "hover:border-[var(--border-hover)]" : "opacity-50 cursor-not-allowed",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                        satisfied
-                          ? "bg-[var(--accent-primary)] text-[var(--ui-text-inverse,#fff)]"
-                          : "border border-[var(--border-subtle)] text-[var(--text-muted)]",
-                      )}
-                    >
-                      {satisfied && !selected ? <Check size={12} weight="bold" /> : idx + 1}
-                    </span>
-                    <span className="min-w-0">
-                      <span
-                        className={cn(
-                          "block text-[13px] font-medium",
-                          selected ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]",
-                        )}
-                      >
-                        {s.label}
-                      </span>
-                      <span className="block text-[11px] text-[var(--text-muted)] truncate">
-                        {s.railHint}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* Center content */}
-        <main className="flex flex-1 flex-col min-w-0 min-h-0">
-          <AnimatePresence>
-            {(error || submit.error) && !showProvisioning && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-[var(--status-error)]/30 bg-[var(--status-error)]/10 px-4 py-3 text-[13px] text-[var(--status-error)]"
+    <div className="fixed inset-0 z-[100] overflow-auto bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+      {/* Approved page chrome — same checklist as ProjectView / LibraryView:
+          full-width elevated root, inner max-w-6xl container with px-8
+          pt-10 pb-12. On large screens the left padding clears the shell's
+          floating rail controls (ui/shell/FloatingWidgets.tsx RailControls,
+          rendered at fixed top-0 left-0 z-[150] ABOVE this overlay):
+          railWidth 248 (RAIL_DEFAULT_WIDTH, ShellFrame) + the desktop
+          trafficLightClearance 72. Wizard z-index stays 100 — the rail
+          controls must remain reachable. */}
+      <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-8 pb-12 pt-10 lg:pl-[320px]">
+        <header className="sticky top-0 z-10 bg-[var(--bg-elevated)] pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1
+                className="text-3xl font-medium tracking-tight text-[var(--text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
               >
-                <Warning size={16} weight="fill" />
-                {error || submit.error}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {WIZARD_COPY.header.title}
+              </h1>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                {WIZARD_COPY.header.subtitle}
+              </p>
+              <p className="mt-1 text-[13px] text-[var(--text-tertiary)]">
+                {WIZARD_COPY.footer.stepLine(step + 1, WIZARD_STEPS.length, WIZARD_STEPS[step].label)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={busy}
+              aria-label={WIZARD_COPY.header.closeLabel}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
+            >
+              <X size={14} weight="bold" />
+            </button>
+          </div>
+        </header>
 
-          <div className="flex-1 overflow-auto px-6 py-6">
-            {showProvisioning ? (
-              <ProvisioningView
-                phase={submit.phase as "creating" | "provisioning" | "error"}
-                status={submit.provisioningStatus}
-                error={submit.error}
-                displayName={formData.botProfile?.displayName || "My Bot"}
-                onRetry={submit.retryProvisioning}
-                onDismiss={submit.dismissToBotHome}
-              />
-            ) : (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={stepId}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                  className="mx-auto max-w-3xl pb-8"
-                >
+        <AnimatePresence>
+          {(error || submit.error) && !showProvisioning && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mt-2 flex items-center gap-2 rounded-lg border border-[var(--status-error)]/30 bg-[var(--status-error)]/10 px-4 py-3 text-[13px] text-[var(--status-error)]"
+            >
+              <Warning size={16} weight="fill" />
+              {error || submit.error}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <main className="flex-1 min-w-0">
+          {showProvisioning ? (
+            <ProvisioningView
+              phase={submit.phase as "creating" | "provisioning" | "error"}
+              status={submit.provisioningStatus}
+              error={submit.error}
+              displayName={formData.botProfile?.displayName || "My Bot"}
+              onRetry={submit.retryProvisioning}
+              onDismiss={submit.dismissToBotHome}
+            />
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={stepId}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="max-w-3xl"
+              >
+                <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-6">
                   {stepId === "start" && (
                     <StartStep
                       selectedTemplateId={selectedTemplateId}
                       onSelectTemplate={applyTemplate}
                       describing={describing}
                       onDescribe={handleDescribe}
+                      describeError={describeError}
                     />
                   )}
                   {stepId === "identity" && (
@@ -621,6 +620,7 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
                       setFormData={setFormData}
                       refining={refining}
                       onRefine={handleRefine}
+                      refineError={refineError}
                     />
                   )}
                   {stepId === "computer" && (
@@ -637,69 +637,68 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
                       onVoicePreview={handleVoicePreview}
                     />
                   )}
-                </motion.div>
-              </AnimatePresence>
-            )}
-          </div>
-
-          {/* Footer — Back/Next on steps 1–3, Create bot only on step 4 */}
-          {!showProvisioning && (
-            <footer className="shrink-0 flex items-center justify-between border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-6 py-4">
-              <Button
-                variant="outline"
-                onClick={step === 0 ? onClose : handleBack}
-                disabled={busy}
-                className="gap-1.5"
-              >
-                {step === 0 ? (
-                  WIZARD_COPY.footer.cancel
-                ) : (
-                  <>
-                    <ArrowLeft size={14} />
-                    {WIZARD_COPY.footer.back}
-                  </>
-                )}
-              </Button>
-
-              <div className="flex items-center gap-2">
-                {step < WIZARD_STEPS.length - 1 ? (
-                  <Button
-                    onClick={handleNext}
-                    disabled={!stepGateMet(stepId, formData)}
-                    className="gap-1.5"
-                  >
-                    {WIZARD_COPY.footer.next}
-                    <ArrowRight size={14} />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => void submit.submit()}
-                    disabled={!checklist.isValid || busy}
-                    title={checklist.isValid ? undefined : WIZARD_COPY.steps.computer.createDisabledHint}
-                    className="gap-1.5 bg-[var(--accent-primary)] text-[var(--ui-text-inverse,#fff)] border-none hover:opacity-90"
-                  >
-                    {submit.phase === "creating" ? (
-                      <>
-                        <CircleNotch size={14} className="animate-spin" />
-                        {WIZARD_COPY.steps.computer.creatingCta}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkle size={14} weight="fill" />
-                        {WIZARD_COPY.steps.computer.createCta}
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </footer>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           )}
         </main>
 
-        {/* Right live preview rail */}
-        <aside className="hidden xl:block w-[320px] shrink-0 overflow-auto border-l border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
-          <WizardPreview formData={formData} avatar={buildAvatarConfig()} />
-        </aside>
+        {/* Nav row — Back/Next on steps 1–3, Create bot only on step 4.
+            Approved button shapes (see AutomationTasksView / LibraryView):
+            neutral bordered secondary, inverted primary. */}
+        {!showProvisioning && (
+          <footer className="sticky bottom-0 z-10 mt-5 flex max-w-3xl items-center justify-between bg-[var(--bg-elevated)] py-4">
+            <button
+              type="button"
+              onClick={step === 0 ? onClose : handleBack}
+              disabled={busy}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border-default)] px-3.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
+            >
+              {step === 0 ? (
+                WIZARD_COPY.footer.cancel
+              ) : (
+                <>
+                  <ArrowLeft size={14} />
+                  {WIZARD_COPY.footer.back}
+                </>
+              )}
+            </button>
+
+            <div className="flex items-center gap-2">
+              {step < WIZARD_STEPS.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!stepGateMet(stepId, formData)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {WIZARD_COPY.footer.next}
+                  <ArrowRight size={14} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void submit.submit()}
+                  disabled={!checklist.isValid || busy}
+                  title={checklist.isValid ? undefined : WIZARD_COPY.steps.computer.createDisabledHint}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submit.phase === "creating" ? (
+                    <>
+                      <CircleNotch size={14} className="animate-spin" />
+                      {WIZARD_COPY.steps.computer.creatingCta}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkle size={14} weight="fill" />
+                      {WIZARD_COPY.steps.computer.createCta}
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </footer>
+        )}
       </div>
     </div>
   );
@@ -743,13 +742,13 @@ function ProvisioningView({
     >
       <div
         className={cn(
-          "flex size-16 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)]",
+          "flex size-16 items-center justify-center rounded-2xl border border-[var(--border-default)] bg-[var(--bg-card)]",
         )}
       >
         {failed ? (
           <Warning size={28} weight="fill" className="text-[var(--status-error)]" />
         ) : (
-          <CircleNotch size={28} className="animate-spin text-[var(--accent-primary)]" />
+          <CircleNotch size={28} className="animate-spin text-[var(--text-secondary)]" />
         )}
       </div>
 
@@ -759,7 +758,7 @@ function ProvisioningView({
       </p>
 
       {!failed && phase === "provisioning" && (
-        <div className="mt-6 flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-[12px] text-[var(--text-secondary)]">
+        <div className="mt-6 flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-card)] px-4 py-2 text-[12px] text-[var(--text-secondary)]">
           <span
             className={cn(
               "size-1.5 rounded-full",
@@ -776,13 +775,21 @@ function ProvisioningView({
 
       {failed && (
         <div className="mt-6 flex items-center gap-2">
-          <Button onClick={onRetry} className="gap-1.5">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
+          >
             <CircleNotch size={14} />
             {copy.retry}
-          </Button>
-          <Button variant="outline" onClick={onDismiss}>
+          </button>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="inline-flex h-9 items-center rounded-lg border border-[var(--border-default)] px-3.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
+          >
             {copy.openHome}
-          </Button>
+          </button>
         </div>
       )}
     </motion.div>

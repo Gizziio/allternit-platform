@@ -70,8 +70,11 @@ impl QuotaError {
     }
 }
 
-/// Check whether the user/org may provision another desktop.
-pub async fn check_quota(state: &Arc<AppState>, user: &AuthUser) -> Result<QuotaCheck, QuotaError> {
+/// Snapshot of a user's quota limits and current usage.
+async fn load_snapshot(
+    state: &Arc<AppState>,
+    user: &AuthUser,
+) -> Result<(QuotaLimits, i64, i64), String> {
     let db = state.db.clone();
     let user_id = user.user_id.clone();
     let org_id = user.organization_id.clone();
@@ -140,21 +143,18 @@ pub async fn check_quota(state: &Arc<AppState>, user: &AuthUser) -> Result<Quota
     })
     .await;
 
-    let (limits, active, monthly_minutes) = match result {
-        Ok(Ok(v)) => v,
-        Ok(Err(e)) => {
-            warn!(error = %e, "failed to check desktop quota; allowing provision");
-            return Ok(QuotaCheck {
-                allowed: true,
-                active: 0,
-                active_limit: None,
-                monthly_minutes: 0,
-                monthly_limit: None,
-                reason: None,
-            });
-        }
+    match result {
+        Ok(inner) => inner,
+        Err(e) => Err(format!("task panicked checking desktop quota: {}", e)),
+    }
+}
+
+/// Check whether the user/org may provision another desktop.
+pub async fn check_quota(state: &Arc<AppState>, user: &AuthUser) -> Result<QuotaCheck, QuotaError> {
+    let (limits, active, monthly_minutes) = match load_snapshot(state, user).await {
+        Ok(v) => v,
         Err(e) => {
-            warn!(error = %e, "task panicked checking desktop quota; allowing provision");
+            warn!(error = %e, "failed to check desktop quota; allowing provision");
             return Ok(QuotaCheck {
                 allowed: true,
                 active: 0,
@@ -189,6 +189,56 @@ pub async fn check_quota(state: &Arc<AppState>, user: &AuthUser) -> Result<Quota
         monthly_limit: limits.max_monthly_minutes,
         reason: None,
     })
+}
+
+/// Read-only quota status for UI surfaces (e.g. the Create Bot computer
+/// step). Never fails: on a database error it reports an unconstrained
+/// quota, mirroring check_quota's fail-open provision policy.
+pub async fn quota_status(state: &Arc<AppState>, user: &AuthUser) -> QuotaCheck {
+    let (limits, active, monthly_minutes) = match load_snapshot(state, user).await {
+        Ok(v) => v,
+        Err(e) => {
+            warn!(error = %e, "failed to load desktop quota status");
+            return QuotaCheck {
+                allowed: true,
+                active: 0,
+                active_limit: None,
+                monthly_minutes: 0,
+                monthly_limit: None,
+                reason: None,
+            };
+        }
+    };
+
+    let under_concurrent = limits.max_concurrent.map_or(true, |l| active < l);
+    let under_monthly = limits
+        .max_monthly_minutes
+        .map_or(true, |l| monthly_minutes < l);
+    let allowed = under_concurrent && under_monthly;
+    let reason = if allowed {
+        None
+    } else if !under_concurrent {
+        Some(format!(
+            "concurrent desktop limit reached ({}/{})",
+            active,
+            limits.max_concurrent.unwrap_or(active)
+        ))
+    } else {
+        Some(format!(
+            "monthly desktop minutes limit reached ({}/{})",
+            monthly_minutes,
+            limits.max_monthly_minutes.unwrap_or(monthly_minutes)
+        ))
+    };
+
+    QuotaCheck {
+        allowed,
+        active,
+        active_limit: limits.max_concurrent,
+        monthly_minutes,
+        monthly_limit: limits.max_monthly_minutes,
+        reason,
+    }
 }
 
 /// Record that a desktop started.
@@ -441,6 +491,26 @@ mod tests {
         let check = check_quota(&state, &user).await.unwrap();
         assert!(check.allowed);
         assert_eq!(check.active, 0);
+    }
+
+    #[tokio::test]
+    async fn quota_status_reports_usage_and_limits() {
+        let state = test_state().await;
+        let user = test_user("status-user", None);
+        set_user_quota(&state, &user.user_id, 2).await;
+
+        let status = quota_status(&state, &user).await;
+        assert!(status.allowed);
+        assert_eq!(status.active, 0);
+        assert_eq!(status.active_limit, Some(2));
+        assert_eq!(status.monthly_limit, Some(10000));
+
+        record_start(&state, &user, "bot-s1", "sb-s1", "incus", "linux").await;
+        record_start(&state, &user, "bot-s2", "sb-s2", "incus", "linux").await;
+        let status = quota_status(&state, &user).await;
+        assert!(!status.allowed);
+        assert_eq!(status.active, 2);
+        assert!(status.reason.unwrap().contains("concurrent desktop limit"));
     }
 
     #[tokio::test]

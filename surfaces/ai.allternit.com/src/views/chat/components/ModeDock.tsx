@@ -68,6 +68,11 @@ export function ModeDock({
 
   return (
     <div className="w-full flex flex-col items-start gap-3">
+      {agentModeSurface === 'bot' && !selectedSurfaceAgent && (
+        <div className="flex items-center gap-2 py-1 text-[11px] text-[var(--chat-composer-muted)]">
+          Select or create a bot to run these modes
+        </div>
+      )}
       {agentStatus && (
         <div className="flex items-center gap-2 py-1" aria-label="Agent status">
           <div
