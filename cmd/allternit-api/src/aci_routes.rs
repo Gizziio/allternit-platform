@@ -41,6 +41,11 @@ pub fn aci_router() -> Router<Arc<AppState>> {
             "/aci/batch/receipts/:id",
             get(crate::aci_batch::aci_batch_receipt),
         )
+        .route("/aci/code", post(crate::aci_code::aci_code_execute))
+        .route(
+            "/aci/code/receipts/:id",
+            get(crate::aci_code::aci_code_receipt),
+        )
         .route("/aci/policy/audit", get(aci_policy_audit))
         .merge(crate::aci_credentials::credential_routes())
 }
