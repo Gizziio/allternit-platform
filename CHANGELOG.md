@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Bot-chat streaming UX (2026-09-13, branch `ao/bot-streaming-ux`): transient ActivityLine tool-activity fold, StreamMetricsTracker TTFT + windowed tok/s, SystemLine compaction divider backed by a new `context_compacted` SSE frame (gizzi agent-compat + Rust agent_chat_bridge), finish frames carrying `usage {inputTokens, outputTokens}` from `message.updated` events, opt-in first-response preamble for user/DM turns only, and a routine-pending status label (`nextRoutineLabel`) in the chat chrome. See commit `a035a354d`.
 - Cowork production-quality pass (2026-09-13, branch `ao/platform-console-agents`): security scoping on all cowork runs routes (allternit-api V142 `user_id` ownership + cloud-api tenant scoping incl. new recover/handoffs routes with V016 `handoffs` table), approvals persistence (V143/V144 + POST decision endpoint), real `parse_prd` behind the gizzi gateway, runtime-offline UX across the cowork surface, and 60+ new tests. See commits `0fd578c8b`, `807c0c3af`, `2ce28cb3e`, `ff38427e3`.
 - `cmd/allternit-api/migrations/V71__eval_runs.sql` — `eval_datasets` and `eval_runs` tables for agent evaluation.
 - `cmd/allternit-api/src/eval_routes.rs` — `/api/v1/admin/eval/datasets`, `/api/v1/admin/eval/runs`, and `/runs/:id/scores` CRUD endpoints.
