@@ -21,11 +21,12 @@ import { AgentsPage } from "@/pages/AgentsPage";
 import { PortalLandingPage } from "@/pages/PortalLandingPage";
 import { ModelsPage } from "@/pages/ModelsPage";
 import { PlansPage } from "@/pages/PlansPage";
+import { PlaygroundPage } from "@/pages/console/PlaygroundPage";
+import { FilesPage } from "@/pages/console/FilesPage";
+import { BatchesPage } from "@/pages/console/BatchesPage";
+import { SkillsPage } from "@/pages/console/SkillsPage";
+import { BuilderPage } from "@/pages/console/BuilderPage";
 import {
-  PlaygroundStubPage,
-  FilesStubPage,
-  SkillsStubPage,
-  BatchesStubPage,
   SessionsStubPage,
   DeploymentsStubPage,
   ComputersStubPage,
@@ -77,10 +78,6 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
 
 /** Phase 1 designed stubs — one per future console page. */
 const consoleStubRoutes: Array<{ path: string; element: React.ReactNode }> = [
-  { path: "/playground/*", element: <PlaygroundStubPage /> },
-  { path: "/files/*", element: <FilesStubPage /> },
-  { path: "/skills/*", element: <SkillsStubPage /> },
-  { path: "/batches/*", element: <BatchesStubPage /> },
   { path: "/sessions/*", element: <SessionsStubPage /> },
   { path: "/deployments/*", element: <DeploymentsStubPage /> },
   { path: "/computers/*", element: <ComputersStubPage /> },
@@ -249,6 +246,47 @@ export default function App() {
         element={
           <ConsoleRoute>
             <FabricPage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Phase 2 Build group — real pages on the console-ui kit. */}
+      <Route
+        path="/playground/*"
+        element={
+          <ConsoleRoute>
+            <PlaygroundPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/files/*"
+        element={
+          <ConsoleRoute>
+            <FilesPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/skills/*"
+        element={
+          <ConsoleRoute>
+            <SkillsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/batches/*"
+        element={
+          <ConsoleRoute>
+            <BatchesPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/builder/*"
+        element={
+          <ConsoleRoute>
+            <BuilderPage />
           </ConsoleRoute>
         }
       />

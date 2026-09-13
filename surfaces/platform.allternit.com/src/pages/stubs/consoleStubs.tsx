@@ -4,58 +4,9 @@ import { ComingSoonPage } from "./ComingSoonPage";
 /**
  * Phase 1 route stubs — one named component per future console page. Each is
  * a ComingSoonPage with copy appropriate to the surface it stands in for.
- * Phases 2–6 replace these with real pages built on the console-ui kit.
+ * Phases 3–6 replace these with real pages built on the console-ui kit
+ * (Phase 2 landed Playground, Files, Skills, Batches, and Builder).
  */
-
-export function PlaygroundStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Playground"
-      description="A sandbox for trying models, tuning parameters, and iterating on prompts before you ship them to code. The playground lands in a later phase of the console rebuild."
-      codeTemplate={{
-        language: "bash",
-        code: `curl https://api.allternit.com/v1/chat/completions \\
-  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"model": "claude-fable-5.1", "messages": [{"role": "user", "content": "Hello"}]}'`,
-      }}
-    />
-  );
-}
-
-export function FilesStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Files"
-      description="Upload and manage files for use with the Responses and Batches APIs — documents, fine-tuning datasets, and prompt assets, all scoped to your organization."
-    />
-  );
-}
-
-export function SkillsStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Skills"
-      description="Browse, install, and manage agent skills from the Allternit directory. Skills extend what managed agents can do without custom code."
-    />
-  );
-}
-
-export function BatchesStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Batches"
-      description="Submit large workloads through the Batches API and retrieve results within 24 hours at a fraction of the cost. This page will list your batches and their results — for now, use the API directly."
-      codeTemplate={{
-        language: "bash",
-        code: `curl https://api.allternit.com/v1/batches \\
-  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"endpoint": "/v1/chat/completions", "input_file_id": "file_..."}'`,
-      }}
-    />
-  );
-}
 
 export function SessionsStubPage(): React.ReactNode {
   return (
