@@ -61,7 +61,7 @@ Two honest caveats on the measured rows:
   they are conformance checks, not adversarial or long-horizon task
   evaluations.
 
-### Batch dispatch (measured 2026-09-12)
+### Batch dispatch (measured 2026-09-12; real-model campaign 2026-09-13)
 
 Grant-bound batch dispatch (spec `stagehand-batch-fork`, P1–P2) is measured
 outside `conformance/suites.py` — the suites live in the Rust crate and the
@@ -69,13 +69,10 @@ pytest tree, so they are recorded here instead of in `adapter_grades.json`:
 
 | Component | Suite | Pass rate | Grade |
 |-----------|-------|-----------|-------|
-| Batch grant gate (Rust `aci_batch`) | `cargo test -p allternit-api --lib aci_batch` (19 tests: descriptor hashing, tamper/expiry/replay rejection, per-step fallback, receipts) | 19/19 = 100% | `production` |
+| Batch grant gate (Rust `aci_batch`) | `cargo test -p allternit-api --lib aci_batch` (28 tests: descriptor hashing, tamper/expiry/replay rejection, per-step fallback, receipts) | 28/28 = 100% | `production` |
 | Adversarial batch-grant recall (Rust `aci_batch_adversarial`) | `cargo test -p allternit-api --lib aci_batch -- --nocapture` (35 scripted attack cases across 6 classes: descriptor tampering, replay, scope widening, mixed-risk routing, expiration, receipt-chain integrity) | 35/35 = 100% blocked | `production` |
-| Engine batch dispatch | `tests/test_batch_dispatch.py` (20 tests: plan→grant→batch→observation, halt-at-first-failure, fallback paths) + `tests/test_batch_adversarial.py` (17 engine-side attack assertions: denied retries fail closed, steps stable between attempts, no-receipt fails closed, approval kinds never batched) | 20/20 and 5/5 tests = 100% | `production` |
+| Engine batch dispatch | `tests/test_batch_dispatch.py` (21 tests: plan→grant→batch→observation, halt-at-first-failure, fallback paths, attribute-selector and select grounding) + `tests/test_batch_adversarial.py` (engine-side attack assertions) | 21/21 and 5/5 tests = 100% | `production` |
 | Live gated batch (real stack) | 3-step batch → `confirmation_required` → handoff approve → real Chrome executed all steps → receipt `completed` 3/3, `one_grant` | 16/16 = 100% | `production` |
-
-Economics on the canned 3-step task: **4 model turns step-by-step → 2 turns
-batched** (`model_turns_saved` is recorded on the batch-context ledger event).
 
 Adversarial recall, honestly scoped: the attack cases are **scripted** — a
 hand-enumerated adversary (per-field descriptor mutations, grant replay and
@@ -84,8 +81,8 @@ tampering), not a trained attacking model. Every scripted attack is blocked:
 each mutation or widening changes the SHA-256-bound descriptor hash and is
 denied `approval_denied`, grants are single-use and owner-bound, expired
 grants are refused with a denied receipt on the trail, and the batch-receipt
-JSONL now carries a SHA-256 hash chain — `verify_batch_receipt_chain`
-detects an altered, dropped, reordered, or injected record. Reproduce:
+JSONL carries a SHA-256 hash chain — `verify_batch_receipt_chain` detects an
+altered, dropped, reordered, or injected record. Reproduce:
 
 ```bash
 # Rust gate + adversarial suite (per-class tallies with --nocapture)
@@ -95,12 +92,54 @@ cd domains/computer-use/core && PYTHONPATH="." python -m pytest \
   tests/test_batch_dispatch.py tests/test_batch_adversarial.py -q
 ```
 
-Remaining caveats: small *n* (one live task shape so far — the number shows
-the mechanism works end-to-end, not long-horizon reliability); batch model
-emission was exercised with a scripted provider, not a frontier vision model;
-recall against an *adaptive* (model-driven) adversary is still unmeasured —
-the scripted suite covers the known attack surface, not novel attacks.
-Record→teach→batch workflow compilation is deferred.
+#### Real-model validation campaign (2026-09-13, session cu22)
+
+The "wired but unexercised" deferral is now exercised: a frontier vision
+model (**gpt-6-astra**, via the platform's CLI-brain provider path — the
+ak- LLM gateway has no provider key in the dev environment, so inference ran
+through the authenticated codex CLI; one real call logged at 31,608 in / 70
+out tokens, 7.3 s latency) drove the planning loop over five task shapes on a
+local multi-page site, each run twice (batched vs forced per-step). Ground
+truth came from server-side submission state, independent of any browser.
+
+| Task shape | Batched (turns / grants / task ok) | Per-step (turns / task ok) |
+|------------|-----------------------------------|----------------------------|
+| Form fill (fill+fill+submit) | 8 turns / 6 grants / ✅ | 4 turns / ✅ |
+| Multi-click navigation (3 pages) | 4 turns / 0 grants / ✅ (correctly never batched — cross-page) | 4 turns / ✅ |
+| Select + submit | 4 turns / 2 grants / ✅ | 3 turns / ❌ (no per-step select action) |
+| Extract-then-act (read code, type it) | 12 turns / **12 grants** / ✅ | 2 turns / ✅ |
+| Conditional branch | not completed — model-backend stall (3 hung CLI calls >15 min) | 2 turns / ✅ (earlier run) |
+
+Step success across the campaign: batched 28/29 steps, per-step 13/14.
+**Turns were not saved end-to-end** (28 batched vs 13 per-step on completed
+runs): the post-batch observation is captured from the operator-facing
+adapter browser, while the batch executes in the grant gate's own sidecar
+browser — the model re-plans against a stale screen and re-batches,
+amplifying grant requests (12 grants on extract-then-act, a task per-step
+finishes in 2 turns). That observation disconnect is the campaign's headline
+finding and the next wiring target; the 2026-09-12 canned-task measurement
+(4 → 2 turns) used a scripted provider that declared done from the receipt,
+which real models do not do reliably.
+
+Campaign-found fixes landed in this repo: attribute selectors
+(`input[placeholder=…]`) now ground as batch targets (frontier models prefer
+them even when ids exist), and `select` plans ground to
+`selectOptionFromDropdown`. Named, still-open gaps: the per-step executor
+vocabulary rejects plan types `click`/`select` (the campaign shimmed
+click→left_click; product translation is TODO); the 60 s brain timeout in
+`SubprocessVisionProvider` is too tight for real CLI backends; and CLI-brain
+timeouts orphan the model grandchild process (kill the process tree).
+
+No got-through safety event occurred: every batch execution in the campaign
+was bound to a SHA-256 descriptor grant with a receipt on the trail, and the
+instrumented reruns account for every executed action.
+
+Remaining caveats: small *n* (five task shapes, one model, one run each);
+the model backend stalled on the conditional-branch shape (infrastructure,
+not a gate failure); recall against an *adaptive* (model-driven) adversary is
+still unmeasured — the scripted suite covers the known attack surface, not
+novel attacks. Record→teach→batch workflow compilation has since landed
+(PR #447) — the caveat predates it.
 
 ## Safety architecture
 

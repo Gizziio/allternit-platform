@@ -48,3 +48,18 @@ Let me know if you need changes!`;
     expect(container.querySelector("[data-inline-artifact]")).not.toBeNull();
   });
 });
+
+describe("SettledBubble user message styling", () => {
+  it("gives user bubbles a visible panel fill, not the page-elevated fill", () => {
+    const { container } = render(<SettledBubble role="user" text="hello there" />);
+    const bubble = container.querySelector(".rounded-br-sm") as HTMLElement;
+    expect(bubble.className).toContain("bg-[var(--surface-panel)]");
+    expect(bubble.className).toContain("border-[var(--border-subtle)]");
+    expect(bubble.className).not.toContain("bg-[var(--bg-elevated)]");
+  });
+
+  it("renders user text verbatim, markdown characters included", () => {
+    render(<SettledBubble role="user" text="use [alpha] and **beta**" />);
+    expect(screen.getByText(/use \[alpha\] and \*\*beta\*\*/)).toBeDefined();
+  });
+});
