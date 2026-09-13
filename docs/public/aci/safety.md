@@ -70,18 +70,37 @@ pytest tree, so they are recorded here instead of in `adapter_grades.json`:
 | Component | Suite | Pass rate | Grade |
 |-----------|-------|-----------|-------|
 | Batch grant gate (Rust `aci_batch`) | `cargo test -p allternit-api --lib aci_batch` (19 tests: descriptor hashing, tamper/expiry/replay rejection, per-step fallback, receipts) | 19/19 = 100% | `production` |
-| Engine batch dispatch | `tests/test_batch_dispatch.py` (17 tests: plan→grant→batch→observation, halt-at-first-failure, fallback paths) | 17/17 = 100% | `production` |
+| Adversarial batch-grant recall (Rust `aci_batch_adversarial`) | `cargo test -p allternit-api --lib aci_batch -- --nocapture` (35 scripted attack cases across 6 classes: descriptor tampering, replay, scope widening, mixed-risk routing, expiration, receipt-chain integrity) | 35/35 = 100% blocked | `production` |
+| Engine batch dispatch | `tests/test_batch_dispatch.py` (20 tests: plan→grant→batch→observation, halt-at-first-failure, fallback paths) + `tests/test_batch_adversarial.py` (17 engine-side attack assertions: denied retries fail closed, steps stable between attempts, no-receipt fails closed, approval kinds never batched) | 20/20 and 5/5 tests = 100% | `production` |
 | Live gated batch (real stack) | 3-step batch → `confirmation_required` → handoff approve → real Chrome executed all steps → receipt `completed` 3/3, `one_grant` | 16/16 = 100% | `production` |
 
 Economics on the canned 3-step task: **4 model turns step-by-step → 2 turns
 batched** (`model_turns_saved` is recorded on the batch-context ledger event).
 
-Honest caveats: small *n* (one live task shape so far — the number shows the
-mechanism works end-to-end, not long-horizon reliability); batch model
+Adversarial recall, honestly scoped: the attack cases are **scripted** — a
+hand-enumerated adversary (per-field descriptor mutations, grant replay and
+cross-user redemption, scope widening, TTL races, offline receipt-trail
+tampering), not a trained attacking model. Every scripted attack is blocked:
+each mutation or widening changes the SHA-256-bound descriptor hash and is
+denied `approval_denied`, grants are single-use and owner-bound, expired
+grants are refused with a denied receipt on the trail, and the batch-receipt
+JSONL now carries a SHA-256 hash chain — `verify_batch_receipt_chain`
+detects an altered, dropped, reordered, or injected record. Reproduce:
+
+```bash
+# Rust gate + adversarial suite (per-class tallies with --nocapture)
+cargo test -p allternit-api --lib aci_batch -- --nocapture
+# Engine dispatch + engine adversarial suite
+cd domains/computer-use/core && PYTHONPATH="." python -m pytest \
+  tests/test_batch_dispatch.py tests/test_batch_adversarial.py -q
+```
+
+Remaining caveats: small *n* (one live task shape so far — the number shows
+the mechanism works end-to-end, not long-horizon reliability); batch model
 emission was exercised with a scripted provider, not a frontier vision model;
-per-step denial surfaces `step_index` but batch-grant recall against an
-adversarial planner is not yet measured. Record→teach→batch workflow
-compilation is deferred.
+recall against an *adaptive* (model-driven) adversary is still unmeasured —
+the scripted suite covers the known attack surface, not novel attacks.
+Record→teach→batch workflow compilation is deferred.
 
 ## Safety architecture
 
@@ -110,7 +129,10 @@ Risky and irreversible actions require an approval grant minted by
   `ALLTERNIT_ACI_GRANT_TTL_SECS`, aligned with the planning loop's approval
   timeout).
 - **Receipted** — every redemption attempt, allowed or denied, is recorded as
-  an immutable receipt for audit (retention capped at 10,000 entries).
+  an immutable receipt for audit (retention capped at 10,000 entries). Batch
+  receipts additionally carry a SHA-256 hash chain — an altered, dropped,
+  reordered, or injected trail record is detectable offline (see the batch
+  dispatch section).
 
 Enforcement is entirely server-side; a compromised or modified client cannot
 approve its own actions. The TypeScript SDK's approval predicates are a UX
@@ -308,8 +330,13 @@ cargo test -p allternit-api aci_   # aci_safety, aci_approvals, aci_credentials
 # Batch grant gate (batch descriptors, tamper/expiry/replay, per-step fallback)
 cargo test -p allternit-api --lib aci_batch
 
+# Adversarial batch-grant recall (scripted adversary; per-class tallies)
+cargo test -p allternit-api --lib aci_batch -- --nocapture
+
 # Engine batch dispatch (plan→grant→batch→observation, halt-on-failure)
-cd domains/computer-use/core && PYTHONPATH="." python -m pytest tests/test_batch_dispatch.py -q
+# + engine adversarial suite (denied retries fail closed, no-receipt fails closed)
+cd domains/computer-use/core && PYTHONPATH="." python -m pytest \
+  tests/test_batch_dispatch.py tests/test_batch_adversarial.py -q
 ```
 
 As of this writing the Python suites above pass in full, the Rust `aci_`

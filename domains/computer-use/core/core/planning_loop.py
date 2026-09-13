@@ -912,7 +912,15 @@ class PlanningLoop:
             logger.warning("Batch dispatch failed (%s) — step-by-step fallback", attempt.error)
             return None
 
-        receipt = attempt.receipt or {}
+        receipt = attempt.receipt
+        if not isinstance(receipt, dict) or not receipt.get("status"):
+            # Audit-before-act runs both ways: the gate always returns a
+            # receipt on success, so a 200 without one is not evidence of
+            # anything. Fail closed rather than report an unproven batch.
+            close_batch_context(self.ledger, record, status="failed", model_turns_saved=0)
+            logger.warning("Batch dispatch returned no receipt — failing closed, "
+                           "step-by-step fallback")
+            return None
         status = receipt.get("status", "completed")
         halted_at = receipt.get("halted_at")
         steps_completed = sum(

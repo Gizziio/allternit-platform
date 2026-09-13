@@ -2,8 +2,8 @@
 
 **Goal:** D2 of stagehand-batch-fork: adversarial batch-grant recall measurement suite + published numbers.
 
-**Just did:** Read spec, aci_batch.rs (19 tests), aci_approvals.rs grant semantics, batch_dispatch.py, safety.md batch subsection. Baseline test runs in flight.
+**Just did:** A1 receipt SHA-256 hash chain + verify_batch_receipt_chain; A2 one-grant denial now receipted; A3 aci_batch_adversarial.rs (6 classes, 35 cases, all blocked — tallies print with --nocapture); A4 engine adversarial pytest (5 tests, 17 assertions) + planning_loop fail-closed-on-missing-receipt hardening; B safety.md batch subsection updated (35/35 + honest scripted-adversary caveat + reproduce commands).
 
-**Next:** A1/A2 production fixes (receipt chain hash, one-grant denial receipt), then aci_batch_adversarial.rs (6 attack classes), Python engine adversarial tests, safety.md publish, verify, PR/merge/attest/cleanup.
+**Next:** full aci_ filter x2, release preflight, commit, push, PR, merge, attest, cleanup worktrees/branches.
 
-**Open questions:** none — deferral text in spec names this work explicitly.
+**Open questions:** none.

@@ -372,10 +372,93 @@ pub struct BatchReceipt {
 /// Append-only audit trail entry for the JSONL persistence. Two record kinds:
 /// `dispatched` (full receipt, steps still pending) and `completed` (outcome
 /// overlay). Reload applies them in order so the mutable fields converge.
+///
+/// Every record additionally carries a `chain_hash`: a SHA-256 link binding
+/// this record to every record before it, so an offline edit of any recorded
+/// receipt (or a dropped, reordered, or injected line) is detectable via
+/// [`verify_batch_receipt_chain`]. Records written before chaining existed
+/// deserialize with an empty `chain_hash` and fail verification honestly.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct BatchReceiptRecord {
     kind: String,
     receipt: BatchReceipt,
+    #[serde(default)]
+    chain_hash: String,
+}
+
+/// Genesis link for the batch-receipt chain (domain separation from other
+/// SHA-256 uses in the crate).
+const RECEIPT_CHAIN_GENESIS: &str = "allternit-batch-receipts-v1";
+
+/// Compute the chain link for one record given the previous tip. The hash
+/// covers the record WITHOUT its `chain_hash` field plus the previous tip, so
+/// each link commits to the entire history.
+fn receipt_chain_link(tip: &str, record: &BatchReceiptRecord) -> String {
+    let mut value = serde_json::to_value(record).unwrap_or(Value::Null);
+    if let Value::Object(ref mut map) = value {
+        map.remove("chain_hash");
+    }
+    crate::aci_approvals::hash_action_payload(&json!({
+        "chain": "aci.batch.receipts.v1",
+        "tip": tip,
+        "record": value,
+    }))
+}
+
+/// Why a batch-receipt chain failed verification. `line` is the 1-based JSONL
+/// line where the chain broke.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BatchReceiptChainError {
+    Io(String),
+    Unparseable { line: usize },
+    /// The record predates chaining (no `chain_hash`); the trail was
+    /// rewritten or an old file is being verified.
+    PredatesChaining { line: usize },
+    HashMismatch { line: usize },
+}
+
+impl std::fmt::Display for BatchReceiptChainError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(e) => write!(f, "batch receipt chain unreadable: {e}"),
+            Self::Unparseable { line } => write!(f, "batch receipt chain line {line}: unparseable record"),
+            Self::PredatesChaining { line } => {
+                write!(f, "batch receipt chain line {line}: record predates chaining")
+            }
+            Self::HashMismatch { line } => {
+                write!(f, "batch receipt chain line {line}: hash mismatch (tampered, dropped, reordered, or injected record)")
+            }
+        }
+    }
+}
+
+/// Verify the integrity of a persisted batch-receipt trail: recompute the
+/// chain from genesis and compare every stored link. Returns the number of
+/// chained records on success. This is the offline tamper-evidence check the
+/// adversarial suite's receipt-integrity class asserts against.
+pub fn verify_batch_receipt_chain(path: &std::path::Path) -> Result<usize, BatchReceiptChainError> {
+    let text = std::fs::read_to_string(path).map_err(|e| BatchReceiptChainError::Io(e.to_string()))?;
+    let mut tip = RECEIPT_CHAIN_GENESIS.to_string();
+    let mut count = 0usize;
+    for (index, raw) in text.lines().enumerate() {
+        let line = raw.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let line_no = index + 1;
+        let record: BatchReceiptRecord = serde_json::from_str(line)
+            .map_err(|_| BatchReceiptChainError::Unparseable { line: line_no })?;
+        if record.chain_hash.is_empty() {
+            return Err(BatchReceiptChainError::PredatesChaining { line: line_no });
+        }
+        let expected = receipt_chain_link(&tip, &record);
+        if expected != record.chain_hash {
+            return Err(BatchReceiptChainError::HashMismatch { line: line_no });
+        }
+        tip = expected;
+        count += 1;
+    }
+    Ok(count)
 }
 
 /// In-memory authoritative batch receipts plus an optional JSONL audit
@@ -384,6 +467,10 @@ struct BatchReceiptRecord {
 pub struct BatchReceiptStore {
     receipts: Mutex<Vec<BatchReceipt>>,
     path: Option<std::path::PathBuf>,
+    /// Running chain tip for the JSONL audit trail. `None` until a persisted
+    /// store (re)loads or writes its first record; in-memory-only stores
+    /// never chain.
+    chain_tip: Mutex<Option<String>>,
 }
 
 const MAX_RETAINED_BATCH_RECEIPTS: usize = 10_000;
@@ -397,6 +484,7 @@ impl BatchReceiptStore {
         let store = Self {
             receipts: Mutex::new(Vec::new()),
             path: Some(path),
+            chain_tip: Mutex::new(None),
         };
         store.load();
         store
@@ -408,16 +496,24 @@ impl BatchReceiptStore {
             return;
         };
         let mut receipts = self.receipts.lock().expect("batch receipt lock");
+        let mut tip = RECEIPT_CHAIN_GENESIS.to_string();
         for line in text.lines() {
             let line = line.trim();
             if line.is_empty() {
                 continue;
             }
             match serde_json::from_str::<BatchReceiptRecord>(line) {
-                Ok(record) => match receipts.iter_mut().find(|r| r.receipt_id == record.receipt.receipt_id) {
-                    Some(existing) => *existing = record.receipt,
-                    None => receipts.push(record.receipt),
-                },
+                Ok(record) => {
+                    // Recompute the tip across every parsed record so new
+                    // appends chain onto the full history, even if some
+                    // stored links are stale or the file predates chaining
+                    // (verification, not loading, is the arbiter of that).
+                    tip = receipt_chain_link(&tip, &record);
+                    match receipts.iter_mut().find(|r| r.receipt_id == record.receipt.receipt_id) {
+                        Some(existing) => *existing = record.receipt,
+                        None => receipts.push(record.receipt),
+                    }
+                }
                 Err(e) => tracing::warn!("batch receipts reload: skipping unparseable line: {e}"),
             }
         }
@@ -425,14 +521,27 @@ impl BatchReceiptStore {
         if overflow > 0 {
             receipts.drain(0..overflow);
         }
+        drop(receipts);
+        *self.chain_tip.lock().expect("batch receipt chain lock") = Some(tip);
     }
 
     fn persist(&self, kind: &str, receipt: &BatchReceipt) {
         let Some(path) = &self.path else { return };
-        let Ok(line) = serde_json::to_string(&BatchReceiptRecord {
+        let mut record = BatchReceiptRecord {
             kind: kind.to_string(),
             receipt: receipt.clone(),
-        }) else {
+            chain_hash: String::new(),
+        };
+        {
+            let mut tip_guard = self.chain_tip.lock().expect("batch receipt chain lock");
+            let tip = tip_guard
+                .clone()
+                .unwrap_or_else(|| RECEIPT_CHAIN_GENESIS.to_string());
+            let link = receipt_chain_link(&tip, &record);
+            record.chain_hash = link.clone();
+            *tip_guard = Some(link);
+        }
+        let Ok(line) = serde_json::to_string(&record) else {
             return;
         };
         if let Some(parent) = path.parent() {
@@ -894,7 +1003,36 @@ pub async fn run_gated_batch(
                 body.approval_id.as_deref(),
             ) {
                 Ok(grant) => (BatchEnforcement::OneGrant, grant),
-                Err(denial) => return (denial.status, Json(denial.body)).into_response(),
+                Err(denial) => {
+                    // Audit the refused dispatch, same discipline as the
+                    // per-step denial path: the descriptor, the presented
+                    // grant, and the denial are on the trail before we return.
+                    receipt_store.record_dispatched(BatchReceipt {
+                        receipt_id: uuid::Uuid::new_v4().to_string(),
+                        batch_id: descriptor_hash.clone(),
+                        user_id: user_id.to_string(),
+                        descriptor_hash: descriptor_hash.clone(),
+                        grant_id: body.approval_id.clone(),
+                        enforcement: BatchEnforcement::OneGrant,
+                        status: "denied".to_string(),
+                        steps: descriptor
+                            .steps
+                            .iter()
+                            .enumerate()
+                            .map(|(index, step)| BatchStepReceipt {
+                                index,
+                                method: step.method.clone(),
+                                selector: step.selector.clone(),
+                                status: "denied".to_string(),
+                                outcome: Some(denial.body.clone()),
+                            })
+                            .collect(),
+                        halted_at: None,
+                        created_at: chrono::Utc::now().to_rfc3339(),
+                        completed_at: Some(chrono::Utc::now().to_rfc3339()),
+                    });
+                    return (denial.status, Json(denial.body)).into_response();
+                }
             }
         }
         BatchPlan::PerStep { risky_indices } => {
