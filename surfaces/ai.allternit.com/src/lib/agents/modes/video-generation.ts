@@ -1,19 +1,29 @@
 /**
  * Video Generation Mode Service
- * 
- * Handles text-to-video and image-to-video generation
- * Integrates with MiniMax video-01, Runway, Pika, Stable Video Diffusion
- * 
- * Similar to: MiniMax video-01, GenSpark video generation
+ *
+ * Handles text-to-video and image-to-video generation.
+ *
+ * Providers:
+ * - `minimax` — legacy path proxied through the Gizzi media providers.
+ * - `minimax-h3` — MiniMax H3 via the allternit-api media plane
+ *   (POST /v2/video_generation → poll → download, keys server-side via V134 BYOK).
+ * - `fal-seedance` — Seedance 2.0 via the fal queue API through the same
+ *   media plane (submit → poll status/response → download MP4).
  */
 
+import { previewVideoCost, type VideoProviderId } from './media-cost';
+
 export interface VideoGenerationConfig {
-  provider: 'minimax' | 'runway' | 'pika' | 'stable' | 'custom';
+  provider: 'minimax' | 'minimax-h3' | 'fal-seedance' | 'runway' | 'pika' | 'stable' | 'custom';
   model?: string;
   duration?: 6 | 10 | 15; // seconds
-  resolution?: '768p' | '1080p';
+  resolution?: '768p' | '1080p' | '768P' | '2K' | '720p';
   fps?: 24 | 30 | 60;
   aspectRatio?: '16:9' | '9:16' | '1:1' | '4:3';
+  /** fal Seedance tier: fast is cheaper, standard is higher quality. */
+  falTier?: 'fast' | 'standard';
+  /** First-frame image URL for image-to-video. */
+  imageUrl?: string;
 }
 
 export interface GeneratedVideo {
@@ -70,6 +80,15 @@ export async function generateVideo(
     ...config,
   };
 
+  // Surface the cost preview before any metered generate (Register 1, no guarantees).
+  if (defaultConfig.provider === 'minimax-h3' || defaultConfig.provider === 'fal-seedance') {
+    const preview = previewVideoCost(defaultConfig.provider as VideoProviderId, defaultConfig.duration ?? 6, {
+      resolution: defaultConfig.resolution,
+      falTier: defaultConfig.falTier,
+    });
+    console.info(`[video] Cost preview: ${preview.summary}`);
+  }
+
   switch (defaultConfig.provider) {
     case 'minimax': {
       const response = await fetch('/api/v1/providers/video/generate', {
@@ -81,6 +100,9 @@ export async function generateVideo(
       if (!response.ok) throw new Error(payload.message || `Video generation failed (${response.status}).`);
       return payload;
     }
+    case 'minimax-h3':
+    case 'fal-seedance':
+      return generateVideoViaMediaPlane(prompt, defaultConfig);
     case 'runway': {
       const key = typeof process !== 'undefined' ? process.env.RUNWAY_API_KEY : undefined;
       if (!key) {
@@ -117,7 +139,108 @@ export async function generateVideoFromImage(
     ...config,
   };
 
+  if (defaultConfig.provider === 'minimax-h3' || defaultConfig.provider === 'fal-seedance') {
+    const preview = previewVideoCost(defaultConfig.provider as VideoProviderId, defaultConfig.duration ?? 6, {
+      resolution: defaultConfig.resolution,
+      falTier: defaultConfig.falTier,
+    });
+    console.info(`[video] Cost preview (image-to-video): ${preview.summary}`);
+    return generateVideoViaMediaPlane(prompt, { ...defaultConfig, imageUrl });
+  }
+
   throw new Error('Image-to-video generation requires a MiniMax API key with I2V model access. Add MINIMAX_API_KEY to your environment.');
+}
+
+// ─── Media plane backends (MiniMax H3 / fal Seedance) ───────────────────────
+//
+// The provider protocols run server-side in allternit-api (`media` module);
+// API keys never reach the browser (V134 BYOK credential store, or the
+// platform-funded env lane behind ALLTERNIT_MEDIA_PLATFORM_FUNDED). The client
+// drives the job lifecycle: submit → poll → download.
+
+const MEDIA_JOBS_URL = '/api/v1/media/video/jobs';
+const POLL_INTERVAL_MS = 5000;
+const POLL_TIMEOUT_MS = 8 * 60 * 1000; // provider queues can run several minutes
+
+interface MediaJobResponse {
+  job_id: string;
+  provider: string;
+  status: 'queued' | 'processing' | 'succeeded' | 'failed';
+  video?: { artifact_url: string; content_type?: string };
+  error?: string;
+  estimated_cost_usd?: number;
+}
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({})) as T & { error?: string; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || payload.error || `Media request failed (${response.status}).`);
+  }
+  return payload;
+}
+
+async function getJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  const payload = await response.json().catch(() => ({})) as T & { error?: string; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || payload.error || `Media poll failed (${response.status}).`);
+  }
+  return payload;
+}
+
+export async function generateVideoViaMediaPlane(
+  prompt: string,
+  config: VideoGenerationConfig,
+): Promise<VideoGenerationResult> {
+  const provider = config.provider as VideoProviderId;
+  const isMiniMax = provider === 'minimax-h3';
+  const submit = await postJson<MediaJobResponse & { job_id: string }>(MEDIA_JOBS_URL, {
+    provider,
+    prompt,
+    duration: config.duration ?? 6,
+    resolution: config.resolution ?? (isMiniMax ? '768P' : '720p'),
+    aspect_ratio: config.aspectRatio ?? '16:9',
+    image_url: config.imageUrl,
+    fast: config.falTier ? config.falTier === 'fast' : undefined,
+  });
+
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  let last: MediaJobResponse = submit;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    last = await getJson<MediaJobResponse>(`${MEDIA_JOBS_URL}/${submit.job_id}`);
+    if (last.status === 'succeeded' || last.status === 'failed') break;
+  }
+
+  if (last.status !== 'succeeded' || !last.video?.artifact_url) {
+    throw new Error(last.error || `Video generation did not complete (status: ${last.status}).`);
+  }
+
+  const createdAt = new Date().toISOString();
+  return {
+    videos: [{
+      id: last.job_id,
+      url: last.video.artifact_url,
+      prompt,
+      metadata: {
+        provider,
+        model: isMiniMax ? 'MiniMax-H3' : 'seedance-2.0',
+        duration: config.duration ?? 6,
+        resolution: config.resolution ?? (isMiniMax ? '768P' : '720p'),
+        fps: config.fps ?? 24,
+        aspectRatio: config.aspectRatio ?? '16:9',
+        createdAt,
+      },
+    }],
+    prompt,
+    config,
+    usage: { cost: last.estimated_cost_usd },
+  };
 }
 
 /**
@@ -155,6 +278,23 @@ export async function editVideo(
 
 // API Providers Registry for Video Mode
 export const VIDEO_PROVIDERS = {
+  'minimax-h3': {
+    name: 'MiniMax H3',
+    url: 'api.minimax.io',
+    models: [
+      { id: 'MiniMax-H3', type: 'text-to-video', costPerSecond: 0.08, resolution: '768P', duration: 6 },
+      { id: 'MiniMax-H3', type: 'text-to-video', costPerSecond: 0.13, resolution: '2K', duration: 6, note: 'price corroborated, not on official paygo table' },
+    ],
+  },
+  'fal-seedance': {
+    name: 'Seedance 2.0 (fal)',
+    url: 'fal.ai',
+    models: [
+      { id: 'seedance-2.0-fast', type: 'text-to-video', costPerSecond: 0.2419, resolution: '720p', duration: 6 },
+      { id: 'seedance-2.0', type: 'text-to-video', costPerSecond: 0.3034, resolution: '720p', duration: 6 },
+      { id: 'seedance-2.0', type: 'text-to-video', costPerSecond: 0.682, resolution: '1080p', duration: 6 },
+    ],
+  },
   minimax: {
     name: 'MiniMax',
     url: 'api.minimax.chat',

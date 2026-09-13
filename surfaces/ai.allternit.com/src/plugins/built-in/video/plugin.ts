@@ -21,12 +21,14 @@ import {
   type VideoGenerationResult,
   type GeneratedVideo,
 } from '@/lib/agents/modes/video-generation';
+import { previewVideoCost } from '@/lib/agents/modes/media-cost';
 
 export interface VideoConfig extends PluginConfig {
-  provider?: 'minimax' | 'kling';
+  provider?: 'minimax' | 'minimax-h3' | 'fal-seedance' | 'kling';
   model?: string;
   duration?: 6 | 10;
-  resolution?: '768p' | '1080p';
+  resolution?: '768p' | '1080p' | '768P' | '2K' | '720p';
+  falTier?: 'fast' | 'standard';
 }
 
 class VideoPlugin implements ModePlugin {
@@ -157,6 +159,20 @@ class VideoPlugin implements ModePlugin {
   }
 
   private async generateFromText(prompt: string): Promise<PluginOutput> {
+    const meteredProvider: VideoConfig['provider'] = this.config.provider;
+    if (meteredProvider === 'minimax-h3' || meteredProvider === 'fal-seedance') {
+      // Cost preview before any metered generate (unit price × requested units).
+      const preview = previewVideoCost(meteredProvider, this.config.duration ?? 6, {
+        resolution: this.config.resolution,
+        falTier: this.config.falTier,
+      });
+      this.emit({
+        type: 'progress',
+        payload: { step: 'cost-preview', message: preview.summary },
+        timestamp: Date.now(),
+      });
+    }
+
     this.emit({ 
       type: 'progress', 
       payload: { step: 'generating', message: `Generating ${this.config.duration}s video...` },
@@ -188,6 +204,19 @@ class VideoPlugin implements ModePlugin {
   }
 
   private async generateFromImage(imageUrl: string, prompt: string): Promise<PluginOutput> {
+    const meteredProvider: VideoConfig['provider'] = this.config.provider;
+    if (meteredProvider === 'minimax-h3' || meteredProvider === 'fal-seedance') {
+      const preview = previewVideoCost(meteredProvider, this.config.duration ?? 6, {
+        resolution: this.config.resolution,
+        falTier: this.config.falTier,
+      });
+      this.emit({
+        type: 'progress',
+        payload: { step: 'cost-preview', message: preview.summary },
+        timestamp: Date.now(),
+      });
+    }
+
     this.emit({ 
       type: 'progress', 
       payload: { step: 'generating', message: 'Animating image...' },
@@ -199,6 +228,7 @@ class VideoPlugin implements ModePlugin {
       model: this.config.model!,
       duration: this.config.duration!,
       resolution: this.config.resolution!,
+      falTier: this.config.falTier,
     });
 
     return {
