@@ -1,7 +1,7 @@
 //! Merge locks for the Rails CLI.
 //!
-//! Merge locks are the Rails equivalent of Beads merge-locks: an exclusive
-//! lock over a conflict domain that prevents concurrent conflicting changes.
+//! Merge locks are an exclusive lock over a conflict domain that prevents
+//! concurrent conflicting changes.
 //! They are used during conflict-prone work such as branch merges, schema
 //! changes, or coordinated deployments.
 

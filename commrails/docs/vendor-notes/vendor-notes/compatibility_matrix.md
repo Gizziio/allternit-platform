@@ -5,7 +5,7 @@ Status legend:
 - **Partial**: core semantics exist but CLI or extra ops are missing
 - **Not supported**: explicitly out of scope for v1
 
-## Beads (bd) command families
+## Upstream issue-tracking CLI — command families
 
 Supported / Partial:
 - create/update/show/list: **Partial** → `allternit plan new/refine/show`, `allternit wih list`

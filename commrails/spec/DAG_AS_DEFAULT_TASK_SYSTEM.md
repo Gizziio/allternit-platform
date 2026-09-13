@@ -58,7 +58,7 @@ extends the boundary outward so work must *enter* the system to count.
 
 The Work Identity Law (`spec/SPEC_OVERVIEW.md:9`) says `dag_id` is the
 canonical work ID with **no separate ticket entity**, yet the crate ships a
-full Beads-style ticket DAG (`src/tickets/`, `cli/`). Routing all work through
+full standalone ticket DAG (`src/tickets/`, `cli/`). Routing all work through
 the WIH DAG forces a decision:
 
 - **(a) Ticket system is out-of-scope tooling** — a standalone CLI usable in
