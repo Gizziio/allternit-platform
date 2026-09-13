@@ -504,6 +504,173 @@ class TestAutoPageBinding:
         assert client.calls[1]["page_url"] is None
 
 
+# ── F1: post-batch observation from the batch's own browser ──────────────────
+
+import base64 as _std_b64
+
+_SIDECAR_SCREEN = _std_b64.b64encode(b"sidecar-post-batch-pixels").decode()
+
+
+class _StaleAdapter(_UrlAdapter):
+    """Operator-adapter view that disagrees with the batch's sidecar state —
+    the cu22 campaign's stale-screen condition, reproduced in mocks."""
+
+    def __init__(self):
+        super().__init__(url="https://operator.example/stale")
+
+    async def screenshot(self, session_id):
+        return b"stale-adapter-pixels"
+
+
+def _four_step_batch_plan():
+    return ActionPlan(
+        reasoning="four grounded steps",
+        plan_steps=["open", "fill", "pick", "submit"],
+        confidence=0.9,
+        immediate_action=_action("click", "#open"),
+        batch=[
+            _action("type", "#name", text="Eoj"),
+            _action("select", "#plan", text="pro"),
+            _action("click", "#submit"),
+        ],
+    )
+
+
+class TestPostBatchObservation:
+    @pytest.mark.asyncio
+    async def test_observation_comes_from_the_batch_browser_not_the_adapter(self):
+        events = []
+        emitted = []
+        provider = _ScriptedProvider([_four_step_batch_plan(), _four_step_batch_plan()])
+        adapter = _StaleAdapter()
+        client = _FakeBatchClient([
+            BatchDispatchResult(
+                executed=True, descriptor_hash="d1",
+                receipt=_receipt("completed", [
+                    {"index": i, "status": "completed"} for i in range(4)
+                ]),
+                receipt_id="r1",
+                post_batch_observation={
+                    "screenshot_b64": _SIDECAR_SCREEN,
+                    "url": "https://sidecar.example/step-done",
+                    "title": "Submitted",
+                },
+            ),
+            BatchDispatchResult(
+                executed=True, descriptor_hash="d2",
+                receipt=_receipt("completed", [
+                    {"index": i, "status": "completed"} for i in range(4)
+                ]),
+                receipt_id="r2",
+                post_batch_observation={
+                    "screenshot_b64": _SIDECAR_SCREEN,
+                    "url": "https://sidecar.example/step-done",
+                },
+            ),
+        ])
+        loop = _make_loop(provider, adapter, client, events)
+        loop.event_callback = emitted.append
+
+        result = await loop.run("fill and submit", session_id="s-1", run_id="r-1")
+
+        assert result.stop_reason == StopReason.DONE
+        batch_step = result.steps[0]
+        # The LoopStep observation reflects the SIDECAR state the batch ran
+        # in — not the adapter's stale pixels.
+        assert batch_step.after_screenshot_b64 == _SIDECAR_SCREEN
+        assert batch_step.after_screenshot_b64 != _std_b64.b64encode(
+            b"stale-adapter-pixels").decode()
+        # The NEXT batch descriptor binds the sidecar URL, not the adapter's.
+        assert client.calls[1]["page_url"] == "https://sidecar.example/step-done"
+        opened2 = [e for e in events if e[0] == "batch.context.opened"][1][1]
+        assert opened2["page_url"] == "https://sidecar.example/step-done"
+        assert any(e.get("type") == "page.observed"
+                   and e.get("url") == "https://sidecar.example/step-done"
+                   for e in emitted)
+
+    @pytest.mark.asyncio
+    async def test_turn_count_saved_end_to_end_through_real_observation_path(self):
+        # The P2 4→2 measurement used a scripted provider that declared done
+        # from the receipt; the cu22 campaign showed real models re-plan
+        # against a stale adapter screen and never save turns. With the
+        # observation routed from the batch context, a scripted 4-step batch
+        # shows the reduced-turn behavior through the REAL observation path.
+        events = []
+        provider = _ScriptedProvider([_four_step_batch_plan()])  # then auto-done
+        adapter = _StaleAdapter()
+        client = _FakeBatchClient([
+            BatchDispatchResult(
+                executed=True, descriptor_hash="d1",
+                receipt=_receipt("completed", [
+                    {"index": i, "status": "completed"} for i in range(4)
+                ]),
+                receipt_id="r1",
+                post_batch_observation={
+                    "screenshot_b64": _SIDECAR_SCREEN,
+                    "url": "https://sidecar.example/step-done",
+                },
+            ),
+        ])
+        loop = _make_loop(provider, adapter, client, events)
+
+        result = await loop.run("fill and submit", session_id="s-1", run_id="r-1")
+
+        # 4 steps in ONE batch turn + 1 done turn = 2 turns (would be ≥5 if
+        # the model re-planned per step against the stale adapter screen).
+        assert result.model_turns == 2
+        assert len(client.calls) == 1  # no grant-amplifying re-batch
+        assert provider.turns == 2
+        closed = [e for e in events if e[0] == "batch.context.closed"][0][1]
+        assert closed["model_turns_saved"] == 3
+
+    @pytest.mark.asyncio
+    async def test_undecodable_observation_falls_back_to_adapter(self):
+        events = []
+        provider = _ScriptedProvider([_batch_plan()])
+        adapter = _StaleAdapter()
+        client = _FakeBatchClient([
+            BatchDispatchResult(
+                executed=True, descriptor_hash="d1",
+                receipt=_receipt("completed", [
+                    {"index": i, "status": "completed"} for i in range(3)
+                ]),
+                receipt_id="r1",
+                post_batch_observation={"screenshot_b64": "!!!not-base64!!!",
+                                        "url": "https://sidecar.example/x"},
+            ),
+        ])
+        loop = _make_loop(provider, adapter, client, events)
+
+        result = await loop.run("fill the form", session_id="s-1", run_id="r-1")
+
+        assert result.stop_reason == StopReason.DONE
+        step = result.steps[0]
+        assert step.after_screenshot_b64 == _std_b64.b64encode(
+            b"stale-adapter-pixels").decode()
+        # The URL still came from the batch context (it decoded fine).
+        assert loop._observed_url == "https://sidecar.example/x"
+
+    @pytest.mark.asyncio
+    async def test_no_observation_keeps_adapter_path(self):
+        events = []
+        provider = _ScriptedProvider([_batch_plan()])
+        adapter = _StaleAdapter()
+        client = _FakeBatchClient([
+            BatchDispatchResult(executed=True, descriptor_hash="d1",
+                                receipt=_receipt("completed", [
+                                    {"index": i, "status": "completed"} for i in range(3)
+                                ]), receipt_id="r1"),
+        ])
+        loop = _make_loop(provider, adapter, client, events)
+
+        result = await loop.run("fill the form", session_id="s-1", run_id="r-1")
+
+        step = result.steps[0]
+        assert step.after_screenshot_b64 == _std_b64.b64encode(
+            b"stale-adapter-pixels").decode()
+        assert loop._observed_url == "https://operator.example/stale"
+
+
 # ── Provider parsing ─────────────────────────────────────────────────────────
 
 class TestBatchPlanParsing:

@@ -566,12 +566,44 @@ class PlanningLoop:
                         step.action_succeeded = False
                         logger.warning(f"Action failed at step {step_num}: {act_err}")
 
-                # OBSERVE phase
-                new_screenshot = await self._capture_screenshot(session_id)
+                # OBSERVE phase — F1 (cu22 observation disconnect): after a
+                # batch, observe the SAME browser the batch executed in (the
+                # grant gate's sidecar), not the operator-facing adapter
+                # surface. The adapter view may be stale or a different page
+                # entirely; re-planning against it amplified grants in the
+                # real-model campaign (12 grants on extract-then-act). When
+                # the gate captured no observation, keep the adapter path.
+                batch_observation = (
+                    batch_outcome.get("post_batch_observation")
+                    if batch_outcome is not None else None
+                )
+                if not isinstance(batch_observation, dict):
+                    batch_observation = None
+                new_screenshot = b""
+                if batch_observation and batch_observation.get("screenshot_b64"):
+                    try:
+                        import base64 as _b64
+                        new_screenshot = _b64.b64decode(batch_observation["screenshot_b64"])
+                    except Exception as obs_err:
+                        logger.warning("post-batch observation undecodable (%s) — "
+                                       "falling back to adapter capture", obs_err)
+                        new_screenshot = await self._capture_screenshot(session_id)
+                else:
+                    new_screenshot = await self._capture_screenshot(session_id)
                 step.after_screenshot_b64 = _bytes_to_b64(new_screenshot) if new_screenshot else ""
                 # Deferral B: track the current page URL for the NEXT batch's
-                # descriptor binding (operator pin in config still wins).
-                await self._update_observed_url(step)
+                # descriptor binding (operator pin in config still wins). The
+                # batch execution context's URL wins over the adapter's — it
+                # is the surface the batch actually navigated.
+                batch_obs_url = (batch_observation or {}).get("url")
+                if batch_obs_url and str(batch_obs_url).strip():
+                    url = str(batch_obs_url).strip()
+                    if url != self._observed_url:
+                        self._emit({"type": "page.observed", "run_id": step.run_id,
+                                    "step": step.step, "url": url})
+                    self._observed_url = url
+                else:
+                    await self._update_observed_url(step)
                 self._emit({"type": "screenshot.captured", "run_id": run_id, "step": step_num, "phase": "after_action",
                             "screenshot_b64": step.after_screenshot_b64})
                 self._emit({"type": "action.completed", "run_id": run_id, "step": step_num,
@@ -1007,6 +1039,9 @@ class PlanningLoop:
             "receipt_id": attempt.receipt_id,
             "enforcement": attempt.enforcement,
             "receipt": receipt,
+            # F1: the batch's own execution-context state, when the gate
+            # captured it; None keeps the caller's adapter observation path.
+            "post_batch_observation": attempt.post_batch_observation,
         }
 
     async def _dispatch_code(

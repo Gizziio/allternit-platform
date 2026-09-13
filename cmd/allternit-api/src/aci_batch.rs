@@ -842,6 +842,38 @@ impl Drop for SidecarClient {
 /// per step in descriptor order.
 pub type BatchExecutor = Box<dyn FnOnce(&[BatchStep]) -> Vec<StepResult>>;
 
+/// Post-batch observation captured from the SAME sidecar browser the batch
+/// executed in (cu22 follow-up F1, the observation disconnect). Batches run
+/// in the grant gate's sidecar browser; if the planning loop re-observes the
+/// operator-facing adapter browser afterwards it plans against a stale screen
+/// (grant amplification, no turn savings). This carries the sidecar's own
+/// post-batch pixels + URL back to the caller. Response-only field: the
+/// descriptor format, grant semantics, and receipt hash chain are untouched.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PostBatchObservation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screenshot_b64: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screenshot_sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+}
+
+/// A batch executor plus the optional observation captured from the batch's
+/// own execution context before that context is torn down.
+pub struct BatchExecution {
+    pub executor: BatchExecutor,
+    pub observation: Option<PostBatchObservation>,
+}
+
+impl BatchExecution {
+    pub fn from_executor(executor: BatchExecutor) -> Self {
+        Self { executor, observation: None }
+    }
+}
+
 /// Execute a granted batch through the sidecar: init (mock model — the
 /// whitelisted structured steps execute deterministically with no model
 /// call), optional navigation to the descriptor's bound page, then ONE
@@ -853,7 +885,7 @@ pub type BatchExecutor = Box<dyn FnOnce(&[BatchStep]) -> Vec<StepResult>>;
 pub fn sidecar_batch_executor(
     descriptor: &BatchDescriptor,
     headless: bool,
-) -> Result<BatchExecutor, String> {
+) -> Result<BatchExecution, String> {
     let runtime_dir = resolve_runtime_dir()?;
     let mut client = SidecarClient::spawn(&runtime_dir)?;
     client.request(
@@ -882,6 +914,12 @@ pub fn sidecar_batch_executor(
         )
         .map_err(|e| format!("sidecar actBatch failed: {e}"))?;
 
+    // F1: capture the post-batch observation from THIS sidecar browser (the
+    // surface the batch actually mutated) before the client drops. Best
+    // effort — a failed observation must not fail an otherwise-good batch;
+    // the caller then keeps its existing (adapter) observation path.
+    let observation = capture_post_batch_observation(&mut client);
+
     // The sidecar reports one entry per executed step (`index`, `success`,
     // ...); the tail after a halt is absent. Replay into a full-length vec.
     let mut by_index: std::collections::HashMap<usize, Value> = std::collections::HashMap::new();
@@ -893,23 +931,49 @@ pub fn sidecar_batch_executor(
     }
 
     let step_count = descriptor.steps.len();
-    Ok(Box::new(move |_steps: &[BatchStep]| {
-        (0..step_count)
-            .map(|index| match by_index.get(&index) {
-                Some(entry) => {
-                    let success = entry.get("success").and_then(Value::as_bool).unwrap_or(false);
-                    let detail = Some(entry.clone());
-                    if success {
-                        StepResult::Completed(detail)
-                    } else {
-                        StepResult::Failed(detail)
+    Ok(BatchExecution {
+        executor: Box::new(move |_steps: &[BatchStep]| {
+            (0..step_count)
+                .map(|index| match by_index.get(&index) {
+                    Some(entry) => {
+                        let success = entry.get("success").and_then(Value::as_bool).unwrap_or(false);
+                        let detail = Some(entry.clone());
+                        if success {
+                            StepResult::Completed(detail)
+                        } else {
+                            StepResult::Failed(detail)
+                        }
                     }
-                }
-                // Steps the sidecar never reported are the tail after a halt.
-                None => StepResult::Skipped,
-            })
-            .collect()
-    }))
+                    // Steps the sidecar never reported are the tail after a halt.
+                    None => StepResult::Skipped,
+                })
+                .collect()
+        }),
+        observation,
+    })
+}
+
+/// Read the sidecar browser's post-batch state (screenshot + page info) over
+/// the live stdio client. Returns `None` when neither surface responds — the
+/// observation is a best-effort convenience for the planning loop, never a
+/// gate on batch success.
+fn capture_post_batch_observation(client: &mut SidecarClient) -> Option<PostBatchObservation> {
+    let shot = client
+        .request("screenshot", json!({}), Duration::from_secs(30))
+        .ok();
+    let info = client
+        .request("pageInfo", json!({}), Duration::from_secs(15))
+        .ok();
+    if shot.is_none() && info.is_none() {
+        return None;
+    }
+    let str_of = |v: &Value, key: &str| v.get(key).and_then(Value::as_str).map(str::to_string);
+    Some(PostBatchObservation {
+        screenshot_b64: shot.as_ref().and_then(|v| str_of(v, "pngBase64")),
+        screenshot_sha256: shot.as_ref().and_then(|v| str_of(v, "sha256")),
+        url: info.as_ref().and_then(|v| str_of(v, "url")),
+        title: info.as_ref().and_then(|v| str_of(v, "title")),
+    })
 }
 
 // ─── HTTP surface (P1 invocation route; P2's planning loop consumes this) ──
@@ -950,7 +1014,7 @@ pub async fn run_gated_batch(
     user_id: &str,
     body: &AciBatchBody,
     receipt_store: &BatchReceiptStore,
-    make_executor: impl FnOnce(&BatchDescriptor) -> Result<BatchExecutor, String>,
+    make_executor: impl FnOnce(&BatchDescriptor) -> Result<BatchExecution, String>,
 ) -> Response {
     let descriptor = BatchDescriptor {
         origin: body
@@ -1114,8 +1178,8 @@ pub async fn run_gated_batch(
         completed_at: None,
     });
 
-    let executor = match make_executor(&descriptor) {
-        Ok(executor) => executor,
+    let execution = match make_executor(&descriptor) {
+        Ok(execution) => execution,
         Err(message) => {
             let receipt = receipt_store.record_completed(
                 &receipt_id,
@@ -1146,19 +1210,23 @@ pub async fn run_gated_batch(
         }
     };
 
-    let receipt = run_batch_steps(receipt_store, &receipt_id, &descriptor.steps, executor);
+    let receipt = run_batch_steps(receipt_store, &receipt_id, &descriptor.steps, execution.executor);
 
-    (
-        StatusCode::OK,
-        Json(json!({
-            "receipt_id": receipt_id,
-            "descriptor_hash": descriptor_hash,
-            "grant_id": grant_id,
-            "enforcement": enforcement.as_str(),
-            "receipt": receipt,
-        })),
-    )
-        .into_response()
+    let mut response = json!({
+        "receipt_id": receipt_id,
+        "descriptor_hash": descriptor_hash,
+        "grant_id": grant_id,
+        "enforcement": enforcement.as_str(),
+        "receipt": receipt,
+    });
+    // F1: surface the sidecar's own post-batch state when the execution
+    // context captured one. Absent (stub executors, capture failure) means
+    // the caller keeps its existing observation path — never a failure.
+    if let Some(observation) = execution.observation {
+        response["post_batch_observation"] = serde_json::to_value(observation).unwrap_or(Value::Null);
+    }
+
+    (StatusCode::OK, Json(response)).into_response()
 }
 
 pub async fn aci_batch_execute(
@@ -1784,14 +1852,14 @@ mod tests {
             "user-1",
             &parsed,
             &receipts,
-            |_desc| -> Result<BatchExecutor, String> {
-                Ok(Box::new(|steps: &[BatchStep]| {
+            |_desc| -> Result<BatchExecution, String> {
+                Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
                     steps
                         .iter()
                         .enumerate()
                         .map(|(i, _)| StepResult::Completed(Some(json!({"n": i + 1}))))
                         .collect()
-                }) as BatchExecutor)
+                }) as BatchExecutor))
             },
         )
         .await;
@@ -1819,10 +1887,10 @@ mod tests {
             "user-1",
             &parsed,
             &receipts,
-            |_desc| -> Result<BatchExecutor, String> {
-                Ok(Box::new(|steps: &[BatchStep]| {
+            |_desc| -> Result<BatchExecution, String> {
+                Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
                     steps.iter().map(|_| StepResult::Completed(None)).collect()
-                }) as BatchExecutor)
+                }) as BatchExecutor))
             },
         )
         .await;
@@ -1846,10 +1914,10 @@ mod tests {
             "user-1",
             &parsed,
             &receipts,
-            |_desc| -> Result<BatchExecutor, String> {
-                Ok(Box::new(|steps: &[BatchStep]| {
+            |_desc| -> Result<BatchExecution, String> {
+                Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
                     steps.iter().map(|_| StepResult::Completed(None)).collect()
-                }) as BatchExecutor)
+                }) as BatchExecutor))
             },
         )
         .await;
@@ -1861,6 +1929,76 @@ mod tests {
         assert_eq!(json["enforcement"], "auto");
         assert!(json["grant_id"].is_null());
         assert_eq!(json["receipt"]["status"], "completed");
+    }
+
+    #[tokio::test]
+    async fn http_batch_response_carries_post_batch_observation_when_captured() {
+        // F1 (observation disconnect): when the execution context captures the
+        // sidecar browser's post-batch state, the response surfaces it; when it
+        // captures nothing, the field is absent (caller keeps its own path).
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let parsed: AciBatchBody = serde_json::from_value(json!({
+            "steps": [
+                {"method": "hover", "selector": "#a"},
+                {"method": "scrollTo", "selector": "#b"},
+            ],
+        }))
+        .unwrap();
+        let receipts = BatchReceiptStore::new();
+        let response = run_gated_batch(
+            &state,
+            "user-1",
+            &parsed,
+            &receipts,
+            |_desc| -> Result<BatchExecution, String> {
+                Ok(BatchExecution {
+                    executor: Box::new(|steps: &[BatchStep]| {
+                        steps.iter().map(|_| StepResult::Completed(None)).collect()
+                    }),
+                    observation: Some(PostBatchObservation {
+                        screenshot_b64: Some("c2lkZWNhci1waXhlbHM=".to_string()),
+                        screenshot_sha256: Some("deadbeef".to_string()),
+                        url: Some("https://sidecar.example/after-batch".to_string()),
+                        title: Some("done".to_string()),
+                    }),
+                })
+            },
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: Value = serde_json::from_slice(&bytes).unwrap();
+        let obs = &json["post_batch_observation"];
+        assert_eq!(obs["screenshot_b64"], "c2lkZWNhci1waXhlbHM=");
+        assert_eq!(obs["screenshot_sha256"], "deadbeef");
+        assert_eq!(obs["url"], "https://sidecar.example/after-batch");
+        assert_eq!(obs["title"], "done");
+        // The observation rides alongside the receipt — the receipt itself is
+        // unchanged (descriptor format and hash chain untouched).
+        assert_eq!(json["receipt"]["status"], "completed");
+
+        // No observation captured → field absent, batch still succeeds.
+        let response = run_gated_batch(
+            &state,
+            "user-1",
+            &parsed,
+            &receipts,
+            |_desc| -> Result<BatchExecution, String> {
+                Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
+                    steps.iter().map(|_| StepResult::Completed(None)).collect()
+                }) as BatchExecutor))
+            },
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json.get("post_batch_observation").is_none());
     }
 
     #[tokio::test]
@@ -1880,10 +2018,10 @@ mod tests {
             "user-1",
             &parsed,
             &receipts,
-            |_desc| -> Result<BatchExecutor, String> {
-                Ok(Box::new(|steps: &[BatchStep]| {
+            |_desc| -> Result<BatchExecution, String> {
+                Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
                     steps.iter().map(|_| StepResult::Completed(None)).collect()
-                }) as BatchExecutor)
+                }) as BatchExecutor))
             },
         )
         .await;
@@ -1951,10 +2089,10 @@ mod tests {
             "user-1",
             &parsed,
             &receipts,
-            |_desc| -> Result<BatchExecutor, String> {
-                Ok(Box::new(|steps: &[BatchStep]| {
+            |_desc| -> Result<BatchExecution, String> {
+                Ok(BatchExecution::from_executor(Box::new(|steps: &[BatchStep]| {
                     steps.iter().map(|_| StepResult::Completed(None)).collect()
-                }) as BatchExecutor)
+                }) as BatchExecutor))
             },
         )
         .await;
