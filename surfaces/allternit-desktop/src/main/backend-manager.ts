@@ -13,6 +13,7 @@ import { app } from 'electron';
 import { spawn, execFileSync, ChildProcess } from 'child_process';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -20,6 +21,33 @@ import log from 'electron-log';
 import { PORTS, URLS, webhookReceiverUrl } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Computer Cloud (tart host) credentials. Operators keep them in
+ * ~/.allternit/tart-host.env — the same file the e2e harness reads. When the
+ * process environment does not set them, inject from that file so bot-computer
+ * provisioning works on a plain app launch instead of 503ing with
+ * "Configure INCUS_URL or TART_HOST_URL for Computer Cloud." Never logged.
+ */
+export function loadTartHostEnv(env: Record<string, string>, file = path.join(os.homedir(), '.allternit', 'tart-host.env')): void {
+  if (env.TART_HOST_URL && env.TART_HOST_TOKEN) return;
+  try {
+    const parsed: Record<string, string> = {};
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line);
+      if (!m) continue;
+      parsed[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+    if (!env.TART_HOST_URL && parsed.TART_HOST_URL) env.TART_HOST_URL = parsed.TART_HOST_URL;
+    if (!env.TART_HOST_TOKEN && parsed.TART_HOST_TOKEN) env.TART_HOST_TOKEN = parsed.TART_HOST_TOKEN;
+    if (env.TART_HOST_URL && parsed.TART_HOST_URL) {
+      log.info('[BackendManager] Tart host config loaded from ~/.allternit/tart-host.env');
+    }
+  } catch {
+    // tart-host.env absent — Computer Cloud stays unconfigured; the API
+    // already surfaces an actionable 503 for that case.
+  }
+}
 
 // Port ownership: the packaged app owns the production gateway port (8013)
 // and reclaims it on launch. A dev desktop (worktree Electron, npm run dev)
@@ -179,6 +207,7 @@ export class BackendManager {
       NODE_ENV: 'production',
       ...(config.extraEnv ?? {}),
     };
+    loadTartHostEnv(env);
 
     log.info(`[BackendManager] Starting allternit-api on port ${API_PORT} from ${binaryPath}`);
     const spawned = spawn(binaryPath, developmentCargoProject ? ['run', '--manifest-path', path.join(developmentCargoProject, 'Cargo.toml')] : [], {
