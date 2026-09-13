@@ -1142,9 +1142,14 @@ mod tests {
 
     #[test]
     fn snapshot_throttle_writes_immediately_when_due_and_on_done() {
-        // Mutates the process-wide ALLTERNIT_COMPUTER_USE_DIR — serialize
-        // against every other test that reads/writes through it.
-        let _dir_guard = crate::test_helpers::computer_use_dir_test_lock();
+        // This test mutates ALLTERNIT_COMPUTER_USE_DIR, which the policy-seat
+        // tests read at request time (audit log, approvals). Take the same
+        // env-var lock they do, or a parallel policy test sees this test's
+        // temp dir (or the unset fallback) mid-request and flakes.
+        let _guard = crate::policy_config::POLICY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let prior_dir = std::env::var("ALLTERNIT_COMPUTER_USE_DIR").ok();
         let dir = tempfile::tempdir().unwrap();
         // Point the snapshot writer at a temp dir for this test.
         std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", dir.path());
@@ -1177,7 +1182,12 @@ mod tests {
         assert_eq!(parsed.frames.len(), 2);
         assert!(parsed.done);
         assert!(!buf.dirty);
-        std::env::remove_var("ALLTERNIT_COMPUTER_USE_DIR");
+        // Restore the prior value (don't leave the var unset for tests that
+        // expect the policy-seat default resolution).
+        match prior_dir {
+            Some(value) => std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", value),
+            None => std::env::remove_var("ALLTERNIT_COMPUTER_USE_DIR"),
+        }
     }
 
     #[test]

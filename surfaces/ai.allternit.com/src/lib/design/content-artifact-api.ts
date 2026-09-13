@@ -13,12 +13,35 @@
 
 import { api } from '@/integration/api-client';
 
+/** One hop of the org-relay chain — which gateway held the artifact. */
+export interface ContentArtifactRelayHop {
+  gateway?: string;
+  artifactId?: string;
+  version?: number;
+}
+
+/**
+ * Relay provenance (org relay tier, artifacts-api.md §6) — present on
+ * artifacts this gateway RECEIVED from a peer. The local id is minted on
+ * receive; the origin id + relay path are recorded here for display.
+ */
+export interface ContentArtifactRelayProvenance {
+  originGateway?: string;
+  originArtifactId?: string;
+  originVersion?: number;
+  originSandboxPolicy?: string;
+  relayPath?: ContentArtifactRelayHop[];
+  bundleHash?: string;
+  receivedAt?: string;
+}
+
 export interface ContentArtifactProvenance {
   prompt?: string;
   designSystemId?: string;
   skillId?: string;
   skillName?: string;
   sourceSessionId?: string;
+  relay?: ContentArtifactRelayProvenance;
 }
 
 export interface ContentArtifactRecord {
@@ -154,6 +177,67 @@ export async function appendContentArtifactVersion(
 /** Soft delete. Missing rows are a no-op on the gateway side. */
 export async function deleteContentArtifact(id: string): Promise<void> {
   await api.delete(`/api/v1/content-artifacts/${encodeURIComponent(id)}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Per-artifact file tree (docs/design/artifacts-api.md §7 Phase 2 multi-file sync)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface ContentArtifactFileEntry {
+  path: string;
+  sha256: string;
+  updatedAt: string;
+}
+
+export interface ContentArtifactFile extends ContentArtifactFileEntry {
+  body: string;
+}
+
+function encodeFilePath(path: string): string {
+  // Gateway wildcard segment: leading slash is the route separator, so the
+  // canonical `/a/b.css` path goes on the wire as `a/b.css`.
+  return encodeURIComponent(path.replace(/^\/+/, '')).replace(/%2F/gi, '/');
+}
+
+/** Index of the artifact's whole file tree (no bodies). */
+export async function listContentArtifactFiles(
+  id: string,
+): Promise<{ files?: ContentArtifactFileEntry[] }> {
+  return (await api.get(`/api/v1/content-artifacts/${encodeURIComponent(id)}/files`)) as {
+    files?: ContentArtifactFileEntry[];
+  };
+}
+
+/** Read one file from the artifact tree. Throws when not found. */
+export async function getContentArtifactFile(
+  id: string,
+  path: string,
+): Promise<ContentArtifactFile> {
+  return (await api.get(
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}/files/${encodeFilePath(path)}`,
+  )) as ContentArtifactFile;
+}
+
+/** Upsert one file into the artifact tree (write-through; naturally idempotent). */
+export async function putContentArtifactFile(
+  id: string,
+  path: string,
+  body: string,
+): Promise<ContentArtifactFileEntry> {
+  return (await api.put(
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}/files/${encodeFilePath(path)}`,
+    { body },
+  )) as ContentArtifactFileEntry;
+}
+
+/** Remove one file from the artifact tree. Missing rows are a no-op. */
+export async function deleteContentArtifactFile(
+  id: string,
+  path: string,
+): Promise<void> {
+  await api.delete(
+    `/api/v1/content-artifacts/${encodeURIComponent(id)}/files/${encodeFilePath(path)}`,
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

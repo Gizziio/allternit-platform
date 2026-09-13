@@ -608,7 +608,7 @@ async fn test_full_824_sequence_with_approval() {
 
     let binding1 = sqlite_store::request_approval(
         &mut conn, &a, &fx.job_id, &lease_a.lease_id, 1,
-        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET, None,
     )
     .expect("A requests approval");
     assert_eq!(binding1.status, "pending");
@@ -691,7 +691,7 @@ async fn test_full_824_sequence_with_approval() {
     // B re-obtains approval under generation 2; the user grants again.
     let binding2 = sqlite_store::request_approval(
         &mut conn, &b, &fx.job_id, &lease_b.lease_id, 2,
-        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET, None,
     )
     .expect("B re-requests approval");
     assert_eq!(binding2.lease_generation, 2);
@@ -819,4 +819,213 @@ async fn test_downtime_expiry_recovers_at_boot() {
         .expect("requeued job claimable after boot recovery");
     assert!(grant.lease_generation > actions[0].lease_generation);
     let _ = run_id;
+}
+
+/// (a) Approval timeout: a request that expires un-acted is swept to
+/// `expired` with an attributed event; a late grant is rejected; the worker
+/// must re-request (recovery policy = re-request, deny-by-default).
+#[tokio::test]
+async fn test_approval_expiry_and_late_grant_rejected() {
+    let fx = setup().await;
+    let lease_ttl = Duration::from_secs(60);
+    let mut conn = open(&fx.db_path);
+    let a = auth(&conn, "token-a");
+    let lease_a = sqlite_store::claim_job(&mut conn, &a, Some(&fx.job_id), lease_ttl).unwrap();
+
+    let binding = sqlite_store::request_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, lease_a.lease_generation,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+        Some(Duration::from_secs(1)),
+    )
+    .unwrap();
+    assert!(binding.expires_at.is_some());
+
+    // Not yet expired: the human decision works.
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    let late = sqlite_store::decide_approval(&mut conn, &binding.id, true, INITIATOR)
+        .expect_err("late grant must be rejected (server clock)");
+    assert_eq!(late.code, TransportErrorCode::ApprovalInvalid);
+
+    // Sweeper (or this direct pass) marks it expired with an attributed
+    // event. The fixture's background sweeper may have already done it.
+    let _ = sqlite_store::expire_approvals(&mut conn, chrono::Utc::now()).unwrap();
+    let view = sqlite_store::get_approval(&conn, &binding.id).unwrap().unwrap();
+    assert_eq!(view.status, "expired");
+    let rows = event_rows(&conn, &fx.run_id);
+    let expired_row = rows.iter().find(|r| r.0 == "approval.expired").unwrap();
+    assert_eq!(expired_row.3, WORKER_A, "approval.expired attributes its executor");
+
+    // Execution awaiting the expired approval is told to re-request.
+    let check = sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, lease_a.lease_generation,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect_err("expired approval cannot authorize");
+    assert_eq!(check.code, TransportErrorCode::ApprovalRequired);
+
+    // Re-request under the same (still valid) lease succeeds.
+    let rebinding = sqlite_store::request_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, lease_a.lease_generation,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET, None,
+    )
+    .unwrap();
+    assert_ne!(rebinding.id, binding.id);
+    sqlite_store::decide_approval(&mut conn, &rebinding.id, true, INITIATOR).unwrap();
+    sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lease_a.lease_id, lease_a.lease_generation,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET,
+    )
+    .expect("re-requested approval authorizes");
+}
+
+/// (b) Event idempotency: a client-supplied event_id dedupes retries — the
+/// duplicate returns the canonical existing event instead of double-writing.
+#[test]
+fn test_event_post_idempotency() {
+    let tmp = tempfile::tempdir().unwrap();
+    let db_path = tmp.path().join("events.db");
+    let run_id = {
+        let mut conn = open(&db_path);
+        sqlite_store::apply_store_ddl(&mut conn).unwrap();
+        let run_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO cowork_runs
+                (id, tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id, policy_profile)
+             VALUES (?1, 't', ?2, ?3, 'cowork', 'running', 'x', 'd', 'default')",
+            rusqlite::params![run_id, WORKSPACE, INITIATOR],
+        )
+        .unwrap();
+        run_id
+    };
+
+    let mut conn = open(&db_path);
+    let first = sqlite_store::insert_event_idempotent(
+        &mut conn, &run_id, "custom.event", serde_json::json!({"n": 1}),
+        Some(INITIATOR), Some(DELEGATOR), None, Some("evt-retry-key-1"),
+    )
+    .unwrap();
+    let first_id = match first {
+        sqlite_store::EventInsertOutcome::Inserted(id) => id,
+        _ => panic!("first insert must commit"),
+    };
+
+    // Retry with the same key (at-least-once delivery) → canonical existing.
+    let dup = sqlite_store::insert_event_idempotent(
+        &mut conn, &run_id, "custom.event", serde_json::json!({"n": 1}),
+        Some(INITIATOR), Some(DELEGATOR), None, Some("evt-retry-key-1"),
+    )
+    .unwrap();
+    match dup {
+        sqlite_store::EventInsertOutcome::Duplicate(id) => assert_eq!(id, first_id),
+        _ => panic!("retry must dedupe"),
+    }
+
+    // A different key writes a second row; a None key always writes.
+    sqlite_store::insert_event_idempotent(
+        &mut conn, &run_id, "custom.event", serde_json::json!({"n": 2}),
+        None, None, None, Some("evt-retry-key-2"),
+    )
+    .unwrap();
+    sqlite_store::insert_event_idempotent(
+        &mut conn, &run_id, "custom.other", serde_json::json!({}),
+        None, None, None, None,
+    )
+    .unwrap();
+
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM cowork_run_events WHERE run_id = ?1",
+            rusqlite::params![run_id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(count, 3, "exactly-once per idempotency key");
+}
+
+/// (c) Single policy path: risk rules decide whether a protected action needs
+/// an approval at all (mirrors the cowork-engine ApprovalGate model);
+/// bindings scope the approval when one is required.
+#[tokio::test]
+async fn test_risk_policy_single_evaluation_path() {
+    let fx = setup().await;
+    let lease_ttl = Duration::from_secs(60);
+    let mut conn = open(&fx.db_path);
+    let a = auth(&conn, "token-a");
+    let lease_a = sqlite_store::claim_job(&mut conn, &a, Some(&fx.job_id), lease_ttl).unwrap();
+    let gen = lease_a.lease_generation;
+    let lid = lease_a.lease_id.clone();
+
+    // Low-risk capability → auto-approved by the default rule, no binding row.
+    let auto = sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lid, gen, "web.read", "https://example.com",
+    )
+    .expect("low-risk auto-approve");
+    assert_eq!(auto.status, "granted");
+    assert!(auto.id.starts_with("auto:approve:"));
+    assert!(auto.decided_by.as_deref().unwrap().contains("risk-rule"));
+
+    // Medium/high/critical → binding required.
+    let medium = sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lid, gen, "shell.exec", "any",
+    )
+    .expect_err("medium-risk requires approval");
+    assert_eq!(medium.code, TransportErrorCode::ApprovalRequired);
+    let critical = sqlite_store::request_approval(
+        &mut conn, &a, &fx.job_id, &lid, gen,
+        PROTECTED_CAPABILITY, PROTECTED_TARGET, None,
+    )
+    .expect("critical-risk creates a binding");
+    assert!(critical.id.starts_with("appr_"));
+
+    // Workspace policy override: auto-deny shell.exec, downgrade web.read risk.
+    use allternit_cowork_runtime::{ApprovalPolicy, RiskRule};
+    let policy = ApprovalPolicy {
+        capability_risk: std::collections::HashMap::from([
+            ("shell.exec".to_string(), "critical".to_string()),
+        ]),
+        rules: vec![
+            RiskRule {
+                action_type: Some("shell.exec.".to_string()),
+                risk_level: vec![],
+                decision: "reject".to_string(),
+                reason: Some("workspace forbids shell".to_string()),
+            },
+            RiskRule {
+                action_type: Some("web.read".to_string()),
+                risk_level: vec!["low".to_string()],
+                decision: "approve".to_string(),
+                reason: Some("reading allowed".to_string()),
+            },
+        ],
+    };
+    sqlite_store::set_policy(&mut conn, WORKSPACE, &policy).unwrap();
+
+    // Request path: auto-deny is rejected AND ledgered (check is read-only
+    // and deliberately writes nothing, so polling cannot flood the ledger).
+    let denied = sqlite_store::request_approval(
+        &mut conn, &a, &fx.job_id, &lid, gen, "shell.exec.cleanup", "any", None,
+    )
+    .expect_err("workspace policy auto-denies shell");
+    assert_eq!(denied.code, TransportErrorCode::PermissionDenied);
+    let rows = event_rows(&conn, &fx.run_id);
+    let denied_row = rows.iter().find(|r| r.0 == "approval.denied").unwrap();
+    assert_eq!(denied_row.3, WORKER_A, "auto-deny attributes its executor");
+    // Auto-approve via the REQUEST path is granted and ledgered once.
+    let auto_req = sqlite_store::request_approval(
+        &mut conn, &a, &fx.job_id, &lid, gen, "web.read", "https://example.com", None,
+    )
+    .expect("policy auto-approves via request");
+    assert_eq!(auto_req.status, "granted");
+    let rows = event_rows(&conn, &fx.run_id);
+    assert_eq!(
+        rows.iter().filter(|r| r.0 == "approval.granted").count(),
+        1,
+        "auto-approve via request is ledgered exactly once"
+    );
+
+    let still_auto = sqlite_store::check_approval(
+        &mut conn, &a, &fx.job_id, &lid, gen, "web.read", "https://example.com",
+    )
+    .expect("policy still auto-approves web.read");
+    assert_eq!(still_auto.status, "granted");
 }

@@ -117,6 +117,21 @@ diff tooling later.
 Indexes: `(artifact_id, version)` unique; `(user_id, created_at)` for list;
 `(type)`; `(project_id)`.
 
+### `content_artifact_files` — per-artifact project file tree (V159, 2026-09-12)
+
+Mirrors a design project's whole file tree per artifact so the web store's
+read-through cache works for every file, not just `/index.html` (§3 file
+tree). Upsert-keyed on `(artifact_id, path)`; bodies inline.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `artifact_id` | TEXT NOT NULL | FK → `content_artifacts.id`, cascade delete; PK part |
+| `path` | TEXT NOT NULL | canonical `/segment/…` project path; PK part |
+| `body` / `body_sha256` | TEXT NOT NULL | full file content + content hash |
+| `created_at` / `updated_at` | DATETIME | updated bumps on every upsert |
+
+Index: `(artifact_id)`.
+
 ### 2.1 Type system (DECIDED shape, typed renderers DECIDED 2026-09-12)
 
 `type` is a MIME-style string. Html-first, per row 1:
@@ -237,6 +252,25 @@ memory-store work — no OFFSET paging.
 Sets `deleted_at`; list/get exclude it. Hard purge is a retention concern
 (§8.3), not an API concern.
 
+### File tree (Phase 2 multi-file sync, IMPLEMENTED 2026-09-12 — session `artpolish-0912`)
+
+Design-mode projects are a flat per-project tree of files; until this session
+only `/index.html` synced to the gateway (as the artifact version body).
+`content_artifact_file_routes.rs` (migration V159, table
+`content_artifact_files`) mirrors the whole tree per artifact:
+
+- `GET /api/v1/content-artifacts/:id/files` — index: `[{path, sha256, updatedAt}]` (no bodies)
+- `GET /api/v1/content-artifacts/:id/files/*path` — read one file `{path, body, sha256, updatedAt}`
+- `PUT /api/v1/content-artifacts/:id/files/*path` — upsert write-through `{body}` → `{path, sha256, updatedAt}` (200; natural idempotency via the PK upsert)
+- `DELETE /api/v1/content-artifacts/:id/files/*path` — remove one file
+
+Paths are canonical `/segment/…` (no `..`, empty, or trailing-slash segments;
+404 cross-user like every route, soft-deleted artifacts unreadable). Bodies are
+inline — design project files are small source files; the disk-spill machinery
+stays reserved for version bodies. The web store
+(`project-file-store.ts`) writes through every save/delete/rename and
+read-through-fills a cache-cold browser's whole tree from the index.
+
 ### Publish tier (Phase 3, IMPLEMENTED 2026-09-12 — session `artphase3-0912`)
 
 Served by `content_artifact_publish.rs`; state in V150
@@ -282,6 +316,40 @@ Implements decision (3): removes the route only — the Pages deployment
 stays immutable (wrangler: the tree is redeployed without the route and the
 previous deployment keeps its own `pages.dev` URL; fs: the route directory
 is removed, the deployment file stays). 404 when not published.
+
+### Relay tier (org relay, IMPLEMENTED 2026-09-12 — session `relay-0912`)
+
+Served by `content_artifact_relay.rs`; state in V159
+(`content_artifact_relay_receipts` + `content_artifact_relay_provenance`).
+
+### `POST /api/v1/content-artifacts/:id/relay` — relay to a peer gateway
+
+```json
+// request
+{ "target": "gateway-b" }
+// response 200 — { "ok": true, "target", "bundleHash", "received":
+//                  { "artifactId": "art_…", "version": 1, "bundleHash" } }
+// response 200 + "replayed": true — send dedupe: this exact bundle was
+//                  already delivered to this target
+// response 404 — unknown relay peer (configure ALLTERNIT_RELAY_PEERS)
+// response 502 — peer unreachable / rejected the bundle
+```
+
+### `POST /api/v1/content-artifacts/relay/inbox` — receive a relay bundle
+
+Public router, `internal_auth::require_internal_token` per-handler (peer
+gateways carry the internal service token, not a Clerk JWT; the localhost
+local-dev bypass applies). Unpacks, verifies the deterministic bundle hash
++ body sha256, mints a NEW LOCAL id (§6 decision 5), stores provenance.
+**Idempotent by bundle hash** — a replayed bundle returns the existing local
+id with 200 instead of 201.
+
+### `GET /api/v1/content-artifacts/:id` — relay addressing
+
+Accepts `a://artifact/<id>@<gateway>`-style ids: local hit on the prefix
+wins; local miss + `@peer` proxies the read from the named peer (read-through,
+nothing persisted; annotated `resolvedVia`/`resolvedFrom`). Relayed reads
+attach `provenance.relay`. Exact semantics documented in §6.
 
 ### Idempotency (DECIDED)
 
@@ -337,7 +405,7 @@ client of the API; the per-surface build plans belong to their own sessions.
 | **Local (default)** | `a://artifact/<id>` on the local gateway; only this machine, only authenticated local users | DECIDED |
 | **Static export** | Existing client-side pipelines: HTML / PDF / ZIP / PPTX / MP4 (`artifact-export.ts`) | DECIDED — exists, unchanged; export stays client-side in Phase 1 |
 | **Hosted publish (Cloudflare Pages)** | Infra exists (the Ops gateway already deploys Pages projects). Publish = explicit user action that exports a version and deploys it to a Pages project under the user's account. | IMPLEMENTED 2026-09-12 (`artphase3-0912`) — `POST/GET/DELETE /api/v1/content-artifacts/:id/publish`; shared project + per-user routes, version-snapshot publish, immutable deployments, sandbox-policy gate |
-| **Org relay (A:// mesh)** | Artifact travels between gateways over the mesh (CommRails substrate, `commrails/`). | DECIDED 2026-09-12 (Eoj) — see answers below |
+| **Org relay (A:// mesh)** | Artifact travels between gateways over the mesh (CommRails substrate, `commrails/`). | IMPLEMENTED 2026-09-12 (session `relay-0912`) — `POST /api/v1/content-artifacts/:id/relay` + public inbox `POST /api/v1/content-artifacts/relay/inbox`; `a://artifact/<id>@<gateway>` read resolution; see "Relay tier — implementation" below |
 
 **Publish tier — decisions (2026-09-12, decided by Eoj; the former OPEN
 questions, answered):**
@@ -362,6 +430,51 @@ questions, answered):**
 6. **Trust: NO stricter received sandbox.** Received artifacts render under
    the standard policy; provenance is displayed to the user. There is no
    `sandbox_policy='received'` promotion flow in v1.
+
+**Relay tier — implementation (2026-09-12, session `relay-0912`).** The
+decisions above are implemented as decided, in
+`cmd/allternit-api/src/content_artifact_relay.rs` (+ migration V159):
+
+- **Send:** `POST /api/v1/content-artifacts/:id/relay` `{target}` packages the
+  current version (HTML body + metadata + relay/provenance chain) as a
+  portable bundle (`allternit.content-artifact.relay/v1`) and POSTs it to the
+  target gateway's inbox. Idempotent per bundle: a retried send with the same
+  artifact+version+target replays the original receipt instead of
+  re-delivering.
+- **Receive:** `POST /api/v1/content-artifacts/relay/inbox` (public router;
+  per-handler `internal_auth::require_internal_token`, so the same localhost
+  local-dev bypass applies) unpacks the bundle, verifies the deterministic
+  bundle hash and body sha256, then mints `art_<uuid4>`, stores the artifact
+  (sandbox_policy forced to `standard`; the origin policy is kept in
+  provenance) + version 1 + a `content_artifact_relay_provenance` row, and
+  records a receipt. **Idempotent by bundle hash:** a replayed bundle returns
+  the already-minted local id (200, not 201) — no duplicates.
+- **Provenance on read:** `GET /content-artifacts[/:id]` attaches
+  `provenance.relay` (`originGateway`, `originArtifactId`, `originVersion`,
+  `originSandboxPolicy`, `relayPath[]`, `bundleHash`, `receivedAt`) whenever
+  the artifact was received over the relay. The web gallery detail surface
+  renders it as a small "Relayed from \<gateway\>" line.
+- **`a://artifact/<id>@<gateway>` read resolution:** `GET
+  /content-artifacts/:id` accepts an `@peer` suffix. A local hit on the
+  prefix always wins. On a local miss with a suffix, the gateway proxies the
+  read from the named peer (forwarding the caller's `Authorization` when
+  present) and annotates the response `resolvedVia: "relay"` +
+  `resolvedFrom`. This is read-through only — nothing is persisted locally;
+  import happens only via the explicit relay send/inbox flow. Unknown peer →
+  404 naming the peer.
+- **Wire transport:** HTTP inbox between gateway base URLs. The CommRails UDS
+  envelope path needs a listener the gateway does not run, and the CommRails
+  Bus inbox is keyed per data_dir (`.allternit/bus/queue.db`), so neither can
+  span two gateway instances with separate data dirs — the org-mesh topology.
+  The bundle is a CommRails-shaped envelope and every relayed bundle is
+  recorded as a `ContentArtifactRelayed` event in the local CommRails ledger
+  on both the sending and receiving gateways.
+- **Configuration:** `ALLTERNIT_GATEWAY_NAME` (this gateway's name in
+  provenance, default `local`) and `ALLTERNIT_RELAY_PEERS` (comma-separated
+  `name=http(s)://host:port` peer map, read per request). The receiving user
+  of a relayed artifact is the origin user id — the org mesh assumes shared
+  user identity across org gateways; per-user cross-org attribution is future
+  work.
 
 ## 7. Phasing
 

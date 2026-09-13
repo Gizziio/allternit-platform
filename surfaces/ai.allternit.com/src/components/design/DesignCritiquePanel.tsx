@@ -29,6 +29,8 @@ interface Panelist {
 interface CritiqueState {
   status: 'idle' | 'running' | 'done' | 'error';
   model?: { providerID: string; modelID: string };
+  /** True when the brain received images as real multimodal parts. */
+  vision?: boolean;
   roster: string[];
   panelists: Panelist[];
   verdict?: Verdict;
@@ -141,6 +143,7 @@ export function DesignCritiquePanel({ artifactHtml, artifactImages }: { artifact
             setState((s) => ({
               ...s,
               model: props.model,
+              vision: props.vision === true,
               roster: props.panelists ?? [],
               panelists: (props.panelists ?? []).map((role: string) => ({
                 role,
@@ -274,6 +277,11 @@ export function DesignCritiquePanel({ artifactHtml, artifactImages }: { artifact
           >
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
               Attached from the latest turn — {images.length} image{images.length > 1 ? 's' : ''} the panelists will review alongside the HTML
+              {state.status !== 'idle' && (
+                <span style={{ fontWeight: 400 }}>
+                  {' '}· {state.vision ? 'forwarded to the brain as vision parts' : 'referenced as markdown (text-only brain path)'}
+                </span>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {images.map((src, i) => (

@@ -133,12 +133,19 @@ export function BotChatSessionView({
     return null;
   }, [sessions, sessionIdProp, botId, bot?.name]);
 
+  // Deliberately no bot.provider/bot.model fallback: that pair is the agent
+  // *catalog* default (config.models.defaults.primary), which on desktop is
+  // frequently a provider gizzi does not serve (ProviderModelNotFoundError,
+  // silent no-reply). Session metadata is also skipped: older builds stamped
+  // every bot session with the broken catalog default at create time, and
+  // restoring it on reopen re-pins a model the runtime cannot serve. The
+  // bot-level config pin (bot.config.runtimeModelId) is the only deliberate
+  // default. With nothing pinned, the composer falls back to the persisted
+  // picker choice and the send path resolves the local Kimi brain
+  // (resolveAgentChatRuntimeModelId → kimi-cli/kimi-k3).
   const runtimeModelId = useMemo(
-    () =>
-      (session?.metadata?.runtimeModelId as string | undefined) ??
-      (bot?.config?.runtimeModelId as string | undefined) ??
-      (bot?.provider && bot?.model ? `${bot.provider}/${bot.model}` : undefined),
-    [session?.metadata, bot?.config, bot?.provider, bot?.model]
+    () => bot?.config?.runtimeModelId as string | undefined,
+    [bot?.config]
   );
 
   const defaultSelection = useMemo(

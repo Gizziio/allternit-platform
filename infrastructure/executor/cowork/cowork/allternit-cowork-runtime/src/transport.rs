@@ -221,6 +221,8 @@ pub struct ApprovalBinding {
     pub status: String,
     /// Who granted/denied (user principal), if decided.
     pub decided_by: Option<String>,
+    /// Server-clock expiry for the request; decided after this is rejected.
+    pub expires_at: Option<String>,
 }
 
 /// Hash a bearer token for storage/compared lookup (SHA-256 hex).

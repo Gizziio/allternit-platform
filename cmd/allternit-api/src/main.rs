@@ -797,7 +797,9 @@ async fn main() {
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(allternit_api::content_artifact_routes::content_artifact_router())
+        .merge(allternit_api::content_artifact_file_routes::content_artifact_file_router())
         .merge(allternit_api::content_artifact_publish::content_artifact_publish_router())
+        .merge(allternit_api::content_artifact_relay::content_artifact_relay_router())
         .merge(allternit_api::console_announcement_routes::console_announcement_router())
         // Analytics on the /api/v1 surface too — the gizzi-code telemetry
         // client and admin console call /api/v1/analytics/* (the historical
@@ -904,6 +906,10 @@ async fn main() {
         // session, so these are gated by internal_auth::require_internal_token
         // per-handler instead of the Clerk auth_middleware layer above.
         .merge(allternit_api::internal_routes::internal_router())
+        // Org relay tier (artifacts-api.md §6): inbound artifact bundles from
+        // peer gateways carry the internal service token, not a Clerk JWT —
+        // the inbox handler gates itself per-handler, same as internal_routes.
+        .merge(allternit_api::content_artifact_relay::content_artifact_relay_inbox_router())
         // Desktop Cloud host self-registration from bootstrap cloud-init.
         .merge(allternit_api::desktop_host_admin::public_router())
         // Private Fabric node daemon enrollment and heartbeat.
@@ -1014,13 +1020,18 @@ async fn main() {
         allternit_api::metrics::metrics_middleware,
     ));
 
-    // Start server — port from config (env override supported), default 8013
+    // Start server — port from env; production owners pin 8013 explicitly,
+    // unset defaults to the dev port (18013) so ad-hoc builds never squat :8013.
     let port = app_config.api_port();
+    let port_source = match std::env::var("ALLTERNIT_API_PORT") {
+        Ok(value) if value.parse::<u16>().is_ok() => format!("env ALLTERNIT_API_PORT={value}"),
+        _ => "default (dev 18013 — production owners must pin ALLTERNIT_API_PORT=8013)".to_string(),
+    };
     let webhook_receiver_port = app_config.webhook_receiver_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .unwrap();
-    info!("Server listening on {}", listener.local_addr().unwrap());
+    info!("Server listening on {} ({})", listener.local_addr().unwrap(), port_source);
     info!("Webhook receiver port configured to {}", webhook_receiver_port);
     info!("API Documentation:");
     info!("  - Health:         GET /health");
@@ -1302,12 +1313,23 @@ async fn expire_downtime_leases(db: &allternit_api::db::DbHandle) {
     let path = db.path().to_path_buf();
     let result = tokio::task::spawn_blocking(move || {
         let mut conn = allternit_cowork_runtime::sqlite_store::open_store(&path)?;
-        allternit_cowork_runtime::sqlite_store::expire_leases(&mut conn, chrono::Utc::now())
+        let actions = allternit_cowork_runtime::sqlite_store::expire_leases(
+            &mut conn,
+            chrono::Utc::now(),
+        )?;
+        let expired_approvals = allternit_cowork_runtime::sqlite_store::expire_approvals(
+            &mut conn,
+            chrono::Utc::now(),
+        )?;
+        Ok::<_, allternit_cowork_runtime::TransportError>((actions, expired_approvals))
     })
     .await;
 
     match result {
-        Ok(Ok(actions)) => {
+        Ok(Ok((actions, expired_approvals))) => {
+            for approval_id in expired_approvals {
+                info!(approval_id = %approval_id, "Downtime approval expiry applied at boot");
+            }
             for action in actions {
                 info!(
                     job_id = %action.job_id,

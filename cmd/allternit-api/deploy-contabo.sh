@@ -42,6 +42,17 @@ fi
 systemctl stop allternit-api
 mv /tmp/allternit-api.new "$BIN"
 chmod +x "$BIN"
+
+# Pin the production port explicitly. Since the api's unset-env default is
+# the dev port (18013), the unit must own 8013 via env or the service would
+# come up on the wrong port and the health check below would roll back.
+mkdir -p /etc/systemd/system/allternit-api.service.d
+cat > /etc/systemd/system/allternit-api.service.d/50-port.conf <<'UNIT'
+[Service]
+Environment=ALLTERNIT_API_PORT=8013
+UNIT
+systemctl daemon-reload
+
 systemctl start allternit-api
 
 for attempt in 1 2 3 4 5 6 7 8 9 10; do

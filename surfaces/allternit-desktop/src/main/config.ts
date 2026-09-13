@@ -6,8 +6,10 @@
  */
 
 export const PORTS = {
-  /** Rust operator API (allternit-api) */
+  /** Rust operator API (allternit-api) — production port; only the packaged desktop may bind it */
   API: 8013,
+  /** Rust operator API dev default — what an allternit-api with no explicit env binds */
+  API_DEV: 18013,
   /** Gizzi Code AI runtime terminal server */
   GIZZI: 4096,
   /** Local development Vite UI server */

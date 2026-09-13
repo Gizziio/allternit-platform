@@ -4,6 +4,7 @@ import { describeRoute, resolver, validator } from "@/runtime/server/openapi"
 import { errors } from "@/runtime/server/error"
 import { Provider } from "@/runtime/providers/provider"
 import { ProviderTransform } from "@/runtime/providers/adapters/transform"
+import { SubprocessLanguageModel } from "@/runtime/providers/adapters/loaders/subprocess"
 import { Installation } from "@/shared/installation"
 import { Log } from "@/shared/util/log"
 import z from "zod/v4"
@@ -51,6 +52,8 @@ const CritiqueResponseSchema = z.object({
   }),
   verdict: z.enum(["ship", "iterate"]),
   overall: z.number(),
+  /** True when attached images were forwarded as real multimodal parts. */
+  vision: z.boolean().optional(),
   dimensions: z.array(z.object({
     name: z.string(),
     score: z.number(),
@@ -84,6 +87,8 @@ interface Panelist {
   dimensions: string[]
   stance: string
 }
+
+export type { Panelist }
 
 const PANELISTS: Panelist[] = [
   {
@@ -121,17 +126,45 @@ const PANELISTS: Panelist[] = [
 const MAX_HTML_CHARS = 120_000
 const MAX_IMAGE_REF_CHARS = 100_000
 
-function buildPrompt(panelist: Panelist, html: string, images: string[] = []) {
+/**
+ * Whether attached images can ride as real multimodal content parts for this
+ * brain. Two gates, both required:
+ *  - the model advertises image input (`capabilities.input.image`), and
+ *  - the language model is not a subprocess CLI brain — the subprocess
+ *    adapter forwards only extracted text (extractLastUserText), so image
+ *    parts would vanish silently. Text-only/API brains that fail the first
+ *    gate get the markdown-ref fallback instead.
+ */
+export function supportsVisionParts(model: Provider.Model, language: unknown): boolean {
+  if (!model.capabilities?.input?.image) return false
+  return !(language instanceof SubprocessLanguageModel)
+}
+
+function buildPrompt(panelist: Panelist, html: string, images: string[] = [], vision = false) {
   const truncated = html.length > MAX_HTML_CHARS
   const body = truncated ? html.slice(0, MAX_HTML_CHARS) : html
-  // Attached turn images are referenced as markdown image embeds after the
-  // HTML block. CLI/subprocess brains only forward text, so this stays a
-  // single text turn; vision-capable API brains receive the same references.
+  // Attached turn images reach the brain one of two ways:
+  //  - vision-capable API brains: real `{type:"image"}` content parts ride
+  //    alongside the text turn (runPanelist), and the text only labels them;
+  //  - text-only / CLI-subprocess brains: markdown image refs embedded after
+  //    the HTML block (single text turn), as before.
   // Each ref is hard-capped so a multi-MB data URL cannot blow the context.
-  const imageRefs = images
+  const usable = images
     .filter((u) => u.startsWith("data:image/") || /^https?:\/\//.test(u))
     .slice(0, 6)
-    .map((u, i) => `![attached-image-${i + 1}](${u.length > MAX_IMAGE_REF_CHARS ? u.slice(0, MAX_IMAGE_REF_CHARS) : u})`)
+  const imageNote = vision
+    ? usable.length
+      ? `${usable.length} image(s) generated during the same design turn are attached to this message as actual image content (in order: ${usable
+          .map((_, i) => `[attached-image-${i + 1}]`)
+          .join(", ")}). Review them as part of the artifact's visual output (e.g. hero images, illustrations, brand marks).`
+      : ""
+    : usable.length
+      ? `${usable.length} image(s) generated during the same design turn are attached below as image references. Review them as part of the artifact's visual output (e.g. hero images, illustrations, brand marks); if your brain cannot render them, judge whether the HTML references them appropriately and say so in your summary.
+
+${usable
+  .map((u, i) => `![attached-image-${i + 1}](${u.length > MAX_IMAGE_REF_CHARS ? u.slice(0, MAX_IMAGE_REF_CHARS) : u})`)
+  .join("\n")}`
+      : ""
   const system = `${panelist.stance}
 
 You must return ONLY a single JSON object (no prose, no markdown code fences, no comments) with exactly this shape:
@@ -155,14 +188,39 @@ Example of the exact output format (use double-quoted keys, real values from THI
 
 \`\`\`html
 ${body}
-\`\`\`${imageRefs.length ? `
+\`\`\`${imageNote ? `
 
-${imageRefs.length} image(s) generated during the same design turn are attached below as image references. Review them as part of the artifact's visual output (e.g. hero images, illustrations, brand marks); if your brain cannot render them, judge whether the HTML references them appropriately and say so in your summary.
-
-${imageRefs.join("\n")}` : ""}
+${imageNote}` : ""}
 
 Return the structured critique now.`
-  return { system, user }
+  return { system, user, usableImages: usable }
+}
+
+/** Content parts for one panelist turn. Vision-capable brains get real image
+ * parts; everything else stays a single text turn (CLI brains extract only
+ * text — image parts would be dropped silently). */
+type PanelistContent =
+  | string
+  | Array<{ type: "text"; text: string } | { type: "image"; image: string }>
+
+export function panelistMessage(
+  panelist: Panelist,
+  html: string,
+  images: string[] | undefined,
+  vision: boolean,
+): { system: string; user: string; content: PanelistContent } {
+  const { system, user, usableImages } = buildPrompt(panelist, html, images, vision)
+  if (vision && usableImages.length > 0) {
+    return {
+      system,
+      user,
+      content: [
+        { type: "text", text: `${system}\n\n${user}` },
+        ...usableImages.map((u) => ({ type: "image" as const, image: u })),
+      ],
+    }
+  }
+  return { system, user, content: `${system}\n\n${user}` }
 }
 
 // ── Aggregation ───────────────────────────────────────────────────────────────
@@ -301,6 +359,7 @@ async function buildCallCtx(modelRef: ModelRef) {
   return {
     streamText,
     wrappedModel,
+    vision: supportsVisionParts(modelRef.model, language),
     maxOutputTokens: ProviderTransform.maxOutputTokens(modelRef.model),
     providerOptions: ProviderTransform.providerOptions(modelRef.model, {}),
     headers: modelRef.model.providerID.startsWith("gizzi")
@@ -312,7 +371,7 @@ async function buildCallCtx(modelRef: ModelRef) {
 type CallCtx = Awaited<ReturnType<typeof buildCallCtx>>
 
 async function runPanelist(panelist: Panelist, html: string, images: string[] | undefined, ctx: CallCtx): Promise<PanelistOut> {
-  const { system, user } = buildPrompt(panelist, html, images)
+  const { content } = panelistMessage(panelist, html, images, ctx.vision)
   try {
     const stream = ctx.streamText({
       model: ctx.wrappedModel,
@@ -324,12 +383,11 @@ async function runPanelist(panelist: Panelist, html: string, images: string[] | 
       // Single user turn by design: gizzi's CLI/subprocess adapter
       // (runtime/providers/adapters/loaders/subprocess.ts extractLastUserText)
       // forwards only the LAST user message and drops the system prompt. The
-      // JSON-shape instructions live in `system`, so we fold them into the user
-      // turn — otherwise claude/codex/kimi CLI brains never see the schema and
-      // return free-form text. API providers handle an instruction-bearing user
-      // message equally well, so one unified turn works for every brain.
+      // JSON-shape instructions live folded into the text content, so CLI
+      // brains still see the schema. Vision-capable API brains get the same
+      // text plus real image parts appended to the same user turn.
       messages: [
-        { role: "user", content: `${system}\n\n${user}` },
+        { role: "user", content },
       ],
       experimental_telemetry: { isEnabled: false },
     })
@@ -438,6 +496,7 @@ export const CritiqueRoutes = () =>
           model: { providerID: modelRef.providerID, modelID: modelRef.modelID },
           verdict: agg.verdict,
           overall: agg.overall,
+          vision: ctx.vision,
           dimensions: agg.dimensions,
           suggestions: agg.suggestions,
           panelists: results.map(publicPanelist),
@@ -479,14 +538,15 @@ export const CritiqueRoutes = () =>
 
           const roster = PANELISTS.slice(0, body.panelists)
           const runId = `crt_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 8)}`
+          const ctx = await buildCallCtx(modelRef)
           await send("critique.start", {
             runId,
             sessionID: body.sessionID,
             model: { providerID: modelRef.providerID, modelID: modelRef.modelID },
             panelists: roster.map((p) => p.role),
+            vision: ctx.vision,
           })
 
-          const ctx = await buildCallCtx(modelRef)
           // Run in parallel; emit each panelist event as soon as it resolves.
           const results: PanelistOut[] = await Promise.all(
             roster.map(async (p) => {
