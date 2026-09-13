@@ -2,18 +2,55 @@
   "task": "form-fill",
   "mode": "per-step",
   "status": "completed",
-  "stop_reason": "StopReason.MAX_STEPS",
-  "model_turns": 12,
-  "steps_attempted": 12,
-  "steps_completed": 12,
+  "stop_reason": "StopReason.DONE",
+  "model_turns": 4,
+  "brain_calls": 4,
+  "brain_input_tokens": 128305,
+  "brain_output_tokens": 410,
+  "steps_attempted": 4,
+  "steps_completed": 4,
+  "step_details": [
+    {
+      "step": 1,
+      "action_type": "fill",
+      "target": "input[placeholder='Full name']",
+      "ok": true,
+      "error": null,
+      "receipt_id": null
+    },
+    {
+      "step": 2,
+      "action_type": "fill",
+      "target": "input[placeholder='Email address']",
+      "ok": true,
+      "error": null,
+      "receipt_id": null
+    },
+    {
+      "step": 3,
+      "action_type": "click",
+      "target": "button",
+      "ok": true,
+      "error": null,
+      "receipt_id": null
+    },
+    {
+      "step": 4,
+      "action_type": "done",
+      "target": "h1",
+      "ok": true,
+      "error": null,
+      "receipt_id": null
+    }
+  ],
   "total_tokens": 0,
   "input_tokens": 0,
   "output_tokens": 0,
-  "wall_s": 90.5,
+  "wall_s": 30.7,
   "grants": [],
   "n_grants": 0,
   "batch_events": [],
   "receipt_ids": [],
-  "ground_truth_success": false,
+  "ground_truth_success": true,
   "error": null
 }

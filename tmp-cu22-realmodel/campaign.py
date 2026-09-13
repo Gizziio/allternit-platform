@@ -114,8 +114,11 @@ class PerStepVocabularyAdapter:
     async def execute(self, action, session_id=None, run_id=None, **kwargs):
         mapped = self._MAP.get(action.action_type)
         if mapped:
-            action = type("ActionRequest", (), dict(vars(action)))()
-            action.action_type = mapped
+            fields = {k: getattr(action, k, None) for k in
+                      ("action_id", "action_type", "target", "parameters",
+                       "timeout_ms", "retry_count")}
+            fields["action_type"] = mapped
+            action = type("ActionRequest", (), fields)()
         return await self._inner.execute(action, session_id=session_id,
                                          run_id=run_id or "cu22", **kwargs)
 
