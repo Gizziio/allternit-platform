@@ -41,15 +41,22 @@ export function useCommRailSections(): {
 
   useEffect(() => {
     let cancelled = false;
-    void fetchVisibility()
-      .then((dto) => {
-        if (!cancelled) setVisibility(dto);
-      })
-      .catch(() => {
-        if (!cancelled) setVisibility({ ...EMPTY_VISIBILITY });
-      });
+    const load = () => {
+      void fetchVisibility()
+        .then((dto) => {
+          // Keep the last good snapshot when ao/rails is down — a failed
+          // refetch must not clobber the sections with empty data.
+          if (!cancelled && dto.aoRunning) setVisibility(dto);
+        })
+        .catch(() => {
+          /* keep last good data */
+        });
+    };
+    load();
+    const interval = setInterval(load, 15_000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
@@ -97,6 +104,8 @@ export function useCommRailSections(): {
           label: nativeJoin.get(pane.id) ?? pane.label,
           payload: pane.id,
           status: paneStateToOperational(pane.state),
+          lastMessage: pane.lastMessage,
+          lastMessageAt: pane.lastMessageAt,
         }))
       : [
           {

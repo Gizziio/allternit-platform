@@ -31,6 +31,10 @@ pub enum TransportErrorCode {
     LeaseExpired,
     /// The job's run is cancelled.
     RunCancelled,
+    /// The delegation chain contains a cycle (A → B → A is invalid, §8.15).
+    DelegationCycle,
+    /// The delegation chain exceeds the workspace depth limit (default 4, §8.15).
+    DelegationDepthExceeded,
     /// A protected action requires an approval for the current lease generation.
     ApprovalRequired,
     /// An approval exists but is bound to a stale generation or was invalidated.
@@ -58,6 +62,8 @@ impl TransportErrorCode {
             Self::StaleLeaseGeneration => "A_STALE_LEASE_GENERATION",
             Self::LeaseExpired => "A_LEASE_EXPIRED",
             Self::RunCancelled => "A_RUN_CANCELLED",
+            Self::DelegationCycle => "A_DELEGATION_CYCLE",
+            Self::DelegationDepthExceeded => "A_DELEGATION_DEPTH_EXCEEDED",
             Self::ApprovalRequired => "A_APPROVAL_REQUIRED",
             Self::ApprovalInvalid => "A_APPROVAL_INVALID",
             Self::ResultAlreadyCommitted => "A_RESULT_ALREADY_COMMITTED",
@@ -126,6 +132,9 @@ pub struct PrincipalRecord {
     pub workspace: String,
     /// Declared capability strings (§8.6).
     pub capabilities: Vec<String>,
+    /// Role vocabulary (§3): orchestrator, worker, reviewer, observer,
+    /// human, system. A principal may hold several.
+    pub roles: Vec<String>,
     /// Registration status; only `active` principals may claim work.
     pub status: String,
 }
@@ -231,4 +240,67 @@ pub fn hash_token(token: &str) -> String {
     let mut hasher = sha2::Sha256::new();
     hasher.update(token.as_bytes());
     hex::encode(hasher.finalize())
+}
+
+/// Canonical IntentEnvelope (A:// §5) — the normalized form of work entering
+/// the execution system. Idempotent on `intent_id`: resubmitting the same
+/// intent_id resolves to the same canonical run_id (§5 intent idempotency).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntentEnvelope {
+    /// Protocol version; v0.1 requires `a/0.1` (§15).
+    pub version: String,
+    /// Idempotency key (§5). Same intent_id → same canonical run.
+    pub intent_id: String,
+    /// Workspace scope, e.g. `a://workspace/acme`.
+    pub workspace: String,
+    /// Who asked (§8.18 initiator).
+    pub initiator: String,
+    /// Who delegates (optional; recorded as the delegator attribution).
+    pub delegator: Option<String>,
+    /// Who should execute (target principal address).
+    pub target: Option<String>,
+    /// Action description.
+    pub action: IntentAction,
+    /// Requested permission strings (§8.6 vocabulary).
+    #[serde(default)]
+    pub permissions: Vec<String>,
+    /// Compute placement policy (`local`, `vm`, `byo`, `cloud`, `auto`).
+    #[serde(default)]
+    pub compute: Option<serde_json::Value>,
+    /// Model/router policy.
+    #[serde(default)]
+    pub model: Option<serde_json::Value>,
+    /// Approval policy.
+    #[serde(default)]
+    pub approval: Option<serde_json::Value>,
+    /// Where the result should return.
+    #[serde(default)]
+    pub return_channel: Option<serde_json::Value>,
+    /// Append-only delegation causation chain (§8.15); last element is the
+    /// executor delegate. Validated: no cycles, depth within workspace limit.
+    #[serde(default)]
+    pub causation_chain: Vec<String>,
+}
+
+/// The action block of an IntentEnvelope.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntentAction {
+    /// Action type, e.g. `research`, `shell_steps`.
+    pub action_type: String,
+    /// Human description of the work.
+    pub description: String,
+    /// Optional machine payload (step sequences, parameters).
+    #[serde(default)]
+    pub payload: Option<serde_json::Value>,
+}
+
+/// Outcome of submitting an intent.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntentSubmission {
+    /// The submitted (or canonical pre-existing) intent id.
+    pub intent_id: String,
+    /// Canonical run id this intent resolved to.
+    pub run_id: String,
+    /// False when the intent_id already existed (idempotent replay).
+    pub created: bool,
 }

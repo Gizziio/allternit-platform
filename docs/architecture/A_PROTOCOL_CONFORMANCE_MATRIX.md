@@ -30,11 +30,11 @@ See the last section for the adjacent-plumbing inventory.
 
 | Claim | Proof | Status |
 |---|---|---|
-| Create or observe intents | Run/job creation via `POST /runs`, `POST /runs/:id/jobs` (implemented); IntentEnvelope as a type: **Planned** (`A_PROTOCOL_SCHEMA.md` §9) | ⚠️ partial |
+| Create or observe intents | `test_intent_submission_idempotent` (idempotent on intent_id, canonical run, attribution, version/cycle rejection) + `POST/GET /fabric/transport/intents` live | ✅ |
 | Observe canonical run state | `GET /runs`, `GET /runs/:id/jobs`, `GET /fabric/transport/jobs/:id` read the store; state-machine reference in `COWORK_RUNTIME_STATE_MACHINES.md` | ✅ (API) |
-| Display approvals | `GET /fabric/transport/approvals/:id` (worker-scoped); human grant/deny endpoints; `GET /cowork/approvals` now user-filtered (bug fixed in #422) | ✅ (API; Cowork UI surfacing partial) |
+| Display approvals | `GET /fabric/transport/approvals` inbox (workspace/status filter) + grant/deny; `GET /cowork/approvals` user-filtered (#422); `/fabric-transport` control view renders the inbox with decided_by reasons (auto-approvals show WHY, not silent) | ✅ |
 | Display attributed events | `GET /runs/:id/events` + SSE stream return attribution columns (V154) | ✅ (API; UI partial) |
-| Display completion/failure | CompleteOutcome + job view expose state/result; run advanced to terminal | ✅ (API; UI partial) |
+| Display completion/failure | CompleteOutcome + job view expose state/result; run advanced to terminal; rendered in `/fabric-transport` run detail | ✅ |
 
 ## 3. §8.24 proof-of-protocol sequence
 
@@ -75,15 +75,33 @@ in the lifecycle. Per §16 they must not be cited as A:// conformance:
 | `cowork_memory_entries`, schedules DB | Scoped data/trigger substrate; durable but not execution-ownership state | — |
 | CommRails ledger mirroring of runtime events | Transport substrate carrying already-attributed events; carries semantics, does not define them | `A_PROTOCOL.md` §15 |
 
+## 5b. Task-DAG items A-T1–A-T5 (closed)
+
+| Item | Proof |
+|---|---|
+| A-T1 handoff chains + ack | `test_handoff_ack_completes_linked_job` (linked job terminated with typed result, executor attribution, idempotent replay); cyclic handoff chains rejected at the route; `POST /runs/:id/handoffs/:hid/ack` |
+| A-T2 per-principal memory grants | `test_memory_principal_grants` (owner/grantee/stranger visibility, default-deny write check); `/cowork/memory` with `principal`/`grants` |
+| A-T3 Al orchestration loop v0.1 | `test_al_orchestration_loop` (rule-based delegation, attributed delegation.created/rejected/completed, parent-run mirroring, no double delegation); boot tick in `main.rs` |
+| A-T4 Gizzi claim loop | `cmd/gizzi-code/src/runtime/fabric-transport/worker.ts` — long-poll claim, `Sandbox.wrap` posture, heartbeat, checkpoints, typed Result; typechecked; live demo evidence |
+| A-T5 connector broker v0.1 | `test_connector_broker_sessions` (secret-free sessions, principal-bound, approval-gated critical capabilities, honest simulated invoke, attributed connector.invoked); live demo evidence |
+
 ## 6. Honest gaps in the conformance story
 
-- **Intent envelope** — the conformance path starts at run creation; intent
-  idempotency (`intent_id` → canonical run) is Planned, untested.
-- **Delegation chains** — depth/cycle enforcement (§8.15) is Planned; the
-  triple is attributed but chains are not stored or validated.
 - **Non-local compute** — all conformance proofs run `compute: local`;
   placement is out of scope for v0.1 (lock 1, §8.8).
-- **UI conformance** — API-side control conformance is proven; Cowork UI
-  rendering of leases/bindings/attribution is Partial and unproven here.
-- **Gizzi as transport worker** — spec'd in `GIZZI_WORKER_SPEC.md`, not wired;
-  no conformance claim until it claims leases as `principal/gizzi`.
+- **Al/Gizzi as live workers** — Gizzi's claim loop is implemented
+  (`fabric-transport/worker.ts`) but runs on-demand (bun entry), not as an
+  installed service; Al's loop is the deterministic orchestrator (no persona
+  runtime yet). Conformance claims attach when they operate continuously.
+- **UI conformance depth** — the `/fabric-transport` control view satisfies
+  the §17 control list minimally; rich protocol-entity rendering (leases,
+  DAG graphs, timelines) remains ongoing product work.
+- **Delegation chain enforcement coverage** — chains are validated on intent
+  submission and job creation; enforcement on other write paths (handoffs)
+  is not universal.
+
+Proven in this pass: `test_default_principal_seeding_and_token_provisioning`
+(Gap 1), agent creation minting the principal in-transaction (Gap 2, build +
+live evidence), `test_delegation_chain_cycle_and_depth` (Gap 3),
+`test_intent_submission_idempotent` (Gap 4), `/fabric-transport` view +
+approvals inbox (Gap 5, typechecked).

@@ -285,7 +285,8 @@ Transport does not redefine principal identity, run state, attribution, or appro
 
 ### Implemented / backed by code
 
-- workspace-scoped `cowork_principals`
+- workspace-scoped `cowork_principals` (incl. `roles`, V162)
+- default Al/Gizzi principal minting per workspace, idempotent, credential-provisioned once
 - bearer token hash authentication for Fabric Transport proof slice
 - principal capability storage
 - job lease ID / generation / expiry / claimed-at fields
@@ -303,17 +304,24 @@ Transport does not redefine principal identity, run state, attribution, or appro
 - single risk-policy evaluation path shared with the cowork-engine rule model
 - boot-time downtime lease recovery and full run/job rehydration
 - client-supplied event idempotency keys on the run-events API
+- bot product/agent record ↔ execution principal linkage (agents.principal_id, V163)
+- delegation causation chains with cycle rejection and configurable depth (default 4, V164)
+- canonical IntentEnvelope submission, idempotent on intent_id (cowork_intents, V164)
+- handoff delegation chains + handoff acknowledgment (completion) path (V165)
+- per-principal memory grants with default-deny cross-principal access (V165)
+- deterministic Al orchestration loop (delegation rules → child intent → monitor → record; V166)
+- connector broker v0.1: lease+policy validated sessions, system-side invocation, no raw secrets to workers (V167)
 
 ### Partial / still needs hardening
 
-- full IntentEnvelope as a first-class canonical type/store
 - approval-to-lease binding coverage across all protected tools/connectors
   (the binding mechanism is implemented; tool/connector coverage is not universal)
-- principal-scoped memory and connector brokerage
 - canonical multi-store consolidation beyond the proof slice
-- delegation-depth / causation-chain enforcement across every execution path
+- Cowork visualization depth (a control surface now exists at
+  `/fabric-transport`; full protocol-entity rendering is ongoing)
 - complete capability vocabulary across all workers
-- cross-surface Cowork visualization of the protocol entities
+- Gizzi's TS claim loop ships in cmd/gizzi-code (`fabric-transport/worker.ts`);
+  packaging/install automation for always-on operation is product work
 
 ### Planned / not implied by v0.1
 
