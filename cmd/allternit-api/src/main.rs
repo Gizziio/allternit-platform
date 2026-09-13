@@ -1302,12 +1302,23 @@ async fn expire_downtime_leases(db: &allternit_api::db::DbHandle) {
     let path = db.path().to_path_buf();
     let result = tokio::task::spawn_blocking(move || {
         let mut conn = allternit_cowork_runtime::sqlite_store::open_store(&path)?;
-        allternit_cowork_runtime::sqlite_store::expire_leases(&mut conn, chrono::Utc::now())
+        let actions = allternit_cowork_runtime::sqlite_store::expire_leases(
+            &mut conn,
+            chrono::Utc::now(),
+        )?;
+        let expired_approvals = allternit_cowork_runtime::sqlite_store::expire_approvals(
+            &mut conn,
+            chrono::Utc::now(),
+        )?;
+        Ok::<_, allternit_cowork_runtime::TransportError>((actions, expired_approvals))
     })
     .await;
 
     match result {
-        Ok(Ok(actions)) => {
+        Ok(Ok((actions, expired_approvals))) => {
+            for approval_id in expired_approvals {
+                info!(approval_id = %approval_id, "Downtime approval expiry applied at boot");
+            }
             for action in actions {
                 info!(
                     job_id = %action.job_id,
