@@ -36,15 +36,15 @@ use allternit_commrails::tickets::{
     TicketUpdate,
 };
 use allternit_commrails::wait_gates::WaitGateStore;
-use allternit_commrails::wih::{WihState, active_wihs};
+use allternit_commrails::wih::{WihState, active_wihs, project_wih};
 use allternit_commrails::work::{DagNode, ready_nodes};
 use allternit_commrails::{
     Actor, ActorType, AllternitEvent, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
-    DagMutation, Gate, GateOptions, Index, IndexOptions, LeaseRecord, Leases, LeasesOptions,
-    Ledger, LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex, MailIndexOptions,
-    MailOptions, PeerEnvelope, PeerRegistry, ReceiptRecord, ReceiptStore, ReceiptStoreOptions,
-    Steer, TypedMessage, Vault, VaultOptions, WorkOps, project_dag, resolve_thread_id,
-    send_envelope,
+    DagMutation, EventScope, Gate, GateOptions, Index, IndexOptions, LeaseRecord, Leases,
+    LeasesOptions, Ledger, LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex,
+    MailIndexOptions, MailOptions, PeerEnvelope, PeerRegistry, ReceiptRecord, ReceiptStore,
+    ReceiptStoreOptions, Steer, TypedMessage, Vault, VaultOptions, WihPickupOptions, WorkOps,
+    project_dag, resolve_thread_id, send_envelope,
 };
 
 // ============================================================================
@@ -801,6 +801,8 @@ struct WihSignResponse {
 struct WihCloseRequest {
     status: String,
     evidence: Option<Vec<String>>,
+    #[serde(default)]
+    agent_id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1734,7 +1736,7 @@ async fn list_wihs_get(State(state): State<Arc<AppState>>) -> impl IntoResponse 
 }
 
 async fn pickup_wih(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(req): Json<WihPickupRequest>,
 ) -> impl IntoResponse {
     info!(
@@ -1746,42 +1748,104 @@ async fn pickup_wih(
         "Picking up WIH"
     );
 
-    (
-        StatusCode::OK,
-        Json(WihPickupResponse {
-            wih_id: format!("{}:{}", req.dag_id, req.node_id),
-            context_pack_path: None,
-        }),
-    )
+    if req.dag_id.trim().is_empty() || req.node_id.trim().is_empty() || req.agent_id.trim().is_empty()
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "dag_id, node_id, and agent_id are required" })),
+        )
+            .into_response();
+    }
+    let scope = EventScope {
+        dag_id: Some(req.dag_id.clone()),
+        node_id: Some(req.node_id.clone()),
+        ..Default::default()
+    };
+    if let Err(resp) = ensure_policy_injected(&state, Some(scope)).await {
+        return resp.into_response();
+    }
+    let options = WihPickupOptions {
+        role: req.role,
+        fresh: req.fresh.unwrap_or(false),
+    };
+    match state
+        .rails
+        .gate
+        .wih_pickup_with(&req.dag_id, &req.node_id, &req.agent_id, options)
+        .await
+    {
+        Ok(wih_id) => {
+            let context_pack_path = match state.rails.ledger.query(LedgerQuery::default()).await {
+                Ok(events) => project_wih(&events, &wih_id).and_then(|w| w.context_pack_path),
+                Err(_) => None,
+            };
+            (
+                StatusCode::OK,
+                Json(WihPickupResponse {
+                    wih_id,
+                    context_pack_path,
+                }),
+            )
+                .into_response()
+        }
+        Err(e) => (StatusCode::CONFLICT, Json(json!({ "error": e.to_string() }))).into_response(),
+    }
 }
 
 async fn get_wih_context(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Path(wih_id): Path<String>,
 ) -> impl IntoResponse {
     info!(wih_id = %wih_id, "Fetching WIH context");
 
-    (
-        StatusCode::OK,
-        Json(WihContextResponse {
-            wih_id,
-            context_pack: None,
-        }),
-    )
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let context_pack = project_wih(&events, &wih_id)
+                .and_then(|w| w.context_pack_path)
+                .and_then(|path| std::fs::read_to_string(path).ok());
+            (
+                StatusCode::OK,
+                Json(WihContextResponse {
+                    wih_id,
+                    context_pack,
+                }),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
 }
 
 async fn sign_wih(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Path(wih_id): Path<String>,
     Json(req): Json<WihSignRequest>,
 ) -> impl IntoResponse {
     info!(wih_id = %wih_id, signature = %req.signature, "Signing WIH");
 
-    (StatusCode::OK, Json(WihSignResponse { signed: true }))
+    let scope = EventScope {
+        wih_id: Some(wih_id.clone()),
+        ..Default::default()
+    };
+    if let Err(resp) = ensure_policy_injected(&state, Some(scope)).await {
+        return resp.into_response();
+    }
+    match state.rails.gate.wih_sign_open(&wih_id, &req.signature).await {
+        Ok(_) => (StatusCode::OK, Json(WihSignResponse { signed: true })).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
 }
 
 async fn close_wih(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Path(wih_id): Path<String>,
     Json(req): Json<WihCloseRequest>,
 ) -> impl IntoResponse {
@@ -1792,7 +1856,85 @@ async fn close_wih(
         "Closing WIH"
     );
 
-    (StatusCode::OK, Json(WihCloseResponse { closed: true }))
+    if req.agent_id.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "agent_id is required" })),
+        )
+            .into_response();
+    }
+
+    // Agent ownership check happens before any gate mutation.
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => match project_wih(&events, &wih_id) {
+            Some(wih) => {
+                if let Some(owner) = &wih.agent_id {
+                    if owner != &req.agent_id {
+                        return (
+                            StatusCode::FORBIDDEN,
+                            Json(json!({ "error": "wih owned by another agent" })),
+                        )
+                            .into_response();
+                    }
+                }
+            }
+            None => {
+                return (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({ "error": "wih not found" })),
+                )
+                    .into_response();
+            }
+        },
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    }
+
+    let scope = EventScope {
+        wih_id: Some(wih_id.clone()),
+        ..Default::default()
+    };
+    if let Err(resp) = ensure_policy_injected(&state, Some(scope)).await {
+        return resp.into_response();
+    }
+    let evidence = req.evidence.clone().unwrap_or_default();
+    match state.rails.gate.wih_close(&wih_id, &req.status, &evidence).await {
+        Ok(_) => (StatusCode::OK, Json(WihCloseResponse { closed: true })).into_response(),
+        Err(e) => {
+            let status = if e.to_string().contains("evidence") {
+                StatusCode::BAD_REQUEST
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+            (status, Json(json!({ "error": e.to_string() }))).into_response()
+        }
+    }
+}
+
+async fn ensure_policy_injected(
+    state: &AppState,
+    scope: Option<EventScope>,
+) -> Result<(), (StatusCode, Json<serde_json::Value>)> {
+    allternit_commrails::policy::inject_policy(
+        &state.rails.root_dir,
+        &state.rails.ledger,
+        scope,
+        "gateway",
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| {
+        error!(error = %e, "policy injection failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+    })
 }
 
 async fn list_dags(

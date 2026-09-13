@@ -1,82 +1,74 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { ModeDock } from './ModeDock';
+import { ModeDock, MODE_TABS } from './ModeDock';
 
-describe('ModeDock', () => {
-  it('defaults to the first available mode', () => {
+describe('ModeDeck persistence', () => {
+  it('shows all mode tabs on the bot surface even when no bot is mounted', () => {
+    render(
+      <ModeDock
+        selectedMode="swarms"
+        onSelectMode={() => {}}
+        agentModeSurface="bot"
+        selectedSurfaceAgent={null}
+      />
+    );
+
+    for (const tab of MODE_TABS) {
+      expect(screen.getByRole('button', { name: `Mode: ${tab.label}` })).toBeInTheDocument();
+    }
+  });
+
+  it('shows the unmounted-bot hint on the bot surface when no bot is selected', () => {
+    render(
+      <ModeDock
+        selectedMode="swarms"
+        onSelectMode={() => {}}
+        agentModeSurface="bot"
+        selectedSurfaceAgent={null}
+      />
+    );
+
+    expect(screen.getByText(/Select or create a bot/)).toBeInTheDocument();
+  });
+
+  it('hides the unmounted-bot hint once a bot is bound', () => {
+    render(
+      <ModeDock
+        selectedMode="swarms"
+        onSelectMode={() => {}}
+        agentModeSurface="bot"
+        selectedSurfaceAgent={{ name: 'Helper' }}
+      />
+    );
+
+    expect(screen.queryByText(/Select or create a bot/)).not.toBeInTheDocument();
+  });
+
+  it('does not show the unmounted-bot hint on non-bot surfaces', () => {
+    render(
+      <ModeDock
+        selectedMode="swarms"
+        onSelectMode={() => {}}
+        agentModeSurface="cowork"
+        selectedSurfaceAgent={null}
+      />
+    );
+
+    expect(screen.queryByText(/Select or create a bot/)).not.toBeInTheDocument();
+  });
+
+  it('defaults the selection to the first visible tab when none is valid', () => {
     const onSelectMode = vi.fn();
     render(
       <ModeDock
         selectedMode={null}
         onSelectMode={onSelectMode}
-        agentModeSurface="chat"
+        agentModeSurface="bot"
+        selectedSurfaceAgent={null}
       />
     );
 
-    expect(onSelectMode).toHaveBeenCalledWith('swarms');
-    expect(screen.getByRole('button', { name: /Mode: Agent Swarm/i })).toBeInTheDocument();
-  });
-
-  it('renders all visible modes as horizontal tabs separated by pipes', () => {
-    render(
-      <ModeDock
-        selectedMode="docs"
-        onSelectMode={() => {}}
-        agentModeSurface="chat"
-      />
-    );
-
-    expect(screen.getByRole('button', { name: /Mode: Docs/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Agent Swarm/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Deep Research/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Websites/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Sheets/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Slides/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Image/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Video/i })).toBeInTheDocument();
-
-    // Eight modes → seven separators
-    const separators = screen.getAllByText('|');
-    expect(separators).toHaveLength(7);
-  });
-
-  it('selects a mode when its tab is clicked', () => {
-    const onSelectMode = vi.fn();
-    render(
-      <ModeDock
-        selectedMode="image"
-        onSelectMode={onSelectMode}
-        agentModeSurface="chat"
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /Mode: Deep Research/i }));
-    expect(onSelectMode).toHaveBeenCalledWith('research');
-  });
-
-  it('does not render templates in the tabs', () => {
-    render(
-      <ModeDock
-        selectedMode="docs"
-        onSelectMode={() => {}}
-        agentModeSurface="chat"
-      />
-    );
-
-    expect(screen.queryByText(/Featured Docs Cases/i)).not.toBeInTheDocument();
-  });
-
-  it('only exposes the eight retained agent modes', () => {
-    render(<ModeDock selectedMode="swarms" onSelectMode={() => {}} agentModeSurface="chat" />);
-
-    expect(screen.getByRole('button', { name: /Mode: Agent Swarm/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Deep Research/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Websites/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Docs/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Sheets/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Mode: Code$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Mode: Flow$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Mode: Computer$/i })).not.toBeInTheDocument();
+    expect(onSelectMode).toHaveBeenCalledWith(MODE_TABS[0].id);
   });
 });

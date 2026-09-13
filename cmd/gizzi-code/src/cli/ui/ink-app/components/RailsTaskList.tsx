@@ -14,6 +14,18 @@ import { useAppState } from '../state/AppState.js'
 import type { AppState } from '../state/AppStateStore.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { truncateToWidth } from '../../../../shared/utils/format.js'
+import { useKeybindings } from '../keybindings/useKeybinding.js'
+import {
+  useIsModalOverlayActive,
+  useRegisterOverlay,
+} from '../context/overlayContext.js'
+import {
+  closeWih,
+  isRailsPeerMode,
+  pickupWih,
+  railsPeerAgentId,
+  refreshRailsDagNow,
+} from '@/runtime/gizzi-core/services/railsDag'
 
 // Same budget rule as TaskListV2: rows<=10 hides the panel entirely, else
 // min(10, max(3, rows-14)) lines — dag headers count against it.
@@ -89,6 +101,40 @@ type DagLine =
   | { kind: 'node'; key: string; dagId: string; node: RailsDagNode; depth: number }
   | { kind: 'done-summary'; key: string; dagId: string; count: number }
 
+// ─── Selection (pure logic, unit-tested in RailsTaskList.test.ts) ──────────
+
+export type ActionableKind = 'take' | 'done'
+
+/**
+ * Which write-back action (if any) a node row supports for this peer:
+ * READY → 'take' (pickup), RUNNING owned by us → 'done' (close).
+ */
+export function actionableKindFor(
+  status: string,
+  assignee: string | null,
+  agentId: string | null,
+): ActionableKind | null {
+  const normalized = String(status).toUpperCase()
+  if (normalized === 'READY') return 'take'
+  if (normalized === 'RUNNING' && agentId && assignee === agentId) return 'done'
+  return null
+}
+
+/** Clamp a selection index into [0, count-1]; -1 when nothing is selectable. */
+export function clampSelectionIndex(index: number, count: number): number {
+  if (count <= 0) return -1
+  return Math.max(0, Math.min(index, count - 1))
+}
+
+type ActionableRow = {
+  key: string
+  dagId: string
+  kind: ActionableKind
+  node: RailsDagNode
+}
+
+const ROW_ERROR_TTL_MS = 5_000
+
 export function RailsTaskList(): React.ReactElement | null {
   const railsDag = useAppState(s => s.railsDag)
   const { rows, columns } = useTerminalSize()
@@ -142,12 +188,7 @@ export function RailsTaskList(): React.ReactElement | null {
     return () => clearTimeout(timer)
   }, [dags])
 
-  if (!railsDag || railsDag.updatedAt === null || dags.length === 0) {
-    return null
-  }
-
   const maxDisplay = maxDisplayForRows(rows)
-  if (maxDisplay === 0) return null
 
   // Build display lines: one header per dag, then nodes frontier-first with
   // children indented under parents; DONE nodes past the TTL collapse into a
@@ -194,8 +235,145 @@ export function RailsTaskList(): React.ReactElement | null {
   const visibleLines = lines.slice(0, maxDisplay)
   const hiddenCount = lines.length - visibleLines.length
 
+  // ─── Interactivity (write-back) ──────────────────────────────────────────
+  //
+  // Focus model follows the established overlay pattern (overlayContext.tsx):
+  // `tab` focuses the panel, which registers a modal overlay so PromptInput
+  // releases the text input and its keybindings; `esc` blurs, unregistering
+  // the overlay so keys return to the prompt. Keys only bind while focused
+  // (useKeybindings isActive), so unfocused/non-rails behavior is untouched.
+
+  const [focused, setFocused] = React.useState(false)
+  const [selectionKey, setSelectionKey] = React.useState<string | null>(null)
+  const [rowError, setRowError] = React.useState<{
+    key: string
+    message: string
+  } | null>(null)
+
+  const agentId = railsPeerAgentId()
+  const actionable: ActionableRow[] = []
+  if (isRailsPeerMode() && maxDisplay > 0) {
+    for (const line of visibleLines) {
+      if (line.kind !== 'node') continue
+      const kind = actionableKindFor(line.node.status, line.node.assignee, agentId)
+      if (kind) {
+        actionable.push({
+          key: line.key,
+          dagId: line.dagId,
+          kind,
+          node: line.node,
+        })
+      }
+    }
+  }
+  const actionableCount = actionable.length
+  const foundIndex = selectionKey
+    ? actionable.findIndex(row => row.key === selectionKey)
+    : -1
+  const selectionIndex =
+    foundIndex >= 0 ? foundIndex : clampSelectionIndex(0, actionableCount)
+
+  const panelVisible = Boolean(
+    railsDag &&
+      railsDag.updatedAt !== null &&
+      dags.length > 0 &&
+      maxDisplay > 0 &&
+      isRailsPeerMode(),
+  )
+  const isModalOverlayActive = useIsModalOverlayActive()
+
+  const selectDelta = (delta: number): void => {
+    const next = clampSelectionIndex(selectionIndex + delta, actionableCount)
+    if (next >= 0) setSelectionKey(actionable[next]!.key)
+  }
+
+  const takeSelected = async (): Promise<void> => {
+    const selected = actionable[selectionIndex]
+    if (!selected || selected.kind !== 'take') return
+    const result = await pickupWih(selected.dagId, selected.node.node_id)
+    if (result.ok) {
+      setRowError(null)
+      refreshRailsDagNow()
+    } else {
+      setRowError({ key: selected.key, message: result.error ?? 'pickup failed' })
+    }
+  }
+
+  const doneSelected = async (): Promise<void> => {
+    const selected = actionable[selectionIndex]
+    if (!selected || selected.kind !== 'done' || !selected.node.current_wih_id) {
+      return
+    }
+    const result = await closeWih(selected.node.current_wih_id, [
+      `closed from gizzi-code todo panel by ${railsPeerAgentId() ?? 'unknown'}`,
+    ])
+    if (result.ok) {
+      setRowError(null)
+      refreshRailsDagNow()
+    } else {
+      setRowError({ key: selected.key, message: result.error ?? 'close failed' })
+    }
+  }
+
+  // Focus grab: only while the panel is visible, unfocused, and no modal
+  // overlay (permission dialogs etc.) already owns the keys.
+  useKeybindings(
+    {
+      'railsDag:focus': () => {
+        if (actionableCount === 0) return
+        setFocused(true)
+        setSelectionKey(prev => prev ?? actionable[0]?.key ?? null)
+      },
+    },
+    {
+      context: 'RailsDag',
+      isActive: panelVisible && !focused && !isModalOverlayActive,
+    },
+  )
+
+  // Focused keys: j/k/arrows move, t takes, d closes, esc blurs.
+  useKeybindings(
+    {
+      'select:next': () => selectDelta(1),
+      'select:previous': () => selectDelta(-1),
+      'railsDag:take': () => {
+        void takeSelected()
+      },
+      'railsDag:done': () => {
+        void doneSelected()
+      },
+      'railsDag:blur': () => setFocused(false),
+    },
+    { context: 'RailsDag', isActive: focused && panelVisible },
+  )
+
+  // Modal overlay while focused: PromptInput gates its text input and
+  // keybindings on useIsModalOverlayActive (PromptInput.tsx:2186), so this
+  // is what actually "gives the panel the keys" and returns them on blur.
+  useRegisterOverlay('rails-dag-todo', focused && panelVisible)
+
+  // Auto-blur when the selection pool empties (last actionable node closed
+  // or the dags view went quiet).
+  React.useEffect(() => {
+    if (focused && actionableCount === 0) setFocused(false)
+  }, [focused, actionableCount])
+
+  // Row errors clear after a short TTL.
+  React.useEffect(() => {
+    if (!rowError) return
+    const timer = setTimeout(() => setRowError(null), ROW_ERROR_TTL_MS)
+    return () => clearTimeout(timer)
+  }, [rowError])
+
+  if (!railsDag || railsDag.updatedAt === null || dags.length === 0) {
+    return null
+  }
+
+  if (maxDisplay === 0) return null
+
   const planPublish = railsDag.planPublish
   const maxTitleWidth = Math.max(15, columns - 20)
+  const selectedKey = focused ? actionable[selectionIndex]?.key : null
 
   return (
     <Box flexDirection="column" marginTop={1} marginLeft={2}>
@@ -223,9 +401,15 @@ export function RailsTaskList(): React.ReactElement | null {
         }
         const { icon, color, dim } = glyphFor(statusOf(line.node))
         const title = truncateToWidth(line.node.title, maxTitleWidth)
+        const isSelected = line.key === selectedKey
+        const error =
+          rowError && rowError.key === line.key ? rowError.message : null
         return (
           <Box key={line.key}>
-            <Text>{'  '.repeat(line.depth)}</Text>
+            <Text>
+              {focused ? (isSelected ? '❯ ' : '  ') : ''}
+              {'  '.repeat(line.depth)}
+            </Text>
             <Text color={color}>{icon} </Text>
             <Text bold={statusOf(line.node) === 'RUNNING'} dimColor={dim}>
               {title}
@@ -233,10 +417,16 @@ export function RailsTaskList(): React.ReactElement | null {
             {statusOf(line.node) === 'RUNNING' && line.node.assignee && (
               <Text dimColor> ({line.node.assignee})</Text>
             )}
+            {error && (
+              <Text color="error">
+                {' '}⚠ {truncateToWidth(error, Math.max(20, columns - maxTitleWidth - 25))}
+              </Text>
+            )}
           </Box>
         )
       })}
       {hiddenCount > 0 && <Text dimColor>{` … +${hiddenCount} more`}</Text>}
+      {focused && <Text dimColor>j/k move · t take · d done · esc blur</Text>}
     </Box>
   )
 }

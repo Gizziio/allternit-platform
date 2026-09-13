@@ -1587,7 +1587,7 @@ declare module '@anthropic-ai/sandbox-runtime' {
 
 // Keybinding types
 declare module '*/keybindings/types.js' {
-  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select'
+  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select' | 'RailsDag'
   export type KeybindingAction = 'command' | 'callback' | string
   export interface ParsedBinding {
     keys: string[]
@@ -1600,7 +1600,7 @@ declare module '*/keybindings/types.js' {
   }
 }
 declare module '../keybindings/types.js' {
-  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select'
+  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select' | 'RailsDag'
   export type KeybindingAction = 'command' | 'callback' | string
   export interface ParsedBinding {
     keys: string[]
@@ -1613,7 +1613,7 @@ declare module '../keybindings/types.js' {
   }
 }
 declare module 'src/components/keybindings/types.js' {
-  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select'
+  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select' | 'RailsDag'
   export type KeybindingAction = 'command' | 'callback' | string
   export interface ParsedBinding {
     keys: string[]

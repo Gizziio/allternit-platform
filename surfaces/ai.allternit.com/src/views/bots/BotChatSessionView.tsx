@@ -52,6 +52,7 @@ import { getProviderMeta } from "@/lib/providers/provider-registry";
 import { BotComputerViewport } from "./BotComputerViewport";
 import { PolicyGovernance } from "./PolicyGovernance";
 import { BotWatchStrip } from "./BotWatchStrip";
+import { BotRailsDeck } from "@/components/bot-chat/BotRailsDeck";
 import { useBotActiveVm } from "./useBotActiveVm";
 import {
   cycleBotThreadNotifyMode,
@@ -547,6 +548,8 @@ function BotChatSessionContent({
         sessionMode={session?.metadata?.sessionMode}
         isBot={session?.metadata?.isBot === true}
       />
+
+      <BotRailsDeck />
 
       {botId && (session?.metadata?.sessionMode === "agent" || session?.metadata?.isBot === true) && (
         <BotWatchStrip

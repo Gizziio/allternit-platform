@@ -444,7 +444,9 @@ export function ChatComposer({
     () => Boolean(activeSession && activeSession?.metadata?.sessionMode === 'agent'),
     [activeSession],
   );
-  const [locallyEnabled, setLocallyEnabled] = useState(false);
+  // Bot-mode surfaces always show the feature deck — even before a bot is
+  // mounted — so the modes never pop in/out on selection changes.
+  const [locallyEnabled, setLocallyEnabled] = useState(agentModeSurface === 'bot');
   const [selectedTemplateTitle, setSelectedTemplateTitle] = useState<string | undefined>();
   const agentModeEnabled = hasEmbeddedSession || locallyEnabled;
   const [agentModePulse, setAgentModePulse] = useState(0);
@@ -2471,7 +2473,7 @@ export function ChatComposer({
       {/* Agent-mode bottom deck — tray tucked behind the card's bottom
           edge (z-0 under the composer card's z-10), sliding down from behind
           with the same deck-rise/fall motion as the top deck. */}
-      {agentModeSurface && agentModeEnabled && selectedSurfaceAgent && !voiceModeActive && (
+      {agentModeSurface && agentModeEnabled && (agentModeSurface === 'bot' || selectedSurfaceAgent) && !voiceModeActive && (
         <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
           <div className="relative z-0 w-full h-[60px] -mt-3 box-border bg-input-bg border-b border-r border-l border-input-border rounded-b-2xl px-4 pt-4 flex items-start gap-3 animate-deck-fall">
             <ModeDock

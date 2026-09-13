@@ -156,6 +156,19 @@ export async function getDesktopUsageSummary(): Promise<DesktopUsageSummary> {
   return api.get<DesktopUsageSummary>('/api/v1/desktop-usage/summary');
 }
 
+export interface ComputerQuotaStatus {
+  allowed: boolean;
+  active: number;
+  active_limit: number | null;
+  monthly_minutes: number;
+  monthly_limit: number | null;
+  reason: string | null;
+}
+
+export async function getComputerQuota(): Promise<ComputerQuotaStatus> {
+  return api.get<ComputerQuotaStatus>('/api/v1/computers/quota');
+}
+
 export type ComputerMouseInput =
   | { action: 'move' | 'click' | 'rightclick' | 'doubleclick' | 'mousedown' | 'mouseup'; x?: number; y?: number; button?: 'left' | 'middle' | 'right' }
   | { action: 'drag'; x: number; y: number; end_x: number; end_y: number }

@@ -23,6 +23,31 @@ at the macOS HID event tap). That is only acceptable behind both of these:
 
 Single viewer at a time. A second WS connection is refused (1013).
 
+## Lifecycle ownership
+
+- **Normal operation: the Allternit Desktop app owns the server.** On launch
+  it spawns the bundled `server/index.mjs` (Electron's bundled Node,
+  `ELECTRON_RUN_AS_NODE=1`, `PORT=8477`) if `/healthz` is dark, supervises
+  the child with backoff, and SIGTERMs it (SIGKILL after 3s) on quit. Server
+  stdio lands in `phone-remote.log` next to `main.log`. Set
+  `ALLTERNIT_DISABLE_PHONE_REMOTE=1` to opt out of the spawn.
+- **Adopt, don't kill.** If something already answers `/healthz` on 8477
+  (e.g. a manual `node server/index.mjs` dev start), the desktop logs the
+  foreign owner's PID, uses it, and does NOT supervise or stop it.
+- **Standalone manual start still works** for development:
+  `node server/index.mjs` from this directory. `PORT` env pins the port
+  without argv.
+- **Watchdog.** In sckit mode, once capture has started, a frame must arrive
+  at least every 5s (it runs at 10fps). If the helper freezes, the server
+  kills it, tries ONE in-process sckit restart, and — if frames still don't
+  flow — exits non-zero so the desktop supervisor restarts the whole server.
+  An unexpected `sc_capture` exit (other than TCC code 3, which still falls
+  back to the `screencapture` loop) gets the same one-restart treatment.
+- **Honest `/hello`.** The response gains `stale: true` plus an `error`
+  string when capture is dead/frozen, alongside the existing fields
+  (`hasFrame` stays a literal "a frame was ever cached" — check `stale`
+  before trusting it).
+
 ## Architecture
 
 ```
@@ -69,8 +94,9 @@ node server/index.mjs
 Tests:
 
 ```bash
-npm test          # 20 checks: WS framing (masking, fragmentation, ping/pong,
-                  # close), HTTP/WS token gate, single-viewer refusal
+npm test          # 38 checks: WS framing (masking, fragmentation, ping/pong,
+                  # close), HTTP/WS token gate, single-viewer refusal,
+                  # watchdog freshness + /hello stale reporting
 npm run smoke     # live loopback: real capture → frames over WS, measured fps
 ```
 

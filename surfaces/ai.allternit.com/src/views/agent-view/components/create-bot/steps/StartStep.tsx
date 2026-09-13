@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { CaretDown, CaretRight, CheckCircle, CircleNotch, Sparkle } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, CheckCircle, CircleNotch, Sparkle, Warning } from "@phosphor-icons/react";
 import { BOT_TEMPLATES, type BotTemplate } from "@/lib/bots/bots.manifest";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { WIZARD_COPY } from "../wizard-copy";
 
@@ -16,6 +15,8 @@ interface StartStepProps {
   /** Describe-to-prefill accelerator (milestone 5). */
   describing: boolean;
   onDescribe: (text: string) => Promise<void>;
+  /** Inline message when the describe call failed (see describeBot.ts). */
+  describeError?: string | null;
 }
 
 /**
@@ -25,7 +26,7 @@ interface StartStepProps {
  * job, tools, AND the template's authored system prompt — the wizard's
  * applyTemplate does the seeding; this component only renders the gallery.
  */
-export function StartStep({ selectedTemplateId, onSelectTemplate, describing, onDescribe }: StartStepProps) {
+export function StartStep({ selectedTemplateId, onSelectTemplate, describing, onDescribe, describeError }: StartStepProps) {
   const copy = WIZARD_COPY.steps.start;
   const [describeOpen, setDescribeOpen] = useState(false);
   const [describeText, setDescribeText] = useState("");
@@ -34,19 +35,19 @@ export function StartStep({ selectedTemplateId, onSelectTemplate, describing, on
 
   return (
     <section>
-      <div className="mb-6">
-        <h2 className="text-[18px] font-semibold text-[var(--text-primary)]">{copy.title}</h2>
-        <p className="text-[14px] text-[var(--text-secondary)] mt-1">{copy.description}</p>
+      <div className="mb-5">
+        <h2 className="text-[13px] font-semibold text-[var(--text-primary)]">{copy.title}</h2>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">{copy.description}</p>
       </div>
 
       {/* Describe-to-prefill accelerator: one platform LLM call seeds the
-          wizard from a sentence. Failure falls back to template defaults
-          silently — see describeBot.ts. */}
-      <div className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]">
+          wizard from a sentence. Failure surfaces an inline error — see
+          describeBot.ts. */}
+      <div className="mb-5 rounded-xl border border-[var(--border-default)] bg-[var(--bg-card)]">
         <button
           type="button"
           onClick={() => setDescribeOpen((v) => !v)}
-          className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
         >
           {describeOpen ? <CaretDown size={14} /> : <CaretRight size={14} />}
           {copy.describeToggle}
@@ -59,14 +60,20 @@ export function StartStep({ selectedTemplateId, onSelectTemplate, describing, on
               onChange={(e) => setDescribeText(e.target.value)}
               placeholder={copy.describePlaceholder}
               rows={3}
-              className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] resize-none"
+              className="rounded-xl border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] resize-none"
             />
+            {describeError && (
+              <p className="text-[12px] text-[var(--status-error)] flex items-center gap-1">
+                <Warning size={12} weight="fill" />
+                {describeError}
+              </p>
+            )}
             <div className="flex justify-end">
-              <Button
+              <button
                 type="button"
                 onClick={() => void onDescribe(describeText)}
                 disabled={!canPrefill}
-                className="gap-1.5 bg-[var(--accent-primary)] text-[var(--ui-text-inverse,#fff)] border-none hover:opacity-90"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {describing ? (
                   <>
@@ -76,7 +83,7 @@ export function StartStep({ selectedTemplateId, onSelectTemplate, describing, on
                 ) : (
                   copy.describeAction
                 )}
-              </Button>
+              </button>
             </div>
           </div>
         )}
@@ -88,7 +95,7 @@ export function StartStep({ selectedTemplateId, onSelectTemplate, describing, on
           const profile = agent.botProfile;
           const selected = selectedTemplateId === template.id;
           const Icon = template.icon;
-          const accentColor = profile?.accentColor || "var(--accent-primary)";
+          const accentColor = profile?.accentColor || "var(--text-primary)";
           return (
             <button
               key={template.id}
@@ -97,8 +104,8 @@ export function StartStep({ selectedTemplateId, onSelectTemplate, describing, on
               className={cn(
                 "flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200",
                 selected
-                  ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
-                  : "border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--border-hover)]",
+                  ? "border-[var(--text-primary)] bg-[var(--surface-hover)]"
+                  : "border-[var(--border-default)] bg-[var(--bg-card)] hover:border-[var(--border-hover)]",
               )}
             >
               <div className="flex w-full items-center justify-between">
@@ -111,7 +118,7 @@ export function StartStep({ selectedTemplateId, onSelectTemplate, describing, on
                 >
                   <Icon size={18} />
                 </span>
-                {selected && <CheckCircle size={16} className="text-[var(--accent-primary)]" />}
+                {selected && <CheckCircle size={16} className="text-[var(--text-primary)]" />}
               </div>
               <span className="mt-3 text-[14px] font-semibold text-[var(--text-primary)]">
                 {profile?.displayName || agent.name}
@@ -130,8 +137,8 @@ export function StartStep({ selectedTemplateId, onSelectTemplate, describing, on
           className={cn(
             "flex flex-col items-start rounded-xl border border-dashed p-4 text-left transition-all duration-200",
             selectedTemplateId === BLANK_TEMPLATE_ID || selectedTemplateId === null
-              ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
-              : "border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--border-hover)]",
+              ? "border-[var(--text-primary)] bg-[var(--surface-hover)]"
+              : "border-[var(--border-default)] bg-[var(--bg-card)] hover:border-[var(--border-hover)]",
           )}
         >
           <div className="flex w-full items-center justify-between">
@@ -139,7 +146,7 @@ export function StartStep({ selectedTemplateId, onSelectTemplate, describing, on
               <Sparkle size={18} />
             </span>
             {(selectedTemplateId === BLANK_TEMPLATE_ID || selectedTemplateId === null) && (
-              <CheckCircle size={16} className="text-[var(--accent-primary)]" />
+              <CheckCircle size={16} className="text-[var(--text-primary)]" />
             )}
           </div>
           <span className="mt-3 text-[14px] font-semibold text-[var(--text-primary)]">

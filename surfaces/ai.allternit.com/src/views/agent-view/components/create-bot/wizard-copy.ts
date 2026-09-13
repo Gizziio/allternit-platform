@@ -7,8 +7,8 @@
 
 export const WIZARD_COPY = {
   header: {
-    brandMark: "A://",
     title: "Create bot",
+    subtitle: "Configure a bot to work autonomously.",
     closeLabel: "Close",
   },
   steps: {
@@ -50,6 +50,7 @@ export const WIZARD_COPY = {
       starterPromptsLabel: "Starter prompts",
       starterPromptsPlaceholder: "Add quick-start prompts users can click…",
       starterPromptsHint: "Max 5 starter prompts.",
+      starterPromptsSuggestionsLabel: "Suggestions",
       avatarTitle: "Avatar",
       avatarDescription: "Choose a visual identity for your bot. Gizzi is the default companion.",
     },
@@ -77,6 +78,9 @@ export const WIZARD_COPY = {
       desktopToggleDescription:
         "Provisioned when you create the bot, bound to it by id. The same computer is reused every time you open the bot.",
       desktopSizeLabel: "Size",
+      desktopSizeHint:
+        "Bigger desktops cost more disk on the host — each bot's allocation counts against how many bots the machine can hold. Start small and resize later if the bot outgrows it.",
+      desktopQuotaLabel: "Your desktop quota",
       desktopProviderLabel: "Provider",
       desktopProviderValue: "Computer Cloud · Incus Linux desktop",
       desktopResourcesLabel: "Resources",
@@ -112,6 +116,8 @@ export const WIZARD_COPY = {
     next: "Next",
     cancel: "Cancel",
     stepCounter: (current: number, total: number) => `Step ${current} of ${total}`,
+    stepLine: (current: number, total: number, stepName: string) =>
+      `Step ${current} of ${total} — ${stepName}`,
   },
   preview: {
     title: "Live preview",
@@ -143,6 +149,8 @@ export const WIZARD_COPY = {
     imageReadFailed: "Failed to read image.",
     createFailed: "Failed to create bot.",
     checklistPrefix: "Still missing",
+    describeFailed: "Couldn't prefill — try again.",
+    refineFailed: "Couldn't refine — try again.",
   },
 } as const;
 
