@@ -153,8 +153,9 @@ class _FakeBatchClient:
                             page_url=None, approval_id=None, step_approval_ids=None,
                             headless=True):
         self.calls.append({
-            "steps": steps, "mode": mode, "approval_id": approval_id,
-            "step_approval_ids": step_approval_ids,
+            "steps": steps, "mode": mode, "origin": origin, "session": session,
+            "page_url": page_url, "approval_id": approval_id,
+            "step_approval_ids": step_approval_ids, "headless": headless,
         })
         result = self._results.pop(0)
         if callable(result):
@@ -395,6 +396,99 @@ class TestPlanningLoopBatch:
         assert client.calls == []
         assert adapter.calls == ["click"]
         assert result.stop_reason == StopReason.DONE
+
+
+# ── Automatic page binding (deferral B) ─────────────────────────────────────
+
+class _UrlAdapter(_FakeAdapter):
+    """Fake adapter whose surface carries a current page URL."""
+
+    def __init__(self, url="https://app.example/step2"):
+        super().__init__()
+        self._url = url
+
+    async def get_url(self):
+        return self._url
+
+
+class TestAutoPageBinding:
+    @pytest.mark.asyncio
+    async def test_observed_url_pins_the_next_batch_descriptor(self):
+        events = []
+        provider = _ScriptedProvider([_batch_plan(), _batch_plan()])
+        adapter = _UrlAdapter()
+        emitted = []
+        client = _FakeBatchClient([
+            BatchDispatchResult(executed=True, descriptor_hash="d1",
+                                receipt=_receipt("completed", [
+                                    {"index": i, "status": "completed"} for i in range(3)
+                                ]), receipt_id="r1"),
+            BatchDispatchResult(executed=True, descriptor_hash="d2",
+                                receipt=_receipt("completed", [
+                                    {"index": i, "status": "completed"} for i in range(3)
+                                ]), receipt_id="r2"),
+        ])
+        loop = _make_loop(provider, adapter, client, events)
+        loop.event_callback = emitted.append
+
+        result = await loop.run("two batch turns", session_id="s-1", run_id="r-1")
+
+        assert result.stop_reason == StopReason.DONE
+        # First dispatch: nothing observed yet → origin+session only.
+        assert client.calls[0]["page_url"] is None
+        # Post-step observation carried the URL → pinned into the 2nd descriptor.
+        assert client.calls[1]["page_url"] == "https://app.example/step2"
+        # The ledger record agrees with the descriptor binding.
+        opened2 = [e for e in events if e[0] == "batch.context.opened"][1][1]
+        assert opened2["page_url"] == "https://app.example/step2"
+        # The observation is surfaced as an event.
+        assert any(e.get("type") == "page.observed"
+                   and e.get("url") == "https://app.example/step2" for e in emitted)
+
+    @pytest.mark.asyncio
+    async def test_operator_pin_wins_over_observed_url(self):
+        events = []
+        provider = _ScriptedProvider([_batch_plan(), _batch_plan()])
+        adapter = _UrlAdapter(url="https://observed.example/x")
+        client = _FakeBatchClient([
+            BatchDispatchResult(executed=True, descriptor_hash="d1",
+                                receipt=_receipt("completed", [
+                                    {"index": i, "status": "completed"} for i in range(3)
+                                ]), receipt_id="r1"),
+            BatchDispatchResult(executed=True, descriptor_hash="d2",
+                                receipt=_receipt("completed", [
+                                    {"index": i, "status": "completed"} for i in range(3)
+                                ]), receipt_id="r2"),
+        ])
+        loop = _make_loop(provider, adapter, client, events,
+                          batch_page_url="https://operator.example/pinned")
+
+        await loop.run("two batch turns", session_id="s-1", run_id="r-1")
+
+        assert client.calls[0]["page_url"] == "https://operator.example/pinned"
+        assert client.calls[1]["page_url"] == "https://operator.example/pinned"
+
+    @pytest.mark.asyncio
+    async def test_no_url_surface_keeps_origin_session_binding(self):
+        events = []
+        provider = _ScriptedProvider([_batch_plan(), _batch_plan()])
+        adapter = _FakeAdapter()  # no get_url()
+        client = _FakeBatchClient([
+            BatchDispatchResult(executed=True, descriptor_hash="d1",
+                                receipt=_receipt("completed", [
+                                    {"index": i, "status": "completed"} for i in range(3)
+                                ]), receipt_id="r1"),
+            BatchDispatchResult(executed=True, descriptor_hash="d2",
+                                receipt=_receipt("completed", [
+                                    {"index": i, "status": "completed"} for i in range(3)
+                                ]), receipt_id="r2"),
+        ])
+        loop = _make_loop(provider, adapter, client, events)
+
+        await loop.run("two batch turns", session_id="s-1", run_id="r-1")
+
+        assert client.calls[0]["page_url"] is None
+        assert client.calls[1]["page_url"] is None
 
 
 # ── Provider parsing ─────────────────────────────────────────────────────────
