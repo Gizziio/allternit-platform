@@ -1,7 +1,7 @@
 # DAG as the Default Task System (Spec Delta)
 
-Status: **RATIFIED (decision) 2026-09-13, rollout in progress.** The decision
-below is final; the rollout checklist at the bottom tracks adoption. Owner
+Status: **RATIFIED 2026-09-13 — rollout COMPLETE.** All checklist items below
+are checked. The decision is final and both pilot validations passed. Owner
 decisions on file: ticket-system identity resolved as **(a)**; `AGENTS.md`
 planning rules amended in the same change.
 
@@ -90,7 +90,11 @@ option (b) (merge/remove) reopens — but as of ratification, (a) is the law.
       38 open item nodes, all READY. Memo:
       `Allternit Brain/Research/memos/dag-pilot-2026-09-13.md` (mapping
       convention, reproduction steps, limitations).
-- [ ] At least one full multi-session work item completed end-to-end via
+- [x] At least one full multi-session work item completed end-to-end via
       plan → pickup → gates → vault with no parallel plan file.
+      Done 2026-09-13: the Gate-0 skills rollout itself (PR #468) rode
+      `dag_544340` / `wih_3160` — plan new → wih pickup → gate-checked
+      work → `wih close` with evidence → `runner once` vaulted it to
+      `.allternit/vault/2026/dag_544340`. No plan file existed for the item.
 - [x] Status changed to RATIFIED with the date (decision ratified; the two
       remaining items are rollout validation, tracked here).
