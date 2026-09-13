@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-12 23:25 — kimi — desktop startup lifecycle hardening (#453)
+
+- **Session ID / Branch:** `session/desktopfix-0912`
+- **Agent:** kimi
+- **Summary:** Fixed "app not rendering" (windowless zombie: sidecars up, no UI, no error dialog). (1) All startup-window sends now go through `sendToSplash()` guarding `isDestroyed()` — a destroyed splash window previously threw inside init, and the catch block's own unguarded send re-threw before dialog+quit, leaving the zombie. (2) First-launch-after-install static miss: api spawned with empty `ALLTERNIT_PLATFORM_STATIC` → 501 at / → wedged startup gate; BackendManager now restarts the sidecar once with the static export when it sees a healthy api serving no platform UI. Typecheck ✅, backend-manager tests 4/4 ✅, release-preflight 35/0 ✅. Desktop rebuild from fresh main + install done in-session after this attestation.
+- **PR / Commit:** #453, merge commit `6e66965cec382e7520b9731ee9ec270538b4f1c0`
+- **Full summary:** [agent-ledger/summaries/2026-09-12-2325-desktopfix-0912-kimi-code-startup-lifecycle.md](agent-ledger/summaries/2026-09-12-2325-desktopfix-0912-kimi-code-startup-lifecycle.md)
+
 ### 2026-09-12 21:20 — kimi — gateway port ownership: 8013 owned, not defaulted (#445)
 
 - **Session ID / Branch:** `session/portowner-0912`
