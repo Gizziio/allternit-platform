@@ -124,11 +124,20 @@ which real models do not do reliably.
 Campaign-found fixes landed in this repo: attribute selectors
 (`input[placeholder=…]`) now ground as batch targets (frontier models prefer
 them even when ids exist), and `select` plans ground to
-`selectOptionFromDropdown`. Named, still-open gaps: the per-step executor
-vocabulary rejects plan types `click`/`select` (the campaign shimmed
-click→left_click; product translation is TODO); the 60 s brain timeout in
-`SubprocessVisionProvider` is too tight for real CLI backends; and CLI-brain
-timeouts orphan the model grandchild process (kill the process tree).
+`selectOptionFromDropdown`. The campaign's four named follow-ups have since
+been wired (session cu24): the post-batch observation is captured from the
+sidecar browser the batch executed in and routed back through the batch
+response (`post_batch_observation`), so the loop re-plans against the surface
+the batch actually mutated; the per-step executor accepts the plan vocabulary
+batch dispatch accepts (`click`/`select`/`press`/`doubleClick`/`scrollTo`/
+`hover` translated at the executor boundary); the CLI-brain timeout is
+configurable (`ALLTERNIT_BRAIN_TIMEOUT_S`, default 240 s); and CLI-brain
+timeout/cancellation kills the whole process group, reaping grandchild
+processes. The turn-saving behavior is verified end-to-end with scripted
+providers through the real observation path (a 4-step batch completes in 2
+turns with a single dispatch); a fresh real-model campaign re-run against a
+frontier CLI backend remains the follow-up that confirms the fix at campaign
+scale.
 
 No got-through safety event occurred: every batch execution in the campaign
 was bound to a SHA-256 descriptor grant with a receipt on the trail, and the
