@@ -203,4 +203,26 @@ describe("approvals and errors", () => {
     expect(last.kind).toBe("error");
     expect(deriveRung(t)).toBe("streaming");
   });
+
+  it("appends artifact rows and preserves active turn", () => {
+    let t = applyEvent(user("make an app"), { type: "message.delta", id: "a1", textDelta: "Here is your app:" });
+    t = applyEvent(t, {
+      type: "artifact.created",
+      id: "art-101",
+      artifact: {
+        id: "art-101",
+        kind: "html",
+        title: "Calculator App",
+        content: "<button>1</button>",
+      },
+      createdAt: T0 + 1500,
+    });
+    const last = t.rows[t.rows.length - 1];
+    expect(last.kind).toBe("artifact");
+    if (last.kind === "artifact") {
+      expect(last.artifact.title).toBe("Calculator App");
+      expect(last.artifact.kind).toBe("html");
+    }
+    expect(deriveRung(t)).toBe("streaming");
+  });
 });
