@@ -885,9 +885,10 @@ mod tests {
     const RELAY_TOKEN: &str = "relay-test-token";
 
     /// Serializes tests that mutate the shared relay env vars
-    /// (ALLTERNIT_RELAY_PEERS / ALLTERNIT_GATEWAY_NAME) so parallel tests in
-    /// this module cannot stomp each other's peer maps. tokio's async Mutex
-    /// guard is Send, unlike std's.
+    /// (ALLTERNIT_RELAY_PEERS / ALLTERNIT_GATEWAY_NAME /
+    /// ALLTERNIT_INTERNAL_SERVICE_TOKEN) so parallel tests in this module
+    /// cannot stomp each other's configuration. tokio's async Mutex guard is
+    /// Send, unlike std's.
     static RELAY_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
     async fn inbox_app(temp: &std::path::Path) -> (axum::Router, Arc<AppState>) {
@@ -991,6 +992,7 @@ mod tests {
 
     #[tokio::test]
     async fn inbox_requires_internal_token() {
+        let _guard = RELAY_ENV_LOCK.lock().await;
         std::env::set_var("ALLTERNIT_INTERNAL_SERVICE_TOKEN", RELAY_TOKEN);
         let temp = std::env::temp_dir().join(format!("relay-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp).unwrap();
@@ -1027,6 +1029,7 @@ mod tests {
 
     #[tokio::test]
     async fn inbox_mints_provenance_and_is_idempotent_by_bundle_hash() {
+        let _guard = RELAY_ENV_LOCK.lock().await;
         std::env::set_var("ALLTERNIT_INTERNAL_SERVICE_TOKEN", RELAY_TOKEN);
         let temp = std::env::temp_dir().join(format!("relay-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp).unwrap();
@@ -1113,6 +1116,7 @@ mod tests {
 
     #[tokio::test]
     async fn inbox_rejects_tampered_bundles() {
+        let _guard = RELAY_ENV_LOCK.lock().await;
         std::env::set_var("ALLTERNIT_INTERNAL_SERVICE_TOKEN", RELAY_TOKEN);
         let temp = std::env::temp_dir().join(format!("relay-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp).unwrap();
@@ -1268,17 +1272,20 @@ mod tests {
         let temp_b = std::env::temp_dir().join(format!("relay-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_b).unwrap();
         let state_b = test_app_state(&temp_b).await;
-        let app_b = crate::content_artifact_routes::content_artifact_router().with_state(state_b);
+        let app_b = crate::content_artifact_routes::content_artifact_router().with_state(state_b.clone());
         let user = test_user("user-1", None);
         let (_s, created) = create_artifact(&app_b, &user, "Peer deck", "<html>peer</html>", json!({})).await;
         let peer_artifact_id = created["artifact"]["id"].as_str().unwrap().to_string();
 
         // The TCP-served peer has no auth middleware, so inject the user the
-        // same way auth_middleware's local-dev bypass does.
-        let app_b = app_b.layer(axum::middleware::from_fn(|mut req: axum::extract::Request, next: axum::middleware::Next| async move {
-            req.extensions_mut().insert(test_user("user-1", None));
-            next.run(req).await
-        }));
+        // same way auth_middleware's local-dev bypass does. Nested under
+        // /api/v1 exactly like the real gateway in main.rs.
+        let app_b = Router::new()
+            .nest("/api/v1", crate::content_artifact_routes::content_artifact_router().with_state(state_b))
+            .layer(axum::middleware::from_fn(|mut req: axum::extract::Request, next: axum::middleware::Next| async move {
+                req.extensions_mut().insert(test_user("user-1", None));
+                next.run(req).await
+            }));
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
