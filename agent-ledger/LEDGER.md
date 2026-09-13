@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-13 14:45 — kimi — node daemon Phase 1.5: identity bridge + lifecycle hygiene
+
+- **Session ID / Branch:** `session/node-daemon-p15`
+- **Agent:** kimi-code
+- **Summary:** Merged PR #472 (d8ffd7c32) — desktop is the single writer of the daemon identity (pair/rotate writes, revoke removes); daemon hot-reloads rotated identity before each relay connect; LaunchDaemon runs as the pairing user (UserName + per-user logs); SIGTERM/SIGINT reap all PTY children; exec timeout path no longer orphans children; no-competition contract documented in cmd/allternit-node/README.md.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/472 · d8ffd7c32
+- **How it works:** Replaces the manual decrypt bridge used in the PR #465 E2E. One writer (desktop), one direction — daemon never writes the desktop's file; rotation flows desktop → both files → daemon adopts on next connect. Daemon remains outbound-only (zero listening ports); desktop owns :8013/:8477 + phone-remote/screen; restart only signals exact-name "Allternit Desktop".
+- **Verification:** cargo test 23/23 (incl. 4 identity-reload, shutdown_all, plist-user); release build clean; desktop typecheck pass; release-preflight 35/0; CI green on PR (Vercel previews fail repo-wide on a deploy rate limit, pre-existing).
+- **Outstanding work:** Desktop rebuild shipping the single-writer sync (next desktop build); daemon reinstall from merged binary + plist UserName verification; Eoj-side reboot-survival and in-PWA-terminal-while-app-closed checks.
+- **Summary file:** [2026-09-13-1445-node-daemon-p15-kimi-node-daemon-identity-lifecycle.md](./summaries/2026-09-13-1445-node-daemon-p15-kimi-node-daemon-identity-lifecycle.md)
+
 ### 2026-09-11 08:51 — kimi — cream-squircle A mark across AI product surfaces
 
 - **Session ID / Branch:** `session/logo0911`
