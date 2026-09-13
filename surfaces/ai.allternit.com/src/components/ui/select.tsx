@@ -112,22 +112,28 @@ export const SelectContent: React.FC<{ children: React.ReactNode; onSelect?: (va
 );
 
 export const SelectItem: React.FC<{ value: string; children: React.ReactNode; onClick?: () => void; className?: string; disabled?: boolean }> = ({
-  className, 
-  children, 
+  className,
+  children,
   onClick,
   disabled
-}) => (
-  <div role="button" tabIndex={0}
-    onClick={disabled ? undefined : onClick}
-    className={className}
-    style={{
-      padding: '10px 14px',
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      color: disabled ? 'var(--ui-text-muted)' : '#fff',
-      fontSize: '14px',
-      opacity: disabled ? 0.5 : 1,
-    }}
-  >
-    {children}
-  </div>
-);
+}) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div role="button" tabIndex={0}
+      onClick={disabled ? undefined : onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={className}
+      style={{
+        padding: '10px 14px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        color: disabled ? 'var(--ui-text-muted)' : 'var(--text-primary)',
+        fontSize: '14px',
+        opacity: disabled ? 0.5 : 1,
+        background: hovered && !disabled ? 'var(--surface-hover)' : 'transparent',
+      }}
+    >
+      {children}
+    </div>
+  );
+};

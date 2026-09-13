@@ -41,23 +41,35 @@ describe('bot-tool-registry', () => {
 });
 
 describe('bot desktop presets', () => {
-  it('medium preset matches the atomic-create defaults (2 vCPU / 4 GB / 100 GB)', () => {
-    const medium = BOT_DESKTOP_PRESETS.find((p) => p.id === 'medium');
-    expect(medium?.resources).toEqual({ cpu: '2', memory: '4096', disk: '102400' });
+  it('small preset matches the atomic-create defaults (2 vCPU / 4 GB / 20 GB)', () => {
+    const small = BOT_DESKTOP_PRESETS.find((p) => p.id === 'small');
+    expect(small?.resources).toEqual({ cpu: '2', memory: '4096', disk: '20480' });
+  });
+
+  it('every preset is inside the backend allow-lists', () => {
+    const VALID_CPU = ['2', '4', '8'];
+    const VALID_MEMORY = ['4096', '8192', '16384', '32768', '65536'];
+    const VALID_DISK = ['20480', '40960', '81920'];
+    for (const preset of BOT_DESKTOP_PRESETS) {
+      expect(VALID_CPU, `${preset.id} cpu`).toContain(preset.resources.cpu);
+      expect(VALID_MEMORY, `${preset.id} memory`).toContain(preset.resources.memory);
+      expect(VALID_DISK, `${preset.id} disk`).toContain(preset.resources.disk);
+    }
   });
 
   it('describes resources in GB', () => {
-    expect(describeDesktopResources({ cpu: '4', memory: '8192', disk: '204800' })).toBe(
-      '4 vCPU · 8 GB RAM · 200 GB disk',
+    expect(describeDesktopResources({ cpu: '8', memory: '16384', disk: '81920' })).toBe(
+      '8 vCPU · 16 GB RAM · 80 GB disk',
     );
-    expect(describeDesktopResources(undefined)).toBe('2 vCPU · 4 GB RAM · 100 GB disk');
+    expect(describeDesktopResources(undefined)).toBe('2 vCPU · 4 GB RAM · 20 GB disk');
   });
 
-  it('resolves preset id from resources, defaulting to medium', () => {
-    expect(presetIdForResources({ cpu: '1', memory: '2048', disk: '51200' })).toBe('small');
-    expect(presetIdForResources({ cpu: '4', memory: '8192', disk: '204800' })).toBe('large');
-    expect(presetIdForResources(undefined)).toBe('medium');
-    expect(presetIdForResources({ cpu: '8', memory: '16384', disk: '409600' })).toBe('medium');
+  it('resolves preset id from resources, defaulting to small', () => {
+    expect(presetIdForResources({ cpu: '2', memory: '4096', disk: '20480' })).toBe('small');
+    expect(presetIdForResources({ cpu: '4', memory: '8192', disk: '40960' })).toBe('medium');
+    expect(presetIdForResources({ cpu: '8', memory: '16384', disk: '81920' })).toBe('large');
+    expect(presetIdForResources(undefined)).toBe('small');
+    expect(presetIdForResources({ cpu: '8', memory: '16384', disk: '409600' })).toBe('small');
   });
 });
 

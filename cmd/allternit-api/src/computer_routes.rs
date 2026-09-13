@@ -153,6 +153,7 @@ pub struct ComputersListResponse {
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/computers", get(list_computers).post(create_computer))
+        .route("/computers/quota", get(get_computer_quota))
         .route("/computers/:id", get(get_computer).patch(update_computer))
         .route(
             "/computers/:id/resize",
@@ -266,6 +267,16 @@ pub(crate) fn computer_visibility_clause(user_param: usize, org_param: Option<us
         .map(|p| format!(" OR (c.owner_type = 'org' AND c.owner_id = ?{p})"))
         .unwrap_or_default();
     format!("(c.owner_id = ?{user_param} OR (c.kind = 'cloud_desktop' AND a.user_id = ?{user_param}){org})")
+}
+
+/// Read-only desktop quota status for UI surfaces (Create Bot computer step).
+/// Reports limits + current usage without blocking; `allowed: false` with a
+/// human-readable `reason` means provisioning another desktop would fail.
+pub(crate) async fn get_computer_quota(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> impl IntoResponse {
+    Json(crate::bot_desktop_quotas::quota_status(&state, &user).await)
 }
 
 pub(crate) async fn list_computers(

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CaretDown,
   CaretRight,
@@ -25,6 +25,7 @@ import {
   describeDesktopResources,
   presetIdForResources,
 } from "@/lib/bots/vm-operator";
+import { getComputerQuota, type ComputerQuotaStatus } from "@/lib/computers-api";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,23 @@ export function ComputerRuntimeStep({
   const vmConfig = formData.vmOperator;
   const enabled = vmConfig?.enabled === true;
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [quota, setQuota] = useState<ComputerQuotaStatus | null>(null);
+
+  // Quota status is read-only and fail-open — it only steers the size choice.
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    getComputerQuota()
+      .then((status) => {
+        if (!cancelled) setQuota(status);
+      })
+      .catch(() => {
+        if (!cancelled) setQuota(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
 
   const toggleDesktop = (checked: boolean) =>
     setFormData((prev) => ({
@@ -133,13 +151,13 @@ export function ComputerRuntimeStep({
   return (
     <section className="space-y-6">
       <div>
-        <h2 className="text-[18px] font-semibold text-[var(--text-primary)]">{copy.title}</h2>
-        <p className="text-[14px] text-[var(--text-secondary)] mt-1">{copy.description}</p>
+        <h2 className="text-[13px] font-semibold text-[var(--text-primary)]">{copy.title}</h2>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">{copy.description}</p>
       </div>
 
       {/* Persistent desktop */}
-      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6">
-        <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-subtle)] mb-4">
+      <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-card)] p-5">
+        <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-default)] mb-4">
           <div className="flex items-center gap-3">
             {enabled ? (
               <ComputerTower size={20} className="text-[var(--status-success)]" />
@@ -162,6 +180,7 @@ export function ComputerRuntimeStep({
               <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
                 {copy.desktopSizeLabel}
               </Label>
+              <p className="text-[12px] text-[var(--text-muted)] mb-3">{copy.desktopSizeHint}</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {BOT_DESKTOP_PRESETS.map((preset) => {
                   const selected = presetIdForResources(vmConfig?.resources) === preset.id;
@@ -173,8 +192,8 @@ export function ComputerRuntimeStep({
                       className={cn(
                         "rounded-xl border p-3 text-left transition-all",
                         selected
-                          ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
-                          : "border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)]",
+                          ? "border-[var(--text-primary)] bg-[var(--bg-elevated)]"
+                          : "border-[var(--border-default)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)]",
                       )}
                     >
                       <span className="block text-[13px] font-semibold text-[var(--text-primary)]">
@@ -190,7 +209,7 @@ export function ComputerRuntimeStep({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+              <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4">
                 <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                   {copy.desktopProviderLabel}
                 </div>
@@ -198,7 +217,7 @@ export function ComputerRuntimeStep({
                   {copy.desktopProviderValue}
                 </div>
               </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+              <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4">
                 <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                   {copy.desktopResourcesLabel}
                 </div>
@@ -206,7 +225,7 @@ export function ComputerRuntimeStep({
                   {describeDesktopResources(vmConfig?.resources)}
                 </div>
               </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+              <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4">
                 <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
                   {copy.desktopPersistenceLabel}
                 </div>
@@ -216,15 +235,28 @@ export function ComputerRuntimeStep({
               </div>
             </div>
 
+            {quota && !quota.allowed && (
+              <p className="text-[12px] text-[var(--status-error)] mb-3">
+                {quota.reason ?? "Desktop quota reached — this bot may not be able to provision."}
+              </p>
+            )}
+            {quota?.allowed && quota.active_limit != null && (
+              <p className="text-[12px] text-[var(--text-muted)] mb-3">
+                {copy.desktopQuotaLabel}: {quota.active} of {quota.active_limit} desktops in use
+                {quota.monthly_limit != null &&
+                  ` · ${quota.monthly_minutes} of ${quota.monthly_limit} min this month`}
+              </p>
+            )}
+
             <p className="text-[12px] text-[var(--text-muted)]">{copy.desktopNote}</p>
           </>
         )}
       </div>
 
       {/* Intelligence */}
-      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6">
+      <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-card)] p-5">
         <div className="mb-5">
-          <h3 className="text-[16px] font-semibold text-[var(--text-primary)]">
+          <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">
             {copy.intelligenceTitle}
           </h3>
           <p className="text-[13px] text-[var(--text-secondary)] mt-1">
@@ -251,7 +283,7 @@ export function ComputerRuntimeStep({
 
         {brains.length > 0 ? (
           <div className="mb-5">
-            <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+            <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
               {copy.knowledgeBrainLabel}
             </Label>
             {brainsLoading ? (
@@ -263,10 +295,10 @@ export function ComputerRuntimeStep({
                   setFormData((prev) => ({ ...prev, brainId: value === "platform" ? "" : value }))
                 }
               >
-                <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-primary)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                <SelectContent className="bg-[var(--bg-card)] border-[var(--border-default)]">
                   <SelectItem value="platform">Platform model</SelectItem>
                   {brains.map((brain) => (
                     <SelectItem key={brain.brain_id} value={brain.brain_id}>
@@ -280,14 +312,14 @@ export function ComputerRuntimeStep({
         ) : brainsLoading ? (
           <div className="h-10 rounded-lg bg-[var(--bg-primary)] animate-pulse mb-5" />
         ) : (
-          <div className="rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 mb-5 text-[13px] text-[var(--text-muted)]">
+          <div className="rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 mb-5 text-[13px] text-[var(--text-muted)]">
             {copy.noBrains}
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4">
           <div>
-            <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+            <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
               {copy.modelLabel}
             </Label>
             {modelsLoading ? (
@@ -304,10 +336,10 @@ export function ComputerRuntimeStep({
                   }));
                 }}
               >
-                <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-primary)]">
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
-                <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)] max-h-[400px]">
+                <SelectContent className="bg-[var(--bg-card)] border-[var(--border-default)] max-h-[400px]">
                   {models.map((model) => (
                     <SelectItem key={model.id} value={model.id}>
                       <div className="flex items-center gap-2">
@@ -329,7 +361,7 @@ export function ComputerRuntimeStep({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+              <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
                 {copy.providerLabel}
               </Label>
               <Select
@@ -338,10 +370,10 @@ export function ComputerRuntimeStep({
                   setFormData((prev) => ({ ...prev, provider: value as CreateAgentInput["provider"] }))
                 }
               >
-                <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-primary)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                <SelectContent className="bg-[var(--bg-card)] border-[var(--border-default)]">
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="anthropic">Anthropic</SelectItem>
                   <SelectItem value="google">Google</SelectItem>
@@ -351,7 +383,7 @@ export function ComputerRuntimeStep({
               </Select>
             </div>
             <div>
-              <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+              <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
                 {copy.harnessLabel}
               </Label>
               <Select
@@ -360,10 +392,10 @@ export function ComputerRuntimeStep({
                   setFormData((prev) => ({ ...prev, harness: { mode: value as "byok" | "cloud" | "local" | "subprocess" } }))
                 }
               >
-                <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-primary)]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                <SelectContent className="bg-[var(--bg-card)] border-[var(--border-default)]">
                   {HARNESS_MODES.map((mode) => (
                     <SelectItem key={mode.id} value={mode.id}>
                       <div className="flex items-center gap-2">
@@ -380,11 +412,11 @@ export function ComputerRuntimeStep({
       </div>
 
       {/* Advanced */}
-      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]">
+      <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-card)]">
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="flex w-full items-center gap-2 px-6 py-4 text-left text-[14px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          className="flex w-full items-center gap-2 px-6 py-4 text-left text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
         >
           {showAdvanced ? <CaretDown size={14} /> : <CaretRight size={14} />}
           {copy.advancedTitle}
@@ -394,7 +426,7 @@ export function ComputerRuntimeStep({
           <div className="px-6 pb-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+                <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
                   {copy.maxIterationsLabel}: {formData.maxIterations}
                 </Label>
                 <Slider
@@ -406,7 +438,7 @@ export function ComputerRuntimeStep({
                 />
               </div>
               <div>
-                <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+                <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
                   {copy.temperatureLabel}: {formData.temperature}
                 </Label>
                 <Slider
@@ -420,11 +452,11 @@ export function ComputerRuntimeStep({
             </div>
 
             <div>
-              <h4 className="text-[14px] font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                <Headphones size={16} className="text-[var(--accent-primary)]" />
+              <h4 className="text-[13px] font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+                <Headphones size={16} className="text-[var(--text-secondary)]" />
                 {copy.voiceTitle}
               </h4>
-              <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-subtle)] mb-4">
+              <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-default)] mb-4">
                 <div className="flex items-center gap-3">
                   {formData.voice?.enabled ? (
                     <SpeakerHigh size={20} className="text-[var(--status-success)]" />
@@ -460,10 +492,10 @@ export function ComputerRuntimeStep({
                       }))
                     }
                   >
-                    <SelectTrigger className="flex-1 bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                    <SelectTrigger className="flex-1 bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-primary)]">
                       <SelectValue placeholder={voicesLoading ? copy.voiceLoading : copy.voiceSelect} />
                     </SelectTrigger>
-                    <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                    <SelectContent className="bg-[var(--bg-card)] border-[var(--border-default)]">
                       {voices.length === 0 && (
                         <SelectItem value="default" disabled>
                           {copy.voiceDefault}

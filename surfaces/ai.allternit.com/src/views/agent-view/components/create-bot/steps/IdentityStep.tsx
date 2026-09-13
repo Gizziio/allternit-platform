@@ -17,6 +17,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WIZARD_COPY } from "../wizard-copy";
+import {
+  addStarterPrompt,
+  STARTER_PROMPT_MAX,
+  starterPromptSuggestionsFor,
+} from "../starter-prompt-suggestions";
 import { deriveHandle, hasDisplayName } from "../wizard-state";
 import { AvatarEditor, type AvatarEditorState } from "./AvatarEditor";
 
@@ -67,17 +72,20 @@ export function IdentityStep({
   const botProfile = formData.botProfile!;
   const accentColor = botProfile.accentColor || "#B08D6E";
   const nameValid = hasDisplayName(formData);
+  const starterPrompts = botProfile.starterPrompts || [];
+  const atCap = starterPrompts.length >= STARTER_PROMPT_MAX;
+  const suggestions = starterPromptSuggestionsFor(botProfile.botCategory);
 
   return (
-    <section className="space-y-8">
+    <section className="space-y-6">
       <div>
-        <h2 className="text-[18px] font-semibold text-[var(--text-primary)]">{copy.title}</h2>
-        <p className="text-[14px] text-[var(--text-secondary)] mt-1">{copy.description}</p>
+        <h2 className="text-[13px] font-semibold text-[var(--text-primary)]">{copy.title}</h2>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">{copy.description}</p>
       </div>
 
       {/* Display name — the only hard gate in the wizard */}
       <div>
-        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+        <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
           {copy.displayNameLabel}
         </Label>
         <Input
@@ -89,7 +97,7 @@ export function IdentityStep({
             setFormData((prev) => ({ ...prev, name: prev.name || deriveHandle(value) }));
           }}
           placeholder={copy.displayNamePlaceholder}
-          className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] text-[16px] py-3"
+          className="h-11 rounded-xl border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)]"
         />
         <p className={cn("text-[11px] mt-1.5", nameValid ? "text-[var(--text-muted)]" : "text-[var(--status-error)]")}>
           {nameValid
@@ -100,45 +108,45 @@ export function IdentityStep({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+          <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
             {copy.handleLabel}
           </Label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-[14px]">@</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">@</span>
             <Input
               value={formData.name || ""}
               onChange={(e) => setFormData((prev) => ({ ...prev, name: deriveHandle(e.target.value) }))}
               placeholder={copy.handlePlaceholder}
-              className="pl-7 bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
+              className="h-11 rounded-xl border-[var(--border-default)] bg-[var(--bg-primary)] pl-7 text-[var(--text-primary)]"
             />
           </div>
         </div>
         <div>
-          <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+          <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
             {copy.taglineLabel}
           </Label>
           <Input
             value={botProfile.tagline || ""}
             onChange={(e) => updateBotProfile({ tagline: e.target.value })}
             placeholder={copy.taglinePlaceholder}
-            className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
+            className="h-11 rounded-xl border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)]"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+          <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
             {copy.categoryLabel}
           </Label>
           <Select
             value={botProfile.botCategory || "custom"}
             onValueChange={(value) => updateBotProfile({ botCategory: value as BotCategory })}
           >
-            <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+            <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-default)] text-[var(--text-primary)]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+            <SelectContent className="border-[var(--border-default)]">
               {CATEGORY_OPTIONS.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {BOT_CATEGORIES[cat].label}
@@ -148,7 +156,7 @@ export function IdentityStep({
           </Select>
         </div>
         <div>
-          <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+          <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
             {copy.accentLabel}
           </Label>
           <div className="flex flex-wrap gap-2">
@@ -160,7 +168,7 @@ export function IdentityStep({
                 className={cn(
                   "size-9 rounded-full transition-transform hover:scale-110",
                   accentColor === color &&
-                    "ring-2 ring-[var(--text-primary)] ring-offset-2 ring-offset-[var(--bg-card)]",
+                    "ring-2 ring-[var(--text-primary)] ring-offset-2 ring-offset-[var(--bg-elevated)]",
                 )}
                 style={{ backgroundColor: color }}
               />
@@ -170,7 +178,7 @@ export function IdentityStep({
       </div>
 
       <div>
-        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+        <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
           {copy.purposeLabel}
         </Label>
         <Textarea
@@ -178,12 +186,12 @@ export function IdentityStep({
           onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
           placeholder={copy.purposePlaceholder}
           rows={3}
-          className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] resize-none"
+          className="rounded-xl border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] resize-none"
         />
       </div>
 
       <div>
-        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+        <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">
           {copy.welcomeLabel}
         </Label>
         <Textarea
@@ -191,27 +199,56 @@ export function IdentityStep({
           onChange={(e) => updateBotProfile({ welcomeMessage: e.target.value })}
           placeholder={copy.welcomePlaceholder}
           rows={2}
-          className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] resize-none"
+          className="rounded-xl border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] resize-none"
         />
       </div>
 
       <div>
-        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 flex items-center gap-2">
+        <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 flex items-center gap-2">
           <ChatText size={14} />
           {copy.starterPromptsLabel}
         </Label>
+        <p className="text-[11px] text-[var(--text-muted)] mb-1.5">
+          {copy.starterPromptsSuggestionsLabel}
+        </p>
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {suggestions.map((suggestion) => {
+            const added = starterPrompts.includes(suggestion);
+            const disabled = added || atCap;
+            return (
+              <button
+                key={suggestion}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  const next = addStarterPrompt(starterPrompts, suggestion);
+                  if (next) updateBotProfile({ starterPrompts: next });
+                }}
+                className={cn(
+                  "h-7 max-w-full truncate rounded-lg border px-2.5 text-[12px] transition-colors disabled:cursor-not-allowed",
+                  disabled
+                    ? "border-[var(--border-subtle)] text-[var(--text-muted)] opacity-50"
+                    : "border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]",
+                )}
+                title={suggestion}
+              >
+                {suggestion}
+              </button>
+            );
+          })}
+        </div>
         <TagInput
-          value={botProfile.starterPrompts || []}
-          onChange={(tags) => updateBotProfile({ starterPrompts: tags.slice(0, 5) })}
+          value={starterPrompts}
+          onChange={(tags) => updateBotProfile({ starterPrompts: tags.slice(0, STARTER_PROMPT_MAX) })}
           placeholder={copy.starterPromptsPlaceholder}
         />
         <p className="text-[11px] text-[var(--text-muted)] mt-1">{copy.starterPromptsHint}</p>
       </div>
 
       {/* Avatar — the five existing modes, lifted as-is */}
-      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6">
-        <div className="mb-6">
-          <h3 className="text-[16px] font-semibold text-[var(--text-primary)]">{copy.avatarTitle}</h3>
+      <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-card)] p-5">
+        <div className="mb-5">
+          <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">{copy.avatarTitle}</h3>
           <p className="text-[13px] text-[var(--text-secondary)] mt-1">{copy.avatarDescription}</p>
         </div>
         <AvatarEditor botProfile={botProfile} onError={onError} {...avatarState} />

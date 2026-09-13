@@ -136,14 +136,21 @@ function mapCreateResponseToSandbox(
 
 /**
  * Default persistent-desktop resources for bots created through the atomic
- * Create Bot path (spec bot-identity-computer): 2 vCPU / 4 GB RAM / 100 GB disk.
+ * Create Bot path (spec bot-identity-computer): 2 vCPU / 4 GB RAM / 20 GB disk.
+ *
+ * These values must stay inside the backend allow-lists (VALIDATED_CPU_CORES /
+ * VALIDATED_MEMORY_MB / VALIDATED_DISK_MB in cmd/allternit-api/src/
+ * bot_desktop_templates.rs) — the Create Computer step passes them through to
+ * POST /api/v1/computers at provision time. The smallest tier is the default
+ * on purpose: oversized disk allocations throttle how many bot desktops a
+ * host can hold.
  */
 export const BOT_DESKTOP_DEFAULT_RESOURCES: NonNullable<
   AgentVMOperatorConfig['resources']
 > = {
   cpu: '2',
   memory: '4096',
-  disk: '102400',
+  disk: '20480',
 };
 
 /** Size presets for the Create Bot Computer step (overridable per bot). */
@@ -157,17 +164,17 @@ export const BOT_DESKTOP_PRESETS: BotDesktopPreset[] = [
   {
     id: 'small',
     label: 'Small',
-    resources: { cpu: '1', memory: '2048', disk: '51200' },
+    resources: { cpu: '2', memory: '4096', disk: '20480' },
   },
   {
     id: 'medium',
     label: 'Medium',
-    resources: { cpu: '2', memory: '4096', disk: '102400' },
+    resources: { cpu: '4', memory: '8192', disk: '40960' },
   },
   {
     id: 'large',
     label: 'Large',
-    resources: { cpu: '4', memory: '8192', disk: '204800' },
+    resources: { cpu: '8', memory: '16384', disk: '81920' },
   },
 ];
 
@@ -176,7 +183,7 @@ export function describeDesktopResources(
 ): string {
   const cpu = resources?.cpu ?? '2';
   const memoryGb = Math.round(Number(resources?.memory ?? '4096') / 1024) || 4;
-  const diskGb = Math.round(Number(resources?.disk ?? '102400') / 1024) || 100;
+  const diskGb = Math.round(Number(resources?.disk ?? '20480') / 1024) || 20;
   return `${cpu} vCPU · ${memoryGb} GB RAM · ${diskGb} GB disk`;
 }
 
@@ -187,8 +194,8 @@ export function presetIdForResources(
     (p) =>
       p.resources.cpu === (resources?.cpu ?? '2') &&
       p.resources.memory === (resources?.memory ?? '4096') &&
-      p.resources.disk === (resources?.disk ?? '102400'),
-  )?.id ?? 'medium';
+      p.resources.disk === (resources?.disk ?? '20480'),
+  )?.id ?? 'small';
 }
 
 /**
@@ -256,6 +263,18 @@ export async function ensureBotComputer(
       template_id: config.templateId,
       persistence: config.persistence ?? 'persistent',
       provider: substrateProvider(config.provider),
+      // Pass the wizard's size preset through so the provisioned desktop
+      // actually matches what the user picked. Values come from
+      // BOT_DESKTOP_PRESETS, which mirrors the backend allow-lists.
+      ...(config.resources?.cpu
+        ? { cpu_cores: Number(config.resources.cpu) as 2 | 4 | 8 }
+        : {}),
+      ...(config.resources?.memory
+        ? { memory_mb: Number(config.resources.memory) as 4096 | 8192 | 16384 | 32768 | 65536 }
+        : {}),
+      ...(config.resources?.disk
+        ? { disk_mb: Number(config.resources.disk) as 20480 | 40960 | 81920 }
+        : {}),
     });
     return { ok: true, data: mapCreateResponseToSandbox(botId, config, response) };
   } catch (err) {
