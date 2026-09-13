@@ -36,12 +36,13 @@ Return EXACTLY one JSON object (no prose, no markdown fences) with keys:
 - "plan_steps": remaining high-level steps (array of strings)
 - "immediate_action": {"type", "target", "reason", "text"?} — the ONE next action.
   type is one of: click, type, fill, scroll, screenshot, done, navigate.
-  target MUST be a CSS selector when one is visible/derivable (e.g.
-  "#submit", "button#register", "a#next", "select#plan", "#name") — a bare
-  element description is only a last resort. For type/fill include "text".
-  Use type "done" with done=true when the task is complete. Use type
-  "navigate" with target = the URL when the task needs a different page.
-  NEVER invent actions outside this vocabulary.
+  target MUST be a CSS selector, and when the element has an id attribute
+  ALWAYS use "#id" (e.g. "#submit", "#name", "#email", "#next", "#plan",
+  "#entry", "#enter", "#umbrella"). Only use other selector forms (tag,
+  //xpath) when no id exists. A bare element description is a last resort.
+  For type/fill include "text". Use type "done" with done=true when the task
+  is complete. Use type "navigate" with target = the URL when the task needs
+  a different page. NEVER invent actions outside this vocabulary.
 - "confidence": 0..1
 - "done": true only when the task is fully complete on this page
 - "requires_approval": false

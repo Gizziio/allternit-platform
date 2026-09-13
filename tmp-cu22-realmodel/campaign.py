@@ -158,7 +158,8 @@ class CampaignBatchClient:
         return result
 
 
-def _step_ok(step) -> bool:    result = getattr(step, "adapter_result", None) or {}
+def _step_ok(step) -> bool:
+    result = getattr(step, "adapter_result", None) or {}
     if not isinstance(result, dict):
         return bool(getattr(step, "action_succeeded", False))
     receipt = result.get("batch_receipt")
