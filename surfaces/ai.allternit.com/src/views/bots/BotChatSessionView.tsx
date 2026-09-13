@@ -364,13 +364,9 @@ function BotChatSessionContent({
       {
         id: "watch",
         icon: <Broadcast className="size-4" />,
-        title: computerOpen ? "Stop watching" : "Watch computer",
-        subtitle: hasVm ? "Show or hide the computer pane" : "This bot has no computer attached",
+        title: computerOpen ? "Hide computer" : "Open computer",
+        subtitle: hasVm ? "Show or hide the computer pane" : "Attach or provision a computer",
         onSelect: () => {
-          if (!hasVm) {
-            setSendError("This bot has no computer attached.");
-            return;
-          }
           setComputerOpen((open) => !open);
         },
       },
@@ -496,7 +492,7 @@ function BotChatSessionContent({
           >
             {modelSelection?.modelName ?? "Model"}
           </Button>
-          {hasVm && (
+          {bot && (
             <Button
               type="button"
               variant={computerOpen ? "secondary" : "outline"}
@@ -504,9 +500,13 @@ function BotChatSessionContent({
               onClick={() => setComputerOpen((open) => !open)}
               className="gap-1.5 shrink-0"
               aria-pressed={computerOpen}
+              title={hasVm ? "Toggle computer viewport" : "Open bot computer"}
             >
               <Desktop size={14} />
               Computer
+              {activeVM?.status === "running" && (
+                <span className="h-2 w-2 rounded-full bg-[var(--status-success)] animate-pulse" />
+              )}
             </Button>
           )}
         </div>

@@ -23,3 +23,11 @@ native/dictation-helper/DictationHelper
 # OS files
 .DS_Store
 Thumbs.db
+
+# Build outputs (generated at package time)
+resources/build-info.json
+/auth-manager.js
+resources/computer-use/acu/
+resources/computer-use/darwin/
+resources/computer-use/linux/
+resources/computer-use/win32/
