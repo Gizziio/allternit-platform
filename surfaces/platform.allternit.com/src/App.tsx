@@ -17,7 +17,6 @@ import { RunsPage } from "@/pages/RunsPage";
 import { SchedulesPage } from "@/pages/SchedulesPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { FabricPage } from "@/pages/FabricPage";
-import { AgentsPage } from "@/pages/AgentsPage";
 import { PortalLandingPage } from "@/pages/PortalLandingPage";
 import { ModelsPage } from "@/pages/ModelsPage";
 import { PlansPage } from "@/pages/PlansPage";
@@ -26,12 +25,17 @@ import { FilesPage } from "@/pages/console/FilesPage";
 import { BatchesPage } from "@/pages/console/BatchesPage";
 import { SkillsPage } from "@/pages/console/SkillsPage";
 import { BuilderPage } from "@/pages/console/BuilderPage";
+import { AgentsPage } from "@/pages/console/agents/AgentsPage";
+import { AgentDetailPage } from "@/pages/console/agents/AgentDetailPage";
+import { AgentFormPage } from "@/pages/console/agents/AgentFormPage";
+import { SessionsPage } from "@/pages/console/sessions/SessionsPage";
+import { SessionNewPage } from "@/pages/console/sessions/SessionNewPage";
+import { SessionDetailPage } from "@/pages/console/sessions/SessionDetailPage";
+import { DeploymentsPage } from "@/pages/console/deployments/DeploymentsPage";
+import { ComputersPage } from "@/pages/console/computers/ComputersPage";
+import { VaultsPage, VaultDetailPage } from "@/pages/console/vaults/VaultsPage";
+import { MemoryPage, MemoryStorePage } from "@/pages/console/memory/MemoryPage";
 import {
-  SessionsStubPage,
-  DeploymentsStubPage,
-  ComputersStubPage,
-  VaultsStubPage,
-  MemoryStubPage,
   AnalyticsUsageStubPage,
   AnalyticsLogsStubPage,
   AnalyticsCachingStubPage,
@@ -78,11 +82,6 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
 
 /** Phase 1 designed stubs — one per future console page. */
 const consoleStubRoutes: Array<{ path: string; element: React.ReactNode }> = [
-  { path: "/sessions/*", element: <SessionsStubPage /> },
-  { path: "/deployments/*", element: <DeploymentsStubPage /> },
-  { path: "/computers/*", element: <ComputersStubPage /> },
-  { path: "/vaults/*", element: <VaultsStubPage /> },
-  { path: "/memory/*", element: <MemoryStubPage /> },
   { path: "/analytics/usage/*", element: <AnalyticsUsageStubPage /> },
   { path: "/analytics/logs/*", element: <AnalyticsLogsStubPage /> },
   { path: "/analytics/caching/*", element: <AnalyticsCachingStubPage /> },
@@ -170,10 +169,106 @@ export default function App() {
         }
       />
       <Route
-        path="/agents/*"
+        path="/agents"
         element={
           <ConsoleRoute>
             <AgentsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/agents/new"
+        element={
+          <ConsoleRoute>
+            <AgentFormPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/agents/:id"
+        element={
+          <ConsoleRoute>
+            <AgentDetailPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/agents/:id/edit"
+        element={
+          <ConsoleRoute>
+            <AgentFormPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/sessions"
+        element={
+          <ConsoleRoute>
+            <SessionsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/sessions/new"
+        element={
+          <ConsoleRoute>
+            <SessionNewPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/sessions/:id"
+        element={
+          <ConsoleRoute>
+            <SessionDetailPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/deployments"
+        element={
+          <ConsoleRoute>
+            <DeploymentsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/computers"
+        element={
+          <ConsoleRoute>
+            <ComputersPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/vaults"
+        element={
+          <ConsoleRoute>
+            <VaultsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/vaults/:id"
+        element={
+          <ConsoleRoute>
+            <VaultDetailPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/memory"
+        element={
+          <ConsoleRoute>
+            <MemoryPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/memory/:id"
+        element={
+          <ConsoleRoute>
+            <MemoryStorePage />
           </ConsoleRoute>
         }
       />

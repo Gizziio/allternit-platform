@@ -4,62 +4,10 @@ import { ComingSoonPage } from "./ComingSoonPage";
 /**
  * Phase 1 route stubs — one named component per future console page. Each is
  * a ComingSoonPage with copy appropriate to the surface it stands in for.
- * Phases 3–6 replace these with real pages built on the console-ui kit
- * (Phase 2 landed Playground, Files, Skills, Batches, and Builder).
+ * Phase 2 landed Playground, Files, Skills, Batches, and Builder; Phase 3
+ * landed the Managed Agents group (Agents/Sessions/Deployments/Computers/
+ * Vaults/Memory) and retired their stubs.
  */
-
-export function SessionsStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Sessions"
-      description="Managed agent sessions will appear here once you create them through the API. A session is a stateful conversation with tool access, memory, and resumable context."
-      codeTemplate={{
-        language: "bash",
-        code: `curl https://api.allternit.com/v1/agents/sessions \\
-  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"agent": "general-purpose", "input": "Summarize my last 10 emails"}'`,
-      }}
-    />
-  );
-}
-
-export function DeploymentsStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Deployments"
-      description="Deploy managed agents as persistent endpoints with stable URLs, environment configuration, and rollout controls. Deployments land in a later phase."
-    />
-  );
-}
-
-export function ComputersStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Computers"
-      description="Managed cloud computers for agent use — provisioned on demand with a browser, shell, and filesystem. Compute management relocates here from the current Compute page in Phase 3."
-      cta={{ label: "Open current Compute page", to: "/compute" }}
-    />
-  );
-}
-
-export function VaultsStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Vaults"
-      description="Encrypted secret vaults that managed agents can read at runtime — API keys, credentials, and tokens without embedding them in prompts or code."
-    />
-  );
-}
-
-export function MemoryStubPage(): React.ReactNode {
-  return (
-    <ComingSoonPage
-      title="Memory"
-      description="Shared memory stores that give managed agents durable, searchable context across sessions. Configure retention, scope, and what agents are allowed to remember."
-    />
-  );
-}
 
 export function AnalyticsUsageStubPage(): React.ReactNode {
   return (

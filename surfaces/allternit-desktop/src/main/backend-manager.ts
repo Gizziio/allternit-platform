@@ -13,6 +13,7 @@ import { app } from 'electron';
 import { spawn, execFileSync, ChildProcess } from 'child_process';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -20,6 +21,33 @@ import log from 'electron-log';
 import { PORTS, URLS, webhookReceiverUrl } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Computer Cloud (tart host) credentials. Operators keep them in
+ * ~/.allternit/tart-host.env — the same file the e2e harness reads. When the
+ * process environment does not set them, inject from that file so bot-computer
+ * provisioning works on a plain app launch instead of 503ing with
+ * "Configure INCUS_URL or TART_HOST_URL for Computer Cloud." Never logged.
+ */
+export function loadTartHostEnv(env: Record<string, string>, file = path.join(os.homedir(), '.allternit', 'tart-host.env')): void {
+  if (env.TART_HOST_URL && env.TART_HOST_TOKEN) return;
+  try {
+    const parsed: Record<string, string> = {};
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line);
+      if (!m) continue;
+      parsed[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+    if (!env.TART_HOST_URL && parsed.TART_HOST_URL) env.TART_HOST_URL = parsed.TART_HOST_URL;
+    if (!env.TART_HOST_TOKEN && parsed.TART_HOST_TOKEN) env.TART_HOST_TOKEN = parsed.TART_HOST_TOKEN;
+    if (env.TART_HOST_URL && parsed.TART_HOST_URL) {
+      log.info('[BackendManager] Tart host config loaded from ~/.allternit/tart-host.env');
+    }
+  } catch {
+    // tart-host.env absent — Computer Cloud stays unconfigured; the API
+    // already surfaces an actionable 503 for that case.
+  }
+}
 
 // Port ownership: the packaged app owns the production gateway port (8013)
 // and reclaims it on launch. A dev desktop (worktree Electron, npm run dev)
@@ -65,6 +93,8 @@ export class BackendManager {
   private static readonly BACKOFF_STEPS_MS = [1000, 2000, 5000, 10000, 30000];
   private static readonly STABLE_RUN_MS = 60_000;
   private respawnAttempts = 0;
+  /** One-shot self-heal: restart the sidecar if it came up without the platform static export. */
+  private staticRespawnAttempted = false;
   private spawnTimestamp = 0;
   private respawnTimer: ReturnType<typeof setTimeout> | null = null;
   /** True while a shutdown was requested — exit events from that kill must not respawn. */
@@ -177,6 +207,7 @@ export class BackendManager {
       NODE_ENV: 'production',
       ...(config.extraEnv ?? {}),
     };
+    loadTartHostEnv(env);
 
     log.info(`[BackendManager] Starting allternit-api on port ${API_PORT} from ${binaryPath}`);
     const spawned = spawn(binaryPath, developmentCargoProject ? ['run', '--manifest-path', path.join(developmentCargoProject, 'Cargo.toml')] : [], {
@@ -228,6 +259,28 @@ export class BackendManager {
     });
 
     await this.waitForUrl(`${this.getUrl()}/health`, 'allternit-api');
+
+    // Self-heal a missed platform static export (seen on the first launch
+    // after a fresh install): the api answers /health but serves the 501 stub
+    // at / because ALLTERNIT_PLATFORM_STATIC resolved empty at spawn time.
+    // If a static export is resolvable now, restart the sidecar once with it.
+    if (!this.staticRespawnAttempted && !(await this.servesPlatformStatic())) {
+      const staticPath = this.resolvePlatformStaticPath();
+      if (staticPath) {
+        this.staticRespawnAttempted = true;
+        log.warn(
+          `[BackendManager] allternit-api is up but serves no platform UI at /; ` +
+            `restarting once with static export from ${staticPath}`,
+        );
+        this.intentionalStop = true;
+        this.kernelProc?.kill('SIGTERM');
+        this.kernelProc = null;
+        this.apiKey = null;
+        await new Promise((r) => setTimeout(r, 500));
+        this.intentionalStop = false;
+        return this.ensureBackend(config);
+      }
+    }
 
     log.info(`[BackendManager] Ready at ${this.getUrl()}`);
     return this.getUrl();
