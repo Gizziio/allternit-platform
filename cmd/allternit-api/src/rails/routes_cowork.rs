@@ -1099,6 +1099,9 @@ async fn get_run_events(
 pub struct PostEventRequest {
     pub event_type: String,
     pub payload: serde_json::Value,
+    /// Client-supplied idempotency key (A:// §5): retries with the same
+    /// event_id return the canonical existing event instead of double-writing.
+    pub event_id: Option<String>,
 }
 
 async fn post_run_event(
@@ -1106,13 +1109,27 @@ async fn post_run_event(
     Path(run_id): Path<String>,
     Json(req): Json<PostEventRequest>,
 ) -> Result<Json<serde_json::Value>, ErrorResponse> {
-    let conn = state.db.connect().map_err(db_error)?;
-    let id = uuid::Uuid::new_v4().to_string();
-    conn.execute(
-        "INSERT INTO cowork_run_events (id, run_id, event_type, payload) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![&id, &run_id, &req.event_type, &req.payload.to_string(),],
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let outcome = allternit_cowork_runtime::sqlite_store::insert_event_idempotent(
+        &mut conn,
+        &run_id,
+        &req.event_type,
+        req.payload,
+        None,
+        None,
+        None,
+        req.event_id.as_deref(),
     )
-    .map_err(db_error)?;
-
-    Ok(Json(json!({ "id": id })))
+    .map_err(|e| ErrorResponse {
+        error: format!("{}: {}", e.wire(), e.message),
+        code: e.http_status(),
+    })?;
+    match outcome {
+        allternit_cowork_runtime::sqlite_store::EventInsertOutcome::Inserted(id) => {
+            Ok(Json(json!({ "id": id, "duplicated": false })))
+        }
+        allternit_cowork_runtime::sqlite_store::EventInsertOutcome::Duplicate(id) => {
+            Ok(Json(json!({ "id": id, "duplicated": true })))
+        }
+    }
 }

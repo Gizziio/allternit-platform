@@ -65,6 +65,29 @@ describe("streamCallbacksToEvents", () => {
     const err = t.rows.find((r) => r.kind === "error");
     expect(err?.kind === "error" && err.text).toBe("stream dropped");
   });
+
+  it("maps onArtifact callback to artifact.created event and row", () => {
+    let t = initTranscript();
+    const cb = streamCallbacksToEvents((e) => {
+      t = applyEvent(t, e);
+    }, { turnId: "a3", now: () => T0 });
+
+    cb.onArtifact?.({
+      artifactId: "art-1",
+      kind: "html",
+      title: "Interactive Preview",
+      content: "<h1>Hello World</h1>",
+    });
+
+    const artRow = t.rows.find((r) => r.kind === "artifact");
+    expect(artRow).toBeDefined();
+    if (artRow?.kind === "artifact") {
+      expect(artRow.artifact.id).toBe("art-1");
+      expect(artRow.artifact.kind).toBe("html");
+      expect(artRow.artifact.title).toBe("Interactive Preview");
+      expect(artRow.artifact.content).toBe("<h1>Hello World</h1>");
+    }
+  });
 });
 
 describe("approval mappers", () => {
