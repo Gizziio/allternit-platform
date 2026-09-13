@@ -1157,6 +1157,40 @@ export class DesktopAuthManager {
     this.session = this.toSession(identity);
     fs.mkdirSync(path.dirname(this.identityPath), { recursive: true });
     fs.writeFileSync(this.identityPath, this.encodeSecret(JSON.stringify(identity)));
+    this.persistDaemonIdentity(identity);
+  }
+
+  /**
+   * The node daemon (cmd/allternit-node, `node.core`) reads a plain-JSON copy
+   * of the runtime identity from ~/.config/allternit/runtime-identity.json.
+   * The desktop app is the single writer: pair/rotate rewrites this file, and
+   * clearSession removes it so a revoked runtime leaves no creds the daemon
+   * can adopt. Daemon serde field names are camelCase runtimeId/deviceToken/
+   * userId/expiresAt (expiresAt RFC3339 — a numeric epoch is rejected).
+   */
+  private daemonIdentityPath = path.join(os.homedir(), '.config', 'allternit', 'runtime-identity.json');
+
+  private persistDaemonIdentity(identity: PersistedRuntimeIdentity): void {
+    try {
+      const payload = {
+        runtimeId: identity.runtimeId,
+        deviceToken: identity.accessToken,
+        userId: identity.userId,
+        expiresAt: new Date(identity.expiresAt).toISOString(),
+      };
+      fs.mkdirSync(path.dirname(this.daemonIdentityPath), { recursive: true });
+      fs.writeFileSync(this.daemonIdentityPath, JSON.stringify(payload), { mode: 0o600 });
+    } catch (error) {
+      log.warn('[Auth] Failed to write daemon identity file (desktop remains the source of truth):', error);
+    }
+  }
+
+  private removeDaemonIdentity(): void {
+    try {
+      fs.rmSync(this.daemonIdentityPath, { force: true });
+    } catch (error) {
+      log.warn('[Auth] Failed to remove daemon identity file:', error);
+    }
   }
 
   private readIdentityFromDisk(): PersistedRuntimeIdentity | null {
@@ -1196,6 +1230,7 @@ export class DesktopAuthManager {
       this.relaySocket = null;
     }
     fs.rmSync(this.identityPath, { force: true });
+    this.removeDaemonIdentity();
   }
 
   private connectRuntimeRelay(): void {
