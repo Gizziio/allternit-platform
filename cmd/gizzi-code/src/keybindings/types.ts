@@ -41,6 +41,7 @@ export type KeybindingContextName =
   | 'DiffDialog'
   | 'ModelPicker'
   | 'Select'
+  | 'RailsDag'
   | 'Plugin'
   | 'Scroll'
   | 'MessageActions'

@@ -351,6 +351,22 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
       escape: 'select:cancel',
     },
   },
+  // Rails DAG todo panel (expanded tasks view). `tab` focuses the panel
+  // while it is visible; once focused it registers a modal overlay so the
+  // prompt input releases keys, `esc` blurs back to the prompt.
+  {
+    context: 'RailsDag',
+    bindings: {
+      tab: 'railsDag:focus',
+      j: 'select:next',
+      k: 'select:previous',
+      down: 'select:next',
+      up: 'select:previous',
+      t: 'railsDag:take',
+      d: 'railsDag:done',
+      escape: 'railsDag:blur',
+    },
+  },
   // Plugin dialog actions (manage, browse, discover plugins)
   // Navigation (select:*) uses the Select context above
   {
