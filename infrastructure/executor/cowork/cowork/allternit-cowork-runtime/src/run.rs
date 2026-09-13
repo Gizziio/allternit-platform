@@ -622,12 +622,18 @@ impl RunManager {
                 let path = store_path.clone();
                 let result = tokio::task::spawn_blocking(move || {
                     let mut conn = crate::sqlite_store::open_store(&path)?;
-                    crate::sqlite_store::expire_leases(&mut conn, Utc::now())
+                    let actions = crate::sqlite_store::expire_leases(&mut conn, Utc::now())?;
+                    let expired_approvals =
+                        crate::sqlite_store::expire_approvals(&mut conn, Utc::now())?;
+                    Ok::<_, crate::transport::TransportError>((actions, expired_approvals))
                 })
                 .await;
 
                 match result {
-                    Ok(Ok(actions)) => {
+                    Ok(Ok((actions, expired_approvals))) => {
+                        for approval_id in expired_approvals {
+                            info!(approval_id = %approval_id, "Approval request expired (server clock)");
+                        }
                         for action in actions {
                             info!(
                                 job_id = %action.job_id,

@@ -121,7 +121,7 @@ async fn test_run_pause_resume() {
     let run = app.start_run(&run.id).await;
     
     // Move run to running state (since start might queue it, let's transition manually via db)
-    sqlx::query("UPDATE runs SET status = 'running' WHERE id = ?")
+    sqlx::query("UPDATE runs SET status = 'running' WHERE id = $1")
         .bind(&run.id)
         .execute(&app.db)
         .await

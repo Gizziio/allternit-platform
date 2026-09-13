@@ -401,7 +401,12 @@ mod tests {
         let first = run_tick(&db, now).unwrap();
         assert_eq!(first.len(), 1);
         // A second tick for the same due window finds nothing to claim.
-        let second = run_tick(&db, now + Duration::seconds(5)).unwrap();
+        // Anchor the re-tick to the claimed row's next_run_at (not wall
+        // clock): with a once-per-minute cron, `now + 5s` can cross the next
+        // minute boundary when the test starts in the last seconds of a
+        // minute, firing a second run and flaking the test.
+        let before_next = first[0].next_run_at - Duration::seconds(1);
+        let second = run_tick(&db, before_next).unwrap();
         assert!(second.is_empty());
         assert_eq!(count_rows(&db, "beta_deployment_runs"), 1);
         assert_eq!(count_rows(&db, "beta_work_tasks"), 1);

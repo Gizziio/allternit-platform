@@ -490,17 +490,17 @@ async fn job_started(db: &PgPool, run_id: &str, instance_name: &str) -> Result<S
     .bind("gizzi-dispatch")
     .bind(format!("Dispatched to gizzi instance '{instance_name}'"))
     .bind(JobStatus::Running)
-    .bind(0i32)
-    .bind(None::<i32>)
+    .bind(0i64)
+    .bind(None::<i64>)
     .bind(sqlx::types::Json(serde_json::json!({})))
     .bind(None::<DateTime<Utc>>)
     .bind(now)
     .bind(None::<DateTime<Utc>>)
-    .bind(None::<i32>)
+    .bind(None::<i64>)
     .bind(None::<sqlx::types::Json<serde_json::Value>>)
     .bind(None::<String>)
-    .bind(0i32)
-    .bind(0i32)
+    .bind(0i64)
+    .bind(0i64)
     .bind(now)
     .bind(now)
     .execute(db)
@@ -1081,8 +1081,8 @@ mod tests {
             mode runmode NOT NULL,
             status runstatus NOT NULL,
             step_cursor TEXT,
-            total_steps INTEGER,
-            completed_steps INTEGER DEFAULT 0,
+            total_steps BIGINT,
+            completed_steps BIGINT DEFAULT 0,
             config JSONB NOT NULL,
             owner_id TEXT,
             tenant_id TEXT,
@@ -1105,17 +1105,17 @@ mod tests {
             name TEXT NOT NULL,
             description TEXT,
             status jobstatus NOT NULL,
-            priority INTEGER NOT NULL DEFAULT 0,
-            queue_position INTEGER,
+            priority BIGINT NOT NULL DEFAULT 0,
+            queue_position BIGINT,
             config JSONB NOT NULL,
             scheduled_at TIMESTAMPTZ,
             started_at TIMESTAMPTZ,
             completed_at TIMESTAMPTZ,
-            exit_code INTEGER,
+            exit_code BIGINT,
             result JSONB,
             error_message TEXT,
-            retry_count INTEGER DEFAULT 0,
-            max_retries INTEGER DEFAULT 0,
+            retry_count BIGINT DEFAULT 0,
+            max_retries BIGINT DEFAULT 0,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );

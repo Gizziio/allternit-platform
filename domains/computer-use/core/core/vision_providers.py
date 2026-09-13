@@ -90,6 +90,12 @@ class ActionPlan:
     cost_usd: float = 0.0             # estimated cost for this plan call
     input_tokens: int = 0             # prompt tokens, when the provider reports the split
     output_tokens: int = 0            # completion tokens, when reported
+    # Optional batch continuation: when the next actions are all groundable on
+    # the same page in the whitelisted browser vocabulary (core/batch_dispatch.py),
+    # a provider may emit them here so the planning loop ships one grant-bound
+    # batch instead of step-by-step turns. ``immediate_action`` stays the first
+    # step. Never required — the loop falls back to per-step when absent.
+    batch: Optional[List["VisionAction"]] = None
 
 
 @dataclass
@@ -866,8 +872,21 @@ Respond with valid JSON only:
   "confidence": 0.0-1.0,
   "requires_approval": false,
   "risk_level": "low|medium|high|critical",
-  "done": false
-}}"""
+  "done": false,
+  "batch": [
+    {{
+      "type": "click|type|fill|scroll|double_click|key",
+      "target": "CSS selector or XPath on the SAME page (e.g. #submit)",
+      "reason": "why",
+      "text": "text to type (if type/fill action)"
+    }}
+  ]
+}}
+
+"batch" is OPTIONAL: list further actions only when they are all on the same
+page, each uses a CSS selector / XPath target (not coordinates), and none
+depends on observing the screen after an earlier action. Omit it when unsure —
+the engine falls back to one step at a time."""
 
 
 ACTION_PLAN_JSON_SCHEMA: Dict[str, Any] = {
@@ -890,6 +909,23 @@ ACTION_PLAN_JSON_SCHEMA: Dict[str, Any] = {
         "requires_approval": {"type": "boolean"},
         "risk_level": {"type": "string"},
         "done": {"type": "boolean"},
+        # Optional batch continuation (core/batch_dispatch.py): further
+        # whitelisted actions on the same page, shipped as one grant-bound
+        # batch. Omit when the next step depends on observing the screen.
+        "batch": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string"},
+                    "target": {"type": "string"},
+                    "reason": {"type": "string"},
+                    "coordinates": {"type": "array", "items": {"type": "number"}},
+                    "text": {"type": "string"},
+                },
+                "required": ["type", "target"],
+            },
+        },
     },
     "required": ["immediate_action", "done"],
 }
@@ -969,6 +1005,22 @@ def _parse_action_plan(raw: str) -> ActionPlan:
             coordinates=ia.get("coordinates"),
             text=ia.get("text"),
         )
+        batch = None
+        raw_batch = data.get("batch")
+        if isinstance(raw_batch, list) and raw_batch:
+            parsed_batch = []
+            for item in raw_batch:
+                if not isinstance(item, dict):
+                    parsed_batch = None
+                    break
+                parsed_batch.append(VisionAction(
+                    type=item.get("type", ""),
+                    target=item.get("target", ""),
+                    reason=item.get("reason", ""),
+                    coordinates=item.get("coordinates"),
+                    text=item.get("text"),
+                ))
+            batch = parsed_batch or None
         return ActionPlan(
             reasoning=data.get("reasoning", ""),
             plan_steps=data.get("plan_steps", []),
@@ -977,6 +1029,7 @@ def _parse_action_plan(raw: str) -> ActionPlan:
             requires_approval=bool(data.get("requires_approval", False)),
             risk_level=data.get("risk_level", "low"),
             done=bool(data.get("done", False)),
+            batch=batch,
         )
     except Exception:
         return ActionPlan(

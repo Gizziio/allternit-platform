@@ -935,7 +935,13 @@ pub async fn run_gated_batch(
                             created_at: chrono::Utc::now().to_rfc3339(),
                             completed_at: Some(chrono::Utc::now().to_rfc3339()),
                         });
-                        return (denial.status, Json(denial.body)).into_response();
+                        // Name the step that blocked dispatch so a caller
+                        // holding an approved per-step grant can place it at
+                        // the right index without re-deriving the
+                        // ConfirmationClass taxonomy client-side.
+                        let mut body = denial.body.clone();
+                        body["step_index"] = json!(index);
+                        return (denial.status, Json(body)).into_response();
                     }
                 }
             }
@@ -1750,6 +1756,9 @@ mod tests {
             .unwrap();
         let json: Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["error"], "confirmation_required");
+        // The denial names the blocking step so the caller can place an
+        // approved per-step grant without re-deriving the taxonomy.
+        assert_eq!(json["step_index"], 1);
 
         // The refusal is on the audit trail as a denied receipt.
         let denied = receipts
