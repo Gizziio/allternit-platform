@@ -65,6 +65,8 @@ export class BackendManager {
   private static readonly BACKOFF_STEPS_MS = [1000, 2000, 5000, 10000, 30000];
   private static readonly STABLE_RUN_MS = 60_000;
   private respawnAttempts = 0;
+  /** One-shot self-heal: restart the sidecar if it came up without the platform static export. */
+  private staticRespawnAttempted = false;
   private spawnTimestamp = 0;
   private respawnTimer: ReturnType<typeof setTimeout> | null = null;
   /** True while a shutdown was requested — exit events from that kill must not respawn. */
@@ -228,6 +230,28 @@ export class BackendManager {
     });
 
     await this.waitForUrl(`${this.getUrl()}/health`, 'allternit-api');
+
+    // Self-heal a missed platform static export (seen on the first launch
+    // after a fresh install): the api answers /health but serves the 501 stub
+    // at / because ALLTERNIT_PLATFORM_STATIC resolved empty at spawn time.
+    // If a static export is resolvable now, restart the sidecar once with it.
+    if (!this.staticRespawnAttempted && !(await this.servesPlatformStatic())) {
+      const staticPath = this.resolvePlatformStaticPath();
+      if (staticPath) {
+        this.staticRespawnAttempted = true;
+        log.warn(
+          `[BackendManager] allternit-api is up but serves no platform UI at /; ` +
+            `restarting once with static export from ${staticPath}`,
+        );
+        this.intentionalStop = true;
+        this.kernelProc?.kill('SIGTERM');
+        this.kernelProc = null;
+        this.apiKey = null;
+        await new Promise((r) => setTimeout(r, 500));
+        this.intentionalStop = false;
+        return this.ensureBackend(config);
+      }
+    }
 
     log.info(`[BackendManager] Ready at ${this.getUrl()}`);
     return this.getUrl();
