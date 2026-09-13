@@ -41,7 +41,11 @@ function clip(value: unknown, fallback = ""): string {
   if (value == null) return fallback;
   if (typeof value === "string") return value.slice(0, 240);
   try {
-    return JSON.stringify(value).slice(0, 240);
+    const json = JSON.stringify(value);
+    // An empty container stringifies to "[]" or "{}" — rendering that as the
+    // tool input summary looks like brackets with no text content.
+    if (json === "[]" || json === "{}") return fallback;
+    return json.slice(0, 240);
   } catch {
     return fallback;
   }

@@ -189,3 +189,32 @@ describe("messagesToTranscript", () => {
     expect(t.activeTurn).toBeNull();
   });
 });
+
+describe("empty tool input containers", () => {
+  it("falls back to the tool name instead of rendering bare brackets", () => {
+    let t = applyEvent(initTranscript(), userSendEvent("go", { id: "u5", createdAt: T0 }));
+    const cb = streamCallbacksToEvents((e) => {
+      t = applyEvent(t, e);
+    }, { turnId: "a5", now: () => T0 });
+
+    cb.onToolCall?.({ toolCallId: "tc-empty", toolName: "GetGoal", input: {} });
+    cb.onToolResult?.({ toolCallId: "tc-empty", toolName: "GetGoal", result: [] });
+
+    const callRow = t.rows.find((r) => r.kind === "toolCall");
+    expect(callRow?.kind === "toolCall" && callRow.call.inputSummary).toBe("GetGoal");
+    const resultRow = t.rows.find((r) => r.kind === "toolCall");
+    expect(resultRow?.kind === "toolCall" && resultRow.call.outputSummary).toBe("");
+  });
+
+  it("keeps real input summaries untouched", () => {
+    let t = applyEvent(initTranscript(), userSendEvent("go", { id: "u6", createdAt: T0 }));
+    const cb = streamCallbacksToEvents((e) => {
+      t = applyEvent(t, e);
+    }, { turnId: "a6", now: () => T0 });
+
+    cb.onToolCall?.({ toolCallId: "tc-real", toolName: "read", input: { path: "/tmp/x" } });
+
+    const row = t.rows.find((r) => r.kind === "toolCall");
+    expect(row?.kind === "toolCall" && row.call.inputSummary).toContain("/tmp/x");
+  });
+});
