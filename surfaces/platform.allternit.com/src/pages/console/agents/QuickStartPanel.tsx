@@ -20,7 +20,7 @@ import {
   sendCloudEvent,
   sessionCreateCurl,
 } from "@/lib/cloud-agents";
-import { QUIET_BUTTON_CLASS } from "@/components/settings/buttonStyles";
+import { QUIET_BUTTON_CLASS } from "@/components/console-ui";
 
 const KINDS: ComputerKind[] = ["none", "sandbox", "desktop", "fabric", "local"];
 const FIELD_CLASS =
@@ -28,7 +28,12 @@ const FIELD_CLASS =
 const PRIMARY_BUTTON_CLASS =
   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] hover:brightness-110 transition-all disabled:opacity-50";
 
-export function AgentsPage() {
+/**
+ * Ad-hoc session runner — the original AgentsPage capability, preserved
+ * verbatim in behavior. Creates a cloud session with an inline agent spec
+ * and follows its SSE event stream. Same contract as POST /api/v1/sessions.
+ */
+export function QuickStartPanel(): React.ReactNode {
   const [model, setModel] = useState("default");
   const [instructions, setInstructions] = useState("Be terse. Report real output.");
   const [prompt, setPrompt] = useState("Summarize what you can see and stop.");
@@ -51,7 +56,7 @@ export function AgentsPage() {
         computerKind,
         maxCostUsd: maxCostUsd ? Number(maxCostUsd) : undefined,
       }),
-    [model, instructions, prompt, computerKind, maxCostUsd],
+    [model, instructions, prompt, computerKind, maxCostUsd]
   );
   const curl = useMemo(() => sessionCreateCurl(body), [body]);
 
@@ -67,7 +72,7 @@ export function AgentsPage() {
       abortRef.current = controller;
       const response = await api.raw(
         `/api/v1/sessions/${encodeURIComponent(sessionId)}/events/stream`,
-        { method: "GET", signal: controller.signal },
+        { method: "GET", signal: controller.signal }
       );
       if (!response.ok || !response.body) {
         throw new Error(`Event stream failed: HTTP ${response.status}`);
@@ -85,7 +90,7 @@ export function AgentsPage() {
         });
       }
     },
-    [stopStream],
+    [stopStream]
   );
 
   const onStart = useCallback(async () => {
@@ -127,30 +132,19 @@ export function AgentsPage() {
   useEffect(() => () => stopStream(), [stopStream]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
-            Agents
-          </h1>
-          <p className="text-[13px] text-[var(--text-secondary)] mt-1">
-            Start a Cloud Agent session. Same contract as /api/v1/sessions.
-          </p>
-        </div>
-        {session ? (
-          <div className="text-right text-[12px] text-[var(--text-secondary)]">
-            <div>
-              {session.budget?.estimated_cost_usd == null
-                ? "—"
-                : `$${Number(session.budget.estimated_cost_usd).toFixed(4)} estimated`}
-            </div>
-            <div>{session.budget?.charged === false ? "not charged" : ""}</div>
-          </div>
-        ) : null}
-      </div>
+    <details className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5 group">
+      <summary className="cursor-pointer list-none text-[13px] font-semibold text-[var(--text-secondary)] select-none">
+        <span className="inline-flex items-center gap-2">
+          <HugeiconsIcon icon={AiChat02Icon} size={14} />
+          Quick start — run an ad-hoc session
+          <span className="text-[11px] font-normal text-[var(--text-tertiary)]">
+            (inline agent spec, same contract as POST /api/v1/sessions)
+          </span>
+        </span>
+      </summary>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5 space-y-4">
+      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div className="space-y-1">
             <label className="text-[11px] font-medium text-[var(--text-tertiary)]">Model</label>
             <input className={FIELD_CLASS} value={model} onChange={(e) => setModel(e.target.value)} />
@@ -232,7 +226,7 @@ export function AgentsPage() {
                 "rounded-xl border border-solid p-3 text-[12px] flex gap-2",
                 unavailable
                   ? "border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 text-[var(--status-warning)]"
-                  : "border-[var(--status-error)]/30 bg-[var(--status-error)]/10 text-[var(--status-error)]",
+                  : "border-[var(--status-error)]/30 bg-[var(--status-error)]/10 text-[var(--status-error)]"
               )}
             >
               <HugeiconsIcon icon={AlertCircleIcon} size={14} className="shrink-0 mt-0.5" />
@@ -252,9 +246,8 @@ export function AgentsPage() {
             {curl}
           </pre>
         </div>
-        <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5 space-y-3">
+        <div className="space-y-3">
           <div className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
-            <HugeiconsIcon icon={AiChat02Icon} size={14} />
             {session
               ? `${session.id} · ${session.status ?? "—"} · ${session.computer?.kind ?? "none"}`
               : "Events appear here after start."}
@@ -266,6 +259,6 @@ export function AgentsPage() {
           </ol>
         </div>
       </div>
-    </div>
+    </details>
   );
 }
