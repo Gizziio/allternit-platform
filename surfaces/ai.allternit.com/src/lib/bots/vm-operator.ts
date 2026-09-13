@@ -582,8 +582,10 @@ export interface BotDesktopSandbox {
   host?: string;
 }
 
-function botDesktopUrl(botId: string, sandboxId: string) {
-  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop?sandbox_id=${encodeURIComponent(sandboxId)}`;
+function botDesktopUrl(botId: string, sandboxId: string, action = '') {
+  // The action goes in the PATH, before the query string — appending it
+  // after `?sandbox_id=…` lands on the GET-only /desktop route (405).
+  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
 }
 
 /**
@@ -641,7 +643,7 @@ export async function observeBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/observe', { method: 'POST' });
+    const res = await fetch(botDesktopUrl(botId, sandboxId, '/observe'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -662,7 +664,7 @@ export async function takeOverBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/take-over', { method: 'POST' });
+    const res = await fetch(botDesktopUrl(botId, sandboxId, '/take-over'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -683,7 +685,7 @@ export async function handBackBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/hand-back', { method: 'POST' });
+    const res = await fetch(botDesktopUrl(botId, sandboxId, '/hand-back'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -704,7 +706,7 @@ export async function startBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ status: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/start', { method: 'POST' });
+    const res = await fetch(botDesktopUrl(botId, sandboxId, '/start'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -725,7 +727,7 @@ export async function stopBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ status: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/stop', { method: 'POST' });
+    const res = await fetch(botDesktopUrl(botId, sandboxId, '/stop'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -746,7 +748,7 @@ export async function pauseBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ status: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/pause', { method: 'POST' });
+    const res = await fetch(botDesktopUrl(botId, sandboxId, '/pause'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -767,7 +769,7 @@ export async function resumeBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ status: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/resume', { method: 'POST' });
+    const res = await fetch(botDesktopUrl(botId, sandboxId, '/resume'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -809,7 +811,7 @@ export async function getBotDesktopScreenshot(
   signal?: AbortSignal,
 ): Promise<VMOperatorResult<BotDesktopScreenshot>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/screenshot', {
+    const res = await fetch(botDesktopUrl(botId, sandboxId, '/screenshot'), {
       method: 'GET',
       headers: { Accept: 'image/png, application/json' },
       signal,
