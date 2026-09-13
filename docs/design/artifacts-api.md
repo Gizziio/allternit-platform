@@ -285,7 +285,7 @@ is removed, the deployment file stays). 404 when not published.
 
 ### Relay tier (org relay, IMPLEMENTED 2026-09-12 — session `relay-0912`)
 
-Served by `content_artifact_relay.rs`; state in V156
+Served by `content_artifact_relay.rs`; state in V159
 (`content_artifact_relay_receipts` + `content_artifact_relay_provenance`).
 
 ### `POST /api/v1/content-artifacts/:id/relay` — relay to a peer gateway
@@ -399,7 +399,7 @@ questions, answered):**
 
 **Relay tier — implementation (2026-09-12, session `relay-0912`).** The
 decisions above are implemented as decided, in
-`cmd/allternit-api/src/content_artifact_relay.rs` (+ migration V156):
+`cmd/allternit-api/src/content_artifact_relay.rs` (+ migration V159):
 
 - **Send:** `POST /api/v1/content-artifacts/:id/relay` `{target}` packages the
   current version (HTML body + metadata + relay/provenance chain) as a
