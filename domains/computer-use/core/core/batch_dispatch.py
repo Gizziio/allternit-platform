@@ -211,6 +211,11 @@ class BatchDispatchResult:
     enforcement: Optional[str] = None
     status_code: int = 0
     error: Optional[str] = None                     # Hard failure (5xx, transport, ...)
+    # F1 (observation disconnect): the batch execution context's own post-batch
+    # state (screenshot_b64/url/title from the SAME sidecar browser the batch
+    # ran in). None = the gate did not capture one; the caller then observes
+    # through its existing adapter path, exactly as before.
+    post_batch_observation: Optional[Dict[str, Any]] = None
 
 
 class AciBatchClient:
@@ -309,6 +314,7 @@ class AciBatchClient:
             )
 
         receipt = data.get("receipt") if isinstance(data.get("receipt"), dict) else None
+        observation = data.get("post_batch_observation")
         return BatchDispatchResult(
             executed=True,
             descriptor_hash=data.get("descriptor_hash"),
@@ -316,6 +322,7 @@ class AciBatchClient:
             receipt_id=data.get("receipt_id"),
             enforcement=data.get("enforcement"),
             status_code=resp.status_code,
+            post_batch_observation=observation if isinstance(observation, dict) else None,
         )
 
 

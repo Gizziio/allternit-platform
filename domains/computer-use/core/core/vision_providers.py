@@ -14,6 +14,7 @@ Supports: OpenAI GPT-4o, Anthropic Claude (as a provider option), Azure OpenAI.
 import os
 import base64
 import json
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -1281,6 +1282,37 @@ class AllternitGatewayProvider(VisionProvider):
             raise VisionAPIError(f"Gizzi brain error: {e}", provider="allternit")
 
 
+async def _kill_process_tree(proc: asyncio.subprocess.Process) -> None:
+    """Kill a brain subprocess AND its descendants, then reap the direct child.
+
+    CLI brains spawn their own children (the actual model process); killing
+    only the spawned CLI left the grandchild orphaned (cu22 follow-up F4).
+    ``start_new_session=True`` put the child in its own process group, so on
+    POSIX ``killpg`` reaps the whole tree; platforms without process groups
+    fall back to the direct kill. Best effort throughout — never raise.
+    """
+    import signal
+
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+        else:
+            proc.kill()
+    except (ProcessLookupError, PermissionError):
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    except Exception:
+        pass
+    # Reap the direct child so no zombie lingers.
+    try:
+        if proc.returncode is None:
+            await asyncio.wait_for(proc.wait(), timeout=5)
+    except Exception:
+        pass
+
+
 class SubprocessVisionProvider(VisionProvider):
     """
     Subprocess brain provider — invokes a CLI agent as a subprocess.
@@ -1290,13 +1322,28 @@ class SubprocessVisionProvider(VisionProvider):
     return a JSON action plan on stdout.
 
     Env vars:
-        ALLTERNIT_BRAIN_CMD   — command to invoke (e.g. "claude", "codex", "gemini")
-        ALLTERNIT_BRAIN_ARGS  — space-separated extra args (optional)
+        ALLTERNIT_BRAIN_CMD         — command to invoke (e.g. "claude", "codex", "gemini")
+        ALLTERNIT_BRAIN_ARGS        — space-separated extra args (optional)
+        ALLTERNIT_BRAIN_TIMEOUT_S   — per-call wall-clock cap in seconds
+                                      (default DEFAULT_BRAIN_TIMEOUT_S; the cu22
+                                      real-model campaign hit the old fixed 60 s
+                                      with gpt-6-astra via the codex CLI)
     """
 
-    def __init__(self):
-        self._cmd = os.environ.get("ALLTERNIT_BRAIN_CMD", "claude")
-        self._args = os.environ.get("ALLTERNIT_BRAIN_ARGS", "").split() or []
+    def __init__(self, cmd: Optional[str] = None, args: Optional[List[str]] = None,
+                 timeout_s: Optional[float] = None):
+        self._cmd = cmd or os.environ.get("ALLTERNIT_BRAIN_CMD", "claude")
+        self._args = list(args) if args is not None else (
+            os.environ.get("ALLTERNIT_BRAIN_ARGS", "").split() or []
+        )
+        # F3: one sourced timeout for the CLI-brain path (constructor wins,
+        # then env, then default). Fast gateway providers use their own
+        # transport timeouts and are unaffected.
+        if timeout_s is not None:
+            self._timeout_s = float(timeout_s)
+        else:
+            env_timeout = os.environ.get("ALLTERNIT_BRAIN_TIMEOUT_S", "").strip()
+            self._timeout_s = float(env_timeout) if env_timeout else DEFAULT_BRAIN_TIMEOUT_S
 
     def is_available(self) -> bool:
         import shutil, subprocess as _sp
@@ -1325,18 +1372,30 @@ class SubprocessVisionProvider(VisionProvider):
         prompt = _build_planning_prompt(task, history_text, (1280, 720))
         stdin_payload = json.dumps({"prompt": prompt, "screenshot_b64": screenshot_b64})
         try:
+            # F4: start_new_session puts the CLI in its own process group so a
+            # timeout/cancellation can kill the whole tree — CLI brains spawn
+            # their own children (the model process), and killing only the
+            # direct child orphaned the grandchild (cu22 campaign finding).
             proc = await asyncio.create_subprocess_exec(
                 self._cmd, *self._args,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
             )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(stdin_payload.encode()), timeout=60)
+            try:
+                stdout, stderr = await asyncio.wait_for(proc.communicate(stdin_payload.encode()), timeout=self._timeout_s)
+            except asyncio.CancelledError:
+                await _kill_process_tree(proc)
+                raise  # cancellation must propagate
+            except asyncio.TimeoutError:
+                await _kill_process_tree(proc)
+                raise VisionAPIError(f"Brain subprocess timed out after {self._timeout_s:g}s", provider="subprocess")
             if proc.returncode != 0:
                 raise VisionAPIError(f"Brain subprocess exited {proc.returncode}: {stderr.decode()[:200]}", provider="subprocess")
             return _parse_action_plan(stdout.decode())
         except asyncio.TimeoutError:
-            raise VisionAPIError("Brain subprocess timed out after 60s", provider="subprocess")
+            raise VisionAPIError(f"Brain subprocess timed out after {self._timeout_s:g}s", provider="subprocess")
         except FileNotFoundError:
             raise VisionConfigError(
                 f"Brain command not found: {self._cmd!r}. "
@@ -1344,6 +1403,13 @@ class SubprocessVisionProvider(VisionProvider):
                 f"or set ALLTERNIT_BRAIN_CMD to a valid command."
             )
 
+
+# Default per-call wall-clock cap for the CLI-brain path. Real models via
+# real CLIs routinely exceed 60 s (the cu22 campaign hit the old fixed 60 s
+# cap with gpt-6-astra through the codex CLI); fast gateway providers use
+# their own transport timeouts and never see this value. Overridable per
+# deployment via ALLTERNIT_BRAIN_TIMEOUT_S or the provider constructor.
+DEFAULT_BRAIN_TIMEOUT_S = 240.0
 
 # Production computer-use always uses the Gizzi platform brain. Direct API
 # keys, ak- virtual keys, and CLI subprocesses are not auto-selected.
