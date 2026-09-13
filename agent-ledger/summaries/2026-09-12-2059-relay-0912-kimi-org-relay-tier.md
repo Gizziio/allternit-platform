@@ -114,3 +114,23 @@
 
 Follows in a ledger update below (release-path rule: rebuild from merged
 main after attestation).
+
+## Update 2026-09-12 ~21:30 — desktop rebuild DONE
+
+- Fresh `gizzi-code` binary built from the merged tree (`cmd/gizzi-code`
+  `bun run script/build-production.js` after `ensure-sdk-dist.sh`) and
+  staged into `surfaces/allternit-desktop/resources/bin/gizzi-code` (2.0.8).
+- Fresh `allternit-api` sidecar from this session's
+  `cargo build --release -p allternit-api` on merged main (45,039,024 bytes,
+  byte-identical into the bundle). Other 4 sidecars copied from the shared
+  checkout (unchanged upstream).
+- `CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist` from the session
+  worktree (pnpm collector — the shared checkout's npm-style node_modules
+  breaks electron-builder, as onlook-ast documented).
+- Result: **build b2423**, 8 files (arm64/x64 × dmg/zip + blockmaps),
+  copied to the shared `surfaces/allternit-desktop/release/`.
+- Bundle verification: `grep -rl relay/inbox` →
+  `bin/allternit-api` inside `release/mac-arm64/Allternit Desktop.app`;
+  `grep -rl "Relayed from"` → `platform/assets/DesignModeView-BUZi1A6L.js`.
+- Retired ONLY the previous latest set: **b2414** (8 files). DMG unsigned/
+  unnotarized (no APPLE_ID creds) — expected for local builds.
