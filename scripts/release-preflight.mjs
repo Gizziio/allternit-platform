@@ -505,7 +505,32 @@ function checkPhoneRemoteBundle() {
     );
     return;
   }
-  pass('phone-remote: desktop extraResources bundles surfaces/phone-remote/server (index.mjs + lib/ + sc_capture.swift)');
+
+  // The HID input bridge (lib/input.mjs) resolves the helper at
+  // <Resources>/phone-remote/input/input_helper.py — the b2585 live test
+  // caught the bundled server starting without it (helper exit 2, remote
+  // input dead, silent).
+  const inputEntry = entries.find((e) => e && e.to === 'phone-remote/input');
+  if (!inputEntry) {
+    fail(
+      'phone-remote: desktop package.json build.extraResources has no entry copying ' +
+        'surfaces/phone-remote/input to Resources/phone-remote/input — the bundled ' +
+        'server starts but the HID input helper is missing (remote input dead).'
+    );
+    return;
+  }
+  const inputDir = path.join(desktopDir, inputEntry.from);
+  const inputMissing = ['input_helper.py', 'input_helper_x11.py']
+    .map((f) => path.join(inputDir, f))
+    .filter((p) => !fs.existsSync(p));
+  if (inputMissing.length > 0) {
+    fail(
+      'phone-remote: input helper sources missing: ' +
+        inputMissing.map((p) => path.relative(repoRoot, p)).join(', ')
+    );
+    return;
+  }
+  pass('phone-remote: desktop extraResources bundles surfaces/phone-remote/server (index.mjs + lib/ + sc_capture.swift) and the input helper (input/*.py)');
 }
 
 /* ── Main ── */

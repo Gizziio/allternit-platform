@@ -1148,11 +1148,20 @@ mod tests {
     use tokio::io::AsyncBufReadExt;
     use tokio::process::Command;
 
-    async fn spawn_real_os_control_plane() -> (String, tokio::process::Child) {
+    /// Returns None (and the test should skip) when the sidecar binary is not
+    /// built — e.g. CI runners without the AllternitOS workspace checkout.
+    async fn spawn_real_os_control_plane() -> Option<(String, tokio::process::Child)> {
         let temp = tempfile::tempdir().unwrap().keep();
         let bin = std::env::var("ALLTERNITOS_CONTROL_PLANE_BIN").unwrap_or_else(|_| {
             "/Users/joe/Desktop/AllternitOS/target/debug/allternitos_control_plane".to_string()
         });
+        if !std::path::Path::new(&bin).exists() {
+            eprintln!(
+                "skipping: allternitos_control_plane binary not found at {bin} \
+                 (set ALLTERNITOS_CONTROL_PLANE_BIN to run this test)"
+            );
+            return None;
+        }
         let db_path = temp.join("cp.db");
         let mut child = Command::new(&bin)
             .arg("--bind")
@@ -1195,12 +1204,14 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
 
-        (url, child)
+        Some((url, child))
     }
 
     #[tokio::test]
     async fn provision_runtime_routes_through_real_os_control_plane() {
-        let (url, _child) = spawn_real_os_control_plane().await;
+        let Some((url, _child)) = spawn_real_os_control_plane().await else {
+            return;
+        };
         let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
 
         let temp = tempfile::tempdir().unwrap().keep();
@@ -1350,7 +1361,9 @@ mod tests {
 
     #[tokio::test]
     async fn provision_harness_routes_through_real_os_control_plane() {
-        let (url, _child) = spawn_real_os_control_plane().await;
+        let Some((url, _child)) = spawn_real_os_control_plane().await else {
+            return;
+        };
         let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
 
         let temp = tempfile::tempdir().unwrap().keep();
@@ -1421,7 +1434,9 @@ mod tests {
     async fn provision_harness_reconciles_os_usage_event_to_credits() {
         use crate::fabric::usage::UsageIngestor;
 
-        let (url, _child) = spawn_real_os_control_plane().await;
+        let Some((url, _child)) = spawn_real_os_control_plane().await else {
+            return;
+        };
         let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
 
         let temp = tempfile::tempdir().unwrap().keep();
@@ -1543,7 +1558,9 @@ mod tests {
 
     #[tokio::test]
     async fn provision_harness_opencode_routes_through_real_os_control_plane() {
-        let (url, _child) = spawn_real_os_control_plane().await;
+        let Some((url, _child)) = spawn_real_os_control_plane().await else {
+            return;
+        };
         let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
 
         let temp = tempfile::tempdir().unwrap().keep();

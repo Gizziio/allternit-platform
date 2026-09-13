@@ -276,6 +276,7 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/plan/:dag_id", get(plan_show))
         .route("/dags/:dag_id/render", get(dag_render))
         .route("/dags/:dag_id/execute", post(dag_execute))
+        .route("/dags/:dag_id/nodes", post(create_dag_node))
         .route("/runs/:run_id/cancel", post(run_cancel))
         // Leases
         .route("/leases", get(list_leases).post(request_lease))
@@ -1864,6 +1865,15 @@ async fn close_wih(
             .into_response();
     }
 
+    let status = req.status.trim().to_uppercase();
+    if status != "DONE" && status != "FAILED" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "status must be DONE or FAILED" })),
+        )
+            .into_response();
+    }
+
     // Agent ownership check happens before any gate mutation.
     match state.rails.ledger.query(LedgerQuery::default()).await {
         Ok(events) => match project_wih(&events, &wih_id) {
@@ -1903,7 +1913,7 @@ async fn close_wih(
         return resp.into_response();
     }
     let evidence = req.evidence.clone().unwrap_or_default();
-    match state.rails.gate.wih_close(&wih_id, &req.status, &evidence).await {
+    match state.rails.gate.wih_close(&wih_id, &status, &evidence).await {
         Ok(_) => (StatusCode::OK, Json(WihCloseResponse { closed: true })).into_response(),
         Err(e) => {
             let status = if e.to_string().contains("evidence") {
@@ -2889,6 +2899,79 @@ async fn plan_show(
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct CreateDagNodeRequest {
+    title: String,
+    parent_node_id: String,
+}
+
+async fn create_dag_node(
+    State(state): State<Arc<AppState>>,
+    Path(dag_id): Path<String>,
+    Json(req): Json<CreateDagNodeRequest>,
+) -> impl IntoResponse {
+    info!(dag_id = %dag_id, title = %req.title, "Creating DAG node");
+
+    let title = req.title.trim();
+    let parent = req.parent_node_id.trim();
+    if title.is_empty() || parent.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "title and parent_node_id are required" })),
+        )
+            .into_response();
+    }
+
+    let events = match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => events,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+    let dag = project_dag(&events, &dag_id);
+    if !dag.nodes.contains_key(parent) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "parent node not found" })),
+        )
+            .into_response();
+    }
+
+    let node_id = format!("n_{}", rand::random::<u32>() % 10_000);
+    match state
+        .rails
+        .gate
+        .mutate_with_decision(
+            &dag_id,
+            "api node add",
+            None,
+            vec![DagMutation::CreateNode {
+                node_id: node_id.clone(),
+                node_kind: "task".to_string(),
+                title: title.to_string(),
+                parent_node_id: Some(parent.to_string()),
+                execution_mode: "shared".to_string(),
+            }],
+        )
+        .await
+    {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(json!({ "node_id": node_id })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
 async fn dag_render(
     State(state): State<Arc<AppState>>,
     Path(dag_id): Path<String>,
@@ -3514,14 +3597,18 @@ async fn gate_check(
 
 async fn gate_rules() -> impl IntoResponse {
     // The rules file ships with the rails crate's spec directory; in a dev
-    // checkout that is two levels up from this crate's manifest dir.
-    let crate_spec = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    // checkout that is two levels up from this crate's manifest dir. The
+    // crate was later renamed commrails — accept both locations.
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
-        .join("..")
-        .join("rails")
-        .join("spec")
-        .join("GATE_RULES.md");
-    let rules = std::fs::read_to_string(crate_spec).ok();
+        .join("..");
+    let candidates = [
+        repo_root.join("rails").join("spec").join("GATE_RULES.md"),
+        repo_root.join("commrails").join("spec").join("GATE_RULES.md"),
+    ];
+    let rules = candidates
+        .iter()
+        .find_map(|path| std::fs::read_to_string(path).ok());
     (StatusCode::OK, Json(GateRulesResponse { rules })).into_response()
 }
 

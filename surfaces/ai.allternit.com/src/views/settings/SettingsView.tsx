@@ -8,6 +8,7 @@ const logger = createModuleLogger('SettingsView');
 
 import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
 import { BrainsPanel } from '@/components/settings/BrainsPanel';
+import { MediaProvidersCard } from './MediaProvidersCard';
 import {
   Cpu,
   Sun,
@@ -907,6 +908,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         Detected providers and their auth state. Connect a subscription or CLI brain in one click; API-key providers use a key.
       </p>
       <BrainsPanel />
+
+      <SectionHeading>Media providers</SectionHeading>
+      <MediaProvidersCard />
     </div>
   );
 

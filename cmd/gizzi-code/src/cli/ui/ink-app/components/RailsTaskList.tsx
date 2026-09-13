@@ -135,6 +135,15 @@ type ActionableRow = {
 
 const ROW_ERROR_TTL_MS = 5_000
 
+/** Auto-evidence line for a panel-initiated close (v1, no prompt input). */
+export function closeEvidenceFor(
+  status: 'DONE' | 'FAILED',
+  agentId: string | null,
+): string {
+  const verb = status === 'FAILED' ? 'failed' : 'closed'
+  return `${verb} from gizzi-code todo panel by ${agentId ?? 'unknown'}`
+}
+
 export function RailsTaskList(): React.ReactElement | null {
   const railsDag = useAppState(s => s.railsDag)
   const { rows, columns } = useTerminalSize()
@@ -299,14 +308,16 @@ export function RailsTaskList(): React.ReactElement | null {
     }
   }
 
-  const doneSelected = async (): Promise<void> => {
+  const closeSelected = async (status: 'DONE' | 'FAILED'): Promise<void> => {
     const selected = actionable[selectionIndex]
     if (!selected || selected.kind !== 'done' || !selected.node.current_wih_id) {
       return
     }
-    const result = await closeWih(selected.node.current_wih_id, [
-      `closed from gizzi-code todo panel by ${railsPeerAgentId() ?? 'unknown'}`,
-    ])
+    const result = await closeWih(
+      selected.node.current_wih_id,
+      [closeEvidenceFor(status, railsPeerAgentId())],
+      status,
+    )
     if (result.ok) {
       setRowError(null)
       refreshRailsDagNow()
@@ -331,7 +342,7 @@ export function RailsTaskList(): React.ReactElement | null {
     },
   )
 
-  // Focused keys: j/k/arrows move, t takes, d closes, esc blurs.
+  // Focused keys: j/k/arrows move, t takes, d/x close done/failed, esc blurs.
   useKeybindings(
     {
       'select:next': () => selectDelta(1),
@@ -340,7 +351,10 @@ export function RailsTaskList(): React.ReactElement | null {
         void takeSelected()
       },
       'railsDag:done': () => {
-        void doneSelected()
+        void closeSelected('DONE')
+      },
+      'railsDag:fail': () => {
+        void closeSelected('FAILED')
       },
       'railsDag:blur': () => setFocused(false),
     },
@@ -426,7 +440,7 @@ export function RailsTaskList(): React.ReactElement | null {
         )
       })}
       {hiddenCount > 0 && <Text dimColor>{` … +${hiddenCount} more`}</Text>}
-      {focused && <Text dimColor>j/k move · t take · d done · esc blur</Text>}
+      {focused && <Text dimColor>j/k move · t take · d done · x fail · esc blur</Text>}
     </Box>
   )
 }
