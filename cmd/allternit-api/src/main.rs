@@ -797,6 +797,7 @@ async fn main() {
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(allternit_api::content_artifact_routes::content_artifact_router())
+        .merge(allternit_api::content_artifact_file_routes::content_artifact_file_router())
         .merge(allternit_api::content_artifact_publish::content_artifact_publish_router())
         .merge(allternit_api::console_announcement_routes::console_announcement_router())
         // Analytics on the /api/v1 surface too — the gizzi-code telemetry

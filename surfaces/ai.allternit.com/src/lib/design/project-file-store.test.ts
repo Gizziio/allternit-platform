@@ -5,6 +5,7 @@ import {
   deleteProjectFile,
   listFileVersions,
   loadProjectFiles,
+  renameProjectFile,
   restoreFileVersion,
   writeProjectFile,
 } from './project-file-store';
@@ -249,6 +250,105 @@ describe('project-file-store', () => {
       const again = await loadProjectFiles('p9');
       expect(again.files['/index.html']?.content).toBe('<html>gateway</html>');
       expect(mockedApi.get.mock.calls.length).toBe(calls);
+    });
+  });
+
+  describe('whole-tree gateway sync (multi-file)', () => {
+    it('mirrors a non-artifact file into the artifact file index', async () => {
+      await writeProjectFile('p1', '/index.html', 'seed'); // local-only seed
+      mockedApi.get.mockResolvedValue({ artifacts: [{ id: 'art_1', projectId: 'p1' }] });
+      mockedApi.put.mockResolvedValue({});
+
+      await writeProjectFile('p1', '/styles.css', 'body { color: red }');
+
+      await vi.waitFor(() => expect(mockedApi.put).toHaveBeenCalled());
+      expect(mockedApi.put).toHaveBeenCalledWith(
+        '/api/v1/content-artifacts/art_1/files/styles.css',
+        { body: 'body { color: red }' },
+      );
+      // The non-artifact write must NOT append an artifact version.
+      expect(mockedApi.put).not.toHaveBeenCalledWith(
+        '/api/v1/content-artifacts/art_1/versions',
+        expect.anything(),
+      );
+    });
+
+    it('skips the tree mirror for non-artifact files when no artifact exists yet', async () => {
+      mockedApi.get.mockResolvedValue({ artifacts: [] });
+      mockedApi.put.mockResolvedValue({});
+
+      await writeProjectFile('p1', '/styles.css', 'orphan');
+
+      // Nothing to hang the file on — no gateway write of any kind.
+      expect(mockedApi.put).not.toHaveBeenCalled();
+    });
+
+    it('mirrors /index.html to BOTH the version body and the file tree', async () => {
+      mockedApi.get.mockResolvedValue({ artifacts: [{ id: 'art_1', projectId: 'p1' }] });
+      mockedApi.put.mockResolvedValue({});
+
+      await writeProjectFile('p1', '/index.html', '<h1>v2</h1>');
+
+      await vi.waitFor(() => {
+        expect(mockedApi.put).toHaveBeenCalledWith(
+          '/api/v1/content-artifacts/art_1/versions',
+          expect.objectContaining({ body: '<h1>v2</h1>' }),
+        );
+        expect(mockedApi.put).toHaveBeenCalledWith(
+          '/api/v1/content-artifacts/art_1/files/index.html',
+          { body: '<h1>v2</h1>' },
+        );
+      });
+    });
+
+    it('fills the whole tree from the gateway index when the local cache is empty', async () => {
+      mockedApi.get
+        .mockResolvedValueOnce({ artifacts: [{ id: 'art_9', projectId: 'p9' }] })
+        .mockResolvedValueOnce({
+          artifact: { body: '<html>gateway</html>', updatedAt: '2026-09-12T10:00:00Z' },
+        })
+        .mockResolvedValueOnce({
+          files: [
+            { path: '/index.html', sha256: 'aaa', updatedAt: '2026-09-12T10:00:00Z' },
+            { path: '/styles.css', sha256: 'bbb', updatedAt: '2026-09-12T10:05:00Z' },
+          ],
+        })
+        .mockResolvedValueOnce({
+          path: '/styles.css',
+          body: 'body { color: blue }',
+          sha256: 'bbb',
+          updatedAt: '2026-09-12T10:05:00Z',
+        });
+
+      const tree = await loadProjectFiles('p9');
+      expect(tree.files['/index.html']?.content).toBe('<html>gateway</html>');
+      expect(tree.files['/styles.css']?.content).toBe('body { color: blue }');
+    });
+
+    it('delete and rename mirror to the gateway tree best-effort', async () => {
+      mockedApi.get.mockResolvedValue({ artifacts: [{ id: 'art_1', projectId: 'p1' }] });
+      mockedApi.put.mockResolvedValue({});
+      mockedApi.delete.mockResolvedValue({});
+
+      await writeProjectFile('p1', '/a.css', 'a');
+      await deleteProjectFile('p1', '/a.css');
+      await vi.waitFor(() =>
+        expect(mockedApi.delete).toHaveBeenCalledWith(
+          '/api/v1/content-artifacts/art_1/files/a.css',
+        ),
+      );
+
+      await writeProjectFile('p1', '/b.css', 'b');
+      await renameProjectFile('p1', '/b.css', '/c.css');
+      await vi.waitFor(() => {
+        expect(mockedApi.put).toHaveBeenCalledWith(
+          '/api/v1/content-artifacts/art_1/files/c.css',
+          { body: 'b' },
+        );
+        expect(mockedApi.delete).toHaveBeenCalledWith(
+          '/api/v1/content-artifacts/art_1/files/b.css',
+        );
+      });
     });
   });
 });
