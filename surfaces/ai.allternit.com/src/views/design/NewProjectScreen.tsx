@@ -29,6 +29,7 @@ import type { SkillRecord } from '../../lib/design/skill-registry';
 import { type GalleryEntry } from '../../lib/design/gallery-store';
 import { listGalleryEntriesGatewayFirst } from '../../lib/design/content-artifact-sync';
 import { GalleryPublishActions } from './GalleryPublishActions';
+import { GalleryRelayProvenance } from './GalleryRelayProvenance';
 import { renderArtifactThumbnail } from '../../lib/design/artifact-thumbnail';
 import { useDesignProjectStore, type DesignProject } from '@/views/project/design/design-project.store';
 import { AProtocolWordmark } from '@/components/AProtocolWordmark';
@@ -567,6 +568,7 @@ export function NewProjectScreen({
                           </span>
                         </button>
                         <GalleryPublishActions entry={entry} />
+                        <GalleryRelayProvenance entry={entry} />
                       </div>
                     ))}
                   </div>

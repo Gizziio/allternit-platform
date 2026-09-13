@@ -117,3 +117,6 @@
 .ad-gallery-publish__btn:hover:not(:disabled) { border-color: var(--launch-accent); color: var(--launch-text); }
 .ad-gallery-publish__btn:disabled { opacity: 0.5; cursor: default; }
 .ad-gallery-publish__notice { color: var(--launch-muted); }
+
+/* ── Gallery relay provenance (A:// Artifacts org relay tier, §6) ── */
+.ad-gallery-relay { display: inline-flex; align-items: center; gap: 5px; padding: 0 10px 8px; font-size: 9px; color: var(--launch-muted); }

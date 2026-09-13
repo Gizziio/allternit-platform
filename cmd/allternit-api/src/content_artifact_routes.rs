@@ -369,7 +369,7 @@ fn store_version_body(
 }
 
 /// Insert one immutable version row.
-fn insert_version(
+pub(crate) fn insert_version(
     tx: &Transaction,
     data_dir: &std::path::Path,
     artifact_id: &str,
@@ -563,35 +563,56 @@ async fn create_content_artifact(
 async fn get_content_artifact(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
+    // a://artifact/<id>@<gateway> addressing (§6 relay tier): a local hit on
+    // the prefix always wins; on a local miss with a `@peer` suffix the read
+    // resolves through the named peer (read-through, nothing persisted).
+    let (local_id, peer) = crate::content_artifact_relay::split_relay_address(&id);
     let db = state.db.clone();
     let data_dir = state.data_dir.clone();
     let user_id = user.user_id;
+    let local_id_c = local_id.clone();
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let meta = match fetch_artifact_meta(&conn, &id, &user_id)? {
+        let meta = match fetch_artifact_meta(&conn, &local_id_c, &user_id)? {
             Some(m) => m,
             None => return Ok(None),
         };
         let (body, sha, _, _) =
-            read_version_body(&conn, &data_dir, &id, meta.current_version)?
+            read_version_body(&conn, &data_dir, &local_id_c, meta.current_version)?
                 .expect("current_version row exists");
         let mut artifact = artifact_json(&meta);
         artifact["body"] = json!(body);
         artifact["bodySha256"] = json!(sha);
+        // Relay provenance (§6 decision 5): present on artifacts this
+        // gateway received over the org relay.
+        if let Some(relay) = crate::content_artifact_relay::fetch_relay_provenance(&conn, &local_id_c)? {
+            artifact["provenance"]["relay"] = relay;
+        }
         Ok(Some(artifact))
     })
     .await;
 
     match result {
         Ok(Ok(Some(artifact))) => Json(json!({"artifact": artifact})).into_response(),
-        Ok(Ok(None)) => (
-            StatusCode::NOT_FOUND,
-            Json(json!({"error": "not found"})),
-        )
-            .into_response(),
+        Ok(Ok(None)) => match peer {
+            Some(peer) => {
+                match crate::content_artifact_relay::resolve_from_peer(&peer, &local_id, &headers)
+                    .await
+                {
+                    Ok(body) => Json(body).into_response(),
+                    Err(resp) => resp,
+                }
+            }
+            None => (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "not found"})),
+            )
+                .into_response(),
+        },
         Ok(Err(e)) => db_error("getting content artifact", e),
         Err(_) => internal_error(),
     }
@@ -876,7 +897,20 @@ async fn list_content_artifacts(
         } else {
             None
         };
-        let artifacts: Vec<serde_json::Value> = rows.iter().map(artifact_json).collect();
+        // Relay provenance attach (one query set for the page).
+        let ids: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
+        let relay_map =
+            crate::content_artifact_relay::fetch_relay_provenance_map(&conn, &ids)?;
+        let artifacts: Vec<serde_json::Value> = rows
+            .iter()
+            .map(|meta| {
+                let mut v = artifact_json(meta);
+                if let Some(relay) = relay_map.get(&meta.id) {
+                    v["provenance"]["relay"] = relay.clone();
+                }
+                v
+            })
+            .collect();
         Ok(Ok(json!({
             "artifacts": artifacts,
             "next_cursor": next_cursor,

@@ -99,24 +99,33 @@ pub async fn list_tasks(
     let workspace_id = filters.workspace_id.as_deref().unwrap_or("");
     let mut query = String::from("SELECT * FROM tasks WHERE tenant_id = $1 AND workspace_id = $2");
     let mut conditions: Vec<String> = Vec::new();
+    // $1/$2 are tenant_id/workspace_id; number the optional placeholders in
+    // bind order to match the Postgres $n convention.
+    let mut next = 3;
 
     if let Some(statuses) = &filters.status {
         if !statuses.is_empty() {
-            let placeholders: Vec<String> = (0..statuses.len()).map(|_| "?".to_string()).collect();
+            let placeholders: Vec<String> = (0..statuses.len())
+                .map(|i| format!("${}", next + i))
+                .collect();
+            next += statuses.len();
             conditions.push(format!("status IN ({})", placeholders.join(", ")));
         }
     }
 
     if filters.assignee_id.is_some() {
-        conditions.push("assignee_id = ?".to_string());
+        conditions.push(format!("assignee_id = ${}", next));
+        next += 1;
     }
 
     if filters.priority_min.is_some() {
-        conditions.push("priority >= ?".to_string());
+        conditions.push(format!("priority >= ${}", next));
+        next += 1;
     }
 
     if filters.priority_max.is_some() {
-        conditions.push("priority <= ?".to_string());
+        conditions.push(format!("priority <= ${}", next));
+        next += 1;
     }
 
     if !conditions.is_empty() {
@@ -124,7 +133,7 @@ pub async fn list_tasks(
         query.push_str(&conditions.join(" AND "));
     }
 
-    query.push_str(" ORDER BY created_at DESC LIMIT $1 OFFSET $2");
+    query.push_str(&format!(" ORDER BY created_at DESC LIMIT ${} OFFSET ${}", next, next + 1));
 
     let mut sql_query = sqlx::query_as::<_, Task>(&query);
 
