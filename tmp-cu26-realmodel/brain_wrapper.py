@@ -96,7 +96,21 @@ def main() -> int:
 
         out_file = Path(tmp) / "out.txt"
         if proc.returncode != 0 or not out_file.exists():
-            evidence["error"] = (proc.stderr or proc.stdout or "")[-300:]
+            # Capture real failure causes from the JSON event stream (usage
+            # limits, auth errors) — the plain stderr tail can be just
+            # "Reading additional input from stdin..." which masks them.
+            events_err = ""
+            for line in (proc.stdout or "").splitlines():
+                try:
+                    event = json.loads(line)
+                except Exception:
+                    continue
+                if event.get("type") in ("error", "turn.failed"):
+                    msg = (event.get("error") or {}).get("message") or event.get("message") or ""
+                    if msg:
+                        events_err = msg
+                        break
+            evidence["error"] = events_err or (proc.stderr or proc.stdout or "")[-300:]
             _record(evidence)
             print(json.dumps({"error": "brain_failed", "detail": evidence["error"]}))
             return 1
