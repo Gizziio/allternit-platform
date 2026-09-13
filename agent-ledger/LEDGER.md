@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-13 18:15 — kimi — phone-remote input-helper bundle fix
+
+- **Session ID / Branch:** `session/phone-remote-bundle-fix`
+- **Agent:** kimi-code
+- **Summary:** Merged PR #482 (e5e38be8c) — the PR #479 live test caught the bundled phone-remote starting without `input_helper.py` (remote input dead, silent); extraResources now ships `phone-remote/input`, release-preflight check 7 gates both entries.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/482 · e5e38be8c
+- **How it works:** Same-session incident chain: b2585 boot also exposed a stale shared-checkout `allternit-api` sidecar (embedded migrations predated V142 → panic loop, app never rendered); fixed by building the sidecar from the same main worktree as the app. Standing rule: never copy sidecar binaries from the shared checkout.
+- **Verification:** release-preflight 36/0; gap found by live spawn test.
+- **Outstanding work:** Rebuilt DMG carrying both fixes; live verify remote input after Accessibility grant.
+- **Summary file:** [2026-09-13-1815-phone-remote-bundle-fix-kimi-input-helper-bundle.md](./summaries/2026-09-13-1815-phone-remote-bundle-fix-kimi-input-helper-bundle.md)
+
 ### 2026-09-13 16:10 — kimi — desktop owns the phone-remote cast server
 
 - **Session ID / Branch:** `session/phone-remote-owner`
