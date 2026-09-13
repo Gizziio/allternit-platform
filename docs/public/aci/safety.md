@@ -61,6 +61,28 @@ Two honest caveats on the measured rows:
   they are conformance checks, not adversarial or long-horizon task
   evaluations.
 
+### Batch dispatch (measured 2026-09-12)
+
+Grant-bound batch dispatch (spec `stagehand-batch-fork`, P1–P2) is measured
+outside `conformance/suites.py` — the suites live in the Rust crate and the
+pytest tree, so they are recorded here instead of in `adapter_grades.json`:
+
+| Component | Suite | Pass rate | Grade |
+|-----------|-------|-----------|-------|
+| Batch grant gate (Rust `aci_batch`) | `cargo test -p allternit-api --lib aci_batch` (19 tests: descriptor hashing, tamper/expiry/replay rejection, per-step fallback, receipts) | 19/19 = 100% | `production` |
+| Engine batch dispatch | `tests/test_batch_dispatch.py` (17 tests: plan→grant→batch→observation, halt-at-first-failure, fallback paths) | 17/17 = 100% | `production` |
+| Live gated batch (real stack) | 3-step batch → `confirmation_required` → handoff approve → real Chrome executed all steps → receipt `completed` 3/3, `one_grant` | 16/16 = 100% | `production` |
+
+Economics on the canned 3-step task: **4 model turns step-by-step → 2 turns
+batched** (`model_turns_saved` is recorded on the batch-context ledger event).
+
+Honest caveats: small *n* (one live task shape so far — the number shows the
+mechanism works end-to-end, not long-horizon reliability); batch model
+emission was exercised with a scripted provider, not a frontier vision model;
+per-step denial surfaces `step_index` but batch-grant recall against an
+adversarial planner is not yet measured. Record→teach→batch workflow
+compilation is deferred.
+
 ## Safety architecture
 
 ### Confirmation taxonomy and approval grants
@@ -282,6 +304,12 @@ Rust safety enforcement:
 
 ```bash
 cargo test -p allternit-api aci_   # aci_safety, aci_approvals, aci_credentials
+
+# Batch grant gate (batch descriptors, tamper/expiry/replay, per-step fallback)
+cargo test -p allternit-api --lib aci_batch
+
+# Engine batch dispatch (plan→grant→batch→observation, halt-on-failure)
+cd domains/computer-use/core && PYTHONPATH="." python -m pytest tests/test_batch_dispatch.py -q
 ```
 
 As of this writing the Python suites above pass in full, the Rust `aci_`
