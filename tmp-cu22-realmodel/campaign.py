@@ -19,11 +19,13 @@ Usage:
 import argparse
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
 import urllib.request
 from pathlib import Path
+from typing import List
 
 REPO = Path(__file__).resolve().parents[1]
 CORE = REPO / "domains/computer-use/core"
@@ -91,6 +93,14 @@ TASKS = [
 ]
 
 
+# ── Log capture ──────────────────────────────────────────────────────────────
+class _LogCapture(logging.Handler):
+    lines: list = []
+
+    def emit(self, record):
+        self.lines.append(record.getMessage())
+
+
 # ── Vocabulary shim ─────────────────────────────────────────────────────────
 class PerStepVocabularyAdapter:
     """Translate the plan/whitelist vocabulary (click/press) to the executor's
@@ -148,8 +158,7 @@ class CampaignBatchClient:
         return result
 
 
-def _step_ok(step) -> bool:
-    result = getattr(step, "adapter_result", None) or {}
+def _step_ok(step) -> bool:    result = getattr(step, "adapter_result", None) or {}
     if not isinstance(result, dict):
         return bool(getattr(step, "action_succeeded", False))
     receipt = result.get("batch_receipt")
@@ -223,6 +232,9 @@ async def run_one(task, mode, executor, session_id):
 
     brain_log = Path(os.environ.get("CU22_EVIDENCE", "evidence/brain_calls.jsonl"))
     brain_pos = brain_log.stat().st_size if brain_log.exists() else 0
+    # Capture executor-level dispatch lines per run so every executed action
+    # is attributable (grant-path forensics).
+    log_lines: List[str] = []
 
     async def approval_callback(step):
         events.append({"type": "approval.auto", "step": getattr(step, "step", None)})
@@ -240,6 +252,11 @@ async def run_one(task, mode, executor, session_id):
         max_cost_usd=50.0,
     )
     loop_adapter = executor if mode == "batched" else PerStepVocabularyAdapter(executor)
+    capture = _LogCapture()
+    capture.lines = log_lines
+    for logger_name in ("core.computer_use_executor", "core.planning_loop",
+                        "core.batch_dispatch", "adapters.browser.cdp_adapter"):
+        logging.getLogger(logger_name).addHandler(capture)
     loop = PlanningLoop(
         vision_provider=provider,
         adapter=loop_adapter,
@@ -255,8 +272,13 @@ async def run_one(task, mode, executor, session_id):
     await asyncio.sleep(1.0)  # let the page settle before the first screenshot
 
     started = time.time()
-    result = await loop.run(task=task["prompt"], session_id=session_id,
-                            run_id=f"cu22-{task['name']}-{mode}")
+    try:
+        result = await loop.run(task=task["prompt"], session_id=session_id,
+                                run_id=f"cu22-{task['name']}-{mode}")
+    finally:
+        for logger_name in ("core.computer_use_executor", "core.planning_loop",
+                            "core.batch_dispatch", "adapters.browser.cdp_adapter"):
+            logging.getLogger(logger_name).removeHandler(capture)
     wall_s = round(time.time() - started, 1)
 
     state = _site_state()
@@ -293,6 +315,8 @@ async def run_one(task, mode, executor, session_id):
         "receipt_ids": [g["approval_id"] for g in client.grants],
         "ground_truth_success": bool(task["success"](state)),
         "error": result.error,
+        "events": events,
+        "dispatch_log": log_lines,
     }
 
 
