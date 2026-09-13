@@ -112,7 +112,12 @@ impl TestApp {
     /// `public` schema's operator-managed history (`VersionMismatch` on
     /// shared bookkeeping). The same embedded `migrations_pg` set the
     /// library applies is used here — the legacy SQLite-dialect `migrations/`
-    /// tree it replaced cannot run against Postgres.
+    /// tree it replaced cannot run against Postgres. `public` stays on the
+    /// search_path after the fresh schema because the migration tree
+    /// qualifies every cowork table and enum type as `public.*`, and sqlx
+    /// binds derived enums with explicit `::<type>` casts that must resolve
+    /// (without `public` on the path, any query binding `RunMode`/`EventType`
+    /// fails with `type "runmode" does not exist`).
     async fn init_test_db() -> PgPool {
         let database_url = std::env::var("TEST_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test".to_string());
@@ -127,7 +132,7 @@ impl TestApp {
                     sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
                         .execute(&mut *conn)
                         .await?;
-                    sqlx::query(&format!("SET search_path TO {}", schema))
+                    sqlx::query(&format!("SET search_path TO {}, public", schema))
                         .execute(&mut *conn)
                         .await?;
                     Ok(())

@@ -3,13 +3,34 @@
 //! Provides REST API endpoints for job management within runs.
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::{db::cowork_models::*, ApiError, ApiState};
+use crate::{
+    auth::middleware::AuthContext, db::cowork_models::*, routes::runs::ensure_run_accessible,
+    ApiError, ApiState,
+};
+
+/// Load the run and verify the caller may access it, using the same tenant
+/// convention as the run routes (tenant_id == authenticated user id; runs
+/// with no tenant are internal/shared and are not scope-checked).
+async fn ensure_run_accessible_by_id(
+    state: &ApiState,
+    run_id: &str,
+    auth_context: &AuthContext,
+) -> Result<(), ApiError> {
+    let run: Option<Run> = sqlx::query_as("SELECT * FROM runs WHERE id = $1")
+        .bind(run_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+
+    let run = run.ok_or_else(|| ApiError::NotFound(format!("Run not found: {}", run_id)))?;
+    ensure_run_accessible(&run, auth_context)
+}
 
 /// Query parameters for listing jobs
 #[derive(Debug, Deserialize, Default)]
@@ -24,7 +45,7 @@ pub struct ListJobsQuery {
 pub struct CreateJobRequest {
     pub name: String,
     pub description: Option<String>,
-    pub priority: Option<i32>,
+    pub priority: Option<i64>,
     pub config: JobConfig,
 }
 
@@ -39,19 +60,12 @@ pub struct UpdateJobRequest {
 /// List jobs for a run
 pub async fn list_jobs(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(run_id): Path<String>,
     Query(query): Query<ListJobsQuery>,
 ) -> Result<Json<Vec<Job>>, ApiError> {
-    // Verify run exists
-    let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = $1")
-        .bind(&run_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(|e| ApiError::DatabaseError(e))?;
-
-    if run.is_none() {
-        return Err(ApiError::NotFound(format!("Run not found: {}", run_id)));
-    }
+    // Verify run exists and belongs to the caller's tenant
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
 
     let limit = query.limit.unwrap_or(100);
     let offset = query.offset.unwrap_or(0);
@@ -85,21 +99,14 @@ pub async fn list_jobs(
 /// Create a new job for a run
 pub async fn create_job(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(run_id): Path<String>,
     Json(request): Json<CreateJobRequest>,
 ) -> Result<Json<Job>, ApiError> {
     tracing::info!("Creating job '{}' for run: {}", request.name, run_id);
 
-    // Verify run exists
-    let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = $1")
-        .bind(&run_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(|e| ApiError::DatabaseError(e))?;
-
-    if run.is_none() {
-        return Err(ApiError::NotFound(format!("Run not found: {}", run_id)));
-    }
+    // Verify run exists and belongs to the caller's tenant
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
 
     let job_id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
@@ -121,16 +128,16 @@ pub async fn create_job(
     .bind(&request.description)
     .bind(JobStatus::Pending)
     .bind(priority)
-    .bind(None::<i32>) // queue_position
+    .bind(None::<i64>) // queue_position
     .bind(sqlx::types::Json(request.config.clone()))
     .bind(None::<chrono::DateTime<chrono::Utc>>) // scheduled_at
     .bind(None::<chrono::DateTime<chrono::Utc>>) // started_at
     .bind(None::<chrono::DateTime<chrono::Utc>>) // completed_at
-    .bind(None::<i32>) // exit_code
+    .bind(None::<i64>) // exit_code
     .bind(None::<sqlx::types::Json<serde_json::Value>>) // result
     .bind(None::<String>) // error_message
-    .bind(0i32) // retry_count
-    .bind(0i32) // max_retries
+    .bind(0i64) // retry_count
+    .bind(0i64) // max_retries
     .bind(now)
     .bind(now)
     .fetch_one(&state.db)
@@ -159,8 +166,11 @@ pub async fn create_job(
 /// Get job by ID
 pub async fn get_job(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<Json<Job>, ApiError> {
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
+
     let job = sqlx::query_as::<_, Job>("SELECT * FROM jobs WHERE id = $1 AND run_id = $2")
         .bind(&job_id)
         .bind(&run_id)
@@ -175,9 +185,12 @@ pub async fn get_job(
 /// Update job
 pub async fn update_job(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path((run_id, job_id)): Path<(String, String)>,
     Json(request): Json<UpdateJobRequest>,
 ) -> Result<Json<Job>, ApiError> {
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
+
     // Get existing job
     let job = sqlx::query_as::<_, Job>("SELECT * FROM jobs WHERE id = $1 AND run_id = $2")
         .bind(&job_id)
@@ -216,8 +229,11 @@ pub async fn update_job(
 /// Delete a job
 pub async fn delete_job(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<(), ApiError> {
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
+
     let result = sqlx::query("DELETE FROM jobs WHERE id = $1 AND run_id = $2")
         .bind(&job_id)
         .bind(&run_id)
@@ -235,8 +251,11 @@ pub async fn delete_job(
 /// Start a job (mark as running)
 pub async fn start_job(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<Json<Job>, ApiError> {
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
+
     let now = chrono::Utc::now();
 
     let job = sqlx::query_as::<_, Job>(
@@ -282,9 +301,12 @@ pub async fn start_job(
 /// Complete a job successfully
 pub async fn complete_job(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path((run_id, job_id)): Path<(String, String)>,
     Json(result): Json<serde_json::Value>,
 ) -> Result<Json<Job>, ApiError> {
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
+
     let now = chrono::Utc::now();
     let result_clone = result.clone();
 
@@ -298,7 +320,7 @@ pub async fn complete_job(
     )
     .bind(JobStatus::Completed)
     .bind(now)
-    .bind(0i32) // exit_code 0 = success
+    .bind(0i64) // exit_code 0 = success
     .bind(sqlx::types::Json(result))
     .bind(now)
     .bind(&job_id)
@@ -333,9 +355,12 @@ pub async fn complete_job(
 /// Fail a job
 pub async fn fail_job(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path((run_id, job_id)): Path<(String, String)>,
     Json(request): Json<FailJobRequest>,
 ) -> Result<Json<Job>, ApiError> {
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
+
     let now = chrono::Utc::now();
 
     let job = sqlx::query_as::<_, Job>(
@@ -383,15 +408,18 @@ pub async fn fail_job(
 /// Fail job request
 #[derive(Debug, Deserialize)]
 pub struct FailJobRequest {
-    pub exit_code: Option<i32>,
+    pub exit_code: Option<i64>,
     pub error_message: String,
 }
 
 /// Cancel a job
 pub async fn cancel_job(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<Json<Job>, ApiError> {
+    ensure_run_accessible_by_id(&state, &run_id, &auth_context).await?;
+
     let now = chrono::Utc::now();
 
     let job = sqlx::query_as::<_, Job>(

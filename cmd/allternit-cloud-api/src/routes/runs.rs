@@ -103,10 +103,12 @@ pub async fn list_runs(
 
 pub async fn get_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<Json<Run>, ApiError> {
     // Use shared run service from state
     let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     Ok(Json(run))
 }
@@ -115,9 +117,13 @@ pub async fn get_run(
 
 pub async fn update_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
     Json(request): Json<UpdateRunRequest>,
 ) -> Result<Json<Run>, ApiError> {
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
     let run = state.run_service.update(&id, request).await?;
 
     Ok(Json(run))
@@ -127,8 +133,12 @@ pub async fn update_run(
 
 pub async fn delete_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<(), ApiError> {
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
     state.run_service.delete(&id).await?;
 
     Ok(())
@@ -138,9 +148,13 @@ pub async fn delete_run(
 
 pub async fn start_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<Json<Run>, ApiError> {
     tracing::info!("Starting run: {}", id);
+
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     let run = state.run_service.start(&id).await?;
 
@@ -151,9 +165,13 @@ pub async fn start_run(
 
 pub async fn pause_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<Json<Run>, ApiError> {
     tracing::info!("Pausing run: {}", id);
+
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     let run = state.run_service.pause(&id).await?;
 
@@ -164,9 +182,13 @@ pub async fn pause_run(
 
 pub async fn resume_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<Json<Run>, ApiError> {
     tracing::info!("Resuming run: {}", id);
+
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     let run = state.run_service.resume(&id).await?;
 
@@ -177,9 +199,13 @@ pub async fn resume_run(
 
 pub async fn cancel_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<Json<Run>, ApiError> {
     tracing::info!("Cancelling run: {}", id);
+
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     let run = state.run_service.cancel(&id, None).await?;
 
@@ -195,9 +221,13 @@ pub struct AttachRequest {
 
 pub async fn attach_to_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
     Json(request): Json<AttachRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
     // Use shared session manager from state
     let (client_id, _rx) = state
         .session_manager
@@ -219,9 +249,13 @@ pub struct DetachRequest {
 
 pub async fn detach_from_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
     Json(request): Json<DetachRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
     // Use shared session manager from state
     state
         .session_manager
@@ -238,8 +272,12 @@ pub async fn detach_from_run(
 /// Get attachments for a run
 pub async fn get_run_attachments(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<Json<Vec<Attachment>>, ApiError> {
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
     // Use shared session manager from state
     let attachments = state.session_manager.get_attachments(&id).await?;
 
@@ -250,9 +288,13 @@ pub async fn get_run_attachments(
 
 pub async fn get_run_events(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
     Query(query): Query<EventQuery>,
 ) -> Result<Json<Vec<Event>>, ApiError> {
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
     let filter = EventFilter {
         event_types: None,
         since: None,
@@ -279,6 +321,7 @@ pub struct CreateCheckpointBody {
 
 pub async fn create_checkpoint(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
     Json(request): Json<CreateCheckpointBody>,
 ) -> Result<Json<Checkpoint>, ApiError> {
@@ -286,6 +329,7 @@ pub async fn create_checkpoint(
 
     // Get current run to capture step_cursor
     let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     let step_cursor = run.step_cursor.unwrap_or_else(|| "0".to_string());
 
@@ -310,8 +354,12 @@ pub async fn create_checkpoint(
 /// List checkpoints for a run
 pub async fn list_checkpoints(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<Json<Vec<CheckpointSummary>>, ApiError> {
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
     // Use shared run service from state
     let checkpoints = state.run_service.list_checkpoints(&id).await?;
 
@@ -321,10 +369,15 @@ pub async fn list_checkpoints(
 /// Get checkpoint by ID
 pub async fn get_checkpoint(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<Json<Checkpoint>, ApiError> {
     // Use shared run service from state
     let checkpoint = state.run_service.get_checkpoint(&id).await?;
+
+    // Scope through the checkpoint's run (same tenant convention as run routes)
+    let run = state.run_service.get(&checkpoint.run_id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     Ok(Json(checkpoint))
 }
@@ -337,6 +390,7 @@ pub struct RestoreCheckpointBody {
 
 pub async fn restore_checkpoint(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
     Json(request): Json<RestoreCheckpointBody>,
 ) -> Result<Json<Run>, ApiError> {
@@ -345,6 +399,9 @@ pub async fn restore_checkpoint(
         id,
         request.checkpoint_id
     );
+
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     // Use shared run service from state
     let run = state
@@ -363,9 +420,15 @@ pub async fn restore_checkpoint(
 /// Delete a checkpoint
 pub async fn delete_checkpoint(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
 ) -> Result<(), ApiError> {
     tracing::info!("Deleting checkpoint: {}", id);
+
+    // Scope through the checkpoint's run (same tenant convention as run routes)
+    let checkpoint = state.run_service.get_checkpoint(&id).await?;
+    let run = state.run_service.get(&checkpoint.run_id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     // Use shared run service from state
     state.run_service.delete_checkpoint(&id).await?;
@@ -374,10 +437,173 @@ pub async fn delete_checkpoint(
     Ok(())
 }
 
+/// Verify the caller may access the run, using the same tenant convention as
+/// create_run/list_runs (tenant_id == authenticated user id). Runs with no
+/// tenant are internal/shared and are not scope-checked here.
+pub(crate) fn ensure_run_accessible(run: &Run, auth_context: &AuthContext) -> Result<(), ApiError> {
+    if let Some(tenant_id) = &run.tenant_id {
+        if tenant_id != &auth_context.user.user_id {
+            return Err(ApiError::NotFound(format!("Run not found: {}", run.id)));
+        }
+    }
+    Ok(())
+}
+
+/// Recover a run from its latest checkpoint
+///
+/// DB-level equivalent of allternit-api's recover handler: that crate rewinds
+/// its in-memory run runtime and marks the run `recovering`; cloud-api has no
+/// such runtime, so this loads the run's latest resumable checkpoint, restores
+/// the run onto it (status back to pending, step_cursor rewound — the same
+/// operation as POST /runs/:id/restore), then transitions the run to queued so
+/// an executor picks it up again, and records a `run_recovered` event.
+pub async fn recover_run(
+    State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
+    Path(id): Path<String>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    tracing::info!("Recovering run: {}", id);
+
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
+    // Latest resumable checkpoint for this run
+    let checkpoint: Option<Checkpoint> = sqlx::query_as(
+        "SELECT * FROM checkpoints WHERE run_id = $1 AND resumable = TRUE ORDER BY created_at DESC LIMIT 1",
+    )
+    .bind(&id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(ApiError::DatabaseError)?;
+
+    let Some(checkpoint) = checkpoint else {
+        return Ok(Json(
+            serde_json::json!({ "recovered": false, "reason": "no checkpoint" }),
+        ));
+    };
+
+    let checkpoint_id = checkpoint.id.clone();
+    let cursor = checkpoint.step_cursor.clone();
+
+    // Restore the run onto the checkpoint, then queue it for re-execution.
+    let _run = state
+        .run_service
+        .restore_checkpoint(&id, &checkpoint_id)
+        .await?;
+    let _run = state.run_service.transition(&id, RunStatus::Queued).await?;
+
+    let _ = state
+        .event_store
+        .append(
+            &id,
+            EventType::RunRecovered,
+            serde_json::json!({
+                "checkpoint_id": checkpoint_id,
+                "cursor": cursor,
+                "recovered_at": chrono::Utc::now().to_rfc3339(),
+            }),
+        )
+        .await;
+
+    tracing::info!(
+        "Run {} recovered from checkpoint {} at cursor {}",
+        id,
+        checkpoint_id,
+        cursor
+    );
+    Ok(Json(
+        serde_json::json!({ "recovered": true, "checkpoint_id": checkpoint_id, "cursor": cursor }),
+    ))
+}
+
+/// Create a handoff for a run
+///
+/// Parity with allternit-api's create_handoff, minus the in-memory runtime
+/// handoff job: cloud-api's job model is command-based, so only the handoff
+/// record and a `handoff_created` run event are written here.
+pub async fn create_handoff(
+    State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
+    Path(run_id): Path<String>,
+    Json(request): Json<CreateHandoffRequest>,
+) -> Result<Json<Handoff>, ApiError> {
+    tracing::info!(
+        "Creating handoff for run: {} to agent: {}",
+        run_id,
+        request.to_agent_id
+    );
+
+    if request.to_agent_id.trim().is_empty() {
+        return Err(ApiError::BadRequest(
+            "to_agent_id must not be empty".to_string(),
+        ));
+    }
+
+    // Run must exist and belong to the caller's tenant
+    let run = state.run_service.get(&run_id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
+    let handoff_id = uuid::Uuid::new_v4().to_string();
+
+    let handoff: Handoff = sqlx::query_as(
+        r#"
+        INSERT INTO handoffs (id, run_id, to_agent_id, task_id, note, status)
+        VALUES ($1, $2, $3, $4, $5, 'pending')
+        RETURNING *
+        "#,
+    )
+    .bind(&handoff_id)
+    .bind(&run_id)
+    .bind(&request.to_agent_id)
+    .bind(&request.task_id)
+    .bind(&request.note)
+    .fetch_one(&state.db)
+    .await
+    .map_err(ApiError::DatabaseError)?;
+
+    let _ = state
+        .event_store
+        .append(
+            &run_id,
+            EventType::HandoffCreated,
+            serde_json::json!({
+                "handoff_id": handoff.id,
+                "to_agent_id": request.to_agent_id,
+                "task_id": request.task_id,
+            }),
+        )
+        .await;
+
+    tracing::info!("Handoff created: {} for run: {}", handoff.id, run_id);
+    Ok(Json(handoff))
+}
+
+/// List handoffs for a run
+pub async fn list_handoffs(
+    State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
+    Path(run_id): Path<String>,
+) -> Result<Json<Vec<Handoff>>, ApiError> {
+    // Run must exist and belong to the caller's tenant
+    let run = state.run_service.get(&run_id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
+
+    let handoffs = sqlx::query_as::<_, Handoff>(
+        "SELECT * FROM handoffs WHERE run_id = $1 ORDER BY created_at DESC",
+    )
+    .bind(&run_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(ApiError::DatabaseError)?;
+
+    Ok(Json(handoffs))
+}
+
 /// Server-sent events endpoint for real-time run updates
 
 pub async fn run_events_sse(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Path(id): Path<String>,
     Query(query): Query<EventQuery>,
 ) -> Result<
@@ -391,6 +617,9 @@ pub async fn run_events_sse(
     use tokio_stream::wrappers::BroadcastStream;
 
     // Use shared event store from state
+
+    let run = state.run_service.get(&id).await?;
+    ensure_run_accessible(&run, &auth_context)?;
 
     // Get historical events if cursor provided
     let historical_events = if let Some(cursor) = query.cursor {

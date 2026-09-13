@@ -162,8 +162,8 @@ pub struct Run {
     pub mode: RunMode,
     pub status: RunStatus,
     pub step_cursor: Option<String>,
-    pub total_steps: Option<i32>,
-    pub completed_steps: i32,
+    pub total_steps: Option<i64>,
+    pub completed_steps: i64,
     pub config: sqlx::types::Json<RunConfig>,
     pub owner_id: Option<String>,
     pub tenant_id: Option<String>,
@@ -186,8 +186,8 @@ pub struct RunSummary {
     pub name: String,
     pub mode: RunMode,
     pub status: RunStatus,
-    pub completed_steps: i32,
-    pub total_steps: Option<i32>,
+    pub completed_steps: i64,
+    pub total_steps: Option<i64>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -234,17 +234,17 @@ pub struct Job {
     pub name: String,
     pub description: Option<String>,
     pub status: JobStatus,
-    pub priority: i32,
-    pub queue_position: Option<i32>,
+    pub priority: i64,
+    pub queue_position: Option<i64>,
     pub config: sqlx::types::Json<JobConfig>,
     pub scheduled_at: Option<DateTime<Utc>>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
-    pub exit_code: Option<i32>,
+    pub exit_code: Option<i64>,
     pub result: Option<sqlx::types::Json<serde_json::Value>>,
     pub error_message: Option<String>,
-    pub retry_count: i32,
-    pub max_retries: i32,
+    pub retry_count: i64,
+    pub max_retries: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -255,7 +255,7 @@ pub struct QueuedJob {
     pub id: String,
     pub run_id: String,
     pub name: String,
-    pub priority: i32,
+    pub priority: i64,
     pub config: sqlx::types::Json<JobConfig>,
     pub created_at: DateTime<Utc>,
 }
@@ -333,8 +333,8 @@ pub struct Schedule {
     pub misfire_policy: MisfirePolicy,
     pub last_run_at: Option<DateTime<Utc>>,
     pub next_run_at: Option<DateTime<Utc>>,
-    pub run_count: i32,
-    pub misfire_count: i32,
+    pub run_count: i64,
+    pub misfire_count: i64,
     pub owner_id: Option<String>,
     pub tenant_id: Option<String>,
     pub region_id: Option<String>,
@@ -351,7 +351,7 @@ pub struct ScheduleSummary {
     pub cron_expr: String,
     pub natural_lang: Option<String>,
     pub next_run_at: Option<DateTime<Utc>>,
-    pub run_count: i32,
+    pub run_count: i64,
 }
 
 // ============================================================================
@@ -397,6 +397,10 @@ pub enum EventType {
     CheckpointCreated,
     CheckpointRestored,
 
+    // Recovery / handoff events
+    RunRecovered,
+    HandoffCreated,
+
     // Job events
     JobQueued,
     JobStarted,
@@ -436,6 +440,8 @@ impl EventType {
             EventType::ApprovalTimeout => "Approval Timeout",
             EventType::CheckpointCreated => "Checkpoint Created",
             EventType::CheckpointRestored => "Checkpoint Restored",
+            EventType::RunRecovered => "Run Recovered",
+            EventType::HandoffCreated => "Handoff Created",
             EventType::JobQueued => "Job Queued",
             EventType::JobStarted => "Job Started",
             EventType::JobCompleted => "Job Completed",
@@ -545,6 +551,32 @@ pub struct CheckpointSummary {
     pub step_cursor: String,
     pub resumable: bool,
     pub created_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// Handoff Models
+// ============================================================================
+
+/// Handoff record - transfers a run to another agent/task.
+/// Same column shape as allternit-api's cowork_handoffs table; the
+/// `status` column is plain text ('pending' at creation).
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct Handoff {
+    pub id: String,
+    pub run_id: String,
+    pub to_agent_id: String,
+    pub task_id: Option<String>,
+    pub note: Option<String>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Create handoff request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateHandoffRequest {
+    pub to_agent_id: String,
+    pub task_id: Option<String>,
+    pub note: Option<String>,
 }
 
 // ============================================================================
@@ -800,7 +832,7 @@ pub struct Task {
     pub title: String,
     pub description: Option<String>,
     pub status: TaskStatus,
-    pub priority: i32,
+    pub priority: i64,
     pub estimated_minutes: Option<i32>,
     pub deadline: Option<DateTime<Utc>>,
     pub assignee_type: Option<AssigneeType>,
@@ -851,8 +883,8 @@ pub struct TaskQueueEntry {
     pub completed_at: Option<DateTime<Utc>>,
     pub result: Option<sqlx::types::Json<serde_json::Value>>,
     pub error: Option<String>,
-    pub retry_count: i32,
-    pub max_retries: i32,
+    pub retry_count: i64,
+    pub max_retries: i64,
     pub created_at: DateTime<Utc>,
 }
 
@@ -878,7 +910,7 @@ pub struct CreateTaskRequest {
     pub title: String,
     pub description: Option<String>,
     pub status: Option<TaskStatus>,
-    pub priority: Option<i32>,
+    pub priority: Option<i64>,
     pub estimated_minutes: Option<i32>,
     pub deadline: Option<DateTime<Utc>>,
     pub assignee_type: Option<AssigneeType>,
@@ -895,7 +927,7 @@ pub struct UpdateTaskRequest {
     pub title: Option<String>,
     pub description: Option<String>,
     pub status: Option<TaskStatus>,
-    pub priority: Option<i32>,
+    pub priority: Option<i64>,
     pub estimated_minutes: Option<i32>,
     pub deadline: Option<DateTime<Utc>>,
     pub assignee_type: Option<AssigneeType>,
@@ -931,7 +963,7 @@ pub struct TaskResponse {
     pub title: String,
     pub description: Option<String>,
     pub status: String,
-    pub priority: i32,
+    pub priority: i64,
     pub estimated_minutes: Option<i32>,
     pub deadline: Option<String>,
     pub assignee_type: Option<String>,

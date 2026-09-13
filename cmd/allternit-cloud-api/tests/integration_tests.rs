@@ -121,7 +121,7 @@ async fn test_run_pause_resume() {
     let run = app.start_run(&run.id).await;
     
     // Move run to running state (since start might queue it, let's transition manually via db)
-    sqlx::query("UPDATE runs SET status = 'running' WHERE id = ?")
+    sqlx::query("UPDATE runs SET status = 'running' WHERE id = $1")
         .bind(&run.id)
         .execute(&app.db)
         .await
@@ -639,4 +639,188 @@ async fn test_full_workflow_with_approval() {
     // 8. Attach a client
     let attach_result = app.attach_to_run(&run.id, ClientType::Web, Some("operator")).await;
     assert!(attach_result.get("attached").unwrap().as_bool().unwrap());
+}
+
+
+// ============================================================================
+// Recover + Handoff Tests
+// ============================================================================
+
+/// The dev-mode auth middleware authenticates every request as `dev-user`;
+/// re-tenanting a run to another user simulates a different caller so the
+/// access-control (404) paths can be exercised through the real router.
+async fn retenant_run(app: &TestApp, run_id: &str, tenant_id: &str) {
+    sqlx::query("UPDATE runs SET tenant_id = $1 WHERE id = $2")
+        .bind(tenant_id)
+        .bind(run_id)
+        .execute(&app.db)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn test_recover_run_without_checkpoint() {
+    let app = TestApp::new().await;
+    let run = app.create_run("Recover No Checkpoint").await;
+
+    let response = app
+        .post(&format!("/api/v1/runs/{}/recover", run.id), serde_json::json!({}))
+        .await;
+    TestApp::assert_success(&response);
+
+    let body: serde_json::Value = TestApp::parse_json(response).await;
+    assert_eq!(body["recovered"], false);
+    assert_eq!(body["reason"], "no checkpoint");
+
+    // The run is left untouched.
+    let run = app.get_run(&run.id).await;
+    assert!(matches!(run.status, RunStatus::Pending));
+}
+
+#[tokio::test]
+async fn test_recover_run_with_checkpoint_transitions_and_emits_event() {
+    let app = TestApp::new().await;
+    let run = app.create_run("Recover With Checkpoint").await;
+
+    // Create a resumable checkpoint for the run.
+    let checkpoint_body = serde_json::json!({
+        "name": "pre-failure",
+        "workspace_state": {"files": ["a.txt"]},
+    });
+    let response = app
+        .post(
+            &format!("/api/v1/runs/{}/checkpoints", run.id),
+            checkpoint_body,
+        )
+        .await;
+    TestApp::assert_success(&response);
+    let checkpoint: Checkpoint = TestApp::parse_json(response).await;
+    assert!(checkpoint.resumable);
+
+    // Recover: restores onto the checkpoint, then queues the run.
+    let response = app
+        .post(&format!("/api/v1/runs/{}/recover", run.id), serde_json::json!({}))
+        .await;
+    TestApp::assert_success(&response);
+    let body: serde_json::Value = TestApp::parse_json(response).await;
+    assert_eq!(body["recovered"], true);
+    assert_eq!(body["checkpoint_id"], checkpoint.id);
+
+    // Run transitioned to queued for re-execution.
+    let run = app.get_run(&run.id).await;
+    assert!(matches!(run.status, RunStatus::Queued));
+
+    // run_recovered event was recorded.
+    let events = app.get_run_events(&run.id).await;
+    let recovered = events
+        .iter()
+        .any(|e| matches!(e.event_type, EventType::RunRecovered));
+    assert!(recovered, "expected a run_recovered event");
+}
+
+#[tokio::test]
+async fn test_recover_run_other_tenant_is_404() {
+    let app = TestApp::new().await;
+    let run = app.create_run("Recover Other Tenant").await;
+    retenant_run(&app, &run.id, "user-b").await;
+
+    let response = app
+        .post(&format!("/api/v1/runs/{}/recover", run.id), serde_json::json!({}))
+        .await;
+    assert_eq!(response.status(), 404);
+}
+
+#[tokio::test]
+async fn test_handoffs_create_and_list_round_trip() {
+    let app = TestApp::new().await;
+    let run = app.create_run("Handoff Round Trip").await;
+
+    // Create a handoff.
+    let body = CreateHandoffRequest {
+        to_agent_id: "agent-b".to_string(),
+        task_id: Some("task-1".to_string()),
+        note: Some("take it from here".to_string()),
+    };
+    let response = app
+        .post(&format!("/api/v1/runs/{}/handoffs", run.id), body)
+        .await;
+    TestApp::assert_success(&response);
+    let handoff: Handoff = TestApp::parse_json(response).await;
+    assert_eq!(handoff.run_id, run.id);
+    assert_eq!(handoff.to_agent_id, "agent-b");
+    assert_eq!(handoff.task_id.as_deref(), Some("task-1"));
+    assert_eq!(handoff.note.as_deref(), Some("take it from here"));
+    assert_eq!(handoff.status, "pending");
+
+    // List round-trips the created handoff.
+    let response = app.get(&format!("/api/v1/runs/{}/handoffs", run.id)).await;
+    TestApp::assert_success(&response);
+    let handoffs: Vec<Handoff> = TestApp::parse_json(response).await;
+    assert_eq!(handoffs.len(), 1);
+    assert_eq!(handoffs[0].id, handoff.id);
+
+    // handoff_created event was recorded.
+    let events = app.get_run_events(&run.id).await;
+    let created = events
+        .iter()
+        .any(|e| matches!(e.event_type, EventType::HandoffCreated));
+    assert!(created, "expected a handoff_created event");
+}
+
+#[tokio::test]
+async fn test_handoffs_create_rejects_empty_agent_and_missing_run() {
+    let app = TestApp::new().await;
+    let run = app.create_run("Handoff Validation").await;
+
+    // Empty to_agent_id is a 400.
+    let body = CreateHandoffRequest {
+        to_agent_id: "  ".to_string(),
+        task_id: None,
+        note: None,
+    };
+    let response = app
+        .post(&format!("/api/v1/runs/{}/handoffs", run.id), body)
+        .await;
+    assert_eq!(response.status(), 400);
+
+    // Nonexistent run is a 404.
+    let body = CreateHandoffRequest {
+        to_agent_id: "agent-b".to_string(),
+        task_id: None,
+        note: None,
+    };
+    let response = app
+        .post("/api/v1/runs/nonexistent-id/handoffs", body)
+        .await;
+    assert_eq!(response.status(), 404);
+}
+
+#[tokio::test]
+async fn test_handoffs_other_tenant_is_404() {
+    let app = TestApp::new().await;
+    let run = app.create_run("Handoffs Other Tenant").await;
+    retenant_run(&app, &run.id, "user-b").await;
+
+    // List as the non-owning caller: 404.
+    let response = app.get(&format!("/api/v1/runs/{}/handoffs", run.id)).await;
+    assert_eq!(response.status(), 404);
+
+    // Create as the non-owning caller: 404.
+    let body = CreateHandoffRequest {
+        to_agent_id: "agent-c".to_string(),
+        task_id: None,
+        note: None,
+    };
+    let response = app
+        .post(&format!("/api/v1/runs/{}/handoffs", run.id), body)
+        .await;
+    assert_eq!(response.status(), 404);
+
+    // Nothing was written for the foreign run.
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM handoffs WHERE run_id = $1")
+        .bind(&run.id)
+        .fetch_one(&app.db)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
 }

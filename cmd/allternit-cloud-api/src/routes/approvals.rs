@@ -183,21 +183,28 @@ pub async fn create_approval(
     let id = Uuid::new_v4().to_string();
     let now = Utc::now();
     let priority = request.priority.unwrap_or_default();
-    let requested_by = auth_context.user.user_id;
 
-    // Verify the run exists
-    let run_exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM runs WHERE id = $1)")
+    // Verify the run exists and belongs to the caller's tenant (same
+    // convention as the run routes: tenant_id == authenticated user id,
+    // NULL-tenant internal runs allowed).
+    let run: Option<Run> = sqlx::query_as("SELECT * FROM runs WHERE id = $1")
         .bind(&request.run_id)
-        .fetch_one(&state.db)
+        .fetch_optional(&state.db)
         .await
         .map_err(ApiError::DatabaseError)?;
 
-    if !run_exists {
-        return Err(ApiError::NotFound(format!(
-            "Run '{}' not found",
-            request.run_id
-        )));
-    }
+    let run = match run {
+        Some(run) => run,
+        None => {
+            return Err(ApiError::NotFound(format!(
+                "Run '{}' not found",
+                request.run_id
+            )));
+        }
+    };
+    crate::routes::runs::ensure_run_accessible(&run, &auth_context)?;
+
+    let requested_by = auth_context.user.user_id;
 
     // Insert the approval request
     sqlx::query(

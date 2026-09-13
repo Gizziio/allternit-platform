@@ -135,6 +135,15 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
             "/api/v1/runs/:id/restore",
             post(routes::runs::restore_checkpoint),
         )
+        .route("/api/v1/runs/:id/recover", post(routes::runs::recover_run))
+        .route(
+            "/api/v1/runs/:run_id/handoffs",
+            get(routes::runs::list_handoffs),
+        )
+        .route(
+            "/api/v1/runs/:run_id/handoffs",
+            post(routes::runs::create_handoff),
+        )
         // Job endpoints
         .route("/api/v1/runs/:run_id/jobs", post(routes::jobs::create_job))
         .route("/api/v1/runs/:run_id/jobs", get(routes::jobs::list_jobs))
