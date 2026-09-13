@@ -28,16 +28,91 @@ pub const MACOS_LOG_DIR: &str = "/Library/Logs/allternit";
 pub const SYSTEMD_UNIT_PATH: &str = "/etc/systemd/system/allternit-node.service";
 pub const SERVICE_NAME: &str = "allternit-node";
 
-pub fn log_file() -> PathBuf {
+/// Resolve the user the daemon should run as. LaunchDaemons default to root,
+/// but the daemon must operate on the pairing user's files (identity,
+/// terminals, exec) — so it runs as whoever paired the machine: `$SUDO_USER`
+/// when installed via sudo, else the owner of the identity file. `None` means
+/// root (headless installs, current behavior).
+pub fn resolve_pairing_user(identity_path: &Path) -> Option<String> {
+    if let Ok(user) = std::env::var("SUDO_USER") {
+        if !user.is_empty() && user != "root" {
+            return Some(user);
+        }
+    }
+    if identity_path.exists() {
+        if let Ok(owner) = run_command("stat", &["-f", "%Su", &identity_path.to_string_lossy()]) {
+            if !owner.is_empty() && owner != "root" {
+                return Some(owner);
+            }
+        }
+    }
+    None
+}
+
+/// Home directory of `user` on macOS: dscl first, `eval echo ~user` as a
+/// fallback, then the conventional `/Users/<user>`.
+pub fn user_home(user: &str) -> Option<PathBuf> {
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(output) = run_command(
+            "dscl",
+            &[".", "-read", &format!("/Users/{user}"), "NFSHomeDirectory"],
+        ) {
+            if let Some((_, home)) = output.split_once(':') {
+                let home = home.trim();
+                if home.starts_with('/') {
+                    return Some(PathBuf::from(home));
+                }
+            }
+        }
+        if let Ok(output) = run_command("sh", &["-c", &format!("eval echo ~{user}")]) {
+            let home = output.trim();
+            if home.starts_with('/') && !home.starts_with('~') {
+                return Some(PathBuf::from(home));
+            }
+        }
+        return Some(PathBuf::from(format!("/Users/{user}")));
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        if let Ok(output) = run_command("sh", &["-c", &format!("eval echo ~{user}")]) {
+            let home = output.trim();
+            if home.starts_with('/') && !home.starts_with('~') {
+                return Some(PathBuf::from(home));
+            }
+        }
+        None
+    }
+}
+
+/// Daemon log file. When the daemon runs as the pairing user it cannot write
+/// `/Library/Logs`, so the log lives in that user's home instead.
+pub fn log_file(identity_path: &Path) -> PathBuf {
     match platform() {
-        ServicePlatform::Launchd => PathBuf::from(MACOS_LOG_DIR).join("node.log"),
+        ServicePlatform::Launchd => {
+            if let Some(user) = resolve_pairing_user(identity_path) {
+                if let Some(home) = user_home(&user) {
+                    return home.join("Library/Logs/allternit/node.log");
+                }
+            }
+            PathBuf::from(MACOS_LOG_DIR).join("node.log")
+        }
         ServicePlatform::Systemd => PathBuf::from("/var/log/allternit-node.log"),
     }
 }
 
 /// launchd plist for the daemon. Pure function so the unit shape is unit
-/// tested; `binary` is the absolute path of the running executable.
-pub fn launchd_plist(binary: &Path, identity_path: &Path) -> String {
+/// tested; `binary` is the absolute path of the running executable. When
+/// `user` is `Some((name, home))` the daemon runs as that user (`UserName`)
+/// and logs inside their home (a non-root daemon cannot write
+/// `/Library/Logs`).
+pub fn launchd_plist(binary: &Path, identity_path: &Path, user: Option<(&str, &Path)>) -> String {
+    let username_block = user
+        .map(|(name, _)| format!("    <key>UserName</key>\n    <string>{name}</string>\n"))
+        .unwrap_or_default();
+    let log_path = user
+        .map(|(_, home)| home.join("Library/Logs/allternit/node.log"))
+        .unwrap_or_else(|| PathBuf::from(MACOS_LOG_DIR).join("node.log"));
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -59,7 +134,7 @@ pub fn launchd_plist(binary: &Path, identity_path: &Path) -> String {
     <true/>
     <key>KeepAlive</key>
     <true/>
-    <key>StandardOutPath</key>
+{username_block}    <key>StandardOutPath</key>
     <string>{}</string>
     <key>StandardErrorPath</key>
     <string>{}</string>
@@ -70,8 +145,8 @@ pub fn launchd_plist(binary: &Path, identity_path: &Path) -> String {
 "#,
         binary.display(),
         identity_path.display(),
-        log_file().display(),
-        log_file().display(),
+        log_path.display(),
+        log_path.display(),
     )
 }
 
@@ -140,17 +215,33 @@ pub fn install(binary: &Path, identity_path: &Path) -> Result<String, String> {
     }
     match platform() {
         ServicePlatform::Launchd => {
-            let plist = launchd_plist(binary, identity_path);
+            let user = resolve_pairing_user(identity_path);
+            let user_ctx = user.as_deref().and_then(|name| {
+                user_home(name).map(|home| (name, home))
+            });
+            let plist = launchd_plist(binary, identity_path, user_ctx.as_ref().map(|(name, home)| (*name, home.as_path())));
             std::fs::write(MACOS_PLIST_PATH, &plist)
                 .map_err(|error| format!("write {MACOS_PLIST_PATH}: {error}"))?;
+            // A user daemon logs inside the user's home; create the dir and
+            // hand it to the pairing user (install runs as root).
+            if let Some((name, home)) = &user_ctx {
+                let log_dir = home.join("Library/Logs/allternit");
+                std::fs::create_dir_all(&log_dir)
+                    .map_err(|error| format!("create {}: {error}", log_dir.display()))?;
+                let _ = run_command("chown", &["-R", name, &log_dir.to_string_lossy()]);
+            }
             let _ = run_command("launchctl", &["bootout", "system/com.allternit.node"]);
             run_command(
                 "launchctl",
                 &["bootstrap", "system/", MACOS_PLIST_PATH],
             )?;
+            let user_note = user
+                .as_ref()
+                .map(|name| format!(" (running as {name})"))
+                .unwrap_or_default();
             Ok(format!(
-                "installed {MACOS_PLIST_PATH}; service is starting (logs: {})",
-                log_file().display()
+                "installed {MACOS_PLIST_PATH}{user_note}; service is starting (logs: {})",
+                log_file(identity_path).display()
             ))
         }
         ServicePlatform::Systemd => {
@@ -220,7 +311,7 @@ pub fn uninstall(identity_path: &Path, config_path: &Path, purge: bool) -> Resul
 }
 
 /// Human-readable service status (best effort, read-only).
-pub fn status() -> String {
+pub fn status(identity_path: &Path) -> String {
     match platform() {
         ServicePlatform::Launchd => {
             let loaded = run_command("launchctl", &["list"]).unwrap_or_default();
@@ -231,7 +322,7 @@ pub fn status() -> String {
             match line {
                 Some(line) => format!(
                     "LaunchDaemon loaded ({line}). logs: {}",
-                    log_file().display()
+                    log_file(identity_path).display()
                 ),
                 None => "LaunchDaemon not loaded (run `sudo allternit-node install`)".to_string(),
             }
@@ -245,8 +336,8 @@ pub fn status() -> String {
 }
 
 /// Tail the daemon log (last 100 lines) or print where logs live.
-pub fn logs() -> String {
-    let file = log_file();
+pub fn logs(identity_path: &Path) -> String {
+    let file = log_file(identity_path);
     if file.exists() {
         run_command("tail", &["-n", "100", &file.to_string_lossy()])
             .unwrap_or_else(|error| format!("unable to read {}: {error}", file.display()))
@@ -267,7 +358,7 @@ mod tests {
 
     #[test]
     fn launchd_plist_runs_binary_at_boot_and_survives_logout() {
-        let plist = launchd_plist(Path::new("/usr/local/bin/allternit-node"), Path::new("/home/u/.config/allternit/runtime-identity.json"));
+        let plist = launchd_plist(Path::new("/usr/local/bin/allternit-node"), Path::new("/home/u/.config/allternit/runtime-identity.json"), None);
         assert!(plist.contains("<key>RunAtLoad</key>"));
         assert!(plist.contains("<true/>"));
         assert!(plist.contains("<key>KeepAlive</key>"));
@@ -276,6 +367,22 @@ mod tests {
         assert!(plist.contains("ALLTERNIT_RUNTIME_IDENTITY_PATH"));
         assert!(plist.contains("com.allternit.node"));
         assert!(plist.contains("/Library/Logs/allternit/node.log"));
+        // No pairing user known → root daemon, no UserName key.
+        assert!(!plist.contains("UserName"));
+    }
+
+    #[test]
+    fn launchd_plist_runs_as_pairing_user_with_user_home_logs() {
+        let plist = launchd_plist(
+            Path::new("/usr/local/bin/allternit-node"),
+            Path::new("/Users/joe/.config/allternit/runtime-identity.json"),
+            Some(("joe", Path::new("/Users/joe"))),
+        );
+        assert!(plist.contains("<key>UserName</key>"));
+        assert!(plist.contains("<string>joe</string>"));
+        assert!(plist.contains("/Users/joe/Library/Logs/allternit/node.log"));
+        // The root-owned log dir must not appear as a standalone path.
+        assert!(!plist.contains("<string>/Library/Logs/allternit/node.log</string>"));
     }
 
     #[test]

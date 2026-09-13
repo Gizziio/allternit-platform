@@ -276,24 +276,71 @@ async fn exec(state: &Arc<DaemonState>, body: &[u8]) -> HandlerResponse {
     for (key, value) in &request.env {
         command.env(key, value);
     }
+    command.stdin(std::process::Stdio::null());
+    command.stdout(std::process::Stdio::piped());
+    command.stderr(std::process::Stdio::piped());
 
-    match tokio::time::timeout(timeout, command.output()).await {
-        Ok(Ok(output)) => HandlerResponse::json(
-            200,
-            json!({
-                "stdout": String::from_utf8_lossy(&output.stdout),
-                "stderr": String::from_utf8_lossy(&output.stderr),
-                "exitCode": output.status.code(),
-            }),
-        ),
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            return HandlerResponse::json(
+                500,
+                json!({ "error": "exec_failed", "message": error.to_string() }),
+            )
+        }
+    };
+    // Drain the pipes on dedicated tasks so a chatty child can never
+    // dead-lock against the pipe buffer while we wait. On timeout the child
+    // is killed and reaped explicitly — a timed-out command never outlives
+    // the exec as an orphan.
+    let mut stdout_pipe = child.stdout.take();
+    let mut stderr_pipe = child.stderr.take();
+    let stdout_task = tokio::spawn(async move {
+        let mut buffer = Vec::new();
+        match stdout_pipe.as_mut() {
+            Some(pipe) => tokio::io::AsyncReadExt::read_to_end(pipe, &mut buffer).await.map(|_| buffer),
+            None => Ok(buffer),
+        }
+    });
+    let stderr_task = tokio::spawn(async move {
+        let mut buffer = Vec::new();
+        match stderr_pipe.as_mut() {
+            Some(pipe) => tokio::io::AsyncReadExt::read_to_end(pipe, &mut buffer).await.map(|_| buffer),
+            None => Ok(buffer),
+        }
+    });
+
+    match tokio::time::timeout(timeout, child.wait()).await {
+        Ok(Ok(status)) => {
+            let stdout = stdout_task
+                .await
+                .map(|result| result.unwrap_or_default())
+                .unwrap_or_default();
+            let stderr = stderr_task
+                .await
+                .map(|result| result.unwrap_or_default())
+                .unwrap_or_default();
+            HandlerResponse::json(
+                200,
+                json!({
+                    "stdout": String::from_utf8_lossy(&stdout),
+                    "stderr": String::from_utf8_lossy(&stderr),
+                    "exitCode": status.code(),
+                }),
+            )
+        }
         Ok(Err(error)) => HandlerResponse::json(
             500,
             json!({ "error": "exec_failed", "message": error.to_string() }),
         ),
-        Err(_) => HandlerResponse::json(
-            504,
-            json!({ "error": "exec_timeout", "message": format!("command exceeded {}ms", timeout.as_millis()) }),
-        ),
+        Err(_) => {
+            let _ = child.start_kill();
+            let _ = child.wait().await;
+            HandlerResponse::json(
+                504,
+                json!({ "error": "exec_timeout", "message": format!("command exceeded {}ms", timeout.as_millis()) }),
+            )
+        }
     }
 }
 
