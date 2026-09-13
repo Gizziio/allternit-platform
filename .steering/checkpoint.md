@@ -1,17 +1,19 @@
 # Steering checkpoint — session/adocs2-0913
 
 ## Goal
-Second documentation pass per owner directive: (0) fresh worktree [done];
-(1) grounding check of the owner's five A:// docs against the implementation,
-correcting drift; (2) six new second-pass documents grounded in code;
-(3) index update + verification; PR opened, NOT merged; no attestation.
+Second documentation pass: grounding check of owner's five A:// docs + six
+new second-pass documents + index update. PR opened, NOT merged; no attestation.
 
 ## Just did
-- Read all five owner docs (A_PROTOCOL, FABRIC_TRANSPORT, COWORK_A_PROTOCOL_ARCHITECTURE, A_PROTOCOL_DEVELOPER_GUIDE, README index).
-- Grounding pass in progress.
+- Grounding check: owner's docs were accurate except migration citations
+  (V149–V151 → V152–V154) and predated phase 3 (V156–V158 undocumented);
+  A_PROTOCOL §16 missed five implemented items. No overclaims found.
+- Corrections committed (2fbc7a96b); six new docs + index committed (f2bc8fd90).
+- Verified: 18 cited paths exist, key symbols grep-verified, cargo test 15/15,
+  cargo build 0 errors (docs-only).
 
 ## Next
-- Verify claims (migration numbers, routes, error codes, fields), correct owner docs, write the six docs.
+- Push, open PR, report.
 
 ## Open questions
-- llms.txt pattern? (checking)
+- none.
