@@ -19,6 +19,7 @@ import type { TaskState } from '../tasks/types.js'
 import type { AgentColorName } from '../tools/AgentTool/agentColorManager.js'
 import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir.js'
 import type { AllowedPrompt } from '../tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
+import type { DagViewDto } from '../../../../runtime/gizzi-core/services/railsDag.js'
 import type { AgentId } from '../types/ids.js'
 import type { Message, UserMessage } from '../types/message.js'
 import type { LoadedPlugin, PluginError } from '../types/plugin.js'
@@ -423,6 +424,19 @@ export type AppState = DeepImmutable<{
     verificationStarted: boolean
     verificationCompleted: boolean
   }
+  // CommRails DAG view mirrored from GET /api/commrails/dags (peer mode
+  // only). Written by RailsDagBridge (poll) and ExitPlanModeV2Tool (plan
+  // publish); read by the RailsTaskList panel.
+  railsDag: {
+    dags: DagViewDto['dags']
+    activeWihs: DagViewDto['active_wihs']
+    planPublish: {
+      dag_id: string
+      node_count: number
+      publishedAt: number
+    } | null
+    updatedAt: number | null
+  }
   // Denial tracking for classifier modes (YOLO, headless, etc.) - falls back to prompting when limits exceeded
   denialTracking?: DenialTrackingState
   // Active overlays (Select dialogs, etc.) for Escape key coordination
@@ -572,6 +586,12 @@ export function getDefaultAppState(): AppState {
     },
     authVersion: 0,
     initialMessage: null,
+    railsDag: {
+      dags: [],
+      activeWihs: [],
+      planPublish: null,
+      updatedAt: null,
+    },
     effortValue: undefined,
     activeOverlays: new Set<string>(),
     fastMode: false,
