@@ -6,12 +6,13 @@
  */
 
 import { bonsaiWebGpuProvider } from '@/lib/local-models/providers/bonsai-webgpu';
+import { previewImageCost, type ImageProviderId } from './media-cost';
 
 export interface ImageGenerationConfig {
-  provider: 'bonsai-local' | 'bonsai-webgpu' | 'pollinations' | 'openai' | 'stability' | 'midjourney';
+  provider: 'bonsai-local' | 'bonsai-webgpu' | 'pollinations' | 'openai' | 'gpt-image' | 'flux-fal' | 'stability' | 'midjourney';
   model?: string;
-  size?: '1024x1024' | '1024x1792' | '1792x1024' | string;
-  quality?: 'standard' | 'hd';
+  size?: '1024x1024' | '1024x1792' | '1792x1024' | '1024x1536' | '1536x1024' | string;
+  quality?: 'standard' | 'hd' | 'low' | 'medium' | 'high';
   style?: 'vivid' | 'natural' | 'photographic' | 'artistic';
   n?: number; // Number of images (1-4)
   seed?: number; // For reproducibility
@@ -315,6 +316,74 @@ export async function generateImagesOpenAI(
 }
 
 // ==========================================
+// MEDIA PLANE PROVIDERS: gpt-image + FLUX-via-fal
+// ==========================================
+//
+// Metered hosted providers run server-side through the allternit-api media
+// plane (`POST /api/v1/media/image/generate`). Keys never reach the browser:
+// the API resolves the caller's V134 BYOK credential (provider `openai` or
+// `fal`) or the platform-funded env lane (flag-gated, ships disabled).
+
+export interface MediaPlaneImage {
+  artifact_url: string;
+  width?: number;
+  height?: number;
+}
+
+export interface MediaPlaneImageResult {
+  images: MediaPlaneImage[];
+  estimated_cost_usd?: number;
+}
+
+export async function generateImagesMediaPlane(
+  prompt: string,
+  config: Pick<ImageGenerationConfig, 'provider' | 'size' | 'quality' | 'n' | 'seed'>,
+): Promise<ImageGenerationResult> {
+  const provider = config.provider as 'gpt-image' | 'flux-fal';
+  const n = Math.max(1, Math.min(4, config.n ?? 1));
+  const size = config.size ?? '1024x1024';
+
+  const response = await fetch('/api/v1/media/image/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider,
+      prompt,
+      size,
+      quality: config.quality ?? (provider === 'gpt-image' ? 'medium' : undefined),
+      n,
+      seed: config.seed,
+    }),
+  });
+  const payload = await response.json().catch(() => ({})) as MediaPlaneImageResult & { error?: string; message?: string };
+  if (!response.ok) {
+    throw new Error(payload.message || payload.error || `Image generation failed (${response.status}).`);
+  }
+  if (!payload.images?.length) {
+    throw new Error('The image provider returned no images.');
+  }
+
+  const createdAt = new Date().toISOString();
+  return {
+    images: payload.images.map((img, index) => ({
+      id: `${provider}_${Date.now()}_${index}`,
+      url: img.artifact_url,
+      prompt,
+      metadata: {
+        provider,
+        model: provider === 'gpt-image' ? 'gpt-image-2' : 'fal-ai/flux/schnell',
+        size: img.width && img.height ? `${img.width}x${img.height}` : size,
+        quality: config.quality ?? 'medium',
+        createdAt,
+      },
+    })),
+    prompt,
+    config: { provider, size, quality: config.quality, n },
+    usage: { cost: payload.estimated_cost_usd },
+  };
+}
+
+// ==========================================
 // MAIN INTERFACE: Smart Provider Selection
 // ==========================================
 
@@ -354,6 +423,24 @@ export async function generateImages(
         throw new Error('OpenAI was selected but no API key is configured. Select Local Bonsai or add an API key.');
       }
       return generateImagesOpenAI(prompt, userSettings.apiKeys.openai, config as any);
+
+    case 'gpt-image':
+    case 'flux-fal': {
+      // Cost preview before any metered generate (unit price × requested units).
+      const preview = previewImageCost(provider as ImageProviderId, {
+        quality: config.quality,
+        size: config.size,
+        n: config.n,
+      });
+      console.info(`[image] Cost preview: ${preview.summary}`);
+      return generateImagesMediaPlane(prompt, {
+        provider,
+        size: config.size,
+        quality: config.quality,
+        n: config.n,
+        seed: config.seed,
+      });
+    }
 
     case 'stability':
       throw new Error('Stability AI is not integrated. Select Local Bonsai or configure another explicit provider.');
@@ -460,6 +547,22 @@ function getImageProviders(userSettings?: any) {
       type: 'api_key',
       isAvailable: !!userSettings?.apiKeys?.openai,
       isDefault: userSettings?.preferredProvider === 'openai',
+    },
+    {
+      id: 'gpt-image',
+      name: 'gpt-image (OpenAI)',
+      description: 'Metered; runs through the Allternit media plane with your own OpenAI key (BYOK) or the operator-funded lane',
+      type: 'api_key',
+      isAvailable: true,
+      isDefault: userSettings?.preferredProvider === 'gpt-image',
+    },
+    {
+      id: 'flux-fal',
+      name: 'FLUX schnell (fal)',
+      description: 'Burst/draft images, metered per megapixel; runs through the Allternit media plane with your own fal key (BYOK) or the operator-funded lane',
+      type: 'api_key',
+      isAvailable: true,
+      isDefault: userSettings?.preferredProvider === 'flux-fal',
     },
     {
       id: 'stability',

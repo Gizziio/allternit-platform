@@ -19,6 +19,7 @@ import {
   generateImages,
   type ImageGenerationResult,
 } from '@/lib/agents/modes/image-generation';
+import { previewImageCost } from '@/lib/agents/modes/media-cost';
 import {
   BONSAI_WEBGPU_CONSENT,
   BONSAI_WEBGPU_PROVIDER_PREFERENCE,
@@ -27,9 +28,15 @@ import {
 
 type BonsaiImageProvider = 'bonsai-local' | 'bonsai-webgpu';
 
+/** Metered hosted providers run through the allternit-api media plane (BYOK V134 / operator-funded lane). */
+type HostedImageProvider = 'gpt-image' | 'flux-fal';
+
 export interface ImageConfig extends PluginConfig {
   defaultProvider?: BonsaiImageProvider;
+  /** When set, generation uses this metered hosted provider instead of local Bonsai. */
+  hostedProvider?: HostedImageProvider;
   defaultSize?: string;
+  defaultQuality?: 'low' | 'medium' | 'high' | 'standard' | 'hd';
   defaultN?: number;
 }
 
@@ -168,6 +175,45 @@ class ImagePlugin implements ModePlugin {
   }
 
   private async generateImages(prompt: string): Promise<PluginOutput> {
+    const hosted = this.config.hostedProvider;
+    if (hosted) {
+      // Cost preview before any metered generate (unit price × requested units).
+      const preview = previewImageCost(hosted, {
+        quality: this.config.defaultQuality,
+        size: this.config.defaultSize,
+        n: this.config.defaultN,
+      });
+      this.emit({
+        type: 'progress',
+        payload: { step: 'cost-preview', message: preview.summary },
+        timestamp: Date.now(),
+      });
+      this.emit({
+        type: 'progress',
+        payload: { step: 'generating', message: `Generating with ${hosted === 'gpt-image' ? 'gpt-image' : 'FLUX (fal)'}…` },
+        timestamp: Date.now(),
+      });
+      const hostedResult = await generateImages(prompt, {
+        provider: hosted,
+        n: this.config.defaultN,
+        size: this.config.defaultSize,
+        quality: this.config.defaultQuality,
+      });
+      return {
+        success: true,
+        content: this.formatImageOutput(hostedResult),
+        artifacts: hostedResult.images.map((img) => ({
+          type: 'image',
+          url: img.url,
+          name: `generated-${img.id}.png`,
+          metadata: {
+            provider: img.metadata.provider,
+            prompt: img.prompt,
+          },
+        })),
+      };
+    }
+
     const provider = this.selectedProvider();
     this.emit({ 
       type: 'progress', 
