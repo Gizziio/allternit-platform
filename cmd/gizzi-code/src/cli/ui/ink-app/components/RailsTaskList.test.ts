@@ -3,6 +3,7 @@ import {
   actionableKindFor,
   clampSelectionIndex,
   closeEvidenceFor,
+  reparentCandidates,
 } from './RailsTaskList.js'
 
 describe('actionableKindFor', () => {
@@ -87,5 +88,71 @@ describe('clampSelectionIndex', () => {
     expect(index).toBe(0)
     index = clampSelectionIndex(index - 1, count) // k at top stays
     expect(index).toBe(0)
+  })
+})
+
+describe('reparentCandidates', () => {
+  // Minimal node literals — the helper is generic over { node_id,
+  // parent_node_id } so tests don't need full DagNodeDto shapes.
+  const node = (node_id: string, parent_node_id: string | null) => ({
+    node_id,
+    parent_node_id,
+  })
+
+  test('excludes the node itself', () => {
+    const nodes = [node('a', null), node('b', null), node('c', 'b')]
+    expect(reparentCandidates(nodes, 'a').map(n => n.node_id)).toEqual(['b', 'c'])
+  })
+
+  test('excludes direct children', () => {
+    const nodes = [node('a', null), node('b', 'a'), node('c', null)]
+    expect(reparentCandidates(nodes, 'a').map(n => n.node_id)).toEqual(['c'])
+  })
+
+  test('a parent with only children has no candidates but the root entry', () => {
+    const nodes = [node('a', null), node('b', 'a')]
+    expect(reparentCandidates(nodes, 'a')).toEqual([])
+  })
+
+  test('excludes deeper descendants (grandchildren)', () => {
+    const nodes = [
+      node('a', null),
+      node('b', 'a'),
+      node('c', 'b'),
+      node('d', null),
+    ]
+    expect(reparentCandidates(nodes, 'a').map(n => n.node_id)).toEqual(['d'])
+  })
+
+  test('keeps parent, siblings, and unrelated branches as candidates', () => {
+    const nodes = [
+      node('root', null),
+      node('me', 'root'),
+      node('child', 'me'),
+      node('sibling', 'root'),
+      node('other-branch', null),
+    ]
+    expect(reparentCandidates(nodes, 'me').map(n => n.node_id)).toEqual([
+      'root',
+      'sibling',
+      'other-branch',
+    ])
+  })
+
+  test('returns empty for a single-node dag (root entry is component-side)', () => {
+    expect(reparentCandidates([node('only', null)], 'only')).toEqual([])
+  })
+
+  test('null parent links do not break descendant walking', () => {
+    const nodes = [node('a', null), node('b', null), node('c', 'b')]
+    expect(reparentCandidates(nodes, 'b').map(n => n.node_id)).toEqual(['a'])
+  })
+
+  test('tolerates a node id that is not in the list', () => {
+    const nodes = [node('a', null), node('b', 'a')]
+    expect(reparentCandidates(nodes, 'missing').map(n => n.node_id)).toEqual([
+      'a',
+      'b',
+    ])
   })
 })

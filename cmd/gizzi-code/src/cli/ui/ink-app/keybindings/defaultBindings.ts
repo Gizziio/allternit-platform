@@ -353,7 +353,11 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
   },
   // Rails DAG todo panel (expanded tasks view). `tab` focuses the panel
   // while it is visible; once focused it registers a modal overlay so the
-  // prompt input releases keys, `esc` blurs back to the prompt.
+  // prompt input releases keys, `esc` blurs back to the prompt. `e` edits
+  // the selected node's title inline, `D` (shift+d) deletes it after a
+  // y/n confirm, `r` reparents it under another node (or the dag root).
+  // enter/y/n only act while a sub-mode (reparent picker or delete
+  // confirm) is open — the panel's handlers gate on that.
   {
     context: 'RailsDag',
     bindings: {
@@ -365,6 +369,12 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
       t: 'railsDag:take',
       d: 'railsDag:done',
       x: 'railsDag:fail',
+      e: 'railsDag:edit',
+      'shift+d': 'railsDag:delete',
+      r: 'railsDag:reparent',
+      enter: 'railsDag:confirm',
+      y: 'railsDag:confirm',
+      n: 'railsDag:cancel',
       escape: 'railsDag:blur',
     },
   },

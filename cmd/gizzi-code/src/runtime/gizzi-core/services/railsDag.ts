@@ -154,6 +154,89 @@ export function closeWih(
   )
 }
 
+// ─── DAG node mutations ─────────────────────────────────────────────────────
+//
+// rename/reparent/delete against /api/commrails/dags/:dag_id/nodes/:node_id.
+// Same contract as the WIH mutations: never throw, 400/409 bodies carry an
+// `error` string that is surfaced verbatim in the todo panel.
+
+export type DagNodeMutationResult = { ok: boolean; error?: string }
+
+async function dagNodeMutation(
+  method: 'PATCH' | 'DELETE',
+  dagId: string,
+  nodeId: string,
+  body?: Record<string, unknown>,
+): Promise<DagNodeMutationResult> {
+  const path = `/api/commrails/dags/${encodeURIComponent(dagId)}/nodes/${encodeURIComponent(nodeId)}`
+  try {
+    const config = getAllternitApiConfig()
+    const res = await apiFetch(config, path, {
+      method,
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      let message = `HTTP ${res.status}`
+      try {
+        const parsed = JSON.parse(text) as { error?: string; message?: string }
+        message = parsed.error ?? parsed.message ?? message
+      } catch {
+        // Non-JSON body — keep the status fallback.
+      }
+      logForDiagnosticsNoPII('info', 'rails_dag_node_mutation_failed', {
+        path,
+        method,
+        status: res.status,
+      })
+      return { ok: false, error: `${message} (${res.status})` }
+    }
+    return { ok: true }
+  } catch (error) {
+    logForDiagnosticsNoPII('info', 'rails_dag_node_mutation_failed', {
+      path,
+      method,
+      error: errorMessage(error),
+    })
+    return { ok: false, error: errorMessage(error) }
+  }
+}
+
+/**
+ * Rename a node (todo panel `e` key). 400 on an empty/invalid title; the
+ * server's error string is surfaced inline.
+ */
+export function renameNode(
+  dagId: string,
+  nodeId: string,
+  title: string,
+): Promise<DagNodeMutationResult> {
+  return dagNodeMutation('PATCH', dagId, nodeId, { title })
+}
+
+/**
+ * Move a node under a new parent (`parent_node_id`, null = dag root). 409
+ * when the move would create a cycle.
+ */
+export function reparentNode(
+  dagId: string,
+  nodeId: string,
+  parentNodeId: string | null,
+): Promise<DagNodeMutationResult> {
+  return dagNodeMutation('PATCH', dagId, nodeId, { parent_node_id: parentNodeId })
+}
+
+/**
+ * Delete a node (todo panel `D` key, y-confirm). 204 on success; 409 when
+ * the node still has open work (body carries an `error` string).
+ */
+export function deleteNode(
+  dagId: string,
+  nodeId: string,
+): Promise<DagNodeMutationResult> {
+  return dagNodeMutation('DELETE', dagId, nodeId)
+}
+
 // ─── Immediate refresh ──────────────────────────────────────────────────────
 //
 // The poller dedupes by JSON fingerprint, so after a successful mutation a

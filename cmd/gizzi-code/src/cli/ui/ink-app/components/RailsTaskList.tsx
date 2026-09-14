@@ -6,6 +6,12 @@
  * figures-style glyphs, 30s recent-completion TTL with a collapse summary
  * row, and the same terminal-height display budget. Self-hides when Rails
  * peer mode is off (no updatedAt) or there are no dags.
+ *
+ * Focused keys (peer mode only): j/k move the selection across actionable
+ * rows, t picks up a READY node, d/x closes owned RUNNING work as
+ * DONE/FAILED, e renames the selected node inline, D (shift+d) deletes it
+ * after a y/n confirm, and r reparents it under another node or the dag
+ * root. Write failures surface inline on the row for 5s.
  */
 
 import * as React from 'react'
@@ -19,12 +25,16 @@ import {
   useIsModalOverlayActive,
   useRegisterOverlay,
 } from '../context/overlayContext.js'
+import { Input } from './Input.js'
 import {
   closeWih,
+  deleteNode,
   isRailsPeerMode,
   pickupWih,
+  renameNode,
   railsPeerAgentId,
   refreshRailsDagNow,
+  reparentNode,
 } from '@/runtime/gizzi-core/services/railsDag'
 
 // Same budget rule as TaskListV2: rows<=10 hides the panel entirely, else
@@ -126,6 +136,38 @@ export function clampSelectionIndex(index: number, count: number): number {
   return Math.max(0, Math.min(index, count - 1))
 }
 
+/**
+ * Reparent targets for `nodeId`: every node in the same dag except the node
+ * itself and its own descendants (walking parent_node_id child chains —
+ * offering a descendant would create a cycle the server would 409 on).
+ * Generic over the node shape so tests can pass minimal literals.
+ */
+export function reparentCandidates<T extends {
+  node_id: string
+  parent_node_id: string | null
+}>(nodes: T[], nodeId: string): T[] {
+  const childIdsByParent = new Map<string, string[]>()
+  for (const node of nodes) {
+    if (!node.parent_node_id) continue
+    const siblings = childIdsByParent.get(node.parent_node_id)
+    if (siblings) siblings.push(node.node_id)
+    else childIdsByParent.set(node.parent_node_id, [node.node_id])
+  }
+  const excluded = new Set<string>([nodeId])
+  // BFS down from the node itself: everything reachable via child links is
+  // a descendant and must not be offered as a new parent.
+  const queue = [nodeId]
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    for (const childId of childIdsByParent.get(current) ?? []) {
+      if (excluded.has(childId)) continue
+      excluded.add(childId)
+      queue.push(childId)
+    }
+  }
+  return nodes.filter(node => !excluded.has(node.node_id))
+}
+
 type ActionableRow = {
   key: string
   dagId: string
@@ -143,6 +185,25 @@ export function closeEvidenceFor(
   const verb = status === 'FAILED' ? 'failed' : 'closed'
   return `${verb} from gizzi-code todo panel by ${agentId ?? 'unknown'}`
 }
+
+/**
+ * Sub-modes entered from the focused panel. `edit` swaps the selected row
+ * for an inline Input; `confirm-delete` and `reparent` keep the row and
+ * attach a small prompt/candidate list beneath it. While a sub-mode is
+ * open the main action keys (t/d/x/e/D/r) are suspended.
+ */
+type SubMode =
+  | { kind: 'edit'; dagId: string; nodeId: string; key: string }
+  | { kind: 'confirm-delete'; dagId: string; nodeId: string; key: string }
+  | {
+      kind: 'reparent'
+      dagId: string
+      nodeId: string
+      key: string
+      candidates: RailsDagNode[]
+      /** 0 = the synthetic "(root)" entry; i+1 indexes into candidates. */
+      index: number
+    }
 
 export function RailsTaskList(): React.ReactElement | null {
   const railsDag = useAppState(s => s.railsDag)
@@ -258,6 +319,8 @@ export function RailsTaskList(): React.ReactElement | null {
     key: string
     message: string
   } | null>(null)
+  const [subMode, setSubMode] = React.useState<SubMode | null>(null)
+  const [editValue, setEditValue] = React.useState('')
 
   const agentId = railsPeerAgentId()
   const actionable: ActionableRow[] = []
@@ -326,8 +389,108 @@ export function RailsTaskList(): React.ReactElement | null {
     }
   }
 
-  // Focus grab: only while the panel is visible, unfocused, and no modal
-  // overlay (permission dialogs etc.) already owns the keys.
+  // ─── Sub-modes (edit / delete confirm / reparent picker) ─────────────────
+
+  const startEdit = (): void => {
+    const selected = actionable[selectionIndex]
+    if (!selected) return
+    setEditValue(selected.node.title)
+    setSubMode({
+      kind: 'edit',
+      dagId: selected.dagId,
+      nodeId: selected.node.node_id,
+      key: selected.key,
+    })
+  }
+
+  const submitEdit = async (): Promise<void> => {
+    if (subMode?.kind !== 'edit') return
+    const title = editValue.trim()
+    const { dagId, nodeId, key } = subMode
+    if (!title) {
+      // Empty submission (e.g. after esc cleared the field) cancels.
+      setSubMode(null)
+      return
+    }
+    const result = await renameNode(dagId, nodeId, title)
+    if (result.ok) {
+      setSubMode(null)
+      setRowError(null)
+      refreshRailsDagNow()
+    } else {
+      setSubMode(null)
+      setRowError({ key, message: result.error ?? 'rename failed' })
+    }
+  }
+
+  const startConfirmDelete = (): void => {
+    const selected = actionable[selectionIndex]
+    if (!selected) return
+    setSubMode({
+      kind: 'confirm-delete',
+      dagId: selected.dagId,
+      nodeId: selected.node.node_id,
+      key: selected.key,
+    })
+  }
+
+  const confirmDelete = async (): Promise<void> => {
+    if (subMode?.kind !== 'confirm-delete') return
+    const { dagId, nodeId, key } = subMode
+    const result = await deleteNode(dagId, nodeId)
+    setSubMode(null)
+    if (result.ok) {
+      setRowError(null)
+      refreshRailsDagNow()
+    } else {
+      setRowError({ key, message: result.error ?? 'delete failed' })
+    }
+  }
+
+  const startReparent = (): void => {
+    const selected = actionable[selectionIndex]
+    if (!selected) return
+    const dag = dags.find(d => d.dag_id === selected.dagId)
+    if (!dag) return
+    setSubMode({
+      kind: 'reparent',
+      dagId: selected.dagId,
+      nodeId: selected.node.node_id,
+      key: selected.key,
+      candidates: reparentCandidates(dag.nodes, selected.node.node_id),
+      index: 0,
+    })
+  }
+
+  const reparentDelta = (delta: number): void => {
+    setSubMode(prev => {
+      if (prev?.kind !== 'reparent') return prev
+      // +1: the synthetic "(root)" entry occupies index 0.
+      return {
+        ...prev,
+        index: clampSelectionIndex(prev.index + delta, prev.candidates.length + 1),
+      }
+    })
+  }
+
+  const confirmReparent = async (): Promise<void> => {
+    if (subMode?.kind !== 'reparent') return
+    const { dagId, nodeId, key, index, candidates } = subMode
+    // Index 0 is the synthetic root entry → parent_node_id null.
+    const parentNodeId = index === 0 ? null : (candidates[index - 1]?.node_id ?? null)
+    const result = await reparentNode(dagId, nodeId, parentNodeId)
+    setSubMode(null)
+    if (result.ok) {
+      setRowError(null)
+      refreshRailsDagNow()
+    } else {
+      setRowError({ key, message: result.error ?? 'reparent failed' })
+    }
+  }
+
+  // Focus grab: only while the panel is visible, unfocused, no modal
+  // overlay (permission dialogs etc.) already owns the keys, and no sub-mode
+  // is open.
   useKeybindings(
     {
       'railsDag:focus': () => {
@@ -342,7 +505,8 @@ export function RailsTaskList(): React.ReactElement | null {
     },
   )
 
-  // Focused keys: j/k/arrows move, t takes, d/x close done/failed, esc blurs.
+  // Focused keys: j/k/arrows move, t takes, d/x close done/failed, e/D/r
+  // edit/delete/reparent, esc blurs. Suspended while a sub-mode is open.
   useKeybindings(
     {
       'select:next': () => selectDelta(1),
@@ -356,21 +520,56 @@ export function RailsTaskList(): React.ReactElement | null {
       'railsDag:fail': () => {
         void closeSelected('FAILED')
       },
+      'railsDag:edit': () => startEdit(),
+      'railsDag:delete': () => startConfirmDelete(),
+      'railsDag:reparent': () => startReparent(),
       'railsDag:blur': () => setFocused(false),
     },
-    { context: 'RailsDag', isActive: focused && panelVisible },
+    { context: 'RailsDag', isActive: focused && panelVisible && subMode === null },
+  )
+
+  // Sub-mode keys (delete confirm / reparent picker): j/k move the reparent
+  // candidate cursor, enter/y confirms, n/esc cancels. The inline edit
+  // sub-mode owns its keys through the Input component instead.
+  useKeybindings(
+    {
+      'select:next': () => reparentDelta(1),
+      'select:previous': () => reparentDelta(-1),
+      'railsDag:confirm': () => {
+        if (subMode?.kind === 'reparent') void confirmReparent()
+        else if (subMode?.kind === 'confirm-delete') void confirmDelete()
+      },
+      'railsDag:cancel': () => setSubMode(null),
+      'railsDag:blur': () => setSubMode(null),
+    },
+    {
+      context: 'RailsDag',
+      isActive:
+        focused && panelVisible && subMode !== null && subMode.kind !== 'edit',
+    },
   )
 
   // Modal overlay while focused: PromptInput gates its text input and
   // keybindings on useIsModalOverlayActive (PromptInput.tsx:2186), so this
   // is what actually "gives the panel the keys" and returns them on blur.
+  // Kept registered through sub-modes so the prompt never steals keystrokes
+  // from the inline Input or the y/n confirm.
   useRegisterOverlay('rails-dag-todo', focused && panelVisible)
 
   // Auto-blur when the selection pool empties (last actionable node closed
-  // or the dags view went quiet).
+  // or the dags view went quiet); drop any sub-mode with it.
   React.useEffect(() => {
-    if (focused && actionableCount === 0) setFocused(false)
+    if (focused && actionableCount === 0) {
+      setFocused(false)
+      setSubMode(null)
+    }
   }, [focused, actionableCount])
+
+  // Drop a stale sub-mode when the panel hides (terminal resize, peer mode
+  // off, dags emptied) so keys aren't stranded on an invisible overlay.
+  React.useEffect(() => {
+    if (!panelVisible && subMode) setSubMode(null)
+  }, [panelVisible, subMode])
 
   // Row errors clear after a short TTL.
   React.useEffect(() => {
@@ -418,29 +617,81 @@ export function RailsTaskList(): React.ReactElement | null {
         const isSelected = line.key === selectedKey
         const error =
           rowError && rowError.key === line.key ? rowError.message : null
+
+        // Inline edit: the selected row swaps to an Input pre-filled with
+        // the current title. Enter renames; empty submission cancels.
+        if (subMode?.kind === 'edit' && subMode.key === line.key) {
+          return (
+            <Box key={line.key} flexDirection="column">
+              <Box>
+                <Text>{'  '.repeat(line.depth)}</Text>
+                <Text color="gizzi">✎ </Text>
+                <Input
+                  value={editValue}
+                  onChange={setEditValue}
+                  onSubmit={() => {
+                    void submitEdit()
+                  }}
+                />
+              </Box>
+              <Text dimColor>{'  '.repeat(line.depth)}enter rename · empty cancels</Text>
+            </Box>
+          )
+        }
+
+        const confirmDeleteThisRow =
+          subMode?.kind === 'confirm-delete' && subMode.key === line.key
+        const reparentThisRow =
+          subMode?.kind === 'reparent' && subMode.key === line.key
+
         return (
-          <Box key={line.key}>
-            <Text>
-              {focused ? (isSelected ? '❯ ' : '  ') : ''}
-              {'  '.repeat(line.depth)}
-            </Text>
-            <Text color={color}>{icon} </Text>
-            <Text bold={statusOf(line.node) === 'RUNNING'} dimColor={dim}>
-              {title}
-            </Text>
-            {statusOf(line.node) === 'RUNNING' && line.node.assignee && (
-              <Text dimColor> ({line.node.assignee})</Text>
-            )}
-            {error && (
-              <Text color="error">
-                {' '}⚠ {truncateToWidth(error, Math.max(20, columns - maxTitleWidth - 25))}
+          <React.Fragment key={line.key}>
+            <Box>
+              <Text>
+                {focused ? (isSelected ? '❯ ' : '  ') : ''}
+                {'  '.repeat(line.depth)}
               </Text>
+              <Text color={color}>{icon} </Text>
+              <Text bold={statusOf(line.node) === 'RUNNING'} dimColor={dim}>
+                {title}
+              </Text>
+              {statusOf(line.node) === 'RUNNING' && line.node.assignee && (
+                <Text dimColor> ({line.node.assignee})</Text>
+              )}
+              {confirmDeleteThisRow && (
+                <Text color="error"> ⚠ delete this node? [y/n]</Text>
+              )}
+              {error && (
+                <Text color="error">
+                  {' '}⚠ {truncateToWidth(error, Math.max(20, columns - maxTitleWidth - 25))}
+                </Text>
+              )}
+            </Box>
+            {reparentThisRow && subMode?.kind === 'reparent' && (
+              <Box flexDirection="column" marginLeft={line.depth * 2}>
+                <Text dimColor={subMode.index !== 0}>
+                  {subMode.index === 0 ? '❯ ' : '  '}
+                  {'⟡ (root)'}
+                </Text>
+                {subMode.candidates.map((candidate, index) => (
+                  <Text key={candidate.node_id} dimColor={subMode.index !== index + 1}>
+                    {subMode.index === index + 1 ? '❯ ' : '  '}
+                    {truncateToWidth(candidate.title, maxTitleWidth)}
+                  </Text>
+                ))}
+                <Text dimColor>j/k choose · enter move here · esc cancel</Text>
+              </Box>
             )}
-          </Box>
+          </React.Fragment>
         )
       })}
       {hiddenCount > 0 && <Text dimColor>{` … +${hiddenCount} more`}</Text>}
-      {focused && <Text dimColor>j/k move · t take · d done · x fail · esc blur</Text>}
+      {focused && subMode === null && (
+        <Text dimColor>
+          j/k move · t take · d done · x fail · e edit · D delete · r reparent ·
+          esc blur
+        </Text>
+      )}
     </Box>
   )
 }
