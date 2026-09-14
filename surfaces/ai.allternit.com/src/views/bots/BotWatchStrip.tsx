@@ -5,29 +5,22 @@
  * compact tool-call rows from the policy audit. Sits beside the dialogue,
  * not inside message bubbles. Reuses screenshot + audit APIs — no new transport.
  *
+ * Intentionally screenshot-only. A 140×88 thumbnail must not open a noVNC RFB:
+ * decoding a full-resolution desktop stream for an 88px-tall thumb burned
+ * ~470% renderer CPU and starved the node daemon's terminal relay.
+ *
  * @module BotWatchStrip
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Desktop, Eye } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import {
-  getBotDesktopScreenshot,
-  getBotDesktopStatus,
-  observeBotDesktop,
-} from "@/lib/bots/vm-operator";
+import { getBotDesktopScreenshot } from "@/lib/bots/vm-operator";
 import { activityCounts, formatActivityLines } from "@/lib/bots/bot-activity-rows";
 import { fetchSubagentFeed, liveActivityTree, type SubagentRow } from "@/lib/bots/bot-subagent-feed";
 import type { BotChatTranscript } from "@/components/bot-chat/types";
 import { BotSubagentTree } from "./BotSubagentTree";
 import { fetchPolicyAudit, type PolicyAuditRow } from "./policy-audit";
-import { claimVnc, releaseVnc } from "./bot-computer-vnc";
-
-function wsUrlFromPath(path: string): string {
-  if (typeof window === "undefined") return path;
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}${path}`;
-}
 
 const SCREEN_POLL_MS = 4000;
 const AUDIT_POLL_MS = 3000;
@@ -52,10 +45,29 @@ export function BotWatchStrip({
   const [png, setPng] = useState<string | null>(null);
   const [screenError, setScreenError] = useState(false);
   const [subagents, setSubagents] = useState<SubagentRow[]>([]);
-  const [live, setLive] = useState(false);
   const [rows, setRows] = useState<PolicyAuditRow[]>([]);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const rfbRef = useRef<{ disconnect?: () => void } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [onscreen, setOnscreen] = useState(true);
+  const [pageVisible, setPageVisible] = useState(
+    () => typeof document === "undefined" || !document.hidden,
+  );
+  const screenActive = pageVisible && onscreen && !computerOpen;
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      setOnscreen(entries.some((entry) => entry.isIntersecting));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const onVisibility = () => setPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   const loadScreen = useCallback(async (signal: AbortSignal) => {
     if (!sandboxId) return;
@@ -81,7 +93,7 @@ export function BotWatchStrip({
   }, [botId]);
 
   useEffect(() => {
-    if (!sandboxId || computerOpen || live) return;
+    if (!sandboxId || !screenActive) return;
     const controller = new AbortController();
     void loadScreen(controller.signal);
     const id = window.setInterval(() => void loadScreen(controller.signal), SCREEN_POLL_MS);
@@ -89,49 +101,7 @@ export function BotWatchStrip({
       controller.abort();
       window.clearInterval(id);
     };
-  }, [sandboxId, computerOpen, loadScreen, live]);
-
-  useEffect(() => {
-    if (!sandboxId || computerOpen) {
-      rfbRef.current?.disconnect?.();
-      rfbRef.current = null;
-      setLive(false);
-      if (sandboxId) releaseVnc(sandboxId, "strip");
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      await observeBotDesktop(botId, sandboxId);
-      const status = await getBotDesktopStatus(botId, sandboxId);
-      if (cancelled || !status.ok || !status.data?.ws_url) return;
-      if (!claimVnc(sandboxId, "strip")) return;
-      if (!canvasRef.current) {
-        releaseVnc(sandboxId, "strip");
-        return;
-      }
-      try {
-        const mod = await import("@novnc/novnc");
-        const RFB = (mod as { default?: new (...args: unknown[]) => { disconnect?: () => void; viewOnly?: boolean } }).default ?? (mod as never);
-        const rfb = new (RFB as new (t: HTMLElement, u: string, o?: object) => { disconnect?: () => void; viewOnly?: boolean })(
-          canvasRef.current,
-          wsUrlFromPath(status.data.ws_url),
-          { scaleViewport: true, clipViewport: true }
-        );
-        rfb.viewOnly = true;
-        rfbRef.current = rfb;
-        if (!cancelled) setLive(true);
-      } catch {
-        releaseVnc(sandboxId, "strip");
-      }
-    })();
-    return () => {
-      cancelled = true;
-      rfbRef.current?.disconnect?.();
-      rfbRef.current = null;
-      releaseVnc(sandboxId, "strip");
-      setLive(false);
-    };
-  }, [botId, sandboxId, computerOpen]);
+  }, [sandboxId, screenActive, loadScreen]);
 
   useEffect(() => {
     void loadAudit();
@@ -168,6 +138,7 @@ export function BotWatchStrip({
 
   return (
     <div
+      ref={rootRef}
       data-testid="bot-watch-strip"
       className="flex min-h-0 shrink-0 gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2"
     >
@@ -178,23 +149,21 @@ export function BotWatchStrip({
           className="relative h-[88px] w-[140px] shrink-0 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)]"
           aria-label="Watch this bot's computer"
         >
-          <div ref={canvasRef} className={cn("absolute inset-0", live ? "block" : "hidden")} />
-          {!live && png ? (
+          {png ? (
             <img
               src={`data:image/png;base64,${png}`}
               alt=""
               className="h-full w-full object-cover"
             />
-          ) : null}
-          {!live && !png ? (
+          ) : (
             <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-[10px] text-[var(--text-tertiary)]">
               <Desktop size={16} />
               {screenError ? "screen unavailable" : "watching…"}
             </span>
-          ) : null}
+          )}
           <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-medium text-white">
             <Eye size={10} />
-            {live ? "live" : "watch"}
+            watch
           </span>
         </button>
       )}
