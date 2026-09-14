@@ -3087,7 +3087,7 @@ ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; work
   void sessionWindow.loadURL(url.toString());
 });
 
-ipcMain.handle('shell:open-bot-computer', (_event, options: { botId: string; title?: string }) => {
+ipcMain.handle('shell:open-bot-computer', (_event, options: { botId: string; title?: string; sandboxId?: string }) => {
   if (!options?.botId) throw new Error('A bot ID is required');
 
   const existing = botComputerWindows.get(options.botId);
@@ -3112,10 +3112,12 @@ ipcMain.handle('shell:open-bot-computer', (_event, options: { botId: string; tit
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      backgroundThrottling: false,
     },
   });
 
   installWillNavigateGuard(computerWindow.webContents);
+  computerWindow.webContents.setBackgroundThrottling(false);
   botComputerWindows.set(options.botId, computerWindow);
 
   const url = buildBotComputerWindowUrl(activePlatformUrl, options);
