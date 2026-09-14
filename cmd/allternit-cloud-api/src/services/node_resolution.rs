@@ -188,6 +188,50 @@ pub async fn resolve_default_node(
     })
 }
 
+/// Node that stays up when the laptop sleeps: provisioned, then paired,
+/// never `local`. Used for Cowork cloud continuation ingest.
+pub async fn resolve_continuation_node(
+    store: &dyn NodeStore,
+    user_id: &str,
+) -> Result<ResolvedNode, ApiError> {
+    let candidates = store.candidate_nodes(user_id).await?;
+    let stale_before = Utc::now() - staleness_window();
+    let mut healthy: Vec<&NodeCandidate> = candidates
+        .iter()
+        .filter(|candidate| {
+            candidate.kind != NodeKind::LOCAL
+                && candidate.status == "online"
+                && candidate
+                    .last_seen_at
+                    .map(|seen| seen >= stale_before)
+                    .unwrap_or(false)
+                && candidate.credential_expires_at > Utc::now()
+        })
+        .collect();
+    healthy.sort_by(|a, b| {
+        let rank = |kind: &str| match kind {
+            NodeKind::PROVISIONED => 0,
+            NodeKind::PAIRED => 1,
+            _ => 2,
+        };
+        rank(&a.kind)
+            .cmp(&rank(&b.kind))
+            .then_with(|| b.recency().cmp(&a.recency()))
+            .then_with(|| a.device_id.cmp(&b.device_id))
+    });
+    let Some(node) = healthy.first() else {
+        return Err(ApiError::PreconditionRequired(
+            "No always-on data-plane node for cloud continuation — start a hosted runtime or pair a box that stays online".to_string(),
+        ));
+    };
+    Ok(ResolvedNode {
+        device_id: node.device_id.clone(),
+        name: node.name.clone(),
+        kind: NodeKind(node.kind.clone()),
+        last_seen_at: node.last_seen_at,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,6 +328,23 @@ mod tests {
             ],
         };
         assert!(resolve_default_node(&store, "user_1").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn continuation_node_skips_local_and_prefers_provisioned() {
+        let store = MockStore {
+            candidates: vec![
+                online("laptop", NodeKind::LOCAL, 1),
+                online("box", NodeKind::PAIRED, 5),
+                online("hosted", NodeKind::PROVISIONED, 30),
+            ],
+        };
+        let node = resolve_continuation_node(&store, "user_1").await.unwrap();
+        assert_eq!(node.device_id, "hosted");
+        let store = MockStore {
+            candidates: vec![online("laptop", NodeKind::LOCAL, 1)],
+        };
+        assert!(resolve_continuation_node(&store, "user_1").await.is_err());
     }
 
     #[tokio::test]

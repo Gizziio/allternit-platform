@@ -365,6 +365,13 @@ async fn main() {
     // §3: every workspace in the store gets the default Al and Gizzi
     // principals (idempotent; credentials are provisioned separately, once).
     seed_default_principals(&db).await;
+    if allternit_api::cloud_worker::should_run_cloud_worker(&app_config) {
+        allternit_api::cloud_worker::spawn_cloud_fabric_worker(
+            db.clone(),
+            Arc::new(app_config.clone()),
+            app_config.api_port(),
+        );
+    }
     // A-T3: deterministic Al orchestration loop — processes intents targeted
     // at principal/al (delegation rules → child intent → monitor → record).
     // The manager mirror is passed so store-direct child runs become visible

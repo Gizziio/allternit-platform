@@ -526,13 +526,11 @@ owner reviews and merges — no self-merge.
   iOS `FabricTransportClient` / `FabricApprovalsView` source is in the
   Xcode project; Grant/Deny was **not** click-tested on a simulator
   (Mesh.xcframework blocked that pass). Do not treat iOS reach as shipped.
-- **E6 PARTIAL** — laptop side now **fails closed** without
-  `ALLTERNIT_CONTINUATION_API_URL` + `ALLTERNIT_CONTINUATION_TOKEN`, and
-  quit **POSTs ingest** (envelope + bounded trusted-folder copy) to that
-  API. Cloud-continuation routines are created on the remote API (local
-  row is a disabled pointer). Still operator-owned: someone must run
-  `gizzi-code fabric-worker --compute-mode cloud` against the always-on
-  API. The desktop does not provision that host.
+- **E6** — laptop quit retags jobs, packs granted folders, and relays
+  ingest through `api.allternit.com` to a **non-local** node (provisioned
+  then paired; never the laptop). That node's allternit-api auto-starts
+  `gizzi-cloud` when it is not a desktop sidecar. `GET/POST
+  /api/v1/continuation/ensure` refuses if only a laptop node is online.
 - **P5 PARTIAL** — updater feed locked to `Gizziio/desktop` (publish +
   `updateElectronApp` + manifest + preflight mismatch gate). Signing /
   notarization / cutting `desktop-v1.2.0` is an owner action (Apple

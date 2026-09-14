@@ -51,7 +51,8 @@ pub use inference_keys::{
     InferenceKeyService, KeyValidator,
 };
 pub use node_resolution::{
-    resolve_default_node, NodeCandidate, NodeKind, NodeStore, PgNodeStore, ResolvedNode,
+    resolve_continuation_node, resolve_default_node, NodeCandidate, NodeKind, NodeStore,
+    PgNodeStore, ResolvedNode,
 };
 pub use provisioning::{
     activate_registered_device, bind_device_slot, build_user_data, can_transition,

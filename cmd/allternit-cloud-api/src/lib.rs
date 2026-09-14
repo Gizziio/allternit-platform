@@ -366,6 +366,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // per-request inside each handler (resolve_user_scoped), then proxied
         // to the caller's default data-plane node via the runtime relay.
         .merge(routes::agent_sessions::routes())
+        .merge(routes::continuation::routes())
         // Office namespace (P1): bindings/bootstrap/runtime-state, relayed to
         // the caller's default node. Office state is in-memory per :8013
         // process, so these handlers are node-affine by design (§3.3).

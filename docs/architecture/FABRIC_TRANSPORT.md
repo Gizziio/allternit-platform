@@ -427,12 +427,14 @@ What now happens when a target is configured:
 - Cloud-continuation routines are inserted on the remote API (local
   copy is `enabled=0` so the laptop does not tick them).
 
-What is still operator-owned:
+Always-on worker: a data-plane allternit-api that is **not** the laptop
+sidecar (no `ALLTERNIT_DESKTOP_ACCESS_TOKEN`) starts `gizzi-code
+fabric-worker --compute-mode cloud` itself. Desktop quit calls
+`/api/v1/continuation/ensure` then relays ingest through cloud-api to a
+provisioned or paired node — never the sleeping laptop. If only a laptop
+node is registered, ensure returns 428.
 
-- An always-on allternit-api must already be running.
-- `gizzi-code fabric-worker --compute-mode cloud` must already be
-  running against that API. The desktop does not start it.
-- Folders larger than the cap are not uploaded.
+Folders larger than 20 MiB / files larger than 1 MiB are skipped.
 
 ## 15c. Release engineering (consumer P5)
 

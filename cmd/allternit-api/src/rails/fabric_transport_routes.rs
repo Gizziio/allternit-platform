@@ -1073,13 +1073,6 @@ async fn handoff_all_in_flight(
         .ok()
         .flatten()
     });
-    let Some(target) = crate::continuation::resolve_target(&state.config, prefs_url.as_deref())
-    else {
-        return Err(ErrorResponse {
-            error: "cloud continuation is not configured: set ALLTERNIT_CONTINUATION_API_URL (always-on allternit-api) and ALLTERNIT_CONTINUATION_TOKEN. Jobs were only retagged locally; this API is about to stop.".to_string(),
-            code: 409,
-        });
-    };
     let folders: Vec<String> = user
         .as_ref()
         .and_then(|u| {
@@ -1103,20 +1096,26 @@ async fn handoff_all_in_flight(
             })
         })
         .collect();
-    if bundles.is_empty() {
-        return Err(ErrorResponse {
-            error: "in-flight jobs have no intent envelopes to replay on the always-on API".to_string(),
-            code: 409,
-        });
+    let mut forwarded = 0u64;
+    let mut target_out: Option<String> = None;
+    if let Some(target) = crate::continuation::resolve_target(&state.config, prefs_url.as_deref()) {
+        if !bundles.is_empty() {
+            forwarded = crate::continuation::forward_bundles(&state.config, &target, &bundles)
+                .await
+                .map_err(|e| ErrorResponse {
+                    error: format!("continuation ingest failed: {e}"),
+                    code: 502,
+                })? as u64;
+            target_out = Some(target);
+        }
     }
-    let forwarded = crate::continuation::forward_bundles(&state.config, &target, &bundles)
-        .await
-        .map_err(|e| ErrorResponse {
-            error: format!("continuation ingest failed: {e}"),
-            code: 502,
-        })?;
-    info!(count = jobs.len(), forwarded, target = %target, "In-flight jobs forwarded to always-on continuation API");
-    Ok(Json(json!({ "jobs": jobs, "forwarded": forwarded, "target": target })))
+    info!(count = jobs.len(), forwarded, "In-flight jobs retagged; envelopes ready for cloud-api relay");
+    Ok(Json(json!({
+        "jobs": jobs,
+        "files": files,
+        "forwarded": forwarded,
+        "target": target_out,
+    })))
 }
 
 #[derive(Debug, serde::Deserialize)]
