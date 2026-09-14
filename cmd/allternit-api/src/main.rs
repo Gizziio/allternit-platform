@@ -83,6 +83,7 @@ use allternit_api::me_routes::me_router;
 use allternit_api::memory_reconstruction_routes::memory_reconstruction_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
+use allternit_api::model_training_routes::model_training_router;
 use allternit_api::oauth_routes::oauth_router;
 use allternit_api::office_cli_routes::office_cli_router;
 use allternit_api::office_engine_routes::{office_engine_router, office_engine_v1_router};
@@ -692,6 +693,7 @@ async fn main() {
         .merge(memory_router())
         .merge(me_router())
         .merge(local_brain_router())
+        .merge(model_training_router())
         .merge(library_router())
         .merge(workflow_router())
         .merge(ssh_router())
@@ -839,6 +841,7 @@ async fn main() {
         .nest("/api", local_engine_router())
         .nest("/api", local_studio_router())
         .nest("/api", har_api_router())
+        .nest("/api", model_training_router())
         // Feature routes
         .nest("/viz", viz_router())
         .nest("/sandbox", sandbox_router())
