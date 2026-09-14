@@ -145,6 +145,12 @@ class RecordingManifest:
     # to video offsets: offset_ms = frame_ts_ms - video_start_epoch.
     video_path: Optional[str] = None
     video_start_epoch: Optional[int] = None
+    # H0 (har-network-traces): scrubbed HAR artifact. har_status is one of
+    # "absent" (capture off), "captured", "refused" (scrub failed — the raw
+    # HAR was destroyed, never stored), "unavailable" (capture on but the
+    # browser context never delivered a HAR to scrub).
+    har_path: Optional[str] = None
+    har_status: str = "absent"
 
     def to_dict(self) -> Dict:
         return {
@@ -162,6 +168,8 @@ class RecordingManifest:
             "gif_path": self.gif_path,
             "video_path": self.video_path,
             "video_start_epoch": self.video_start_epoch,
+            "har_path": self.har_path,
+            "har_status": self.har_status,
         }
 
 
@@ -194,6 +202,7 @@ class ActionRecorder:
         gif_fps: int = 2,
         gif_scale: float = 0.5,
         gif_annotate: bool = True,
+        record_har: bool = False,
     ):
         self.recording_id = recording_id or f"rec-{uuid.uuid4().hex[:12]}"
         self.output_dir = output_dir or DEFAULT_RECORDINGS_DIR
@@ -209,6 +218,20 @@ class ActionRecorder:
         self._file = None
         self._lock = asyncio.Lock()
         self._frame_count = 0
+
+        # H0 (har-network-traces): HAR capture. Playwright only records a HAR
+        # when the browser context is created with ``record_har_path``, so the
+        # recorder exposes the raw path/target via ``har_context_options()``
+        # for the caller creating the context. The raw file is a temp artifact
+        # that is scrubbed BEFORE storage; on scrub failure the recording is
+        # refused and the raw HAR destroyed (fail closed — never stored raw).
+        self._record_har = record_har
+        self._raw_har_path: Optional[Path] = (
+            self.output_dir / f".{self.recording_id}.raw.har" if record_har else None
+        )
+        self._har_path: Optional[Path] = (
+            self.output_dir / f"{self.recording_id}.har" if record_har else None
+        )
 
         # GIF recording
         self._gif_annotate = gif_annotate
@@ -228,6 +251,66 @@ class ActionRecorder:
         if self.manifest.gif_path:
             return Path(self.manifest.gif_path)
         return None
+
+    def har_context_options(self) -> Dict[str, Any]:
+        """Playwright BrowserContext kwargs enabling HAR capture (H0).
+
+        Pass the result to ``browser.new_context(**recorder.har_context_options())``.
+        Playwright writes the raw HAR when the context closes; the recorder
+        then scrubs it before storage via ``stop()``. Empty dict when HAR
+        capture is off.
+        """
+        if not self._record_har or self._raw_har_path is None:
+            return {}
+        return {"record_har_path": str(self._raw_har_path)}
+
+    def get_har_path(self) -> Optional[Path]:
+        """The scrubbed HAR path, once ``stop()`` has finalized it."""
+        if self.manifest.har_path:
+            return Path(self.manifest.har_path)
+        return None
+
+    async def finish_har(self) -> Optional[Path]:
+        """Scrub the raw HAR and store it beside the recording (H0).
+
+        Fail closed: when scrubbing cannot prove the artifact clean a
+        ``HarScrubError`` propagates, the raw HAR is destroyed, and the
+        manifest is marked ``refused`` — raw HAR never enters storage.
+        """
+        if not self._record_har:
+            return None
+        from core.network_trace import HarScrubError, store_scrubbed_har
+
+        raw = self._raw_har_path
+        target = self._har_path
+        if raw is None or target is None:
+            return None
+        if not raw.is_file():
+            self.manifest.har_status = "unavailable"
+            logger.warning("[Recorder] HAR capture produced no raw file: %s", raw)
+            return None
+        try:
+            store_scrubbed_har(raw, target)
+        except HarScrubError:
+            self.manifest.har_status = "refused"
+            try:
+                raw.unlink()
+            except OSError:
+                pass
+            logger.error("[Recorder] HAR scrub failed — recording refused (raw destroyed)")
+            raise
+        finally:
+            # The raw HAR is a temp artifact in every non-refused path too —
+            # only the scrubbed copy may persist.
+            if raw.is_file():
+                try:
+                    raw.unlink()
+                except OSError:
+                    pass
+        self.manifest.har_path = str(target)
+        self.manifest.har_status = "captured"
+        logger.info("[Recorder] Scrubbed HAR stored: %s", target)
+        return target
 
     async def start(self) -> Path:
         """Open the recording file and write the manifest."""
@@ -325,6 +408,16 @@ class ActionRecorder:
                 self.manifest.gif_path = str(gif_path)
                 logger.info("[Recorder] GIF saved: %s (%d frames)", gif_path, self._gif_recorder.frame_count)
 
+        # H0: scrub the captured HAR before persisting anything. A scrub
+        # failure refuses the recording (manifest marked, raw destroyed) and
+        # propagates after the manifest is rewritten.
+        har_error: Optional[Exception] = None
+        if self._record_har:
+            try:
+                await self.finish_har()
+            except Exception as exc:  # HarScrubError — fail closed
+                har_error = exc
+
         if self._file:
             self._file.close()
             self._file = None
@@ -336,6 +429,8 @@ class ActionRecorder:
                 self._path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         except Exception as e:
             logger.warning(f"[Recorder] Could not update manifest: {e}")
+        if har_error is not None:
+            raise har_error
         logger.info(f"[Recorder] Stopped recording {self.recording_id}, {self._frame_count} frames")
         return self._path
 
@@ -371,6 +466,8 @@ class ActionRecorder:
             gif_path=manifest_data.get("gif_path"),
             video_path=manifest_data.get("video_path"),
             video_start_epoch=manifest_data.get("video_start_epoch"),
+            har_path=manifest_data.get("har_path"),
+            har_status=manifest_data.get("har_status", "absent"),
         )
         frames = []
         for line in lines[1:]:

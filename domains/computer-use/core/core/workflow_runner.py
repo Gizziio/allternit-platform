@@ -34,6 +34,8 @@ Behavior:
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 import os
 import re
@@ -126,9 +128,13 @@ class WorkflowRunResult:
     title: str
     run_id: str
     session_id: str
-    status: str  # "completed" | "abandoned" | "failed" | "cancelled"
+    status: str  # "completed" | "abandoned" | "failed" | "cancelled" | "deviated"
     steps: List[WorkflowStepResult] = field(default_factory=list)
     pauses: List[WorkflowPause] = field(default_factory=list)
+    # H2 (har-network-traces): exact network mismatches vs the spec's
+    # recorded NetworkTrace, plus deterministic receipt fragments for them.
+    network_deviations: List[Dict[str, Any]] = field(default_factory=list)
+    receipts: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -139,6 +145,8 @@ class WorkflowRunResult:
             "status": self.status,
             "steps": [s.to_dict() for s in self.steps],
             "pauses": [p.to_dict() for p in self.pauses],
+            "network_deviations": list(self.network_deviations),
+            "receipts": list(self.receipts),
             "total_steps": len(self.steps),
         }
 
@@ -168,7 +176,45 @@ def load_workflow_spec(spec: Dict[str, Any]) -> Dict[str, Any]:
             raise WorkflowValidationError(f"workflow step #{index} is missing 'id'")
         if not step.get("kind"):
             raise WorkflowValidationError(f"workflow step {step.get('id')!r} is missing 'kind'")
+    _validate_network_trace(spec.get("networkTrace"))
     return spec
+
+
+def _validate_network_trace(trace: Any) -> None:
+    """H1 (har-network-traces): validate the additive ``networkTrace`` field.
+
+    Shape-only contract: versioned entries of {method, host, pathTemplate,
+    payloadKeysHash, verifiable}. Absent is fine (pre-H1 specs); present and
+    malformed refuses the spec.
+    """
+    if trace is None:
+        return
+    if not isinstance(trace, dict):
+        raise WorkflowValidationError("workflow spec 'networkTrace' must be an object")
+    if trace.get("version") != 1:
+        raise WorkflowValidationError(
+            f"workflow spec 'networkTrace' has unsupported version: {trace.get('version')!r}"
+        )
+    entries = trace.get("entries")
+    if not isinstance(entries, list):
+        raise WorkflowValidationError("workflow spec 'networkTrace.entries' must be a list")
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise WorkflowValidationError(f"networkTrace entry #{index} must be an object")
+        for field_name in ("method", "host", "pathTemplate"):
+            if not isinstance(entry.get(field_name), str) or not entry[field_name]:
+                raise WorkflowValidationError(
+                    f"networkTrace entry #{index} is missing '{field_name}'"
+                )
+        if "payloadKeysHash" in entry and entry["payloadKeysHash"] is not None \
+                and not isinstance(entry["payloadKeysHash"], str):
+            raise WorkflowValidationError(
+                f"networkTrace entry #{index} 'payloadKeysHash' must be a string or null"
+            )
+        if "verifiable" in entry and not isinstance(entry["verifiable"], bool):
+            raise WorkflowValidationError(
+                f"networkTrace entry #{index} 'verifiable' must be a boolean"
+            )
 
 
 def _substitute(value: Any, params: Dict[str, Any]) -> Tuple[Any, List[str]]:
@@ -242,6 +288,7 @@ class WorkflowRunner:
         batch_mode: str = "batch",               # "batch" (one grant) | "per_step"
         batch_page_url: Optional[str] = None,    # operator-pinned page binding; else observed
         batch_headless: bool = True,
+        har_finalizer: Optional[Callable[[], Any]] = None,  # H2: async/sync → scrubbed live HAR dict
     ) -> None:
         self.adapter = adapter
         self.session_id = session_id
@@ -255,6 +302,7 @@ class WorkflowRunner:
         self.batch_mode = batch_mode
         self.batch_page_url = batch_page_url
         self.batch_headless = batch_headless
+        self.har_finalizer = har_finalizer
 
     async def run(self, spec: Dict[str, Any]) -> WorkflowRunResult:
         spec = load_workflow_spec(spec)
@@ -304,6 +352,72 @@ class WorkflowRunner:
                 steps_out, pauses, workflow_id, run_id,
             )
 
+        # H2 (har-network-traces): verify the live run's network trace against
+        # the spec's recorded NetworkTrace — exact ordered comparison. A
+        # HarScrubError from the finalizer propagates (fail closed). The
+        # finalizer returns an already-scrubbed live HAR dict, or None when
+        # no live capture happened (verify skipped, deterministic).
+        network_deviations: List[Dict[str, Any]] = []
+        receipts: List[Dict[str, Any]] = []
+        network_trace_spec = spec.get("networkTrace")
+        if network_trace_spec and self.har_finalizer is not None:
+            live_har = self.har_finalizer()
+            if asyncio.iscoroutine(live_har):
+                live_har = await live_har
+            if live_har is not None:
+                from core.network_trace import NetworkTrace, compare_traces, distill_har
+
+                recorded_trace = NetworkTrace.from_dict(network_trace_spec)
+                deviations = compare_traces(recorded_trace, distill_har(live_har))
+                for deviation in deviations:
+                    deviation_dict = deviation.to_dict()
+                    network_deviations.append(deviation_dict)
+                    receipts.append({
+                        "type": "network.deviation",
+                        "workflow_id": workflow_id,
+                        "run_id": run_id,
+                        "deviation_hash": hashlib.sha256(
+                            json.dumps(deviation_dict, sort_keys=True, default=str).encode("utf-8")
+                        ).hexdigest(),
+                        "deviation": deviation_dict,
+                    })
+                await self._emit({
+                    "type": "workflow.network_verify",
+                    "workflow_id": workflow_id,
+                    "run_id": run_id,
+                    "deviations": len(deviations),
+                })
+                if deviations:
+                    if self.approval_callback is None:
+                        if status == "completed":
+                            status = "deviated"
+                    else:
+                        pause = WorkflowPause(
+                            kind="workflow.network_deviation",
+                            step="network",
+                            step_index=-1,
+                            reason=f"{len(deviations)} network deviation(s) vs recorded trace",
+                        )
+                        pauses.append(pause)
+                        await self._emit({
+                            "type": "approval.required",
+                            "kind": pause.kind,
+                            "workflow_id": workflow_id,
+                            "step": pause.step,
+                            "step_index": pause.step_index,
+                            "reason": pause.reason,
+                        })
+                        resume = await self._ask_approval(pause)
+                        await self._emit({
+                            "type": "approval.resolved",
+                            "kind": pause.kind,
+                            "workflow_id": workflow_id,
+                            "step": pause.step,
+                            "approved": resume,
+                        })
+                        if not resume:
+                            status = "abandoned"
+
         result = WorkflowRunResult(
             workflow_id=workflow_id,
             title=title,
@@ -312,6 +426,8 @@ class WorkflowRunner:
             status=status,
             steps=steps_out,
             pauses=pauses,
+            network_deviations=network_deviations,
+            receipts=receipts,
         )
         await self._emit({
             "type": "workflow.finished",

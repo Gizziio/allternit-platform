@@ -500,3 +500,37 @@ tests pass (40/40), and the six graded rows in `adapter_grades.json` were
 reproduced on 2026-09-09 by executing the conformance suites — the full
 measurement where the runtimes were available, and the CDP suite directly
 against a headless Chrome listening on the CDP port.
+
+## Network-trace verification (HAR third leg)
+
+Recorded workflows can now carry a `networkTrace` (HAR-derived, shapes only)
+that is re-verified after batch/replay execution. Measured on the canned
+form-fill chain (`domains/computer-use/core/scripts/har_chain_e2e.py`, two
+full runs, 2026-09-14, local Chromium + local test site):
+
+- **Scrub is fail-closed.** A planted credential canary (header `Bearer`
+  token, query param, cookie jar, and JSON payload field) appears nowhere in
+  the stored HAR or the distilled trace. Two leaks found during bring-up —
+  the request cookie jar and the `Referer` header carrying the navigation
+  URL's query tokens — are scrubbed; any survivor anywhere in the serialized
+  document refuses the recording (`har_status: "refused"`, raw destroyed).
+- **Verdicts are exact, not fuzzy.** Method + path-template + order and the
+  payload key-set must match exactly; any mismatch is a first-class
+  `ReplayDeviation` (kind `network`) / workflow receipt fragment. Two full
+  chain runs produce byte-identical verdicts and identical receipt hashes
+  (`sha256(receipt)` reproducible from content alone).
+- **Determinism is by construction, not tuning.** The verdict excludes
+  timestamps and uuids; the batch receipt id is content-derived.
+
+Honest caveats:
+
+- Unverifiable marking is conservative: if one (method, host) group
+  produces more than one path template at teach time, the whole group is
+  marked `verifiable: false` (method+host matched, never path-guessed).
+- Non-JSON, non-form payloads are not key-redacted (the survivor check still
+  fails closed if a collected secret appears there).
+- Response bodies are embedded in the scrubbed HAR; a server that renders a
+  secret into page HTML will trip the survivor check — that refusal is
+  correct, and fixtures should inject such tokens client-side.
+- Browser-internal requests (data:, extension) are excluded from traces as
+  non-server truth.

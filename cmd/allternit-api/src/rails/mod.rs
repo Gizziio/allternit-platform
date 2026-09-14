@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
     Json, Router,
 };
 pub mod routes_cowork;
@@ -277,6 +277,8 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/dags/:dag_id/render", get(dag_render))
         .route("/dags/:dag_id/execute", post(dag_execute))
         .route("/dags/:dag_id/nodes", post(create_dag_node))
+        .route("/dags/:dag_id/nodes/:node_id", patch(update_dag_node))
+        .route("/dags/:dag_id/nodes/:node_id", delete(delete_dag_node))
         .route("/runs/:run_id/cancel", post(run_cancel))
         // Leases
         .route("/leases", get(list_leases).post(request_lease))
@@ -423,10 +425,19 @@ pub(crate) struct VisibilityPane {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub(crate) struct VisibilityNeedNode {
+    pub(crate) dag_id: String,
+    pub(crate) node_id: String,
+    pub(crate) title: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub(crate) struct VisibilityNeed {
     pub(crate) id: String,
     pub(crate) label: String,
     pub(crate) reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) node: Option<VisibilityNeedNode>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -443,7 +454,7 @@ pub(crate) struct VisibilityDto {
 /// (engine blocked/idle panes + waiting-on-you); falls back to the local
 /// peer registry when ao is down.
 async fn visibility(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let dto = visibility::load_visibility(&state.rails.root_dir, &state.rails.peers).await;
+    let dto = visibility::load_visibility(&state.rails.root_dir, &state.rails.peers, &state.rails.ledger).await;
     (StatusCode::OK, Json(dto))
 }
 
@@ -2633,14 +2644,11 @@ async fn dags_view(
             };
             let mut dags = Vec::new();
             for dag_id in dag_ids {
-                let dag_events: Vec<_> = events
-                    .iter()
-                    .filter(|e| {
-                        e.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id.as_str())
-                    })
-                    .cloned()
-                    .collect();
-                let dag = project_dag(&dag_events, &dag_id);
+                // Project from the full event log: DagNodeUpdated /
+                // DagNodeStatusChanged-style events carry no dag_id in their
+                // payload, so the dag-scoped filter drops renames and status
+                // transitions from the projection.
+                let dag = project_dag(&events, &dag_id);
                 let ready_set: std::collections::HashSet<String> =
                     ready_nodes(&dag).into_iter().collect();
                 let ready_count = ready_set.len();
@@ -2964,6 +2972,229 @@ async fn create_dag_node(
             Json(json!({ "node_id": node_id })),
         )
             .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateDagNodeRequest {
+    title: Option<String>,
+    // Double Option: absent field = no reparent, null = reparent to root,
+    // string = reparent under that node. serde_json collapses a nested
+    // Option<Option<String>> (null deserializes to the outer None, identical
+    // to an absent field), so the distinction needs an explicit visitor.
+    #[serde(default, deserialize_with = "deserialize_reparent")]
+    parent_node_id: Option<Option<String>>,
+}
+
+fn deserialize_reparent<'de, D>(deserializer: D) -> Result<Option<Option<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct ReparentVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for ReparentVisitor {
+        type Value = Option<Option<String>>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("null or a parent node id string")
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(None))
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(None))
+        }
+
+        fn visit_some<D2>(self, deserializer: D2) -> Result<Self::Value, D2::Error>
+        where
+            D2: serde::Deserializer<'de>,
+        {
+            String::deserialize(deserializer).map(Some).map(Some)
+        }
+    }
+
+    deserializer.deserialize_option(ReparentVisitor)
+}
+
+async fn update_dag_node(
+    State(state): State<Arc<AppState>>,
+    Path((dag_id, node_id)): Path<(String, String)>,
+    Json(req): Json<UpdateDagNodeRequest>,
+) -> impl IntoResponse {
+    info!(dag_id = %dag_id, node_id = %node_id, "Updating DAG node");
+
+    let title = req.title.as_deref().map(str::trim);
+    if matches!(title, Some("")) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "title is required" })),
+        )
+            .into_response();
+    }
+    if req.title.is_none() && req.parent_node_id.is_none() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "no changes: title or parent_node_id is required" })),
+        )
+            .into_response();
+    }
+
+    let events = match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => events,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+    let dag = project_dag(&events, &dag_id);
+    let node = match dag.nodes.get(&node_id) {
+        Some(node) => node,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "node not found" })),
+            )
+                .into_response();
+        }
+    };
+
+    let mut mutations = Vec::new();
+    if let Some(title) = title {
+        mutations.push(DagMutation::UpdateNode {
+            node_id: node_id.clone(),
+            patch: serde_json::json!({ "title": title }),
+        });
+    }
+    if let Some(new_parent) = &req.parent_node_id {
+        if new_parent.as_deref() != node.parent_node_id.as_deref() {
+            mutations.push(DagMutation::ReparentNode {
+                node_id: node_id.clone(),
+                new_parent_id: new_parent.clone(),
+            });
+        }
+    }
+    if mutations.is_empty() {
+        // Reparent identical to the current parent: nothing to record.
+        return (StatusCode::OK, Json(json!({ "node_id": node_id }))).into_response();
+    }
+
+    match state
+        .rails
+        .gate
+        .mutate_with_decision(&dag_id, "api node update", None, mutations)
+        .await
+    {
+        Ok(_) => (StatusCode::OK, Json(json!({ "node_id": node_id }))).into_response(),
+        Err(e) => {
+            let message = e.to_string();
+            let status = if message.contains("cycle") {
+                StatusCode::CONFLICT
+            } else if message.contains("not found") {
+                StatusCode::BAD_REQUEST
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+            (status, Json(json!({ "error": message }))).into_response()
+        }
+    }
+}
+
+async fn delete_dag_node(
+    State(state): State<Arc<AppState>>,
+    Path((dag_id, node_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    info!(dag_id = %dag_id, node_id = %node_id, "Deleting DAG node");
+
+    let events = match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => events,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+    let dag = project_dag(&events, &dag_id);
+    let node = match dag.nodes.get(&node_id) {
+        Some(node) => node,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "node not found" })),
+            )
+                .into_response();
+        }
+    };
+
+    // Guard against deleting a node that has an ACTIVE WIH. The node's own
+    // `current_wih_id` field is never populated by the projection (it is always
+    // None), so scan active WIHs by node id instead — smoke-tested 2026-09-13:
+    // relying on current_wih_id let a delete through and orphaned the WIH.
+    let blocking_wihs: Vec<String> = active_wihs(&events)
+        .into_iter()
+        .filter(|w| w.dag_id == dag_id && w.node_id == node_id)
+        .map(|w| w.wih_id)
+        .collect();
+    if !blocking_wihs.is_empty() {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": format!(
+                    "node has an active WIH ({}); close it before deleting the node",
+                    blocking_wihs.join(", ")
+                )
+            })),
+        )
+            .into_response();
+    }
+
+    let open_children: Vec<String> = dag
+        .nodes
+        .values()
+        .filter(|n| n.parent_node_id.as_deref() == Some(node_id.as_str()))
+        .filter(|n| n.status != "DONE")
+        .map(|n| n.node_id.clone())
+        .collect();
+    if !open_children.is_empty() {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "node has children that are not DONE",
+                "children": open_children
+            })),
+        )
+            .into_response();
+    }
+
+    match state
+        .rails
+        .gate
+        .mutate_with_decision(
+            &dag_id,
+            "api node delete",
+            None,
+            vec![DagMutation::DeleteNode { node_id }],
+        )
+        .await
+    {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({ "error": e.to_string() })),
@@ -4528,6 +4759,20 @@ mod tests {
             .unwrap()
     }
 
+    async fn patch_json(app: &Router, uri: &str, body: Value) -> axum::response::Response {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .body(Body::from(body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
     /// E1 mail round-trip: thread default fix (R4), agent registry (R1),
     /// typed envelope send (R2), per-agent inbox/outbox (R3), and the
     /// untouched share path whose events the inbox must skip.
@@ -5349,6 +5594,243 @@ mod tests {
         let resp = post_json(&app, "/index/rebuild", json!({})).await;
         let body = body_json(resp.into_body()).await;
         assert!(body["indexed_count"].as_u64().unwrap() >= 3);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Delete guard: a node with an ACTIVE WIH must 409 even though the node's
+    /// own `current_wih_id` projection field is never populated (always None).
+    /// Live-smoke regression 2026-09-13: the field-based guard let the delete
+    /// through and orphaned the WIH.
+    #[tokio::test]
+    async fn delete_node_with_active_wih_conflicts() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-delwih-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // Plan with a parent + child so we can also exercise the children guard.
+        let resp = post_json(
+            &app,
+            "/plan/from-text",
+            json!({
+                "title": "delete guard",
+                "todos": [
+                    { "title": "parent", "depth": 0 },
+                    { "title": "leaf", "depth": 1 }
+                ]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let dag_id = body["dag_id"].as_str().unwrap().to_string();
+
+        let resp = get(&app, "/dags?view=all").await;
+        let body = body_json(resp.into_body()).await;
+        let dag = body["dags"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|d| d["dag_id"] == json!(dag_id))
+            .unwrap()
+            .clone();
+        let nodes: Vec<(String, String)> = dag["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| {
+                (
+                    n["node_id"].as_str().unwrap().to_string(),
+                    n["title"].as_str().unwrap().to_string(),
+                )
+            })
+            .collect();
+        let (parent_id, _) = nodes.iter().find(|(_, t)| t == "parent").unwrap().clone();
+        let (leaf_id, _) = nodes.iter().find(|(_, t)| t == "leaf").unwrap().clone();
+
+        // Children guard: parent has a non-DONE child.
+        let resp = delete_req(&app, &format!("/dags/{dag_id}/nodes/{parent_id}")).await;
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+        // Pick up the leaf; active WIH must block its deletion.
+        let wih_id = state
+            .rails
+            .gate
+            .wih_pickup(&dag_id, &leaf_id, "agent-a")
+            .await
+            .unwrap();
+        let resp = delete_req(&app, &format!("/dags/{dag_id}/nodes/{leaf_id}")).await;
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+        let body = body_json(resp.into_body()).await;
+        assert!(
+            body["error"]
+                .as_str()
+                .unwrap()
+                .contains("active WIH"),
+            "expected active-WIH conflict, got: {body}"
+        );
+
+        // Close the WIH; deletion now succeeds.
+        let evidence = vec!["smoke evidence".to_string()];
+        state
+            .rails
+            .gate
+            .wih_close(&wih_id, "DONE", &evidence)
+            .await
+            .unwrap();
+        let resp = delete_req(&app, &format!("/dags/{dag_id}/nodes/{leaf_id}")).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// PATCH parent_node_id: reparent under another node, reparent to root
+    /// (null), reparent onto an own descendant → 409 cycle, and title-only
+    /// PATCH keeps the v4 rename contract.
+    #[tokio::test]
+    async fn patch_reparent_nodes_with_cycle_409() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-reparent-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        let resp = post_json(
+            &app,
+            "/plan/from-text",
+            json!({
+                "title": "reparent plan",
+                "todos": [
+                    { "title": "task A", "depth": 0 },
+                    { "title": "task B", "depth": 1 },
+                    { "title": "task C", "depth": 1 }
+                ]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let dag_id = body["dag_id"].as_str().unwrap().to_string();
+
+        // (node_id, parent_node_id) for a node title, via the dags view.
+        async fn node_info(app: &Router, dag_id: &str, title: &str) -> (String, Value) {
+            let resp = get(app, "/dags?view=all").await;
+            let body = body_json(resp.into_body()).await;
+            let dag = body["dags"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|d| d["dag_id"] == json!(dag_id))
+                .unwrap()
+                .clone();
+            let node = dag["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|n| n["title"] == json!(title))
+                .unwrap_or_else(|| panic!("node {title:?} missing from dags view"))
+                .clone();
+            (
+                node["node_id"].as_str().unwrap().to_string(),
+                node["parent_node_id"].clone(),
+            )
+        }
+
+        // plan/from-text wraps todos under its own plan-root node and nests
+        // them per depth; the exact initial shape is not load-bearing here.
+        let (a_id, _) = node_info(&app, &dag_id, "task A").await;
+        let (b_id, _) = node_info(&app, &dag_id, "task B").await;
+        let (c_id, _) = node_info(&app, &dag_id, "task C").await;
+        assert!(a_id != b_id && b_id != c_id && a_id != c_id);
+
+        // Reparent C to the root (explicit null — serde double-Option).
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{c_id}"),
+            json!({ "parent_node_id": null }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let (_, c_parent) = node_info(&app, &dag_id, "task C").await;
+        assert!(c_parent.is_null());
+
+        // Reparent C under B, then move it back to the root: assert the
+        // parent actually changed via the dags view each time.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{c_id}"),
+            json!({ "parent_node_id": b_id }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let (_, c_parent) = node_info(&app, &dag_id, "task C").await;
+        assert_eq!(c_parent, json!(b_id));
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{c_id}"),
+            json!({ "parent_node_id": null }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let (_, c_parent) = node_info(&app, &dag_id, "task C").await;
+        assert!(c_parent.is_null());
+
+        // Set up the cycle chain: B under C ...
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{b_id}"),
+            json!({ "parent_node_id": c_id }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let (_, b_parent) = node_info(&app, &dag_id, "task B").await;
+        assert_eq!(b_parent, json!(c_id));
+
+        // ... then reparenting C under its own descendant must 409.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{c_id}"),
+            json!({ "parent_node_id": b_id }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+        let body = body_json(resp.into_body()).await;
+        assert!(
+            body["error"].as_str().unwrap().contains("cycle"),
+            "expected cycle message, got: {body}"
+        );
+
+        // Unknown parent maps the library error to 400.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{c_id}"),
+            json!({ "parent_node_id": "n_bogus" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Empty PATCH is rejected.
+        let resp = patch_json(&app, &format!("/dags/{dag_id}/nodes/{c_id}"), json!({})).await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Title-only PATCH keeps the v4 rename contract.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{c_id}"),
+            json!({ "title": "task C renamed" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["node_id"], json!(c_id));
+        let (c_id2, _) = node_info(&app, &dag_id, "task C renamed").await;
+        assert_eq!(c_id2, c_id);
 
         let _ = std::fs::remove_dir_all(&temp);
     }

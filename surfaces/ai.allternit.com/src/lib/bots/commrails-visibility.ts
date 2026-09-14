@@ -20,10 +20,18 @@ export interface VisibilityPane {
   lastMessageAt?: number;
 }
 
+export interface VisibilityNeedNode {
+  dag_id: string;
+  node_id: string;
+  title: string;
+}
+
 export interface VisibilityNeed {
   id: string;
   label: string;
   reason: string;
+  /** Correlated CommRails DAG node when the need is blocked on one. */
+  node?: VisibilityNeedNode | null;
 }
 
 export interface VisibilityDto {
@@ -79,6 +87,19 @@ export function paneStateToOperational(
   return 'idle';
 }
 
+function parseNeedNode(raw: unknown): VisibilityNeedNode | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const rec = raw as Record<string, unknown>;
+  if (
+    typeof rec.dag_id !== 'string' ||
+    typeof rec.node_id !== 'string' ||
+    typeof rec.title !== 'string'
+  ) {
+    return null;
+  }
+  return { dag_id: rec.dag_id, node_id: rec.node_id, title: rec.title };
+}
+
 function parseDto(raw: unknown): VisibilityDto {
   if (!raw || typeof raw !== 'object') return { ...EMPTY_VISIBILITY };
   const rec = raw as Record<string, unknown>;
@@ -109,6 +130,7 @@ function parseDto(raw: unknown): VisibilityDto {
         id: String(n.id ?? ''),
         label: String(n.label ?? n.id ?? ''),
         reason: String(n.reason ?? ''),
+        node: parseNeedNode(n.node),
       }))
       .filter((n) => n.id.length > 0),
     aoRunning: true,

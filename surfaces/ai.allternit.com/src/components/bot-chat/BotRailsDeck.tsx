@@ -12,7 +12,7 @@
 import React, { useState } from "react";
 import { CaretDown, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { useRailsAgentId, useRailsDags, useRailsNeedsYouCount } from "@/lib/rails/use-rails-dags";
+import { useRailsAgentId, useRailsDags, useRailsNeedsYouCount, useRailsNeedsYouEntries } from "@/lib/rails/use-rails-dags";
 import RailsTaskList from "@/components/rails/RailsTaskList";
 
 export function BotRailsDeck() {
@@ -20,6 +20,7 @@ export function BotRailsDeck() {
   const mine = useRailsDags("mine");
   const ready = useRailsDags("ready");
   const blocked = useRailsNeedsYouCount();
+  const blockedEntries = useRailsNeedsYouEntries();
   const [open, setOpen] = useState(true);
 
   const mineCount = mine.data?.dags.length ?? 0;
@@ -58,6 +59,22 @@ export function BotRailsDeck() {
       </button>
       {open && (
         <div className="min-w-0">
+          {blockedEntries.length > 0 && (
+            <ul className="min-w-0">
+              {blockedEntries.map((entry) => (
+                <li key={entry.id} className="flex min-w-0 flex-col py-0.5">
+                  <span className="min-w-0 truncate text-[11px] text-[var(--text-secondary)]">
+                    {entry.label}
+                  </span>
+                  {entry.node ? (
+                    <span className="min-w-0 truncate text-[10px] text-[var(--text-tertiary)]">
+                      blocked on &ldquo;{entry.node.title}&rdquo;
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
           {mineCount > 0 && <RailsTaskList view="mine" agentId={agentId} compact />}
           {mineCount === 0 && readyDags.length > 0 && (
             <div className="min-w-0">

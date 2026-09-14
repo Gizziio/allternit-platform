@@ -11,11 +11,15 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ArrowsMerge,
+  Check,
   CheckCircle,
   Circle,
   CircleHalf,
   MinusCircle,
+  PencilSimple,
   Plus,
+  Trash,
   XCircle,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -24,8 +28,11 @@ import {
   DEFAULT_RAILS_AGENT_ID,
   useCloseWih,
   useCreateDagNode,
+  useDeleteDagNode,
   usePickupWih,
   useRailsDags,
+  useReparentDagNode,
+  useUpdateDagNode,
   type RailsDagNode,
   type RailsDagSummary,
   type RailsDagView,
@@ -34,6 +41,7 @@ import {
 import {
   findRootNodeId,
   organizeDagNodes,
+  reparentCandidates,
   type OrganizedDag,
   type OrganizedRow,
 } from "./organize";
@@ -79,6 +87,11 @@ function DagRow({
   onTake,
   onCloseDone,
   onFail,
+  onRename,
+  onDelete,
+  onReparent,
+  moveCandidates,
+  currentParentId,
   compact,
 }: {
   row: OrganizedRow;
@@ -90,9 +103,23 @@ function DagRow({
   onTake: (node: RailsDagNode) => void;
   onCloseDone: (node: RailsDagNode) => void;
   onFail: (node: RailsDagNode) => void;
+  onRename: (node: RailsDagNode, title: string) => void;
+  onDelete: (node: RailsDagNode) => void;
+  onReparent: (node: RailsDagNode, parentNodeId: string | null) => void;
+  /** Same-dag nodes valid as a new parent (excludes self + descendants). */
+  moveCandidates: RailsDagNode[];
+  currentParentId: string | null;
   compact: boolean;
 }) {
   const pad = { paddingLeft: row.depth * 16 };
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const [moveOpen, setMoveOpen] = useState(false);
+  const editInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) editInputRef.current?.focus();
+  }, [editing]);
 
   if (row.kind === "done") {
     const expanded = expandedDone[row.parentKey] === true;
@@ -132,19 +159,127 @@ function DagRow({
   }
 
   const { node } = row;
+
+  const submitEdit = () => {
+    const title = editValue.trim();
+    setEditing(false);
+    if (title.length === 0 || title === node.title) return;
+    onRename(node, title);
+  };
+
+  const cancelEdit = () => {
+    setEditValue("");
+    setEditing(false);
+  };
+
   return (
-    <li style={pad} className={cn("flex items-center gap-1.5", compact ? "py-0.5" : "py-1")}>
+    <li
+      style={pad}
+      className={cn("relative flex items-center gap-1.5", compact ? "py-0.5" : "py-1")}
+    >
       <StatusIcon status={node.status} />
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate text-[11px]",
-          node.status === "DONE"
-            ? "text-[var(--text-tertiary)] opacity-70"
-            : "text-[var(--text-primary)]"
-        )}
-      >
-        {node.title}
-      </span>
+      {editing ? (
+        <input
+          ref={editInputRef}
+          value={editValue}
+          disabled={pending}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submitEdit();
+            if (e.key === "Escape") cancelEdit();
+          }}
+          onBlur={cancelEdit}
+          className="min-w-0 flex-1 rounded border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+        />
+      ) : (
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate text-[11px]",
+            node.status === "DONE"
+              ? "text-[var(--text-tertiary)] opacity-70"
+              : "text-[var(--text-primary)]"
+          )}
+        >
+          {node.title}
+        </span>
+      )}
+      {interactive && node.status !== "DONE" && !editing && (
+        <>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              setEditValue(node.title);
+              setEditing(true);
+            }}
+            aria-label={`Edit task ${node.title}`}
+            className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
+          >
+            <PencilSimple size={11} />
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setMoveOpen((o) => !o)}
+            aria-label={`Move task ${node.title}`}
+            className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
+          >
+            <ArrowsMerge size={11} />
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => onDelete(node)}
+            aria-label={`Delete task ${node.title}`}
+            className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--status-error)] disabled:opacity-40"
+          >
+            <Trash size={11} />
+          </button>
+        </>
+      )}
+      {moveOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMoveOpen(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] py-1 shadow-xl">
+            {currentParentId !== null && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setMoveOpen(false);
+                  onReparent(node, null);
+                }}
+                className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-white/5 disabled:opacity-40"
+              >
+                <ArrowsMerge size={11} className="shrink-0 opacity-60" />
+                <span className="min-w-0 flex-1 truncate">Move to root</span>
+              </button>
+            )}
+            {moveCandidates.map((c) => (
+              <button
+                type="button"
+                key={c.node_id}
+                disabled={pending}
+                onClick={() => {
+                  setMoveOpen(false);
+                  onReparent(node, c.node_id);
+                }}
+                className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-white/5 disabled:opacity-40"
+              >
+                <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                {c.node_id === currentParentId && (
+                  <Check size={11} className="shrink-0 text-[var(--status-success)]" />
+                )}
+              </button>
+            ))}
+            {currentParentId === null && moveCandidates.length === 0 && (
+              <p className="px-2 py-1 text-[11px] text-[var(--text-tertiary)]">
+                Nothing to move to
+              </p>
+            )}
+          </div>
+        </>
+      )}
       {interactive && node.status === "READY" && (
         <button
           type="button"
@@ -258,7 +393,11 @@ export function RailsTaskList({
   const pickup = usePickupWih();
   const close = useCloseWih();
   const create = useCreateDagNode();
+  const update = useUpdateDagNode();
+  const remove = useDeleteDagNode();
+  const reparent = useReparentDagNode();
   const [expandedDone, setExpandedDone] = useState<Record<string, boolean>>({});
+  const [actionError, setActionError] = useState<string | null>(null);
   // Write-back probe: if the pickup endpoint is unsupported (405/5xx/network),
   // silently degrade to read-only. 404 means the route answered (unknown node).
   const [writeBackOk, setWriteBackOk] = useState(true);
@@ -305,7 +444,13 @@ export function RailsTaskList({
   if (organized.length === 0) return null;
 
   const canAct = interactive && writeBackOk;
-  const pending = pickup.isPending || close.isPending || create.isPending;
+  const pending =
+    pickup.isPending ||
+    close.isPending ||
+    create.isPending ||
+    update.isPending ||
+    remove.isPending ||
+    reparent.isPending;
 
   return (
     <div className={cn("flex min-w-0 flex-col", compact ? "gap-1" : "gap-2")}>
@@ -356,10 +501,59 @@ export function RailsTaskList({
                     agent_id: agent,
                   });
                 }}
+                onRename={(node, title) =>
+                  update.mutate({ dag_id: dag.dag_id, node_id: node.node_id, title })
+                }
+                onDelete={(node) => {
+                  if (!window.confirm(`Delete task "${node.title}"?`)) return;
+                  setActionError(null);
+                  remove.mutate(
+                    { dag_id: dag.dag_id, node_id: node.node_id },
+                    {
+                      onError: (err) => {
+                        const status = (err as Error & { status?: number }).status;
+                        setActionError(
+                          status === 409
+                            ? `Cannot delete "${node.title}": it has active work or unfinished subtasks`
+                            : `Delete failed for "${node.title}"${status ? ` (${status})` : ""}`
+                        );
+                      },
+                    }
+                  );
+                }}
+                onReparent={(node, parentNodeId) => {
+                  setActionError(null);
+                  reparent.mutate(
+                    {
+                      dag_id: dag.dag_id,
+                      node_id: node.node_id,
+                      parent_node_id: parentNodeId,
+                    },
+                    {
+                      onError: (err) => {
+                        const status = (err as Error & { status?: number }).status;
+                        setActionError(
+                          status === 409
+                            ? `Cannot move "${node.title}": it would create a cycle`
+                            : `Move failed for "${node.title}"${status ? ` (${status})` : ""}`
+                        );
+                      },
+                    }
+                  );
+                }}
+                moveCandidates={
+                  row.kind === "node"
+                    ? reparentCandidates(dag.nodes, row.node.node_id)
+                    : []
+                }
+                currentParentId={row.kind === "node" ? row.node.parent_node_id : null}
                 compact={compact}
               />
             ))}
           </ul>
+          {actionError && (
+            <p className="text-[10px] text-[var(--status-error)]">{actionError}</p>
+          )}
           {canAct && (
             <AddTaskRow
               dag={dag}

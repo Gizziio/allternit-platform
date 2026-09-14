@@ -66,3 +66,24 @@ Checks:
 Emits:
 - WIHArchived
 - VaultJobCreated → VaultJobCompleted
+
+## Gate 6 — Node removal
+Trigger: `DagMutation::DeleteNode` (e.g. API `DELETE /dags/:dag_id/nodes/:node_id`).
+Checks (enforced at the API surface, not the library):
+- node has no active WIH (status not CLOSED/FAILED/VAULTED)
+- node has no children with status other than DONE
+Emits:
+- DagNodeRemoved (payload: dag_id, node_id, title, parent_node_id)
+
+## Gate 7 — Node reparent
+Trigger: `DagMutation::ReparentNode` (wire op `reparent_node`; `new_parent_id: null` moves the node to top level).
+Checks (enforced in the library, unlike Gate 6):
+- node exists in the dag
+- new parent (if any) exists in the dag
+- reparent would not create a parent-chain cycle (node must not be an ancestor of the new parent)
+Emits:
+- DagNodeReparented (payload: dag_id, node_id, new_parent_id, old_parent_id)
+
+Invariant: the parent chain is always acyclic. Reparenting goes exclusively through
+this mutation; the node patch path (`DagMutation::UpdateNode`) must not accept
+`parent_node_id`, since that would bypass the cycle check.

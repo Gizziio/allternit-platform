@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import logging
 import sys
 import uuid
@@ -226,13 +227,22 @@ def _make_request(action_type: str, target: str, parameters: Dict[str, Any]) -> 
 
 @dataclass
 class ReplayDeviation:
-    """A detected divergence between the recorded and live after-state."""
+    """A detected divergence between the recorded and live after-state.
+
+    ``kind`` distinguishes the screenshot pixel-diff leg (default) from the
+    H2 network-trace leg (``"network"``), whose exact mismatch payload rides
+    in ``detail`` as the serialized ``NetworkDeviation`` dict. Network
+    deviations use ``score`` 1.0 / ``threshold`` 0.0 — exact mismatch, no
+    fuzzy threshold — and leave the b64 image fields empty.
+    """
     step: int
     action_type: str
     score: float
     threshold: float
     recorded_after_b64: str = ""
     live_after_b64: str = ""
+    kind: str = "screenshot"
+    detail: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -242,6 +252,8 @@ class ReplayDeviation:
             "threshold": self.threshold,
             "recorded_after_b64": self.recorded_after_b64,
             "live_after_b64": self.live_after_b64,
+            "kind": self.kind,
+            "detail": self.detail,
         }
 
 
@@ -315,6 +327,8 @@ class ReplayEngine:
         on_event: Optional[EventCallback] = None,
         cancel_event: Optional[asyncio.Event] = None,
         screenshot_capture: Optional[ScreenshotCapture] = None,
+        network_trace: Optional[Any] = None,   # H2: recorded NetworkTrace (core.network_trace)
+        har_finalizer: Optional[Callable[[], Any]] = None,  # H2: async/sync → scrubbed live HAR dict
     ) -> None:
         self.adapter = adapter
         self.session_id = session_id
@@ -323,6 +337,8 @@ class ReplayEngine:
         self.on_event = on_event
         self.cancel_event = cancel_event
         self._screenshot_capture = screenshot_capture or capture_screenshot
+        self.network_trace = network_trace
+        self.har_finalizer = har_finalizer
 
     async def replay(self, recording_path: Path) -> ReplayResult:
         """Replay the recording at ``recording_path`` frame by frame."""
@@ -410,14 +426,73 @@ class ReplayEngine:
             deviations=deviations,
             total_steps=len(frames),
         )
+        # H2: network-trace verification runs before replay.finished so the
+        # finished event reports the final status and deviation count.
+        await self._verify_network(result)
         await self._emit({
             "type": "replay.finished",
             "recording_id": manifest.recording_id,
-            "status": status,
+            "status": result.status,
             "replayed_steps": len(steps),
-            "deviations": len(deviations),
+            "deviations": len(result.deviations),
         })
         return result
+
+    # ── H2: network-trace verification ──────────────────────────────────────
+
+    async def _verify_network(self, result: ReplayResult) -> None:
+        """Compare the live run's network trace against the recorded one.
+
+        Runs after the frame loop (the live HAR is only complete once the
+        browser context closes). Every exact mismatch becomes a
+        ``ReplayDeviation`` of kind ``"network"`` with halt-at-first-failure
+        discipline identical to the screenshot leg: with no approval callback
+        the first deviation ends the replay with status ``"deviated"``; with
+        a callback each deviation asks once. A ``HarScrubError`` from the
+        finalizer propagates — scrub failure is fail-closed by contract.
+        """
+        if self.network_trace is None or self.har_finalizer is None:
+            return
+        live_har = self.har_finalizer()
+        if asyncio.iscoroutine(live_har):
+            live_har = await live_har
+        if live_har is None:
+            return
+
+        from core.network_trace import compare_traces, distill_har
+
+        live_trace = distill_har(live_har)
+        network_deviations = compare_traces(self.network_trace, live_trace)
+        await self._emit({
+            "type": "replay.network_verify",
+            "recording_id": result.recording_id,
+            "live_entries": len(live_trace.entries),
+            "deviations": len(network_deviations),
+        })
+        for deviation in network_deviations:
+            replay_deviation = ReplayDeviation(
+                step=deviation.index,
+                action_type="network",
+                score=1.0,
+                threshold=0.0,
+                kind="network",
+                detail=json.dumps(deviation.to_dict(), sort_keys=True),
+            )
+            result.deviations.append(replay_deviation)
+            await self._emit({
+                "type": "replay.deviation",
+                "recording_id": result.recording_id,
+                "step": deviation.index,
+                "kind": "network",
+                "deviation": deviation.to_dict(),
+            })
+            if self.approval_callback is None:
+                result.status = "deviated"
+                break
+            resume = await self._ask_approval(replay_deviation)
+            if not resume:
+                result.status = "abandoned"
+                break
 
     # ── internals ────────────────────────────────────────────────────────────
 

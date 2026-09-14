@@ -388,9 +388,23 @@ impl ExecutionDriver for IncusDriver {
 
     async fn spawn(&self, spec: SpawnSpec) -> Result<ExecutionHandle, DriverError> {
         let bot_id = Self::bot_id_from_tenant(&spec.tenant);
-        // Incus instance names must be <= 63 chars. Prefix + uuid is 48 chars,
-        // leaving 15 for the owner id. User-owned computers are shared across bots.
-        let bot_suffix = bot_id.chars().take(15).collect::<String>();
+        // Incus instance names must be <= 63 chars and contain only
+        // alphanumeric characters and hyphens. Prefix + uuid is 48 chars,
+        // leaving 15 for the owner id. Owner ids can contain other characters
+        // (Clerk user ids carry underscores, e.g. "user_2kQ..."), and Incus
+        // rejects the whole create call otherwise — map them to hyphens.
+        // User-owned computers are shared across bots.
+        let bot_suffix: String = bot_id
+            .chars()
+            .take(15)
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '-' {
+                    c
+                } else {
+                    '-'
+                }
+            })
+            .collect();
         let kind = if spec.tenant.0.starts_with("user-") {
             "user"
         } else {

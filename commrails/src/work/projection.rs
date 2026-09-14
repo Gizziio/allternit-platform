@@ -13,7 +13,24 @@ pub fn project_dag(events: &[AllternitEvent], dag_id: &str) -> DagState {
         relations: Vec::new(),
     };
 
+    // wih_id -> (dag_id, node_id) from WIHCreated events. Pre-v5 ledgers carry
+    // pickup/close events without dag_id/node_id in the payload; this map lets
+    // the WIH arms below resolve them. NOTE: callers that pre-filter events by
+    // payload.dag_id (e.g. Gate::events_for_dag) drop dag_id-less WIH events
+    // before project_dag sees them, so for those callers the fallback only
+    // works once ledgers contain enriched (post-v5) events.
+    let mut wih_nodes: HashMap<String, (String, String)> = HashMap::new();
+
     for evt in events {
+        if evt.r#type == "WIHCreated" {
+            if let (Some(wih_id), Some(e_dag_id), Some(node_id)) = (
+                get_str(&evt.payload, "wih_id"),
+                get_str(&evt.payload, "dag_id"),
+                get_str(&evt.payload, "node_id"),
+            ) {
+                wih_nodes.insert(wih_id, (e_dag_id, node_id));
+            }
+        }
         match evt.r#type.as_str() {
             "DagNodeCreated" => {
                 if let Some(node) = parse_node_created(evt, dag_id) {
@@ -25,6 +42,29 @@ pub fn project_dag(events: &[AllternitEvent], dag_id: &str) -> DagState {
                     if let Some(node) = dag.nodes.get_mut(&node_id) {
                         if let Some(patch) = evt.payload.get("patch") {
                             apply_node_patch(node, patch);
+                            node.updated_at = Some(evt.ts.clone());
+                        }
+                    }
+                }
+            }
+            "DagNodeRemoved" => {
+                if get_str(&evt.payload, "dag_id").as_deref() == Some(dag_id) {
+                    if let Some(node_id) = get_str(&evt.payload, "node_id") {
+                        dag.nodes.remove(&node_id);
+                        dag.edges
+                            .retain(|e| e.from_node_id != node_id && e.to_node_id != node_id);
+                    }
+                }
+            }
+            "DagNodeReparented" => {
+                if get_str(&evt.payload, "dag_id").as_deref() == Some(dag_id) {
+                    if let Some(node_id) = get_str(&evt.payload, "node_id") {
+                        if let Some(node) = dag.nodes.get_mut(&node_id) {
+                            node.parent_node_id = evt
+                                .payload
+                                .get("new_parent_id")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
                             node.updated_at = Some(evt.ts.clone());
                         }
                     }
@@ -83,6 +123,60 @@ pub fn project_dag(events: &[AllternitEvent], dag_id: &str) -> DagState {
                             node.updated_at = Some(evt.ts.clone());
                         }
                     }
+                }
+            }
+            "WIHPickedUp" => {
+                // See the wih_nodes note above: dag_id-less pickup events are
+                // invisible to callers that pre-filter by payload.dag_id.
+                let wih_id = match get_str(&evt.payload, "wih_id") {
+                    Some(id) => id,
+                    None => continue,
+                };
+                let (e_dag_id, node_id) = match (
+                    get_str(&evt.payload, "dag_id"),
+                    get_str(&evt.payload, "node_id"),
+                ) {
+                    (Some(d), Some(n)) => (d, n),
+                    _ => match wih_nodes.get(&wih_id) {
+                        Some((d, n)) => (d.clone(), n.clone()),
+                        None => continue,
+                    },
+                };
+                if e_dag_id != dag_id {
+                    continue;
+                }
+                if let Some(node) = dag.nodes.get_mut(&node_id) {
+                    node.current_wih_id = Some(wih_id);
+                    if let Some(agent_id) = get_str(&evt.payload, "agent_id") {
+                        node.assignee = Some(agent_id);
+                    }
+                    node.updated_at = Some(evt.ts.clone());
+                }
+            }
+            "WIHClosedSigned" | "WIHArchived" => {
+                // Semantics: closing/archiving a WIH releases the node — clear
+                // both current_wih_id and assignee.
+                let wih_id = match get_str(&evt.payload, "wih_id") {
+                    Some(id) => id,
+                    None => continue,
+                };
+                let (e_dag_id, node_id) = match (
+                    get_str(&evt.payload, "dag_id"),
+                    get_str(&evt.payload, "node_id"),
+                ) {
+                    (Some(d), Some(n)) => (d, n),
+                    _ => match wih_nodes.get(&wih_id) {
+                        Some((d, n)) => (d.clone(), n.clone()),
+                        None => continue,
+                    },
+                };
+                if e_dag_id != dag_id {
+                    continue;
+                }
+                if let Some(node) = dag.nodes.get_mut(&node_id) {
+                    node.current_wih_id = None;
+                    node.assignee = None;
+                    node.updated_at = Some(evt.ts.clone());
                 }
             }
             _ => {}

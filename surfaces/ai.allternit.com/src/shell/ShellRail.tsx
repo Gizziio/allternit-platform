@@ -1357,11 +1357,16 @@ export function ShellRail({
               {needsYouSection?.items.map((item) => (
                 <div
                   key={item.id}
-                  className="w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--accent-primary)]"
+                  className="w-full flex flex-col gap-0.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--accent-primary)]"
                 >
                   <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                     {item.label}
                   </span>
+                  {typeof item.metadata?.dagNodeTitle === 'string' && (
+                    <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-[var(--shell-item-muted)]">
+                      blocked on &ldquo;{item.metadata.dagNodeTitle}&rdquo;
+                    </span>
+                  )}
                 </div>
               ))}
             </RecentsPanel>
