@@ -56,6 +56,20 @@ pub fn project_dag(events: &[AllternitEvent], dag_id: &str) -> DagState {
                     }
                 }
             }
+            "DagNodeReparented" => {
+                if get_str(&evt.payload, "dag_id").as_deref() == Some(dag_id) {
+                    if let Some(node_id) = get_str(&evt.payload, "node_id") {
+                        if let Some(node) = dag.nodes.get_mut(&node_id) {
+                            node.parent_node_id = evt
+                                .payload
+                                .get("new_parent_id")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+                            node.updated_at = Some(evt.ts.clone());
+                        }
+                    }
+                }
+            }
             "DagEdgeAdded" => {
                 if let Some(edge) = parse_edge_added(&evt.payload) {
                     dag.edges.push(edge);

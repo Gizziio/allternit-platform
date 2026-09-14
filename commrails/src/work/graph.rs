@@ -28,8 +28,27 @@ pub fn has_cycle_edges(edges: &[DagEdge]) -> bool {
     has_cycle(&graph)
 }
 
-pub fn ready_nodes(dag: &DagState) -> Vec<String> {
-    let mut ready = Vec::new();
+/// True if making `new_parent_id` the parent of `node_id` would create a
+/// parent-chain cycle (i.e. `node_id` is `new_parent_id` itself or one of its
+/// ancestors). Walks parent_node_id upward with a visited set as a loop guard.
+pub fn would_create_parent_cycle(dag: &DagState, node_id: &str, new_parent_id: &str) -> bool {
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut current = new_parent_id.to_string();
+    loop {
+        if current == node_id {
+            return true;
+        }
+        if !visited.insert(current.clone()) {
+            return false;
+        }
+        match dag.nodes.get(&current).and_then(|n| n.parent_node_id.clone()) {
+            Some(parent) => current = parent,
+            None => return false,
+        }
+    }
+}
+
+pub fn ready_nodes(dag: &DagState) -> Vec<String> {    let mut ready = Vec::new();
     for (node_id, node) in dag.nodes.iter() {
         if node.status != "READY" && node.status != "NEW" {
             continue;
