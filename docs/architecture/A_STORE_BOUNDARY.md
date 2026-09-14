@@ -39,7 +39,7 @@ Proof: `infrastructure/executor/cowork/cowork/allternit-cowork-runtime/tests/sto
   SQL upserts that could overwrite `lease_owner` and clobber a leased job's
   state. All of those writes now route through the canonical projection
   helpers; `transition_job` reports `projection_applied: false` when the
-  boundary refuses a leased-job write. The crate's test DDL gained the V142
+  boundary refuses a leased-job write. The crate's test DDL gained the V168
   `user_id` columns (guarded `ensure_column`) so the store schema is
   self-contained.
 - **Live-path corrections (2026-09-13 evidence run):** intent-created runs
