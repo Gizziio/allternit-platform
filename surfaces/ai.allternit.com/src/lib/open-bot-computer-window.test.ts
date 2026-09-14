@@ -1,8 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   botComputerWindowHref,
+  isBotComputerLocation,
   launchBotComputerWindow,
 } from "./open-bot-computer-window";
+
+describe("isBotComputerLocation", () => {
+  it("matches /bot-computer and the legacy /shell detached URL", () => {
+    expect(isBotComputerLocation("/bot-computer", "botId=b1")).toBe(true);
+    expect(isBotComputerLocation("/shell", "detachedSurface=bot-computer&botId=b1")).toBe(true);
+    expect(isBotComputerLocation("/shell", "detachedSurface=code&detachedSessionId=s")).toBe(false);
+  });
+});
 
 describe("botComputerWindowHref", () => {
   it("builds a lightweight /bot-computer URL", () => {

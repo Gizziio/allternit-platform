@@ -15,6 +15,12 @@ export type BotComputerWindowOptions = {
   sandboxId?: string;
 };
 
+export function isBotComputerLocation(pathname: string, search: string): boolean {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  if (pathname === "/bot-computer" && Boolean(params.get("botId"))) return true;
+  return params.get("detachedSurface") === BOT_COMPUTER_DETACHED_SURFACE && Boolean(params.get("botId"));
+}
+
 export function botComputerWindowHref(
   origin: string,
   options: BotComputerWindowOptions,

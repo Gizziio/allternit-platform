@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Spinner, Warning } from "@phosphor-icons/react";
+import { Warning } from "@phosphor-icons/react";
+import type { Agent } from "@/lib/agents/agent.types";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { getBotAccentColor } from "@/lib/bots/bot-profile";
 import { BotComputerViewport } from "./BotComputerViewport";
@@ -13,7 +14,18 @@ export function BotComputerWindow({ botId, sandboxId }: { botId: string; sandbox
   const isLoadingAgents = useAgentStore((s) => s.isLoadingAgents);
   const agentError = useAgentStore((s) => s.error);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
-  const bot = useMemo(() => agents.find((a) => a.id === botId) ?? null, [agents, botId]);
+  const found = useMemo(() => agents.find((a) => a.id === botId) ?? null, [agents, botId]);
+  const bot = useMemo<Agent>(
+    () =>
+      found ??
+      ({
+        id: botId,
+        name: "Bot",
+        isBot: true,
+        botProfile: { displayName: "Computer" },
+      } as Agent),
+    [found, botId],
+  );
   const activeVM = useBotActiveVm(botId, sandboxId);
 
   useEffect(() => {
@@ -21,24 +33,12 @@ export function BotComputerWindow({ botId, sandboxId }: { botId: string; sandbox
       void fetchAgents();
     }
   }, [agents.length, isLoadingAgents, fetchAgents]);
-  const accentColor = bot
-    ? getBotAccentColor(bot) ?? bot.botProfile?.accentColor ?? "var(--accent-primary)"
-    : "var(--accent-primary)";
-  const stillHydrating = isLoadingAgents || (!agentError && agents.length === 0);
-
-  if (!bot && stillHydrating) {
+  const accentColor =
+    getBotAccentColor(bot) ?? bot.botProfile?.accentColor ?? "var(--accent-primary)";
+  if (agentError && !found && !sandboxId && !activeVM) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
-        <Spinner size={24} className="animate-spin" />
-        <p className="text-[13px]">Opening computer…</p>
-      </div>
-    );
-  }
-
-  if (!bot) {
-    return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
-        <Warning size={28} className="text-[var(--status-error)]" />
+      <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-[#0F0C0A] text-[#D4B08C]">
+        <Warning size={28} />
         <p className="text-[13px]">Could not find that bot&rsquo;s computer.</p>
       </div>
     );
