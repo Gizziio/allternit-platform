@@ -57,6 +57,11 @@ mcp = [
     "mcp>=1.0.0",
 ]
 
+# DroidRun mobile harness integration (Android via mobilerun_core)
+droidrun = [
+    "mobilerun-core[local]>=0.1.0",
+]
+
 # Desktop automation dependencies
 desktop = [
     "pyautogui>=0.9.54",
@@ -66,6 +71,16 @@ desktop = [
     # RFB/VNC client for VmGuiBackend (Firecracker guest display, tunneled
     # over vsock) -- see research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md
     "asyncvnc>=1.1.0",
+]
+
+# iOS mobile automation dependencies (phone-harness primary, pymobiledevice3 / idb fallback)
+mobile = [
+    "pymobiledevice3>=4.0",
+    "pyobjc>=10.0; platform_system=='Darwin'",
+    "pyobjc-framework-Quartz>=10.0; platform_system=='Darwin'",
+    "pyobjc-framework-Vision>=10.0; platform_system=='Darwin'",
+    "pyobjc-framework-AppKit>=10.0; platform_system=='Darwin'",
+    "pyobjc-framework-ApplicationServices>=10.0; platform_system=='Darwin'",
 ]
 
 desktop-macos = [

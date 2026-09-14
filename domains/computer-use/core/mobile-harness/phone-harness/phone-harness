@@ -1,0 +1,4 @@
+#!/bin/sh
+# Dev launcher: run the working tree without installing.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+PYTHONPATH="$DIR/src" exec python3 -m phone_harness.run "$@"
