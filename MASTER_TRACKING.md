@@ -477,8 +477,26 @@ owner reviews and merges — no self-merge.
 **Sequence:** P1 → P2 → P3 ∥ P4 → P5.
 
 **Status (2026-09-14, session/coworkp1-0914):**
-- **P1 IN PROGRESS** — managed runtime (auto-provision, managed launch,
-  engine status, folder grants).
+- **P1 CLOSED** — managed runtime implemented and live-verified:
+  1.1 local-only ensure route `POST /api/v1/fabric/transport/local/ensure-worker-principal`
+  (desktop access-token gated, fail-closed unconfigured; token returned
+  once, rotation kills the old token — live 403/200/rotate evidence) +
+  Keychain-backed secure store in desktop main; 1.2 `gizzi-code
+  fabric-worker` bundled subcommand + `fabric-worker-manager.ts`
+  (spawn/readiness/backoff respawn/SIGTERM graceful stop — live
+  daemon_start + shutdown evidence); 1.3 aggregate engine-status pill in
+  the shell chrome (API / gizzi / fabric worker / office engine,
+  `engines:get-status` IPC + push, hidden in browser/cloud) + splash rows;
+  1.4 startup-wizard "Grant workspace folders" step → `/cowork-preferences`
+  trusted_folders via the desktop local auth (live GET/PUT/persist
+  evidence). Verification: 40/40 runtime tests (incl. 2 new managed-runtime
+  store tests), `cargo build -p allternit-api` clean, clippy clean on
+  touched files, desktop main/preload tsc clean, gizzi typecheck clean,
+  SPA typecheck clean, release-preflight 36/0. Evidence:
+  `tmp/coworkp1-evidence/` (rerun via `run.sh`). Honest note: the full
+  GUI wizard click-through needs an interactive Clerk sign-in and was not
+  exercised; every non-interactive piece (provision, spawn, status,
+  folder persistence) was verified live.
 - **P2 PLANNED** — chat-drives-A://.
 - **P3 PLANNED** — deliverables.
 - **P4 PLANNED** — reach (mobile approvals + routines).
