@@ -65,6 +65,7 @@ tokio-tungstenite = { workspace = true, features = ["rustls-tls-webpki-roots"] }
 ed25519-dalek = { workspace = true }
 rand = "0.8"
 futures-util = "0.3"
+tokio-stream = { version = "0.1", features = ["sync"] }
 
 # P5 visibility panel (src/ao/peers/*, src/ao/visibility/*): CommRails peer feed
 # links the workspace commrails crate for Peer/PeerEnvelope/send_envelope parity.
