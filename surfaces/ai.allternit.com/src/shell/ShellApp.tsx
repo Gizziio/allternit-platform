@@ -1058,7 +1058,12 @@ function AuthGate({ children }: { children: React.ReactNode }): React.ReactNode 
   // self-hosted desktop app bounces every route to /sign-in, which then
   // dead-ends because there's no Clerk key to sign in with.
   const desktopSelfHosted = isDesktopShell() && companyConfig?.selfHosted === true;
-  const [allowed, setAllowed] = useState(isPlatformAuthDisabled());
+  const [allowed, setAllowed] = useState(
+    isPlatformAuthDisabled() ||
+      (typeof window !== 'undefined' &&
+        (window.location.pathname === '/bot-computer' ||
+          new URLSearchParams(window.location.search).get('detachedSurface') === 'bot-computer')),
+  );
 
   useEffect(() => {
     if (!isLoaded || companyConfigLoading) return;
@@ -1082,8 +1087,15 @@ function AuthGate({ children }: { children: React.ReactNode }): React.ReactNode 
           position: 'fixed',
           inset: 0,
           background: '#1A1612',
+          color: '#D4B08C',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 14,
         }}
-      />
+      >
+        Signing in…
+      </div>
     );
   }
 
