@@ -78,6 +78,10 @@ allternit-agent-system-rails = { workspace = true }
 # in-process (not a sidecar); the gateway drives the engine over the socket API.
 uhp-gateway = { path = "../uhp-gateway" }
 
+# P5 visibility panel (src/ao/peers/*, src/ao/visibility/*): Rails peer feed
+# links the workspace rails crate for Peer/PeerEnvelope/send_envelope parity.
+allternit-agent-system-rails = { workspace = true }
+
 # NOTE: cargo only honors [patch] in the WORKSPACE ROOT manifest. The
 # portable-pty patch was ported to the workspace root Cargo.toml
 # ([patch.crates-io] portable-pty = { path = "infrastructure/executor/ao-engine/vendor/portable-pty" }).
