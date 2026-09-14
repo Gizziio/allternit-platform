@@ -233,6 +233,13 @@ def scrub_har(har: Dict[str, Any]) -> Dict[str, Any]:
                 request["url"] = _scrub_url(request["url"], query)
             if isinstance(request.get("postData"), dict):
                 request["postData"] = _scrub_post_data(request["postData"], secrets)
+            # Request cookies ride their own list alongside the Cookie header.
+            cookies = request.get("cookies")
+            if isinstance(cookies, list):
+                for cookie in cookies:
+                    if isinstance(cookie, dict) and isinstance(cookie.get("value"), str):
+                        _collect_value(cookie["value"], secrets)
+                        cookie["value"] = REDACTED
         response = entry.get("response")
         if isinstance(response, dict):
             response["headers"] = _scrub_headers(response.get("headers"), secrets)

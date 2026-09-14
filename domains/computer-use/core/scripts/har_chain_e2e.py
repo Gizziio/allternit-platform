@@ -64,7 +64,7 @@ FORM_HTML = (
     "'/submit', {method: 'POST', headers: {'Content-Type': "
     "'application/json'}, body: JSON.stringify({name: document."
     "getElementById('name').value, email: document.getElementById("
-    "'email').value, csrf_token: '" + CANARY + "'})});</script>"
+    "'email').value, csrf_token: window.__csrf || ''})});</script>"
     "</body></html>"
 )
 
@@ -168,6 +168,7 @@ def _diff_summary(old_dict: Dict[str, Any], new_dict: Dict[str, Any]) -> Dict[st
 
 async def _drive_form(page: Any, name: str, email: str) -> None:
     """The canned form-fill task: fill name, fill email, click submit."""
+    await page.evaluate("() => { window.__csrf = %s; }" % json.dumps(CANARY))
     await page.fill("#name", name)
     await page.fill("#email", email)
     async with page.expect_response(lambda resp: resp.url.endswith("/submit")) as info:
@@ -223,6 +224,7 @@ class _LocalBatchExecutor:
             page = await context.new_page()
             if page_url:
                 await page.goto(page_url)
+            await page.evaluate("() => { window.__csrf = %s; }" % json.dumps(CANARY))
             receipt_steps: List[Dict[str, Any]] = []
             halted_at = None
             for index, step in enumerate(steps):
@@ -326,6 +328,7 @@ async def _record_leg(artifacts: Path, site_url: str) -> Dict[str, Any]:
     try:
         page = await context.new_page()
         await page.goto(f"{site_url}/form?token={CANARY}")
+        await page.evaluate("() => { window.__csrf = %s; }" % json.dumps(CANARY))
         await page.fill("#name", RECIPIENT_NAME)
         await recorder.record_frame(RecordedFrame(
             recording_id=recorder.recording_id, step=1, action_type="type",

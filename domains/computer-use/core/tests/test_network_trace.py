@@ -124,7 +124,7 @@ class TestScrubHar:
                 method="POST",
                 post_data={
                     "mimeType": "application/x-www-form-urlencoded",
-                    "text": "user=eoj&password=" + CANARY + "&csrf=" + CANARY,
+                    "text": "user=eoj&password=" + CANARY + "&session_token=" + CANARY,
                 },
             ),
         )
@@ -151,6 +151,7 @@ class TestScrubHar:
         # Form body scrubbed.
         login = scrubbed["log"]["entries"][1]["request"]["postData"]["text"]
         assert "password=" + CANARY not in login
+        assert "session_token=" + CANARY not in login
         assert "user=eoj" in login
 
     def test_response_cookie_values_redacted(self):
@@ -233,8 +234,14 @@ class TestDistillHar:
         entries = distill_har(har).entries
         assert all(not e.verifiable for e in entries)
         # Distillation still records shapes; comparison must not assert paths.
-        live = _trace(("GET", "h.example.com", "/anything/else", None, True))
+        live = _trace(("GET", H, "/anything/else", None, True),
+                      ("GET", H, "/more/stuff", None, True))
         assert compare_traces(NetworkTrace(entries=entries), live) == []
+        # But count mismatch stays a deviation even for unverifiable entries.
+        one_live = _trace(("GET", H, "/anything/else", None, True))
+        assert [d.kind for d in compare_traces(
+            NetworkTrace(entries=entries), one_live
+        )] == [DEV_MISSING]
 
     def test_payload_key_hash_is_shape_only(self):
         har_a = _har(_entry(
@@ -308,7 +315,10 @@ class TestCompareTraces:
         live = _trace(("GET", H, "/b", None, True), ("GET", H, "/a", None, True))
         deviations = compare_traces(recorded, NetworkTrace(entries=live.entries))
         assert [d.kind for d in deviations] == [DEV_REORDERED]
-        assert deviations[0].expected["pathTemplate"] == "/a"
+        # Greedy forward match pairs the first recorded entry wherever it
+        # appears ahead; the LATER recorded entry is the one out of order.
+        assert deviations[0].index == 1
+        assert deviations[0].expected["pathTemplate"] == "/b"
 
     def test_extra_call(self):
         recorded = _trace(("GET", H, "/a", None, True))
@@ -469,7 +479,7 @@ class TestWorkflowRunnerNetworkVerify:
         result = await runner.run(_spec(trace))
         assert result.status == "completed"  # approved → not deviated
         assert [p.kind for p in pauses] == ["workflow.network_deviation"]
-        assert len(result.network_deviations) == 1
+        assert {d["kind"] for d in result.network_deviations} == {DEV_MISSING, DEV_EXTRA}
 
     @pytest.mark.asyncio
     async def test_no_finalizer_skips_verify_deterministically(self):
@@ -567,7 +577,7 @@ class _CanaryHandler(BaseHTTPRequestHandler):
                 "'/submit', {method: 'POST', headers: {'Content-Type': "
                 "'application/json'}, body: JSON.stringify({name: document."
                 "getElementById('name').value, email: document.getElementById("
-                "'email').value, csrf_token: '" + CANARY + "'})});"
+                "'email').value, csrf_token: window.__csrf || ''})});"
                 "</script></body></html>",
                 cookie="session=" + CANARY_COOKIE,
             )
@@ -619,6 +629,7 @@ class TestRecorderHarCapture:
                 context = browser.new_context(**recorder.har_context_options())
                 page = context.new_page()
                 page.goto(url)
+                page.evaluate("() => { window.__csrf = %s; }" % json.dumps(CANARY))
                 page.fill("#name", "Eoj")
                 page.fill("#email", "e@x.com")
                 page.click("#submit")
