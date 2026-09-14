@@ -156,6 +156,12 @@ impl VncAuthInterceptor {
         Ok(pipe)
     }
 
+    /// True once the handshake has completed (or been passed through) and the
+    /// interceptor is a transparent byte pipe.
+    pub fn handshake_done(&self) -> bool {
+        matches!(self.phase, Phase::Transparent)
+    }
+
     /// Feed bytes arriving from the viewing client.
     pub fn client_bytes(&mut self, chunk: &[u8]) -> Result<VncPipe, String> {
         self.client_buf.extend_from_slice(chunk);
