@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 09:50 — grok — Consumer-packaged Cowork P4 reach + P5 updater feed
+
+- **Session ID / Branch:** `session/coworkp1-0914` (resume of Kimi `session_93cc7789`)
+- **Agent:** grok
+- **Summary:** Merged PR #518 (`112de3c99`) — iOS Fabric Transport approvals inbox, cowork routines that fire canonical intents, auto-update feed locked to `Gizziio/desktop`.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/518 · 112de3c99
+- **How it works:** Routines tick submits an Al-delegated intent whose `agentic.task` is the routine message; iOS grant/deny hits the existing fabric approvals endpoints; updater repo/manifest/publish/preflight all name `Gizziio/desktop`.
+- **Verification:** `cargo test -p allternit-api --lib routine_routes` 4/4; release-preflight 39/0.
+- **Outstanding work:** iOS simulator click-through (Mesh.xcframework); signed `desktop-v1.2.0` (Apple secrets, owner action); post-merge desktop DMG rebuild.
+- **Summary file:** [2026-09-14-0950-coworkp1-0914-grok-p4-p5.md](./summaries/2026-09-14-0950-coworkp1-0914-grok-p4-p5.md)
+
 ### 2026-09-14 09:40 — grok — Workflows panel on live Fabric Transport
 
 - **Session ID / Branch:** `session/cu29-fabric-panel`
