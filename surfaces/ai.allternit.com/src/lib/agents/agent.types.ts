@@ -21,6 +21,7 @@ export type { AvatarConfig } from './character.types';
 
 // Agent Types
 export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
+export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant' | 'bot';
 
 export type AppMode = 'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser';
 
@@ -222,7 +223,7 @@ const voiceConfigSchema = z.object({
 export type AgentStatus = 'idle' | 'running' | 'paused' | 'error';
 
 // Agent Configuration
-type ModelProvider = 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
+export type ModelProvider = 'openai' | 'anthropic' | 'google' | 'kimi' | 'local' | 'custom';
 
 /**
  * Bot packaging overlay on top of the Agent type.
@@ -280,7 +281,7 @@ export interface Agent {
   type: AgentType;
   parentAgentId?: string; // For sub-agents
   model: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
+  provider: ModelProvider;
   capabilities: string[];
   systemPrompt?: string;
   tools: string[];
@@ -355,7 +356,7 @@ export interface Agent {
   /** If this agent represents a swarm, the swarm ID */
   swarmId?: string;
 
-  // ── Packaged Bot fields (OpenMausBot / Grok Bot integration) ─────────────
+  // ── Packaged Bot fields (OpenMausBot / Allternit Bot integration) ─────────────
   /** Marks this agent as a packaged bot discoverable in the Bots hub and CommRails */
   isBot?: boolean;
   /** Bot-specific UX metadata (only present when isBot is true) */
@@ -463,6 +464,7 @@ export interface BotProfile {
   hidden?: boolean;
 
   /** External platform that owns this bot (e.g. 'hermes', 'openclaw') */
+  /** External platform that owns this bot (e.g. 'hermes', 'openclaw', 'kimi') */
   providerId?: string;
   /** Stable identifier within the external platform's namespace */
   externalId?: string;
@@ -707,6 +709,10 @@ export const agentSchema = z.object({
   // allternit/kimi-k3); the API stores and returns it, so the schema must
   // accept it or every such agent is silently dropped by safeValidate.
   provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom', 'allternit']),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant', 'bot']),
+  parentAgentId: z.string().optional(),
+  model: z.string().min(1),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']),
   capabilities: z.array(z.string()),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()),
@@ -844,7 +850,7 @@ export interface CreateAgentInput {
   type?: AgentType;
   parentAgentId?: string;
   model: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
+  provider: ModelProvider;
   capabilities?: string[];
   systemPrompt?: string;
   tools?: string[];
@@ -901,6 +907,10 @@ const createAgentInputSchema = z.object({
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom', 'allternit']),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant', 'bot']).optional(),
+  parentAgentId: z.string().optional(),
+  model: z.string().min(1),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']),
   capabilities: z.array(z.string()).optional(),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()).optional(),

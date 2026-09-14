@@ -194,7 +194,7 @@ export const PresentationProgram: React.FC<PresentationProgramProps> = ({ progra
           <button type="button"
             onClick={() => setShowRemote(true)}
             className="p-2 rounded text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            title="Open Remote Control"
+            title="Open Fabric Session"
           >
             📱
           </button>

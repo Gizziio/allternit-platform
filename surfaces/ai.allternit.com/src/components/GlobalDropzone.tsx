@@ -72,6 +72,7 @@ const VALID_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/',
   'application/json',
+  'text/markdown',
 ];
 
 const MAX_SIZE = 50 * 1024 * 1024; // 50MB
@@ -94,9 +95,11 @@ export function GlobalDropzoneProvider({ children }: GlobalDropzoneProviderProps
   }, []);
 
   // Check if file is valid
+  const OFFICE_EXTENSIONS = ['.docx', '.xlsx', '.pptx', '.pdf', '.md', '.markdown', '.doc', '.xls', '.ppt', '.csv', '.rtf', '.odt', '.ods', '.odp', '.epub'];
+
   const isValidFile = useCallback((file: File): boolean => {
     if (file.size > MAX_SIZE) return false;
-    return VALID_TYPES.some(type => file.type.startsWith(type) || file.name.endsWith('.docx'));
+    return VALID_TYPES.some(type => file.type.startsWith(type)) || OFFICE_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext));
   }, []);
 
   // Process dropped files

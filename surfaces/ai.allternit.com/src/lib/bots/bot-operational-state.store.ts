@@ -34,6 +34,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { useEffect } from 'react';
 import { createModuleLogger } from '@/lib/logger';
 import {
   type BotOperationalState,
@@ -42,6 +43,7 @@ import {
 } from './orpc-contracts';
 import { type GoalLoopState } from './goal-loop-controller';
 import { projectOperationalStateFromGoalLoop } from './bot-operational-projection';
+import { getBotOperationalState } from './bot-events-api';
 
 const logger = createModuleLogger('BotOperationalState');
 
@@ -125,6 +127,14 @@ interface BotOperationalStateStoreState {
    * unreadMessagesCount) are preserved from the existing projection.
    */
   applyGoalLoopState: (botId: string, loopState: GoalLoopState) => void;
+
+  /**
+   * Fetch the server-owned operational state for a bot and merge it into the
+   * entry. Server-sourced fields (status, activityLabel, computerState,
+   * lastEventSequence, ...) win; subscriptionState and resume cursors are
+   * preserved. Returns false when the fetch fails; the entry is left untouched.
+   */
+  fetchOperationalState: (botId: string) => Promise<boolean>;
 
   /** Mark a bot as offline when its projection cannot be reached */
   markOffline: (botId: string) => void;
@@ -295,6 +305,40 @@ export const useBotOperationalStateStore = create<BotOperationalStateStoreState>
         logger.debug({ botId, status: loopState.status }, 'Goal loop state applied to projection');
       },
 
+      fetchOperationalState: async (botId) => {
+        get().setFetching(botId, true);
+        try {
+          const serverState = await getBotOperationalState(botId);
+
+          set(
+            (store) => {
+              const existing = store.projections[botId] ?? defaultEntry(botId);
+              // Server is authoritative for the fields it owns; preserve local
+              // subscription bookkeeping and resume cursors.
+              const newEntry: BotProjectionEntry = {
+                ...existing,
+                state: { ...existing.state, ...serverState },
+                lastFetchedAt: new Date().toISOString(),
+              };
+              return { projections: { ...store.projections, [botId]: newEntry } };
+            },
+            false,
+            'fetchOperationalState',
+          );
+
+          logger.debug(
+            { botId, status: serverState.status, seq: serverState.lastEventSequence },
+            'Operational state fetched from server',
+          );
+          return true;
+        } catch (err) {
+          logger.warn({ err, botId }, 'Failed to fetch operational state from server');
+          return false;
+        } finally {
+          get().setFetching(botId, false);
+        }
+      },
+
       markOffline: (botId) => {
         set(
           (store) => {
@@ -432,12 +476,28 @@ export const useBotOperationalStateStore = create<BotOperationalStateStoreState>
  * Callers must NOT infer bot status from local state; always use this hook.
  */
 export function useBotStatus(botId: string) {
-  return useBotOperationalStateStore((s) => ({
-    status: s.getStatus(botId),
-    isWorking: s.isWorking(botId),
-    needsAttention: s.needsAttention(botId),
-    hasPendingApprovals: s.hasPendingApprovals(botId),
-    subscriptionState: s.projections[botId]?.subscriptionState ?? 'offline',
-    projection: s.projections[botId]?.state ?? null,
-  }));
+  const entry = useBotOperationalStateStore((s) => s.projections[botId]);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = () => {
+      if (active) void useBotOperationalStateStore.getState().fetchOperationalState(botId);
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 5_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [botId]);
+
+  const status = entry?.state.status ?? 'offline';
+  return {
+    status,
+    isWorking: status === 'working' || status === 'waiting_input',
+    needsAttention: ['waiting_approval', 'blocked', 'failed', 'degraded'].includes(status),
+    hasPendingApprovals: (entry?.state.pendingApprovalsCount ?? 0) > 0,
+    subscriptionState: entry?.subscriptionState ?? 'offline',
+    projection: entry?.state ?? null,
+  };
 }

@@ -52,9 +52,10 @@ struct ModelsTabView: View {
                     }
                     .accessibilityLabel("Refresh")
                     .disabled(store.isLoading)
+                    .accessibilityLabel("Refresh models")
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.vertical, 10)
 
                 ModelManagementListContent(modelStore: modelStore, store: store)
             }

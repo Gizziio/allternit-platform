@@ -6,6 +6,11 @@
  * snapshots so the loop can be resumed after a page reload or process restart.
  * The reducer rebuilds the latest `GoalLoopState` from the stored event history.
  *
+ * Wave 3: when constructed with an events API, the recorder also dual-writes
+ * every event to the server-owned ledger (`POST /api/v1/bots/:id/events`)
+ * with a deterministic idempotency key; the local store remains the offline
+ * replica.
+ *
  * @module goal-loop-persistence
  */
 
@@ -38,6 +43,7 @@ import {
   type StoredEventType,
   createMemoryBotEventStore,
 } from './bot-event-store';
+import { type BotEventsApi } from './bot-events-api';
 
 const logger = createModuleLogger('GoalLoopPersistence');
 
@@ -51,6 +57,13 @@ export interface GoalLoopRecorderOptions {
   eventStore: BotEventStore;
   /** Emit a `loop.snapshot` event after every transition for easy recovery. */
   snapshotEveryEvent?: boolean;
+  /**
+   * Server-owned event ledger. When provided, every recorded event is
+   * dual-written: the local append stays (offline replica) and the event is
+   * also POSTed to `/api/v1/bots/:id/events` fire-and-forget with a
+   * deterministic idempotency key of `${botId}:${goalId}:${sequence}`.
+   */
+  eventsApi?: BotEventsApi;
 }
 
 /**
@@ -61,6 +74,7 @@ export class GoalLoopRecorder {
   private eventStore: BotEventStore;
   private botId: string;
   private goalId: string;
+  private eventsApi?: BotEventsApi;
   private nextSequence: number;
   private snapshotEveryEvent: boolean;
   private unsubscribe?: () => void;
@@ -69,6 +83,7 @@ export class GoalLoopRecorder {
     this.botId = options.botId;
     this.goalId = options.goalId;
     this.eventStore = options.eventStore;
+    this.eventsApi = options.eventsApi;
     this.snapshotEveryEvent = options.snapshotEveryEvent ?? true;
     this.nextSequence = this.computeNextSequence();
   }
@@ -105,6 +120,7 @@ export class GoalLoopRecorder {
       occurredAt: event.occurredAt,
     };
     this.eventStore.append(stored);
+    this.appendToServer(stored);
   }
 
   private recordSnapshot(state: GoalLoopState): void {
@@ -117,6 +133,31 @@ export class GoalLoopRecorder {
       occurredAt: new Date().toISOString(),
     };
     this.eventStore.append(stored);
+    this.appendToServer(stored);
+  }
+
+  /**
+   * Fire-and-forget dual-write to the server-owned ledger. Server failures are
+   * logged but never break the controller — the local replica keeps recording.
+   */
+  private appendToServer(stored: StoredGoalEvent): void {
+    if (!this.eventsApi) return;
+    const idempotencyKey = `${stored.botId}:${stored.goalId}:${stored.sequence}`;
+    void this.eventsApi
+      .appendBotEvent(stored.botId, {
+        eventType: stored.type,
+        actor: { type: 'bot', id: stored.botId },
+        payload: (stored.payload ?? {}) as Record<string, unknown>,
+        occurredAt: stored.occurredAt,
+        goalId: stored.goalId,
+        idempotencyKey,
+      })
+      .catch((err) => {
+        logger.error(
+          { err, botId: stored.botId, goalId: stored.goalId, seq: stored.sequence, idempotencyKey },
+          'Failed to append event to server ledger',
+        );
+      });
   }
 
   /** Clear the recorded history for this goal. */

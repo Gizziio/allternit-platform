@@ -137,31 +137,24 @@ struct ConnectorsListView: View {
                 Spacer()
             }
         } else if let loadError, connectors.isEmpty {
-            VStack(spacing: 12) {
-                Text("Couldn't load connectors")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") { Task { await loadConnectors() } }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 40)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load connectors",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await loadConnectors() } }
+            )
             .frame(maxWidth: .infinity)
         } else if filtered.isEmpty {
-            VStack(spacing: 10) {
-                Image(systemName: searchText.isEmpty ? "puzzlepiece.extension" : "magnifyingglass")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(Color("TextSecondary"))
-                Text(searchText.isEmpty ? "No connectors available." : "No connectors match your search.")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextSecondary"))
-            }
-            .padding(.top, 40)
+            FriendlyStateView(
+                style: .empty,
+                icon: searchText.isEmpty ? "puzzlepiece.extension" : "magnifyingglass",
+                title: searchText.isEmpty ? "No connectors available" : "No matches",
+                message: searchText.isEmpty
+                    ? "Add a connector to link external accounts and services."
+                    : "No connectors match your search."
+            )
             .frame(maxWidth: .infinity)
         } else {
             LazyVStack(spacing: 0) {

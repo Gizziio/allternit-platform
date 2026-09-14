@@ -30,6 +30,8 @@ function openSessionView(sessionId: string): void {
         context: isBot
           ? { sessionId, botId, originView: 'chat' }
           : { sessionId, originView: 'chat' },
+        viewType: 'cowork-agent-session',
+        context: { sessionId, originView: 'chat' },
       },
     }),
   );

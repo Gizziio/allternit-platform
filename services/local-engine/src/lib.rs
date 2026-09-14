@@ -11,12 +11,11 @@
 //!   polls their health endpoints.
 //! - `routes`: axum HTTP handlers for `/models/download` and `/status`.
 
-pub mod assess;
 pub mod cache;
-pub mod catalog;
 pub mod download;
 pub mod hardware;
 pub mod recommend;
+pub mod runtime;
 pub mod routes;
 pub mod runtime;
 pub mod sampler;
@@ -24,7 +23,6 @@ pub mod sampler;
 use std::path::PathBuf;
 
 // Re-export the most commonly used types.
-pub use assess::{AssessRequest, AssessResponse, Assessor};
 pub use cache::{CachedModel, ModelSource, ModelStatus, ModelStore};
 pub use catalog::{CatalogEntry, CatalogService, CatalogSource};
 pub use download::{build_cached_model, spawn_download_task, HuggingFaceError, TreeEntry};
@@ -32,6 +30,12 @@ pub use hardware::HardwareProfile;
 pub use recommend::{RecommendRequest, RecommendResponse, Recommender};
 pub use runtime::{ProcessManager, RuntimeInfo, RuntimeManagerError, RuntimeRecipe, RuntimeStatus};
 pub use sampler::{SystemSample, SystemSampler};
+pub use download::{
+    build_cached_model, spawn_download_task, HuggingFaceError, TreeEntry,
+};
+pub use runtime::{
+    ProcessManager, RuntimeInfo, RuntimeManagerError, RuntimeRecipe, RuntimeStatus,
+};
 
 /// Shared application state used by all HTTP routes.
 #[derive(Clone)]

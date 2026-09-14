@@ -7,6 +7,7 @@ import { GoalLoopController, type TaskRunner, type Attempt } from './goal-loop-c
 import { GoalLoopRecorder, rebuildGoalLoopState, resumeGoalLoopController } from './goal-loop-persistence';
 import { createMemoryBotEventStore } from './bot-event-store';
 import { GoalSchema, PlanSchema, TaskGraphSchema, type Goal } from './goal-task-contracts';
+import { type BotEventsApi, type BotEventRow } from './bot-events-api';
 
 const now = new Date().toISOString();
 
@@ -86,6 +87,92 @@ describe('GoalLoopRecorder', () => {
     const events = store.readEvents('b_1', 'g_1');
     expect(events.length).toBeGreaterThan(firstCount);
     expect(events[events.length - 1]?.sequence).toBe(events.length);
+  });
+
+  describe('server dual-write', () => {
+    function mockEventsApi(appendBotEvent?: ReturnType<typeof vi.fn>): BotEventsApi & {
+      appendBotEvent: ReturnType<typeof vi.fn>;
+    } {
+      return {
+        appendBotEvent: appendBotEvent ?? vi.fn(async () => ({} as unknown as BotEventRow)),
+        queryBotEvents: vi.fn(),
+        getBotOperationalState: vi.fn(),
+      };
+    }
+
+    it('writes every recorded event to both the local store and the server', () => {
+      const store = createMemoryBotEventStore();
+      const eventsApi = mockEventsApi();
+      const recorder = new GoalLoopRecorder({ botId: 'b_1', goalId: 'g_1', eventStore: store, eventsApi });
+      const controller = new GoalLoopController({
+        botId: 'b_1',
+        goal: makeGoal(),
+        taskRunner: { runAttempt: vi.fn() },
+      });
+
+      recorder.attach(controller);
+      controller.materializePlan(makePlan(['t_1']));
+      recorder.detach();
+
+      const events = store.readEvents('b_1', 'g_1');
+      expect(events.length).toBeGreaterThan(0);
+      expect(eventsApi.appendBotEvent).toHaveBeenCalledTimes(events.length);
+
+      events.forEach((event, i) => {
+        expect(eventsApi.appendBotEvent).toHaveBeenNthCalledWith(i + 1, 'b_1', {
+          eventType: event.type,
+          actor: { type: 'bot', id: 'b_1' },
+          payload: event.payload,
+          occurredAt: event.occurredAt,
+          goalId: 'g_1',
+          idempotencyKey: `b_1:g_1:${event.sequence}`,
+        });
+      });
+    });
+
+    it('logs server failures without breaking the local append or the controller', async () => {
+      const store = createMemoryBotEventStore();
+      const eventsApi = mockEventsApi(vi.fn(async () => {
+        throw new Error('server unreachable');
+      }));
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const recorder = new GoalLoopRecorder({ botId: 'b_1', goalId: 'g_1', eventStore: store, eventsApi });
+      const controller = new GoalLoopController({
+        botId: 'b_1',
+        goal: makeGoal(),
+        taskRunner: { runAttempt: vi.fn() },
+      });
+
+      recorder.attach(controller);
+      controller.materializePlan(makePlan(['t_1']));
+      recorder.detach();
+
+      // The local replica recorded everything despite the server failure.
+      const events = store.readEvents('b_1', 'g_1');
+      expect(events.length).toBeGreaterThan(0);
+      expect(eventsApi.appendBotEvent).toHaveBeenCalledTimes(events.length);
+
+      // The rejection was caught and surfaced via the logger (console.error).
+      await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled());
+      expect(String(errorSpy.mock.calls[0]?.[0])).toContain('Failed to append event to server ledger');
+      errorSpy.mockRestore();
+    });
+
+    it('does not call the server when no events API is configured', () => {
+      const store = createMemoryBotEventStore();
+      const recorder = new GoalLoopRecorder({ botId: 'b_1', goalId: 'g_1', eventStore: store });
+      const controller = new GoalLoopController({
+        botId: 'b_1',
+        goal: makeGoal(),
+        taskRunner: { runAttempt: vi.fn() },
+      });
+
+      recorder.attach(controller);
+      controller.materializePlan(makePlan(['t_1']));
+      recorder.detach();
+
+      expect(store.readEvents('b_1', 'g_1').length).toBeGreaterThan(0);
+    });
   });
 });
 

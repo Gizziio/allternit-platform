@@ -55,18 +55,14 @@ struct FileDetailView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let loadError, result == nil {
-            VStack(spacing: 12) {
-                Text("Couldn't load file")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") { Task { await load() } }
-                    .font(.subheadline)
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .error,
+                icon: "doc",
+                title: "Couldn't load file",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await load() } }
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let result {
             if result.type == .binary {

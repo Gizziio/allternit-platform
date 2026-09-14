@@ -67,10 +67,10 @@ async function handoffFetch(path: string, init?: RequestInit, getToken?: TokenGe
   return fetch(`${hostedHandoffBase()}${path}`, await withAuthHeaders(init, getToken));
 }
 
-/** Mint a handoff token bound to one of the caller's paired runtimes (hosted). */
+/** Mint a handoff token bound to one of the caller's paired runtimes. */
 export async function mintDispatchToken(getToken: TokenGetter, runtimeId?: string): Promise<DispatchMintResponse> {
-  const res = await fetch(
-    `${hostedHandoffBase()}/mint`,
+  const res = await handoffFetch(
+    '/mint',
     await withAuthHeaders(
       {
         method: 'POST',
@@ -79,6 +79,7 @@ export async function mintDispatchToken(getToken: TokenGetter, runtimeId?: strin
       },
       getToken,
     ),
+    getToken,
   );
   if (!res.ok) {
     throw new Error(`Failed to mint dispatch token: ${res.status}`);

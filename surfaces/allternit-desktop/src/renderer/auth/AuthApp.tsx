@@ -114,6 +114,12 @@ function SignedInView() {
  * it, and `<SignIn>` remounts as signed-out even though FAPI already created
  * the session. Hash routing on `<SignIn>` is not enough — ClerkProvider still
  * needs an in-app redirect target.
+ * URL of the auth page itself (https://accounts.<instance>/__desktop_auth__/). The
+ * top-level ClerkProvider uses this as the fallback redirect target so Clerk never
+ * navigates the isolated auth window away to the platform website. The embedded
+ * <SignIn>/<SignUp> components use hash routing and do NOT set forceRedirectUrl,
+ * because that caused a redirect loop: after sign-in Clerk would reload the page, the
+ * component would remount, and immediately redirect again.
  */
 const selfRedirectUrl =
   typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '/';
@@ -433,8 +439,6 @@ export default function AuthApp() {
       proxyUrl={config.proxyUrl}
       appearance={clerkAppearance}
       localization={clerkLocalization}
-      signInForceRedirectUrl={selfRedirectUrl}
-      signUpForceRedirectUrl={selfRedirectUrl}
       signInFallbackRedirectUrl={selfRedirectUrl}
       signUpFallbackRedirectUrl={selfRedirectUrl}
     >

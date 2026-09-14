@@ -628,7 +628,7 @@ async function importWorkspace(
     description: (manifest.description as string) || `Imported from ${file.name}`,
     type: 'worker',
     model: (manifest.model as string) || getDefaultAgentModel().id,
-    provider: (manifest.provider as 'openai' | 'anthropic' | 'google' | 'local' | 'custom') || getDefaultAgentModel().provider,
+    provider: (manifest.provider as 'openai' | 'anthropic' | 'google' | 'kimi' | 'local' | 'custom') || getDefaultAgentModel().provider,
     harness: { mode: 'cloud' },
     allowedSurfaces: ['chat'],
     trustTier: 'standard',

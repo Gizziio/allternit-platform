@@ -10,6 +10,12 @@ import { designSkillsPlugin } from './src/lib/design/design-skills-plugin'
 
 const require = createRequire(import.meta.url)
 const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
+
+/**
+ * Dev-only override for the allternit-api backend URL.
+ * Useful when another service already owns localhost:8013.
+ */
+const API_TARGET = process.env.ALLTERNIT_API_URL || 'http://127.0.0.1:8013'
 // Force Univer to use the same @univerjs/core that office-sheets-app depends
 // on. Without this, the platform surface's legacy design-mode editor pins
 // @univerjs/core@0.21.1, which conflicts with office-sheets-app's 0.25.x
@@ -32,6 +38,10 @@ const univerCore = path.dirname(path.dirname(path.dirname(univerCoreEntry)))
  * Transport view works. Build: copy the PWA to `dist/fabric-session/index.html`
  * so Cloudflare Pages pretty-URLs can serve `/fabric-session/` without a
  * `.html` rewrite loop.
+ * Dev-only: Vite's MPA server matches `/fabric-session` to `fabric-session.html`
+ * because of the rollup input key. The platform route `/fabric-session` must
+ * serve `index.html` (the SPA shell) so the hub page renders, while
+ * `/fabric-session.html` continues to serve the standalone dashboard entry.
  */
 function fabricSessionRoutePlugin(): Plugin {
   return {
@@ -40,6 +50,8 @@ function fabricSessionRoutePlugin(): Plugin {
       server.middlewares.use('/fabric-session', (req, res, next) => {
         if (req.method !== 'GET') return next();
         const url = req.url ?? '/';
+        // Only rewrite the exact hub path (with optional query string), not
+        // static assets under /fabric-session/ or the standalone entrypoint.
         if (url !== '/' && !url.startsWith('?')) return next();
         req.url = '/index.html' + (url.startsWith('?') ? url : '');
         next();
@@ -198,6 +210,12 @@ export default defineConfig({
         /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,
         'better-sqlite3',
         /^better-sqlite3(\/.+)?$/,
+        // The allternit-office-suite workspace package and its subpaths depend on
+        // office-app assets that are not yet bundled correctly into the platform
+        // surface. Keep them external so the platform shell, auth, and remote
+        // control builds deploy while the office integration is finished.
+        '@allternit/allternit-office-suite',
+        /^@allternit\/allternit-office-suite\/.+$/,
       ],
       output: {
         manualChunks(id) {
@@ -255,8 +273,15 @@ export default defineConfig({
           });
         },
       },
+      // Chat streaming is now implemented by allternit-api's /api/agent-chat
+      // bridge. Route it to the backend in dev instead of the legacy local
+      // gizzi runtime on 4096.
+      '/api/agent-chat': {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
       '/api': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
         // The gateway CORS-gates on the Origin header; the allowlist covers
         // deployed origins plus specific dev ports, and every local browser
@@ -270,39 +295,39 @@ export default defineConfig({
         },
       },
       '/viz': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/sandbox': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/vm-session': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/rails': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/stream': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/terminal': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/mcp': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/status': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
     },

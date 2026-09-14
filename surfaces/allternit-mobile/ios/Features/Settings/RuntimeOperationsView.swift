@@ -61,7 +61,7 @@ struct RuntimeOperationsView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
-            .accessibilityLabel("Refresh")
+            .accessibilityLabel("Refresh runtime operations")
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
@@ -87,21 +87,14 @@ struct RuntimeOperationsView: View {
             Spacer()
         } else if let loadError = store.loadError, store.budget == nil {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Couldn't load runtime ops")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load runtime ops",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else {
             ScrollView {
@@ -263,9 +256,12 @@ struct RuntimeOperationsView: View {
                         }
                     }
                 } else {
-                    Text("Budget data unavailable")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
+                    FriendlyInlineStateView(
+                        style: .empty,
+                        icon: "wallet",
+                        title: "Budget data unavailable",
+                        message: "Connect a billing source to see runtime budget."
+                    )
                 }
             }
         }

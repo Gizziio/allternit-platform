@@ -1,14 +1,11 @@
 // @ts-nocheck
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
 import { useIsClient } from '@/lib/hooks/use-is-client';
 import { GizziMascot, type GizziAttention } from '@/components/ai-elements/GizziMascot';
 import { cn } from '@/lib/utils';
-import type { Agent } from '@/lib/agents/agent.types';
-import { isBot } from '@/lib/bots/bot-profile';
-import { getBotIcon } from '@/lib/bots/bot-icons';
 
 import { 
   type AgentModeGizziProps, 
@@ -22,7 +19,7 @@ import { ExitEffects } from './agent-mode-gizzi/components/ExitEffects';
 import { OutOfTokensNotice } from './agent-mode-gizzi/components/OutOfTokensNotice';
 
 export function AgentModeGizzi(props: AgentModeGizziProps) {
-  const { surface, selectedAgentName, selectedAgent, theme, hasActionPills = false, position = 'top' } = props;
+  const { surface, selectedAgentName, selectedAgentAvatarUrl, theme, hasActionPills = false, position = 'top' } = props;
   const isClient = useIsClient();
   
   const {
@@ -168,11 +165,28 @@ export function AgentModeGizzi(props: AgentModeGizziProps) {
                   animation: isCompanion && isBubblePinned ? 'gizziCompanionPulse 820ms cubic-bezier(0.22, 1, 0.36, 1)' : undefined,
                 }}
               >
-                {selectedAgent && isBot(selectedAgent) ? (
-                  <BotAvatar
-                    bot={selectedAgent}
-                    size={isCompanion ? companionMascotSize : config.mascotSize}
-                  />
+                {selectedAgentAvatarUrl ? (
+                  <div
+                    className={cn(
+                      'rounded-full border-2 shadow-lg overflow-hidden bg-surface-floating',
+                      isCompanion ? 'size-14' : 'size-[var(--mascot-size)]'
+                    )}
+                    style={{
+                      borderColor: theme.accent,
+                      boxShadow: `0 0 20px ${theme.glow}`,
+                    }}
+                  >
+                    <img
+                      src={selectedAgentAvatarUrl}
+                      alt={selectedAgentName ? `${selectedAgentName} avatar` : 'Bot avatar'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to Gizzi if the avatar fails to load by
+                        // clearing the src so the parent can render the mascot.
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
                 ) : (
                   <GizziMascot
                     size={isCompanion ? companionMascotSize : config.mascotSize}
@@ -200,65 +214,6 @@ export function AgentModeGizzi(props: AgentModeGizziProps) {
         <OutOfTokensNotice isVisible={animState === 'out-of-tokens'} />
       </div>
     </LazyMotion>
-  );
-}
-
-function botAvatarUrl(bot: Agent): string | undefined {
-  if (bot.avatar?.uri) return bot.avatar.uri;
-  if (bot.characterLayer?.avatar?.uri) return bot.characterLayer.avatar.uri;
-  return bot.teammateProfile?.avatar;
-}
-
-function BotAvatar({ bot, size }: { bot: Agent; size: number }) {
-  const accentColor = bot.botProfile?.accentColor || bot.characterLayer?.avatar?.style?.accentColor || 'var(--accent-primary)';
-  const displayName = bot.botProfile?.displayName || bot.name;
-  const rawImageUrl = botAvatarUrl(bot);
-  const [imageError, setImageError] = useState(false);
-  // If the avatar URL changes, allow the new image to attempt loading again.
-  useEffect(() => {
-    setImageError(false);
-  }, [rawImageUrl]);
-  const BotIcon = getBotIcon(bot.id);
-  const initials = displayName
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join('');
-
-  // Reset error state if the bot avatar URL changes so a newly-provided URL
-  // is allowed to load.
-  const imageUrl = imageError ? undefined : rawImageUrl;
-
-  return (
-    <div
-      data-testid="agent-mode-bot-avatar"
-      className="rounded-full flex items-center justify-center overflow-hidden shadow-md border-2"
-      style={{
-        width: size,
-        height: size,
-        borderColor: accentColor,
-        background: `color-mix(in srgb, ${accentColor} 18%, var(--surface-panel))`,
-      }}
-      title={displayName}
-    >
-      {imageUrl ? (
-        <img
-          key={imageUrl}
-          src={imageUrl}
-          alt={displayName}
-          className="w-full h-full object-cover"
-          onError={() => setImageError(true)}
-        />
-      ) : BotIcon ? (
-        <div className="flex items-center justify-center w-full h-full">
-          <BotIcon size={Math.max(16, size * 0.45)} color={accentColor} />
-        </div>
-      ) : (
-        <span className="text-[10px] font-bold" style={{ color: accentColor }}>
-          {initials}
-        </span>
-      )}
-    </div>
   );
 }
 

@@ -8,16 +8,8 @@ import SwiftUI
 /// Code | ACI] tab list lives in the sidebar header instead
 /// (HistorySidebarView). Cowork is NOT a tab destination; it's a
 /// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
-extension Notification.Name {
-    /// Posted by BotHomeView when the user taps a task row or starts a new
-    /// chat/task for a bot. MainWorkspaceView switches to the Chats tab,
-    /// selects the session, and mounts the bot in the composer.
-    static let openChatSession = Notification.Name("com.allternit.openChatSession")
-}
-
 struct MainWorkspaceView: View {
     @EnvironmentObject private var modeStore: AppModeStore
-    @EnvironmentObject private var agentModeStore: AgentModeStore
     @State private var isSidebarOpen = false
     @State private var dragOffset: CGFloat = 0
     @State private var selectedSessionId: String? = nil
@@ -143,7 +135,7 @@ struct MainWorkspaceView: View {
             // Response-style preferences: loaded here so the very first
             // send can already inject the directive (plan Phase 6).
             PreferencesStore.shared.fetchIfNeeded()
-            if CommandLine.arguments.contains("-sidebar") {
+            if launchArgumentEnabled("sidebar") {
                 isSidebarOpen = true
             }
             #if DEBUG
@@ -156,36 +148,23 @@ struct MainWorkspaceView: View {
             }
             // `-open-projects` / `-open-artifacts` (DEBUG only): land on a
             // tab surface directly (no tap injection in simctl).
-            if CommandLine.arguments.contains("-open-projects") {
+            if launchArgumentEnabled("open-projects") {
                 modeStore.selectBarItem(.projects)
             }
-            if CommandLine.arguments.contains("-open-artifacts") {
+            if launchArgumentEnabled("open-artifacts") {
                 modeStore.selectBarItem(.artifacts)
             }
             // `-open-agent-hub` (DEBUG only): land on the Agents tab
             // directly (no tap injection in simctl).
-            if CommandLine.arguments.contains("-open-agent-hub") {
+            if launchArgumentEnabled("open-agent-hub") {
                 modeStore.selectBarItem(.agents)
             }
             // `-open-code-filter` (DEBUG only): land on the Code tab —
             // CodeModeView presents the Phase-8 status filter sheet itself.
-            if CommandLine.arguments.contains("-open-code-filter") {
+            if launchArgumentEnabled("open-code-filter") {
                 modeStore.selectBarItem(.code)
             }
             #endif
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openChatSession)) { notification in
-            guard let sessionId = notification.userInfo?["sessionId"] as? String else { return }
-            if let agentId = notification.userInfo?["agentId"] as? String {
-                agentModeStore.setAgentEnabled(true, for: .chat)
-                agentModeStore.selectAgentId(agentId, for: .chat)
-                agentModeStore.fetchAgentsIfNeeded(force: true)
-            }
-            selectedSessionId = sessionId
-            modeStore.selectBarItem(.chats)
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
-                isSidebarOpen = false
-            }
         }
     }
 
@@ -223,29 +202,14 @@ struct ModePlaceholderView: View {
     let mode: AppMode
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: mode.theme.icon)
-                .font(.system(size: 28, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 64, height: 64)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-
-            Text("\(mode.label) mode — coming in UX-4")
-                .font(.system(.title3, design: .serif))
-                .fontWeight(.medium)
-                .foregroundColor(Color("TextPrimary"))
-
-            Text("This surface isn't part of the iOS app yet.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: mode.theme.icon,
+            title: "\(mode.label) mode — coming in UX-4",
+            message: "This surface isn't part of the iOS app yet."
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("BgPrimary"))
+        .background(Color("BgSecondary"))
     }
 }
 
@@ -291,7 +255,7 @@ struct ChatView: View {
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     if isInChat {
-                        floatingIcon("chevron.left", accessibilityLabel: "Back to new chat") {
+                        floatingIcon("chevron.left", accessibilityLabel: "Back") {
                             selectedSessionId = nil
                             viewModel.startNewSession()
                             viewModel.isTemporaryChat = false
@@ -307,18 +271,14 @@ struct ChatView: View {
                     // Incognito chat (Phase 6, Claude parity): starts an
                     // ephemeral session stamped `metadata.ephemeral` —
                     // excluded from history, purged on abort server-side.
-                    floatingIcon(
-                        Self.incognitoSymbolName,
-                        isActive: viewModel.isIncognito,
-                        accessibilityLabel: viewModel.isIncognito ? "Incognito chat active" : "Start incognito chat"
-                    ) {
+                    floatingIcon(Self.incognitoSymbolName, isActive: viewModel.isIncognito, accessibilityLabel: "Incognito chat") {
                         selectedSessionId = nil
                         viewModel.startNewSession(ephemeral: true)
                     }
 
                     // Intelli-Schedule panel — only offered in Cowork mode.
                     if modeStore.mode == .cowork {
-                        floatingIcon("calendar.badge.clock", accessibilityLabel: "Open IntelliSchedule") {
+                        floatingIcon("calendar.badge.clock", accessibilityLabel: "Open Intelli-Schedule") {
                             isIntelliSchedulePresented = true
                         }
                     }
@@ -348,10 +308,10 @@ struct ChatView: View {
         // `-open-incognito` (DEBUG only): start an incognito chat on launch
         // so the explainer empty state can be screenshot-verified.
         .onAppear {
-            if CommandLine.arguments.contains("-temporary-chat"), !viewModel.isTemporaryChat {
+            if launchArgumentEnabled("temporary-chat"), !viewModel.isTemporaryChat {
                 viewModel.toggleTemporaryChat()
             }
-            if CommandLine.arguments.contains("-open-incognito"), !viewModel.isIncognito {
+            if launchArgumentEnabled("open-incognito"), !viewModel.isIncognito {
                 viewModel.startNewSession(ephemeral: true)
             }
         }
@@ -397,7 +357,7 @@ struct ChatView: View {
                 )
                 .shadow(color: isActive ? Color("AccentPrimary").opacity(0.25) : Color.black.opacity(0.10), radius: 10, y: 3)
         }
-        .accessibilityLabel(accessibilityLabel ?? systemName)
+        .accessibilityLabel(accessibilityLabel ?? "")
     }
 }
 
@@ -468,7 +428,7 @@ struct ChatContentView: View {
         // and the code terminal keeps its boot header clean.
         guard !viewModel.isIncognito, !isTerminal else { return false }
         #if DEBUG
-        if CommandLine.arguments.contains("-open-notifications-card") {
+        if launchArgumentEnabled("open-notifications-card") {
             return true
         }
         #endif
@@ -817,7 +777,7 @@ struct ChatContentView: View {
             // tap-injection or photo-library fixtures. Runs before the
             // `-autosend` branch below so combining both args exercises the
             // upload path end-to-end.
-            if CommandLine.arguments.contains("-stage-test-attachment") {
+            if launchArgumentEnabled("stage-test-attachment") {
                 stageTestAttachment()
             }
             // `-open-voice-mode` / `-open-voice-settings` (DEBUG only):
@@ -825,8 +785,8 @@ struct ChatContentView: View {
             // settings variant lands on the voice settings sheet. Combine
             // with `-voice-state listening|thinking|speaking` to pin a
             // gradient state for screenshots.
-            if CommandLine.arguments.contains("-open-voice-mode")
-                || CommandLine.arguments.contains("-open-voice-settings") {
+            if launchArgumentEnabled("open-voice-mode")
+                || launchArgumentEnabled("open-voice-settings") {
                 isVoiceModePresented = true
             }
             // `-voice-summary <seconds>` (DEBUG only): files a "Voice chat
@@ -911,7 +871,6 @@ private enum DeckMotion {
 private func toolbarIconButton(
     _ systemName: String,
     tint: Color? = nil,
-    accessibilityLabel: String? = nil,
     action: @escaping () -> Void
 ) -> some View {
     Button(action: {
@@ -926,7 +885,6 @@ private func toolbarIconButton(
             .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(accessibilityLabel ?? systemName)
 }
 
 /// The platform composer: one card holding the editor and a toolbar row,
@@ -1104,7 +1062,7 @@ struct ComposerView: View {
             // first-run sheets show again. Runs before the `-open-*` args.
             // (The Phase-10 onboarding gate itself is cleared earlier, in
             // AllternitApp.init, so this launch lands on its page 1.)
-            if CommandLine.arguments.contains("-reset-onboarding") {
+            if launchArgumentEnabled("reset-onboarding") {
                 DictationOnboardingSheet.resetShown()
                 AppPermission.resetAllPriming()
             }
@@ -1112,37 +1070,37 @@ struct ComposerView: View {
             // (DEBUG only): jump straight to a composer sheet for UI
             // testing/screenshots — simctl has no tap-injection, so this is
             // the way to reach sheet content without a real touch.
-            if CommandLine.arguments.contains("-open-plus-sheet") {
+            if launchArgumentEnabled("open-plus-sheet") {
                 isPlusSheetPresented = true
             }
-            if CommandLine.arguments.contains("-open-connectors") {
+            if launchArgumentEnabled("open-connectors") {
                 isConnectorsPresented = true
             }
-            if CommandLine.arguments.contains("-open-model-picker") {
+            if launchArgumentEnabled("open-model-picker") {
                 isModelPickerPresented = true
             }
             // `-open-dictation-onboarding` (DEBUG only): shows the first-run
             // dictation onboarding sheet for screenshot verification. Does
             // NOT mark it shown (only Continue does).
-            if CommandLine.arguments.contains("-open-dictation-onboarding") {
+            if launchArgumentEnabled("open-dictation-onboarding") {
                 isDictationOnboardingPresented = true
             }
             // `-open-mic-priming` (DEBUG only): shows the mic permission-
             // priming sheet for screenshot verification. NOTE: presenting it
             // this way marks the mic permission primed (shows-once flag).
-            if CommandLine.arguments.contains("-open-mic-priming") {
+            if launchArgumentEnabled("open-mic-priming") {
                 isMicPrimingPresented = true
             }
             // `-enable-agent-mode` (DEBUG only): turn on agent mode at launch
             // so the agent pill, bottom deck, and Gizzi mascot can be
             // screenshot-verified without simctl tap injection.
-            if CommandLine.arguments.contains("-enable-agent-mode"), !agentOn {
+            if launchArgumentEnabled("enable-agent-mode"), !agentOn {
                 agentModeStore.toggleAgent(for: mode)
             }
             // `-select-website-mode` (DEBUG only): pre-select the Websites tile
             // and fill the composer so the collapsed agent-mode UX can be
             // screenshot-verified.
-            if CommandLine.arguments.contains("-select-website-mode") {
+            if launchArgumentEnabled("select-website-mode") {
                 agentModeStore.selectTile(.website, for: mode)
                 inputText = AgentModeTile.website.taskPrompt
             }
@@ -1227,9 +1185,10 @@ struct ComposerView: View {
                 // Opens the "+" sheet (ComposerPlusSheet): attachments
                 // (camera/photos/files), tool toggles, tool access, and
                 // the Connectors entry — Claude iOS "Add to Chat" parity.
-                toolbarIconButton("plus", accessibilityLabel: "Add attachment") {
+                toolbarIconButton("plus") {
                     isPlusSheetPresented = true
                 }
+                .accessibilityLabel("Add attachment")
 
                 // Chat/Cowork toggle is a Home composer control
                 // (pre-session only); the Code surface never offers it.
@@ -1240,9 +1199,10 @@ struct ComposerView: View {
                 // Cowork workspace launchpad — opens the full workspace when
                 // in Cowork mode and no session is active.
                 if !hasActiveSession, mode == .cowork {
-                    toolbarIconButton("arrow.up.forward.square", accessibilityLabel: "Open cowork workspace") {
+                    toolbarIconButton("arrow.up.forward.square") {
                         isCoworkWorkspacePresented = true
                     }
+                    .accessibilityLabel("Open Cowork workspace")
                 }
 
                 // Agent | Bot toggle chip. Not offered in code mode: the
@@ -1254,11 +1214,7 @@ struct ComposerView: View {
                 Spacer(minLength: 2)
 
                 // Dictation mic: plain icon, red while recording.
-                toolbarIconButton(
-                    dictation.isRecording ? "mic.fill" : "mic",
-                    tint: dictation.isRecording ? .red : nil,
-                    accessibilityLabel: dictation.isRecording ? "Stop dictation" : "Start dictation"
-                ) {
+                toolbarIconButton(dictation.isRecording ? "mic.fill" : "mic", tint: dictation.isRecording ? Theme.statusError : nil) {
                     toggleDictation()
                 }
                 .symbolEffect(.pulse, isActive: dictation.isRecording)
@@ -1285,7 +1241,6 @@ struct ComposerView: View {
                     .frame(height: 26)
                     .frame(maxWidth: 78)
                 }
-                .accessibilityLabel("Select model")
 
                 if isStreaming {
                     Button(action: onStop) {
@@ -1303,7 +1258,6 @@ struct ComposerView: View {
                                 .clipShape(Circle())
                         }
                     }
-                    .accessibilityLabel("Stop generating")
                 } else if canSend {
                     Button(action: sendTapped) {
                         if isTerminal {
@@ -1321,7 +1275,6 @@ struct ComposerView: View {
                                 .clipShape(Circle())
                         }
                     }
-                    .accessibilityLabel("Send message")
                 }
             }
         }
@@ -1458,43 +1411,49 @@ struct ComposerView: View {
 
 // MARK: - Chat / Cowork toggle
 
-/// Single capsule toggle for Chat/Cowork (BottomDock.tsx ChatCoworkToggle).
-/// Cowork is a composer-level mode, not a tab: tapping cycles between Chat
-/// and Cowork, the active mode gets the mode accent and soft fill, and the
-/// top deck appears for Cowork. Pre-session only — the caller hides it once
-/// a session is active.
+/// Icon-only 28pt segmented pair [Chat | Cowork] (BottomDock.tsx
+/// ChatCoworkToggle, lines 18-63). Cowork is a composer-level mode, not a
+/// tab: selecting it sets the app mode (accent turns purple, the top deck
+/// appears); selecting Chat returns. Pre-session only — the caller hides it
+/// once a session is active.
 struct ChatCoworkToggle: View {
     @EnvironmentObject private var modeStore: AppModeStore
 
-    private var isCowork: Bool { modeStore.mode == .cowork }
-    private var activeMode: AppMode { isCowork ? .cowork : .chat }
-
     var body: some View {
-        Button(action: toggle) {
-            HStack(spacing: 6) {
-                Image(systemName: isCowork ? "person.3" : "message")
-                    .font(.system(size: 11, weight: .semibold))
-                Text(isCowork ? "Cowork" : "Chat")
-                    .font(.system(size: 11, weight: .semibold))
-            }
-            .foregroundColor(isCowork ? activeMode.theme.accent : Color("TextSecondary"))
-            .padding(.horizontal, 10)
-            .frame(height: 26)
-            .background(isCowork ? activeMode.theme.accentSoft : Color.clear)
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
-            )
+        HStack(spacing: 0) {
+            segment(mode: .chat, icon: "message", label: "Chat")
+            Rectangle()
+                .fill(Theme.borderWarmDefault)
+                .frame(width: 1, height: 14)
+            segment(mode: .cowork, icon: "person.3", label: "Cowork")
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Switch to \(isCowork ? "Chat" : "Cowork")")
+        .frame(height: 26)
+        .clipShape(RoundedRectangle(cornerRadius: 7))
+        .overlay(
+            RoundedRectangle(cornerRadius: 7)
+                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+        )
     }
 
-    private func toggle() {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
-        modeStore.mode = isCowork ? .chat : .cowork
+    private func segment(mode: AppMode, icon: String, label: String) -> some View {
+        let isActive = modeStore.mode == mode
+        return Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            modeStore.mode = mode
+        }) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+            // Active = soft bg + mode accent (web bg-composer-soft);
+            // inactive = muted.
+            .foregroundColor(isActive ? mode.theme.accent : Color("TextSecondary"))
+            .padding(.horizontal, 10)
+            .frame(height: 26)
+            .background(isActive ? mode.theme.accentSoft : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
@@ -1525,11 +1484,13 @@ struct AgentBotChip: View {
         }) {
             HStack(spacing: 6) {
                 if agentOn {
-                    Image("GizziMascot")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 18, height: 18)
-                        .clipShape(Circle())
+                    if let selectedAgent {
+                        AgentAvatarView(agent: selectedAgent, size: 18)
+                    } else {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(theme.accent)
+                    }
                     Text("Bot on")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(theme.accent)
@@ -1555,7 +1516,6 @@ struct AgentBotChip: View {
             )
         }
         .buttonStyle(.plain)
-        .layoutPriority(1)
         .accessibilityLabel(agentOn ? "Bot on" : "Bot off")
         .sheet(isPresented: $isSelectionSheetPresented) {
             AgentSelectionSheet()
@@ -1647,7 +1607,7 @@ private struct ComposerTextView: UIViewRepresentable {
         // `-focus-composer` (DEBUG only): focus the editor on launch so the
         // caret's alignment can be screenshot-verified (no tap injection in
         // simctl).
-        if CommandLine.arguments.contains("-focus-composer"), !textView.isFirstResponder {
+        if launchArgumentEnabled("focus-composer"), !textView.isFirstResponder {
             DispatchQueue.main.async { textView.becomeFirstResponder() }
         }
         #endif
@@ -1850,7 +1810,7 @@ private struct AgentSelectionMenu: View {
             #if DEBUG
             // `-open-agent-sheet` (DEBUG only): open the picker on launch
             // for screenshot verification (no tap injection in simctl).
-            if CommandLine.arguments.contains("-open-agent-sheet") {
+            if launchArgumentEnabled("open-agent-sheet") {
                 isSheetPresented = true
             }
             #endif
@@ -2035,19 +1995,25 @@ struct AgentModeBottomDeck: View {
         .animation(DeckMotion.animation, value: expanded)
     }
 
-    /// Expanded: a wrapping grid of mode pills so every tile is reachable
-    /// without a horizontal tab strip.
+    /// Expanded: a horizontally scrolling row of mode tabs separated by a
+    /// pipe character, matching the original web mode selector.
     private var expandedTiles: some View {
-        let tiles = AgentModeTile.visibleTiles(for: surface)
-        return LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 80), spacing: 8)],
-            spacing: 8
-        ) {
-            ForEach(tiles, id: \.self) { tile in
-                modeTab(tile)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                let tiles = AgentModeTile.visibleTiles(for: surface)
+                ForEach(Array(tiles.enumerated()), id: \.element) { index, tile in
+                    modeTab(tile)
+                    if index < tiles.count - 1 {
+                        Text("|")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color("BorderSubtle"))
+                            .padding(.horizontal, 8)
+                    }
+                }
             }
+            .padding(.horizontal, 12)
         }
-        .padding(.horizontal, 12)
+        .frame(height: 38)
         .padding(.top, 16) // tucked portion hidden under the card
         .padding(.bottom, 10)
     }
@@ -2219,7 +2185,6 @@ struct EmptyChatStateView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 160, height: 160)
-                    .colorMultiply(Color("TextPrimary"))
                     .shadow(color: Color("AccentPrimary").opacity(0.15), radius: 12, y: 4)
             }
             .padding(.bottom, 24)
@@ -2274,40 +2239,14 @@ struct IncognitoEmptyStateView: View {
     let onLearnMore: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Ghost glyph with accent glow (mirrors the brand mark) ──
-            ZStack {
-                Circle()
-                    .fill(Color("AccentPrimary").opacity(0.08))
-                    .frame(width: 120, height: 120)
-                    .blur(radius: 30)
-
-                Image(systemName: ChatView.incognitoSymbolName)
-                    .font(.system(size: 64, weight: .light))
-                    .foregroundColor(Color("TextPrimary"))
-            }
-            .padding(.bottom, 24)
-
-            // ── Privacy explainer (Claude's incognito copy, verbatim) ──
-            Text("Incognito chats can't access memory. They aren't saved to history, added to memory, or used to train models.")
-                .font(.body)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 12)
-
-            // ── Underlined learn-more link → Safari sheet ──
-            Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
-                onLearnMore()
-            }) {
-                Text("Learn more about how your data is used.")
-                    .font(.body)
-                    .underline()
-                    .foregroundColor(Color("TextPrimary"))
-            }
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: ChatView.incognitoSymbolName,
+            title: "Incognito chat",
+            message: "Incognito chats can't access memory. They aren't saved to history, added to memory, or used to train models.",
+            actionTitle: "Learn more about how your data is used.",
+            action: onLearnMore
+        )
     }
 }
 
@@ -2322,7 +2261,7 @@ struct TransientErrorBanner: View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.subheadline)
-                .foregroundColor(.red)
+                .foregroundColor(Theme.statusError)
 
             Text(message)
                 .font(.subheadline)
@@ -2387,7 +2326,7 @@ private struct TerminalMessageRow: View {
                             .lineLimit(2)
                         Spacer(minLength: 4)
                         Text(toolGlyph(tool.state))
-                            .foregroundColor(tool.state == .failed ? .orange : TerminalTheme.accent)
+                            .foregroundColor(tool.state == .failed ? Theme.statusWarning : TerminalTheme.accent)
                     }
                     .font(.system(size: 12, design: .monospaced))
                 }

@@ -190,13 +190,33 @@ struct AgentActivityDetailView: View {
                 }
                 .padding(.vertical, 12)
             } else if let messagesError {
-                Text(messagesError)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                HStack(spacing: 10) {
+                    Image(systemName: "wifi.slash")
+                        .font(.system(size: 14))
+                        .foregroundColor(Theme.statusWarning)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Couldn't load messages")
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextPrimary"))
+                        Text(FriendlyErrorMessage.from(messagesError))
+                            .font(.caption)
+                            .foregroundColor(Color("TextSecondary"))
+                        Button("Retry") {
+                            Task { await loadMessages() }
+                        }
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color("AccentPrimary"))
+                    }
+                }
+                .padding(.vertical, 4)
             } else if messages.isEmpty {
-                Text("No messages yet.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "bubble.left",
+                    title: "No messages yet",
+                    message: "Messages from this thread will appear here."
+                )
             } else {
                 VStack(spacing: 8) {
                     ForEach(messages) { message in
@@ -268,7 +288,7 @@ struct AgentActivityDetailView: View {
         } catch is CancellationError {
             // View went away mid-flight — keep current state.
         } catch {
-            messagesError = "Couldn't load messages: \(error.localizedDescription)"
+            messagesError = error.localizedDescription
         }
         isLoadingMessages = false
     }

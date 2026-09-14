@@ -179,9 +179,12 @@ struct LoopDetailView: View {
                 .foregroundColor(Color("TextSecondary"))
 
             if liveLoop.iterationLog.isEmpty {
-                Text("No iterations yet.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "arrow.2.circlepath",
+                    title: "No iterations yet",
+                    message: "Loop iterations will appear here as they run."
+                )
             } else {
                 VStack(spacing: 8) {
                     ForEach(liveLoop.iterationLog, id: \.iteration) { entry in

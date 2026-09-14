@@ -13,7 +13,7 @@ struct DiffLine: Identifiable {
         var background: Color {
             switch self {
             case .added: return Theme.statusSuccess.opacity(0.15)
-            case .removed: return Color.red.opacity(0.15)
+            case .removed: return Theme.statusError.opacity(0.15)
             case .context, .header: return .clear
             }
         }

@@ -69,6 +69,9 @@ use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
 use allternit_api::har_api_routes::har_api_router;
+use allternit_api::bot_event_routes::bot_event_router;
+use allternit_api::model_training_routes::model_training_router;
+use allternit_api::photon_routes::photon_router;
 use allternit_api::health::health_router;
 use allternit_api::inference_router_routes::inference_router_router;
 use allternit_api::hud_routes::hud_router;
@@ -788,6 +791,9 @@ async fn main() {
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
         .merge(allternit_api::tag_routes::tag_router())
         .merge(inference_router_router())
+        .merge(bot_event_router())
+        .merge(model_training_router())
+        .merge(photon_router())
         .merge(allternit_api::enterprise_auth::router())
         .merge(allternit_api::eval_routes::router())
         .merge(allternit_api::eval_metric_routes::router())

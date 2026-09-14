@@ -139,7 +139,7 @@ export const BotAgentsFrontmatterSchema = z.object({
   description: z.string().default(''),
   type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']).default('specialist'),
   model: z.string().default('default'),
-  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']).default('custom'),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']).default('custom'),
 });
 
 export type BotAgentsFrontmatter = z.infer<typeof BotAgentsFrontmatterSchema>;

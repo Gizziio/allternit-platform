@@ -225,7 +225,7 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
                 guard self.currentSessionId == sessionId else { return }
                 self.messages = records.map(Self.mapRecord)
             } catch {
-                self.transientError = "Couldn't load the conversation: \(error.localizedDescription)"
+                self.transientError = "Couldn't load the conversation: \(FriendlyErrorMessage.from(error.localizedDescription))"
             }
         }
     }
@@ -483,7 +483,7 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
                     // back to the composer, and surface one banner.
                     self.messages.removeAll { $0.id == assistantId || $0.id == userMessageId }
                     self.draftToRestore = trimmed
-                    self.transientError = "Couldn't send the message: \(error.localizedDescription)"
+                    self.transientError = "Couldn't send the message: \(FriendlyErrorMessage.from(error.localizedDescription))"
                     self.finishStreaming(messageId: assistantId)
                     let generator = UINotificationFeedbackGenerator()
                     generator.notificationOccurred(.error)
@@ -655,7 +655,7 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
             self.messages = records.map(Self.mapRecord)
             self.transientError = nil
         } catch {
-            self.transientError = "Couldn't refresh the conversation: \(error.localizedDescription)"
+            self.transientError = "Couldn't refresh the conversation: \(FriendlyErrorMessage.from(error.localizedDescription))"
         }
     }
 

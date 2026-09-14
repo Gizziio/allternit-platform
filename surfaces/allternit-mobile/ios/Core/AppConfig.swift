@@ -28,28 +28,15 @@ enum AppConfig {
         return URL(string: "http://127.0.0.1:8013/api/v1")!
     }()
 
-    /// Full URL of the agent-chat streaming endpoint (`POST /api/agent-chat`).
-    ///
-    /// agent-chat is mounted directly under `/api` on allternit-api
-    /// (cmd/allternit-api/src/main.rs: `.nest("/api", agent_chat_router())`) —
-    /// NOT under the `/api/v1` router like every other endpoint — so it can't
-    /// be reached by appending a path to `apiBaseURL`. Derived by stripping a
-    /// trailing `v1` path component when present, then appending `agent-chat`.
-    static let agentChatURL: URL = {
-        let apiBase = apiBaseURL.lastPathComponent == "v1"
-            ? apiBaseURL.deletingLastPathComponent()
-            : apiBaseURL
-        return apiBase.appendingPathComponent("agent-chat")
-    }()
-
     /// Base URL of the ACI (Agent-Computer-Interface) endpoints —
     /// `POST /api/aci/run`, `GET /api/aci/stream/:id`, `POST /api/aci/stop/:id`,
     /// `POST /api/aci/approve/:id`.
     ///
-    /// Like agent-chat, the ACI router is mounted directly under `/api` on
-    /// allternit-api (cmd/allternit-api/src/main.rs: `.nest("/api", aci_router())`)
-    /// — NOT under the `/api/v1` router — so it can't be reached by appending
-    /// a path to `apiBaseURL`. Derived the same way as `agentChatURL`.
+    /// The ACI router is mounted directly under `/api` on allternit-api
+    /// (cmd/allternit-api/src/main.rs: `.nest("/api", aci_router())`) — NOT under
+    /// the `/api/v1` router — so it can't be reached by appending a path to
+    /// `apiBaseURL`. Derived by stripping a trailing `v1` path component when
+    /// present, then appending `aci`.
     static let aciBaseURL: URL = {
         let apiBase = apiBaseURL.lastPathComponent == "v1"
             ? apiBaseURL.deletingLastPathComponent()
@@ -62,11 +49,10 @@ enum AppConfig {
     /// `POST /api/rails/mail/send`, `POST /api/rails/mail/decide`,
     /// `POST /api/rails/mail/share`, `POST /api/rails/ledger/tail`.
     ///
-    /// Like agent-chat and ACI, the rails router is mounted directly under
-    /// `/api` on allternit-api (cmd/allternit-api/src/main.rs:334-335,
-    /// `.nest("/api/rails", rails_router())`) — NOT under the `/api/v1`
-    /// router — so it can't be reached by appending a path to `apiBaseURL`.
-    /// Derived the same way as `aciBaseURL`.
+    /// Like ACI, the rails router is mounted directly under `/api` on
+    /// allternit-api (cmd/allternit-api/src/main.rs: `.nest("/api/rails", rails_router())`)
+    /// — NOT under the `/api/v1` router — so it can't be reached by appending a
+    /// path to `apiBaseURL`. Derived the same way as `aciBaseURL`.
     static let railsBaseURL: URL = {
         let apiBase = apiBaseURL.lastPathComponent == "v1"
             ? apiBaseURL.deletingLastPathComponent()
@@ -80,6 +66,14 @@ enum AppConfig {
     /// server. Terminal connections always go DIRECTLY here — the cloud relay
     /// envelope cannot carry a WebSocket upgrade.
     static let gizziCodeBaseURL: URL = {
+        #if DEBUG
+        // `-gizzi-url <url>` (DEBUG only): point terminal/session calls at a
+        // specific gizzi-code server without a registered instance.
+        if let override = UserDefaults.standard.string(forKey: "gizzi-url"),
+           let url = URL(string: override) {
+            return url
+        }
+        #endif
         if let value = infoPlistValue("ALLTERNIT_GIZZI_CODE_URL"),
            let url = URL(string: value) {
             return url

@@ -34,6 +34,16 @@ interface ModelSelectionContextType {
   clearSelection: () => void;
   startSelection: () => void;
   cancelSelection: () => void;
+
+  // Available models from the current discovery source
+  availableModels: ModelOption[];
+
+  // Helper to create a brain session with current selection
+  getBrainSessionConfig: () => {
+    brain_profile_id: string;
+    source: "chat";
+    runtime_overrides?: { model_id: string };
+  } | null;
 }
 
 const ModelSelectionContext = createContext<ModelSelectionContextType | undefined>(undefined);
@@ -202,6 +212,8 @@ export function ModelSelectionProvider({
     clearSelection,
     startSelection,
     cancelSelection,
+    availableModels: [] as ModelOption[],
+    getBrainSessionConfig,
   }), [
     selection,
     availableModels,

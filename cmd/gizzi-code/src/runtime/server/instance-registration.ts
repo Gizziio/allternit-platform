@@ -141,6 +141,19 @@ export namespace InstanceRegistration {
     }
   }
 
+  /** Publish a capability record by registering its primary endpoint URL. */
+  export async function registerCapabilityRecord(record: {
+    name?: string
+    endpoints?: Array<{ url?: string }>
+  }): Promise<void> {
+    const url = record.endpoints?.find((e) => e.url)?.url
+    if (!url) {
+      log.warn("capability record has no endpoint URL; registration skipped")
+      return
+    }
+    await register({ url, name: record.name })
+  }
+
   // Clears the refresh loop. Called from Server.stop alongside Tunnel.stop so a
   // graceful shutdown never leaves the interval dangling (it is also unref'd,
   // so it can never keep the process alive on its own).

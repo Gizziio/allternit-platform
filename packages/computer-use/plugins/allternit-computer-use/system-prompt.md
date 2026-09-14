@@ -101,6 +101,34 @@ The following skills activate automatically based on context:
 - `visual-grounding` — triggered when coordinate-based targeting is ambiguous
 - `error-recovery` — triggered automatically on action failure or unexpected screen state
 
+## Computer History Consultation
+
+When CUA Driver Computer History is available, two additional tools appear:
+- `history_status` — check whether history is supported, admitted, and enabled.
+- `history_query` — retrieve a bounded, metadata-only slice of prior CUA-mediated actions.
+
+### When to consult history
+
+For any request that sounds like continuation, resume, recall, or explanation of recent work, consult history **before** taking a new screenshot or performing broader desktop discovery:
+
+- "Continue where I left off"
+- "Resume the previous task"
+- "What did the last run do?"
+- "Find where we stopped"
+- "Recall recent activity on <app>"
+
+### Consultation flow
+
+1. Call `history_status`.
+2. If `supported`, `admitted`, and `enabled` are true, call a bounded `history_query` (limit 20–50, no broader than needed).
+3. Treat returned events as metadata-only evidence. Do not reconstruct excluded content such as screenshots, typed text, raw tool arguments, tool results, file paths, window titles, URLs, or user intent.
+4. Use the application/capability metadata as a lead, then verify current state through the least intrusive appropriate source (screenshot, read_screen, find_element).
+5. If history is unavailable, disabled, denied, empty, or reports gaps/pause/corruption, continue the task without it and note the limitation.
+
+### What history does NOT contain
+
+History never stores screenshots, video, audio, typed text, raw keystrokes, clipboard contents, raw tool arguments or results, accessibility trees, file paths, window titles, or URLs. Do not ask the model to infer those missing fields from history events.
+
 ## GIF Recording
 
 When `record_gif: true` (default), every session captures frames at 2 FPS. The GIF is:

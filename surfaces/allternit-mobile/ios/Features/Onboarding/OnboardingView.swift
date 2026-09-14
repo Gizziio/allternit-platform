@@ -5,7 +5,7 @@ import SwiftUI
 /// sign-in, gated by `OnboardingStore.isComplete` in AllternitApp (root
 /// swap — never over LoginGateView).
 ///
-///   1. Welcome — aurora background, A://TERNIT wordmark with the
+///   1. Welcome — aurora background, A:// monogram with the
 ///      EmptyChatStateView glow, "Hey, <first name>!" (Clerk first name;
 ///      "Hey there!" fallback under skip-auth), tagline.
 ///   2. Work profile — "Which best describes your work?" 12-option radio
@@ -156,13 +156,13 @@ struct OnboardingView: View {
                 ?? OnboardingPersona.allCases.first(where: { $0.label == raw }) {
                 store.persona = persona
             }
-            if CommandLine.arguments.contains("-onboarding-skip-dialog") {
+            if launchArgumentEnabled("onboarding-skip-dialog") {
                 showSkipDialog = true
             }
             // `-brain-create-auto` (D3 live verification): run "Create my
             // brain" automatically and record the outcome to
             // <Documents>/brain-create-result.json for the simctl harness.
-            if CommandLine.arguments.contains("-brain-create-auto"), !brainAutoRan {
+            if launchArgumentEnabled("brain-create-auto"), !brainAutoRan {
                 brainAutoRan = true
                 Task {
                     do {
@@ -198,9 +198,8 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 40)
 
-            // A://TERNIT wordmark (pixel construct) with the ambient glow from
-            // EmptyChatStateView / LoginGateView (accent circle, blurred, slow
-            // pulse). The asset has light/dark appearance variants.
+            // A:// monogram with the ambient glow from EmptyChatStateView /
+            // LoginGateView (accent circle, blurred, slow pulse).
             ZStack {
                 Circle()
                     .fill(Color("AccentPrimary").opacity(logoGlowing ? 0.12 : 0.04))
@@ -208,10 +207,7 @@ struct OnboardingView: View {
                     .blur(radius: 35)
                     .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: logoGlowing)
 
-                Image("ATernitWordmark")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 30)
+                WordmarkView(height: 28)
             }
             .padding(.bottom, 32)
 

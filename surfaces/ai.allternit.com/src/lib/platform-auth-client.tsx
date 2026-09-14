@@ -340,7 +340,9 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       // build anyway.
       clerkJSUrl={
         typeof window !== "undefined"
-          ? `${window.location.origin}/__clerk/npm/@clerk/clerk-js@5/dist/clerk.browser.js`
+          // Pin the versioned clerk-js URL. Safari will not execute the
+          // unversioned 307 as a script src (Chrome follows it).
+          ? `${window.location.origin}/__clerk/npm/@clerk/clerk-js@5.127.2/dist/clerk.browser.js`
           : undefined
       }
       allowedRedirectOrigins={getAllowedRedirectOrigins()}
@@ -691,7 +693,14 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
 function usePlatformAuthContext() {
   const context = useContext(PlatformAuthContext)
   if (!context) {
-    throw new Error("PlatformAuthProvider is missing")
+    // Defensive fallback: in self-hosted / desktop dev shells, HMR or a stale
+    // module can render a consumer before the provider has mounted its context.
+    // Returning the disabled-auth shape keeps the shell from crashing so the
+    // auth gate can still allow self-hosted sessions through.
+    if (import.meta.env.DEV) {
+      console.warn("[PlatformAuth] Provider context missing; using disabled-auth fallback.")
+    }
+    return buildDisabledAuthValue()
   }
   return context
 }

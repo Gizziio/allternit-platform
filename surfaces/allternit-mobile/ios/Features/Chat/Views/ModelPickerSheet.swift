@@ -31,16 +31,15 @@ struct ModelPickerSheet: View {
                             ProgressView().padding(.top, 24)
                             Spacer()
                         }
-                    } else if modelStore.models.isEmpty, modelStore.loadError != nil {
-                        VStack(spacing: 8) {
-                            Text("Couldn't load models")
-                                .font(.subheadline)
-                                .foregroundColor(Color("TextPrimary"))
-                            Button("Retry") { modelStore.fetchModelsIfNeeded(force: true) }
-                                .font(.subheadline)
-                                .foregroundColor(Color("AccentPrimary"))
-                        }
-                        .padding(.top, 24)
+                    } else if modelStore.models.isEmpty, let loadError = modelStore.loadError {
+                        FriendlyStateView(
+                            style: .offline,
+                            icon: "wifi.slash",
+                            title: "Couldn't load models",
+                            message: FriendlyErrorMessage.from(loadError),
+                            actionTitle: "Retry",
+                            action: { modelStore.fetchModelsIfNeeded(force: true) }
+                        )
                     }
 
                     ForEach(modelStore.tiers, id: \.tier) { group in

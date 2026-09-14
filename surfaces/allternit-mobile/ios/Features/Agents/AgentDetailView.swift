@@ -12,7 +12,9 @@ struct AgentDetailView: View {
 
     @StateObject private var hubStore = AgentHubStore.shared
     @StateObject private var modelStore = ModelStore.shared
-    @ObservedObject private var preferences = PreferencesStore.shared
+    @StateObject private var botStatusStore = BotStatusStore.shared
+    @StateObject private var webhookStore = WebhookTriggersStore.shared
+    @StateObject private var botDesktopStore = BotDesktopStore.shared
     @EnvironmentObject private var agentModeStore: AgentModeStore
 
     @State private var workspaceFiles: [WorkspaceFileInfo] = []
@@ -34,6 +36,10 @@ struct AgentDetailView: View {
     @State private var isSavingModel = false
     @State private var saveError: String? = nil
     @State private var isPublishSheetPresented = false
+    /// Pushed Webhook Triggers panel (Webhooks card, bots only).
+    @State private var isWebhooksPresented = false
+    /// Fullscreen native VNC viewer (Desktop card, bots only).
+    @State private var isDesktopViewerPresented = false
 
     private let agentClient = AgentClient()
 
@@ -49,6 +55,11 @@ struct AgentDetailView: View {
             identitySection
             workspaceSections
             behaviorSection
+            if agent.isBot {
+                webhooksSection
+                desktopSection
+                activitySection
+            }
             Section {
                 Button(action: {
                     let generator = UIImpactFeedbackGenerator(style: .light)
@@ -66,8 +77,31 @@ struct AgentDetailView: View {
         .background(Color("BgPrimary"))
         .navigationTitle(agent.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if agent.isBot {
+                    Button(action: {
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.impactOccurred()
+                        if botStatusStore.isPinned(botId: agent.id) {
+                            botStatusStore.unpin()
+                        } else {
+                            botStatusStore.pin(botId: agent.id, displayName: agent.name)
+                        }
+                    }) {
+                        Image(systemName: botStatusStore.isPinned(botId: agent.id) ? "pin.fill" : "pin")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Color("AccentPrimary"))
+                    }
+                    .accessibilityLabel(botStatusStore.isPinned(botId: agent.id) ? "Unpin from Dynamic Island" : "Pin to Dynamic Island")
+                }
+            }
+        }
         .navigationDestination(item: $fileToEdit) { file in
             WorkspaceFileEditorView(agentId: agent.id, agentName: agent.name, file: file)
+        }
+        .navigationDestination(isPresented: $isWebhooksPresented) {
+            WebhooksSettingsView()
         }
         .sheet(isPresented: $isNewFileSheetPresented) {
             NewWorkspaceFileSheet(
@@ -89,6 +123,13 @@ struct AgentDetailView: View {
         .sheet(isPresented: $isPublishSheetPresented) {
             PublishAgentSheet(sourceAgent: agent)
         }
+        .fullScreenCover(isPresented: $isDesktopViewerPresented) {
+            // The Desktop card only offers "View desktop" while a VNC
+            // stream + wsURL exist, so the status is present here.
+            if let status = botDesktopStore.entry(for: agent.id)?.status, status.wsURL != nil {
+                BotDesktopView(agent: agent, status: status)
+            }
+        }
         .alert("Couldn't save changes", isPresented: Binding(
             get: { saveError != nil },
             set: { if !$0 { saveError = nil } }
@@ -99,6 +140,12 @@ struct AgentDetailView: View {
         }
         .task {
             modelStore.fetchModelsIfNeeded()
+            if agent.isBot {
+                // The Webhooks card's count; deduped once per launch.
+                webhookStore.fetchTriggersIfNeeded()
+                // The Desktop card's status; deduped once per launch.
+                botDesktopStore.fetchStatusIfNeeded(botId: agent.id)
+            }
         }
         .onAppear {
             // Re-listed on every appear so sizes stay truthful after the
@@ -110,12 +157,12 @@ struct AgentDetailView: View {
             if !didApplyDebugArgs {
                 // `-open-avatar-editor` (DEBUG only): open the avatar
                 // editor on appear for screenshot verification.
-                if CommandLine.arguments.contains("-open-avatar-editor") {
+                if launchArgumentEnabled("open-avatar-editor") {
                     isAvatarEditorPresented = true
                 }
                 // `-open-new-workspace-file` (DEBUG only): open the
                 // new-file sheet on appear for screenshot verification.
-                if CommandLine.arguments.contains("-open-new-workspace-file") {
+                if launchArgumentEnabled("open-new-workspace-file") {
                     isNewFileSheetPresented = true
                 }
                 // `-open-workspace-file <path>` (DEBUG only): open a
@@ -229,15 +276,7 @@ struct AgentDetailView: View {
         } header: {
             Text("Identity")
         } footer: {
-            if let error = preferences.saveError {
-                Text("Couldn't sync preferences: \(error)")
-                    .font(.caption)
-                    .foregroundColor(.red)
-            } else if let lastSavedAt = preferences.lastSavedAt, Date().timeIntervalSince(lastSavedAt) < 2 {
-                Text("Saved")
-                    .font(.caption)
-                    .foregroundColor(.green)
-            } else if !promptFiles.isEmpty && agent.systemPrompt?.isEmpty == false {
+            if !promptFiles.isEmpty && agent.systemPrompt?.isEmpty == false {
                 Text("Both prompt sources are active: the platform layers the persona and instruction files with the system prompt — neither overrides the other.")
             }
         }
@@ -443,19 +482,14 @@ struct AgentDetailView: View {
             }
         } else if let filesError, workspaceFiles.isEmpty {
             Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Couldn't load workspace files")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextPrimary"))
-                    Text(filesError)
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                    Button("Retry") {
-                        Task { await loadWorkspaceFiles() }
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-                }
+                FriendlyInlineStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load workspace files",
+                    message: FriendlyErrorMessage.from(filesError),
+                    actionTitle: "Retry",
+                    action: { Task { await loadWorkspaceFiles() } }
+                )
             } header: {
                 Text("Workspace files")
             }
@@ -605,6 +639,271 @@ struct AgentDetailView: View {
         }
     }
 
+    // MARK: - Webhooks (bots, read-only)
+
+    /// Read-only card for the triggers that wake this bot
+    /// (`target_bot_id == agent.id`), mirroring the web bot home's
+    /// `WebhooksCard` (surfaces/ai.allternit.com/src/views/bots/
+    /// BotHomeView.tsx): "N triggers wake this bot", tap pushes the full
+    /// Webhooks settings panel (management lives there, not here).
+    private var webhooksSection: some View {
+        Section {
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isWebhooksPresented = true
+            }) {
+                HStack {
+                    Text("Webhook triggers")
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Text(webhooksSummary)
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextSecondary"))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.trailing)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            }
+        } header: {
+            Text("Webhooks")
+        }
+    }
+
+    /// "N triggers wake this bot (M active)" — copy parity with the web
+    /// card, with the active subset called out when some are paused.
+    private var webhooksSummary: String {
+        let triggers = webhookStore.triggers(forBotId: agent.id)
+        if webhookStore.isLoading && triggers.isEmpty { return "Loading…" }
+        if triggers.isEmpty { return "No triggers wake this bot yet" }
+        let activeCount = triggers.filter(\.active).count
+        let base = "\(triggers.count) trigger\(triggers.count == 1 ? "" : "s") wake this bot"
+        return activeCount == triggers.count ? base : "\(base) (\(activeCount) active)"
+    }
+
+    // MARK: - Desktop (bots)
+
+    /// Status + control of the bot's persistent virtual computer (`/api/v1/
+    /// bots/:id/desktop`, bot_desktop_routes.rs) — the iOS counterpart of
+    /// the web's BotDesktopView (surfaces/ai.allternit.com/src/views/bots/
+    /// BotDesktopView.tsx): provision when off, observe / take over / hand
+    /// back when running, and — when the server offers a VNC stream the
+    /// human may watch — a "View desktop" button presenting the native RFB
+    /// viewer (Features/Agents/Desktop/BotDesktopView.swift).
+    private var desktopSection: some View {
+        Section {
+            desktopContent
+        } header: {
+            Text("Desktop")
+        }
+    }
+
+    @ViewBuilder
+    private var desktopContent: some View {
+        let entry = botDesktopStore.entry(for: agent.id)
+        if let status = entry?.status {
+            behaviorRow("Status", value: desktopStatusLabel(status.status))
+            if status.status == .running {
+                behaviorRow("Control", value: status.controlState.label)
+                if !status.sandboxId.isEmpty {
+                    HStack {
+                        Text("Sandbox")
+                            .foregroundColor(Color("TextPrimary"))
+                        Spacer()
+                        Text(truncatedSandboxId(status.sandboxId))
+                            .font(.system(.subheadline, design: .monospaced))
+                            .foregroundColor(Color("TextSecondary"))
+                    }
+                }
+                desktopControlButtons(status: status)
+                if status.wsURL != nil,
+                   status.streamProtocol == .vnc,
+                   status.controlState == .humanObserving || status.controlState == .humanControls {
+                    // Native VNC viewer (the server only accepts the socket
+                    // in observe/control states, bot_desktop_stream.rs:74-81).
+                    desktopActionRow(
+                        title: "View desktop",
+                        systemImage: "display",
+                        isDisabled: false,
+                        showsSpinner: false
+                    ) {
+                        isDesktopViewerPresented = true
+                    }
+                } else if status.wsURL != nil {
+                    Text("Live desktop viewing isn't available for this stream — use the web app to watch or drive it.")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            } else {
+                // Off (or never provisioned): the only move is to provision.
+                // The route is idempotent server-side, so re-tapping after a
+                // previous provision returns the existing sandbox.
+                desktopActionRow(
+                    title: "Provision virtual computer",
+                    systemImage: "desktopcomputer",
+                    isDisabled: entry?.isProvisioning == true,
+                    showsSpinner: entry?.isProvisioning == true
+                ) {
+                    await botDesktopStore.provision(botId: agent.id)
+                }
+            }
+            if let error = entry?.error {
+                // Server's own message (e.g. the 503 "No VM driver is
+                // configured on this host").
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "exclamationmark.triangle",
+                    title: "Desktop unavailable",
+                    message: error
+                )
+            }
+        } else if let error = entry?.error {
+            FriendlyInlineStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load desktop status",
+                message: FriendlyErrorMessage.from(error),
+                actionTitle: "Retry",
+                action: { botDesktopStore.fetchStatusIfNeeded(botId: agent.id, force: true) }
+            )
+        } else {
+            HStack {
+                Spacer()
+                ProgressView()
+                Spacer()
+            }
+        }
+    }
+
+    /// Observe / take-over / hand-back rows reflecting the server's control
+    /// state (web parity, BotDesktopView.tsx:266-301): while the human
+    /// drives only "Hand back" is offered; otherwise Observe (disabled once
+    /// observing) + Take over.
+    @ViewBuilder
+    private func desktopControlButtons(status: BotDesktopStatus) -> some View {
+        let entry = botDesktopStore.entry(for: agent.id)
+        let inFlight = entry?.isControlActionInFlight == true
+        switch status.controlState {
+        case .humanControls:
+            desktopActionRow(
+                title: "Hand back to bot",
+                systemImage: "hand.raised",
+                isDisabled: inFlight,
+                showsSpinner: inFlight
+            ) {
+                await botDesktopStore.handBack(botId: agent.id)
+            }
+        default:
+            desktopActionRow(
+                title: status.controlState == .humanObserving ? "Observing" : "Observe",
+                systemImage: "eye",
+                isDisabled: inFlight || status.controlState == .humanObserving,
+                showsSpinner: inFlight
+            ) {
+                await botDesktopStore.observe(botId: agent.id)
+            }
+            desktopActionRow(
+                title: "Take over",
+                systemImage: "play.fill",
+                isDisabled: inFlight,
+                showsSpinner: false
+            ) {
+                await botDesktopStore.takeOver(botId: agent.id)
+            }
+        }
+    }
+
+    /// One tappable action row (provision / control handoff), styled like
+    /// the workspace section's "New context file…" row.
+    private func desktopActionRow(title: String, systemImage: String,
+                                  isDisabled: Bool, showsSpinner: Bool,
+                                  action: @escaping () async -> Void) -> some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            Task { await action() }
+        }) {
+            HStack(spacing: 10) {
+                Image(systemName: systemImage)
+                    .font(.subheadline)
+                    .frame(width: 20)
+                Text(title)
+                    .font(.subheadline)
+                Spacer()
+                if showsSpinner {
+                    ProgressView()
+                }
+            }
+            .foregroundColor(Color("AccentPrimary"))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+    }
+
+    private func desktopStatusLabel(_ status: BotDesktopStatus.Status) -> String {
+        switch status {
+        case .running: return "Running"
+        case .off: return "Off"
+        case .unknown: return "Unknown"
+        }
+    }
+
+    /// "abcd1234efgh…" — sandbox ids are driver-native and long; the card
+    /// shows the head only (the web shows the full id, BotDesktopView.
+    /// tsx:388-390, but it has the width).
+    private func truncatedSandboxId(_ id: String) -> String {
+        id.count > 12 ? "\(id.prefix(12))…" : id
+    }
+
+    // MARK: - Activity (bots)
+
+    /// Live per-bot activity feed — BotStatusStore's unified tail: server
+    /// ledger history (`GET /api/v1/bots/:id/events`,
+    /// bot_event_routes.rs) seeded on subscribe, then live SSE-folded
+    /// ledger events (`GET /api/v1/agents/:id/events`,
+    /// agent_routes.rs:84-138) appended. Newest first. The section
+    /// subscribes while the detail is on screen and unsubscribes when it
+    /// leaves.
+    private var activitySection: some View {
+        Section {
+            if let entry = botStatusStore.entry(for: agent.id), !entry.recentEvents.isEmpty {
+                ForEach(Array(entry.recentEvents.reversed().enumerated()), id: \.offset) { _, item in
+                    activityRow(item)
+                }
+            } else {
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "clock",
+                    title: "No recent activity",
+                    message: ""
+                )
+            }
+        } header: {
+            Text("Activity")
+        }
+        .onAppear { botStatusStore.subscribe(botId: agent.id) }
+        .onDisappear { botStatusStore.unsubscribe(botId: agent.id) }
+    }
+
+    /// One feed row: label + relative timestamp, same styling for both
+    /// server-history rows (goal/task events) and live run events.
+    private func activityRow(_ item: BotStatusStore.FeedItem) -> some View {
+        HStack {
+            Text(item.label)
+                .font(.subheadline)
+                .foregroundColor(Color("TextPrimary"))
+            Spacer()
+            if let timestamp = item.timestamp {
+                Text(timestamp, style: .relative)
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+            }
+        }
+    }
+
     // MARK: - Actions
 
     private func updateModel(_ runtimeModel: RuntimeModel) {
@@ -643,12 +942,11 @@ struct AgentDetailView: View {
 /// System-prompt editor sheet (Identity section) — a plain TextEditor whose
 /// Save PUTs `system_prompt` through the hub store (which re-fetches the
 /// row so the detail reflects the saved value).
-struct SystemPromptEditorSheet: View {
+private struct SystemPromptEditorSheet: View {
     let agentId: String
     let initialPrompt: String
 
     @StateObject private var hubStore = AgentHubStore.shared
-    @EnvironmentObject private var agentModeStore: AgentModeStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var prompt: String
@@ -705,7 +1003,6 @@ struct SystemPromptEditorSheet: View {
         Task {
             do {
                 try await hubStore.updateAgent(id: agentId, systemPrompt: prompt)
-                agentModeStore.fetchAgentsIfNeeded(force: true)
                 dismiss()
             } catch {
                 saveError = error.localizedDescription
@@ -723,11 +1020,10 @@ struct SystemPromptEditorSheet: View {
 /// schema). Save sends the FULL merged config
 /// (`AgentRecord.configReplacing`) since the backend replaces `config`
 /// wholesale rather than merging it.
-struct GreetingEditorSheet: View {
+private struct GreetingEditorSheet: View {
     let agent: AgentRecord
 
     @StateObject private var hubStore = AgentHubStore.shared
-    @EnvironmentObject private var agentModeStore: AgentModeStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var greeting: String
@@ -819,7 +1115,6 @@ struct GreetingEditorSheet: View {
             do {
                 let config = agent.configReplacing(greeting: greeting, suggestedPrompts: prompts)
                 try await hubStore.updateAgent(id: agent.id, config: config)
-                agentModeStore.fetchAgentsIfNeeded(force: true)
                 dismiss()
             } catch {
                 saveError = error.localizedDescription
@@ -837,7 +1132,7 @@ struct GreetingEditorSheet: View {
 /// glyph of your own, or Reset to the deterministic default. Save PUTs
 /// through the hub store, which re-fetches the row so every surface (hub,
 /// deck sheet, detail hero) repaints.
-struct AgentAvatarEditorSheet: View {
+private struct AgentAvatarEditorSheet: View {
     let agent: AgentRecord
 
     @StateObject private var hubStore = AgentHubStore.shared
@@ -1044,14 +1339,14 @@ private struct NewWorkspaceFileSheet: View {
 
     private let agentClient = AgentClient()
 
-    /// Sanitized document filename: lowercased, spaces to dashes, .md
+    /// Sanitized document filename: uppercased, spaces to dashes, .md
     /// suffix — the platform's doc-name convention.
     private var fileName: String {
         let base = name.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: " ", with: "-")
         guard !base.isEmpty else { return "" }
-        let lower = base.lowercased()
-        return lower.hasSuffix(".md") ? lower : lower + ".md"
+        let upper = base.uppercased()
+        return upper.hasSuffix(".MD") ? upper : upper + ".MD"
     }
 
     private var fullPath: String {
@@ -1095,7 +1390,7 @@ private struct NewWorkspaceFileSheet: View {
                         Text(fullPath)
                             .font(.system(.caption, design: .monospaced))
                     } else {
-                        Text("Saved as a lowercase .md name inside the category.")
+                        Text("Saved as an uppercase .md name inside the category.")
                     }
                 }
 

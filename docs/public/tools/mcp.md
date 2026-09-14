@@ -46,7 +46,6 @@ Each attached tool is registered under the namespace `<serverId>.<toolName>` wit
 |------------|--------|---------|
 | `sequential-thinking` | npm package | Structured reasoning steps |
 | `context7` | npm package | Document retrieval and context |
-| `superpowers` | `tools/mcp-servers/superpowers/superpowers-mcp.js` | Internal utility server |
 | `allternit-connectors` | Rust API `/internal/connectors/mcp` | Per-user actions on connected apps |
 | `allternit-tools` | Rust API `/internal/tools/mcp` | Platform tool registry over MCP |
 

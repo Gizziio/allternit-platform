@@ -420,6 +420,86 @@ impl DbHandle {
         let rows = stmt.query_map(params.as_slice(), |row| Ok(endpoint_from_row(row)?))?;
         rows.collect()
     }
+
+    /// Site-APIs capture ingest (session/site-apis-capture) writes through these
+    /// helpers onto the same `har_api_*` tables as the typed API.
+    pub fn create_contract(
+        &self,
+        id: &str,
+        user_id: &str,
+        domain: &str,
+        source: &str,
+        derived_at: &str,
+    ) -> SqlResult<()> {
+        self.create_api_contract(id, user_id, domain, Some(source), derived_at)
+    }
+
+    pub fn create_endpoint(
+        &self,
+        id: &str,
+        contract_id: &str,
+        method: &str,
+        url: &str,
+        host: &str,
+        path: &str,
+        path_template: &str,
+        summary: Option<&str>,
+        query_params_json: &str,
+        path_params_json: &str,
+        headers_json: &str,
+        body_template: Option<&str>,
+        body_mime_type: Option<&str>,
+        body_params_json: &str,
+        status_code: u16,
+        response_sample: Option<&str>,
+        hit_count: u32,
+    ) -> SqlResult<()> {
+        let parse_params = |raw: &str| -> Vec<TemplatedParam> {
+            serde_json::from_str(raw).unwrap_or_default()
+        };
+        let ep = ApiEndpoint {
+            id: id.to_string(),
+            contract_id: contract_id.to_string(),
+            method: method.to_string(),
+            url: url.to_string(),
+            host: Some(host.to_string()),
+            path: Some(path.to_string()),
+            path_template: Some(path_template.to_string()),
+            summary: summary.map(str::to_string),
+            query_params: parse_params(query_params_json),
+            path_params: parse_params(path_params_json),
+            headers: parse_params(headers_json),
+            body_template: body_template.map(str::to_string),
+            body_mime_type: body_mime_type.map(str::to_string),
+            body_params: parse_params(body_params_json),
+            status_code: Some(status_code as i64),
+            response_sample: response_sample.map(str::to_string),
+            hit_count: hit_count as i64,
+        };
+        self.create_api_endpoints(&[ep])
+    }
+
+    pub fn list_capture_contracts(&self, user_id: &str) -> SqlResult<Vec<serde_json::Value>> {
+        Ok(self
+            .list_contracts_for_user(user_id)?
+            .into_iter()
+            .map(|c| {
+                serde_json::json!({
+                    "id": c.id,
+                    "domain": c.domain,
+                    "source": c.source,
+                    "derived_at": c.derived_at,
+                })
+            })
+            .collect())
+    }
+
+    pub fn delete_capture_contract(&self, contract_id: &str, user_id: &str) -> SqlResult<bool> {
+        match self.get_contract_with_endpoints(contract_id)? {
+            Some((contract, _)) if contract.user_id == user_id => self.delete_contract(contract_id),
+            _ => Ok(false),
+        }
+    }
 }
 
 pub(crate) fn endpoint_from_row(row: &rusqlite::Row) -> SqlResult<ApiEndpoint> {

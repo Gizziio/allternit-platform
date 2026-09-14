@@ -394,6 +394,9 @@ async fn approve_pairing(
     // Persist the Clerk-authenticated user before quota checks so that the
     // user_runtime_quotas foreign key (REFERENCES users(id)) is satisfied when
     // ensure_quota lazily creates the quota row.
+    // Upsert the users row first. Both quota and usage tables FK-reference
+    // users(id), so creating the user before touching them avoids a latent
+    // foreign-key failure if SQLite foreign-key enforcement is ever enabled.
     let email = user
         .email
         .clone()

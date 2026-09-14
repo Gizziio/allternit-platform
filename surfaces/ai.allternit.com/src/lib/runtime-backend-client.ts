@@ -5,7 +5,8 @@ import { isRuntimeApiEnabled } from "@/lib/env";
 import { isCloudControlPlaneUrl, isLoopbackUrl } from "@/lib/operator-gateway";
 
 const DEFAULT_GATEWAY_BASE_URL = normalizeBaseUrl(
-  process.env.NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL ||
+  (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL ||
+    process.env.NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL ||
     process.env.NEXT_PUBLIC_GATEWAY_URL ||
     "http://127.0.0.1:8013",
 );

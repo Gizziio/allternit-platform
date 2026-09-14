@@ -104,6 +104,7 @@
     "@allternit/gizzi-util": "workspace:*",
     "@allternit/native-sessions": "workspace:*",
     "@allternit/orchestrator": "workspace:*",
+    "@allternit/os-contracts": "workspace:*",
     "@allternit/plugin": "workspace:*",
     "@allternit/request-scorer": "workspace:*",
     "@allternit/script": "workspace:*",

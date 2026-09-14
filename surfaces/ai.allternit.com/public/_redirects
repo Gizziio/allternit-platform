@@ -22,6 +22,10 @@
 /fabric-session-icon-192.png /fabric-session-icon-192.png 200
 /fabric-session-icon-512.png /fabric-session-icon-512.png 200
 /fabric-session-splash-1170x2532.png /fabric-session-splash-1170x2532.png 200
+/favicon.svg /favicon.svg 200
+/fabric-session.html /fabric-session.html 200
+/fabric-session-service-worker.js /fabric-session-service-worker.js 200
+/fabric-session.webmanifest /fabric-session.webmanifest 200
 /manifest.json /manifest.json 200
 /sw.js /sw.js 200
 /robots.txt /robots.txt 200

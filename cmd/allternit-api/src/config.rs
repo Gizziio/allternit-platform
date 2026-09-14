@@ -82,6 +82,9 @@ pub struct CompanyConfig {
 
     /// Canonical AllternitOS lease authority. Unset means fabric lease
     /// issuance returns 503 until production configures it.
+    /// URL of the canonical AllternitOS lease authority. When set, the gateway
+    /// proxies `/api/v1/fabric/leases` there instead of relying on a runtime-local
+    /// dev issuer. Unset means lease issuance returns 503 in production.
     #[serde(rename = "allternitOSLeaseAuthorityUrl")]
     pub allternitos_lease_authority_url: Option<String>,
 
@@ -200,6 +203,29 @@ pub struct UserConfig {
     /// still applies when this is unset.
     #[serde(rename = "hostControlEnabled", default)]
     pub host_control_enabled: Option<bool>,
+    /// Inference router configuration: which local CLI provider handles turns.
+    #[serde(rename = "inferenceRouter", default)]
+    pub inference_router: Option<InferenceRouterConfig>,
+}
+
+/// Local CLI provider routing preferences.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct InferenceRouterConfig {
+    /// Active provider: codex, claude-code, cursor, openrouter.
+    #[serde(rename = "provider", default)]
+    pub provider: Option<String>,
+
+    /// Default model passed to the provider (e.g. "claude-sonnet-4-6").
+    #[serde(rename = "defaultModel", default)]
+    pub default_model: Option<String>,
+
+    /// Whether to route turns through a local sandbox instead of the provider.
+    #[serde(rename = "localSandbox", default)]
+    pub local_sandbox: Option<bool>,
+
+    /// Provider-specific extra options (e.g. OpenRouter API key reference).
+    #[serde(rename = "options", default)]
+    pub options: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 /// Tracks when the first-start / env wizard last ran so the app can prompt
@@ -1027,6 +1053,7 @@ impl From<SaveUserConfigPayload> for UserConfig {
             wizard: payload.wizard,
             permission_policies: None,
             active_permission_policy: None,
+            inference_router: None,
         }
     }
 }

@@ -39,6 +39,7 @@ class StackedAgentService {
     error: null,
     lastSyncedAt: null,
   };
+  private cachedSnapshot: StackedAgentSyncState = this.state;
   private listeners = new Set<StackedAgentListener>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastStateRef: StackedAgentSyncState | null = null;
@@ -69,10 +70,10 @@ class StackedAgentService {
   }
 
   private emit(): void {
-    const snapshot = this.getState();
+    this.cachedSnapshot = { ...this.state };
     for (const listener of this.listeners) {
       try {
-        listener(snapshot);
+        listener(this.cachedSnapshot);
       } catch (err) {
         logger.error({ err }, 'StackedAgent listener failed');
       }
@@ -190,8 +191,8 @@ function providerColor(providerId: string): string {
       return '#3b82f6'; // blue
     case 'openclaw':
       return '#f97316'; // orange
-    case 'grok':
-      return '#ec4899'; // pink
+    case 'kimi':
+      return '#D4956A'; // warm accent
     default:
       return '#6b7280'; // gray
   }

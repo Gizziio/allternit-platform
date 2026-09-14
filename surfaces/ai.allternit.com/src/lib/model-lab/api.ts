@@ -163,14 +163,6 @@ export interface EngineStatus {
   gpu?: EngineGpuInfo[];
   active_runtimes: number;
   cached_models: number;
-  hardware_id: string;
-  apple_chip?: string;
-  unified_memory: boolean;
-  backends: {
-    metal: boolean;
-    cuda: boolean;
-    cpu_fallback: boolean;
-  };
 }
 
 export interface EngineHealth {
@@ -382,7 +374,7 @@ export interface HuggingFaceModel {
   sizeBytes?: number;
 }
 
-export type HfSortOption = 'downloads' | 'likes' | 'recent' | 'recommended';
+export type HfSortOption = 'downloads' | 'likes' | 'recent';
 
 export async function searchHuggingFaceModels(
   query: string,

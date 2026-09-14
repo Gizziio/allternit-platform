@@ -20,6 +20,11 @@ export function openRemoteControlWindow(runtimeId?: string): void {
     void window.allternit.shell.openFabricSession(runtimeId);
     return;
   }
+ * - Inside the Allternit Desktop shell this opens a dedicated BrowserWindow.
+ * - In a normal browser it opens a new tab so the dashboard can be installed as
+ *   a PWA on mobile.
+ */
+export function openRemoteControlWindow(runtimeId?: string): void {
   if (window.allternit?.shell?.openRemoteControl) {
     void window.allternit.shell.openRemoteControl(runtimeId);
     return;

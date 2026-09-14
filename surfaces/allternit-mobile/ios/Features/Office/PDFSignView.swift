@@ -87,14 +87,12 @@ struct PDFSignView: View {
             PDFKitView(document: pdf)
                 .padding(16)
         } else {
-            VStack(spacing: 12) {
-                Image(systemName: "doc.text")
-                    .font(.system(size: 40, weight: .medium))
-                    .foregroundColor(Color("TextSecondary"))
-                Text("No PDF loaded")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextSecondary"))
-            }
+            FriendlyStateView(
+                style: .empty,
+                icon: "doc.text",
+                title: "No PDF loaded",
+                message: "Select a PDF to sign and share."
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }

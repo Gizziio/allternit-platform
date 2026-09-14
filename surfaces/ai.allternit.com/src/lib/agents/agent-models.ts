@@ -36,11 +36,12 @@ function toAgentProvider(ownedBy: string): AgentProvider {
     case 'openai': return 'openai';
     case 'anthropic': return 'anthropic';
     case 'google': return 'google';
+    case 'moonshotai': return 'kimi';
     default: return 'custom';
   }
 }
 
-const FIRST_PARTY_PROVIDERS = new Set(['openai', 'anthropic', 'google']);
+const FIRST_PARTY_PROVIDERS = new Set(['openai', 'anthropic', 'google', 'moonshotai']);
 const CURATED_IDS = new Set([config.models.defaults.primary, ...config.models.curatedDefaults]);
 
 /**

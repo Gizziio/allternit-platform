@@ -19,16 +19,20 @@ struct OfficeDocumentsView: View {
                     ProgressView("Loading documents…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error {
-                    ContentUnavailableView(
-                        "Couldn't load documents",
-                        systemImage: "exclamationmark.triangle",
-                        description: Text(error)
+                    FriendlyStateView(
+                        style: .offline,
+                        icon: "wifi.slash",
+                        title: "Couldn't load documents",
+                        message: FriendlyErrorMessage.from(error),
+                        actionTitle: "Retry",
+                        action: { Task { await loadArtifacts() } }
                     )
                 } else if artifacts.isEmpty {
-                    ContentUnavailableView(
-                        "No documents yet",
-                        systemImage: "doc",
-                        description: Text("Documents saved from the Docs, Sheets, Slides, or PDF editors appear here.")
+                    FriendlyStateView(
+                        style: .empty,
+                        icon: "doc",
+                        title: "No documents yet",
+                        message: "Documents saved from the Docs, Sheets, Slides, or PDF editors appear here."
                     )
                 } else {
                     List(artifacts) { artifact in
@@ -66,14 +70,18 @@ struct OfficeDocumentsView: View {
                 PDFSignView(sourceURL: nil)
             }
             .task {
-                do {
-                    artifacts = try await OfficeArtifactClient.shared.listArtifacts()
-                    isLoading = false
-                } catch {
-                    self.error = error.localizedDescription
-                    isLoading = false
-                }
+                await loadArtifacts()
             }
         }
+    }
+
+    private func loadArtifacts() async {
+        do {
+            artifacts = try await OfficeArtifactClient.shared.listArtifacts()
+            error = nil
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isLoading = false
     }
 }

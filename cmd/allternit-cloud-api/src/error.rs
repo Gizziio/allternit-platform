@@ -106,6 +106,7 @@ impl IntoResponse for ApiError {
 
         // Log the real error detail server-side before any production sanitization
         // so server logs show the root cause instead of a generic message.
+        // so fly.io logs show the root cause instead of a generic message.
         warn!(error = %self, "ApiError response");
 
         let (status, error_code, message) = match &self {
@@ -221,6 +222,16 @@ impl IntoResponse for ApiError {
                 msg.clone(),
             ),
         };
+
+        // Log the unsanitized error detail so production logs contain the real
+        // failure reason even when the public response is generic.
+        if status.is_server_error() {
+            tracing::error!(
+                error = %self,
+                error_code,
+                "API error response"
+            );
+        }
 
         let body = Json(ErrorResponse {
             error: error_code.to_string(),

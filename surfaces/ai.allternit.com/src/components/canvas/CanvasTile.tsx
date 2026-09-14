@@ -205,6 +205,7 @@ export function CanvasTile({
       onClick={(e) => {
         e.stopPropagation();
         onSelect?.(e.shiftKey);
+        onClick?.();
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

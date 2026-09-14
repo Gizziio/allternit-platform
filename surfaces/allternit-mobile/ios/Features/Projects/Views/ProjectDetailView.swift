@@ -97,6 +97,7 @@ struct ProjectDetailView: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(Color("TextSecondary"))
                 }
+                .accessibilityLabel("Project options")
             }
         }
         .alert("Rename project", isPresented: $isRenameAlertPresented) {
@@ -182,6 +183,7 @@ struct ProjectDetailView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     // MARK: Instructions
@@ -259,13 +261,23 @@ struct ProjectDetailView: View {
                 .foregroundColor(Color("TextSecondary"))
 
             if let filesError {
-                Text(filesError)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "exclamationmark.triangle",
+                    title: "Couldn't load files",
+                    message: FriendlyErrorMessage.from(filesError),
+                    actionTitle: "Retry",
+                    action: {
+                        Task { await loadFiles() }
+                    }
+                )
             } else if files.isEmpty {
-                Text("No files yet — Add files to give every chat in this project the same context.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "folder",
+                    title: "No files yet",
+                    message: "Add files to give every chat in this project the same context."
+                )
             } else {
                 VStack(spacing: 8) {
                     ForEach(files) { file in
@@ -349,9 +361,12 @@ struct ProjectDetailView: View {
             }
 
             if chats.isEmpty {
-                Text("No chats in this project — start a conversation to see it here")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "bubble.left",
+                    title: "No chats yet",
+                    message: "Start a conversation to see it here."
+                )
             } else {
                 VStack(spacing: 8) {
                     ForEach(chats) { session in
@@ -435,7 +450,7 @@ struct ProjectDetailView: View {
         } catch is CancellationError {
             // View went away mid-flight — keep current state.
         } catch {
-            filesError = "Couldn't load files: \(error.localizedDescription)"
+            filesError = error.localizedDescription
         }
     }
 

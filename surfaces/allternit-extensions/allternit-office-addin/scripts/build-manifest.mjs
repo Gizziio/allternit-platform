@@ -13,18 +13,21 @@ const HOSTS = {
   word: {
     label: 'Word',
     officeName: 'Document',
+    hostApi: 'WordApi',
     guid: 'b765c354-dc5c-4b98-9f54-320e110c42d1',
     description: 'Allternit writing, review, and research tools for Microsoft Word',
   },
   excel: {
     label: 'Excel',
     officeName: 'Workbook',
+    hostApi: 'ExcelApi',
     guid: 'b765c354-dc5c-4b98-9f54-320e110c42d2',
     description: 'Allternit analysis, modeling, and workbook tools for Microsoft Excel',
   },
   powerpoint: {
     label: 'PowerPoint',
     officeName: 'Presentation',
+    hostApi: 'PowerPointApi',
     guid: 'b765c354-dc5c-4b98-9f54-320e110c42d3',
     description: 'Allternit narrative, design, and slide tools for Microsoft PowerPoint',
   },
@@ -56,6 +59,7 @@ for (const [key, host] of Object.entries(HOSTS)) {
     HOST_KEY: key,
     HOST_LABEL: host.label,
     HOST_NAME: host.officeName,
+    HOST_API: host.hostApi,
     PLATFORM_URL: platformUrl,
     SUPPORT_URL: supportUrl,
     // No index.html: Cloudflare Pages 308-redirects directory indexes, and

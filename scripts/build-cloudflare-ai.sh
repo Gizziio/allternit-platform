@@ -32,12 +32,19 @@ ok()   { echo -e "${GREEN}✓ $*${NC}"; }
 warn() { echo -e "${YELLOW}⚠ $*${NC}"; }
 die()  { echo -e "${RED}✗ $*${NC}"; exit 1; }
 
-cd "$PLATFORM_DIR"
+step "Toolchain"
+echo "node $(node -v 2>/dev/null || echo missing)"
+echo "pnpm $(pnpm -v 2>/dev/null || echo missing)"
 
-if [ ! -d node_modules ]; then
-  warn "node_modules missing — running pnpm install"
-  pnpm install --frozen-lockfile
+# The lockfile lives at the repo root. Never run `pnpm install --frozen-lockfile`
+# inside surfaces/ai.allternit.com — that is what Cloudflare Pages was doing
+# after a root install that did not create this package's node_modules.
+cd "$REPO_ROOT"
+if [ ! -d "$PLATFORM_DIR/node_modules" ] && [ ! -d "$REPO_ROOT/node_modules" ]; then
+  warn "node_modules missing — installing @allternit/ai workspace only"
+  pnpm install --frozen-lockfile --filter "@allternit/ai..."
 fi
+cd "$PLATFORM_DIR"
 
 # ---------------------------------------------------------------------------
 # Stash API routes — they require a running server and cannot be statically
@@ -80,7 +87,7 @@ export NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK=""
 export NEXT_PUBLIC_CLERK_SIGN_IN_URL="${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}"
 export NEXT_PUBLIC_CLERK_SIGN_UP_URL="${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}"
 
-NODE_OPTIONS="--max-old-space-size=6144" \
+NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=8192}" \
   CLOUDFLARE_PAGES=1 \
   pnpm build
 

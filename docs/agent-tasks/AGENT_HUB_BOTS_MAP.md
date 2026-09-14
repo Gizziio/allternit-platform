@@ -37,7 +37,7 @@ This document analyzes agent catalogs, packaged bot architectures, Manus-style t
 
 ---
 
-### 5. `x.ai/bot` (Grok Bot Architecture)
+### 5. `x.ai/bot` (Allternit Bot Architecture)
 - **Summary:** Packaged conversational bot interface with real-time tool execution chips, inline citations, and collapsible thinking traces.
 - **License & Reuse Risk:** Proprietary UI reference.
 - **Decision:** **Adopt UI Pattern**. Native implementation of inline tool execution parts (`AgentElementsToolPart`) and thinking toggles in `ModeSessionMessage`.

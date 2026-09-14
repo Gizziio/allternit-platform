@@ -70,9 +70,9 @@ These are available as generic connectors, but there is no bot-native payment or
 
 ## 3. Industry patterns
 
-### 3.1 Grok Bot / xAI
+### 3.1 Allternit Bot / xAI
 
-- Grok Bot is a packaged teammate that can run background tasks, but payments are not a public primitive yet.
+- Allternit Bot is a packaged teammate that can run background tasks, but payments are not a public primitive yet.
 - The relevant pattern is **named, persistent bots with owned cloud runtime** — the packaging model we already mirror.
 
 ### 3.2 Cursor

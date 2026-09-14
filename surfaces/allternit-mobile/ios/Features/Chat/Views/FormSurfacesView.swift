@@ -254,7 +254,7 @@ private struct FormFieldRow: View {
                     .foregroundColor(Color("TextPrimary"))
                 if field.required {
                     Text("*")
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.statusError)
                 }
             }
 
