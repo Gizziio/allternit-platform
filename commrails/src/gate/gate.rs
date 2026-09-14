@@ -302,6 +302,32 @@ impl Gate {
                     }),
                     provenance: Some(self.provenance_from(&mutation_prov)),
                 },
+                DagMutation::DeleteNode { node_id } => {
+                    // Project from the full event log: DagNodeUpdated events carry no
+                    // dag_id in their payload, so the dag-scoped event filter would
+                    // miss renames and serve a stale title.
+                    let all_events = self.ledger.query(LedgerQuery::default()).await?;
+                    let dag = project_dag(&all_events, dag_id);
+                    let (title, parent_node_id) = dag
+                        .nodes
+                        .get(&node_id)
+                        .map(|n| (Some(n.title.clone()), n.parent_node_id.clone()))
+                        .unwrap_or((None, None));
+                    AllternitEvent {
+                        event_id: create_event_id(),
+                        ts: Utc::now().to_rfc3339(),
+                        actor: gate_actor(&self.actor_id),
+                        scope: None,
+                        r#type: "DagNodeRemoved".to_string(),
+                        payload: json!({
+                            "dag_id": dag_id,
+                            "node_id": node_id,
+                            "title": title,
+                            "parent_node_id": parent_node_id
+                        }),
+                        provenance: Some(self.provenance_from(&mutation_prov)),
+                    }
+                }
                 DagMutation::AddBlockedBy {
                     from_node_id,
                     to_node_id,
@@ -1619,6 +1645,32 @@ impl Gate {
                     }),
                     provenance: None,
                 },
+                DagMutation::DeleteNode { node_id } => {
+                    // Project from the full event log: DagNodeUpdated events carry no
+                    // dag_id in their payload, so the dag-scoped event filter would
+                    // miss renames and serve a stale title.
+                    let all_events = self.ledger.query(LedgerQuery::default()).await?;
+                    let dag = project_dag(&all_events, dag_id);
+                    let (title, parent_node_id) = dag
+                        .nodes
+                        .get(&node_id)
+                        .map(|n| (Some(n.title.clone()), n.parent_node_id.clone()))
+                        .unwrap_or((None, None));
+                    AllternitEvent {
+                        event_id: create_event_id(),
+                        ts: Utc::now().to_rfc3339(),
+                        actor: gate_actor(&self.actor_id),
+                        scope: None,
+                        r#type: "DagNodeRemoved".to_string(),
+                        payload: json!({
+                            "dag_id": dag_id,
+                            "node_id": node_id,
+                            "title": title,
+                            "parent_node_id": parent_node_id
+                        }),
+                        provenance: None,
+                    }
+                }
                 DagMutation::AddBlockedBy {
                     from_node_id,
                     to_node_id,
@@ -1984,6 +2036,9 @@ pub enum DagMutation {
     UpdateNode {
         node_id: String,
         patch: serde_json::Value,
+    },
+    DeleteNode {
+        node_id: String,
     },
     AddBlockedBy {
         from_node_id: String,

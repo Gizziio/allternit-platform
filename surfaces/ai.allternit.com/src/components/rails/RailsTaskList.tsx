@@ -15,7 +15,9 @@ import {
   Circle,
   CircleHalf,
   MinusCircle,
+  PencilSimple,
   Plus,
+  Trash,
   XCircle,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
@@ -24,8 +26,10 @@ import {
   DEFAULT_RAILS_AGENT_ID,
   useCloseWih,
   useCreateDagNode,
+  useDeleteDagNode,
   usePickupWih,
   useRailsDags,
+  useUpdateDagNode,
   type RailsDagNode,
   type RailsDagSummary,
   type RailsDagView,
@@ -79,6 +83,8 @@ function DagRow({
   onTake,
   onCloseDone,
   onFail,
+  onRename,
+  onDelete,
   compact,
 }: {
   row: OrganizedRow;
@@ -90,9 +96,18 @@ function DagRow({
   onTake: (node: RailsDagNode) => void;
   onCloseDone: (node: RailsDagNode) => void;
   onFail: (node: RailsDagNode) => void;
+  onRename: (node: RailsDagNode, title: string) => void;
+  onDelete: (node: RailsDagNode) => void;
   compact: boolean;
 }) {
   const pad = { paddingLeft: row.depth * 16 };
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const editInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) editInputRef.current?.focus();
+  }, [editing]);
 
   if (row.kind === "done") {
     const expanded = expandedDone[row.parentKey] === true;
@@ -132,19 +147,72 @@ function DagRow({
   }
 
   const { node } = row;
+
+  const submitEdit = () => {
+    const title = editValue.trim();
+    setEditing(false);
+    if (title.length === 0 || title === node.title) return;
+    onRename(node, title);
+  };
+
+  const cancelEdit = () => {
+    setEditValue("");
+    setEditing(false);
+  };
+
   return (
     <li style={pad} className={cn("flex items-center gap-1.5", compact ? "py-0.5" : "py-1")}>
       <StatusIcon status={node.status} />
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate text-[11px]",
-          node.status === "DONE"
-            ? "text-[var(--text-tertiary)] opacity-70"
-            : "text-[var(--text-primary)]"
-        )}
-      >
-        {node.title}
-      </span>
+      {editing ? (
+        <input
+          ref={editInputRef}
+          value={editValue}
+          disabled={pending}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submitEdit();
+            if (e.key === "Escape") cancelEdit();
+          }}
+          onBlur={cancelEdit}
+          className="min-w-0 flex-1 rounded border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+        />
+      ) : (
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate text-[11px]",
+            node.status === "DONE"
+              ? "text-[var(--text-tertiary)] opacity-70"
+              : "text-[var(--text-primary)]"
+          )}
+        >
+          {node.title}
+        </span>
+      )}
+      {interactive && node.status !== "DONE" && !editing && (
+        <>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              setEditValue(node.title);
+              setEditing(true);
+            }}
+            aria-label={`Edit task ${node.title}`}
+            className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
+          >
+            <PencilSimple size={11} />
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => onDelete(node)}
+            aria-label={`Delete task ${node.title}`}
+            className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--status-error)] disabled:opacity-40"
+          >
+            <Trash size={11} />
+          </button>
+        </>
+      )}
       {interactive && node.status === "READY" && (
         <button
           type="button"
@@ -258,7 +326,10 @@ export function RailsTaskList({
   const pickup = usePickupWih();
   const close = useCloseWih();
   const create = useCreateDagNode();
+  const update = useUpdateDagNode();
+  const remove = useDeleteDagNode();
   const [expandedDone, setExpandedDone] = useState<Record<string, boolean>>({});
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   // Write-back probe: if the pickup endpoint is unsupported (405/5xx/network),
   // silently degrade to read-only. 404 means the route answered (unknown node).
   const [writeBackOk, setWriteBackOk] = useState(true);
@@ -305,7 +376,12 @@ export function RailsTaskList({
   if (organized.length === 0) return null;
 
   const canAct = interactive && writeBackOk;
-  const pending = pickup.isPending || close.isPending || create.isPending;
+  const pending =
+    pickup.isPending ||
+    close.isPending ||
+    create.isPending ||
+    update.isPending ||
+    remove.isPending;
 
   return (
     <div className={cn("flex min-w-0 flex-col", compact ? "gap-1" : "gap-2")}>
@@ -356,10 +432,33 @@ export function RailsTaskList({
                     agent_id: agent,
                   });
                 }}
+                onRename={(node, title) =>
+                  update.mutate({ dag_id: dag.dag_id, node_id: node.node_id, title })
+                }
+                onDelete={(node) => {
+                  if (!window.confirm(`Delete task "${node.title}"?`)) return;
+                  setDeleteError(null);
+                  remove.mutate(
+                    { dag_id: dag.dag_id, node_id: node.node_id },
+                    {
+                      onError: (err) => {
+                        const status = (err as Error & { status?: number }).status;
+                        setDeleteError(
+                          status === 409
+                            ? `Cannot delete "${node.title}": it has active work or unfinished subtasks`
+                            : `Delete failed for "${node.title}"${status ? ` (${status})` : ""}`
+                        );
+                      },
+                    }
+                  );
+                }}
                 compact={compact}
               />
             ))}
           </ul>
+          {deleteError && (
+            <p className="text-[10px] text-[var(--status-error)]">{deleteError}</p>
+          )}
           {canAct && (
             <AddTaskRow
               dag={dag}
