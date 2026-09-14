@@ -3,16 +3,29 @@
  *
  * Enables installability as a PWA and handles background push notifications
  * for remote approval requests and session events.
+ *
+ * Navigations, HTML, and unhashed boot files are network-first. Cache-first
+ * index.html after a Vite hashed deploy 404s lazy chunks (ShellPage, ShellApp)
+ * and pins returning visitors on the dark "Loading Allternit Platform" screen.
+ * Same class of bug as the fabric-session SW, which already network-firsts
+ * navigations so a stale worker cannot pin "Loading account".
  */
 
-const CACHE_NAME = 'allternit-platform-v1';
-const PRECACHE_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.png', '/icons/icon-192x192.png', '/icons/icon-512x512.png'];
+const CACHE_NAME = 'allternit-platform-v2';
+const PRECACHE_ASSETS = [
+  '/manifest.json',
+  '/favicon.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_ASSETS))
+      .then((cache) =>
+        Promise.all(PRECACHE_ASSETS.map((asset) => cache.add(asset).catch(() => undefined)))
+      )
       .then(() => self.skipWaiting())
   );
 });
@@ -23,8 +36,32 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) =>
+        Promise.all(
+          clients.map((client) => {
+            if (typeof client.navigate === 'function') {
+              return client.navigate(client.url);
+            }
+            return undefined;
+          })
+        )
+      )
   );
 });
+
+function isNetworkFirst(request, url) {
+  if (request.mode === 'navigate') return true;
+  const accept = request.headers.get('accept') || '';
+  if (accept.includes('text/html')) return true;
+  const path = url.pathname;
+  return (
+    path === '/' ||
+    path === '/index.html' ||
+    path === '/boot.js' ||
+    path.endsWith('.html')
+  );
+}
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -35,9 +72,12 @@ self.addEventListener('fetch', (event) => {
   // bounce between /sign-in and /sign-in/factor-one.
   if (request.method !== 'GET') return;
   if (request.url.startsWith('chrome-extension://')) return;
-  if (request.url.includes('/api/')) return;
-  if (request.url.includes('/dispatch/')) return;
-  if (request.url.includes('/__clerk/')) return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith('/dispatch/')) return;
+  if (url.pathname.startsWith('/__clerk/')) return;
 
   // Never cache Vite's development module graph. Vite's URLs include
   // cache-busting query parameters (e.g. ?v=...) that change whenever
@@ -45,11 +85,22 @@ self.addEventListener('fetch', (event) => {
   // mismatched React/React-DOM chunks and "Cannot read properties of null
   // (reading 'useState' / 'useContext')" crashes when stale and fresh chunks
   // are served together.
-  const url = new URL(request.url);
   if (url.pathname.startsWith('/node_modules/.vite/')) return;
   if (url.pathname.startsWith('/src/')) return;
   if (url.pathname.startsWith('/@fs/')) return;
   if (url.pathname.startsWith('/@vite/')) return;
+
+  // Let the browser handle SW updates; caching sw.js pins an old worker.
+  if (url.pathname === '/sw.js') return;
+
+  if (isNetworkFirst(request, url)) {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => networkResponse)
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then((cached) => {
