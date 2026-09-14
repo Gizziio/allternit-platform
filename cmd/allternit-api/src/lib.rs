@@ -102,6 +102,7 @@ pub mod content_artifact_routes;
 pub mod console_announcement_routes;
 pub mod conversation_routes;
 pub mod al_persona_routes;
+pub mod deliverable_routes;
 pub mod cors;
 pub mod credits;
 pub mod cowork;

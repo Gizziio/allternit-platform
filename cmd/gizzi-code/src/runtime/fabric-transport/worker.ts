@@ -212,6 +212,23 @@ export async function runFabricWorker(opts: RunFabricWorkerOptions = {}): Promis
                 outputs: { worker: "a://principal/gizzi", agentic: true, ...outputs },
               }),
             }).then(() => {}).catch(() => {}),
+          // P3.1: render + attach a finished document to this run.
+          createDeliverable: (input) =>
+            api<{ url?: string; file?: string; error?: string; message?: string }>(
+              `/cowork/runs/${grant.run_id}/deliverables`,
+              {
+                method: "POST",
+                body: JSON.stringify(input),
+              },
+            )
+              .then((res) => {
+                log("info", "worker.deliverable_attached", { run_id: grant.run_id, file: res.file ?? res.url })
+                return { ok: true, detail: `deliverable attached: ${res.url ?? res.file ?? "ok"}` }
+              })
+              .catch((e) => {
+                log("error", "worker.deliverable_failed", { run_id: grant.run_id, error: (e as Error).message })
+                return { ok: false, detail: (e as Error).message }
+              }),
           log,
           maxSteps: agentic.max_steps,
           maxTokens: agentic.max_tokens,

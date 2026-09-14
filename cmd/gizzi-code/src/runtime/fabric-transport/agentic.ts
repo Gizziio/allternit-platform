@@ -30,6 +30,13 @@ export interface AgenticDeps {
   runStep?: (command: string, cwd: string, sessionId: string) => Promise<{ code: number; output: string }>
   checkpoint: (stepIndex: number, cursor: Record<string, unknown>) => Promise<void>
   complete: (success: boolean, summary: string, outputs: Record<string, unknown>) => Promise<void>
+  /** P3.1: attach a rendered deliverable to this run (worker bearer auth). */
+  createDeliverable?: (input: {
+    name: string
+    template: string
+    title?: string
+    markdown: string
+  }) => Promise<{ ok: boolean; detail: string }>
   log: (level: "info" | "warn" | "error", event: string, fields?: Record<string, unknown>) => void
   fetchImpl?: typeof fetch
   maxSteps?: number
@@ -72,6 +79,25 @@ const TOOL_DEFS = [
           content: { type: "string" },
         },
         required: ["path", "content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "deliverable",
+      description:
+        "Render a finished office document (report .docx / sheet .xlsx / deck .pptx) " +
+        "from markdown and attach it to this run for preview/export.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          template: { type: "string", enum: ["report", "sheet", "deck"] },
+          title: { type: "string" },
+          markdown: { type: "string" },
+        },
+        required: ["name", "template", "markdown"],
       },
     },
   },
@@ -157,6 +183,22 @@ async function executeTool(
     } catch (e) {
       return { ok: false, output: `fs error: ${(e as Error).message}` }
     }
+  }
+  if (name === "deliverable") {
+    if (!deps.createDeliverable) {
+      return { ok: false, output: "deliverable tool unavailable in this worker" }
+    }
+    const template = String(args.template ?? "report")
+    if (!["report", "sheet", "deck"].includes(template)) {
+      return { ok: false, output: `unknown template: ${template}` }
+    }
+    const result = await deps.createDeliverable({
+      name: String(args.name ?? "deliverable"),
+      template,
+      title: typeof args.title === "string" ? args.title : undefined,
+      markdown: String(args.markdown ?? ""),
+    })
+    return { ok: result.ok, output: result.detail }
   }
   if (name === "bash") {
     const command = String(args.command ?? "")
