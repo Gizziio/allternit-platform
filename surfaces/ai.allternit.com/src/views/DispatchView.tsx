@@ -343,7 +343,7 @@ export function DispatchView(): React.ReactNode {
     }
   };
 
-  const handleSendMessage = useCallback(() => {
+  const handleSendMessage = useCallback(async () => {
     const text = composerValue.trim();
     if (!text || sending) return;
     if (!fabricClient) {
@@ -352,8 +352,6 @@ export function DispatchView(): React.ReactNode {
     }
     setSending(true);
     try {
-      const session = await remoteClient.createSession({ title: 'Fabric Transport', surface: 'fabric-session' });
-      await remoteClient.sendMessage(session.id, { text });
       const session = await fabricClient.createSession({ title: 'Fabric Session', surface: 'fabric-session' });
       await fabricClient.sendMessage(session.id, { text });
       setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
@@ -368,11 +366,6 @@ export function DispatchView(): React.ReactNode {
     } finally {
       setSending(false);
     }
-  }, [composerValue, sending, remoteClient, addToast]);
-    if (!text) return;
-    setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
-    setComposerValue('');
-  }, [composerValue]);
   }, [composerValue, sending, fabricClient, addToast]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

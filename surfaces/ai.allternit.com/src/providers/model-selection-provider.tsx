@@ -35,9 +35,6 @@ interface ModelSelectionContextType {
   startSelection: () => void;
   cancelSelection: () => void;
 
-  // Available models from the current discovery source
-  availableModels: ModelOption[];
-
   // Helper to create a brain session with current selection
   getBrainSessionConfig: () => {
     brain_profile_id: string;
@@ -203,6 +200,15 @@ export function ModelSelectionProvider({
     setIsSelecting(false);
   }, []);
 
+  const getBrainSessionConfig = useCallback(() => {
+    if (!selection?.profileId) return null;
+    return {
+      brain_profile_id: selection.profileId,
+      source: "chat" as const,
+      runtime_overrides: selection.modelId ? { model_id: selection.modelId } : undefined,
+    };
+  }, [selection]);
+
   const value = useMemo(() => ({
     selection,
     availableModels,
@@ -212,7 +218,6 @@ export function ModelSelectionProvider({
     clearSelection,
     startSelection,
     cancelSelection,
-    availableModels: [] as ModelOption[],
     getBrainSessionConfig,
   }), [
     selection,
@@ -223,6 +228,7 @@ export function ModelSelectionProvider({
     clearSelection,
     startSelection,
     cancelSelection,
+    getBrainSessionConfig,
   ]);
 
   return (

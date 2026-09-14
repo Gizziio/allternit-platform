@@ -206,8 +206,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
 
   const vapidKey = useVapidKey();
   const { pushByRuntime, setPushByRuntime } = usePushByRuntime(runtimes, auth.getToken);
-      .catch(() => {});
-  }, [runtimes]);
 
   const togglePush = useCallback(
     async (rt: RuntimeViewModel) => {
@@ -293,10 +291,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
       }
     },
     [addToast, auth, pushByRuntime, setPushByRuntime, vapidKey]
-    [addToast, pushByRuntime, vapidKey]
   );
-
-  const onlineCount = runtimes.filter((r) => r.status === "online").length;
 
   if (!auth.isLoaded) {
     return (
@@ -336,8 +331,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         </div>
       </div>
     );
-    window.location.replace('/sign-in');
-    return null;
   }
 
   return (

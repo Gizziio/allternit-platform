@@ -62,6 +62,16 @@ describe("operator-gateway", () => {
     ).toBe("https://api.allternit.com");
   });
 
+  it("uses api.allternit.com on hosted web even when VITE is missing", () => {
+    expect(
+      resolveOperatorGatewayUrl({
+        locationOrigin: "https://ai.allternit.com",
+        isDesktop: false,
+        fallback: "http://127.0.0.1:8013",
+      }),
+    ).toBe("https://api.allternit.com");
+  });
+
   it("never discovers providers against the cloud control plane", () => {
     expect(operatorProviderDiscoveryUrl("https://api.allternit.com")).toBe(
       "/api/v1/providers",

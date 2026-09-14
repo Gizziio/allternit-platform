@@ -291,8 +291,6 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
             </div>
           )}
 
-          {/* Surfaces — only meaningful for non-bot agents */}
-          {!isBotAgent && surfaces.length > 0 && (
           {/* Tags */}
           {agentTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
