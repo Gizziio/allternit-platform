@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import * as QRCodeModule from 'react-qr-code';
 const QRCode = (QRCodeModule as any).default?.QRCode ?? (QRCodeModule as any).default ?? QRCodeModule;
 import {
@@ -238,7 +238,6 @@ export function DispatchView(): React.ReactNode {
   const [qrPanelDismissed, setQrPanelDismissed] = useState(false);
 
   // ── composer ────────────────────────────────────────────────────────────────
-  const { addToast } = useToast();
   const [composerValue, setComposerValue] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user'; text: string }>>([]);
   const [sending, setSending] = useState(false);
@@ -342,7 +341,7 @@ export function DispatchView(): React.ReactNode {
     }
   };
 
-  const handleSendMessage = useCallback(async () => {
+  const handleSendMessage = useCallback(() => {
     const text = composerValue.trim();
     if (!text || sending) return;
     if (!remoteClient) {
@@ -366,6 +365,10 @@ export function DispatchView(): React.ReactNode {
       setSending(false);
     }
   }, [composerValue, sending, remoteClient, addToast]);
+    if (!text) return;
+    setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
+    setComposerValue('');
+  }, [composerValue]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -393,7 +396,7 @@ export function DispatchView(): React.ReactNode {
             <button
               type="button"
               className="text-blue-500 underline bg-transparent border-none cursor-pointer p-0 text-[14px]"
-              onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
+              onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'dispatch' } }))}
             >
               Settings
             </button>
@@ -509,7 +512,7 @@ export function DispatchView(): React.ReactNode {
   // ── Active dispatch session ──────────────────────────────────────────────────
   return (
     <div className="h-full w-full flex flex-col overflow-hidden bg-[var(--bg-elevated)] text-[var(--text-primary)]">
-      <div className="w-full max-w-7xl mx-auto px-8 pt-10 pb-12 flex flex-col flex-1 min-h-0">
+      <div className="w-full max-w-6xl mx-auto px-8 pt-10 pb-12 flex flex-col flex-1 min-h-0">
         {/* Header — same pattern as Artifacts Library / Automation Tasks / Projects */}
         <div className="flex items-center justify-between gap-4 shrink-0">
           <div>
@@ -518,6 +521,7 @@ export function DispatchView(): React.ReactNode {
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Fabric Transport
+              Remote Control
             </h1>
             <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">This desktop joins the Allternit fabric. Peers, leases, and session-worker calls go through the local gateway.</p>
           </div>
@@ -623,31 +627,42 @@ export function DispatchView(): React.ReactNode {
                   </p>
                 </div>
               </div>
+          <div className="px-4 pb-4 space-y-3">
+            {/* Keep awake */}
+            <div className="flex items-center gap-3">
+              <Sun size={16} className="text-[var(--text-tertiary)]" />
+              <span className="flex-1 text-[13px] text-[var(--text-secondary)]">Keep awake</span>
+              <ToggleSwitch checked={keepAwake} onChange={setKeepAwake} />
             </div>
-
-            {/* Bridge hint card */}
-            <div className="px-4 py-4">
-              <div className="relative rounded-2xl border border-solid border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 shadow-sm">
-                <p className="m-0 text-[13px] text-[var(--text-secondary)] leading-relaxed">
-                  Dispatch to Allternit and check in from anywhere—a task, a code session, in one continuous thread.
-                </p>
-                <div className="absolute left-4 -bottom-3 inline-flex items-center px-2.5 py-1 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-[11px] font-semibold shadow-sm">
-                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
+            {/* Notifications */}
+            <div className="flex items-center gap-3">
+              <Bell size={16} className="text-[var(--text-tertiary)]" />
+              <span className="flex-1 text-[13px] text-[var(--text-secondary)]">Mobile notifications</span>
+              <ToggleSwitch checked={notifications} onChange={handleNotificationsToggle} />
             </div>
-
-            {/* Reset setup */}
-            <div className="mt-auto px-4 py-4">
+            {/* Computer use */}
+            <div className="flex items-center gap-3">
+              <Monitor size={16} className="text-[var(--text-tertiary)]" />
+              <span className="flex-1 text-[13px] text-[var(--text-secondary)]">Computer use</span>
+              {computerControl && (
+                <Warning size={14} className="text-amber-500 shrink-0" weight="fill" />
+              )}
               <button
                 type="button"
-                onClick={() => setSetupComplete(false)}
-                className="w-full text-[12px] text-[var(--text-tertiary)] bg-transparent border border-solid border-[var(--border-subtle)] rounded-xl py-2 cursor-pointer hover:text-[var(--text-secondary)] hover:border-[var(--border-default)] transition-colors"
+                onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'dispatch' } }))}
+                className="text-[12px] text-[var(--text-primary)] border border-solid border-[var(--border-default)] rounded-lg px-2.5 py-1 bg-transparent cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
               >
-                Reconfigure setup
+                Open settings
               </button>
             </div>
+            {/* Code permissions */}
+            <div className="flex items-center gap-3">
+              <Code size={16} className="text-[var(--text-tertiary)]" />
+              <span className="flex-1 text-[13px] text-[var(--text-secondary)]">Code permissions</span>
+              <CodePermissionsDropdown value={codePermission} onChange={setCodePermission} />
+            </div>
           </div>
+        </div>
 
           {/* ── Center + right ── */}
           <div className="flex-1 flex min-h-0">
@@ -698,6 +713,32 @@ export function DispatchView(): React.ReactNode {
                   </button>
                 </div>
               )}
+        {/* Outputs panel */}
+        <div className="border-b border-solid border-[var(--border-subtle)]">
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-[13px] font-semibold text-[var(--text-primary)]">Outputs</span>
+            <CaretDown size={14} className="text-[var(--text-tertiary)]" />
+          </div>
+          <div className="px-4 pb-4">
+            <div className="rounded-xl bg-[var(--surface-hover)] border border-dashed border-[var(--border-default)] px-3 py-3">
+              <p className="m-0 text-[12px] text-[var(--text-tertiary)] italic">
+                Files Allternit shares will appear here.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bridge hint card */}
+        <div className="px-4 py-4">
+          <div className="relative rounded-2xl border border-solid border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 shadow-sm">
+            <p className="m-0 text-[13px] text-[var(--text-secondary)] leading-relaxed">
+              Dispatch to Allternit and check in from anywhere—a task, a code session, in one continuous thread.
+            </p>
+            <div className="absolute left-4 -bottom-3 inline-flex items-center px-2.5 py-1 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-[11px] font-semibold shadow-sm">
+              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+        </div>
 
               {activeHubTab === 'handoff' && (<>
                 {/* Handoff banner */}
@@ -1199,6 +1240,8 @@ export function DispatchView(): React.ReactNode {
         </div>
       </div>
     </div>
+  </div>
+</div>
   );
 }
 
