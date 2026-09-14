@@ -25,7 +25,7 @@ use crate::receipts::ReceiptStore;
 use crate::vault::Vault;
 use crate::wih::projection::project_wih;
 use crate::wih::types::LoopPolicy;
-use crate::work::graph::would_create_cycle;
+use crate::work::graph::{would_create_cycle, would_create_parent_cycle};
 use crate::work::projection::project_dag;
 use crate::work::types::{DagEdge, DagNode, DagRelation, DagState};
 
@@ -324,6 +324,49 @@ impl Gate {
                             "node_id": node_id,
                             "title": title,
                             "parent_node_id": parent_node_id
+                        }),
+                        provenance: Some(self.provenance_from(&mutation_prov)),
+                    }
+                }
+                DagMutation::ReparentNode {
+                    node_id,
+                    new_parent_id,
+                } => {
+                    // Project from the full event log: the dag-scoped event
+                    // filter misses dag_id-less events (e.g. pre-v5
+                    // WIHPickedUp), so a dag projected from filtered events
+                    // can serve a stale parent chain to the cycle check.
+                    let all_events = self.ledger.query(LedgerQuery::default()).await?;
+                    let dag = project_dag(&all_events, dag_id);
+                    let old_parent_id = dag
+                        .nodes
+                        .get(&node_id)
+                        .ok_or_else(|| anyhow!("node not found: {}", node_id))?
+                        .parent_node_id
+                        .clone();
+                    if let Some(parent) = &new_parent_id {
+                        if !dag.nodes.contains_key(parent) {
+                            return Err(anyhow!("new parent not found in dag: {}", parent));
+                        }
+                        if would_create_parent_cycle(&dag, &node_id, parent) {
+                            return Err(anyhow!(
+                                "reparent_node would create parent cycle: {} under {}",
+                                node_id,
+                                parent
+                            ));
+                        }
+                    }
+                    AllternitEvent {
+                        event_id: create_event_id(),
+                        ts: Utc::now().to_rfc3339(),
+                        actor: gate_actor(&self.actor_id),
+                        scope: None,
+                        r#type: "DagNodeReparented".to_string(),
+                        payload: json!({
+                            "dag_id": dag_id,
+                            "node_id": node_id,
+                            "new_parent_id": new_parent_id,
+                            "old_parent_id": old_parent_id
                         }),
                         provenance: Some(self.provenance_from(&mutation_prov)),
                     }
@@ -670,6 +713,8 @@ impl Gate {
             r#type: "WIHPickedUp".to_string(),
             payload: json!({
                 "wih_id": wih_id,
+                "dag_id": dag_id,
+                "node_id": node_id,
                 "agent_id": agent_id,
                 "role": opts.role,
                 "picked_up_at": Utc::now().to_rfc3339()
@@ -1150,7 +1195,7 @@ impl Gate {
             actor: gate_actor(&self.actor_id),
             scope: None,
             r#type: "WIHCloseRequested".to_string(),
-            payload: json!({ "wih_id": wih_id, "status": status, "evidence_refs": evidence_refs }),
+            payload: json!({ "wih_id": wih_id, "dag_id": dag_id, "node_id": node_id, "status": status, "evidence_refs": evidence_refs }),
             provenance: None,
         };
         self.emit(close_req).await?;
@@ -1161,7 +1206,7 @@ impl Gate {
             actor: gate_actor(&self.actor_id),
             scope: None,
             r#type: "WIHClosedSigned".to_string(),
-            payload: json!({ "wih_id": wih_id, "final_status": status, "closed_at": Utc::now().to_rfc3339() }),
+            payload: json!({ "wih_id": wih_id, "dag_id": dag_id, "node_id": node_id, "final_status": status, "closed_at": Utc::now().to_rfc3339() }),
             provenance: None,
         };
         self.emit(closed).await?;
@@ -1183,7 +1228,7 @@ impl Gate {
             actor: gate_actor(&self.actor_id),
             scope: None,
             r#type: "WIHArchived".to_string(),
-            payload: json!({ "wih_id": wih_id }),
+            payload: json!({ "wih_id": wih_id, "dag_id": dag_id, "node_id": node_id }),
             provenance: None,
         };
         self.emit(archived).await?;
@@ -1671,6 +1716,49 @@ impl Gate {
                         provenance: None,
                     }
                 }
+                DagMutation::ReparentNode {
+                    node_id,
+                    new_parent_id,
+                } => {
+                    // Project from the full event log: the dag-scoped event
+                    // filter misses dag_id-less events (e.g. pre-v5
+                    // WIHPickedUp), so a dag projected from filtered events
+                    // can serve a stale parent chain to the cycle check.
+                    let all_events = self.ledger.query(LedgerQuery::default()).await?;
+                    let dag = project_dag(&all_events, dag_id);
+                    let old_parent_id = dag
+                        .nodes
+                        .get(&node_id)
+                        .ok_or_else(|| anyhow!("node not found: {}", node_id))?
+                        .parent_node_id
+                        .clone();
+                    if let Some(parent) = &new_parent_id {
+                        if !dag.nodes.contains_key(parent) {
+                            return Err(anyhow!("new parent not found in dag: {}", parent));
+                        }
+                        if would_create_parent_cycle(&dag, &node_id, parent) {
+                            return Err(anyhow!(
+                                "reparent_node would create parent cycle: {} under {}",
+                                node_id,
+                                parent
+                            ));
+                        }
+                    }
+                    AllternitEvent {
+                        event_id: create_event_id(),
+                        ts: Utc::now().to_rfc3339(),
+                        actor: gate_actor(&self.actor_id),
+                        scope: None,
+                        r#type: "DagNodeReparented".to_string(),
+                        payload: json!({
+                            "dag_id": dag_id,
+                            "node_id": node_id,
+                            "new_parent_id": new_parent_id,
+                            "old_parent_id": old_parent_id
+                        }),
+                        provenance: None,
+                    }
+                }
                 DagMutation::AddBlockedBy {
                     from_node_id,
                     to_node_id,
@@ -2039,6 +2127,10 @@ pub enum DagMutation {
     },
     DeleteNode {
         node_id: String,
+    },
+    ReparentNode {
+        node_id: String,
+        new_parent_id: Option<String>,
     },
     AddBlockedBy {
         from_node_id: String,

@@ -57,6 +57,11 @@ Mutations JSON format:
   {
     "op": "delete_node",
     "node_id": "n_0002"
+  },
+  {
+    "op": "reparent_node",
+    "node_id": "n_0003",
+    "new_parent_id": "n_0001"
   }
 ]
 ```

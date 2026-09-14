@@ -128,7 +128,8 @@ impl Orchestrator {
         // and the legacy ALLTERNIT_RAILS_* names for one release, so old
         // executors still see them), and chain the notes sentinel if requested.
         let mut inner = format!(
-            "export ALLTERNIT_COMMRAILS_PEER_NAME={}; export ALLTERNIT_COMMRAILS_INBOX={}; export ALLTERNIT_COMMRAILS_ROOT={}; export ALLTERNIT_RAILS_PEER_NAME={}; export ALLTERNIT_RAILS_INBOX={}; export ALLTERNIT_RAILS_ROOT={}; ",
+            "export ALLTERNIT_AO_PANE_ID={}; export ALLTERNIT_COMMRAILS_PEER_NAME={}; export ALLTERNIT_COMMRAILS_INBOX={}; export ALLTERNIT_COMMRAILS_ROOT={}; export ALLTERNIT_RAILS_PEER_NAME={}; export ALLTERNIT_RAILS_INBOX={}; export ALLTERNIT_RAILS_ROOT={}; ",
+            shell_escape(&session),
             shell_escape(&peer.name),
             shell_escape(&peer.inbox_socket.to_string_lossy()),
             shell_escape(&workdir.to_string_lossy()),

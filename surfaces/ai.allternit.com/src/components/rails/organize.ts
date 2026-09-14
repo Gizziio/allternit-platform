@@ -149,3 +149,24 @@ export function findRootNodeId(dag: RailsDagSummary): string | null {
   roots.sort((a, b) => a.node_id.localeCompare(b.node_id));
   return roots[0].node_id;
 }
+
+/**
+ * Valid new-parent candidates for reparenting `nodeId`: every node in the
+ * dag except the node itself and its own descendants (walking
+ * parent_node_id chains to a fixed point, so diamond shapes are covered).
+ * Orphans (parent missing from `nodes`) are still valid candidates.
+ */
+export function reparentCandidates(nodes: RailsDagNode[], nodeId: string): RailsDagNode[] {
+  const blocked = new Set<string>([nodeId]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const n of nodes) {
+      if (n.parent_node_id && blocked.has(n.parent_node_id) && !blocked.has(n.node_id)) {
+        blocked.add(n.node_id);
+        grew = true;
+      }
+    }
+  }
+  return nodes.filter((n) => !blocked.has(n.node_id));
+}

@@ -23,6 +23,7 @@ All events are appended to the Ledger as JSON objects with:
 - DagNodeCreated
 - DagNodeUpdated
 - DagNodeRemoved (payload: dag_id, node_id, title, parent_node_id)
+- DagNodeReparented (payload: dag_id, node_id, new_parent_id, old_parent_id)
 - DagNodeStatusChanged
 - DagEdgeAdded (blocked_by)
 - DagRelationAdded (related_to)
