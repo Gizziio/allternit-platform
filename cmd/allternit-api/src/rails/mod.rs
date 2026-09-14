@@ -3075,18 +3075,26 @@ async fn delete_dag_node(
         }
     };
 
-    if let Some(wih_id) = &node.current_wih_id {
-        if let Some(wih) = project_wih(&events, wih_id) {
-            if !matches!(wih.status.as_str(), "CLOSED" | "FAILED" | "VAULTED") {
-                return (
-                    StatusCode::CONFLICT,
-                    Json(json!({
-                        "error": format!("node has an active WIH ({wih_id}); close it before deleting the node")
-                    })),
+    // Guard against deleting a node that has an ACTIVE WIH. The node's own
+    // `current_wih_id` field is never populated by the projection (it is always
+    // None), so scan active WIHs by node id instead — smoke-tested 2026-09-13:
+    // relying on current_wih_id let a delete through and orphaned the WIH.
+    let blocking_wihs: Vec<String> = active_wihs(&events)
+        .into_iter()
+        .filter(|w| w.dag_id == dag_id && w.node_id == node_id)
+        .map(|w| w.wih_id)
+        .collect();
+    if !blocking_wihs.is_empty() {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": format!(
+                    "node has an active WIH ({}); close it before deleting the node",
+                    blocking_wihs.join(", ")
                 )
-                    .into_response();
-            }
-        }
+            })),
+        )
+            .into_response();
     }
 
     let open_children: Vec<String> = dag
@@ -5504,6 +5512,96 @@ mod tests {
         let resp = post_json(&app, "/index/rebuild", json!({})).await;
         let body = body_json(resp.into_body()).await;
         assert!(body["indexed_count"].as_u64().unwrap() >= 3);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Delete guard: a node with an ACTIVE WIH must 409 even though the node's
+    /// own `current_wih_id` projection field is never populated (always None).
+    /// Live-smoke regression 2026-09-13: the field-based guard let the delete
+    /// through and orphaned the WIH.
+    #[tokio::test]
+    async fn delete_node_with_active_wih_conflicts() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-delwih-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // Plan with a parent + child so we can also exercise the children guard.
+        let resp = post_json(
+            &app,
+            "/plan/from-text",
+            json!({
+                "title": "delete guard",
+                "todos": [
+                    { "title": "parent", "depth": 0 },
+                    { "title": "leaf", "depth": 1 }
+                ]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let dag_id = body["dag_id"].as_str().unwrap().to_string();
+
+        let resp = get(&app, "/dags?view=all").await;
+        let body = body_json(resp.into_body()).await;
+        let dag = body["dags"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|d| d["dag_id"] == json!(dag_id))
+            .unwrap()
+            .clone();
+        let nodes: Vec<(String, String)> = dag["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| {
+                (
+                    n["node_id"].as_str().unwrap().to_string(),
+                    n["title"].as_str().unwrap().to_string(),
+                )
+            })
+            .collect();
+        let (parent_id, _) = nodes.iter().find(|(_, t)| t == "parent").unwrap().clone();
+        let (leaf_id, _) = nodes.iter().find(|(_, t)| t == "leaf").unwrap().clone();
+
+        // Children guard: parent has a non-DONE child.
+        let resp = delete_req(&app, &format!("/dags/{dag_id}/nodes/{parent_id}")).await;
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+        // Pick up the leaf; active WIH must block its deletion.
+        let wih_id = state
+            .rails
+            .gate
+            .wih_pickup(&dag_id, &leaf_id, "agent-a")
+            .await
+            .unwrap();
+        let resp = delete_req(&app, &format!("/dags/{dag_id}/nodes/{leaf_id}")).await;
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+        let body = body_json(resp.into_body()).await;
+        assert!(
+            body["error"]
+                .as_str()
+                .unwrap()
+                .contains("active WIH"),
+            "expected active-WIH conflict, got: {body}"
+        );
+
+        // Close the WIH; deletion now succeeds.
+        let evidence = vec!["smoke evidence".to_string()];
+        state
+            .rails
+            .gate
+            .wih_close(&wih_id, "DONE", &evidence)
+            .await
+            .unwrap();
+        let resp = delete_req(&app, &format!("/dags/{dag_id}/nodes/{leaf_id}")).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         let _ = std::fs::remove_dir_all(&temp);
     }
