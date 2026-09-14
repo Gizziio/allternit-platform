@@ -2208,22 +2208,51 @@ async function handoffInFlightToCloud(): Promise<void> {
   const headers = backendManager.getLocalAuthHeaders();
   const api = backendManager.getUrl();
   try {
+    const ensureClerk = await authManager.getClerkToken();
+    if (ensureClerk) {
+      const ensure = await fetch(`${URLS.CLOUD_API}/api/v1/continuation/ensure`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${ensureClerk}`, 'content-type': 'application/json' },
+      });
+      if (!ensure.ok) {
+        log.error(`[Main] continuation ensure failed: ${ensure.status} ${await ensure.text().then((t) => t.slice(0, 300))}`);
+      }
+    }
     const res = await fetch(`${api}/api/v1/fabric/transport/continuation/handoff-all`, {
       method: 'POST',
       headers: { ...headers, 'content-type': 'application/json' },
     });
+    const raw = await res.text();
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      log.error(`[Main] cloud continuation handoff failed: ${res.status} ${body.slice(0, 400)}`);
+      log.error(`[Main] cloud continuation handoff failed: ${res.status} ${raw.slice(0, 400)}`);
       return;
     }
-    const body = (await res.json()) as { jobs?: Array<{ job_id: string }>; forwarded?: number; target?: string };
+    const body = JSON.parse(raw) as {
+      jobs?: Array<{ job_id: string; envelope?: unknown }>;
+      files?: unknown[];
+      forwarded?: number;
+      target?: string;
+    };
+    const clerk = ensureClerk ?? (await authManager.getClerkToken());
+    let relayed = 0;
+    if (clerk && body.jobs?.length) {
+      for (const job of body.jobs) {
+        if (!job.envelope) continue;
+        const ingest = await fetch(`${URLS.CLOUD_API}/api/v1/fabric/transport/continuation/ingest`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${clerk}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ envelope: job.envelope, files: body.files ?? [] }),
+        });
+        if (ingest.ok) relayed += 1;
+        else log.error(`[Main] continuation ingest ${ingest.status}: ${(await ingest.text()).slice(0, 200)}`);
+      }
+    }
     log.info(
-      `[Main] cloud continuation forwarded ${body.forwarded ?? 0}/${body.jobs?.length ?? 0} job(s)` +
-        (body.target ? ` to ${body.target}` : ''),
+      `[Main] cloud continuation local-forwarded ${body.forwarded ?? 0}, cloud-api relayed ${relayed}/${body.jobs?.length ?? 0}` +
+        (body.target ? ` url=${body.target}` : ''),
     );
   } catch (err) {
-    log.warn('[Main] cloud continuation handoff failed', err);
+    log.error('[Main] cloud continuation handoff failed', err);
   }
 }
 

@@ -408,13 +408,14 @@ Transport does not redefine principal identity, run state, attribution, or appro
   auto-update target; preflight refuses a mismatch. Signed/notarized
   `desktop-v1.2.0` remains an owner action (Apple secrets).
 
-### Cloud continuation (E6) — NOT a finished product path
+### Cloud continuation (E6)
 
-session/e6-0914: laptop quit POSTs ingest (envelope + bounded folder copy)
-to `ALLTERNIT_CONTINUATION_API_URL` with a shared token; missing config is
-409. Cloud routines are created on that API. The desktop still does **not**
-launch the always-on host or its `gizzi-cloud` worker. Without those
-already running, closing the laptop still stops the work.
+Desktop quit retags in-flight jobs, packs granted folders, calls
+`/api/v1/continuation/ensure`, and relays ingest through cloud-api to a
+**non-local** node (provisioned, then paired). That node's allternit-api
+auto-starts `gizzi-cloud` when it is not a desktop sidecar. If the account
+only has a laptop node, ensure is 428 — the laptop is not an always-on
+host.
 
 Live behavioral evidence for all six items (vm-job claim grant/refusal,
 boundary projection refusal, brokered files read/write + approval gate +

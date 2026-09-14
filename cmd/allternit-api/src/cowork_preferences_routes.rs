@@ -218,11 +218,16 @@ async fn set_cowork_preferences(
 
         if cloud_continuation != 0 {
             let has_url = env_url.is_some() || continuation_api_url.as_ref().is_some();
-            if !has_url || env_token.is_none() {
+            let has_cloud_relay = std::env::var("ALLTERNIT_CLOUD_API_URL")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .is_some();
+            if !has_url && !has_cloud_relay {
                 return Err(rusqlite::Error::InvalidParameterName(
-                    "cloud continuation needs ALLTERNIT_CONTINUATION_API_URL (or continuation_api_url) and ALLTERNIT_CONTINUATION_TOKEN; the laptop API is not always-on".into(),
+                    "cloud continuation needs a hosted/paired always-on node (api.allternit.com continuation/ensure) or ALLTERNIT_CONTINUATION_API_URL".into(),
                 ));
             }
+            let _ = env_token;
         }
 
         conn.execute(

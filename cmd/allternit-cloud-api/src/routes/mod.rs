@@ -13,6 +13,7 @@ pub mod beta;
 pub mod canvases;
 pub mod clerk_webhooks;
 pub mod contabo_hosted_runtimes;
+pub mod continuation;
 pub mod costs;
 pub mod data_plane;
 pub mod deployments;
