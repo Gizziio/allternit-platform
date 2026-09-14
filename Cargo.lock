@@ -559,7 +559,6 @@ dependencies = [
 name = "allternit-commrails"
 version = "0.1.0"
 dependencies = [
- "allternit-mux",
  "anyhow",
  "async-trait",
  "axum",

@@ -47,8 +47,6 @@ use allternit_driver_interface::{
     SpawnSpec,
     TenantId,
     CommandSpec
-    CommandSpec, DesktopEndpoint, DesktopProtocol, DriverError, EnvironmentSpec, ExecutionHandle,
-    ExecutionId, NetworkPolicy, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
 };
 
 /// Deprecated: prefer `crate::computer_routes::router()` for new code.
@@ -58,7 +56,6 @@ pub fn bot_desktop_router() -> Router<Arc<AppState>> {
         .route("/bots/:bot_id/desktop", get(get_desktop_status))
         .route("/bots/:bot_id/desktop", delete(destroy_desktop))
         .route("/bots/:bot_id/desktop/screenshot", get(get_desktop_screenshot).post(get_desktop_screenshot))
-        .route("/bots/:bot_id/desktop/screenshot", get(get_desktop_screenshot))
         .route(
             "/bots/:bot_id/desktop/mouse",
             post(crate::bot_desktop_input::send_desktop_mouse),
@@ -156,8 +153,6 @@ pub(crate) async fn resolve_sandbox_id(
                 .into_response())
         }
     }
-    /// OpenSandbox sandbox id for the bot's persistent virtual computer.
-    pub(crate) sandbox_id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -183,12 +178,6 @@ pub struct ProvisionDesktopResponse {
     pub host: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_index: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct LifecycleDesktopResponse {
-    pub sandbox_id: String,
-    pub status: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -304,128 +293,6 @@ async fn get_desktop_screenshot(
     Extension(user): Extension<AuthUser>,
     Path(bot_id): Path<String>,
     Query(query): Query<DesktopQuery>,
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-    Query(query): Query<DesktopQuery>,
-) -> impl IntoResponse {
-    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "bot not found or access denied"})),
-        )
-            .into_response();
-    }
-
-    let driver = match &state.vm_driver {
-        Some(d) => d.clone(),
-        None => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({"error": "No VM driver is configured on this host"})),
-            )
-                .into_response();
-        }
-    };
-
-    let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) => r,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({"error": "bot has no desktop sandbox"})),
-            )
-                .into_response();
-        }
-        Err(e) => {
-            warn!(bot_id, error = %e, "Failed to read bot sandbox");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "failed to read sandbox record"})),
-            )
-                .into_response();
-        }
-    };
-
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
-    let capture_cmd = if record.os == "windows" {
-        bot_desktop_windows::screenshot_command()
-    } else {
-        let mut env_vars = std::collections::HashMap::new();
-        env_vars.insert("DISPLAY".to_string(), ":0".to_string());
-        CommandSpec {
-            command: vec![
-                "sh".to_string(),
-                "-c".to_string(),
-                "scrot -z -o /tmp/allternit-screen.png && base64 -w0 /tmp/allternit-screen.png".to_string(),
-            ],
-            env_vars,
-            working_dir: None,
-            stdin_data: None,
-            capture_stdout: true,
-            capture_stderr: true,
-        }
-    };
-
-    let exec_result = match driver.exec(&handle, capture_cmd).await {
-        Ok(r) => r,
-        Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to capture desktop screenshot");
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({"error": format!("failed to capture screenshot: {}", e)})),
-            )
-                .into_response();
-        }
-    };
-
-    let stdout = exec_result.stdout.as_deref().unwrap_or(&[]);
-    let stdout_str = String::from_utf8_lossy(stdout);
-    let stdout_trimmed = stdout_str.trim();
-    if stdout_trimmed.is_empty() {
-        let stderr = String::from_utf8_lossy(exec_result.stderr.as_deref().unwrap_or(&[]));
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({
-                "error": "screenshot command produced no output",
-                "exit_code": exec_result.exit_code,
-                "stderr": stderr.trim(),
-            })),
-        )
-            .into_response();
-    }
-
-    let png = match BASE64_STANDARD.decode(stdout_trimmed) {
-        Ok(bytes) => bytes,
-        Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Screenshot output was not valid base64");
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({"error": format!("invalid screenshot output: {}", e)})),
-            )
-                .into_response();
-        }
-    };
-
-    (
-        StatusCode::OK,
-        [(header::CONTENT_TYPE, "image/png")],
-        Bytes::from(png),
-    )
-        .into_response()
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct ProvisionDesktopQuery {
-    pub os: Option<String>,
-    pub template_id: Option<String>,
-}
-
-async fn provision_desktop(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-    Query(query): Query<ProvisionDesktopQuery>,
 ) -> impl IntoResponse {
     if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
         return (
@@ -707,34 +574,6 @@ pub(crate) async fn provision_desktop_internal(
         user.user_id.chars().take(50).collect::<String>()
     );
     let tenant_id = match TenantId::new(tenant_key) {
-    match crate::bot_desktop_quotas::check_quota(&state, &user).await {
-        Ok(check) if !check.allowed => {
-            return (
-                StatusCode::TOO_MANY_REQUESTS,
-                Json(json!({"error": check.reason.unwrap_or_else(|| "quota exceeded".to_string())})),
-            )
-                .into_response();
-        }
-        Err(e) => {
-            return (
-                StatusCode::TOO_MANY_REQUESTS,
-                Json(json!({"error": e.to_string()})),
-            )
-                .into_response();
-        }
-        _ => {}
-    }
-
-    let req = ProvisionRequest {
-        os: query.os.clone(),
-        template_id: query.template_id.clone(),
-    };
-    let spec = match crate::bot_desktop_templates::resolve_provision_spec(&state, &user, &req).await {
-        Ok(s) => s,
-        Err(resp) => return resp.into_response(),
-    };
-
-    let tenant_id = match TenantId::new(format!("bot-{}", bot_id)) {
         Ok(t) => t,
         Err(e) => {
             return Err((
@@ -812,10 +651,6 @@ pub(crate) async fn provision_desktop_internal(
     if let Some(ref provider) = query.provider {
         env_vars.insert("ALLTERNIT_DESKTOP_PROVIDER".to_string(), provider.clone());
     }
-    let mut env_vars = spec.env.clone();
-    env_vars.insert("ALLTERNIT_BOT_ID".to_string(), bot_id.clone());
-    env_vars.insert("ALLTERNIT_USER_ID".to_string(), user.user_id.clone());
-    env_vars.insert("ALLTERNIT_DESKTOP_OS".to_string(), spec.os.clone());
 
     let env = EnvironmentSpec {
         spec_type: allternit_driver_interface::EnvSpecType::Oci,
@@ -903,9 +738,6 @@ async fn finish_bot_provision(
     provider: String,
     host: Option<String>,
 ) -> Result<ProvisionDesktopResponse, axum::response::Response> {
-
-    // Both Incus and Tart drivers now block in spawn() until the guest reports
-    // Running/running, so we can truthfully store the sandbox as active.
     if let Err(e) = upsert_bot_sandbox(
         &state.db,
         bot_id,
@@ -919,7 +751,6 @@ async fn finish_bot_provision(
     }
 
     crate::bot_desktop_quotas::record_start(state, user, bot_id, &sandbox_id, &provider, &spec.os).await;
-    crate::bot_desktop_quotas::record_start(&state, &user, &bot_id, &sandbox_id, &provider, &spec.os).await;
 
     info!(bot_id, sandbox_id, provider, "Bot desktop sandbox provisioned");
 
@@ -951,185 +782,6 @@ async fn finish_bot_provision(
 }
 
 async fn provision_desktop(
-async fn start_desktop(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-) -> impl IntoResponse {
-    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "bot not found or access denied"})),
-        )
-            .into_response();
-    }
-
-    let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) => r,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({"error": "no desktop sandbox found for this bot"})),
-            )
-                .into_response();
-        }
-        Err(e) => {
-            warn!(bot_id, error = %e, "Failed to read bot desktop sandbox");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "database error"})),
-            )
-                .into_response();
-        }
-    };
-
-    let driver = match require_driver(&state).await {
-        Ok(d) => d,
-        Err(resp) => return resp,
-    };
-
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
-    match driver.resume_vm(&handle).await {
-        Ok(()) => {
-            let _ = update_bot_sandbox_status(&state.db, &bot_id, "running");
-            Json(LifecycleDesktopResponse {
-                sandbox_id: record.sandbox_id,
-                status: "running".to_string(),
-            })
-            .into_response()
-        }
-        Err(e) => {
-            warn!(bot_id, sandbox_id = %record.sandbox_id, error = %e, "Failed to start bot desktop");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({"error": format!("failed to start desktop sandbox: {}", e)})),
-            )
-                .into_response()
-        }
-    }
-}
-
-async fn stop_desktop(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-) -> impl IntoResponse {
-    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "bot not found or access denied"})),
-        )
-            .into_response();
-    }
-
-    let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) => r,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({"error": "no desktop sandbox found for this bot"})),
-            )
-                .into_response();
-        }
-        Err(e) => {
-            warn!(bot_id, error = %e, "Failed to read bot desktop sandbox");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "database error"})),
-            )
-                .into_response();
-        }
-    };
-
-    let driver = match require_driver(&state).await {
-        Ok(d) => d,
-        Err(resp) => return resp,
-    };
-
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
-    match driver.pause_vm(&handle).await {
-        Ok(()) => {
-            let _ = update_bot_sandbox_status(&state.db, &bot_id, "stopped");
-            Json(LifecycleDesktopResponse {
-                sandbox_id: record.sandbox_id,
-                status: "stopped".to_string(),
-            })
-            .into_response()
-        }
-        Err(e) => {
-            warn!(bot_id, sandbox_id = %record.sandbox_id, error = %e, "Failed to stop bot desktop");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({"error": format!("failed to stop desktop sandbox: {}", e)})),
-            )
-                .into_response()
-        }
-    }
-}
-
-async fn deprovision_desktop(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-) -> impl IntoResponse {
-    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "bot not found or access denied"})),
-        )
-            .into_response();
-    }
-
-    let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) => r,
-        Ok(None) => return StatusCode::NO_CONTENT.into_response(),
-        Err(e) => {
-            warn!(bot_id, error = %e, "Failed to read bot desktop sandbox");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "database error"})),
-            )
-                .into_response();
-        }
-    };
-
-    let driver = match require_driver(&state).await {
-        Ok(d) => d,
-        Err(resp) => return resp,
-    };
-
-    // Remove the database record immediately so the UI reflects the action.
-    // VM destruction can take tens of seconds on some substrates, so we run it
-    // in the background and rely on the driver's idempotent destroy to clean up.
-    if let Err(e) = delete_bot_sandbox(&state.db, &bot_id) {
-        warn!(bot_id, error = %e, "Failed to delete bot desktop sandbox record");
-    }
-
-    crate::bot_desktop_quotas::record_end(&state, &bot_id).await;
-
-    {
-        let mut sessions = state.bot_desktop_sessions.write().await;
-        sessions.remove(&bot_id);
-    }
-
-    let sandbox_id = record.sandbox_id.clone();
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
-    tokio::spawn(async move {
-        match driver.destroy(&handle).await {
-            Ok(()) => info!(bot_id, sandbox_id, "Bot desktop sandbox destroyed"),
-            Err(DriverError::NotFound { .. }) => {
-                info!(bot_id, sandbox_id, "Bot desktop sandbox already destroyed");
-            }
-            Err(e) => {
-                warn!(bot_id, sandbox_id, error = %e, "Failed to destroy bot desktop sandbox");
-            }
-        }
-    });
-
-    StatusCode::NO_CONTENT.into_response()
-}
-
-async fn observe_desktop(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(bot_id): Path<String>,
@@ -1701,7 +1353,6 @@ pub(crate) fn build_handle(
     os: Option<&str>,
     provider: Option<&str>,
 ) -> ExecutionHandle {
-pub(crate) fn build_handle(native_id: &str, os: Option<&str>) -> ExecutionHandle {
     let mut driver_info = std::collections::HashMap::new();
     driver_info.insert("native_id".to_string(), native_id.to_string());
 
@@ -1713,11 +1364,6 @@ pub(crate) fn build_handle(native_id: &str, os: Option<&str>) -> ExecutionHandle
             _ => "incus".to_string(),
         });
         driver_info.insert("provider".to_string(), provider);
-        let provider = match os {
-            "macos" => "tart",
-            _ => "incus",
-        };
-        driver_info.insert("provider".to_string(), provider.to_string());
     }
 
     ExecutionHandle {
@@ -1847,7 +1493,6 @@ fn upsert_bot_sandbox(
 }
 
 pub(crate) fn update_bot_sandbox_status(
-fn update_bot_sandbox_status(
     db: &crate::db::DbHandle,
     bot_id: &str,
     status: &str,
@@ -1861,7 +1506,6 @@ fn update_bot_sandbox_status(
 }
 
 pub(crate) fn delete_bot_sandbox(
-fn delete_bot_sandbox(
     db: &crate::db::DbHandle,
     bot_id: &str,
 ) -> Result<(), rusqlite::Error> {
@@ -1963,8 +1607,6 @@ mod tests {
             allternit_driver_interface::DriverCapabilities {
                 resize: false,
                 clone: false,
-        fn capabilities(&self) -> allternit_driver_interface::DriverCapabilities {
-            allternit_driver_interface::DriverCapabilities {
                 driver_type: allternit_driver_interface::DriverType::Container,
                 isolation: allternit_driver_interface::IsolationLevel::Standard,
                 max_resources: ResourceSpec {
@@ -2130,7 +1772,6 @@ mod tests {
                 Request::builder()
                     .method("POST")
                     .uri("/bots/bot-1/desktop/stop?sandbox_id=sandbox-abc")
-                    .uri("/bots/bot-1/desktop/stop")
                     .extension(test_user("user-1"))
                     .body(Body::empty())
                     .unwrap(),
@@ -2160,7 +1801,6 @@ mod tests {
                 Request::builder()
                     .method("POST")
                     .uri("/bots/bot-1/desktop/start?sandbox_id=sandbox-abc")
-                    .uri("/bots/bot-1/desktop/start")
                     .extension(test_user("user-1"))
                     .body(Body::empty())
                     .unwrap(),
@@ -2370,8 +2010,6 @@ mod tests {
         for uri in [
             "/bots/bot-1/desktop/start?sandbox_id=sandbox-abc",
             "/bots/bot-1/desktop/stop?sandbox_id=sandbox-abc",
-            "/bots/bot-1/desktop/start",
-            "/bots/bot-1/desktop/stop",
             "/bots/bot-1/desktop/deprovision",
         ] {
             let resp = app
@@ -2409,8 +2047,6 @@ mod tests {
         for uri in [
             "/bots/bot-empty/desktop/start?sandbox_id=sandbox-abc",
             "/bots/bot-empty/desktop/stop?sandbox_id=sandbox-abc",
-            "/bots/bot-empty/desktop/start",
-            "/bots/bot-empty/desktop/stop",
         ] {
             let resp = app
                 .clone()

@@ -1568,6 +1568,9 @@ mod surface_normalize_tests {
         assert_eq!(normalize_surface_for_gizzi("design"), "chat");
         assert_eq!(normalize_surface_for_gizzi("code"), "code");
         assert_eq!(normalize_surface_for_gizzi("cowork"), "cowork");
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

@@ -3664,7 +3664,6 @@ async fn append_run_ledger_event(
     event_type: &str,
     payload: serde_json::Value,
 ) {
-    let event = allternit_commrails::AllternitEvent {
     if let Some(agent_id) = payload.get("agent_id").and_then(|value| value.as_str()) {
         let bot_event_type = match event_type {
             "agent.run.started" => Some("run.started"),
@@ -3705,7 +3704,7 @@ async fn append_run_ledger_event(
         }
     }
 
-    let event = allternit_agent_system_rails::AllternitEvent {
+    let event = allternit_commrails::AllternitEvent {
         event_id: String::new(),
         ts: String::new(),
         actor: allternit_commrails::Actor {
@@ -5100,9 +5099,7 @@ mod tests {
             assert!(table_exists);
         }
         let _ = std::fs::remove_dir_all(&dir);
-    use axum::http::Request;
-    use http_body_util::BodyExt;
-    use tower::ServiceExt;
+    }
 
     fn test_user(id: &str) -> AuthUser {
         AuthUser {
