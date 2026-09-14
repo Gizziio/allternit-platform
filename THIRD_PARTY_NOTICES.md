@@ -151,7 +151,7 @@ This file contains notices for open-source software incorporated into this produ
 **Used in:**  
 - `cmd/allternit-api/src/cowork/executor.rs` (SubAgentOrchestrator)  
 - `cmd/allternit-api/src/cowork/background_service.rs` (subconscious background loop)  
-- `domains/cowork/connectors/linear/`, `connectors/jira/`, `connectors/google-workspace/`, `connectors/hubspot/`, `connectors/figma/`, `connectors/asana/`, `connectors/salesforce/`, `connectors/zendesk/`, `connectors/vercel/`, `connectors/okta/`, `connectors/monday/`, `connectors/discord/`  
+- `domains/cowork/connectors/linear/`, `connectors/jira/`, `connectors/google-workspace/`, `connectors/hubspot/`, `connectors/figma/`, `connectors/asana/`, `connectors/salesforce/`, `connectors/zendesk/`, `connectors/okta/`, `connectors/monday/`, `connectors/discord/`  
 **MCP stdio connector servers; CRUD operations for each platform.**
 
 ---

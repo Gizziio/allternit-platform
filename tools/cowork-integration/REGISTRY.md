@@ -20,7 +20,6 @@
 | 3 | CoWork-OS | connectors/asana/ | domains/cowork/connectors/asana/ | MIT | done | Stdio MCP; projects, tasks CRUD; ASANA_API_KEY |
 | 3 | CoWork-OS | connectors/salesforce/ | domains/cowork/connectors/salesforce/ | MIT | done | Stdio MCP; objects, SOQL, records CRUD; OAuth |
 | 3 | CoWork-OS | connectors/zendesk/ | domains/cowork/connectors/zendesk/ | MIT | done | Stdio MCP; tickets CRUD, search; OAuth+Basic |
-| 3 | CoWork-OS | connectors/vercel/ | domains/cowork/connectors/vercel/ | MIT | done | Stdio MCP; projects, deployments; VERCEL_API_TOKEN |
 | 3 | CoWork-OS | connectors/okta/ | domains/cowork/connectors/okta/ | MIT | done | Stdio MCP; users CRUD; OKTA_API_TOKEN |
 | 3 | CoWork-OS | connectors/monday/ | domains/cowork/connectors/monday/ | MIT | done | Stdio MCP; boards, items; MONDAY_API_KEY |
 | 3 | CoWork-OS | connectors/discord/ | domains/cowork/connectors/discord/ | MIT | done | Stdio MCP; guilds, channels, messages, roles, webhooks; DISCORD_BOT_TOKEN |
