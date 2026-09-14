@@ -51,16 +51,6 @@ function configuredGatewayUrl(): string {
     isDesktop,
     fallback: DEFAULT_GATEWAY_URL,
   }) || DEFAULT_GATEWAY_URL;
-  // In Vite-based dev/builds, a VITE_ env var is the explicit operator intent
-  // and must win over a stale runtime-backend snapshot stored in localStorage.
-  const viteUrl = (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL;
-  // SSR-safe: check for window existence before accessing
-  const windowUrl = typeof window !== 'undefined' ? (window as any).__ALLTERNIT_GATEWAY_URL__ : undefined;
-  const configured = viteUrl || windowUrl || DEFAULT_GATEWAY_URL;
-
-  const normalized = normalizeGatewayCandidate(String(configured).trim());
-
-  return normalized || DEFAULT_GATEWAY_URL;
 }
 
 function gatewayUrl(): string {
