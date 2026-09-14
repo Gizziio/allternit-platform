@@ -100,3 +100,29 @@ describe("LocalCliDriver adapter registry", () => {
     }
   })
 })
+
+describe("acpPermissionFor — ACP tool → gizzi permission mapping", () => {
+  test("read-only tools map to the read permission", async () => {
+    const { acpPermissionFor } = await import("@/runtime/drivers/local-cli-driver")
+    expect(acpPermissionFor({ kind: "read_file", title: "Read /tmp/x" }).permission).toBe("read")
+    expect(acpPermissionFor({ kind: "", title: "grep pattern src/" }).permission).toBe("read")
+  })
+
+  test("edit/write tools map to the edit permission (acceptEdits-allowable)", async () => {
+    const { acpPermissionFor } = await import("@/runtime/drivers/local-cli-driver")
+    expect(acpPermissionFor({ kind: "edit_file", title: "Edit foo.ts" }).permission).toBe("edit")
+    expect(acpPermissionFor({ kind: "", title: "Write /tmp/cowork-proof.txt" }).permission).toBe("edit")
+  })
+
+  test("shell/command tools map to the bash permission (asked in default, denied in plan)", async () => {
+    const { acpPermissionFor } = await import("@/runtime/drivers/local-cli-driver")
+    expect(acpPermissionFor({ kind: "run_command", title: "npm test" }).permission).toBe("bash")
+    expect(acpPermissionFor({ kind: "mystery", title: "" }).permission).toBe("bash")
+  })
+
+  test("patterns carry the tool title for display and approval binding", async () => {
+    const { acpPermissionFor } = await import("@/runtime/drivers/local-cli-driver")
+    const mapped = acpPermissionFor({ kind: "edit_file", title: "Write /tmp/proof.txt" })
+    expect(mapped.pattern).toBe("Write /tmp/proof.txt")
+  })
+})

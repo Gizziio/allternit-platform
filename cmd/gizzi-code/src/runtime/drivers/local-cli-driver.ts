@@ -36,8 +36,39 @@ import {
 import { spawn as nodeSpawn } from "node:child_process"
 import { Readable, Writable } from "node:stream"
 import { ProcessRegistry } from "@/runtime/process-registry"
+import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 
 const log = Log.create({ service: "local-cli-driver" })
+
+/**
+ * Coarse permission mapping for CLI-internal (ACP) tool calls. The CLI
+ * executes the tool itself; gizzi's gate decides from the tool's kind/title
+ * using the same permission vocabulary as gizzi's own tools, so session
+ * modes behave identically for every provider:
+ *   plan      → deny anything not read-only
+ *   acceptEdits → allow read + edit classes
+ *   default   → permission.asked, block until the user replies
+ *
+ * Exported for unit tests.
+ */
+export function acpPermissionFor(tool: { kind?: unknown; title?: unknown }): {
+  permission: string
+  pattern: string
+} {
+  const kind = String(tool.kind ?? "")
+  const title = String(tool.title ?? "")
+  const s = `${kind} ${title}`.toLowerCase()
+  if (/\b(read|view|grep|glob|list|cat|find|search|ls)\b/.test(s) && !/write|edit|create|delete/.test(s)) {
+    return { permission: "read", pattern: title || kind || "*" }
+  }
+  if (/(edit|write|patch|create|delete|update|mkdir|rename|move)/.test(s)) {
+    return { permission: "edit", pattern: title || kind || "*" }
+  }
+  if (/(bash|shell|command|exec|terminal|npm|pip|curl|git)/.test(s)) {
+    return { permission: "bash", pattern: title || kind || "*" }
+  }
+  return { permission: "bash", pattern: title || kind || "*" }
+}
 
 export class LocalCliDriver implements RuntimeDriver {
   private readonly runtimeId: string
@@ -732,7 +763,9 @@ export class LocalCliDriver implements RuntimeDriver {
     const events: AgentEvent[] = []
     let done = false
     let notify = () => {}
-    let usage = zeroUsage()
+    // Context-window info from ACP usage_update ({used, size}) — a fallback
+    // hint only, never a source of billing-grade token counts.
+    let contextUsage: { used: number; size: number } | undefined
 
     proc.on("exit", (code) => {
       if (code !== 0 && code !== null) {
@@ -812,13 +845,14 @@ export class LocalCliDriver implements RuntimeDriver {
             break
           }
           case "usage_update": {
+            // ACP usage_update is CONTEXT-WINDOW INFO ({used: tokens currently
+            // in context, size: context window size}), not token billing —
+            // deriving token counts from it (e.g. size - used) fabricates
+            // numbers. Keep it only as a fallback hint; real per-turn counts
+            // come from the prompt response's `usage` below.
             const used = typeof update.used === "number" ? update.used : 0
             const size = typeof update.size === "number" ? update.size : 0
-            usage = {
-              inputTokens: Math.max(0, size - used),
-              outputTokens: Math.max(0, used),
-              totalTokens: Math.max(0, size),
-            }
+            contextUsage = { used: Math.max(0, used), size: Math.max(0, size) }
             break
           }
           default:
@@ -827,10 +861,48 @@ export class LocalCliDriver implements RuntimeDriver {
       },
       requestPermission: async (request: Record<string, unknown>) => {
         const options = (request.options ?? []) as Array<Record<string, unknown>>
-        const option =
-          options.find((item) => item.kind === "allow_always") ??
-          options.find((item) => item.kind === "allow_once") ??
-          options.find((item) => !String(item.kind).includes("reject"))
+        const allowOnce = options.find((item) => item.kind === "allow_once")
+        const allowAlways = options.find((item) => item.kind === "allow_always")
+        const pickAllow = () =>
+          allowOnce ?? allowAlways ?? options.find((item) => !String(item.kind).includes("reject"))
+        const sessionID = task?.sessionID
+
+        // No session context (raw driver use outside a session turn): keep
+        // the legacy best-effort behavior rather than guessing a policy.
+        if (!sessionID) {
+          const option = pickAllow()
+          return option
+            ? { outcome: { outcome: "selected" as const, optionId: option.optionId } }
+            : { outcome: { outcome: "cancelled" as const } }
+        }
+
+        const toolCall = (request.toolCall ?? {}) as { kind?: unknown; title?: unknown }
+        const { permission, pattern } = acpPermissionFor(toolCall)
+        try {
+          // Same gate as gizzi's own tools: plan-mode denies non-readonly
+          // here; default mode publishes permission.asked and blocks until
+          // the platform/user replies via PermissionNext.reply.
+          await PermissionNext.ask({
+            permission,
+            patterns: [pattern],
+            sessionID,
+            metadata: { tool: String(toolCall.title ?? toolCall.kind ?? "tool") },
+            always: allowAlways ? [pattern] : [],
+            ruleset: [],
+          })
+        } catch (err) {
+          log.info("acp permission denied", {
+            taskId: handle.taskId,
+            permission,
+            pattern,
+            error: err instanceof Error ? err.message : String(err),
+          })
+          const rejectOption = options.find((item) => String(item.kind).includes("reject"))
+          return rejectOption
+            ? { outcome: { outcome: "selected" as const, optionId: rejectOption.optionId } }
+            : { outcome: { outcome: "cancelled" as const } }
+        }
+        const option = pickAllow()
         return option
           ? { outcome: { outcome: "selected" as const, optionId: option.optionId } }
           : { outcome: { outcome: "cancelled" as const } }
@@ -886,10 +958,26 @@ export class LocalCliDriver implements RuntimeDriver {
       }
 
       const result = await promptPromise
+      // Per-turn token counts come from the prompt response's `usage`
+      // (ACP Usage: input/output totals across the agent's internal calls).
+      // Only when the agent omits it do we fall back to the last context
+      // high-water mark (tokens in context) with output unknown — never the
+      // previous size-minus-used derivation, which reported the FREE portion
+      // of the context window as "input tokens".
+      const resultUsage = (result as { usage?: { inputTokens?: number; outputTokens?: number } | null } | undefined)?.usage
       const finishEv = {
         type: "finish",
         finishReason: result.stopReason ?? "stop",
-        usage,
+        usage: resultUsage
+          ? {
+              inputTokens: Math.max(0, resultUsage.inputTokens ?? 0),
+              outputTokens: Math.max(0, resultUsage.outputTokens ?? 0),
+              totalTokens:
+                Math.max(0, resultUsage.inputTokens ?? 0) + Math.max(0, resultUsage.outputTokens ?? 0),
+            }
+          : contextUsage
+            ? { inputTokens: contextUsage.used, outputTokens: 0, totalTokens: contextUsage.used }
+            : zeroUsage(),
       } as AgentEvent
       yield finishEv
       await this.logEvent(handle.taskId, finishEv)
@@ -903,7 +991,7 @@ export class LocalCliDriver implements RuntimeDriver {
       const errorEv = { type: "error", error } as AgentEvent
       yield errorEv
       await this.logEvent(handle.taskId, errorEv)
-      const finishEv = { type: "finish", finishReason: "error", usage } as AgentEvent
+      const finishEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
       yield finishEv
       await this.logEvent(handle.taskId, finishEv)
     } finally {

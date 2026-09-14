@@ -22,6 +22,7 @@ import { Plugin } from "@/runtime/integrations/plugin"
 import { SystemPrompt } from "@/runtime/session/system"
 import { Flag } from "@/runtime/context/flag/flag"
 import { PermissionNext } from "@/runtime/tools/guard/permission/next"
+import { runWithStreamContext } from "@/runtime/session/stream-context"
 import { Auth } from "@/runtime/integrations/auth"
 import { SessionTrace } from "@/runtime/session/trace"
 import { ContextProjector } from "@/runtime/session/context-projector"
@@ -269,7 +270,13 @@ export namespace LLM {
       },
     })
 
-    return streamText({
+    return runWithStreamContext({ sessionID: input.sessionID }, () =>
+      streamText({
+      // Raw model chunks are the sanctioned AI SDK sideband for
+      // provider-internal events (see `includeRawChunks` below): the
+      // subprocess adapter forwards CLI-observed tool invocations as raw
+      // parts and the processor turns them into session tool parts.
+      includeRawChunks: true,
       onError(error) {
         l.error("stream error", {
           error,
@@ -352,7 +359,8 @@ export namespace LLM {
           sessionId: input.sessionID,
         },
       },
-    })
+      })
+    )
   }
 
   async function resolveTools(input: Pick<StreamInput, "tools" | "agent" | "user">) {
