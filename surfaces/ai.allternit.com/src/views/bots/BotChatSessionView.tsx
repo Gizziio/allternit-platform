@@ -383,8 +383,9 @@ function BotChatSessionContent({
     launchBotComputerWindow({
       botId,
       title: `${botName}'s computer`,
+      sandboxId: activeVM?.id,
     });
-  }, [botId, botName]);
+  }, [botId, botName, activeVM?.id]);
 
   const handleShare = useCallback(async () => {
     const lines = transcript.rows.map((row) => {

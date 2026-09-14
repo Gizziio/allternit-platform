@@ -141,6 +141,7 @@ function ShellAppInner(): React.ReactNode {
   const detachedSessionId = detachedParams.get('detachedSessionId');
   const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
   const detachedBotId = detachedParams.get('botId');
+  const detachedSandboxId = detachedParams.get('sandboxId');
   const isDetachedCodeSession = detachedParams.get('detachedSurface') === 'code' && Boolean(detachedSessionId);
   const isDetachedBotComputer = detachedParams.get('detachedSurface') === 'bot-computer' && Boolean(detachedBotId);
   // The Electron desktop opens HUD-mode windows at /hud and /hud/*.  In those
@@ -724,7 +725,7 @@ function ShellAppInner(): React.ReactNode {
       <TooltipProvider>
         <VoiceProvider>
           <SessionProvider session={session}>
-            <BotComputerWindow botId={detachedBotId} />
+            <BotComputerWindow botId={detachedBotId} sandboxId={detachedSandboxId} />
           </SessionProvider>
         </VoiceProvider>
       </TooltipProvider>

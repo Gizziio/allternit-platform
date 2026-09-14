@@ -12,6 +12,7 @@ export const BOT_COMPUTER_DETACHED_SURFACE = "bot-computer";
 export type BotComputerWindowOptions = {
   botId: string;
   title?: string;
+  sandboxId?: string;
 };
 
 export function botComputerWindowHref(
@@ -25,6 +26,7 @@ export function botComputerWindowHref(
   url.searchParams.set("detachedSurface", BOT_COMPUTER_DETACHED_SURFACE);
   url.searchParams.set("botId", options.botId);
   if (options.title) url.searchParams.set("title", options.title);
+  if (options.sandboxId) url.searchParams.set("sandboxId", options.sandboxId);
   return url.toString();
 }
 

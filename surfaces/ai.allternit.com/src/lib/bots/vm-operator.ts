@@ -607,6 +607,118 @@ function botDesktopUrl(botId: string, sandboxId: string, action = '') {
   return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
 }
 
+function botDesktopBindingUrl(botId: string) {
+  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop`;
+}
+
+/**
+ * Read the bot's persisted desktop mapping (`bot_desktop_sandboxes`).
+ * The account owns one Incus/Tart computer; bots attach to it as screens.
+ * `GET /api/v1/computers?bot_id=` is empty for that shared computer
+ * (`bot_id` is null on the row) — this endpoint is the source of truth.
+ */
+export async function getBotDesktopBinding(
+  botId: string,
+  signal?: AbortSignal,
+): Promise<VMOperatorResult<BotDesktopStatus>> {
+  try {
+    const res = await fetch(botDesktopBindingUrl(botId), { signal });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as BotDesktopStatus;
+    if (!data?.sandbox_id) {
+      return { ok: false, error: 'Bot has no desktop sandbox' };
+    }
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId }, 'Failed to get bot desktop binding');
+    return { ok: false, error: err instanceof Error ? err.message : 'Desktop binding failed' };
+  }
+}
+
+/**
+ * Resolve the computer a bot chat/window should show.
+ *
+ * Order: persisted bot mapping → attach to the running account computer
+ * (provision is idempotent attach when a user computer already exists) →
+ * computers API filtered by bot_id.
+ */
+export async function resolveLiveBotDesktop(
+  botId: string,
+  hintSandboxId?: string | null,
+): Promise<VMOperatorResult<BotActiveVmLike>> {
+  if (hintSandboxId) {
+    const hinted = await getBotDesktopStatus(botId, hintSandboxId);
+    if (hinted.ok && hinted.data && isLiveDesktopStatus(hinted.data.status)) {
+      return { ok: true, data: vmFromDesktopStatus(hinted.data) };
+    }
+  }
+
+  const binding = await getBotDesktopBinding(botId);
+  if (binding.ok && binding.data && isLiveDesktopStatus(binding.data.status)) {
+    return { ok: true, data: vmFromDesktopStatus(binding.data) };
+  }
+
+  try {
+    const computers = await listComputers({ kind: 'cloud_desktop' });
+    const live = computers.find(
+      (c) => c.status === 'running' || c.status === 'creating',
+    );
+    if (live) {
+      const attached = await provisionBotDesktop(botId);
+      if (attached.ok && attached.data?.sandbox_id) {
+        return {
+          ok: true,
+          data: {
+            id: attached.data.sandbox_id,
+            provider: attached.data.provider,
+            status: attached.data.status,
+          },
+        };
+      }
+    }
+  } catch (err) {
+    logger.error({ err, botId }, 'Failed to attach bot to account computer');
+  }
+
+  const byBot = await getSandboxForAgent(botId);
+  if (byBot.ok && byBot.data) {
+    return {
+      ok: true,
+      data: {
+        id: byBot.data.id,
+        provider: byBot.data.provider,
+        status: byBot.data.status,
+        vncUrl: byBot.data.vncUrl,
+      },
+    };
+  }
+
+  return { ok: false, error: byBot.error ?? binding.error ?? 'No live desktop' };
+}
+
+function isLiveDesktopStatus(status?: string): boolean {
+  return status === 'running' || status === 'creating';
+}
+
+function vmFromDesktopStatus(data: BotDesktopStatus): BotActiveVmLike {
+  return {
+    id: data.sandbox_id,
+    provider: data.provider ?? 'cloud-desktop',
+    status: data.status,
+    vncUrl: data.ws_url,
+  };
+}
+
+export type BotActiveVmLike = {
+  id: string;
+  provider: string;
+  status: string;
+  vncUrl?: string;
+};
+
 /**
  * Provision a persistent virtual computer for a bot.
  *
