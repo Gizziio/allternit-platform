@@ -43,6 +43,8 @@ from providers.playwright_canonical import PlaywrightCanonicalProvider
 from providers.accessibility_canonical import AccessibilityCanonicalProvider
 from providers.cua_driver_canonical import CuaDriverCanonicalProvider
 from providers.cua_driver_transport import CuaDriverTransport
+from providers.agent_desktop_canonical import AgentDesktopCanonicalProvider
+from providers.agent_desktop_transport import AgentDesktopTransport
 from providers.cdp_canonical import CDPCanonicalProvider
 from providers.extension_canonical import ExtensionCanonicalProvider
 try:
@@ -198,6 +200,40 @@ async def _initialize_providers() -> None:
         _provider_diagnostics["desktop.cua-driver"] = {
             "available": False,
             "reason": "cua_driver_discovery_failed",
+            "message": str(error),
+        }
+    try:
+        transport = await AgentDesktopTransport.discover()
+        if transport is None:
+            _provider_diagnostics["desktop.agent-desktop.canonical"] = {
+                "available": False,
+                "reason": "agent_desktop_not_installed",
+            }
+        else:
+            installation = await transport.version()
+            version = (
+                installation.get("data", {}).get("version", "unknown")
+                if isinstance(installation, dict)
+                else "unknown"
+            )
+            await service.register(
+                AgentDesktopCanonicalProvider(
+                    transport,
+                    _state_dir / "artifacts",
+                    version=version,
+                    authority=_environments,
+                    backend=_environment_backends.backend("allternit.host"),
+                )
+            )
+            _provider_diagnostics["desktop.agent-desktop.canonical"] = {
+                "available": True,
+                "executable": transport.executable,
+                "version": version,
+            }
+    except Exception as error:
+        _provider_diagnostics["desktop.agent-desktop.canonical"] = {
+            "available": False,
+            "reason": "agent_desktop_discovery_failed",
             "message": str(error),
         }
 
