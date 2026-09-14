@@ -226,3 +226,107 @@ describe("approvals and errors", () => {
     expect(deriveRung(t)).toBe("streaming");
   });
 });
+
+
+describe("live activity line", () => {
+  it("tracks the most recent tool call on the active turn", () => {
+    let t = user("check the logs");
+    t = applyEvent(t, {
+      type: "tool.call",
+      id: "tc1",
+      tool: "shell",
+      inputSummary: "tail /var/log/app.log",
+      createdAt: T0 + 100,
+    });
+    expect(t.activeTurn?.activity).toEqual({
+      callId: "tc1",
+      tool: "shell",
+      inputSummary: "tail /var/log/app.log",
+      status: "running",
+      startedAt: T0 + 100,
+    });
+
+    t = applyEvent(t, {
+      type: "tool.call",
+      id: "tc2",
+      tool: "read",
+      inputSummary: "/etc/config.yml",
+      createdAt: T0 + 200,
+    });
+    expect(t.activeTurn?.activity?.callId).toBe("tc2");
+    expect(t.activeTurn?.activity?.tool).toBe("read");
+  });
+
+  it("updates the activity status only for the call it describes", () => {
+    let t = user("check");
+    t = applyEvent(t, {
+      type: "tool.call",
+      id: "tc1",
+      tool: "shell",
+      inputSummary: "ls",
+      createdAt: T0 + 100,
+    });
+    t = applyEvent(t, {
+      type: "tool.call",
+      id: "tc2",
+      tool: "read",
+      inputSummary: "a.txt",
+      createdAt: T0 + 200,
+    });
+    // Late result for the older call must not flip the newer activity.
+    t = applyEvent(t, {
+      type: "tool.result",
+      id: "tc1",
+      outputSummary: "ok",
+      status: "success",
+      createdAt: T0 + 300,
+    });
+    expect(t.activeTurn?.activity?.status).toBe("running");
+    t = applyEvent(t, {
+      type: "tool.result",
+      id: "tc2",
+      outputSummary: "contents",
+      status: "success",
+      createdAt: T0 + 400,
+    });
+    expect(t.activeTurn?.activity?.status).toBe("success");
+  });
+
+  it("clears the activity line when the turn settles and never materializes it into rows", () => {
+    let t = user("check");
+    t = applyEvent(t, {
+      type: "tool.call",
+      id: "tc1",
+      tool: "shell",
+      inputSummary: "ls",
+      createdAt: T0 + 100,
+    });
+    t = applyEvent(t, { type: "message.delta", id: "a1", textDelta: "Done." });
+    t = applyEvent(t, { type: "turn.completed", id: "a1", createdAt: T0 + 500 });
+    expect(t.activeTurn).toBeNull();
+    expect(t.rows.every((r) => r.kind !== "system")).toBe(true);
+    // The settled tool receipt row persists; the transient line does not.
+    expect(t.rows.some((r) => r.kind === "toolCall")).toBe(true);
+  });
+});
+
+describe("system.notice", () => {
+  it("appends a non-interactive system row between content rows", () => {
+    let t = user("hi");
+    t = applyEvent(t, { type: "message.delta", id: "a1", textDelta: "before" });
+    t = applyEvent(t, { type: "turn.completed", id: "a1", createdAt: T0 + 100 });
+    t = applyEvent(t, {
+      type: "system.notice",
+      id: "cmp-1",
+      text: "Context compacted — earlier messages summarized",
+      createdAt: T0 + 200,
+    });
+    const last = t.rows[t.rows.length - 1];
+    expect(last.kind).toBe("system");
+    if (last.kind === "system") {
+      expect(last.text).toBe("Context compacted — earlier messages summarized");
+      expect(last.createdAt).toBe(T0 + 200);
+    }
+    expect(deriveRung(t)).toBeNull();
+  });
+});

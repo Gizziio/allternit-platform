@@ -29,6 +29,7 @@ import {
   type BackendMessage,
   type AgentContext,
   type BrainRef,
+  type ChatFinishUsage,
 } from './native-agent-api';
 import { useAgentStore } from './agent.store';
 import type { Agent, HarnessConfig } from './agent.types';
@@ -184,7 +185,13 @@ export interface SendMessageOptions {
     onToolResult?: (toolResult: unknown) => void;
     onToolError?: (toolError: unknown) => void;
     onArtifact?: (artifact: ArtifactUIPart) => void;
-    onDone?: () => void;
+    /** Context compaction ran mid-turn (server `context_compacted` frame). */
+    onCompaction?: () => void;
+    /**
+     * Terminal stream event. Carries real token usage when the finish frame
+     * ships it; absent otherwise.
+     */
+    onDone?: (usage?: ChatFinishUsage) => void;
     onError?: (error: Error) => void;
   };
 }
@@ -810,8 +817,11 @@ async function streamMessageWithContext(
       onArtifact: (artifact) => {
         callbacks?.onArtifact?.(artifact);
       },
-      onDone: () => {
-        callbacks?.onDone?.();
+      onCompaction: () => {
+        callbacks?.onCompaction?.();
+      },
+      onDone: (usage) => {
+        callbacks?.onDone?.(usage);
       },
       onError: (error) => {
         callbacks?.onError?.(error);
@@ -1632,7 +1642,7 @@ export function createModeSessionStore(config: StoreConfig) {
                     emitArtifact(sessionId, artifact);
                     options.callbacks?.onArtifact?.(artifact);
                   },
-                  onDone: () => {
+                  onDone: (usage) => {
                     // Flush any remaining deltas immediately
                     deltaFlushScheduled = false;
                     if (deltaBuffer.length > 0) {
@@ -1754,7 +1764,7 @@ export function createModeSessionStore(config: StoreConfig) {
                       }
                     }
 
-                    options.callbacks?.onDone?.();
+                    options.callbacks?.onDone?.(usage);
                   },
                   onError: (error) => {
                     // Flush remaining deltas before showing error

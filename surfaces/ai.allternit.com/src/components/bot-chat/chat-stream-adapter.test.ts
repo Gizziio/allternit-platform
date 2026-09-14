@@ -88,6 +88,26 @@ describe("streamCallbacksToEvents", () => {
       expect(artRow.artifact.content).toBe("<h1>Hello World</h1>");
     }
   });
+
+  it("maps onCompaction to a system.notice divider row", () => {
+    let t = applyEvent(initTranscript(), userSendEvent("go", { id: "u3", createdAt: T0 }));
+    const cb = streamCallbacksToEvents((e) => {
+      t = applyEvent(t, e);
+    }, { turnId: "a3", now: () => T0 + 5 });
+
+    cb.onCompaction?.();
+    cb.onChunk?.("still here");
+
+    const notice = t.rows.find((r) => r.kind === "system");
+    expect(notice?.kind === "system" && notice.text).toBe(
+      "Context compacted — earlier messages summarized",
+    );
+    // The notice lands between the user message and the in-flight turn…
+    const noticeIndex = t.rows.findIndex((r) => r.kind === "system");
+    expect(noticeIndex).toBe(1);
+    // …and does not disturb the active turn.
+    expect(t.activeTurn?.partialText).toBe("still here");
+  });
 });
 
 describe("approval mappers", () => {

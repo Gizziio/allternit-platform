@@ -577,10 +577,13 @@ function createMainWindow(): BrowserWindow {
       // Browser Mode uses Electron webviews for real page isolation. Guest
       // preferences are locked down again in will-attach-webview below.
       webviewTag: true,
-      // Secure by default: API calls are routed through the allternit-api
-      // custom protocol handler (registered in app.whenReady) which proxies
-      // to the local API without mixed-content issues.
-      allowRunningInsecureContent: false,
+      // The platform UI is served over http://127.0.0.1. Loopback is a secure
+      // context, so Chromium treats plain ws:// connections — including the
+      // bot-desktop VNC stream, which noVNC opens as ws://127.0.0.1 — as mixed
+      // content and blocks them, making Observe/Take Over show a black canvas.
+      // Insecure content must be allowed in the MAIN window for VNC to work.
+      // Browser Mode webviews keep their own lockdown in will-attach-webview.
+      allowRunningInsecureContent: true,
     },
   });
 

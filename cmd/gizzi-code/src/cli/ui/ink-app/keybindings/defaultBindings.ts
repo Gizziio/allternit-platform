@@ -364,6 +364,7 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
       up: 'select:previous',
       t: 'railsDag:take',
       d: 'railsDag:done',
+      x: 'railsDag:fail',
       escape: 'railsDag:blur',
     },
   },

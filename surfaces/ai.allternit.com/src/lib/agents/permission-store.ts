@@ -9,8 +9,8 @@
 
 import { create } from 'zustand';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
-import { isPermissionsApiEnabled, isQuestionsApiEnabled } from '@/lib/env';
-import { nativeAgentApi, questionsApi } from './native-agent-api';
+import { isQuestionsApiEnabled } from '@/lib/env';
+import { questionsApi } from './native-agent-api';
 
 export interface PendingPermissionRequest {
   requestId: string;
@@ -100,23 +100,19 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
       };
     });
 
-    // Forward gate-originated approvals to the ApprovalGate API
-    if (request.metadata?.source === 'approval-gate') {
-      const decision = reply === 'reject' ? 'rejected' : 'approved';
-      fetch('/api/v1/cowork/approvals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actionId: requestId, decision }),
-      }).catch(() => {});
-    } else if (isPermissionsApiEnabled()) {
-      // `POST /api/v1/permissions/:id/reply` is served only by the Rust
-      // allternit-api — when the flag is off, keep the local decision without
-      // forwarding it to a backend this deployment does not serve.
-      void nativeAgentApi.permissions.replyPermission(requestId, reply).catch(() => {
-        // The request remains recorded in history; the runtime will also clear
-        // it when the originating session is stopped or disconnected.
-      });
-    }
+    // Forward the decision to the ApprovalGate API. Gate-originated (poller)
+    // and stream-originated (SSE `tool_permission`) requests share the
+    // endpoint: the store's requestId is the cowork_approvals row id — for
+    // runtime asks, the gizzi permission request id the bridge keyed the row
+    // by — and the API relays approved → allow-once / rejected → deny to the
+    // agent runtime. The old `/api/v1/permissions/:id/reply` path was never
+    // served by allternit-api and is gone.
+    const gateDecision = reply === 'reject' ? 'rejected' : 'approved';
+    fetch('/api/v1/cowork/approvals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actionId: requestId, decision: gateDecision }),
+    }).catch(() => {});
   },
 
   clearPermissionRequest: (requestId) => {

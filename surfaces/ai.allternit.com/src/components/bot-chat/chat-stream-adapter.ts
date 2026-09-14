@@ -27,6 +27,8 @@ export interface StreamCallbacks {
   onToolResult?: (toolResult: unknown) => void;
   onToolError?: (toolError: unknown) => void;
   onArtifact?: (artifact: unknown) => void;
+  /** Context compaction ran mid-turn (server `context_compacted` frame). */
+  onCompaction?: () => void;
   onDone?: () => void;
   onError?: (error: Error) => void;
 }
@@ -172,6 +174,13 @@ export function streamCallbacksToEvents(
           url,
           createdAt: now(),
         },
+      });
+    },
+    onCompaction: () => {
+      onEvent({
+        type: "system.notice",
+        id: `compaction-${ctx.turnId}`,
+        text: "Context compacted — earlier messages summarized",
         createdAt: now(),
       });
     },

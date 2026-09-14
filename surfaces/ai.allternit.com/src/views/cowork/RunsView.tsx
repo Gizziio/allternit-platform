@@ -55,7 +55,7 @@ export const RunsView: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>('all');
-  const { runs, loading, error, unsupported, recoverUnavailable, handoffsUnavailable, refresh, startRun, cancelRun, recoverRun, createHandoff } =
+  const { runs, loading, error, unsupported, refresh, startRun, cancelRun, recoverRun, createHandoff } =
     useCoworkRuns();
 
   useEffect(() => {
@@ -273,8 +273,6 @@ export const RunsView: React.FC = () => {
                 <RunDetail
                   run={run}
                   onChange={refresh}
-                  recoverUnavailable={recoverUnavailable}
-                  handoffsUnavailable={handoffsUnavailable}
                   startRun={startRun}
                   cancelRun={cancelRun}
                   recoverRun={recoverRun}
@@ -307,8 +305,6 @@ export const RunsView: React.FC = () => {
 function RunDetail({
   run,
   onChange,
-  recoverUnavailable,
-  handoffsUnavailable,
   startRun,
   cancelRun,
   recoverRun,
@@ -316,8 +312,6 @@ function RunDetail({
 }: {
   run: CoworkRun;
   onChange: () => void;
-  recoverUnavailable: boolean;
-  handoffsUnavailable: boolean;
   // Lifted from the parent's useCoworkRuns() so expanding a run does not spin
   // up a second hook instance (and a second mount fetch) per expansion.
   startRun: (id: string) => Promise<void>;
@@ -408,7 +402,7 @@ function RunDetail({
             Cancel
           </ActionButton>
         )}
-        {canRecover && !recoverUnavailable && (
+        {canRecover && (
           <ActionButton onClick={handleRecover} color="var(--status-info)" icon={<ArrowCounterClockwise size={14} weight="fill" />}>
             Recover
           </ActionButton>
@@ -425,7 +419,6 @@ function RunDetail({
       )}
 
       {/* Handoffs */}
-      {!handoffsUnavailable && (
       <Section title="Handoffs">
         {handoffs.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 'var(--spacing-sm)' }}>
@@ -475,7 +468,6 @@ function RunDetail({
           </button>
         </div>
       </Section>
-      )}
 
       {/* Event Stream */}
       <Section title="Events">

@@ -59,6 +59,14 @@ export function botRoutineLabel(jobName: string): string {
   return parseBotRoutineJobName(jobName)?.label || jobName
 }
 
+/** Turn-text prefix that marks a routine delivery (`[routine: <label>] …`). */
+export const ROUTINE_MARKER_PREFIX = "[routine: "
+
+/** True when the turn text carries the routine delivery marker. */
+export function isRoutineTurnText(text: string): boolean {
+  return text.startsWith(ROUTINE_MARKER_PREFIX)
+}
+
 /* -------------------------------------------------------------------------- */
 /* Cron job store seam                                                        */
 /* -------------------------------------------------------------------------- */
@@ -306,7 +314,7 @@ export async function deliverBotRoutine(
     bot.canonicalSession?.projectPath ?? input.projectPath,
   )
   const body = input.context ? `${input.context}\n\n${input.prompt}` : input.prompt
-  const marked = `[routine: ${input.label}] ${body}`
+  const marked = `${ROUTINE_MARKER_PREFIX}${input.label}] ${body}`
   const turn = () =>
     deps.runTurn({
       sessionID: opened.sessionId,

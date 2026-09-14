@@ -306,6 +306,11 @@ export const AgentCompatRoutes = () =>
               message_id: props.messageID ?? null,
               part_id: props.partID ?? null,
             }
+          case "session.compacted":
+            return {
+              type: "session_compacted",
+              session_id: props.sessionID ?? null,
+            }
           default:
             return undefined
         }
@@ -598,10 +603,15 @@ export const AgentCompatRoutes = () =>
       c.header("X-Accel-Buffering", "no")
       return streamSSE(c, async (stream) => {
         const write = (frame: any) => stream.writeSSE({ data: JSON.stringify(frame) })
+        // Latest assistant usage seen on the bus (message.updated carries the
+        // full message info incl. tokens) — attached to the finish frame so
+        // clients can render an exact tok/s instead of a chars/4 estimate.
+        let lastUsage: { inputTokens: number; outputTokens: number } | undefined
         const finish = (status: "complete" | "error", error?: { error: string; errorDetails?: any }) => ({
           type: "finish",
           messageId: msgID,
           status,
+          ...(status === "complete" && lastUsage ? { usage: lastUsage } : {}),
           metadata: { status, ...error },
         })
 
@@ -635,6 +645,20 @@ export const AgentCompatRoutes = () =>
             if (part?.type === "reasoning" && typeof part?.id === "string") reasoningParts.add(part.id)
             return
           }
+          if (type === "message.updated") {
+            // message.updated carries the full message info; keep the newest
+            // assistant usage so the finish frame can report real tokens.
+            const info = props.info
+            if (info?.sessionID !== sessionID || info?.role !== "assistant") return
+            const tokens = info?.tokens
+            if (typeof tokens?.input === "number" || typeof tokens?.output === "number") {
+              lastUsage = {
+                inputTokens: typeof tokens.input === "number" ? tokens.input : 0,
+                outputTokens: typeof tokens.output === "number" ? tokens.output : 0,
+              }
+            }
+            return
+          }
           const evtSession = typeof props.sessionID === "string" ? props.sessionID : ""
           if (evtSession !== "" && evtSession !== sessionID) return // different session — ignore
           if (type === "message.part.delta") {
@@ -654,6 +678,14 @@ export const AgentCompatRoutes = () =>
             const statusType = props.status?.type
             if (statusType === "busy") wasBusy = true
             else if (statusType === "idle" && wasBusy) push(finish("complete"))
+            return
+          }
+          if (type === "session.compacted") {
+            // Context compaction ran on this session (auto or manual) while
+            // the turn is in flight: surface it so the chat can render a
+            // "context compacted" divider instead of going silent.
+            push({ type: "context_compacted", messageId: msgID, sessionID })
+            return
           }
         })
 

@@ -23,6 +23,55 @@ interface GatePendingApproval {
   requestedAt: string;
 }
 
+/** Raw cowork_approvals row shape returned by /api/v1/cowork/approvals. */
+interface ApprovalRowShape {
+  id?: string;
+  content?: string;
+  source?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Map a /api/v1/cowork/approvals row to the gate shape the permission store
+ * expects. The allternit-api returns raw cowork_approvals rows whose payload
+ * lives in the `content` JSON column — rows written by the agent-chat bridge
+ * (source 'gizzi-permission') carry the same actionId/sessionId/riskLevel/
+ * summary/details keys as approval-gate rows. An already-projected row (no
+ * `content` string) is accepted as-is, and a row whose content is missing or
+ * malformed is skipped — a broken row must never wedge the poller.
+ */
+export function parseGateApprovalRow(row: unknown): GatePendingApproval | null {
+  if (!isRecord(row)) return null;
+  let candidate: unknown = row;
+  if (typeof row.content === 'string') {
+    try {
+      candidate = JSON.parse(row.content);
+    } catch {
+      return null;
+    }
+  }
+  if (!isRecord(candidate) || typeof candidate.actionId !== 'string' || !candidate.actionId) {
+    return null;
+  }
+  const details = isRecord(candidate.details) ? candidate.details : {};
+  const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+  return {
+    actionId: candidate.actionId,
+    sessionId: str(candidate.sessionId),
+    riskLevel: str(candidate.riskLevel) || 'medium',
+    summary: str(candidate.summary),
+    details: {
+      actionType: str(details.actionType),
+      target: str(details.target),
+      consequence: str(details.consequence),
+    },
+    requestedAt: str(candidate.requestedAt),
+  };
+}
+
 const POLL_INTERVAL_MS = 5_000;
 
 /**
@@ -79,22 +128,37 @@ export function useApprovalGatePoller(active = true, surface: AgentModeSurface =
         markRuntimeAvailable();
         // The allternit-api handler returns { approvals: [...] }; a newer
         // alias emits { pending: [...] }. Accept either, preferring pending.
+        // Rows are raw cowork_approvals records — the gate payload is parsed
+        // out of each row's content JSON (see parseGateApprovalRow).
         const data = (await res.json()) as {
-          pending?: GatePendingApproval[];
-          approvals?: GatePendingApproval[];
+          pending?: unknown[];
+          approvals?: unknown[];
         };
-        const pending = data.pending ?? data.approvals ?? [];
+        const rows = data.pending ?? data.approvals ?? [];
+        const pending = rows
+          .map((row) => ({ row, approval: parseGateApprovalRow(row) }))
+          .filter(
+            (entry): entry is { row: unknown; approval: GatePendingApproval } =>
+              entry.approval !== null,
+          );
 
         // Prune seen ids that are no longer pending so the set can't grow
         // unbounded and vanished approvals can be re-injected if they return.
-        const returnedIds = new Set(pending.map((a) => a.actionId));
+        const returnedIds = new Set(pending.map((p) => p.approval.actionId));
         for (const id of Array.from(seenIds.current)) {
           if (!returnedIds.has(id)) seenIds.current.delete(id);
         }
 
-        for (const approval of pending) {
+        for (const { row, approval } of pending) {
           if (seenIds.current.has(approval.actionId)) continue;
           seenIds.current.add(approval.actionId);
+
+          // Rows written by the agent-chat bridge answer a live gizzi
+          // permission ask; everything else is an approval-gate row.
+          const rowSource =
+            isRecord(row) && typeof (row as ApprovalRowShape).source === 'string'
+              ? (row as ApprovalRowShape).source
+              : undefined;
 
           usePermissionStore.getState().addPermissionRequest({
             requestId: approval.actionId,
@@ -106,7 +170,7 @@ export function useApprovalGatePoller(active = true, surface: AgentModeSurface =
               riskLevel: approval.riskLevel,
               summary: approval.summary,
               consequence: approval.details.consequence,
-              source: 'approval-gate',
+              source: rowSource === 'gizzi-permission' ? 'gizzi-permission' : 'approval-gate',
             },
             always: [],
           });

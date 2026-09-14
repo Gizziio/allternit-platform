@@ -113,10 +113,26 @@ export type TranscriptRow =
   | { kind: "toolRun"; id: string; createdAt: number; run: ToolRunGroup }
   | { kind: "approval"; id: string; createdAt: number; approval: ApprovalRequest }
   | { kind: "timestamp-gap"; id: string; from: number; to: number }
+  | { kind: "system"; id: string; createdAt: number; text: string }
   | { kind: "error"; id: string; createdAt: number; text: string };
 
 /** Ladder of the active streaming turn, from quietest to loudest. */
 export type BotChatRung = "thinking" | "typing" | "streaming";
+
+/**
+ * Transient "what is the bot doing right now" indicator for the active turn:
+ * the most recent tool call with a brief input summary. Lives only on
+ * `ActiveTurn` — it is never materialized into `rows`, so it disappears when
+ * the turn settles (the settled tool receipts stay).
+ */
+export interface ToolActivity {
+  /** Id of the tool call this activity describes (matches the receipt row). */
+  callId: string;
+  tool: string;
+  inputSummary: string;
+  status: ToolRunStatus;
+  startedAt: number;
+}
 
 /**
  * State of the in-flight bot turn. Materialized into `rows` only on
@@ -132,6 +148,8 @@ export interface ActiveTurn {
   partialText: string;
   /** Tool calls made this turn that have not all settled into rows yet. */
   pendingToolCalls: ToolCallRecord[];
+  /** Most recent tool activity; transient, cleared with the turn. */
+  activity: ToolActivity | null;
   startedAt: number;
 }
 

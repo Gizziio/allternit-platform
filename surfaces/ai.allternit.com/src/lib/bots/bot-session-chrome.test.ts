@@ -4,6 +4,7 @@ import {
   botSessionStatus,
   groupMessagesByDay,
   messageDayKey,
+  nextRoutineLabel,
   splitCompactMessages,
   summarizeOlderMessages,
 } from "./bot-session-chrome";
@@ -36,6 +37,46 @@ describe("messageDayKey", () => {
   it("labels today and yesterday", () => {
     expect(messageDayKey("2026-09-10T12:00:00.000Z", now)).toBe("Today");
     expect(messageDayKey("2026-09-09T12:00:00.000Z", now)).toBe("Yesterday");
+  });
+});
+
+describe("nextRoutineLabel", () => {
+  const now = Date.parse("2026-09-10T18:00:00.000Z");
+
+  it("returns null when there are no enabled routines", () => {
+    expect(nextRoutineLabel([], now)).toBeNull();
+    expect(
+      nextRoutineLabel(
+        [{ title: "off", enabled: false, nextRunAt: now + 60_000 }],
+        now,
+      ),
+    ).toBeNull();
+  });
+
+  it("picks the nearest enabled routine and formats the delta", () => {
+    const label = nextRoutineLabel(
+      [
+        { title: "later", enabled: true, nextRunAt: now + 3 * 60 * 60 * 1000 },
+        { title: "soon", enabled: true, nextRunAt: now + 2 * 60 * 60 * 1000 },
+      ],
+      now,
+    );
+    expect(label).toBe('next routine "soon" in 2.0h');
+  });
+
+  it("marks an overdue routine as due and formats minutes and days", () => {
+    expect(
+      nextRoutineLabel([{ title: "late", enabled: true, nextRunAt: now - 1000 }], now),
+    ).toBe('routine "late" due');
+    expect(
+      nextRoutineLabel([{ title: "m", enabled: true, nextRunAt: now + 5 * 60_000 }], now),
+    ).toBe('next routine "m" in 5m');
+    expect(
+      nextRoutineLabel(
+        [{ title: "d", enabled: true, nextRunAt: now + 3 * 24 * 60 * 60 * 1000 }],
+        now,
+      ),
+    ).toBe('next routine "d" in 3d');
   });
 });
 

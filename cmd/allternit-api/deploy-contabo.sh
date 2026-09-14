@@ -55,7 +55,7 @@ systemctl daemon-reload
 
 systemctl start allternit-api
 
-for attempt in 1 2 3 4 5 6 7 8 9 10; do
+for attempt in $(seq 1 30); do
     sleep 2
     if curl -sf http://127.0.0.1:8013/health > /dev/null 2>&1; then
         echo "health check OK"
@@ -64,6 +64,9 @@ for attempt in 1 2 3 4 5 6 7 8 9 10; do
     echo "waiting for health (attempt $attempt)..."
 done
 
+echo "HEALTH CHECK FAILED — dumping recent service logs before rollback" >&2
+journalctl -u allternit-api --since '-5 minutes' --no-pager >&2 || true
+systemctl status allternit-api --no-pager -l >&2 || true
 echo "HEALTH CHECK FAILED — rolling back to previous binary" >&2
 systemctl stop allternit-api
 if [[ -f "$BAK" ]]; then

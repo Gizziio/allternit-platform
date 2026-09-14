@@ -32,7 +32,7 @@ Proof: `infrastructure/executor/cowork/cowork/allternit-cowork-runtime/tests/sto
 - **Role:** canonical store for A:// runs, jobs, events, principals,
   intents, approvals, handoffs, memory grants, delegation rules, connector
   sessions. Same DB file the API's refinery migrations manage
-  (`V142` ownership columns, `V153` lease columns, `V162–V167` protocol
+  (`V168` ownership columns, `V153` lease columns, `V162–V167` protocol
   additions).
 - **What changed (P-T1):** the Rails cowork REST surface
   (`cmd/allternit-api/src/rails/routes_cowork.rs`) previously issued raw
@@ -43,7 +43,7 @@ Proof: `infrastructure/executor/cowork/cowork/allternit-cowork-runtime/tests/sto
   `user_id` columns (guarded `ensure_column`) so the store schema is
   self-contained.
 - **Live-path corrections (2026-09-13 evidence run):** intent-created runs
-  are stamped with the authenticated owner via `set_run_owner` (the V169
+  are stamped with the authenticated owner via `set_run_owner` (the V168
   owner-scoped Rails reads 404'd on them before); `GET /runs/:id/jobs`
   falls back to the canonical table when the legacy in-memory mirror has no
   rows; `transition_job` only drives the mirror when the mirror holds the

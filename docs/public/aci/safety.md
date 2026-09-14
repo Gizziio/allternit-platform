@@ -150,6 +150,48 @@ still unmeasured — the scripted suite covers the known attack surface, not
 novel attacks. Record→teach→batch workflow compilation has since landed
 (PR #447) — the caveat predates it.
 
+#### F1 re-verification campaign (2026-09-13, session cu26) — quota-blocked, partial evidence, one regression found and fixed
+
+The cu24 follow-up (re-run the campaign against fixed main to confirm F1's
+turn-saving with a frontier model) was attempted the same day with the cu22
+setup verbatim — same five task shapes, same brain path (gpt-6-astra via the
+authenticated codex CLI), same grant-gate stack. Two results landed; the
+turn-saving verification itself did not.
+
+**Verified first-hand on fixed main:** the PR #484 migration fix holds — a
+fresh dev database applied all 167 refinery migrations with zero errors, and
+the batch grant gate served the full request cycle (descriptor validation,
+confirmation handoff) on the first campaign probe.
+
+**Brain-path health, then quota exhaustion.** The campaign smoke logged one
+real inference (31,758 in / 60 out tokens, 12.9 s — consistent with cu22's
+31,608 in / 70 out). The per-step baseline arm then logged 26 further real
+calls (586,805 in / 1,556 out tokens total) before the codex CLI's
+ChatGPT-account usage limit tripped mid-run (account-level; the dev gateway
+has no provider key, so there is no alternate frontier path). Every call is
+in `tmp-cu26-realmodel/evidence/` (27 calls, all token counts logged). The
+limit resets 2026-09-20 12:08 AM local; the re-run resumes after that.
+
+**Campaign-found regression, fixed in this PR:** the cu24 F2 per-step
+vocabulary translation (`PLAN_ACTION_MAP`) crashes on the real planning-loop
+path — the loop builds a plain `ActionRequest`-like object, not a dataclass,
+so `dataclasses.replace` raised *"replace() should be called on dataclass
+instances"* for every mapped plan type (`click`/`press`/`select`/`…`). The
+cu22 campaign never saw this because it shimmed the translation in the
+harness; the cu24 suite tested dataclass inputs only. On main before this
+fix, per-step execution of any mapped plan type was broken end-to-end. The
+fix translates dataclasses with `replace` and everything else with a shallow
+copy; two integration-shape regression tests pin the plain-object path.
+
+**Honest status of the F1 claim:** unchanged — turn-saving through the real
+observation path remains **scripted-verified only**. The partial per-step
+runs from cu26 (e.g. form-fill 12 turns / 2-of-12 steps) are contaminated by
+the F2 crash and the quota cutoff and are **not** comparable campaign
+numbers; they are recorded in the evidence directory for forensics only. The
+decisive three-arm comparison (per-step vs pre-F1 batch vs F1 batch) is the
+open follow-up, now gated only on CLI-brain quota and unblocked on the
+per-step arm by the F2 fix above.
+
 ### Code mode (measured 2026-09-13, session cu23)
 
 Sandboxed code execution (spec `code-mode-execution`, C0–C3) is the **third

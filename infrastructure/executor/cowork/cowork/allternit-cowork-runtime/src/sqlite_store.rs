@@ -2432,12 +2432,16 @@ fn memory_principal_filter(idx: usize) -> String {
 }
 
 /// Read/search memory for a user + optional principal scope (A-T2).
+///
+/// `offset` skips the first N rows of the principal-filtered, recency-ordered
+/// result set, so `limit` + `offset` page within the same visibility window.
 pub fn search_memory_entries(
     conn: &Connection,
     user_id: &str,
     principal: Option<&str>,
     query: Option<&str>,
     limit: i64,
+    offset: i64,
 ) -> Result<Vec<serde_json::Value>, TransportError> {
     let like = query.map(|q| format!("%{q}%"));
     let out = match (principal, like) {
@@ -2447,12 +2451,12 @@ pub fn search_memory_entries(
                     "SELECT id, content, type, tags, source, owner_principal, grants, created_at
                      FROM cowork_memory_entries
                      WHERE user_id = ?1 AND content LIKE ?2 AND {}
-                     ORDER BY created_at DESC LIMIT ?3",
+                     ORDER BY created_at DESC LIMIT ?3 OFFSET ?5",
                     memory_principal_filter(4),
                 ))
                 .map_err(store_err)?;
             let rows = stmt
-                .query_map(params![user_id, q, limit, p.to_string()], memory_row)
+                .query_map(params![user_id, q, limit, p.to_string(), offset], memory_row)
                 .map_err(store_err)?
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(store_err)?;
@@ -2464,12 +2468,12 @@ pub fn search_memory_entries(
                     "SELECT id, content, type, tags, source, owner_principal, grants, created_at
                      FROM cowork_memory_entries
                      WHERE user_id = ?1 AND {}
-                     ORDER BY created_at DESC LIMIT ?2",
+                     ORDER BY created_at DESC LIMIT ?2 OFFSET ?4",
                     memory_principal_filter(3),
                 ))
                 .map_err(store_err)?;
             let rows = stmt
-                .query_map(params![user_id, limit, p.to_string()], memory_row)
+                .query_map(params![user_id, limit, p.to_string(), offset], memory_row)
                 .map_err(store_err)?
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(store_err)?;
@@ -2481,11 +2485,11 @@ pub fn search_memory_entries(
                     "SELECT id, content, type, tags, source, owner_principal, grants, created_at
                      FROM cowork_memory_entries
                      WHERE user_id = ?1 AND content LIKE ?2
-                     ORDER BY created_at DESC LIMIT ?3",
+                     ORDER BY created_at DESC LIMIT ?3 OFFSET ?4",
                 )
                 .map_err(store_err)?;
             let rows = stmt
-                .query_map(params![user_id, q, limit], memory_row)
+                .query_map(params![user_id, q, limit, offset], memory_row)
                 .map_err(store_err)?
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(store_err)?;
@@ -2496,11 +2500,11 @@ pub fn search_memory_entries(
                 .prepare(
                     "SELECT id, content, type, tags, source, owner_principal, grants, created_at
                      FROM cowork_memory_entries
-                     WHERE user_id = ?1 ORDER BY created_at DESC LIMIT ?2",
+                     WHERE user_id = ?1 ORDER BY created_at DESC LIMIT ?2 OFFSET ?3",
                 )
                 .map_err(store_err)?;
             let rows = stmt
-                .query_map(params![user_id, limit], memory_row)
+                .query_map(params![user_id, limit, offset], memory_row)
                 .map_err(store_err)?
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(store_err)?;

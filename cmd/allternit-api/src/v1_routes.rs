@@ -26,42 +26,35 @@ use crate::config::build_gizzi_harness_for_provider;
 use crate::gizzi_chat_stream::configure_harness_on_gizzi;
 use crate::{default_model, AppState};
 
-/// In-memory map from platform chatId → Gizzi session ID. Gizzi generates its
-/// own session IDs, so we cache the mapping for the lifetime of the API process.
-static GIZZI_CHAT_SESSIONS: Lazy<Mutex<HashMap<String, String>>> =
+/// In-memory map from platform chatId → (Gizzi session ID, last applied
+/// permission mode). Gizzi generates its own session IDs, so we cache the
+/// mapping for the lifetime of the API process; the cached mode lets us skip
+/// re-pushing an unchanged mode while guaranteeing every session runs under
+/// the mode the client requested.
+static GIZZI_CHAT_SESSIONS: Lazy<Mutex<HashMap<String, (String, String)>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
-async fn get_or_create_gizzi_session(
+/// Normalize the client's requested permission mode. Only the modes the
+/// allternit surfaces expose are accepted; anything absent or unrecognized
+/// falls back to "default" (gizzi's ask-before-write behavior).
+fn parse_permission_mode(body: &serde_json::Value) -> &'static str {
+    match body
+        .get("permissionMode")
+        .or_else(|| body.get("codePermissionMode"))
+        .and_then(|v| v.as_str())
+    {
+        Some("default") => "default",
+        Some("acceptEdits") => "acceptEdits",
+        Some("plan") => "plan",
+        _ => "default",
+    }
+}
+
+async fn create_gizzi_chat_session(
     client: &reqwest::Client,
     gizzi: &str,
     chat_id: &str,
 ) -> Result<String, String> {
-    {
-        let lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
-        if let Some(id) = lock.get(chat_id) {
-            return Ok(id.clone());
-        }
-    }
-
-    // Sessions created via /api/v1/agent-sessions already exist in Gizzi (that
-    // router proxies creation there). If chat_id is such a session, use it
-    // directly — forking a second Gizzi session here made streamed messages land
-    // in a different session than the one GET /agent-sessions/:id/messages reads,
-    // so threads looked empty and history vanished on reload.
-    if chat_id.starts_with("ses") {
-        if let Ok(resp) = client
-            .get(format!("{}/session/{}", gizzi, chat_id))
-            .send()
-            .await
-        {
-            if resp.status().is_success() {
-                let mut lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
-                lock.insert(chat_id.to_string(), chat_id.to_string());
-                return Ok(chat_id.to_string());
-            }
-        }
-    }
-
     let resp = client
         .post(format!("{}/session", gizzi))
         .json(&json!({ "title": format!("Allternit chat {}", chat_id) }))
@@ -77,18 +70,144 @@ async fn get_or_create_gizzi_session(
         .json::<serde_json::Value>()
         .await
         .map_err(|e| format!("failed to parse gizzi session response: {}", e))?;
-    let session_id = body
-        .get("id")
+    body.get("id")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| "gizzi session response missing id".to_string())?
-        .to_string();
+        .ok_or_else(|| "gizzi session response missing id".to_string())
+        .map(str::to_string)
+}
 
-    let mut lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
-    lock.insert(chat_id.to_string(), session_id.clone());
+async fn get_or_create_gizzi_session(
+    client: &reqwest::Client,
+    gizzi: &str,
+    chat_id: &str,
+    permission_mode: &str,
+) -> Result<String, String> {
+    let cached = {
+        let lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
+        lock.get(chat_id).cloned()
+    };
+
+    let (session_id, cached_mode) = match cached {
+        Some(entry) => entry,
+        None => {
+            // Sessions created via /api/v1/agent-sessions already exist in
+            // Gizzi (that router proxies creation there). If chat_id is such
+            // a session, use it directly — forking a second Gizzi session
+            // here made streamed messages land in a different session than
+            // the one GET /agent-sessions/:id/messages reads, so threads
+            // looked empty and history vanished on reload.
+            let id = if chat_id.starts_with("ses") {
+                match client
+                    .get(format!("{}/session/{}", gizzi, chat_id))
+                    .send()
+                    .await
+                {
+                    Ok(resp) if resp.status().is_success() => chat_id.to_string(),
+                    _ => create_gizzi_chat_session(client, gizzi, chat_id).await?,
+                }
+            } else {
+                create_gizzi_chat_session(client, gizzi, chat_id).await?
+            };
+            // An empty cached mode forces the mode sync below, so a session
+            // we have never configured always gets its mode pushed once.
+            (id, String::new())
+        }
+    };
+
+    // Enforce the requested permission mode server-side BEFORE any message
+    // streams. A runtime that rejects the mode endpoint is a runtime without
+    // server-side permission enforcement — fail closed rather than stream
+    // unguarded tool calls past the user's chosen mode.
+    if cached_mode != permission_mode {
+        match client
+            .put(format!("{}/permission/mode/{}", gizzi, session_id))
+            .json(&json!({ "mode": permission_mode }))
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => {
+                let mut lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
+                lock.insert(
+                    chat_id.to_string(),
+                    (session_id.clone(), permission_mode.to_string()),
+                );
+            }
+            Ok(resp) => {
+                let status = resp.status();
+                warn!(status = %status, chat_id = %chat_id, "gizzi rejected permission-mode set");
+                return Err(format!(
+                    "gizzi runtime lacks permission-mode enforcement (mode set rejected with status {})",
+                    status
+                ));
+            }
+            Err(e) => {
+                warn!(error = %e, chat_id = %chat_id, "failed to set gizzi permission mode");
+                return Err(format!(
+                    "failed to enforce permission mode on the agent runtime: {}",
+                    e
+                ));
+            }
+        }
+    }
+
     Ok(session_id)
 }
 
-fn gizzi_base() -> String {
+/// Shape a gizzi `permission.asked` event's properties into the JSON payload
+/// stored in `cowork_approvals.content`. Keys match what the ApprovalGate
+/// poller reads (actionId, sessionId, riskLevel, summary, details) plus the
+/// raw gizzi fields the decide route needs to relay the decision back to the
+/// runtime (requestId) and the modal renders with (toolName, patterns,
+/// always, messageId).
+fn gizzi_permission_approval_content(props: &serde_json::Value) -> serde_json::Value {
+    let permission = props
+        .get("permission")
+        .and_then(|v| v.as_str())
+        .unwrap_or("tool_use");
+    let request_id = props.get("id").and_then(|v| v.as_str()).unwrap_or("");
+    let session_id = props.get("sessionID").and_then(|v| v.as_str()).unwrap_or("");
+    let patterns: Vec<&str> = props
+        .get("patterns")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|p| p.as_str()).collect())
+        .unwrap_or_default();
+    let always: Vec<&str> = props
+        .get("always")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|p| p.as_str()).collect())
+        .unwrap_or_default();
+    let metadata = props.get("metadata").cloned().unwrap_or_else(|| json!({}));
+    let tool_name = metadata
+        .get("toolName")
+        .or_else(|| metadata.get("tool"))
+        .and_then(|v| v.as_str())
+        .unwrap_or(permission)
+        .to_string();
+    let message_id = props
+        .pointer("/tool/messageID")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    json!({
+        "actionId": request_id,
+        "sessionId": session_id,
+        "riskLevel": "medium",
+        "summary": format!("{} requested by {}", permission, tool_name),
+        "details": {
+            "actionType": permission,
+            "target": patterns.join(", "),
+            "consequence": "The agent is waiting on your approval to run this tool; the turn stays parked until you approve or reject.",
+        },
+        "toolName": tool_name,
+        "patterns": patterns,
+        "requestId": request_id,
+        "always": always,
+        "messageId": message_id,
+    })
+}
+
+pub(crate) fn gizzi_base() -> String {
     crate::APP_CONFIG
         .get()
         .map(|c| c.terminal_server_url())
@@ -836,7 +955,14 @@ async fn agent_chat_bridge(
     let model_ref = json!({ "providerID": provider_id, "modelID": model_id });
     configure_harness_on_gizzi(&client, &gizzi, harness.as_ref(), &model_ref).await;
 
-    let gizzi_session_id = match get_or_create_gizzi_session(&client, &gizzi, &chat_id).await {
+    let gizzi_session_id = match get_or_create_gizzi_session(
+        &client,
+        &gizzi,
+        &chat_id,
+        parse_permission_mode(&body_json),
+    )
+    .await
+    {
         Ok(id) => id,
         Err(err) => {
             warn!(error = %err, "Failed to get or create Gizzi session");
@@ -1001,7 +1127,15 @@ async fn agent_chat_bridge(
         // If the message endpoint returned a body with an agent response, ignore
         // it; we rely on the event stream for streaming replies.
 
-        // Stream events from gizzi, forwarding text deltas for our session
+        // Stream events from gizzi, forwarding text deltas for our session.
+        //
+        // Parked-turn behavior: when gizzi's tool guard asks for approval
+        // (permission.asked below), the tool call blocks on a pending promise
+        // and the session stays busy — no session.status idle arrives — so
+        // this loop correctly keeps the SSE stream open until the user
+        // replies (modal → POST /api/v1/cowork/approvals → decide route →
+        // gizzi reply relay) and the turn completes. Do NOT add an idle
+        // timeout that ends the stream while a turn is parked on approval.
         let mut buf = String::new();
         let mut byte_stream = event_resp.bytes_stream();
         let mut was_busy = false;
@@ -1010,6 +1144,9 @@ async fn agent_chat_bridge(
         // so reasoning streams can be forwarded as thinking deltas instead
         // of being flattened into the visible reply text.
         let mut reasoning_parts = std::collections::HashSet::<String>::new();
+        // Newest assistant usage seen on the bus (message.updated carries the
+        // full message info incl. tokens) — attached to the finish frame.
+        let mut last_usage: Option<serde_json::Value> = None;
 
         'event_loop: while let Some(chunk_result) = byte_stream.next().await {
             let chunk = match chunk_result {
@@ -1044,6 +1181,25 @@ async fn agent_chat_bridge(
                 }
 
                 match event_type {
+                    "message.updated" => {
+                        // message.updated carries the full message info;
+                        // keep the newest assistant usage so the finish frame
+                        // can report real tokens (exact tok/s client-side).
+                        let info = &props["info"];
+                        let role = info.get("role").and_then(|v| v.as_str()).unwrap_or("");
+                        let info_session = info.get("sessionID").and_then(|v| v.as_str()).unwrap_or("");
+                        if role == "assistant" && info_session == session_id {
+                            let tokens = &info["tokens"];
+                            let input = tokens.get("input").and_then(|v| v.as_u64());
+                            let output = tokens.get("output").and_then(|v| v.as_u64());
+                            if input.is_some() || output.is_some() {
+                                last_usage = Some(json!({
+                                    "inputTokens": input.unwrap_or(0),
+                                    "outputTokens": output.unwrap_or(0),
+                                }));
+                            }
+                        }
+                    }
                     "message.part.updated" => {
                         let part = &props["part"];
                         let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
@@ -1086,18 +1242,91 @@ async fn agent_chat_bridge(
                             break 'event_loop;
                         }
                     }
+                    "session.compacted" => {
+                        // Context compaction ran on this session mid-turn —
+                        // forward it so the chat can render a divider instead
+                        // of going silent (mirrors gizzi's agent-compat route).
+                        yield Ok(Event::default().data(json!({
+                            "type": "context_compacted",
+                            "messageId": msg_id,
+                        }).to_string()));
+                    }
+                    "permission.asked" => {
+                        // The tool guard parked the turn on this approval.
+                        // Surface it twice: a cowork_approvals row for the
+                        // ApprovalGate poller, and a tool_permission SSE
+                        // event so the client's permission modal fires
+                        // instantly. toolCallId is the gizzi request id — the
+                        // same key the row is stored under — so a modal reply
+                        // POSTs actionId=<that id> to /api/v1/cowork/approvals
+                        // and the decide route relays it to the runtime.
+                        if let Some(request_id) = props
+                            .get("id")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty())
+                        {
+                            let content = gizzi_permission_approval_content(props).to_string();
+                            let db = state.db.clone();
+                            let uid = user_id_for_record.clone();
+                            let rid = request_id.to_string();
+                            // INSERT OR IGNORE: gizzi may re-publish the ask
+                            // (e.g. after an SSE reconnect replay); the row is
+                            // keyed by the request id so it stays idempotent.
+                            let _ = tokio::task::spawn_blocking(
+                                move || -> Result<(), rusqlite::Error> {
+                                    let conn = db.connect()?;
+                                    conn.execute(
+                                        "INSERT OR IGNORE INTO cowork_approvals (id, user_id, content, source) \
+                                         VALUES (?1, ?2, ?3, 'gizzi-permission')",
+                                        params![rid, uid, content],
+                                    )?;
+                                    Ok(())
+                                },
+                            )
+                            .await;
+
+                            yield Ok(Event::default().data(json!({
+                                "type": "tool_permission",
+                                "toolCallId": request_id,
+                                "toolName": props
+                                    .get("permission")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("tool_use"),
+                                "messageId": props
+                                    .pointer("/tool/messageID")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or(""),
+                                "metadata": {
+                                    "sessionId": session_id,
+                                    "patterns": props
+                                        .get("patterns")
+                                        .cloned()
+                                        .unwrap_or_else(|| json!([])),
+                                    "requestId": request_id,
+                                },
+                            }).to_string()));
+                        }
+                    }
+                    // "permission.replied" is the runtime confirming a reply
+                    // our decide route already relayed — the stream consumer
+                    // needs no separate signal, so it is deliberately ignored.
+                    "permission.replied" => {}
                     _ => {}
                 }
             }
         }
 
         settle_chat_run(&chat_run, true, None).await;
-        yield Ok(Event::default().data(json!({
+        let mut finish_frame = json!({
             "type": "finish",
             "messageId": msg_id,
             "status": "complete",
             "metadata": { "status": "complete" },
-        }).to_string()));
+        });
+        if let Some(usage) = &last_usage {
+            finish_frame["usage"] = usage.clone();
+        }
+        yield Ok(Event::default().data(finish_frame.to_string()));
     };
 
     Sse::new(stream)
@@ -1282,5 +1511,77 @@ mod tests {
         let (code_score, _) = score_model_for_task(&code_model, "code", "quality");
         let (chat_score, _) = score_model_for_task(&chat_model, "code", "quality");
         assert!(code_score > chat_score, "codex should outrank a chat-fast model for code");
+    }
+
+    #[test]
+    fn permission_mode_defaults_when_absent_or_invalid() {
+        assert_eq!(parse_permission_mode(&json!({})), "default");
+        assert_eq!(parse_permission_mode(&json!({ "permissionMode": "yolo" })), "default");
+        assert_eq!(parse_permission_mode(&json!({ "permissionMode": "bypassPermissions" })), "default");
+        assert_eq!(parse_permission_mode(&json!({ "permissionMode": 42 })), "default");
+        assert_eq!(parse_permission_mode(&json!({ "codePermissionMode": null })), "default");
+    }
+
+    #[test]
+    fn permission_mode_accepts_valid_values_and_alias() {
+        assert_eq!(parse_permission_mode(&json!({ "permissionMode": "default" })), "default");
+        assert_eq!(parse_permission_mode(&json!({ "permissionMode": "acceptEdits" })), "acceptEdits");
+        assert_eq!(parse_permission_mode(&json!({ "permissionMode": "plan" })), "plan");
+        assert_eq!(
+            parse_permission_mode(&json!({ "codePermissionMode": "acceptEdits" })),
+            "acceptEdits"
+        );
+        // The primary key wins over the alias when both are present.
+        assert_eq!(
+            parse_permission_mode(
+                &json!({ "permissionMode": "plan", "codePermissionMode": "acceptEdits" })
+            ),
+            "plan"
+        );
+        // An invalid primary value does NOT fall through to a valid alias.
+        assert_eq!(
+            parse_permission_mode(
+                &json!({ "permissionMode": "yolo", "codePermissionMode": "plan" })
+            ),
+            "default"
+        );
+    }
+
+    #[test]
+    fn gizzi_permission_content_carries_gate_and_relay_keys() {
+        let props = json!({
+            "id": "perm_123",
+            "sessionID": "ses_9",
+            "permission": "bash",
+            "patterns": ["rm -rf tmp"],
+            "metadata": { "toolName": "Bash" },
+            "always": ["bash *"],
+            "tool": { "messageID": "msg_1", "callID": "call_1" },
+        });
+        let content = gizzi_permission_approval_content(&props);
+        assert_eq!(content["actionId"], "perm_123");
+        assert_eq!(content["requestId"], "perm_123");
+        assert_eq!(content["sessionId"], "ses_9");
+        assert_eq!(content["riskLevel"], "medium");
+        assert_eq!(content["summary"], "bash requested by Bash");
+        assert_eq!(content["details"]["actionType"], "bash");
+        assert_eq!(content["details"]["target"], "rm -rf tmp");
+        assert!(content["details"]["consequence"].as_str().unwrap().contains("parked"));
+        assert_eq!(content["toolName"], "Bash");
+        assert_eq!(content["patterns"], json!(["rm -rf tmp"]));
+        assert_eq!(content["always"], json!(["bash *"]));
+        assert_eq!(content["messageId"], "msg_1");
+    }
+
+    #[test]
+    fn gizzi_permission_content_tolerates_missing_fields() {
+        let content = gizzi_permission_approval_content(&json!({}));
+        assert_eq!(content["actionId"], "");
+        assert_eq!(content["sessionId"], "");
+        assert_eq!(content["toolName"], "tool_use");
+        assert_eq!(content["summary"], "tool_use requested by tool_use");
+        assert_eq!(content["patterns"], json!([]));
+        assert_eq!(content["always"], json!([]));
+        assert_eq!(content["messageId"], "");
     }
 }

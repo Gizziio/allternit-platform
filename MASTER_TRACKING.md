@@ -423,7 +423,7 @@ Statuses updated as items land; owner reviews and merges — no self-merge.
   secrets system-side only; attributed `connector.invoked`. Proof:
   `connector_breadth_tests.rs` (3 tests, escapes refused on disk).
 - **P-T5 CLOSED** — `al_persona_routes.rs`: `POST /cowork/al/chat` +
-  `GET /cowork/al/sessions/:id` (V168 transcript); model-assisted extraction
+  `GET /cowork/al/sessions/:id` (V172 transcript); model-assisted extraction
   reusing `run_completion` (extracted from `/v1/responses`, same catalog /
   credit gate / OS inference — no new LLM path) with deterministic
   fallback; target resolution via `resolve_delegation_rule` (shared with the
@@ -452,7 +452,9 @@ and every P-T6 control-surface endpoint. Evidence: `tmp/aproduct-evidence/LIVE_E
 
 **Pre-existing main breakage fixed in this session (required for the
 above):** duplicate migration versions V142/V143/V144 (cowork pass collided
-with earlier migrations) panicked every fresh DB — renumbered V169–V171;
-plus live-path fixes in the fabric submit/claim/read paths (dag_node_id NOT
-NULL, run owner stamping, workspace URI normalization, canonical fallbacks
-for mirror-only reads) — see CHANGELOG [Unreleased] → Fixed.
+with earlier migrations) panicked every fresh DB — the merge keeps
+origin/main's independent renumbering (cowork trio now V168–V170); this
+branch's P-T4/P-T5 additions take V172/V173; plus live-path fixes in the
+fabric submit/claim/read paths (dag_node_id NOT NULL, run owner stamping,
+workspace URI normalization, canonical fallbacks for mirror-only reads) —
+see CHANGELOG [Unreleased] → Fixed.
