@@ -639,6 +639,77 @@ export namespace SessionProcessor {
                 case "finish":
                   break
 
+                case "raw": {
+                  // Subprocess providers (kimi-cli ACP et al.) execute tools
+                  // inside the CLI; the loader forwards them as raw parts.
+                  // Publish them as ordinary session tool parts so surfaces
+                  // (event stream, DAG bridge) see tool execution exactly
+                  // like SDK-executed tools — with no execution on our side.
+                  const raw = (value as { raw?: unknown }).raw
+                  if (!raw || typeof raw !== "object") break
+                  const observed = raw as Record<string, unknown>
+                  if (observed.__gizzi === "observed_tool_call") {
+                    const id = String(observed.id ?? "")
+                    if (!id || toolcalls[id]) break
+                    const part = (await Session.updatePart({
+                      id: Identifier.ascending("part"),
+                      messageID: input.assistantMessage.id,
+                      sessionID: input.assistantMessage.sessionID,
+                      type: "tool",
+                      tool: String(observed.name ?? "tool"),
+                      callID: id,
+                      // The CLI is already executing the call — "running" is
+                      // the honest state, and it is what the DAG bridge keys
+                      // its tool-job rows on.
+                      state: {
+                        status: "running",
+                        input: (observed.arguments ?? {}) as Record<string, unknown>,
+                        time: { start: Date.now() },
+                      },
+                    })) as MessageV2.ToolPart
+                    toolcalls[id] = part
+                    if (!(id in toolCallOrder)) {
+                      toolCallOrder[id] = nextToolCallIndex++
+                    }
+                    Bus.publish(MessageV2.Event.PartUpdated, { part })
+                    break
+                  }
+                  if (observed.__gizzi === "observed_tool_result") {
+                    const id = String(observed.id ?? "")
+                    const match = id ? toolcalls[id] : undefined
+                    if (!match || match.state.status !== "running") break
+                    const isError = Boolean(observed.isError)
+                    const part = (await Session.updatePart({
+                      ...match,
+                      state: isError
+                        ? {
+                            status: "error",
+                            input: match.state.input,
+                            error: String(observed.content ?? "tool call failed"),
+                            time: {
+                              start: match.state.time.start,
+                              end: Date.now(),
+                            },
+                          }
+                        : {
+                            status: "completed",
+                            input: match.state.input,
+                            output: String(observed.content ?? ""),
+                            title: match.tool,
+                            metadata: {},
+                            time: {
+                              start: match.state.time.start,
+                              end: Date.now(),
+                            },
+                          },
+                    })) as MessageV2.ToolPart
+                    Bus.publish(MessageV2.Event.PartUpdated, { part })
+                    delete toolcalls[id]
+                    break
+                  }
+                  break
+                }
+
                 default:
                   log.info("unhandled", {
                     ...value,
