@@ -497,7 +497,18 @@ owner reviews and merges — no self-merge.
   GUI wizard click-through needs an interactive Clerk sign-in and was not
   exercised; every non-interactive piece (provision, spawn, status,
   folder persistence) was verified live.
-- **P2 PLANNED** — chat-drives-A://.
+- **P2 CLOSED** — chat drives A://: SSE stream
+  `POST /cowork/al/chat/stream` (delegation → run_state → approval → result
+  narration; legacy path behind `NEXT_PUBLIC_ALLTERNIT_COWORK_CHAT_VIA_AL`
+  with a parity checklist in PR #508); agentic job kind in the gizzi worker
+  (bounded model-agent loop via the existing model router, per-step
+  checkpoints, budget caps); trusted_folders enforced in worker file tools
+  (default-deny, symlink-escape-safe); approval cards → fabric approvals
+  endpoints. Live demo evidence: chat "organize this folder" → intent →
+  delegated run → worker killed mid-run (job `leased`) → sweeper requeue
+  (`queued`, retry 1) → recovery at lease_generation 2 → completed →
+  artifact written only inside the granted folder.
+  `tmp/p2-evidence/`.
 - **P3 PLANNED** — deliverables.
 - **P4 PLANNED** — reach (mobile approvals + routines).
 - **P5 PLANNED** — release engineering.

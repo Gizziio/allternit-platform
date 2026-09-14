@@ -15,13 +15,14 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Response, sse::{Event, KeepAlive, Sse}},
     routing::{get, post},
     Json, Router,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::{info, warn};
 
 use allternit_cowork_runtime::sqlite_store;
@@ -35,6 +36,11 @@ use crate::AppState;
 pub fn al_persona_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/cowork/al/chat", post(al_chat))
+        // Consumer-packaged Cowork P2: chat drives A:// — the same Al
+        // delegation, streamed (delegation → run state → approvals → result)
+        // so the chat surface narrates the canonical run instead of direct
+        // model relay.
+        .route("/cowork/al/chat/stream", post(al_chat_stream))
         .route("/cowork/al/sessions/:session_id", get(get_al_session))
 }
 
@@ -66,6 +72,95 @@ pub struct AlChatRequest {
     pub message: String,
     /// Workspace scope (default `default`), e.g. "acme".
     pub workspace: Option<String>,
+}
+
+/// Shared Al delegation outcome — used by both the JSON chat surface and the
+/// P2 SSE stream so both narrate identically.
+enum AlDelegation {
+    NoRule {
+        extracted: ExtractedIntent,
+        reply: String,
+    },
+    Delegated {
+        target_principal: String,
+        intent_id: String,
+        run_id: String,
+        action_type: String,
+        description: String,
+    },
+}
+
+/// Steps 1–3 of an Al turn: normalize the request, resolve the delegation
+/// target through the workspace rules, and submit the canonical intent
+/// (initiator = user, delegator = Al, chain [user, al]). Al never executes.
+async fn prepare_delegation(
+    state: &AppState,
+    user: &AuthUser,
+    session_id: &str,
+    workspace: &str,
+    message: &str,
+) -> Result<AlDelegation, AlError> {
+    let extracted = match model_extract(state, user, message).await {
+        Some(intent) => intent,
+        None => fallback_extract(message),
+    };
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let target =
+        sqlite_store::resolve_delegation_rule(&conn, workspace, &extracted.action_type)
+            .map_err(transport_error)?;
+    let Some(target) = target else {
+        let reply = format!(
+            "I can take this on, but no delegation rule in workspace `{workspace}` matches \
+             action type `{}`. Add one (action_type prefix → target principal) and ask again.",
+            extracted.action_type
+        );
+        return Ok(AlDelegation::NoRule { extracted, reply });
+    };
+    let al_principal = format!("a://workspace/{workspace}/principal/al");
+    let target_principal = canonicalize_target(workspace, &target);
+    let envelope = IntentEnvelope {
+        version: "a/0.1".to_string(),
+        intent_id: format!("al_{}", uuid::Uuid::new_v4()),
+        workspace: format!("a://workspace/{workspace}"),
+        initiator: user.user_id.clone(),
+        delegator: Some(al_principal.clone()),
+        target: Some(target_principal.clone()),
+        action: IntentAction {
+            action_type: extracted.action_type.clone(),
+            description: extracted.description.clone(),
+            // P2.2: Al-driven turns carry the agentic job kind — the worker
+            // runs a bounded model-agent loop (existing model router) with
+            // file/bash tools confined to the granted folders.
+            payload: Some(json!({
+                "message": message,
+                "via": "al_persona",
+                "agentic": { "task": message },
+            })),
+        },
+        permissions: vec![],
+        compute: None,
+        model: None,
+        approval: None,
+        return_channel: Some(json!({ "channel": "cowork", "session_id": session_id })),
+        causation_chain: vec![user.user_id.clone(), al_principal.clone()],
+    };
+    let submission = sqlite_store::submit_intent(&mut conn, &envelope).map_err(transport_error)?;
+    sqlite_store::set_run_owner(&mut conn, &submission.run_id, &user.user_id)
+        .map_err(transport_error)?;
+    info!(
+        user = %user.user_id,
+        intent = %submission.intent_id,
+        run = %submission.run_id,
+        target = %target_principal,
+        "Al persona delegated a request"
+    );
+    Ok(AlDelegation::Delegated {
+        target_principal,
+        intent_id: submission.intent_id,
+        run_id: submission.run_id,
+        action_type: extracted.action_type.clone(),
+        description: extracted.description.clone(),
+    })
 }
 
 /// The normalized work item Al extracts from a user message.
@@ -266,119 +361,288 @@ async fn al_chat(
         .strip_prefix("a://workspace/")
         .unwrap_or(&workspace)
         .to_string();
-    let al_principal = format!("a://workspace/{workspace}/principal/al");
 
     // Record the user's turn.
     let conn = state.db.connect().map_err(db_error)?;
     append_al_message(&conn, &user.user_id, &session_id, "user", &message, None, None)?;
 
-    // 1. Normalize toward the IntentEnvelope (model-assisted when the
-    //    gateway can run a model; deterministic otherwise).
-    let extracted = match model_extract(&state, &user, &message).await {
-        Some(intent) => intent,
-        None => fallback_extract(&message),
+    // Steps 1–3 (extract → resolve → submit) are shared with the SSE stream
+    // so both surfaces narrate identically.
+    match prepare_delegation(&state, &user, &session_id, &workspace, &message).await? {
+        AlDelegation::NoRule { extracted, reply } => {
+            let conn = state.db.connect().map_err(db_error)?;
+            append_al_message(&conn, &user.user_id, &session_id, "assistant", &reply, None, None)?;
+            Ok(Json(json!({
+                "session_id": session_id,
+                "reply": reply,
+                "delegated": false,
+                "reason": "no delegation rule matched",
+                "extracted": { "action_type": extracted.action_type, "description": extracted.description },
+            })))
+        }
+        AlDelegation::Delegated {
+            target_principal,
+            intent_id,
+            run_id,
+            action_type,
+            description,
+        } => {
+            // 4. Narrate against canonical state: run state + pending approvals.
+            let conn = state.db.connect().map_err(db_error)?;
+            let run_state: Option<String> = conn
+                .query_row(
+                    "SELECT state FROM cowork_runs WHERE id = ?1",
+                    rusqlite::params![run_id],
+                    |r| r.get(0),
+                )
+                .ok();
+            let pending_approvals: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM cowork_approval_bindings WHERE run_id = ?1 AND status = 'pending'",
+                    rusqlite::params![run_id],
+                    |r| r.get(0),
+                )
+                .unwrap_or(0);
+            let run_state_str = run_state.clone().unwrap_or_else(|| "queued".to_string());
+            let reply = format!(
+                "Delegated to {target_principal} (run {run_id}, state {run_state_str}). {pending_approvals} approval(s) pending.",
+            );
+            append_al_message(
+                &conn,
+                &user.user_id,
+                &session_id,
+                "assistant",
+                &reply,
+                Some(&intent_id),
+                Some(&run_id),
+            )?;
+
+            info!(
+                user = %user.user_id,
+                session = %session_id,
+                intent = %intent_id,
+                run = %run_id,
+                target = %target_principal,
+                "Al persona delegated a request"
+            );
+
+            Ok(Json(json!({
+                "session_id": session_id,
+                "reply": reply,
+                "delegated": true,
+                "intent_id": intent_id,
+                "run_id": run_id,
+                "target": target_principal,
+                "run_state": run_state,
+                "pending_approvals": pending_approvals,
+                "extracted": { "action_type": action_type, "description": description },
+            })))
+        }
+    }
+}
+
+/// Consumer-packaged Cowork P2 — chat drives A://. The same Al delegation
+/// as `al_chat`, streamed: `delegation` → `run_state` → `approval` /
+/// `approval_decision` → `result` → `finish`, with narration as
+/// `content_block_delta` text (the frame family the chat client already
+/// parses). Every request becomes a canonical intent → orchestrator
+/// delegation → leased worker run; nothing here bypasses Fabric Transport.
+async fn al_chat_stream(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<AlChatRequest>,
+) -> Result<Response, AlError> {
+    let user = get_user(&headers).ok_or_else(|| {
+        AlError::new(StatusCode::UNAUTHORIZED, "unauthorized", "authentication required")
+    })?;
+    let message = req.message.trim().to_string();
+    if message.is_empty() {
+        return Err(AlError::new(
+            StatusCode::BAD_REQUEST,
+            "empty_message",
+            "message must not be empty",
+        ));
+    }
+    let session_id = req
+        .session_id
+        .clone()
+        .unwrap_or_else(|| format!("als_{}", uuid::Uuid::new_v4()));
+    let workspace = req.workspace.clone().unwrap_or_else(|| "default".to_string());
+    let workspace = workspace
+        .strip_prefix("a://workspace/")
+        .unwrap_or(&workspace)
+        .to_string();
+
+    {
+        let conn = state.db.connect().map_err(db_error)?;
+        append_al_message(&conn, &user.user_id, &session_id, "user", &message, None, None)?;
+    }
+
+    let delegation =
+        prepare_delegation(&state, &user, &session_id, &workspace, &message).await?;
+
+    let db = state.db.clone();
+    let uid = user.user_id.clone();
+    let stream = async_stream::stream! {
+        match delegation {
+            AlDelegation::NoRule { reply, .. } => {
+                yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                    "type": "content_block_delta",
+                    "delta": { "type": "text_delta", "text": reply },
+                }).to_string()));
+                if let Ok(conn) = db.connect() {
+                    let _ = append_al_message(&conn, &uid, &session_id, "assistant", &reply, None, None);
+                }
+                yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                    "type": "finish", "status": "complete", "metadata": { "status": "complete" },
+                }).to_string()));
+                return;
+            }
+            AlDelegation::Delegated {
+                target_principal,
+                intent_id,
+                run_id,
+                action_type,
+                description,
+            } => {
+                let narration = format!("Delegated to {target_principal} (run {run_id}).");
+                yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                    "type": "delegation",
+                    "intent_id": intent_id,
+                    "run_id": run_id,
+                    "target": target_principal,
+                    "action_type": action_type,
+                    "description": description,
+                }).to_string()));
+                yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                    "type": "content_block_delta",
+                    "delta": { "type": "text_delta", "text": narration.clone() },
+                }).to_string()));
+                if let Ok(conn) = db.connect() {
+                    let _ = append_al_message(&conn, &uid, &session_id, "assistant", &narration, Some(&intent_id), Some(&run_id));
+                }
+
+                // Poll canonical state until the run is terminal (or the
+                // client disconnects, which drops the stream).
+                let mut last_state = String::new();
+                let mut seen_approvals: std::collections::HashSet<String> = Default::default();
+                let deadline = std::time::Instant::now() + Duration::from_secs(15 * 60);
+                loop {
+                    if std::time::Instant::now() > deadline {
+                        yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                            "type": "error", "message": "narration timed out waiting for the run to finish",
+                        }).to_string()));
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(900)).await;
+
+                    #[derive(Default)]
+                    struct Snapshot {
+                        state: String,
+                        terminal: bool,
+                        result: Option<Value>,
+                        approvals: Vec<(String, String, String, String, Option<String>)>, // id, capability, target, status, decided_by
+                    }
+                    let snap = (|| -> Snapshot {
+                        let mut snap = Snapshot::default();
+                        let Ok(conn) = db.connect() else { return snap };
+                        let row: Option<(String, Option<String>)> = conn
+                            .query_row(
+                                "SELECT state, completed_at FROM cowork_runs WHERE id = ?1",
+                                rusqlite::params![run_id],
+                                |r| Ok((r.get(0)?, r.get(1)?)),
+                            )
+                            .ok();
+                        if let Some((state, completed)) = row {
+                            snap.state = state.clone();
+                            snap.terminal = completed.is_some()
+                                || matches!(state.as_str(), "completed" | "failed" | "cancelled");
+                        }
+                        if snap.terminal {
+                            snap.result = conn
+                                .query_row(
+                                    "SELECT result FROM cowork_jobs WHERE run_id = ?1 AND result IS NOT NULL ORDER BY completed_at DESC LIMIT 1",
+                                    rusqlite::params![run_id],
+                                    |r| r.get::<_, Option<String>>(0),
+                                )
+                                .ok()
+                                .flatten()
+                                .and_then(|raw| serde_json::from_str(&raw).ok());
+                        }
+                        let mut stmt = match conn.prepare(
+                            "SELECT id, capability, target, status, decided_by FROM cowork_approval_bindings WHERE run_id = ?1 ORDER BY created_at ASC",
+                        ) {
+                            Ok(stmt) => stmt,
+                            Err(_) => return snap,
+                        };
+                        if let Ok(rows) = stmt.query_map(rusqlite::params![run_id], |r| {
+                            Ok((
+                                r.get::<_, String>(0)?,
+                                r.get::<_, String>(1)?,
+                                r.get::<_, String>(2)?,
+                                r.get::<_, String>(3)?,
+                                r.get::<_, Option<String>>(4)?,
+                            ))
+                        }) {
+                            snap.approvals = rows.filter_map(|r| r.ok()).collect();
+                        }
+                        snap
+                    })();
+
+                    if snap.state != last_state {
+                        last_state = snap.state.clone();
+                        yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                            "type": "run_state", "run_id": run_id, "state": snap.state,
+                        }).to_string()));
+                    }
+                    for (id, capability, target, status, decided_by) in &snap.approvals {
+                        if status == "pending" && seen_approvals.insert(id.clone()) {
+                            yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                                "type": "approval",
+                                "approval_id": id,
+                                "run_id": run_id,
+                                "capability": capability,
+                                "target": target,
+                            }).to_string()));
+                        } else if status != "pending" && seen_approvals.contains(id) {
+                            seen_approvals.remove(id);
+                            yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                                "type": "approval_decision",
+                                "approval_id": id,
+                                "status": status,
+                                "decided_by": decided_by,
+                            }).to_string()));
+                        }
+                    }
+                    if snap.terminal {
+                        let summary = snap
+                            .result
+                            .as_ref()
+                            .and_then(|r| r.get("summary").and_then(|v| v.as_str()).map(str::to_string))
+                            .unwrap_or_else(|| format!("run {run_id} finished ({})", snap.state));
+                        yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                            "type": "result", "run_id": run_id, "state": snap.state, "result": snap.result,
+                        }).to_string()));
+                        yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                            "type": "content_block_delta",
+                            "delta": { "type": "text_delta", "text": format!("Done: {summary}") },
+                        }).to_string()));
+                        if let Ok(conn) = db.connect() {
+                            let _ = append_al_message(&conn, &uid, &session_id, "assistant", &format!("Done: {summary}"), Some(&intent_id), Some(&run_id));
+                        }
+                        yield Ok::<axum::response::sse::Event, std::convert::Infallible>(Event::default().data(json!({
+                            "type": "finish", "status": snap.state, "metadata": { "status": snap.state },
+                        }).to_string()));
+                        break;
+                    }
+                }
+            }
+        }
     };
 
-    // 2. Resolve the execution target through the delegation rules — the
-    //    same resolution the deterministic orchestrator uses.
-    let target = sqlite_store::resolve_delegation_rule(&conn, &workspace, &extracted.action_type)
-        .map_err(transport_error)?;
-
-    let Some(target) = target else {
-        let reply = format!(
-            "I can take this on, but no delegation rule in workspace `{workspace}` matches \
-             action type `{}`. Add one (action_type prefix → target principal) and ask again.",
-            extracted.action_type
-        );
-        append_al_message(&conn, &user.user_id, &session_id, "assistant", &reply, None, None)?;
-        return Ok(Json(json!({
-            "session_id": session_id,
-            "reply": reply,
-            "delegated": false,
-            "reason": "no delegation rule matched",
-            "extracted": { "action_type": extracted.action_type, "description": extracted.description },
-        })));
-    };
-    let target_principal = canonicalize_target(&workspace, &target);
-
-    // 3. Submit the canonical intent: initiator = user, delegator = Al,
-    //    chain [user, al]. Al never appears as executor.
-    let envelope = IntentEnvelope {
-        version: "a/0.1".to_string(),
-        intent_id: format!("al_{}", uuid::Uuid::new_v4()),
-        workspace: format!("a://workspace/{workspace}"),
-        initiator: user.user_id.clone(),
-        delegator: Some(al_principal.clone()),
-        target: Some(target_principal.clone()),
-        action: IntentAction {
-            action_type: extracted.action_type.clone(),
-            description: extracted.description.clone(),
-            payload: Some(json!({ "message": message, "via": "al_persona" })),
-        },
-        permissions: vec![],
-        compute: None,
-        model: None,
-        approval: None,
-        return_channel: Some(json!({ "channel": "cowork", "session_id": session_id })),
-        causation_chain: vec![user.user_id.clone(), al_principal.clone()],
-    };
-    let mut conn = state.db.connect().map_err(db_error)?;
-    let submission = sqlite_store::submit_intent(&mut conn, &envelope).map_err(transport_error)?;
-    sqlite_store::set_run_owner(&mut conn, &submission.run_id, &user.user_id)
-        .map_err(transport_error)?;
-
-    // 4. Narrate against canonical state: run state + pending approvals.
-    let run_state: Option<String> = conn
-        .query_row(
-            "SELECT state FROM cowork_runs WHERE id = ?1",
-            rusqlite::params![submission.run_id],
-            |r| r.get(0),
-        )
-        .ok();
-    let pending_approvals: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM cowork_approval_bindings WHERE run_id = ?1 AND status = 'pending'",
-            rusqlite::params![submission.run_id],
-            |r| r.get(0),
-        )
-        .unwrap_or(0);
-    let run_state_str = run_state.clone().unwrap_or_else(|| "queued".to_string());
-    let reply = format!(
-        "Delegated to {target_principal} (run {}, state {}). {pending_approvals} approval(s) pending.",
-        submission.run_id,
-        run_state_str,
-    );
-    append_al_message(
-        &conn,
-        &user.user_id,
-        &session_id,
-        "assistant",
-        &reply,
-        Some(&submission.intent_id),
-        Some(&submission.run_id),
-    )?;
-
-    info!(
-        user = %user.user_id,
-        session = %session_id,
-        intent = %submission.intent_id,
-        run = %submission.run_id,
-        target = %target_principal,
-        "Al persona delegated a request"
-    );
-
-    Ok(Json(json!({
-        "session_id": session_id,
-        "reply": reply,
-        "delegated": true,
-        "intent_id": submission.intent_id,
-        "run_id": submission.run_id,
-        "created": submission.created,
-        "target": target_principal,
-        "run_state": run_state,
-        "pending_approvals": pending_approvals,
-        "extracted": { "action_type": extracted.action_type, "description": extracted.description },
-    })))
+    Ok(Sse::new(stream)
+        .keep_alive(KeepAlive::default())
+        .into_response())
 }
 
 /// Transcript + observed canonical run states for a session (the control

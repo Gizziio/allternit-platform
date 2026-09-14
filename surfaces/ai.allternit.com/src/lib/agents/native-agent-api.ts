@@ -21,7 +21,7 @@
 import type { ArtifactUIPart } from "@/lib/ai/ui-parts.types";
 import { buildAuthHeaders } from "@/lib/agents/api-config";
 import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
-import { getCloudApiBaseUrl, isAgentSessionsApiEnabled, isDesktopOperatorShell } from "@/lib/env";
+import { getCloudApiBaseUrl, isAgentSessionsApiEnabled, isDesktopOperatorShell, isCoworkChatViaAlEnabled } from "@/lib/env";
 import { createCloudApiEventSource } from "@/lib/cloud-api";
 import {
   detectRuntimeUnavailable,
@@ -94,8 +94,12 @@ const getRuntimeBase = () => getApiV1Base();
 // chat: local desktop uses Next.js /api/agent-chat; tunnel rewrites /api/v1/agent-chat → /agent-chat on allternit-api
 // Returns base such that appending /agent-chat gives the correct URL in both environments
 const getAgentChatBase = () => getGatewayOrigin() ? `${getGatewayOrigin()}/api/v1` : '/api';
-const getAgentChatUrl = () =>
-  isDesktopOperatorShell() ? `${getApiV1Base()}/ai/chat` : `${getAgentChatBase()}/agent-chat`;
+const getAgentChatUrl = () => {
+  // P2: feature-flagged route — chat drives A:// through the Al persona
+  // sessions API (canonical intent → delegation → leased worker run).
+  if (isCoworkChatViaAlEnabled()) return `${getApiV1Base()}/cowork/al/chat/stream`;
+  return isDesktopOperatorShell() ? `${getApiV1Base()}/ai/chat` : `${getAgentChatBase()}/agent-chat`;
+};
 
 // ============================================================================
 // Types - Backend API Response Shapes
@@ -702,8 +706,19 @@ export const runtimeApi = {
 // Chat API
 // ============================================================================
 
+export interface ApprovalRequest {
+  approvalId: string;
+  runId: string;
+  capability?: string;
+  target?: string;
+  status: string;
+  decidedBy?: string;
+}
+
 export interface ChatStreamCallbacks {
   onChunk?: (chunk: BackendChatChunk) => void;
+  /** A:// approval narration (P2.4): render a grant/deny card. */
+  onApproval?: (approval: ApprovalRequest) => void;
   onThinkingChunk?: (text: string) => void;
   onToolCall?: (tool: {
     toolCallId: string;
@@ -924,6 +939,23 @@ export const chatApi = {
                 toolName:
                   typeof parsed.toolName === "string" ? parsed.toolName : undefined,
                 error: String(parsed.error ?? "Tool execution failed"),
+              });
+            } else if (parsed.type === "delegation" || parsed.type === "run_state" || parsed.type === "result") {
+              // A:// narration frames (P2): surface as text lines.
+              const line = parsed.type === "delegation"
+                ? `Delegation created → ${parsed.target} (run ${parsed.run_id})`
+                : parsed.type === "run_state"
+                  ? `Run state: ${parsed.state}`
+                  : `Result: ${parsed.state ?? "done"}`;
+              callbacks.onChunk?.({ chunk: line, chunk_type: "text", session_id: sessionId });
+            } else if (parsed.type === "approval" || parsed.type === "approval_decision") {
+              callbacks.onApproval?.({
+                approvalId: parsed.approval_id as string,
+                runId: parsed.run_id as string,
+                capability: parsed.capability as string | undefined,
+                target: parsed.target as string | undefined,
+                status: (parsed.status as string | undefined) ?? "pending",
+                decidedBy: parsed.decided_by as string | undefined,
               });
             } else if (parsed.type === "finish" || parsed.type === "message_stop") {
               markDone(parseFinishUsage(parsed));

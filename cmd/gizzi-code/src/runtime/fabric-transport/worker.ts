@@ -174,6 +174,7 @@ export async function runFabricWorker(opts: RunFabricWorkerOptions = {}): Promis
 
     log("info", "worker.claimed", { job_id: grant.job_id, lease_generation: grant.lease_generation })
     const steps: string[] = Array.isArray(grant.payload?.steps) ? (grant.payload.steps as string[]) : []
+    const agentic = grant.payload?.agentic as { task?: string; model?: string; max_steps?: number; max_tokens?: number } | undefined
     const stepResults: Array<{ step: number; code: number }> = []
     let heartbeat: ReturnType<typeof setInterval> | null = null
     let failed = false
@@ -185,6 +186,38 @@ export async function runFabricWorker(opts: RunFabricWorkerOptions = {}): Promis
           body: JSON.stringify({ lease_id: grant.lease_id, lease_generation: grant.lease_generation }),
         }).catch(() => {})
       }, HEARTBEAT_MS)
+
+      if (agentic) {
+        // Agentic job kind (P2.2): bounded model-agent loop through the
+        // existing model router, checkpointed per committed step.
+        const { runAgenticLoop } = await import("./agentic")
+        await runAgenticLoop(agentic.task ?? String(grant.payload?.message ?? ""), {
+          apiBase: API,
+          operatorKey: process.env.ALLTERNIT_OPERATOR_API_KEY ?? null,
+          model: agentic.model ?? process.env.ALLTERNIT_AGENTIC_MODEL ?? "openai/gpt-4o-mini",
+          grants: (await import("./agentic")).parseGrants(process.env.ALLTERNIT_WORKER_TRUSTED_FOLDERS),
+          checkpoint: (stepIndex, cursor) =>
+            api(`/runs/${grant.run_id}/checkpoints`, {
+              method: "POST",
+              body: JSON.stringify({ step_index: stepIndex, cursor_state: cursor }),
+            }).then(() => {}).catch(() => {}),
+          complete: (success, summary, outputs) =>
+            api(`/fabric/transport/jobs/${grant.job_id}/complete`, {
+              method: "POST",
+              body: JSON.stringify({
+                lease_id: grant.lease_id,
+                lease_generation: grant.lease_generation,
+                success,
+                summary,
+                outputs: { worker: "a://principal/gizzi", agentic: true, ...outputs },
+              }),
+            }).then(() => {}).catch(() => {}),
+          log,
+          maxSteps: agentic.max_steps,
+          maxTokens: agentic.max_tokens,
+        })
+        continue
+      }
 
       for (let i = 0; i < steps.length; i++) {
         const { code } = await runStep(steps[i], cwd, grant.job_id)

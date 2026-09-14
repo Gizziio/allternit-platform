@@ -423,7 +423,18 @@ async function startManagedFabricWorker(): Promise<void> {
   const ensured = (await ensureRes.json()) as { principal_id: string; token: string };
   writeSecret(FABRIC_WORKER_TOKEN_KEY, ensured.token);
   log.info(`[Main] Fabric worker credential provisioned for ${ensured.principal_id} (stored in Keychain)`);
-  const state = await fabricWorkerManager.start({ token: ensured.token, apiUrl: URLS.API });
+  // P2.2/2.3: the worker's agentic jobs use the existing model router (the
+  // api's operator key) and confine file tools to the granted folders.
+  const prefsRes = await fetch(`${URLS.API}/api/v1/cowork-preferences`, { headers });
+  const trustedFolders: string[] = prefsRes.ok
+    ? (((await prefsRes.json().catch(() => ({}))) as { trusted_folders?: string[] }).trusted_folders ?? [])
+    : [];
+  const state = await fabricWorkerManager.start({
+    token: ensured.token,
+    apiUrl: URLS.API,
+    operatorKey: backendManager.getApiKey(),
+    trustedFolders,
+  });
   serviceState.fabricWorker = { status: state.status === 'up' ? 'up' : state.status, detail: state.detail };
   pushServiceState();
 }
