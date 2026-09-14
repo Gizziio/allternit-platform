@@ -425,10 +425,19 @@ pub(crate) struct VisibilityPane {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub(crate) struct VisibilityNeedNode {
+    pub(crate) dag_id: String,
+    pub(crate) node_id: String,
+    pub(crate) title: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub(crate) struct VisibilityNeed {
     pub(crate) id: String,
     pub(crate) label: String,
     pub(crate) reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) node: Option<VisibilityNeedNode>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -445,7 +454,7 @@ pub(crate) struct VisibilityDto {
 /// (engine blocked/idle panes + waiting-on-you); falls back to the local
 /// peer registry when ao is down.
 async fn visibility(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let dto = visibility::load_visibility(&state.rails.root_dir, &state.rails.peers).await;
+    let dto = visibility::load_visibility(&state.rails.root_dir, &state.rails.peers, &state.rails.ledger).await;
     (StatusCode::OK, Json(dto))
 }
 

@@ -66,3 +66,11 @@ Checks:
 Emits:
 - WIHArchived
 - VaultJobCreated → VaultJobCompleted
+
+## Gate 6 — Node removal
+Trigger: `DagMutation::DeleteNode` (e.g. API `DELETE /dags/:dag_id/nodes/:node_id`).
+Checks (enforced at the API surface, not the library):
+- node has no active WIH (status not CLOSED/FAILED/VAULTED)
+- node has no children with status other than DONE
+Emits:
+- DagNodeRemoved (payload: dag_id, node_id, title, parent_node_id)

@@ -17,7 +17,7 @@ Required events:
 ### `allternit plan refine <dag_id> --delta "<text>" [--mutations <file>|--mutations-json <json>]`
 Required events:
 - PromptDeltaAppended
-- (0..N) DagNodeCreated / DagNodeUpdated / DagEdgeAdded / DagRelationAdded
+- (0..N) DagNodeCreated / DagNodeUpdated / DagNodeRemoved / DagEdgeAdded / DagRelationAdded
 
 Notes:
 - In strict provenance mode, every mutation must carry `prompt_id + delta_id` or `agent_decision_id`.
@@ -53,6 +53,10 @@ Mutations JSON format:
     "b": "n_0004",
     "note": "related but not blocked",
     "context_share": true
+  },
+  {
+    "op": "delete_node",
+    "node_id": "n_0002"
   }
 ]
 ```
