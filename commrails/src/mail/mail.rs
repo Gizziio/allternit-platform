@@ -316,7 +316,6 @@ impl Mail {
                 "importance": message.importance,
                 "ack_required": message.ack_required,
                 "body_path": body_rel,
-                "peer_address": message.peer_address,
                 "sent_at": Utc::now().to_rfc3339()
             }),
         );
@@ -491,7 +490,6 @@ mod tests {
             importance: MailImportance::Normal,
             ack_required,
             body: "body".to_string(),
-            peer_address: None,
         }
     }
 
@@ -533,7 +531,6 @@ mod tests {
                     importance: MailImportance::High,
                     ack_required: true,
                     body: "# Body".to_string(),
-                    peer_address: None,
                 },
             )
             .await
@@ -596,7 +593,6 @@ mod tests {
                     importance: MailImportance::Normal,
                     ack_required: false,
                     body: "x".to_string(),
-                    peer_address: None,
                 },
             )
             .await;

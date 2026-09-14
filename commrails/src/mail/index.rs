@@ -240,7 +240,6 @@ mod tests {
             importance: MailImportance::Normal,
             ack_required: false,
             body: body.to_string(),
-            peer_address: None,
         }
     }
 

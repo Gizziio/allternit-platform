@@ -65,13 +65,7 @@ pub use crate::peer::{
 };
 #[cfg(unix)]
 pub use crate::peer::PeerSocket;
-pub use crate::orchestrator::{DoctorReport, ExecutorSession, ExecutorSpec, ExecutorState,
-                              Orchestrator, OrchestratorOptions};
-pub use crate::peer::{Peer, PeerAddress, PeerInboxOptions, PeerInboxServer, PeerKind, PeerMessage,
-                      PeerRegistry, PeerRegistryOptions, send_to_peer};
 pub use crate::prompt::{project_prompt, PromptTimeline};
-pub use crate::steer::{Steering, SteeringCheckpoint, SteeringConsult, SteeringGateResult,
-                      SteeringOptions, SteeringVerdict, parse_checkpoint};
 pub use crate::receipts::{ReceiptStore, ReceiptStoreOptions};
 pub use crate::steer::{CheckpointResult, ConsultResult, Steer};
 pub use crate::vault::{Vault, VaultOptions};
