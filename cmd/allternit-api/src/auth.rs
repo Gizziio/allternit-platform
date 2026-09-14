@@ -691,6 +691,27 @@ pub(crate) fn constant_time_eq(a: &str, b: &str) -> bool {
     a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
+/// Local-only gate for managed-runtime endpoints (e.g. the fabric worker
+/// auto-provision route): true only when the caller presents the
+/// `x-allternit-desktop-access-token` header matching the configured
+/// `ALLTERNIT_DESKTOP_ACCESS_TOKEN` spawn-time secret. Fail-closed when no
+/// secret is configured — in cloud deployments this path simply does not
+/// exist.
+pub fn verify_desktop_access_token(
+    headers: &HeaderMap,
+    config: &crate::config::AppConfig,
+) -> bool {
+    let expected = match config.desktop_access_token() {
+        Some(token) => token,
+        None => return false,
+    };
+    let provided = headers
+        .get(DESKTOP_ACCESS_TOKEN_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    !provided.is_empty() && constant_time_eq(provided, &expected)
+}
+
 fn extract_desktop_bootstrap_user(
     headers: &HeaderMap,
     config: &crate::config::AppConfig,

@@ -325,6 +325,27 @@ pub fn seed_default_principals(conn: &mut Connection) -> Result<Vec<String>, Tra
     Ok(touched)
 }
 
+/// Managed-runtime ensure (consumer desktop, P1): the `gizzi` worker
+/// principal for a workspace exists with its canonical capability set and
+/// roles. Idempotent upsert — never touches credentials (the desktop
+/// provisions those separately via the local ensure route, which returns
+/// the fresh token once). Returns the principal id.
+pub fn ensure_gizzi_principal(
+    conn: &mut Connection,
+    workspace: &str,
+) -> Result<String, TransportError> {
+    let ws = workspace.strip_prefix("a://workspace/").unwrap_or(workspace);
+    let id = format!("a://workspace/{ws}/principal/gizzi");
+    mint_principal(
+        conn,
+        &id,
+        ws,
+        &GIZZI_CAPABILITIES.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+        &["worker".into(), "code".into(), "terminal".into()],
+    )?;
+    Ok(id)
+}
+
 /// Compute placement resolution (§8.8, P-T2): an explicit compute policy on
 /// the intent becomes a mandatory job capability; claim eligibility then
 /// restricts the job to workers that declared that capability.

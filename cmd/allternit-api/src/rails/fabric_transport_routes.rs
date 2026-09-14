@@ -31,6 +31,12 @@ pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/fabric/transport/principals", post(create_principal))
         .route("/fabric/transport/principals", get(list_principals))
+        // Managed-runtime local provision (consumer desktop P1): gated on the
+        // spawn-time desktop access secret; absent in cloud deployments.
+        .route(
+            "/fabric/transport/local/ensure-worker-principal",
+            post(ensure_worker_principal),
+        )
         .route("/fabric/transport/claim", post(claim))
         .route("/fabric/transport/jobs/:job_id", get(get_job))
         .route("/fabric/transport/jobs/:job_id/heartbeat", post(heartbeat))
@@ -158,6 +164,58 @@ async fn sync_run_state(state: &AppState, run_id: &str, to: RunState) {
 }
 
 // ─── Principal registration ─────────────────────────────────────────────────
+
+/// Managed-runtime local provision (consumer desktop P1): the signed desktop
+/// process calls this once per profile to obtain the fabric-transport worker
+/// credential it stores in the macOS Keychain and hands to the bundled
+/// worker. Local-only: requires the spawn-time desktop access secret; the
+/// token is minted fresh (rotating any previous one) and returned exactly
+/// once — only its hash is stored.
+#[derive(Debug, serde::Deserialize)]
+pub struct EnsureWorkerPrincipalRequest {
+    #[serde(default = "default_worker_workspace")]
+    pub workspace: String,
+}
+
+fn default_worker_workspace() -> String {
+    "default".to_string()
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct EnsureWorkerPrincipalResponse {
+    pub principal_id: String,
+    pub workspace: String,
+    pub token: String,
+}
+
+async fn ensure_worker_principal(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(req): Json<EnsureWorkerPrincipalRequest>,
+) -> Result<Json<EnsureWorkerPrincipalResponse>, ErrorResponse> {
+    if !crate::auth::verify_desktop_access_token(&headers, &state.config) {
+        return Err(ErrorResponse {
+            error: "local desktop auth required to provision the worker principal".to_string(),
+            code: 403,
+        });
+    }
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let principal_id =
+        sqlite_store::ensure_gizzi_principal(&mut conn, &req.workspace).map_err(transport_err)?;
+    let token =
+        sqlite_store::provision_principal_token(&mut conn, &principal_id).map_err(transport_err)?;
+    let workspace = req
+        .workspace
+        .strip_prefix("a://workspace/")
+        .unwrap_or(&req.workspace)
+        .to_string();
+    info!(principal = %principal_id, "Managed runtime provisioned fabric worker credential (returned once)");
+    Ok(Json(EnsureWorkerPrincipalResponse {
+        principal_id,
+        workspace,
+        token,
+    }))
+}
 
 #[derive(Debug, serde::Deserialize)]
 pub struct CreatePrincipalRequest {
