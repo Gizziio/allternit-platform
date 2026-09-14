@@ -139,6 +139,8 @@ pub struct WaitingEntry {
     pub title: Option<String>,
     pub blocked_seq: u64,
     pub observed_at_ms: u64,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub tokens: HashMap<String, String>,
 }
 
 /// Persistent waiting-on-you list (see module docs).
@@ -174,6 +176,7 @@ impl WaitingList {
                 title: agent.title.clone(),
                 blocked_seq: agent.state_change_seq,
                 observed_at_ms: now_ms,
+                tokens: agent.tokens.clone(),
             });
         }
     }
@@ -508,6 +511,47 @@ mod tests {
         list.observe(&[agent_info("p1", AgentStatus::Blocked, 9)], 200);
         assert_eq!(list.len(), 1);
         assert_eq!(list.ordered()[0].blocked_seq, 2);
+    }
+
+    #[test]
+    fn waiting_list_entry_carries_pane_tokens() {
+        let mut list = WaitingList::new();
+        let mut blocked = agent_info("p1", AgentStatus::Blocked, 2);
+        blocked
+            .tokens
+            .insert("needsYou".to_string(), "approve plan".to_string());
+        blocked
+            .tokens
+            .insert("dagWih".to_string(), "wih_123".to_string());
+        list.observe(&[blocked], 100);
+
+        let entry = &list.ordered()[0];
+        assert_eq!(entry.tokens.get("needsYou").map(String::as_str), Some("approve plan"));
+        assert_eq!(entry.tokens.get("dagWih").map(String::as_str), Some("wih_123"));
+
+        // Carried through the panel snapshot and serialized as `tokens`.
+        let panel = build_panel(
+            FeedSample {
+                engine: Ok(vec![]),
+                native: vec![],
+                peers: vec![],
+            },
+            &list,
+            vec![],
+            100,
+        );
+        let value = serde_json::to_value(&panel.waiting_on_you[0]).unwrap();
+        assert_eq!(
+            value.pointer("/tokens/needsYou").and_then(|v| v.as_str()),
+            Some("approve plan")
+        );
+
+        // Empty tokens are skipped in JSON entirely.
+        let mut empty = WaitingList::new();
+        empty.observe(&[agent_info("p2", AgentStatus::Blocked, 3)], 100);
+        assert!(empty.ordered()[0].tokens.is_empty());
+        let value = serde_json::to_value(&empty.ordered()[0]).unwrap();
+        assert!(value.get("tokens").is_none());
     }
 
     #[test]
