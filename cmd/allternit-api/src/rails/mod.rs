@@ -2608,6 +2608,9 @@ fn dag_node_json(node: &DagNode, ready: bool, wih: Option<&WihState>) -> serde_j
         "node_id": node.node_id,
         "parent_node_id": node.parent_node_id,
         "title": node.title,
+        "description": node.description,
+        "labels": node.labels,
+        "priority": node.priority,
         "status": node.status,
         "ready": ready,
         "assignee": wih.and_then(|w| w.agent_id.clone()),
@@ -2989,6 +2992,53 @@ struct UpdateDagNodeRequest {
     // to an absent field), so the distinction needs an explicit visitor.
     #[serde(default, deserialize_with = "deserialize_reparent")]
     parent_node_id: Option<Option<String>>,
+    // Present (even as []) replaces the node's label set; absent = unchanged.
+    labels: Option<Vec<String>>,
+    // Absent = unchanged; empty string passes through and clears the text.
+    description: Option<String>,
+    // Three-state, same serde collapse as parent_node_id: absent = unchanged,
+    // null = explicit clear attempt (NOT supported — apply_node_patch ignores
+    // a null priority, so it is a no-op), integer = set.
+    #[serde(default, deserialize_with = "deserialize_priority_patch")]
+    priority: Option<Option<i64>>,
+}
+
+fn deserialize_priority_patch<'de, D>(deserializer: D) -> Result<Option<Option<i64>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct PriorityVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for PriorityVisitor {
+        type Value = Option<Option<i64>>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("null or an integer priority")
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(None))
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(None))
+        }
+
+        fn visit_some<D2>(self, deserializer: D2) -> Result<Self::Value, D2::Error>
+        where
+            D2: serde::Deserializer<'de>,
+        {
+            i64::deserialize(deserializer).map(Some).map(Some)
+        }
+    }
+
+    deserializer.deserialize_option(PriorityVisitor)
 }
 
 fn deserialize_reparent<'de, D>(deserializer: D) -> Result<Option<Option<String>>, D::Error>
@@ -3044,10 +3094,15 @@ async fn update_dag_node(
         )
             .into_response();
     }
-    if req.title.is_none() && req.parent_node_id.is_none() {
+    if req.title.is_none()
+        && req.parent_node_id.is_none()
+        && req.labels.is_none()
+        && req.description.is_none()
+        && req.priority.is_none()
+    {
         return (
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "no changes: title or parent_node_id is required" })),
+            Json(json!({ "error": "no changes: one of title, parent_node_id, labels, description, priority is required" })),
         )
             .into_response();
     }
@@ -3089,8 +3144,31 @@ async fn update_dag_node(
             });
         }
     }
+    // labels/description/priority ride a single patch mutation carrying
+    // exactly the provided keys.
+    let mut patch_map = serde_json::Map::new();
+    if let Some(labels) = &req.labels {
+        patch_map.insert("labels".to_string(), serde_json::Value::from(labels.clone()));
+    }
+    if let Some(description) = &req.description {
+        patch_map.insert(
+            "description".to_string(),
+            serde_json::Value::from(description.clone()),
+        );
+    }
+    if let Some(Some(priority)) = req.priority {
+        patch_map.insert("priority".to_string(), serde_json::Value::from(priority));
+    }
+    if !patch_map.is_empty() {
+        mutations.push(DagMutation::UpdateNode {
+            node_id: node_id.clone(),
+            patch: serde_json::Value::Object(patch_map),
+        });
+    }
     if mutations.is_empty() {
-        // Reparent identical to the current parent: nothing to record.
+        // Nothing to record: reparent identical to the current parent, or a
+        // priority:null clear attempt (unsupported — apply_node_patch ignores
+        // null priorities, so clearing is a documented v6 deferral).
         return (StatusCode::OK, Json(json!({ "node_id": node_id }))).into_response();
     }
 
@@ -5831,6 +5909,131 @@ mod tests {
         assert_eq!(body["node_id"], json!(c_id));
         let (c_id2, _) = node_info(&app, &dag_id, "task C renamed").await;
         assert_eq!(c_id2, c_id);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// PATCH labels/description/priority: one call sets all three, labels
+    /// replace (not merge), an empty array clears, and priority null is a
+    /// no-op (clearing priority is not supported — apply_node_patch ignores
+    /// null).
+    #[tokio::test]
+    async fn patch_node_labels_description_priority() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-node-meta-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        let resp = post_json(
+            &app,
+            "/plan/from-text",
+            json!({
+                "title": "meta plan",
+                "todos": [
+                    { "title": "task X", "depth": 0 }
+                ]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let dag_id = body["dag_id"].as_str().unwrap().to_string();
+
+        async fn node_meta(app: &Router, dag_id: &str, title: &str) -> Value {
+            let resp = get(app, "/dags?view=all").await;
+            let body = body_json(resp.into_body()).await;
+            let dag = body["dags"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|d| d["dag_id"] == json!(dag_id))
+                .unwrap()
+                .clone();
+            dag["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|n| n["title"] == json!(title))
+                .unwrap_or_else(|| panic!("node {title:?} missing from dags view"))
+                .clone()
+        }
+
+        let x = node_meta(&app, &dag_id, "task X").await;
+        let x_id = x["node_id"].as_str().unwrap().to_string();
+        assert_eq!(x["labels"], json!([]));
+        assert_eq!(x["description"], Value::Null);
+        assert_eq!(x["priority"], Value::Null);
+
+        // One PATCH sets labels + description + priority together.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{x_id}"),
+            json!({
+                "labels": ["backend", "urgent"],
+                "description": "wire the meta endpoint",
+                "priority": 3
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let x = node_meta(&app, &dag_id, "task X").await;
+        assert_eq!(x["labels"], json!(["backend", "urgent"]));
+        assert_eq!(x["description"], json!("wire the meta endpoint"));
+        assert_eq!(x["priority"], json!(3));
+
+        // Labels replace: the old set is gone.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{x_id}"),
+            json!({ "labels": ["frontend"] }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let x = node_meta(&app, &dag_id, "task X").await;
+        assert_eq!(x["labels"], json!(["frontend"]));
+        // Untouched fields keep their values.
+        assert_eq!(x["description"], json!("wire the meta endpoint"));
+        assert_eq!(x["priority"], json!(3));
+
+        // Empty array clears the label set.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{x_id}"),
+            json!({ "labels": [] }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let x = node_meta(&app, &dag_id, "task X").await;
+        assert_eq!(x["labels"], json!([]));
+
+        // Priority clear is not supported: null is a no-op, not a clear.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{x_id}"),
+            json!({ "priority": null }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let x = node_meta(&app, &dag_id, "task X").await;
+        assert_eq!(
+            x["priority"],
+            json!(3),
+            "priority null must leave the value unchanged (no clear in v6)"
+        );
+
+        // Empty description string passes through and clears the text.
+        let resp = patch_json(
+            &app,
+            &format!("/dags/{dag_id}/nodes/{x_id}"),
+            json!({ "description": "" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let x = node_meta(&app, &dag_id, "task X").await;
+        assert_eq!(x["description"], json!(""));
 
         let _ = std::fs::remove_dir_all(&temp);
     }
