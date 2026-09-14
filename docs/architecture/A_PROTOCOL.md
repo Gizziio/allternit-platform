@@ -362,6 +362,33 @@ main breakage: duplicate migration versions V142–V144 (renumbered
 V169–V171) and the embed_migrations no-rebuild gotcha — see CHANGELOG
 [Unreleased] → Fixed.
 
+### Implemented in the cowork-DAG integration pass (session/adocs2-0913)
+
+- **cowork sessions participate in the A:// lifecycle (§7/§16)** — session
+  row creation submits the session's canonical intent (target: the
+  workspace Gizzi principal; return channel `cowork`), creating the
+  session's run; the linkage lives in the session row's `metadata`
+  (`a_intent_id` / `a_run_id` / `a_native_session_id`) and the agent-chat
+  bridge resolves (or lazily backfills) it per turn. Gizzi tool executions
+  during a turn are recorded as lightweight, attributed job rows on the
+  session run (`job_created` / `job.completed` / `job.failed`); turn
+  completion writes a typed `turn.completed` Result and an A-T2 memory
+  entry owned by the user's principal with an explicit grant to Al;
+  session completion finalizes the run (`run.completed`). Conversational
+  tool jobs are not Fabric-Transport-leased work (§8.2), so they are
+  recorded directly without a claim and carry the `cowork.chat` capability
+  on the session run's placeholder job so no transport worker claims it.
+- **seam fixes** — intent-created runs are owner-stamped at insert (visible
+  to the V142/V169-scoped run surface; job-postable like any run); the Al
+  orchestrator matches the documented short alias `principal/al` exactly as
+  the canonical long form (`targets_al`); store-direct orchestrator child
+  runs are mirrored into the RunManager within one tick.
+
+Delegation-rule convention (orchestrator + P-T5 persona runtime):
+`cowork_delegation_rules.workspace` is the **bare workspace id** (the
+`a://workspace/` prefix stripped), matching the store's workspace column —
+an `a://`-form value silently matches no intent.
+
 ### Planned / not implied by v0.1
 
 - public URI scheme registration

@@ -37,6 +37,7 @@ pub fn cowork_router() -> Router<Arc<AppState>> {
                 .patch(update_session)
                 .delete(delete_session),
         )
+        .route("/cowork/sessions/:id/dag", get(get_session_dag))
         .route("/cowork/personas", get(list_personas).post(create_persona))
         .route(
             "/cowork/personas/:id",
@@ -276,6 +277,12 @@ struct CreateSessionBody {
     metadata: Option<String>,
     started_at: Option<String>,
     completed_at: Option<String>,
+    /// Native (gizzi/mode-session) chat id, when this row backs a UI chat
+    /// session. Stored in metadata as `a_native_session_id`; the agent-chat
+    /// bridge resolves the session's A:// run through it. Idempotency key:
+    /// posting again with the same native id returns the existing row.
+    #[serde(rename = "nativeSessionId", alias = "native_session_id", alias = "chatId")]
+    native_session_id: Option<String>,
 }
 
 async fn create_session(
@@ -284,10 +291,65 @@ async fn create_session(
     _headers: HeaderMap,
     Json(body): Json<CreateSessionBody>,
 ) -> impl IntoResponse {
-    let id = uuid::Uuid::new_v4().to_string();
     let db = state.db.clone();
-    let id2 = id.clone();
     let user_id = user.user_id;
+
+    // A:// §7: session start participates in the canonical lifecycle — the
+    // row creation submits the session's canonical intent (creating its run)
+    // and stamps the linkage into the session metadata. Idempotent on
+    // `nativeSessionId`: a repost for a chat that already has a row returns
+    // the existing session. Best-effort like all session recording: a DAG
+    // failure must never block session creation.
+    let native_for_lookup = body.native_session_id.clone();
+    let lookup = tokio::task::spawn_blocking({
+        let db = db.clone();
+        let user_id = user_id.clone();
+        move || {
+            let mut conn = db.connect()?;
+            match native_for_lookup.as_deref().filter(|s| !s.is_empty()) {
+                Some(native) => match crate::cowork::dag::find_session_run(&conn, &user_id, native)? {
+                    Some(link) => Ok::<_, rusqlite::Error>(Some(link)),
+                    None => Ok(None),
+                },
+                None => Ok(None),
+            }
+        }
+    })
+    .await;
+
+    if let Ok(Ok(Some(existing))) = lookup {
+        // Idempotent repost: the session row and its run already exist.
+        return (
+            StatusCode::CREATED,
+            Json(json!({
+                "session": { "id": existing.session_id },
+                "a_intent_id": existing.intent_id,
+                "a_run_id": existing.run_id,
+            })),
+        )
+            .into_response();
+    }
+    if let Ok(Err(e)) = lookup {
+        warn!("session DAG lookup failed: {}", e);
+    }
+
+    let id = uuid::Uuid::new_v4().to_string();
+    let id2 = id.clone();
+    let body_native = body.native_session_id.clone();
+    let body_title = body.title.clone();
+    let link_user_id = user_id.clone();
+    let metadata = {
+        let caller_meta = body.metadata.clone();
+        let mut meta: serde_json::Value = caller_meta
+            .as_deref()
+            .and_then(|m| serde_json::from_str(m).ok())
+            .filter(|v: &serde_json::Value| v.is_object())
+            .unwrap_or_else(|| serde_json::json!({}));
+        if let Some(native) = body.native_session_id.as_deref() {
+            meta["a_native_session_id"] = serde_json::json!(native);
+        }
+        Some(meta.to_string())
+    };
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -303,7 +365,7 @@ async fn create_session(
                 body.status.unwrap_or_else(|| "idle".to_string()),
                 body.mode.unwrap_or_else(|| "agent".to_string()),
                 body.checkpoint,
-                body.metadata,
+                metadata,
                 body.started_at,
                 body.completed_at,
             ],
@@ -313,11 +375,57 @@ async fn create_session(
     .await;
 
     match result {
-        Ok(Ok(())) => (
-            StatusCode::CREATED,
-            Json(json!({ "session": { "id": id } })),
-        )
-            .into_response(),
+        Ok(Ok(())) => {
+            // Now that the row exists, create the session's A:// run and
+            // stamp the linkage. Failure here leaves a working session
+            // without DAG linkage (warned above); the agent-chat bridge
+            // backfills it lazily on the next turn.
+            let link = tokio::task::spawn_blocking({
+                let db = state.db.clone();
+                let user_id = link_user_id.clone();
+                let id = id.clone();
+                let native = body_native.clone();
+                let title = body_title.clone();
+                move || {
+                    let mut conn = db.connect()?;
+                    crate::cowork::dag::link_run_to_session(
+                        &mut conn,
+                        &user_id,
+                        &id,
+                        native.as_deref(),
+                        title.as_deref(),
+                    )
+                }
+            })
+            .await;
+            match link {
+                Ok(Ok(link)) => (
+                    StatusCode::CREATED,
+                    Json(json!({
+                        "session": { "id": id },
+                        "a_intent_id": link.intent_id,
+                        "a_run_id": link.run_id,
+                    })),
+                )
+                    .into_response(),
+                Ok(Err(e)) => {
+                    warn!("session DAG linkage failed: {}", e);
+                    (
+                        StatusCode::CREATED,
+                        Json(json!({ "session": { "id": id } })),
+                    )
+                        .into_response()
+                }
+                Err(e) => {
+                    warn!("session DAG task panicked: {}", e);
+                    (
+                        StatusCode::CREATED,
+                        Json(json!({ "session": { "id": id } })),
+                    )
+                        .into_response()
+                }
+            }
+        }
         Ok(Err(e)) => {
             warn!("DB error creating session: {}", e);
             (
@@ -397,6 +505,118 @@ async fn get_session(
     }
 }
 
+/// A:// DAG state for a session: the linked run, its jobs, and its recent
+/// attributed events. User-scoped through the session row (V142 pattern).
+async fn get_session_dag(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        // `:id` may be the session row id OR the native (mode-session) chat
+        // id — the UI rail only has the latter. Resolve both through the
+        // metadata linkage.
+        let link = match crate::cowork::dag::session_link(&conn, &user_id, &id)? {
+            Some(l) => Some(l),
+            None => crate::cowork::dag::find_session_run(&conn, &user_id, &id)?,
+        }
+        .ok_or_else(|| rusqlite::Error::QueryReturnedNoRows)?;
+
+        let run: Option<serde_json::Value> = conn
+            .query_row(
+                "SELECT id, workspace_id, initiator, state, entrypoint, created_at, completed_at
+                 FROM cowork_runs WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+                params![link.run_id, user_id],
+                |row| {
+                    Ok(serde_json::json!({
+                        "id": row.get::<_, String>(0)?,
+                        "workspace": row.get::<_, String>(1)?,
+                        "initiator": row.get::<_, String>(2)?,
+                        "state": row.get::<_, String>(3)?,
+                        "entrypoint": row.get::<_, String>(4)?,
+                        "created_at": row.get::<_, String>(5)?,
+                        "completed_at": row.get::<_, Option<String>>(6)?,
+                    }))
+                },
+            )
+            .optional()?;
+
+        let mut jobs_stmt = conn.prepare(
+            "SELECT id, job_type, state, payload, result, created_at, completed_at
+             FROM cowork_jobs WHERE run_id = ?1 ORDER BY created_at DESC LIMIT 50",
+        )?;
+        let jobs: Vec<serde_json::Value> = jobs_stmt
+            .query_map(params![link.run_id], |row| {
+                Ok(serde_json::json!({
+                    "id": row.get::<_, String>(0)?,
+                    "job_type": row.get::<_, String>(1)?,
+                    "state": row.get::<_, String>(2)?,
+                    "payload": row.get::<_, String>(3)?,
+                    "result": row.get::<_, Option<String>>(4)?,
+                    "created_at": row.get::<_, String>(5)?,
+                    "completed_at": row.get::<_, Option<String>>(6)?,
+                }))
+            })?
+            .collect::<Result<_, _>>()?;
+
+        let mut events_stmt = conn.prepare(
+            "SELECT event_type, payload, initiator, delegator, executor, created_at
+             FROM cowork_run_events WHERE run_id = ?1 ORDER BY created_at DESC LIMIT 50",
+        )?;
+        let events: Vec<serde_json::Value> = events_stmt
+            .query_map(params![link.run_id], |row| {
+                Ok(serde_json::json!({
+                    "event_type": row.get::<_, String>(0)?,
+                    "payload": row.get::<_, String>(1)?,
+                    "initiator": row.get::<_, Option<String>>(2)?,
+                    "delegator": row.get::<_, Option<String>>(3)?,
+                    "executor": row.get::<_, Option<String>>(4)?,
+                    "created_at": row.get::<_, String>(5)?,
+                }))
+            })?
+            .collect::<Result<_, _>>()?;
+
+        Ok::<_, rusqlite::Error>(serde_json::json!({
+            "session_id": link.session_id,
+            "intent_id": link.intent_id,
+            "run": run,
+            "jobs": jobs,
+            "events": events,
+        }))
+    })
+    .await;
+
+    match result {
+        Ok(Ok(dag)) => Json(dag).into_response(),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "session not found"})),
+        )
+            .into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error getting session DAG: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
 #[derive(Deserialize)]
 struct UpdateSessionBody {
     // Option<Option<T>> patch semantics: outer None = field absent from the
@@ -442,6 +662,14 @@ async fn update_session(
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    // Captured before the body/id move into the update closure: a terminal
+    // status finalizes the session's A:// run after the PATCH succeeds.
+    let completing = matches!(
+        body.status.as_ref().and_then(|s| s.as_deref()),
+        Some("completed") | Some("complete") | Some("ended")
+    );
+    let session_id = id.clone();
+    let fin_user_id = user_id.clone();
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -472,7 +700,27 @@ async fn update_session(
     .await;
 
     match result {
-        Ok(Ok(())) => Json(json!({"ok": true})).into_response(),
+        Ok(Ok(())) => {
+            // Session reaching a terminal status finalizes its A:// run
+            // (typed Result + run.completed). Best-effort: the PATCH itself
+            // already succeeded.
+            if completing {
+                let fin = tokio::task::spawn_blocking({
+                    let db = state.db.clone();
+                    let user_id = fin_user_id.clone();
+                    let id = session_id.clone();
+                    move || {
+                        let mut conn = db.connect()?;
+                        crate::cowork::dag::finalize_session_run(&mut conn, &id, &user_id)
+                    }
+                })
+                .await;
+                if let Ok(Err(e)) = fin {
+                    warn!("session run finalize failed: {}", e);
+                }
+            }
+            Json(json!({"ok": true})).into_response()
+        }
         Ok(Err(e)) => {
             warn!("DB error updating session: {}", e);
             (
@@ -500,6 +748,24 @@ async fn delete_session(
 ) -> impl IntoResponse {
     let db = state.db.clone();
     let user_id = user.user_id;
+    let session_id = id.clone();
+    let fin_user_id = user_id.clone();
+
+    // Finalize the session's A:// run before the row (and its linkage)
+    // disappears. Best-effort: deletion must not fail on a DAG error.
+    let fin = tokio::task::spawn_blocking({
+        let db = db.clone();
+        let user_id = fin_user_id;
+        let id = session_id.clone();
+        move || {
+            let mut conn = db.connect()?;
+            crate::cowork::dag::finalize_session_run(&mut conn, &id, &user_id)
+        }
+    })
+    .await;
+    if let Ok(Err(e)) = fin {
+        warn!("session run finalize failed: {}", e);
+    }
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -2158,8 +2424,12 @@ async fn team_execute(
 
     let result = tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
-        allternit_cowork_runtime::sqlite_store::submit_intent(&mut conn, &envelope)
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
+        allternit_cowork_runtime::sqlite_store::submit_intent_for_user(
+            &mut conn,
+            &envelope,
+            Some(user_id.as_str()),
+        )
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
     })
     .await;
 
@@ -2257,8 +2527,12 @@ async fn run_agent(
 
     let result = tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
-        allternit_cowork_runtime::sqlite_store::submit_intent(&mut conn, &envelope)
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
+        allternit_cowork_runtime::sqlite_store::submit_intent_for_user(
+            &mut conn,
+            &envelope,
+            Some(user_id.as_str()),
+        )
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
     })
     .await;
 
