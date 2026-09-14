@@ -35,6 +35,7 @@ struct CoworkPreferencesPayload {
     trusted_folders: Vec<String>,
     global_instructions: String,
     cloud_continuation: bool,
+    continuation_api_url: Option<String>,
     updated_at: String,
 }
 
@@ -65,18 +66,19 @@ async fn get_cowork_preferences(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let pref: (String, String, i64, String) = conn
+        let pref: (String, String, i64, Option<String>, String) = conn
             .query_row(
-                "SELECT trusted_folders, global_instructions, cloud_continuation, updated_at
+                "SELECT trusted_folders, global_instructions, cloud_continuation, continuation_api_url, updated_at
                  FROM user_cowork_preferences WHERE user_id = ?1",
                 params![user_id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
             )
             .unwrap_or_else(|_| {
                 (
                     "[]".to_string(),
                     String::new(),
                     0,
+                    None,
                     chrono::Utc::now().to_rfc3339(),
                 )
             });
@@ -85,11 +87,12 @@ async fn get_cowork_preferences(
     .await;
 
     match result {
-        Ok(Ok((trusted_folders_raw, global_instructions, cloud_continuation, updated_at))) => Json(
+        Ok(Ok((trusted_folders_raw, global_instructions, cloud_continuation, continuation_api_url, updated_at))) => Json(
             CoworkPreferencesPayload {
                 trusted_folders: parse_trusted_folders(&trusted_folders_raw),
                 global_instructions,
                 cloud_continuation: cloud_continuation != 0,
+                continuation_api_url,
                 updated_at,
             },
         )
@@ -120,6 +123,7 @@ struct SetCoworkPreferencesBody {
     trusted_folders: Option<Vec<String>>,
     global_instructions: Option<String>,
     cloud_continuation: Option<bool>,
+    continuation_api_url: Option<String>,
 }
 
 fn validate_trusted_folders(folders: &[String]) -> Result<Vec<String>, String> {
@@ -180,19 +184,21 @@ async fn set_cowork_preferences(
 
     let db = state.db.clone();
     let user_id = user.user_id;
+    let env_url = state.config.continuation_api_url();
+    let env_token = state.config.continuation_token();
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
 
         // Merge with the existing row so omitted fields keep their values.
-        let current: (String, String, i64) = conn
+        let current: (String, String, i64, Option<String>) = conn
             .query_row(
-                "SELECT trusted_folders, global_instructions, cloud_continuation
+                "SELECT trusted_folders, global_instructions, cloud_continuation, continuation_api_url
                  FROM user_cowork_preferences WHERE user_id = ?1",
                 params![user_id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )
-            .unwrap_or(("[]".to_string(), String::new(), 0));
+            .unwrap_or(("[]".to_string(), String::new(), 0, None));
 
         let trusted_folders = trusted_folders.unwrap_or_else(|| parse_trusted_folders(&current.0));
         let global_instructions = body.global_instructions.unwrap_or(current.1);
@@ -200,18 +206,35 @@ async fn set_cowork_preferences(
             .cloud_continuation
             .map(|v| if v { 1 } else { 0 })
             .unwrap_or(current.2);
+        let continuation_api_url = body
+            .continuation_api_url
+            .map(|s| {
+                let t = s.trim().trim_end_matches('/').to_string();
+                if t.is_empty() { None } else { Some(t) }
+            })
+            .unwrap_or(current.3);
         let trusted_folders_raw =
             serde_json::to_string(&trusted_folders).unwrap_or_else(|_| "[]".to_string());
 
+        if cloud_continuation != 0 {
+            let has_url = env_url.is_some() || continuation_api_url.as_ref().is_some();
+            if !has_url || env_token.is_none() {
+                return Err(rusqlite::Error::InvalidParameterName(
+                    "cloud continuation needs ALLTERNIT_CONTINUATION_API_URL (or continuation_api_url) and ALLTERNIT_CONTINUATION_TOKEN; the laptop API is not always-on".into(),
+                ));
+            }
+        }
+
         conn.execute(
-            "INSERT INTO user_cowork_preferences (user_id, trusted_folders, global_instructions, cloud_continuation)
-             VALUES (?1, ?2, ?3, ?4)
+            "INSERT INTO user_cowork_preferences (user_id, trusted_folders, global_instructions, cloud_continuation, continuation_api_url)
+             VALUES (?1, ?2, ?3, ?4, ?5)
              ON CONFLICT(user_id) DO UPDATE SET
                 trusted_folders = excluded.trusted_folders,
                 global_instructions = excluded.global_instructions,
                 cloud_continuation = excluded.cloud_continuation,
+                continuation_api_url = excluded.continuation_api_url,
                 updated_at = CURRENT_TIMESTAMP",
-            params![user_id, trusted_folders_raw, global_instructions, cloud_continuation],
+            params![user_id, trusted_folders_raw, global_instructions, cloud_continuation, continuation_api_url],
         )?;
 
         let updated_at: String = conn.query_row(
@@ -224,6 +247,7 @@ async fn set_cowork_preferences(
             trusted_folders,
             global_instructions,
             cloud_continuation: cloud_continuation != 0,
+            continuation_api_url,
             updated_at,
         })
     })
@@ -232,10 +256,18 @@ async fn set_cowork_preferences(
     match result {
         Ok(Ok(pref)) => Json(pref).into_response(),
         Ok(Err(e)) => {
+            let message = e.to_string();
+            if message.contains("cloud continuation needs") {
+                return (
+                    StatusCode::CONFLICT,
+                    Json(json!({ "error": "continuation_unconfigured", "message": message })),
+                )
+                    .into_response();
+            }
             warn!("DB error setting cowork preferences: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": message})),
             )
                 .into_response()
         }

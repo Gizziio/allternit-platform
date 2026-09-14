@@ -163,12 +163,19 @@ export function continueRunInCloud(getToken: TokenGetter, runId: string): Promis
   return req(getToken, `/fabric/transport/runs/${encodeURIComponent(runId)}/continue-in-cloud`, { method: 'POST' });
 }
 
-export function getCoworkPreferences(getToken: TokenGetter): Promise<{ trusted_folders: string[]; cloud_continuation: boolean }> {
+export function getCoworkPreferences(getToken: TokenGetter): Promise<{ trusted_folders: string[]; cloud_continuation: boolean; continuation_api_url?: string | null }> {
   return req(getToken, '/cowork-preferences');
 }
 
-export function setCloudContinuation(getToken: TokenGetter, enabled: boolean): Promise<{ cloud_continuation: boolean }> {
-  return req(getToken, '/cowork-preferences', { method: 'PUT', body: JSON.stringify({ cloud_continuation: enabled }) });
+export function setCloudContinuation(
+  getToken: TokenGetter,
+  enabled: boolean,
+  continuationApiUrl?: string,
+): Promise<{ cloud_continuation: boolean; continuation_api_url?: string | null }> {
+  return req(getToken, '/cowork-preferences', {
+    method: 'PUT',
+    body: JSON.stringify({ cloud_continuation: enabled, continuation_api_url: continuationApiUrl }),
+  });
 }
 
 // ─── P-T6: principals / delegation rules / connector sessions ───────────────

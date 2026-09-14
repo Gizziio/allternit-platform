@@ -408,12 +408,13 @@ Transport does not redefine principal identity, run state, attribution, or appro
   auto-update target; preflight refuses a mismatch. Signed/notarized
   `desktop-v1.2.0` remains an owner action (Apple secrets).
 
-### Cloud continuation substrate only (E6, session/cloudcont-0914) — NOT done
+### Cloud continuation (E6) — NOT a finished product path
 
-Placement (`compute.cloud`) and local retag APIs landed. There is no
-always-on worker the app launches, no real remote ingest on quit, no
-folder upload, and no laptop-closed routine tick. Closing the laptop
-still stops the work. Do not list this under “implemented product.”
+session/e6-0914: laptop quit POSTs ingest (envelope + bounded folder copy)
+to `ALLTERNIT_CONTINUATION_API_URL` with a shared token; missing config is
+409. Cloud routines are created on that API. The desktop still does **not**
+launch the always-on host or its `gizzi-cloud` worker. Without those
+already running, closing the laptop still stops the work.
 
 Live behavioral evidence for all six items (vm-job claim grant/refusal,
 boundary projection refusal, brokered files read/write + approval gate +

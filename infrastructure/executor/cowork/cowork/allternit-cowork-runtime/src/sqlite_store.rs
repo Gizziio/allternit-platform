@@ -384,6 +384,10 @@ pub struct CloudContinuation {
     pub required_capabilities: Vec<String>,
     /// Job state after the handoff (`queued`).
     pub state: String,
+    /// Intent envelope to replay onto an always-on API. None when the job
+    /// was not created through submit_intent (synthetic envelope is built
+    /// by the API layer).
+    pub envelope: Option<serde_json::Value>,
 }
 
 /// Hand a job to the cloud worker: drop any local lease, require
@@ -449,12 +453,22 @@ pub fn continue_job_in_cloud(
         attr.delegator.as_deref(),
         None,
     )?;
+    let envelope: Option<serde_json::Value> = tx
+        .query_row(
+            "SELECT envelope FROM cowork_intents WHERE run_id = ?1 LIMIT 1",
+            params![run_id],
+            |r| r.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(store_err)?
+        .and_then(|raw| serde_json::from_str(&raw).ok());
     tx.commit().map_err(store_err)?;
     Ok(CloudContinuation {
         job_id: job_id.to_string(),
         run_id,
         required_capabilities: caps,
         state: "queued".to_string(),
+        envelope,
     })
 }
 

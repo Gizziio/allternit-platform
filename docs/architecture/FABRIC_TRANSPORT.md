@@ -416,14 +416,23 @@ What is in the tree:
 - `POST …/continue-in-cloud` and `…/continuation/handoff-all` retag
   in-flight jobs on **this** API
 
-What is missing:
+What now happens when a target is configured:
 
-- The desktop does not start a `gizzi-cloud` worker.
-- Quit-time `ALLTERNIT_CONTINUATION_API_URL` is logged, not POSTed; jobs
-  stay on the local API, which then shuts down.
-- Granted local folders are not uploaded.
-- Routine ticks die with the local API. A sleeping laptop does not fire
-  schedules.
+- Quit calls `handoff-all`, which POSTs each intent envelope plus a
+  bounded copy of granted folders (skip symlinks, skip files > 1 MiB,
+  cap 20 MiB) to `{url}/api/v1/fabric/transport/continuation/ingest`
+  with `x-allternit-continuation-token`.
+- Enabling the preference or creating a cloud routine without URL+token
+  returns 409.
+- Cloud-continuation routines are inserted on the remote API (local
+  copy is `enabled=0` so the laptop does not tick them).
+
+What is still operator-owned:
+
+- An always-on allternit-api must already be running.
+- `gizzi-code fabric-worker --compute-mode cloud` must already be
+  running against that API. The desktop does not start it.
+- Folders larger than the cap are not uploaded.
 
 ## 15c. Release engineering (consumer P5)
 

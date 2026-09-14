@@ -91,6 +91,7 @@ export function FabricTransportView() {
   const [routineMessage, setRoutineMessage] = useState('');
   const [routineSchedule, setRoutineSchedule] = useState('*/30');
   const [cloudContinuation, setCloudContinuationPref] = useState(false);
+  const [continuationApiUrl, setContinuationApiUrl] = useState('');
 
   // Intent form
   const [initiator, setInitiator] = useState('a://workspace/ws-allternit/user/joe');
@@ -120,6 +121,7 @@ export function FabricTransportView() {
       setSessions(sessionList.sessions.slice(0, 25));
       setRoutines(routineList.routines);
       setCloudContinuationPref(Boolean(prefs.cloud_continuation));
+      if (prefs.continuation_api_url) setContinuationApiUrl(prefs.continuation_api_url);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -289,6 +291,13 @@ export function FabricTransportView() {
             aria-label="Workspace"
           />
           <button className="rounded border px-2 py-1 text-xs" onClick={refresh}>Refresh</button>
+          <input
+            className="w-56 rounded border border-[var(--border-default)] bg-transparent px-2 py-1 text-xs"
+            placeholder="Always-on API URL"
+            value={continuationApiUrl}
+            onChange={(e) => setContinuationApiUrl(e.target.value)}
+            aria-label="Continuation API URL"
+          />
           <label className="flex items-center gap-1 text-xs">
             <input
               type="checkbox"
@@ -296,14 +305,14 @@ export function FabricTransportView() {
               onChange={async (e) => {
                 const on = e.target.checked;
                 try {
-                  await setCloudContinuation(getToken, on);
+                  await setCloudContinuation(getToken, on, continuationApiUrl || undefined);
                   setCloudContinuationPref(on);
                 } catch (err) {
                   setError((err as Error).message);
                 }
               }}
             />
-            Queue as compute.cloud (needs a running gizzi-cloud worker)
+            Continue on always-on API (needs URL + token + gizzi-cloud)
           </label>
         </div>
       </header>
