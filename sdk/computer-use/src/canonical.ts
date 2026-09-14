@@ -31,6 +31,38 @@ export interface ComputerCapabilityManifest {
   mobile: boolean;
   max_concurrency: number;
   limitations: string[];
+  tools?: string[];
+}
+
+// =============================================================================
+// CUA Driver Computer History types (agent integration contract)
+// =============================================================================
+
+export interface HistoryStatusResponse {
+  supported: boolean;
+  admitted: boolean;
+  enabled: boolean;
+  paused: boolean;
+  encrypted: boolean;
+  profile: string;
+  retention_days: number;
+  quota_bytes: number;
+  bytes_used: number;
+  dropped_events: number;
+  health: string;
+}
+
+export interface HistoryQueryRequest {
+  limit?: number;
+  session_id?: string;
+  since_sequence?: number;
+  until_sequence?: number;
+}
+
+export interface HistoryQueryResponse {
+  events: Record<string, unknown>[];
+  metadata_only: boolean;
+  model_context_disclosure: boolean;
 }
 
 export interface ComputerEnvironment {
