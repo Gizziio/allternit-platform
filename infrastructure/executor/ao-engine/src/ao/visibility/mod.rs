@@ -324,17 +324,6 @@ pub fn build_panel(
                 last_message_at: joined.and_then(|s| s.last_prompt_at),
                 agent_session: agent.agent_session.as_ref().map(Into::into),
             }
-        .map(|agent| PanelEngineAgent {
-            pane_id: agent.pane_id.clone(),
-            workspace_id: agent.workspace_id.clone(),
-            name: agent.name.clone(),
-            agent: agent.agent.clone(),
-            title: agent.title.clone(),
-            status: agent.agent_status,
-            state_change_seq: agent.state_change_seq,
-            cwd: agent.cwd.clone(),
-            joined_native: joined_native_row(agent, &sample.native).map(|s| s.join_key()),
-            agent_session: agent.agent_session.as_ref().map(Into::into),
         })
         .collect();
     panel_agents.sort_by(|a, b| {

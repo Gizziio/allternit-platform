@@ -27,8 +27,6 @@ use serde::Deserialize;
 
 pub use allternit_commrails::peer::{Peer, PeerStatus};
 use allternit_commrails::peer::PeerEnvelope;
-pub use allternit_agent_system_rails::peer::{Peer, PeerStatus};
-use allternit_agent_system_rails::peer::PeerEnvelope;
 
 /// Env override for the registry root (flag > env > cwd).
 pub const ROOT_ENV_VAR: &str = "AO_PEERS_ROOT";
