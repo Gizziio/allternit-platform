@@ -8,6 +8,8 @@
  */
 
 import type { AgentVMOperatorConfig } from '@/lib/agents/agent.types';
+import { API_BASE_URL } from '@/lib/agents/api-config';
+import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { createModuleLogger } from '@/lib/logger';
 import {
   createComputer,
@@ -29,6 +31,15 @@ export interface Sandbox {
   provider: string;
   image?: string;
   vncUrl?: string;
+  persistence?: 'ephemeral' | 'session' | 'persistent';
+  createdAt: string;
+  lastActiveAt?: string;
+}
+
+export interface SandboxSnapshot {
+  id: string;
+  sandboxId: string;
+  label?: string;
   createdAt: string;
 }
 
@@ -477,12 +488,11 @@ export async function restoreSandbox(
 export async function runCommand(
   sandboxId: string,
   command: string,
+  agentId?: string,
 ): Promise<VMOperatorResult<CommandResult>> {
   if (agentId && isBotDesktopPaused(agentId)) {
     return pausedResult<CommandResult>();
   }
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<CommandResult>();
 
   try {
     const data = await runComputerShell(sandboxId, { command: ['sh', '-c', command] });
@@ -515,31 +525,6 @@ export async function runBrowserTask(
     return pausedResult<BrowserTaskResult>();
   }
   return notConfigured<BrowserTaskResult>();
-  sandboxId: string,
-  url: string,
-  instructions: string,
-): Promise<VMOperatorResult<BrowserTaskResult>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<BrowserTaskResult>();
-
-  try {
-    const res = await fetch(`${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}/browser`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, instructions }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
-    }
-
-    const data = (await res.json()) as BrowserTaskResult;
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, sandboxId }, 'Failed to run browser task in sandbox');
-    return { ok: false, error: err instanceof Error ? err.message : 'Browser task failed' };
-  }
 }
 
 /**
@@ -620,23 +605,6 @@ function botDesktopUrl(botId: string, sandboxId: string, action = '') {
   // The action goes in the PATH, before the query string — appending it
   // after `?sandbox_id=…` lands on the GET-only /desktop route (405).
   return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
-function botDesktopBaseUrl(botId: string) {
-  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop`;
-}
-
-function botDesktopUrl(botId: string, sandboxId: string) {
-  return `${botDesktopBaseUrl(botId)}?sandbox_id=${encodeURIComponent(sandboxId)}`;
-}
-
-function botDesktopActionUrl(botId: string, sandboxId: string, action: string) {
-  return `${botDesktopBaseUrl(botId)}/${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
-}
-
-// Control actions are path segments on the server (`POST …/desktop/observe`
-// etc., bot_desktop_routes.rs), with sandbox_id as a query param — appending
-// the verb after the query string would land it inside the sandbox_id value.
-function botDesktopActionUrl(botId: string, sandboxId: string, action: 'observe' | 'take-over' | 'hand-back') {
-  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop/${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
 }
 
 function botDesktopBindingUrl(botId: string) {
@@ -807,7 +775,6 @@ export async function observeBotDesktop(
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
     const res = await fetch(botDesktopUrl(botId, sandboxId, '/observe'), { method: 'POST' });
-    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'observe'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -829,7 +796,6 @@ export async function takeOverBotDesktop(
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
     const res = await fetch(botDesktopUrl(botId, sandboxId, '/take-over'), { method: 'POST' });
-    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'take-over'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -851,7 +817,6 @@ export async function handBackBotDesktop(
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
     const res = await fetch(botDesktopUrl(botId, sandboxId, '/hand-back'), { method: 'POST' });
-    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'hand-back'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -1005,13 +970,3 @@ export async function getBotDesktopScreenshot(
 }
 
 export { deleteComputer };
- * Build the screenshot URL for a bot's desktop. The returned URL returns an
- * image (SVG placeholder when no live VM stream is available) that can be
- * polled to implement a screenshot feed.
- */
-export function getBotDesktopScreenshotUrl(botId: string, sandboxId: string, cacheBust?: number): string {
-  const url = botDesktopActionUrl(botId, sandboxId, 'screenshot');
-  if (cacheBust === undefined) return url;
-  const sep = url.includes('?') ? '&' : '?';
-  return `${url}${sep}ts=${cacheBust}`;
-}

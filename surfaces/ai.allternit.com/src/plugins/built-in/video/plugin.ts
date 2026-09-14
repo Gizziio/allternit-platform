@@ -18,23 +18,15 @@ import {
   generateVideo,
   generateVideoFromImage,
   VIDEO_PROVIDERS,
-  getVideoProviders,
-  type VideoGenerationConfig,
   type VideoGenerationResult,
   type GeneratedVideo,
-  type VideoProviderApiKeys,
 } from '@/lib/agents/modes/video-generation';
 import { previewVideoCost } from '@/lib/agents/modes/media-cost';
 
-const VIDEO_PROVIDER_PREFERENCE = 'allternit_video_provider_preference';
-const VIDEO_API_KEYS = 'allternit_video_api_keys';
-
-type VideoProviderId = VideoGenerationConfig['provider'];
-
 export interface VideoConfig extends PluginConfig {
-  provider?: VideoProviderId;
+  provider?: 'minimax' | 'minimax-h3' | 'fal-seedance' | 'kling';
   model?: string;
-  duration?: 6 | 10 | 15;
+  duration?: 6 | 10;
   resolution?: '768p' | '1080p' | '768P' | '2K' | '720p';
   falTier?: 'fast' | 'standard';
 }
@@ -55,8 +47,8 @@ class VideoPlugin implements ModePlugin {
   isInitialized = false;
   isExecuting = false;
   config: VideoConfig = {
-    provider: 'pollinations',
-    model: 'pollinations-video',
+    provider: 'minimax',
+    model: 'MiniMax-Hailuo-2.3',
     duration: 6,
     resolution: '1080p',
   };
@@ -119,17 +111,16 @@ class VideoPlugin implements ModePlugin {
 
       switch (mode) {
         case 'text-to-video':
-          return await this.generateFromText(input.prompt, input.options);
+          return await this.generateFromText(input.prompt);
         case 'image-to-video':
           return await this.generateFromImage(
             input.options?.imageUrl as string,
-            input.prompt,
-            input.options,
+            input.prompt
           );
         case 'extend':
           return await this.extendVideo(input.options?.videoId as string);
         default:
-          return await this.generateFromText(input.prompt, input.options);
+          return await this.generateFromText(input.prompt);
       }
 
     } catch (err) {
@@ -164,40 +155,15 @@ class VideoPlugin implements ModePlugin {
   }
 
   async health(): Promise<{ healthy: boolean; message?: string }> {
-    const provider = this.selectedProvider();
-    const providerInfo = getVideoProviders(this.readApiKeys()).find((p) => p.id === provider);
-    return {
-      healthy: providerInfo?.isAvailable ?? false,
-      message: providerInfo?.isAvailable
-        ? `${providerInfo.name} video generation is ready.`
-        : `${providerInfo?.name ?? provider} video generation needs configuration.`,
-    };
+    return { healthy: true };
   }
 
-  private resolveConfig(inputOptions?: Record<string, unknown>): {
-    provider: VideoProviderId;
-    model: string;
-    duration: 6 | 10 | 15;
-    resolution: '768p' | '1080p';
-  } {
-    const provider = (inputOptions?.provider as VideoProviderId) || this.selectedProvider();
-    const providerInfo = VIDEO_PROVIDERS[provider];
-    const duration = (inputOptions?.duration as 6 | 10 | 15) || this.config.duration || 6;
-    const resolution = (inputOptions?.resolution as '768p' | '1080p') || this.config.resolution || '1080p';
-    return {
-      provider,
-      model: (inputOptions?.model as string) || this.config.model || providerInfo?.models[0]?.id || 'MiniMax-Hailuo-2.3',
-      duration,
-      resolution,
-    };
-  }
-
-  private async generateFromText(prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
-    const config = this.resolveConfig(inputOptions);
-    const meteredProvider = config.provider;
+  private async generateFromText(prompt: string): Promise<PluginOutput> {
+    const meteredProvider: VideoConfig['provider'] = this.config.provider;
     if (meteredProvider === 'minimax-h3' || meteredProvider === 'fal-seedance') {
-      const preview = previewVideoCost(meteredProvider, config.duration ?? 6, {
-        resolution: config.resolution,
+      // Cost preview before any metered generate (unit price × requested units).
+      const preview = previewVideoCost(meteredProvider, this.config.duration ?? 6, {
+        resolution: this.config.resolution,
         falTier: this.config.falTier,
       });
       this.emit({
@@ -207,18 +173,18 @@ class VideoPlugin implements ModePlugin {
       });
     }
 
-    const style = (inputOptions?.style as string) || undefined;
-    const promptWithStyle = style ? `${style} style video. ${prompt}` : prompt;
-
-    this.emit({
-      type: 'progress',
-      payload: { step: 'generating', message: `Generating ${config.duration}s video with ${VIDEO_PROVIDERS[config.provider].name}...` },
-      timestamp: Date.now()
+    this.emit({ 
+      type: 'progress', 
+      payload: { step: 'generating', message: `Generating ${this.config.duration}s video...` },
+      timestamp: Date.now() 
     });
 
-    const result = await generateVideo(promptWithStyle, {
-      ...config,
-      apiKey: this.readApiKeys()[config.provider],
+    // TODO: Call actual MiniMax/Kling API
+    const result = await generateVideo(prompt, {
+      provider: this.config.provider! as any,
+      model: this.config.model!,
+      duration: this.config.duration!,
+      resolution: this.config.resolution!,
     });
 
     return {
@@ -228,7 +194,7 @@ class VideoPlugin implements ModePlugin {
         type: 'video',
         url: v.url,
         name: `video-${v.id}.mp4`,
-        metadata: {
+        metadata: { 
           duration: v.metadata.duration,
           resolution: v.metadata.resolution,
           provider: v.metadata.provider,
@@ -237,12 +203,11 @@ class VideoPlugin implements ModePlugin {
     };
   }
 
-  private async generateFromImage(imageUrl: string, prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
-    const config = this.resolveConfig(inputOptions);
-    const meteredProvider = config.provider;
+  private async generateFromImage(imageUrl: string, prompt: string): Promise<PluginOutput> {
+    const meteredProvider: VideoConfig['provider'] = this.config.provider;
     if (meteredProvider === 'minimax-h3' || meteredProvider === 'fal-seedance') {
-      const preview = previewVideoCost(meteredProvider, config.duration ?? 6, {
-        resolution: config.resolution,
+      const preview = previewVideoCost(meteredProvider, this.config.duration ?? 6, {
+        resolution: this.config.resolution,
         falTier: this.config.falTier,
       });
       this.emit({
@@ -264,8 +229,6 @@ class VideoPlugin implements ModePlugin {
       duration: this.config.duration!,
       resolution: this.config.resolution!,
       falTier: this.config.falTier,
-      ...config,
-      apiKey: this.readApiKeys()[config.provider],
     });
 
     return {
@@ -278,7 +241,6 @@ class VideoPlugin implements ModePlugin {
         metadata: { 
           duration: v.metadata.duration,
           resolution: v.metadata.resolution,
-          provider: v.metadata.provider,
         },
       })),
     };
@@ -288,40 +250,20 @@ class VideoPlugin implements ModePlugin {
     return {
       success: false,
       error: {
-        message: `Video extension is not yet available. Video ID: ${videoId}`,
+        message: `Video extension requires a MiniMax API key. Video ID: ${videoId}`,
         code: 'NOT_IMPLEMENTED',
         recoverable: false,
       },
     };
   }
 
-  private selectedProvider(): VideoProviderId {
-    if (typeof window !== 'undefined') {
-      const preference = localStorage.getItem(VIDEO_PROVIDER_PREFERENCE);
-      if (preference && preference in VIDEO_PROVIDERS) {
-        return preference as VideoProviderId;
-      }
-    }
-    return this.config.provider ?? 'minimax';
-  }
-
-  private readApiKeys(): VideoProviderApiKeys {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem(VIDEO_API_KEYS) || '{}') as VideoProviderApiKeys;
-    } catch {
-      return {};
-    }
-  }
-
   private formatVideoOutput(result: VideoGenerationResult): string {
-    const providerInfo = VIDEO_PROVIDERS[result.config.provider];
+    const providerInfo = VIDEO_PROVIDERS[result.config.provider as keyof typeof VIDEO_PROVIDERS];
     return [
       `# Video Generated`,
       '',
       `**Prompt:** ${result.prompt}`,
       `**Provider:** ${providerInfo?.name || result.config.provider}`,
-      `**Model:** ${result.config.model}`,
       `**Duration:** ${result.config.duration}s`,
       `**Resolution:** ${result.config.resolution}`,
       '',

@@ -41,8 +41,6 @@ import { useRoutineTimer } from '@/lib/bots/use-routine-timer';
 import { useSyncBotWatermarks } from '@/lib/bots/bot-activity-watermark';
 import { useBotActivityToasts } from '@/lib/bots/bot-activity-toasts';
 import { useStackProviders } from '@/lib/bots/use-stack-providers';
-import { useAgentStore } from '../lib/agents';
-import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
@@ -72,7 +70,6 @@ import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 import { FloatingAvatar } from '../components/agents/FloatingAvatar';
 import { SessionProvider } from '../providers/session-provider';
 import { RailControls } from './FloatingWidgets';
-import { SearchOverlay } from './SearchOverlay';
 import { FindInPageOverlay } from './FindInPageOverlay';
 import { ArtifactSidecar } from './ArtifactSidecar';
 import { useInboxBadgeCount } from '@/lib/bots/BotInboxContent';
@@ -99,6 +96,7 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'mini-apps-store',
   'aci-recordings',
   'browser-extensions',
+  'site-apis',
   'mini-app',
   'addin-word',
   'addin-excel',
@@ -118,8 +116,7 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'sheets',
   'slides',
   'pdf',
-  // API capture / HAR-derived site API contracts surfaced from the browser.
-  'site-apis',
+  'sign',
 ]);
 
 // Bot views drive bot mode (rail sections, bot background, pill highlight)
@@ -138,7 +135,9 @@ const BOT_MODE_VIEW_TYPES = new Set<ViewType>([
 
 // Inner app component that uses mode context
 function ShellAppInner(): React.ReactNode {
+  const navigate = useNavigate();
   const detachedParams = useMemo(() => new URLSearchParams(window.location.search), []);
+
   const detachedSessionId = detachedParams.get('detachedSessionId');
   const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
   const detachedBotId = detachedParams.get('botId');
@@ -155,12 +154,6 @@ function ShellAppInner(): React.ReactNode {
   const { startSession: startBotSession } = useStartBotSession(
     useCallback((sessionId: string, botId: string) => {
       dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
-    useCallback((sessionId: string) => {
-      // Bot sessions render in the standard chat surface so they match regular
-      // sessions and stay in the Bots section of the rail.
-      useChatSessionStore.getState().setActiveSession(sessionId);
-      dispatch({ type: 'OPEN_VIEW', viewType: 'chat', context: { sessionId, originView: active.viewType } });
-      dispatch({ type: 'OPEN_VIEW', viewType: 'cowork-agent-session', context: { sessionId, originView: active.viewType } });
     }, [active.viewType])
   );
   useStackProviders();
@@ -171,6 +164,17 @@ function ShellAppInner(): React.ReactNode {
   // When the HUD window closes, resume its active session in the main window.
   useHudHandoff();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
+
+  const handleStartBotSession = useCallback(async (agent: Agent) => {
+    const surfaceModeState = useAgentSurfaceModeStore.getState();
+    // Bot sessions are always chat-origin sessions (created in ChatSessionStore),
+    // so the surface agent binding is for the chat surface.
+    const modeId = surfaceModeState.selectedModeBySurface['chat'];
+    const sessionId = await startBotSession(agent, { modeId: modeId ?? undefined });
+    if (sessionId) {
+      useAgentSurfaceModeStore.getState().setSelectedAgent('chat', agent.id);
+    }
+  }, [startBotSession]);
   const { isLoaded: authLoaded, isSignedIn } = usePlatformUser();
   const { config: companyConfig } = useCompanyConfig();
   const desktopSelfHosted = isDesktopShell() && companyConfig?.selfHosted === true;
@@ -181,7 +185,6 @@ function ShellAppInner(): React.ReactNode {
   const [hoveredModeIcon, setHoveredModeIcon] = useState<AppMode | null>(null);
   const [railHovered, setRailHovered] = useState(false);
   const [isRailPeekOpen, setIsRailPeekOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFindInPageOpen, setIsFindInPageOpen] = useState(false);
   const { railWidth, setRailWidth } = usePanelLayout();
 
@@ -380,6 +383,17 @@ function ShellAppInner(): React.ReactNode {
     dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true });
   }, []);
 
+  // When another surface requests "chat with this model" (e.g. Model Lab),
+  // open the chat view and let the mounted ModelSelectionProvider apply it.
+  useEffect(() => {
+    const unsubscribe = usePendingChatModelStore.subscribe((state, prevState) => {
+      if (state.pending && state.pending !== prevState.pending) {
+        dispatch({ type: 'OPEN_VIEW', viewType: 'chat' });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Sync view to persisted mode once mode is loaded from localStorage, or when
   // the user explicitly changes mode. Do not override a view that was just
   // opened because the mode-sync effect changed mode in response to that view.
@@ -460,6 +474,28 @@ function ShellAppInner(): React.ReactNode {
   ) => {
     const surfaceModeState = useAgentSurfaceModeStore.getState();
     const selectedAgentId = surfaceModeState.selectedAgentIdBySurface[surface];
+    const selectedAgent = useAgentStore.getState().agents.find((a) => a.id === selectedAgentId);
+
+    // If the user selected a packaged bot, start a dedicated bot session that
+    // reuses an existing bot chat session when one exists, then stream the
+    // opening message so it behaves like a real bot session rather than a
+    // generic home chat.
+    if (selectedAgent && isBot(selectedAgent)) {
+      try {
+        const modeId = execution?.modeId ?? surfaceModeState.selectedModeBySurface[surface];
+        const sessionId = await startBotSession(selectedAgent, { modeId: modeId ?? undefined });
+        if (!sessionId) {
+          logger.error({ surface }, 'Failed to start bot session');
+          return;
+        }
+        void useChatSessionStore.getState().sendMessageStream(sessionId, { text });
+        return;
+      } catch (err) {
+        logger.error({ err: err }, 'Failed to create bot session');
+        return;
+      }
+    }
+
     const modeId = execution?.modeId ?? surfaceModeState.selectedModeBySurface[surface];
     const contract = getAgentModeContract(modeId);
 
@@ -512,9 +548,9 @@ function ShellAppInner(): React.ReactNode {
     } catch (err) {
       logger.error({ err: err }, 'Failed to create session');
     }
-  }, []);
+  }, [active.viewType, dispatch, startBotSession]);
 
-  const registry = useMemo(() => getShellViewRegistry({ handleOpenAgentSession, open }), [handleOpenAgentSession, open]);
+  const registry = useMemo(() => getShellViewRegistry({ handleOpenAgentSession, handleStartBotSession, open }), [handleOpenAgentSession, handleStartBotSession, open]);
 
   useEffect(() => {
     const cleanup = initBrowserSurfaceBridge();
@@ -591,6 +627,14 @@ function ShellAppInner(): React.ReactNode {
     }
     return () => window.removeEventListener('allternit:open-view', handleOpenView);
   }, [isHudWindow]);
+
+  useEffect(() => {
+    const handleOpenAgentActivity = (): void => {
+      setAgentActivityPanelOpen(true);
+    };
+    window.addEventListener('allternit:open-agent-activity', handleOpenAgentActivity);
+    return () => window.removeEventListener('allternit:open-agent-activity', handleOpenAgentActivity);
+  }, []);
 
   const handleModeChange = useCallback((mode: AppMode): void => {
     if (mode === 'design') {
@@ -901,9 +945,11 @@ function ShellAppInner(): React.ReactNode {
                     }
                   }}
                   isRailCollapsed={isRailCollapsed}
-                  onSearchOpen={() => setIsSearchOpen(true)}
+                  onBack={() => dispatch({ type: 'BACK' })}
+                  onForward={() => dispatch({ type: 'FORWARD' })}
+                  canGoBack={nav.history.length > 1}
+                  canGoForward={nav.future.length > 0}
                 />}
-                <SearchOverlay open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
         <FindInPageOverlay open={isFindInPageOpen} onClose={() => setIsFindInPageOpen(false)} />
         {active.viewType === 'code' && <ConsoleDrawer />}
         <AgentActivityPanel

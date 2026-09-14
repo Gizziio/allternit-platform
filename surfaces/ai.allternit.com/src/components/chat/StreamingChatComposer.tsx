@@ -15,10 +15,7 @@ import { BranchIndicator } from "./BranchIndicator";
 import { TextShimmer } from "@/components/agent-elements/text-shimmer";
 import { AgentAvatar } from "@/components/Avatar";
 import { useAgentStore } from "@/lib/agents";
-import { BotAvatar } from "@/views/bots/BotAvatar";
-import { isBot, getBotDisplayName } from "@/lib/bots/bot-profile";
 import { PluginMentionChip } from "@/components/chat/PluginMentionChip";
-import { MessageReactions } from "@/components/chat/MessageReactions";
 import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 import { useAgentStreamingStatus } from "@/hooks/useAgentStreamingStatus";
 import { cn } from "@/lib/utils";
@@ -143,25 +140,13 @@ function ThinkingIndicator({ agentName }: { agentName?: string }) {
 // User Message Card
 // ============================================================================
 
-interface UserMessageCardProps {
-  messageId: string;
-  text: string;
-  pluginMention?: PluginMentionTarget;
-  conversationId?: string;
-}
-
-const UserMessageCard = memo(function UserMessageCard({
-  messageId,
-  text,
-  pluginMention,
-  conversationId,
-}: UserMessageCardProps) {
+const UserMessageCard = memo(function UserMessageCard({ text, pluginMention }: { text: string; pluginMention?: PluginMentionTarget }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isLongText = text.length > 400;
   const displayText = isExpanded ? text : text.slice(0, 400);
 
   return (
-    <div className="flex flex-col items-end py-2 w-full">
+    <div className="flex justify-end py-2 w-full">
       <div className="max-w-[85%] p-4 px-5 rounded-2xl bg-[var(--chat-composer-soft)] border border-solid border-[var(--ui-border-default)] text-[var(--ui-text-primary)] text-base leading-[1.75] break-words relative">
         {pluginMention && (
           <div className="mb-2 flex">
@@ -172,7 +157,7 @@ const UserMessageCard = memo(function UserMessageCard({
           {displayText}
           {!isExpanded && isLongText && '…'}
         </div>
-
+        
         {isLongText && (
           <button type="button"
             onClick={() => setIsExpanded(!isExpanded)}
@@ -182,7 +167,6 @@ const UserMessageCard = memo(function UserMessageCard({
           </button>
         )}
       </div>
-      <MessageReactions messageId={messageId} conversationId={conversationId} />
     </div>
   );
 });
@@ -388,9 +372,7 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
       setSpeakingMessageId(null);
     }
   }, [isPlaying, speakingMessageId, message.id]);
-  const displayName = agent ? getBotDisplayName(agent) : agentName;
   const avatarConfig = agent?.config?.avatar as Record<string, unknown> | undefined;
-  const isBotAgent = Boolean(agent && isBot(agent));
 
   const handleAgentHeaderClick = useCallback(() => {
     if (!agent) return;
@@ -405,29 +387,20 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
   );
 
   if (!isAssistant) {
-    return (
-      <UserMessageCard
-        messageId={message.id}
-        text={fullText}
-        pluginMention={message.metadata?.pluginMention as PluginMentionTarget | undefined}
-        conversationId={conversationId}
-      />
-    );
+    return <UserMessageCard text={fullText} pluginMention={message.metadata?.pluginMention as PluginMentionTarget | undefined} />;
   }
 
   return (
     <div className="assistant-message-group group/message flex flex-col gap-0 py-5 w-full">
       {/* Phase 2+3: Agent identity header for mixed LLM/agent threads */}
-      {agentId && displayName && (
+      {agentId && agentName && (
         <button
           type="button"
           onClick={handleAgentHeaderClick}
           className="inline-flex items-center gap-2 mb-3 bg-transparent border-none cursor-pointer p-0 text-left transition-opacity hover:opacity-80"
-          title={`Click to @mention ${displayName}`}
+          title={`Click to @mention ${agentName}`}
         >
-          {isBotAgent && agent ? (
-            <BotAvatar bot={agent} size={20} className="rounded-md" />
-          ) : avatarConfig ? (
+          {avatarConfig ? (
             <AgentAvatar
               config={avatarConfig as any}
               size={20}
@@ -438,12 +411,10 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
           ) : (
             <div className="size-5 rounded-md bg-[var(--accent-primary,#D4B08C)] flex items-center justify-center text-[12px] font-bold text-white shrink-0">
               {agentName.charAt(0).toUpperCase()}
-            <div className="size-5 rounded-md bg-[var(--accent-chat,#D4B08C)] flex items-center justify-center text-[12px] font-bold text-white shrink-0">
-              {displayName.charAt(0).toUpperCase()}
             </div>
           )}
           <span className="text-[13px] font-semibold text-[var(--ui-text-primary,#ECECEC)]">
-            {displayName}
+            {agentName}
           </span>
         </button>
       )}
@@ -533,17 +504,6 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
             isSpeaking={isThisMessageSpeaking}
             isSpeakingLoading={isSpeakLoading}
             voiceAvailable={serviceAvailable ?? false}
-          />
-        )}
-
-        {/* Per-message reactions */}
-        {!isLoading && fullText && (
-          <MessageReactions
-            messageId={message.id}
-            conversationId={conversationId}
-            initialReactions={
-              (message.metadata?.reactions as Record<string, number> | undefined) ?? undefined
-            }
           />
         )}
       </div>

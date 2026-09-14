@@ -20,7 +20,6 @@ import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 import { useAdvancedAgentStore } from "@/lib/agents/agent-advanced.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
-import type { InferenceProvider } from "@/lib/inference-router";
 import { useThreadAgentSessionsStore } from "@/stores/thread-agent-sessions.store";
 import { NativeAgentApiError, type BrainRef } from "@/lib/agents/native-agent-api";
 import {
@@ -30,7 +29,6 @@ import {
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
-import { runAgentGroup, startAgentRun } from '@/lib/agents/agent.service';
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
 import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
 import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
@@ -87,7 +85,6 @@ export function ChatView({
   const fetchNativeMessages = useChatSessionStore((state) => state.fetchMessages);
   const fetchNativeCanvases = useChatSessionStore((state) => state.fetchSessionCanvases);
   const sendNativeMessageStream = useChatSessionStore((state) => state.sendMessageStream);
-  const sendNativeRoutedTurn = useChatSessionStore((state) => state.sendRoutedTurn);
   const abortNativeGeneration = useChatSessionStore((state) => state.abortGeneration);
   
   const activeNativeSession = useMemo(
@@ -354,7 +351,6 @@ export function ChatView({
   const [pluginMention, setPluginMention] = useState<PluginMentionTarget | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [launchMascotAttention, setLaunchMascotAttention] = useState<GizziAttention | null>(null);
-  const [routedProvider, setRoutedProvider] = useState<InferenceProvider | null>(null);
   const mascotResetTimeoutRef = useRef<number | null>(null);
   
   const { fetchWihs } = useUnifiedStore();
@@ -432,121 +428,6 @@ export function ChatView({
   const handleSend = useCallback(async (text: string, _context?: unknown) => {
     if (!text.trim()) return;
 
-    // Group chat: multiple bots respond in the same thread via the agent group endpoint.
-    const activeSession = useChatSessionStore
-      .getState()
-      .sessions.find((s) => s.id === embeddedAgentSession.sessionId);
-    const memberIds = (activeSession?.metadata?.memberIds as string[] | undefined) ?? [];
-    if (memberIds.length > 0) {
-      setSendError(null);
-      let sessionId = embeddedAgentSession.sessionId || chatId;
-
-      try {
-        if (!sessionId) {
-          sessionId = await useChatSessionStore.getState().createSession({
-            name: text.trim().slice(0, 60) || 'Group Chat',
-            sessionMode: 'agent',
-            metadata: {
-              isGroupChat: true,
-              memberIds,
-              originSurface: 'chat',
-            },
-            allowLocalFallback: true,
-          });
-        }
-
-        if (!sessionId) return;
-        useChatSessionStore.getState().setActiveSession(sessionId);
-        useChatSessionStore.getState().appendUserMessage(sessionId, {
-          id: `user-${Date.now()}`,
-          content: text.trim(),
-        });
-
-        const responses = await runAgentGroup(memberIds, text.trim());
-        for (const response of responses) {
-          useChatSessionStore.getState().appendAssistantMessage(sessionId, {
-            id: `assistant-${response.agentId}-${Date.now()}`,
-            content: response.output,
-            metadata: {
-              agentId: response.agentId,
-              agentName: response.agentName,
-              isGroupResponse: true,
-            },
-          });
-        }
-      } catch (error) {
-        logger.error({ err: error }, 'Failed to run agent group chat');
-        setSendError("Couldn't run group chat. Please try again.");
-      }
-      return;
-    }
-
-    // Local bot session: backend session creation is not implemented, so bot
-    // sessions are client-only. Send turns through the agent run endpoint and
-    // append the response locally so the bot's configured name appears.
-    const botSessionId = embeddedAgentSession.sessionId || chatId;
-    const isLocalBotSession = Boolean(
-      activeSession?.metadata?.isBot &&
-        activeSession?.metadata?.agentId &&
-        botSessionId &&
-        !botSessionId.startsWith('ses')
-    );
-    console.log('[ChatView.handleSend] botSessionId=', botSessionId, 'isBot=', activeSession?.metadata?.isBot, 'agentId=', activeSession?.metadata?.agentId, 'isLocalBotSession=', isLocalBotSession);
-    if (isLocalBotSession) {
-      setSendError(null);
-      const agentId = activeSession!.metadata.agentId as string;
-      const agentName = (activeSession!.metadata.agentName as string | undefined) ||
-        (activeSession!.metadata.botProfile as { displayName?: string } | undefined)?.displayName ||
-        'Bot';
-
-      const localSessionId = botSessionId as string;
-      try {
-        useChatSessionStore.getState().setActiveSession(localSessionId);
-        useChatSessionStore.getState().appendUserMessage(localSessionId, {
-          id: `user-${Date.now()}`,
-          content: text.trim(),
-        });
-
-        const run = await startAgentRun(agentId, text.trim());
-        useChatSessionStore.getState().appendAssistantMessage(localSessionId, {
-          id: `assistant-${agentId}-${Date.now()}`,
-          content: run.output || 'No response',
-          metadata: { agentId, agentName, isBotResponse: true },
-        });
-      } catch (error) {
-        logger.error({ err: error }, 'Failed to run local bot turn');
-        setSendError("Couldn't get a response from the bot. Please try again.");
-      }
-      return;
-    }
-
-    // Routed CLI turn: bypass the normal backend stream and execute through the
-    // local inference router instead.
-    if (routedProvider) {
-      let sessionId = embeddedAgentSession.sessionId || chatId;
-      const hasLiveSession = Boolean(sessionId && sessionId.startsWith('ses_'));
-
-      setSendError(null);
-      try {
-        if (!hasLiveSession) {
-          sessionId = await useChatSessionStore.getState().createSession({
-            name: text.trim().slice(0, 60) || 'New Session',
-            sessionMode: 'regular',
-            allowLocalFallback: true,
-          });
-        }
-
-        if (sessionId) {
-          useChatSessionStore.getState().setActiveSession(sessionId);
-          await sendNativeRoutedTurn(sessionId, routedProvider, text.trim());
-        }
-      } catch (error) {
-        logger.error({ err: error }, 'Failed to send routed turn');
-        setSendError("Couldn't route that turn. Please try again.");
-      }
-      return;
-    }
-
     if (mentionAgentId && chatId) {
       if (isSwarmAgentId(mentionAgentId)) {
         const swarmId = getSwarmIdFromAgent(mentionAgentId);
@@ -597,7 +478,6 @@ export function ChatView({
               ? brainRef.modelID
               : `${brainRef.providerID}/${brainRef.modelID}`
             : undefined,
-          ...(modelSelection?.modelId ? { modelId: modelSelection.modelId } : {}),
           ...(pluginMention
             ? { pluginMention: { kind: pluginMention.kind, id: pluginMention.id, name: pluginMention.name } }
             : {}),
@@ -613,7 +493,6 @@ export function ChatView({
       );
     }
   }, [mentionAgentId, pluginMention, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream, modelSelection?.modelId]);
-  }, [mentionAgentId, pluginMention, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream, routedProvider, sendNativeRoutedTurn, modelSelection?.modelId, runAgentGroup]);
 
   const handleStop = useCallback(() => {
     const activeSessionId = embeddedAgentSession.sessionId || chatId;
@@ -819,25 +698,6 @@ export function ChatView({
           agent={selectedAgent ?? undefined}
         />
       )}
-      <ChatBottomBar
-        mode={mode}
-        isChatEmpty={isChatEmpty}
-        hideEmptyState={hideEmptyState}
-        handleSend={handleSend}
-        onOpenAgentSession={onOpenAgentSession}
-        agentSurface={agentSurface}
-        setMentionAgentId={setMentionAgentId}
-        mentionAgentId={mentionAgentId}
-        setPluginMention={setPluginMention}
-        activeIsLoading={activeIsLoading}
-        handleStop={handleStop}
-        composerTopInfoBar={composerTopInfoBar}
-        composerQuestionBar={composerQuestionBar}
-        composerBottomInfoBar={composerBottomInfoBar}
-        useMonolithLogo={useMonolithLogo}
-        pulseMascot={pulseMascot}
-        setLaunchMascotAttention={setLaunchMascotAttention}
-      />
 
       <ModelPicker
         open={isSelecting}

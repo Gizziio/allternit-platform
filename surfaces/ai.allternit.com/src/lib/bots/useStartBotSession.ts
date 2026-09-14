@@ -1,9 +1,5 @@
 import { useCallback, useState } from 'react';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
-import { startAgentRun } from '@/lib/agents/agent.service';
-import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
-import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
-import { createSandbox, type Sandbox } from './vm-operator';
 import type { Agent } from '../agents/agent.types';
 import {
   prepareBotSession,
@@ -18,44 +14,6 @@ export interface UseStartBotSessionReturn {
   /** Non-fatal notice, e.g. "Running locally — sync pending" when the
    * backend session could not be created but a local session is live. */
   warning: string | null;
-  startSession: (agent: Agent) => Promise<string | null>;
-  startTask: (agent: Agent, task: string) => Promise<string | null>;
-  isStarting: boolean;
-  error: string | null;
-}
-
-interface BotSessionStartResult {
-  sessionId: string;
-  sandbox?: Sandbox;
-  sandboxError?: string;
-}
-
-function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox?: Sandbox): string {
-  const lines = [
-    '## Virtual Computer Operator',
-    '',
-    `You have access to a sandboxed virtual computer (${vmConfig.provider}).`,
-    `Allowed actions: ${(vmConfig.allowedActions?.length ? vmConfig.allowedActions : ['command']).join(', ')}.`,
-    `Network policy: ${vmConfig.networkPolicy || 'restricted'}.`,
-    `Persistence: ${vmConfig.persistence || 'session'}.`,
-  ];
-
-  if (sandbox) {
-    lines.push(
-      '',
-      `A sandbox is already running for this session (id: ${sandbox.id}).`,
-      sandbox.vncUrl ? `VNC stream: ${sandbox.vncUrl}` : '',
-      'Use the sandbox to run commands, operate browsers, edit files, or stream the desktop when the user asks you to perform actions that require a computer.'
-    );
-  } else {
-    lines.push(
-      '',
-      'A sandbox will be started automatically when you request a computer-use action.',
-      'When the user asks you to perform actions that require a computer, ask for permission if the trust tier requires it, then use the sandbox tools available to you.'
-    );
-  }
-
-  return lines.filter(Boolean).join('\n');
 }
 
 /**
@@ -69,9 +27,6 @@ function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox
  *
  * The session-start core lives in `./start-bot-session` so non-React callers
  * (rail rows, toasts, bot home) can start sessions without mounting a hook.
- * system prompt. The resulting sessionId can be passed to
- * `open('cowork-agent-session', { sessionId })` so the existing chat surface
- * renders it.
  */
 export function useStartBotSession(
   onSessionStarted?: (sessionId: string, botId: string) => void
@@ -84,8 +39,6 @@ export function useStartBotSession(
   // (temp-…) bot session (e.g. backend unreachable). Open it rather than
   // orphaning it, and flag that cloud sync is pending.
   const recoverLocalBotSession = useCallback((agent: Agent): string | null => {
-  const prepareBotSession = useCallback(async (agent: Agent): Promise<BotSessionStartResult | null> => {
-    const displayName = agent.botProfile?.displayName ?? agent.name;
     const store = useChatSessionStore.getState();
     const localSession = store.sessions.find(
       (s) => s.metadata?.isBot === true && s.metadata?.botCanonicalFor === agent.id,
@@ -113,26 +66,6 @@ export function useStartBotSession(
         // Surface the sandbox error as a system notice in the session metadata
         // without blocking the chat from opening.
         setError(sandboxError);
-    if (existingSession) {
-      return { sessionId: existingSession.id };
-    }
-
-    const [secretsResult, connectorsResult] = await Promise.all([
-      resolveAgentSecrets(agent.id, agent.secretRefs),
-      resolveAgentConnectors(agent.id, agent.connectorBindings),
-    ]);
-
-    let sandbox: Sandbox | undefined;
-    let sandboxError: string | undefined;
-    const vmConfig = agent.vmOperator;
-    const shouldStartSandbox = vmConfig?.enabled === true && vmConfig?.autoStart !== false;
-
-    if (shouldStartSandbox) {
-      const result = await createSandbox(agent.id, vmConfig);
-      if (result.ok && result.data) {
-        sandbox = result.data;
-      } else {
-        sandboxError = result.error ?? 'Virtual computer failed to start';
       }
 
       onSessionStarted?.(sessionId, agent.id);
@@ -140,57 +73,15 @@ export function useStartBotSession(
     },
     [onSessionStarted],
   );
-    }
-
-    const vmPrompt = vmConfig?.enabled ? buildVMSystemPrompt(vmConfig, sandbox) : '';
-    const basePrompt = agent.systemPrompt ?? '';
-    const systemPrompt = vmPrompt ? `${basePrompt}\n\n${vmPrompt}` : basePrompt;
-
-    const sessionId = await store.createSession({
-      name: displayName,
-      description: agent.botProfile?.welcomeMessage ?? agent.description,
-      sessionMode: 'agent',
-      agentId: agent.id,
-      agentName: displayName,
-      systemPrompt,
-      skipBackend: true,
-      metadata: {
-        isBot: agent.isBot === true,
-        botProfile: agent.botProfile,
-        starterPrompts: agent.botProfile?.starterPrompts,
-        model: agent.model,
-        tags: agent.tags,
-        category: agent.category,
-        trustTier: agent.trustTier,
-        originSurface: 'chat',
-        connectorBindings: agent.connectorBindings,
-        secretRefs: agent.secretRefs,
-        resolvedSecrets: secretsResult.secrets,
-        missingSecrets: secretsResult.missing,
-        resolvedConnectors: connectorsResult.credentials,
-        missingConnectors: connectorsResult.missing,
-        messagingConfig: agent.messagingConfig,
-        identityChannels: agent.identityChannels,
-        vmOperator: agent.vmOperator,
-        vmSandbox: sandbox ? { id: sandbox.id, provider: sandbox.provider, status: sandbox.status, vncUrl: sandbox.vncUrl } : undefined,
-        vmSandboxError: sandboxError,
-        vmControlNotice: notice,
-        executionPersistence: 'local',
-      },
-    });
-
-    return { sessionId, sandbox, sandboxError };
-  }, []);
 
   const startSession = useCallback(
     async (agent: Agent, options?: { modeId?: string; modelOverride?: string }): Promise<string | null> => {
-    async (agent: Agent): Promise<string | null> => {
       setIsStarting(true);
       setError(null);
       setWarning(null);
 
       try {
-        const result = await prepareBotSession(agent);
+        const result = await prepareBotSession(agent, options);
         if (!result) return null;
         return applyResult(agent, result);
       } catch (err) {
@@ -208,7 +99,6 @@ export function useStartBotSession(
 
   const startTask = useCallback(
     async (agent: Agent, task: string, options?: { modeId?: string; modelOverride?: string }): Promise<string | null> => {
-    async (agent: Agent, task: string): Promise<string | null> => {
       if (!task.trim()) return null;
 
       setIsStarting(true);
@@ -216,7 +106,7 @@ export function useStartBotSession(
       setWarning(null);
 
       try {
-        const result = await prepareBotSession(agent);
+        const result = await prepareBotSession(agent, options);
         if (!result) return null;
 
         const { sessionId, sandboxError } = result;
@@ -233,8 +123,7 @@ export function useStartBotSession(
         onSessionStarted?.(sessionId, agent.id);
 
         // Send the task as the first message so the bot starts working immediately.
-        // Bot sessions are local-only, so append locally and run through the agent
-        // run endpoint instead of the backend chat stream.
+        // A small delay ensures the session is active before streaming begins.
         await new Promise((resolve) => window.setTimeout(resolve, 50));
         const taskPrefix = agent.vmOperator?.enabled
           ? `[Task] ${task.trim()}\n\nIf this task requires a computer, browser, file system, or code execution, use your virtual computer.`
@@ -245,28 +134,12 @@ export function useStartBotSession(
         await store.sendMessageStream(sessionId, {
           text: taskPrefix,
           ...(runtimeModelId ? { modelId: runtimeModelId } : {}),
-
-        store.appendUserMessage(sessionId, {
-          id: `user-${Date.now()}`,
-          content: taskPrefix,
-        });
-        const run = await startAgentRun(agent.id, taskPrefix);
-        const displayName = agent.botProfile?.displayName ?? agent.name;
-        store.appendAssistantMessage(sessionId, {
-          id: `assistant-${agent.id}-${Date.now()}`,
-          content: run.output || 'No response',
-          metadata: {
-            agentId: agent.id,
-            agentName: displayName,
-            isBotResponse: true,
-          },
         });
 
         if (sandboxError) {
           setError(sandboxError);
         }
 
-        onSessionStarted?.(sessionId);
         return sessionId;
       } catch (err) {
         const localSessionId = recoverLocalBotSession(agent);

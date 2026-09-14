@@ -54,7 +54,6 @@ import {
   readConfigProviderRoutingPin,
   resolveProviderRoutingWirePin,
 } from './provider-routing';
-import { inferenceRouterApi, type InferenceProvider } from '@/lib/inference-router';
 
 const logger = createModuleLogger('ModeSessionStore');
 
@@ -102,10 +101,6 @@ export interface ModeSession {
     agentIds?: string[];
     agentName?: string;
     originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design' | 'bot';
-    // Group chat: multiple agent members in one session
-    isGroupChat?: boolean;
-    memberIds?: string[];
-    originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
     projectId?: string;
     taskId?: string;
     workspaceId?: string;
@@ -170,16 +165,6 @@ export interface CreateModeSessionOptions {
   systemPrompt?: string;
   isolation?: 'worktree' | 'none';
   metadata?: Record<string, unknown>;
-  /**
-   * When true, keep the optimistic local session if backend creation fails.
-   * Used for routed CLI turns that do not require a live Gizzi session.
-   */
-  allowLocalFallback?: boolean;
-  /**
-   * When true, never create a backend session. The session is local-only.
-   * Used for group chats and other client-only session types.
-   */
-  skipBackend?: boolean;
 }
 
 export interface SendMessageOptions {
@@ -275,22 +260,6 @@ function mapBackendMessage(backend: BackendMessage): ModeSessionMessage {
   };
 }
 
-/**
- * Build base metadata for assistant messages in bot sessions so the UI can
- * render the bot's name and avatar. Group-chat replies override this with
- * per-message agentId/agentName via appendAssistantMessage.
- */
-function buildBotAssistantMetadata(session: ModeSession): Record<string, unknown> | undefined {
-  const agentId = session.metadata?.agentId;
-  const agentName = session.metadata?.agentName;
-  if (!agentId && !agentName) return undefined;
-  return {
-    agentId: agentId as string | undefined,
-    agentName: agentName as string | undefined,
-    isBotResponse: true,
-  };
-}
-
 function isBackendSessionId(sessionId: string): boolean {
   return sessionId.startsWith('ses');
 }
@@ -327,7 +296,7 @@ function upsertAgentElementsToolPart(
   );
 }
 
-export async function persistArtifactToCanvas(
+async function persistArtifactToCanvas(
   sessionId: string,
   artifact: ArtifactUIPart,
   artifactCanvasIds: Map<string, string>,
@@ -622,56 +591,6 @@ async function sendMessageWithContext(
 
 async function resolveFallbackRuntimeModelId(agent?: Agent): Promise<string | null> {
   return (await resolveAgentChatRuntimeModelId(agent)) ?? null;
-/**
- * Resolve the provider/model string the kernel expects (`provider/modelId`).
- * Reads the composer's persisted model selection; falls back to the platform's
- * configured default brain, then to the first local Ollama model.
- */
-const MODEL_SELECTION_STORAGE_KEY = 'allternit:model-selection';
-
-function resolveRuntimeModelId(): string | undefined {
-  try {
-    const raw = typeof window !== 'undefined'
-      ? window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY)
-      : null;
-    if (raw) {
-      const parsed = JSON.parse(raw) as { providerId?: string; modelId?: string } | null;
-      if (parsed?.providerId && parsed?.modelId) {
-        return `${parsed.providerId}/${parsed.modelId}`;
-      }
-    }
-  } catch { /* malformed or unavailable storage */ }
-  return undefined;
-}
-
-async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
-  // Prefer the backend's configured default model. This matches what the
-  // composer/model picker shows by default and keeps bot sessions on a brain
-  // that actually works (e.g. the gizzi sidecar embedded model in dev).
-  try {
-    const res = await fetch('/api/onboarding/config');
-    if (res.ok) {
-      const data = await res.json() as { user?: { defaultModel?: string } };
-      const defaultModel = data.user?.defaultModel;
-      if (defaultModel && defaultModel.includes('/')) {
-        return defaultModel;
-      }
-    }
-  } catch { /* onboarding config unavailable */ }
-
-  // Last resort: use a locally-pulled Ollama model.
-  try {
-    const res = await fetch('/api/local-brain');
-    if (!res.ok) return undefined;
-    const data = await res.json() as { ollamaRunning?: boolean; modelId?: string; pulledModels?: string[] };
-    if (data.ollamaRunning && data.modelId) {
-      return `ollama/${data.modelId}`;
-    }
-    if (data.ollamaRunning && data.pulledModels?.length) {
-      return `ollama/${data.pulledModels[0]}`;
-    }
-  } catch { /* local brain unavailable */ }
-  return undefined;
 }
 
 /**
@@ -1070,7 +989,6 @@ export interface ModeSessionState {
   
   sendMessage: (sessionId: string, options: SendMessageOptions) => Promise<void>;
   sendMessageStream: (sessionId: string, options: SendMessageOptions) => Promise<void>;
-  sendRoutedTurn: (sessionId: string, provider: InferenceProvider, prompt: string) => Promise<void>;
   abortGeneration: (sessionId: string) => void;
   setStreamingBySession: (sessionId: string, isStreaming: boolean) => void;
 
@@ -1187,21 +1105,6 @@ export function createModeSessionStore(config: StoreConfig) {
               activeSessionId: optimisticId,
             }));
 
-            // Client-only sessions (e.g. bot group chats) skip the backend entirely
-            // so custom metadata like memberIds survives.
-            if (options.skipBackend) {
-              set((state) => ({
-                isLoading: false,
-                sessions: state.sessions.map((s) =>
-                  s.id === optimisticId
-                    ? { ...s, metadata: { ...s.metadata, ...options.metadata } }
-                    : s
-                ),
-              }));
-              return optimisticId;
-            }
-
-            
             try {
               // Load agent workspace if agent mode
               let workspace: AgentWorkspace | null = null;
@@ -1328,7 +1231,7 @@ export function createModeSessionStore(config: StoreConfig) {
               const canRunLocally = Boolean(localModeId) && (
                 options.sessionMode === 'agent' || config.originSurface === 'code' || isBotSession
               );
-              if (canRunLocally || options.allowLocalFallback) {
+              if (canRunLocally) {
                 logger.warn({ err: error }, `[${config.name}] Backend session unavailable; running built-in mode locally`);
                 set((state) => ({
                   error: null,
@@ -1341,7 +1244,6 @@ export function createModeSessionStore(config: StoreConfig) {
                             ...session.metadata,
                             agentModeId: (localModeId ?? session.metadata?.agentModeId) as CanonicalAgentModeId | undefined,
                             executionPersistence: 'local',
-                            allowLocalFallback: true,
                           },
                         }
                       : session
@@ -1560,7 +1462,6 @@ export function createModeSessionStore(config: StoreConfig) {
             // single chunk, all set() calls land in one React render with
             // isStreaming=false, causing StreamingChatComposer to mount with
             // isActivelyStreaming=false and show the full text as a blob.
-            const botAssistantMeta = buildBotAssistantMetadata(session);
             set((state) => ({
               sessions: state.sessions.map((s) =>
                 s.id === sessionId
@@ -1569,7 +1470,6 @@ export function createModeSessionStore(config: StoreConfig) {
                       role: 'assistant' as const,
                       content: '',
                       timestamp: new Date().toISOString(),
-                      metadata: botAssistantMeta,
                     }] }
                   : s
               ),
@@ -1651,8 +1551,8 @@ export function createModeSessionStore(config: StoreConfig) {
                     content: assistantContent,
                     thinking: reasoningContent || undefined,
                     timestamp: new Date().toISOString(),
-                    metadata: assistantToolParts.length > 0 || botAssistantMeta
-                      ? { ...(botAssistantMeta ?? {}), ...(assistantToolParts.length > 0 ? { agentElementsParts: assistantToolParts } : {}) }
+                    metadata: assistantToolParts.length > 0
+                      ? { agentElementsParts: assistantToolParts }
                       : undefined,
                   };
                   const newMessages = existingMsgIndex >= 0
@@ -1805,8 +1705,8 @@ export function createModeSessionStore(config: StoreConfig) {
                           content: assistantContent,
                           thinking: reasoningContent || undefined,
                           timestamp: new Date().toISOString(),
-                          metadata: assistantToolParts.length > 0 || botAssistantMeta
-                            ? { ...(botAssistantMeta ?? {}), ...(assistantToolParts.length > 0 ? { agentElementsParts: assistantToolParts } : {}) }
+                          metadata: assistantToolParts.length > 0
+                            ? { agentElementsParts: assistantToolParts }
                             : undefined,
                         };
                         const newMessages = existingMsgIndex >= 0
@@ -1926,148 +1826,6 @@ export function createModeSessionStore(config: StoreConfig) {
             }
           },
 
-          sendRoutedTurn: async (sessionId: string, provider: InferenceProvider, prompt: string) => {
-            const session = get().sessions.find((s) => s.id === sessionId);
-            if (!session) throw new Error('Session not found');
-            // Routed turns can run against local fallback sessions when the Gizzi
-            // runtime is unavailable; persistence is handled by the local store.
-            if (!isBackendSessionId(sessionId) && !session.metadata.allowLocalFallback) {
-              throw new Error(`Cannot send a routed turn before a live session exists: ${sessionId}`);
-            }
-
-            const trimmed = prompt.trim();
-            if (!trimmed) return;
-
-            // For bot sessions, make sure the routed CLI brain knows the bot's
-            // identity and system prompt instead of answering as the raw CLI.
-            const botProfile = session.metadata?.botProfile as { displayName?: string; tagline?: string; welcomeMessage?: string } | undefined;
-            const routedAgentId = session.metadata?.agentId as string | undefined;
-            const routedAgentName =
-              botProfile?.displayName ||
-              (session.metadata?.agentName as string | undefined) ||
-              'Bot';
-            const personaParts: string[] = [];
-            if (routedAgentName) {
-              personaParts.push(`You are ${routedAgentName}.`);
-            }
-            if (botProfile?.tagline) personaParts.push(botProfile.tagline);
-            if (botProfile?.welcomeMessage) personaParts.push(botProfile.welcomeMessage);
-            if (session.metadata?.systemPrompt) personaParts.push(session.metadata.systemPrompt as string);
-            const routedSystemPrompt = personaParts.length > 0 ? personaParts.join('\n\n') : undefined;
-
-            const userMessageId = `temp-${Date.now()}`;
-            const assistantMessageId = `assistant-${Date.now()}`;
-
-            // Mark session as streaming and add optimistic user + placeholder assistant messages.
-            set((state) => ({
-              streamingBySession: {
-                ...state.streamingBySession,
-                [sessionId]: { isStreaming: true, error: null, abortController: null },
-              },
-              sessions: state.sessions.map((s) =>
-                s.id === sessionId
-                  ? {
-                      ...s,
-                      messages: [
-                        ...s.messages,
-                        {
-                          id: userMessageId,
-                          role: 'user' as const,
-                          content: trimmed,
-                          timestamp: new Date().toISOString(),
-                        },
-                        {
-                          id: assistantMessageId,
-                          role: 'assistant' as const,
-                          content: '',
-                          timestamp: new Date().toISOString(),
-                          metadata: {
-                            routedTurn: true,
-                            provider,
-                            routedStatus: 'running',
-                            agentId: routedAgentId,
-                            agentName: routedAgentName,
-                          },
-                        },
-                      ],
-                      messageCount: s.messageCount + 1,
-                    }
-                  : s
-              ),
-            }));
-
-            // Yield so React renders the placeholder while isStreaming=true.
-            await new Promise<void>((resolve) => setTimeout(resolve, 0));
-
-            try {
-              const result = await inferenceRouterApi.execute(provider, trimmed, {
-                systemPrompt: routedSystemPrompt,
-              });
-              const output = result.output || result.error || '';
-              set((state) => ({
-                sessions: state.sessions.map((s) =>
-                  s.id === sessionId
-                    ? {
-                        ...s,
-                        messages: s.messages.map((m) =>
-                          m.id === assistantMessageId
-                            ? {
-                                ...m,
-                                content: output,
-                                metadata: {
-                                  routedTurn: true,
-                                  provider,
-                                  exitCode: result.exitCode ?? null,
-                                  error: result.error ?? null,
-                                  routedStatus: result.error ? 'error' : 'complete',
-                                  agentId: routedAgentId,
-                                  agentName: routedAgentName,
-                                },
-                              }
-                            : m
-                        ),
-                      }
-                    : s
-                ),
-              }));
-            } catch (err) {
-              const message = err instanceof Error ? err.message : String(err);
-              set((state) => ({
-                sessions: state.sessions.map((s) =>
-                  s.id === sessionId
-                    ? {
-                        ...s,
-                        messages: s.messages.map((m) =>
-                          m.id === assistantMessageId
-                            ? {
-                                ...m,
-                                content: `Routing error: ${message}`,
-                                metadata: {
-                                  routedTurn: true,
-                                  provider,
-                                  routedStatus: 'error',
-                                  agentId: routedAgentId,
-                                  agentName: routedAgentName,
-                                },
-                              }
-                            : m
-                        ),
-                      }
-                    : s
-                ),
-              }));
-            } finally {
-              set((state) => ({
-                streamingBySession: {
-                  ...state.streamingBySession,
-                  [sessionId]: state.streamingBySession[sessionId]
-                    ? { ...state.streamingBySession[sessionId], isStreaming: false }
-                    : { isStreaming: false, error: null, abortController: null },
-                },
-              }));
-            }
-          },
-
           abortGeneration: async (sessionId: string) => {
             if (!isBackendSessionId(sessionId)) {
               set((state) => ({
@@ -2102,9 +1860,6 @@ export function createModeSessionStore(config: StoreConfig) {
               streamingBySession: {
                 ...state.streamingBySession,
                 [sessionId]: { isStreaming, error: null, abortController: null },
-                [sessionId]: state.streamingBySession[sessionId]
-                  ? { ...state.streamingBySession[sessionId], isStreaming }
-                  : { isStreaming, error: null, abortController: null },
               },
             }));
           },
@@ -2304,38 +2059,18 @@ export function createModeSessionStore(config: StoreConfig) {
               sessions: state.sessions.map((s) =>
                 s.id === sessionId
                   ? { ...s, messages: [...s.messages, userMsg], updatedAt: new Date().toISOString() }
-                  ? { ...s, messages: [...s.messages, userMsg], messageCount: s.messageCount + 1 }
                   : s
               ),
             }));
           },
 
           appendAssistantMessage: (sessionId: string, message) => {
-            const session = get().sessions.find((s) => s.id === sessionId);
-            const isBotSession = Boolean(session?.metadata?.isBot) || Boolean(session?.metadata?.isGroupChat);
-            // Prefer identity supplied per-message (group replies pass their own
-            // agentId/agentName). Fall back to session-level bot metadata.
-            const sessionBotMeta = isBotSession
-              ? {
-                  agentId: session?.metadata?.agentId as string | undefined,
-                  agentName:
-                    (session?.metadata?.agentName as string | undefined) ||
-                    (session?.metadata?.botProfile &&
-                      (session.metadata.botProfile as { displayName?: string }).displayName) ||
-                    'Bot',
-                }
-              : {};
             const assistantMsg: ModeSessionMessage = {
               id: message.id,
               role: 'assistant',
               content: message.content,
               timestamp: new Date().toISOString(),
-              metadata: {
-                ...sessionBotMeta,
-                ...message.metadata,
-                agentId: (message.metadata?.agentId as string | undefined) ?? sessionBotMeta.agentId,
-                agentName: (message.metadata?.agentName as string | undefined) ?? sessionBotMeta.agentName,
-              },
+              metadata: message.metadata,
             };
             set((state) => ({
               sessions: state.sessions.map((s) =>

@@ -57,110 +57,6 @@ function ChatCoworkToggle() {
                 ? 'h-7 before:bg-composer-soft text-primary'
                 : 'h-full bg-transparent text-muted hover:text-primary'
             )}
-      aria-label="Chat or Cowork"
-      className="flex items-center rounded-md overflow-hidden border border-composer-border bg-transparent h-7 flex-shrink-0"
-    >
-      <button
-        type="button"
-        aria-pressed={mode === 'chat'}
-        onClick={() => handleSwitch('chat')}
-        className={cn(
-          'flex items-center gap-1 px-2 h-full border-none transition-all duration-150 text-xs font-semibold',
-          mode === 'chat'
-            ? 'bg-composer-soft text-primary rounded-r-md'
-            : 'bg-transparent text-muted hover:text-primary'
-        )}
-      >
-        <ChatTeardropText size={14} weight={mode === 'chat' ? 'fill' : 'bold'} />
-        Chat
-      </button>
-      <button
-        type="button"
-        aria-pressed={mode === 'cowork'}
-        onClick={() => handleSwitch('cowork')}
-        className={cn(
-          'flex items-center gap-1 px-2 h-full border-none border-l border-composer-border transition-all duration-150 text-xs font-semibold',
-          mode === 'cowork'
-            ? 'bg-composer-soft text-primary rounded-l-md'
-            : 'bg-transparent text-muted hover:text-primary'
-        )}
-      >
-        <UsersThree size={14} weight={mode === 'cowork' ? 'fill' : 'bold'} />
-        Cowork
-      </button>
-    </div>
-  );
-}
-
-interface AgentModePillProps {
-  agentModeEnabled: boolean;
-  agentModeTheme: { glow: string; soft: string; accent: string };
-  selectedSurfaceAgent: { name: string } | null;
-  selectedModeId: string | null;
-  onToggle: () => void;
-  onOpenMenu: () => void;
-  showMenu: boolean;
-}
-
-function AgentModePill({
-  agentModeEnabled,
-  agentModeTheme,
-  selectedSurfaceAgent,
-  selectedModeId,
-  onToggle,
-  onOpenMenu,
-  showMenu,
-}: AgentModePillProps) {
-  const glowColor = agentModeEnabled ? agentModeTheme.glow : 'var(--chat-composer-border)';
-  const softColor = agentModeEnabled ? agentModeTheme.soft : 'transparent';
-  const accentColor = agentModeEnabled ? agentModeTheme.accent : 'var(--chat-composer-muted)';
-  const selectedModeLabel = selectedModeId
-    ? MODE_TABS.find((m) => m.id === selectedModeId)?.label ?? null
-    : null;
-  const label = agentModeEnabled
-    ? selectedSurfaceAgent && selectedModeLabel
-      ? `Bot | ${selectedModeLabel}`
-      : selectedModeLabel
-        ? `Bot | ${selectedModeLabel}`
-        : selectedSurfaceAgent
-          ? `Bot | ${selectedSurfaceAgent.name}`
-          : 'Bot On'
-    : 'Bot Off';
-
-  return (
-    <div
-      className={cn(
-        'inline-flex items-center h-8 pl-2.5 pr-1 rounded-full text-xs font-bold transition-all ease border overflow-hidden',
-        agentModeEnabled ? 'shadow-sm' : 'opacity-75'
-      )}
-      style={{
-        borderColor: glowColor,
-        background: softColor,
-        color: accentColor,
-        boxShadow: agentModeEnabled ? `0 0 10px ${glowColor}` : 'none',
-      }}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex items-center gap-1.5 h-full bg-transparent border-none cursor-pointer"
-        style={{ color: accentColor }}
-      >
-        <Robot size={14} />
-        <span>{label}</span>
-      </button>
-      {agentModeEnabled && (
-        <>
-          <div className="w-px h-4 mx-1 opacity-30" style={{ background: glowColor }} />
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenMenu();
-            }}
-            aria-label="Select agent"
-            className="flex items-center justify-center size-6 rounded-full bg-transparent border-none cursor-pointer transition-colors hover:bg-black/5"
-            style={{ color: accentColor }}
           >
             <span className="relative z-[1] flex items-center gap-1 px-2">
               <SegmentIcon size={14} weight={isActive ? 'fill' : 'bold'} />
@@ -177,10 +73,6 @@ interface BottomDockProps {
   agentModeSurface?: AgentModeSurface | null;
   agentModeEnabled: boolean;
   agentModeTheme: { glow: string; soft: string; accent: string };
-  setShowAgentMenu: (show: boolean) => void;
-  showAgentMenu: boolean;
-  selectedSurfaceAgent: { name: string } | null;
-  onToggleAgentMode?: () => void;
   customLeftContent?: React.ReactNode;
   /** Chat/Cowork/Bots mode toggle is only for pre-session composers; hide once a session is active */
   showModeToggle?: boolean;
@@ -219,42 +111,6 @@ export function BottomDock({
       {customLeftContent ? (
         <div className="flex items-center">{customLeftContent}</div>
       ) : null}
-      ) : (
-        <AgentModePill
-          agentModeEnabled={agentModeEnabled}
-          agentModeTheme={agentModeTheme}
-          selectedSurfaceAgent={selectedSurfaceAgent}
-          selectedModeId={_selectedModeId}
-          onToggle={onToggleAgentMode || (() => {})}
-          onOpenMenu={() => setShowAgentMenu(true)}
-          showMenu={showAgentMenu}
-        />
-      )}
-
-      {showAgentMenu && agentModeSurface && (
-        <AgentSelectorDropdown
-          className="absolute bottom-full left-0 mb-2"
-          agents={agents.filter((a) => {
-            const allowedSurfaces = (a.allowedSurfaces as string[] | undefined) || [];
-            return allowedSurfaces.includes(agentModeSurface);
-          })}
-          isLoading={isLoadingAgents}
-          selectedAgent={selectedSurfaceAgentId}
-          workspaceArtifacts={workspaceArtifacts}
-          error={agentError}
-          openClawCandidatesCount={openClawCandidatesCount}
-          onOpenImportWizard={onOpenImportWizard}
-          onSelect={(agent) => {
-            onSelectAgent?.(agent);
-            setShowAgentMenu(false);
-          }}
-          onClear={() => {
-            onClearAgent?.();
-            setShowAgentMenu(false);
-          }}
-          onClose={() => setShowAgentMenu(false)}
-        />
-      )}
     </div>
   );
 }

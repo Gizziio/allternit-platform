@@ -20,7 +20,6 @@
 import { api } from '../../integration/api-client';
 import type {
   Agent,
-  BotProfile,
   AppMode,
   CreateAgentInput,
   VoiceConfig,
@@ -76,11 +75,6 @@ function assertRailsApiEnabled(): void {
 }
 
 const logger = createModuleLogger('AgentService');
-
-/** Return the first argument that is not `undefined` or `null`. */
-function firstDefined<T>(...values: unknown[]): T | undefined {
-  return values.find((v) => v !== undefined && v !== null) as T | undefined;
-}
 
 // ============================================================================
 // Agent CRUD Operations (Registry via API)
@@ -257,7 +251,6 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     avatar: input.avatar
       ? (typeof input.avatar === 'string' ? input.avatar : JSON.stringify(input.avatar))
       : undefined,
-    avatar: input.avatar && typeof input.avatar === 'object' ? JSON.stringify(input.avatar) : input.avatar,
     character_json: input.characterLayer,
     trust_tier: input.trustTier,
     harness_config: input.harness,
@@ -328,7 +321,6 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
       try {
         logger.debug(`API call attempt ${attempt + 1}/${maxRetries}`);
         const response = await api.createAgent(apiInput as Parameters<typeof api.createAgent>[0]);
-        const response = await api.createAgent(apiInput as unknown as Omit<import('@/integration/api-client').Agent, 'id'>);
         logger.debug(`Agent created in ${Date.now() - startTime}ms`);
         // allternit-api's create response only carries { agent: { id } } — no
         // other fields — so merge the generated id over what we already sent
@@ -365,40 +357,6 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
  * Transform agent data from API (snake_case) to frontend (camelCase)
  * Note: Input should already be validated by Zod before calling this
  */
-function normalizeBotProfile(raw: unknown): BotProfile | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const p = raw as Record<string, unknown>;
-  const displayName =
-    firstDefined<string>(p.display_name, p.displayName) ||
-    firstDefined<string>(p.name, p.name) ||
-    '';
-  if (!displayName) return undefined;
-  return {
-    displayName,
-    handle: firstDefined<string>(p.handle, p.handle),
-    version: firstDefined<string>(p.version, p.version),
-    tagline: firstDefined<string>(p.tagline, p.tagline),
-    welcomeMessage: firstDefined<string>(p.welcome_message, p.welcomeMessage),
-    starterPrompts: Array.isArray(p.starter_prompts)
-      ? (p.starter_prompts as string[])
-      : Array.isArray(p.starterPrompts)
-        ? (p.starterPrompts as string[])
-        : undefined,
-    accentColor: firstDefined<string>(p.accent_color, p.accentColor),
-    groupChatEnabled: firstDefined<boolean>(p.group_chat_enabled, p.groupChatEnabled),
-    defaultPresetId: firstDefined<string>(p.default_preset_id, p.defaultPresetId),
-    botCategory: firstDefined<BotProfile['botCategory']>(
-      p.bot_category as BotProfile['botCategory'],
-      p.botCategory as BotProfile['botCategory'],
-    ),
-    lifecycle: firstDefined<BotProfile['lifecycle']>(
-      p.lifecycle as BotProfile['lifecycle'],
-      p.lifecycle as BotProfile['lifecycle'],
-    ),
-    avatar: p.avatar as BotProfile['avatar'],
-  };
-}
-
 export function transformAgentFromApi(apiAgent: unknown): Agent {
   const a = apiAgent as Record<string, unknown>;
   const voiceData = a.voice as Record<string, unknown> | undefined;
@@ -445,17 +403,7 @@ export function transformAgentFromApi(apiAgent: unknown): Agent {
     lastRunAt: pick<string>(a.last_run_at, a.lastRunAt),
     workspaceId: pick<string>(a.workspace_id, a.workspaceId),
     ownerId: pick<string>(a.owner_id, a.ownerId),
-    avatar: (() => {
-      if (!a.avatar) return undefined;
-      if (typeof a.avatar === 'string') {
-        try {
-          return JSON.parse(a.avatar) as Agent['avatar'];
-        } catch {
-          return undefined;
-        }
-      }
-      return a.avatar as Agent['avatar'];
-    })(),
+    avatar: (a.avatar as Agent['avatar']) || undefined,
     characterLayer: pick<Agent['characterLayer']>(a.character_json, a.characterLayer),
     trustTier: pick<Agent['trustTier']>(a.trust_tier, a.trustTier) || 'standard',
     harness: pick<Agent['harness']>(a.harness_config, a.harness),
@@ -473,13 +421,11 @@ export function transformAgentFromApi(apiAgent: unknown): Agent {
     dataClassification: pick<string>(a.data_classification, a.dataClassification),
     writeScope: pick<string>(a.write_scope, a.writeScope),
     isBot: pick<boolean>(a.is_bot, a.isBot, config.isBot) ?? false,
-    botProfile: normalizeBotProfile(
-      pick<unknown>(
-        a.bot_profile,
-        a.botProfile,
-        config.botProfile,
-      ),
-    ),
+    botProfile: pick<Agent['botProfile']>(
+      a.bot_profile as Agent['botProfile'],
+      a.botProfile as Agent['botProfile'],
+      config.botProfile as Agent['botProfile'],
+    ) || undefined,
     brainId: pick<string>(a.brain_id, a.brainId, config.brainId as string),
     brain: parseBotBrain(pick(a.brain, a.bot_brain, a.botBrain, config.botBrain)),
     connectorBindings: pick<Agent['connectorBindings']>(
@@ -549,9 +495,7 @@ export async function updateAgent(
     // over the config update (if any) so neither write clobbers the other.
     apiUpdates.config = { ...((apiUpdates.config as Record<string, unknown>) || {}), agentSource: updates.source };
   }
-  if (updates.avatar !== undefined) {
-    apiUpdates.avatar = updates.avatar && typeof updates.avatar === 'object' ? JSON.stringify(updates.avatar) : updates.avatar;
-  }
+  if (updates.avatar !== undefined) apiUpdates.avatar = updates.avatar;
   if (updates.characterLayer !== undefined) apiUpdates.character_json = updates.characterLayer;
   if (updates.trustTier !== undefined) apiUpdates.trust_tier = updates.trustTier;
   if (updates.harness !== undefined) apiUpdates.harness_config = updates.harness;
@@ -632,36 +576,6 @@ export async function deleteAgent(agentId: string): Promise<void> {
 // ============================================================================
 // Agent Execution (Rails DAG/WIH Integration)
 // ============================================================================
-
-/**
- * Run a group of agents in parallel against a single user input.
- * Maps to: POST /api/v1/agents/group/runs
- */
-export async function runAgentGroup(
-  agentIds: string[],
-  input: string,
-): Promise<Array<{ agentId: string; agentName: string; output: string; status: string }>> {
-  const response = await apiRequestWithError<{
-    responses?: Array<{
-      agent_id?: string;
-      agent_name?: string;
-      output?: string;
-      status?: string;
-      [key: string]: unknown;
-    }>;
-  }>(`${API_BASE_URL}/agents/group/runs`, {
-    method: 'POST',
-    body: JSON.stringify({ agent_ids: agentIds, input }),
-  });
-
-  const responses = response?.responses ?? [];
-  return responses.map((r) => ({
-    agentId: String(r.agent_id ?? ''),
-    agentName: String(r.agent_name ?? 'Unknown Agent'),
-    output: String(r.output ?? ''),
-    status: String(r.status ?? ''),
-  }));
-}
 
 /**
  * Start an agent run - API handles Rails DAG + Kernel execution

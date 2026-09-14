@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FilePdf, LinkSimple, UploadSimple } from '@phosphor-icons/react';
-import { LinkSimple, Signature, UploadSimple } from '@phosphor-icons/react';
 import { stashFile } from './file-handoff';
 import { OfficeAppLogo } from './OfficeAppLogo';
 import { fetchArtifacts, type ArtifactDto } from '@/services/artifacts-api';
@@ -22,7 +21,7 @@ interface EditorCard {
   formats: string[]
 }
 
-/** Open-a-file targets: the four editors plus the anydoc markdown preview. */
+/** Open-a-file targets: the editors, Allternit Sign, plus the anydoc markdown preview. */
 type RouteTarget = EditorCard['id'] | 'markdown-preview'
 
 const EDITORS: EditorCard[] = [
@@ -54,8 +53,8 @@ const EDITORS: EditorCard[] = [
   {
     id: 'sign',
     name: 'Allternit Sign',
-    description: 'Native electronic signing powered by the open-source DocuSeal platform.',
-    formats: ['.pdf', '.docx'],
+    description: 'Native PDF signing — add signers, place signature fields on the page, and download the signed document. No cloud service or API key required.',
+    formats: ['.pdf'],
   },
 ]
 
@@ -65,7 +64,6 @@ const ROUTE_BY_EXT: Record<string, RouteTarget> = {
   pptx: 'slides',
   pdf: 'pdf',
   md: 'markdown-preview',
-  markdown: 'markdown-preview',
   // Formats with no native editor open in the anydoc markdown preview.
   doc: 'markdown-preview',
   docm: 'markdown-preview',
@@ -230,14 +228,18 @@ export function OfficeSuiteSection({ openView }: OfficeSuiteSectionProps) {
                 if (editor.id === 'pdf') {
                   fileInputRef.current?.click();
                 } else if (editor.id === 'sign') {
-                  openEditor('sign');
+                  if (openView) {
+                    openView('sign');
+                  } else {
+                    navigate('/sign');
+                  }
                 } else {
                   openEditor(editor.id);
                 }
               }}
               className="mt-auto inline-flex h-9 items-center justify-center rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
             >
-              {editor.id === 'pdf' ? 'Open a PDF' : editor.id === 'sign' ? 'Sign a document' : 'Create new'}
+              {editor.id === 'pdf' ? 'Open a PDF' : editor.id === 'sign' ? 'Open Sign' : 'Create new'}
             </button>
           </article>
         ))}

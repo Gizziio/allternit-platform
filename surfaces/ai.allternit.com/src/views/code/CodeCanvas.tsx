@@ -65,6 +65,12 @@ import { createModuleLogger } from '@/lib/logger';
 const logger = createModuleLogger('CodeCanvas');
 
 const CONTENT_WIDTH = 760;
+const CODE_MODEL_NAMES: Record<string, string> = {
+  codex: 'Codex CLI',
+  'claude-code': 'Claude Code',
+  'gemini-cli': 'Gemini CLI',
+  'kimi-cli': 'Kimi CLI',
+};
 
 const CODE_RUNTIME_PERMISSION_MODES: Record<CodeSessionMode, 'default' | 'acceptEdits' | 'plan'> = {
   SAFE: 'plan',
@@ -95,6 +101,11 @@ interface ActionGroup {
 
 interface CodeCanvasProps {
   // Canvas fills its container; collapse state is handled by the parent layout.
+}
+
+interface CodeModelSelection {
+  modelId: string;
+  modelName?: string;
 }
 
 const CODE_ACTION_GROUPS: ActionGroup[] = [
@@ -326,7 +337,6 @@ export function CodeCanvas(_props: CodeCanvasProps) {
   }, [modelSelection]);
   const selectedModelDisplayName =
     modelSelection?.modelName || modelSelection?.modelId || CODE_MODEL_NAMES['claude-code'];
-  const { selection: modelSelection } = useModelSelection();
   const [terminalCanvasOpen, setTerminalCanvasOpen] = useState(false);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [showWorkspacePicker, setShowWorkspacePicker] = useState(false);
@@ -533,6 +543,8 @@ export function CodeCanvas(_props: CodeCanvasProps) {
         setShowSessionPicker(false);
         setShowWorkspacePicker((current) => !current);
       }}
+      selectedModel={selectedModel}
+      selectedModelDisplayName={selectedModelDisplayName}
       showSessionPicker={showSessionPicker}
       showWorkspacePicker={showWorkspacePicker}
       workspaceReady={workspaceReady}
@@ -570,12 +582,15 @@ interface CodeSessionSurfaceProps {
   onDismissEmbeddedAgentSession: () => void;
   onToggleTerminalCanvas: () => void;
   terminalCanvasOpen: boolean;
+  onSelectModel: (selection: CodeModelSelection) => void;
   onPreviewTemplate: (prompt: string) => void;
   onSelectTemplate: (prompt: string) => void;
   onSetActiveSession: (sessionId: string) => void;
   onToggleAction: (id: ActionGroupId) => void;
   onToggleSessionPicker: () => void;
   onToggleWorkspacePicker: () => void;
+  selectedModel: string;
+  selectedModelDisplayName: string;
   showSessionPicker: boolean;
   showWorkspacePicker: boolean;
   workspaceReady: boolean;
@@ -611,12 +626,15 @@ function CodeSessionSurface({
   onDismissEmbeddedAgentSession,
   onToggleTerminalCanvas,
   terminalCanvasOpen,
+  onSelectModel,
   onPreviewTemplate,
   onSelectTemplate,
   onSetActiveSession,
   onToggleAction,
   onToggleSessionPicker,
   onToggleWorkspacePicker,
+  selectedModel,
+  selectedModelDisplayName,
   showSessionPicker,
   showWorkspacePicker,
   workspaceReady,
@@ -637,7 +655,6 @@ function CodeSessionSurface({
   pendingQuestions,
   brainMode,
 }: CodeSessionSurfaceProps) {
-  const { selection: modelSelection } = useModelSelection();
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('code');
   // Tracks the gizzi ses_* ID for regular (non-agent) chat within this surface instance
@@ -685,7 +702,7 @@ function CodeSessionSurface({
     onError: (error) => logger.error({ err: error }, '[CodeCanvas] stream error'),
   });
 
-  const effectiveModelId = resolveCodeChatModel(modelSelection?.modelId ?? 'claude-code');
+  const effectiveModelId = resolveCodeChatModel(selectedModel);
   const embeddedMessages = useMemo(
     () => mapNativeMessagesToStreamMessages(embeddedCodeMessages),
     [embeddedCodeMessages],
@@ -981,6 +998,7 @@ function CodeSessionSurface({
           onToggleTerminalCanvas={onToggleTerminalCanvas}
           terminalCanvasOpen={terminalCanvasOpen}
           onRegenerate={handleRegenerate}
+          onSelectModel={onSelectModel}
           onPreviewTemplate={onPreviewTemplate}
           onSelectTemplate={onSelectTemplate}
           onSend={handleSend}
@@ -989,6 +1007,8 @@ function CodeSessionSurface({
           onToggleAction={onToggleAction}
           onToggleSessionPicker={onToggleSessionPicker}
           onToggleWorkspacePicker={onToggleWorkspacePicker}
+          selectedModel={selectedModel}
+          selectedModelDisplayName={selectedModelDisplayName}
           showSessionPicker={showSessionPicker}
           showWorkspacePicker={showWorkspacePicker}
           workspaceReady={effectiveWorkspaceReady}
@@ -1033,10 +1053,13 @@ function CodeSessionSurface({
         isProcessing={isProcessing}
         onToggleTerminalCanvas={onToggleTerminalCanvas}
         terminalCanvasOpen={terminalCanvasOpen}
+        onSelectModel={onSelectModel}
         onSend={handleSend}
         onSetActiveSession={onSetActiveSession}
         onToggleSessionPicker={onToggleSessionPicker}
         onToggleWorkspacePicker={onToggleWorkspacePicker}
+        selectedModel={selectedModel}
+        selectedModelDisplayName={selectedModelDisplayName}
         showSessionPicker={showSessionPicker}
         showWorkspacePicker={showWorkspacePicker}
         workspaceReady={effectiveWorkspaceReady}
@@ -1079,10 +1102,13 @@ function LaunchpadStage({
   isProcessing,
   onToggleTerminalCanvas,
   terminalCanvasOpen,
+  onSelectModel,
   onSend,
   onSetActiveSession,
   onToggleSessionPicker,
   onToggleWorkspacePicker,
+  selectedModel,
+  selectedModelDisplayName,
   showSessionPicker,
   showWorkspacePicker,
   workspaceReady,
@@ -1120,10 +1146,13 @@ function LaunchpadStage({
   isProcessing: boolean;
   onToggleTerminalCanvas: () => void;
   terminalCanvasOpen: boolean;
+  onSelectModel: (selection: CodeModelSelection) => void;
   onSend: (text: string) => void;
   onSetActiveSession: (sessionId: string) => void;
   onToggleSessionPicker: () => void;
   onToggleWorkspacePicker: () => void;
+  selectedModel: string;
+  selectedModelDisplayName: string;
   showSessionPicker: boolean;
   showWorkspacePicker: boolean;
   workspaceReady: boolean;
@@ -1299,6 +1328,9 @@ function LaunchpadStage({
             onSend={onSend}
             isLoading={isProcessing}
             onStop={() => undefined}
+            selectedModel={selectedModel}
+            selectedModelDisplayName={selectedModelDisplayName}
+            onSelectModel={onSelectModel}
             placeholder={
               workspaceReady
                 ? 'Run a command or describe a task...'
@@ -1362,6 +1394,7 @@ function ConversationStage({
   onToggleTerminalCanvas,
   terminalCanvasOpen,
   onRegenerate,
+  onSelectModel,
   onPreviewTemplate,
   onSelectTemplate,
   onSend,
@@ -1370,6 +1403,8 @@ function ConversationStage({
   onToggleAction,
   onToggleSessionPicker,
   onToggleWorkspacePicker,
+  selectedModel,
+  selectedModelDisplayName,
   showSessionPicker,
   showWorkspacePicker,
   workspaceReady,
@@ -1410,6 +1445,7 @@ function ConversationStage({
   onToggleTerminalCanvas: () => void;
   terminalCanvasOpen: boolean;
   onRegenerate: () => void;
+  onSelectModel: (selection: CodeModelSelection) => void;
   onPreviewTemplate: (prompt: string) => void;
   onSelectTemplate: (prompt: string) => void;
   onSend: (text: string) => void;
@@ -1418,6 +1454,8 @@ function ConversationStage({
   onToggleAction: (id: ActionGroupId) => void;
   onToggleSessionPicker: () => void;
   onToggleWorkspacePicker: () => void;
+  selectedModel: string;
+  selectedModelDisplayName: string;
   showSessionPicker: boolean;
   showWorkspacePicker: boolean;
   workspaceReady: boolean;
@@ -1630,6 +1668,9 @@ function ConversationStage({
               onSend={onSend}
               isLoading={isProcessing}
               onStop={onStop}
+              selectedModel={selectedModel}
+              selectedModelDisplayName={selectedModelDisplayName}
+              onSelectModel={onSelectModel}
               placeholder="Reply…"
               showTopActions={false}
               inputValue={composerSeed}

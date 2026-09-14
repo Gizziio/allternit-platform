@@ -25,8 +25,6 @@ import { useModelLabStore, useModelLabCatalogStore } from '@/lib/model-lab/store
 import type { CachedModel, RuntimeRecipe, RuntimeRecipeType, HuggingFaceModel, ModelAssessment, Recommendation } from '@/lib/model-lab/api';
 import { installHuggingFaceModel, assessModelsBatch, recommendModels, getCatalog, refreshCatalog } from '@/lib/model-lab/api';
 import { AuthorAvatar } from './components/AuthorAvatar';
-import type { CachedModel, RuntimeRecipe, RuntimeRecipeType, HuggingFaceModel } from '@/lib/model-lab/api';
-import { installHuggingFaceModel } from '@/lib/model-lab/api';
 import { usePendingChatModelStore } from '@/stores/pending-chat-model.store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,10 +40,13 @@ import { ModelCard } from './components/ModelCard';
 import { ModelDetailDrawer } from './components/ModelDetailDrawer';
 import { cn } from '@/lib/utils';
 
-const SORT_OPTIONS: { value: 'downloads' | 'likes' | 'recent'; label: string }[] = [
+type SortOption = 'downloads' | 'likes' | 'recent' | 'recommended';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'downloads', label: 'Most downloads' },
   { value: 'likes', label: 'Most likes' },
   { value: 'recent', label: 'Recently updated' },
+  { value: 'recommended', label: 'Recommended for this machine' },
 ];
 
 const FIT_OPTIONS: { value: 'all' | Fit; label: string }[] = [
@@ -213,15 +214,22 @@ function ModelCardItem({
   onDownload,
   onSelect,
   fit,
+  assessment,
 }: {
   model: HuggingFaceModel;
   installing: boolean;
   onDownload: (repoId: string) => void;
   onSelect: (model: HuggingFaceModel) => void;
   fit: { fit: Fit; reason: string };
+  assessment?: ModelAssessment;
 }) {
   const tags = (model.tags ?? []).slice(0, 3);
-  const size = formatSizeGB(model.repoId, model.sizeBytes);
+  const size = assessment
+    ? `${(assessment.estimated_download_bytes / 1024 ** 3).toFixed(1)} GB`
+    : formatSizeGB(model.repoId, model.sizeBytes);
+  const tokPerSec = assessment?.estimated_tok_per_second.context_4k;
+  const confidence = assessment?.confidence ?? 'guess';
+  const backend = assessment?.recommended_backend ?? 'llama.cpp';
   const parts = model.repoId.split('/');
   const author = parts[0] ?? '';
   const name = parts.slice(1).join('/') || model.repoId;
@@ -230,38 +238,25 @@ function ModelCardItem({
   return (
     <ModelCard className="flex flex-col overflow-hidden h-full cursor-pointer" hover onClick={() => onSelect(model)}>
       {/* Header — profile-first card preview */}
-      <div className="relative h-40 overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50">
+      <div className="relative h-32 sm:h-36 overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="size-16 sm:size-20 rounded-2xl border-2 border-[var(--border-subtle)] bg-[var(--bg-elevated)] overflow-hidden shadow-sm">
             <AuthorAvatar author={author} iconSize={28} />
-          <div className="size-20 rounded-2xl border-2 border-[var(--border-subtle)] bg-[var(--bg-elevated)] overflow-hidden shadow-sm">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={author}
-                className="size-full object-cover"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            ) : (
-              <div className="size-full flex items-center justify-center text-[var(--accent-primary)]">
-                <Cube size={32} weight="duotone" />
-              </div>
-            )}
           </div>
         </div>
 
-        <div className="absolute top-3 left-3 flex items-center gap-2">
+        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex items-center gap-1.5 max-w-[calc(100%-1rem)]">
           {model.pipeline_tag && (
             <Badge
               variant="secondary"
-              className="text-[10px] uppercase tracking-wide bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)]"
+              className="text-[10px] uppercase tracking-wide bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)] truncate"
             >
               {model.pipeline_tag}
             </Badge>
           )}
         </div>
 
-        <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
           {isOfficial && (
             <Badge
               variant="secondary"
@@ -270,10 +265,29 @@ function ModelCardItem({
               Official
             </Badge>
           )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex flex-col flex-1 p-3 sm:p-4 gap-2">
+        <div className="min-w-0">
+          <p className="text-xs text-[var(--text-tertiary)] truncate">{author}</p>
+          <h3 className="text-[15px] font-medium text-[var(--text-primary)] leading-snug line-clamp-2">
+            {name}
+          </h3>
+        </div>
+
+        {/* Hardware fit / size / perf — in body flow so they never overlap the header or title */}
+        <div className="flex flex-wrap items-center gap-1.5">
           <div className="inline-flex items-center gap-1 text-[11px] text-[var(--text-secondary)] bg-[var(--bg-elevated)] px-2 py-1 rounded-full border border-[var(--border-subtle)]">
             <Memory size={11} />
             {size}
           </div>
+          {tokPerSec !== undefined && (
+            <div className="inline-flex items-center gap-1 text-[11px] text-[var(--text-secondary)] bg-[var(--bg-elevated)] px-2 py-1 rounded-full border border-[var(--border-subtle)]">
+              {tokPerSec.toFixed(1)} tok/s
+            </div>
+          )}
           <Badge
             variant="secondary"
             className={cn('text-[10px] capitalize border', fitBadgeClass(fit.fit))}
@@ -281,21 +295,16 @@ function ModelCardItem({
           >
             {FIT_LABELS[fit.fit]}
           </Badge>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="flex flex-col flex-1 p-4">
-        <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-[var(--text-tertiary)] truncate">{author}</p>
-            <h3 className="text-[15px] font-medium text-[var(--text-primary)] leading-snug line-clamp-2">
-              {name}
-            </h3>
-          </div>
+          <Badge
+            variant="outline"
+            className="text-[10px] capitalize"
+            title={`Confidence: ${confidence}. Recommended backend: ${backend}.`}
+          >
+            {confidence}
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-4 text-xs mt-2 text-[var(--text-secondary)]">
+        <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
           <span className="inline-flex items-center gap-1">
             <ArrowDown size={12} />
             {formatCount(model.downloads)}
@@ -307,7 +316,7 @@ function ModelCardItem({
         </div>
 
         {tags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          <div className="flex flex-wrap items-center gap-1.5">
             {tags.map((t) => (
               <span
                 key={t}
@@ -319,9 +328,9 @@ function ModelCardItem({
           </div>
         )}
 
-        <div className="flex-1" />
+        <div className="flex-1 min-h-[4px]" />
 
-        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-[var(--border-subtle)]">
+        <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
           <Button
             variant="outline"
             size="sm"
@@ -386,6 +395,10 @@ export function CatalogPanel(): React.ReactNode {
   const [selectedBackend, setSelectedBackend] = useState<Record<string, RuntimeRecipeType>>({});
   const [selectedModel, setSelectedModel] = useState<HuggingFaceModel | null>(null);
   const [fitFilter, setFitFilter] = useState<'all' | Fit>('all');
+  const [assessments, setAssessments] = useState<Record<string, ModelAssessment>>({});
+  const [recommendedResults, setRecommendedResults] = useState<HuggingFaceModel[]>([]);
+  const [recommendedAssessments, setRecommendedAssessments] = useState<Record<string, ModelAssessment>>({});
+  const [recommendedLoading, setRecommendedLoading] = useState(false);
 
   // Default browse view: engine catalog shown when the search box is empty.
   const browseMode = sort !== 'recommended' && query.trim() === '';
@@ -548,11 +561,14 @@ export function CatalogPanel(): React.ReactNode {
 
   const scoredModels = useMemo(
     () =>
-      results.map((m) => ({
+      activeResults.map((m) => ({
         model: m,
-        fit: computeHardwareFit(m.repoId, m.sizeBytes, totalMemoryBytes),
+        assessment: activeAssessments[m.repoId],
+        fit: activeAssessments[m.repoId]
+          ? { fit: activeAssessments[m.repoId].fit, reason: activeAssessments[m.repoId].fit_reason }
+          : computeHardwareFit(m.repoId, m.sizeBytes, totalMemoryBytes),
       })),
-    [results, totalMemoryBytes]
+    [activeResults, activeAssessments, totalMemoryBytes]
   );
 
   const sorted = useMemo(() => {
@@ -732,7 +748,7 @@ export function CatalogPanel(): React.ReactNode {
               className="pl-9 bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
             />
           </div>
-          <Button onClick={() => void search()} disabled={searchLoading || !query.trim()}>
+          <Button onClick={() => void search()} disabled={searchLoading || sort === 'recommended' || !query.trim()}>
             {searchLoading ? (
               <ArrowsClockwise size={14} className="animate-spin mr-1.5" />
             ) : (
@@ -740,7 +756,7 @@ export function CatalogPanel(): React.ReactNode {
             )}
             Search
           </Button>
-          <Select value={sort} onValueChange={(v) => setSort(v as 'downloads' | 'likes' | 'recent')}>
+          <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
             <SelectTrigger className="w-40 h-10 bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-primary)]">
               {SORT_OPTIONS.find((o) => o.value === sort)?.label}
             </SelectTrigger>
@@ -816,7 +832,6 @@ export function CatalogPanel(): React.ReactNode {
         )}
 
         {!searched && !searchLoading && sort !== 'recommended' && !browseMode && (
-        {!searched && !searchLoading && (
           <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30">
             <Cube size={40} className="text-[var(--text-secondary)] opacity-40" />
             <p className="text-sm text-[var(--text-secondary)]">Enter a search term to find models on Hugging Face.</p>
@@ -838,14 +853,10 @@ export function CatalogPanel(): React.ReactNode {
                   ? 'Loading catalog…'
                   : 'Searching Hugging Face…'}
             </span>
-        {searchLoading && (
-          <div className="flex items-center justify-center py-12 gap-3">
-            <ArrowsClockwise size={18} className="animate-spin text-[var(--accent-primary)]" />
-            <span className="text-sm text-[var(--text-secondary)]">Searching Hugging Face…</span>
           </div>
         )}
 
-        {searched && !searchLoading && sorted.length === 0 && !searchError && (
+        {searched && !searchLoading && sorted.length === 0 && !searchError && sort !== 'recommended' && (
           <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30">
             <MagnifyingGlass size={40} className="text-[var(--text-secondary)] opacity-40" />
             <p className="text-sm text-[var(--text-secondary)]">No models found for &ldquo;{query}&rdquo;.</p>
@@ -884,6 +895,7 @@ export function CatalogPanel(): React.ReactNode {
                   onDownload={handleDownload}
                   onSelect={setSelectedModel}
                   fit={fit}
+                  assessment={activeAssessments[m.repoId]}
                 />
               ))}
             </div>

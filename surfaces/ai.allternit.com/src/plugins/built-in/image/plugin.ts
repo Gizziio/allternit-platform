@@ -17,10 +17,7 @@ import type {
 import {
   checkBonsaiLocal,
   generateImages,
-  IMAGE_PROVIDERS,
-  type ImageGenerationConfig,
   type ImageGenerationResult,
-  type ImageProviderApiKeys,
 } from '@/lib/agents/modes/image-generation';
 import { previewImageCost } from '@/lib/agents/modes/media-cost';
 import {
@@ -29,16 +26,13 @@ import {
   bonsaiWebGpuProvider,
 } from '@/lib/local-models/providers/bonsai-webgpu';
 
-const IMAGE_PROVIDER_PREFERENCE = 'allternit_image_provider_preference';
-const IMAGE_API_KEYS = 'allternit_image_api_keys';
-
-type ImageProviderId = ImageGenerationConfig['provider'];
+type BonsaiImageProvider = 'bonsai-local' | 'bonsai-webgpu';
 
 /** Metered hosted providers run through the allternit-api media plane (BYOK V134 / operator-funded lane). */
 type HostedImageProvider = 'gpt-image' | 'flux-fal';
 
 export interface ImageConfig extends PluginConfig {
-  defaultProvider?: ImageProviderId;
+  defaultProvider?: BonsaiImageProvider;
   /** When set, generation uses this metered hosted provider instead of local Bonsai. */
   hostedProvider?: HostedImageProvider;
   defaultSize?: string;
@@ -62,7 +56,7 @@ class ImagePlugin implements ModePlugin {
   isInitialized = false;
   isExecuting = false;
   config: ImageConfig = {
-    defaultProvider: 'pollinations',
+    defaultProvider: 'bonsai-local',
     defaultSize: '1024x1024',
     defaultN: 4,
   };
@@ -125,7 +119,7 @@ class ImagePlugin implements ModePlugin {
 
       switch (mode) {
         case 'generate':
-          return await this.generateImages(input.prompt, input.options);
+          return await this.generateImages(input.prompt);
         case 'variations':
           return await this.generateVariations(
             input.options?.imageId as string,
@@ -134,7 +128,7 @@ class ImagePlugin implements ModePlugin {
         case 'upscale':
           return await this.upscaleImage(input.options?.imageId as string);
         default:
-          return await this.generateImages(input.prompt, input.options);
+          return await this.generateImages(input.prompt);
       }
 
     } catch (err) {
@@ -169,37 +163,18 @@ class ImagePlugin implements ModePlugin {
   }
 
   async health(): Promise<{ healthy: boolean; message?: string }> {
-    const provider = this.selectedProvider();
-    const apiKeys = this.readApiKeys();
-    const entry = IMAGE_PROVIDERS[provider];
-
-    if (provider === 'pollinations') {
-      return { healthy: true, message: 'Pollinations.ai image generation is available.' };
-    }
-
-    if (provider === 'bonsai-webgpu') {
+    if (this.selectedProvider() === 'bonsai-webgpu') {
       const status = await bonsaiWebGpuProvider.connect();
       return { healthy: status.connected, message: status.error ?? 'Bonsai WebGPU is available.' };
     }
-
-    if (provider === 'bonsai-local') {
-      const healthy = await checkBonsaiLocal();
-      return {
-        healthy,
-        message: healthy ? 'Local Bonsai companion is ready.' : 'Local Bonsai companion is not running or its model is unavailable.',
-      };
-    }
-
-    const available = entry?.isAvailable({ preferredProvider: provider, apiKeys }) ?? false;
+    const healthy = await checkBonsaiLocal();
     return {
-      healthy: available,
-      message: available
-        ? `${entry?.name ?? provider} is configured.`
-        : `${entry?.name ?? provider} was selected but no API key is configured.`,
+      healthy,
+      message: healthy ? 'Local Bonsai companion is ready.' : 'Local Bonsai companion is not running or its model is unavailable.',
     };
   }
 
-  private async generateImages(prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
+  private async generateImages(prompt: string): Promise<PluginOutput> {
     const hosted = this.config.hostedProvider;
     if (hosted) {
       // Cost preview before any metered generate (unit price × requested units).
@@ -239,28 +214,21 @@ class ImagePlugin implements ModePlugin {
       };
     }
 
-    const provider = this.selectedProvider(inputOptions?.provider as ImageProviderId | undefined);
-    this.emit({
-      type: 'progress',
-      payload: { step: 'generating', message: this.progressMessage(provider) },
-      timestamp: Date.now()
+    const provider = this.selectedProvider();
+    this.emit({ 
+      type: 'progress', 
+      payload: { step: 'generating', message: provider === 'bonsai-webgpu' ? 'Generating locally with fast Bonsai WebGPU…' : 'Generating locally with Bonsai Image 4B...' },
+      timestamp: Date.now() 
     });
 
-    const requestedSize = (inputOptions?.size as string) || this.config.defaultSize || '1024x1024';
-    const requestedStyle = (inputOptions?.style as string) || undefined;
-    const requestedN = typeof inputOptions?.n === 'number' ? inputOptions.n : (this.config.defaultN ?? 1);
-
-    const promptWithStyle = requestedStyle ? `${requestedStyle} image style. ${prompt}` : prompt;
-
     const result = await generateImages(
-      promptWithStyle,
+      prompt,
       {
         provider,
-        n: requestedN,
-        size: requestedSize as '1024x1024' | '1024x1792' | '1792x1024' | string,
-        style: requestedStyle as any,
+        n: this.config.defaultN,
+        size: this.config.defaultSize as '1024x1024' | '1024x1792' | '1792x1024',
       },
-      { preferredProvider: provider, apiKeys: this.readApiKeys() }
+      { preferredProvider: provider, apiKeys: {} }
     );
 
     return {
@@ -290,7 +258,7 @@ class ImagePlugin implements ModePlugin {
     const result = await generateImages(
       prompt,
       { provider, n: this.config.defaultN ?? 4 },
-      { preferredProvider: provider, apiKeys: this.readApiKeys() },
+      { preferredProvider: provider, apiKeys: {} },
     );
     return {
       success: true,
@@ -301,44 +269,18 @@ class ImagePlugin implements ModePlugin {
         name: `variation-${img.id}.png`,
         metadata: {
           prompt: result.prompt,
-          provider: img.metadata.provider,
         },
       })),
     };
   }
 
-  private selectedProvider(requestedProvider?: ImageProviderId): ImageProviderId {
-    if (requestedProvider && requestedProvider in IMAGE_PROVIDERS) {
-      return requestedProvider;
-    }
+  private selectedProvider(): BonsaiImageProvider {
     if (typeof window !== 'undefined') {
-      const preference = localStorage.getItem(IMAGE_PROVIDER_PREFERENCE) ?? sessionStorage.getItem(BONSAI_WEBGPU_PROVIDER_PREFERENCE);
-      if (preference) {
-        if (preference === 'bonsai-webgpu') {
-          const consent = sessionStorage.getItem(BONSAI_WEBGPU_CONSENT);
-          if (consent === 'accepted') return 'bonsai-webgpu';
-        } else {
-          return preference as ImageProviderId;
-        }
-      }
+      const preference = sessionStorage.getItem(BONSAI_WEBGPU_PROVIDER_PREFERENCE);
+      const consent = sessionStorage.getItem(BONSAI_WEBGPU_CONSENT);
+      if (preference === 'bonsai-webgpu' && consent === 'accepted') return 'bonsai-webgpu';
     }
-    return this.config.defaultProvider ?? 'pollinations';
-  }
-
-  private readApiKeys(): ImageProviderApiKeys {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem(IMAGE_API_KEYS) || '{}') as ImageProviderApiKeys;
-    } catch {
-      return {};
-    }
-  }
-
-  private progressMessage(provider: ImageProviderId): string {
-    const name = IMAGE_PROVIDERS[provider]?.name ?? provider;
-    if (provider === 'bonsai-local') return 'Generating locally with Bonsai Image 4B…';
-    if (provider === 'bonsai-webgpu') return 'Generating locally with fast Bonsai WebGPU…';
-    return `Generating with ${name}…`;
+    return this.config.defaultProvider === 'bonsai-webgpu' ? 'bonsai-webgpu' : 'bonsai-local';
   }
 
   private async upscaleImage(imageId: string): Promise<PluginOutput> {
@@ -359,7 +301,7 @@ class ImagePlugin implements ModePlugin {
       `# Image Generation`,
       '',
       `**Prompt:** ${result.prompt}`,
-      `**Provider:** ${result.config.provider ?? 'unknown'}`,
+      `**Provider:** ${(result as any).provider ?? 'unknown'}`,
       `**Images:** ${result.images.length}`,
       '',
       'Images generated successfully!',
