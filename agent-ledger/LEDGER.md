@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 08:35 — grok — open bot computer in a dedicated Electron window
+
+- **Session ID / Branch:** `session/bot-computer-window-0914`
+- **Agent:** grok (handoff from kimi-code session_4651d526)
+- **Summary:** Merged PR #516 (`21303b597`) — bot-chat "Open in ACI" is now "Open in window" and opens a full-size Electron window (chrome-free detached `/shell?detachedSurface=bot-computer`). VNC claim priority `window: 4` so the live stream leaves the chat pane.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/516 · 21303b597
+- **How it works:** `shell:open-bot-computer` IPC (same BrowserWindow pattern as code sessions). Non-Electron fallback is a popup. The ACI sidecar is no longer the expand target.
+- **Verification:** vitest 9/9 platform + 4/4 desktop URL tests; desktop typecheck clean.
+- **Outstanding work:** Live click-through needs a desktop main/preload + :8013 SPA rebuild; no DMG this session.
+- **Summary file:** [2026-09-14-0835-bot-computer-window-0914-grok-dedicated-electron-window.md](./summaries/2026-09-14-0835-bot-computer-window-0914-grok-dedicated-electron-window.md)
+
 ### 2026-09-14 08:32 — grok — stop hidden noVNC streams from starving the desktop
 
 - **Session ID / Branch:** `session/novnc-cpu-tame`
