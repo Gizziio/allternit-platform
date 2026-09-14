@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Circle,
   CircleHalf,
+  DotsThreeOutline,
   MinusCircle,
   PencilSimple,
   Plus,
@@ -42,9 +43,162 @@ import {
   findRootNodeId,
   organizeDagNodes,
   reparentCandidates,
+  dropTargetState,
+  parseLabelsInput,
   type OrganizedDag,
   type OrganizedRow,
 } from "./organize";
+
+/** Fields the detail editor can change in one PATCH; all optional. */
+export interface NodeDetailPatch {
+  title?: string;
+  labels?: string[];
+  description?: string;
+  priority?: number;
+}
+
+const RAILS_PRIORITY_OPTIONS = [0, 1, 2, 3];
+
+function NodeDetailEditor({
+  node,
+  pending,
+  onSubmit,
+  onClose,
+}: {
+  node: RailsDagNode;
+  pending: boolean;
+  onSubmit: (patch: NodeDetailPatch) => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(node.title);
+  const [labelsRaw, setLabelsRaw] = useState(node.labels.join(", "));
+  const [priority, setPriority] = useState<string>(
+    node.priority === null ? "" : String(node.priority)
+  );
+  const [description, setDescription] = useState(node.description ?? "");
+  const titleRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, []);
+
+  const fieldClass =
+    "w-full rounded border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]";
+
+  const buildPatch = (): NodeDetailPatch => {
+    const patch: NodeDetailPatch = {};
+    const t = title.trim();
+    if (t.length > 0 && t !== node.title) patch.title = t;
+    const labels = parseLabelsInput(labelsRaw);
+    if (
+      labels.length !== node.labels.length ||
+      labels.some((l, i) => l !== node.labels[i])
+    )
+      patch.labels = labels;
+    if (description !== (node.description ?? "")) patch.description = description;
+    if (priority !== "") {
+      const p = Number(priority);
+      if (Number.isInteger(p) && node.priority !== p) patch.priority = p;
+    }
+    return patch;
+  };
+
+  const submit = () => {
+    const patch = buildPatch();
+    if (Object.keys(patch).length > 0) onSubmit(patch);
+    onClose();
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-2 shadow-xl">
+        <div className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-[var(--text-tertiary)]">Title</span>
+            <input
+              ref={titleRef}
+              value={title}
+              disabled={pending}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") onClose();
+              }}
+              className={fieldClass}
+            />
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-[var(--text-tertiary)]">
+              Labels (comma-separated)
+            </span>
+            <input
+              value={labelsRaw}
+              disabled={pending}
+              onChange={(e) => setLabelsRaw(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") onClose();
+              }}
+              placeholder="e.g. urgent, follow up"
+              className={fieldClass}
+            />
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-[var(--text-tertiary)]">Priority</span>
+            <select
+              value={priority}
+              disabled={pending}
+              onChange={(e) => setPriority(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") onClose();
+              }}
+              className={fieldClass}
+            >
+              <option value="">None</option>
+              {RAILS_PRIORITY_OPTIONS.map((p) => (
+                <option key={p} value={String(p)}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-[var(--text-tertiary)]">Description</span>
+            <textarea
+              value={description}
+              disabled={pending}
+              onChange={(e) => setDescription(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") onClose();
+              }}
+              rows={2}
+              className={cn(fieldClass, "resize-none")}
+            />
+          </label>
+          <div className="mt-0.5 flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={onClose}
+              className="rounded px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={submit}
+              className="rounded bg-[var(--accent-primary)] px-2 py-0.5 text-[10px] font-medium text-[var(--bg-primary)] disabled:opacity-40"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export interface RailsTaskListProps {
   view: RailsDagView;
@@ -79,6 +233,9 @@ function StatusIcon({ status }: { status: RailsNodeStatus }) {
 
 function DagRow({
   row,
+  dagId,
+  dagNodes,
+  drag,
   expandedDone,
   onToggleDone,
   agentId,
@@ -90,11 +247,20 @@ function DagRow({
   onRename,
   onDelete,
   onReparent,
+  onUpdate,
+  onDragNodeStart,
+  onDragNodeEnd,
+  onDropReparent,
   moveCandidates,
   currentParentId,
   compact,
 }: {
   row: OrganizedRow;
+  dagId: string;
+  /** All nodes of this row's dag (drop-validity checks). */
+  dagNodes: RailsDagNode[];
+  /** In-flight drag payload when it belongs to this row's dag. */
+  drag: { node_id: string } | null;
   expandedDone: Record<string, boolean>;
   onToggleDone: (key: string) => void;
   agentId: string;
@@ -106,6 +272,10 @@ function DagRow({
   onRename: (node: RailsDagNode, title: string) => void;
   onDelete: (node: RailsDagNode) => void;
   onReparent: (node: RailsDagNode, parentNodeId: string | null) => void;
+  onUpdate: (node: RailsDagNode, patch: NodeDetailPatch) => void;
+  onDragNodeStart: (node: RailsDagNode) => void;
+  onDragNodeEnd: () => void;
+  onDropReparent: (draggedNodeId: string, targetNodeId: string | null) => void;
   /** Same-dag nodes valid as a new parent (excludes self + descendants). */
   moveCandidates: RailsDagNode[];
   currentParentId: string | null;
@@ -115,6 +285,8 @@ function DagRow({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [moveOpen, setMoveOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
   const editInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -160,6 +332,11 @@ function DagRow({
 
   const { node } = row;
 
+  const dropState = drag
+    ? dropTargetState(drag.node_id, node.node_id, dagNodes, dagId)
+    : "invalid";
+  const droppable = drag !== null && dropState !== "invalid";
+
   const submitEdit = () => {
     const title = editValue.trim();
     setEditing(false);
@@ -174,7 +351,39 @@ function DagRow({
 
   return (
     <li
-      style={pad}
+      style={{
+        ...pad,
+        outline: dropActive ? "1px dashed var(--accent-primary)" : undefined,
+      }}
+      draggable={interactive && node.status !== "DONE" && !editing}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(
+          "text/plain",
+          JSON.stringify({ dag_id: dagId, node_id: node.node_id })
+        );
+        e.dataTransfer.effectAllowed = "move";
+        onDragNodeStart(node);
+      }}
+      onDragEnd={() => {
+        setDropActive(false);
+        onDragNodeEnd();
+      }}
+      onDragOver={(e) => {
+        if (!droppable) {
+          if (drag) e.dataTransfer.dropEffect = "none";
+          return;
+        }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDropActive(true);
+      }}
+      onDragLeave={() => setDropActive(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDropActive(false);
+        if (!droppable || !drag) return;
+        onDropReparent(drag.node_id, node.node_id);
+      }}
       className={cn("relative flex items-center gap-1.5", compact ? "py-0.5" : "py-1")}
     >
       <StatusIcon status={node.status} />
@@ -202,6 +411,17 @@ function DagRow({
         >
           {node.title}
         </span>
+      )}
+      {interactive && !editing && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => setDetailOpen((o) => !o)}
+          aria-label={`Edit details for ${node.title}`}
+          className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
+        >
+          <DotsThreeOutline size={11} />
+        </button>
       )}
       {interactive && node.status !== "DONE" && !editing && (
         <>
@@ -279,6 +499,14 @@ function DagRow({
             )}
           </div>
         </>
+      )}
+      {detailOpen && (
+        <NodeDetailEditor
+          node={node}
+          pending={pending}
+          onSubmit={(patch) => onUpdate(node, patch)}
+          onClose={() => setDetailOpen(false)}
+        />
       )}
       {interactive && node.status === "READY" && (
         <button
@@ -398,6 +626,10 @@ export function RailsTaskList({
   const reparent = useReparentDagNode();
   const [expandedDone, setExpandedDone] = useState<Record<string, boolean>>({});
   const [actionError, setActionError] = useState<string | null>(null);
+  /** In-flight native drag payload (same-dag validated at drop time). */
+  const [drag, setDrag] = useState<{ dag_id: string; node_id: string } | null>(null);
+  /** Dag section header currently highlighted as a root-drop target. */
+  const [rootDropDag, setRootDropDag] = useState<string | null>(null);
   // Write-back probe: if the pickup endpoint is unsupported (405/5xx/network),
   // silently degrade to read-only. 404 means the route answered (unknown node).
   const [writeBackOk, setWriteBackOk] = useState(true);
@@ -452,11 +684,73 @@ export function RailsTaskList({
     remove.isPending ||
     reparent.isPending;
 
+  const doReparent = (dag: RailsDagSummary, node: RailsDagNode, parentNodeId: string | null) => {
+    setActionError(null);
+    reparent.mutate(
+      {
+        dag_id: dag.dag_id,
+        node_id: node.node_id,
+        parent_node_id: parentNodeId,
+      },
+      {
+        onError: (err) => {
+          const status = (err as Error & { status?: number }).status;
+          setActionError(
+            status === 409
+              ? `Cannot move "${node.title}": it would create a cycle`
+              : `Move failed for "${node.title}"${status ? ` (${status})` : ""}`
+          );
+        },
+      }
+    );
+  };
+
+  const doUpdate = (dag: RailsDagSummary, node: RailsDagNode, patch: NodeDetailPatch) => {
+    setActionError(null);
+    update.mutate(
+      { dag_id: dag.dag_id, node_id: node.node_id, ...patch },
+      {
+        onError: (err) => {
+          const status = (err as Error & { status?: number }).status;
+          setActionError(
+            `Update failed for "${node.title}"${status ? ` (${status})` : ""}`
+          );
+        },
+      }
+    );
+  };
+
   return (
     <div className={cn("flex min-w-0 flex-col", compact ? "gap-1" : "gap-2")}>
       {organized.map(({ dag, rows }) => (
         <section key={dag.dag_id} className="min-w-0">
-          <header className="flex items-baseline justify-between gap-2">
+          <header
+            style={
+              rootDropDag === dag.dag_id
+                ? { outline: "1px dashed var(--accent-primary)", outlineOffset: 2 }
+                : undefined
+            }
+            onDragOver={(e) => {
+              if (!drag || drag.dag_id !== dag.dag_id) {
+                if (drag) e.dataTransfer.dropEffect = "none";
+                return;
+              }
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setRootDropDag(dag.dag_id);
+            }}
+            onDragLeave={() => setRootDropDag((d) => (d === dag.dag_id ? null : d))}
+            onDrop={(e) => {
+              e.preventDefault();
+              setRootDropDag(null);
+              if (!drag || drag.dag_id !== dag.dag_id) return;
+              const dragged = dag.nodes.find((n) => n.node_id === drag.node_id);
+              setDrag(null);
+              if (!dragged) return;
+              doReparent(dag, dragged, null);
+            }}
+            className="flex items-baseline justify-between gap-2"
+          >
             <span className="min-w-0 truncate text-[11px] text-[var(--text-secondary)]">
               {dag.root_title ?? dag.dag_id}
             </span>
@@ -469,6 +763,9 @@ export function RailsTaskList({
               <DagRow
                 key={row.kind === "node" ? row.node.node_id : `${row.parentKey}-done-${i}`}
                 row={row}
+                dagId={dag.dag_id}
+                dagNodes={dag.nodes}
+                drag={drag && drag.dag_id === dag.dag_id ? drag : null}
                 expandedDone={expandedDone}
                 onToggleDone={(key) =>
                   setExpandedDone((e) => ({ ...e, [key]: !e[key] }))
@@ -501,9 +798,8 @@ export function RailsTaskList({
                     agent_id: agent,
                   });
                 }}
-                onRename={(node, title) =>
-                  update.mutate({ dag_id: dag.dag_id, node_id: node.node_id, title })
-                }
+                onRename={(node, title) => doUpdate(dag, node, { title })}
+                onUpdate={(node, patch) => doUpdate(dag, node, patch)}
                 onDelete={(node) => {
                   if (!window.confirm(`Delete task "${node.title}"?`)) return;
                   setActionError(null);
@@ -521,25 +817,14 @@ export function RailsTaskList({
                     }
                   );
                 }}
-                onReparent={(node, parentNodeId) => {
-                  setActionError(null);
-                  reparent.mutate(
-                    {
-                      dag_id: dag.dag_id,
-                      node_id: node.node_id,
-                      parent_node_id: parentNodeId,
-                    },
-                    {
-                      onError: (err) => {
-                        const status = (err as Error & { status?: number }).status;
-                        setActionError(
-                          status === 409
-                            ? `Cannot move "${node.title}": it would create a cycle`
-                            : `Move failed for "${node.title}"${status ? ` (${status})` : ""}`
-                        );
-                      },
-                    }
-                  );
+                onReparent={(node, parentNodeId) => doReparent(dag, node, parentNodeId)}
+                onDragNodeStart={(node) => setDrag({ dag_id: dag.dag_id, node_id: node.node_id })}
+                onDragNodeEnd={() => setDrag(null)}
+                onDropReparent={(draggedNodeId, targetNodeId) => {
+                  const dragged = dag.nodes.find((n) => n.node_id === draggedNodeId);
+                  setDrag(null);
+                  if (!dragged) return;
+                  doReparent(dag, dragged, targetNodeId);
                 }}
                 moveCandidates={
                   row.kind === "node"

@@ -527,6 +527,7 @@ function CoworkRootContent() {
                                   onClose={() => setShowRail(false)}
                                   liveMessages={liveMessages}
                                   liveIsStreaming={liveIsStreaming}
+                                  nativeSessionId={embeddedAgentSession?.sessionId ?? null}
                                 />
                               )}
                             </aside>

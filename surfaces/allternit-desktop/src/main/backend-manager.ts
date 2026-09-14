@@ -49,6 +49,49 @@ export function loadTartHostEnv(env: Record<string, string>, file = path.join(os
   }
 }
 
+/**
+ * Incus (dedicated Computer Cloud box) substrate config. Same operator-file
+ * pattern as tart-host.env: keep INCUS_URL, the client cert/key paths, and
+ * stream hosts in ~/.allternit/incus-host.env and inject whatever is not
+ * already in the environment, so a plain app launch routes bot desktops to
+ * the box instead of falling back to whatever other substrate is configured.
+ * Never logged.
+ */
+const INCUS_ENV_KEYS = [
+  'INCUS_URL',
+  'INCUS_URLS',
+  'INCUS_CLIENT_CERT',
+  'INCUS_CLIENT_KEY',
+  'INCUS_CA_CERT',
+  'INCUS_INSECURE_SKIP_VERIFY',
+  'INCUS_VNC_HOST',
+  'INCUS_CDP_HOST',
+] as const;
+
+export function loadIncusHostEnv(env: Record<string, string>, file = path.join(os.homedir(), '.allternit', 'incus-host.env')): void {
+  try {
+    const parsed: Record<string, string> = {};
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line);
+      if (!m) continue;
+      parsed[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+    let injected = false;
+    for (const key of INCUS_ENV_KEYS) {
+      if (!env[key] && parsed[key]) {
+        env[key] = parsed[key];
+        injected = true;
+      }
+    }
+    if (injected && env.INCUS_URL) {
+      log.info('[BackendManager] Incus host config loaded from ~/.allternit/incus-host.env');
+    }
+  } catch {
+    // incus-host.env absent — no Incus substrate; the Tart path (or the
+    // API's actionable 503 when neither is configured) still applies.
+  }
+}
+
 // Port ownership: the packaged app owns the production gateway port (8013)
 // and reclaims it on launch. A dev desktop (worktree Electron, npm run dev)
 // binds the dev port instead, so a dev build can run side by side with the
@@ -216,6 +259,7 @@ export class BackendManager {
       ...(config.extraEnv ?? {}),
     };
     loadTartHostEnv(env);
+    loadIncusHostEnv(env);
 
     log.info(`[BackendManager] Starting allternit-api on port ${API_PORT} from ${binaryPath}`);
     const spawned = spawn(binaryPath, developmentCargoProject ? ['run', '--manifest-path', path.join(developmentCargoProject, 'Cargo.toml')] : [], {

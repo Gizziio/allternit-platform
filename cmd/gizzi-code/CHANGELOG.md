@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.9 (2026-09-14)
 
 Grok-style agent dashboard and session-info polish.
 
