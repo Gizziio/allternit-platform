@@ -138,11 +138,6 @@ impl ServiceState {
 
         let peers = Arc::new(PeerRegistry::new(root_dir.clone())?);
 
-        let bus = Arc::new(
-            Bus::new(crate::bus::BusOptions {
-                root_dir: root_dir.clone(),
-                ledger: ledger.clone(),
-                actor_id: Some("service".to_string()),
         let peer_registry = Arc::new(PeerRegistry::new(PeerRegistryOptions {
             root_dir: Some(root_dir.clone()),
             mux_root: None,
@@ -192,7 +187,6 @@ impl ServiceState {
             steer,
             peer_registry,
             steering,
-            bus,
             orchestrator,
             root_dir,
         })
