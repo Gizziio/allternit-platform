@@ -151,7 +151,7 @@ export function BotComputerViewport({
   );
   // A live RFB decode of a viewport nobody can see is pure CPU burn: pause
   // both the stream and the screenshot poll until the pane is visible again.
-  const streamActive = pageVisible && isOnscreen;
+  const streamActive = pageVisible && (layout === "window" || isOnscreen);
   const compact = layout !== "page";
 
   useEffect(() => {
@@ -164,7 +164,12 @@ export function BotComputerViewport({
 
   // Pause when scrolled out of view (IntersectionObserver on the whole pane;
   // document.hidden alone doesn't catch a viewport buried in a long chat).
+  // The dedicated Electron window IS the computer — never treat it as offscreen.
   useEffect(() => {
+    if (layout === "window") {
+      setIsOnscreen(true);
+      return;
+    }
     const el = containerRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver((entries) => {
@@ -172,7 +177,7 @@ export function BotComputerViewport({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [layout]);
 
   useEffect(() => {
     const onVisibility = () => setPageVisible(!document.hidden);
@@ -363,12 +368,14 @@ export function BotComputerViewport({
         resizeSession: false,
         clipViewport: false,
       });
+      rfb.viewOnly = vncControlState !== "human_controls";
+      rfb.focusOnClick = true;
       rfbRef.current = rfb;
       connectedWsUrlRef.current = wsPath;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start VNC viewer");
     }
-  }, [disconnectVnc]);
+  }, [disconnectVnc, vncControlState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -392,6 +399,12 @@ export function BotComputerViewport({
       if (sandboxId) releaseVnc(sandboxId, layout);
     };
   }, [wsUrl, canConnectVnc, connectVnc, disconnectVnc, sandboxId, layout, vncEpoch, streamActive]);
+
+  useEffect(() => {
+    if (rfbRef.current) {
+      rfbRef.current.viewOnly = vncControlState !== "human_controls";
+    }
+  }, [vncControlState]);
 
   const setSessionControlState = (controlState: ControlState) => {
     try {
@@ -434,6 +447,20 @@ export function BotComputerViewport({
     }
     setIsLoading(false);
   };
+
+  const autoTakeoverRef = useRef(false);
+  useEffect(() => {
+    if (layout !== "window") return;
+    if (!sandboxId) return;
+    if (status?.status !== "running") return;
+    if (vncControlState === "human_controls") {
+      autoTakeoverRef.current = true;
+      return;
+    }
+    if (autoTakeoverRef.current) return;
+    autoTakeoverRef.current = true;
+    void handleTakeOver();
+  }, [layout, sandboxId, status?.status, vncControlState]);
 
   const handleHandBack = async () => {
     if (!sandboxId) return;
