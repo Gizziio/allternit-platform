@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Circle,
   CircleHalf,
+  DotsThreeOutline,
   MinusCircle,
   PencilSimple,
   Plus,
@@ -43,9 +44,161 @@ import {
   organizeDagNodes,
   reparentCandidates,
   dropTargetState,
+  parseLabelsInput,
   type OrganizedDag,
   type OrganizedRow,
 } from "./organize";
+
+/** Fields the detail editor can change in one PATCH; all optional. */
+export interface NodeDetailPatch {
+  title?: string;
+  labels?: string[];
+  description?: string;
+  priority?: number;
+}
+
+const RAILS_PRIORITY_OPTIONS = [0, 1, 2, 3];
+
+function NodeDetailEditor({
+  node,
+  pending,
+  onSubmit,
+  onClose,
+}: {
+  node: RailsDagNode;
+  pending: boolean;
+  onSubmit: (patch: NodeDetailPatch) => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(node.title);
+  const [labelsRaw, setLabelsRaw] = useState(node.labels.join(", "));
+  const [priority, setPriority] = useState<string>(
+    node.priority === null ? "" : String(node.priority)
+  );
+  const [description, setDescription] = useState(node.description ?? "");
+  const titleRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, []);
+
+  const fieldClass =
+    "w-full rounded border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-1.5 py-0.5 text-[11px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]";
+
+  const buildPatch = (): NodeDetailPatch => {
+    const patch: NodeDetailPatch = {};
+    const t = title.trim();
+    if (t.length > 0 && t !== node.title) patch.title = t;
+    const labels = parseLabelsInput(labelsRaw);
+    if (
+      labels.length !== node.labels.length ||
+      labels.some((l, i) => l !== node.labels[i])
+    )
+      patch.labels = labels;
+    if (description !== (node.description ?? "")) patch.description = description;
+    if (priority !== "") {
+      const p = Number(priority);
+      if (Number.isInteger(p) && node.priority !== p) patch.priority = p;
+    }
+    return patch;
+  };
+
+  const submit = () => {
+    const patch = buildPatch();
+    if (Object.keys(patch).length > 0) onSubmit(patch);
+    onClose();
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-2 shadow-xl">
+        <div className="flex flex-col gap-1.5">
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-[var(--text-tertiary)]">Title</span>
+            <input
+              ref={titleRef}
+              value={title}
+              disabled={pending}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") onClose();
+              }}
+              className={fieldClass}
+            />
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-[var(--text-tertiary)]">
+              Labels (comma-separated)
+            </span>
+            <input
+              value={labelsRaw}
+              disabled={pending}
+              onChange={(e) => setLabelsRaw(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") onClose();
+              }}
+              placeholder="e.g. urgent, follow up"
+              className={fieldClass}
+            />
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-[var(--text-tertiary)]">Priority</span>
+            <select
+              value={priority}
+              disabled={pending}
+              onChange={(e) => setPriority(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") onClose();
+              }}
+              className={fieldClass}
+            >
+              <option value="">None</option>
+              {RAILS_PRIORITY_OPTIONS.map((p) => (
+                <option key={p} value={String(p)}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-[var(--text-tertiary)]">Description</span>
+            <textarea
+              value={description}
+              disabled={pending}
+              onChange={(e) => setDescription(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") onClose();
+              }}
+              rows={2}
+              className={cn(fieldClass, "resize-none")}
+            />
+          </label>
+          <div className="mt-0.5 flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={onClose}
+              className="rounded px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={submit}
+              className="rounded bg-[var(--accent-primary)] px-2 py-0.5 text-[10px] font-medium text-[var(--bg-primary)] disabled:opacity-40"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export interface RailsTaskListProps {
   view: RailsDagView;
@@ -94,6 +247,7 @@ function DagRow({
   onRename,
   onDelete,
   onReparent,
+  onUpdate,
   onDragNodeStart,
   onDragNodeEnd,
   onDropReparent,
@@ -118,6 +272,7 @@ function DagRow({
   onRename: (node: RailsDagNode, title: string) => void;
   onDelete: (node: RailsDagNode) => void;
   onReparent: (node: RailsDagNode, parentNodeId: string | null) => void;
+  onUpdate: (node: RailsDagNode, patch: NodeDetailPatch) => void;
   onDragNodeStart: (node: RailsDagNode) => void;
   onDragNodeEnd: () => void;
   onDropReparent: (draggedNodeId: string, targetNodeId: string | null) => void;
@@ -130,6 +285,7 @@ function DagRow({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [moveOpen, setMoveOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [dropActive, setDropActive] = useState(false);
   const editInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -256,6 +412,17 @@ function DagRow({
           {node.title}
         </span>
       )}
+      {interactive && !editing && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => setDetailOpen((o) => !o)}
+          aria-label={`Edit details for ${node.title}`}
+          className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
+        >
+          <DotsThreeOutline size={11} />
+        </button>
+      )}
       {interactive && node.status !== "DONE" && !editing && (
         <>
           <button
@@ -332,6 +499,14 @@ function DagRow({
             )}
           </div>
         </>
+      )}
+      {detailOpen && (
+        <NodeDetailEditor
+          node={node}
+          pending={pending}
+          onSubmit={(patch) => onUpdate(node, patch)}
+          onClose={() => setDetailOpen(false)}
+        />
       )}
       {interactive && node.status === "READY" && (
         <button
@@ -530,6 +705,21 @@ export function RailsTaskList({
     );
   };
 
+  const doUpdate = (dag: RailsDagSummary, node: RailsDagNode, patch: NodeDetailPatch) => {
+    setActionError(null);
+    update.mutate(
+      { dag_id: dag.dag_id, node_id: node.node_id, ...patch },
+      {
+        onError: (err) => {
+          const status = (err as Error & { status?: number }).status;
+          setActionError(
+            `Update failed for "${node.title}"${status ? ` (${status})` : ""}`
+          );
+        },
+      }
+    );
+  };
+
   return (
     <div className={cn("flex min-w-0 flex-col", compact ? "gap-1" : "gap-2")}>
       {organized.map(({ dag, rows }) => (
@@ -608,9 +798,8 @@ export function RailsTaskList({
                     agent_id: agent,
                   });
                 }}
-                onRename={(node, title) =>
-                  update.mutate({ dag_id: dag.dag_id, node_id: node.node_id, title })
-                }
+                onRename={(node, title) => doUpdate(dag, node, { title })}
+                onUpdate={(node, patch) => doUpdate(dag, node, patch)}
                 onDelete={(node) => {
                   if (!window.confirm(`Delete task "${node.title}"?`)) return;
                   setActionError(null);

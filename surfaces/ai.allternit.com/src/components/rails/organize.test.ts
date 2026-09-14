@@ -3,6 +3,7 @@ import {
   dropTargetState,
   findRootNodeId,
   organizeDagNodes,
+  parseLabelsInput,
   reparentCandidates,
   selectDags,
   type OrganizedDoneRow,
@@ -18,6 +19,9 @@ function node(partial: Partial<RailsDagNode> & { node_id: string }): RailsDagNod
     ready: false,
     assignee: null,
     current_wih_id: null,
+    labels: [],
+    description: null,
+    priority: null,
     ...partial,
   };
 }
@@ -327,5 +331,20 @@ describe('dropTargetState', () => {
   it('marks everything invalid when the dragged node is unknown', () => {
     expect(dropTargetState('nope', 'root', nodes, 'dag1')).toBe('invalid');
     expect(dropTargetState('nope', null, nodes, 'dag1')).toBe('invalid');
+  });
+});
+
+describe('parseLabelsInput', () => {
+  it('trims, drops empties, and dedupes preserving order', () => {
+    expect(parseLabelsInput('a, b ,a')).toEqual(['a', 'b']);
+  });
+
+  it('returns an empty array for empty or whitespace input', () => {
+    expect(parseLabelsInput('')).toEqual([]);
+    expect(parseLabelsInput('   , ,')).toEqual([]);
+  });
+
+  it('keeps single labels and internal spaces intact', () => {
+    expect(parseLabelsInput('urgent, follow up')).toEqual(['urgent', 'follow up']);
   });
 });

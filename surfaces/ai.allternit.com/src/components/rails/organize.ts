@@ -194,3 +194,19 @@ export function dropTargetState(
     ? 'valid-under'
     : 'invalid';
 }
+
+/**
+ * Parse a comma-separated labels text field: trim, drop empties, dedupe
+ * preserving first-seen order. Empty input → [] (clears the label set).
+ */
+export function parseLabelsInput(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(',')) {
+    const label = part.trim();
+    if (label.length === 0 || seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+  }
+  return out;
+}

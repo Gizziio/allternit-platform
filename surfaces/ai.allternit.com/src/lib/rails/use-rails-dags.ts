@@ -28,6 +28,9 @@ export interface RailsDagNode {
   ready: boolean;
   assignee?: string | null;
   current_wih_id?: string | null;
+  labels: string[];
+  description: string | null;
+  priority: number | null;
 }
 
 export interface RailsDagSummary {
@@ -77,7 +80,13 @@ export interface CreateDagNodeInput {
 export interface UpdateDagNodeInput {
   dag_id: string;
   node_id: string;
-  title: string;
+  title?: string;
+  /** Present = replace label set (empty array clears). */
+  labels?: string[];
+  /** Present = set (empty string allowed). */
+  description?: string;
+  /** Present = set. No null-clear in v6. */
+  priority?: number;
 }
 
 export interface DeleteDagNodeInput {
@@ -127,6 +136,11 @@ function parseDags(raw: unknown): RailsDagsDto {
               ready: n.ready === true,
               assignee: typeof n.assignee === 'string' ? n.assignee : null,
               current_wih_id: typeof n.current_wih_id === 'string' ? n.current_wih_id : null,
+              labels: Array.isArray(n.labels)
+                ? n.labels.filter((l): l is string => typeof l === 'string')
+                : [],
+              description: typeof n.description === 'string' ? n.description : null,
+              priority: typeof n.priority === 'number' ? n.priority : null,
             }))
             .filter((n) => n.node_id.length > 0),
           ready_count: typeof d.ready_count === 'number' ? d.ready_count : 0,
@@ -248,11 +262,17 @@ export function useCreateDagNode() {
 export function useUpdateDagNode() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: UpdateDagNodeInput) =>
-      patchJson(
+    mutationFn: (input: UpdateDagNodeInput) => {
+      const body: Record<string, unknown> = {};
+      if (input.title !== undefined) body.title = input.title;
+      if (input.labels !== undefined) body.labels = input.labels;
+      if (input.description !== undefined) body.description = input.description;
+      if (input.priority !== undefined) body.priority = input.priority;
+      return patchJson(
         `/api/commrails/dags/${encodeURIComponent(input.dag_id)}/nodes/${encodeURIComponent(input.node_id)}`,
-        { title: input.title }
-      ) as Promise<Record<string, unknown>>,
+        body
+      ) as Promise<Record<string, unknown>>;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: RAILS_DAGS_QUERY_KEY }),
   });
 }
