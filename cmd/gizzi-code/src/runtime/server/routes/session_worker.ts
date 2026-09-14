@@ -38,13 +38,6 @@ const log = Log.create({ service: "session-worker" })
 // imports these routes, so their `.Info` schemas may only be touched inside
 // the lazy factory — module-scope access races the circular import and
 // crashes with "undefined is not an object" at import time.
-export const RemoteControlRoutes = lazy(() => {
-  const RemoteSessionStatus = z.object({
-    session: Session.Info,
-    status: SessionStatus.Info,
-  })
-
-  return (
 const CapabilityInvocation = z.object({
   capability: z.string().min(1),
   inputs: z.record(z.string(), z.unknown()).default({}),

@@ -461,8 +461,6 @@ describe.skip("DiscretionaryScreen VM disclosure", () => {
   })
 
   test.skip("vm-session route file implements toggle endpoint", async () => {
-describe("DiscretionaryScreen VM disclosure", () => {
-  test("vm-session route file implements toggle endpoint", async () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const content = await fs.readFile(
@@ -526,7 +524,6 @@ describe("DiscretionaryScreen VM disclosure", () => {
   })
 
   test.skip("vm_session_routes.rs bootstrap matches gizzi-code cloud session environment", async () => {
-  test("vm_session_routes.rs bootstrap matches Claude Code cloud session environment", async () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const content = await fs.readFile(
@@ -734,7 +731,6 @@ describe("DiscretionaryScreen VM disclosure", () => {
   })
 
   test.skip("allternit-api main.rs registers /vm-session route", async () => {
-  test("allternit-api main.rs registers /vm-session route", async () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const mainContent = await fs.readFile(
@@ -857,7 +853,6 @@ describe("DiscretionaryScreen VM disclosure", () => {
   })
 
   test.skip("POST /vm-session propagates tool integration fields to bootstrap log", async () => {
-  test("POST /vm-session propagates tool integration fields to bootstrap log", async () => {
     // Update mock to echo back exa_api_key / gizzi_server_url presence
     const res = await fetch(`${mockApiUrl}/vm-session`, {
       method: "POST",

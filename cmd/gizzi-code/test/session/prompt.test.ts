@@ -2,11 +2,11 @@
 import path from "path"
 import { describe, expect, test } from "bun:test"
 import { fileURLToPath } from "url"
-import { Instance } from "../../src/runtime/context/project/instance"
-import { Session } from "../../src/runtime/session/index"
-import { MessageV2 } from "../../src/runtime/session/message-v2"
-import { SessionPrompt } from "../../src/runtime/session/prompt"
-import { Log } from "../../src/shared/util/log"
+import { Instance } from "../../src/project/instance"
+import { Session } from "../../src/session"
+import { MessageV2 } from "../../src/session/message-v2"
+import { SessionPrompt } from "../../src/session/prompt"
+import { Log } from "../../src/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
@@ -110,11 +110,6 @@ describe.skip("session.prompt missing file", () => {
 
 describe.skip("session.prompt special characters", () => {
   test.skip("handles filenames with # character", async () => {
-describe("session.prompt special characters", () => {
-  test("handles filenames with # character", async () => {
-    // Keep the test independent of any API key set by earlier tests.
-    delete process.env.OPENAI_API_KEY
-
     await using tmp = await tmpdir({
       git: true,
       init: async (dir) => {

@@ -57,8 +57,9 @@ import { CronService } from "@/runtime/automation/cron/service"
 import { ArsContextaRoutes } from "@/runtime/server/routes/ars-contexta"
 import { WebProxyRoutes } from "@/runtime/server/routes/web-proxy"
 import { MDNS } from "@/runtime/server/mdns"
+import { Tunnel } from "@/runtime/server/tunnel"
+import { Mesh } from "@/runtime/server/mesh"
 import { InstanceRegistration } from "@/runtime/server/instance-registration"
-import { Fabric } from "@/runtime/fabric"
 import { ClerkAuth } from "@/runtime/server/middleware/clerk-auth"
 import { TerminalClerkAuthRoutes } from "@/runtime/server/routes/terminal-clerk-auth"
 import { UserRoutes } from "@/runtime/server/routes/user"
@@ -81,11 +82,8 @@ import { AcpRoutes } from "@/runtime/server/routes/acp"
 import { PeerRoutes } from "@/runtime/server/routes/peers"
 import { OrchestratorRoutes } from "@/runtime/server/routes/orchestrator"
 import { RuntimeHeartbeat } from "@/runtime/runtime-heartbeat"
-import { AgentEventBridge } from "@/runtime/services/agent-event-bridge"
 import { RuntimeRoutes } from "@/runtime/server/routes/runtime"
-import { SessionWorkerRoutes } from "@/runtime/server/routes/session_worker"
-import { CapabilitiesRoutes } from "@/runtime/server/routes/capabilities"
-import { FabricRoutes } from "@/runtime/server/routes/fabric"
+import { RemoteControlRoutes } from "@/runtime/server/routes/remote_control"
 import { AgentCompatRoutes } from "@/runtime/server/routes/agent-compat"
 import { createHash, randomUUID } from "node:crypto"
 
@@ -471,6 +469,7 @@ export namespace Server {
         // /api/agent-chat) — lets any gizzi instance serve as the app's
         // agent brain without allternit-api in the middle.
         .route("/api", AgentCompatRoutes())
+        .route("/v1beta/remote-control", RemoteControlRoutes())
         // /v1/ — versioned API surface (same handlers, new path prefix)
         .route(
           "/v1",
@@ -518,9 +517,7 @@ export namespace Server {
             .route("/tui", TuiRoutes())
             .route("/acp", AcpRoutes())
             .route("/runtime", RuntimeRoutes())
-            .route("/session-worker", SessionWorkerRoutes())
-            .route("/node", CapabilitiesRoutes())
-            .route("/fabric", FabricRoutes())
+            .route("/remote-control", RemoteControlRoutes())
             .route("/workspace", WorkspaceRoutes()) as unknown as Hono,
         )
         .all("/*", async (c) => {
@@ -653,7 +650,6 @@ export namespace Server {
     }
 
     if (opts.tunnel && !Tunnel.available()) {
-    if (opts.tunnel && !Fabric.getTunnelTransport().available()) {
       throw new Error(
         "--tunnel requires cloudflared, which is not installed. Install it (`brew install cloudflared`, or see https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) or set GIZZI_CLOUDFLARED_BIN to its path.",
       )
@@ -704,16 +700,6 @@ export namespace Server {
       log.error("failed to start runtime heartbeat", { error: err })
     }
 
-    // Bridge permission/question wait-state bus events into the Allternit
-    // agent event stream for sessions bound to an agent via the
-    // x-allternit-agent-id header (agent-event-bridge.ts).
-    try {
-      AgentEventBridge.start()
-      log.info("agent event bridge started")
-    } catch (err) {
-      log.error("failed to start agent event bridge", { error: err })
-    }
-
     const shouldPublishMDNS =
       opts.mdns &&
       server.port &&
@@ -727,22 +713,21 @@ export namespace Server {
     }
 
     if (opts.tunnel) {
-      // Tunnel is now a FabricTransport like the mesh path.
-      Fabric.getTunnelTransport()
-        .join({
-          port: server.port!,
-          tunnelToken: opts.tunnelToken,
-          tunnelHostname: opts.tunnelHostname,
-        })
-        .then((result) => {
-          if (!result.ok) {
-            log.warn("fabric tunnel join skipped", { reason: result.error })
-            return
-          }
-          const urls = result.endpoints.map((e) => e.url)
-          if (urls.length) {
-            for (const url of urls) process.stderr.write(`gizzi tunnel ready at ${url}\n`)
+      const tunnelOpts: Tunnel.Options = opts.tunnelToken
+        ? { mode: "named", token: opts.tunnelToken, hostname: opts.tunnelHostname }
+        : { mode: "quick" }
+      Tunnel.start(server.port!, tunnelOpts)
+        .then((url) => {
+          if (url) {
+            process.stderr.write(`gizzi tunnel ready at ${url}\n`)
+            // Best-effort self-registration with the platform instance registry;
+            // fire-and-forget so startup never blocks on it.
+            void InstanceRegistration.register({ url }).catch((err) => {
+              log.warn("instance registration failed", { error: err })
+            })
           } else {
+            // Named tunnel without a configured hostname: the tunnel runs, but
+            // there is no URL to log or register.
             process.stderr.write("gizzi named tunnel running (hostname not configured)\n")
             log.info("skipping instance registration: named tunnel hostname not configured")
           }
@@ -763,15 +748,16 @@ export namespace Server {
       // Mesh is strictly additive: any join failure (missing binaries, expired
       // or single-use auth key, unreachable control server) is logged and the
       // server keeps running without mesh.
-      Fabric.getTailscaleTransport()
-        .join({ port: server.port!, authKey: opts.meshAuthKey, controlUrl: opts.meshControlUrl })
-        .then((result) => {
-          if (!result.ok) {
-            log.warn("fabric mesh join skipped", { reason: result.error })
-            return
-          }
-          const urls = result.endpoints.map((e) => e.url)
-          for (const url of urls) process.stderr.write(`gizzi mesh ready at ${url}\n`)
+      Mesh.start(server.port!, { authKey: opts.meshAuthKey, controlUrl: opts.meshControlUrl })
+        .then((url) => {
+          if (!url) return
+          process.stderr.write(`gizzi mesh ready at ${url}\n`)
+          // Best-effort self-registration with the platform instance registry,
+          // same contract as the tunnel URL ({url, name} only); clients tell
+          // mesh URLs apart by the 100.64.0.0/10 prefix.
+          void InstanceRegistration.register({ url }).catch((err) => {
+            log.warn("instance registration failed", { error: err })
+          })
         })
         .catch((err) => {
           log.error("failed to join mesh tailnet", { error: err })
@@ -784,11 +770,11 @@ export namespace Server {
     const originalStop = server.stop.bind(server)
     server.stop = async (closeActiveConnections?: boolean) => {
       if (opts.tunnel) {
-        await Fabric.getTunnelTransport().leave()
+        Tunnel.stop()
         InstanceRegistration.stop()
       }
       if (opts.mesh) {
-        await Fabric.getTailscaleTransport().leave()
+        await Mesh.stop()
         InstanceRegistration.stop()
       }
       if (shouldPublishMDNS) MDNS.unpublish()
