@@ -104,7 +104,6 @@ pub fn send_message(
     body: &str,
     timeout: std::time::Duration,
 ) -> Result<allternit_commrails::peer::DeliveryReceipt, String> {
-) -> Result<allternit_agent_system_rails::peer::DeliveryReceipt, String> {
     let envelope = PeerEnvelope::new(from, &peer.name, body);
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -112,7 +111,6 @@ pub fn send_message(
         .map_err(|e| format!("tokio runtime: {e}"))?;
     runtime
         .block_on(allternit_commrails::peer::send_envelope(
-        .block_on(allternit_agent_system_rails::peer::send_envelope(
             &peer.inbox_socket,
             &envelope,
             timeout,
