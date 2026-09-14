@@ -80,7 +80,14 @@ export class FabricWorkerManager {
    * credential provisioned by the local ensure route; `apiUrl` points at
    * the loopback allternit-api the desktop just started.
    */
-  async start(options: { token: string; apiUrl?: string }): Promise<FabricWorkerState> {
+  async start(options: {
+    token: string;
+    apiUrl?: string;
+    /** Existing model-router key (ALLTERNIT_OPERATOR_API_KEY) for agentic jobs. */
+    operatorKey?: string | null;
+    /** Granted folders (P2.3 confinement); empty array = default-deny. */
+    trustedFolders?: string[];
+  }): Promise<FabricWorkerState> {
     if (this.proc && this.proc.exitCode === null) {
       return this.status;
     }
@@ -98,6 +105,10 @@ export class FabricWorkerManager {
       ALLTERNIT_GIZZI_TOKEN: options.token,
       ALLTERNIT_API_URL: apiUrl,
       GIZZI_COMPUTE_MODE: process.env.GIZZI_COMPUTE_MODE ?? 'local',
+      // Agentic jobs (P2.2) reach the model through the existing router
+      // (the api's own operator key); file tools confine to these grants.
+      ...(options.operatorKey ? { ALLTERNIT_OPERATOR_API_KEY: options.operatorKey } : {}),
+      ALLTERNIT_WORKER_TRUSTED_FOLDERS: JSON.stringify(options.trustedFolders ?? []),
     };
     // The token never reaches logs: we log everything except the env.
     log.info(`[FabricWorker] Spawning fabric worker (${binaryPath}) against ${apiUrl}`);

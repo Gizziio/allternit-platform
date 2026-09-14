@@ -352,6 +352,27 @@ Transport does not redefine principal identity, run state, attribution, or appro
   editor, connector sessions view, attributed + approvals-interleaved run
   timeline in `/fabric-transport`.
 
+### Implemented in the chat-drives-A:// phase (consumer desktop P2, 2026-09-14)
+
+- **chat drives A://** — `POST /cowork/al/chat/stream` (SSE): the same Al
+  delegation as `/cowork/al/chat`, streamed (`delegation` → `run_state` →
+  `approval`/`approval_decision` → `result` → `finish`, narration as
+  `content_block_delta` text). Al's payload carries the agentic job kind
+  (`payload.agentic.task`). The SPA routes Cowork chat through it behind
+  `NEXT_PUBLIC_ALLTERNIT_COWORK_CHAT_VIA_AL`; the legacy `/api/agent-chat`
+  relay stays the default until parity is proven.
+- **agentic job kind** — the gizzi worker runs a bounded model-agent loop
+  (`src/runtime/fabric-transport/agentic.ts`) through the EXISTING model
+  router (`/v1/chat/completions` with the operator key; no new LLM path),
+  with `fs_read`/`fs_write`/`bash` tools, per-step checkpointing, and
+  step/token budget caps from the job payload.
+- **trusted-folder confinement** — worker file tools default-deny outside
+  `ALLTERNIT_WORKER_TRUSTED_FOLDERS` (grants the desktop passes at spawn
+  from `/cowork-preferences`); symlink escapes refused.
+- **approval cards** — SSE approval frames surface as grant/deny cards in
+  the app chrome (`ApprovalToastHost`) against the existing fabric
+  approvals endpoints; decided-by is recorded server-side.
+
 ### Implemented in the managed-runtime phase (consumer desktop P1, 2026-09-14)
 
 - **managed worker lifecycle** — `POST /fabric/transport/local/ensure-worker-principal`
