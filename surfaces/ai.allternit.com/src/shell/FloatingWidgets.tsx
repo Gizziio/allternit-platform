@@ -11,6 +11,8 @@ import {
   TerminalWindow,
   Globe,
   ChatCircle,
+  ArrowLeft,
+  ArrowRight,
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
 import { isElectronShell } from '../lib/platform';
@@ -49,6 +51,16 @@ const MODE_BUTTONS: ModeButton[] = [
   { id: 'code', label: 'Code', icon: TerminalWindow, accent: 'var(--accent-primary)' },
   { id: 'browser', label: 'ACI', icon: Globe, accent: 'var(--accent-primary)' },
 ];
+
+const MODE_ORDER = MODE_BUTTONS.map((b) => b.id);
+
+function cycleMode(mode: AppMode, direction: 'back' | 'forward'): AppMode {
+  const idx = MODE_ORDER.indexOf(mode);
+  if (idx === -1) return MODE_ORDER[0];
+  const delta = direction === 'forward' ? 1 : -1;
+  const nextIdx = (idx + delta + MODE_ORDER.length) % MODE_ORDER.length;
+  return MODE_ORDER[nextIdx];
+}
 
 export function RailControls({
   mode,
@@ -146,6 +158,19 @@ export function RailControls({
                     />
                   </ShellMenu>
                 </div>
+                <TitleBarButton
+                  onClick={() => onModeChange(cycleMode(mode, 'back'))}
+                  title="Previous mode"
+                >
+                  <ArrowLeft size={15} weight="bold" />
+                </TitleBarButton>
+                <TitleBarButton
+                  onClick={() => onModeChange(cycleMode(mode, 'forward'))}
+                  title="Next mode"
+                >
+                  <ArrowRight size={15} weight="bold" />
+                </TitleBarButton>
+                <div className="w-px h-4 bg-[var(--shell-divider)]" />
                 {MODE_BUTTONS.map((btn) => {
                   const isActive = mode === btn.id;
                   const IconComponent = btn.icon;
@@ -227,6 +252,24 @@ export function RailControls({
               ariaExpanded={showCreateMenu}
             >
               <Plus size={15} weight="bold" />
+          <TitleBarButton
+            onClick={() => onModeChange(cycleMode(mode, 'back'))}
+            title="Previous mode"
+          >
+            <ArrowLeft size={15} weight="bold" />
+          </TitleBarButton>
+          <TitleBarButton
+            onClick={() => onModeChange(cycleMode(mode, 'forward'))}
+            title="Next mode"
+          >
+            <ArrowRight size={15} weight="bold" />
+          </TitleBarButton>
+
+          <div className="w-px h-4 bg-[var(--shell-divider)] mx-1" />
+
+          <div ref={createMenuRef} className="relative">
+            <TitleBarButton onClick={() => setShowCreateMenu((v) => !v)} title="New Session">
+              <NotePencil size={15} weight="bold" />
             </TitleBarButton>
             <ShellMenu
               open={showCreateMenu}

@@ -49,6 +49,40 @@ export interface CommRailsState {
 export function dropSeedBotSessions(items: BotRailItem[]): BotRailItem[] {
   return items.filter((item) => !isSeedBotSession(item.id, item.botId));
 }
+// ============================================================================
+// Seed Data
+// ============================================================================
+
+const SEED_BOT_SESSIONS: BotRailItem[] = [
+  {
+    id: 'bot-session-deep-researcher',
+    label: 'Deep Researcher',
+    payload: 'deep-researcher',
+    status: 'running',
+    botId: 'deep-researcher-001',
+    wihId: 'wih-research-q3-analysis',
+    accentColor: '#A78BFA',
+    badge: 3,
+  },
+  {
+    id: 'bot-session-code-reviewer',
+    label: 'Code Reviewer',
+    payload: 'code-reviewer',
+    status: 'idle',
+    botId: 'code-reviewer-001',
+    accentColor: '#4ade80',
+  },
+  {
+    id: 'bot-session-writing-partner',
+    label: 'Writing Partner',
+    payload: 'writing-partner',
+    status: 'paused',
+    botId: 'writing-partner-001',
+    wihId: 'wih-docs-api-guide',
+    accentColor: '#D4956A',
+    badge: 1,
+  },
+];
 
 // ============================================================================
 // Store

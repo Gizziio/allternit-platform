@@ -221,12 +221,6 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   pdf: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
   // Markdown preview (anydoc)
   'markdown-preview': { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
-  // API Capture / Site APIs
-  'site-apis': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
-  // Model Lab
-  'model-lab': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
-  // Allternit Sign (native client-side PDF signing)
-  sign: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
 };
 

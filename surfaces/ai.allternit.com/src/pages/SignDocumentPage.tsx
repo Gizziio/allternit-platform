@@ -1,4 +1,4 @@
-"use client";
+import { DocuSealSigningView } from '@/views/office/DocuSealSigningView'
 
 import { NativeSigningView } from "@/views/office/NativeSigningView";
 import { OfficePageChrome } from "@/shell/OfficePageChrome";
@@ -12,4 +12,6 @@ export default function SignDocumentPage(): React.ReactNode {
       </div>
     </main>
   );
+export default function SignDocumentPage() {
+  return <DocuSealSigningView />
 }

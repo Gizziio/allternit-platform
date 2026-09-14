@@ -1,20 +1,22 @@
 /**
  * HAR-derived API capture UI store.
+ *
+ * Contracts are persisted in the Allternit API backend (SQLite). The store
+ * keeps a local cache and uses optimistic updates where appropriate.
  */
 
 import { create } from 'zustand';
 import {
   ingestHar,
   generateClient,
-  loadPersistedContracts,
-  persistContracts,
-  createContractFromHar,
-  replayEndpoint,
   loadPersistedApiSkills,
   persistApiSkills,
   notifyApiSkillsChanged,
+  createContractFromHar,
+  replayEndpoint,
   createApiSkillFromContract,
-  fetchPersistedContracts,
+  listContracts,
+  deleteContract as deleteContractApi,
   type CaptureSession,
   type Endpoint,
   type ReplayInput,
@@ -47,7 +49,7 @@ interface ApiCaptureState {
   replaySelectedEndpoint: (input: ReplayInput) => Promise<ReplayResult>;
   generateClientForSelected: (language: 'python' | 'typescript' | 'curl') => Promise<void>;
   publishAsSkill: (contractId: string, name: string, description: string) => Promise<ApiSkill | null>;
-  deleteContract: (id: string) => void;
+  deleteContract: (id: string) => Promise<void>;
   clearError: () => void;
   clearGeneratedClient: () => void;
   clearPublishSkillSuccess: () => void;
@@ -55,7 +57,7 @@ interface ApiCaptureState {
 
 export const useApiCaptureStore = create<ApiCaptureState>((set, get) => ({
   sessions: [],
-  contracts: loadPersistedContracts(),
+  contracts: [],
   apiSkills: loadPersistedApiSkills(),
   selectedContractId: null,
   selectedEndpointId: null,
@@ -83,36 +85,29 @@ export const useApiCaptureStore = create<ApiCaptureState>((set, get) => ({
   },
 
   fetchContracts: async () => {
-    set({ isLoadingContracts: true });
+    set({ isLoadingContracts: true, error: null });
     try {
-      const remote = await fetchPersistedContracts();
-      const local = loadPersistedContracts();
-      const seen = new Set<string>();
-      const merged: SiteApiContract[] = [];
-      for (const contract of [...remote, ...local]) {
-        if (seen.has(contract.id)) continue;
-        seen.add(contract.id);
-        merged.push(contract);
-      }
-      set({ contracts: merged, isLoadingContracts: false });
-    } catch {
-      set({ contracts: loadPersistedContracts(), isLoadingContracts: false });
+      const contracts = await listContracts();
+      set({ contracts, isLoadingContracts: false });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to load contracts',
+        isLoadingContracts: false,
+      });
     }
   },
 
   ingestHarFile: async (harJson, source = 'upload') => {
     set({ isLoadingContracts: true, error: null });
     try {
-      const result = await ingestHar(harJson);
-      const contract = createContractFromHar(result.endpoints, source);
-      const nextContracts = [contract, ...get().contracts];
-      persistContracts(nextContracts);
-      set({
-        contracts: nextContracts,
+      const result = await ingestHar(harJson, source);
+      const contract = createContractFromHar(result, source);
+      set((state) => ({
+        contracts: [contract, ...state.contracts],
         selectedContractId: contract.id,
         selectedEndpointId: null,
         isLoadingContracts: false,
-      });
+      }));
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to ingest HAR',
@@ -133,13 +128,13 @@ export const useApiCaptureStore = create<ApiCaptureState>((set, get) => ({
     const { contracts, selectedContractId, selectedEndpointId } = get();
     const contract = contracts.find((c) => c.id === selectedContractId);
     const endpoint = contract?.endpoints.find((e) => e.id === selectedEndpointId);
-    if (!endpoint) {
+    if (!contract || !endpoint) {
       throw new Error('No endpoint selected');
     }
 
     set({ isReplaying: true, replayResult: null, error: null });
     try {
-      const result = await replayEndpoint(endpoint, input);
+      const result = await replayEndpoint(contract.id, endpoint.id, input);
       set({ replayResult: result, isReplaying: false });
       return result;
     } catch (error) {
@@ -192,14 +187,21 @@ export const useApiCaptureStore = create<ApiCaptureState>((set, get) => ({
     }
   },
 
-  deleteContract: (id) => {
-    const next = get().contracts.filter((c) => c.id !== id);
-    persistContracts(next);
-    set({
-      contracts: next,
-      selectedContractId: get().selectedContractId === id ? null : get().selectedContractId,
-      selectedEndpointId: null,
-    });
+  deleteContract: async (id) => {
+    set({ error: null });
+    try {
+      await deleteContractApi(id);
+      const next = get().contracts.filter((c) => c.id !== id);
+      set({
+        contracts: next,
+        selectedContractId: get().selectedContractId === id ? null : get().selectedContractId,
+        selectedEndpointId: null,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to delete contract',
+      });
+    }
   },
 
   clearError: () => set({ error: null }),

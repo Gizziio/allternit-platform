@@ -508,16 +508,69 @@ Execute Phase 2 Packaged Bots implementation following the master implementation
 - `cargo check -p allternit-api` ✅ (warnings only, no errors).
 
 ### Next
+## Goal
 
-1. Begin Wave 2: Goal, Plan, Task, Validation, and Loop Runtime.
-   - Define `Goal`, `Plan`, `TaskGraph`, `Task`, `Attempt`, `Validation` TypeScript contracts.
-   - Implement 9 goal states and 7 task states.
-   - Implement Ralph inventory/deprecation (W2-001–W2-005).
-   - Implement policy-driven loop strategies (W2-060–W2-072).
+Finish the Allternit Desktop auth/onboarding handoff: review fixes 1–13, implement the two remaining items (#14 Sidecar-backed Local Brain model routes + ModesStep rework, #15 `gizzi init` wiring), then build/test/package and commit scoped changes.
 
-### Open questions
+## Just did
 
-- None blocking Wave 2 start.
+- Implemented #14 end-to-end:
+  - Added `cmd/gizzi-code/src/runtime/server/routes/sidecar.ts` exposing `/sidecar/models` (list), `/sidecar/models/search` (HF GGUF search), `/sidecar/models/install` (SSE install progress), `/sidecar/models/:tag/remove`.
+  - Registered the route in `cmd/gizzi-code/src/runtime/server/server.ts` under both unversioned `/sidecar` and `/v1/sidecar`.
+  - Added proxy routes in `cmd/allternit-api/src/local_brain_routes.rs` under `/api/local-brain/models/*` forwarding to gizzi-code.
+  - Added `setupApi.listLocalModels` / `searchLocalModels` / `installLocalModel` / `removeLocalModel` in `surfaces/ai.allternit.com/src/services/setup-api.ts`.
+  - Reworked the `ModesStep` Local Brain UI to list installed sidecar models, search HuggingFace, install with SSE progress, remove, and select as the default brain.
+- Implemented #15 end-to-end:
+  - Extracted reusable `initializeProject()` into `cmd/gizzi-code/src/runtime/project/init.ts`.
+  - Refactored `cmd/gizzi-code/src/cli/commands/init.ts` to call the shared function (no CLI behavior change).
+  - Added `POST /v1/project/init` route in `cmd/gizzi-code/src/runtime/server/routes/project.ts`.
+  - Added `POST /api/onboarding/init-project` proxy in `cmd/allternit-api/src/onboarding_routes.rs`.
+  - Added `setupApi.initProject()` and wired it into the wizard `finish()` handler using `data.workspacePath`.
+  - Added workspace path to the Done screen summary.
+- Verified code health:
+  - `cargo check -p allternit-api` ✅
+  - `cargo build --release -p allternit-api` ✅; copied fresh binary into `surfaces/allternit-desktop/resources/bin/allternit-api`.
+  - `bun run typecheck` in `cmd/gizzi-code` ✅
+  - `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com` ✅
+  - `pnpm test` in `surfaces/allternit-desktop` ✅ (94 passed)
+  - Desktop main/preload typecheck ✅
+- Started full DMG build (`npm run build:electron:dmg` with live Clerk key) — currently running in background task `bash-z0fskqnw`.
+
+## Next
+
+1. Wait for DMG build to finish; inspect result.
+2. Stage and commit the scoped set of files touched for this handoff, avoiding unrelated WIP.
+3. Update this checkpoint once commits are ready for steering approval.
+
+## Open questions
+
+- Worktree policy: AGENTS.md requires sessions to use linked worktrees, but the entire handoff state (fixes 1–13) is in the main checkout. Working in main checkout to avoid losing/cherry-picking 194 files of WIP; commit guard will be triggered for approval.
+
+## Files changed / to commit
+
+New:
+- `cmd/gizzi-code/src/runtime/server/routes/sidecar.ts`
+- `cmd/gizzi-code/src/runtime/project/init.ts`
+
+Modified:
+- `cmd/gizzi-code/src/runtime/server/server.ts`
+- `cmd/gizzi-code/src/runtime/server/routes/project.ts`
+- `cmd/gizzi-code/src/cli/commands/init.ts`
+- `cmd/allternit-api/src/local_brain_routes.rs`
+- `cmd/allternit-api/src/onboarding_routes.rs`
+- `surfaces/ai.allternit.com/src/services/setup-api.ts`
+- `surfaces/ai.allternit.com/src/components/onboarding/OnboardingFlow.tsx`
+- `surfaces/allternit-desktop/resources/bin/allternit-api` (binary refresh)
+
+---
+
+## Swarm E checkpoint (2026-08-09)
+
+Goal: Complete Swarm E Enterprise Auth & Vault Phase 0.
+
+Just did: Added V36 credential/vault schema, scoped enterprise credential management and bearer authentication, encrypted AllternitVault storage, and authenticated gateway idempotency ownership.
+
+Next: Stage and commit the completed Phase 0 files once the linked-worktree Git index is writable.
 
 ## Goal
 A:// product-depth phase (2026-09-13), owner-approved. Six items, dependency
@@ -608,8 +661,173 @@ Implement Rails as the unified agent communication and coordination system: cons
 1. Phase 5: rewrite `tools/agent-orchestrator/scripts/ao-*` as thin `allternit rails orchestrator ...` / `allternit rails steer ...` shims.
 2. Phase 6: replace `.steering/bin/*.sh` hooks with `allternit rails steer ...` calls.
 3. Phase 7: update `rails/README.md`, `docs/Core_System/01-Reality/SPEC-Reality-Rails-Control-Plane.md`, `docs/ALLTERNIT_MUX_PLAN.md`, and relevant `AGENTS.md` files.
+Open questions: Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. Builds/tests are intentionally not run under the Swarm E repository instructions.
 
-## Open questions
+---
+
+## Swarm A checkpoint (2026-08-09)
+
+Goal: Complete Swarm A Core API / Harness Phase 2.
+
+Just did:
+- Verified the SDK retry/backoff interceptor (`retry.ts`) and wired it into the Anthropic BYOK fetch path.
+- Added `GET /v1/rate-limits` to the LLM gateway (`auth.rs`, `proxy.rs`, `mod.rs`) with unit tests.
+- Added normalized `HarnessStopReason` taxonomy to harness types, mapped Anthropic/OpenAI stop/finish reasons via `mapStopReason`, surfaced the reason in `run()`/`done` chunks, and emitted `run.stop` lifecycle events from `RunState`.
+- Added legacy OpenAI `functions`/`function_call` output support to `toOpenAIRequest` with tests.
+- Updated harness tests and added `provider-request.test.ts`.
+- `cargo check -p allternit-api` and `cargo test -p allternit-api --lib` pass (136 tests). Targeted `bun test` for `sdk/allternit-sdk/src/ai-runtime/harness/__tests__` passes (51 tests). Broader `bun test` in the SDK has pre-existing failures (missing `zod` dep, unimplemented Google/Local harness streaming) not introduced by these changes.
+
+Next: Stage all Phase 2 files and commit to `ao/p2-swarm-a`, then write `docs/SWARM_A_PHASE2_NOTES.md`.
+
+Open questions: None.
+
+---
+
+## Codex manual parity part 3 checkpoint (2026-08-12)
+
+Goal: Document Allternit parity for the assigned Codex manual part 3 items
+covering configuration, UI, integrations, permissions, observability, and
+security workflows.
+
+Just did: Created `docs/public/parity/codex-manual-part3.md` and its required
+coverage report. Mapped project discovery, worktrees, approvals, credentials,
+provider endpoints, model availability, MCP/apps, agents/hooks, web search,
+TypeScript, TUI customization, analytics, OTLP, and vulnerability reporting;
+marked Codex-hosted and literal-schema-only features as not applicable or
+roadmap.
+
+Next: Reviewer can validate the semantic mappings and decide whether the
+documented network-proxy, Windows-isolation, TUI, OTLP, and security-workbench
+gaps should become implementation tasks.
+
+Open questions: None. Documentation-only work; no build was run.
+
+---
+
+## Codex Security parity documentation (2026-08-12)
+
+Goal: Document Allternit parity for the assigned Codex Security cloud FAQ,
+CLI FAQ/reference/quickstart, TypeScript SDK, and plugin quickstart items.
+
+Just did: Created six parity pages and the required coverage report. Mapped the
+plugin-backed `/security-review` workflow, provider auth, sandbox/approval
+configuration, MCP, managed session budgets, and `gizzi verification`; marked
+the managed scanner, typed scan lifecycle/results, threat-model store, bulk
+resume, baseline matching, and SARIF surfaces as roadmap instead of presenting
+generic agent infrastructure as feature parity.
+
+Next: Reviewer can validate the mappings and decide which missing security
+product contracts should become implementation work.
+
+Open questions: The repository does not publish a guaranteed marketplace URL
+for the `security-review` plugin. Documentation-only work; no build was run.
+
+---
+
+## Parity docs: developer commands (2026-08-12)
+
+Goal: Document Allternit parity for the 53 assigned ChatGPT/Codex developer-command items.
+
+Just did: Researched the Gizzi TUI command registry, global CLI flags,
+keybinding schema, session lifecycle APIs, connector catalog, MCP server, work
+queue, memory, preferences, permissions, and hooks. Created
+`docs/public/parity/developer-commands.md` and the required coverage report.
+
+Next: Reviewer can validate command naming and roadmap classifications. No build
+is needed because the change is documentation-only.
+
+Open questions: None.
+
+---
+
+## Codex manual parity part 4 checkpoint (2026-08-12)
+
+Goal: Document Allternit parity for the assigned Codex manual part 4
+configuration literals.
+
+Just did: Created `docs/public/parity/codex-manual-part4.md` with researched
+mappings for providers, MCP/OAuth, compaction and memory, tools, sandboxing,
+history/OTel, TUI controls, authentication, connectors, and web search. Added
+the required `.parity-reports/codex-manual-part4.md` report. Unsupported
+Codex-hosted and configuration-specific controls are explicitly labeled not
+applicable or roadmap.
+
+Next: Reviewer can validate wording and roadmap classifications. No build is
+needed because the changes are documentation-only.
+
+Open questions: None.
+
+---
+
+## Parity docs: non-interactive, commands, prompts, administration, usage (2026-08-12)
+
+Goal: Document the 24 assigned OpenAI ChatGPT/Codex handoff items across five
+Allternit parity pages.
+
+Just did: Researched `gizzi exec`, stdin/structured output, auth profiles,
+session resume, TUI commands/keybindings/search, guarded deep links, custom
+command frontmatter, admin routes/CLI, gateway budgets, spend caps, and managed
+session budgets. Created the five public pages and the required coverage report;
+classified hosted ChatGPT subscription allowances and implicit external posting
+as not applicable to the self-host/BYOC model.
+
+Next: Reviewer can validate terminology and cross-links. No build is needed
+because the change is documentation-only.
+
+Open questions: None.
+
+---
+
+## Codex manual parity part 1 checkpoint (2026-08-12)
+
+Goal: Document Allternit parity for the 118 assigned Codex manual items through
+`History & File Opener`.
+
+Just did: Created `docs/public/parity/codex-manual-part1.md` with configuration,
+provider, sandbox, MCP, session, UI, analytics, governance, and security mappings;
+marked unsupported Codex syntax and SaaS-only concepts as not applicable/roadmap;
+created the required `.parity-reports/codex-manual-part1.md` report.
+
+Next: Reviewer can validate terminology and decide whether roadmap gaps should
+be promoted into implementation tasks.
+
+Open questions: None.
+
+---
+
+## Goal (parallel session: Second Brain rename + creation wiring)
+
+Rename the web UI's "Brain" surface to "Second Brain", wire Clerk JWT sync into the runtime API client, and add a gizzi-code `/brain/provision` route so the empty Brain view can actually create a hosted second brain.
+
+## Just did
+
+- Renamed visible strings: `ShellRail.tsx` nav label, `BrainView.tsx` heading/empty/error/copy, `ViewRegistry.tsx` error fallback.
+- Added `useEffect` in `ClerkPlatformAuthBridge` to push `clerkAuth.getToken()` into `api.setToken()` every ~50s and clear on sign-out.
+- Created `cmd/gizzi-code/src/runtime/server/routes/brain.ts` with `POST /brain/provision` (init → relay-authenticated create → link → sync), fail-closed 401.
+- Mounted `BrainRoutes()` in `cmd/gizzi-code/src/runtime/server/server.ts` under `/brain` and `/v1/brain`.
+- Added `createBrain()` in `surfaces/ai.allternit.com/src/services/brain-api.ts` calling gizzi-code via `apiRequest(gizziBaseUrl() + "/brain/provision")`.
+- Wired `useMutation` in `BrainView.tsx` to the `EmptyState` CTA; invalidates `['brains']` on success and toasts on error.
+- Typecheck clean for both `cmd/gizzi-code` and `surfaces/ai.allternit.com`; production Vite build succeeded.
+- Restarted the local gizzi-code HTTP server and verified `POST /brain/provision` returns 401 without `Authorization` and on both `/brain/provision` and `/v1/brain/provision`.
+
+## Follow-up change: move Second Brain from Home tab to Mini-apps
+
+- Removed the `Second Brain` `RailItem` from the Home-mode tabs in `ShellRail.tsx`.
+- Added a builtin `second-brain` mini-app in `mini-app-registry.ts` (seeded under the new `allternit-mini-apps-seeded-v7` key), surfaced as an `allternit-native` mini-app with `viewType: 'brain'` so it appears alongside Vault Viewer in Browser mode's pinned Mini-apps list.
+- Updated `PinnedMiniAppItem` to allow per-ID icon overrides, keeping the `Brain` icon for the Second Brain mini-app instead of the generic tool icon.
+- Added `brain`, `vault-viewer`, and `oh-my-pi` to `BROWSER_MODE_VIEW_TYPES` in `ShellApp.tsx` so clicking any pinned mini-app no longer flips the shell back to Home/Chat mode; it stays in ACI/Browser mode.
+- Wrapped `BrainView` in `ToastProvider` inside `ViewRegistry.tsx`; `BrainView` calls `useToast()` but the main shell canvas had no provider, causing a runtime crash and the "Second Brain Error" boundary screen.
+- Fixed `cmd/gizzi-code/src/runtime/server/routes/brain.ts` so `/brain/provision` no longer forwards gizzi-code's own HTTP Basic auth header to allternit-api. In Desktop mode the Electron broker authenticates to gizzi-code with Basic auth; the route now forwards only Clerk Bearer tokens upstream.
+- Switched the allternit-api create call to `apiFetchJson()` from `@/runtime/services/api/allternitApi`, which adds gizzi-code's runtime-device/local-dev auth headers (`x-allternit-user-id`, `x-allternit-desktop-access-token`) so allternit-api can authenticate the request even when no Clerk token is present.
+- Typecheck clean for both `surfaces/ai.allternit.com` and `cmd/gizzi-code`; production Vite build passed.
+
+## Next
+
+- Obtain a valid Clerk JWT (e.g. via browser devtools `window.Clerk.session.getToken()`) and curl-test the full create→link→sync chain through `/brain/provision`.
+- With the UI signed in, verify `localStorage['allternit_token']` populates on sign-in/clears on sign-out, then run the full empty-state → create → reflow click-through on a zero-brains account (now reachable via the Second Brain mini-app in Browser mode).
+- Stage and commit the scoped changes.
+
+## Open questions / limitations
 
 - Should the UDS runner be started automatically by the Rails service, or exposed as a separate `allternit-rails bus uds-runner` command?
 - How should the orchestrator module authenticate to the `allternit-mux` UDS API when running inside the Rails service?
@@ -654,160 +872,79 @@ Modified:
 - `cmd/gizzi-code/src/runtime/tools-registry-gizzi.ts`
 - `.steering/checkpoint.md`
 - `allternit-rails` is not on PATH on the desktop, so the repo's ao-* shims currently fail there while the stale standalone copies work. Migration needs an install step (`cargo install --path rails` or packaged binary) — flagging so it is not missed.
+- Could not complete the live JWT click-through in this session: the running Desktop renderer page was a document view, not the signed-in shell, so no Clerk session token was obtainable via CDP. The 401 path and build artifacts are verified; the full E2E needs a signed-in shell.
 
 ---
 
-## Checkpoint update (session/steering-packaging)
+## Goal (platform polish: Site APIs / HAR-derived API Capture audit & redesign plan)
 
-Just did:
-- Added steer-* toolkit (steer, steer-discover, steer-context, steer-checkpoint, steer-prompt, steer-verify) to `tools/agent-orchestrator/scripts/`.
-- Added `.agents/skills/agent-orchestrator/` + `.agents/skills/steer-parallel-agent/` (auto-discovered by gizzi-code project skill scan).
-- Registered both skills in gizzi-code builtin catalog (`cmd/gizzi-code/src/runtime/skills/bundledSkills.ts` + Bun text-loaded markdown under `src/runtime/skills/bundled/`).
-- `steer-discover` now queries the Rails peer registry first (`ALLTERNIT_RAILS_URL`, default `http://127.0.0.1:8013`), filesystem scan as fallback.
-- Flipped `GIZZI_ENABLE_RAILS_PEER` to default-on (opt out via `=0`) in `railsPeer.ts`, `tools-registry-gizzi.ts`, `cli/ui/ink-app/tools.ts`.
-- Added `tools/agent-orchestrator/install.sh` (idempotent PATH installer + allternit-rails bootstrap) and ran it: 13 tools + the freshly built `allternit-rails` binary now on PATH; `ao-doctor` verified working through the shims.
-- Verification: `tsc --noEmit` in `cmd/gizzi-code` — zero errors in touched files; only 7 pre-existing errors in `packages/sdk/scripts/verify-sdk.ts` from missing `dist/` artifacts in the fresh worktree.
+Audit the current Site APIs surface and HAR-derived API capture flow, research open-source patterns and GitHub projects that do the same workflow, identify the root causes of the spacing/wiring/cross-surface failures, write a research-backed redesign plan, and begin implementation of the highest-impact fixes.
 
-Next:
-- Merge `session/steering-packaging` when approved, then re-run `tools/agent-orchestrator/install.sh` from the main checkout (current `~/.local/bin` symlinks point into this worktree).
-- Homebrew formula deferred until release tarballs exist.
+## Just did
 
-Open questions:
-- Should kimi/codex/claude session-start hooks also register Rails peers so `steer-discover`'s Rails section covers non-gizzi agents?
-### Update — generated media integration
-- Copied generated assets into `surfaces/office.allternit.com/public/`:
-  - `hero-documents.png` — static hero image of the five document cards.
-  - `hero-cards.mp4` — animated floating document cards (used as the hero visual).
-  - `hero-glow.mp4` — warm golden glow (used as ambient hero background).
-  - `grid-beam.mp4` — subtle grid light beam (used as value-props background).
-  - `sign-signature.mp4` — kept in public for future Sign section use.
-- Replaced the SVG `HeroVisual` composition with a looping `<video>` using the PNG as poster/fallback.
-- Added autoplay/muted/loop background videos to the hero and value-props sections.
-- Updated `HomePage.css` with video positioning, opacity, and z-index layering.
-- Verified the build copies all media files to `dist/` and the preview serves them.
+- Audited the full capture stack:
+  - Frontend: `ApiCaptureView.tsx`, `api-capture/store.ts`, `api-capture/api.ts`, `BrowserApiCaptureButton.tsx`, `BrowserChatPane.tsx`.
+  - Desktop: `browser-capture-manager.ts`, `unified-main.ts` IPC handlers, `preload/index.ts` bridge.
+  - Backend: `cmd/allternit-api/src/har_api_routes.rs`.
+  - Extension: `surfaces/allternit-extensions/allternit-extension/` manifest and sidepanel.
+- Found concrete bugs: desktop capture tore down all global `webRequest` listeners, response bodies were not captured, concurrent sessions raced, the "Open browser to capture" CTA opened the browser landing page, generated clients were stubs, and the extension had no capture permissions.
+- Researched GitHub projects: `neo`, `har-to-curl`, `reverse-api-engineer`, `zapi`, `vespasian`, `har-to-openapi`, `bluebox-sdk`, `har-capture`, `mitmproxy`, `apify/crawlee`, Chrome DevTools Protocol, and Vercel's `agent-browser derive-client` skill.
+- Documented capture options for Chrome extensions: `webRequest` (no bodies), `chrome.debugger` + CDP (full capture), DevTools panel, content-script interception.
+- Wrote `docs/SITE_APIS_CAPTURE_REDESIGN_PLAN.md` with root-cause table, proposed adapter-based cross-surface architecture, backend service outline, phased implementation plan, acceptance criteria, and open questions.
+- **Implemented Phase 1 & 2 fixes:**
+  - Hardened `browser-capture-manager.ts` with per-session dispatch, global listener lifecycle, concurrent-session guard, and request-body capture; added 8 passing unit tests.
+  - Created `src/lib/api-capture/arm.ts` so the Site APIs surface can arm the ACI browser capture button across components.
+  - Rewired `BrowserApiCaptureButton` into the ACI browser top row (`BrowserCapsuleEnhanced.tsx`); it now auto-starts capture when it receives an arm signal whose domain matches the active tab.
+  - Redesigned `ApiCaptureView.tsx` with a `CaptureLauncher` CTA, URL prompt, expandable endpoint cards, improved replay form, compact mode prop, and better Allternit spacing.
+  - Added an "APIs" tab to `BrowserChatPane` so Site APIs are usable in the compact ACI sidepanel without clipping.
+  - Wired the desktop `browserCapture` API end-to-end:
+    - Added `browser-capture:*` IPC handlers in `surfaces/allternit-desktop/src/main/unified-main.ts` backed by `browser-capture-manager.ts`.
+    - Exposed `window.allternit.browserCapture` in `surfaces/allternit-desktop/src/preload/index.ts`.
+    - Added the TypeScript contract to `surfaces/ai.allternit.com/src/lib/globals.d.ts`.
+- Verified health:
+  - `pnpm test -- browser-capture-manager.test.ts` in `surfaces/allternit-desktop` ✅ (8 tests)
+  - `pnpm run typecheck` in `surfaces/allternit-desktop` ✅
+  - `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` in `surfaces/ai.allternit.com` reports no new errors in touched files (baseline pre-existing errors unchanged).
 
-### Update — clickable feature cards and persistent platform links
-- Added `AppTab` type (`docs` | `sheets` | `slides` | `pdf` | `sign`) and wired `HomePage` → `AppContent` so each feature card launches its matching office app tab.
-- Made feature cards keyboard-accessible (`role="button"`, `tabIndex={0}`, Enter/Space handlers) and styled them with `cursor: pointer`, hover lift, and focus rings.
-- Added an "Allternit" platform link in the homepage header next to the brand, plus a footer links row with the platform link and copyright.
-- Rebuilt the main checkout and restarted the preview server at `http://localhost:3019/`.
+## Next
 
-### Update — full Allternit footer on office homepage
-- Created `src/Footer.tsx` that replicates the five-column footer from `www.allternit.com`:
-  - Research, Products, A://Labs, Developers, Company.
-  - All relative links rewritten as absolute `https://allternit.com/...` links.
-  - External links open in a new tab.
-- Replaced the minimal footer in `HomePage.tsx` with the new `<Footer />` component.
-- Added responsive `office-footer` styles to `HomePage.css` using the office design tokens.
-- Rebuilt and restarted the preview server at `http://localhost:3019/`.
+1. Build the `services/api-capture/` Rust backend (Phase 3): SQLite persistence, real client generation, server-side replay proxy.
+2. Spike the Chrome extension `chrome.debugger` capture adapter (Phase 4).
+3. Add agent-facing tools for `api_capture_record` / `api_capture_stop` / `api_capture_replay` (Phase 5).
 
-----
+## Open questions
 
-## CUA Driver Computer History Integration (2026-08-19)
-
-### Goal
-
-Integrate CUA Driver's encrypted Computer History preview (`history_status`, `history_query`) into Allternit's canonical computer-use stack across backend, SDKs, MCP, and plugin layers, with deterministic planning-loop consultation.
-
-### Just did
-
-- Created session worktree `allternit-session-94f633c4-8f25-427a-8c87-c6ba4b68a43c` and wrote an approved implementation plan.
-- Implemented the full stack:
-  - Python CUA transport: `history_status()` / `history_query()` with bounds validation.
-  - Canonical contract: added `tools` to `CapabilityManifest` and JSON schema.
-  - CUA provider: probes history admission and advertises tools only when supported & admitted.
-  - HTTP API: `POST /history/status` and `POST /history/query` with Pydantic validation.
-  - Canonical MCP server: `computer_history_status` and `computer_history_query` tools.
-  - TypeScript SDK: history types + `canonicalHistoryStatus` / `canonicalHistoryQuery`.
-  - Python SDK: `history_status` / `history_query` client methods.
-  - Plugin: tool definitions, HTTP adapter methods, and consultation policy in system prompt.
-- Made consultation deterministic by wiring a `history_preflight` callback into `PlanningLoop`; the callback uses the canonical CUA provider to call `history_status` then `history_query` for continuation/recent-work tasks.
-- Adjusted `history_query` transport to use the nightly CLI surface (`history list [limit] --session --since --until`) rather than the not-yet-available `history_query` tool, while preserving the same Python/SDK contract.
-- Added tests: `domains/computer-use/core/tests/test_cua_history.py` (9 passed) and SDK `client.test.ts` additions (37 passed total).
-- Reverted `pnpm-lock.yaml` to keep the diff scoped.
-
-### Verification
-
-- `python3 -m pytest domains/computer-use/core/tests/test_cua_history.py -v` → **9 passed**
-- `npm test -- --testPathPattern=client.test.ts` in `sdk/computer-use` → **37 passed**
-- Python syntax check on all modified `.py` files → OK
-- `canonical.schema.json` valid JSON → OK
-- **Real CUA Driver nightly test** (installed 0.20.1-nightly.20260818):
-  - `CuaDriverTransport.discover()` found `/Applications/CuaDriver.app/Contents/MacOS/cua-driver`
-  - `history_status()` returned `health: ready`, `enabled: true`, `admitted: true`
-  - `history_query(limit=3)` returned 3 CloudEvents-style metadata events
-  - `CuaDriverCanonicalProvider` advertised `history_status` and `history_query` in `manifest.tools`
-  - `gateway.canonical_router.history_preflight_for_task()` returned status + 23 events
-  - Legacy packaged binary (0.8.2) degrades gracefully with `CuaDriverCallError`
-
-### Next
-
-Merged into `main` (2026-08-19).
+- ~~The integration tracker claims `services/api-capture/` is done, but it is not present in this checkout. Should we recover that branch or re-implement?~~ **Answered:** `ao/p1-apitap-capture` does not exist locally or on `origin`. We are implementing from the current prototype.
+- Should the extension use `debugger` permission (full capture but Chrome warning bar) or a DevTools panel approach?
+- How should auth/cookie replay be handled safely in the server-side replay proxy?
 
 ---
 
-## Runtime CLI adapter alignment with Multica production protocols
+## Goal (parallel session: Allternit Manufacturing productization)
 
-### Goal
-Bring `cmd/gizzi-code/src/runtime/drivers/local-cli-driver.ts` and `cmd/gizzi-code/src/runtime/runtime-discovery.ts` into protocol parity with Multica's production Go implementation so every discovered agent CLI uses the same argv/wire/approval path Multica already ships.
+Add Allternit Manufacturing as a platform offering: create a strategic master plan, add the product to the Products Discovery catalog and spotlight carousel, and build a dedicated Manufacturing view.
 
-### Background
-Multica drives the same CLIs through stable protocol families: `stream-json` (Claude/CodeBuddy/Cursor/OpenCode/DevEco/OpenClaw/Qwen), `acp` (Hermes/Kimi/Kiro/Qoder/QwenPaw/Reasonix/TraeCLI/Grok/MCode), `codex app-server` JSON-RPC (Codex), and one-shot JSON/text (Pi/Oh-My-Pi/Antigravity). Allternit's current adapter map has several mismatches that will break in production (e.g. Codex uses `codex exec`, Cursor/OpenCode/DevEco/OpenClaw use ACP, Kimi/Qwen are one-shot). Discovery also only runs `which` and ignores `MULTICA_*_PATH` / `MULTICA_*_MODEL` overrides and login-shell PATH fallback that Multica uses.
+## Just did
 
-### Plan
-1. Refactor `local-cli-driver.ts` into shared protocol runners:
-   - `runStreamJson` for line-delimited `stream-json` agents.
-   - `runACP` (extend existing) for ACP stdio agents.
-   - `runCodexAppServer` for Codex JSON-RPC app-server protocol.
-   - `runOneShotJson` / `runOneShotText` for pi/omp/agy.
-2. Correct every adapter to match Multica argv:
-   - `codex`: `app-server --listen stdio://` JSON-RPC.
-   - `cursor-agent`: `-p --output-format stream-json --yolo`.
-   - `opencode`: `run --format json --dangerously-skip-permissions`.
-   - `deveco`: `run --format json` (stream-json).
-   - `openclaw`: `agent ... --output-format stream-json`.
-   - `kimi`: `acp` ACP.
-   - `qwen`: `-p <prompt> --output-format stream-json --yolo`.
-   - Add `mcode`: `acp` ACP.
-3. Update `SUBPROCESS_PROVIDERS` in `providers/discovery/subprocess.ts` to add `mcode` and align IDs where needed.
-4. Update `runtime-discovery.ts` to support `MULTICA_*_PATH` / `MULTICA_*_MODEL` env overrides and a login-shell PATH fallback with a 30-minute cache.
-5. Update tests and fixtures in `cmd/gizzi-code/test/runtime/` and `test/fixture/agent-clis/` to exercise the corrected protocols.
-6. Run `bun test test/runtime/` and `bun run typecheck` in `cmd/gizzi-code` and fix all errors.
+- Created `docs/ALLTERNIT_MANUFACTURING_MASTER_PLAN.md` with the 6-division structure, revenue model, build phases, 10-year roadmap, equipment list, AI agent roles, CAD-as-a-Service verticals, software licensing model, CAD/3D AI tool stack, robotics resources, and integration with the Allternit ecosystem.
+- Generated `docs/ALLTERNIT_MANUFACTURING_MASTER_PLAN.html` and `.pdf` as visual review decks (16 pages).
+- Added a new `Manufacturing` category and `Allternit Manufacturing` product card in `surfaces/ai.allternit.com/src/views/products/ProductsDiscoveryView.tsx`.
+- Added an `Allternit Manufacturing` spotlight carousel entry in `ProductsDiscoveryView.tsx`.
+- Created `surfaces/ai.allternit.com/src/views/manufacturing/ManufacturingView.tsx` as a first-class surface showing divisions, build phases, and revenue mix.
+- Registered `manufacturing` as a `ViewType` in `nav.types.ts` and wired the lazy-loaded component in `ViewRegistry.tsx`.
+- Inventoried relevant Twitter/CAD bookmarks on the Desktop and linked them in the master plan's reference section.
+- Verified `pnpm exec tsc --noEmit` passes for `surfaces/ai.allternit.com`.
 
-### Just did
-- Created worktree `allternit-session-multica-runtime-align` on branch `session/multica-runtime-align` per repo policy.
-- Verified Multica production source for discovery (`agents_probe.go`), backend factory (`agent.go`), builtin runtime registry (`builtin_runtimes.go`), and per-provider backends (`codex.go`, `cursor.go`, `opencode.go`, `kimi.go`, `qwen.go`, `mcode.go`, `claude.go`, `codebuddy.go`, `deveco.go`, `openclaw.go`).
-- Audited current Allternit adapter map against Multica protocol families and documented mismatches.
-- Refactored `local-cli-driver.ts` into shared protocol runners matching Multica's families:
-  - `runStreamJson` for line-delimited `stream-json` agents (Claude/CodeBuddy/Cursor/OpenCode/DevEco/Qwen).
-  - `runOpenclawJson` for OpenClaw's NDJSON/final-blob dialect.
-  - `runAcp` for ACP stdio agents (Hermes/Kimi/Kiro/Qoder/QwenPaw/Reasonix/TraeCLI/Grok/MCode).
-  - `runCodexAppServer` for Codex JSON-RPC app-server over stdio.
-  - `runOneShotJson` / `runOneShotText` for Pi/Oh-My-Pi/Antigravity.
-- Corrected every provider adapter to Multica argv/wire shapes, added `mcode` (MiniMax Code) to ACP, and mapped Codex to `app-server --listen stdio://`.
-- Unified discovery path resolution in `providers/discovery/subprocess.ts` with `MULTICA_*_PATH` / `MULTICA_*_MODEL` overrides, login-shell PATH fallback, and Codex Desktop fallback; `runtime-discovery.ts` now imports the shared resolver.
-- Hardened production hygiene in `local-cli-driver.ts`:
-  - Added `StderrTail` (2048 bytes) to every runner and surfaced the tail in failure messages.
-  - Added `terminateProcessTree` with graceful SIGTERM → SIGKILL for Unix process groups, matching Multica's `proc_other.go`.
-  - Replaced direct `proc.kill()` calls in ACP and Codex runners with `terminateProcessTree`.
-  - Forward `task.env` into all runners and added Multica-style child env filtering (strips inherited `MULTICA_*` and Claude internal markers).
-  - Fixed Codex app-server JSON-RPC dispatch so server requests (`id` + `method`) are answered with the correct shapes (`decision: "accept"`, `action: "accept"`, permissions echo, etc.) instead of being mistaken for responses.
-  - Fixed Claude `control_response` shape to match Multica (no `allowed` flag).
-- Removed all mock agent CLI fixtures (`test/fixture/agent-clis/*`) and the mock-based execution/discovery test file (`test/runtime/local-cli-driver-execution.test.ts`) because AGENTS.md requires production-quality code with no mock code.
-- Kept the adapter registry tests (`test/runtime/local-cli-driver.test.ts`) which verify every discovered provider maps to a concrete adapter mode with no generic fallbacks.
+## Next
 
-### Verification
-- `bun run typecheck` in `cmd/gizzi-code` ✅
-- `bun test test/runtime/` in `cmd/gizzi-code` ✅ 24 pass, 0 fail, 170 expect calls
+- Build the manufacturing queue/quoting software MVP when Phase 1 equipment is acquired.
+- Curate the text-to-CAD, robotics, and print-farm bookmarks into actionable tool lists.
+- Create follow-up specs: software architecture, equipment roadmap, product catalog, and operations manual.
 
-### Next
-- Add integration tests that run only when real agent CLIs are installed on the host (e.g. `claude`, `kimi`, `codex`) so the protocol runners are exercised against actual binaries, not mocks.
-- Port Multica's per-provider `blockedArgs` filtering to strip protocol-critical flags from user-supplied `customArgs`.
-- Decide whether to keep warm pooling or align with Multica's per-task spawn model.
+## Open questions
 
-### Open questions
-- Do we want to keep `warm` pooling for stream-json agents, or switch to one-shot-per-task like Multica? Multica spawns per task, so parity suggests dropping pooling; keeping pooling is a performance optimization but risks protocol drift.
-- Should custom CLI args (`customArgs`) be filtered per-provider like Multica's `blockedArgs` maps? Production safety says yes.
+- Should Manufacturing have its own top-level navigation entry, or remain discoverable only through Products Discovery for now?
+- What is the Phase 1 equipment budget and target go-live date?
 
 ---
 
@@ -1233,3 +1370,38 @@ Continue the Fabric-vs-remote-control convergence by removing/replacing deeper g
 
 ### Open questions
 - The active bridge code in `src/runtime/integrations/` and `src/cli/ui/ink-app/bridge/` still implements remote-control semantics. This pass intentionally leaves it untouched because it is a live product feature and its replacement by Fabric capabilities is a larger architectural effort. Should the next pass remove it entirely or migrate it to a capability-native Fabric adapter?
+## Goal (platform polish: Agent | Bot Hub, ACI, Code, Home, iOS)
+
+Work through the user's platform todo list across ACI, Code mode, Home/bots, and iOS parity, starting with the smallest high-impact UI fixes and progressing to larger features.
+
+## Just did
+
+- Created linked worktree `allternit-session-platform-polish` from `main`.
+- Copied 192 dirty/untracked files from the shared checkout into the worktree so we work on the current state (WIP from previous sessions).
+- Installed dependencies with `pnpm install --ignore-scripts`.
+- Established baseline typecheck: `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` reports 952 lines of pre-existing errors.
+- Mapped key surfaces: `ShellApp.tsx`, `ShellRail.tsx`, `ViewRegistry.tsx`, `views/api-capture/ApiCaptureView.tsx`, `views/HomeView.tsx`, `views/AgentHub.tsx`, `views/bots/`.
+
+## Just did (continued)
+
+- **Site API tab rail fix**: registered `site-apis` as a `ViewType`, wired it into `ViewRegistry.tsx`, and added it to `BROWSER_MODE_VIEW_TYPES` in `ShellApp.tsx` so opening Site APIs no longer jumps the rail to Home. Added "Site APIs" to the Browser-mode rail and its More dropdown.
+- **Site API tab polish**: improved `ApiCaptureView.tsx` header with a subtle gradient, larger icon container, and shadow.
+- **Chat top-deck pills glass effect**: changed `InfoChip`, `ActionChip` (inactive), and the agent status pill in `AgentContextStrip` to `bg-white/5 backdrop-blur-sm` for a see-through glass look.
+- **Composer + button parity**: updated the compact composer path so the + button now toggles the existing Claude-style attachment/context/style menu (rotates to ×) instead of directly opening the file picker. Extracted the menu into a shared `plusMenuPanel` variable used by both compact and full composer layouts.
+- **Usage card polish**: converted `CodeUsageDashboard.tsx` from a light parchment surface to a dark glass card (`rgba(255,255,255,0.03)` + `backdrop-blur(20px)`), updated tab/range switchers, metric cards, heatmap, and model rows to match the dark glass Allternit style.
+- **Agent | Bot Hub rename**: updated visible labels in `AgentHub.tsx`, `ShellRail.tsx`, rail configs (`rail.config.tsx`, `cowork.config.ts`, `code.config.ts`), `ViewRegistry.tsx` error fallback, and `ProductsDiscoveryView.tsx`.
+- **Verification**: `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` still reports 952 lines (same baseline; no new errors introduced).
+
+## Next
+
+1. Phase 2 — Home & bots rework: bot toggle modes/mascot, session routing, workspace audit.
+2. Phase 3 — ACI & mini-apps: file-open integration, mini-app store/catalog polish, browser chat branding.
+3. Phase 4 — Code mode: console branding, terminal session canvas redesign, ACI dev server sideline.
+4. Phase 5 spikes: choose DocuSign alternative, locate and audit Allternit iOS project.
+
+## Open questions
+
+- User clarified rename should be "Agent | Bot Hub" (not "Agents & Bots").
+- User wants me to choose the best open-source DocuSign alternative (leaning toward DocuSeal for modern API-first UX).
+- iOS project exists as "allternit ios" and needs parity upgrades; exact path still to locate.
+- Code canvas should be kept, simplified, and redesigned for organized terminal-session overlays.

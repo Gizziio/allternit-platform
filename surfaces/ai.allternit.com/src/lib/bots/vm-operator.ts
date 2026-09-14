@@ -8,8 +8,6 @@
  */
 
 import type { AgentVMOperatorConfig } from '@/lib/agents/agent.types';
-import { API_BASE_URL } from '@/lib/agents/api-config';
-import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { createModuleLogger } from '@/lib/logger';
 import {
   createComputer,
@@ -31,15 +29,6 @@ export interface Sandbox {
   provider: string;
   image?: string;
   vncUrl?: string;
-  persistence?: 'ephemeral' | 'session' | 'persistent';
-  createdAt: string;
-  lastActiveAt?: string;
-}
-
-export interface SandboxSnapshot {
-  id: string;
-  sandboxId: string;
-  label?: string;
   createdAt: string;
 }
 
@@ -488,11 +477,12 @@ export async function restoreSandbox(
 export async function runCommand(
   sandboxId: string,
   command: string,
-  agentId?: string,
 ): Promise<VMOperatorResult<CommandResult>> {
   if (agentId && isBotDesktopPaused(agentId)) {
     return pausedResult<CommandResult>();
   }
+  const baseURL = getSandboxBaseURL();
+  if (!baseURL) return notConfigured<CommandResult>();
 
   try {
     const data = await runComputerShell(sandboxId, { command: ['sh', '-c', command] });
@@ -525,6 +515,31 @@ export async function runBrowserTask(
     return pausedResult<BrowserTaskResult>();
   }
   return notConfigured<BrowserTaskResult>();
+  sandboxId: string,
+  url: string,
+  instructions: string,
+): Promise<VMOperatorResult<BrowserTaskResult>> {
+  const baseURL = getSandboxBaseURL();
+  if (!baseURL) return notConfigured<BrowserTaskResult>();
+
+  try {
+    const res = await fetch(`${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}/browser`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, instructions }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
+    }
+
+    const data = (await res.json()) as BrowserTaskResult;
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, sandboxId }, 'Failed to run browser task in sandbox');
+    return { ok: false, error: err instanceof Error ? err.message : 'Browser task failed' };
+  }
 }
 
 /**

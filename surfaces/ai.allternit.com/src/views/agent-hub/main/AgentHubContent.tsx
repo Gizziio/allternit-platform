@@ -17,11 +17,15 @@ export const AgentHubContent: React.FC<AgentHubContentProps> = ({
   activeTab,
   onSessionStarted,
 }) => {
+}
+
+export const AgentHubContent: React.FC<AgentHubContentProps> = ({ activeTab }) => {
   switch (activeTab) {
-    case 'bots':
+    case 'studio':
       return (
         <div className="flex-1 overflow-hidden">
           <BotHubHomeTab />
+          <AgentView title="Agent Studio" hideHeader />
         </div>
       );
     case 'sessions':

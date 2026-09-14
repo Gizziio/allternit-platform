@@ -3,13 +3,7 @@ import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { startAgentRun } from '@/lib/agents/agent.service';
 import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
 import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
-import {
-  createSandbox,
-  getSandboxForAgent,
-  isBotDesktopPaused,
-  type Sandbox,
-} from './vm-operator';
-import { useBotAllternitBusStore } from './bot-allternit-bus';
+import { createSandbox, type Sandbox } from './vm-operator';
 import type { Agent } from '../agents/agent.types';
 import {
   prepareBotSession,
@@ -24,6 +18,44 @@ export interface UseStartBotSessionReturn {
   /** Non-fatal notice, e.g. "Running locally — sync pending" when the
    * backend session could not be created but a local session is live. */
   warning: string | null;
+  startSession: (agent: Agent) => Promise<string | null>;
+  startTask: (agent: Agent, task: string) => Promise<string | null>;
+  isStarting: boolean;
+  error: string | null;
+}
+
+interface BotSessionStartResult {
+  sessionId: string;
+  sandbox?: Sandbox;
+  sandboxError?: string;
+}
+
+function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox?: Sandbox): string {
+  const lines = [
+    '## Virtual Computer Operator',
+    '',
+    `You have access to a sandboxed virtual computer (${vmConfig.provider}).`,
+    `Allowed actions: ${(vmConfig.allowedActions?.length ? vmConfig.allowedActions : ['command']).join(', ')}.`,
+    `Network policy: ${vmConfig.networkPolicy || 'restricted'}.`,
+    `Persistence: ${vmConfig.persistence || 'session'}.`,
+  ];
+
+  if (sandbox) {
+    lines.push(
+      '',
+      `A sandbox is already running for this session (id: ${sandbox.id}).`,
+      sandbox.vncUrl ? `VNC stream: ${sandbox.vncUrl}` : '',
+      'Use the sandbox to run commands, operate browsers, edit files, or stream the desktop when the user asks you to perform actions that require a computer.'
+    );
+  } else {
+    lines.push(
+      '',
+      'A sandbox will be started automatically when you request a computer-use action.',
+      'When the user asks you to perform actions that require a computer, ask for permission if the trust tier requires it, then use the sandbox tools available to you.'
+    );
+  }
+
+  return lines.filter(Boolean).join('\n');
 }
 
 /**
@@ -52,6 +84,8 @@ export function useStartBotSession(
   // (temp-…) bot session (e.g. backend unreachable). Open it rather than
   // orphaning it, and flag that cloud sync is pending.
   const recoverLocalBotSession = useCallback((agent: Agent): string | null => {
+  const prepareBotSession = useCallback(async (agent: Agent): Promise<BotSessionStartResult | null> => {
+    const displayName = agent.botProfile?.displayName ?? agent.name;
     const store = useChatSessionStore.getState();
     const localSession = store.sessions.find(
       (s) => s.metadata?.isBot === true && s.metadata?.botCanonicalFor === agent.id,
@@ -79,6 +113,26 @@ export function useStartBotSession(
         // Surface the sandbox error as a system notice in the session metadata
         // without blocking the chat from opening.
         setError(sandboxError);
+    if (existingSession) {
+      return { sessionId: existingSession.id };
+    }
+
+    const [secretsResult, connectorsResult] = await Promise.all([
+      resolveAgentSecrets(agent.id, agent.secretRefs),
+      resolveAgentConnectors(agent.id, agent.connectorBindings),
+    ]);
+
+    let sandbox: Sandbox | undefined;
+    let sandboxError: string | undefined;
+    const vmConfig = agent.vmOperator;
+    const shouldStartSandbox = vmConfig?.enabled === true && vmConfig?.autoStart !== false;
+
+    if (shouldStartSandbox) {
+      const result = await createSandbox(agent.id, vmConfig);
+      if (result.ok && result.data) {
+        sandbox = result.data;
+      } else {
+        sandboxError = result.error ?? 'Virtual computer failed to start';
       }
 
       onSessionStarted?.(sessionId, agent.id);
@@ -89,15 +143,8 @@ export function useStartBotSession(
     }
 
     const vmPrompt = vmConfig?.enabled ? buildVMSystemPrompt(vmConfig, sandbox) : '';
-
-    // Connect AllternitBus cloud-orchestration messaging when configured
-    const allternitBusEnabled = agent.messagingConfig?.photonEnabled === true;
-    if (allternitBusEnabled) {
-      useBotAllternitBusStore.getState().connect(agent.id);
-    }
-
     const basePrompt = agent.systemPrompt ?? '';
-    const systemPrompt = [basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
+    const systemPrompt = vmPrompt ? `${basePrompt}\n\n${vmPrompt}` : basePrompt;
 
     const sessionId = await store.createSession({
       name: displayName,
@@ -115,7 +162,6 @@ export function useStartBotSession(
         tags: agent.tags,
         category: agent.category,
         trustTier: agent.trustTier,
-        agentModeId: options?.modeId,
         originSurface: 'chat',
         connectorBindings: agent.connectorBindings,
         secretRefs: agent.secretRefs,
@@ -133,17 +179,18 @@ export function useStartBotSession(
       },
     });
 
-    return { sessionId, sandbox, sandboxError, notice };
+    return { sessionId, sandbox, sandboxError };
   }, []);
 
   const startSession = useCallback(
     async (agent: Agent, options?: { modeId?: string; modelOverride?: string }): Promise<string | null> => {
+    async (agent: Agent): Promise<string | null> => {
       setIsStarting(true);
       setError(null);
       setWarning(null);
 
       try {
-        const result = await prepareBotSession(agent, options);
+        const result = await prepareBotSession(agent);
         if (!result) return null;
         return applyResult(agent, result);
       } catch (err) {
@@ -161,6 +208,7 @@ export function useStartBotSession(
 
   const startTask = useCallback(
     async (agent: Agent, task: string, options?: { modeId?: string; modelOverride?: string }): Promise<string | null> => {
+    async (agent: Agent, task: string): Promise<string | null> => {
       if (!task.trim()) return null;
 
       setIsStarting(true);
@@ -168,7 +216,7 @@ export function useStartBotSession(
       setWarning(null);
 
       try {
-        const result = await prepareBotSession(agent, options);
+        const result = await prepareBotSession(agent);
         if (!result) return null;
 
         const { sessionId, sandboxError } = result;
@@ -218,6 +266,7 @@ export function useStartBotSession(
           setError(sandboxError);
         }
 
+        onSessionStarted?.(sessionId);
         return sessionId;
       } catch (err) {
         const localSessionId = recoverLocalBotSession(agent);

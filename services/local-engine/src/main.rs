@@ -1,4 +1,3 @@
-use allternit_local_engine::assess::Assessor;
 use allternit_local_engine::cache::ModelStore;
 use allternit_local_engine::catalog::CatalogService;
 use allternit_local_engine::hardware;
@@ -8,11 +7,13 @@ use allternit_local_engine::routes::{
 };
 use allternit_local_engine::runtime::ProcessManager;
 use allternit_local_engine::sampler::SystemSampler;
+use allternit_local_engine::runtime::ProcessManager;
+use allternit_local_engine::routes::{chat, health, models, runtimes, status};
 use allternit_local_engine::AppState;
 use axum::Router;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -58,9 +59,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(models::create_router(state.clone()))
         .merge(runtimes::create_router(state.clone()))
         .merge(chat::create_router(state.clone()))
-        .merge(catalog::create_router(state.clone()))
-        .merge(assess::create_router(state.clone()))
-        .merge(recommend::create_router(state.clone()))
         .merge(status::create_router(state));
 
     let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());

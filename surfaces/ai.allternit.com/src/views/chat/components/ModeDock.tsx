@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   VideoCamera,
@@ -9,6 +9,9 @@ import {
   Database,
   FileText,
   UsersThree,
+  CaretDown,
+  Check,
+  Code,
 } from '@phosphor-icons/react';
 import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
@@ -16,6 +19,7 @@ import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
 import { FormatPicker } from '@/views/create/FormatPicker';
 import { isCreationMode, type FormatSelection } from '@/views/create/presets';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 interface ModeDockProps {
   selectedMode: string | null;
@@ -25,6 +29,7 @@ interface ModeDockProps {
   selectedSurfaceAgent?: { name: string } | null;
   formatSelection?: FormatSelection | null;
   onFormatChange?: (selection: FormatSelection) => void;
+  variant?: 'popover' | 'bar';
 }
 
 export const MODE_TABS = [
@@ -36,6 +41,7 @@ export const MODE_TABS = [
   { id: 'slides', label: 'Slides', color: 'var(--status-warning)', icon: PresentationChart },
   { id: 'image', label: 'Image', color: 'var(--accent-primary)', icon: Image },
   { id: 'video', label: 'Video', color: '#ec4899', icon: VideoCamera },
+  { id: 'code', label: 'Code', color: '#f59e0b', icon: Code },
 ] as const;
 
 export const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
@@ -43,6 +49,10 @@ export const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
   cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
   bot: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
   code: ['swarms', 'website', 'docs'],
+const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
+  chat: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video', 'code'],
+  cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video', 'code'],
+  code: ['swarms', 'website', 'docs', 'code'],
   browser: ['research', 'website', 'docs', 'data'],
   design: ['website', 'slides', 'image', 'video'],
 };
@@ -55,7 +65,9 @@ export function ModeDock({
   selectedSurfaceAgent,
   formatSelection,
   onFormatChange,
+  variant = 'popover',
 }: ModeDockProps) {
+  const [open, setOpen] = useState(false);
   const allowedModes = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map((m) => m.id);
   const visibleTabs = MODE_TABS.filter((tab) => allowedModes.includes(tab.id));
 
@@ -67,12 +79,72 @@ export function ModeDock({
     }
   }, [selectedMode, visibleTabs, onSelectMode]);
 
+  const selectedModeData = visibleTabs.find((m) => m.id === selectedMode) ?? visibleTabs[0] ?? null;
+
   const agentStatus = useAgentStreamingStatus(
     !!(isLoading && selectedSurfaceAgent),
     1500
   );
   const creationMode = isCreationMode(selectedMode);
   const selectedModeData = MODE_TABS.find((mode) => mode.id === selectedMode);
+
+  const SelectedIcon = selectedModeData?.icon ?? null;
+
+  if (variant === 'bar') {
+    return (
+      <div className="w-full flex flex-col items-start gap-3">
+        {agentStatus && (
+          <div className="flex items-center gap-2 py-1" aria-label="Agent status">
+            <div className="size-1.5 rounded-full animate-pulse bg-[var(--accent-chat,#D4B08C)]" />
+            <TextShimmer as="span" className="text-xs font-medium">
+              {agentStatus}
+            </TextShimmer>
+          </div>
+        )}
+        <div
+          role="tablist"
+          aria-label="Bot mode"
+          className="inline-flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+        >
+          {visibleTabs.map((mode, index) => {
+            const isSelected = selectedMode === mode.id;
+            const ModeIcon = mode.icon;
+            return (
+              <React.Fragment key={mode.id}>
+                {index > 0 && (
+                  <span className="text-[var(--chat-composer-border)] select-none">|</span>
+                )}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => onSelectMode(mode.id)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-xs font-bold transition-all border border-transparent',
+                    isSelected
+                      ? 'bg-composer-hover text-primary'
+                      : 'text-secondary hover:text-primary hover:bg-hover'
+                  )}
+                  style={isSelected ? { boxShadow: `inset 0 0 0 1.5px ${mode.color}50` } : undefined}
+                >
+                  <span
+                    className="flex items-center justify-center size-5 rounded-md"
+                    style={{
+                      background: `${mode.color}18`,
+                      color: mode.color,
+                    }}
+                  >
+                    <ModeIcon size={11} weight={isSelected ? 'fill' : 'bold'} />
+                  </span>
+                  {mode.label}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col items-start gap-3">
@@ -128,6 +200,98 @@ export function ModeDock({
           color={selectedModeData?.color}
         />
       )}
+      {/* Compact mode selector — pinned to the left of the deck */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={selectedModeData ? `Mode: ${selectedModeData.label}` : 'Select mode'}
+            className={cn(
+              'inline-flex items-center gap-2 h-8 pl-3 pr-2 rounded-full text-xs font-bold transition-all border',
+              selectedModeData
+                ? 'border-transparent text-white'
+                : 'bg-composer-soft border-composer-border text-secondary hover:text-primary hover:bg-composer-hover'
+            )}
+            style={
+              selectedModeData
+                ? {
+                    background: selectedModeData.color,
+                    boxShadow: `0 2px 10px ${selectedModeData.color}40`,
+                  }
+                : undefined
+            }
+          >
+            {SelectedIcon && <SelectedIcon size={14} weight="fill" />}
+            <span>{selectedModeData?.label ?? 'Select mode'}</span>
+            <CaretDown
+              size={12}
+              className={cn('transition-transform opacity-80', open && 'rotate-180')}
+            />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="top"
+          align="start"
+          sideOffset={6}
+          className="w-[340px] p-3 bg-menu-bg backdrop-blur-[20px] rounded-2xl border border-menu-border shadow-xl"
+          style={{ boxShadow: '0 10px 40px var(--shell-overlay-backdrop)' }}
+        >
+          <div className="mb-2">
+            <div className="text-xs font-extrabold text-muted tracking-wider uppercase">
+              Bot mode
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {visibleTabs.map((mode) => {
+              const isSelected = selectedMode === mode.id;
+              const ModeIcon = mode.icon;
+              return (
+                <button
+                  type="button"
+                  key={mode.id}
+                  onClick={() => {
+                    onSelectMode(mode.id);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    'group relative flex flex-col items-center gap-1 p-1.5 rounded-xl text-center transition-all',
+                    isSelected
+                      ? 'bg-composer-hover'
+                      : 'hover:bg-hover'
+                  )}
+                  style={isSelected ? { boxShadow: `inset 0 0 0 1.5px ${mode.color}50` } : undefined}
+                >
+                  <div
+                    className="flex items-center justify-center size-9 rounded-lg transition-transform group-hover:scale-105"
+                    style={{
+                      background: `${mode.color}18`,
+                      color: mode.color,
+                    }}
+                  >
+                    <ModeIcon size={16} weight={isSelected ? 'fill' : 'bold'} />
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[10px] leading-tight',
+                      isSelected ? 'font-bold text-primary' : 'font-medium text-secondary'
+                    )}
+                  >
+                    {mode.label}
+                  </span>
+                  {isSelected && (
+                    <div
+                      className="absolute top-1 right-1 size-3 rounded-full flex items-center justify-center"
+                      style={{ background: mode.color }}
+                    >
+                      <Check size={7} weight="bold" className="text-white" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

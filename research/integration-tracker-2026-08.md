@@ -112,7 +112,6 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 2026-08-13 | ApiTap research & unblock | Audited ApiTap and Hermes `har-derived-api-client`; promoted ApiTap from blocked to P1 |
 | 2026-08-13 | Allternit Local Engine | `services/local-engine/` + `/api/local-engine/*` proxy + Model Lab Engine/Playground tabs + Unsloth **Serve locally** action; `cargo check` clean; 15 tests passing |
 | 2026-08-13 | ApiTap / HAR-derived API Capture | `services/api-capture/` + `/api/api-capture/*` proxy + Site APIs surface panel; HAR ingest, contract derivation, replay; `cargo check` clean; 4 tests passing |
-| 2026-08-13 | ApiTap cross-surface integration | `sdk/computer-use/src/mcp-tool-spec.ts` + `packages/computer-use/plugins/allternit-computer-use/tools/tool-definitions.ts` + `surfaces/ai.allternit.com/src/allternit-os/kernel/AgentTools.ts` + browser toolbar record toggle + `useApiCaptureRecorder` hook; typecheck clean for touched files; cargo tests passing |
 
 ---
 

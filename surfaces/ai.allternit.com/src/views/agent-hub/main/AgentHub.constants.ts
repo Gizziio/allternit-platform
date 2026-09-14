@@ -1,4 +1,4 @@
-import { Robot, ChatText } from '@phosphor-icons/react';
+import { PaintBrush, ChatText, ChartLineUp, Folder, Tag } from '@phosphor-icons/react';
 
 export type AgentTab = 'bots' | 'sessions';
 import { PaintBrush, ChatText, ChartLineUp, Folder, Tag } from '@phosphor-icons/react';
@@ -6,7 +6,7 @@ import { PaintBrush, ChatText, ChartLineUp, Folder, Tag } from '@phosphor-icons/
 export type AgentTab = 'studio' | 'sessions' | 'analytics' | 'workspace' | 'tags';
 
 export const TABS = [
-  { id: 'bots' as AgentTab, label: 'Bots', icon: Robot },
+  { id: 'studio' as AgentTab, label: 'Agent Studio', icon: PaintBrush },
   { id: 'sessions' as AgentTab, label: 'Sessions', icon: ChatText },
   { id: 'tags' as AgentTab, label: 'Tags', icon: Tag },
   { id: 'analytics' as AgentTab, label: 'Analytics', icon: ChartLineUp },

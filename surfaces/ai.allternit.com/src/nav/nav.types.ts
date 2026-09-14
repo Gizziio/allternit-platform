@@ -25,6 +25,7 @@ export type ViewType =
   | "bot-chat-session"
   | "tag-manager"
   | "bot-group-chat"
+  | "tag-manager"
   | "native-agent"
   | "registry"
   | "memory"
@@ -80,9 +81,6 @@ export type ViewType =
   | "context-control"
   | "memory-kernel"
   | "acf"
-  // Agents Sessions & Memory views
-  | "allternit-playground"
-  | "agent-studio"
   // AllternitOS View
   | "allternit-os"
   // Other views
@@ -186,6 +184,8 @@ export type ViewType =
   | "pdf"
   // Markdown preview (anydoc conversion)
   | "markdown-preview"
+  // DocuSeal signing
+  | "sign"
   // Browser Extensions hub
   | "browser-extensions"
   // API Capture / Site APIs
@@ -200,6 +200,8 @@ export type ViewType =
   | "hud-annotate"
   // Rail "Customize" — theme / plugins / skills (same surface as Settings)
   | "customize";
+  // API capture / HAR-derived site API contracts
+  | "site-apis";
 
 export type ViewId = string;
 

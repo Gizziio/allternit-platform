@@ -1,2 +1,2 @@
-export * from './allternit-bus.types';
-export * from './allternit-bus.service';
+export * from './photon.types';
+export * from './photon.service';

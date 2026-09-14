@@ -162,17 +162,6 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
       maxIterations: agent.maxIterations,
       temperature: agent.temperature,
       source: "personal",
-      isBot: agent.isBot,
-      botProfile: agent.botProfile
-        ? {
-            ...agent.botProfile,
-            displayName: `${agent.botProfile.displayName} (Copy)`,
-          }
-        : undefined,
-      connectorBindings: agent.connectorBindings,
-      secretRefs: agent.secretRefs,
-      messagingConfig: agent.messagingConfig,
-      identityChannels: agent.identityChannels,
     });
     setIsCreating(true);
   };
@@ -199,7 +188,6 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
     onClick();
   };
 
-  const isBotAgent = isBot(agent);
   const surfaces = useMemo(() => agent.allowedSurfaces?.slice(0, 4) || [], [agent.allowedSurfaces]);
   const capabilities = useMemo(() => agent.capabilities || [], [agent.capabilities]);
   const visibleCapabilities = capabilities.slice(0, 2);
@@ -215,18 +203,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04, duration: 0.3 }}
-        onClick={() => {
-          if (menuOpen) return;
-          if (isBotAgent) {
-            window.dispatchEvent(
-              new CustomEvent("allternit:open-view", {
-                detail: { viewType: "bot-home", context: { botId: agent.id } },
-              })
-            );
-            return;
-          }
-          onClick();
-        }}
+        onClick={() => !menuOpen && onClick()}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => { setIsHovered(false); setMenuOpen(false); }}
         className={cn(

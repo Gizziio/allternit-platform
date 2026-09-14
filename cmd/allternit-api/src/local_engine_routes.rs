@@ -4,7 +4,7 @@
 //! running at `LOCAL_ENGINE_URL` (default `http://127.0.0.1:8090`).
 
 use axum::body::Body;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -187,28 +187,12 @@ async fn proxy_chat_completions(
 // ─── Generic proxy helpers ────────────────────────────────────────────────────
 
 async fn proxy_get(path: &str) -> Response {
-    proxy_get_with_query(path, std::collections::HashMap::new()).await
-}
-
-async fn proxy_get_with_query(
-    path: &str,
-    params: std::collections::HashMap<String, String>,
-) -> Response {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .unwrap_or_default();
 
-    let mut url = format!("{}{}", local_engine_url(), path);
-    if !params.is_empty() {
-        let query = params
-            .iter()
-            .map(|(k, v)| format!("{}={}", urlencoding::encode(k), urlencoding::encode(v)))
-            .collect::<Vec<_>>()
-            .join("&");
-        url = format!("{}?{}", url, query);
-    }
-
+    let url = format!("{}{}", local_engine_url(), path);
     match client.get(&url).send().await {
         Ok(res) => forward_response(res).await,
         Err(err) => {

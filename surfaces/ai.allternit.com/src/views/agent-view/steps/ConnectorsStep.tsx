@@ -1,10 +1,10 @@
 import React from "react";
-import { Plugs, Key, Robot } from "@phosphor-icons/react";
+import { Plugs, Key, ShieldCheck, Robot } from "@phosphor-icons/react";
 import type { CreateAgentInput, AgentConnectorBinding, AgentSecretRef } from "@/lib/agents/agent.types";
-import type { OwnedConnector } from "@/lib/design/owned-connector";
+import type { Connector } from "@/plugins/capability.types";
 import { Input, Label } from "@/components/ui";
 import { Button } from "@/components/ui/button";
-import { ConnectorMarketplace } from "@/components/marketplace/ConnectorMarketplace";
+import { useConnectors } from "@/plugins/useCapabilities";
 
 interface ConnectorsStepProps {
   formData: Partial<CreateAgentInput>;
@@ -16,32 +16,61 @@ function connectorProviderSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'connector';
 }
 
-function bindingFromOwned(c: OwnedConnector): AgentConnectorBinding {
-  return {
-    connectorId: c.id,
-    provider: connectorProviderSlug(c.name),
-    label: c.name,
-    capabilities: ['connect'],
-    autonomous: true,
-  };
-}
+const COMMON_CONNECTORS = [
+  { provider: 'slack', label: 'Slack', capabilities: ['chat', 'notify'] },
+  { provider: 'gmail', label: 'Gmail', capabilities: ['email_send', 'email_read'] },
+  { provider: 'github', label: 'GitHub', capabilities: ['code', 'issues'] },
+  { provider: 'linear', label: 'Linear', capabilities: ['issues', 'project'] },
+  { provider: 'notion', label: 'Notion', capabilities: ['docs', 'knowledge'] },
+  { provider: 'calendar', label: 'Calendar', capabilities: ['calendar_read', 'calendar_write'] },
+];
 
 export function ConnectorsStep({ formData, setFormData, isBotMode }: ConnectorsStepProps) {
+  const { connectors, enabledIds } = useConnectors();
   const bindings = formData.connectorBindings ?? [];
   const secrets = formData.secretRefs ?? [];
-  const boundIds = React.useMemo(() => new Set(bindings.map((b) => b.connectorId)), [bindings]);
 
-  const bindConnector = (c: OwnedConnector) => {
+  const installedConnectors = connectors.filter((c) => enabledIds.has(c.id));
+
+  const toggleInstalledBinding = (connector: Connector) => {
+    const existing = bindings.find((b) => b.connectorId === connector.id);
+    if (existing) {
+      setFormData((prev) => ({
+        ...prev,
+        connectorBindings: bindings.filter((b) => b.connectorId !== connector.id),
+      }));
+      return;
+    }
+    const provider = connectorProviderSlug(connector.appName || connector.name);
+    const actions = connector.actions || [];
+    const next: AgentConnectorBinding = {
+      connectorId: connector.id,
+      provider,
+      label: connector.appName || connector.name,
+      capabilities: actions.length > 0
+        ? actions.map((a) => a.id || a.name)
+        : ['read'],
+      autonomous: true,
+    };
     setFormData((prev) => ({
       ...prev,
-      connectorBindings: [...(prev.connectorBindings ?? []), bindingFromOwned(c)],
+      connectorBindings: [...bindings, next],
     }));
   };
 
-  const unbindConnector = (c: OwnedConnector) => {
+  const addBinding = (provider: string, label: string, capabilities: string[]) => {
+    const exists = bindings.some((b) => b.provider === provider);
+    if (exists) return;
+    const next: AgentConnectorBinding = {
+      connectorId: `${provider}-${Date.now()}`,
+      provider,
+      label,
+      capabilities,
+      autonomous: true,
+    };
     setFormData((prev) => ({
       ...prev,
-      connectorBindings: (prev.connectorBindings ?? []).filter((b) => b.connectorId !== c.id),
+      connectorBindings: [...bindings, next],
     }));
   };
 
@@ -91,12 +120,80 @@ export function ConnectorsStep({ formData, setFormData, isBotMode }: ConnectorsS
           </p>
         </div>
 
-        <ConnectorMarketplace
-          bindOnConnect
-          boundIds={boundIds}
-          onBind={bindConnector}
-          onUnbind={unbindConnector}
-        />
+        {installedConnectors.length > 0 && (
+          <div className="mb-6">
+            <h4 className="text-[13px] font-semibold text-[var(--text-primary)] mb-3">Installed connectors</h4>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+              {installedConnectors.map((connector) => {
+                const active = bindings.some((b) => b.connectorId === connector.id);
+                return (
+                  <button
+                    key={connector.id}
+                    type="button"
+                    onClick={() => toggleInstalledBinding(connector)}
+                    className={`rounded-[10px] border border-solid p-4 text-left transition-all duration-200 cursor-pointer flex items-start gap-3 ${
+                      active
+                        ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
+                        : 'border-[var(--border-subtle)] bg-transparent hover:bg-[var(--surface-hover)]'
+                    }`}
+                  >
+                    <div className="mt-0.5">
+                      {active ? (
+                        <ShieldCheck size={18} className="text-[var(--accent-primary)]" />
+                      ) : (
+                        <Plugs size={18} className="text-[var(--text-secondary)]" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-medium text-[var(--text-primary)] text-[14px]">{connector.appName || connector.name}</div>
+                      <div className="text-[11px] text-[var(--text-secondary)] mt-0.5">
+                        {connector.authType}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <h4 className="text-[13px] font-semibold text-[var(--text-primary)] mb-3">Quick-pick integrations</h4>
+
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+          {COMMON_CONNECTORS.map((connector) => {
+            const active = bindings.some((b) => b.provider === connector.provider);
+            return (
+              <button
+                key={connector.provider}
+                type="button"
+                onClick={() =>
+                  active
+                    ? removeBinding(bindings.find((b) => b.provider === connector.provider)!.connectorId)
+                    : addBinding(connector.provider, connector.label, connector.capabilities)
+                }
+                className={`rounded-[10px] border border-solid p-4 text-left transition-all duration-200 cursor-pointer flex items-start gap-3 ${
+                  active
+                    ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
+                    : 'border-[var(--border-subtle)] bg-transparent hover:bg-[var(--surface-hover)]'
+                }`}
+              >
+                <div className="mt-0.5">
+                  {active ? (
+                    <ShieldCheck size={18} className="text-[var(--accent-primary)]" />
+                  ) : (
+                    <Plugs size={18} className="text-[var(--text-secondary)]" />
+                  )}
+                </div>
+                <div>
+                  <div className="font-medium text-[var(--text-primary)] text-[14px]">{connector.label}</div>
+                  <div className="text-[11px] text-[var(--text-secondary)] mt-0.5 capitalize">
+                    {connector.capabilities.join(', ')}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
         {bindings.length > 0 && (
           <div className="mt-6">
