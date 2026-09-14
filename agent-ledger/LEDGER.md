@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 09:40 — grok — Workflows panel on live Fabric Transport
+
+- **Session ID / Branch:** `session/cu29-fabric-panel`
+- **Agent:** grok (handoff from kimi-code session_0a6252e4)
+- **Summary:** Merged PR #514 (`2527471fb`) — moved the record→teach→batch→verify Workflows panel out of the legacy remote-control tree into `FabricTransportView`, which is what the shell actually renders.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/514 · 2527471fb
+- **How it works:** Same `/v1/browser-skills` gateway as cu28; client now at `src/lib/browser-skills-api.ts`. Desktop inherits via the web console + its own ACU gateway process. No native Electron workflows UI.
+- **Verification:** Desktop vitest + typecheck/build + gitleaks green. Typography/Vercel/Pages same pre-existing ignores as recent merges.
+- **Outstanding work:** Standard post-merge desktop/web rebuild so the panel is visible in the running app. Phone-remote still has no computer-use view.
+- **Summary file:** [2026-09-14-0940-cu29-fabric-panel-grok-workflows-in-fabric-transport.md](./summaries/2026-09-14-0940-cu29-fabric-panel-grok-workflows-in-fabric-transport.md)
+
 ### 2026-09-14 08:35 — grok — open bot computer in a dedicated Electron window
 
 - **Session ID / Branch:** `session/bot-computer-window-0914`
