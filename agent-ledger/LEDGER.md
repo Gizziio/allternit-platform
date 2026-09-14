@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 14:39 — grok — Cowork ACP caveats landed; live Kimi proof did not complete
+
+- **Session ID / Branch:** `session/cowork-caveats-0914` (resume of Kimi `session_a9f18780`)
+- **Agent:** grok
+- **Summary:** Merged `ao/cowork-permission-enforcement` to main (`d8752d94f` / `74bac27a9`) — ACP tool visibility, PermissionNext gating, honest usage, empty idle is an error, text deltas stream.
+- **Commit:** `d8752d94f` on main (contained in later `origin/main`)
+- **How it works:** kimi-cli ACP tool events become session tool parts; permissions go through PermissionNext when a session id is present (ALS or `x-gizzi-session`); quota 403 is an error; agent-chat no longer reports empty idle as complete.
+- **Verification:** gizzi 21 tests; api `gizzi_chat_stream` 4 + `v1_routes` 15; Contabo allternit-api deploy green on `74bac27a9`.
+- **Outstanding work:** Live Kimi ACP turn hung 900s with only `message_start` — no tool_permission, no proof file, no DAG tool jobs. Pages + Desktop Cloud VPS workflows red on main for unrelated pre-existing reasons.
+- **Summary file:** [2026-09-14-1439-cowork-caveats-grok.md](./summaries/2026-09-14-1439-cowork-caveats-grok.md)
+
 ### 2026-09-14 13:10 — grok — Status correction: E6 is not a finished feature
 
 - **Session ID / Branch:** `session/status-honest-0914`
