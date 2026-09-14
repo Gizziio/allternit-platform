@@ -84,6 +84,7 @@ export class BackendManager {
   private static instance: BackendManager;
   private kernelProc: ChildProcess | null = null;
   private apiKey: string | null = null;
+  private desktopAccessToken: string | null = null;
   private lastConfig: BackendLaunchConfig | null = null;
   private resolvedBinaryPath: string | null | undefined;
   /**
@@ -172,6 +173,11 @@ export class BackendManager {
     }
 
     this.apiKey = crypto.randomBytes(32).toString('hex');
+    // Spawn-time secret for the managed-runtime local endpoints (fabric
+    // worker auto-provision). Per-boot random; consumed by the API's
+    // desktop-bootstrap auth path via the environment. When absent there
+    // (non-desktop deployments) the endpoints are disabled, not open.
+    this.desktopAccessToken = crypto.randomBytes(32).toString('hex');
 
     const dataDir = path.join(app.getPath('userData'), 'allternit');
     fs.mkdirSync(dataDir, { recursive: true });
@@ -196,6 +202,7 @@ export class BackendManager {
       ALLTERNIT_CLOUD_API_URL: process.env.ALLTERNIT_CLOUD_API_URL || URLS.CLOUD_API,
       ALLTERNIT_SELF_HOSTED: process.env.ALLTERNIT_SELF_HOSTED || 'false',
       ALLTERNIT_OPERATOR_API_KEY: this.apiKey,
+      ALLTERNIT_DESKTOP_ACCESS_TOKEN: this.desktopAccessToken,
       ALLTERNIT_DATA_DIR: dataDir,
       ALLTERNIT_VM_DIR: fs.existsSync(vmDir) ? vmDir : '',
       ALLTERNIT_PLATFORM_STATIC: platformStatic ?? '',
@@ -308,6 +315,20 @@ export class BackendManager {
 
   getApiKey(): string | null {
     return this.apiKey;
+  }
+
+  /** Spawn-time secret for managed-runtime local API endpoints (never logged). */
+  getDesktopAccessToken(): string | null {
+    return this.desktopAccessToken;
+  }
+
+  /** Authenticated headers for managed-runtime local API calls from main. */
+  getLocalAuthHeaders(userId = 'desktop-local'): Record<string, string> {
+    return {
+      'x-allternit-desktop-access-token': this.desktopAccessToken ?? '',
+      'x-allternit-user-id': userId,
+      'x-allternit-user-email': `${userId}@desktop.allternit.local`,
+    };
   }
 
   async getStatus(): Promise<BackendStatus> {

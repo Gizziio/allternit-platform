@@ -220,6 +220,13 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
     .stack-value { color: var(--soft); text-align: right; word-break: break-word; }
     .stack-value.up { color: var(--up); }
     .stack-value.down { color: var(--down); }
+    .folder-list { width: 380px; max-height: 180px; overflow-y: auto; margin-bottom: 10px; }
+    .folder-empty { color: var(--soft); font-size: 12px; text-align: center; padding: 14px 0; border: 1px dashed var(--border, #ddd); border-radius: 8px; }
+    .folder-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; margin-bottom: 6px; background: var(--panel); }
+    .folder-path { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; }
+    .folder-remove { border: none; background: none; color: var(--soft); cursor: pointer; font-size: 11px; }
+    .folder-remove:hover { color: var(--down); }
+    .btn:disabled { opacity: 0.5; cursor: default; }
     .version {
       position: absolute;
       bottom: 12px;
@@ -251,6 +258,8 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       <div class="stack-row"><div class="stack-name">Allternit API</div><div class="stack-value" id="svc-api">Starting…</div></div>
       <div class="stack-row"><div class="stack-name">Gateway</div><div class="stack-value" id="svc-gateway">Starting…</div></div>
       <div class="stack-row"><div class="stack-name">Gizzi Runtime</div><div class="stack-value" id="svc-gizzi">Starting…</div></div>
+      <div class="stack-row"><div class="stack-name">Fabric Worker</div><div class="stack-value" id="svc-fabricWorker">Waiting…</div></div>
+      <div class="stack-row"><div class="stack-name">Office Engine</div><div class="stack-value" id="svc-office">Waiting…</div></div>
       <div class="stack-row"><div class="stack-name">Platform</div><div class="stack-value" id="svc-platform">Waiting…</div></div>
     </div>
     <div id="loading">
@@ -258,6 +267,20 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       <div class="status" id="status">Starting...</div>
       <div class="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
       <div class="progress-text" id="progress-text"></div>
+    </div>
+  </div>
+
+  <div class="step" id="step-folders">
+    ${MATRIX_LOGO_SVG}
+    <div class="brand" style="font-size: 22px; margin-top: 18px;">Grant workspace folders</div>
+    <div class="tagline" style="max-width: 380px; text-align: center; margin-bottom: 14px;">
+      Allternit Cowork only works in folders you grant. Pick one or more — you can change this later in Settings.
+    </div>
+    <div class="folder-list" id="folder-list"></div>
+    <button type="button" class="btn" id="btn-add-folder">＋ Add folder</button>
+    <div style="display: flex; gap: 10px; margin-top: 14px;">
+      <button type="button" class="btn" id="btn-skip-folders">Skip for now</button>
+      <button type="button" class="btn btn-primary" id="btn-save-folders" disabled>Save &amp; continue</button>
     </div>
   </div>
 
@@ -283,7 +306,7 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
         return;
       }
       api.onServices(function (services) {
-        var entries = [['api', 'svc-api'], ['gateway', 'svc-gateway'], ['gizzi', 'svc-gizzi'], ['platform', 'svc-platform']];
+        var entries = [['api', 'svc-api'], ['gateway', 'svc-gateway'], ['gizzi', 'svc-gizzi'], ['fabricWorker', 'svc-fabricWorker'], ['office', 'svc-office'], ['platform', 'svc-platform']];
         for (var i = 0; i < entries.length; i++) {
           var key = entries[i][0];
           var nodeId = entries[i][1];
@@ -313,6 +336,66 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
           node.textContent = 'Error: ' + message;
           node.style.color = 'var(--down)';
         }
+      });
+
+      // Folder-grant step (consumer-packaged Cowork P1).
+      var grantedFolders = [];
+      function renderFolders() {
+        var list = document.getElementById('folder-list');
+        var save = document.getElementById('btn-save-folders');
+        if (!list || !save) return;
+        list.innerHTML = grantedFolders.length === 0
+          ? '<div class="folder-empty">No folders granted yet.</div>'
+          : grantedFolders.map(function (f, i) {
+              return '<div class="folder-row"><span class="folder-path" title="' + f.replace(/"/g, '&quot;') + '">' + f + '</span>' +
+                '<button type="button" class="folder-remove" data-index="' + i + '">Remove</button></div>';
+            }).join('');
+        save.disabled = grantedFolders.length === 0;
+        list.querySelectorAll('.folder-remove').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            grantedFolders.splice(Number(btn.getAttribute('data-index')), 1);
+            renderFolders();
+          });
+        });
+      }
+      var addFolder = document.getElementById('btn-add-folder');
+      if (addFolder) {
+        addFolder.addEventListener('click', function () {
+          if (typeof api.pickFolder !== 'function') return;
+          api.pickFolder().then(function (folder) {
+            if (folder && grantedFolders.indexOf(folder) === -1) {
+              grantedFolders.push(folder);
+              renderFolders();
+            }
+          });
+        });
+      }
+      var saveFolders = document.getElementById('btn-save-folders');
+      if (saveFolders) {
+        saveFolders.addEventListener('click', function () {
+          saveFolders.disabled = true;
+          saveFolders.textContent = 'Saving…';
+          api.saveFolders(grantedFolders.slice()).catch(function (err) {
+            saveFolders.disabled = false;
+            saveFolders.textContent = 'Save & continue';
+            console.error('saveFolders failed', err);
+          });
+        });
+      }
+      var skipFolders = document.getElementById('btn-skip-folders');
+      if (skipFolders) {
+        skipFolders.addEventListener('click', function () {
+          api.saveFolders(grantedFolders.slice());
+        });
+      }
+      api.onFoldersShow(function () {
+        document.getElementById('step-loading').classList.remove('active');
+        document.getElementById('step-folders').classList.add('active');
+        renderFolders();
+      });
+      api.onFoldersHide(function () {
+        document.getElementById('step-folders').classList.remove('active');
+        document.getElementById('step-loading').classList.add('active');
       });
     })();
   </script>
