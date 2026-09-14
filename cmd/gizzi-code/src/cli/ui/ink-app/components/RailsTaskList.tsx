@@ -411,6 +411,8 @@ export function RailsTaskList(): React.ReactElement | null {
       selected.node.current_wih_id,
       [closeEvidenceFor(status, railsPeerAgentId())],
       status,
+      selected.dagId,
+      selected.node.node_id,
     )
     if (result.ok) {
       setRowError(null)

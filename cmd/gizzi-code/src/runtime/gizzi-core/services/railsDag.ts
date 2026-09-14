@@ -138,38 +138,64 @@ async function postWihMutation(
  * binary, spawn error, non-zero exit) must NEVER break or delay pickup —
  * everything here is untracked and swallowed to a debug log.
  */
-function stampPickupOnPane(dagId: string, nodeId: string, wihId: string): void {
-  const paneId = process.env.ALLTERNIT_AO_PANE_ID
+function paneIdOrNull(): string | null {
+  return process.env.ALLTERNIT_AO_PANE_ID || null
+}
+
+function spawnPaneMetadata(
+  args: string[],
+  context?: Record<string, unknown>,
+): void {
+  const paneId = paneIdOrNull()
   if (!paneId) return
   try {
-    const child = spawn(
-      'ao',
-      [
-        'pane',
-        'report-metadata',
-        paneId,
-        '--token',
-        `wihId=${wihId}`,
-        '--token',
-        `dagId=${dagId}`,
-        '--token',
-        `nodeId=${nodeId}`,
-      ],
-      { detached: true, stdio: 'ignore', shell: false },
-    )
+    const child = spawn('ao', ['pane', 'report-metadata', paneId, ...args], {
+      detached: true,
+      stdio: 'ignore',
+      shell: false,
+    })
     child.on('error', error => {
       // Most commonly ENOENT when the `ao` binary isn't on PATH — log and
-      // skip; the pickup itself already succeeded.
-      logForDiagnosticsNoPII('debug', 'rails_pickup_stamp_failed', {
+      // skip; the mutation itself already succeeded.
+      logForDiagnosticsNoPII('debug', 'rails_pane_metadata_failed', {
         error: errorMessage(error),
+        ...context,
       })
     })
     child.unref()
   } catch (error) {
-    logForDiagnosticsNoPII('debug', 'rails_pickup_stamp_failed', {
+    logForDiagnosticsNoPII('debug', 'rails_pane_metadata_failed', {
       error: errorMessage(error),
+      ...context,
     })
   }
+}
+
+function stampPickupOnPane(dagId: string, nodeId: string, wihId: string): void {
+  spawnPaneMetadata(
+    [
+      '--token',
+      `wihId=${wihId}`,
+      '--token',
+      `dagId=${dagId}`,
+      '--token',
+      `nodeId=${nodeId}`,
+    ],
+    { dagId, nodeId, wihId },
+  )
+}
+
+/**
+ * Counterpart to the pickup stamp: when the WIH closes (DONE or FAILED),
+ * the pane's provenance tokens come off again so the pane ledger doesn't
+ * keep pointing at finished work. Same never-breaks-the-mutation contract
+ * as the stamp.
+ */
+function clearPaneTokensForClose(dagId: string, nodeId: string): void {
+  spawnPaneMetadata(
+    ['--clear-token', 'wihId', '--clear-token', 'dagId', '--clear-token', 'nodeId'],
+    { dagId, nodeId },
+  )
 }
 
 /**
@@ -201,12 +227,17 @@ export function pickupWih(
 /**
  * Close a WIH we own (status DONE or FAILED, auto-evidence v1). 403 when
  * the WIH is owned by a different agent; 400 when evidence is empty or the
- * status is outside DONE|FAILED (the server normalizes case).
+ * status is outside DONE|FAILED (the server normalizes case). dagId/nodeId
+ * are optional context threaded from the caller; on a successful close they
+ * trigger the fire-and-forget pane token clear (no-op when the pane env is
+ * absent).
  */
 export function closeWih(
   wihId: string,
   evidence: string[],
   status: 'DONE' | 'FAILED' = 'DONE',
+  dagId?: string,
+  nodeId?: string,
 ): Promise<WihMutationResult> {
   const agentId = railsPeerAgentId()
   if (!agentId) {
@@ -215,7 +246,12 @@ export function closeWih(
   return postWihMutation(
     `/api/commrails/wihs/${encodeURIComponent(wihId)}/close`,
     { status, evidence, agent_id: agentId },
-  )
+  ).then(result => {
+    if (result.ok && dagId && nodeId) {
+      clearPaneTokensForClose(dagId, nodeId)
+    }
+    return result
+  })
 }
 
 // ─── DAG node mutations ─────────────────────────────────────────────────────
