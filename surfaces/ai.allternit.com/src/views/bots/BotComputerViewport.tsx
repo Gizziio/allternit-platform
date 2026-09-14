@@ -771,7 +771,7 @@ export function BotComputerViewport({
             {layout === "pane" && onOpenInAci && (
               <Button variant="outline" size="sm" onClick={onOpenInAci} className="gap-1.5">
                 <ArrowSquareOut size={14} />
-                Open in ACI
+                Open in window
               </Button>
             )}
             {layout === "aci" && onReturnToChat && (

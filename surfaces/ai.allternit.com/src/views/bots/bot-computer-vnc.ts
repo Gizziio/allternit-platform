@@ -1,13 +1,14 @@
 /**
- * One noVNC connection per sandbox. Chat pane, Bot Home, and ACI all host
- * the same desktop — connecting twice to the same ws_url fights for the
- * RFB session. Higher-priority layouts steal the claim; losers show the
- * screenshot poll instead.
+ * One noVNC connection per sandbox. Chat pane, Bot Home, ACI, and the
+ * detached computer window all host the same desktop — connecting twice
+ * to the same ws_url fights for the RFB session. Higher-priority layouts
+ * steal the claim; losers show the screenshot poll instead.
  */
 
-export type BotComputerLayout = "page" | "pane" | "aci" | "strip";
+export type BotComputerLayout = "page" | "pane" | "aci" | "strip" | "window";
 
 const PRIORITY: Record<BotComputerLayout, number> = {
+  window: 4,
   aci: 3,
   pane: 2,
   page: 1,
