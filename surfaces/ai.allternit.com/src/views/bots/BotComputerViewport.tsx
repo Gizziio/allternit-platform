@@ -148,6 +148,9 @@ export function BotComputerViewport({
   const RFBModuleRef = useRef<any>(null);
   const connectedWsUrlRef = useRef<string | null>(null);
   const [rfbConnected, setRfbConnected] = useState(false);
+  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+  const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
+  const rippleSeq = useRef(0);
   const [isOnscreen, setIsOnscreen] = useState(true);
   const [pageVisible, setPageVisible] = useState(
     () => typeof document === "undefined" || !document.hidden,
@@ -199,7 +202,6 @@ export function BotComputerViewport({
   const vncProtocol = status?.protocol;
   const vncControlState = status?.control_state;
   const canConnectVnc =
-    layout !== "window" &&
     (vncControlState === "human_controls" || vncControlState === "human_observing") &&
     !!wsUrl &&
     vncProtocol === "vnc";
@@ -393,6 +395,7 @@ export function BotComputerViewport({
       });
       rfb.viewOnly = vncControlState !== "human_controls";
       rfb.focusOnClick = true;
+      rfb.showDotCursor = true;
       if (typeof rfb.qualityLevel === "number") rfb.qualityLevel = 6;
       rfb.addEventListener("connect", () => setRfbConnected(true));
       rfb.addEventListener("disconnect", () => {
@@ -417,7 +420,7 @@ export function BotComputerViewport({
   }, [layout, sandboxId]);
 
   useEffect(() => {
-    const wantsVnc = layout !== "window" && streamActive && canConnectVnc;
+    const wantsVnc = streamActive && canConnectVnc;
     const holdsClaim = Boolean(sandboxId && wantsVnc && claimVnc(sandboxId, layout));
     if (wantsVnc && holdsClaim && wsUrl) {
       void connectVnc(wsUrl);
@@ -476,6 +479,7 @@ export function BotComputerViewport({
     if (result.ok) {
       setSessionControlState("human_controls");
       await loadStatus();
+      void sendDesktopMouse(bot.id, sandboxId, { action: "move", x: 24, y: 24 }).catch(() => {});
     } else {
       setError(result.error ?? "Take over failed");
     }
@@ -772,22 +776,48 @@ export function BotComputerViewport({
             {drivingLabel}
           </span>
         </div>
-        {!compact && (
+        {(layout === "window" || !compact) && (
           <div className="text-[11px] text-[var(--text-tertiary)] truncate">
-            {status?.protocol === "vnc" ? "VNC stream" : status?.protocol === "novnc" ? "noVNC" : "Desktop"}
-            {vm?.sandbox_id ? ` · ${vm.sandbox_id}` : ""}
+            {rfbConnected ? "Live" : screenshot ? "Snapshot" : "Connecting…"}
           </div>
         )}
       </div>
 
-      <div className={cn("flex-1 bg-black relative min-h-0", compact ? "" : "min-h-[480px]")}>
+      <div
+        className={cn("flex-1 bg-black relative min-h-0", compact ? "" : "min-h-[480px]")}
+        onMouseMove={
+          layout === "window"
+            ? (event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                setPointer({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+              }
+            : undefined
+        }
+        onMouseLeave={layout === "window" ? () => setPointer(null) : undefined}
+        onMouseDown={
+          layout === "window"
+            ? (event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                const id = rippleSeq.current + 1;
+                rippleSeq.current = id;
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                setRipples((list) => [...list, { id, x, y }]);
+                window.setTimeout(() => {
+                  setRipples((list) => list.filter((item) => item.id !== id));
+                }, 500);
+              }
+            : undefined
+        }
+        style={layout === "window" ? { cursor: "none" } : undefined}
+      >
         <div
           ref={canvasRef}
           className="absolute inset-0 bg-black"
           style={{ width: "100%", height: "100%" }}
         />
 
-        {screenshot && (layout === "window" || !rfbConnected) && (
+        {screenshot && !rfbConnected && (
           <img
             src={`data:${screenshot.mime};base64,${screenshot.png}`}
             alt={`${displayName}'s desktop preview`}
@@ -802,11 +832,35 @@ export function BotComputerViewport({
                 : undefined
             }
             className={cn(
-              "absolute inset-0 w-full h-full object-contain",
-              layout === "window" ? "cursor-crosshair" : "pointer-events-none",
+              "absolute inset-0 z-[1] w-full h-full object-contain",
+              layout === "window" ? "" : "pointer-events-none",
             )}
           />
         )}
+
+        {layout === "window" && pointer && (
+          <div
+            className="pointer-events-none absolute z-30"
+            style={{ left: pointer.x, top: pointer.y, transform: "translate(-1px, -1px)" }}
+          >
+            <svg width="18" height="22" viewBox="0 0 18 22" fill="none" aria-hidden>
+              <path
+                d="M1 1L1 17.5L5.2 13.6L8.2 21L11.1 19.7L8.1 12.4L14.5 12.4L1 1Z"
+                fill="#F8FAFC"
+                stroke="#0F172A"
+                strokeWidth="1.2"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        )}
+        {ripples.map((ripple) => (
+          <span
+            key={ripple.id}
+            className="pointer-events-none absolute z-20 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/90 animate-ping"
+            style={{ left: ripple.x, top: ripple.y }}
+          />
+        ))}
 
         {screenshotLoading && !screenshot && !isHumanControl && !isObserving && (
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-elevated)]/60 z-10">
