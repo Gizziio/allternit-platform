@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3: Description: Writing Effective Prompts and Skills — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #3b82f6;
+      --accent-dim: rgba(59,130,246,0.15);
+      --accent-glow: rgba(59,130,246,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(59,130,246,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#descriptionCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(59,130,246,0.12); color: #60a5fa; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#3b82f6', primaryTextColor: '#e5e5e5', primaryBorderColor: '#3b82f6', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#prompts" data-section="prompts">Prompts</a></li>
+        <li><a href="#skills" data-section="skills">Skills</a></li>
+        <li><a href="#patterns" data-section="patterns">Patterns</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">CORE</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="descriptionCanvas"></canvas>
+  <span class="hero-badge">CORE Tier</span>
+  <h1>Module 3: <em>Description: Writing Effective Prompts and Skills</em></h1>
+  <p>Learn how to describe work so an agent can do it reliably. This module covers prompt patterns, reusable skills, and the validation layer that keeps agent behavior predictable.</p>
+  <div class="hero-meta">
+    <span><strong>5 lessons</strong> · ~40 minutes</span>
+    <span>Source: <code>.agents/skills/agent-orchestrator</code></span>
+  </div>
+</section>
+
+<section id="prompts" class="reveal">
+  <h2>Prompts as contracts</h2>
+  <p>A prompt is not a wish. In production it is a contract between the operator, the model, and the downstream code that consumes the output. If the contract is ambiguous, every integration downstream pays the cost in parsing logic, retries, and human review.</p>
+  <p>The 4D Description step from AI Fluency says: be explicit about the output shape, give the model a role and constraints, and provide examples at the boundary. Allternit encodes this in <code>agent-definition.ts</code> through the <code>defineAgent</code> factory, which validates a compact declarative definition against the full <code>CreateAgentInput</code> schema and the agent creation checklist.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>import { defineAgent } from '@/lib/agents/agent-definition';
+
+const triageAgent = defineAgent({
+  name: 'support-triage',
+  description: 'Classifies support tickets and drafts first responses.',
+  instructions: `You are a support triage assistant. Read the ticket, classify
+    the issue into one of: Billing, Technical, Account, Feature Request.
+    Draft a brief, empathetic first response. If sentiment is strongly
+    negative or the issue mentions legal terms, set escalate to true and
+    do not draft a response.`,
+  capabilities: ['classify', 'respond'],
+  tools: ['web_search', 'read_file'],
+});</code></pre>
+  </div>
+
+  <ul>
+    <li><strong>Role.</strong> Start with who the model is and what it is doing.</li>
+    <li><strong>Output shape.</strong> State whether the result should be prose, JSON, CSV, or an artifact manifest.</li>
+    <li><strong>Constraints.</strong> List hard bans and escalation rules explicitly.</li>
+  </ul>
+</section>
+
+<section id="skills" class="reveal">
+  <h2>Skills: reusable prompt-and-tool packages</h2>
+  <p>A skill packages a prompt, a tool allowlist, and progressive disclosure into a single directory. Allternit skills live under <code>~/.allternit/skills/</code> and are declared by a <code>SKILL.md</code> manifest. The registry validates that the manifest exists, required fields are present, the version looks like semver, tools is a non-empty array, and entrypoint is a non-empty string.</p>
+  <p>gizzi-code can also load skills from <code>~/.config/gizzi/skills/</code> and <code>.gizzi/skills/</code>. Project-level skills override user-level skills by name, so a repository can ship its own conventions without breaking the user's global setup.</p>
+
+  <div class="callout info">
+    <p><strong>Skill lifecycle:</strong> manifest → registry validation → tool allowlist → progressive disclosure → agent invocation → review → iterate.</p>
+  </div>
+
+  <h3>Skill lifecycle diagram</h3>
+  <p>The diagram below shows how a user need becomes a validated skill, how the skill restricts tools, and how review feeds back into the next version.</p>
+
+  <pre class="mermaid alabs-media" data-media-id="core-fluency-m3-skill-lifecycle">flowchart LR
+    A[User Need] --&gt; B[Skill Manifest]
+    B --&gt; C[Registry Validation]
+    C --&gt; D[Tool Allowlist]
+    D --&gt; E[Progressive Disclosure]
+    E --&gt; F[Agent Invocation]
+    F --&gt; G[Review Output]
+    G --&gt; H[Iterate Skill]
+    H --&gt; B
+
+    style B fill:#3b82f6,stroke:#60a5fa,color:#fff
+    style D fill:#3b82f6,stroke:#60a5fa,color:#fff
+    style F fill:#3b82f6,stroke:#60a5fa,color:#fff
+    style G fill:#151517,stroke:#3f3f46,color:#e5e5e5</pre>
+</section>
+
+<section id="patterns" class="reveal">
+  <h2>Reusable prompt patterns</h2>
+  <p>The Allternit use-case playbooks demonstrate patterns that generalize across tasks. The support-triage playbook combines a role, a closed set of categories, an escalation rule, and a structured output schema. The legal-document playbook requires quoted evidence for every risk flag. The data-extraction playbook returns null for missing fields instead of hallucinating values.</p>
+
+  <table>
+    <thead>
+      <tr><th>Pattern</th><th>When to use</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Role + constraints</td><td>Any agent with a bounded job</td><td>“You are a support triage assistant…”</td></tr>
+      <tr><td>Closed categories</td><td>Classification tasks</td><td><code>enum: ["Billing", "Technical", "Account"]</code></td></tr>
+      <tr><td>Evidence quoting</td><td>Risk or review tasks</td><td>“Quote the relevant passage for each flag.”</td></tr>
+      <tr><td>Null for missing</td><td>Structured extraction</td><td>“If a field is missing or unreadable, use null.”</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Demo: validating a local skill</h3>
+  <p>The terminal demo shows creating a <code>SKILL.md</code> file in <code>.gizzi/skills/</code> and validating it with gizzi-code.</p>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="core-fluency-m3-skill-build-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAxNiwgInRpbWVzdGFtcCI6IDE3MDAwMDAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4vYmFzaCIsICJURVJNIjogInh0ZXJtLTI1NmNvbG9yIn19ClswLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gbWtkaXIgLXAgLmdpenppL3NraWxscy9ydW4tdGVzdHNcclxuIl0KWzAuNSwgIm8iLCAiXHUwMDFiWzE7MzJtJFx1MDAxYlswbSBjYXQgPiAuZ2l6emkvc2tpbGxzL3J1bi10ZXN0cy9TS0lMTC5tZCA8PCdFT0YnXHJcbiJdClsxLjAsICJvIiwgIi0tLVxyXG4iXQpbMS4yLCAibyIsICJuYW1lOiBydW4tdGVzdHNcclxuIl0KWzEuNCwgIm8iLCAidmVyc2lvbjogMS4wLjBcclxuIl0KWzEuNiwgIm8iLCAiZGVzY3JpcHRpb246IFJ1biB0aGUgcHJvamVjdCB0ZXN0IHN1aXRlIGFuZCBzdW1tYXJpemUgZmFpbHVyZXMuXHJcbiJdClsxLjgsICJvIiwgInRvb2xzOiBbYmFzaCwgZmlsZS5yZWFkXVxyXG4iXQpbMi4wLCAibyIsICItLS1cclxuIl0KWzIuNSwgIm8iLCAiXHUwMDFiWzE7MzJtJFx1MDAxYlswbSBnaXp6aSBza2lsbHMgdmFsaWRhdGVcclxuIl0KWzMuMiwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBMb2FkaW5nIHNraWxscyBmcm9tIH4vLmNvbmZpZy9naXp6aS9za2lsbHMsIC5naXp6aS9za2lsbHNcclxuIl0KWzQuMCwgIm8iLCAiXHUwMDFiWzE7MzJt4pyTXHUwMDFiWzBtIHJ1bi10ZXN0czogbmFtZSwgdmVyc2lvbiwgZGVzY3JpcHRpb24sIHRvb2xzLCBlbnRyeXBvaW50IHZhbGlkXHJcbiJdCls1LjAsICJvIiwgIlx1MDAxYlsxOzMybeKck1x1MDAxYlswbSBTa2lsbCBhdmFpbGFibGUgdW5kZXIgL3J1bi10ZXN0c1xyXG4iXQ==" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+
+  <h3>Walkthrough: SKILL.md format</h3>
+  <p>The walkthrough below highlights the required frontmatter, progressive disclosure levels, and instruction body of an Allternit skill manifest.</p>
+
+  <div class="walkthrough-container" data-walkthrough-container="core-fluency-m3-skill-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="core-fluency-m3-skill-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('core-fluency-m3-skill-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 3</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('core-fluency-m3-skill-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="core-fluency-m3-skill-walkthrough-step-0" data-walkthrough="core-fluency-m3-skill-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Required frontmatter</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>A SKILL.md manifest must declare name, version, description, tools, and entrypoint. The registry rejects any skill missing these fields.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">markdown</span>
+      <span class="code-path">alabs-generated-courses/media/src/core-fluency-m3-skill-format-excerpt.md</span>
+    </div>
+    <pre><div class="walkthrough-line highlight" data-line="1">
+        <span class="line-no"> 1</span>
+        <span class="line-code">---</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="2">
+        <span class="line-no"> 2</span>
+        <span class="line-code">name: allternit/powerpoint</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="3">
+        <span class="line-no"> 3</span>
+        <span class="line-code">version: <span class="token-number">0.1</span>.<span class="token-number">0</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="4">
+        <span class="line-no"> 4</span>
+        <span class="line-code">description: Generate and edit .pptx presentations</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="5">
+        <span class="line-no"> 5</span>
+        <span class="line-code">tools:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="6">
+        <span class="line-no"> 6</span>
+        <span class="line-code">  - create_presentation</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="7">
+        <span class="line-no"> 7</span>
+        <span class="line-code">  - add_slide</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="8">
+        <span class="line-no"> 8</span>
+        <span class="line-code">entrypoint: powerpoint.ts</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="9">
+        <span class="line-no"> 9</span>
+        <span class="line-code">progressive_disclosure:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="10">
+        <span class="line-no">10</span>
+        <span class="line-code">  levels:</span>
+      </div>
+<div class="walkthrough-line dim" data-line="11">
+        <span class="line-no">11</span>
+        <span class="line-code">    - name: basic</span>
+      </div>
+<div class="walkthrough-line dim" data-line="12">
+        <span class="line-no">12</span>
+        <span class="line-code">      trigger: first user request to create a deck</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="core-fluency-m3-skill-walkthrough-step-1" data-walkthrough="core-fluency-m3-skill-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Progressive disclosure</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The skill can surface only create_presentation initially and reveal add_slide once the user wants to edit an existing deck. This limits blast radius for new skills.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">markdown</span>
+      <span class="code-path">alabs-generated-courses/media/src/core-fluency-m3-skill-format-excerpt.md</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="9">
+        <span class="line-no"> 9</span>
+        <span class="line-code">progressive_disclosure:</span>
+      </div>
+<div class="walkthrough-line dim" data-line="10">
+        <span class="line-no">10</span>
+        <span class="line-code">  levels:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="11">
+        <span class="line-no">11</span>
+        <span class="line-code">    - name: basic</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="12">
+        <span class="line-no">12</span>
+        <span class="line-code">      trigger: first user request to create a deck</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="13">
+        <span class="line-no">13</span>
+        <span class="line-code">      tools:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="14">
+        <span class="line-no">14</span>
+        <span class="line-code">        - create_presentation</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="15">
+        <span class="line-no">15</span>
+        <span class="line-code">    - name: full</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="16">
+        <span class="line-no">16</span>
+        <span class="line-code">      trigger: user asks to edit an existing deck</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="17">
+        <span class="line-no">17</span>
+        <span class="line-code">      tools:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="18">
+        <span class="line-no">18</span>
+        <span class="line-code">        - create_presentation</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="19">
+        <span class="line-no">19</span>
+        <span class="line-code">        - add_slide</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="20">
+        <span class="line-no">20</span>
+        <span class="line-code">---</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="21">
+        <span class="line-no">21</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="22">
+        <span class="line-no">22</span>
+        <span class="line-code"># allternit/powerpoint</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="23">
+        <span class="line-no">23</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="24">
+        <span class="line-no">24</span>
+        <span class="line-code">Generate and edit PowerPoint presentations. In basic mode, create a <span class=<span class="token-string">"token-keyword"</span>>new</span> deck</span>
+      </div>
+<div class="walkthrough-line dim" data-line="25">
+        <span class="line-no">25</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>from</span> a title and bullet outline. In full mode, add, reorder, and style slides.</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="core-fluency-m3-skill-walkthrough-step-2" data-walkthrough="core-fluency-m3-skill-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Instruction body</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The markdown body explains expected inputs, outputs, and behavior. Treat it as the system prompt for the skill: concrete, scoped, and reviewable.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">markdown</span>
+      <span class="code-path">alabs-generated-courses/media/src/core-fluency-m3-skill-format-excerpt.md</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="23">
+        <span class="line-no">23</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="24">
+        <span class="line-no">24</span>
+        <span class="line-code">Generate and edit PowerPoint presentations. In basic mode, create a <span class=<span class="token-string">"token-keyword"</span>>new</span> deck</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="25">
+        <span class="line-no">25</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>from</span> a title and bullet outline. In full mode, add, reorder, and style slides.</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="26">
+        <span class="line-no">26</span>
+        <span class="line-code">&nbsp;</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-num">1</span>
+      <h3>What does the <code>defineAgent</code> factory do by default?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        <span>It only type-checks the input</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        <span>It validates the schema and enforces the agent creation checklist</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        <span>It deploys the agent to the cloud</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)">
+        <span class="radio"></span>
+        <span>It generates a random system prompt</span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="window.QuizEngine.reset(1)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-num">2</span>
+      <h3>Which SKILL.md field is used to limit which tools the skill can invoke?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        <span><code>model</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        <span><code>tools</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        <span><code>tags</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)">
+        <span class="radio"></span>
+        <span><code>version</code></span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="window.QuizEngine.reset(2)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-num">3</span>
+      <h3>In the support-triage playbook, what must happen when <code>escalate</code> is true?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        <span>The model must draft a longer response</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        <span>The model must not draft a response and must set escalate to true</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        <span>The model must request a tool call</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)">
+        <span class="radio"></span>
+        <span>The model must ignore the sentiment field</span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="window.QuizEngine.reset(3)">Retry</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Write a reusable skill</h2>
+    <p>Design, validate, and test a skill for a real task in your workflow.</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>Scope</h4>
+        <p>Pick one narrow task, such as reviewing a diff or summarizing a meeting transcript.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Manifest</h4>
+        <p>Write a SKILL.md with required frontmatter and a least-privilege <code>tools</code> list.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Progressive disclosure</h4>
+        <p>Define a basic level that surfaces one tool and a full level that unlocks the rest.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Validate</h4>
+        <p>Run the skill through gizzi-code and verify it loads without registry errors.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — CORE Tier — Module 3: Description: Writing Effective Prompts and Skills</p>
+    <p style="margin-top:4px;">Generated from <code>.agents/skills/agent-orchestrator</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":1,"3":1}, {"1":{"correct":"Correct. defineAgent validates against the Zod schema and, by default, enforces the agent creation checklist.","wrong":"Not quite. defineAgent does more than type checking; it validates the schema and enforces the checklist unless enforceChecklist is false."},"2":{"correct":"Correct. The tools field declares the least-privilege tool set the skill is allowed to use.","wrong":"Not quite. The tools array in SKILL.md controls which tools the skill can invoke."},"3":{"correct":"Correct. The playbook explicitly forbids drafting a response when escalate is true and requires the escalate boolean.","wrong":"Not quite. When sentiment is strongly negative or legal terms appear, the model must set escalate: true and not draft a response."}});
+
+    
+const canvas = document.getElementById('descriptionCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#3b82f6';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(59,130,246,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

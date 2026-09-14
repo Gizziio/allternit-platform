@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 9: Engineering: Harness — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ec4899;
+      --accent-dim: rgba(236,72,153,0.15);
+      --accent-glow: rgba(236,72,153,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #f472b6);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(236,72,153,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#harnessNetworkCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(236,72,153,0.12); color: #f472b6; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#ec4899', primaryTextColor: '#e5e5e5', primaryBorderColor: '#ec4899', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#harness" data-section="harness">Harness</a></li>
+        <li><a href="#middleware" data-section="middleware">Middleware</a></li>
+        <li><a href="#gateway" data-section="gateway">Gateway</a></li>
+        <li><a href="#quotas" data-section="quotas">Quotas</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">AGENTS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="harnessNetworkCanvas"></canvas>
+  <span class="hero-badge">AGENTS Tier</span>
+  <h1>Module 9: <em>Engineering: Harness</em></h1>
+  <p>Learn how Allternit unifies model execution behind a single harness and API gateway, turning provider differences, retries, fallbacks, and quotas into a predictable execution layer.</p>
+  <div class="hero-meta">
+    <span><strong>6 lessons</strong> · ~45 minutes</span>
+    <span>Source: <code>sdk/allternit-sdk/src/ai-runtime/harness</code></span>
+  </div>
+</section>
+
+<section id="harness" class="reveal">
+  <h2>Why a harness?</h2>
+  <p>Every provider exposes a different HTTP surface, authentication scheme, chunk shape, and error vocabulary. Production code that calls these surfaces directly becomes a tangle of provider-specific branching. The Allternit harness is the unified execution layer that absorbs those differences.</p>
+  <p><code>AllternitHarness</code> in <code>sdk/allternit-sdk/src/ai-runtime/harness/index.ts</code> exposes three entry points:</p>
+  <ul>
+    <li><code>stream()</code> — returns an async generator of normalized chunks such as <code>text</code>, <code>tool_call</code>, <code>citation</code>, and <code>done</code>.</li>
+    <li><code>complete()</code> — collects the stream into a single string.</li>
+    <li><code>run()</code> — collects the stream into a <code>HarnessResponse</code> that preserves usage, citations, and stop reason.</li>
+  </ul>
+  <div class="callout info">
+    <p><strong>One contract, many runtimes.</strong> The harness is where provider-specific protocols are normalized into provider-agnostic events.</p>
+  </div>
+
+  <h3>Execution modes</h3>
+  <p>The harness supports four modes, validated at construction time:</p>
+  <table>
+    <thead>
+      <tr><th>Mode</th><th>Required config</th><th>Use case</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>byok</code></td><td>At least one provider API key</td><td>Use your own provider keys</td></tr>
+      <tr><td><code>cloud</code></td><td><code>baseURL</code> + <code>accessToken</code></td><td>Allternit managed cloud</td></tr>
+      <tr><td><code>local</code></td><td><code>baseURL</code></td><td>Local model server such as Ollama</td></tr>
+      <tr><td><code>subprocess</code></td><td><code>command</code></td><td>Custom model runner</td></tr>
+    </tbody>
+  </table>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>import { AllternitHarness } from '@allternit/sdk';
+
+const harness = new AllternitHarness({
+  mode: 'byok',
+  byok: {
+    openai: { apiKey: process.env.OPENAI_API_KEY! },
+  },
+});
+
+const answer = await harness.complete({
+  provider: 'openai',
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Explain the harness in one sentence.' }],
+});</code></pre>
+  </div>
+
+  <h3>Walkthrough: inside the harness</h3>
+  <p>The walkthrough below steps through the constructor, middleware chain, request validation, mode routing, and response collection.</p>
+
+  <div class="walkthrough-container" data-walkthrough-container="agents-api-m9-harness-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="agents-api-m9-harness-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('agents-api-m9-harness-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 6</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('agents-api-m9-harness-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="agents-api-m9-harness-walkthrough-step-0" data-walkthrough="agents-api-m9-harness-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Harness constructor validates config</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>AllternitHarness is instantiated with a HarnessConfig. The constructor immediately validates the config and builds the middleware chain.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">sdk/allternit-sdk/src/ai-runtime/harness/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="39">
+        <span class="line-no"> 39</span>
+        <span class="line-code"> * AI completions across multiple providers and deployment modes.</span>
+      </div>
+<div class="walkthrough-line dim" data-line="40">
+        <span class="line-no"> 40</span>
+        <span class="line-code"> */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="41">
+        <span class="line-no"> 41</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>class</span> AllternitHarness {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="42">
+        <span class="line-no"> 42</span>
+        <span class="line-code">  private config: HarnessConfig;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="43">
+        <span class="line-no"> 43</span>
+        <span class="line-code">  private middleware: HarnessMiddleware[];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="44">
+        <span class="line-no"> 44</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="45">
+        <span class="line-no"> 45</span>
+        <span class="line-code">  /**</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="46">
+        <span class="line-no"> 46</span>
+        <span class="line-code">   * Creates a <span class=<span class="token-string">"token-keyword"</span>>new</span> AllternitHarness instance</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="47">
+        <span class="line-no"> 47</span>
+        <span class="line-code">   * </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="48">
+        <span class="line-no"> 48</span>
+        <span class="line-code">   * @param config - Harness configuration including mode and credentials</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="49">
+        <span class="line-no"> 49</span>
+        <span class="line-code">   * @throws HarnessError <span class=<span class="token-string">"token-keyword"</span>>if</span> configuration is invalid</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="50">
+        <span class="line-no"> 50</span>
+        <span class="line-code">   */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="51">
+        <span class="line-no"> 51</span>
+        <span class="line-code">  constructor(config: HarnessConfig) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="52">
+        <span class="line-no"> 52</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>this</span>.validateConfig(config);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="53">
+        <span class="line-no"> 53</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>this</span>.config = config;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="54">
+        <span class="line-no"> 54</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>this</span>.middleware = <span class=<span class="token-string">"token-keyword"</span>>this</span>.buildMiddleware();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="55">
+        <span class="line-no"> 55</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="56">
+        <span class="line-no"> 56</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="57">
+        <span class="line-no"> 57</span>
+        <span class="line-code">  /**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m9-harness-walkthrough-step-1" data-walkthrough="agents-api-m9-harness-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Build the middleware stack</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>buildMiddleware() orders hooks carefully: refusal fallback first, then user middleware, then retry. This lets fallback intercept refusals before retry consumes attempts.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">sdk/allternit-sdk/src/ai-runtime/harness/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="60">
+        <span class="line-no"> 60</span>
+        <span class="line-code">   * retry middleware <span class=<span class="token-string">"token-keyword"</span>>for</span> backward compatibility with the legacy retry option.</span>
+      </div>
+<div class="walkthrough-line dim" data-line="61">
+        <span class="line-no"> 61</span>
+        <span class="line-code">   */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="62">
+        <span class="line-no"> 62</span>
+        <span class="line-code">  private buildMiddleware(): HarnessMiddleware[] {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="63">
+        <span class="line-no"> 63</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> list: HarnessMiddleware[] = [];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="64">
+        <span class="line-no"> 64</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (<span class=<span class="token-string">"token-keyword"</span>>this</span>.config.fallbackModels &amp;&amp; <span class=<span class="token-string">"token-keyword"</span>>this</span>.config.fallbackModels.length &gt; <span class="token-number">0</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="65">
+        <span class="line-no"> 65</span>
+        <span class="line-code">      list.push(createRefusalFallbackMiddleware(<span class=<span class="token-string">"token-keyword"</span>>this</span>.config.fallbackModels));</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="66">
+        <span class="line-no"> 66</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="67">
+        <span class="line-no"> 67</span>
+        <span class="line-code">    list.push(...normalizeMiddleware(<span class=<span class="token-string">"token-keyword"</span>>this</span>.config.middleware));</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="68">
+        <span class="line-no"> 68</span>
+        <span class="line-code">    list.push(createRetryMiddleware(<span class=<span class="token-string">"token-keyword"</span>>this</span>.config.retry));</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="69">
+        <span class="line-no"> 69</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> list;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="70">
+        <span class="line-no"> 70</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="71">
+        <span class="line-no"> 71</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="72">
+        <span class="line-no"> 72</span>
+        <span class="line-code">  /**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m9-harness-walkthrough-step-2" data-walkthrough="agents-api-m9-harness-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Validate configuration and execution mode</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>validateConfig() ensures a config object exists, requires a supported mode (byok, cloud, local, subprocess), and switches to mode-specific checks.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">sdk/allternit-sdk/src/ai-runtime/harness/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="76">
+        <span class="line-no"> 76</span>
+        <span class="line-code">   * @throws HarnessError <span class=<span class="token-string">"token-keyword"</span>>if</span> invalid</span>
+      </div>
+<div class="walkthrough-line dim" data-line="77">
+        <span class="line-no"> 77</span>
+        <span class="line-code">   */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="78">
+        <span class="line-no"> 78</span>
+        <span class="line-code">  private validateConfig(config: HarnessConfig): void {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="79">
+        <span class="line-no"> 79</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!config) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="80">
+        <span class="line-no"> 80</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="81">
+        <span class="line-no"> 81</span>
+        <span class="line-code">        HarnessErrorCode.CONFIG_INVALID,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="82">
+        <span class="line-no"> 82</span>
+        <span class="line-code">        <span class="token-string">'Configuration is required'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="83">
+        <span class="line-no"> 83</span>
+        <span class="line-code">      );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="84">
+        <span class="line-no"> 84</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="85">
+        <span class="line-no"> 85</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="86">
+        <span class="line-no"> 86</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!config.mode) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="87">
+        <span class="line-no"> 87</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="88">
+        <span class="line-no"> 88</span>
+        <span class="line-code">        HarnessErrorCode.CONFIG_INVALID,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="89">
+        <span class="line-no"> 89</span>
+        <span class="line-code">        <span class="token-string">'Mode is required (byok, cloud, local, subprocess)'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="90">
+        <span class="line-no"> 90</span>
+        <span class="line-code">      );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="91">
+        <span class="line-no"> 91</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="92">
+        <span class="line-no"> 92</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="93">
+        <span class="line-no"> 93</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> validModes: HarnessMode[] = [<span class="token-string">'byok'</span>, <span class="token-string">'cloud'</span>, <span class="token-string">'local'</span>, <span class="token-string">'subprocess'</span>];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="94">
+        <span class="line-no"> 94</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!validModes.includes(config.mode)) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="95">
+        <span class="line-no"> 95</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="96">
+        <span class="line-no"> 96</span>
+        <span class="line-code">        HarnessErrorCode.MODE_UNSUPPORTED,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="97">
+        <span class="line-no"> 97</span>
+        <span class="line-code">        `Unsupported mode: ${config.mode}. Must be one of: ${validModes.join(<span class="token-string">', '</span>)}`</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="98">
+        <span class="line-no"> 98</span>
+        <span class="line-code">      );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="99">
+        <span class="line-no"> 99</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="100">
+        <span class="line-no">100</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="101">
+        <span class="line-no">101</span>
+        <span class="line-code">    <span class="token-comment">// Validate mode-specific configuration</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="102">
+        <span class="line-no">102</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>switch</span> (config.mode) {</span>
+      </div>
+<div class="walkthrough-line dim" data-line="103">
+        <span class="line-no">103</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">'byok'</span>:</span>
+      </div>
+<div class="walkthrough-line dim" data-line="104">
+        <span class="line-no">104</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (!config.byok) {</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m9-harness-walkthrough-step-3" data-walkthrough="agents-api-m9-harness-walkthrough" data-step="3">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 4</span>
+    <h4>Validate cloud, local, and subprocess modes</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>Each non-BYOK mode validates its own required fields: cloud needs baseURL and accessToken, local needs baseURL, and subprocess needs a command.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">sdk/allternit-sdk/src/ai-runtime/harness/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="121">
+        <span class="line-no">121</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="122">
+        <span class="line-no">122</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="123">
+        <span class="line-no">123</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="124">
+        <span class="line-no">124</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">'cloud'</span>:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="125">
+        <span class="line-no">125</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (!config.cloud?.baseURL || !config.cloud?.accessToken) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="126">
+        <span class="line-no">126</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="127">
+        <span class="line-no">127</span>
+        <span class="line-code">            HarnessErrorCode.CONFIG_INVALID,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="128">
+        <span class="line-no">128</span>
+        <span class="line-code">            <span class="token-string">'Cloud mode requires baseURL and accessToken'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="129">
+        <span class="line-no">129</span>
+        <span class="line-code">          );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="130">
+        <span class="line-no">130</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="131">
+        <span class="line-no">131</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="132">
+        <span class="line-no">132</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="133">
+        <span class="line-no">133</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">'local'</span>:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="134">
+        <span class="line-no">134</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (!config.local?.baseURL) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="135">
+        <span class="line-no">135</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="136">
+        <span class="line-no">136</span>
+        <span class="line-code">            HarnessErrorCode.CONFIG_INVALID,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="137">
+        <span class="line-no">137</span>
+        <span class="line-code">            <span class="token-string">'Local mode requires baseURL'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="138">
+        <span class="line-no">138</span>
+        <span class="line-code">          );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="139">
+        <span class="line-no">139</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="140">
+        <span class="line-no">140</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="141">
+        <span class="line-no">141</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="142">
+        <span class="line-no">142</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">'subprocess'</span>:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="143">
+        <span class="line-no">143</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (!config.subprocess?.command) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="144">
+        <span class="line-no">144</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="145">
+        <span class="line-no">145</span>
+        <span class="line-code">            HarnessErrorCode.CONFIG_INVALID,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="146">
+        <span class="line-no">146</span>
+        <span class="line-code">            <span class="token-string">'Subprocess mode requires command'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="147">
+        <span class="line-no">147</span>
+        <span class="line-code">          );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="148">
+        <span class="line-no">148</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="149">
+        <span class="line-no">149</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="150">
+        <span class="line-no">150</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="151">
+        <span class="line-no">151</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="152">
+        <span class="line-no">152</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="153">
+        <span class="line-no">153</span>
+        <span class="line-code">  /**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m9-harness-walkthrough-step-4" data-walkthrough="agents-api-m9-harness-walkthrough" data-step="4">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 5</span>
+    <h4>Stream entry point routes by mode</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>stream() validates the request, runs beforeRequest hooks, injects system/provider prompts, fills maxTokens from the model registry, and dispatches to the mode-specific generator.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">sdk/allternit-sdk/src/ai-runtime/harness/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="161">
+        <span class="line-no">161</span>
+        <span class="line-code">   * @throws HarnessError <span class=<span class="token-string">"token-keyword"</span>>for</span> configuration or routing errors</span>
+      </div>
+<div class="walkthrough-line dim" data-line="162">
+        <span class="line-no">162</span>
+        <span class="line-code">   */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="163">
+        <span class="line-no">163</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>async</span> *stream(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="164">
+        <span class="line-no">164</span>
+        <span class="line-code">    request: StreamRequest</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="165">
+        <span class="line-no">165</span>
+        <span class="line-code">  ): AsyncGenerator&lt;HarnessStreamChunk&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="166">
+        <span class="line-no">166</span>
+        <span class="line-code">    <span class="token-comment">// Validate request</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="167">
+        <span class="line-no">167</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!request) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="168">
+        <span class="line-no">168</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="169">
+        <span class="line-no">169</span>
+        <span class="line-code">        HarnessErrorCode.CONFIG_INVALID,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="170">
+        <span class="line-no">170</span>
+        <span class="line-code">        <span class="token-string">'Stream request is required'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="171">
+        <span class="line-no">171</span>
+        <span class="line-code">      );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="172">
+        <span class="line-no">172</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="173">
+        <span class="line-no">173</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="174">
+        <span class="line-no">174</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!request.provider || !request.model) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="175">
+        <span class="line-no">175</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="176">
+        <span class="line-no">176</span>
+        <span class="line-code">        HarnessErrorCode.CONFIG_INVALID,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="177">
+        <span class="line-no">177</span>
+        <span class="line-code">        <span class="token-string">'Provider and model are required'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="178">
+        <span class="line-no">178</span>
+        <span class="line-code">      );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="179">
+        <span class="line-no">179</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="180">
+        <span class="line-no">180</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="181">
+        <span class="line-no">181</span>
+        <span class="line-code">    <span class="token-comment">// Validate and inject system prompts</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="182">
+        <span class="line-no">182</span>
+        <span class="line-code">    validateMessages(request.messages);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="183">
+        <span class="line-no">183</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="184">
+        <span class="line-no">184</span>
+        <span class="line-code">    <span class="token-comment">// Apply beforeRequest middleware before provider-specific prompt injection.</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="185">
+        <span class="line-no">185</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> middlewareRequest = <span class=<span class="token-string">"token-keyword"</span>>await</span> applyBeforeRequest(<span class=<span class="token-string">"token-keyword"</span>>this</span>.middleware, request);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="186">
+        <span class="line-no">186</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="187">
+        <span class="line-no">187</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> hasTools = !!middlewareRequest.tools &amp;&amp; middlewareRequest.tools.length &gt; <span class="token-number">0</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="188">
+        <span class="line-no">188</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> messages = injectSystemPrompt(middlewareRequest.messages, hasTools);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="189">
+        <span class="line-no">189</span>
+        <span class="line-code">    messages = injectProviderPrompt(messages, middlewareRequest.provider);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="190">
+        <span class="line-no">190</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="191">
+        <span class="line-no">191</span>
+        <span class="line-code">    <span class="token-comment">// Create modified request with injected prompts</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="192">
+        <span class="line-no">192</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> modifiedRequest: StreamRequest = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="193">
+        <span class="line-no">193</span>
+        <span class="line-code">      ...middlewareRequest,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="194">
+        <span class="line-no">194</span>
+        <span class="line-code">      messages,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="195">
+        <span class="line-no">195</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="196">
+        <span class="line-no">196</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="197">
+        <span class="line-no">197</span>
+        <span class="line-code">    <span class="token-comment">// Fall back to the registry's max_output_tokens when the caller does not</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="198">
+        <span class="line-no">198</span>
+        <span class="line-code">    <span class="token-comment">// supply an explicit limit.</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="199">
+        <span class="line-no">199</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (modifiedRequest.maxTokens === <span class=<span class="token-string">"token-keyword"</span>>undefined</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="200">
+        <span class="line-no">200</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> metadata = getModelMetadata(modifiedRequest.provider, modifiedRequest.model);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="201">
+        <span class="line-no">201</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>if</span> (metadata) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="202">
+        <span class="line-no">202</span>
+        <span class="line-code">        modifiedRequest = { ...modifiedRequest, maxTokens: metadata.maxOutputTokens };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="203">
+        <span class="line-no">203</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="204">
+        <span class="line-no">204</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="205">
+        <span class="line-no">205</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="206">
+        <span class="line-no">206</span>
+        <span class="line-code">    <span class="token-comment">// Route to appropriate mode</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="207">
+        <span class="line-no">207</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>try</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="208">
+        <span class="line-no">208</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>switch</span> (<span class=<span class="token-string">"token-keyword"</span>>this</span>.config.mode) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="209">
+        <span class="line-no">209</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">'cloud'</span>:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="210">
+        <span class="line-no">210</span>
+        <span class="line-code">          yield* <span class=<span class="token-string">"token-keyword"</span>>this</span>.streamFromCloud(modifiedRequest);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="211">
+        <span class="line-no">211</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="212">
+        <span class="line-no">212</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">'byok'</span>:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="213">
+        <span class="line-no">213</span>
+        <span class="line-code">          yield* <span class=<span class="token-string">"token-keyword"</span>>this</span>.streamFromBYOK(modifiedRequest);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="214">
+        <span class="line-no">214</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="215">
+        <span class="line-no">215</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">'local'</span>:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="216">
+        <span class="line-no">216</span>
+        <span class="line-code">          yield* <span class=<span class="token-string">"token-keyword"</span>>this</span>.streamFromLocal(modifiedRequest);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="217">
+        <span class="line-no">217</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="218">
+        <span class="line-no">218</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">'subprocess'</span>:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="219">
+        <span class="line-no">219</span>
+        <span class="line-code">          yield* <span class=<span class="token-string">"token-keyword"</span>>this</span>.streamFromSubprocess(modifiedRequest);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="220">
+        <span class="line-no">220</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="221">
+        <span class="line-no">221</span>
+        <span class="line-code">        default:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="222">
+        <span class="line-no">222</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="223">
+        <span class="line-no">223</span>
+        <span class="line-code">            HarnessErrorCode.MODE_UNSUPPORTED,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="224">
+        <span class="line-no">224</span>
+        <span class="line-code">            `Mode ${<span class=<span class="token-string">"token-keyword"</span>>this</span>.config.mode} is not implemented`</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="225">
+        <span class="line-no">225</span>
+        <span class="line-code">          );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="226">
+        <span class="line-no">226</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="227">
+        <span class="line-no">227</span>
+        <span class="line-code">    } <span class=<span class="token-string">"token-keyword"</span>>catch</span> (error) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="228">
+        <span class="line-no">228</span>
+        <span class="line-code">      <span class="token-comment">// Re-wrap errors <span class=<span class="token-string">"token-keyword"</span>>for</span> consistent handling</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="229">
+        <span class="line-no">229</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> harnessError =</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="230">
+        <span class="line-no">230</span>
+        <span class="line-code">        error instanceof HarnessError</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="231">
+        <span class="line-no">231</span>
+        <span class="line-code">          ? error</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="232">
+        <span class="line-no">232</span>
+        <span class="line-code">          : <span class=<span class="token-string">"token-keyword"</span>>new</span> HarnessError(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="233">
+        <span class="line-no">233</span>
+        <span class="line-code">              HarnessErrorCode.UNKNOWN_ERROR,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="234">
+        <span class="line-no">234</span>
+        <span class="line-code">              error instanceof Error ? error.message : <span class="token-string">'Unknown error during streaming'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="235">
+        <span class="line-no">235</span>
+        <span class="line-code">              error</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="236">
+        <span class="line-no">236</span>
+        <span class="line-code">            );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="237">
+        <span class="line-no">237</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="238">
+        <span class="line-no">238</span>
+        <span class="line-code">      <span class="token-comment">// Allow middleware to recover <span class=<span class="token-string">"token-keyword"</span>>from</span> the error.</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="239">
+        <span class="line-no">239</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> replacement = <span class=<span class="token-string">"token-keyword"</span>>await</span> <span class=<span class="token-string">"token-keyword"</span>>this</span>.applyOnError(harnessError, middlewareRequest);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="240">
+        <span class="line-no">240</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>if</span> (replacement) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="241">
+        <span class="line-no">241</span>
+        <span class="line-code">        yield* replacement;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="242">
+        <span class="line-no">242</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>return</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="243">
+        <span class="line-no">243</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="244">
+        <span class="line-no">244</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="245">
+        <span class="line-no">245</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> harnessError;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="246">
+        <span class="line-no">246</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="247">
+        <span class="line-no">247</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="248">
+        <span class="line-no">248</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="249">
+        <span class="line-no">249</span>
+        <span class="line-code">  /**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m9-harness-walkthrough-step-5" data-walkthrough="agents-api-m9-harness-walkthrough" data-step="5">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 6</span>
+    <h4>Collect stream into a response</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>run() consumes the async generator, accumulates text, citations, usage, and stop reason, then applies afterResponse middleware before returning.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">sdk/allternit-sdk/src/ai-runtime/harness/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="282">
+        <span class="line-no">282</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="283">
+        <span class="line-no">283</span>
+        <span class="line-code">  /** Collect a stream into a response <span class=<span class="token-string">"token-keyword"</span>>while</span> retaining citations, usage, and stop reason. */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="284">
+        <span class="line-no">284</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>async</span> run(request: StreamRequest): Promise&lt;HarnessResponse&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="285">
+        <span class="line-no">285</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> chunks: string[] = [];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="286">
+        <span class="line-no">286</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> citations: Citation[] = [];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="287">
+        <span class="line-no">287</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> usage: HarnessResponse[<span class="token-string">'usage'</span>];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="288">
+        <span class="line-no">288</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> stopReason: HarnessResponse[<span class="token-string">'stopReason'</span>];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="289">
+        <span class="line-no">289</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>for</span> <span class=<span class="token-string">"token-keyword"</span>>await</span> (<span class=<span class="token-string">"token-keyword"</span>>const</span> chunk of <span class=<span class="token-string">"token-keyword"</span>>this</span>.stream(request)) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="290">
+        <span class="line-no">290</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>if</span> (chunk.<span class=<span class="token-string">"token-keyword"</span>>type</span> === <span class="token-string">'text'</span> &amp;&amp; chunk.text) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="291">
+        <span class="line-no">291</span>
+        <span class="line-code">        chunks.push(chunk.text);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="292">
+        <span class="line-no">292</span>
+        <span class="line-code">      } <span class=<span class="token-string">"token-keyword"</span>>else</span> <span class=<span class="token-string">"token-keyword"</span>>if</span> (chunk.<span class=<span class="token-string">"token-keyword"</span>>type</span> === <span class="token-string">'citation'</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="293">
+        <span class="line-no">293</span>
+        <span class="line-code">        citations.push(chunk.citation);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="294">
+        <span class="line-no">294</span>
+        <span class="line-code">      } <span class=<span class="token-string">"token-keyword"</span>>else</span> <span class=<span class="token-string">"token-keyword"</span>>if</span> (chunk.<span class=<span class="token-string">"token-keyword"</span>>type</span> === <span class="token-string">'done'</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="295">
+        <span class="line-no">295</span>
+        <span class="line-code">        usage = chunk.usage;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="296">
+        <span class="line-no">296</span>
+        <span class="line-code">        stopReason = chunk.stopReason;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="297">
+        <span class="line-no">297</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="298">
+        <span class="line-no">298</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="299">
+        <span class="line-no">299</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> response: HarnessResponse = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="300">
+        <span class="line-no">300</span>
+        <span class="line-code">      content: chunks.join(<span class="token-string">''</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="301">
+        <span class="line-no">301</span>
+        <span class="line-code">      ...(citations.length ? { citations } : {}),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="302">
+        <span class="line-no">302</span>
+        <span class="line-code">      ...(usage ? { usage } : {}),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="303">
+        <span class="line-no">303</span>
+        <span class="line-code">      ...(stopReason ? { stopReason } : {}),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="304">
+        <span class="line-no">304</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="305">
+        <span class="line-no">305</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> applyAfterResponse(<span class=<span class="token-string">"token-keyword"</span>>this</span>.middleware, response);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="306">
+        <span class="line-no">306</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="307">
+        <span class="line-no">307</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="308">
+        <span class="line-no">308</span>
+        <span class="line-code">  /**</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="middleware" class="reveal">
+  <h2>Middleware: retries, fallbacks, and observability</h2>
+  <p>Middleware in the harness is a stack of hooks that runs on every request. <code>middleware.ts</code> defines three hook types:</p>
+  <ul>
+    <li><code>beforeRequest</code> — mutate or log the request after validation but before system/provider prompt injection.</li>
+    <li><code>afterResponse</code> — transform the collected response before <code>run()</code> returns it.</li>
+    <li><code>onError</code> — recover from a thrown error by yielding a replacement stream.</li>
+  </ul>
+  <p>The default harness installs two built-in middlewares automatically:</p>
+  <ul>
+    <li><strong>Refusal fallback</strong> — when <code>fallbackModels</code> are configured, a provider refusal or content-filter error re-routes the request to the next model.</li>
+    <li><strong>Retry</strong> — network errors, timeouts, rate limits, and retryable HTTP statuses are retried with exponential backoff and jitter.</li>
+  </ul>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>const harness = new AllternitHarness({
+  mode: 'byok',
+  byok: {
+    openai: { apiKey: process.env.OPENAI_API_KEY! },
+    google: { apiKey: process.env.GOOGLE_API_KEY! },
+  },
+  fallbackModels: [
+    { provider: 'openai', model: 'gpt-4o-mini' },
+    { provider: 'google', model: 'gemini-1.5-flash' },
+  ],
+  retry: { maxRetries: 3, initialDelayMs: 500, jitter: true },
+  middleware: {
+    beforeRequest: async (req) => {
+      console.log('[harness] routing', req.provider, req.model);
+      return req;
+    },
+    afterResponse: async (res) => {
+      console.log('[harness] tokens', res.usage?.totalTokens);
+      return res;
+    },
+  },
+});</code></pre>
+  </div>
+
+  <div class="callout success">
+    <p><strong>Order matters.</strong> Refusal fallback is installed first so it can intercept content-filter errors before the retry middleware consumes a retry attempt on the same model.</p>
+  </div>
+</section>
+
+<section id="gateway" class="reveal">
+  <h2>The API gateway</h2>
+  <p>While the SDK harness runs inside your process, the Allternit API gateway (<code>cmd/allternit-api/src/llm_gateway</code>) is the server-side counterpart. It exposes an OpenAI-compatible surface at <code>/v1</code>, validates virtual-key authentication, applies routing policy, meters usage, and persists events.</p>
+
+  <h3>B5 routing policy</h3>
+  <p>Callers can pass a policy alias instead of a concrete model. The gateway's B5 router resolves the alias to a winner model plus a cross-provider fallback chain:</p>
+  <ul>
+    <li><code>auto</code> / <code>allternit-balanced</code> — equal weight across benchmarks.</li>
+    <li><code>allternit-code</code> — weights coding benchmarks heavily.</li>
+    <li><code>allternit-reasoning</code> — weights reasoning benchmarks heavily.</li>
+    <li><code>allternit-knowledge</code> — weights knowledge benchmarks heavily.</li>
+    <li><code>allternit-instruct</code> — weights instruction-following benchmarks heavily.</li>
+  </ul>
+  <p>Scoring is deterministic: <code>total = 0.75 × quality + 0.25 × cost_efficiency</code>. Fallbacks are always from distinct providers to maximize resilience.</p>
+
+  <pre class="mermaid alabs-media" data-media-id="agents-api-m9-harness-lifecycle">flowchart TB
+    subgraph Client["AllternitHarness client"]
+        A[Caller code] --&gt; B([stream / complete / run])
+    end
+
+    B --&gt; C{Validate request}
+    C --&gt;|messages, provider, model| D[Apply middleware&lt;br/&gt;beforeRequest]
+
+    D --&gt; E[Inject Allternit system prompt]
+    E --&gt; F[Inject provider prompt]
+    F --&gt; G[Model registry fallback&lt;br/&gt;maxOutputTokens]
+
+    G --&gt; H{Config mode}
+    H --&gt;|byok| I[BYOK provider route]
+    H --&gt;|cloud| J[Allternit Cloud]
+    H --&gt;|local| K[Local model server]
+    H --&gt;|subprocess| L[Custom subprocess]
+
+    I --&gt; M[Provider API&lt;br/&gt;SSE stream]
+    J --&gt; M
+    K --&gt; M
+    L --&gt; M
+
+    M --&gt; N[Normalize chunks]
+    N --&gt; O{text / tool_call /&lt;br/&gt;citation / done}
+
+    O --&gt;|success| P[Apply middleware&lt;br/&gt;afterResponse]
+    O --&gt;|retryable error| Q[Retry middleware&lt;br/&gt;exponential backoff]
+    O --&gt;|refusal| R[Refusal fallback&lt;br/&gt;next model]
+
+    Q --&gt; M
+    R --&gt; M
+
+    P --&gt; S[Return response]
+    S --&gt; T[(llm_usage_events)]
+
+    style Client fill:#151517,stroke:#ec4899,stroke-width:2px
+    style T fill:#151517,stroke:#ec4899,stroke-width:2px</pre>
+
+  <h3>Request lifecycle</h3>
+  <p>Every gateway request follows the lifecycle shown above: request validation, middleware, prompt injection, model-registry fallback for omitted <code>max_tokens</code>, provider routing, chunk normalization, retry/fallback on errors, and finally a usage event plus routing decision record.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">bash</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>curl -sN "$ALLTERNIT_API_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "allternit-balanced",
+    "messages": [{"role": "user", "content": "Count to 3"}],
+    "stream": true,
+    "stream_options": {"include_usage": true}
+  }'</code></pre>
+  </div>
+</section>
+
+<section id="quotas" class="reveal">
+  <h2>Idempotency, batches, and rate limits</h2>
+  <p>Production workloads need more than streaming. The gateway adds three operational controls:</p>
+
+  <h3>Idempotency</h3>
+  <p>Non-streaming <code>POST /v1/chat/completions</code> honors an <code>Idempotency-Key</code> header. Duplicate keys for completed requests replay the stored response; duplicates for in-flight requests return <code>409 Conflict</code> with code <code>allternit.idempotency_conflict</code>. Streaming requests cannot be replayed, so the header is ignored when <code>stream: true</code>.</p>
+
+  <h3>Batches</h3>
+  <p><code>POST /v1/batches</code> stores a batch of completion requests and runs them asynchronously. Each request is validated against the key's model allowlist. The worker submits to the provider batch endpoint, polls to completion, and stores results behind <code>GET /v1/batches/:id/results</code>.</p>
+
+  <h3>Rate limits</h3>
+  <p><code>GET /v1/rate-limits</code> returns the caller's sliding-window request quota and token budget. Requests are counted per minute; tokens are drawn from the key's monthly budget and any tenant hard cap, with the tighter remaining value winning.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">bash</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>curl -s "$ALLTERNIT_API_URL/v1/batches" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requests": [
+      {"model": "allternit-balanced", "messages": [{"role": "user", "content": "Summarize A."}]},
+      {"model": "allternit-balanced", "messages": [{"role": "user", "content": "Summarize B."}]}
+    ]
+  }'
+
+curl -s "$ALLTERNIT_API_URL/v1/rate-limits" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"</code></pre>
+  </div>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="agents-api-m9-harness-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAyNCwgInRpbWVzdGFtcCI6IDE3NTg0NTAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4venNoIiwgIlRFUk0iOiAieHRlcm0tMjU2Y29sb3IifX0KWzAuMDAwMDAwLCAibyIsICIkIGNhdCBoYXJuZXNzLXN0cmVhbS50c1xyXG4iXQpbMC44MDAwMDAsICJvIiwgImltcG9ydCB7IEFsbHRlcm5pdEhhcm5lc3MgfSBmcm9tICdAYWxsdGVybml0L3Nkayc7XHJcblxyXG4iXQpbMS4yMDAwMDAsICJvIiwgImNvbnN0IGhhcm5lc3MgPSBuZXcgQWxsdGVybml0SGFybmVzcyh7XHJcbiJdClsxLjQwMDAwMCwgIm8iLCAiICBtb2RlOiAnYnlvaycsXHJcbiJdClsxLjYwMDAwMCwgIm8iLCAiICBieW9rOiB7IG9wZW5haTogeyBhcGlLZXk6IHByb2Nlc3MuZW52Lk9QRU5BSV9BUElfS0VZISB9IH0sXHJcbiJdClsxLjgwMDAwMCwgIm8iLCAiICBtaWRkbGV3YXJlOiB7XHJcbiJdClsyLjAwMDAwMCwgIm8iLCAiICAgIGJlZm9yZVJlcXVlc3Q6IGFzeW5jIChyZXEpID0+IHtcclxuIl0KWzIuMjAwMDAwLCAibyIsICIgICAgICBjb25zb2xlLmxvZygnW21pZGRsZXdhcmVdIHByb3ZpZGVyOicsIHJlcS5wcm92aWRlciwgJ21vZGVsOicsIHJlcS5tb2RlbCk7XHJcbiJdClsyLjQwMDAwMCwgIm8iLCAiICAgICAgcmV0dXJuIHJlcTtcclxuIl0KWzIuNjAwMDAwLCAibyIsICIgICAgfVxyXG4iXQpbMi44MDAwMDAsICJvIiwgIiAgfVxyXG4iXQpbMy4wMDAwMDAsICJvIiwgIn0pO1xyXG5cclxuIl0KWzMuNTAwMDAwLCAibyIsICJjb25zdCBzdHJlYW0gPSBoYXJuZXNzLnN0cmVhbSh7XHJcbiJdClszLjcwMDAwMCwgIm8iLCAiICBwcm92aWRlcjogJ29wZW5haScsXHJcbiJdClszLjkwMDAwMCwgIm8iLCAiICBtb2RlbDogJ2dwdC00bycsXHJcbiJdCls0LjEwMDAwMCwgIm8iLCAiICBtZXNzYWdlczogW3sgcm9sZTogJ3VzZXInLCBjb250ZW50OiAnQ291bnQgdG8gNScgfV0sXHJcbiJdCls0LjMwMDAwMCwgIm8iLCAifSk7XHJcblxyXG4iXQpbNC41MDAwMDAsICJvIiwgImZvciBhd2FpdCAoY29uc3QgY2h1bmsgb2Ygc3RyZWFtKSB7XHJcbiJdCls0LjcwMDAwMCwgIm8iLCAiICBpZiAoY2h1bmsudHlwZSA9PT0gJ3RleHQnKSBwcm9jZXNzLnN0ZG91dC53cml0ZShjaHVuay50ZXh0KTtcclxuIl0KWzQuOTAwMDAwLCAibyIsICIgIGlmIChjaHVuay50eXBlID09PSAnZG9uZScpIGNvbnNvbGUubG9nKCdcclxuJywgY2h1bmsudXNhZ2UpO1xyXG4iXQpbNS4xMDAwMDAsICJvIiwgIn1cclxuIl0KWzUuODAwMDAwLCAibyIsICIkIG5weCB0c3ggaGFybmVzcy1zdHJlYW0udHNcclxuIl0KWzYuNTAwMDAwLCAibyIsICJbbWlkZGxld2FyZV0gcHJvdmlkZXI6IG9wZW5haSBtb2RlbDogZ3B0LTRvXHJcbiJdCls3LjIwMDAwMCwgIm8iLCAiMSJdCls3LjM1MDAwMCwgIm8iLCAiICIgXQpbNy41MDAwMDAsICJvIiwgIjIiXQpbNy42NTAwMDAsICJvIiwgIiAiIF0KWzcuODAwMDAwLCAibyIsICIzIl0KWzcuOTUwMDAwLCAibyIsICIgIiBdCls4LjEwMDAwMCwgIm8iLCAiNCJdCls4LjI1MDAwMCwgIm8iLCAiICIgXQpbOC40MDAwMDAsICJvIiwgIjUiXQpbOS4wMDAwMDAsICJvIiwgIlxyXG4iXQpbOS41MDAwMDAsICJvIiwgInsgcHJvbXB0VG9rZW5zOiAxMiwgY29tcGxldGlvblRva2VuczogOSwgdG90YWxUb2tlbnM6IDIxIH1cclxuIl0KWzEwLjUwMDAwMCwgIm8iLCAiJCAiIF0=" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-num">1</span>
+      <h3>Which harness method preserves usage, citations, and stop reason in a single response object?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        <code>harness.complete()</code>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        <code>harness.run()</code>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        <code>harness.stream()</code>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="QuizEngine.reset(1)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-num">2</span>
+      <h3>Why is refusal fallback middleware installed before retry middleware?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        So fallback can switch models before retry wastes attempts on the same model
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        Because retry middleware does not support async generators
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        Because fallback only runs after response collection
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="QuizEngine.reset(2)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-num">3</span>
+      <h3>Which request type supports the <code>Idempotency-Key</code> header?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        Streaming chat completions
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        Non-streaming chat completions
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        Batch result retrieval
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="QuizEngine.reset(3)">Retry</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: build a resilient harness wrapper</h2>
+    <p>Create a small TypeScript service that wraps <code>AllternitHarness</code> and exposes a single <code>ask(question)</code> function. Your wrapper must:</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>1. Configure fallback</h4>
+        <p>Define at least two models in <code>fallbackModels</code> from distinct providers.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>2. Add middleware</h4>
+        <p>Log every request provider/model and every response's total token count.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>3. Test resilience</h4>
+        <p>Simulate a retryable error and verify the retry middleware re-attempts the stream.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>4. Gateway parity</h4>
+        <p>Make the same request through <code>POST /v1/chat/completions</code> using an <code>allternit-balanced</code> alias and confirm the response shape matches.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — AGENTS Tier — Module 9: Engineering: Harness</p>
+    <p style="margin-top:4px;">Generated from <code>sdk/allternit-sdk/src/ai-runtime/harness</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":0,"3":1}, {"1":{"correct":"Correct. harness.run() collects the stream into a HarnessResponse with content, usage, citations, and stopReason.","wrong":"Not quite. complete() returns only the content string. stream() yields raw chunks. run() is the method that preserves metadata."},"2":{"correct":"Correct. Refusal fallback is installed first so it can switch to a different model before retry middleware consumes retries on the refused model.","wrong":"Not quite. The retry middleware fully supports async generators. The ordering is specifically so fallback intercepts refusals first."},"3":{"correct":"Correct. The gateway honors Idempotency-Key only for non-streaming chat completions; streams cannot be replayed from a stored body.","wrong":"Not quite. Streaming requests ignore the header because they cannot be replayed, and batch results use GET, not idempotent POST semantics."}});
+
+    
+const canvas = document.getElementById('harnessNetworkCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ec4899';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(236,72,153,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

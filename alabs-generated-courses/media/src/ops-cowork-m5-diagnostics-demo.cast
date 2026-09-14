@@ -1,0 +1,11 @@
+{"version": 2, "width": 80, "height": 20, "timestamp": 1700000000, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.0, "o", "\u001b[1;32m$\u001b[0m gizzi auth status\r\n"]
+[0.5, "o", "Authenticated via OAuth token\r\n"]
+[1.0, "o", "\u001b[1;32m$\u001b[0m gizzi config show\r\n"]
+[1.5, "o", "default_model = \"openai/gpt-4o\"\r\napproval_policy = \"on-request\"\r\nsandbox_mode = \"workspace-write\"\r\nnetwork_access = false\r\n"]
+[2.5, "o", "\u001b[1;32m$\u001b[0m gizzi config list --sources\r\n"]
+[3.0, "o", "~/.gizzi/config.toml\r\n~/.gizzi/profiles/team-review.toml\r\n.gizzi/config.toml\r\n"]
+[4.0, "o", "\u001b[1;32m$\u001b[0m gizzi metrics --last-hour\r\n"]
+[4.6, "o", "requests: 142\r\ntool_approvals: 38\r\ntimeouts: 2\r\navg_latency_ms: 890\r\n"]
+[5.5, "o", "\u001b[1;32m$\u001b[0m tail -n 20 ~/.gizzi/logs/gizzi-2026-08-23.log\r\n"]
+[6.2, "o", "INFO  hook executed: post-tool-use\r\nINFO  approval resolved: approved\r\nWARN  high latency on provider request\r\n"]

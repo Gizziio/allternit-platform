@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 8: Bridge: Production Deployment — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ec4899;
+      --accent-dim: rgba(236,72,153,0.15);
+      --accent-glow: rgba(236,72,153,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #f472b6);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(236,72,153,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#deployNetworkCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(236,72,153,0.12); color: #f472b6; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#ec4899', primaryTextColor: '#e5e5e5', primaryBorderColor: '#ec4899', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#api" data-section="api">API</a></li>
+        <li><a href="#failover" data-section="failover">Failover</a></li>
+        <li><a href="#security" data-section="security">Security</a></li>
+        <li><a href="#gateway" data-section="gateway">Gateway</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">AGENTS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="deployNetworkCanvas"></canvas>
+  <span class="hero-badge">AGENTS Tier</span>
+  <h1>Module 8: <em>Bridge: Production Deployment</em></h1>
+  <p>Learn how to deploy Allternit agents at scale: OpenAI-compatible API semantics, rate limits, idempotency, retries, batch jobs, provider failover, and the security controls that guard every request.</p>
+  <div class="hero-meta">
+    <span><strong>6 lessons</strong> · ~50 minutes</span>
+    <span>Source: <code>cmd/allternit-api/src/llm_gateway</code></span>
+  </div>
+</section>
+
+<section id="api" class="reveal">
+  <h2>The public API surface</h2>
+  <p>The public Allternit API is mounted at <code>/v1</code> and is backed by the Gizzi runtime. It uses virtual-key authentication and returns OpenAI-compatible request and response shapes, with Allternit-specific error codes such as <code>allternit.rate_limited</code>, <code>allternit.budget_exceeded</code>, and <code>allternit.idempotency_conflict</code>.</p>
+
+  <h3>Rate limits and budgets</h3>
+  <p><code>GET /v1/rate-limits</code> returns the caller's sliding-window request rate and token budget. Requests are capped per minute; tokens are capped monthly or by a tenant hard cap, whichever is tighter. When a limit is exceeded the gateway returns <code>429 Too Many Requests</code> with code <code>allternit.rate_limited</code> or <code>allternit.budget_exceeded</code>.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">bash</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>curl -s "$ALLTERNIT_API_URL/rate-limits" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"</code></pre>
+  </div>
+
+  <h3>Idempotency</h3>
+  <p>The gateway honors <code>Idempotency-Key</code> for non-streaming <code>POST /v1/chat/completions</code> only. Streaming requests cannot be replayed from a stored body, so the header is ignored when <code>stream: true</code>.</p>
+  <ul>
+    <li>The key must be 1–255 ASCII characters.</li>
+    <li>A duplicate key for a completed request replays the stored body with <code>200 OK</code>.</li>
+    <li>A duplicate key for an in-flight request returns <code>409 Conflict</code> with <code>allternit.idempotency_conflict</code>.</li>
+    <li>An <code>in_progress</code> row older than 10 minutes is treated as abandoned and may be retried.</li>
+  </ul>
+
+  <h3>Batches</h3>
+  <p><code>POST /v1/batches</code> stores a collection of chat-completion requests for asynchronous execution. The worker validates each request, checks it against the key's model allowlist, posts to the provider batch endpoint, and polls to completion. Status flows <code>validating → in_progress → completed/failed/cancelled</code>. Results are retrieved with <code>GET /v1/batches/:id/results</code>.</p>
+
+  <div class="callout info">
+    <p><strong>Operational note:</strong> Use idempotency for synchronous retries, batches for offline throughput, and rate-limit headers for client-side pacing.</p>
+  </div>
+</section>
+
+<section id="failover" class="reveal">
+  <h2>Provider registry and failover</h2>
+  <p>Provider metadata lives in two places: the TypeScript SDK's <code>PROVIDER_REGISTRY</code> and the API's <code>GET /v1/models</code> endpoint, enriched with limits from the Gizzi provider catalog. Each entry carries feature flags, default model, supported models, and API-key requirements.</p>
+
+  <h3>Policy aliases and routing</h3>
+  <p>The caller can pass a concrete <code>provider/model</code> id or a policy alias such as <code>auto</code>, <code>allternit-balanced</code>, <code>allternit-code</code>, <code>allternit-reasoning</code>, <code>allternit-knowledge</code>, or <code>allternit-instruct</code>. Aliases are owned by Allternit and resolved at request time by the B5 router, which scores the connected provider catalog and derives a primary model plus a fallback chain.</p>
+
+  <h3>Retry/failover engine</h3>
+  <p>The <code>failover.rs</code> module decides when a failed or refused completion should be retried, how long to back off, and which model to try next. It is intentionally kept pure so the policy rules can be unit-tested without a live runtime.</p>
+
+  <ul>
+    <li><strong>Retry policy</strong> is loaded per organization from <code>fallback_retry_policies</code>. Defaults include max 2 retries, exponential backoff from 500ms to 8000ms, and full jitter.</li>
+    <li><strong>Retryable statuses</strong> include refusal, error, rate_limited, and timeout.</li>
+    <li><strong>Fallback chain</strong> sends the top distinct-provider candidates to Gizzi as <code>fallbackModels</code>.</li>
+  </ul>
+
+  <pre class="mermaid alabs-media" data-media-id="agents-api-m8-deployment-failover">flowchart LR
+    subgraph Client["Client"]
+        A[Bearer ak-...]
+    end
+
+    A --&gt; B[Idempotency check]
+    B --&gt; C[Virtual-key auth]
+    C --&gt; D[Rate limit]
+    D --&gt; E[DLP scan]
+    E --&gt; F[Budget pre-check]
+    F --&gt; G[Model resolution]
+    G --&gt; H{Primary provider}
+
+    H --&gt;|success| I[Collect response]
+    H --&gt;|refusal/error| J[Retry policy]
+    J --&gt; K{Fallback available?}
+    K --&gt;|yes| L[Next provider]
+    K --&gt;|no| M[Return error]
+    L --&gt; H
+
+    I --&gt; N[(llm_usage_events)]
+
+    style A fill:#151517,stroke:#ec4899,stroke-width:2px
+    style N fill:#151517,stroke:#ec4899,stroke-width:2px
+    style H fill:#1c1c1f,stroke:#ec4899
+    style L fill:#1c1c1f,stroke:#ec4899</pre>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">rust</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>// Retry policy defaults
+RetryPolicy {
+    enabled: true,
+    max_retries: 2,
+    retryable_statuses: ["refusal", "error", "rate_limited", "timeout"],
+    retryable_errors: ["*"],
+    base_delay_ms: 500,
+    max_delay_ms: 8000,
+    fallback_chain_enabled: true,
+}
+
+// Attempt 1 uses primary; attempt 2 uses first fallback, etc.
+let model = select_fallback(attempt, primary, fallbacks, policy);</code></pre>
+  </div>
+
+  <div class="walkthrough-container" data-walkthrough-container="agents-api-m8-failover-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="agents-api-m8-failover-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('agents-api-m8-failover-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 5</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('agents-api-m8-failover-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="agents-api-m8-failover-walkthrough-step-0" data-walkthrough="agents-api-m8-failover-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Retry policy struct</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>RetryPolicy defines the knobs: enabled, max_retries, retryable statuses and errors, base and max delay, and whether the fallback chain is enabled.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">rust</span>
+      <span class="code-path">cmd/allternit-api/src/llm_gateway/failover.rs</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="16">
+        <span class="line-no"> 16</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="17">
+        <span class="line-no"> 17</span>
+        <span class="line-code"><span class="token-comment">/// Retry policy loaded <span class=<span class="token-string">"token-keyword"</span>>from</span> `fallback_retry_policies`.</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="18">
+        <span class="line-no"> 18</span>
+        <span class="line-code">#[derive(Debug, Clone, PartialEq)]</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="19">
+        <span class="line-no"> 19</span>
+        <span class="line-code">pub struct RetryPolicy {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="20">
+        <span class="line-no"> 20</span>
+        <span class="line-code">    pub enabled: bool,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="21">
+        <span class="line-no"> 21</span>
+        <span class="line-code">    pub max_retries: i64,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="22">
+        <span class="line-no"> 22</span>
+        <span class="line-code">    pub retryable_statuses: HashSet&lt;String&gt;,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="23">
+        <span class="line-no"> 23</span>
+        <span class="line-code">    pub retryable_errors: HashSet&lt;String&gt;,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="24">
+        <span class="line-no"> 24</span>
+        <span class="line-code">    pub base_delay_ms: i64,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="25">
+        <span class="line-no"> 25</span>
+        <span class="line-code">    pub max_delay_ms: i64,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="26">
+        <span class="line-no"> 26</span>
+        <span class="line-code">    pub fallback_chain_enabled: bool,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="27">
+        <span class="line-no"> 27</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="28">
+        <span class="line-no"> 28</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="29">
+        <span class="line-no"> 29</span>
+        <span class="line-code">impl Default <span class=<span class="token-string">"token-keyword"</span>>for</span> RetryPolicy {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="30">
+        <span class="line-no"> 30</span>
+        <span class="line-code">    fn default() -&gt; Self {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="31">
+        <span class="line-no"> 31</span>
+        <span class="line-code">        Self {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="32">
+        <span class="line-no"> 32</span>
+        <span class="line-code">            enabled: <span class=<span class="token-string">"token-keyword"</span>>true</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="33">
+        <span class="line-no"> 33</span>
+        <span class="line-code">            max_retries: <span class="token-number">2</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="34">
+        <span class="line-no"> 34</span>
+        <span class="line-code">            retryable_statuses: [<span class="token-string">"refusal"</span>, <span class="token-string">"error"</span>, <span class="token-string">"rate_limited"</span>, <span class="token-string">"timeout"</span>]</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="35">
+        <span class="line-no"> 35</span>
+        <span class="line-code">                .iter()</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="36">
+        <span class="line-no"> 36</span>
+        <span class="line-code">                .map(|s| s.to_string())</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="37">
+        <span class="line-no"> 37</span>
+        <span class="line-code">                .collect(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="38">
+        <span class="line-no"> 38</span>
+        <span class="line-code">            retryable_errors: [<span class="token-string">"*"</span>].iter().map(|s| s.to_string()).collect(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="39">
+        <span class="line-no"> 39</span>
+        <span class="line-code">            base_delay_ms: <span class="token-number">500</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="40">
+        <span class="line-no"> 40</span>
+        <span class="line-code">            max_delay_ms: <span class="token-number">8000</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="41">
+        <span class="line-no"> 41</span>
+        <span class="line-code">            fallback_chain_enabled: <span class=<span class="token-string">"token-keyword"</span>>true</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="42">
+        <span class="line-no"> 42</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="43">
+        <span class="line-no"> 43</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="44">
+        <span class="line-no"> 44</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="45">
+        <span class="line-no"> 45</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="46">
+        <span class="line-no"> 46</span>
+        <span class="line-code">#[derive(Debug, thiserror::Error)]</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m8-failover-walkthrough-step-1" data-walkthrough="agents-api-m8-failover-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Load organization policy</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>load_policy reads the organization's fallback_retry_policies row from SQLite, returning the default policy when no row exists.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">rust</span>
+      <span class="code-path">cmd/allternit-api/src/llm_gateway/failover.rs</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="60">
+        <span class="line-no"> 60</span>
+        <span class="line-code"><span class="token-comment">/// Load the retry policy <span class=<span class="token-string">"token-keyword"</span>>for</span> an organization. Returns the default policy <span class=<span class="token-string">"token-keyword"</span>>if</span> no</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="61">
+        <span class="line-no"> 61</span>
+        <span class="line-code"><span class="token-comment">/// row exists.</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="62">
+        <span class="line-no"> 62</span>
+        <span class="line-code">pub fn load_policy(db: &amp;DbHandle, org_id: &amp;str) -&gt; Result&lt;RetryPolicy, LoadError&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="63">
+        <span class="line-no"> 63</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> conn = db.connect()?;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="64">
+        <span class="line-no"> 64</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> row: Option&lt;(i64, i64, String, String, i64, i64, i64)&gt; = conn</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="65">
+        <span class="line-no"> 65</span>
+        <span class="line-code">        .query_row(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="66">
+        <span class="line-no"> 66</span>
+        <span class="line-code">            "SELECT enabled, max_retries, retryable_statuses, retryable_errors,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="67">
+        <span class="line-no"> 67</span>
+        <span class="line-code">                    base_delay_ms, max_delay_ms, fallback_chain_enabled</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="68">
+        <span class="line-no"> 68</span>
+        <span class="line-code">             FROM fallback_retry_policies</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="69">
+        <span class="line-no"> 69</span>
+        <span class="line-code">             WHERE org_id = ?<span class="token-number">1</span>",</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="70">
+        <span class="line-no"> 70</span>
+        <span class="line-code">            [org_id],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="71">
+        <span class="line-no"> 71</span>
+        <span class="line-code">            |row| {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="72">
+        <span class="line-no"> 72</span>
+        <span class="line-code">                Ok((</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="73">
+        <span class="line-no"> 73</span>
+        <span class="line-code">                    row.get(<span class="token-number">0</span>)?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="74">
+        <span class="line-no"> 74</span>
+        <span class="line-code">                    row.get(<span class="token-number">1</span>)?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="75">
+        <span class="line-no"> 75</span>
+        <span class="line-code">                    row.get(<span class="token-number">2</span>)?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="76">
+        <span class="line-no"> 76</span>
+        <span class="line-code">                    row.get(<span class="token-number">3</span>)?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="77">
+        <span class="line-no"> 77</span>
+        <span class="line-code">                    row.get(<span class="token-number">4</span>)?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="78">
+        <span class="line-no"> 78</span>
+        <span class="line-code">                    row.get(<span class="token-number">5</span>)?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="79">
+        <span class="line-no"> 79</span>
+        <span class="line-code">                    row.get(<span class="token-number">6</span>)?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="80">
+        <span class="line-no"> 80</span>
+        <span class="line-code">                ))</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="81">
+        <span class="line-no"> 81</span>
+        <span class="line-code">            },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="82">
+        <span class="line-no"> 82</span>
+        <span class="line-code">        )</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="83">
+        <span class="line-no"> 83</span>
+        <span class="line-code">        .optional()?;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="84">
+        <span class="line-no"> 84</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="85">
+        <span class="line-no"> 85</span>
+        <span class="line-code">    match row {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="86">
+        <span class="line-no"> 86</span>
+        <span class="line-code">        Some((enabled, max_retries, statuses_json, errors_json, base_delay, max_delay, fallback)) =&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="87">
+        <span class="line-no"> 87</span>
+        <span class="line-code">            Ok(RetryPolicy {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="88">
+        <span class="line-no"> 88</span>
+        <span class="line-code">                enabled: enabled == <span class="token-number">1</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="89">
+        <span class="line-no"> 89</span>
+        <span class="line-code">                max_retries,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="90">
+        <span class="line-no"> 90</span>
+        <span class="line-code">                retryable_statuses: parse_string_set(statuses_json.as_str())?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="91">
+        <span class="line-no"> 91</span>
+        <span class="line-code">                retryable_errors: parse_string_set(errors_json.as_str())?,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="92">
+        <span class="line-no"> 92</span>
+        <span class="line-code">                base_delay_ms: base_delay,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="93">
+        <span class="line-no"> 93</span>
+        <span class="line-code">                max_delay_ms: max_delay,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="94">
+        <span class="line-no"> 94</span>
+        <span class="line-code">                fallback_chain_enabled: fallback == <span class="token-number">1</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="95">
+        <span class="line-no"> 95</span>
+        <span class="line-code">            })</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="96">
+        <span class="line-no"> 96</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="97">
+        <span class="line-no"> 97</span>
+        <span class="line-code">        None =&gt; Ok(RetryPolicy::default()),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="98">
+        <span class="line-no"> 98</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="99">
+        <span class="line-no"> 99</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="100">
+        <span class="line-no">100</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="101">
+        <span class="line-no">101</span>
+        <span class="line-code"><span class="token-comment">/// Decide whether a request outcome warrants another attempt.</span></span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m8-failover-walkthrough-step-2" data-walkthrough="agents-api-m8-failover-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Decide whether to retry</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>should_retry checks that the policy is enabled, the attempt is within max_retries, the status is retryable, and either the error wildcard matches or the error type is in the allowlist.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">rust</span>
+      <span class="code-path">cmd/allternit-api/src/llm_gateway/failover.rs</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="100">
+        <span class="line-no">100</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="101">
+        <span class="line-no">101</span>
+        <span class="line-code"><span class="token-comment">/// Decide whether a request outcome warrants another attempt.</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="102">
+        <span class="line-no">102</span>
+        <span class="line-code">pub fn should_retry(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="103">
+        <span class="line-no">103</span>
+        <span class="line-code">    status: &amp;str,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="104">
+        <span class="line-no">104</span>
+        <span class="line-code">    error_type: Option&lt;&amp;str&gt;,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="105">
+        <span class="line-no">105</span>
+        <span class="line-code">    attempt: u32,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="106">
+        <span class="line-no">106</span>
+        <span class="line-code">    policy: &amp;RetryPolicy,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="107">
+        <span class="line-no">107</span>
+        <span class="line-code">) -&gt; bool {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="108">
+        <span class="line-no">108</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> !policy.enabled || attempt == <span class="token-number">0</span> || attempt &gt; policy.max_retries as u32 {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="109">
+        <span class="line-no">109</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>return</span> <span class=<span class="token-string">"token-keyword"</span>>false</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="110">
+        <span class="line-no">110</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="111">
+        <span class="line-no">111</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> !policy.retryable_statuses.contains(status) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="112">
+        <span class="line-no">112</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>return</span> <span class=<span class="token-string">"token-keyword"</span>>false</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="113">
+        <span class="line-no">113</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="114">
+        <span class="line-no">114</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> policy.retryable_errors.contains(<span class="token-string">"*"</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="115">
+        <span class="line-no">115</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>return</span> <span class=<span class="token-string">"token-keyword"</span>>true</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="116">
+        <span class="line-no">116</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="117">
+        <span class="line-no">117</span>
+        <span class="line-code">    match error_type {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="118">
+        <span class="line-no">118</span>
+        <span class="line-code">        Some(error) =&gt; policy.retryable_errors.iter().any(|e| error.contains(e)),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="119">
+        <span class="line-no">119</span>
+        <span class="line-code">        None =&gt; <span class=<span class="token-string">"token-keyword"</span>>true</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="120">
+        <span class="line-no">120</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="121">
+        <span class="line-no">121</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="122">
+        <span class="line-no">122</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="123">
+        <span class="line-no">123</span>
+        <span class="line-code"><span class="token-comment">/// Compute the backoff delay <span class=<span class="token-string">"token-keyword"</span>>for</span> a given attempt using exponential backoff with</span></span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m8-failover-walkthrough-step-3" data-walkthrough="agents-api-m8-failover-walkthrough" data-step="3">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 4</span>
+    <h4>Compute backoff delay</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>next_backoff_ms uses exponential backoff capped at max_delay_ms and applies full jitter so retries do not thunder against the upstream.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">rust</span>
+      <span class="code-path">cmd/allternit-api/src/llm_gateway/failover.rs</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="123">
+        <span class="line-no">123</span>
+        <span class="line-code"><span class="token-comment">/// Compute the backoff delay <span class=<span class="token-string">"token-keyword"</span>>for</span> a given attempt using exponential backoff with</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="124">
+        <span class="line-no">124</span>
+        <span class="line-code"><span class="token-comment">/// full jitter. `attempt` is <span class="token-number">1</span>-based.</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="125">
+        <span class="line-no">125</span>
+        <span class="line-code">pub fn next_backoff_ms(attempt: u32, base_delay_ms: i64, max_delay_ms: i64) -&gt; u64 {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="126">
+        <span class="line-no">126</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> base = base_delay_ms.max(<span class="token-number">1</span>) as u64;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="127">
+        <span class="line-no">127</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> max = (max_delay_ms as u64).max(base);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="128">
+        <span class="line-no">128</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> exponential = base.saturating_mul(2u64.saturating_pow(attempt.saturating_sub(<span class="token-number">1</span>)));</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="129">
+        <span class="line-no">129</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> capped = exponential.min(max);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="130">
+        <span class="line-no">130</span>
+        <span class="line-code">    <span class="token-comment">// Full jitter: sleep a random duration in [<span class="token-number">0</span>, capped].</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="131">
+        <span class="line-no">131</span>
+        <span class="line-code">    rand::random::&lt;u64&gt;() % (capped + <span class="token-number">1</span>)</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="132">
+        <span class="line-no">132</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="133">
+        <span class="line-no">133</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="134">
+        <span class="line-no">134</span>
+        <span class="line-code"><span class="token-comment">/// A candidate model reference.</span></span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m8-failover-walkthrough-step-4" data-walkthrough="agents-api-m8-failover-walkthrough" data-step="4">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 5</span>
+    <h4>Select primary or fallback model</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>select_fallback returns the primary model on attempt 1 and walks the fallback chain on subsequent attempts. If the chain is disabled, it always returns the primary.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">rust</span>
+      <span class="code-path">cmd/allternit-api/src/llm_gateway/failover.rs</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="147">
+        <span class="line-no">147</span>
+        <span class="line-code"><span class="token-comment">/// Select the model to use <span class=<span class="token-string">"token-keyword"</span>>for</span> a retry. `attempt` is <span class="token-number">1</span>-based: attempt <span class="token-number">1</span> uses</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="148">
+        <span class="line-no">148</span>
+        <span class="line-code"><span class="token-comment">/// the primary model, attempt <span class="token-number">2</span> uses the first fallback, and so on.</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="149">
+        <span class="line-no">149</span>
+        <span class="line-code">pub fn select_fallback(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="150">
+        <span class="line-no">150</span>
+        <span class="line-code">    attempt: u32,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="151">
+        <span class="line-no">151</span>
+        <span class="line-code">    primary: &amp;ModelRef,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="152">
+        <span class="line-no">152</span>
+        <span class="line-code">    fallbacks: &amp;[ModelRef],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="153">
+        <span class="line-no">153</span>
+        <span class="line-code">    policy: &amp;RetryPolicy,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="154">
+        <span class="line-no">154</span>
+        <span class="line-code">) -&gt; Option&lt;ModelRef&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="155">
+        <span class="line-no">155</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> !policy.fallback_chain_enabled {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="156">
+        <span class="line-no">156</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>return</span> Some(primary.clone());</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="157">
+        <span class="line-no">157</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="158">
+        <span class="line-no">158</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> attempt == <span class="token-number">1</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="159">
+        <span class="line-no">159</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>return</span> Some(primary.clone());</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="160">
+        <span class="line-no">160</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="161">
+        <span class="line-no">161</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> idx = attempt.saturating_sub(<span class="token-number">2</span>) as usize;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="162">
+        <span class="line-no">162</span>
+        <span class="line-code">    fallbacks.get(idx).cloned()</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="163">
+        <span class="line-no">163</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="164">
+        <span class="line-no">164</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="165">
+        <span class="line-no">165</span>
+        <span class="line-code">#[cfg(test)]</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="security" class="reveal">
+  <h2>Security model</h2>
+  <p>Allternit uses two authentication modes. Clerk JWTs protect the web/desktop UI and admin APIs, scoping sessions to organization and role. Virtual LLM keys (<code>ak-…</code>) protect the <code>/v1</code> surface; each key is tied to an organization, optional model allowlist, monthly budget, and rate limit.</p>
+
+  <h3>Authorization and data protection</h3>
+  <ul>
+    <li><strong>RBAC.</strong> Owners and admins manage workspaces, keys, budgets, DLP rules, and analytics. Members are restricted to permitted resources.</li>
+    <li><strong>Model allowlists.</strong> Virtual keys can be restricted to specific models or aliases, preventing calls to unapproved providers.</li>
+    <li><strong>Workspace isolation.</strong> Agents, sessions, files, and memory are scoped to an organization and, where applicable, to individual users.</li>
+    <li><strong>Encryption.</strong> All traffic uses TLS. SQLite databases and vault stores encrypt sensitive values; connector tokens and vault entries use a configurable encryption key.</li>
+  </ul>
+
+  <h3>DLP and prompt safety</h3>
+  <p>The LLM gateway scans outgoing requests for secrets, PII, and prompt-injection patterns. Detections can warn, redact, or block. Admin endpoints can score user text against system prompts to detect accidental leakage. Strict tool-use validation closes schemas with <code>additionalProperties: false</code> to reduce injection surface.</p>
+
+  <div class="callout info">
+    <p><strong>Threat mitigation:</strong> stolen keys are bounded by rate limits and budgets; secret exfiltration is caught by DLP; provider credentials never reach clients.</p>
+  </div>
+</section>
+
+<section id="gateway" class="reveal">
+  <h2>Gateway middleware pipeline</h2>
+  <p>Every <code>/v1</code> request passes through a layered middleware chain before it reaches the Gizzi runtime. The order matters: auth first, then rate limiting, then DLP, then budget pre-check.</p>
+
+  <table>
+    <thead>
+      <tr><th>Layer</th><th>Responsibility</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>idempotency_key_middleware</code></td><td>Reject malformed Idempotency-Key headers before spend.</td></tr>
+      <tr><td><code>llm_key_middleware</code></td><td>Resolve Bearer <code>ak-…</code> to an organization and key context.</td></tr>
+      <tr><td><code>rate_limit_middleware</code></td><td>Enforce per-key sliding-window request limits.</td></tr>
+      <tr><td><code>dlp_middleware</code></td><td>Scan for secrets, PII, and injection patterns.</td></tr>
+      <tr><td><code>budget_middleware</code></td><td>Pre-check monthly and tenant token budgets.</td></tr>
+      <tr><td><code>proxy::chat_completions</code></td><td>Resolve model, create Gizzi session, collect events, record usage.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Usage recording</h3>
+  <p>Every completed request writes one <code>llm_usage_events</code> row with tokens, cost, latency, provider, model, fallback history, and routing decision. The gateway recomputes cost server-side from a cached price matrix and flags mismatches greater than 1%. Prometheus counters and histograms are emitted from the same choke point.</p>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="agents-api-m8-cli-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAyNCwgInRpbWVzdGFtcCI6IDE3NTg0NTAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4venNoIiwgIlRFUk0iOiAieHRlcm0tMjU2Y29sb3IifX0KWzAuMDAwMDAwLCAibyIsICIkIGV4cG9ydCBBTExURVJOSVRfQVBJX1VSTD1odHRwOi8vMTI3LjAuMC4xOjgwMTMvdjFcclxuIl0KWzAuNTAwMDAwLCAibyIsICIkIGV4cG9ydCBBTExURVJOSVRfQVBJX0tFWT1ha18uLi5cclxuIl0KWzEuMDAwMDAwLCAibyIsICIkIGN1cmwgLXMgXCIkQUxMVEVSTklUX0FQSV9VUkwvcmF0ZS1saW1pdHNcIiBcXFxyXG4iXQpbMS40MDAwMDAsICJvIiwgIiAgICAtSCBcIkF1dGhvcml6YXRpb246IEJlYXJlciAkQUxMVEVSTklUX0FQSV9LRVlcIlxyXG4iXQpbMi41MDAwMDAsICJvIiwgIntcclxuIl0KWzIuNzAwMDAwLCAibyIsICIgIFwib2JqZWN0XCI6IFwicmF0ZV9saW1pdHNcIixcclxuIl0KWzIuOTAwMDAwLCAibyIsICIgIFwicmVxdWVzdHNfcmVtYWluaW5nXCI6IDU5OCxcclxuIl0KWzMuMTAwMDAwLCAibyIsICIgIFwicmVxdWVzdHNfbGltaXRcIjogNjAwLFxyXG4iXQpbMy4zMDAwMDAsICJvIiwgIiAgXCJ0b2tlbnNfcmVtYWluaW5nXCI6IDk4NyxcclxuIl0KWzMuNTAwMDAwLCAibyIsICIgIFwidG9rZW5zX2xpbWl0XCI6IDEwMDAsXHJcbiJdClszLjcwMDAwMCwgIm8iLCAiICBcInJlc2V0X2F0XCI6IFwiMjAyNi0wOC0wOVQwOTowMTowMFpcIlxyXG4iXQpbMy45MDAwMDAsICJvIiwgIn1cclxuIl0KWzUuMDAwMDAwLCAibyIsICIkIGN1cmwgLXMgLVggUE9TVCBcIiRBTExURVJOSVRfQVBJX1VSTC9jaGF0L2NvbXBsZXRpb25zXCIgXFxcclxuIl0KWzUuNDAwMDAwLCAibyIsICIgICAgLUggXCJBdXRob3JpemF0aW9uOiBCZWFyZXIgJEFMTFRFUk5JVF9BUElfS0VZXCIgXFxcclxuIl0KWzUuODAwMDAwLCAibyIsICIgICAgLUggXCJDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb25cIiBcXFxyXG4iXQpbNi4yMDAwMDAsICJvIiwgIiAgICAtSCBcIklkZW1wb3RlbmN5LUtleTogc3VtbWFyaXplLTQyXCIgXFxcclxuIl0KWzYuNjAwMDAwLCAibyIsICIgICAgLWQgJ3tcIm1vZGVsXCI6XCJhbGx0ZXJuaXQtYmFsYW5jZWRcIixcIm1lc3NhZ2VzXCI6W3tcInJvbGVcIjpcInVzZXJcIixcImNvbnRlbnRcIjpcIlN1bW1hcml6ZSB0aGUgc2VjdXJpdHkgbW9kZWwuXCJ9XX0nIHwganEgLm1vZGVsXHJcbiJdCls4LjUwMDAwMCwgIm8iLCAiXCJhbGx0ZXJuaXQtYmFsYW5jZWRcIlxyXG4iXQpbMTAuMDAwMDAwLCAibyIsICIkIGN1cmwgLXMgLVggUE9TVCBcIiRBTExURVJOSVRfQVBJX1VSTC9iYXRjaGVzXCIgXFxcclxuIl0KWzEwLjQwMDAwMCwgIm8iLCAiICAgIC1IIFwiQXV0aG9yaXphdGlvbjogQmVhcmVyICRBTExURVJOSVRfQVBJX0tFWVwiIFxcXHJcbiJdClsxMC44MDAwMDAsICJvIiwgIiAgICAtSCBcIkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvblwiIFxcXHJcbiJdClsxMS4yMDAwMDAsICJvIiwgIiAgICAtZCAne1wicmVxdWVzdHNcIjpbe1wibW9kZWxcIjpcImFsbHRlcm5pdC1iYWxhbmNlZFwiLFwibWVzc2FnZXNcIjpbe1wicm9sZVwiOlwidXNlclwiLFwiY29udGVudFwiOlwiQ2xhc3NpZnkgQVwifV19LHtcIm1vZGVsXCI6XCJhbGx0ZXJuaXQtYmFsYW5jZWRcIixcIm1lc3NhZ2VzXCI6W3tcInJvbGVcIjpcInVzZXJcIixcImNvbnRlbnRcIjpcIkNsYXNzaWZ5IEJcIn1dfV19J1xyXG4iXQpbMTMuMDAwMDAwLCAibyIsICJ7XCJpZFwiOlwiYmF0Y2hfMDFKNC4uLlwiLFwic3RhdHVzXCI6XCJ2YWxpZGF0aW5nXCIsXCJyZXF1ZXN0X2NvdW50XCI6Mn1cclxuIl0KWzE0LjUwMDAwMCwgIm8iLCAiJCAiXQ==" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-num">1</span>
+      <h3>For which request type does the gateway honor <code>Idempotency-Key</code>?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        All chat-completion requests, including streaming
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        Non-streaming <code>POST /v1/chat/completions</code> only
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        Batch result retrieval via <code>GET /v1/batches/:id/results</code>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)">
+        <span class="radio"></span>
+        Rate-limit checks via <code>GET /v1/rate-limits</code>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="QuizEngine.reset(1)">Try again</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-num">2</span>
+      <h3>What is the first fallback model used on attempt 2?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        The same primary model, retried immediately
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        The first entry in the fallback chain derived by the router
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        A fixed hard-coded model in the gateway config
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)">
+        <span class="radio"></span>
+        The cheapest model regardless of capability
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="QuizEngine.reset(2)">Try again</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-num">3</span>
+      <h3>In the gateway middleware chain, which layer runs just before the budget pre-check?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        Virtual-key authentication
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        Rate-limit middleware
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        DLP scanning
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)">
+        <span class="radio"></span>
+        Idempotency-key validation
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="QuizEngine.reset(3)">Try again</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Deploy a resilient agent service</h2>
+    <p>Apply the production controls from this module to a real agent workload.</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>Goal</h4>
+        <p>Build a small service that calls <code>POST /v1/chat/completions</code> with an Idempotency-Key, handles 429 retries with exponential backoff, and falls back through the policy alias chain.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Constraints</h4>
+        <p>Respect <code>x-allternit-fallback</code> headers, log usage rows, and cap monthly spend via a virtual-key budget.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Deliverable</h4>
+        <p>A deployment diagram, the client code, and a runbook for rotating a virtual key without downtime.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Stretch</h4>
+        <p>Submit a batch of 50 classification requests to <code>/v1/batches</code> and poll the results endpoint to completion.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — AGENTS Tier — Module 8: Bridge: Production Deployment</p>
+    <p style="margin-top:4px;">Generated from <code>cmd/allternit-api/src/llm_gateway</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":1,"3":2}, {"1":{"correct":"Correct. Idempotency-Key is honored only for non-streaming POST /v1/chat/completions because streams cannot be replayed from a stored body.","wrong":"Not quite. Streaming requests ignore the header. Batch results use GET, and rate-limits are read-only."},"2":{"correct":"Correct. select_fallback uses the primary model on attempt 1 and the first entry in the fallback chain on attempt 2.","wrong":"Not quite. The retry engine does not reuse the primary model on attempt 2 unless the fallback chain is disabled. The router derives the chain from the connected provider catalog."},"3":{"correct":"Correct. The execution order is idempotency validation → auth → rate limit → DLP → budget. DLP runs immediately before the budget pre-check so secrets are caught before spend.","wrong":"Not quite. Auth and rate limiting run before DLP. Idempotency validation is first. DLP is the layer just before budget."}});
+
+    
+const canvas = document.getElementById('deployNetworkCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ec4899';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(236,72,153,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

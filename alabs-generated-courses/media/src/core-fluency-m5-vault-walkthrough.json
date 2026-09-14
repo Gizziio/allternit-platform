@@ -1,0 +1,22 @@
+{
+  "file": "docs/public/security/vault.md",
+  "language": "markdown",
+  "contextLines": 2,
+  "steps": [
+    {
+      "title": "Vault scopes",
+      "lines": [12, 22],
+      "note": "Vault routes accept Clerk sessions or scoped enterprise tokens. vault:read grants GET access, vault:write grants mutation, and * grants everything. CredentialContext.allows_request maps HTTP methods and paths to these scopes."
+    },
+    {
+      "title": "Sealing credentials",
+      "lines": [75, 100],
+      "note": "The plaintext oauth_value is sealed with token_crypto::seal before it is written to allternit_vault_credentials.encrypted_value. The credential list API never returns plaintext."
+    },
+    {
+      "title": "Revocation without deletion",
+      "lines": [125, 133],
+      "note": "Revocation sets revoked_at without deleting the row. This preserves an audit trail while preventing the credential from being used again."
+    }
+  ]
+}

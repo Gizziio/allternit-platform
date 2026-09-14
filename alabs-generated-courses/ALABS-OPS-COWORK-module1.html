@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{MODULE_TITLE}} — A://Labs</title>
+  <title>Module 1: Cowork Workspaces and Context — A://Labs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -21,9 +21,9 @@
       --text: #e5e5e5;
       --text-secondary: #a1a1aa;
       --text-muted: #71717a;
-      --accent: {{ACCENT_COLOR}};
-      --accent-dim: {{ACCENT_DIM}};
-      --accent-glow: {{ACCENT_GLOW}};
+      --accent: #8b5cf6;
+      --accent-dim: rgba(139,92,246,0.15);
+      --accent-glow: rgba(139,92,246,0.4);
       --success: #22c55e;
       --error: #ef4444;
       --info: #3b82f6;
@@ -56,7 +56,7 @@
     #progress-bar {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, var(--accent), {{ACCENT_LIGHT}});
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
       box-shadow: 0 0 12px var(--accent-glow);
       transition: width 0.2s ease;
     }
@@ -158,7 +158,7 @@
       letter-spacing: 0.1em;
       color: var(--accent);
       background: var(--accent-dim);
-      border: 1px solid {{ACCENT_BADGE_BORDER}};
+      border: 1px solid rgba(139,92,246,0.25);
       padding: 6px 14px;
       border-radius: 100px;
       margin-bottom: 24px;
@@ -643,7 +643,7 @@
     }
 
     /* Module-specific styles injection point */
-    {{MODULE_CSS}}
+    
   </style>
 </head>
 <body>
@@ -653,18 +653,258 @@
     <div class="nav-inner">
       <div class="nav-logo">A://<span>Labs</span></div>
       <ul class="nav-links" id="navLinks">
-        {{NAV_LINKS}}
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#concepts" data-section="concepts">Concepts</a></li>
+        <li><a href="#walkthrough" data-section="walkthrough">Walkthrough</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
       </ul>
-      <span class="nav-tier">{{TIER}}</span>
+      <span class="nav-tier">OPS</span>
       <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
     </div>
   </nav>
 
-  {{MODULE_CONTENT}}
+  <section id="overview" class="hero reveal">
+  <div class="hero-badge">OPS Tier</div>
+  <h1>Module 1: <em>Cowork Workspaces</em> and Context</h1>
+  <p>
+    Learn how Allternit's Cowork engine turns user identity, memory, and personas into a shared workspace for agent collaboration.
+    You'll explore the core types that define a cowork session and see how context is scoped, stored, and recalled.
+  </p>
+  <div class="hero-meta">
+    <span>~5 lessons</span>
+    <span>~30 min</span>
+    <span>packages/@allternit/cowork-engine</span>
+  </div>
+  <canvas id="context-network" width="800" height="260" style="margin-top: 40px; width: 100%; max-width: 800px; opacity: 0.65; border-radius: 12px;"></canvas>
+</section>
+
+<section id="concepts" class="reveal">
+  <h2>Core Concepts</h2>
+  <p>
+    A <strong>Cowork workspace</strong> is a collaboration surface where agents operate on behalf of a user. The engine is organized around three primitives:
+    <strong>memory</strong>, <strong>personas</strong>, and <strong>approval gates</strong>. This module focuses on the first two.
+  </p>
+
+  <h3>Scoping Context</h3>
+  <p>
+    Every memory entry is tied to a <code>userId</code>. Entries can optionally be narrowed to a <code>projectId</code> or a <code>sessionId</code>,
+    making it easy to keep long-lived facts separate from short-term turn-by-turn context.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Scope</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>userId</code></td><td>User-wide</td><td>Preferences, skills, cross-project facts</td></tr>
+      <tr><td><code>projectId</code></td><td>Project-wide</td><td>Architecture decisions, codebase conventions</td></tr>
+      <tr><td><code>sessionId</code></td><td>Session-only</td><td>Current task, draft outputs, temporary context</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Memory Entry Types</h3>
+  <p>
+    The engine classifies memory into four types, each with a distinct retrieval purpose:
+  </p>
+  <ul>
+    <li><code>fact</code> — Verified knowledge about the user, project, or domain.</li>
+    <li><code>preference</code> — User tastes, defaults, and stylistic choices.</li>
+    <li><code>skill</code> — Capabilities or reusable workflows the agent should remember.</li>
+    <li><code>context</code> — General, often transient, session background.</li>
+  </ul>
+
+  <h3>Personas</h3>
+  <p>
+    A <code>CoworkPersona</code> defines how an agent behaves inside a workspace. It bundles a <code>systemPrompt</code>, an allowed <code>tools</code> list,
+    and a default flag. Cowork ships with three built-in personas — <em>Researcher</em>, <em>Engineer</em>, and <em>Analyst</em> — so workspaces can be useful immediately.
+  </p>
+
+  <div class="callout info">
+    <p><strong>Design note:</strong> Personas and memory are intentionally separate. Personas shape <em>behavior</em>; memory shapes <em>what the agent knows</em> about the current workspace.</p>
+  </div>
+</section>
+
+<section id="walkthrough" class="reveal">
+  <h2>Walkthrough: The Workspace Types</h2>
+  <p>
+    The public surface of the package is tiny — <code>src/index.ts</code> re-exports memory, approval, and persona modules — but the type contracts tell the story.
+    Here are the shapes that drive every cowork interaction.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>// packages/@allternit/cowork-engine/src/memory/types.ts
+
+export type CoworkMemoryEntryType = 'fact' | 'preference' | 'skill' | 'context';
+
+export interface CoworkMemoryEntry {
+  id: string;
+  userId: string;
+  projectId: string | null;
+  sessionId: string | null;
+  content: string;
+  type: CoworkMemoryEntryType;
+  tags: string[];
+  source: string | null;
+  createdAt: Date;
+}
+
+export interface CoworkMemoryCreateInput {
+  userId: string;
+  projectId?: string | null;
+  sessionId?: string | null;
+  content: string;
+  type?: CoworkMemoryEntryType;
+  tags?: string[];
+  source?: string | null;
+}</code></pre>
+  </div>
+
+  <p>
+    Creating a memory entry only requires a user and some content. Everything else is optional, so callers can decide how narrowly they want to scope the record.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>// packages/@allternit/cowork-engine/src/personas/types.ts
+
+export interface CoworkPersona {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  systemPrompt: string;
+  tools: string[];
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CoworkPersonaCreateInput {
+  userId: string;
+  name: string;
+  description?: string;
+  systemPrompt: string;
+  tools?: string[];
+  isDefault?: boolean;
+}
+
+export const BUILT_IN_PERSONAS = [
+  {
+    name: 'Researcher',
+    tools: ['web_search', 'read_file', 'write_file'],
+    isDefault: false,
+  },
+  {
+    name: 'Engineer',
+    tools: ['read_file', 'write_file', 'run_command', 'web_search'],
+    isDefault: true,
+  },
+  {
+    name: 'Analyst',
+    tools: ['read_file', 'write_file', 'run_command'],
+    isDefault: false,
+  },
+] as const;</code></pre>
+  </div>
+
+  <p>
+    Notice that personas are also <code>userId</code>-scoped, but they carry a default flag. The store guarantees that only one persona per user is marked default,
+    falling back to the alphabetically first persona if no default exists.
+  </p>
+
+  <div class="callout">
+    <p><strong>Try it:</strong> Open <code>packages/@allternit/cowork-engine/src/index.ts</code> and trace the exports. Memory and personas each expose a <code>create*Store</code> factory that wires the types to a Prisma client.</p>
+  </div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check Your Understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <div class="quiz-num">1</div>
+      <h3>Which field scopes a memory entry to a single collaboration session?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)"><div class="radio"></div><span>userId</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)"><div class="radio"></div><span>projectId</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)"><div class="radio"></div><span>sessionId</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)"><div class="radio"></div><span>source</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="window.QuizEngine.reset(1)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <div class="quiz-num">2</div>
+      <h3>What memory type is best for storing a user's preferred output format?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)"><div class="radio"></div><span>fact</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)"><div class="radio"></div><span>preference</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)"><div class="radio"></div><span>skill</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)"><div class="radio"></div><span>context</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="window.QuizEngine.reset(2)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <div class="quiz-num">3</div>
+      <h3>Which built-in Cowork persona is configured as the default?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)"><div class="radio"></div><span>Researcher</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)"><div class="radio"></div><span>Engineer</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)"><div class="radio"></div><span>Analyst</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)"><div class="radio"></div><span>None of the above</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="window.QuizEngine.reset(3)">Retry</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal capstone">
+  <h2>Capstone: Bootstrap a Cowork Workspace</h2>
+  <p>
+    Build a small workspace initializer using the real Cowork engine types and stores. Your solution should run against a Prisma-backed store and leave the workspace ready for an agent session.
+  </p>
+  <div class="capstone-grid">
+    <div class="capstone-item">
+      <h4>Seed Personas</h4>
+      <p>Call <code>ensureBuiltIns(userId)</code> so Researcher, Engineer, and Analyst are available.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Capture Context</h4>
+      <p>Create a <code>context</code> memory entry scoped to a <code>projectId</code> and <code>sessionId</code>.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Recall by Type</h4>
+      <p>List memory entries filtered by <code>type: 'preference'</code> and by a tag such as <code>output-format</code>.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Select Default Persona</h4>
+      <p>Fetch the default persona for the user and return its name and tool list.</p>
+    </div>
+  </div>
+  <div class="callout success" style="margin-top: 24px;">
+    <p><strong>Deliverable:</strong> A TypeScript function <code>async function initWorkspace(userId, projectId, sessionId, prisma)</code> that returns the seeded default persona and at least one memory entry.</p>
+  </div>
+</section>
 
   <footer>
-    <p>A://Labs — {{TIER}} Tier — {{MODULE_TITLE}}</p>
-    <p style="margin-top:4px;">Generated from <code>{{SOURCE_PACKAGE}}</code> · Allternit Internal</p>
+    <p>A://Labs — OPS Tier — Module 1: Cowork Workspaces and Context</p>
+    <p style="margin-top:4px;">Generated from <code>packages/@allternit/cowork-engine</code> · Allternit Internal</p>
   </footer>
 
   <script>
@@ -820,7 +1060,57 @@
     // ========================
     // Module-specific JS injection point
     // ========================
-    {{MODULE_JS}}
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":2,"2":1,"3":1}, {"1":{"correct":"Correct. sessionId scopes an entry to a single session, letting the workspace isolate short-term context from user- or project-wide memory.","wrong":"Not quite. The sessionId field scopes entries to one session; userId is user-wide, projectId is project-wide, and source records provenance."},"2":{"correct":"Correct. The preference type is designed for user tastes, defaults, and stylistic choices.","wrong":"Not quite. preference captures user defaults; fact stores knowledge, skill records capabilities, and context is general session background."},"3":{"correct":"Correct. The built-in Engineer persona sets isDefault: true, so workspaces can fall back to it when no other default is chosen.","wrong":"Not quite. Engineer is the default built-in persona. Researcher and Analyst are isDefault: false."}});
+
+    (function() {
+  const canvas = document.getElementById('context-network');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const accent = '#8b5cf6';
+  const width = canvas.width;
+  const height = canvas.height;
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * width,
+    y: Math.random() * height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+    r: 2 + Math.random() * 3
+  }));
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j];
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 110) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(139, 92, 246, ${0.25 * (1 - dist / 110)})`;
+          ctx.lineWidth = 1;
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+    for (const n of nodes) {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > width) n.vx *= -1;
+      if (n.y < 0 || n.y > height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.fillStyle = accent;
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
   </script>
 </body>
 </html>

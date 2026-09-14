@@ -1,0 +1,36 @@
+{
+  "file": "packages/@allternit/computer-use-protocol/src/index.ts",
+  "language": "typescript",
+  "steps": [
+    {
+      "title": "Protocol version and surface schema",
+      "lines": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      "note": "The protocol declares its schema version and the surfaces that can participate in a run: platform-web, desktop, gizzi, extension, and api."
+    },
+    {
+      "title": "Run states",
+      "lines": [89, 90, 91, 92],
+      "note": "BrowserRun.state uses a strict union: queued, running, approval_pending, paused, recovering, completed, failed, or cancelled."
+    },
+    {
+      "title": "Action kinds",
+      "lines": [170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188],
+      "note": "ActionKind enumerates everything from navigate and click to tab.open, dialog.accept, and screenshot. Each maps to a concrete browser operation."
+    },
+    {
+      "title": "Action intent structure",
+      "lines": [190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200],
+      "note": "An ActionIntent carries the run and session ids, the action kind, a human-readable reason, an optional target ref, and arbitrary input."
+    },
+    {
+      "title": "Browser observations",
+      "lines": [155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168],
+      "note": "BrowserObservation captures the URL, title, format, text, element refs, artifacts, and redactions at a point in time."
+    },
+    {
+      "title": "Browser event vocabulary",
+      "lines": [244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269],
+      "note": "BrowserEvent is the cross-surface event vocabulary: run lifecycle, action state changes, observations, approvals, artifacts, receipts, and handoffs."
+    }
+  ]
+}

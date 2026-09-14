@@ -1,0 +1,278 @@
+{
+  "generatedFrom": "Anthropic Academy deep section analysis — curated for Allternit platform",
+  "note": "Each module below maps to one section of the source Anthropic course. Lesson-level detail is preserved in the module content, not flattened.",
+  "courses": [
+    {
+      "courseCode": "ALABS-AGENTS-API",
+      "title": "Allternit Agent API & Provider Adapters",
+      "tier": "AGENTS",
+      "description": "Build production agents on the Allternit stack. Covers provider adapters, streaming, tool use, RAG, MCP, autonomous coding, and agent architectures — mapped section-by-section from Anthropic's API course.",
+      "estimatedHours": 14,
+      "sourceCourse": "Anthropic — Building with the Claude API (67 lessons, 9 hr)",
+      "sourcePackages": [
+        "packages/@allternit/provider-adapters",
+        "surfaces/ai.allternit.com/src/lib/agents",
+        "packages/@allternit/cowork-engine",
+        "packages/@allternit/computer-use-protocol"
+      ],
+      "modules": [
+        {
+          "position": 1,
+          "title": "Accessing Models with Provider Adapters",
+          "focus": "Authentication, first request, multi-turn conversations, system prompts, streaming, structured outputs. Allternit adapter layer instead of hard-coding a single provider.",
+          "media": "Code Hike walkthrough + Mermaid request/adapter flow diagram",
+          "sourceFiles": ["packages/@allternit/provider-adapters/src/ai-sdk.ts", "packages/@allternit/provider-adapters/src/index.ts"]
+        },
+        {
+          "position": 2,
+          "title": "Prompt Engineering & Evaluation",
+          "focus": "Structured prompts, strict output schemas, agent mode contracts, test-dataset generation, automated grading, and iterative prompt improvement.",
+          "media": "Mermaid prompt-eval lifecycle + Asciinema eval demo + Code-Hike walkthrough of agent-mode-contracts",
+          "sourceFiles": [
+            "surfaces/ai.allternit.com/src/lib/agents/agent.service.ts",
+            "surfaces/ai.allternit.com/src/lib/agents/agent-mode-contracts.ts",
+            "docs/public/guides/use-case-playbooks.md",
+            "docs/public/guides/build-a-tool.md"
+          ]
+        },
+        {
+          "position": 3,
+          "title": "Tool Use & the Agent Loop",
+          "focus": "Tool Registry, MCP attachment, deferred tools, multi-turn tool interactions, and observing tool results through the Allternit agent-mode executor.",
+          "media": "Mermaid agent-loop sequence diagram + Code-Hike executor walkthrough + Asciinema loop demo",
+          "sourceFiles": [
+            "surfaces/ai.allternit.com/src/lib/agents/agent-mode-executor.ts",
+            "surfaces/ai.allternit.com/src/lib/agents/agent-mode-contracts.ts",
+            "docs/public/tools/mcp.md",
+            "docs/public/guides/build-a-tool.md"
+          ]
+        },
+        {
+          "position": 4,
+          "title": "RAG and Agentic Search",
+          "focus": "Chunking, embeddings, hybrid BM25 search, reranking, and contextual retrieval on Allternit.",
+          "media": "Manim or Mermaid RAG pipeline animation",
+          "sourceFiles": ["packages/@allternit/office-file-parse", "surfaces/ai.allternit.com/src/lib/agents"]
+        },
+        {
+          "position": 5,
+          "title": "Model Context Protocol",
+          "focus": "MCP servers/clients, tools, resources, prompts, and lifecycle — mapped to Allternit's MCP integration.",
+          "media": "Mermaid MCP client/server sequence diagram + Code Hike server code",
+          "sourceFiles": ["packages/@allternit/mcp"]
+        },
+        {
+          "position": 6,
+          "title": "Autonomous Coding & Computer Use",
+          "focus": "ACI browser automation, computer-use protocol schemas, gizzi-code headless execution, and Autonomous Code Factory governance.",
+          "media": "Mermaid ACI flow + Asciinema agent run + Code-Hike walkthrough",
+          "sourceFiles": [
+            "surfaces/ai.allternit.com/src/views/AutonomousCodeFactoryView.tsx",
+            "packages/@allternit/computer-use-protocol/src/index.ts",
+            "docs/public/aci/index.md",
+            "docs/public/gizzi/index.md"
+          ]
+        },
+        {
+          "position": 7,
+          "title": "Agent Architectures & Workflows",
+          "focus": "Managed agent lifecycle, workflow DAG patterns (routing/chaining/parallelization), and orchestrator backends with verified send.",
+          "media": "Mermaid workflow DAG + Asciinema orchestrator demo + Code-Hike walkthrough",
+          "sourceFiles": [
+            "packages/@allternit/workflow-engine/src/engine/workflow-engine.ts",
+            "packages/@allternit/workflow-engine/src/types.ts",
+            "packages/@allternit/orchestrator/src/orchestrator.interface.ts",
+            "packages/@allternit/orchestrator/src/backends/mux.backend.ts",
+            "docs/public/guides/agent-lifecycle.md",
+            "docs/public/guides/use-case-playbooks.md"
+          ]
+        },
+        {
+          "position": 8,
+          "title": "Bridge: Production Deployment",
+          "focus": "Production API deployment: rate limits, idempotency, retries, batches, provider failover, and security controls.",
+          "media": "Mermaid deployment/failover diagram + Asciinema CLI demo + Code-Hike walkthrough",
+          "sourceFiles": [
+            "packages/@allternit/provider-adapters/src/ai-sdk.ts",
+            "cmd/allternit-api/src/llm_gateway/failover.rs",
+            "cmd/allternit-api/src/llm_gateway/mod.rs",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs",
+            "docs/public/api/reference.md",
+            "docs/public/providers/provider-registry.md",
+            "docs/public/security/security-model.md"
+          ]
+        },
+        {
+          "position": 9,
+          "title": "Engineering: Harness",
+          "focus": "AllternitHarness execution layer: modes, middleware, retries, fallbacks, and the API gateway's routing, idempotency, batches, and rate limits.",
+          "media": "Mermaid harness lifecycle + Asciinema SDK demo + Code-Hike harness walkthrough",
+          "sourceFiles": [
+            "sdk/allternit-sdk/src/ai-runtime/harness/index.ts",
+            "sdk/allternit-sdk/src/ai-runtime/harness/middleware.ts",
+            "cmd/allternit-api/src/llm_gateway/router.rs",
+            "cmd/allternit-api/src/llm_gateway/failover.rs",
+            "docs/public/api/reference.md"
+          ]
+        },
+        {
+          "position": 10,
+          "title": "Engineering: Graph",
+          "focus": "Agent/workflow graphs: routing, chaining, parallelization, and stateful execution on the Allternit workflow engine and orchestrator.",
+          "media": "Mermaid routing/chaining/parallel graph + Asciinema orchestrated run + Code-Hike workflow execution walkthrough",
+          "sourceFiles": [
+            "packages/@allternit/workflow-engine/src/engine/workflow-engine.ts",
+            "packages/@allternit/orchestrator/src/orchestrator.interface.ts",
+            "surfaces/ai.allternit.com/src/lib/agents/agent-advanced.store.ts",
+            "surfaces/ai.allternit.com/src/lib/agents/agent-mode-executor.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "courseCode": "ALABS-OPS-COWORK",
+      "title": "Allternit Cowork & Task Automation",
+      "tier": "OPS",
+      "description": "Delegate multi-step work to Allternit Cowork: workspaces, context, task loops, plugins, browser tasks, and team rollout.",
+      "estimatedHours": 8,
+      "sourceCourse": "Anthropic — Introduction to Claude Cowork",
+      "sourcePackages": [
+        "packages/@allternit/cowork-engine",
+        "surfaces/ai.allternit.com/src/views/AllternitOSView.tsx",
+        "surfaces/ai.allternit.com/src/views/OperatorBrowserView.tsx"
+      ],
+      "modules": [
+        {
+          "position": 1,
+          "title": "Cowork Workspaces and Context",
+          "focus": "What Cowork is, setting up a workspace, giving initial context, and running your first task loop.",
+          "media": "Asciinema terminal recording of workspace setup",
+          "sourceFiles": ["packages/@allternit/cowork-engine/src/index.ts", "packages/@allternit/cowork-engine/src/memory/types.ts"]
+        },
+        {
+          "position": 2,
+          "title": "Standing Context & Personas",
+          "focus": "Default personas, memory entry types (fact/preference/skill/context), scoping by user/project/session, and reusable skill packages.",
+          "media": "Mermaid persona/memory flow + Code-Hike types walkthrough + Asciinema workspace setup",
+          "sourceFiles": [
+            "packages/@allternit/cowork-engine/src/memory/types.ts",
+            "packages/@allternit/cowork-engine/src/personas/types.ts",
+            "docs/public/skills/skill-format.md",
+            "docs/public/cli/build-skills.md"
+          ]
+        },
+        {
+          "position": 3,
+          "title": "Plugins, Browser, and Document Tasks",
+          "focus": "Using plugins for research and documents, browser automation, and Office suite integration.",
+          "media": "Asciinema recording of a multi-step Cowork task",
+          "sourceFiles": ["packages/@allternit/browser-tools", "surfaces/ai.allternit.com/src/views/OperatorBrowserView.tsx"]
+        },
+        {
+          "position": 4,
+          "title": "Scaling Cowork Across a Team",
+          "focus": "RBAC, workspace isolation, permission profiles, approval gates, and a four-phase team rollout plan.",
+          "media": "Mermaid team rollout flow + Asciinema permission demo + Code-Hike ApprovalGate walkthrough",
+          "sourceFiles": [
+            "packages/@allternit/cowork-engine/src/approval/gate.ts",
+            "packages/@allternit/cowork-engine/src/approval/types.ts",
+            "docs/public/security/security-model.md",
+            "docs/public/cli/permission-profiles.md"
+          ]
+        },
+        {
+          "position": 5,
+          "title": "Bridge: Admin Runbooks",
+          "focus": "gizzi-code CLI diagnostics for auth, config, metrics, and observability; audit and compliance runbooks for Cowork admins.",
+          "media": "Asciinema CLI diagnostics demo + Mermaid runbook flow + Code-Hike audit walkthrough",
+          "sourceFiles": [
+            "packages/@allternit/cowork-engine/src/index.ts",
+            "docs/public/cli/admin.md",
+            "docs/public/cli/metrics.md",
+            "docs/public/cli/observability.md",
+            "docs/public/cli/config-locations.md",
+            "docs/public/security/audit.md",
+            "docs/public/security/compliance.md"
+          ]
+        }
+      ]
+    },
+    {
+      "courseCode": "ALABS-CORE-FLUENCY",
+      "title": "AI Fluency with the Allternit Stack",
+      "tier": "CORE",
+      "description": "Learn to collaborate with AI effectively, efficiently, ethically, and safely using Allternit's agent platform and the 4D framework.",
+      "estimatedHours": 7,
+      "sourceCourse": "Anthropic — AI Fluency: Framework & Foundations",
+      "sourcePackages": [
+        "surfaces/ai.allternit.com/src/views/ChatView.tsx",
+        ".agents/skills/",
+        "surfaces/ai.allternit.com/src/lib/agents"
+      ],
+      "modules": [
+        {
+          "position": 1,
+          "title": "Introduction to AI Fluency",
+          "focus": "What AI fluency is, the 4D framework, and how it applies to the Allternit agent surface.",
+          "media": "Mermaid 4D framework diagram",
+          "sourceFiles": ["surfaces/ai.allternit.com/src/views/ChatView.tsx"]
+        },
+        {
+          "position": 2,
+          "title": "Delegation: Scoping Work for Agents",
+          "focus": "The 4D delegation framework, writing precise task specs, agent definition via defineAgent, and lifecycle guardrails.",
+          "media": "Mermaid delegation flow + Code-Hike agent-definition walkthrough + Asciinema delegation demo",
+          "sourceFiles": [
+            ".agents/skills/agent-orchestrator/SKILL.md",
+            "surfaces/ai.allternit.com/src/lib/agents/agent-definition.ts",
+            "docs/public/guides/use-case-playbooks.md",
+            "docs/public/guides/agent-lifecycle.md"
+          ]
+        },
+        {
+          "position": 3,
+          "title": "Description: Writing Effective Prompts and Skills",
+          "focus": "Prompt patterns, context, examples, and reusable skills.",
+          "media": "Code Hike prompt-evolution walkthrough + Sandpack prompt tester",
+          "sourceFiles": [".agents/skills/", "surfaces/ai.allternit.com/src/lib/agents"]
+        },
+        {
+          "position": 4,
+          "title": "Discernment: Evaluating Agent Outputs",
+          "focus": "Four-stage evaluation loop, evidence requirements, conflict detection, and playbook checklists for support, legal, code review, and RAG.",
+          "media": "Mermaid evaluation loop + Asciinema review demo + Code-Hike agent-review walkthrough",
+          "sourceFiles": [
+            "surfaces/ai.allternit.com/src/lib/agents/agent-review.ts",
+            "surfaces/ai.allternit.com/src/lib/agents/agent-review.test.ts",
+            "docs/public/guides/use-case-playbooks.md",
+            "docs/public/security/security-model.md"
+          ]
+        },
+        {
+          "position": 5,
+          "title": "Diligence: Safety, Privacy, and Verification",
+          "focus": "DLP scanning, prompt leak detection, permission profiles, vault credentials, audit logs, and compliance workflows.",
+          "media": "Mermaid safety/governance flow + Asciinema permission profile demo + Code-Hike vault walkthrough",
+          "sourceFiles": [
+            "surfaces/ai.allternit.com/src/lib/agents",
+            "docs/public/security/security-model.md",
+            "docs/public/cli/permission-profiles.md",
+            "docs/public/security/vault.md",
+            "docs/public/security/audit.md"
+          ]
+        },
+        {
+          "position": 6,
+          "title": "Bridge: Applying 4D to Your Role",
+          "focus": "Capstone project: map a real task through Decide, Delegate, Describe, Discern, and Diligence using the Allternit chat surface and skills.",
+          "media": "Mermaid 4D reflection loop + interactive capstone worksheet + Code-Hike ChatView walkthrough",
+          "sourceFiles": [
+            ".agents/skills/",
+            "surfaces/ai.allternit.com/src/views/ChatView.tsx",
+            "docs/public/guides/use-case-playbooks.md"
+          ]
+        }
+      ]
+    }
+  ]
+}

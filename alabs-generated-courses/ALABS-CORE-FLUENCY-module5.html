@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{MODULE_TITLE}} — A://Labs</title>
+  <title>Module 5: Diligence: Safety, Privacy, and Verification — A://Labs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -21,9 +21,9 @@
       --text: #e5e5e5;
       --text-secondary: #a1a1aa;
       --text-muted: #71717a;
-      --accent: {{ACCENT_COLOR}};
-      --accent-dim: {{ACCENT_DIM}};
-      --accent-glow: {{ACCENT_GLOW}};
+      --accent: #3b82f6;
+      --accent-dim: rgba(59,130,246,0.15);
+      --accent-glow: rgba(59,130,246,0.4);
       --success: #22c55e;
       --error: #ef4444;
       --info: #3b82f6;
@@ -56,7 +56,7 @@
     #progress-bar {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, var(--accent), {{ACCENT_LIGHT}});
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
       box-shadow: 0 0 12px var(--accent-glow);
       transition: width 0.2s ease;
     }
@@ -158,7 +158,7 @@
       letter-spacing: 0.1em;
       color: var(--accent);
       background: var(--accent-dim);
-      border: 1px solid {{ACCENT_BADGE_BORDER}};
+      border: 1px solid rgba(59,130,246,0.25);
       padding: 6px 14px;
       border-radius: 100px;
       margin-bottom: 24px;
@@ -643,8 +643,20 @@
     }
 
     /* Module-specific styles injection point */
-    {{MODULE_CSS}}
+    
+.hero { position: relative; overflow: hidden; }
+#moduleCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(59,130,246,0.12); color: #3b82f6; }
+
   </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#3b82f6', primaryTextColor: '#e5e5e5', primaryBorderColor: '#3b82f6', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
 </head>
 <body>
   <div id="progress-container"><div id="progress-bar"></div></div>
@@ -653,18 +665,390 @@
     <div class="nav-inner">
       <div class="nav-logo">A://<span>Labs</span></div>
       <ul class="nav-links" id="navLinks">
-        {{NAV_LINKS}}
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#dlp" data-section="dlp">DLP</a></li>
+        <li><a href="#profiles" data-section="profiles">Profiles</a></li>
+        <li><a href="#vault" data-section="vault">Vault</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
       </ul>
-      <span class="nav-tier">{{TIER}}</span>
+      <span class="nav-tier">CORE</span>
       <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
     </div>
   </nav>
 
-  {{MODULE_CONTENT}}
+  <section id="overview" class="hero reveal">
+  <canvas id="moduleCanvas"></canvas>
+  <span class="hero-badge">CORE Tier</span>
+  <h1>Module 5: <em>Diligence: Safety, Privacy, and Verification</em></h1>
+  <p>
+    Diligence is the fourth D of AI fluency: treating safety, privacy, and verification as design constraints rather than afterthoughts.
+    This module connects Allternit's security model, permission profiles, vault, and audit system.
+  </p>
+  <div class="hero-meta">
+    <span><strong>5 lessons</strong> · ~40 minutes</span>
+    <span>Source: <code>surfaces/ai.allternit.com/src/lib/agents</code></span>
+  </div>
+</section>
+
+<section id="dlp" class="reveal">
+  <h2>DLP and prompt leak detection</h2>
+  <p>
+    The Allternit LLM gateway scans outgoing requests for secrets, PII, and prompt-injection patterns before they reach any provider.
+    Detections can warn, redact, or block. Admin endpoints also let operators score user text against system prompts to detect accidental leakage.
+  </p>
+  <p>
+    Trust boundaries are clear: customer browsers and the gizzi-code CLI live in the customer environment; the Allternit API server enforces auth, rate limits, DLP, budgets, and routing;
+    external providers receive only policy-checked requests.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Threat</th><th>Mitigation</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Secret exfiltration in prompts</td><td>DLP scanning with block/redact actions</td></tr>
+      <tr><td>Prompt injection</td><td>Injection scoring and strict tool-use validation</td></tr>
+      <tr><td>Provider key exposure</td><td>Provider keys stored in vault or external keys, never returned to clients</td></tr>
+      <tr><td>Privilege escalation</td><td>RBAC with org-scoped ownership checks on every admin route</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="profiles" class="reveal">
+  <h2>Permission profiles as safety boundaries</h2>
+  <p>
+    Permission profiles define what an agent can do on your machine. The built-in profiles let you choose a default posture without rewriting config.
+    For sensitive work, start with <code>restricted</code>; for trusted repositories, use <code>trusted-review</code>; avoid <code>danger-full-access</code> unless the host already isolates processes.
+  </p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">toml</span><button class="code-copy">Copy</button></div>
+    <pre><code># ~/.gizzi/profiles/untrusted-audit.toml
+[permissions]
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+network_access = false
+allow_login_shell = false
+
+[permissions.sandbox_workspace_write]
+writable_roots = []</code></pre>
+  </div>
+  <p>
+    Overlay order matters. A profile is loaded after user defaults but before project overrides and CLI flags.
+    That means a project-local <code>.gizzi/config.toml</code> can tighten settings, but it should not silently loosen safety settings without review.
+  </p>
+  <div class="asciinema-wrapper alabs-media" data-media-id="core-fluency-m5-permission-profile-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAxNiwgInRpbWVzdGFtcCI6IDE3MDAwMDAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4vYmFzaCIsICJURVJNIjogInh0ZXJtLTI1NmNvbG9yIn19ClswLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gZ2l6emkgY29uZmlnIHBlcm1pc3Npb24tcHJvZmlsZXMgZGlmZiByZXN0cmljdGVkIHRydXN0ZWQtcmV2aWV3XHJcbiJdClswLjgsICJvIiwgImFwcHJvdmFsX3BvbGljeTogdW50cnVzdGVkIC0+IG9uLXJlcXVlc3Rcclxuc2FuZGJveF9tb2RlOiByZXN0cmljdGVkIC0+IHdvcmtzcGFjZS13cml0ZVxyXG5uZXR3b3JrX2FjY2VzczogZmFsc2UgLT4gdHJ1ZSAoYXBwcm92YWwgcmVxdWlyZWQpXHJcbiJdClsyLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gZXhwb3J0IERJU0FCTEVfVEVMRU1FVFJZPTFcclxuIl0KWzIuNSwgIm8iLCAiXHUwMDFiWzE7MzJtJFx1MDAxYlswbSBnaXp6aSAtLXByb2ZpbGUgcmVzdHJpY3RlZCBleGVjIFwiUmV2aWV3IHB1YmxpYyBQUiBkaWZmXCJcclxuIl0KWzMuNSwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBOZXR3b3JrIGFjY2VzcyBkZW5pZWQgYnkgcHJvZmlsZVxyXG4iXQpbNC4yLCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIEZpbGVzeXN0ZW0gd3JpdGVzIHJlcXVpcmUgYXBwcm92YWxcclxuIl0KWzUuMCwgIm8iLCAiXHUwMDFiWzE7MzJt4pyTXHUwMDFiWzBtIE5vIGV4dGVybmFsIGRhdGEgZXhmaWx0cmF0aW9uIHBhdGggaW4gcmVzdHJpY3RlZCBtb2RlLlxyXG4iXQ==" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+</section>
+
+<section id="vault" class="reveal">
+  <h2>Vault, audit, and compliance</h2>
+  <p>
+    Credentials belong in the vault, not in prompts or repository files. <code>AllternitVault</code> seals OAuth values and other secrets at rest using the API's token crypto layer.
+    The plaintext is never returned by the credential list API, and revocation sets <code>revoked_at</code> without deleting the row, preserving an audit trail.
+  </p>
+  <pre class="mermaid alabs-media" data-media-id="core-fluency-m5-safety-governance">flowchart TD
+    A[User Prompt] --&gt; B[DLP Scan]
+    B --&gt;|secret/PII| C[Warn / Redact / Block]
+    B --&gt;|clean| D{Permission Profile}
+    D --&gt; E[Approval Gate]
+    E --&gt;|low risk| F[Auto-approve]
+    E --&gt;|medium+| G[Human Review]
+    G --&gt; H[Approved]
+    H --&gt; I[Vault Credentials]
+    I --&gt; J[Upstream Provider]
+    F --&gt; J
+    C --&gt; K[Audit Log]
+    E --&gt; K
+    J --&gt; K
+
+    style A fill:#3b82f6,stroke:#60a5fa,color:#fff
+    style B fill:#f59e0b,stroke:#fbbf24,color:#000
+    style E fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style K fill:#22c55e,stroke:#86efac,color:#000</pre>
+  <p>
+    Audit logs cover administrative actions, key lifecycle events, and compliance requests. Every LLM request is recorded with tokens, cost, status, latency, and routing decision.
+    Compliance endpoints let admins export or delete chats, projects, and artifacts when required.
+  </p>
+  <div class="walkthrough-container" data-walkthrough-container="core-fluency-m5-vault-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="core-fluency-m5-vault-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('core-fluency-m5-vault-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 3</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('core-fluency-m5-vault-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="core-fluency-m5-vault-walkthrough-step-0" data-walkthrough="core-fluency-m5-vault-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Vault scopes</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>Vault routes accept Clerk sessions or scoped enterprise tokens. vault:read grants GET access, vault:write grants mutation, and * grants everything. CredentialContext.allows_request maps HTTP methods and paths to these scopes.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">markdown</span>
+      <span class="code-path">docs/public/security/vault.md</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="10">
+        <span class="line-no"> 10</span>
+        <span class="line-code">## Authentication</span>
+      </div>
+<div class="walkthrough-line dim" data-line="11">
+        <span class="line-no"> 11</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="12">
+        <span class="line-no"> 12</span>
+        <span class="line-code">Vault routes accept Clerk sessions or scoped enterprise credentials. Enterprise tokens must include a scope that grants the requested action:</span>
+      </div>
+<div class="walkthrough-line dim" data-line="13">
+        <span class="line-no"> 13</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="14">
+        <span class="line-no"> 14</span>
+        <span class="line-code">| Scope | Grants |</span>
+      </div>
+<div class="walkthrough-line ellipsis"><span class="line-no"></span><span class="line-code">⋮</span></div><div class="walkthrough-line dim" data-line="20">
+        <span class="line-no"> 20</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="21">
+        <span class="line-no"> 21</span>
+        <span class="line-code">`CredentialContext.allows_request` maps `GET`/`HEAD` to `read` and mutating methods to `write`, and any path containing `/vault/` or `/vaults` to the `vault` resource.</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="22">
+        <span class="line-no"> 22</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="23">
+        <span class="line-no"> 23</span>
+        <span class="line-code">## Endpoints</span>
+      </div>
+<div class="walkthrough-line dim" data-line="24">
+        <span class="line-no"> 24</span>
+        <span class="line-code">&nbsp;</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="core-fluency-m5-vault-walkthrough-step-1" data-walkthrough="core-fluency-m5-vault-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Sealing credentials</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The plaintext oauth_value is sealed with token_crypto::seal before it is written to allternit_vault_credentials.encrypted_value. The credential list API never returns plaintext.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">markdown</span>
+      <span class="code-path">docs/public/security/vault.md</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="73">
+        <span class="line-no"> 73</span>
+        <span class="line-code">```</span>
+      </div>
+<div class="walkthrough-line dim" data-line="74">
+        <span class="line-no"> 74</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="75">
+        <span class="line-no"> 75</span>
+        <span class="line-code">## Store a credential in a vault</span>
+      </div>
+<div class="walkthrough-line dim" data-line="76">
+        <span class="line-no"> 76</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="77">
+        <span class="line-no"> 77</span>
+        <span class="line-code">```bash</span>
+      </div>
+<div class="walkthrough-line ellipsis"><span class="line-no"></span><span class="line-code">⋮</span></div><div class="walkthrough-line dim" data-line="98">
+        <span class="line-no"> 98</span>
+        <span class="line-code">```</span>
+      </div>
+<div class="walkthrough-line dim" data-line="99">
+        <span class="line-no"> 99</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="100">
+        <span class="line-no">100</span>
+        <span class="line-code">The plaintext `oauth_value` is sealed before it is written to `allternit_vault_credentials.encrypted_value`. The returned credential list never includes the plaintext.</span>
+      </div>
+<div class="walkthrough-line dim" data-line="101">
+        <span class="line-no">101</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="102">
+        <span class="line-no">102</span>
+        <span class="line-code">## List credentials</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="core-fluency-m5-vault-walkthrough-step-2" data-walkthrough="core-fluency-m5-vault-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Revocation without deletion</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>Revocation sets revoked_at without deleting the row. This preserves an audit trail while preventing the credential from being used again.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">markdown</span>
+      <span class="code-path">docs/public/security/vault.md</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="123">
+        <span class="line-no">123</span>
+        <span class="line-code">```</span>
+      </div>
+<div class="walkthrough-line dim" data-line="124">
+        <span class="line-no">124</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="125">
+        <span class="line-no">125</span>
+        <span class="line-code">## Revoke a credential</span>
+      </div>
+<div class="walkthrough-line dim" data-line="126">
+        <span class="line-no">126</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="127">
+        <span class="line-no">127</span>
+        <span class="line-code">```bash</span>
+      </div>
+<div class="walkthrough-line ellipsis"><span class="line-no"></span><span class="line-code">⋮</span></div><div class="walkthrough-line dim" data-line="131">
+        <span class="line-no">131</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="132">
+        <span class="line-no">132</span>
+        <span class="line-code">Revocation sets `revoked_at` without deleting the row, preserving an audit trail.</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="133">
+        <span class="line-no">133</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="134">
+        <span class="line-no">134</span>
+        <span class="line-code">## Legacy credential store</span>
+      </div>
+<div class="walkthrough-line dim" data-line="135">
+        <span class="line-no">135</span>
+        <span class="line-code">&nbsp;</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+  <div class="quiz" id="quiz1">
+  <div class="quiz-header">
+    <span class="quiz-num">1</span>
+    <h3>What action does the DLP layer take when it detects a secret in an outgoing request?</h3>
+  </div>
+  <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        <span>Always blocks</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        <span>Warns, redacts, or blocks depending on policy</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        <span>Logs only</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)">
+        <span class="radio"></span>
+        <span>Forwards to the provider unchanged</span>
+      </div>
+  </div>
+  <div class="quiz-feedback" id="feedback1"></div>
+  <button class="quiz-retry" id="retry1" onclick="QuizEngine.reset(1)">Try again</button>
+</div>
+
+<div class="quiz" id="quiz2">
+  <div class="quiz-header">
+    <span class="quiz-num">2</span>
+    <h3>Which permission profile should you avoid unless the host environment already isolates processes?</h3>
+  </div>
+  <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        <span>restricted</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        <span>workspace-write</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        <span>trusted-review</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)">
+        <span class="radio"></span>
+        <span>danger-full-access</span>
+      </div>
+  </div>
+  <div class="quiz-feedback" id="feedback2"></div>
+  <button class="quiz-retry" id="retry2" onclick="QuizEngine.reset(2)">Try again</button>
+</div>
+
+<div class="quiz" id="quiz3">
+  <div class="quiz-header">
+    <span class="quiz-num">3</span>
+    <h3>What happens to a vault credential when it is revoked?</h3>
+  </div>
+  <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        <span>The row is deleted</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        <span>revoked_at is set without deleting the row</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        <span>It is returned in plaintext one last time</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)">
+        <span class="radio"></span>
+        <span>It is moved to a different table</span>
+      </div>
+  </div>
+  <div class="quiz-feedback" id="feedback3"></div>
+  <button class="quiz-retry" id="retry3" onclick="QuizEngine.reset(3)">Try again</button>
+</div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Conduct a safety review</h2>
+    <p>
+      Pick one agent workflow in your organization. Identify the data it touches, the tools it uses, the permission profile it runs under, and where credentials are stored.
+      Propose three concrete changes that improve safety or privacy.
+    </p>
+    <div class="capstone-grid">
+      <div class="capstone-item"><h4>Data classification</h4><p>PII, secrets, or regulated data involved.</p></div>
+      <div class="capstone-item"><h4>Tool boundaries</h4><p>Which tools are allowed and why.</p></div>
+      <div class="capstone-item"><h4>Profile choice</h4><p>Recommended permission profile and exceptions.</p></div>
+      <div class="capstone-item"><h4>Credential handling</h4><p>Vault usage and rotation plan.</p></div>
+    </div>
+  </div>
+</section>
 
   <footer>
-    <p>A://Labs — {{TIER}} Tier — {{MODULE_TITLE}}</p>
-    <p style="margin-top:4px;">Generated from <code>{{SOURCE_PACKAGE}}</code> · Allternit Internal</p>
+    <p>A://Labs — CORE Tier — Module 5: Diligence: Safety, Privacy, and Verification</p>
+    <p style="margin-top:4px;">Generated from <code>surfaces/ai.allternit.com/src/lib/agents</code> · Allternit Internal</p>
   </footer>
 
   <script>
@@ -820,7 +1204,54 @@
     // ========================
     // Module-specific JS injection point
     // ========================
-    {{MODULE_JS}}
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":3,"3":1}, {"1":{"correct":"Correct. DLP detections can warn, redact, or block depending on the configured policy.","wrong":"Not quite. The DLP layer is configurable; it does not always block or always forward unchanged."},"2":{"correct":"Correct. danger-full-access disables sandboxing and should only be used when the environment already isolates processes.","wrong":"Not quite. restricted, workspace-write, and trusted-review all maintain some sandbox boundaries."},"3":{"correct":"Correct. Revocation sets revoked_at without deleting the row, preserving an audit trail.","wrong":"Not quite. Vault credentials are not deleted on revocation; their revoked_at timestamp is set."}});
+
+    const canvas = document.getElementById('moduleCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#3b82f6';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(59,130,246,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
   </script>
 </body>
 </html>

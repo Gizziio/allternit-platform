@@ -1,0 +1,16 @@
+flowchart TD
+    U[User opens Cowork workspace] --> P{Default persona set?}
+    P -->|Yes| S[Use selected persona]
+    P -->|No| D[Use Engineer built-in]
+    S --> M{Memory query scope}
+    D --> M
+    M -->|userId| F[User-wide facts & preferences]
+    M -->|projectId| R[Project conventions & decisions]
+    M -->|sessionId| T[Session task context]
+    F --> C[Compose system prompt + memories]
+    R --> C
+    T --> C
+    C --> A[Agent executes task]
+
+    style D fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style C fill:#151517,stroke:#3f3f46,color:#e5e5e5

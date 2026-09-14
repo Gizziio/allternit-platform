@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant Agent as Allternit Agent
+    participant Belt as NativeToolBelt
+    participant Client as MCP Client
+    participant Server as MCP Server
+    participant Registry as ToolRegistry
+
+    Agent->>Belt: attachMcpServer({ serverId, listTools, callTool })
+    Belt->>Client: Connect transport
+    Client->>Server: initialize
+    Server-->>Client: capabilities
+    Client->>Server: tools/list
+    Server-->>Client: tool definitions
+    Belt->>Registry: register('docs.read', strict schema)
+    Agent->>Registry: invoke('docs.read', args)
+    Registry->>Client: callTool(name, args)
+    Client->>Server: tools/call
+    Server-->>Client: result
+    Client-->>Registry: result
+    Registry-->>Agent: formatted result

@@ -1,0 +1,156 @@
+{
+  "collections": {
+    "build-with-claude": {
+      "url": "https://academy.claude.com/collections/build-with-claude",
+      "title": "Build with Claude \u00b7 Claude Academy",
+      "description": "Courses, guides, and best practices for developing Claude-powered applications, from your first API call to production agents.",
+      "course_count": 0
+    },
+    "claude-for-work": {
+      "url": "https://academy.claude.com/collections/claude-for-work",
+      "title": "Claude for work \u00b7 Claude Academy",
+      "description": "Bring Claude into your team&#x27;s day-to-day: get everyone started, find the workflows that fit each function, and roll it out well.",
+      "course_count": 0
+    },
+    "ai-fluency": {
+      "url": "https://academy.claude.com/collections/ai-fluency",
+      "title": "AI Fluency \u00b7 Claude Academy",
+      "description": "Learn what AI is good at, where it breaks down, and how to work with it effectively.",
+      "course_count": 0
+    }
+  },
+  "courses": {
+    "building-with-the-claude-api": {
+      "url": "https://academy.claude.com/courses/building-with-the-claude-api",
+      "title": "Building with the Claude API \u00b7 Claude Academy",
+      "description": "The full spectrum of working with Anthropic models using the Claude API: prompting, tool use, RAG, agents, MCP, and production patterns.",
+      "text_length": 5902
+    },
+    "claude-code-101": {
+      "url": "https://academy.claude.com/courses/claude-code-101",
+      "title": "Claude Code 101 \u00b7 Claude Academy",
+      "description": "An agentic coding tool that lives in your terminal. Learn what Claude Code is, how it works, and the core workflows for getting real work done with it.",
+      "text_length": 6030
+    },
+    "claude-code-in-action": {
+      "url": "https://academy.claude.com/courses/claude-code-in-action",
+      "title": "Claude Code in Action \u00b7 Claude Academy",
+      "description": "Run long, hands-off Claude Code sessions you can trust: steer, configure, automate, and verify",
+      "text_length": 2376
+    },
+    "claude-platform-101": {
+      "url": "https://academy.claude.com/courses/claude-platform-101",
+      "title": "Claude Platform 101 \u00b7 Claude Academy",
+      "description": "This course teaches developers to build on the Claude Platform from the ground up, whether you&#x27;ve made a few API calls or have only used Claude through a chat window.",
+      "text_length": 5614
+    },
+    "claude-with-amazon-bedrock": {
+      "url": "https://academy.claude.com/courses/claude-with-amazon-bedrock",
+      "title": "Claude with Amazon Bedrock \u00b7 Claude Academy",
+      "description": "Integrating and deploying Claude through Amazon Bedrock: API implementation, tool use, RAG pipelines, agents, and production-ready applications on AWS.",
+      "text_length": 4925
+    },
+    "claude-with-google-cloud-s-vertex-ai": {
+      "url": "https://academy.claude.com/courses/claude-with-google-cloud-s-vertex-ai",
+      "title": "Claude with Google Cloud&#x27;s Vertex AI \u00b7 Claude Academy",
+      "description": "Working with Anthropic models through Google Cloud&#x27;s Vertex AI: setup, prompting, tool use, RAG, agents, and production deployment patterns.",
+      "text_length": 5199
+    },
+    "introduction-to-agent-skills": {
+      "url": "https://academy.claude.com/courses/introduction-to-agent-skills",
+      "title": "Introduction to agent skills \u00b7 Claude Academy",
+      "description": "Build, configure, and share skills in Claude Code \u2014 reusable markdown instructions that Claude applies automatically to matching tasks. Covers creating your first skill through team distribution and troubleshooting.",
+      "text_length": 1923
+    },
+    "introduction-to-model-context-protocol": {
+      "url": "https://academy.claude.com/courses/introduction-to-model-context-protocol",
+      "title": "Introduction to Model Context Protocol \u00b7 Claude Academy",
+      "description": "Build MCP servers and clients from scratch with the Python SDK, covering the three core primitives\u2014tools, resources, and prompts\u2014that connect Claude to external services.",
+      "text_length": 3446
+    },
+    "introduction-to-subagents": {
+      "url": "https://academy.claude.com/courses/introduction-to-subagents",
+      "title": "Introduction to subagents \u00b7 Claude Academy",
+      "description": "Decompose complex tasks across parallel Claude subagents and orchestrate them deterministically.",
+      "text_length": 1373
+    },
+    "model-context-protocol-advanced-topics": {
+      "url": "https://academy.claude.com/courses/model-context-protocol-advanced-topics",
+      "title": "Model Context Protocol: Advanced Topics \u00b7 Claude Academy",
+      "description": "Go beyond MCP basics: sampling, notifications, and roots, with interactive walkthroughs of each protocol flow.",
+      "text_length": 3318
+    },
+    "claude-101": {
+      "url": "https://academy.claude.com/courses/claude-101",
+      "title": "Claude 101 \u00b7 Claude Academy",
+      "description": "Learn to use Claude for everyday work, from your first conversation and effective prompting to projects, artifacts, skills, and connected tools.",
+      "text_length": 2924
+    },
+    "introduction-to-claude-cowork": {
+      "url": "https://academy.claude.com/courses/introduction-to-claude-cowork",
+      "title": "Introduction to Claude Cowork \u00b7 Claude Academy",
+      "description": "Delegate multi-step work to Claude in Cowork: set up workspaces, give context, run task loops, and use plugins for research, documents, and browser tasks.",
+      "text_length": 3782
+    },
+    "ai-capabilities-and-limitations": {
+      "url": "https://academy.claude.com/courses/ai-capabilities-and-limitations",
+      "title": "AI Capabilities and Limitations \u00b7 Claude Academy",
+      "description": "Build an accurate mental model of what large language models can and cannot do: next-token prediction, knowledge, working memory, steerability, and context limits.",
+      "text_length": 7633
+    },
+    "ai-fluency-for-builders": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-builders",
+      "title": "AI Fluency for Builders \u00b7 Claude Academy",
+      "description": "This course empowers builders to develop AI fluency \u2014 increasing impact and efficiency while staying true to what it means to own the full arc from problem to shipped solution.",
+      "text_length": 5755
+    },
+    "ai-fluency-for-educators": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-educators",
+      "title": "AI Fluency for educators \u00b7 Claude Academy",
+      "description": "Helps faculty, instructional designers, and education leaders apply the 4D AI Fluency framework to course design, learning materials, and teaching practice.",
+      "text_length": 4387
+    },
+    "ai-fluency-for-k-12-educators": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-k-12-educators",
+      "title": "AI Fluency for pK\u201312 Educators \u00b7 Claude Academy",
+      "description": "Helps pK-12 educators build practical AI fluency through the 4D Framework, supporting student learning while staying true to their mission and values. Created in partnership with Teach For America.",
+      "text_length": 6835
+    },
+    "ai-fluency-for-nonprofits": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-nonprofits",
+      "title": "AI Fluency for nonprofits \u00b7 Claude Academy",
+      "description": "Build practical AI collaboration skills for nonprofit work using the 4D Framework: Delegation, Description, Discernment, and Diligence. Covers research, writing, data analysis, and organization-wide AI adoption while staying true to your mission and values.",
+      "text_length": 4362
+    },
+    "ai-fluency-for-pk-12-train-the-trainer": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-pk-12-train-the-trainer",
+      "title": "AI Fluency for pK-12 Train the Trainer \u00b7 Claude Academy",
+      "description": "This course empowers pK\u201312 educators to lead AI fluency training for their colleagues \u2014 equipping them with a ready-to-run workshop kit grounded in the 4D Framework, while staying true to educators&#x27; mission and values.",
+      "text_length": 3438
+    },
+    "ai-fluency-for-small-businesses": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-small-businesses",
+      "title": "AI Fluency for Small Businesses \u00b7 Claude Academy",
+      "description": "Helps small business owners and staff build practical AI collaboration skills using the 4D Framework: Delegation, Description, Discernment, and Diligence. Applies the framework to everyday business tasks like research, customer data, and operations while staying true to your mission and values.",
+      "text_length": 7206
+    },
+    "ai-fluency-for-students": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-students",
+      "title": "AI Fluency for students \u00b7 Claude Academy",
+      "description": "Helps students build AI fluency skills for learning, career planning, and academic success through responsible AI collaboration. Applies the 4D framework (delegation, description, discernment, diligence) to student life.",
+      "text_length": 4207
+    },
+    "ai-fluency-framework-foundations": {
+      "url": "https://academy.claude.com/courses/ai-fluency-framework-foundations",
+      "title": "AI Fluency: Framework &amp; Foundations \u00b7 Claude Academy",
+      "description": "Learn to collaborate with AI effectively, efficiently, ethically, and safely using the 4D framework: Delegation, Description, Discernment, and Diligence.",
+      "text_length": 6346
+    },
+    "teaching-ai-fluency": {
+      "url": "https://academy.claude.com/courses/teaching-ai-fluency",
+      "title": "Teaching AI Fluency \u00b7 Claude Academy",
+      "description": "Equips academic faculty and instructional designers to teach and assess AI fluency in instructor-led settings. Builds on the 4D AI Fluency Framework with strategies for assessment, assignment design, and discipline-specific application.",
+      "text_length": 4613
+    }
+  }
+}

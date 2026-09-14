@@ -1,0 +1,71 @@
+{
+  "title": "Module 5: Diligence: Safety, Privacy, and Verification",
+  "tier": "CORE",
+  "sourcePackage": "surfaces/ai.allternit.com/src/lib/agents",
+  "accentColor": "#3b82f6",
+  "navLinks": [
+    {
+      "label": "Overview",
+      "section": "overview"
+    },
+    {
+      "label": "DLP",
+      "section": "dlp"
+    },
+    {
+      "label": "Profiles",
+      "section": "profiles"
+    },
+    {
+      "label": "Vault",
+      "section": "vault"
+    },
+    {
+      "label": "Quizzes",
+      "section": "quizzes"
+    },
+    {
+      "label": "Capstone",
+      "section": "capstone"
+    }
+  ],
+  "moduleCss": "\n.hero { position: relative; overflow: hidden; }\n#moduleCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }\n.quiz-option code { background: rgba(59,130,246,0.12); color: #3b82f6; }\n",
+  "moduleContent": "<section id=\"overview\" class=\"hero reveal\">\n  <canvas id=\"moduleCanvas\"></canvas>\n  <span class=\"hero-badge\">CORE Tier</span>\n  <h1>Module 5: <em>Diligence: Safety, Privacy, and Verification</em></h1>\n  <p>\n    Diligence is the fourth D of AI fluency: treating safety, privacy, and verification as design constraints rather than afterthoughts.\n    This module connects Allternit's security model, permission profiles, vault, and audit system.\n  </p>\n  <div class=\"hero-meta\">\n    <span><strong>5 lessons</strong> · ~40 minutes</span>\n    <span>Source: <code>surfaces/ai.allternit.com/src/lib/agents</code></span>\n  </div>\n</section>\n\n<section id=\"dlp\" class=\"reveal\">\n  <h2>DLP and prompt leak detection</h2>\n  <p>\n    The Allternit LLM gateway scans outgoing requests for secrets, PII, and prompt-injection patterns before they reach any provider.\n    Detections can warn, redact, or block. Admin endpoints also let operators score user text against system prompts to detect accidental leakage.\n  </p>\n  <p>\n    Trust boundaries are clear: customer browsers and the gizzi-code CLI live in the customer environment; the Allternit API server enforces auth, rate limits, DLP, budgets, and routing;\n    external providers receive only policy-checked requests.\n  </p>\n  <table>\n    <thead>\n      <tr><th>Threat</th><th>Mitigation</th></tr>\n    </thead>\n    <tbody>\n      <tr><td>Secret exfiltration in prompts</td><td>DLP scanning with block/redact actions</td></tr>\n      <tr><td>Prompt injection</td><td>Injection scoring and strict tool-use validation</td></tr>\n      <tr><td>Provider key exposure</td><td>Provider keys stored in vault or external keys, never returned to clients</td></tr>\n      <tr><td>Privilege escalation</td><td>RBAC with org-scoped ownership checks on every admin route</td></tr>\n    </tbody>\n  </table>\n</section>\n\n<section id=\"profiles\" class=\"reveal\">\n  <h2>Permission profiles as safety boundaries</h2>\n  <p>\n    Permission profiles define what an agent can do on your machine. The built-in profiles let you choose a default posture without rewriting config.\n    For sensitive work, start with <code>restricted</code>; for trusted repositories, use <code>trusted-review</code>; avoid <code>danger-full-access</code> unless the host already isolates processes.\n  </p>\n  <div class=\"code-block\">\n    <div class=\"code-header\"><span class=\"code-lang\">toml</span><button class=\"code-copy\">Copy</button></div>\n    <pre><code># ~/.gizzi/profiles/untrusted-audit.toml\n[permissions]\napproval_policy = \"never\"\nsandbox_mode = \"workspace-write\"\nnetwork_access = false\nallow_login_shell = false\n\n[permissions.sandbox_workspace_write]\nwritable_roots = []</code></pre>\n  </div>\n  <p>\n    Overlay order matters. A profile is loaded after user defaults but before project overrides and CLI flags.\n    That means a project-local <code>.gizzi/config.toml</code> can tighten settings, but it should not silently loosen safety settings without review.\n  </p>\n  {{MEDIA:core-fluency-m5-permission-profile-demo}}\n</section>\n\n<section id=\"vault\" class=\"reveal\">\n  <h2>Vault, audit, and compliance</h2>\n  <p>\n    Credentials belong in the vault, not in prompts or repository files. <code>AllternitVault</code> seals OAuth values and other secrets at rest using the API's token crypto layer.\n    The plaintext is never returned by the credential list API, and revocation sets <code>revoked_at</code> without deleting the row, preserving an audit trail.\n  </p>\n  {{MEDIA:core-fluency-m5-safety-governance}}\n  <p>\n    Audit logs cover administrative actions, key lifecycle events, and compliance requests. Every LLM request is recorded with tokens, cost, status, latency, and routing decision.\n    Compliance endpoints let admins export or delete chats, projects, and artifacts when required.\n  </p>\n  {{MEDIA:core-fluency-m5-vault-walkthrough}}\n</section>\n\n<section id=\"quizzes\" class=\"reveal\">\n  <h2>Check your understanding</h2>\n  <div class=\"quiz\" id=\"quiz1\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">1</span>\n    <h3>What action does the DLP layer take when it detects a secret in an outgoing request?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 0)\">\n        <span class=\"radio\"></span>\n        <span>Always blocks</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 1)\">\n        <span class=\"radio\"></span>\n        <span>Warns, redacts, or blocks depending on policy</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 2)\">\n        <span class=\"radio\"></span>\n        <span>Logs only</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 3)\">\n        <span class=\"radio\"></span>\n        <span>Forwards to the provider unchanged</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback1\"></div>\n  <button class=\"quiz-retry\" id=\"retry1\" onclick=\"QuizEngine.reset(1)\">Try again</button>\n</div>\n\n<div class=\"quiz\" id=\"quiz2\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">2</span>\n    <h3>Which permission profile should you avoid unless the host environment already isolates processes?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 0)\">\n        <span class=\"radio\"></span>\n        <span>restricted</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 1)\">\n        <span class=\"radio\"></span>\n        <span>workspace-write</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 2)\">\n        <span class=\"radio\"></span>\n        <span>trusted-review</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 3)\">\n        <span class=\"radio\"></span>\n        <span>danger-full-access</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback2\"></div>\n  <button class=\"quiz-retry\" id=\"retry2\" onclick=\"QuizEngine.reset(2)\">Try again</button>\n</div>\n\n<div class=\"quiz\" id=\"quiz3\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">3</span>\n    <h3>What happens to a vault credential when it is revoked?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 0)\">\n        <span class=\"radio\"></span>\n        <span>The row is deleted</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 1)\">\n        <span class=\"radio\"></span>\n        <span>revoked_at is set without deleting the row</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 2)\">\n        <span class=\"radio\"></span>\n        <span>It is returned in plaintext one last time</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 3)\">\n        <span class=\"radio\"></span>\n        <span>It is moved to a different table</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback3\"></div>\n  <button class=\"quiz-retry\" id=\"retry3\" onclick=\"QuizEngine.reset(3)\">Try again</button>\n</div>\n</section>\n\n<section id=\"capstone\" class=\"reveal\">\n  <div class=\"capstone\">\n    <h2>Capstone: Conduct a safety review</h2>\n    <p>\n      Pick one agent workflow in your organization. Identify the data it touches, the tools it uses, the permission profile it runs under, and where credentials are stored.\n      Propose three concrete changes that improve safety or privacy.\n    </p>\n    <div class=\"capstone-grid\">\n      <div class=\"capstone-item\"><h4>Data classification</h4><p>PII, secrets, or regulated data involved.</p></div>\n      <div class=\"capstone-item\"><h4>Tool boundaries</h4><p>Which tools are allowed and why.</p></div>\n      <div class=\"capstone-item\"><h4>Profile choice</h4><p>Recommended permission profile and exceptions.</p></div>\n      <div class=\"capstone-item\"><h4>Credential handling</h4><p>Vault usage and rotation plan.</p></div>\n    </div>\n  </div>\n</section>",
+  "moduleJs": "const canvas = document.getElementById('moduleCanvas');\nif (canvas) {\n  const ctx = canvas.getContext('2d');\n  function resize() {\n    canvas.width = canvas.offsetWidth;\n    canvas.height = canvas.offsetHeight;\n  }\n  window.addEventListener('resize', resize);\n  resize();\n  const nodes = Array.from({ length: 24 }, () => ({\n    x: Math.random() * canvas.width,\n    y: Math.random() * canvas.height,\n    vx: (Math.random() - 0.5) * 0.6,\n    vy: (Math.random() - 0.5) * 0.6,\n  }));\n  function draw() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.fillStyle = '#3b82f6';\n    nodes.forEach((n) => {\n      n.x += n.vx;\n      n.y += n.vy;\n      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;\n      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;\n      ctx.beginPath();\n      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);\n      ctx.fill();\n    });\n    ctx.strokeStyle = 'rgba(59,130,246,0.12)';\n    for (let i = 0; i < nodes.length; i++) {\n      for (let j = i + 1; j < nodes.length; j++) {\n        const dx = nodes[i].x - nodes[j].x;\n        const dy = nodes[i].y - nodes[j].y;\n        const d = Math.sqrt(dx * dx + dy * dy);\n        if (d < 120) {\n          ctx.beginPath();\n          ctx.moveTo(nodes[i].x, nodes[i].y);\n          ctx.lineTo(nodes[j].x, nodes[j].y);\n          ctx.stroke();\n        }\n      }\n    }\n    requestAnimationFrame(draw);\n  }\n  draw();\n}",
+  "quizAnswers": {
+    "1": 1,
+    "2": 3,
+    "3": 1
+  },
+  "quizFeedback": {
+    "1": {
+      "correct": "Correct. DLP detections can warn, redact, or block depending on the configured policy.",
+      "wrong": "Not quite. The DLP layer is configurable; it does not always block or always forward unchanged."
+    },
+    "2": {
+      "correct": "Correct. danger-full-access disables sandboxing and should only be used when the environment already isolates processes.",
+      "wrong": "Not quite. restricted, workspace-write, and trusted-review all maintain some sandbox boundaries."
+    },
+    "3": {
+      "correct": "Correct. Revocation sets revoked_at without deleting the row, preserving an audit trail.",
+      "wrong": "Not quite. Vault credentials are not deleted on revocation; their revoked_at timestamp is set."
+    }
+  },
+  "mediaAssets": [
+    {
+      "id": "core-fluency-m5-safety-governance",
+      "type": "mermaid",
+      "src": "alabs-generated-courses/media/src/core-fluency-m5-safety-governance.mmd"
+    },
+    {
+      "id": "core-fluency-m5-permission-profile-demo",
+      "type": "asciinema",
+      "src": "alabs-generated-courses/media/src/core-fluency-m5-permission-profile-demo.cast"
+    },
+    {
+      "id": "core-fluency-m5-vault-walkthrough",
+      "type": "walkthrough",
+      "src": "alabs-generated-courses/media/src/core-fluency-m5-vault-walkthrough.json"
+    }
+  ]
+}

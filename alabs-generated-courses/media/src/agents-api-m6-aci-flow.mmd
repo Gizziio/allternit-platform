@@ -1,0 +1,22 @@
+flowchart TB
+    subgraph User["Operator surface"]
+        A[Web / Desktop / iOS]
+    end
+
+    A -->|POST /api/aci/run| B[ACU gateway]
+    B --> C[Browser provider]
+    C --> D{Screenshot + DOM}
+    D --> E[Planner model]
+    E --> F[ActionIntent]
+    F --> G{Policy check}
+    G -->|allow| H[Execute action]
+    G -->|require_approval| I[Approval prompt]
+    I -->|approved| H
+    H --> J[BrowserObservation]
+    J --> D
+
+    B -->|SSE /api/aci/stream| A
+
+    style A fill:#151517,stroke:#ec4899,stroke-width:2px
+    style B fill:#151517,stroke:#ec4899,stroke-width:2px
+    style E fill:#1c1c1f,stroke:#ec4899

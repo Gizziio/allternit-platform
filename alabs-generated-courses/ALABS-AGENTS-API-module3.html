@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3: Tool Use & the Agent Loop — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ec4899;
+      --accent-dim: rgba(236,72,153,0.15);
+      --accent-glow: rgba(236,72,153,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #f472b6);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(236,72,153,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#loopNetworkCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(236,72,153,0.12); color: #f472b6; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#ec4899', primaryTextColor: '#e5e5e5', primaryBorderColor: '#ec4899', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#loop" data-section="loop">Loop</a></li>
+        <li><a href="#registry" data-section="registry">Registry</a></li>
+        <li><a href="#sessions" data-section="sessions">Sessions</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">AGENTS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="loopNetworkCanvas"></canvas>
+  <span class="hero-badge">AGENTS Tier</span>
+  <h1>Module 3: <em>Tool Use & the Agent Loop</em></h1>
+  <p>Learn how Allternit agents decide when to call tools, how the Tool Registry and MCP surface those tools, and how the session event stream captures every turn of the loop.</p>
+  <div class="hero-meta">
+    <span><strong>5 lessons</strong> · ~45 minutes</span>
+    <span>Source: <code>surfaces/ai.allternit.com/src/lib/agents</code></span>
+  </div>
+</section>
+
+<section id="loop" class="reveal">
+  <h2>The agent loop</h2>
+  <p>A model running by itself can only produce text. A useful agent can act. The difference is the <em>loop</em>: the model proposes a tool call, the runtime executes it, the result returns to the model, and the model decides what to do next. The loop continues until the task is done or a budget limit is reached.</p>
+  <p>Inside Allternit, the loop is implemented by <code>agent-mode-executor.ts</code>. It starts with a user prompt and a canonical mode, looks up the mode contract, dispatches to the right plugin or inline handler, and emits the resulting artifact.</p>
+  <ul>
+    <li><strong>Prompt + contract.</strong> The system prompt and required capabilities come from <code>agent-mode-contracts.ts</code>.</li>
+    <li><strong>Tool calls.</strong> The model can request tools from the active registry; the runtime executes them and returns results.</li>
+    <li><strong>Evidence validation.</strong> After the run, <code>validateAgentModeExecution</code> checks that the required artifact and markers are present.</li>
+  </ul>
+
+  <pre class="mermaid alabs-media" data-media-id="agents-api-m3-agent-loop">sequenceDiagram
+    participant U as User
+    participant E as AgentModeExecutor
+    participant G as generateText
+    participant R as ToolRegistry / MCP
+    participant A as ArtifactStore
+
+    U-&gt;&gt;E: prompt + mode (e.g. research)
+    E-&gt;&gt;E: look up contract &amp; plugin
+    E-&gt;&gt;G: system prompt + tools
+    G--&gt;&gt;E: tool_call: web_search
+    E-&gt;&gt;R: execute tool
+    R--&gt;&gt;E: search results
+    E-&gt;&gt;G: results + continue
+    G--&gt;&gt;E: tool_call: file_write
+    E-&gt;&gt;R: execute tool
+    R--&gt;&gt;E: written artifact
+    E-&gt;&gt;E: validate evidence
+    E-&gt;&gt;A: emit artifact
+    E--&gt;&gt;U: MODE_EXECUTION_COMPLETE</pre>
+
+  <h3>Walkthrough: inside the executor</h3>
+  <p>The executor is the heart of the loop. The walkthrough below shows how it maps modes to plugins, dispatches execution, and produces an artifact.</p>
+
+  <div class="walkthrough-container" data-walkthrough-container="agents-api-m3-executor-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="agents-api-m3-executor-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('agents-api-m3-executor-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 5</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('agents-api-m3-executor-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="agents-api-m3-executor-walkthrough-step-0" data-walkthrough="agents-api-m3-executor-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Mode-to-plugin mapping</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The executor maps canonical modes like research, code, and data to plugin IDs. If no plugin is mapped, the executor falls back to inline handlers such as docs or data.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">surfaces/ai.allternit.com/src/lib/agents/agent-mode-executor.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="12">
+        <span class="line-no"> 12</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="13">
+        <span class="line-no"> 13</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="14">
+        <span class="line-no"> 14</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>const</span> MODE_PLUGIN: Partial&lt;Record&lt;CanonicalAgentModeId, PluginId&gt;&gt; = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="15">
+        <span class="line-no"> 15</span>
+        <span class="line-code">  swarms: <span class="token-string">'swarms'</span>, research: <span class="token-string">'research'</span>, website: <span class="token-string">'website'</span>, data: <span class="token-string">'data'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="16">
+        <span class="line-no"> 16</span>
+        <span class="line-code">  slides: <span class="token-string">'slides'</span>, image: <span class="token-string">'image'</span>, video: <span class="token-string">'video'</span>, code: <span class="token-string">'code'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="17">
+        <span class="line-no"> 17</span>
+        <span class="line-code">};</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="18">
+        <span class="line-no"> 18</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="19">
+        <span class="line-no"> 19</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>const</span> MODE_KIND: Record&lt;CanonicalAgentModeId, ArtifactKind&gt; = {</span>
+      </div>
+<div class="walkthrough-line dim" data-line="20">
+        <span class="line-no"> 20</span>
+        <span class="line-code">  swarms: <span class="token-string">'document'</span>, research: <span class="token-string">'document'</span>, website: <span class="token-string">'html'</span>, docs: <span class="token-string">'document'</span>,</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m3-executor-walkthrough-step-1" data-walkthrough="agents-api-m3-executor-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Mode-to-artifact kind</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>Each mode declares the artifact kind it produces. This lets downstream UI components render the result with the correct viewer: document, spreadsheet, website, image, video, or code.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">surfaces/ai.allternit.com/src/lib/agents/agent-mode-executor.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="17">
+        <span class="line-no"> 17</span>
+        <span class="line-code">};</span>
+      </div>
+<div class="walkthrough-line dim" data-line="18">
+        <span class="line-no"> 18</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="19">
+        <span class="line-no"> 19</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>const</span> MODE_KIND: Record&lt;CanonicalAgentModeId, ArtifactKind&gt; = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="20">
+        <span class="line-no"> 20</span>
+        <span class="line-code">  swarms: <span class="token-string">'document'</span>, research: <span class="token-string">'document'</span>, website: <span class="token-string">'html'</span>, docs: <span class="token-string">'document'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="21">
+        <span class="line-no"> 21</span>
+        <span class="line-code">  data: <span class="token-string">'sheet'</span>, slides: <span class="token-string">'slides'</span>, image: <span class="token-string">'image'</span>, video: <span class="token-string">'video'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="22">
+        <span class="line-no"> 22</span>
+        <span class="line-code">  code: <span class="token-string">'jsx'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="23">
+        <span class="line-no"> 23</span>
+        <span class="line-code">};</span>
+      </div>
+<div class="walkthrough-line dim" data-line="24">
+        <span class="line-no"> 24</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="25">
+        <span class="line-no"> 25</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>function</span> escapeHtml(value: string): string {</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m3-executor-walkthrough-step-2" data-walkthrough="agents-api-m3-executor-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Execute agent mode</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>executeAgentMode receives the mode id, prompt, optional template title, and callbacks. It emits a tool-call event so the rest of the surface can observe the run.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">surfaces/ai.allternit.com/src/lib/agents/agent-mode-executor.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="116">
+        <span class="line-no">116</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="117">
+        <span class="line-no">117</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="118">
+        <span class="line-no">118</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>async</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> executeAgentMode(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="119">
+        <span class="line-no">119</span>
+        <span class="line-code">  modeId: CanonicalAgentModeId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="120">
+        <span class="line-no">120</span>
+        <span class="line-code">  prompt: string,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="121">
+        <span class="line-no">121</span>
+        <span class="line-code">  templateTitle: string | <span class=<span class="token-string">"token-keyword"</span>>undefined</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="122">
+        <span class="line-no">122</span>
+        <span class="line-code">  callbacks: AgentModeExecutorCallbacks,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="123">
+        <span class="line-no">123</span>
+        <span class="line-code">  signal?: AbortSignal,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="124">
+        <span class="line-no">124</span>
+        <span class="line-code">): Promise&lt;void&gt; {</span>
+      </div>
+<div class="walkthrough-line dim" data-line="125">
+        <span class="line-no">125</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>if</span> (signal?.aborted) <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> DOMException(<span class="token-string">'Mode execution cancelled'</span>, <span class="token-string">'AbortError'</span>);</span>
+      </div>
+<div class="walkthrough-line dim" data-line="126">
+        <span class="line-no">126</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> toolCallId = `mode-${modeId}-${Date.now()}`;</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m3-executor-walkthrough-step-3" data-walkthrough="agents-api-m3-executor-walkthrough" data-step="3">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 4</span>
+    <h4>Dispatch to plugin or inline handler</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The executor selects the plugin instance, wires abort handling, and runs the plugin. Docs and sheets use dedicated prompts, while other modes delegate to the plugin runtime.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">surfaces/ai.allternit.com/src/lib/agents/agent-mode-executor.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="132">
+        <span class="line-no">132</span>
+        <span class="line-code">  });</span>
+      </div>
+<div class="walkthrough-line dim" data-line="133">
+        <span class="line-no">133</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="134">
+        <span class="line-no">134</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> pluginId = MODE_PLUGIN[modeId];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="135">
+        <span class="line-no">135</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>if</span> (modeId === <span class="token-string">'video'</span>) <span class=<span class="token-string">"token-keyword"</span>>await</span> ensureVideoProviderKey();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="136">
+        <span class="line-no">136</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>let</span> plugin: Awaited&lt;ReturnType&lt;typeof createPluginInstance&gt;&gt; | <span class=<span class="token-string">"token-keyword"</span>>undefined</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="137">
+        <span class="line-no">137</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> output = modeId === <span class="token-string">'docs'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="138">
+        <span class="line-no">138</span>
+        <span class="line-code">    ? <span class=<span class="token-string">"token-keyword"</span>>await</span> executeDocs(prompt, signal)</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="139">
+        <span class="line-no">139</span>
+        <span class="line-code">    : modeId === <span class="token-string">'data'</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="140">
+        <span class="line-no">140</span>
+        <span class="line-code">      ? <span class=<span class="token-string">"token-keyword"</span>>await</span> executeSheets(prompt, signal)</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="141">
+        <span class="line-no">141</span>
+        <span class="line-code">      : <span class=<span class="token-string">"token-keyword"</span>>await</span> (<span class=<span class="token-string">"token-keyword"</span>>async</span> () =&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="142">
+        <span class="line-no">142</span>
+        <span class="line-code">          plugin = <span class=<span class="token-string">"token-keyword"</span>>await</span> createPluginInstance(pluginId!);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="143">
+        <span class="line-no">143</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>const</span> cancel = () =&gt; void plugin?.cancel();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="144">
+        <span class="line-no">144</span>
+        <span class="line-code">          signal?.addEventListener(<span class="token-string">'abort'</span>, cancel, { once: <span class=<span class="token-string">"token-keyword"</span>>true</span> });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="145">
+        <span class="line-no">145</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>try</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="146">
+        <span class="line-no">146</span>
+        <span class="line-code">            <span class=<span class="token-string">"token-keyword"</span>>return</span> <span class=<span class="token-string">"token-keyword"</span>>await</span> plugin.execute({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="147">
+        <span class="line-no">147</span>
+        <span class="line-code">              prompt,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="148">
+        <span class="line-no">148</span>
+        <span class="line-code">              options: { templateTitle, format: modeId === <span class="token-string">'slides'</span> ? <span class="token-string">'markdown'</span> : <span class=<span class="token-string">"token-keyword"</span>>undefined</span> },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="149">
+        <span class="line-no">149</span>
+        <span class="line-code">            });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="150">
+        <span class="line-no">150</span>
+        <span class="line-code">          } finally {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="151">
+        <span class="line-no">151</span>
+        <span class="line-code">            signal?.removeEventListener(<span class="token-string">'abort'</span>, cancel);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="152">
+        <span class="line-no">152</span>
+        <span class="line-code">            <span class=<span class="token-string">"token-keyword"</span>>await</span> plugin.destroy();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="153">
+        <span class="line-no">153</span>
+        <span class="line-code">          }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="154">
+        <span class="line-no">154</span>
+        <span class="line-code">        })();</span>
+      </div>
+<div class="walkthrough-line dim" data-line="155">
+        <span class="line-no">155</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="156">
+        <span class="line-no">156</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>if</span> (!output.success) {</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m3-executor-walkthrough-step-4" data-walkthrough="agents-api-m3-executor-walkthrough" data-step="4">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 5</span>
+    <h4>Emit result and artifact</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>After the plugin succeeds, the executor emits the tool result and builds an ArtifactUIPart with the primary content. The MODE_EXECUTION_COMPLETE marker is sent through the chunk callback.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">surfaces/ai.allternit.com/src/lib/agents/agent-mode-executor.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="154">
+        <span class="line-no">154</span>
+        <span class="line-code">        })();</span>
+      </div>
+<div class="walkthrough-line dim" data-line="155">
+        <span class="line-no">155</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="156">
+        <span class="line-no">156</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>if</span> (!output.success) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="157">
+        <span class="line-no">157</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> Error(output.error?.message ?? `${modeId} execution failed`);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="158">
+        <span class="line-no">158</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="159">
+        <span class="line-no">159</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>if</span> (signal?.aborted) <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> DOMException(<span class="token-string">'Mode execution cancelled'</span>, <span class="token-string">'AbortError'</span>);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="160">
+        <span class="line-no">160</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="161">
+        <span class="line-no">161</span>
+        <span class="line-code">  callbacks.onToolResult?.({ toolCallId, toolName, result: output });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="162">
+        <span class="line-no">162</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> artifact: ArtifactUIPart = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="163">
+        <span class="line-no">163</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'artifact'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="164">
+        <span class="line-no">164</span>
+        <span class="line-code">    artifactId: `${modeId}-${Date.now()}-${Math.random().toString(<span class="token-number">36</span>).slice(<span class="token-number">2</span>, <span class="token-number">8</span>)}`,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="165">
+        <span class="line-no">165</span>
+        <span class="line-code">    kind: MODE_KIND[modeId],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="166">
+        <span class="line-no">166</span>
+        <span class="line-code">    title: templateTitle || `${modeId[<span class="token-number">0</span>].toUpperCase()}${modeId.slice(<span class="token-number">1</span>)} result`,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="167">
+        <span class="line-no">167</span>
+        <span class="line-code">    content: primaryContent(modeId, output),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="168">
+        <span class="line-no">168</span>
+        <span class="line-code">    url: output.artifacts?.[<span class="token-number">0</span>]?.url,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="169">
+        <span class="line-no">169</span>
+        <span class="line-code">  };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="170">
+        <span class="line-no">170</span>
+        <span class="line-code">  callbacks.onArtifact?.(artifact);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="171">
+        <span class="line-no">171</span>
+        <span class="line-code">  callbacks.onChunk?.(`${output.content ?? `${artifact.title} created.`}\n\nMODE_EXECUTION_COMPLETE\n- ${artifact.title} (${artifact.kind})`);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="172">
+        <span class="line-no">172</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="173">
+        <span class="line-no">173</span>
+        <span class="line-code">&nbsp;</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="registry" class="reveal">
+  <h2>Tool Registry and MCP</h2>
+  <p>Tools are not hard-coded into the agent. They live in a <code>ToolRegistry</code> that can hold native platform tools, custom tools, and tools imported from external MCP servers. The registry enforces schemas, namespaces names, and can defer heavy tools until the model explicitly activates them.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+
+const registry = new ToolRegistry();
+registry.registerTool(weatherTool, { namespace: 'demo', strict: true });
+
+console.log(registry.getTool('demo.weather'));
+// => { name: 'demo.weather', input_schema: ..., execute: ... }</code></pre>
+  </div>
+
+  <h3>Attaching an MCP server</h3>
+  <p>The platform can consume external MCP servers through <code>NativeToolBelt.attachMcpServer</code>. Each discovered tool is registered under a namespace with <code>strict: true</code>, so the model sees a closed schema and the runtime can proxy calls back to the server.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>const belt = new NativeToolBelt(registry);
+const names = await belt.attachMcpServer({
+  serverId: 'docs',
+  listTools: async () => [{
+    name: 'read',
+    description: 'Read a document',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id']
+    }
+  }],
+  callTool: async (name, args) => {
+    return { content: `Read ${name} with ${JSON.stringify(args)}` };
+  }
+});
+
+console.log(names); // => ['docs.read']</code></pre>
+  </div>
+
+  <p>The Rust API also exposes the platform's own registry as an MCP server at <code>/mcp/server</code>, so external clients can call Allternit tools while the platform can call theirs. Both directions share the same tool definitions.</p>
+
+  <div class="callout info">
+    <p><strong>Namespace rule:</strong> Names follow <code>^[A-Za-z][A-Za-z0-9_-]*$</code>. The qualified name becomes <code>namespace.tool</code>, preventing collisions between MCP servers and built-in tools.</p>
+  </div>
+
+  <h3>Deferred tools</h3>
+  <p>Some tools are expensive or rare. The registry supports deferred tools that are known but not injected into the active schema until the model calls <code>tool_activate</code>. This keeps the context window small and the schema focused.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>registry.registerDeferredTool({
+  id: 'db-tool',
+  name: 'query_db',
+  description: 'Run a read-only SQL query',
+  input_schema: {
+    type: 'object',
+    properties: { query: { type: 'string' } },
+    required: ['query']
+  },
+  tags: ['database', 'sql']
+});
+
+registry.activateTool('db-tool');
+console.log(registry.getActiveTools().map(t => t.name));
+// => [..., 'query_db']</code></pre>
+  </div>
+</section>
+
+<section id="sessions" class="reveal">
+  <h2>Sessions and events</h2>
+  <p>The agent lifecycle guide shows how runs are anchored to sessions. A session has a budget—max tokens, turns, and tool calls—and receives a stream of events. The runtime appends events such as <code>content_block_delta</code>, <code>tool_calls</code>, and usage updates, while clients listen over SSE.</p>
+  <p>This event model is what makes the loop observable. A parent orchestrator can interrupt the session, a human reviewer can watch progress, and an evaluator can reconstruct exactly which tools were called and when.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">bash</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>curl -N "http://localhost:8013/api/v1/beta/sessions/$SESSION_ID/events" \
+  -H "Authorization: Bearer $CLERK_JWT" \
+  -H "Accept: text/event-stream"</code></pre>
+  </div>
+
+  <h3>Budget and interruption</h3>
+  <p>The session budget is created with the session and updated as the run consumes tokens and tool calls. If a human or parent agent needs to stop the run, an interrupt is appended as a <code>user_interrupt</code> event. The loop checks its abort signal and exits cleanly.</p>
+
+  <div class="callout">
+    <p><strong>Loop invariant:</strong> Every tool call is observable, every result is logged, and every completion is validated against the mode contract before the artifact is shown to the user.</p>
+  </div>
+
+  <h3>Terminal demo: a research-mode loop</h3>
+  <p>The recording below shows a research-mode agent calling search and browser tools, validating evidence, and emitting a completed artifact.</p>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="agents-api-m3-agent-loop-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAyMCwgInRpbWVzdGFtcCI6IDE3MDAwMDAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4vYmFzaCIsICJURVJNIjogInh0ZXJtLTI1NmNvbG9yIn19ClswLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gdHN4IHNjcmlwdHMvcnVuLWFnZW50LW1vZGUudHMgcmVzZWFyY2ggXCJDb21wYXJlIGxvY2FsIExMTSBwcm92aWRlcnMgZm9yIHByaXZhY3lcIlxyXG4iXQpbMC44LCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIExvYWRlZCBjb250cmFjdCBmb3IgcmVzZWFyY2ggbW9kZVxyXG4iXQpbMS40LCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIFJlcXVpcmVkIGNhcGFiaWxpdGllczogd2ViX3NlYXJjaCwgYnJvd3NlciwgZmlsZV93cml0ZVxyXG4iXQpbMi4yLCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIENhbGxpbmcgZ2VuZXJhdGVUZXh0IHdpdGggdG9vbCBjaG9pY2UgJ2F1dG8nXHJcbiJdClszLjAsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gVG9vbCBjYWxsOiB3ZWJfc2VhcmNoKHtcInF1ZXJ5XCI6IFwibG9jYWwgTExNIHByb3ZpZGVycyBwcml2YWN5IDIwMjZcIn0pXHJcbiJdCls0LjIsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gVG9vbCBjYWxsOiBicm93c2VyKHtcInVybFwiOiBcImh0dHBzOi8vZG9jcy5hbGx0ZXJuaXQuY29tL2d1aWRlcy9wcml2YWN5XCJ9KVxyXG4iXQpbNS41LCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIE1vZGVsIHByb2R1Y2VkIDQgY2l0ZWQgZmluZGluZ3NcclxuIl0KWzYuMywgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBUb29sIGNhbGw6IGZpbGVfd3JpdGUoe1wicGF0aFwiOiBcInJlcG9ydC5odG1sXCIsIC4uLn0pXHJcbiJdCls3LjEsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gdmFsaWRhdGVBZ2VudE1vZGVFeGVjdXRpb246IGNvbXBsZXRlXHJcbiJdCls3LjksICJvIiwgIlx1MDAxYlsxOzMybeKck1x1MDAxYlswbSBNT0RFX0VYRUNVVElPTl9DT01QTEVURSDigJQgYXJ0aWZhY3QgcmVzZWFyY2gtcmVwb3J0IGNyZWF0ZWRcclxuIl0KWzguNywgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBTZXNzaW9uIGV2ZW50IGFwcGVuZGVkOiB0b29sX2NhbGxzPTMsIHRva2Vucz0xODQyXHJcbiJd" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check Your Understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <div class="quiz-num">1</div>
+      <h3>What does <code>executeAgentMode</code> emit before the plugin or inline handler runs?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)"><div class="radio"></div><span>The final artifact</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)"><div class="radio"></div><span>An <code>onToolCall</code> event</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)"><div class="radio"></div><span>A deployment record</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)"><div class="radio"></div><span>A session budget update</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="window.QuizEngine.reset(1)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <div class="quiz-num">2</div>
+      <h3>What happens when <code>NativeToolBelt.attachMcpServer</code> discovers an external tool?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)"><div class="radio"></div><span>It downloads the tool binary to the client</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)"><div class="radio"></div><span>It registers the tool as a namespaced, strict schema tool</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)"><div class="radio"></div><span>It runs the tool locally in a sandbox</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)"><div class="radio"></div><span>It stores the tool in the session budget</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="window.QuizEngine.reset(2)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <div class="quiz-num">3</div>
+      <h3>Which event type can be appended to a running session?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)"><div class="radio"></div><span><code>session_created</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)"><div class="radio"></div><span><code>budget_updated</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)"><div class="radio"></div><span><code>content_block_delta</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)"><div class="radio"></div><span><code>deployment_scheduled</code></span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="window.QuizEngine.reset(3)">Retry</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal capstone">
+  <h2>Capstone: Add a custom tool to the agent loop</h2>
+  <p>Extend the Allternit agent loop with a custom capability. Your tool should be registered, called by an agent mode, and validated at the end of the run.</p>
+  <div class="capstone-grid">
+    <div class="capstone-item">
+      <h4>Define the tool</h4>
+      <p>Write a <code>ToolDefinition</code> with a strict input schema and an <code>execute</code> function that returns useful data.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Register it</h4>
+      <p>Add the tool to a <code>ToolRegistry</code> under a namespace. Confirm it appears in <code>getActiveTools()</code>.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Invoke from a mode</h4>
+      <p>Choose a canonical mode whose contract includes the capability your tool provides, and trace how the executor would call it.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Validate evidence</h4>
+      <p>Show how <code>validateAgentModeExecution</code> would pass or fail depending on whether the tool was actually called and the required artifact produced.</p>
+    </div>
+  </div>
+  <div class="callout success" style="margin-top: 24px;">
+    <p><strong>Deliverable:</strong> A TypeScript module that exports the tool, a short test that calls it through the registry, and a note explaining which mode contract it satisfies.</p>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — AGENTS Tier — Module 3: Tool Use & the Agent Loop</p>
+    <p style="margin-top:4px;">Generated from <code>surfaces/ai.allternit.com/src/lib/agents</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":1,"3":2}, {"1":{"correct":"Correct. executeAgentMode builds a toolCallId and toolName, then calls callbacks.onToolCall before dispatching to the plugin or inline handler.","wrong":"Not quite. The artifact and MODE_EXECUTION_COMPLETE come after the plugin succeeds. The first observable event is onToolCall."},"2":{"correct":"Correct. attachMcpServer registers each discovered tool under the server namespace with strict schema validation.","wrong":"Not quite. MCP tools remain on their server; the platform proxies calls. They are registered as namespaced tools in the local registry."},"3":{"correct":"Correct. content_block_delta, thinking_delta, tool_calls, and refusal are appendable run event types during a session.","wrong":"Not quite. session_created and budget_updated are seeded when the session is created. deployment_scheduled is a deployment lifecycle event, not a run event."}});
+
+    
+const canvas = document.getElementById('loopNetworkCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ec4899';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(236,72,153,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "file": "packages/@allternit/office-file-parse/src/parse.ts",
+  "language": "typescript",
+  "steps": [
+    {
+      "title": "Parsed file shape",
+      "lines": [8, 9, 10, 11, 12, 13, 14, 15, 16],
+      "note": "Every parsed file returns ok, kind, text, mime, and error. Callers use kind to decide whether to send text or raw image bytes to the model."
+    },
+    {
+      "title": "Image bypass",
+      "lines": [18, 19, 20, 21, 22, 23, 24, 25],
+      "note": "office-file-parse deliberately does not extract text from images. Images are returned as kind='image' so the multimodal provider can handle them directly."
+    },
+    {
+      "title": "Text extraction dispatch",
+      "lines": [40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63],
+      "note": "parseFileToText dispatches by extension, reads raw bytes, and converts each Office format to plain text. Errors are returned as ParsedFile objects rather than thrown, keeping RAG pipelines resilient."
+    }
+  ]
+}

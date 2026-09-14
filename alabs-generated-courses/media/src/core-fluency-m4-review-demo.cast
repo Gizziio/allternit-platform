@@ -1,0 +1,12 @@
+{"version": 2, "width": 80, "height": 18, "timestamp": 1700000000, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.0, "o", "\u001b[1;32m$\u001b[0m cat support-ticket.md | gizzi exec \"Classify and draft reply\"\r\n"]
+[1.0, "o", "\u001b[90m→\u001b[0m category: Billing\r\n"]
+[1.4, "o", "\u001b[90m→\u001b[0m sentiment: strongly_negative\r\n"]
+[1.8, "o", "\u001b[90m→\u001b[0m escalate: true\r\n"]
+[2.2, "o", "\u001b[90m→\u001b[0m response: \"\"\r\n"]
+[3.0, "o", "\u001b[1;32m✓\u001b[0m Review: the model correctly set escalate=true and did not draft a reply.\r\n"]
+[4.0, "o", "\u001b[1;32m$\u001b[0m gizzi exec \"Summarize contract and flag risky clauses\"\r\n"]
+[5.0, "o", "\u001b[90m→\u001b[0m Summary: 3 bullets\r\n"]
+[5.4, "o", "\u001b[90m→\u001b[0m Flag: uncapped liability clause\r\n"]
+[5.8, "o", "\u001b[90m→\u001b[0m Quote: \"Party shall indemnify and hold harmless...\"\r\n"]
+[6.5, "o", "\u001b[1;32m✓\u001b[0m Review: flag has supporting quote; no hallucinated clauses visible.\r\n"]

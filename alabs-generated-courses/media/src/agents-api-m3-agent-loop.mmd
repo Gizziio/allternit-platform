@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant U as User
+    participant E as AgentModeExecutor
+    participant G as generateText
+    participant R as ToolRegistry / MCP
+    participant A as ArtifactStore
+
+    U->>E: prompt + mode (e.g. research)
+    E->>E: look up contract & plugin
+    E->>G: system prompt + tools
+    G-->>E: tool_call: web_search
+    E->>R: execute tool
+    R-->>E: search results
+    E->>G: results + continue
+    G-->>E: tool_call: file_write
+    E->>R: execute tool
+    R-->>E: written artifact
+    E->>E: validate evidence
+    E->>A: emit artifact
+    E-->>U: MODE_EXECUTION_COMPLETE

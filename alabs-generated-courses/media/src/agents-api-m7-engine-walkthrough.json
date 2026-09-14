@@ -1,0 +1,31 @@
+{
+  "file": "packages/@allternit/workflow-engine/src/engine/workflow-engine.ts",
+  "language": "typescript",
+  "steps": [
+    {
+      "title": "Engine configuration",
+      "lines": [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61],
+      "note": "createWorkflowEngine accepts config for concurrency limits, default timeout, history, and lifecycle hooks."
+    },
+    {
+      "title": "Built-in routing node",
+      "lines": [140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160],
+      "note": "condition:if evaluates a JavaScript boolean expression against the input data and context, then emits either the true or false output port."
+    },
+    {
+      "title": "Execute a workflow",
+      "lines": [311, 312, 313, 314, 315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348],
+      "note": "execute() looks up the workflow, enforces the concurrency limit, builds the DAG, initializes execution state, and kicks off starting nodes."
+    },
+    {
+      "title": "Dependency-aware node execution",
+      "lines": [408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426, 427, 428, 429, 430, 431, 432, 433, 434],
+      "note": "executeNode() checks every incoming connection and returns early until all dependency nodes have completed results."
+    },
+    {
+      "title": "Engine public surface",
+      "lines": [662, 663, 664, 665, 666, 667, 668, 669, 670, 671, 672, 673, 674],
+      "note": "The returned engine object exposes registerWorkflow, execute, cancelExecution, pauseExecution, resumeExecution, and node-type registration."
+    }
+  ]
+}

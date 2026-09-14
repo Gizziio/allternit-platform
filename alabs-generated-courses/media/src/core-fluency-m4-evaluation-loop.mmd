@@ -1,0 +1,18 @@
+flowchart LR
+    A[Agent Output] --> B{Structured?}
+    B -->|No| C[Require schema]
+    B -->|Yes| D[Check citations]
+    D --> E{Evidence?}
+    E -->|No| F[Flag missing evidence]
+    E -->|Yes| G[Run test / verify]
+    G --> H{Passes?}
+    H -->|No| I[Reject / revise]
+    H -->|Yes| J[Accept with note]
+    F --> K[Escalate to human]
+    I --> L[Iterate prompt]
+    L --> A
+
+    style A fill:#3b82f6,stroke:#60a5fa,color:#fff
+    style E fill:#f59e0b,stroke:#fbbf24,color:#000
+    style H fill:#22c55e,stroke:#86efac,color:#000
+    style K fill:#ef4444,stroke:#fca5a5,color:#000

@@ -9,7 +9,14 @@ alabs-module-template/
 ├── shell/
 │   └── shell.html          # Shared HTML wrapper with CSS & JS
 ├── scripts/
-│   └── build.ts            # Build script: content JSON → HTML module
+│   ├── build.ts            # Build script: content JSON → HTML module
+│   └── media/              # Per-media build scripts
+│       ├── build-mermaid.ts
+│       ├── build-asciinema.ts
+│       ├── build-walkthrough.ts
+│       ├── build-sandpack.ts (Phase 3)
+│       ├── build-manim.ts    (Phase 4)
+│       └── build-remotion.ts (Phase 4)
 └── README.md
 ```
 
@@ -47,7 +54,12 @@ npx tsx alabs-module-template/scripts/build.ts \
   "quizAnswers": { "1": 1, "2": 1, "3": 2 },
   "quizFeedback": {
     "1": { "correct": "Correct! ...", "wrong": "Not quite..." }
-  }
+  },
+  "mediaAssets": [
+    { "id": "adapter-flow", "type": "mermaid", "src": "alabs-generated-courses/media/src/adapter-flow.mmd" },
+    { "id": "cowork-setup", "type": "asciinema", "src": "alabs-generated-courses/media/src/cowork-setup.cast" },
+    { "id": "adapter-walkthrough", "type": "walkthrough", "src": "alabs-generated-courses/media/src/adapter-walkthrough.json" }
+  ]
 }
 ```
 
@@ -62,9 +74,27 @@ npx tsx alabs-module-template/scripts/build.ts \
 - Mobile responsive
 - Self-contained (only Google Fonts CDN)
 
+## Media assets
+
+The builder supports open-source video replacements via the `mediaAssets` array and `{{MEDIA:asset-id}}` placeholders in `moduleContent`.
+
+### Supported media types
+
+| Type | Source file | Runtime loader | Use case |
+|---|---|---|---|
+| `mermaid` | `.mmd` | Mermaid 10 CDN | Architecture diagrams, flowcharts |
+| `asciinema` | `.cast` | Asciinema Player 3 CDN | Terminal recordings |
+| `walkthrough` | `.json` | Built-in | Code-Hike-style step-through code walkthroughs |
+| `sandpack` | demo folder | iframe | Runnable code playgrounds |
+| `manim` | `.py` | `<video>` | Programmatic animations |
+| `remotion` | `.tsx` | `<video>` | Generated lecture videos |
+
+Store source files in `alabs-generated-courses/media/src/`. The builder will inline small assets (Mermaid, Asciinema) and link larger outputs (Manim/Remotion MP4s, Sandpack demos).
+
 ## Benefits
 
 - **Consistency**: All modules share the same CSS/JS foundation
 - **Smaller modules**: Common code is ~18KB shared, not duplicated per module
 - **Easier maintenance**: Fix a bug in the shell, rebuild all modules
 - **Faster generation**: Agents only generate content, not boilerplate
+- **Production media**: Open-source, self-hostable replacements for lecture videos

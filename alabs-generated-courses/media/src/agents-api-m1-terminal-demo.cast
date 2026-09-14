@@ -1,0 +1,11 @@
+{"version": 2, "width": 80, "height": 16, "timestamp": 1700000000, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.0, "o", "\u001b[1;32m$\u001b[0m tsx scripts/run-agent.ts \"summarize this codebase\"\r\n"]
+[0.8, "o", "\u001b[90m→\u001b[0m Initializing AiSdkReplyAdapter with runId=run_abc123\r\n"]
+[1.6, "o", "\u001b[90m→\u001b[0m Stream started: provider=openai model=gpt-4o\r\n"]
+[2.4, "o", "\u001b[90m→\u001b[0m Emitting reply.started\r\n"]
+[3.2, "o", "\u001b[90m→\u001b[0m reply.item.added kind=text id=text_001\r\n"]
+[4.0, "o", "This codebase uses a provider-adapter layer to normalize streams..."]
+[5.5, "o", " The adapter converts AI SDK events into canonical ReplyEvents."]
+[7.0, "o", "\r\n"]
+[7.5, "o", "\u001b[90m→\u001b[0m reply.completed usage={prompt:42 completion:128}\r\n"]
+[8.2, "o", "\u001b[1;32m✓\u001b[0m Agent run finished in 1.24s\r\n"]

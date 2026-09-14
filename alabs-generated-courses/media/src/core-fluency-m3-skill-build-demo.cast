@@ -1,0 +1,13 @@
+{"version": 2, "width": 80, "height": 16, "timestamp": 1700000000, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.0, "o", "\u001b[1;32m$\u001b[0m mkdir -p .gizzi/skills/run-tests\r\n"]
+[0.5, "o", "\u001b[1;32m$\u001b[0m cat > .gizzi/skills/run-tests/SKILL.md <<'EOF'\r\n"]
+[1.0, "o", "---\r\n"]
+[1.2, "o", "name: run-tests\r\n"]
+[1.4, "o", "version: 1.0.0\r\n"]
+[1.6, "o", "description: Run the project test suite and summarize failures.\r\n"]
+[1.8, "o", "tools: [bash, file.read]\r\n"]
+[2.0, "o", "---\r\n"]
+[2.5, "o", "\u001b[1;32m$\u001b[0m gizzi skills validate\r\n"]
+[3.2, "o", "\u001b[90m→\u001b[0m Loading skills from ~/.config/gizzi/skills, .gizzi/skills\r\n"]
+[4.0, "o", "\u001b[1;32m✓\u001b[0m run-tests: name, version, description, tools, entrypoint valid\r\n"]
+[5.0, "o", "\u001b[1;32m✓\u001b[0m Skill available under /run-tests\r\n"]

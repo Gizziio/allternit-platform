@@ -1,0 +1,27 @@
+{
+  "file": "surfaces/ai.allternit.com/src/lib/agents/agent-review.ts",
+  "language": "typescript",
+  "contextLines": 2,
+  "steps": [
+    {
+      "title": "Prohibited actions guardrail",
+      "lines": [75, 88],
+      "note": "The review engine refuses to mutate bot identity, memory, skills, credentials, financial records, or another bot's files. The PROHIBITED_ACTIONS list surfaces these domains in natural language."
+    },
+    {
+      "title": "Conflict detection",
+      "lines": [111, 129],
+      "note": "Checkpoints are grouped by taskId. If multiple bots report different owners, statuses, or conclusions for the same task, the engine emits an alert-level conflict notification."
+    },
+    {
+      "title": "Evidence requirement",
+      "lines": [195, 267],
+      "note": "A completed checkpoint without evidence (URL, file path, commit hash, or explicit verification statement) is flagged as missing_evidence. This prevents bots from claiming done without proof."
+    },
+    {
+      "title": "Sensitive domain escalation",
+      "lines": [131, 153],
+      "note": "If a checkpoint result or next step mentions payment, credentials, deploy, production, client messages, or publishing, the task is escalated for owner review regardless of status."
+    }
+  ]
+}

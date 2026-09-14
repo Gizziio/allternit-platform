@@ -1,0 +1,17 @@
+flowchart LR
+    A[Upload Document] --> B[parseFileToText]
+    B --> C{docx / pdf / pptx / xlsx}
+    C --> D[Plain Text]
+    D --> E[Chunker]
+    E --> F[Embedding Request]
+    F --> G[AllternitEmbeddings.create]
+    G --> H[(Memory Store)]
+    H --> I[Hybrid Search]
+    I --> J[Top-k Passages]
+    J --> K[buildContextPack]
+    K --> L[Agent Prompt]
+
+    style B fill:#ec4899,stroke:#f472b6,color:#fff
+    style G fill:#ec4899,stroke:#f472b6,color:#fff
+    style K fill:#ec4899,stroke:#f472b6,color:#fff
+    style L fill:#151517,stroke:#3f3f46,color:#e5e5e5
