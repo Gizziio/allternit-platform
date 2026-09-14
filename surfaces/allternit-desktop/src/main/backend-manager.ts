@@ -246,6 +246,13 @@ export class BackendManager {
       ALLTERNIT_SELF_HOSTED: process.env.ALLTERNIT_SELF_HOSTED || 'false',
       ALLTERNIT_OPERATOR_API_KEY: this.apiKey,
       ALLTERNIT_DESKTOP_ACCESS_TOKEN: this.desktopAccessToken,
+      // HMAC secret for short-lived desktop VNC WebSocket tokens (bot-desktop
+      // Observe/Take Over). Without it the api returns unsigned ws_urls the
+      // /ws/* auth rejects, and the computer pane renders nothing. An explicit
+      // env export wins (dev/test flows); otherwise generate per boot like the
+      // operator key — minted tokens are 5-minute-lived, so per-boot rotation
+      // only invalidates in-flight viewers across a restart.
+      ALLTERNIT_DESKTOP_WS_SECRET: process.env.ALLTERNIT_DESKTOP_WS_SECRET ?? crypto.randomBytes(32).toString('hex'),
       ALLTERNIT_DATA_DIR: dataDir,
       ALLTERNIT_VM_DIR: fs.existsSync(vmDir) ? vmDir : '',
       ALLTERNIT_PLATFORM_STATIC: platformStatic ?? '',
