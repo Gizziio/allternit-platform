@@ -2,17 +2,16 @@
 <html lang="en" class="fabric-session-app">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Allternit Fabric Session</title>
     <meta name="description" content="Carry your Allternit agents with you across machines." />
     <link rel="icon" href="/favicon.png" />
     <link rel="manifest" href="/fabric-session.webmanifest" />
     <meta name="theme-color" content="#FFFFFF" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Fabric Session" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/fabric-session-icon-192.png" />
+    <link rel="apple-touch-icon" href="/fabric-session-icon-192.png" />
     <link rel="apple-touch-startup-image" href="/fabric-session-splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
     <style>
       html.fabric-session-app,
@@ -23,28 +22,12 @@
       }
       html.fabric-session-app,
       html.fabric-session-app body {
-        overflow-x: hidden;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        overflow: hidden !important;
       }
       html.fabric-session-app #root {
         overflow: hidden;
       }
     </style>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Allternit Fabric Session</title>
-    <meta name="description" content="Carry your Allternit agents with you across machines." />
-    <link rel="icon" href="/favicon.svg" />
-    <link rel="manifest" href="/fabric-session.webmanifest" />
-    <meta name="theme-color" content="#0F0C0A" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Fabric Session" />
-    <link rel="apple-touch-icon" href="/fabric-session-icon-192.png" />
-    <link rel="apple-touch-startup-image" href="/fabric-session-splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
     <script>
       (function () {
         try {
@@ -60,12 +43,6 @@
           if (!t || t === 'system') {
             localStorage.setItem(key, JSON.stringify({ state: { theme: 'light' }, version: 0 }));
             r = 'light';
-          // Default to the system color scheme so the PWA matches the user's
-          // platform. The React theme provider takes over once hydrated.
-          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var r = t === 'dark' ? 'dark' : t === 'light' ? 'light' : systemDark ? 'dark' : 'light';
-          if (!t) {
-            localStorage.setItem(key, JSON.stringify({ state: { theme: 'system' }, version: 0 }));
           }
           document.documentElement.setAttribute('data-theme', r);
           document.documentElement.style.colorScheme = r;
