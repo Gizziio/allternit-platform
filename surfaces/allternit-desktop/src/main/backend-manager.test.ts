@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BackendManager } from './backend-manager.js';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { BackendManager, loadIncusHostEnv } from './backend-manager.js';
 
 function connectionRefused(): Error {
   const err = new Error('fetch failed');
@@ -81,5 +84,51 @@ describe('BackendManager.probeExistingBackend', () => {
 
     expect(await manager.probeExistingBackend()).toBe('usable');
     expect(healthCalls).toBeGreaterThan(1);
+  });
+});
+
+describe('loadIncusHostEnv', () => {
+  it('injects Incus substrate keys from the operator file when absent from env', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incus-env-'));
+    const file = path.join(dir, 'incus-host.env');
+    fs.writeFileSync(
+      file,
+      [
+        'INCUS_URL=https://incus.example.com:8443',
+        'INCUS_CLIENT_CERT=/home/op/.allternit/incus-client/cert.pem',
+        'INCUS_CLIENT_KEY=/home/op/.allternit/incus-client/key.pem',
+        'INCUS_VNC_HOST=incus.example.com',
+        '# comment line',
+        '',
+      ].join('\n'),
+    );
+    const env: Record<string, string> = {};
+
+    loadIncusHostEnv(env, file);
+
+    expect(env.INCUS_URL).toBe('https://incus.example.com:8443');
+    expect(env.INCUS_CLIENT_CERT).toContain('cert.pem');
+    expect(env.INCUS_VNC_HOST).toBe('incus.example.com');
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('does not override keys already present in the environment', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incus-env-'));
+    const file = path.join(dir, 'incus-host.env');
+    fs.writeFileSync(file, 'INCUS_URL=https://file.example.com:8443\n');
+    const env: Record<string, string> = { INCUS_URL: 'https://env.example.com:8443' };
+
+    loadIncusHostEnv(env, file);
+
+    expect(env.INCUS_URL).toBe('https://env.example.com:8443');
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('tolerates a missing operator file', () => {
+    const env: Record<string, string> = {};
+
+    loadIncusHostEnv(env, path.join(os.tmpdir(), 'does-not-exist-incus-host.env'));
+
+    expect(env).toEqual({});
   });
 });
