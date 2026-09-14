@@ -509,6 +509,18 @@ owner reviews and merges — no self-merge.
   (`queued`, retry 1) → recovery at lease_generation 2 → completed →
   artifact written only inside the granted folder.
   `tmp/p2-evidence/`.
-- **P3 PLANNED** — deliverables.
+- **P3 CLOSED** — finished deliverables: office-engine
+  `POST /deliverable/render` renders report(.docx)/sheet(.xlsx)/deck(.pptx)
+  from agent-filled markdown (minimal-OOXML generators, 4 vitest);
+  `POST/GET /api/v1/cowork/runs/:id/deliverables[/:name]` persists (bytes
+  under the data dir, registry = attributed `deliverable.created` events —
+  no migration), previews inline, exports with content-disposition; authz =
+  run owner or same-workspace worker principal (matrix live-verified incl.
+  403s; found + fixed the `atok_` middleware pass-through without which the
+  managed worker could never authenticate in packaged builds). FabricTransportView
+  run detail renders Deliverables document cards (Preview/Export) above the
+  attributed timeline. Live: chat "write a summary report" → weekly-summary.docx
+  attached by the worker, previewed, unzipped, exported.
+  `tmp/p3-evidence/`.
 - **P4 PLANNED** — reach (mobile approvals + routines).
 - **P5 PLANNED** — release engineering.

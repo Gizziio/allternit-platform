@@ -352,6 +352,18 @@ Transport does not redefine principal identity, run state, attribution, or appro
   editor, connector sessions view, attributed + approvals-interleaved run
   timeline in `/fabric-transport`.
 
+### Implemented in the deliverables phase (consumer desktop P3, 2026-09-14)
+
+- **deliverable pipeline** — agent-filled markdown → office-engine render
+  (report/sheet/deck templates) → persisted finished documents attached to
+  the canonical run (registry = attributed `deliverable.created` events),
+  previewed/exported over `/cowork/runs/:id/deliverables`; the agentic
+  worker's `deliverable` tool attaches them under its principal bearer.
+- **worker auth fix** — `atok_` principal tokens pass the auth middleware to
+  the fabric routes' own authentication (latent P1 production bug).
+- **run detail as document timeline** — FabricTransportView renders
+  Deliverables cards above the attributed event/approval timeline.
+
 ### Implemented in the chat-drives-A:// phase (consumer desktop P2, 2026-09-14)
 
 - **chat drives A://** — `POST /cowork/al/chat/stream` (SSE): the same Al

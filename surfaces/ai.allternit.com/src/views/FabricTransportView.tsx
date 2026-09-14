@@ -198,6 +198,21 @@ export function FabricTransportView() {
       ].sort((x, y) => String(x.at).localeCompare(String(y.at)))
     : [];
 
+  // P3: finished deliverables attached to this run (deliverable.created events)
+  // — rendered as document cards above the timeline.
+  const deliverables = events
+    .filter((e) => e.event_type === 'deliverable.created' && e.payload?.file)
+    .map((e) => ({
+      at: e.created_at,
+      name: String(e.payload?.name ?? e.payload?.file),
+      template: String(e.payload?.template ?? 'report'),
+      title: String(e.payload?.title ?? e.payload?.name ?? ''),
+      file: String(e.payload?.file),
+      mime: String(e.payload?.mime ?? ''),
+      sizeBytes: Number(e.payload?.size_bytes ?? 0),
+      actor: e.executor ?? e.initiator ?? '',
+    }));
+
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 text-sm">
       <header className="flex items-center justify-between">
@@ -374,6 +389,29 @@ export function FabricTransportView() {
               )}
             </div>
           )}
+          {/* P3 deliverables: finished documents, preview + export. */}
+          {deliverables.length > 0 && (
+            <div className="mb-2 space-y-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Deliverables</div>
+              {deliverables.map((d) => {
+                const ext = d.file.split('.').pop()?.toUpperCase() ?? '';
+                const base = `/api/v1/cowork/runs/${selectedRun}/deliverables/${encodeURIComponent(d.file)}`;
+                return (
+                  <div key={d.file} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-[var(--border-default)] px-2 py-1.5">
+                    <span className="rounded bg-[var(--border-default)]/30 px-1.5 py-0.5 text-[10px] font-semibold">{ext}</span>
+                    <span className="font-medium">{d.title || d.name}</span>
+                    <span className="text-[var(--text-muted)]">
+                      {d.template} · {(d.sizeBytes / 1024).toFixed(1)} KB{d.actor ? <> · by <Mono>{d.actor}</Mono></> : null}
+                    </span>
+                    <span className="ml-auto flex gap-2">
+                      <a className="rounded border px-2 py-0.5" href={base} target="_blank" rel="noreferrer">Preview</a>
+                      <a className="rounded border px-2 py-0.5" href={`${base}?download=1`}>Export</a>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {/* Timeline: attributed events + approval states, interleaved by time. */}
           <ul className="max-h-72 space-y-1 overflow-y-auto text-xs">
             {timeline.map((item, i) =>
@@ -381,6 +419,11 @@ export function FabricTransportView() {
                 <li key={`e-${item.event.id ?? i}`} className="flex flex-wrap items-baseline gap-x-2">
                   <span className="text-[var(--text-muted)]">{item.event.created_at?.slice(11, 19)}</span>
                   <span className="font-medium">{item.event.event_type}</span>
+                  {item.event.event_type === 'deliverable.created' && (
+                    <span className="text-[var(--text-muted)]">
+                      📄 {String(item.event.payload?.title ?? item.event.payload?.name ?? '')}
+                    </span>
+                  )}
                   <span className="text-[var(--text-muted)]">
                     {item.event.initiator && <>initiator <Mono>{item.event.initiator}</Mono></>}
                     {item.event.delegator && <> · delegator <Mono>{item.event.delegator}</Mono></>}

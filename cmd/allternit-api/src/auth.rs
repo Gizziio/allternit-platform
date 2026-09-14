@@ -936,6 +936,16 @@ pub async fn auth_middleware(
 
     // 3. Clerk JWT bearer token.
     if let Some(token) = extract_bearer_token(request.headers()) {
+        // Fabric Transport worker credentials (atok_…) are principal tokens,
+        // not user JWTs — the fabric routes authenticate them themselves
+        // (`sqlite_store::authenticate_principal`) against the hashed store.
+        // Passing them through unverified here is safe: any route that needs
+        // a user identity still 401s on the absent user context, and without
+        // this the managed worker would be rejected before reaching its
+        // route in packaged (non-bypass) deployments.
+        if token.starts_with("atok_") {
+            return next.run(request).await;
+        }
         if token.starts_with("at-") {
             let db = state.db.clone();
             let token_for_lookup = token.clone();

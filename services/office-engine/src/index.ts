@@ -410,6 +410,42 @@ app.post('/markdown-url', async (c) => {
  * Headers: x-office-filename
  * Returns: artifact-shaped JSON with sheet metadata and extracted text.
  */
+/**
+ * POST /deliverable/render
+ * Body: JSON `{ template: "report" | "sheet" | "deck", title, markdown }`
+ * Returns: `{ ext, mimeType, bytesBase64 }` — a finished office document the
+ * caller persists and serves (consumer-packaged Cowork P3.1 artifact
+ * pipeline). Templates the agent fills; generation is deliberately minimal
+ * OOXML (the office engines handle the rich round-trip on open).
+ */
+app.post('/deliverable/render', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const template = String(body?.template ?? 'report')
+  const title = String(body?.title ?? 'Deliverable')
+  const markdown = String(body?.markdown ?? '')
+  if (!markdown.trim()) return c.json({ error: 'markdown is required' }, 400)
+  try {
+    const { buildDocx, buildXlsx, buildPptx } = await import('./deliverable-generators')
+    const [ext, mimeType, bytes] =
+      template === 'sheet'
+        ? ['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', await buildXlsx(markdown, title)]
+        : template === 'deck'
+          ? ['pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', await buildPptx(markdown, title)]
+          : ['docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', await buildDocx(markdown, title)]
+    return c.json({
+      template,
+      ext,
+      mimeType,
+      sizeBytes: bytes.byteLength,
+      bytesBase64: Buffer.from(bytes).toString('base64'),
+      engine: { name: 'deliverable-generators', phase: 'minimal-ooxml' },
+      createdAt: new Date().toISOString(),
+    })
+  } catch (err) {
+    return c.json({ error: 'render failed', detail: (err as Error).message }, 422)
+  }
+})
+
 app.post('/xlsx/parse', async (c) => {
   const filename = c.req.header('x-office-filename') ?? 'unknown.xlsx'
   const bytes = await c.req.arrayBuffer()
