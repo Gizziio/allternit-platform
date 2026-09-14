@@ -1,55 +1,60 @@
-# Steering checkpoint — session/aproduct-0913
+# Steering checkpoint — session/coworkp1-0914
 
 ## Goal
-A:// product-depth phase (2026-09-13), owner-approved. Six items, dependency
-order: P-T1 store-consolidation boundary → P-T2 non-local compute placement →
-P-T3 worker daemon packaging → P-T4 connector breadth → P-T5 Al persona
-runtime v0.1 → P-T6 Cowork protocol rendering. No merges — owner reviews.
-Worktree: ../allternit-session-aproduct-0913 on session/aproduct-0913.
+Consumer-packaged Cowork Phase 1 "Managed Runtime" (owner-approved,
+2026-09-14): open the desktop app → the whole engine is alive with zero
+terminal interaction. Four items: 1.1 auto-provision worker principal
+(local-only API + Keychain), 1.2 bundle + launch worker (desktop worker
+manager), 1.3 engine status surface (4 engines, green/yellow/red in chrome),
+1.4 onboarding folder-grants wizard step. Task DAG recorded in
+MASTER_TRACKING ("Consumer-Packaged Cowork Task DAG", P1 IN PROGRESS).
+Worktree: ../allternit-session-coworkp1-0914 on session/coworkp1-0914.
 
-## Just did (resumed session — implementation was complete from prior run;
-this run = verification, live evidence, and live-path bug fixes)
-- Verified: cargo test -p allternit-cowork-runtime 37 green; cargo build
-  -p allternit-api clean; clippy clean on ALL touched files (fixed
-  pre-existing warnings in session-touched files: unused mut, late-init,
-  missing docs, redundant closures); gizzi typecheck clean (0 errors after
-  pnpm install restored worktree node_modules — note: prior session had
-  symlinked root node_modules to the shared checkout, which vanished);
-  frontend (ai.allternit.com) typecheck clean.
-- Live evidence (fresh-migrated scratch DB, dev port 18013, captured in
-  tmp/aproduct-evidence/LIVE_EVIDENCE.md + runnable run.sh): P-T2 vm-job
-  claim granted/refused (A_CAPABILITY_MISSING 422); P-T4 files read/write
-  through broker incl. approval gate + path-escape refusal + on-disk proof;
-  P-T1 projection_applied false→true boundary; P-T5 Al chat fallback +
-  transcript + end-to-end delegation (rule → intent → run → daemon claim);
-  P-T3 daemon claim→execute→complete→SIGTERM; P-T6 all new endpoints.
-- Live-path fixes (found ONLY by the live run; unit tests used the runtime
-  schema and missed them): submit_intent/enqueue_job omitted dag_node_id
-  (NOT NULL on API schema) → 500 on every intent submit; intent runs had no
-  user_id → V169 owner-scoped reads 404'd; register_principal stored full
-  a://workspace URIs vs stripped run workspace_ids → claims never matched;
-  list_jobs/transition_job consulted only the in-memory mirror → canonical
-  jobs invisible / 500. All fixed via canonical helpers (set_run_owner,
-  workspace normalization, canonical fallbacks).
-- Pre-existing main breakage fixed: duplicate migration versions
-  V142/V143/V144 (cowork pass vs earlier migrations) panicked EVERY fresh
-  DB (refinery UNIQUE constraint) and silently skipped the cowork columns
-  on existing DBs → renumbered V169/V170/V171; added V172 connector-breadth
-  seeds (github/files registrations were only in the runtime DDL seed, not
-  the API migration chain). Gotcha documented: embed_migrations! does not
-  trigger rebuilds on new migration files — touch db.rs.
+## Just did
+- DAG committed (699ed0380).
+- 1.1: `auth::verify_desktop_access_token` (constant-time, fail-closed when
+  unconfigured); new local-only route
+  POST /api/v1/fabric/transport/local/ensure-worker-principal (desktop
+  access-token gated; ensure_gizzi_principal store helper; token minted
+  fresh, returned once); BackendManager now generates a per-boot
+  ALLTERNIT_DESKTOP_ACCESS_TOKEN for the api spawn + getLocalAuthHeaders().
+- 1.2: `gizzi-code fabric-worker` CLI command (relative dynamic import of
+  worker-daemon-entry — Bun-build safe; long-lived in main.ts); desktop
+  `fabric-worker-manager.ts` (spawn/readiness via worker.daemon_start JSON
+  line/backoff+jitter respawn/SIGTERM graceful stop with SIGKILL
+  escalation); token in new Keychain-backed `secure-store.ts`
+  (safeStorage packaged / AES-GCM dev); wired into unified-main Step 2.5
+  (provision → store → spawn) + before-quit SIGTERM.
+- 1.3: serviceState gains fabricWorker + office; startup splash rows;
+  IPC engines:get-status + engines:status push; preload engines API;
+  SPA EngineStatusIndicator pill (4 dots, worst-of aggregate, hidden in
+  browser/cloud).
+- 1.4: startup window "Grant workspace folders" step (add/remove via
+  native directory picker, skip allowed) → PUT /cowork-preferences
+  (trusted_folders) with desktop local auth; boot waits for save; new
+  startup preload bridges + ipcMain handlers.
+- Docs: FABRIC_TRANSPORT §15a, GIZZI_WORKER_SPEC §7, A_PROTOCOL §16 P1.
+
+## Verification so far
+- cargo build -p allternit-api clean; desktop main+preload tsc clean;
+  gizzi typecheck clean (0 errors).
+- Pending: cargo test/clippy, SPA typecheck, release-preflight, live
+  fresh-profile launch evidence, MASTER_TRACKING P1 status.
 
 ## Next
-1. Owner reviews PR #491 (https://github.com/Gizziio/allternit-platform/pull/491).
-   No merge by this session; no attestation (post-merge step).
-2. Worktree left in place per instructions.
+1. Wait cargo/SPA checks; fix anything red.
+2. release-preflight.mjs.
+3. Live evidence: api on 18013 with scratch data dir; ensure route
+   (403 without token, 200 with; token returned once, rotates); then a
+   packaged/desktop-shaped launch of the worker path (spawn gizzi-code
+   fabric-worker with token) proving claim loop starts; wizard folder step
+   via preferences GET/PUT with desktop auth.
+4. Commits per item, push, PR (no merge). Worktree stays.
 
 ## Open questions
-- P-T2 doc said "vfkit machinery" but the vfkit manager was deleted in the
-  2026-09 cleanup; Lima is the current VM surface. Implemented VM mode via
-  Lima and documented the correction in GIZZI_WORKER_SPEC.
-- cloud-api Postgres store: honestly marked product-local projection, NOT
-  removed (would gut live cloud routes) — per DoD's escape clause.
-- API dev server on 18013 was killed twice by unknown external causes
-  mid-session (concurrent sessions on this machine); evidence runs were
-  re-done cleanly. Not investigated further.
+- API binds 0.0.0.0 (ALLTERNIT_API_HOST is spawn config the api may honor
+  internally); the local endpoint is therefore auth-gated (desktop access
+  token), not peer-gated — same posture as the existing desktop bootstrap
+  path. Documented in the route.
+- Worker rotation policy: one fresh token per app launch (old tokens die);
+  secure-store rewrites each boot. Simple and safe; noted in FABRIC_TRANSPORT §15a.

@@ -114,3 +114,26 @@ yet exercised by the worker — see honest status).
 Every shell/code/build action Gizzi performs is ledgered with Gizzi as
 executor. Al may be initiator or delegator; it must never absorb Gizzi's
 execution attribution (§8.18; asserted by the conformance suite).
+
+## 7. Managed lifecycle (consumer desktop, implemented 2026-09-14)
+
+Phase P1 of the consumer-packaged Cowork plan closes the gap where the
+desktop auto-started the API, gizzi runtime and office engine but left the
+fabric-transport worker as a manual token + `bun worker-entry.ts` flow.
+
+- **Bundled entry** — `gizzi-code fabric-worker` runs the daemon entry
+  (`worker-daemon-entry.ts`) from inside the single-file production build
+  (relative dynamic import; Bun.build does not apply tsconfig paths). An
+  optional `--compute-mode local|vm` overrides `GIZZI_COMPUTE_MODE`.
+- **Provisioning** — the desktop main calls
+  `POST /api/v1/fabric/transport/local/ensure-worker-principal` (desktop
+  access-token gated), stores the returned once-only token in the macOS
+  Keychain (secure-store module), and spawns the worker with
+  `ALLTERNIT_GIZZI_TOKEN` / `ALLTERNIT_API_URL`. One rotation per launch;
+  previous tokens die.
+- **Process ownership** — `fabric-worker-manager.ts` mirrors the API
+  backend manager: readiness = first `worker.daemon_start` JSON line;
+  crash respawn with exponential backoff + jitter; `stop()` sends SIGTERM
+  and escalates to SIGKILL after 8 s. The claim protocol is unchanged.
+- **Status** — the worker is one of the four engines in the shell's
+  aggregate engine-status indicator (green/yellow/red, never silent).

@@ -352,6 +352,17 @@ Transport does not redefine principal identity, run state, attribution, or appro
   editor, connector sessions view, attributed + approvals-interleaved run
   timeline in `/fabric-transport`.
 
+### Implemented in the managed-runtime phase (consumer desktop P1, 2026-09-14)
+
+- **managed worker lifecycle** — `POST /fabric/transport/local/ensure-worker-principal`
+  (desktop access-token gated, token returned once, hash stored) + the
+  desktop's Keychain-backed credential store and `gizzi-code fabric-worker`
+  managed spawn (backoff respawn, SIGTERM graceful quit). See
+  `FABRIC_TRANSPORT.md` §15a and `GIZZI_WORKER_SPEC.md` §7.
+- **engine status surface** — one aggregate green/yellow/red indicator
+  (API / gizzi / fabric worker / office engine) in the app chrome, fed by
+  the desktop main process over the preload bridge.
+
 Live behavioral evidence for all six items (vm-job claim grant/refusal,
 boundary projection refusal, brokered files read/write + approval gate +
 path-confinement refusal, Al chat fallback + end-to-end delegation, daemon
