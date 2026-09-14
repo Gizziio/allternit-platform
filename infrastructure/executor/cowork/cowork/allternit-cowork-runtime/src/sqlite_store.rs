@@ -2094,6 +2094,67 @@ pub fn update_run_state_record(
     Ok(())
 }
 
+/// Load a run row from the store as a runtime `Run` (manager-mirror shape).
+/// This is the store-side half of the route-level mirror in
+/// `fabric_transport_routes::submit_intent`; anything that creates runs
+/// directly in the store (the Al orchestrator's child intents) uses this so
+/// the in-memory RunManager and the REST run surface stay consistent.
+pub fn load_run_record(
+    conn: &Connection,
+    run_id: &str,
+) -> Result<Option<crate::Run>, TransportError> {
+    let row = conn
+        .query_row(
+            "SELECT tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id,
+                    policy_profile, created_at
+             FROM cowork_runs WHERE id = ?1",
+            params![run_id],
+            |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, String>(2)?,
+                    r.get::<_, String>(3)?,
+                    r.get::<_, String>(4)?,
+                    r.get::<_, String>(5)?,
+                    r.get::<_, String>(6)?,
+                    r.get::<_, String>(7)?,
+                    r.get::<_, String>(8)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(store_err)?;
+    let Some((tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id, policy_profile, created_at)) = row
+    else {
+        return Ok(None);
+    };
+    let parse = |v: &str| {
+        chrono::DateTime::parse_from_rfc3339(v)
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+            .unwrap_or_else(|_| chrono::Utc::now())
+    };
+    let run_uuid = uuid::Uuid::parse_str(run_id).map_err(|e| {
+        TransportError::new(Code::Store, format!("run id {run_id} is not a uuid: {e}"))
+    })?;
+    Ok(Some(crate::Run {
+        id: crate::RunId(run_uuid),
+        tenant_id,
+        workspace_id,
+        initiator,
+        mode: mode.parse().unwrap_or(crate::RunMode::Cowork),
+        state: state.parse().unwrap_or(crate::RunState::Queued),
+        entrypoint,
+        dag_id,
+        current_job_id: None,
+        current_checkpoint_id: None,
+        policy_profile,
+        created_at: parse(&created_at),
+        updated_at: parse(&created_at),
+        completed_at: None,
+    }))
+}
+
 /// Append a product-surface run event through the canonical idempotent
 /// insert, preserving V142 ownership attribution. Returns the event id.
 pub fn record_run_event_projection(
@@ -2157,13 +2218,36 @@ pub fn validate_delegation_chain(
     Ok(())
 }
 
+/// True when an intent target addresses Al, in either the canonical long
+/// form (`a://workspace/{ws}/principal/al`) or the documented short alias
+/// (`principal/al`, A_PROTOCOL §5). Both forms name the same orchestrator;
+/// the alias must not change execution semantics.
+pub fn targets_al(target: Option<&str>) -> bool {
+    target
+        .map(|t| t == "principal/al" || t.ends_with("/principal/al"))
+        .unwrap_or(false)
+}
+
 /// Submit an IntentEnvelope (§5). Idempotent on `intent_id`: resubmission
 /// resolves to the canonical existing run. Creates the run row directly in
 /// the store (state `queued`, §8.2 honesty) with the attribution triple and
 /// causation chain; callers mirror it into the in-memory manager.
+///
+/// The run is stamped with `owner` (the authenticated product user) so the
+/// V142 ownership scoping on the run/job/event routes sees it: intent-created
+/// runs must be listable and job-postable like any other run.
 pub fn submit_intent(
     conn: &mut Connection,
     envelope: &crate::transport::IntentEnvelope,
+) -> Result<crate::transport::IntentSubmission, TransportError> {
+    submit_intent_for_user(conn, envelope, None)
+}
+
+/// [`submit_intent`] with an owning product user stamped on the created run.
+pub fn submit_intent_for_user(
+    conn: &mut Connection,
+    envelope: &crate::transport::IntentEnvelope,
+    owner: Option<&str>,
 ) -> Result<crate::transport::IntentSubmission, TransportError> {
     if envelope.version != "a/0.1" {
         return Err(TransportError::new(
@@ -2209,8 +2293,8 @@ pub fn submit_intent(
     tx.execute(
         "INSERT INTO cowork_runs
             (id, tenant_id, workspace_id, initiator, delegator, mode, state,
-             entrypoint, dag_id, policy_profile, created_at, updated_at, causation_chain)
-         VALUES (?1, 'local', ?2, ?3, ?4, 'cowork', 'queued', ?5, ?6, 'default', ?7, ?7, ?8)",
+             entrypoint, dag_id, policy_profile, created_at, updated_at, causation_chain, user_id)
+         VALUES (?1, 'local', ?2, ?3, ?4, 'cowork', 'queued', ?5, ?6, 'default', ?7, ?7, ?8, ?9)",
         params![
             run_id,
             workspace,
@@ -2220,6 +2304,7 @@ pub fn submit_intent(
             format!("dag-{run_id}"),
             now,
             serde_json::to_string(&envelope.causation_chain).unwrap(),
+            owner,
         ],
     )
     .map_err(store_err)?;
@@ -2242,19 +2327,15 @@ pub fn submit_intent(
     // not executed, by Al — the orchestrator's child intent carries the
     // claimable job, so a parent job here would let a worker bypass
     // delegation.
-    let targeted_at_al = envelope
-        .target
-        .as_deref()
-        .map(|t| t.ends_with("/principal/al"))
-        .unwrap_or(false);
+    let targeted_at_al = targets_al(envelope.target.as_deref());
     if !targeted_at_al {
         let req = compute_requirements(&envelope.compute);
         let job_id = Uuid::new_v4().to_string();
         tx.execute(
             "INSERT INTO cowork_jobs
                 (id, run_id, dag_node_id, job_type, state, payload, required_capabilities, timeout_sec,
-                 max_retries, initiator, delegator)
-             VALUES (?1, ?2, ?3, ?4, 'queued', ?5, ?6, ?7, ?8, ?9, ?10)",
+                 max_retries, initiator, delegator, user_id)
+             VALUES (?1, ?2, ?3, ?4, 'queued', ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 job_id,
                 run_id,
@@ -2271,6 +2352,7 @@ pub fn submit_intent(
                 3,
                 envelope.initiator,
                 envelope.delegator,
+                owner,
             ],
         )
         .map_err(store_err)?;
@@ -2568,6 +2650,11 @@ pub struct OrchestrationAction {
     pub outcome: String,
     /// Human-readable detail for logs/mirror sync.
     pub detail: String,
+    /// Run created by a `delegated` action (the child run). `None` for
+    /// rejections and result-recording actions. The API mirrors this run
+    /// into the in-memory RunManager so store-direct children are as
+    /// listable/job-postable as route-created runs.
+    pub child_run_id: Option<String>,
 }
 
 fn al_principal_id(workspace: &str) -> String {
@@ -2611,7 +2698,7 @@ pub fn orchestrate_pending_intents(
             .prepare(
                 "SELECT intent_id, run_id FROM cowork_intents
                  WHERE orchestration_status = 'pending'
-                   AND json_extract(envelope, '$.target') LIKE '%/principal/al'",
+                   AND json_extract(envelope, '$.target') LIKE '%principal/al'",
             )
             .map_err(store_err)?;
         let rows = stmt
@@ -2677,6 +2764,7 @@ pub fn orchestrate_pending_intents(
                 parent_run_id,
                 outcome: "rejected".to_string(),
                 detail: "no delegation rule matched".to_string(),
+                child_run_id: None,
             });
             continue;
         };
@@ -2739,6 +2827,7 @@ pub fn orchestrate_pending_intents(
             parent_run_id,
             outcome: "delegated".to_string(),
             detail: target_principal,
+            child_run_id: Some(submission.run_id.clone()),
         });
     }
     Ok(actions)
@@ -2838,6 +2927,7 @@ pub fn record_orchestration_results(
             parent_run_id,
             outcome: child_state,
             detail: child_run_id,
+            child_run_id: None,
         });
     }
     Ok(actions)

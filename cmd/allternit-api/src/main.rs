@@ -367,7 +367,10 @@ async fn main() {
     seed_default_principals(&db).await;
     // A-T3: deterministic Al orchestration loop — processes intents targeted
     // at principal/al (delegation rules → child intent → monitor → record).
-    spawn_al_orchestrator(db.clone());
+    // The manager mirror is passed so store-direct child runs become visible
+    // to the REST run surface within one tick (same contract as the route
+    // mirror in fabric_transport_routes::submit_intent).
+    spawn_al_orchestrator(db.clone(), cowork_run_manager.clone());
 
     // Initialize office runtime state (load from disk or start empty)
     let office_runtime = Arc::new(tokio::sync::RwLock::new(
@@ -1492,7 +1495,16 @@ async fn load_persisted_cowork_jobs(db: &allternit_api::db::DbHandle, manager: &
 
 /// Spawn the deterministic Al orchestrator tick loop (A-T3). No model
 /// involvement: delegation targets come from cowork_delegation_rules.
-fn spawn_al_orchestrator(db: allternit_api::db::DbHandle) {
+///
+/// Store-direct children created by a delegation are mirrored into the
+/// in-memory RunManager (via `manager`, when available) so the REST run
+/// surface lists/jobs them exactly like route-created runs — the tick is the
+/// only creator of runs outside the routes, and without this mirror its
+/// children were invisible there (404 on job creation).
+fn spawn_al_orchestrator(
+    db: allternit_api::db::DbHandle,
+    manager: Option<std::sync::Arc<allternit_cowork_runtime::RunManager>>,
+) {
     tokio::spawn(async move {
         let mut interval =
             tokio::time::interval(std::time::Duration::from_secs(2));
@@ -1520,20 +1532,49 @@ fn spawn_al_orchestrator(db: allternit_api::db::DbHandle) {
             .await;
             match result {
                 Ok(Ok((delegated, recorded))) => {
-                    for a in delegated {
+                    for a in delegated.iter().chain(recorded.iter()) {
                         info!(
                             intent_id = %a.intent_id,
                             outcome = %a.outcome,
                             detail = %a.detail,
-                            "Al orchestration: delegation"
+                            "Al orchestration: {}",
+                            if a.child_run_id.is_some() { "delegation" } else { "result recorded" }
                         );
                     }
-                    for a in recorded {
-                        info!(
-                            intent_id = %a.intent_id,
-                            outcome = %a.outcome,
-                            "Al orchestration: result recorded"
-                        );
+                    // Mirror store-direct child runs (and parents being
+                    // updated) into the in-memory manager so the REST run
+                    // surface sees them. Best-effort: a mirror failure must
+                    // never break the tick.
+                    if let Some(manager) = manager.as_ref() {
+                        for run_id in delegated
+                            .iter()
+                            .filter_map(|a| a.child_run_id.as_deref())
+                            .chain(recorded.iter().map(|a| a.parent_run_id.as_str()))
+                        {
+                            let mirrored = tokio::task::spawn_blocking({
+                                let db = db.clone();
+                                let run_id = run_id.to_string();
+                                move || {
+                                    let conn = allternit_cowork_runtime::sqlite_store::open_store(
+                                        db.path(),
+                                    )?;
+                                    allternit_cowork_runtime::sqlite_store::load_run_record(
+                                        &conn, &run_id,
+                                    )
+                                }
+                            })
+                            .await;
+                            match mirrored {
+                                Ok(Ok(Some(run))) => {
+                                    if let Err(e) = manager.load_run(run).await {
+                                        warn!("Al orchestrator manager mirror failed: {e}");
+                                    }
+                                }
+                                Ok(Ok(None)) => {}
+                                Ok(Err(e)) => warn!("Al orchestrator mirror load failed: {e}"),
+                                Err(e) => warn!("Al orchestrator mirror task failed: {e}"),
+                            }
+                        }
                     }
                 }
                 Ok(Err(e)) => warn!("Al orchestrator tick failed: {e}"),
