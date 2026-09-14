@@ -35,29 +35,6 @@ import { FabricOperatorKeys } from "@/components/dispatch/FabricOperatorKeys";
 import { FabricSessionPanel } from "@/components/dispatch/FabricSessionPanel";
 import { FabricSessionRailControls } from "@/components/dispatch/FabricSessionRailControls";
 import type { FabricDriveKind } from "@/lib/fabric-session-kind";
-  DesktopTower,
-  WifiHigh,
-  WifiSlash,
-  Circle,
-  Bell,
-  BellSlash,
-  ArrowSquareOut,
-  DownloadSimple,
-} from "@phosphor-icons/react";
-import { GlassSurface } from "@/design/GlassSurface";
-import { useToast } from "@/hooks/use-toast";
-import { usePlatformAuth } from "@/lib/platform-auth-client";
-import { env } from "@/lib/env";
-import { useToast } from "@/hooks/use-toast";
-import { MachinesPanel } from "@/components/dispatch/MachinesPanel";
-<<<<<<<< HEAD:surfaces/ai.allternit.com/src/remote-control/pages/DashboardPage.tsx
-import { RemoteSessionPanel } from "@/components/dispatch/RemoteSessionPanel";
-import { FabricDesktopDrive } from "@/components/dispatch/FabricDesktopDrive";
-import { RecordingsPanel } from "../recordings/RecordingsPanel";
-========
-import { FabricSessionPanel } from "@/components/dispatch/FabricSessionPanel";
->>>>>>>> archive/2026-09-13/wip/fabric-transport-bridge-removal:surfaces/ai.allternit.com/src/fabric-session/pages/DashboardPage.tsx
-import { useRuntimes, type RuntimeViewModel } from "@/components/dispatch/useRuntimes";
 import { useRuntimeSelection } from "@/components/dispatch/useRuntimeSelection";
 import { useFabricPendingCounts } from "@/components/dispatch/useFabricPendingCounts";
 import {
@@ -81,45 +58,6 @@ interface DashboardPageProps {
 const PUSH_WORKER_URL =
   env("VITE_FABRIC_SESSION_PUSH_URL") || env("VITE_REMOTE_CONTROL_PUSH_URL") || "https://push.fabrictransport.allternit.com";
 
-}
-
-<<<<<<<< HEAD:surfaces/ai.allternit.com/src/remote-control/pages/DashboardPage.tsx
-const PUSH_WORKER_URL = env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.fabrictransport.allternit.com";
-interface CloudRuntimeDevice {
-  id: string;
-  name: string;
-  runtimeType: string;
-  hostname: string;
-  platform: string;
-  version: string;
-  capabilities: string[];
-  status: string;
-  lastSeenAt: string | null;
-}
-
-interface RuntimeViewModel {
-  id: string;
-  name: string;
-  host: string;
-  status: string;
-  lastHeartbeatAt?: number;
-  agentClis: { name: string; icon: string }[];
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  online: "var(--status-success)",
-  busy: "var(--status-warning)",
-  offline: "var(--ui-text-muted)",
-};
-
-const CLOUD_API_BASE_URL = "https://api.allternit.com";
-const PUSH_WORKER_URL =
-  env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.remotecontrol.allternit.com";
-========
-const PUSH_WORKER_URL =
-  env("VITE_FABRIC_SESSION_PUSH_URL") || env("VITE_REMOTE_CONTROL_PUSH_URL") || "https://push.fabric-session.allternit.com";
->>>>>>>> archive/2026-09-13/wip/fabric-transport-bridge-removal:surfaces/ai.allternit.com/src/fabric-session/pages/DashboardPage.tsx
-const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_PLATFORM_URL") ?? "https://platform.allternit.com";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -134,55 +72,6 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 function useVapidKey() {
   const [vapidKey, setVapidKey] = useState<string | null>(null);
-function deviceToViewModel(device: CloudRuntimeDevice): RuntimeViewModel {
-  return {
-    id: device.id,
-    name: device.name || device.hostname || "Unnamed machine",
-    host: `${device.platform} · ${device.hostname}`,
-    status: device.status === "online" ? "online" : "offline",
-    lastHeartbeatAt: device.lastSeenAt ? new Date(device.lastSeenAt).getTime() : undefined,
-    agentClis: (device.capabilities || []).map((cap) => ({ name: cap, icon: "" })),
-  };
-}
-
-export function DashboardPage({ installPrompt, onInstallClick }: DashboardPageProps): React.ReactNode {
-  const { addToast } = useToast();
-  const auth = usePlatformAuth();
-  const [runtimes, setRuntimes] = useState<RuntimeViewModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pushByRuntime, setPushByRuntime] = useState<Record<string, boolean>>({});
-  const [vapidKey, setVapidKey] = useState<string | null>(null);
-
-  const fetchRuntimes = useCallback(async () => {
-    try {
-      const token = await auth.getToken();
-      const res = await fetch(`${CLOUD_API_BASE_URL}/api/v1/runtime-devices`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) {
-        if (res.status === 401) return;
-        throw new Error(`Failed to load runtimes (${res.status})`);
-      }
-      const data = (await res.json()) as { runtimes?: CloudRuntimeDevice[] } | CloudRuntimeDevice[];
-      const devices = Array.isArray(data) ? data : data.runtimes ?? [];
-      setRuntimes(devices.map(deviceToViewModel));
-    } catch (err) {
-      addToast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to load runtimes",
-        type: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, addToast]);
-
-  useEffect(() => {
-    void fetchRuntimes();
-    const interval = setInterval(fetchRuntimes, 10000);
-    return () => clearInterval(interval);
-  }, [fetchRuntimes]);
-
   useEffect(() => {
     fetch(`${PUSH_WORKER_URL}/vapid-public-key`)
       .then((r) => (r.ok ? r.text() : null))
@@ -378,23 +267,6 @@ export function DashboardPage({
 
   const vapidKey = useVapidKey();
   const { pushByRuntime, setPushByRuntime } = usePushByRuntime(runtimes, auth.getToken);
-export function DashboardPage({ installPrompt, onInstallClick }: DashboardPageProps): React.ReactNode {
-  const { addToast } = useToast();
-  const auth = usePlatformAuth();
-  const theme = useFabricSessionThemeStore((state) => state.theme);
-  const setTheme = useFabricSessionThemeStore((state) => state.setTheme);
-
-  const { runtimes, loading } = useRuntimes();
-  const [selectedId, setSelectedId] = useRuntimeSelection();
-  const selected = runtimes.find((r) => r.id === selectedId);
-  const [machineTab, setMachineTab] = useState<"desktop" | "sessions">("sessions");
-  const onlineCount = runtimes.filter((r) => r.status === "online").length;
-  const { permissions: pendingPermissions, questions: pendingQuestions } = useFabricPendingCounts(runtimes, auth.getToken);
-
-  const vapidKey = useVapidKey();
-  const { pushByRuntime, setPushByRuntime } = usePushByRuntime(runtimes, auth.getToken);
-      .catch(() => {});
-  }, [runtimes]);
 
   const togglePush = useCallback(
     async (rt: RuntimeViewModel) => {
@@ -516,21 +388,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
       >
         <div className="text-center">
           <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent mx-auto" />
-    [addToast, pushByRuntime, vapidKey]
-  );
-
-  const onlineCount = runtimes.filter((r) => r.status === "online").length;
-
-  if (!auth.isLoaded) {
-    return (
-      <div
-        className="min-h-screen w-full flex items-center justify-center"
-        style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
-      >
-        <div className="text-center">
-          <div
-            className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent mx-auto"
-          />
           <div className="text-sm font-medium">Loading account…</div>
         </div>
       </div>
@@ -540,7 +397,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   if (!auth.isSignedIn) {
     return (
       <div
-        className="min-h-[100dvh] w-full flex items-center justify-center px-5 overflow-y-auto bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]"
+        className="min-h-screen w-full flex items-center justify-center px-5 bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]"
       >
         <div className="max-w-md w-full p-8 text-center rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)]">
           <DesktopTower size={48} style={{ opacity: 0.6 }} className="mx-auto mb-4" color="var(--accent-primary)" />
@@ -642,7 +499,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
             />
           )}
         >
-        <FabricAppHeader title={selected.name} onBack={closeSession}>
           {headerActions}
         </FabricAppHeader>
         <main className="flex-1 min-h-0">
@@ -663,7 +519,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   }
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)]">
       <FabricAppHeader>{headerActions}</FabricAppHeader>
       <main className="flex-1 min-h-0 overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto px-4 pt-6 pb-10 sm:px-8 sm:pt-10 sm:pb-12">
@@ -676,7 +532,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
               <p className="m-0 mt-2 text-[12px] text-[var(--shell-item-muted)] truncate">
                 {signedInAs}
               </p>
-              <p className="m-0 mt-2 text-[12px] text-[var(--shell-item-muted)] truncate">{signedInAs}</p>
             ) : null}
           </div>
 
@@ -771,225 +626,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
           <FabricOperatorKeys getToken={auth.getToken} />
         </div>
       </main>
-        className="min-h-screen w-full flex items-center justify-center px-5"
-        style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
-      >
-        <div className="max-w-md w-full p-8 text-center rounded-2xl border border-solid border-[var(--border-default)] bg-[var(--bg-elevated)]">
-          <DesktopTower size={48} style={{ opacity: 0.6 }} className="mx-auto mb-4" color="var(--accent-primary)" />
-<<<<<<<< HEAD:surfaces/ai.allternit.com/src/remote-control/pages/DashboardPage.tsx
-          <h1 className="text-[22px] font-semibold mb-2">Sign in to Fabric Transport</h1>
-========
-          <h1 className="text-[22px] font-semibold mb-2">Sign in to Fabric Session</h1>
->>>>>>>> archive/2026-09-13/wip/fabric-transport-bridge-removal:surfaces/ai.allternit.com/src/fabric-session/pages/DashboardPage.tsx
-          <p className="text-[14px] text-[var(--text-secondary)] mb-6">
-            Monitor and manage this desktop and other paired runtimes from any device.
-          </p>
-          <a
-            href={`${PLATFORM_HUB_URL}/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-none text-[14px] font-semibold cursor-pointer transition-colors w-full"
-            style={{ background: "var(--accent-primary)", color: "var(--accent-on-primary)" }}
-          >
-            Sign in with Allternit
-          </a>
-        </div>
-      </div>
-    );
-    window.location.replace('/sign-in');
-    return null;
-  }
-
-  return (
-    <div
-      className="min-h-screen w-full"
-      style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
-    >
-      <div className="max-w-6xl mx-auto px-5 py-8 md:px-8 md:py-10">
-        <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <div className="flex items-center gap-3">
-            <DesktopTower size={32} weight="duotone" color="var(--accent-primary)" />
-            <div>
-<<<<<<<< HEAD:surfaces/ai.allternit.com/src/remote-control/pages/DashboardPage.tsx
-              <h1 className="text-[24px] font-semibold tracking-tight m-0">Fabric Transport</h1>
-========
-              <h1 className="text-[24px] font-semibold tracking-tight m-0">Fabric Session</h1>
->>>>>>>> archive/2026-09-13/wip/fabric-transport-bridge-removal:surfaces/ai.allternit.com/src/fabric-session/pages/DashboardPage.tsx
-              <p className="text-[13px] text-[var(--text-tertiary)] m-0 mt-0.5">
-                Monitor and manage this desktop and other paired runtimes.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {installPrompt && (
-              <button
-                type="button"
-                onClick={onInstallClick}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border-none text-[13px] font-semibold cursor-pointer transition-colors"
-                style={{ background: "var(--surface-hover)", color: "var(--text-primary)" }}
-              >
-                <DownloadSimple size={16} weight="bold" />
-                Install
-              </button>
-            )}
-            <a
-              href={PLATFORM_HUB_URL || "https://ai.allternit.com"}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border-none text-[13px] font-semibold cursor-pointer transition-colors"
-              style={{ background: "var(--surface-hover)", color: "var(--text-primary)" }}
-            >
-              <ArrowSquareOut size={16} weight="bold" />
-              Platform Hub
-            </a>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <GlassSurface className="p-4" intensity="base">
-            <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
-              Online Machines
-            </div>
-            <div className="text-[32px] font-bold">{onlineCount}</div>
-            <div className="text-[12px] text-[var(--text-secondary)]">of {runtimes.length} paired</div>
-          </GlassSurface>
-          <GlassSurface className="p-4" intensity="base">
-            <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
-              Pending Permissions
-            </div>
-            <div className="text-[32px] font-bold">0</div>
-            <div className="text-[12px] text-[var(--text-secondary)]">Need your approval</div>
-          </GlassSurface>
-          <GlassSurface className="p-4" intensity="base">
-            <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
-              Pending Questions
-            </div>
-            <div className="text-[32px] font-bold">0</div>
-            <div className="text-[12px] text-[var(--text-secondary)]">Awaiting answers</div>
-          </GlassSurface>
-        </div>
-
-        <h2 className="text-[16px] font-semibold mb-3">Machines</h2>
-        <MachinesPanel
-          runtimes={runtimes}
-          loading={loading}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          action={pushAction}
-        />
-
-        {selected && (
-<<<<<<<< HEAD:surfaces/ai.allternit.com/src/remote-control/pages/DashboardPage.tsx
-          <div className="mt-6 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden h-[600px] flex flex-col">
-            <div className="shrink-0 flex gap-1 p-2 border-b border-solid border-[var(--border-subtle)]">
-              {(['sessions', 'desktop'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setMachineTab(tab)}
-                  className="px-3 py-1.5 rounded-lg text-[12px] font-bold border-none cursor-pointer"
-                  style={{
-                    background: machineTab === tab ? 'var(--bg-primary)' : 'transparent',
-                    color: machineTab === tab ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                  }}
-                >
-                  {tab === 'desktop' ? 'Desktop' : 'Sessions'}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1 min-h-0">
-              {machineTab === 'desktop' ? (
-                <div className="h-full p-3">
-                  <FabricDesktopDrive runtimeId={selected.id} getToken={auth.getToken} hostName={selected.name} />
-                </div>
-              ) : (
-                <RemoteSessionPanel runtimeId={selected.id} getToken={auth.getToken} />
-              )}
-            </div>
-        {loading ? (
-          <div className="text-[14px] text-[var(--text-secondary)] py-8 text-center">Loading runtimes…</div>
-        ) : runtimes.length === 0 ? (
-          <GlassSurface className="p-8 text-center" intensity="base">
-            <DesktopTower size={48} style={{ opacity: 0.3 }} className="mx-auto mb-3" />
-            <p className="text-[14px] text-[var(--text-secondary)] m-0">
-              No runtimes paired yet. Pair a machine from the Allternit desktop app to get started.
-            </p>
-          </GlassSurface>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {runtimes.map((rt) => {
-              const pushEnabled = Boolean(pushByRuntime[rt.id]);
-              return (
-                <GlassSurface
-                  key={rt.id}
-                  className="p-4 flex flex-col gap-3"
-                  intensity="base"
-                  hover="lift"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <Circle
-                        size={10}
-                        weight="fill"
-                        color={STATUS_COLORS[rt.status] ?? STATUS_COLORS.offline}
-                      />
-                      <span className="text-[15px] font-semibold">{rt.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {rt.status === "online" ? (
-                        <WifiHigh size={18} color="var(--status-success)" />
-                      ) : (
-                        <WifiSlash size={18} color="var(--ui-text-muted)" />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => void togglePush(rt)}
-                        className="p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
-                        title={pushEnabled ? "Disable push notifications" : "Enable push notifications"}
-                      >
-                        {pushEnabled ? (
-                          <Bell size={18} color="var(--status-success)" />
-                        ) : (
-                          <BellSlash size={18} color="var(--ui-text-muted)" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-[13px] text-[var(--text-secondary)]">{rt.host}</div>
-                  {rt.lastHeartbeatAt && (
-                    <div className="text-[12px] text-[var(--text-tertiary)]">
-                      Last heartbeat {new Date(rt.lastHeartbeatAt).toLocaleString()}
-                    </div>
-                  )}
-                  {rt.agentClis.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {rt.agentClis.map((cli) => (
-                        <span
-                          key={cli.name}
-                          className="px-2 py-0.5 rounded-md text-[11px] font-medium"
-                          style={{
-                            background: "var(--surface-hover)",
-                            color: "var(--text-secondary)",
-                          }}
-                        >
-                          {cli.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </GlassSurface>
-              );
-            })}
-========
-          <div className="mt-6 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden h-[600px]">
-            <FabricSessionPanel runtimeId={selected.id} getToken={auth.getToken} />
->>>>>>>> archive/2026-09-13/wip/fabric-transport-bridge-removal:surfaces/ai.allternit.com/src/fabric-session/pages/DashboardPage.tsx
-          </div>
-        )}
-
-        <section className="mt-10">
-          <h2 className="text-[16px] font-semibold mb-3">Recordings</h2>
-          <RecordingsPanel />
-        </section>
-      </div>
     </div>
   );
 }
