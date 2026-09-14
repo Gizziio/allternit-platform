@@ -125,6 +125,11 @@ def _redact_json_value(value: Any) -> Any:
     return value
 
 
+# Header names whose values carry URLs with query strings (the goto URL's
+# tokens ride into every subrequest's Referer — scrub those queries too).
+_URL_CARRYING_HEADERS = re.compile(r"^(referer|referrer)$", re.I)
+
+
 def _scrub_headers(headers: Any, secrets: List[str]) -> List[Dict[str, Any]]:
     """Redact sensitive header values in place-of-value; shape preserved."""
     out = []
@@ -136,6 +141,18 @@ def _scrub_headers(headers: Any, secrets: List[str]) -> List[Dict[str, Any]]:
         if _SENSITIVE_KEY.search(name):
             _collect_value(value if isinstance(value, str) else "", secrets)
             value = REDACTED
+        elif _URL_CARRYING_HEADERS.match(name) and isinstance(value, str) and value:
+            # A navigation URL's tokens reappear in subrequest Referers.
+            try:
+                parts = urlsplit(value)
+            except ValueError:
+                parts = None
+            if parts is not None and parts.query:
+                query, _ = _scrub_query(
+                    [{"name": p.split("=", 1)[0],
+                      "value": p.split("=", 1)[1] if "=" in p else ""}
+                     for p in parts.query.split("&")], secrets)
+                value = _scrub_url(value, query)
         out.append({"name": name, "value": value})
     return out
 
