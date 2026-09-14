@@ -139,6 +139,7 @@ export function BotComputerViewport({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const screenshotPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusAbortRef = useRef<AbortController | null>(null);
+  const statusInFlightRef = useRef(false);
   const screenshotAbortRef = useRef<AbortController | null>(null);
   const screenshotInFlightRef = useRef(false);
   const screenshotFailuresRef = useRef(0);
@@ -158,18 +159,27 @@ export function BotComputerViewport({
   const loadStatus = useCallback(async () => {
     if (!sandboxId) return;
     if (typeof document !== "undefined" && document.hidden) return;
-
+    // Skip this tick instead of aborting a slow in-flight poll. The previous
+    // behavior cancelled any call slower than the 5s poll interval, so a slow
+    // desktop substrate (tart host under load) starved the pane: status never
+    // landed and the UI sat at a permanent "Computer is off" (live defect,
+    // bote2e-0913). Mirrors the screenshot poll's screenshotInFlightRef guard.
+    if (statusInFlightRef.current) return;
+    statusInFlightRef.current = true;
     statusAbortRef.current?.abort();
     const controller = new AbortController();
     statusAbortRef.current = controller;
-
-    const result = await getBotDesktopStatus(bot.id, sandboxId, controller.signal);
-    if (controller.signal.aborted) return;
-    if (result.ok && result.data) {
-      setStatus(result.data);
-      setError(null);
-    } else {
-      setError(result.error ?? "Could not load desktop status");
+    try {
+      const result = await getBotDesktopStatus(bot.id, sandboxId, controller.signal);
+      if (controller.signal.aborted) return;
+      if (result.ok && result.data) {
+        setStatus(result.data);
+        setError(null);
+      } else {
+        setError(result.error ?? "Could not load desktop status");
+      }
+    } finally {
+      statusInFlightRef.current = false;
     }
   }, [bot.id, sandboxId]);
 
