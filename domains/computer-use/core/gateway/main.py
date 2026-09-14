@@ -2619,6 +2619,8 @@ from computer_use_router import router as computer_use_router
 app.include_router(computer_use_router)
 from browser_skills_router import router as browser_skills_router
 app.include_router(browser_skills_router)
+from network_traces_router import router as network_traces_router
+app.include_router(network_traces_router)
 from canonical_router import router as canonical_computer_router
 app.include_router(canonical_computer_router)
 from cloud_credentials_router import router as cloud_credentials_router

@@ -55,6 +55,7 @@ import { ModelSelectionProvider, useModelSelection } from "@/providers/model-sel
 import { ModelPicker, type ModelSelection } from "@/components/model-picker";
 import { getProviderMeta } from "@/lib/providers/provider-registry";
 import { BotComputerViewport } from "./BotComputerViewport";
+import { launchBotComputerWindow } from "@/lib/open-bot-computer-window";
 import { PolicyGovernance } from "./PolicyGovernance";
 import { BotWatchStrip } from "./BotWatchStrip";
 import { BotRailsDeck } from "@/components/bot-chat/BotRailsDeck";
@@ -378,9 +379,12 @@ function BotChatSessionContent({
   );
 
   const handleOpenInAci = useCallback(() => {
-    if (botId) setConnectedBotId(botId);
-    setAciSidecarExpanded(true);
-  }, [botId, setConnectedBotId, setAciSidecarExpanded]);
+    if (!botId) return;
+    launchBotComputerWindow({
+      botId,
+      title: `${botName}'s computer`,
+    });
+  }, [botId, botName]);
 
   const handleShare = useCallback(async () => {
     const lines = transcript.rows.map((row) => {

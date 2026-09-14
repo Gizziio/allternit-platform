@@ -200,6 +200,8 @@ export interface SendMessageOptions {
     onToolResult?: (toolResult: unknown) => void;
     onToolError?: (toolError: unknown) => void;
     onArtifact?: (artifact: ArtifactUIPart) => void;
+    /** A:// approval narration (P2.4). */
+    onApproval?: (approval: unknown) => void;
     /** Context compaction ran mid-turn (server `context_compacted` frame). */
     onCompaction?: () => void;
     /**
@@ -897,6 +899,13 @@ async function streamMessageWithContext(
       },
       onArtifact: (artifact) => {
         callbacks?.onArtifact?.(artifact);
+      },
+      onApproval: (approval) => {
+        // P2.4: surface an actionable approval card in the app chrome.
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('allternit:approval-requested', { detail: approval }));
+        }
+        callbacks?.onApproval?.(approval);
       },
       onCompaction: () => {
         callbacks?.onCompaction?.();

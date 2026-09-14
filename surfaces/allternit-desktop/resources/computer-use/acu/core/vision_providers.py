@@ -14,6 +14,7 @@ Supports: OpenAI GPT-4o, Anthropic Claude (as a provider option), Azure OpenAI.
 import os
 import base64
 import json
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -90,6 +91,18 @@ class ActionPlan:
     cost_usd: float = 0.0             # estimated cost for this plan call
     input_tokens: int = 0             # prompt tokens, when the provider reports the split
     output_tokens: int = 0            # completion tokens, when reported
+    # Optional batch continuation: when the next actions are all groundable on
+    # the same page in the whitelisted browser vocabulary (core/batch_dispatch.py),
+    # a provider may emit them here so the planning loop ships one grant-bound
+    # batch instead of step-by-step turns. ``immediate_action`` stays the first
+    # step. Never required — the loop falls back to per-step when absent.
+    batch: Optional[List["VisionAction"]] = None
+    # Optional code-mode request (core/code_mode.py): a validated, grant-bound
+    # code payload the loop may dispatch INSTEAD of immediate_action when the
+    # run explicitly opted in (PlanningLoopConfig.code_mode_enabled). Shape:
+    # {"language": "playwright-js", "code": str, "declaredTargets": [str]}.
+    # Never the default mode; refused payloads surface as observations.
+    code: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -866,8 +879,21 @@ Respond with valid JSON only:
   "confidence": 0.0-1.0,
   "requires_approval": false,
   "risk_level": "low|medium|high|critical",
-  "done": false
-}}"""
+  "done": false,
+  "batch": [
+    {{
+      "type": "click|type|fill|scroll|double_click|key",
+      "target": "CSS selector or XPath on the SAME page (e.g. #submit)",
+      "reason": "why",
+      "text": "text to type (if type/fill action)"
+    }}
+  ]
+}}
+
+"batch" is OPTIONAL: list further actions only when they are all on the same
+page, each uses a CSS selector / XPath target (not coordinates), and none
+depends on observing the screen after an earlier action. Omit it when unsure —
+the engine falls back to one step at a time."""
 
 
 ACTION_PLAN_JSON_SCHEMA: Dict[str, Any] = {
@@ -890,6 +916,35 @@ ACTION_PLAN_JSON_SCHEMA: Dict[str, Any] = {
         "requires_approval": {"type": "boolean"},
         "risk_level": {"type": "string"},
         "done": {"type": "boolean"},
+        # Optional batch continuation (core/batch_dispatch.py): further
+        # whitelisted actions on the same page, shipped as one grant-bound
+        # batch. Omit when the next step depends on observing the screen.
+        "batch": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string"},
+                    "target": {"type": "string"},
+                    "reason": {"type": "string"},
+                    "coordinates": {"type": "array", "items": {"type": "number"}},
+                    "text": {"type": "string"},
+                },
+                "required": ["type", "target"],
+            },
+        },
+        # Optional code-mode request (core/code_mode.py): validated grant-bound
+        # code payload, consumed only when the run explicitly enabled code
+        # mode. Omit — whitelist actions and batches remain the primary paths.
+        "code": {
+            "type": "object",
+            "properties": {
+                "language": {"type": "string"},
+                "code": {"type": "string"},
+                "declaredTargets": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["code"],
+        },
     },
     "required": ["immediate_action", "done"],
 }
@@ -969,6 +1024,31 @@ def _parse_action_plan(raw: str) -> ActionPlan:
             coordinates=ia.get("coordinates"),
             text=ia.get("text"),
         )
+        batch = None
+        raw_batch = data.get("batch")
+        if isinstance(raw_batch, list) and raw_batch:
+            parsed_batch = []
+            for item in raw_batch:
+                if not isinstance(item, dict):
+                    parsed_batch = None
+                    break
+                parsed_batch.append(VisionAction(
+                    type=item.get("type", ""),
+                    target=item.get("target", ""),
+                    reason=item.get("reason", ""),
+                    coordinates=item.get("coordinates"),
+                    text=item.get("text"),
+                ))
+            batch = parsed_batch or None
+        code = None
+        raw_code = data.get("code")
+        if isinstance(raw_code, dict) and isinstance(raw_code.get("code"), str):
+            raw_targets = raw_code.get("declaredTargets") or raw_code.get("declared_targets") or []
+            code = {
+                "language": str(raw_code.get("language") or "playwright-js"),
+                "code": raw_code["code"],
+                "declaredTargets": [str(t) for t in raw_targets if isinstance(t, (str, int, float))],
+            }
         return ActionPlan(
             reasoning=data.get("reasoning", ""),
             plan_steps=data.get("plan_steps", []),
@@ -977,6 +1057,8 @@ def _parse_action_plan(raw: str) -> ActionPlan:
             requires_approval=bool(data.get("requires_approval", False)),
             risk_level=data.get("risk_level", "low"),
             done=bool(data.get("done", False)),
+            batch=batch,
+            code=code,
         )
     except Exception:
         return ActionPlan(
@@ -1200,6 +1282,37 @@ class AllternitGatewayProvider(VisionProvider):
             raise VisionAPIError(f"Gizzi brain error: {e}", provider="allternit")
 
 
+async def _kill_process_tree(proc: asyncio.subprocess.Process) -> None:
+    """Kill a brain subprocess AND its descendants, then reap the direct child.
+
+    CLI brains spawn their own children (the actual model process); killing
+    only the spawned CLI left the grandchild orphaned (cu22 follow-up F4).
+    ``start_new_session=True`` put the child in its own process group, so on
+    POSIX ``killpg`` reaps the whole tree; platforms without process groups
+    fall back to the direct kill. Best effort throughout — never raise.
+    """
+    import signal
+
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+        else:
+            proc.kill()
+    except (ProcessLookupError, PermissionError):
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    except Exception:
+        pass
+    # Reap the direct child so no zombie lingers.
+    try:
+        if proc.returncode is None:
+            await asyncio.wait_for(proc.wait(), timeout=5)
+    except Exception:
+        pass
+
+
 class SubprocessVisionProvider(VisionProvider):
     """
     Subprocess brain provider — invokes a CLI agent as a subprocess.
@@ -1209,13 +1322,28 @@ class SubprocessVisionProvider(VisionProvider):
     return a JSON action plan on stdout.
 
     Env vars:
-        ALLTERNIT_BRAIN_CMD   — command to invoke (e.g. "claude", "codex", "gemini")
-        ALLTERNIT_BRAIN_ARGS  — space-separated extra args (optional)
+        ALLTERNIT_BRAIN_CMD         — command to invoke (e.g. "claude", "codex", "gemini")
+        ALLTERNIT_BRAIN_ARGS        — space-separated extra args (optional)
+        ALLTERNIT_BRAIN_TIMEOUT_S   — per-call wall-clock cap in seconds
+                                      (default DEFAULT_BRAIN_TIMEOUT_S; the cu22
+                                      real-model campaign hit the old fixed 60 s
+                                      with gpt-6-astra via the codex CLI)
     """
 
-    def __init__(self):
-        self._cmd = os.environ.get("ALLTERNIT_BRAIN_CMD", "claude")
-        self._args = os.environ.get("ALLTERNIT_BRAIN_ARGS", "").split() or []
+    def __init__(self, cmd: Optional[str] = None, args: Optional[List[str]] = None,
+                 timeout_s: Optional[float] = None):
+        self._cmd = cmd or os.environ.get("ALLTERNIT_BRAIN_CMD", "claude")
+        self._args = list(args) if args is not None else (
+            os.environ.get("ALLTERNIT_BRAIN_ARGS", "").split() or []
+        )
+        # F3: one sourced timeout for the CLI-brain path (constructor wins,
+        # then env, then default). Fast gateway providers use their own
+        # transport timeouts and are unaffected.
+        if timeout_s is not None:
+            self._timeout_s = float(timeout_s)
+        else:
+            env_timeout = os.environ.get("ALLTERNIT_BRAIN_TIMEOUT_S", "").strip()
+            self._timeout_s = float(env_timeout) if env_timeout else DEFAULT_BRAIN_TIMEOUT_S
 
     def is_available(self) -> bool:
         import shutil, subprocess as _sp
@@ -1244,18 +1372,30 @@ class SubprocessVisionProvider(VisionProvider):
         prompt = _build_planning_prompt(task, history_text, (1280, 720))
         stdin_payload = json.dumps({"prompt": prompt, "screenshot_b64": screenshot_b64})
         try:
+            # F4: start_new_session puts the CLI in its own process group so a
+            # timeout/cancellation can kill the whole tree — CLI brains spawn
+            # their own children (the model process), and killing only the
+            # direct child orphaned the grandchild (cu22 campaign finding).
             proc = await asyncio.create_subprocess_exec(
                 self._cmd, *self._args,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
             )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(stdin_payload.encode()), timeout=60)
+            try:
+                stdout, stderr = await asyncio.wait_for(proc.communicate(stdin_payload.encode()), timeout=self._timeout_s)
+            except asyncio.CancelledError:
+                await _kill_process_tree(proc)
+                raise  # cancellation must propagate
+            except asyncio.TimeoutError:
+                await _kill_process_tree(proc)
+                raise VisionAPIError(f"Brain subprocess timed out after {self._timeout_s:g}s", provider="subprocess")
             if proc.returncode != 0:
                 raise VisionAPIError(f"Brain subprocess exited {proc.returncode}: {stderr.decode()[:200]}", provider="subprocess")
             return _parse_action_plan(stdout.decode())
         except asyncio.TimeoutError:
-            raise VisionAPIError("Brain subprocess timed out after 60s", provider="subprocess")
+            raise VisionAPIError(f"Brain subprocess timed out after {self._timeout_s:g}s", provider="subprocess")
         except FileNotFoundError:
             raise VisionConfigError(
                 f"Brain command not found: {self._cmd!r}. "
@@ -1263,6 +1403,13 @@ class SubprocessVisionProvider(VisionProvider):
                 f"or set ALLTERNIT_BRAIN_CMD to a valid command."
             )
 
+
+# Default per-call wall-clock cap for the CLI-brain path. Real models via
+# real CLIs routinely exceed 60 s (the cu22 campaign hit the old fixed 60 s
+# cap with gpt-6-astra through the codex CLI); fast gateway providers use
+# their own transport timeouts and never see this value. Overridable per
+# deployment via ALLTERNIT_BRAIN_TIMEOUT_S or the provider constructor.
+DEFAULT_BRAIN_TIMEOUT_S = 240.0
 
 # Production computer-use always uses the Gizzi platform brain. Direct API
 # keys, ak- virtual keys, and CLI subprocesses are not auto-selected.

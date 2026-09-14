@@ -691,6 +691,27 @@ pub(crate) fn constant_time_eq(a: &str, b: &str) -> bool {
     a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
+/// Local-only gate for managed-runtime endpoints (e.g. the fabric worker
+/// auto-provision route): true only when the caller presents the
+/// `x-allternit-desktop-access-token` header matching the configured
+/// `ALLTERNIT_DESKTOP_ACCESS_TOKEN` spawn-time secret. Fail-closed when no
+/// secret is configured — in cloud deployments this path simply does not
+/// exist.
+pub fn verify_desktop_access_token(
+    headers: &HeaderMap,
+    config: &crate::config::AppConfig,
+) -> bool {
+    let expected = match config.desktop_access_token() {
+        Some(token) => token,
+        None => return false,
+    };
+    let provided = headers
+        .get(DESKTOP_ACCESS_TOKEN_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    !provided.is_empty() && constant_time_eq(provided, &expected)
+}
+
 fn extract_desktop_bootstrap_user(
     headers: &HeaderMap,
     config: &crate::config::AppConfig,
@@ -915,6 +936,16 @@ pub async fn auth_middleware(
 
     // 3. Clerk JWT bearer token.
     if let Some(token) = extract_bearer_token(request.headers()) {
+        // Fabric Transport worker credentials (atok_…) are principal tokens,
+        // not user JWTs — the fabric routes authenticate them themselves
+        // (`sqlite_store::authenticate_principal`) against the hashed store.
+        // Passing them through unverified here is safe: any route that needs
+        // a user identity still 401s on the absent user context, and without
+        // this the managed worker would be rejected before reaching its
+        // route in packaged (non-bypass) deployments.
+        if token.starts_with("atok_") {
+            return next.run(request).await;
+        }
         if token.starts_with("at-") {
             let db = state.db.clone();
             let token_for_lookup = token.clone();

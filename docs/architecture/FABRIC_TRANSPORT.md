@@ -357,6 +357,67 @@ ALLTERNIT_FABRIC_TRANSPORT_SWEEP_SECS
 
 Treat these as operational tuning knobs, not semantic changes to the protocol.
 
+## 15a. Managed launch (consumer desktop)
+
+In the consumer-packaged desktop the operator never touches a terminal: the
+signed desktop main process owns the worker lifecycle end-to-end (phase P1,
+2026-09-14, `session/coworkp1-0914`).
+
+- **Credential provision** — once per launch the desktop calls
+  `POST /api/v1/fabric/transport/local/ensure-worker-principal` (loopback
+  API, gated on the spawn-time `ALLTERNIT_DESKTOP_ACCESS_TOKEN` secret; the
+  endpoint does not exist for callers without that secret). The route
+  ensures the canonical `a://workspace/{ws}/principal/gizzi` principal,
+  rotates its token, and returns the fresh token **exactly once** (only its
+  hash is stored). The desktop keeps it in the macOS Keychain (Electron
+  `safeStorage`; AES-GCM local envelope in dev).
+- **Launch** — the bundled gizzi-code sidecar runs
+  `gizzi-code fabric-worker` (the daemon entry ships inside the single-file
+  Bun build; the desktop spawns it with `ALLTERNIT_GIZZI_TOKEN` and
+  `ALLTERNIT_API_URL`). Readiness is the daemon's structured
+  `worker.daemon_start` log line.
+- **Resilience** — crash respawn with exponential backoff + jitter
+  (mirroring the API backend manager); graceful quit is SIGTERM, after
+  which the worker finishes its in-flight claim and exits 0 (abandoned
+  leases requeue via the sweeper).
+- **Status** — the desktop publishes one aggregate engine status
+  (API / gizzi / fabric worker / office engine) to the app chrome; a dead
+  worker is red there, never silently absent.
+
+The manual flow (`ALLTERNIT_GIZZI_TOKEN=… bun worker-daemon-entry.ts`, or
+`bun worker-entry.ts`) remains for operators and development.
+
+## 15b. Reach — mobile approvals + routines (consumer P4)
+
+- **iOS approvals inbox** — `FabricTransportClient` + `FabricApprovalsView`
+  talk to `/api/v1/fabric/transport/approvals` (grant/deny, decided-by
+  recorded server-side) and `/api/v1/runs` / `/runs/:id/events` for run
+  status. Legacy Cowork task clients are untouched. Entry: Cowork
+  launchpad radio-waves button.
+- **Routines** — `POST/GET/DELETE /api/v1/cowork/routines` plus
+  `POST /cowork/routines/:id/run` (run now). Schedule grammar is
+  `*/N` minutes, `@hourly`, `@daily`. The 30s tick submits one canonical
+  intent per due row (initiator = owning user, delegator = Al, target
+  from the principal override or the same delegation-rule lookup Al uses
+  for a chat turn; payload carries `agentic.task` = the routine message).
+  Failed fires back off 5 minutes and do not skip. Cloud continuation is
+  out of v1.
+
+## 15c. Release engineering (consumer P5)
+
+- **Updater feed** — electron-builder `build.publish`,
+  `updateElectronApp({ repo })`, and `PLATFORM_MANIFEST.update.desktopFeedUrl`
+  all point at `Gizziio/desktop`. `allternit/desktop` does not exist (404).
+  `scripts/release-preflight.mjs` fails the release if those three diverge.
+- **Signing / notarization** — owner action. `build.mac.identity` stays
+  `null` so unsigned local builds keep working; CI already forwards
+  `APPLE_ID` / `APPLE_ID_PASSWORD` / `APPLE_TEAM_ID` into
+  `scripts/notarize.cjs`, which hard-fails without them by design. Cut
+  `desktop-v1.2.0` only after those secrets are provisioned.
+- **Windows / Linux** — `release-desktop.yml` already builds NSIS +
+  AppImage on tag `desktop-v*`. Smoke those artifacts from the tag; do
+  not treat an untagged local build as a release.
+
 ## 16. Worker reference loop
 
 A basic worker should behave like:

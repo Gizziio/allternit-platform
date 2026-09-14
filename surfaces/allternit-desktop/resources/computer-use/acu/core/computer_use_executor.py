@@ -20,6 +20,7 @@ Non-Claude models use PlanningLoop (planning_loop.py) which also calls this exec
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import time
 from datetime import datetime, timezone
@@ -60,6 +61,26 @@ BROWSER_EXTENSION_ACTIONS = frozenset({
 })
 
 ALL_SUPPORTED_ACTIONS = NATIVE_CLAUDE_ACTIONS | BROWSER_EXTENSION_ACTIONS
+
+# Plan-loop / grounding-model vocabulary → native executor vocabulary
+# (cu22 follow-up F2). Frontier models emit plan types like `click`, `select`,
+# `press`, or camelCase `doubleClick`; the adapters speak the native set
+# above. Mapping here (rather than at every call site) keeps the per-step
+# fallback path aligned with what batch dispatch accepts — the campaign had
+# to shim click→left_click by hand because the executor rejected the plan
+# types outright. Types absent from both sets still refuse cleanly with
+# UNSUPPORTED_ACTION.
+PLAN_ACTION_MAP: Dict[str, str] = {
+    "click": "left_click",
+    "doubleClick": "double_click",
+    "press": "key",
+    "select": "fill",
+    "scrollTo": "scroll",
+    # hover passes through as-is: adapters that support it
+    # (desktop.accessibility) handle it; browser adapters report unsupported
+    # and the waterfall continues, same as right_click et al.
+    "hover": "hover",
+}
 
 # ---------------------------------------------------------------------------
 # Adapter waterfall — ordered from best to fallback
@@ -136,7 +157,33 @@ class ComputerUseExecutor:
         adapter_preference pins a specific adapter (skips waterfall).
         Falls through the waterfall on health-check failure or unavailability.
         """
-        if action.action_type not in ALL_SUPPORTED_ACTIONS:
+        # F2: translate plan vocabulary into the native adapter vocabulary
+        # before the whitelist check (e.g. the model's `click` plan becomes
+        # the adapters' `left_click`). The envelope reports the action that
+        # actually executed.
+        #
+        # The integration caller (planning_loop._execute_action) builds a
+        # plain ActionRequest-like object, not a dataclass, so only use
+        # dataclasses.replace on real dataclasses; copy anything else
+        # (shallow copy — the caller may still hold the original for its
+        # step record).
+        native_type = PLAN_ACTION_MAP.get(action.action_type, action.action_type)
+        if native_type != action.action_type:
+            if dataclasses.is_dataclass(action):
+                action = dataclasses.replace(action, action_type=native_type)
+            else:
+                import copy
+                action = copy.copy(action)
+                action.action_type = native_type
+
+        # Plan-vocabulary members whose mapping is the identity (e.g. hover)
+        # are accepted as-is; adapters that can't handle them report
+        # unsupported and the waterfall continues.
+        accepted = (
+            action.action_type in ALL_SUPPORTED_ACTIONS
+            or action.action_type in PLAN_ACTION_MAP
+        )
+        if not accepted:
             return self._error_envelope(
                 action, session_id, run_id,
                 f"Unsupported action type: {action.action_type!r}",

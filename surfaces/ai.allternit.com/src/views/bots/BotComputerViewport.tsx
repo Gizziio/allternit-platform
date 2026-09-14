@@ -144,6 +144,14 @@ export function BotComputerViewport({
   const screenshotInFlightRef = useRef(false);
   const screenshotFailuresRef = useRef(0);
   const RFBModuleRef = useRef<any>(null);
+  const connectedWsUrlRef = useRef<string | null>(null);
+  const [isOnscreen, setIsOnscreen] = useState(true);
+  const [pageVisible, setPageVisible] = useState(
+    () => typeof document === "undefined" || !document.hidden,
+  );
+  // A live RFB decode of a viewport nobody can see is pure CPU burn: pause
+  // both the stream and the screenshot poll until the pane is visible again.
+  const streamActive = pageVisible && isOnscreen;
   const compact = layout !== "page";
 
   useEffect(() => {
@@ -154,7 +162,32 @@ export function BotComputerViewport({
 
   useEffect(() => subscribeVncOwner(() => setVncEpoch((n) => n + 1)), []);
 
+  // Pause when scrolled out of view (IntersectionObserver on the whole pane;
+  // document.hidden alone doesn't catch a viewport buried in a long chat).
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      setIsOnscreen(entries.some((entry) => entry.isIntersecting));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const onVisibility = () => setPageVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
   const sandboxId = vm?.sandbox_id;
+  const wsUrl = status?.ws_url ?? null;
+  const vncProtocol = status?.protocol;
+  const vncControlState = status?.control_state;
+  const canConnectVnc =
+    (vncControlState === "human_controls" || vncControlState === "human_observing") &&
+    !!wsUrl &&
+    vncProtocol === "vnc";
 
   const loadStatus = useCallback(async () => {
     if (!sandboxId) return;
@@ -248,11 +281,7 @@ export function BotComputerViewport({
   useEffect(() => {
     if (!sandboxId) return;
 
-    const canConnect =
-      (status?.control_state === "human_controls" || status?.control_state === "human_observing") &&
-      !!status?.ws_url &&
-      status.protocol === "vnc";
-    if (canConnect) {
+    if (canConnectVnc) {
       setScreenshot(null);
       screenshotFailuresRef.current = 0;
       screenshotAbortRef.current?.abort();
@@ -274,13 +303,13 @@ export function BotComputerViewport({
           screenshotPollRef.current = null;
         }
         screenshotAbortRef.current?.abort();
-      } else if (status?.status === "running" && !screenshotPollRef.current) {
+      } else if (status?.status === "running" && streamActive && !screenshotPollRef.current) {
         void loadScreenshot();
         screenshotPollRef.current = setInterval(() => void loadScreenshot(), intervalMs);
       }
     };
 
-    if (status?.status === "running") {
+    if (status?.status === "running" && streamActive) {
       void loadScreenshot();
       screenshotPollRef.current = setInterval(() => void loadScreenshot(), intervalMs);
     }
@@ -292,7 +321,7 @@ export function BotComputerViewport({
       document.removeEventListener("visibilitychange", onVisibility);
       screenshotAbortRef.current?.abort();
     };
-  }, [status, loadScreenshot, sandboxId]);
+  }, [status, loadScreenshot, sandboxId, streamActive, canConnectVnc]);
 
   const disconnectVnc = useCallback(() => {
     if (rfbRef.current) {
@@ -303,10 +332,16 @@ export function BotComputerViewport({
       }
       rfbRef.current = null;
     }
+    connectedWsUrlRef.current = null;
   }, []);
 
   const connectVnc = useCallback(async (wsPath: string) => {
     if (!canvasRef.current) return;
+    // The connect effect re-runs on every 5s status poll tick; reconnecting
+    // each time tears down the framebuffer, re-handshakes, and re-requests
+    // the full screen (the WebSocket close/addEventListener churn in the CPU
+    // profile). Only connect when the target URL actually changed.
+    if (rfbRef.current && connectedWsUrlRef.current === wsPath) return;
     disconnectVnc();
 
     try {
@@ -320,33 +355,43 @@ export function BotComputerViewport({
       const url = wsUrlFromPath(wsPath);
       const rfb = new RFB(canvasRef.current, url, {
         scaleViewport: true,
-        resizeSession: true,
+        // resizeSession asks the guest to re-resolution on every container
+        // resize; in a chat pane that reflows while streaming that
+        // reallocates the framebuffer in a loop (the _allocateBuffers + GC
+        // churn from the CPU profile). Scaling the fixed-size stream to the
+        // pane is enough in this embedded context.
+        resizeSession: false,
         clipViewport: false,
       });
       rfbRef.current = rfb;
+      connectedWsUrlRef.current = wsPath;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start VNC viewer");
     }
   }, [disconnectVnc]);
 
   useEffect(() => {
-    const wsUrl = status?.ws_url;
-    const wantsVnc =
-      (status?.control_state === "human_controls" || status?.control_state === "human_observing") &&
-      !!wsUrl &&
-      status.protocol === "vnc";
+    let cancelled = false;
+    // Depend on the connection target (ws url / control / protocol), not the
+    // whole status object — getBotDesktopStatus rewrites `status` every 5s
+    // and a teardown+handshake on each tick is the WebSocket close/reconnect
+    // churn from the CPU profile.
+    const wantsVnc = streamActive && canConnectVnc;
     const holdsClaim = Boolean(sandboxId && wantsVnc && claimVnc(sandboxId, layout));
     if (wantsVnc && holdsClaim && wsUrl) {
-      void connectVnc(wsUrl);
+      void connectVnc(wsUrl).then(() => {
+        if (cancelled) disconnectVnc();
+      });
     } else {
       disconnectVnc();
     }
 
     return () => {
+      cancelled = true;
       disconnectVnc();
       if (sandboxId) releaseVnc(sandboxId, layout);
     };
-  }, [status, connectVnc, disconnectVnc, sandboxId, layout, vncEpoch]);
+  }, [wsUrl, canConnectVnc, connectVnc, disconnectVnc, sandboxId, layout, vncEpoch, streamActive]);
 
   const setSessionControlState = (controlState: ControlState) => {
     try {
@@ -726,7 +771,7 @@ export function BotComputerViewport({
             {layout === "pane" && onOpenInAci && (
               <Button variant="outline" size="sm" onClick={onOpenInAci} className="gap-1.5">
                 <ArrowSquareOut size={14} />
-                Open in ACI
+                Open in window
               </Button>
             )}
             {layout === "aci" && onReturnToChat && (

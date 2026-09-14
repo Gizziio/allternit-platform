@@ -19,6 +19,14 @@ describe("bot-computer-vnc", () => {
     expect(claimVnc("sb-1", "pane")).toBe(false);
   });
 
+  it("lets the detached window steal the VNC claim from pane and ACI", () => {
+    expect(claimVnc("sb-1", "pane")).toBe(true);
+    expect(claimVnc("sb-1", "window")).toBe(true);
+    expect(getVncOwner()).toEqual({ sandboxId: "sb-1", layout: "window" });
+    expect(claimVnc("sb-1", "aci")).toBe(false);
+    expect(claimVnc("sb-1", "pane")).toBe(false);
+  });
+
   it("releases so a lower-priority host can reconnect", () => {
     expect(claimVnc("sb-1", "aci")).toBe(true);
     releaseVnc("sb-1", "aci");

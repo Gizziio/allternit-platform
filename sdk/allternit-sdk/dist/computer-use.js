@@ -332,6 +332,67 @@ export class AllternitComputerUseClient {
             }
         }
     }
+    /**
+     * List compiled browser-workflow specs (distilled summaries, shapes only).
+     * GET /v1/browser-skills
+     */
+    async listBrowserSkills() {
+        const response = await this.fetch(`${this.baseUrl}/v1/browser-skills`, {
+            method: "GET",
+            headers: this.headers,
+        });
+        if (!response.ok) {
+            throw new Error(`List browser skills failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    }
+    /** Inspect one spec's distilled shape, incl. its taught NetworkTrace. */
+    async getBrowserSkill(skillId) {
+        const response = await this.fetch(`${this.baseUrl}/v1/browser-skills/${encodeURIComponent(skillId)}`, { method: "GET", headers: this.headers });
+        if (!response.ok) {
+            throw new Error(`Get browser skill failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    }
+    /**
+     * Run the deterministic record -> teach -> batch -> verify chain. Without
+     * a targetUrl this is the canned self-check; with one, the spec'd workflow
+     * is batch-verified against that URL. Poll with getBrowserSkillVerify.
+     */
+    async startBrowserSkillVerify(options = {}) {
+        const body = {};
+        if (options.skillId)
+            body.skill_id = options.skillId;
+        if (options.workflow)
+            body.workflow = options.workflow;
+        if (options.targetUrl)
+            body.target_url = options.targetUrl;
+        const response = await this.fetch(`${this.baseUrl}/v1/browser-skills/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...this.headers },
+            body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+            throw new Error(`Start browser skill verify failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    }
+    /** Fetch a stored verify verdict (network deviations, a11y, receipts). */
+    async getBrowserSkillVerify(verifyId) {
+        const response = await this.fetch(`${this.baseUrl}/v1/browser-skills/verify/${encodeURIComponent(verifyId)}`, { method: "GET", headers: this.headers });
+        if (!response.ok) {
+            throw new Error(`Get browser skill verify failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    }
+    /** Recompute the content-derived receipt hash (tamper check). */
+    async checkBrowserSkillVerifyReceipt(verifyId) {
+        const response = await this.fetch(`${this.baseUrl}/v1/browser-skills/verify/${encodeURIComponent(verifyId)}/receipt/check`, { method: "GET", headers: this.headers });
+        if (!response.ok) {
+            throw new Error(`Check browser skill receipt failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    }
     async waitForRun(runId, options = {}) {
         const { intervalMs = 1000, signal } = options;
         while (!signal?.aborted) {

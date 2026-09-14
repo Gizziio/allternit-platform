@@ -352,6 +352,62 @@ Transport does not redefine principal identity, run state, attribution, or appro
   editor, connector sessions view, attributed + approvals-interleaved run
   timeline in `/fabric-transport`.
 
+### Implemented in the deliverables phase (consumer desktop P3, 2026-09-14)
+
+- **deliverable pipeline** — agent-filled markdown → office-engine render
+  (report/sheet/deck templates) → persisted finished documents attached to
+  the canonical run (registry = attributed `deliverable.created` events),
+  previewed/exported over `/cowork/runs/:id/deliverables`; the agentic
+  worker's `deliverable` tool attaches them under its principal bearer.
+- **worker auth fix** — `atok_` principal tokens pass the auth middleware to
+  the fabric routes' own authentication (latent P1 production bug).
+- **run detail as document timeline** — FabricTransportView renders
+  Deliverables cards above the attributed event/approval timeline.
+
+### Implemented in the chat-drives-A:// phase (consumer desktop P2, 2026-09-14)
+
+- **chat drives A://** — `POST /cowork/al/chat/stream` (SSE): the same Al
+  delegation as `/cowork/al/chat`, streamed (`delegation` → `run_state` →
+  `approval`/`approval_decision` → `result` → `finish`, narration as
+  `content_block_delta` text). Al's payload carries the agentic job kind
+  (`payload.agentic.task`). The SPA routes Cowork chat through it behind
+  `NEXT_PUBLIC_ALLTERNIT_COWORK_CHAT_VIA_AL`; the legacy `/api/agent-chat`
+  relay stays the default until parity is proven.
+- **agentic job kind** — the gizzi worker runs a bounded model-agent loop
+  (`src/runtime/fabric-transport/agentic.ts`) through the EXISTING model
+  router (`/v1/chat/completions` with the operator key; no new LLM path),
+  with `fs_read`/`fs_write`/`bash` tools, per-step checkpointing, and
+  step/token budget caps from the job payload.
+- **trusted-folder confinement** — worker file tools default-deny outside
+  `ALLTERNIT_WORKER_TRUSTED_FOLDERS` (grants the desktop passes at spawn
+  from `/cowork-preferences`); symlink escapes refused.
+- **approval cards** — SSE approval frames surface as grant/deny cards in
+  the app chrome (`ApprovalToastHost`) against the existing fabric
+  approvals endpoints; decided-by is recorded server-side.
+
+### Implemented in the managed-runtime phase (consumer desktop P1, 2026-09-14)
+
+- **managed worker lifecycle** — `POST /fabric/transport/local/ensure-worker-principal`
+  (desktop access-token gated, token returned once, hash stored) + the
+  desktop's Keychain-backed credential store and `gizzi-code fabric-worker`
+  managed spawn (backoff respawn, SIGTERM graceful quit). See
+  `FABRIC_TRANSPORT.md` §15a and `GIZZI_WORKER_SPEC.md` §7.
+- **engine status surface** — one aggregate green/yellow/red indicator
+  (API / gizzi / fabric worker / office engine) in the app chrome, fed by
+  the desktop main process over the preload bridge.
+
+### Implemented in the consumer reach + release pass (P4/P5, 2026-09-14)
+
+- **iOS fabric approvals** — Swift `FabricTransportClient` +
+  `FabricApprovalsView` (grant/deny + run timeline). Cloud continuation
+  remains out of v1.
+- **Routines** — `/api/v1/cowork/routines` tick fires a canonical
+  attributed intent per due schedule; Cowork Fabric Transport view
+  creates/runs/deletes them.
+- **Updater feed lock** — `Gizziio/desktop` is the single publish +
+  auto-update target; preflight refuses a mismatch. Signed/notarized
+  `desktop-v1.2.0` remains an owner action (Apple secrets).
+
 Live behavioral evidence for all six items (vm-job claim grant/refusal,
 boundary projection refusal, brokered files read/write + approval gate +
 path-confinement refusal, Al chat fallback + end-to-end delegation, daemon
@@ -361,6 +417,33 @@ a fresh-migrated dev database on 2026-09-13: `tmp/aproduct-evidence/LIVE_EVIDENC
 main breakage: duplicate migration versions V142–V144 (renumbered
 V169–V171) and the embed_migrations no-rebuild gotcha — see CHANGELOG
 [Unreleased] → Fixed.
+
+### Implemented in the cowork-DAG integration pass (session/adocs2-0913)
+
+- **cowork sessions participate in the A:// lifecycle (§7/§16)** — session
+  row creation submits the session's canonical intent (target: the
+  workspace Gizzi principal; return channel `cowork`), creating the
+  session's run; the linkage lives in the session row's `metadata`
+  (`a_intent_id` / `a_run_id` / `a_native_session_id`) and the agent-chat
+  bridge resolves (or lazily backfills) it per turn. Gizzi tool executions
+  during a turn are recorded as lightweight, attributed job rows on the
+  session run (`job_created` / `job.completed` / `job.failed`); turn
+  completion writes a typed `turn.completed` Result and an A-T2 memory
+  entry owned by the user's principal with an explicit grant to Al;
+  session completion finalizes the run (`run.completed`). Conversational
+  tool jobs are not Fabric-Transport-leased work (§8.2), so they are
+  recorded directly without a claim and carry the `cowork.chat` capability
+  on the session run's placeholder job so no transport worker claims it.
+- **seam fixes** — intent-created runs are owner-stamped at insert (visible
+  to the V142/V169-scoped run surface; job-postable like any run); the Al
+  orchestrator matches the documented short alias `principal/al` exactly as
+  the canonical long form (`targets_al`); store-direct orchestrator child
+  runs are mirrored into the RunManager within one tick.
+
+Delegation-rule convention (orchestrator + P-T5 persona runtime):
+`cowork_delegation_rules.workspace` is the **bare workspace id** (the
+`a://workspace/` prefix stripped), matching the store's workspace column —
+an `a://`-form value silently matches no intent.
 
 ### Planned / not implied by v0.1
 

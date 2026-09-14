@@ -1026,9 +1026,55 @@ async fn agent_chat_bridge(
     let agent_id_for_messages = agent_id.clone();
     let run_id_for_messages = chat_run.as_ref().map(|r| r.run_id.clone());
 
+    // A:// §7/§16: this chat turn participates in the canonical DAG. Resolve
+    // (or lazily create) the session's run through the native chat id and
+    // mark it running for the duration of the turn. Best-effort: streaming
+    // must work even if the DAG write fails.
+    let permission_mode = parse_permission_mode(&body_json).to_string();
+    let session_dag = tokio::task::spawn_blocking({
+        let db = state.db.clone();
+        let user_id = user_id_for_record.clone();
+        let chat_id = chat_id.clone();
+        move || {
+            let mut conn = db.connect()?;
+            let link = crate::cowork::dag::ensure_session_run(
+                &mut conn,
+                &user_id,
+                Some(&chat_id),
+                None,
+            )?;
+            allternit_cowork_runtime::sqlite_store::update_run_state_record(
+                &conn,
+                &link.run_id,
+                "running",
+                None,
+            )
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+            Ok::<_, rusqlite::Error>(link)
+        }
+    })
+    .await;
+    let session_link = match session_dag {
+        Ok(Ok(link)) => Some(link),
+        Ok(Err(e)) => {
+            warn!("session DAG ensure failed: {}", e);
+            None
+        }
+        Err(e) => {
+            warn!("session DAG task panicked: {}", e);
+            None
+        }
+    };
+
     let stream = async_stream::stream! {
         let msg_id = assistant_message_id.clone();
         let session_id = gizzi_session_id.clone();
+        let dag_link = session_link.clone();
+        // Tool callID → gizzi permission request id, so a tool job can carry
+        // the approval row it was gated on (A:// §12 binding analog).
+        let mut approval_by_call: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        // Visible reply text, capped, for the turn's memory entry.
+        let mut reply_text = String::new();
 
         yield Ok::<Event, Infallible>(Event::default().data(
             json!({
@@ -1263,27 +1309,96 @@ async fn agent_chat_bridge(
                         if part_type == "reasoning" && !part_id.is_empty() {
                             reasoning_parts.insert(part_id.to_string());
                         }
+                        // A:// §7: gizzi tool executions become lightweight
+                        // DAG jobs on the session run (see cowork::dag).
+                        if part_type == "tool" {
+                            if let (Some(tool), Some(call_id)) = (
+                                part.get("tool").and_then(|v| v.as_str()),
+                                part.get("callID").and_then(|v| v.as_str()),
+                            ) {
+                                let status = part
+                                    .pointer("/state/status")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("");
+                                if status == "running" {
+                                    if let Some(link) = dag_link.clone() {
+                                        let db = state.db.clone();
+                                        let uid = user_id_for_record.clone();
+                                        let tool = tool.to_string();
+                                        let call_id = call_id.to_string();
+                                        let message_id = props
+                                            .get("messageID")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("")
+                                            .to_string();
+                                        let approval = approval_by_call.get(&call_id).cloned();
+                                        let _ = tokio::task::spawn_blocking(move || {
+                                            let mut conn = db.connect()?;
+                                            crate::cowork::dag::record_tool_job(
+                                                &mut conn,
+                                                &link.run_id,
+                                                &uid,
+                                                &tool,
+                                                &call_id,
+                                                &message_id,
+                                                approval.as_deref(),
+                                            )
+                                        })
+                                        .await;
+                                    }
+                                } else if status == "completed" || status == "error" {
+                                    if let Some(link) = dag_link.clone() {
+                                        let db = state.db.clone();
+                                        let uid = user_id_for_record.clone();
+                                        let call_id = call_id.to_string();
+                                        let success = status == "completed";
+                                        let error = part
+                                            .pointer("/state/error")
+                                            .and_then(|v| v.as_str())
+                                            .map(str::to_string);
+                                        let _ = tokio::task::spawn_blocking(move || {
+                                            let mut conn = db.connect()?;
+                                            crate::cowork::dag::complete_tool_job(
+                                                &mut conn,
+                                                &link.run_id,
+                                                &uid,
+                                                &call_id,
+                                                success,
+                                                error.as_deref(),
+                                            )
+                                        })
+                                        .await;
+                                    }
+                                }
+                            }
+                        }
                     }
                     "message.part.delta" => {
                         let delta_text = props.get("delta").and_then(|v| v.as_str()).unwrap_or("");
                         let part_id = props.get("partID").and_then(|v| v.as_str()).unwrap_or("text-1");
 
                         if reasoning_parts.contains(part_id) {
-                            // Reasoning part → thinking delta (the frontend's
-                            // thought stream), not visible reply text.
-                            yield Ok(Event::default().data(json!({
-                                "type": "content_block_delta",
-                                "messageId": msg_id,
-                                "partId": part_id,
-                                "delta": { "type": "thinking_delta", "thinking": delta_text },
-                            }).to_string()));
-                        } else {
-                            yield Ok(Event::default().data(json!({
-                                "type": "content_block_delta",
-                                "messageId": msg_id,
-                                "partId": part_id,
-                                "delta": { "type": "text_delta", "text": delta_text },
-                            }).to_string()));
+                            if reasoning_parts.contains(part_id) {
+                                // Reasoning part → thinking delta (the frontend's
+                                // thought stream), not visible reply text.
+                                yield Ok(Event::default().data(json!({
+                                    "type": "content_block_delta",
+                                    "messageId": msg_id,
+                                    "partId": part_id,
+                                    "delta": { "type": "thinking_delta", "thinking": delta_text },
+                                }).to_string()));
+                            } else {
+                                reply_text.push_str(&delta_text);
+                                if reply_text.len() > 2000 {
+                                    reply_text.truncate(2000);
+                                }
+                                yield Ok(Event::default().data(json!({
+                                    "type": "content_block_delta",
+                                    "messageId": msg_id,
+                                    "partId": part_id,
+                                    "delta": { "type": "text_delta", "text": delta_text },
+                                }).to_string()));
+                            }
                         }
                     }
                     "session.status" => {
@@ -1321,6 +1436,15 @@ async fn agent_chat_bridge(
                             .and_then(|v| v.as_str())
                             .filter(|s| !s.is_empty())
                         {
+                            // Remember which tool call this ask gates so the
+                            // tool's DAG job can carry the approval binding.
+                            if let Some(call_id) = props
+                                .pointer("/tool/callID")
+                                .and_then(|v| v.as_str())
+                                .filter(|s| !s.is_empty())
+                            {
+                                approval_by_call.insert(call_id.to_string(), request_id.to_string());
+                            }
                             let content = gizzi_permission_approval_content(props).to_string();
                             let db = state.db.clone();
                             let uid = user_id_for_record.clone();
@@ -1370,6 +1494,45 @@ async fn agent_chat_bridge(
                     _ => {}
                 }
             }
+        }
+
+        // Turn end: typed Result on the session run + the A-T2 memory grant.
+        // Idempotent on the assistant message id, so an SSE replay does not
+        // duplicate them.
+        if let Some(link) = dag_link {
+            let db = state.db.clone();
+            let uid = user_id_for_record.clone();
+            let msg_id_for_dag = msg_id.clone();
+            let usage = last_usage.clone().unwrap_or_else(|| json!({}));
+            let mode = permission_mode.clone();
+            let summary = if reply_text.trim().is_empty() {
+                format!("cowork turn {msg_id} (no text output)")
+            } else {
+                format!("cowork turn: {}", reply_text.trim())
+            };
+            let session_row_id = link.session_id.clone();
+            let run_id = link.run_id.clone();
+            let _ = tokio::task::spawn_blocking(move || {
+                let mut conn = db.connect()?;
+                crate::cowork::dag::record_turn_result(
+                    &mut conn,
+                    &run_id,
+                    &uid,
+                    &msg_id_for_dag,
+                    "complete",
+                    usage,
+                    &mode,
+                )?;
+                crate::cowork::dag::record_turn_memory(
+                    &mut conn,
+                    &uid,
+                    &run_id,
+                    &session_row_id,
+                    &summary,
+                )?;
+                Ok::<_, rusqlite::Error>(())
+            })
+            .await;
         }
 
         settle_chat_run(&chat_run, true, None).await;

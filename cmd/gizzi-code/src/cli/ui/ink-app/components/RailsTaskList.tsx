@@ -7,11 +7,13 @@
  * row, and the same terminal-height display budget. Self-hides when Rails
  * peer mode is off (no updatedAt) or there are no dags.
  *
- * Focused keys (peer mode only): j/k move the selection across actionable
- * rows, t picks up a READY node, d/x closes owned RUNNING work as
- * DONE/FAILED, e renames the selected node inline, D (shift+d) deletes it
- * after a y/n confirm, and r reparents it under another node or the dag
- * root. Write failures surface inline on the row for 5s.
+ * Focused keys (peer mode only): j/k move the selection across all node
+ * rows; the footer lists what the selected row supports — t picks up a
+ * READY node, d/x closes owned RUNNING work as DONE/FAILED, e renames the
+ * selected node inline, D (shift+d) deletes it after a y/n confirm, and r
+ * reparents it under another node or the dag root (edit/delete/reparent
+ * are offered on every status; the server guards delete/reparent conflicts
+ * with 409s surfaced inline). Write failures surface on the row for 5s.
  */
 
 import * as React from 'react'
@@ -130,6 +132,31 @@ export function actionableKindFor(
   return null
 }
 
+export type RowAction = 'take' | 'done' | 'fail' | 'edit' | 'delete' | 'reparent'
+
+/**
+ * Every action the panel offers on a node row for this peer. edit/delete/
+ * reparent are available on ANY status — the server guards the dangerous
+ * cases (delete with open children/active WIH 409s, reparent cycles 409),
+ * so the panel only needs to offer them; take is READY-only, done/fail only
+ * on RUNNING work owned by this peer. Status is normalized
+ * case-insensitively, mirroring actionableKindFor.
+ */
+export function actionsFor(
+  status: string,
+  assignee: string | null,
+  agentId: string | null,
+): RowAction[] {
+  const normalized = String(status).toUpperCase()
+  const actions: RowAction[] = []
+  if (normalized === 'READY') actions.push('take')
+  if (normalized === 'RUNNING' && agentId && assignee === agentId) {
+    actions.push('done', 'fail')
+  }
+  actions.push('edit', 'delete', 'reparent')
+  return actions
+}
+
 /** Clamp a selection index into [0, count-1]; -1 when nothing is selectable. */
 export function clampSelectionIndex(index: number, count: number): number {
   if (count <= 0) return -1
@@ -168,10 +195,10 @@ export function reparentCandidates<T extends {
   return nodes.filter(node => !excluded.has(node.node_id))
 }
 
-type ActionableRow = {
+type SelectableRow = {
   key: string
   dagId: string
-  kind: ActionableKind
+  actions: RowAction[]
   node: RailsDagNode
 }
 
@@ -323,27 +350,26 @@ export function RailsTaskList(): React.ReactElement | null {
   const [editValue, setEditValue] = React.useState('')
 
   const agentId = railsPeerAgentId()
-  const actionable: ActionableRow[] = []
+  // Every visible node row is selectable — take/done/fail stay gated on the
+  // row's actions, but edit/delete/reparent are offered on any status.
+  const selectable: SelectableRow[] = []
   if (isRailsPeerMode() && maxDisplay > 0) {
     for (const line of visibleLines) {
       if (line.kind !== 'node') continue
-      const kind = actionableKindFor(line.node.status, line.node.assignee, agentId)
-      if (kind) {
-        actionable.push({
-          key: line.key,
-          dagId: line.dagId,
-          kind,
-          node: line.node,
-        })
-      }
+      selectable.push({
+        key: line.key,
+        dagId: line.dagId,
+        actions: actionsFor(line.node.status, line.node.assignee, agentId),
+        node: line.node,
+      })
     }
   }
-  const actionableCount = actionable.length
+  const selectableCount = selectable.length
   const foundIndex = selectionKey
-    ? actionable.findIndex(row => row.key === selectionKey)
+    ? selectable.findIndex(row => row.key === selectionKey)
     : -1
   const selectionIndex =
-    foundIndex >= 0 ? foundIndex : clampSelectionIndex(0, actionableCount)
+    foundIndex >= 0 ? foundIndex : clampSelectionIndex(0, selectableCount)
 
   const panelVisible = Boolean(
     railsDag &&
@@ -355,13 +381,13 @@ export function RailsTaskList(): React.ReactElement | null {
   const isModalOverlayActive = useIsModalOverlayActive()
 
   const selectDelta = (delta: number): void => {
-    const next = clampSelectionIndex(selectionIndex + delta, actionableCount)
-    if (next >= 0) setSelectionKey(actionable[next]!.key)
+    const next = clampSelectionIndex(selectionIndex + delta, selectableCount)
+    if (next >= 0) setSelectionKey(selectable[next]!.key)
   }
 
   const takeSelected = async (): Promise<void> => {
-    const selected = actionable[selectionIndex]
-    if (!selected || selected.kind !== 'take') return
+    const selected = selectable[selectionIndex]
+    if (!selected || !selected.actions.includes('take')) return
     const result = await pickupWih(selected.dagId, selected.node.node_id)
     if (result.ok) {
       setRowError(null)
@@ -372,14 +398,21 @@ export function RailsTaskList(): React.ReactElement | null {
   }
 
   const closeSelected = async (status: 'DONE' | 'FAILED'): Promise<void> => {
-    const selected = actionable[selectionIndex]
-    if (!selected || selected.kind !== 'done' || !selected.node.current_wih_id) {
+    const selected = selectable[selectionIndex]
+    const action: RowAction = status === 'FAILED' ? 'fail' : 'done'
+    if (
+      !selected ||
+      !selected.actions.includes(action) ||
+      !selected.node.current_wih_id
+    ) {
       return
     }
     const result = await closeWih(
       selected.node.current_wih_id,
       [closeEvidenceFor(status, railsPeerAgentId())],
       status,
+      selected.dagId,
+      selected.node.node_id,
     )
     if (result.ok) {
       setRowError(null)
@@ -392,8 +425,8 @@ export function RailsTaskList(): React.ReactElement | null {
   // ─── Sub-modes (edit / delete confirm / reparent picker) ─────────────────
 
   const startEdit = (): void => {
-    const selected = actionable[selectionIndex]
-    if (!selected) return
+    const selected = selectable[selectionIndex]
+    if (!selected || !selected.actions.includes('edit')) return
     setEditValue(selected.node.title)
     setSubMode({
       kind: 'edit',
@@ -424,8 +457,8 @@ export function RailsTaskList(): React.ReactElement | null {
   }
 
   const startConfirmDelete = (): void => {
-    const selected = actionable[selectionIndex]
-    if (!selected) return
+    const selected = selectable[selectionIndex]
+    if (!selected || !selected.actions.includes('delete')) return
     setSubMode({
       kind: 'confirm-delete',
       dagId: selected.dagId,
@@ -448,8 +481,8 @@ export function RailsTaskList(): React.ReactElement | null {
   }
 
   const startReparent = (): void => {
-    const selected = actionable[selectionIndex]
-    if (!selected) return
+    const selected = selectable[selectionIndex]
+    if (!selected || !selected.actions.includes('reparent')) return
     const dag = dags.find(d => d.dag_id === selected.dagId)
     if (!dag) return
     setSubMode({
@@ -494,9 +527,9 @@ export function RailsTaskList(): React.ReactElement | null {
   useKeybindings(
     {
       'railsDag:focus': () => {
-        if (actionableCount === 0) return
+        if (selectableCount === 0) return
         setFocused(true)
-        setSelectionKey(prev => prev ?? actionable[0]?.key ?? null)
+        setSelectionKey(prev => prev ?? selectable[0]?.key ?? null)
       },
     },
     {
@@ -556,14 +589,14 @@ export function RailsTaskList(): React.ReactElement | null {
   // from the inline Input or the y/n confirm.
   useRegisterOverlay('rails-dag-todo', focused && panelVisible)
 
-  // Auto-blur when the selection pool empties (last actionable node closed
-  // or the dags view went quiet); drop any sub-mode with it.
+  // Auto-blur when the selection pool empties (last visible node closed or
+  // the dags view went quiet); drop any sub-mode with it.
   React.useEffect(() => {
-    if (focused && actionableCount === 0) {
+    if (focused && selectableCount === 0) {
       setFocused(false)
       setSubMode(null)
     }
-  }, [focused, actionableCount])
+  }, [focused, selectableCount])
 
   // Drop a stale sub-mode when the panel hides (terminal resize, peer mode
   // off, dags emptied) so keys aren't stranded on an invisible overlay.
@@ -586,7 +619,7 @@ export function RailsTaskList(): React.ReactElement | null {
 
   const planPublish = railsDag.planPublish
   const maxTitleWidth = Math.max(15, columns - 20)
-  const selectedKey = focused ? actionable[selectionIndex]?.key : null
+  const selectedKey = focused ? selectable[selectionIndex]?.key : null
 
   return (
     <Box flexDirection="column" marginTop={1} marginLeft={2}>
@@ -688,10 +721,24 @@ export function RailsTaskList(): React.ReactElement | null {
       {hiddenCount > 0 && <Text dimColor>{` … +${hiddenCount} more`}</Text>}
       {focused && subMode === null && (
         <Text dimColor>
-          j/k move · t take · d done · x fail · e edit · D delete · r reparent ·
-          esc blur
+          {hintForActions(selectable[selectionIndex]?.actions ?? [])}
         </Text>
       )}
     </Box>
   )
+}
+
+const ROW_ACTION_HINTS: Record<RowAction, string> = {
+  take: 't take',
+  done: 'd done',
+  fail: 'x fail',
+  edit: 'e edit',
+  delete: 'D delete',
+  reparent: 'r reparent',
+}
+
+/** Footer hint: only the actions the currently selected row supports. */
+function hintForActions(actions: RowAction[]): string {
+  const keys = actions.map(action => ROW_ACTION_HINTS[action])
+  return ['j/k move', ...keys, 'esc blur'].join(' · ')
 }

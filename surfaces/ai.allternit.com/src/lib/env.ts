@@ -128,6 +128,17 @@ export function isRunnerOperatorModeEnabled(): boolean {
 }
 
 /**
+ * Consumer-packaged Cowork P2 — chat drives A://. When on, Cowork chat
+ * streams through the Al persona sessions API (`POST /api/v1/cowork/al/chat/
+ * stream`): every request becomes a canonical intent → orchestrator
+ * delegation → leased worker run, narrated over SSE. Off (default) keeps
+ * the legacy direct /api/agent-chat relay until parity is proven.
+ */
+export function isCoworkChatViaAlEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_COWORK_CHAT_VIA_AL');
+}
+
+/**
  * Agent Runner — direct AI chat path. The runner's chat client targets
  * `POST /api/chat`, which no backend serves (the real chat bridge is
  * `POST /api/agent-chat`, but it speaks a different SSE protocol), so this

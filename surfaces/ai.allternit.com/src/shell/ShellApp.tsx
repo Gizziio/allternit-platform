@@ -6,6 +6,8 @@ import { getSession } from '../lib/auth-browser';
 import { useCompanyConfig } from '../providers/company-config-provider';
 
 import { ShellFrame } from './ShellFrame';
+import { EngineStatusIndicator } from './EngineStatusIndicator';
+import { ApprovalToastHost } from './ApprovalToastHost';
 import { ShellRail } from './ShellRail';
 import { type AppMode } from './ShellHeader';
 
@@ -50,6 +52,7 @@ import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
 import { HudShell } from './hud/HudShell';
+import { BotComputerWindow } from '@/views/bots/BotComputerWindow';
 import { NativeSessionPickerHost } from '@/components/native-sessions/NativeSessionPicker';
 import { BotPickerHost } from '@/views/bots/BotPickerHost';
 import { useHudHandoff } from './hud/handoff';
@@ -138,7 +141,9 @@ function ShellAppInner(): React.ReactNode {
   const detachedParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const detachedSessionId = detachedParams.get('detachedSessionId');
   const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
+  const detachedBotId = detachedParams.get('botId');
   const isDetachedCodeSession = detachedParams.get('detachedSurface') === 'code' && Boolean(detachedSessionId);
+  const isDetachedBotComputer = detachedParams.get('detachedSurface') === 'bot-computer' && Boolean(detachedBotId);
   // The Electron desktop opens HUD-mode windows at /hud and /hud/*.  In those
   // windows we strip the normal shell chrome (rail, header, rail controls) and
   // render only the HUD/annotation view.
@@ -670,6 +675,18 @@ function ShellAppInner(): React.ReactNode {
     );
   }
 
+  if (isDetachedBotComputer && detachedBotId) {
+    return (
+      <TooltipProvider>
+        <VoiceProvider>
+          <SessionProvider session={session}>
+            <BotComputerWindow botId={detachedBotId} />
+          </SessionProvider>
+        </VoiceProvider>
+      </TooltipProvider>
+    );
+  }
+
   const [agentActivityPanelOpen, setAgentActivityPanelOpen] = useState(false);
   const { unreadCount: agentActivityUnreadCount } = useMonitorThreads();
   const inboxBadgeCount = useInboxBadgeCount();
@@ -697,6 +714,8 @@ function ShellAppInner(): React.ReactNode {
       <VoiceProvider>
       <SessionProvider session={session}>
         <VisionGlass />
+        <EngineStatusIndicator />
+        <ApprovalToastHost />
         <NativeSessionPickerHost />
         <BotPickerHost />
         <VoicePresence compact={false} />
