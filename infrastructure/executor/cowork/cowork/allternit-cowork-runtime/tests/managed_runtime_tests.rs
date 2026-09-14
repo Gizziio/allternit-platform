@@ -48,6 +48,6 @@ fn ensure_gizzi_principal_idempotent_and_preserves_credential() {
     assert!(token_hash.is_some(), "re-ensure must not clear the credential");
     // And a fresh provision rotates: the old token must no longer authenticate.
     let _rotated = sqlite_store::provision_principal_token(&mut conn, &id).unwrap();
-    let auth = sqlite_store::authenticate_principal(&mut conn, &token);
+    let auth = sqlite_store::authenticate_principal(&conn, &token);
     assert!(auth.is_err(), "rotated token is dead");
 }
