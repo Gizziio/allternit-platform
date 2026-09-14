@@ -47,6 +47,71 @@ fn parse_model_ref(
     json!({ "providerID": provider, "modelID": model })
 }
 
+/// Outcome of a gizzi-backed chat turn. Idle-with-no-output used to be
+/// reported as `status: complete` (the cowork re-proof looked successful
+/// on a Kimi 403 that produced zero tokens and no parts).
+pub(crate) struct CoworkTurnFinish {
+    pub status: &'static str,
+    pub error: Option<String>,
+}
+
+pub(crate) fn cowork_turn_finish(
+    saw_text: bool,
+    saw_tool: bool,
+    explicit_error: Option<String>,
+) -> CoworkTurnFinish {
+    if let Some(err) = explicit_error {
+        let err = err.trim();
+        if !err.is_empty() {
+            return CoworkTurnFinish {
+                status: "error",
+                error: Some(err.to_string()),
+            };
+        }
+    }
+    if !saw_text && !saw_tool {
+        return CoworkTurnFinish {
+            status: "error",
+            error: Some("turn produced no model output".to_string()),
+        };
+    }
+    CoworkTurnFinish {
+        status: "complete",
+        error: None,
+    }
+}
+
+pub(crate) fn cowork_turn_finish_frame(
+    message_id: &str,
+    finish: &CoworkTurnFinish,
+    usage: Option<&serde_json::Value>,
+) -> serde_json::Value {
+    let mut metadata = json!({ "status": finish.status });
+    if let Some(err) = &finish.error {
+        metadata["error"] = json!(err);
+    }
+    let mut frame = json!({
+        "type": "finish",
+        "messageId": message_id,
+        "status": finish.status,
+        "metadata": metadata,
+    });
+    if let Some(usage) = usage {
+        frame["usage"] = usage.clone();
+    }
+    frame
+}
+
+pub(crate) fn gizzi_error_text(error: &serde_json::Value) -> String {
+    error
+        .get("message")
+        .and_then(|v| v.as_str())
+        .or_else(|| error.as_str())
+        .or_else(|| error.get("name").and_then(|v| v.as_str()))
+        .unwrap_or("Gizzi session error")
+        .to_string()
+}
+
 /// Translate a Gizzi event-bus stream into frontend SSE events.
 fn chat_event_stream(
     gizzi_events: reqwest::Response,
@@ -57,6 +122,8 @@ fn chat_event_stream(
     let stream = async_stream::stream! {
         let mut was_busy = false;
         let mut started = false;
+        let mut saw_text = false;
+        let mut saw_tool = false;
         let mut buf = String::new();
         let mut byte_stream = gizzi_events.bytes_stream();
         let deadline = tokio::time::Instant::now() + Duration::from_secs(180);
@@ -127,6 +194,9 @@ fn chat_event_stream(
                                         "delta": { "type": "thinking_delta", "thinking": delta }
                                     }).to_string()));
                                 } else {
+                                    if !delta.is_empty() {
+                                        saw_text = true;
+                                    }
                                     yield Ok(Event::default().data(json!({
                                         "type": "content_block_delta",
                                         "messageId": message_id,
@@ -138,9 +208,10 @@ fn chat_event_stream(
                             "message.part.updated" => {
                                 if let Some(part) = props.get("part").and_then(|p| p.as_object()) {
                                     let part_type = part.get("type").and_then(|v| v.as_str()).unwrap_or("");
-                                    if part_type == "tool_use" {
-                                        let id = part.get("toolUseId").and_then(|v| v.as_str()).unwrap_or("");
-                                        let name = part.get("name").and_then(|v| v.as_str()).unwrap_or("tool");
+                                    if part_type == "tool_use" || part_type == "tool" {
+                                        saw_tool = true;
+                                        let id = part.get("toolUseId").or_else(|| part.get("callID")).and_then(|v| v.as_str()).unwrap_or("");
+                                        let name = part.get("name").or_else(|| part.get("tool")).and_then(|v| v.as_str()).unwrap_or("tool");
                                         let input = part.get("input").cloned().unwrap_or(json!({}));
                                         yield Ok(Event::default().data(json!({
                                             "type": "content_block_start",
@@ -179,29 +250,32 @@ fn chat_event_stream(
                                 if status_type == "busy" {
                                     was_busy = true;
                                 } else if status_type == "idle" && was_busy {
-                                    yield Ok(Event::default().data(json!({
-                                        "type": "finish",
-                                        "messageId": message_id,
-                                        "status": "complete",
-                                        "metadata": { "status": "complete" }
-                                    }).to_string()));
+                                    let finish = cowork_turn_finish(saw_text, saw_tool, None);
+                                    if finish.status == "error" {
+                                        yield Ok(Event::default().data(json!({
+                                            "type": "error",
+                                            "messageId": message_id,
+                                            "error": finish.error.clone().unwrap_or_else(|| "turn produced no model output".to_string()),
+                                        }).to_string()));
+                                    }
+                                    yield Ok(Event::default().data(
+                                        cowork_turn_finish_frame(&message_id, &finish, None).to_string(),
+                                    ));
                                     return;
                                 }
                             }
                             "session.error" => {
                                 let error = props.get("error").cloned().unwrap_or(json!({"message": "Unknown Gizzi error"}));
-                                let error_text = error.get("message").and_then(|v| v.as_str()).unwrap_or("Gizzi session error");
+                                let error_text = gizzi_error_text(&error);
+                                let finish = cowork_turn_finish(saw_text, saw_tool, Some(error_text.clone()));
                                 yield Ok(Event::default().data(json!({
                                     "type": "error",
                                     "messageId": message_id,
                                     "error": error_text,
                                 }).to_string()));
-                                yield Ok(Event::default().data(json!({
-                                    "type": "finish",
-                                    "messageId": message_id,
-                                    "status": "error",
-                                    "metadata": { "status": "error" }
-                                }).to_string()));
+                                yield Ok(Event::default().data(
+                                    cowork_turn_finish_frame(&message_id, &finish, None).to_string(),
+                                ));
                                 return;
                             }
                             _ => {}
@@ -218,14 +292,19 @@ fn chat_event_stream(
                     break;
                 }
                 Ok(None) => {
-                    // Stream closed. Emit finish if we ever started.
+                    // Stream closed. Idle-with-no-output is an error, not success.
                     if started {
-                        yield Ok(Event::default().data(json!({
-                            "type": "finish",
-                            "messageId": message_id,
-                            "status": "complete",
-                            "metadata": { "status": "complete" }
-                        }).to_string()));
+                        let finish = cowork_turn_finish(saw_text, saw_tool, None);
+                        if finish.status == "error" {
+                            yield Ok(Event::default().data(json!({
+                                "type": "error",
+                                "messageId": message_id,
+                                "error": finish.error.clone().unwrap_or_else(|| "turn produced no model output".to_string()),
+                            }).to_string()));
+                        }
+                        yield Ok(Event::default().data(
+                            cowork_turn_finish_frame(&message_id, &finish, None).to_string(),
+                        ));
                     }
                     break;
                 }
@@ -525,4 +604,47 @@ fn stream_error(
     };
 
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_idle_turn_is_error_not_complete() {
+        let finish = cowork_turn_finish(false, false, None);
+        assert_eq!(finish.status, "error");
+        assert_eq!(
+            finish.error.as_deref(),
+            Some("turn produced no model output")
+        );
+        let frame = cowork_turn_finish_frame("msg-1", &finish, None);
+        assert_eq!(frame["status"], "error");
+        assert_eq!(frame["metadata"]["status"], "error");
+        assert_eq!(frame["metadata"]["error"], "turn produced no model output");
+    }
+
+    #[test]
+    fn text_or_tool_is_complete() {
+        assert_eq!(cowork_turn_finish(true, false, None).status, "complete");
+        assert_eq!(cowork_turn_finish(false, true, None).status, "complete");
+        assert_eq!(cowork_turn_finish(true, true, None).status, "complete");
+    }
+
+    #[test]
+    fn explicit_error_wins_even_with_output() {
+        let finish = cowork_turn_finish(true, true, Some("provider.auth_error: 403".into()));
+        assert_eq!(finish.status, "error");
+        assert!(finish.error.unwrap().contains("403"));
+    }
+
+    #[test]
+    fn gizzi_error_reads_message_or_name() {
+        assert_eq!(
+            gizzi_error_text(&json!({"name": "APIError", "message": "quota"})),
+            "quota"
+        );
+        assert_eq!(gizzi_error_text(&json!("plain")), "plain");
+        assert_eq!(gizzi_error_text(&json!({"name": "Auth"})), "Auth");
+    }
 }
