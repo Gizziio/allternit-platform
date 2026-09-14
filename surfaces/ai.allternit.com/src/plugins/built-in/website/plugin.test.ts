@@ -23,7 +23,7 @@ describe('Website plugin', () => {
           accent: '#06b6d4',
           background: '#ffffff',
           foreground: '#0f172a',
-          font: 'Inter',
+          font: 'Allternit Sans',
         },
         nav: [
           { label: 'Home', href: '#home' },

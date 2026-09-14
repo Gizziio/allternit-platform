@@ -1,8 +1,7 @@
 /* eslint-disable */
 // Allternit Fabric Session PWA service worker
 
-const CACHE_NAME = 'allternit-fabric-session-v43';
-const CACHE_NAME = 'allternit-fabric-session-v33';
+const CACHE_NAME = 'allternit-fabric-session-v46';
 const DEDICATED_HOSTS = [
   'fabrictransport.allternit.com',
   'fabric-session.allternit.com',
@@ -12,14 +11,6 @@ const PRECACHE_ASSETS = [
   '/fabric-session-icon-192.png',
   '/fabric-session-icon-512.png',
   '/manifest.webmanifest',
-const CACHE_NAME = 'allternit-fabric-session-v1';
-const PRECACHE_ASSETS = [
-  '/fabric-session.html',
-  '/fabric-session.webmanifest',
-  '/favicon.svg',
-  '/fabric-session-icon-192.png',
-  '/fabric-session-icon-512.png',
-  '/fabric-session-splash-1170x2532.png',
 ];
 
 let pushWorkerUrl = null;
@@ -176,7 +167,6 @@ self.addEventListener('notificationclick', (event) => {
   const data = event.notification.data ?? {};
   const dedicated = DEDICATED_HOSTS.includes(self.location.hostname);
   const dashboardUrl = new URL(dedicated ? '/' : '/fabric-session/', self.location.origin);
-  const dashboardUrl = new URL('/fabric-session.html', self.location.origin);
   dashboardUrl.searchParams.set('source', 'notification');
   if (data.runtimeId) dashboardUrl.searchParams.set('runtime', data.runtimeId);
   if (data.sessionId) dashboardUrl.searchParams.set('session', data.sessionId);
@@ -194,7 +184,6 @@ self.addEventListener('notificationclick', (event) => {
               path.startsWith('/fabric-session/')) &&
             'focus' in client
           ) {
-          if (new URL(client.url).pathname === '/fabric-session.html' && 'focus' in client) {
             return client.focus();
           }
         }

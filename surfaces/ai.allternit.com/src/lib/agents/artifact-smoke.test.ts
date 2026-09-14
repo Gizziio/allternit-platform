@@ -51,7 +51,7 @@ describe('Artifact smoke test — create one of each and persist to library canv
           accent: '#06b6d4',
           background: '#ffffff',
           foreground: '#0f172a',
-          font: 'Inter',
+          font: 'Allternit Sans',
         },
         nav: [{ label: 'Home', href: '#home' }],
         sections: [

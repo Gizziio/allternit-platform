@@ -13,6 +13,14 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { GlobalDropzoneProvider } from '@/components/GlobalDropzone'
 import { ModeProvider } from '@/providers/mode-provider'
 
+import '@/design/theme.css'
+import '@/styles/fonts.css'
+import '@/styles/typography.css'
+import '@/styles/globals.css'
+import '@/styles/allternit-design/tokens.css'
+import '@/styles/allternit-design/design-mode-overrides.css'
+import '@/styles/allternit-design/component-tokens.css'
+
 class FabricErrorBoundary extends React.Component<{ children: React.ReactNode }, { err: string | null }> {
   state = { err: null as string | null }
   static getDerivedStateFromError(error: unknown) {
@@ -21,9 +29,9 @@ class FabricErrorBoundary extends React.Component<{ children: React.ReactNode },
   render() {
     if (this.state.err) {
       return (
-        <div style={{ padding: 24, fontFamily: '-apple-system, system-ui, sans-serif' }}>
+        <div style={{ padding: 24, fontFamily: 'inherit' }}>
           <h1 style={{ fontSize: 18 }}>Fabric Session failed to load</h1>
-          <p style={{ color: '#666' }}>{this.state.err}</p>
+          <p>{this.state.err}</p>
           <p>
             On Safari: Settings → Safari → Advanced → Experimental Features, or hard-refresh.
             If you see “No machines paired”, run <code>ao fabric pair --re-pair</code> on this Mac
@@ -36,14 +44,6 @@ class FabricErrorBoundary extends React.Component<{ children: React.ReactNode },
   }
 }
 
-import '@/design/theme.css'
-import '@/styles/fonts.css'
-import '@/styles/typography.css'
-import '@/styles/globals.css'
-import '@/styles/allternit-design/tokens.css'
-import '@/styles/allternit-design/design-mode-overrides.css'
-import '@/styles/allternit-design/component-tokens.css'
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -55,30 +55,6 @@ const queryClient = new QueryClient({
 })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <BrowserRouter>
-    <QueryClientProvider client={queryClient}>
-      <FabricSessionThemeProvider>
-        <CompanyConfigProvider>
-          <PlatformAuthProvider>
-            <FetchInterceptorProvider>
-              <ToastProvider>
-                <TooltipProvider>
-                  <VoiceProvider>
-                    <GlobalDropzoneProvider>
-                      <ModeProvider defaultMode="chat">
-                        <FabricSessionApp />
-                      </ModeProvider>
-                    </GlobalDropzoneProvider>
-                  </VoiceProvider>
-                </TooltipProvider>
-                <FabricSessionApp />
-              </ToastProvider>
-            </FetchInterceptorProvider>
-          </PlatformAuthProvider>
-        </CompanyConfigProvider>
-      </FabricSessionThemeProvider>
-    </QueryClientProvider>
-  </BrowserRouter>
   <FabricErrorBoundary>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
@@ -87,7 +63,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <PlatformAuthProvider>
               <FetchInterceptorProvider>
                 <ToastProvider>
-                  <FabricSessionApp />
+                  <TooltipProvider>
+                    <VoiceProvider>
+                      <GlobalDropzoneProvider>
+                        <ModeProvider defaultMode="chat">
+                          <FabricSessionApp />
+                        </ModeProvider>
+                      </GlobalDropzoneProvider>
+                    </VoiceProvider>
+                  </TooltipProvider>
                 </ToastProvider>
               </FetchInterceptorProvider>
             </PlatformAuthProvider>
