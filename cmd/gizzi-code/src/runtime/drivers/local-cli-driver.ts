@@ -242,6 +242,15 @@ export class LocalCliDriver implements RuntimeDriver {
       }
     })()
 
+    // Capture a bounded stderr tail for diagnostics without blocking exit handling.
+    ;(async () => {
+      try {
+        for await (const chunk of readStreamChunks(proc.stderr)) {
+          stderrTail.append(Buffer.from(chunk))
+        }
+      } catch {}
+    })()
+
     try {
       const [stdout, exitCode] = await Promise.all([readText(proc.stdout), proc.exited])
 
@@ -316,6 +325,7 @@ export class LocalCliDriver implements RuntimeDriver {
       } catch {
         // Stderr stream closed early; the tail is best-effort diagnostics.
       }
+      } catch {}
     })()
 
     try {
@@ -406,6 +416,7 @@ export class LocalCliDriver implements RuntimeDriver {
       } catch {
         // Stderr stream closed early; the tail is best-effort diagnostics.
       }
+      } catch {}
     })()
 
     const stdin = proc.stdin
@@ -542,6 +553,7 @@ export class LocalCliDriver implements RuntimeDriver {
       } catch {
         // stdin may already be closed when the process died.
       }
+      } catch {}
       terminateProcessTree(proc)
       this.resetCurrentTask()
     }
@@ -580,6 +592,7 @@ export class LocalCliDriver implements RuntimeDriver {
       } catch {
         // Stderr stream closed early; the tail is best-effort diagnostics.
       }
+      } catch {}
     })()
 
     const stdin = proc.stdin
@@ -718,6 +731,11 @@ export class LocalCliDriver implements RuntimeDriver {
     this.currentProc = proc
     this.currentTaskId = handle.taskId
     ProcessRegistry.track(proc, { label: `cli:${this.cliName}:acp`, group: process.platform !== "win32" })
+
+    proc.stderr?.on("data", (data: Buffer) => {
+      stderrTail.append(data)
+      log.warn("acp_agent_stderr", { taskId: handle.taskId, data: data.toString().slice(0, 500) })
+    })
 
     proc.stderr?.on("data", (data: Buffer) => {
       stderrTail.append(data)
@@ -1162,6 +1180,162 @@ export class LocalCliDriver implements RuntimeDriver {
         input: [{ type: "text", text: prompt }],
       })
 
+        }
+      } catch {}
+    })()
+
+    // Reader task
+    const readerPromise = (async () => {
+      try {
+        for await (const line of readLines(proc.stdout)) {
+          if (this.abortedTasks.has(handle.taskId)) return
+          if (!line.trim()) continue
+
+          try {
+            const msg = JSON.parse(line) as JsonRpcMessage
+            const hasId = typeof msg.id === "number"
+            const hasMethod = typeof msg.method === "string" && msg.method !== ""
+            const hasResult = "result" in msg
+            const hasError = "error" in msg
+
+            if (hasId) {
+              if (pending.has(msg.id!)) {
+                const p = pending.get(msg.id!)!
+                pending.delete(msg.id!)
+                if (hasError) {
+                  p.reject(msg.error)
+                } else {
+                  p.resolve(msg.result)
+                }
+                continue
+              }
+
+              if (hasMethod) {
+                // Server request (has both id and method) — auto-approve in autonomous mode.
+                switch (msg.method) {
+                  case "item/commandExecution/requestApproval":
+                  case "execCommandApproval":
+                    respond(msg.id!, { decision: "accept" })
+                    break
+                  case "item/fileChange/requestApproval":
+                  case "applyPatchApproval":
+                    respond(msg.id!, { decision: "accept" })
+                    break
+                  case "item/permissions/requestApproval":
+                    respond(msg.id!, codexPermissionsApprovalResponse(msg.params ?? {}))
+                    break
+                  case "mcpServer/elicitation/request":
+                    respond(msg.id!, { action: "accept", content: null, _meta: null })
+                    break
+                  default:
+                    log.warn("codex: unhandled server request", { method: msg.method, id: msg.id })
+                    respondError(msg.id!, -32601, `unsupported codex app-server request: ${msg.method}`)
+                }
+                continue
+              }
+
+              // Response to an unknown request — ignore.
+              continue
+            }
+
+            // Notification (no id, has method)
+            if (!hasMethod) continue
+            const method = msg.method
+            const params = (msg.params ?? {}) as Record<string, unknown>
+
+            if (method === "turn/started" || method === "codex/event") {
+              const event = params.event as Record<string, unknown> | undefined
+              if (method === "turn/started" || event?.type === "task_started") {
+                pushEvent({ type: "status", status: "running" })
+              }
+              continue
+            }
+
+            if (method === "item/completed") {
+              const agentMessage = params.agentMessage as Record<string, unknown> | undefined
+              if (agentMessage) {
+                const text = extractCodexText(agentMessage)
+                if (text) pushEvent({ type: "text_delta", delta: text })
+              }
+              continue
+            }
+
+            if (method === "item/commandExecution/started") {
+              pushEvent({
+                type: "tool_call",
+                id: String(params.id ?? `${handle.taskId}-command`),
+                name: "exec_command",
+                arguments: params,
+              })
+              continue
+            }
+
+            if (method === "item/commandExecution/completed") {
+              pushEvent({
+                type: "tool_result",
+                id: String(params.id ?? `${handle.taskId}-command`),
+                content: extractCodexText(params),
+                isError: Boolean(params.error),
+              })
+              continue
+            }
+
+            if (method === "item/fileChange/started") {
+              pushEvent({
+                type: "tool_call",
+                id: String(params.id ?? `${handle.taskId}-file-change`),
+                name: "patch_apply",
+                arguments: params,
+              })
+              continue
+            }
+
+            if (method === "item/fileChange/completed") {
+              pushEvent({
+                type: "tool_result",
+                id: String(params.id ?? `${handle.taskId}-file-change`),
+                content: extractCodexText(params),
+                isError: Boolean(params.error),
+              })
+              continue
+            }
+
+            if (method === "turn/completed") {
+              finished = true
+              done = true
+              pushEvent({ type: "finish", finishReason: "stop", usage: zeroUsage() })
+              continue
+            }
+          } catch {
+            // malformed JSON-RPC line — skip
+          }
+        }
+      } finally {
+        done = true
+        notifyYield()
+      }
+    })()
+
+    try {
+      await request("initialize", {
+        clientInfo: { name: "Allternit", version: "1.0.0" },
+        capabilities: { experimentalApi: true },
+      })
+
+      notify("initialized", {})
+
+      const thread = (await request("thread/start", {
+        cwd: cwd || process.cwd(),
+        developerInstructions: systemPrompt,
+      })) as { threadId?: string }
+      const threadId = thread.threadId
+      if (!threadId) throw new Error("codex app-server did not return a threadId")
+
+      await request("turn/start", {
+        threadId,
+        input: [{ type: "text", text: prompt }],
+      })
+
       while (!done || events.length > 0) {
         while (events.length > 0) {
           const event = events.shift()!
@@ -1199,6 +1373,7 @@ export class LocalCliDriver implements RuntimeDriver {
       } catch {
         // stdin may already be closed when the process died.
       }
+      } catch {}
       await readerPromise.catch(() => {})
       terminateProcessTree(proc)
       this.resetCurrentTask()
@@ -1250,6 +1425,7 @@ function modelFlag(modelEnv?: string): string[] {
 
 const CLI_ADAPTERS: Record<string, CliAdapter> = {
   // Anthropic gizzi-code — stream-json.
+  // Anthropic Claude Code — stream-json.
   "claude-cli": {
     mode: "stream-json",
     buildArgv: ([command], _message, _ctx) => {
@@ -1421,6 +1597,7 @@ const CLI_ADAPTERS: Record<string, CliAdapter> = {
     mode: "acp",
     supportsAttachments: true,
     buildArgv: ([command]) => [command, "agent", "--no-leader", "--always-approve", "stdio"],
+    buildArgv: ([command]) => [command, "agent", "--always-approve", "stdio"],
   },
 
   // Kiro CLI — ACP stdio.
@@ -1655,6 +1832,8 @@ function mergeEnv(base: NodeJS.ProcessEnv, extra?: Record<string, string>): Node
  * parent process and must not leak into agent CLIs (they can confuse nested
  * sessions or expose internal path overrides). Gizzi internal runtime
  * markers are also stripped; user-facing GIZZI_* config vars are kept.
+ * sessions or expose internal path overrides). Claude Code internal runtime
+ * markers are also stripped; user-facing CLAUDE_CODE_* config vars are kept.
  */
 function isFilteredChildEnvKey(key: string): boolean {
   const up = key.toUpperCase()
@@ -1666,6 +1845,14 @@ function isFilteredChildEnvKey(key: string): boolean {
       return true
   }
   return up.startsWith("GIZZI_CODE_")
+    case "CLAUDECODE":
+    case "CLAUDE_CODE_ENTRYPOINT":
+    case "CLAUDE_CODE_EXECPATH":
+    case "CLAUDE_CODE_SESSION_ID":
+    case "CLAUDE_CODE_SSE_PORT":
+      return true
+  }
+  return up.startsWith("CLAUDECODE_")
 }
 
 function writeToStdin(sink: Bun.FileSink | WritableStream<Uint8Array>, text: string): void {
@@ -1768,6 +1955,7 @@ function terminateProcessTree(proc: KillableProcess, graceMs = 5000): void {
         } catch {
           // Process group already gone.
         }
+        } catch {}
       }, graceMs)
       timer.unref?.()
       return
@@ -1785,6 +1973,7 @@ function safeKill(proc: KillableProcess): void {
   } catch {
     // Already exited.
   }
+  } catch {}
 }
 
 interface StreamJsonEvent {
