@@ -31,4 +31,13 @@ contextBridge.exposeInMainWorld('startup', {
   onComplete: (callback: () => void) => subscribe<unknown>('complete', callback),
   /** Main-process push: startup failure message. */
   onError: (callback: (message: string) => void) => subscribe('error', callback),
+  /** Main-process push: show the folder-grant step (consumer Cowork P1). */
+  onFoldersShow: (callback: () => void) => subscribe<unknown>('folders:show', callback),
+  /** Main-process push: leave the folder-grant step. */
+  onFoldersHide: (callback: () => void) => subscribe<unknown>('folders:hide', callback),
+  /** Folder-grant step: native directory picker; null when cancelled. */
+  pickFolder: (): Promise<string | null> => ipcRenderer.invoke('startup:pick-folder'),
+  /** Folder-grant step: persist trusted_folders via /cowork-preferences. */
+  saveFolders: (folders: string[]): Promise<{ saved: number }> =>
+    ipcRenderer.invoke('startup:save-folders', folders),
 });

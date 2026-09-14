@@ -458,3 +458,46 @@ branch's P-T4/P-T5 additions take V172/V173; plus live-path fixes in the
 fabric submit/claim/read paths (dag_node_id NOT NULL, run owner stamping,
 workspace URI normalization, canonical fallbacks for mirror-only reads) —
 see CHANGELOG [Unreleased] → Fixed.
+
+## Consumer-Packaged Cowork Task DAG (session/coworkp1-0914, 2026-09-14)
+
+Consumer-packaged Cowork plan: open the desktop app → the whole engine is
+alive with zero terminal interaction. Same conventions as the protocol DAGs
+above: id, definition of done, dependencies. Statuses updated as items land;
+owner reviews and merges — no self-merge.
+
+| ID | Phase | Definition of done | Depends on |
+|----|-------|--------------------|-----------|
+| P1 | Managed Runtime | Desktop app start provisions + launches the fabric-transport worker end-to-end: (1.1) loopback/local-auth-gated ensure-principal + provision-token API for the `gizzi` principal, token stored in the macOS Keychain by desktop main; (1.2) worker entry bundled in the gizzi sidecar and launched by a desktop worker manager (spawn, crash-respawn with backoff, graceful quit on app exit, SIGTERM lease release); (1.3) one engine-status indicator (API / gizzi / fabric worker / office-engine) green-yellow-red in the app chrome, never silent degradation; (1.4) startup wizard "grant folders" step writing `trusted_folders` via the preferences API with an Electron directory picker. release-preflight green; fresh-profile launch verified with no terminal | — (product-depth P-T1..P-T6 landed) |
+| P2 | Chat-drives-A:// | Conversational surface drives canonical intents end-to-end (Al persona runtime wired into bot chat; delegation → run → narration visible to the consumer) | P1 (engine alive, worker managed) |
+| P3 | Deliverables | Consumer-visible deliverable outputs from runs (artifacts, files, notifications) land in granted folders / surfaces | P1 (folder grants), P2 (runs driven from chat) |
+| P4 | Reach | Mobile approvals + routines: approval requests routable to the phone (push/deep link), scheduled routines configurable from the consumer surface | P2 (approval flow live), P3 (deliverables proven) |
+| P5 | Release engineering | Managed-runtime install/update path hardened: signed/notarized releases, auto-update wired, worker lifecycle robust across updates | P1..P4 |
+
+**Sequence:** P1 → P2 → P3 ∥ P4 → P5.
+
+**Status (2026-09-14, session/coworkp1-0914):**
+- **P1 CLOSED** — managed runtime implemented and live-verified:
+  1.1 local-only ensure route `POST /api/v1/fabric/transport/local/ensure-worker-principal`
+  (desktop access-token gated, fail-closed unconfigured; token returned
+  once, rotation kills the old token — live 403/200/rotate evidence) +
+  Keychain-backed secure store in desktop main; 1.2 `gizzi-code
+  fabric-worker` bundled subcommand + `fabric-worker-manager.ts`
+  (spawn/readiness/backoff respawn/SIGTERM graceful stop — live
+  daemon_start + shutdown evidence); 1.3 aggregate engine-status pill in
+  the shell chrome (API / gizzi / fabric worker / office engine,
+  `engines:get-status` IPC + push, hidden in browser/cloud) + splash rows;
+  1.4 startup-wizard "Grant workspace folders" step → `/cowork-preferences`
+  trusted_folders via the desktop local auth (live GET/PUT/persist
+  evidence). Verification: 40/40 runtime tests (incl. 2 new managed-runtime
+  store tests), `cargo build -p allternit-api` clean, clippy clean on
+  touched files, desktop main/preload tsc clean, gizzi typecheck clean,
+  SPA typecheck clean, release-preflight 36/0. Evidence:
+  `tmp/coworkp1-evidence/` (rerun via `run.sh`). Honest note: the full
+  GUI wizard click-through needs an interactive Clerk sign-in and was not
+  exercised; every non-interactive piece (provision, spawn, status,
+  folder persistence) was verified live.
+- **P2 PLANNED** — chat-drives-A://.
+- **P3 PLANNED** — deliverables.
+- **P4 PLANNED** — reach (mobile approvals + routines).
+- **P5 PLANNED** — release engineering.

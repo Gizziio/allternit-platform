@@ -253,6 +253,7 @@ function isLongLivedCommand(argv: { _: (string | number)[]; print?: boolean }): 
     case "ssh": // future remote shell; interactive
     case "assistant": // future interactive assistant REPL
     case "remote-control": // future remote control session
+    case "fabric-worker": // Fabric Transport worker daemon; runs until SIGTERM/SIGINT
       return true
     case "mcp":
       // `mcp serve` runs an MCP server; add/remove/list/auth/logout/debug

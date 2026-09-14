@@ -33,6 +33,7 @@ import { AcCommand } from "@/cli/commands/ac"
 import { MailCommand } from "@/cli/commands/mail"
 import { CoworkCommand } from "@/cli/commands/cowork"
 import { CoworkTeamCommand } from "@/cli/commands/cowork-team"
+import { FabricWorkerCommand } from "@/cli/commands/fabric-worker"
 import { AgentCommand } from "@/cli/commands/agent"
 import { ProviderCommand } from "@/cli/commands/provider"
 import { RuntimeCommand } from "@/cli/commands/runtime"
@@ -113,6 +114,7 @@ export const COMMANDS: RegisteredCommand[] = [
   MailCommand,
   CoworkCommand,
   CoworkTeamCommand,
+  FabricWorkerCommand,
   AgentCommand,
   ProviderCommand,
   RuntimeCommand,

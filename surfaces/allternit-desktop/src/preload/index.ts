@@ -74,6 +74,31 @@ const backendAPI = {
   },
 };
 
+// ─── Engine status (consumer-packaged Cowork P1) ─────────────────────────────
+// One aggregate green/yellow/red indicator over the four managed engines.
+// Present only in the packaged desktop bridge; absent in browser/cloud.
+
+export interface EngineComponentStatus {
+  status: 'pending' | 'up' | 'down';
+  detail: string;
+}
+
+export interface EnginesStatus {
+  api: EngineComponentStatus;
+  gizzi: EngineComponentStatus;
+  fabricWorker: EngineComponentStatus;
+  office: EngineComponentStatus;
+}
+
+const enginesAPI = {
+  getStatus: (): Promise<EnginesStatus> => ipcRenderer.invoke('engines:get-status'),
+  onStatusChange: (handler: (status: EnginesStatus) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, s: EnginesStatus) => handler(s);
+    ipcRenderer.on('engines:status', listener);
+    return () => ipcRenderer.removeListener('engines:status', listener);
+  },
+};
+
 // ─── Bonsai local image companion ─────────────────────────────────────────────
 
 export interface BonsaiStatus {
@@ -790,6 +815,7 @@ const allternitDesktopAPI = {
   sdk: sdkAPI,
   connection: connectionAPI,
   backend: backendAPI,
+  engines: enginesAPI,
   bonsai: bonsaiAPI,
   vm: vmAPI,
   window: windowAPI,
