@@ -248,11 +248,6 @@ export default defineConfig({
       // sign-in never starts.
       '/__clerk': {
         target: 'https://clerk.allternit.com',
-      // Chat streaming is now implemented by allternit-api's /api/agent-chat
-      // bridge. Route it to the backend in dev instead of the legacy local
-      // gizzi runtime on 4096.
-      '/api/agent-chat': {
-        target: API_TARGET,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/__clerk/, ''),
         // Clerk validates Origin against the requesting host; through a proxy
@@ -277,6 +272,13 @@ export default defineConfig({
             }
           });
         },
+      },
+      // Chat streaming is now implemented by allternit-api's /api/agent-chat
+      // bridge. Route it to the backend in dev instead of the legacy local
+      // gizzi runtime on 4096.
+      '/api/agent-chat': {
+        target: API_TARGET,
+        changeOrigin: true,
       },
       '/api': {
         target: API_TARGET,
