@@ -8,12 +8,12 @@ import { BotComputerViewport } from "./BotComputerViewport";
 import { useBotActiveVm } from "./useBotActiveVm";
 
 /** Chrome-free host for a detached Electron (or popup) bot-computer window. */
-export function BotComputerWindow({ botId }: { botId: string }) {
+export function BotComputerWindow({ botId, sandboxId }: { botId: string; sandboxId?: string | null }) {
   const agents = useAgentStore((s) => s.agents);
   const isLoadingAgents = useAgentStore((s) => s.isLoadingAgents);
   const agentError = useAgentStore((s) => s.error);
   const bot = useMemo(() => agents.find((a) => a.id === botId) ?? null, [agents, botId]);
-  const activeVM = useBotActiveVm(botId);
+  const activeVM = useBotActiveVm(botId, sandboxId);
   const accentColor = bot
     ? getBotAccentColor(bot) ?? bot.botProfile?.accentColor ?? "var(--accent-primary)"
     : "var(--accent-primary)";

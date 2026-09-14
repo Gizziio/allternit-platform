@@ -18,6 +18,14 @@ describe('buildBotComputerWindowUrl', () => {
     expect(url.searchParams.get('title')).toBe("Gizzi's computer");
   });
 
+  it('forwards sandboxId onto the detached URL', () => {
+    const href = buildBotComputerWindowUrl('https://platform.example', {
+      botId: 'bot-1',
+      sandboxId: 'account-box',
+    });
+    expect(new URL(href).searchParams.get('sandboxId')).toBe('account-box');
+  });
+
   it('rejects a missing bot id', () => {
     expect(() => buildBotComputerWindowUrl('https://platform.example', { botId: '' })).toThrow(
       /bot ID/i,
