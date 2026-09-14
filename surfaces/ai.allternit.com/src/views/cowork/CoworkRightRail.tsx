@@ -544,7 +544,7 @@ function ADagSection({ sessionId, open, onToggle }: {
     >
       <div style={{ maxHeight: 260, overflowY: 'auto', margin: '0 -4px', padding: '0 4px' }}>
         {run && (
-          <div style={{ fontSize: 11, color: RAIL_TEXT, marginBottom: 6, fontFamily: 'monospace' }}>
+          <div style={{ fontSize: 11, color: RAIL_TEXT, marginBottom: 6, fontFamily: 'var(--font-mono)' }}>
             <span style={{ color: ADAG_STATE_COLORS[run.state] ?? RAIL_MUTED }}>●</span>{' '}
             {run.state} · {run.entrypoint}
           </div>
@@ -567,7 +567,7 @@ function ADagSection({ sessionId, open, onToggle }: {
         {data.events.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {data.events.slice(0, 8).map((e, i) => (
-              <div key={`${e.created_at}-${i}`} style={{ fontSize: 10, color: RAIL_MUTED, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div key={`${e.created_at}-${i}`} style={{ fontSize: 10, color: RAIL_MUTED, fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {e.event_type}
                 {e.executor ? ` → ${e.executor.split('/').pop()}` : ''}
               </div>
