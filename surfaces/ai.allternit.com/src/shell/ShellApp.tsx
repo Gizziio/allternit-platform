@@ -6,7 +6,6 @@ import { getSession } from '../lib/auth-browser';
 import { useCompanyConfig } from '../providers/company-config-provider';
 
 import { ShellFrame } from './ShellFrame';
-import { EngineStatusIndicator } from './EngineStatusIndicator';
 import { ApprovalToastHost } from './ApprovalToastHost';
 import { ShellRail } from './ShellRail';
 import { type AppMode } from './ShellHeader';
@@ -759,7 +758,6 @@ function ShellAppInner(): React.ReactNode {
       <VoiceProvider>
       <SessionProvider session={session}>
         <VisionGlass />
-        <EngineStatusIndicator />
         <ApprovalToastHost />
         <NativeSessionPickerHost />
         <BotPickerHost />

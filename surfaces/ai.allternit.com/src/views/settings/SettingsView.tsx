@@ -27,6 +27,7 @@ import {
   Trash,
 } from '@phosphor-icons/react';
 import { DevicePairingPanel } from './DevicePairingPanel';
+import { EngineStatusPanel } from '@/shell/EngineStatusIndicator';
 import { ComputeBillingPanel } from '@/components/settings/ComputeBillingPanel';
 import { OrganizationAccessPanel } from '@/components/settings/OrganizationAccessPanel';
 import { ToastProvider } from '@/components/ui/toast-provider';
@@ -664,6 +665,8 @@ const DiagnosticsPanel = () => {
 
   return (
     <div>
+      <EngineStatusPanel />
+
       <SectionHeading>Telemetry & system</SectionHeading>
       <SettingsTable columns={['Item', 'Value']}>
         {telemetryRows.map((row) => (
