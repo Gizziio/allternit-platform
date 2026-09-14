@@ -991,6 +991,24 @@ pub async fn auth_middleware(
         }
     }
 
+    // 4b. Desktop WebSocket token (`/ws/*?token=…`). Browser WebSocket
+    // handshakes cannot carry the Clerk bearer — header injection applies to
+    // fetches, not upgrade requests — so the VNC stream was unreachable: every
+    // handshake 401'd at this middleware before the route could validate its
+    // own short-lived HMAC-signed desktop token (live defect, bote2e-0913:
+    // Observe/Take Over rendered nothing; external clients with a valid token
+    // also got 401). Authenticate /ws/* requests that carry a valid desktop
+    // token by injecting the claimed user; the ws route re-verifies the
+    // claims against the path. Invalid tokens fall through to the existing
+    // fallbacks (unchanged behavior).
+    if request.uri().path().starts_with("/ws/") {
+        if let Some(user) = auth_user_from_desktop_ws_token(&state, request.uri()) {
+            insert_user_headers(request.headers_mut(), &user);
+            request.extensions_mut().insert(user);
+            return next.run(request).await;
+        }
+    }
+
     // 5. Self-hosted / local-dev fallback: when the deployment is local and no
     // cloud auth succeeded, trust the loopback origin as the default local user.
     // This keeps packaged apps and browser dev flows working without Clerk tokens.
@@ -1009,6 +1027,43 @@ pub async fn auth_middleware(
     }
 
     AuthError::MissingToken.into_response()
+}
+
+/// Authenticate a `/ws/*` request via the desktop WebSocket token query param.
+///
+/// Returns `Some(AuthUser)` when the request carries a well-formed,
+/// HMAC-valid, unexpired desktop token; `None` otherwise (caller falls
+/// through to the remaining auth fallbacks). Pure token verification — the
+/// ws route re-checks that the claims match the request path and user.
+fn auth_user_from_desktop_ws_token(
+    state: &Arc<crate::AppState>,
+    uri: &axum::http::Uri,
+) -> Option<AuthUser> {
+    let query = uri.query()?;
+    let token = query
+        .split('&')
+        .filter_map(|pair| pair.split_once('='))
+        .find(|(k, _)| *k == "token")
+        .map(|(_, v)| v)?;
+    let secret = crate::bot_desktop_stream::desktop_ws_secret(state)?;
+    user_from_desktop_token(&secret, token)
+}
+
+/// Pure token → user lift: verifies the HMAC signature and expiry, then maps
+/// the claims to an AuthUser. Split from the request extraction so it is
+/// unit-testable without an AppState.
+fn user_from_desktop_token(secret: &str, token: &str) -> Option<AuthUser> {
+    let claims = crate::bot_desktop_stream::verify_desktop_token(secret, token).ok()?;
+    Some(AuthUser {
+        user_id: claims.user_id,
+        email: None,
+        name: None,
+        avatar_url: None,
+        tenant_id: None,
+        organization_id: None,
+        organization_role: None,
+        organization_slug: None,
+    })
 }
 
 /// Optional auth middleware — verifies token if present, but allows anonymous requests
@@ -1071,4 +1126,56 @@ pub fn get_user(headers: &HeaderMap) -> Option<AuthUser> {
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string()),
     })
+}
+
+#[cfg(test)]
+mod desktop_ws_token_tests {
+    use super::user_from_desktop_token;
+
+    const TEST_SECRET: &str = "test-desktop-ws-secret";
+
+    #[test]
+    fn valid_desktop_token_maps_to_claimed_user() {
+        let token = crate::bot_desktop_stream::sign_desktop_token(
+            TEST_SECRET,
+            "bot-1",
+            "sandbox-1",
+            "user-9",
+            300,
+        );
+        let user = user_from_desktop_token(TEST_SECRET, &token).expect("valid token must authenticate");
+        assert_eq!(user.user_id, "user-9");
+        assert!(user.organization_id.is_none());
+    }
+
+    #[test]
+    fn wrong_secret_rejects_token() {
+        let token = crate::bot_desktop_stream::sign_desktop_token(
+            TEST_SECRET,
+            "bot-1",
+            "sandbox-1",
+            "user-9",
+            300,
+        );
+        assert!(user_from_desktop_token("a-different-secret", &token).is_none());
+    }
+
+    #[test]
+    fn expired_token_rejects() {
+        let token = crate::bot_desktop_stream::sign_desktop_token(
+            TEST_SECRET,
+            "bot-1",
+            "sandbox-1",
+            "user-9",
+            0,
+        );
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        assert!(user_from_desktop_token(TEST_SECRET, &token).is_none());
+    }
+
+    #[test]
+    fn malformed_token_rejects() {
+        assert!(user_from_desktop_token(TEST_SECRET, "not-a-token").is_none());
+        assert!(user_from_desktop_token(TEST_SECRET, "").is_none());
+    }
 }
