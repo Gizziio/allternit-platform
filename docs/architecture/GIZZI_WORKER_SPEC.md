@@ -34,10 +34,11 @@ roles: [worker, code, terminal]   # repository, filesystem, build, debug, develo
   - **macOS host execution** runs without bwrap (bubblewrap is Linux-only);
     isolation on macOS comes from the VM path (below), not from a
     seatbelt-wrapped shell.
-- Cloud continuation mode — `GIZZI_COMPUTE_MODE=cloud` authenticates as
-  `a://workspace/{ws}/principal/gizzi-cloud` (`compute.cloud`). Used on an
-  always-on host so jobs survive the laptop worker dying. Filesystem is
-  `ALLTERNIT_CLOUD_WORKSPACE`, not the laptop's trusted folders.
+- Cloud continuation mode (operator-started, **not** launched by the
+  desktop): `GIZZI_COMPUTE_MODE=cloud` authenticates as
+  `a://workspace/{ws}/principal/gizzi-cloud` (`compute.cloud`). Filesystem
+  is `ALLTERNIT_CLOUD_WORKSPACE`. Jobs do not survive laptop-close unless
+  this process is already running against an API that stays up.
 - VM execution mode — `GIZZI_COMPUTE_MODE=vm` on the fabric-transport worker
   (`src/runtime/fabric-transport/worker.ts`) runs steps through the repo's
   current VM machinery: the Lima-based executor

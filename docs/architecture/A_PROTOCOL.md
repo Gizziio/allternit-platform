@@ -398,9 +398,9 @@ Transport does not redefine principal identity, run state, attribution, or appro
 
 ### Implemented in the consumer reach + release pass (P4/P5, 2026-09-14)
 
-- **iOS fabric approvals** — Swift `FabricTransportClient` +
-  `FabricApprovalsView` (grant/deny + run timeline). Cloud continuation
-  remains out of v1.
+- **iOS fabric approvals** — Swift sources exist (`FabricTransportClient` +
+  `FabricApprovalsView`). Not simulator-verified. Not a shipped iOS
+  approvals inbox.
 - **Routines** — `/api/v1/cowork/routines` tick fires a canonical
   attributed intent per due schedule; Cowork Fabric Transport view
   creates/runs/deletes them.
@@ -408,17 +408,12 @@ Transport does not redefine principal identity, run state, attribution, or appro
   auto-update target; preflight refuses a mismatch. Signed/notarized
   `desktop-v1.2.0` remains an owner action (Apple secrets).
 
-### Implemented in cloud continuation (E6, session/cloudcont-0914)
+### Cloud continuation substrate only (E6, session/cloudcont-0914) — NOT done
 
-- **`compute.cloud` placement** — opt-in preference and Al/routine
-  intents with that policy are only claimable by
-  `a://workspace/{ws}/principal/gizzi-cloud`. Laptop `gizzi` cannot
-  reclaim after handoff.
-- **Handoff API** — continue-in-cloud on job/run/all-in-flight; desktop
-  quit calls handoff-all while the local API is still up. Ingest replays
-  an envelope onto an always-on data-plane.
-- **Honest limit** — local folder grants do not upload; cloud worker
-  filesystem is `ALLTERNIT_CLOUD_WORKSPACE` on the always-on host.
+Placement (`compute.cloud`) and local retag APIs landed. There is no
+always-on worker the app launches, no real remote ingest on quit, no
+folder upload, and no laptop-closed routine tick. Closing the laptop
+still stops the work. Do not list this under “implemented product.”
 
 Live behavioral evidence for all six items (vm-job claim grant/refusal,
 boundary projection refusal, brokered files read/write + approval gate +
