@@ -612,9 +612,6 @@ fn list_kimi_code(root: &Path) -> Vec<NativeSession> {
             } else {
                 (state_updated_at, last_prompt)
             };
-                    }
-                }
-            }
             let fp_targets: Vec<&Path> = [&state_path, &wire]
                 .iter()
                 .filter(|p| p.exists())
@@ -807,9 +804,6 @@ fn list_cursor(root: &Path) -> Vec<NativeSession> {
             let (last_prompt_at, last_prompt) = claude_like_last_prompt(&file)
                 .map(|(ts, text)| (Some(ts), Some(text)))
                 .unwrap_or((None, None));
-            if !file.ends_with(".jsonl") || !file.exists() {
-                continue;
-            }
             out.push(session(NativeSession {
                 harness: "cursor".to_string(),
                 session_id: id.clone(),
