@@ -1,6 +1,8 @@
 /**
  * Browser-workflow verify API — typed client for the computer-use gateway's
- * network-traces surface (cu28; gateway/network_traces_router.py).
+ * network-traces surface (cu28; gateway/network_traces_router.py). Lives in
+ * src/lib/ (cu29): consumed by the Fabric Transport view — the live
+ * fabric-transport surface — not the legacy src/remote-control/ tree.
  *
  * Distilled shapes only: the gateway never sends raw HAR or step payload
  * values across this API, and neither do these types.

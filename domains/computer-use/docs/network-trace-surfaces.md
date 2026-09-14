@@ -26,14 +26,20 @@ partial one. Verdicts are deterministic; nothing is fuzzy.
 
 ## Console (surfaces/ai.allternit.com — the `ui/` mirror)
 
-The remote-control dashboard's existing computer-use area gains a
-**Workflows** section under Recordings (`src/remote-control/recordings/
-WorkflowsPanel.tsx` + typed client `src/remote-control/api/workflows.ts`):
+The console home for this capability is the **live Fabric Transport view**
+(`src/views/FabricTransportView.tsx`), served by `src/shell/ViewRegistry.tsx`
+for both the `remote-control` and `fabric-session` view ids. It carries a
+**Workflows (record → teach → batch → verify)** section (cu28 landed the panel
+in the legacy `src/remote-control/` tree by mistake; cu29 moved it here):
 spec list, NetworkTrace inspection, self-check / target verify runners,
-verdict rendering (deviations, a11y, receipt hash + tamper check). It reuses
+verdict rendering (deviations, a11y, receipt hash + tamper check). The typed
+client is `src/lib/browser-skills-api.ts`; it reuses
 `getPlatformComputerUseBaseUrl()` from `src/integration/computer-use-engine.ts`,
 so it follows the same override chain as Recordings (manual override →
 electron-injected base URL → `http://127.0.0.1:8760`).
+
+The legacy `src/remote-control/` tree (own `main.tsx`, old branding) is
+**out of scope**: it stays untouched legacy and does not surface this panel.
 
 ## SDK (sdk/allternit-sdk — `@allternit/sdk/computer-use`)
 
