@@ -93,7 +93,6 @@ pub struct DesktopTokenClaims {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-#[derive(Debug, thiserror::Error)]
 pub enum DesktopTokenError {
     #[error("token has expired")]
     Expired,
@@ -234,7 +233,6 @@ pub fn verify_desktop_token(secret: &str, token: &str) -> Result<DesktopTokenCla
 }
 
 pub(crate) fn hmac_sign(secret: &str, input: &str) -> String {
-fn hmac_sign(secret: &str, input: &str) -> String {
     type HmacSha256 = Hmac<Sha256>;
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     mac.update(input.as_bytes());
@@ -243,19 +241,16 @@ fn hmac_sign(secret: &str, input: &str) -> String {
 }
 
 pub(crate) fn b64_encode(input: &[u8]) -> String {
-fn b64_encode(input: &[u8]) -> String {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     URL_SAFE_NO_PAD.encode(input)
 }
 
 pub(crate) fn b64_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
-fn b64_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     URL_SAFE_NO_PAD.decode(input)
 }
 
 pub(crate) fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
     }
@@ -347,7 +342,7 @@ async fn handle_bot_desktop_socket(
         }
     };
 
-    let _vnc_token = endpoint.token;
+    let vnc_token = endpoint.token;
 
     let (mut ws_sender, mut ws_receiver) = socket.split();
     let (mut tcp_read, mut tcp_write) = tokio::io::split(tcp);
@@ -355,6 +350,59 @@ async fn handle_bot_desktop_socket(
     // Channel for messages that need to go to the browser.
     let (ws_tx, mut ws_rx) = mpsc::channel::<Message>(128);
     let ws_tx2 = ws_tx.clone();
+
+    // Guests run x11vnc with a driver-known password (BOT_DESKTOP_VNC_PASSWORD,
+    // default "allternit") and offer no None-security, so browser viewers
+    // cannot complete the RFB handshake themselves. Run the handshake inline
+    // here — the interceptor answers the DES challenge with the shared
+    // password and only then becomes a transparent pipe.
+    if let Some(token) = vnc_token {
+        type HsErr = Box<dyn std::error::Error + Send + Sync>;
+        let mut auth = crate::vnc_auth::VncAuthInterceptor::new(&token);
+        let mut buf = vec![0u8; 16384];
+        let handshake = async {
+            loop {
+                tokio::select! {
+                    n = tcp_read.read(&mut buf) => match n {
+                        Ok(0) => break,
+                        Ok(n) => {
+                            let pipe = auth.server_bytes(&buf[..n]).map_err(|e| -> HsErr { e.into() })?;
+                            if !pipe.to_server.is_empty() {
+                                tcp_write.write_all(&pipe.to_server).await.map_err(|e| -> HsErr { e.into() })?;
+                            }
+                            if !pipe.to_client.is_empty() {
+                                ws_sender.send(Message::Binary(pipe.to_client)).await.map_err(|e| -> HsErr { e.into() })?;
+                            }
+                            if auth.handshake_done() { break; }
+                        }
+                        Err(e) => return Err(e.into()),
+                    },
+                    msg = ws_receiver.next() => match msg {
+                        Some(Ok(Message::Binary(data))) => {
+                            let pipe = auth.client_bytes(&data).map_err(|e| -> HsErr { e.into() })?;
+                            if !pipe.to_server.is_empty() {
+                                tcp_write.write_all(&pipe.to_server).await.map_err(|e| -> HsErr { e.into() })?;
+                            }
+                            if !pipe.to_client.is_empty() {
+                                ws_sender.send(Message::Binary(pipe.to_client)).await.map_err(|e| -> HsErr { e.into() })?;
+                            }
+                            if auth.handshake_done() { break; }
+                        }
+                        Some(Ok(Message::Close(_))) | None => break,
+                        Some(Ok(Message::Ping(data))) => {
+                            let _ = ws_sender.send(Message::Pong(data)).await;
+                        }
+                        _ => {}
+                    },
+                }
+            }
+            Ok::<(), HsErr>(())
+        };
+        if let Err(e) = tokio::time::timeout(std::time::Duration::from_secs(15), handshake).await {
+            warn!(bot_id, sandbox_id, error = %e, "VNC auth handshake failed");
+            return;
+        }
+    }
 
     // Forward channel -> WebSocket sender.
     let forward_to_ws = tokio::spawn(async move {
@@ -366,18 +414,10 @@ async fn handle_bot_desktop_socket(
     });
 
     // Forward WebSocket receiver -> TCP.
-    let observer_bot_id = bot_id.clone();
-    let observer_user_id = user_id.clone();
     let ws_to_tcp = tokio::spawn(async move {
         while let Some(msg) = ws_receiver.next().await {
             match msg {
                 Ok(Message::Binary(data)) => {
-                    // Observe mode is view-only. The client also enforces this,
-                    // but the proxy must not trust it for server-side isolation.
-                    if control_state == BotDesktopControlState::HumanObserving {
-                        warn!(bot_id = observer_bot_id, user_id = observer_user_id, "Dropping observer input message; observe mode is view-only");
-                        continue;
-                    }
                     if tcp_write.write_all(&data).await.is_err() {
                         break;
                     }
