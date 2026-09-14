@@ -533,6 +533,41 @@ function checkPhoneRemoteBundle() {
   pass('phone-remote: desktop extraResources bundles surfaces/phone-remote/server (index.mjs + lib/ + sc_capture.swift) and the input helper (input/*.py)');
 }
 
+/* ── Check 8: updater feed matches electron-builder publish target ── */
+
+function checkUpdaterFeed() {
+  const pkg = JSON.parse(read('surfaces/allternit-desktop/package.json'));
+  const publish = (pkg.build && Array.isArray(pkg.build.publish) ? pkg.build.publish : [])[0] || {};
+  const publishOwner = publish.owner;
+  const publishRepo = publish.repo;
+  const mainSrc = read('surfaces/allternit-desktop/src/main/unified-main.ts');
+  const manifestSrc = read('surfaces/allternit-desktop/src/main/manifest.ts');
+  const expected = `${publishOwner}/${publishRepo}`;
+  if (publishOwner && publishRepo) {
+    pass(`updater: electron-builder publish target is ${expected}`);
+  } else {
+    fail('updater: surfaces/allternit-desktop/package.json build.publish is missing owner/repo');
+    return;
+  }
+  const repoRe = new RegExp(`repo:\\s*['"]${expected}['"]`);
+  if (repoRe.test(mainSrc)) {
+    pass(`updater: updateElectronApp repo is ${expected} (matches publish)`);
+  } else {
+    fail(
+      `updater: unified-main.ts updateElectronApp repo does not match electron-builder publish ` +
+        `${expected} — auto-update would look at a 404 feed (desktop-v1.1.1 consumer-packaging P5).`
+    );
+  }
+  const feedRe = new RegExp(`desktopFeedUrl:\\s*'https://github.com/${expected}/releases/latest'`);
+  if (feedRe.test(manifestSrc)) {
+    pass(`updater: PLATFORM_MANIFEST.update.desktopFeedUrl is github.com/${expected}`);
+  } else {
+    fail(
+      `updater: manifest.ts desktopFeedUrl does not point at github.com/${expected}/releases/latest`
+    );
+  }
+}
+
 /* ── Main ── */
 
 function main() {
@@ -550,6 +585,7 @@ function main() {
   checkWindowsPnpmShim();
   checkSidecarGuards(jobs);
   checkPhoneRemoteBundle();
+  checkUpdaterFeed();
 
   console.log('release-preflight: release-desktop.yml checks\n');
   for (const p of passes) console.log(`  ✓ ${p}`);

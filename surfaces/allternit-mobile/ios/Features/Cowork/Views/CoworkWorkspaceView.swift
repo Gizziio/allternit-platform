@@ -11,6 +11,7 @@ struct CoworkWorkspaceView: View {
     @State private var selectedSessionId: String? = nil
     @State private var isCreating = false
     @State private var createError: String? = nil
+    @State private var isFabricTransportPresented = false
 
     var body: some View {
         NavigationStack {
@@ -23,6 +24,9 @@ struct CoworkWorkspaceView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $selectedSessionId) { sessionId in
                 CoworkSessionWorkspaceView(sessionId: sessionId)
+            }
+            .navigationDestination(isPresented: $isFabricTransportPresented) {
+                FabricApprovalsView()
             }
         }
         .task {
@@ -40,6 +44,17 @@ struct CoworkWorkspaceView: View {
                 .foregroundColor(Color("TextPrimary"))
 
             Spacer()
+
+            // Fabric Transport: approvals inbox + run status (P4.1).
+            Button(action: { isFabricTransportPresented = true }) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color("TextSecondary"))
+                    .frame(width: 32, height: 32)
+                    .background(Color("BgPanel"))
+                    .clipShape(Circle())
+            }
+            .accessibilityLabel("Fabric Transport")
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")

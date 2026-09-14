@@ -1,11 +1,23 @@
-# session/bot-computer-window-0914
+# Steering checkpoint — session/coworkp1-0914
 
-**Goal:** Open the bot's computer in a dedicated full-size Electron window instead of the half-open ACI pane.
+## Goal
+Consumer-packaged Cowork P4 (mobile approvals + routines) + P5 updater-feed
+lock, landing on main. P1–P3 already merged (#507/#508/#512). Resume of
+Kimi session_93cc7789 after 5-hour quota stop.
 
-**Just did:** Implemented `shell:open-bot-computer`, chrome-free detached `/shell?detachedSurface=bot-computer`, pane button now "Open in window", VNC claim priority `window: 4`. Rebased onto main after PR #515 (noVNC CPU tame) auto-merged the viewport.
+## Just did
+- Forward-merged origin/main (including #513/#514/#515/#516) into this
+  worktree. FabricTransportView now has both Routines (this session) and
+  Workflows (cu29).
+- P4.1 iOS FabricTransportClient + FabricApprovalsView.
+- P4.2 routines CRUD + tick; fire carries the routine message as
+  `agentic.task`. 4/4 routine_routes tests green.
+- P5.1 updater feed locked to `Gizziio/desktop`; preflight 39/0.
 
-**Next:** Re-run tests after rebase, push, PR, merge, attest.
+## Next
+Commit, PR, merge to main, attestation. Signing/notarization remains
+owner-gated. iOS simulator click-through not claimed (Mesh.xcframework).
 
-**Open questions:** none. #515 owns RFB pause; this session only changed the pane button label in that file.
-
-**Do not touch:** noVNC decode/scale path; Incus/Tart substrate; ACI rail itself.
+## Open questions
+- Cloud continuation out of v1.
+- `desktop-v1.2.0` needs APPLE_* secrets — owner action.

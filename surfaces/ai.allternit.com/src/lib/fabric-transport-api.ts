@@ -218,3 +218,36 @@ export function listConnectorSessions(getToken: TokenGetter, runId?: string): Pr
   const q = runId ? `?run_id=${encodeURIComponent(runId)}` : '';
   return req(getToken, `/fabric/transport/connector-sessions${q}`);
 }
+
+// ─── P4.2: Cowork routines (scheduled work on Fabric Transport) ─────────────
+
+export interface RoutineRow {
+  id: string;
+  workspace: string;
+  principal?: string | null;
+  name: string;
+  message: string;
+  schedule: string;
+  enabled: boolean;
+  last_run_at?: string | null;
+  next_run_at?: string | null;
+}
+
+export function listRoutines(getToken: TokenGetter): Promise<{ routines: RoutineRow[] }> {
+  return req(getToken, '/cowork/routines');
+}
+
+export function createRoutine(
+  getToken: TokenGetter,
+  input: { name: string; message: string; schedule: string; workspace?: string; principal?: string },
+): Promise<RoutineRow> {
+  return req(getToken, '/cowork/routines', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function deleteRoutine(getToken: TokenGetter, routineId: string): Promise<{ deleted: string }> {
+  return req(getToken, `/cowork/routines/${encodeURIComponent(routineId)}`, { method: 'DELETE' });
+}
+
+export function runRoutineNow(getToken: TokenGetter, routineId: string): Promise<{ id: string; fired: number }> {
+  return req(getToken, `/cowork/routines/${encodeURIComponent(routineId)}/run`, { method: 'POST' });
+}

@@ -387,6 +387,37 @@ signed desktop main process owns the worker lifecycle end-to-end (phase P1,
 The manual flow (`ALLTERNIT_GIZZI_TOKEN=… bun worker-daemon-entry.ts`, or
 `bun worker-entry.ts`) remains for operators and development.
 
+## 15b. Reach — mobile approvals + routines (consumer P4)
+
+- **iOS approvals inbox** — `FabricTransportClient` + `FabricApprovalsView`
+  talk to `/api/v1/fabric/transport/approvals` (grant/deny, decided-by
+  recorded server-side) and `/api/v1/runs` / `/runs/:id/events` for run
+  status. Legacy Cowork task clients are untouched. Entry: Cowork
+  launchpad radio-waves button.
+- **Routines** — `POST/GET/DELETE /api/v1/cowork/routines` plus
+  `POST /cowork/routines/:id/run` (run now). Schedule grammar is
+  `*/N` minutes, `@hourly`, `@daily`. The 30s tick submits one canonical
+  intent per due row (initiator = owning user, delegator = Al, target
+  from the principal override or the same delegation-rule lookup Al uses
+  for a chat turn; payload carries `agentic.task` = the routine message).
+  Failed fires back off 5 minutes and do not skip. Cloud continuation is
+  out of v1.
+
+## 15c. Release engineering (consumer P5)
+
+- **Updater feed** — electron-builder `build.publish`,
+  `updateElectronApp({ repo })`, and `PLATFORM_MANIFEST.update.desktopFeedUrl`
+  all point at `Gizziio/desktop`. `allternit/desktop` does not exist (404).
+  `scripts/release-preflight.mjs` fails the release if those three diverge.
+- **Signing / notarization** — owner action. `build.mac.identity` stays
+  `null` so unsigned local builds keep working; CI already forwards
+  `APPLE_ID` / `APPLE_ID_PASSWORD` / `APPLE_TEAM_ID` into
+  `scripts/notarize.cjs`, which hard-fails without them by design. Cut
+  `desktop-v1.2.0` only after those secrets are provisioned.
+- **Windows / Linux** — `release-desktop.yml` already builds NSIS +
+  AppImage on tag `desktop-v*`. Smoke those artifacts from the tag; do
+  not treat an untagged local build as a release.
+
 ## 16. Worker reference loop
 
 A basic worker should behave like:
