@@ -35,7 +35,21 @@ Worktree: ../allternit-session-coworkp1-0914 on session/coworkp1-0914.
   startup preload bridges + ipcMain handlers.
 - Docs: FABRIC_TRANSPORT §15a, GIZZI_WORKER_SPEC §7, A_PROTOCOL §16 P1.
 
-## Verification so far
+## Verification so far (updated)
+- cargo test 40/40 (incl. 2 new managed-runtime store tests); clippy clean
+  (one nit fixed in managed_runtime_tests); cargo build -p allternit-api clean.
+- Desktop main/preload tsc clean; gizzi typecheck clean; SPA typecheck clean.
+- release-preflight 36/0.
+- LIVE EVIDENCE (tmp/coworkp1-evidence/, fresh scratch DB + desktop token):
+  ensure route 403 without/with wrong token; 200 with token (principal
+  a://workspace/default/principal/gizzi, token len 41); re-ensure rotates
+  and old token dies (claim refused 401); folder grants GET empty → PUT →
+  persisted; worker daemon_start + SIGTERM graceful stop, both via the
+  daemon entry AND via the new `gizzi-code fabric-worker` CLI subcommand.
+- Full GUI wizard click-through NOT exercised (needs interactive Clerk
+  sign-in); documented honestly in MASTER_TRACKING.
+- Desktop bundle (unsigned, -local) building for grep + fresh-profile
+  launch verification.
 - cargo build -p allternit-api clean; desktop main+preload tsc clean;
   gizzi typecheck clean (0 errors).
 - Pending: cargo test/clippy, SPA typecheck, release-preflight, live
