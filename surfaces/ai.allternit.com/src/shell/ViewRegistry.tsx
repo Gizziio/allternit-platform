@@ -1122,6 +1122,13 @@ export function getShellViewRegistry(handlers: {
     'fabric-session': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
         <FabricTransportView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Session" />}>
+        <DispatchView />
+      </ErrorBoundary>
+    ),
+    'fabric-session': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Session" />}>
+        <DispatchView />
       </ErrorBoundary>
     ),
     'hud': () => (

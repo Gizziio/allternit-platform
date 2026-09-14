@@ -32,6 +32,10 @@ import { isFabricSessionPwaHost } from '@/lib/fabric-session-pwa';
 
 export type {
   FabricSession,
+} from '@allternit/sdk/runtime';
+import { env } from '@/lib/env';
+
+export type {
   FabricSessionWithStatus,
   FabricSessionDetail,
   FabricSessionEvent,
@@ -58,6 +62,8 @@ const PUSH_WORKER_BASE = (
   env('NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL') ||
   'https://push.fabrictransport.allternit.com'
 ).replace(/\/$/, '');
+  env('NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL')
+)?.replace(/\/$/, '');
 
 export interface FabricSessionInit {
   runtimeId: string;
@@ -103,6 +109,9 @@ export function createFabricOperator(init: FabricSessionInit): FabricSessionClie
 export function createFabricSessionClient(init: FabricSessionInit): FabricSessionClient {
   const opts: FabricSessionClientOptions = {
     baseUrl: init.baseUrl ?? defaultFabricSessionBaseUrl(),
+export function createFabricSessionClient(init: FabricSessionInit): FabricSessionClient {
+  const opts: FabricSessionClientOptions = {
+    baseUrl: init.baseUrl ?? CLOUD_API_BASE,
     runtimeId: init.direct ? undefined : init.runtimeId,
     direct: init.direct ?? false,
     getToken: init.getToken,

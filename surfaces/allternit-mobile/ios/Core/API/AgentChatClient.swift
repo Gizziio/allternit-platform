@@ -13,8 +13,8 @@ struct ToolOptions: Encodable, Sendable {
 
 /// One composer-staged attachment in the agent-chat body. `url` is the
 /// `POST /api/v1/uploads` result; `dataBase64` inlines small payloads
-/// without an upload round-trip. The bridge forwards each as a gizzi
-/// `{"type":"file","url":...}` part (v1_routes.rs agent_chat_bridge).
+/// without an upload round-trip. The Fabric session-worker forwards each as
+/// a gizzi `{"type":"file","url":...}` part.
 struct AttachmentRef: Encodable, Sendable {
     let url: String?
     let dataBase64: String?
@@ -22,65 +22,35 @@ struct AttachmentRef: Encodable, Sendable {
     let name: String?
 }
 
-/// Client for the LIVE agent platform protocol (replaces the scaffold
-/// RepliesStreamClient):
+/// Errors specific to the capability-native chat path.
+enum AgentChatClientError: Error, LocalizedError {
+    /// No gizzi-code/Fabric node is currently reachable.
+    case noReachableNode
+
+    var errorDescription: String? {
+        switch self {
+        case .noReachableNode:
+            return "No reachable harness. Make sure Allternit Desktop is running or a runtime backend is paired."
+        }
+    }
+}
+
+/// Client for the capability-native agent-chat protocol.
 ///
-/// - `POST /api/v1/agent-sessions`              → create a `ses_*` session
-/// - `GET  /api/v1/agent-sessions`              → history list (`{sessions, count}`)
-/// - `GET  /api/v1/agent-sessions/:id/messages` → session messages (bare array)
-/// - `POST /api/v1/agent-sessions/:id/abort`    → stop an in-flight generation
-/// - `POST /api/agent-chat`                     → send a message; the response
-///   body itself is the SSE-style stream of `AgentChatEvent` frames
-///   (`data: {json}\n\n`, canonical shapes in
-///   cmd/allternit-api/src/v1_routes.rs:247-388).
+/// Sessions and messages are still managed by the platform gateway
+/// (`POST /api/v1/agent-sessions`, `GET /api/v1/agent-sessions/:id/messages`,
+/// etc.). Streaming a turn happens through the Fabric session-worker on the
+/// resolved gizzi-code node: lease `harness.session.message`, invoke it, then
+/// stream `AgentChatEvent` frames from the session-worker events endpoint.
 ///
-/// Reference: the web client's `sessionApi` / `chatApi` in
-/// surfaces/ai.allternit.com/src/lib/agents/native-agent-api.ts:423-579,635-830.
-/// Auth flows through `APIClient.effectiveToken()` (runtime device token,
-/// falling back to Clerk Bearer) — no `X-Allternit-*` tenant headers
-/// (desktop-shell-only).
+/// The legacy `POST /api/agent-chat` streaming bridge has been removed; there
+/// is no fallback path. If no node resolves, the stream fails fast with
+/// `AgentChatClientError.noReachableNode`.
 final class AgentChatClient: ObservableObject, @unchecked Sendable {
     private let client: APIClient
-    private let chatURL: URL
 
-    init(client: APIClient = .shared, chatURL: URL = AppConfig.agentChatURL) {
+    init(client: APIClient = .shared) {
         self.client = client
-        self.chatURL = chatURL
-    }
-
-    /// Body of `POST /api/agent-chat` (native-agent-api.ts:643-648). The web
-    /// also splats an `agentContext` (agentId/systemPrompt/…) into the body —
-    /// desktop-agent-only; mobile chat sends just `agentId`: the bridge
-    /// resolves the agent's persona, workspace files (SOUL.md/STYLE.md),
-    /// and the caller's response-style preferences SERVER-SIDE and wraps
-    /// them as `<system-instructions>` (v1_routes.rs agent_chat_bridge).
-    /// `systemPrompt` stays accepted for parity with the web (appended
-    /// last by the bridge) but mobile sends none. `runtimeModelId` is a
-    /// catalog id ("provider/model", RuntimeModel.id); nil lets the bridge
-    /// fall back to the agent's own model, then the configured default
-    /// (v1_routes.rs:182-200).
-    /// `effort` ("low"|"medium"|"high") rides along for reasoning-capable
-    /// models; the bridge forwards it to the runtime, which ignores it for
-    /// models without reasoning. `attachments` are composer-staged files
-    /// (already uploaded via `POST /api/v1/uploads`); `metadata.tools` carries
-    /// the "+" sheet's tool options. The bridge turns attachments into gizzi
-    /// file parts and stashes the tool options into the gizzi payload
-    /// metadata (v1_routes.rs agent_chat_bridge).
-    private struct AgentChatRequest: Encodable {
-        let chatId: String
-        let message: String
-        let agentId: String?
-        let systemPrompt: String?
-        let runtimeModelId: String?
-        let effort: String?
-        let attachments: [AttachmentRef]?
-        let metadata: RequestMetadata?
-    }
-
-    /// `metadata` on the agent-chat body — currently only the composer tool
-    /// options.
-    private struct RequestMetadata: Encodable {
-        let tools: ToolOptions
     }
 
     /// Response of `POST /api/v1/uploads` (upload_routes.rs).
@@ -187,65 +157,59 @@ final class AgentChatClient: ObservableObject, @unchecked Sendable {
         )
     }
 
-    // MARK: - Chat streaming (POST /api/agent-chat)
+    // MARK: - Chat streaming
 
-    /// Sends `text` to the session and streams the response frames on the
-    /// POST body. The stream finishes on a terminal frame
-    /// (`finish` / `done` / `[DONE]`), when the connection ends, or when the
-    /// consuming task is cancelled; per-frame decode failures are skipped
-    /// (the web parser logs and continues on malformed frames).
+    /// Sends `text` to the session and streams the response frames.
+    ///
+    /// Uses the capability-native Fabric path exclusively: resolve a gizzi-code
+    /// node through `InstanceConnection`, lease `harness.session.message`,
+    /// invoke it, then stream `AgentChatEvent` frames from the session-worker
+    /// events endpoint.
+    ///
+    /// Throws `AgentChatClientError.noReachableNode` when no instance or static
+    /// gizzi-code URL is available.
     func sendMessageStream(sessionId: String, text: String, agentId: String? = nil, systemPrompt: String? = nil, runtimeModelId: String? = nil, effort: String? = nil, attachments: [AttachmentRef]? = nil, tools: ToolOptions? = nil) -> AsyncThrowingStream<AgentChatEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    var request = try await client.authorizedRequest(url: chatURL, method: "POST")
-                    request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-                    // Streams are long-lived; the default 60s idle timeout
-                    // would kill slow generations between frames.
-                    request.timeoutInterval = 600
-                    request.httpBody = try JSONEncoder().encode(
-                        AgentChatRequest(
-                            chatId: sessionId,
-                            message: text,
-                            agentId: agentId,
-                            systemPrompt: systemPrompt,
-                            runtimeModelId: runtimeModelId,
-                            effort: effort,
-                            attachments: attachments,
-                            metadata: tools.map { RequestMetadata(tools: $0) }
-                        )
+                    let resolved = await MainActor.run {
+                        InstanceConnection.resolve()
+                    }
+                    guard let baseURL = resolved?.baseURL else {
+                        throw AgentChatClientError.noReachableNode
+                    }
+
+                    let worker = SessionWorkerClient(
+                        baseURL: baseURL,
+                        tokenProvider: { try await AuthManager.shared.getToken() }
+                    )
+                    let messageLease = try await worker.leaseSessionMessage(grantee: "ios-client")
+                    let eventsLease = try await worker.issueLease(request: IssueLeaseRequest(
+                        capabilityId: "harness.session.events",
+                        grantee: "ios-client",
+                        ttlSeconds: 300,
+                        constraints: nil,
+                        policy: nil
+                    ))
+                    let workerAttachments = (attachments ?? []).compactMap { ref -> SessionWorkerAttachment? in
+                        guard let url = ref.url else { return nil }
+                        return SessionWorkerAttachment(mime: ref.mediaType, url: url, filename: ref.name)
+                    }
+                    _ = try await worker.sendSessionMessage(
+                        sessionID: sessionId,
+                        text: text,
+                        attachments: workerAttachments,
+                        agentId: agentId,
+                        systemPrompt: systemPrompt,
+                        runtimeModelId: runtimeModelId,
+                        effort: effort,
+                        tools: tools,
+                        lease: messageLease
                     )
 
-                    let (bytes, response) = try await client.sendStream(request)
-                    try client.validate(response)
-
-                    let decoder = JSONDecoder()
-                    for try await line in bytes.lines {
+                    for try await event in worker.streamAgentChatEvents(sessionID: sessionId, lease: eventsLease) {
                         try Task.checkCancellation()
-
-                        // SSE frames are `data: {json}`; blank lines, comments
-                        // (axum keep-alive `:…` lines) and event lines are skipped.
-                        guard line.hasPrefix("data: ") else { continue }
-                        let payload = String(line.dropFirst(6))
-                        guard !payload.isEmpty else { continue }
-
-                        // OpenAI-style sentinel, tolerated like the web parser.
-                        if payload == "[DONE]" {
-                            continuation.finish()
-                            return
-                        }
-
-                        guard let data = payload.data(using: .utf8),
-                              let event = try? decoder.decode(AgentChatEvent.self, from: data) else {
-                            print("agent-chat: skipping undecodable frame: \(payload)")
-                            continue
-                        }
-
-                        // Unknown/tolerated frames decode to `.ignored`.
-                        if case .ignored = event { continue }
-
                         continuation.yield(event)
-
                         if event.isTerminal {
                             continuation.finish()
                             return

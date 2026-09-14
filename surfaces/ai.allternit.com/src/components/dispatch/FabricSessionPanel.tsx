@@ -6,6 +6,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow, CaretLeft } from '@phosphor-icons/react';
 import { FabricDesktopDrive, useVisualViewportRect } from '@/components/dispatch/FabricDesktopDrive';
 import type { RuntimeViewModel } from '@/components/dispatch/useRuntimes';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, ArrowSquareOut } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -61,6 +62,9 @@ export function FabricSessionPanel({
   railCollapsed: railCollapsedProp,
   onToggleRail,
 }: FabricSessionPanelProps) {
+}
+
+export function FabricSessionPanel({ runtimeId, getToken, baseUrl, direct }: FabricSessionPanelProps) {
   const { addToast } = useToast();
   const fabricClient = useMemo(
     () => createFabricSessionClient({ runtimeId, getToken, baseUrl, direct }),
@@ -157,6 +161,7 @@ export function FabricSessionPanel({
       else setRailCollapsedState(true);
     }
   }, [onToggleRail, railCollapsed]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [detail, setDetail] = useState<FabricSessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -210,6 +215,9 @@ export function FabricSessionPanel({
         description: error instanceof Error ? error.message : 'Failed to load sessions',
         type: 'error',
       });
+      setSessions(data);
+    } catch {
+      addToast({ title: 'Error', description: 'Failed to load remote sessions', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -386,6 +394,42 @@ export function FabricSessionPanel({
       active = false;
     };
   }, [aciRunId, aciWatching, driveKind, fabricClient, pageVisible, selectedSessionId]);
+    if (!selectedSessionId) return;
+    setEvents([]);
+    const iterator = fabricClient.streamEvents(selectedSessionId);
+    let active = true;
+
+    void (async () => {
+      try {
+        for await (const event of iterator) {
+          if (!active) break;
+          setEvents((prev) => [...prev, event]);
+          if (event.type === 'permission.asked') {
+            const permission = event.properties as FabricPermissionRequest;
+            setPendingPermissions((prev) => {
+              if (prev.some((p) => p.id === permission.id)) return prev;
+              return [...prev, permission];
+            });
+          }
+          if (event.type === 'question.asked') {
+            const question = event.properties as FabricQuestionRequest;
+            setPendingQuestions((prev) => {
+              if (prev.some((q) => q.id === question.id)) return prev;
+              return [...prev, question];
+            });
+          }
+        }
+      } catch {
+        if (active) {
+          addToast({ title: 'Error', description: 'Session event stream disconnected', type: 'error' });
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [fabricClient, selectedSessionId, addToast]);
 
   const selectedSession = useMemo(
     () => sessions.find((s) => s.session.id === selectedSessionId),
@@ -475,6 +519,11 @@ export function FabricSessionPanel({
         text,
         model: selectedBrain ?? undefined,
       });
+  async function handleSend() {
+    if (!selectedSessionId || !composerText.trim()) return;
+    setSending(true);
+    try {
+      await fabricClient.sendMessage(selectedSessionId, { text: composerText.trim() });
       setComposerText('');
     } catch {
       addToast({ title: 'Error', description: 'Failed to send message', type: 'error' });
@@ -579,6 +628,9 @@ export function FabricSessionPanel({
   if (loading && driveKind !== 'desktop') {
     return (
       <div className="flex items-center justify-center h-full text-[var(--shell-item-muted)] bg-[var(--shell-view-bg)]">
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48 text-[var(--text-tertiary)]">
         <Spinner className="animate-spin mr-2" size={20} />
         Loading sessions…
       </div>
@@ -900,6 +952,80 @@ export function FabricSessionPanel({
           <CaretLeft size={16} weight="bold" />
           Sessions
         </button>
+  return (
+    <div className="flex h-full min-h-[400px] border border-[var(--border-default)] rounded-2xl overflow-hidden bg-[var(--bg-elevated)]">
+      {/* Session list */}
+      <div className="w-64 border-r border-[var(--border-default)] flex flex-col">
+        <div className="px-4 py-3 border-b border-[var(--border-default)] flex items-center justify-between">
+          <span className="text-sm font-medium text-[var(--text-primary)]">Active Sessions</span>
+          {pushSupported && (
+            <button
+              type="button"
+              onClick={() => void handlePushToggle()}
+              disabled={pushLoading}
+              title={pushEnabled ? 'Disable push notifications' : 'Enable push notifications'}
+              className={cn(
+                'p-1.5 rounded-lg transition-colors disabled:opacity-40',
+                pushEnabled
+                  ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+                  : 'text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+              )}
+            >
+              {pushLoading ? (
+                <Spinner className="animate-spin" size={16} />
+              ) : pushEnabled ? (
+                <Bell size={16} weight="fill" />
+              ) : (
+                <BellSlash size={16} />
+              )}
+            </button>
+          )}
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {sessions.length === 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
+              <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 w-full">
+                <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
+                <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">No active sessions</p>
+                <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
+                  Start a session from the desktop app or send a message below.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const composer = document.querySelector('[data-remote-composer]') as HTMLElement | null;
+                    composer?.focus();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
+                >
+                  <ArrowSquareOut size={14} weight="bold" />
+                  Start a session
+                </button>
+              </div>
+            </div>
+          )}
+          {sessions.map(({ session, status }) => (
+            <button
+              key={session.id}
+              type="button"
+              onClick={() => setSelectedSessionId(session.id)}
+              className={cn(
+                'w-full text-left px-4 py-3 border-b border-[var(--border-subtle)] hover:bg-[var(--surface-hover)] transition-colors',
+                selectedSessionId === session.id && 'bg-[var(--surface-hover)]'
+              )}
+            >
+              <div className="text-sm font-medium text-[var(--text-primary)] truncate">{session.title}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <StatusDot status={status.type} />
+                <span className="text-xs text-[var(--text-tertiary)] capitalize">{status.type}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Detail / composer */}
+      <div className="flex-1 flex flex-col min-w-0">
         {!selectedSession ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
             <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
@@ -915,6 +1041,9 @@ export function FabricSessionPanel({
               >
                 Start a session
               </button>
+              <p className="text-[12px] text-[var(--text-tertiary)] m-0">
+                Choose an active session from the list to send messages and approve actions.
+              </p>
             </div>
           </div>
         ) : (
@@ -934,6 +1063,16 @@ export function FabricSessionPanel({
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
+            <div className="px-4 py-3 border-b border-[var(--border-default)] flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-[var(--text-primary)] truncate">
+                  {selectedSession.session.title}
+                </div>
+                <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
+                  {detail ? `${detail.messages.length} messages` : 'Loading messages…'}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 {selectedSession.status.type === 'busy' && (
                   <button
                     type="button"
@@ -949,6 +1088,7 @@ export function FabricSessionPanel({
             </div>
 
             <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {detailLoading && (
                 <div className="flex items-center text-xs text-[var(--text-tertiary)]">
                   <Spinner className="animate-spin mr-2" size={14} />
@@ -981,6 +1121,15 @@ export function FabricSessionPanel({
                     }
                     return null;
                   })}
+                      ? 'ml-auto bg-blue-500 text-white rounded-br-md'
+                      : 'mr-auto bg-[var(--bg-subtle)] text-[var(--text-primary)] rounded-bl-md'
+                  )}
+                >
+                  {msg.parts
+                    .filter((p) => p.type === 'text')
+                    .map((p: any, i: number) => (
+                      <div key={i}>{p.text}</div>
+                    ))}
                 </div>
               ))}
 
@@ -1009,12 +1158,15 @@ export function FabricSessionPanel({
               {events.length > 0 && (
                 <div className="text-xs text-[var(--text-tertiary)] pt-2 border-t border-[var(--border-subtle)]">
                   {events.filter((e) => !isFabricKeepalive(e.type)).length} events streamed
+                  {events.filter((e) => e.type !== 'remote.heartbeat').length} events streamed
                 </div>
               )}
             </div>
 
             <div className="p-3 border-t border-solid border-[var(--border-subtle)] bg-[var(--shell-view-bg)]">
               <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] px-3 pt-2.5 pb-2">
+            <div className="p-3 border-t border-[var(--border-default)]">
+              <div className="flex items-end gap-2">
                 <textarea
                   data-remote-composer
                   value={composerText}
@@ -1046,6 +1198,18 @@ export function FabricSessionPanel({
                     {sending ? <Spinner className="animate-spin" size={16} /> : <PaperPlaneRight size={16} weight="fill" />}
                   </button>
                 </div>
+                  placeholder="Send a message to this session…"
+                  rows={2}
+                  className="flex-1 resize-none rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleSend()}
+                  disabled={sending || !composerText.trim()}
+                  className="p-2.5 rounded-xl bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+                >
+                  {sending ? <Spinner className="animate-spin" size={18} /> : <PaperPlaneRight size={18} weight="fill" />}
+                </button>
               </div>
             </div>
           </>

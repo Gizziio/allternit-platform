@@ -128,6 +128,9 @@ export function DispatchSettingsPanel(): React.ReactNode {
       <SectionHeading>Fabric Transport</SectionHeading>
       <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed -mt-3">
         Fabric Transport lets this computer join the Allternit fabric as a node for peers, leases, and session-worker calls.
+      <SectionHeading>Fabric Session</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed -mt-3">
+        Fabric Session lets you hand off tasks from the Allternit mobile app to this computer through capability-native harness access.
       </p>
 
       <SettingsCard title="This node">
@@ -165,6 +168,8 @@ export function DispatchSettingsPanel(): React.ReactNode {
         <SettingsCardRow
           label="Pending approvals"
           description="Permission requests waiting on this node."
+          label="Keep computer awake"
+          description="Prevent sleep while Fabric Session is running."
         >
           <span className="text-[13px] font-medium text-[var(--text-primary)]">
             {pendingLoading ? '…' : pendingPermissions}
@@ -173,6 +178,8 @@ export function DispatchSettingsPanel(): React.ReactNode {
         <SettingsCardRow
           label="Pending questions"
           description="Questions from machines waiting for an answer."
+          label="Mobile notifications"
+          description="Show phone-style notifications for Fabric Session messages."
         >
           <span className="text-[13px] font-medium text-[var(--text-primary)]">
             {pendingLoading ? '…' : pendingQuestions}
@@ -182,6 +189,16 @@ export function DispatchSettingsPanel(): React.ReactNode {
           <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openFabricSessionWindow(thisNode?.id)}>
             <ArrowSquareOut size={14} /> Open Fabric dashboard
           </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Code size={18} className="text-[var(--text-tertiary)]" />
+              <div>
+                <div className="text-[14px] font-medium text-[var(--text-primary)]">Code permissions</div>
+                <div className="text-[12px] text-[var(--text-tertiary)]">What to do when a Fabric Session wants to run code.</div>
+              </div>
+            </div>
+            <CodePermissionsDropdown value={codePermission} onChange={setCodePermission} />
+          </div>
         </div>
       </SettingsCard>
 

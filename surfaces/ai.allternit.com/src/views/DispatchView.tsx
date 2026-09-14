@@ -39,11 +39,13 @@ import { DispatchOptionsMenu } from '@/components/dispatch/DispatchOptionsMenu';
 import { TimestampSeparator } from '@/components/dispatch/TimestampSeparator';
 import { openFabricSessionWindow } from '@/lib/open-fabric-session-window';
 import { RemoteSessionPanel } from '@/components/dispatch/RemoteSessionPanel';
+import { openFabricSessionWindow } from '@/lib/open-fabric-session-window';
+import { FabricSessionPanel } from '@/components/dispatch/FabricSessionPanel';
 import { MachinesPanel } from '@/components/dispatch/MachinesPanel';
 import { useRuntimes } from '@/components/dispatch/useRuntimes';
 import { MockRuntimesBanner } from '@/components/dispatch/MockRuntimesBanner';
 import { useRuntimeSelection } from '@/components/dispatch/useRuntimeSelection';
-import { createRemoteControlClient } from '@/lib/dispatch/remote-control';
+import { createFabricSessionClient } from '@/lib/dispatch/fabric-session-client';
 import { useToast } from '@/hooks/use-toast';
 import { MachinesPanel } from '@/components/dispatch/MachinesPanel';
 import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
@@ -246,16 +248,16 @@ export function DispatchView(): React.ReactNode {
   // ── remote hub tabs ─────────────────────────────────────────────────────────
   const [activeHubTab, setActiveHubTab] = useState<'handoff' | 'active-sessions' | 'remote-sessions'>('handoff');
 
-  // ── machine selection / remote control ──────────────────────────────────────
+  // ── machine selection / fabric session ──────────────────────────────────────
   const { runtimes, loading: runtimesLoading, isMock } = useRuntimes();
   const [selectedRuntimeId, setSelectedRuntimeId] = useRuntimeSelection();
   const selectedRuntime = runtimes.find((r) => r.id === selectedRuntimeId);
 
-  // ── remote control client ────────────────────────────────────────────────────
-  const remoteClient = useMemo(() => {
+  // ── fabric session client ────────────────────────────────────────────────────
+  const fabricClient = useMemo(() => {
     const runtimeId = handoffStatus?.runtimeId ?? selectedRuntimeId;
     if (!runtimeId) return null;
-    return createRemoteControlClient({ runtimeId, getToken });
+    return createFabricSessionClient({ runtimeId, getToken });
   }, [handoffStatus?.runtimeId, selectedRuntimeId, getToken]);
 
   // Build the QR URL. In development we ask the dev server for the LAN address
@@ -344,7 +346,7 @@ export function DispatchView(): React.ReactNode {
   const handleSendMessage = useCallback(() => {
     const text = composerValue.trim();
     if (!text || sending) return;
-    if (!remoteClient) {
+    if (!fabricClient) {
       addToast({ title: 'No machine connected', description: 'Pair or select a runtime before sending.', type: 'error' });
       return;
     }
@@ -352,6 +354,8 @@ export function DispatchView(): React.ReactNode {
     try {
       const session = await remoteClient.createSession({ title: 'Fabric Transport', surface: 'fabric-session' });
       await remoteClient.sendMessage(session.id, { text });
+      const session = await fabricClient.createSession({ title: 'Fabric Session', surface: 'fabric-session' });
+      await fabricClient.sendMessage(session.id, { text });
       setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
       setComposerValue('');
       addToast({ title: 'Dispatched', description: 'Message sent to your machine.', type: 'success' });
@@ -369,6 +373,7 @@ export function DispatchView(): React.ReactNode {
     setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
     setComposerValue('');
   }, [composerValue]);
+  }, [composerValue, sending, fabricClient, addToast]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -397,6 +402,7 @@ export function DispatchView(): React.ReactNode {
               type="button"
               className="text-blue-500 underline bg-transparent border-none cursor-pointer p-0 text-[14px]"
               onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'dispatch' } }))}
+              onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'fabric-session' } }))}
             >
               Settings
             </button>
@@ -409,7 +415,7 @@ export function DispatchView(): React.ReactNode {
               <button
                 type="button"
                 className="text-blue-500 underline bg-transparent border-none cursor-pointer p-0 text-[13px]"
-                onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
+                onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'fabric-session' } }))}
               >
                 Settings
               </button>
@@ -425,6 +431,7 @@ export function DispatchView(): React.ReactNode {
               icon={<Coffee size={20} />}
               title="Keep this computer awake"
               description="Prevents sleep while Fabric Transport is running."
+              description="Prevents sleep while Fabric Session is running."
               variant="toggle"
               checked={keepAwake}
               onToggle={setKeepAwake}
@@ -468,6 +475,7 @@ export function DispatchView(): React.ReactNode {
               icon={<Globe size={20} />}
               title="Browser automation"
               description="Lets Fabric Transport navigate, click, and fill forms in your browser."
+              description="Lets Fabric Session navigate, click, and fill forms in your browser."
               variant="check"
             />
             <SetupRow
@@ -493,6 +501,7 @@ export function DispatchView(): React.ReactNode {
               icon={<SquaresFour size={20} />}
               title="All connectors are on"
               description="Fabric Transport can use every connector you've authenticated."
+              description="Fabric Session can use every connector you've authenticated."
               variant="check"
             />
           </div>
@@ -524,6 +533,9 @@ export function DispatchView(): React.ReactNode {
               Remote Control
             </h1>
             <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">This desktop joins the Allternit fabric. Peers, leases, and session-worker calls go through the local gateway.</p>
+              Dispatch & Fabric Session
+            </h1>
+            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Monitor, hand off, and run agents across machines through capability-native harness access.</p>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -599,7 +611,7 @@ export function DispatchView(): React.ReactNode {
                   <span className="flex-1 text-[13px] text-[var(--text-secondary)]">Host permissions</span>
                   <button
                     type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
+                    onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'fabric-session' } }))}
                     className="text-[12px] text-[var(--text-primary)] border border-solid border-[var(--border-default)] rounded-lg px-2.5 py-1 bg-transparent cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
                   >
                     Open settings
@@ -838,7 +850,7 @@ export function DispatchView(): React.ReactNode {
 
               {activeHubTab === 'active-sessions' && handoffStatus?.runtimeId && (
                 <div className="flex-1 overflow-hidden mx-6 mt-6 mb-6">
-                  <RemoteSessionPanel
+                  <FabricSessionPanel
                     runtimeId={handoffStatus.runtimeId}
                     getToken={getToken}
                   />

@@ -10,6 +10,12 @@
   "background_color": "#000000",
   "theme_color": "#000000",
   "orientation": "any",
+  "start_url": "/fabric-session.html?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0F0C0A",
+  "theme_color": "#0F0C0A",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/fabric-session-icon-192.png",

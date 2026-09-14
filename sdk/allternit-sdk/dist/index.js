@@ -2,6 +2,7 @@
 export { AllternitHarness } from './harness/index.js';
 export { createRetryMiddleware, createRefusalFallbackMiddleware, } from './harness/middleware.js';
 export { AllternitEmbeddings } from './embeddings.js';
+export { AllternitClient, createAllternitClient } from './gen/allternit-client.js';
 // Agent runtime
 export { AllternitAgent, AgentRun, } from './agents/index.js';
 // Tools

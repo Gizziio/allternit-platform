@@ -3,6 +3,10 @@ import { DashboardPage } from './pages/DashboardPage';
 import { BotPickerHost } from '@/views/bots/BotPickerHost';
 import { BotsChatPage } from './pages/BotsChatPage';
 import type { ApprovalRequest } from '@/components/bot-chat/types';
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { DashboardPage } from './pages/DashboardPage';
+import { PlatformSignIn, PlatformSignUp } from '@/lib/platform-auth-client';
 import type { BeforeInstallPromptEvent } from './types';
 
 export function FabricSessionApp(): React.ReactNode {
@@ -36,6 +40,13 @@ export function FabricSessionApp(): React.ReactNode {
         window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       }
     }
+<<<<<<<< HEAD:surfaces/ai.allternit.com/src/remote-control/App.tsx
+      import.meta.env.VITE_REMOTE_CONTROL_PUSH_URL ?? 'https://push.fabrictransport.allternit.com';
+========
+      import.meta.env.VITE_FABRIC_SESSION_PUSH_URL ||
+      import.meta.env.VITE_REMOTE_CONTROL_PUSH_URL ||
+      'https://push.fabric-session.allternit.com';
+>>>>>>>> archive/2026-09-13/wip/fabric-transport-bridge-removal:surfaces/ai.allternit.com/src/fabric-session/App.tsx
 
     navigator.serviceWorker
       .register('/fabric-session-service-worker.js')
@@ -108,5 +119,32 @@ export function FabricSessionApp(): React.ReactNode {
         onToggleWatch={() => setWatching((v) => !v)}
       />
     </>
+  return (
+    <Routes>
+      <Route
+        path="/sign-in"
+        element={
+          <div
+            className="min-h-screen w-full flex items-center justify-center px-5"
+            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+          >
+            <PlatformSignIn forceRedirectUrl="/" signUpForceRedirectUrl="/" />
+          </div>
+        }
+      />
+      <Route
+        path="/sign-up"
+        element={
+          <div
+            className="min-h-screen w-full flex items-center justify-center px-5"
+            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+          >
+            <PlatformSignUp forceRedirectUrl="/" signInForceRedirectUrl="/" />
+          </div>
+        }
+      />
+      <Route path="/" element={<DashboardPage installPrompt={installPrompt} onInstallClick={handleInstall} />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

@@ -1465,6 +1465,9 @@ export function ShellRail({
                 homeSticky.selectTab('fabric-session');
                 onOpen?.('fabric-session');
               }}
+              label="Fabric Session"
+              isActive={activeViewType === 'fabric-session'}
+              onClick={() => onOpen?.('fabric-session')}
             />
             <RailItem
               icon={SlidersHorizontal}

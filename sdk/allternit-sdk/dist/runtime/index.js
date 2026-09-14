@@ -77,6 +77,10 @@ export class FabricSessionClient {
                 body_encoding: "utf8",
             }),
         });
+    async request(path, init = {}) {
+        const url = this.apiPath(path);
+        const headers = await this.authHeaders();
+        return fetch(url, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
     }
     async json(path, init = {}) {
         const res = await this.request(path, init);
@@ -155,6 +159,7 @@ export class FabricSessionClient {
             agent: input.agent,
             model: input.model,
         }, lease);
+        return this.invoke("harness.session.message", { sessionID, text: input.text, attachments: input.attachments }, lease);
     }
     async abortSession(sessionID) {
         const lease = await this.lease("harness.session.abort");
@@ -242,6 +247,12 @@ export class FabricSessionClient {
                     headers: { Accept: "text/event-stream" },
                     signal,
                 }));
+        const leasePromise = this.lease("harness.session.events");
+        const url = this.apiPath(`/session-worker/sessions/${encodeURIComponent(sessionID)}/events`);
+        const getToken = this.getToken;
+        return {
+            [Symbol.asyncIterator]() {
+                return createFabricEventStreamIterator(url, leasePromise, getToken);
             },
         };
     }

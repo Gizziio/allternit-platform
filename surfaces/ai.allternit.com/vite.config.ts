@@ -38,6 +38,10 @@ const univerCore = path.dirname(path.dirname(path.dirname(univerCoreEntry)))
  * Transport view works. Build: copy the PWA to `dist/fabric-session/index.html`
  * so Cloudflare Pages pretty-URLs can serve `/fabric-session/` without a
  * `.html` rewrite loop.
+ * Dev-only: Vite's MPA server matches `/fabric-session` to `fabric-session.html`
+ * because of the rollup input key. The platform route `/fabric-session` must
+ * serve `index.html` (the SPA shell) so the hub page renders, while
+ * `/fabric-session.html` continues to serve the standalone dashboard entry.
  */
 function fabricSessionRoutePlugin(): Plugin {
   return {
@@ -46,6 +50,8 @@ function fabricSessionRoutePlugin(): Plugin {
       server.middlewares.use('/fabric-session', (req, res, next) => {
         if (req.method !== 'GET') return next();
         const url = req.url ?? '/';
+        // Only rewrite the exact hub path (with optional query string), not
+        // static assets under /fabric-session/ or the standalone entrypoint.
         if (url !== '/' && !url.startsWith('?')) return next();
         req.url = '/index.html' + (url.startsWith('?') ? url : '');
         next();

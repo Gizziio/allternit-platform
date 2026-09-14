@@ -3,6 +3,7 @@
  *
  * Enables installability as a PWA and handles background push notifications
  * for remote approval requests and session events.
+ * for fabric-session approvals and session events.
  */
 
 const CACHE_NAME = 'allternit-platform-v1';

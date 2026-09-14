@@ -17,13 +17,12 @@ enum InstanceConnection {
         let instanceName: String?
     }
 
-    /// Resolves where to talk to: the preferred registered instance
-    /// (proxied through `MeshClient` when it's a mesh address), a non-mesh
-    /// fallback instance when the mesh can't be brought up, or
-    /// `AppConfig.gizziCodeBaseURL` when no instance is registered at all.
-    /// nil only when neither source yields a usable host (release build,
-    /// no registered instance, no static fallback) — callers should show a
-    /// no-instance state instead of attempting a connection.
+    /// Resolves where to talk to: the preferred registered instance, proxied
+    /// through `MeshClient` when it's a mesh address. In DEBUG builds with an
+    /// explicit `-gizzi-url` override or a baked `ALLTERNIT_GIZZI_CODE_URL`,
+    /// falls back to that static URL. In release builds there is no silent
+    /// static fallback — callers must have a registered instance or they get
+    /// `nil` and should show a "no harness" state.
     static func resolve(from store: InstanceStore) async -> Resolved? {
         if let instance = store.preferredInstance, let url = instance.instanceURL {
             if !url.isMeshAddress {
@@ -32,15 +31,13 @@ enum InstanceConnection {
             if let proxyURL = await resolveMeshProxyBaseURL(for: url) {
                 return Resolved(baseURL: proxyURL, instanceName: instance.name)
             }
-            // Mesh instance preferred but unreachable — try the non-mesh
-            // fallback before giving up on the registry.
-            if let fallback = store.nonMeshFallbackInstance,
-               fallback.id != instance.id,
-               let fallbackURL = fallback.instanceURL {
-                return Resolved(baseURL: fallbackURL, instanceName: fallback.name)
-            }
+            // Mesh instance preferred but unreachable. Do not silently fall back
+            // to a different instance; the user must pick another or fix mesh.
             return nil
         }
+        // Static gizzi URL is only usable when explicitly configured (DEBUG
+        // launch arg or baked Info.plist). Release builds without a registered
+        // instance resolve to nil.
         guard AppConfig.hasUsableGizziCodeURL else { return nil }
         return Resolved(baseURL: AppConfig.gizziCodeBaseURL, instanceName: nil)
     }

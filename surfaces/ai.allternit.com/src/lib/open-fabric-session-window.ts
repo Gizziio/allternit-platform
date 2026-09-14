@@ -5,6 +5,7 @@ const DASHBOARD_ORIGIN =
   (import.meta.env.VITE_FABRIC_SESSION_ORIGIN || import.meta.env.VITE_REMOTE_CONTROL_ORIGIN)
     ? String(import.meta.env.VITE_FABRIC_SESSION_ORIGIN || import.meta.env.VITE_REMOTE_CONTROL_ORIGIN)
     : FABRIC_SESSION_PWA_ORIGIN;
+    : "https://fabric-session.allternit.com";
 
 /**
  * Open the standalone Fabric Session dashboard in a detached surface.
@@ -16,6 +17,11 @@ const DASHBOARD_ORIGIN =
  * @param runtimeId Optional runtime to pre-select on the dashboard.
  */
 export function openFabricSessionWindow(runtimeId?: string): void {
+  const url = new URL("/", DASHBOARD_ORIGIN);
+  if (runtimeId) {
+    url.searchParams.set("runtime", runtimeId);
+  }
+
   if (window.allternit?.shell?.openFabricSession) {
     void window.allternit.shell.openFabricSession(runtimeId);
     return;
@@ -29,5 +35,6 @@ export function openFabricSessionWindow(runtimeId?: string): void {
   if (runtimeId) {
     url.searchParams.set("runtime", runtimeId);
   }
+
   window.open(url.toString(), "_blank", "noopener,noreferrer");
 }

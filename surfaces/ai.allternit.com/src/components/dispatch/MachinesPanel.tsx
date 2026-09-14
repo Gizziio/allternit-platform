@@ -269,6 +269,14 @@ export function MachinesPanel({
             Clear selection
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'fabric-session' } }))}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
+        >
+          <ArrowSquareOut size={14} weight="bold" />
+          Open settings
+        </button>
       </div>
     );
   }

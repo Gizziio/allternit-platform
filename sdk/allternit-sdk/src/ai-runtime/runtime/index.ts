@@ -199,6 +199,10 @@ export class FabricSessionClient {
         }),
       }
     );
+  private async request(path: string, init: RequestInit = {}): Promise<Response> {
+    const url = this.apiPath(path);
+    const headers = await this.authHeaders();
+    return fetch(url, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
   }
 
   private async json<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -288,6 +292,7 @@ export class FabricSessionClient {
       agent?: string;
       model?: FabricModelRef;
     }
+    input: { text: string; attachments?: Array<{ mime: string; url: string; filename?: string }> }
   ): Promise<unknown> {
     const lease = await this.lease("harness.session.message");
     return this.invoke(
@@ -299,6 +304,7 @@ export class FabricSessionClient {
         agent: input.agent,
         model: input.model,
       },
+      { sessionID, text: input.text, attachments: input.attachments },
       lease
     );
   }
@@ -423,6 +429,12 @@ export class FabricSessionClient {
             signal,
           })
         ) as AsyncIterator<T>;
+    const leasePromise = this.lease("harness.session.events");
+    const url = this.apiPath(`/session-worker/sessions/${encodeURIComponent(sessionID)}/events`);
+    const getToken = this.getToken;
+    return {
+      [Symbol.asyncIterator](): AsyncIterator<FabricSessionEvent> {
+        return createFabricEventStreamIterator(url, leasePromise, getToken) as AsyncIterator<FabricSessionEvent>;
       },
     };
   }

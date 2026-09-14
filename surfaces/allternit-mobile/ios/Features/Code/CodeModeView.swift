@@ -605,12 +605,14 @@ struct CodeThreadChatView: View {
 
     @StateObject private var viewModel = ChatViewModel()
     @StateObject private var instanceStore = InstanceStore.shared
+    @StateObject private var nodeDirectory = NodeDirectory.shared
     @State private var terminalSession: PtySession? = nil
     @State private var showTerminal = false
     @State private var resolvingTerminalHost = false
     @State private var isFileBrowserPresented = false
     @State private var isDiffViewerPresented = false
     @State private var isDevPreviewPresented = false
+    @State private var selectedPeerID: String? = nil
 
     /// Pending gizzi-code approval requests for this thread's own session
     /// (`GET /v1/permission`, filtered to `sessionID == sessionId`), kept
@@ -713,6 +715,14 @@ struct CodeThreadChatView: View {
                     instanceMenu
                 }
             }
+            // Capability-native peer picker: shows Fabric nodes that advertise
+            // session-message capability. The chat path still resolves through
+            // InstanceConnection; this is the convergence UI surface.
+            if nodeDirectory.peers.count > 1 {
+                ToolbarItem(placement: .topBarTrailing) {
+                    peerMenu
+                }
+            }
         }
         .sheet(isPresented: $isFileBrowserPresented) {
             FileBrowserView(instanceStore: instanceStore)
@@ -733,6 +743,11 @@ struct CodeThreadChatView: View {
             // empty list and the flip falls back to the static dev default
             // (DEBUG) or the no-instance state (release).
             await instanceStore.refreshIfNeeded()
+        }
+        .task {
+            // Warm the Fabric peer directory so the capability-native picker
+            // can populate as soon as the thread opens.
+            await nodeDirectory.refresh()
         }
         .task {
             // Mirrors the terminal's own `.task { await session.start() }` —
@@ -932,6 +947,60 @@ struct CodeThreadChatView: View {
                 resolvingTerminalHost = false
             }
         }
+    }
+
+    /// Capability-native peer picker: lists Fabric nodes advertising
+    /// `harness.session.message`. The selection is currently a UI signal;
+    /// the chat path resolves the actual host through `InstanceConnection`.
+    private var peerMenu: some View {
+        Menu {
+            Button(action: { selectedPeerID = nil }) {
+                HStack {
+                    if selectedPeerID == nil {
+                        Image(systemName: "checkmark")
+                    }
+                    Label("Automatic", systemImage: "sparkles")
+                }
+            }
+
+            Divider()
+
+            ForEach(nodeDirectory.peers) { peer in
+                Button(action: { selectedPeerID = peer.nodeId }) {
+                    HStack {
+                        if selectedPeerID == peer.nodeId {
+                            Image(systemName: "checkmark")
+                        }
+                        Circle()
+                            .fill(peer.capabilities.contains { $0.name == "harness.session.message" }
+                                  ? Theme.statusSuccess : Color("TextSecondary"))
+                            .frame(width: 6, height: 6)
+                        Text(peer.name)
+                        if let runtime = peer.runtimeType.presence {
+                            Text(runtime)
+                                .font(.caption)
+                                .foregroundColor(Color("TextSecondary"))
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "network")
+        }
+        .accessibilityLabel("Select Fabric peer")
+        .task {
+            // Presenting the thread re-checks the peer list so the menu is fresh.
+            await nodeDirectory.refresh()
+        }
+    }
+}
+
+private extension String {
+    /// Capitalizes the first character, used for runtime-type labels in the
+    /// peer picker without importing a full formatter.
+    var presence: String? {
+        guard !isEmpty else { return nil }
+        return prefix(1).uppercased() + dropFirst()
     }
 }
 

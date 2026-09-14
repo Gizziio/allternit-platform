@@ -71,6 +71,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                     </GlobalDropzoneProvider>
                   </VoiceProvider>
                 </TooltipProvider>
+                <FabricSessionApp />
               </ToastProvider>
             </FetchInterceptorProvider>
           </PlatformAuthProvider>

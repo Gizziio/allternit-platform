@@ -25,6 +25,7 @@ export function useFabricPendingCounts(
     questions: number;
     byRuntime: Record<string, FabricRuntimePendingCounts>;
   }>({ permissions: 0, questions: 0, byRuntime: {} });
+  const [counts, setCounts] = useState<{ permissions: number; questions: number }>({ permissions: 0, questions: 0 });
   const [loading, setLoading] = useState(true);
 
   const clients = useMemo(
@@ -40,12 +41,14 @@ export function useFabricPendingCounts(
     async function fetchCounts() {
       if (clients.length === 0) {
         setCounts({ permissions: 0, questions: 0, byRuntime: {} });
+        setCounts({ permissions: 0, questions: 0 });
         setLoading(false);
         return;
       }
       setLoading(true);
       const results = await Promise.all(
         clients.map(async ({ runtimeId, client }) => {
+        clients.map(async ({ client }) => {
           try {
             const [permissions, questions] = await Promise.all([
               client.listPendingPermissions(),
@@ -54,6 +57,9 @@ export function useFabricPendingCounts(
             return { runtimeId, permissions: permissions.length, questions: questions.length };
           } catch {
             return { runtimeId, permissions: 0, questions: 0 };
+            return { permissions: permissions.length, questions: questions.length };
+          } catch {
+            return { permissions: 0, questions: 0 };
           }
         })
       );
@@ -79,6 +85,17 @@ export function useFabricPendingCounts(
       cancelled = true;
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onFocus);
+      setCounts(
+        results.reduce(
+          (acc, curr) => ({ permissions: acc.permissions + curr.permissions, questions: acc.questions + curr.questions }),
+          { permissions: 0, questions: 0 }
+        )
+      );
+      setLoading(false);
+    }
+    void fetchCounts();
+    return () => {
+      cancelled = true;
     };
   }, [clients]);
 

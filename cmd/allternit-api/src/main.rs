@@ -66,6 +66,7 @@ use allternit_api::cowork_routes::cowork_router;
 use allternit_api::cowork_team_routes::cowork_team_router;
 use allternit_api::db::DbHandle;
 use allternit_api::design_connector_routes::{design_connector_router, DesignSkillCache};
+use allternit_api::fabric_routes::fabric_router;
 use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;

@@ -23,6 +23,9 @@ export default defineConfig((env) =>
           input: {
             'fabric-session': path.resolve(__dirname, 'fabric-session.html'),
             index: path.resolve(__dirname, 'remote-control.html'),
+        rollupOptions: {
+          input: {
+            'fabric-session': path.resolve(__dirname, 'fabric-session.html'),
           },
           external: [
             /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,

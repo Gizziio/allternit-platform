@@ -5,7 +5,7 @@ import { Pairing } from "@/runtime/services/pairing/pairing"
 import { Session } from "@/runtime/session"
 import { Log } from "@/shared/util/log"
 
-const log = Log.create({ service: "remote-control-push" })
+const log = Log.create({ service: "fabric-push" })
 
 type NotificationType = "permission" | "question" | "completed" | "error"
 
@@ -19,7 +19,10 @@ interface NotificationPayload {
 }
 
 function pushWorkerUrl(): string | undefined {
-  return process.env.ALLTERNIT_REMOTE_CONTROL_PUSH_URL
+  return (
+    process.env.ALLTERNIT_FABRIC_SESSION_PUSH_URL ??
+    process.env.ALLTERNIT_REMOTE_CONTROL_PUSH_URL
+  )
 }
 
 async function notifySubscribers(payload: NotificationPayload) {
@@ -28,7 +31,7 @@ async function notifySubscribers(payload: NotificationPayload) {
 
   const pairing = await Pairing.load()
   if (!pairing?.runtimeId) {
-    log.debug("runtime not cloud-paired; skipping remote-control push notification")
+    log.debug("runtime not cloud-paired; skipping fabric push notification")
     return
   }
 
@@ -42,7 +45,9 @@ async function notifySubscribers(payload: NotificationPayload) {
     return
   }
 
-  const notifySecret = process.env.ALLTERNIT_REMOTE_CONTROL_NOTIFY_SECRET
+  const notifySecret =
+    process.env.ALLTERNIT_FABRIC_SESSION_NOTIFY_SECRET ??
+    process.env.ALLTERNIT_REMOTE_CONTROL_NOTIFY_SECRET
   const deviceToken = pairing.deviceToken
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -76,13 +81,13 @@ async function notifySubscribers(payload: NotificationPayload) {
       log.warn("push worker returned error", { status: response.status })
     }
   } catch (error) {
-    log.warn("failed to notify remote control subscribers", { error: error instanceof Error ? error.message : String(error) })
+    log.warn("failed to notify fabric subscribers", { error: error instanceof Error ? error.message : String(error) })
   }
 }
 
-export function initRemoteControlPush(): void {
+export function initFabricPush(): void {
   if (!pushWorkerUrl()) {
-    log.info("remote control push worker URL not configured; skipping subscriptions")
+    log.info("fabric push worker URL not configured; skipping subscriptions")
     return
   }
 
@@ -129,5 +134,5 @@ export function initRemoteControlPush(): void {
     })
   })
 
-  log.info("remote control push subscriptions initialized")
+  log.info("fabric push subscriptions initialized")
 }

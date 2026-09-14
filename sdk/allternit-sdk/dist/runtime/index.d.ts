@@ -145,6 +145,8 @@ export declare class FabricSessionClient {
     private json;
     private requestFullPath;
     private jsonFullPath;
+    private request;
+    private json;
     lease(capabilityId: string, ttlSeconds?: number): Promise<FabricLease>;
     invoke(capability: string, inputs: Record<string, unknown>, lease?: FabricLease): Promise<unknown>;
     listSessions(): Promise<RemoteSessionWithStatus[]>;
@@ -169,6 +171,7 @@ export declare class FabricSessionClient {
     }): Promise<RemoteSession>;
     listBrains(): Promise<FabricBrain[]>;
     listBots(): Promise<FabricBot[]>;
+    }): Promise<RemoteSession>;
     listPendingPermissions(): Promise<RemotePermissionRequest[]>;
     replyPermission(requestID: string, reply: "once" | "always" | "reject", message?: string): Promise<boolean>;
     listPendingQuestions(): Promise<RemoteQuestionRequest[]>;

@@ -16,6 +16,7 @@ import { Sidecar } from "@/runtime/sidecar"
 import { initRemoteControlPush } from "@/runtime/integrations/remote-control-push"
 import { ProcessRegistry } from "@/runtime/process-registry"
 import { registerCleanup } from "@/shared/utils/cleanupRegistry"
+import { initFabricPush } from "@/runtime/integrations/fabric-push"
 
 export async function InstanceBootstrap() {
   Log.Default.info("bootstrapping", { directory: Instance.directory })
@@ -66,5 +67,5 @@ export async function InstanceBootstrap() {
     }
   })
 
-  initRemoteControlPush()
+  initFabricPush()
 }
