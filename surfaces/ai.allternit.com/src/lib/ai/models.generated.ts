@@ -3127,40 +3127,6 @@ export const models = [
     },
   },
   {
-    id: "vercel/v0-1.0-md",
-    object: "model",
-    created: 1_755_815_280,
-    owned_by: "vercel",
-    name: "v0-1.0-md",
-    description:
-      "Access the model behind v0 to generate, fix, and optimize modern web apps with framework-specific reasoning and up-to-date knowledge.",
-    context_window: 128_000,
-    max_tokens: 32_000,
-    type: "language",
-    tags: ["tool-use", "vision"],
-    pricing: {
-      input: "0.000003",
-      output: "0.000015",
-    },
-  },
-  {
-    id: "vercel/v0-1.5-md",
-    object: "model",
-    created: 1_755_815_280,
-    owned_by: "vercel",
-    name: "v0-1.5-md",
-    description:
-      "Access the model behind v0 to generate, fix, and optimize modern web apps with framework-specific reasoning and up-to-date knowledge.",
-    context_window: 128_000,
-    max_tokens: 32_768,
-    type: "language",
-    tags: ["tool-use", "vision"],
-    pricing: {
-      input: "0.000003",
-      output: "0.000015",
-    },
-  },
-  {
     id: "voyage/voyage-3-large",
     object: "model",
     created: 1_755_815_280,

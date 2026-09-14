@@ -73,7 +73,9 @@ export const ALL_MODELS: ModelData[] = (generatedModels as readonly {
   readonly owned_by: string;
   readonly description: string;
   readonly tags?: readonly string[] | undefined;
-}[]).map(modelToModelData);
+}[])
+  .filter((m) => m.owned_by !== "vercel" && !m.id.startsWith("vercel/"))
+  .map(modelToModelData);
 
 export const DEFAULT_MODEL = "anthropic/claude-sonnet-4-20250514";
 

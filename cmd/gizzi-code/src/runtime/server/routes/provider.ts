@@ -39,6 +39,7 @@ export const ProviderRoutes = lazy(() =>
         const allProviders = await ModelsDev.get()
         const filteredProviders: Record<string, (typeof allProviders)[string]> = {}
         for (const [key, value] of Object.entries(allProviders)) {
+          if (key === "vercel") continue
           if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) {
             filteredProviders[key] = value
           }

@@ -293,6 +293,7 @@ export const AuthLoginCommand = cmd({
         const providers = await ModelsDev.get().then((x) => {
           const filtered: Record<string, (typeof x)[string]> = {}
           for (const [key, value] of Object.entries(x)) {
+            if (key === "vercel") continue
             if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) {
               filtered[key] = value
             }
@@ -306,10 +307,9 @@ export const AuthLoginCommand = cmd({
           openai: 2,
           google: 3,
           openrouter: 4,
-          vercel: 5,
-          alibaba: 6,
-          moonshotai: 7,
-          gizziio: 8,
+          alibaba: 5,
+          moonshotai: 6,
+          gizziio: 7,
         }
         const pluginProviders = resolvePluginProviders({
           hooks: await Plugin.list(),
@@ -403,10 +403,6 @@ export const AuthLoginCommand = cmd({
 
         if (provider === "moonshotai") {
           prompts.log.info("Get your API key from Moonshot AI: https://platform.moonshot.cn")
-        }
-
-        if (provider === "vercel") {
-          prompts.log.info("You can create an api key at https://vercel.link/ai-gateway-token")
         }
 
         if (["cloudflare", "cloudflare-ai-gateway"].includes(provider)) {

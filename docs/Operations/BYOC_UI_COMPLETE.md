@@ -52,10 +52,10 @@ cloudflared tunnel --url http://localhost:4096
 ## Deploy Status
 ✅ Committed: `1947efe7`
 ✅ Pushed to GitHub
-⏳ Deploying to Vercel (check https://vercel.com/dashboard)
+Web deploy is Cloudflare Pages (GitHub Actions), not Vercel.
 
 ## Next Steps
-1. Wait for Vercel deployment (~2-3 minutes)
+1. Wait for the Cloudflare Pages deploy (~2-3 minutes)
 2. Test the new "Enter Backend URL" flow
 3. Verify backend connection works
 4. Test terminal/session functionality

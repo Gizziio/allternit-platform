@@ -83,6 +83,7 @@ export function InstanceRoutes() {
         const allProviderData = await ModelsDev.get().catch(() => ({}))
         const filtered: Record<string, any> = {}
         for (const [key, value] of Object.entries(allProviderData)) {
+          if (key === "vercel") continue
           if ((enabled ? (enabled as Set<string>).has(key) : true) && !disabled.has(key)) {
             filtered[key] = value
           }

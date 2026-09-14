@@ -216,8 +216,8 @@ export default defineConfig({
     host: true,
     proxy: {
       // Dev-only model access: same-origin path to the model-proxy sidecar
-      // (scripts/model-proxy.mjs). Browser-direct calls to ai-gateway.vercel.sh
-      // are CORS-blocked, so getLanguageModel routes here when
+      // (scripts/model-proxy.mjs). Browser-direct calls to the hosted AI
+      // gateway are CORS-blocked, so getLanguageModel routes here when
       // VITE_LOCAL_AI_BASE_URL is set (see src/lib/ai/providers.ts).
       '/local-ai': {
         target: 'http://127.0.0.1:8090',
