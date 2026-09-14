@@ -35,6 +35,10 @@ vi.mock('@/lib/fabric-transport-api', () => ({
   upsertDelegationRule: vi.fn(async () => ({})),
   deleteDelegationRule: vi.fn(async () => ({})),
   listConnectorSessions: vi.fn(async () => ({ sessions: [] })),
+  listRoutines: vi.fn(async () => ({ routines: [] })),
+  createRoutine: vi.fn(async () => ({})),
+  deleteRoutine: vi.fn(async () => ({})),
+  runRoutineNow: vi.fn(async () => ({ fired: 0 })),
 }));
 
 vi.mock('@/lib/browser-skills-api', () => ({

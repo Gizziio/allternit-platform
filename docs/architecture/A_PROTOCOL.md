@@ -396,6 +396,18 @@ Transport does not redefine principal identity, run state, attribution, or appro
   (API / gizzi / fabric worker / office engine) in the app chrome, fed by
   the desktop main process over the preload bridge.
 
+### Implemented in the consumer reach + release pass (P4/P5, 2026-09-14)
+
+- **iOS fabric approvals** — Swift `FabricTransportClient` +
+  `FabricApprovalsView` (grant/deny + run timeline). Cloud continuation
+  remains out of v1.
+- **Routines** — `/api/v1/cowork/routines` tick fires a canonical
+  attributed intent per due schedule; Cowork Fabric Transport view
+  creates/runs/deletes them.
+- **Updater feed lock** — `Gizziio/desktop` is the single publish +
+  auto-update target; preflight refuses a mismatch. Signed/notarized
+  `desktop-v1.2.0` remains an owner action (Apple secrets).
+
 Live behavioral evidence for all six items (vm-job claim grant/refusal,
 boundary projection refusal, brokered files read/write + approval gate +
 path-confinement refusal, Al chat fallback + end-to-end delegation, daemon

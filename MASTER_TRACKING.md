@@ -522,5 +522,13 @@ owner reviews and merges — no self-merge.
   attributed timeline. Live: chat "write a summary report" → weekly-summary.docx
   attached by the worker, previewed, unzipped, exported.
   `tmp/p3-evidence/`.
-- **P4 PLANNED** — reach (mobile approvals + routines).
-- **P5 PLANNED** — release engineering.
+- **P4 CLOSED** — reach: iOS `FabricTransportClient` +
+  `FabricApprovalsView` (grant/deny + run timeline from Cowork launchpad);
+  routines table + `/api/v1/cowork/routines` CRUD + run-now + 30s tick
+  that submits a canonical intent (message is the agentic task; failed
+  fires back off 5 min). Desktop FabricTransportView Routines section.
+  Cloud continuation remains out of v1.
+- **P5 PARTIAL** — updater feed locked to `Gizziio/desktop` (publish +
+  `updateElectronApp` + manifest + preflight mismatch gate). Signing /
+  notarization / cutting `desktop-v1.2.0` is an owner action (Apple
+  secrets). Windows/Linux already build on `desktop-v*` tags.

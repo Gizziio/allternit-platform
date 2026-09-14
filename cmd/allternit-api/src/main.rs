@@ -371,6 +371,29 @@ async fn main() {
     // to the REST run surface within one tick (same contract as the route
     // mirror in fabric_transport_routes::submit_intent).
     spawn_al_orchestrator(db.clone(), cowork_run_manager.clone());
+    // Consumer-packaged Cowork P4.2: routines tick — due routines fire one
+    // canonical intent each onto Fabric Transport (claimed/leased like any
+    // other run).
+    {
+        let db = db.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                interval.tick().await;
+                let db = db.clone();
+                let fired = tokio::task::spawn_blocking(move || {
+                    allternit_api::routine_routes::run_due_routines(&db)
+                })
+                .await;
+                if let Ok(fired) = fired {
+                    if fired > 0 {
+                        info!(fired, "Routines tick fired on Fabric Transport");
+                    }
+                }
+            }
+        });
+    }
 
     // Initialize office runtime state (load from disk or start empty)
     let office_runtime = Arc::new(tokio::sync::RwLock::new(
@@ -703,6 +726,7 @@ async fn main() {
         .merge(cowork_preferences_router())
         .merge(allternit_api::al_persona_routes::al_persona_router())
         .merge(allternit_api::deliverable_routes::deliverable_router())
+        .merge(allternit_api::routine_routes::routine_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(allternit_api::rails::fabric_transport_routes::fabric_transport_routes())
         .merge(agent_router())
