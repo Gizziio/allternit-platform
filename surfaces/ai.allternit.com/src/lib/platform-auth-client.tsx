@@ -340,7 +340,9 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       // build anyway.
       clerkJSUrl={
         typeof window !== "undefined"
-          ? `${window.location.origin}/__clerk/npm/@clerk/clerk-js@5/dist/clerk.browser.js`
+          // Pin the versioned clerk-js URL. Safari will not execute the
+          // unversioned 307 as a script src (Chrome follows it).
+          ? `${window.location.origin}/__clerk/npm/@clerk/clerk-js@5.127.2/dist/clerk.browser.js`
           : undefined
       }
       allowedRedirectOrigins={getAllowedRedirectOrigins()}

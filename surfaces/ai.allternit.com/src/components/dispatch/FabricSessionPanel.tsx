@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, Plus, TerminalWindow, Code } from '@phosphor-icons/react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, Plus, TerminalWindow, CaretLeft } from '@phosphor-icons/react';
+import { FabricDesktopDrive, useVisualViewportRect } from '@/components/dispatch/FabricDesktopDrive';
 import type { RuntimeViewModel } from '@/components/dispatch/useRuntimes';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +28,8 @@ import { FabricChatModeCanvas, FabricCoworkRailSection, type FabricChatView } fr
 import { FabricCodeModeCanvas } from '@/components/dispatch/FabricCodeModeCanvas';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { FabricBotModeCanvas, FabricBotModeRail, type FabricBotView } from '@/components/dispatch/FabricBotMode';
+import { FABRIC_DRIVE_KINDS, fabricKindSurface, fabricSessionKind, type FabricDriveKind } from '@/lib/fabric-session-kind';
+import { extractAciScreenshot, FabricAciDrive, FabricBotDrive, FabricCodeDrive, FabricKindIcon, isFabricKeepalive, mergeNodeBots } from '@/components/dispatch/FabricSessionDriveViews';
 import { FabricBrainPicker, fabricBrainLabel, loadFabricBrain } from '@/components/dispatch/FabricBrainPicker';
 import { useMode } from '@/providers/mode-provider';
 
@@ -116,6 +120,8 @@ export function FabricSessionPanel({
     window.addEventListener('allternit:switch-mode', onSwitchMode);
     return () => window.removeEventListener('allternit:switch-mode', onSwitchMode);
   }, [setDriveKind]);
+  const [driveKind, setDriveKind] = useState<FabricDriveKind>('desktop');
+  const [codePane, setCodePane] = useState<'terminal' | 'chat'>('terminal');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [railCollapsedState, setRailCollapsedState] = useState(() => {
@@ -570,7 +576,7 @@ export function FabricSessionPanel({
     }
   }
 
-  if (loading) {
+  if (loading && driveKind !== 'desktop') {
     return (
       <div className="flex items-center justify-center h-full text-[var(--shell-item-muted)] bg-[var(--shell-view-bg)]">
         <Spinner className="animate-spin mr-2" size={20} />
@@ -599,6 +605,21 @@ export function FabricSessionPanel({
         className={cn(
           'flex w-[268px] min-h-0 flex-col bg-[var(--shell-rail-bg)] border-r border-solid border-[var(--border-subtle)] md:rounded-tr-2xl md:rounded-br-2xl',
           isMobile && 'fixed inset-y-0 left-0 z-40 shadow-[var(--shadow-lg)]',
+  if (driveKind === 'desktop') {
+    return <DesktopLiveView runtimeId={runtimeId} getToken={getToken} hostName={runtime?.name || runtime?.host} onBack={() => setDriveKind('chat')} />;
+  }
+
+  const showDetail = Boolean(selectedSession);
+
+  return (
+    <div
+      className="h-full min-h-0 overflow-hidden flex flex-col md:grid md:grid-cols-[268px_minmax(0,1fr)]"
+      style={{ background: 'var(--shell-frame-bg)', color: 'var(--shell-item-fg)' }}
+    >
+      <aside
+        className={cn(
+          'flex flex-col min-h-0 bg-[var(--shell-rail-bg)] border-r border-solid border-[var(--border-subtle)] rounded-tr-2xl rounded-br-2xl',
+          showDetail && 'hidden md:flex',
         )}
       >
         <div className="px-3 pt-3 pb-2 shrink-0">
@@ -865,6 +886,37 @@ export function FabricSessionPanel({
           <FabricChatModeCanvas view="cowork" onView={applyChatView} />
         ) : !selectedSession ? (
           <FabricChatModeCanvas view="chat" onView={applyChatView} />
+      <div
+        className={cn(
+          'flex flex-col min-w-0 min-h-0 bg-[var(--shell-view-bg)]',
+          !showDetail && 'hidden md:flex',
+        )}
+      >
+        <button
+          type="button"
+          className="md:hidden shrink-0 h-10 px-3 flex items-center gap-2 border-b border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] text-[13px] font-semibold text-[var(--shell-item-fg)] cursor-pointer border-x-0 border-t-0"
+          onClick={() => setSelectedSessionId(null)}
+        >
+          <CaretLeft size={16} weight="bold" />
+          Sessions
+        </button>
+        {!selectedSession ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
+            <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
+              <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
+              <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">Select a session</p>
+              <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
+                Choose an active session from the list, or start a new one on this desktop.
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleStartSession()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                Start a session
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             <div className="h-10 px-4 border-b border-solid border-[var(--border-subtle)] flex items-center justify-between gap-4 bg-[var(--shell-view-bg)]">
@@ -1000,6 +1052,61 @@ export function FabricSessionPanel({
         )}
       </div>
     </div>
+  );
+}
+
+function DesktopLiveView({
+  runtimeId,
+  getToken,
+  hostName,
+  onBack,
+}: {
+  runtimeId: string;
+  getToken: () => Promise<string | null>;
+  hostName?: string;
+  onBack: () => void;
+}) {
+  const vv = useVisualViewportRect();
+  return (
+    <>
+      <div className="hidden md:flex h-full min-h-0 flex-col bg-[#0b0b0a]">
+        <div className="shrink-0 h-10 px-3 flex items-center gap-2 border-b border-solid border-white/10">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1 rounded-lg border-none bg-white/10 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
+          >
+            <CaretLeft size={16} weight="bold" />
+            Sessions
+          </button>
+          <span className="text-[13px] text-white/70 truncate">{hostName || 'Live desktop'}</span>
+        </div>
+        <div className="flex-1 min-h-0">
+          <FabricDesktopDrive runtimeId={runtimeId} getToken={getToken} hostName={hostName} />
+        </div>
+      </div>
+      <div
+        className="md:hidden z-40 bg-[#0b0b0a] text-white overflow-hidden"
+        style={{
+          position: 'fixed',
+          top: vv.height ? vv.top : 0,
+          left: vv.height ? vv.left : 0,
+          width: vv.height ? vv.width : '100%',
+          height: vv.height ? vv.height : '100%',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onBack}
+          className="absolute z-30 left-2 inline-flex items-center gap-1 rounded-full border-none bg-black/55 px-2 py-1.5 text-[13px] font-semibold text-white cursor-pointer"
+          style={{ top: 'max(8px, env(safe-area-inset-top))' }}
+        >
+          <CaretLeft size={16} weight="bold" />
+          Sessions
+        </button>
+        <FabricDesktopDrive runtimeId={runtimeId} getToken={getToken} hostName={hostName} />
+      </div>
+    </>
   );
 }
 

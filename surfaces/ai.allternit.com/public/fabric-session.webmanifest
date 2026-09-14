@@ -6,9 +6,10 @@
   "start_url": "/fabric-session/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#FFFFFF",
-  "orientation": "portrait-primary",
+  "display_override": ["standalone", "browser"],
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "any",
   "icons": [
     {
       "src": "/fabric-session-icon-192.png",
