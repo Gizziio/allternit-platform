@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dropTargetState,
   findRootNodeId,
   organizeDagNodes,
   reparentCandidates,
@@ -284,5 +285,47 @@ describe('reparentCandidates', () => {
   it('treats an unknown nodeId as blocking nothing', () => {
     const ids = reparentCandidates(tree, 'nope').map((n) => n.node_id);
     expect(ids).toEqual(['root', 'a', 'b', 'a1', 'a1x']);
+  });
+});
+
+describe('dropTargetState', () => {
+  // root ── a ── a1 ── a1x
+  //      └ b
+  const nodes: RailsDagNode[] = [
+    node({ node_id: 'root' }),
+    node({ node_id: 'a', parent_node_id: 'root', status: 'READY' }),
+    node({ node_id: 'b', parent_node_id: 'root', status: 'READY' }),
+    node({ node_id: 'a1', parent_node_id: 'a', status: 'READY' }),
+    node({ node_id: 'a1x', parent_node_id: 'a1', status: 'READY' }),
+  ];
+
+  it('marks dropping onto self invalid', () => {
+    expect(dropTargetState('a', 'a', nodes, 'dag1')).toBe('invalid');
+  });
+
+  it('marks dropping onto a descendant invalid', () => {
+    expect(dropTargetState('a', 'a1', nodes, 'dag1')).toBe('invalid');
+    expect(dropTargetState('a', 'a1x', nodes, 'dag1')).toBe('invalid');
+  });
+
+  it('marks dropping onto a parent, ancestor, or sibling valid-under', () => {
+    expect(dropTargetState('a1', 'a', nodes, 'dag1')).toBe('valid-under');
+    expect(dropTargetState('a1', 'root', nodes, 'dag1')).toBe('valid-under');
+    expect(dropTargetState('a1', 'b', nodes, 'dag1')).toBe('valid-under');
+  });
+
+  it('marks dropping onto any other row valid-under for a leaf', () => {
+    expect(dropTargetState('a1x', 'b', nodes, 'dag1')).toBe('valid-under');
+    expect(dropTargetState('a1x', 'a', nodes, 'dag1')).toBe('valid-under');
+  });
+
+  it('marks the dag header (null target) valid-root', () => {
+    expect(dropTargetState('a1', null, nodes, 'dag1')).toBe('valid-root');
+    expect(dropTargetState('root', null, nodes, 'dag1')).toBe('valid-root');
+  });
+
+  it('marks everything invalid when the dragged node is unknown', () => {
+    expect(dropTargetState('nope', 'root', nodes, 'dag1')).toBe('invalid');
+    expect(dropTargetState('nope', null, nodes, 'dag1')).toBe('invalid');
   });
 });

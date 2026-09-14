@@ -42,6 +42,7 @@ import {
   findRootNodeId,
   organizeDagNodes,
   reparentCandidates,
+  dropTargetState,
   type OrganizedDag,
   type OrganizedRow,
 } from "./organize";
@@ -79,6 +80,9 @@ function StatusIcon({ status }: { status: RailsNodeStatus }) {
 
 function DagRow({
   row,
+  dagId,
+  dagNodes,
+  drag,
   expandedDone,
   onToggleDone,
   agentId,
@@ -90,11 +94,19 @@ function DagRow({
   onRename,
   onDelete,
   onReparent,
+  onDragNodeStart,
+  onDragNodeEnd,
+  onDropReparent,
   moveCandidates,
   currentParentId,
   compact,
 }: {
   row: OrganizedRow;
+  dagId: string;
+  /** All nodes of this row's dag (drop-validity checks). */
+  dagNodes: RailsDagNode[];
+  /** In-flight drag payload when it belongs to this row's dag. */
+  drag: { node_id: string } | null;
   expandedDone: Record<string, boolean>;
   onToggleDone: (key: string) => void;
   agentId: string;
@@ -106,6 +118,9 @@ function DagRow({
   onRename: (node: RailsDagNode, title: string) => void;
   onDelete: (node: RailsDagNode) => void;
   onReparent: (node: RailsDagNode, parentNodeId: string | null) => void;
+  onDragNodeStart: (node: RailsDagNode) => void;
+  onDragNodeEnd: () => void;
+  onDropReparent: (draggedNodeId: string, targetNodeId: string | null) => void;
   /** Same-dag nodes valid as a new parent (excludes self + descendants). */
   moveCandidates: RailsDagNode[];
   currentParentId: string | null;
@@ -115,6 +130,7 @@ function DagRow({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const [moveOpen, setMoveOpen] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
   const editInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -160,6 +176,11 @@ function DagRow({
 
   const { node } = row;
 
+  const dropState = drag
+    ? dropTargetState(drag.node_id, node.node_id, dagNodes, dagId)
+    : "invalid";
+  const droppable = drag !== null && dropState !== "invalid";
+
   const submitEdit = () => {
     const title = editValue.trim();
     setEditing(false);
@@ -174,7 +195,39 @@ function DagRow({
 
   return (
     <li
-      style={pad}
+      style={{
+        ...pad,
+        outline: dropActive ? "1px dashed var(--accent-primary)" : undefined,
+      }}
+      draggable={interactive && node.status !== "DONE" && !editing}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(
+          "text/plain",
+          JSON.stringify({ dag_id: dagId, node_id: node.node_id })
+        );
+        e.dataTransfer.effectAllowed = "move";
+        onDragNodeStart(node);
+      }}
+      onDragEnd={() => {
+        setDropActive(false);
+        onDragNodeEnd();
+      }}
+      onDragOver={(e) => {
+        if (!droppable) {
+          if (drag) e.dataTransfer.dropEffect = "none";
+          return;
+        }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDropActive(true);
+      }}
+      onDragLeave={() => setDropActive(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDropActive(false);
+        if (!droppable || !drag) return;
+        onDropReparent(drag.node_id, node.node_id);
+      }}
       className={cn("relative flex items-center gap-1.5", compact ? "py-0.5" : "py-1")}
     >
       <StatusIcon status={node.status} />
@@ -398,6 +451,10 @@ export function RailsTaskList({
   const reparent = useReparentDagNode();
   const [expandedDone, setExpandedDone] = useState<Record<string, boolean>>({});
   const [actionError, setActionError] = useState<string | null>(null);
+  /** In-flight native drag payload (same-dag validated at drop time). */
+  const [drag, setDrag] = useState<{ dag_id: string; node_id: string } | null>(null);
+  /** Dag section header currently highlighted as a root-drop target. */
+  const [rootDropDag, setRootDropDag] = useState<string | null>(null);
   // Write-back probe: if the pickup endpoint is unsupported (405/5xx/network),
   // silently degrade to read-only. 404 means the route answered (unknown node).
   const [writeBackOk, setWriteBackOk] = useState(true);
@@ -452,11 +509,58 @@ export function RailsTaskList({
     remove.isPending ||
     reparent.isPending;
 
+  const doReparent = (dag: RailsDagSummary, node: RailsDagNode, parentNodeId: string | null) => {
+    setActionError(null);
+    reparent.mutate(
+      {
+        dag_id: dag.dag_id,
+        node_id: node.node_id,
+        parent_node_id: parentNodeId,
+      },
+      {
+        onError: (err) => {
+          const status = (err as Error & { status?: number }).status;
+          setActionError(
+            status === 409
+              ? `Cannot move "${node.title}": it would create a cycle`
+              : `Move failed for "${node.title}"${status ? ` (${status})` : ""}`
+          );
+        },
+      }
+    );
+  };
+
   return (
     <div className={cn("flex min-w-0 flex-col", compact ? "gap-1" : "gap-2")}>
       {organized.map(({ dag, rows }) => (
         <section key={dag.dag_id} className="min-w-0">
-          <header className="flex items-baseline justify-between gap-2">
+          <header
+            style={
+              rootDropDag === dag.dag_id
+                ? { outline: "1px dashed var(--accent-primary)", outlineOffset: 2 }
+                : undefined
+            }
+            onDragOver={(e) => {
+              if (!drag || drag.dag_id !== dag.dag_id) {
+                if (drag) e.dataTransfer.dropEffect = "none";
+                return;
+              }
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setRootDropDag(dag.dag_id);
+            }}
+            onDragLeave={() => setRootDropDag((d) => (d === dag.dag_id ? null : d))}
+            onDrop={(e) => {
+              e.preventDefault();
+              setRootDropDag(null);
+              if (!drag || drag.dag_id !== dag.dag_id) return;
+              const dragged = dag.nodes.find((n) => n.node_id === drag.node_id);
+              setDrag(null);
+              if (!dragged) return;
+              doReparent(dag, dragged, null);
+            }}
+            className="flex items-baseline justify-between gap-2"
+          >
             <span className="min-w-0 truncate text-[11px] text-[var(--text-secondary)]">
               {dag.root_title ?? dag.dag_id}
             </span>
@@ -469,6 +573,9 @@ export function RailsTaskList({
               <DagRow
                 key={row.kind === "node" ? row.node.node_id : `${row.parentKey}-done-${i}`}
                 row={row}
+                dagId={dag.dag_id}
+                dagNodes={dag.nodes}
+                drag={drag && drag.dag_id === dag.dag_id ? drag : null}
                 expandedDone={expandedDone}
                 onToggleDone={(key) =>
                   setExpandedDone((e) => ({ ...e, [key]: !e[key] }))
@@ -521,25 +628,14 @@ export function RailsTaskList({
                     }
                   );
                 }}
-                onReparent={(node, parentNodeId) => {
-                  setActionError(null);
-                  reparent.mutate(
-                    {
-                      dag_id: dag.dag_id,
-                      node_id: node.node_id,
-                      parent_node_id: parentNodeId,
-                    },
-                    {
-                      onError: (err) => {
-                        const status = (err as Error & { status?: number }).status;
-                        setActionError(
-                          status === 409
-                            ? `Cannot move "${node.title}": it would create a cycle`
-                            : `Move failed for "${node.title}"${status ? ` (${status})` : ""}`
-                        );
-                      },
-                    }
-                  );
+                onReparent={(node, parentNodeId) => doReparent(dag, node, parentNodeId)}
+                onDragNodeStart={(node) => setDrag({ dag_id: dag.dag_id, node_id: node.node_id })}
+                onDragNodeEnd={() => setDrag(null)}
+                onDropReparent={(draggedNodeId, targetNodeId) => {
+                  const dragged = dag.nodes.find((n) => n.node_id === draggedNodeId);
+                  setDrag(null);
+                  if (!dragged) return;
+                  doReparent(dag, dragged, targetNodeId);
                 }}
                 moveCandidates={
                   row.kind === "node"

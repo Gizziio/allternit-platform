@@ -170,3 +170,27 @@ export function reparentCandidates(nodes: RailsDagNode[], nodeId: string): Rails
   }
   return nodes.filter((n) => !blocked.has(n.node_id));
 }
+
+export type DropTargetState = 'valid-root' | 'valid-under' | 'invalid';
+
+/**
+ * Validity of a drag-and-drop reparent target. `targetNodeId` null means the
+ * dag section header (move to root). `nodes` must be the dragged node's own
+ * dag; `_dagId` is the dag identifier carried in the drag payload — same-dag
+ * enforcement happens at the call site, which only wires handlers for the
+ * matching dag section.
+ */
+export function dropTargetState(
+  draggedNodeId: string,
+  targetNodeId: string | null,
+  nodes: RailsDagNode[],
+  _dagId: string
+): DropTargetState {
+  const draggedExists = nodes.some((n) => n.node_id === draggedNodeId);
+  if (!draggedExists) return 'invalid';
+  if (targetNodeId === null) return 'valid-root';
+  if (targetNodeId === draggedNodeId) return 'invalid';
+  return reparentCandidates(nodes, draggedNodeId).some((n) => n.node_id === targetNodeId)
+    ? 'valid-under'
+    : 'invalid';
+}
