@@ -530,6 +530,79 @@ async fn desktop_input(body: Bytes) -> Response {
     desktop_forward(reqwest::Method::POST, "/input", Some(body)).await
 }
 
+fn acu_base() -> String {
+    std::env::var("ALLTERNIT_ACU_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:8760".to_string())
+        .trim_end_matches('/')
+        .to_string()
+}
+
+async fn acu_forward(method: reqwest::Method, path: &str, body: Option<Bytes>) -> Response {
+    let url = format!("{}{path}", acu_base());
+    let client = reqwest::Client::new();
+    let mut req = client.request(method, url);
+    if let Some(payload) = body {
+        if !payload.is_empty() {
+            req = req.header("content-type", "application/json").body(payload);
+        }
+    }
+    match req.send().await {
+        Ok(resp) => {
+            let status =
+                StatusCode::from_u16(resp.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+            let ct = resp
+                .headers()
+                .get(reqwest::header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("application/json")
+                .to_string();
+            match resp.bytes().await {
+                Ok(bytes) => {
+                    let mut out = Response::new(axum::body::Body::from(bytes));
+                    *out.status_mut() = status;
+                    if let Ok(val) = axum::http::HeaderValue::from_str(&ct) {
+                        out.headers_mut()
+                            .insert(axum::http::header::CONTENT_TYPE, val);
+                    }
+                    out
+                }
+                Err(_) => (StatusCode::BAD_GATEWAY, "ACU read failed").into_response(),
+            }
+        }
+        Err(_) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "computer-use gateway is not running on this machine",
+        )
+            .into_response(),
+    }
+}
+
+async fn acu_browser_skills_get() -> Response {
+    acu_forward(reqwest::Method::GET, "/v1/browser-skills", None).await
+}
+
+async fn acu_browser_skills_post(body: Bytes) -> Response {
+    acu_forward(reqwest::Method::POST, "/v1/browser-skills", Some(body)).await
+}
+
+async fn acu_browser_skills_get_rest(AxumPath(rest): AxumPath<String>) -> Response {
+    acu_forward(
+        reqwest::Method::GET,
+        &format!("/v1/browser-skills/{rest}"),
+        None,
+    )
+    .await
+}
+
+async fn acu_browser_skills_post_rest(AxumPath(rest): AxumPath<String>, body: Bytes) -> Response {
+    acu_forward(
+        reqwest::Method::POST,
+        &format!("/v1/browser-skills/{rest}"),
+        Some(body),
+    )
+    .await
+}
+
 // ---------------------------------------------------------------------------
 // Server
 // ---------------------------------------------------------------------------
@@ -564,6 +637,11 @@ pub(crate) async fn serve(port: u16, state: Arc<ShimState>) -> Result<(), String
         .route("/v1/remote-control/desktop/hello", get(desktop_hello))
         .route("/v1/remote-control/desktop/frame", get(desktop_frame))
         .route("/v1/remote-control/desktop/input", post(desktop_input))
+        .route("/v1/browser-skills", get(acu_browser_skills_get).post(acu_browser_skills_post))
+        .route(
+            "/v1/browser-skills/*rest",
+            get(acu_browser_skills_get_rest).post(acu_browser_skills_post_rest),
+        )
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))

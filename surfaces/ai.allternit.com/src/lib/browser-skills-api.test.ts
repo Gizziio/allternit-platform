@@ -8,9 +8,14 @@ vi.mock("@/integration/computer-use-engine", () => ({
   getPlatformComputerUseBaseUrl: () => "http://127.0.0.1:8760",
 }));
 
+vi.mock("@/lib/cloud-api", () => ({
+  cloudApiUrl: (path: string) => `https://api.allternit.com${path}`,
+}));
+
 import {
   WorkflowsApiError,
   checkVerifyReceipt,
+  createFabricWorkflowsFetch,
   getVerifyResult,
   getWorkflowSpecDetail,
   isTerminalVerifyStatus,
@@ -205,5 +210,29 @@ describe("getVerifyResult", () => {
   it("throws WorkflowsApiError on 404", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ detail: "not found" }, 404)));
     await expect(getVerifyResult("verify-nope")).rejects.toBeInstanceOf(WorkflowsApiError);
+  });
+});
+
+describe("createFabricWorkflowsFetch", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("relays /v1/browser-skills through the runtime-devices proxy", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ specs: [] })));
+    const transport = createFabricWorkflowsFetch("rt_1", async () => "tok");
+    await listWorkflowSpecs({ fetch: transport });
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "https://api.allternit.com/api/v1/runtime-devices/rt_1/proxy",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Authorization: "Bearer tok" }),
+      }),
+    );
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+      method: "GET",
+      path: "/v1/browser-skills",
+      body: "",
+      bodyEncoding: "utf8",
+    });
   });
 });
