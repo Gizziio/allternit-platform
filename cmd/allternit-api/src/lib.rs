@@ -104,6 +104,7 @@ pub mod conversation_routes;
 pub mod al_persona_routes;
 pub mod deliverable_routes;
 pub mod routine_routes;
+pub mod continuation;
 pub mod cors;
 pub mod credits;
 pub mod cowork;

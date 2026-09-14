@@ -2213,18 +2213,15 @@ async function handoffInFlightToCloud(): Promise<void> {
       headers: { ...headers, 'content-type': 'application/json' },
     });
     if (!res.ok) {
-      log.warn(`[Main] cloud continuation handoff: ${res.status}`);
+      const body = await res.text().catch(() => '');
+      log.error(`[Main] cloud continuation handoff failed: ${res.status} ${body.slice(0, 400)}`);
       return;
     }
-    const body = (await res.json()) as { jobs?: Array<{ job_id: string }> };
-    log.info(`[Main] cloud continuation handed off ${body.jobs?.length ?? 0} in-flight job(s)`);
-    const target = process.env.ALLTERNIT_CONTINUATION_API_URL;
-    if (target && body.jobs && body.jobs.length > 0) {
-      log.warn(
-        `[Main] ALLTERNIT_CONTINUATION_API_URL is set but quit does not POST ingest to it. ` +
-          `${body.jobs.length} job(s) were only retagged on this local API, which is about to stop.`,
-      );
-    }
+    const body = (await res.json()) as { jobs?: Array<{ job_id: string }>; forwarded?: number; target?: string };
+    log.info(
+      `[Main] cloud continuation forwarded ${body.forwarded ?? 0}/${body.jobs?.length ?? 0} job(s)` +
+        (body.target ? ` to ${body.target}` : ''),
+    );
   } catch (err) {
     log.warn('[Main] cloud continuation handoff failed', err);
   }

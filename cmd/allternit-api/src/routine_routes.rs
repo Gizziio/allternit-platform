@@ -113,9 +113,88 @@ async fn create_routine(
         .db
         .connect()
         .map_err(|e| RoutineError::new(StatusCode::INTERNAL_SERVER_ERROR, "store_error", e.to_string()))?;
+    let cloud = crate::cowork_preferences_routes::cloud_continuation_enabled(&conn, &user.user_id);
+    let ingest = crate::continuation::verify_continuation_token(&headers, &state.config);
+    if cloud && !ingest {
+        let prefs_url = conn
+            .query_row(
+                "SELECT continuation_api_url FROM user_cowork_preferences WHERE user_id = ?1",
+                rusqlite::params![user.user_id],
+                |r| r.get::<_, Option<String>>(0),
+            )
+            .ok()
+            .flatten();
+        let target = crate::continuation::resolve_target(&state.config, prefs_url.as_deref())
+            .ok_or_else(|| {
+                RoutineError::new(
+                    StatusCode::CONFLICT,
+                    "continuation_unconfigured",
+                    "cloud continuation routines need ALLTERNIT_CONTINUATION_API_URL and ALLTERNIT_CONTINUATION_TOKEN",
+                )
+            })?;
+        drop(conn);
+        let token = state.config.continuation_token().ok_or_else(|| {
+            RoutineError::new(
+                StatusCode::CONFLICT,
+                "continuation_unconfigured",
+                "ALLTERNIT_CONTINUATION_TOKEN is not set",
+            )
+        })?;
+        let client = reqwest::Client::new();
+        let url = format!("{}/api/v1/cowork/routines", target.trim_end_matches('/'));
+        let res = client
+            .post(&url)
+            .header(crate::continuation::CONTINUATION_TOKEN_HEADER, token)
+            .json(&json!({
+                "name": req.name,
+                "message": req.message,
+                "schedule": req.schedule,
+                "workspace": workspace,
+                "principal": req.principal,
+            }))
+            .send()
+            .await
+            .map_err(|e| RoutineError::new(StatusCode::BAD_GATEWAY, "continuation_forward_failed", e.to_string()))?;
+        if !res.status().is_success() {
+            let body = res.text().await.unwrap_or_default();
+            return Err(RoutineError::new(
+                StatusCode::BAD_GATEWAY,
+                "continuation_forward_failed",
+                body,
+            ));
+        }
+        let remote: Value = res.json().await.unwrap_or(json!({}));
+        let conn = state
+            .db
+            .connect()
+            .map_err(|e| RoutineError::new(StatusCode::INTERNAL_SERVER_ERROR, "store_error", e.to_string()))?;
+        conn.execute(
+            "INSERT INTO cowork_routines (id, user_id, workspace, principal, name, message, schedule, enabled, next_run_at, continuation)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8, 'cloud')",
+            rusqlite::params![
+                remote.get("id").and_then(|v| v.as_str()).unwrap_or(&id),
+                user.user_id,
+                workspace,
+                req.principal,
+                req.name,
+                req.message,
+                req.schedule,
+                next,
+            ],
+        )
+        .map_err(|e| RoutineError::new(StatusCode::INTERNAL_SERVER_ERROR, "store_error", e.to_string()))?;
+        return Ok(Json(json!({
+            "id": remote.get("id").and_then(|v| v.as_str()).unwrap_or(&id),
+            "continuation": "cloud",
+            "enabled": false,
+            "remote": remote,
+        })));
+    }
+    let enabled = 1;
+    let continuation = if ingest { "cloud" } else { "local" };
     conn.execute(
-        "INSERT INTO cowork_routines (id, user_id, workspace, principal, name, message, schedule, enabled, next_run_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, ?8)",
+        "INSERT INTO cowork_routines (id, user_id, workspace, principal, name, message, schedule, enabled, next_run_at, continuation)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         rusqlite::params![
             id,
             user.user_id,
@@ -124,7 +203,9 @@ async fn create_routine(
             req.name.trim(),
             req.message.trim(),
             req.schedule.trim(),
+            enabled,
             next,
+            continuation,
         ],
     )
     .map_err(|e| RoutineError::new(StatusCode::INTERNAL_SERVER_ERROR, "store_error", e.to_string()))?;
@@ -134,6 +215,7 @@ async fn create_routine(
         "schedule": req.schedule.trim(),
         "next_run_at": next,
         "enabled": true,
+        "continuation": continuation,
     })))
 }
 

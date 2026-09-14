@@ -5,7 +5,7 @@ use tracing::info;
 
 mod embedded {
     use refinery::embed_migrations;
-    // V175__cloud_continuation.sql
+    // V176__continuation_api_url.sql
     embed_migrations!("migrations");
 }
 
