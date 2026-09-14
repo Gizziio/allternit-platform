@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::core::types::AllternitEvent;
+use crate::peer::types::PeerAddress;
 
 /// Message importance. Serialized as `low` / `normal` / `high`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -27,6 +28,9 @@ pub struct TypedMessage {
     pub importance: MailImportance,
     pub ack_required: bool,
     pub body: String,
+    /// Optional peer address for cross-session delivery. When present, the
+    /// message is also enqueued on the Bus for UDS/bridge delivery.
+    pub peer_address: Option<PeerAddress>,
 }
 
 /// Normalized view over a `MessageSent` event, covering both the typed

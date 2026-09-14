@@ -1,12 +1,15 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, Row, Sqlite};
+use tokio::io::AsyncWriteExt;
+use tokio::net::UnixStream;
+use tokio::time::{sleep, Duration};
 
 use crate::core::ids::create_event_id;
 use crate::core::io::ensure_dir;
@@ -325,4 +328,92 @@ impl Bus {
 
         Ok(count)
     }
+
+    /// Run a long-loop UDS transport runner.  It polls pending Bus messages
+    /// with `transport = "uds"`, connects to the recipient socket path, sends
+    /// the JSON payload as a single newline-terminated line, and marks the
+    /// message delivered or failed.  Returns only on a fatal database error.
+    pub async fn run_uds_transport(&self) -> Result<()> {
+        loop {
+            match self.poll_pending_for_transport("uds", 10).await {
+                Ok(messages) => {
+                    if messages.is_empty() {
+                        sleep(Duration::from_millis(500)).await;
+                        continue;
+                    }
+                    for msg in messages {
+                        let socket_path = PathBuf::from(&msg.to);
+                        let result = send_uds_message(&socket_path, &msg).await;
+                        match result {
+                            Ok(()) => {
+                                if let Err(e) = self.mark_delivered(msg.id).await {
+                                    tracing::error!("bus uds: mark delivered failed: {}", e);
+                                }
+                            }
+                            Err(e) => {
+                                tracing::debug!(
+                                    "bus uds: failed to deliver message {} to {:?}: {}",
+                                    msg.id,
+                                    socket_path,
+                                    e
+                                );
+                                if let Err(e) = self.mark_failed(msg.id, &e.to_string()).await {
+                                    tracing::error!("bus uds: mark failed failed: {}", e);
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("bus uds: poll failed: {}", e);
+                    sleep(Duration::from_millis(1000)).await;
+                }
+            }
+        }
+    }
+
+    async fn poll_pending_for_transport(
+        &self,
+        transport: &str,
+        limit: usize,
+    ) -> Result<Vec<BusMessage>> {
+        let rows = sqlx::query(
+            "SELECT id, correlation_id, recipient, sender, kind, payload, transport, status, created_at
+             FROM messages
+             WHERE status = 'pending' AND transport = ?1
+             ORDER BY id ASC LIMIT ?2",
+        )
+        .bind(transport)
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut result = Vec::new();
+        for row in rows {
+            let payload_text: String = row.try_get("payload")?;
+            let payload = serde_json::from_str(&payload_text).unwrap_or(json!(null));
+            result.push(BusMessage {
+                id: row.try_get("id")?,
+                correlation_id: row.try_get("correlation_id")?,
+                to: row.try_get("recipient")?,
+                from: row.try_get("sender")?,
+                kind: row.try_get("kind")?,
+                payload,
+                transport: row.try_get("transport")?,
+                status: row.try_get("status")?,
+                created_at: row.try_get("created_at")?,
+            });
+        }
+        Ok(result)
+    }
+}
+
+async fn send_uds_message(socket_path: &PathBuf, msg: &BusMessage) -> Result<()> {
+    let mut stream = UnixStream::connect(socket_path)
+        .await
+        .with_context(|| format!("connecting to UDS {:?}", socket_path))?;
+    let line = format!("{}\n", serde_json::to_string(&msg.payload)?);
+    stream.write_all(line.as_bytes()).await?;
+    stream.flush().await?;
+    Ok(())
 }
