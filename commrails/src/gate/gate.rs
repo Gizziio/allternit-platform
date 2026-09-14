@@ -670,6 +670,8 @@ impl Gate {
             r#type: "WIHPickedUp".to_string(),
             payload: json!({
                 "wih_id": wih_id,
+                "dag_id": dag_id,
+                "node_id": node_id,
                 "agent_id": agent_id,
                 "role": opts.role,
                 "picked_up_at": Utc::now().to_rfc3339()
@@ -1150,7 +1152,7 @@ impl Gate {
             actor: gate_actor(&self.actor_id),
             scope: None,
             r#type: "WIHCloseRequested".to_string(),
-            payload: json!({ "wih_id": wih_id, "status": status, "evidence_refs": evidence_refs }),
+            payload: json!({ "wih_id": wih_id, "dag_id": dag_id, "node_id": node_id, "status": status, "evidence_refs": evidence_refs }),
             provenance: None,
         };
         self.emit(close_req).await?;
@@ -1161,7 +1163,7 @@ impl Gate {
             actor: gate_actor(&self.actor_id),
             scope: None,
             r#type: "WIHClosedSigned".to_string(),
-            payload: json!({ "wih_id": wih_id, "final_status": status, "closed_at": Utc::now().to_rfc3339() }),
+            payload: json!({ "wih_id": wih_id, "dag_id": dag_id, "node_id": node_id, "final_status": status, "closed_at": Utc::now().to_rfc3339() }),
             provenance: None,
         };
         self.emit(closed).await?;
@@ -1183,7 +1185,7 @@ impl Gate {
             actor: gate_actor(&self.actor_id),
             scope: None,
             r#type: "WIHArchived".to_string(),
-            payload: json!({ "wih_id": wih_id }),
+            payload: json!({ "wih_id": wih_id, "dag_id": dag_id, "node_id": node_id }),
             provenance: None,
         };
         self.emit(archived).await?;
