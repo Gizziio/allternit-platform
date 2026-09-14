@@ -216,6 +216,97 @@ export interface CompatibilityComputerActionRequest {
     text?: string;
     key?: string;
 }
+export interface BrowserSkillSpecSummary {
+    skill_id: string;
+    source: string;
+    valid: boolean;
+    error: string | null;
+    workflowId?: string;
+    title?: string;
+    provider?: string;
+    stepCount?: number;
+    hasNetworkTrace?: boolean;
+    networkTraceEntries?: number;
+}
+export interface BrowserSkillNetworkTraceEntry {
+    method: string;
+    host: string;
+    pathTemplate: string;
+    payloadKeysHash: string | null;
+    verifiable: boolean;
+}
+export interface BrowserSkillNetworkTrace {
+    version: number;
+    entries: BrowserSkillNetworkTraceEntry[];
+}
+export interface BrowserSkillSpecDetail {
+    workflowId?: string;
+    title?: string;
+    provider?: string;
+    schemaVersion?: string;
+    sourceRunId?: string;
+    inputCount?: number;
+    steps: Array<{
+        id?: string;
+        kind?: string;
+        target?: string;
+        reason?: string;
+    }>;
+    stepCount?: number;
+    safety: {
+        requiresApprovalFor: string[];
+        redactionCount: number;
+    };
+    networkTrace: BrowserSkillNetworkTrace | null;
+}
+export interface BrowserSkillDeviation {
+    kind: string;
+    index: number;
+    live_index: number | null;
+    expected: Partial<BrowserSkillNetworkTraceEntry>;
+    actual: Partial<BrowserSkillNetworkTraceEntry> | null;
+}
+export interface BrowserSkillVerifyResult {
+    verify_id: string;
+    status: string;
+    mode: string;
+    workflow_id?: string;
+    target_url?: string;
+    network?: {
+        status: string;
+        deviations: BrowserSkillDeviation[];
+    };
+    a11y?: {
+        added: number;
+        removed: number;
+        modified: number;
+    } | {
+        status: "unverifiable";
+    };
+    workflow_status?: string;
+    approvals?: string[];
+    grant_requests?: number;
+    receipt_id?: string;
+    receipt_hash?: string;
+    trace?: BrowserSkillNetworkTrace;
+    error?: string | null;
+}
+export interface BrowserSkillReceiptCheck {
+    verify_id: string;
+    receipt_id?: string;
+    valid: boolean;
+    stored_hash: string;
+    recomputed_hash: string;
+    tampered: boolean;
+}
+export interface StartBrowserSkillVerifyOptions {
+    /** Skill package id; the spec is read + validated server-side. */
+    skillId?: string;
+    /** Explicit spec object (server validates + distills). */
+    workflow?: Record<string, unknown>;
+    /** Absolute http(s) URL. Omit for the canned deterministic self-check. */
+    targetUrl?: string;
+}
 export declare class AllternitComputerUseClient {
     readonly baseUrl: string;
     readonly fetch: typeof fetch;
@@ -327,6 +418,35 @@ export declare class AllternitComputerUseClient {
     pauseRun(runId: string, options?: CancelOptions): Promise<unknown>;
     resumeRun(runId: string, options?: ResumeOptions): Promise<unknown>;
     watchRun(runId: string, options?: WatchRunOptions): AsyncGenerator<any, void, unknown>;
+    /**
+     * List compiled browser-workflow specs (distilled summaries, shapes only).
+     * GET /v1/browser-skills
+     */
+    listBrowserSkills(): Promise<{
+        specs: BrowserSkillSpecSummary[];
+        count: number;
+        skills_dir: string;
+    }>;
+    /** Inspect one spec's distilled shape, incl. its taught NetworkTrace. */
+    getBrowserSkill(skillId: string): Promise<{
+        skill_id: string;
+        workflow: BrowserSkillSpecDetail;
+    }>;
+    /**
+     * Run the deterministic record -> teach -> batch -> verify chain. Without
+     * a targetUrl this is the canned self-check; with one, the spec'd workflow
+     * is batch-verified against that URL. Poll with getBrowserSkillVerify.
+     */
+    startBrowserSkillVerify(options?: StartBrowserSkillVerifyOptions): Promise<{
+        verify_id: string;
+        status: string;
+        mode?: string;
+        poll?: string;
+    }>;
+    /** Fetch a stored verify verdict (network deviations, a11y, receipts). */
+    getBrowserSkillVerify(verifyId: string): Promise<BrowserSkillVerifyResult>;
+    /** Recompute the content-derived receipt hash (tamper check). */
+    checkBrowserSkillVerifyReceipt(verifyId: string): Promise<BrowserSkillReceiptCheck>;
     waitForRun(runId: string, options?: WaitForRunOptions): Promise<{
         status?: string;
     }>;
