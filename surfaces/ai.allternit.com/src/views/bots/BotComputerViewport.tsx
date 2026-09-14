@@ -41,6 +41,7 @@ import {
   type BotDesktopScreenshot,
   type BotDesktopStatus,
 } from "@/lib/bots/vm-operator";
+import { sendDesktopKeyboard, sendDesktopMouse } from "@/lib/desktop-cloud-api";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
 import { Button } from "@/components/ui/button";
 import { GlassSurface } from "@/design/GlassSurface";
@@ -48,6 +49,7 @@ import { cn } from "@/lib/utils";
 import {
   claimVnc,
   releaseVnc,
+  shouldHoldBotDesktopStream,
   subscribeVncOwner,
   type BotComputerLayout,
 } from "./bot-computer-vnc";
@@ -145,13 +147,20 @@ export function BotComputerViewport({
   const screenshotFailuresRef = useRef(0);
   const RFBModuleRef = useRef<any>(null);
   const connectedWsUrlRef = useRef<string | null>(null);
+  const [rfbConnected, setRfbConnected] = useState(false);
   const [isOnscreen, setIsOnscreen] = useState(true);
   const [pageVisible, setPageVisible] = useState(
     () => typeof document === "undefined" || !document.hidden,
   );
   // A live RFB decode of a viewport nobody can see is pure CPU burn: pause
   // both the stream and the screenshot poll until the pane is visible again.
-  const streamActive = pageVisible && (layout === "window" || isOnscreen);
+  // The dedicated window must never pause — Electron marks unfocused
+  // BrowserWindows hidden, which used to tear the stream down to a blank canvas.
+  const streamActive = shouldHoldBotDesktopStream({
+    layout,
+    pageVisible,
+    isOnscreen,
+  });
   const compact = layout !== "page";
 
   useEffect(() => {
@@ -190,13 +199,14 @@ export function BotComputerViewport({
   const vncProtocol = status?.protocol;
   const vncControlState = status?.control_state;
   const canConnectVnc =
+    layout !== "window" &&
     (vncControlState === "human_controls" || vncControlState === "human_observing") &&
     !!wsUrl &&
     vncProtocol === "vnc";
 
   const loadStatus = useCallback(async () => {
     if (!sandboxId) return;
-    if (typeof document !== "undefined" && document.hidden) return;
+    if (layout !== "window" && typeof document !== "undefined" && document.hidden) return;
     // Skip this tick instead of aborting a slow in-flight poll. The previous
     // behavior cancelled any call slower than the 5s poll interval, so a slow
     // desktop substrate (tart host under load) starved the pane: status never
@@ -219,7 +229,7 @@ export function BotComputerViewport({
     } finally {
       statusInFlightRef.current = false;
     }
-  }, [bot.id, sandboxId]);
+  }, [bot.id, sandboxId, layout]);
 
   useEffect(() => {
     if (!sandboxId) return;
@@ -231,7 +241,7 @@ export function BotComputerViewport({
     }, 5000);
 
     const onVisibility = () => {
-      if (document.hidden) {
+      if (layout !== "window" && document.hidden) {
         if (pollRef.current) {
           clearInterval(pollRef.current);
           pollRef.current = null;
@@ -251,11 +261,11 @@ export function BotComputerViewport({
       document.removeEventListener("visibilitychange", onVisibility);
       statusAbortRef.current?.abort();
     };
-  }, [loadStatus, sandboxId]);
+  }, [loadStatus, sandboxId, layout]);
 
   const loadScreenshot = useCallback(async () => {
     if (!sandboxId) return;
-    if (typeof document !== "undefined" && document.hidden) return;
+    if (layout !== "window" && typeof document !== "undefined" && document.hidden) return;
     if (screenshotInFlightRef.current) return;
 
     screenshotAbortRef.current?.abort();
@@ -281,14 +291,14 @@ export function BotComputerViewport({
       screenshotInFlightRef.current = false;
       setScreenshotLoading(false);
     }
-  }, [bot.id, sandboxId]);
+  }, [bot.id, sandboxId, layout]);
 
   useEffect(() => {
     if (!sandboxId) return;
-
-    if (canConnectVnc) {
-      setScreenshot(null);
-      screenshotFailuresRef.current = 0;
+    // Keep the last screenshot until noVNC actually paints. Clearing it on
+    // take-over left a black canvas whenever the RFB handshake lagged or
+    // Electron tore the socket down.
+    if (canConnectVnc && rfbConnected) {
       screenshotAbortRef.current?.abort();
       if (screenshotPollRef.current) {
         clearInterval(screenshotPollRef.current);
@@ -297,12 +307,12 @@ export function BotComputerViewport({
       return;
     }
 
-    const baseIntervalMs = 4000;
+    const baseIntervalMs = layout === "window" ? 400 : 4000;
     const failureBackoff = Math.min(screenshotFailuresRef.current, 5);
     const intervalMs = baseIntervalMs * (failureBackoff === 0 ? 1 : 2 ** failureBackoff);
 
     const onVisibility = () => {
-      if (document.hidden) {
+      if (layout !== "window" && document.hidden) {
         if (screenshotPollRef.current) {
           clearInterval(screenshotPollRef.current);
           screenshotPollRef.current = null;
@@ -326,7 +336,7 @@ export function BotComputerViewport({
       document.removeEventListener("visibilitychange", onVisibility);
       screenshotAbortRef.current?.abort();
     };
-  }, [status, loadScreenshot, sandboxId, streamActive, canConnectVnc]);
+  }, [status, loadScreenshot, sandboxId, streamActive, canConnectVnc, rfbConnected, layout]);
 
   const disconnectVnc = useCallback(() => {
     if (rfbRef.current) {
@@ -338,14 +348,32 @@ export function BotComputerViewport({
       rfbRef.current = null;
     }
     connectedWsUrlRef.current = null;
+    setRfbConnected(false);
   }, []);
 
   const connectVnc = useCallback(async (wsPath: string) => {
-    if (!canvasRef.current) return;
-    // The connect effect re-runs on every 5s status poll tick; reconnecting
-    // each time tears down the framebuffer, re-handshakes, and re-requests
-    // the full screen (the WebSocket close/addEventListener churn in the CPU
-    // profile). Only connect when the target URL actually changed.
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (rfbRef.current && connectedWsUrlRef.current === wsPath) return;
+    if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+      await new Promise<void>((resolve) => {
+        if (typeof ResizeObserver === "undefined") {
+          resolve();
+          return;
+        }
+        const ro = new ResizeObserver(() => {
+          if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+            ro.disconnect();
+            resolve();
+          }
+        });
+        ro.observe(canvas);
+        window.setTimeout(() => {
+          ro.disconnect();
+          resolve();
+        }, 2000);
+      });
+    }
     if (rfbRef.current && connectedWsUrlRef.current === wsPath) return;
     disconnectVnc();
 
@@ -358,47 +386,53 @@ export function BotComputerViewport({
         throw new Error("VNC viewer module is not available");
       }
       const url = wsUrlFromPath(wsPath);
-      const rfb = new RFB(canvasRef.current, url, {
+      const rfb = new RFB(canvas, url, {
         scaleViewport: true,
-        // resizeSession asks the guest to re-resolution on every container
-        // resize; in a chat pane that reflows while streaming that
-        // reallocates the framebuffer in a loop (the _allocateBuffers + GC
-        // churn from the CPU profile). Scaling the fixed-size stream to the
-        // pane is enough in this embedded context.
         resizeSession: false,
         clipViewport: false,
       });
       rfb.viewOnly = vncControlState !== "human_controls";
       rfb.focusOnClick = true;
+      if (typeof rfb.qualityLevel === "number") rfb.qualityLevel = 6;
+      rfb.addEventListener("connect", () => setRfbConnected(true));
+      rfb.addEventListener("disconnect", () => {
+        setRfbConnected(false);
+        if (rfbRef.current === rfb) {
+          rfbRef.current = null;
+          connectedWsUrlRef.current = null;
+        }
+      });
       rfbRef.current = rfb;
       connectedWsUrlRef.current = wsPath;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start VNC viewer");
+      setRfbConnected(false);
     }
   }, [disconnectVnc, vncControlState]);
 
   useEffect(() => {
-    let cancelled = false;
-    // Depend on the connection target (ws url / control / protocol), not the
-    // whole status object — getBotDesktopStatus rewrites `status` every 5s
-    // and a teardown+handshake on each tick is the WebSocket close/reconnect
-    // churn from the CPU profile.
-    const wantsVnc = streamActive && canConnectVnc;
+    if (layout !== "window" || !sandboxId) return;
+    claimVnc(sandboxId, "window");
+    return () => releaseVnc(sandboxId, "window");
+  }, [layout, sandboxId]);
+
+  useEffect(() => {
+    const wantsVnc = layout !== "window" && streamActive && canConnectVnc;
     const holdsClaim = Boolean(sandboxId && wantsVnc && claimVnc(sandboxId, layout));
     if (wantsVnc && holdsClaim && wsUrl) {
-      void connectVnc(wsUrl).then(() => {
-        if (cancelled) disconnectVnc();
-      });
+      void connectVnc(wsUrl);
     } else {
       disconnectVnc();
     }
 
     return () => {
-      cancelled = true;
       disconnectVnc();
       if (sandboxId) releaseVnc(sandboxId, layout);
     };
-  }, [wsUrl, canConnectVnc, connectVnc, disconnectVnc, sandboxId, layout, vncEpoch, streamActive]);
+    // connectVnc identity changes with control state (viewOnly). Do not
+    // tear the socket down on take-over — that is the blank-canvas bug.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wsUrl, canConnectVnc, sandboxId, layout, vncEpoch, streamActive]);
 
   useEffect(() => {
     if (rfbRef.current) {
@@ -461,6 +495,41 @@ export function BotComputerViewport({
     autoTakeoverRef.current = true;
     void handleTakeOver();
   }, [layout, sandboxId, status?.status, vncControlState]);
+
+  const handleScreenMouse = useCallback(
+    (event: React.MouseEvent<HTMLImageElement>) => {
+      if (layout !== "window" || !sandboxId) return;
+      if (vncControlState !== "human_controls") return;
+      const img = event.currentTarget;
+      const rect = img.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const naturalW = img.naturalWidth || 1280;
+      const naturalH = img.naturalHeight || 720;
+      const x = Math.round(((event.clientX - rect.left) / rect.width) * naturalW);
+      const y = Math.round(((event.clientY - rect.top) / rect.height) * naturalH);
+      const action =
+        event.type === "dblclick"
+          ? "doubleclick"
+          : event.button === 2
+            ? "rightclick"
+            : "click";
+      void sendDesktopMouse(bot.id, sandboxId, { action, x, y }).catch(() => {});
+    },
+    [layout, sandboxId, vncControlState, bot.id],
+  );
+
+  useEffect(() => {
+    if (layout !== "window" || !sandboxId) return;
+    if (vncControlState !== "human_controls") return;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      event.preventDefault();
+      void sendDesktopKeyboard(bot.id, sandboxId, { action: "key", key: event.key }).catch(() => {});
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [layout, sandboxId, vncControlState, bot.id]);
 
   const handleHandBack = async () => {
     if (!sandboxId) return;
@@ -718,11 +787,24 @@ export function BotComputerViewport({
           style={{ width: "100%", height: "100%" }}
         />
 
-        {(!isHumanControl && !isObserving) && screenshot && !screenshotLoading && (
+        {screenshot && (layout === "window" || !rfbConnected) && (
           <img
             src={`data:${screenshot.mime};base64,${screenshot.png}`}
             alt={`${displayName}'s desktop preview`}
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            onMouseDown={layout === "window" ? handleScreenMouse : undefined}
+            onDoubleClick={layout === "window" ? handleScreenMouse : undefined}
+            onContextMenu={
+              layout === "window"
+                ? (event) => {
+                    event.preventDefault();
+                    handleScreenMouse(event);
+                  }
+                : undefined
+            }
+            className={cn(
+              "absolute inset-0 w-full h-full object-contain",
+              layout === "window" ? "cursor-crosshair" : "pointer-events-none",
+            )}
           />
         )}
 

@@ -398,9 +398,9 @@ Transport does not redefine principal identity, run state, attribution, or appro
 
 ### Implemented in the consumer reach + release pass (P4/P5, 2026-09-14)
 
-- **iOS fabric approvals** — Swift `FabricTransportClient` +
-  `FabricApprovalsView` (grant/deny + run timeline). Cloud continuation
-  remains out of v1.
+- **iOS fabric approvals** — Swift sources exist (`FabricTransportClient` +
+  `FabricApprovalsView`). Not simulator-verified. Not a shipped iOS
+  approvals inbox.
 - **Routines** — `/api/v1/cowork/routines` tick fires a canonical
   attributed intent per due schedule; Cowork Fabric Transport view
   creates/runs/deletes them.
@@ -408,17 +408,13 @@ Transport does not redefine principal identity, run state, attribution, or appro
   auto-update target; preflight refuses a mismatch. Signed/notarized
   `desktop-v1.2.0` remains an owner action (Apple secrets).
 
-### Implemented in cloud continuation (E6, session/cloudcont-0914)
+### Cloud continuation (E6) — NOT a finished product path
 
-- **`compute.cloud` placement** — opt-in preference and Al/routine
-  intents with that policy are only claimable by
-  `a://workspace/{ws}/principal/gizzi-cloud`. Laptop `gizzi` cannot
-  reclaim after handoff.
-- **Handoff API** — continue-in-cloud on job/run/all-in-flight; desktop
-  quit calls handoff-all while the local API is still up. Ingest replays
-  an envelope onto an always-on data-plane.
-- **Honest limit** — local folder grants do not upload; cloud worker
-  filesystem is `ALLTERNIT_CLOUD_WORKSPACE` on the always-on host.
+session/e6-0914: laptop quit POSTs ingest (envelope + bounded folder copy)
+to `ALLTERNIT_CONTINUATION_API_URL` with a shared token; missing config is
+409. Cloud routines are created on that API. The desktop still does **not**
+launch the always-on host or its `gizzi-cloud` worker. Without those
+already running, closing the laptop still stops the work.
 
 Live behavioral evidence for all six items (vm-job claim grant/refusal,
 boundary projection refusal, brokered files read/write + approval gate +

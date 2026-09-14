@@ -1017,6 +1017,9 @@ fn require_user_or_desktop(
     if crate::auth::verify_desktop_access_token(headers, &state.config) {
         return Ok(());
     }
+    if crate::continuation::verify_continuation_token(headers, &state.config) {
+        return Ok(());
+    }
     Err(ErrorResponse {
         error: "authentication required".to_string(),
         code: 401,
@@ -1048,37 +1051,124 @@ async fn continue_run_in_cloud(
     Ok(Json(json!({ "run_id": run_id, "jobs": jobs })))
 }
 
-/// Desktop quit: promote every in-flight job so an always-on cloud worker
-/// can claim them (same API) or an ingest target can replay them.
+/// Desktop quit: retag in-flight jobs AND POST them to the always-on API.
+/// Fail closed (409) when jobs exist but no continuation URL/token is set.
 async fn handoff_all_in_flight(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, ErrorResponse> {
     require_user_or_desktop(&state, &headers)?;
+    let user = crate::auth::get_user(&headers);
     let mut conn = state.db.connect().map_err(db_error)?;
     let jobs = sqlite_store::handoff_all_in_flight(&mut conn).map_err(transport_err)?;
-    info!(count = jobs.len(), "In-flight jobs handed off to cloud continuation");
-    Ok(Json(json!({ "jobs": jobs })))
+    if jobs.is_empty() {
+        return Ok(Json(json!({ "jobs": jobs, "forwarded": 0 })));
+    }
+    let prefs_url = user.as_ref().and_then(|u| {
+        conn.query_row(
+            "SELECT continuation_api_url FROM user_cowork_preferences WHERE user_id = ?1",
+            rusqlite::params![u.user_id],
+            |r| r.get::<_, Option<String>>(0),
+        )
+        .ok()
+        .flatten()
+    });
+    let Some(target) = crate::continuation::resolve_target(&state.config, prefs_url.as_deref())
+    else {
+        return Err(ErrorResponse {
+            error: "cloud continuation is not configured: set ALLTERNIT_CONTINUATION_API_URL (always-on allternit-api) and ALLTERNIT_CONTINUATION_TOKEN. Jobs were only retagged locally; this API is about to stop.".to_string(),
+            code: 409,
+        });
+    };
+    let folders: Vec<String> = user
+        .as_ref()
+        .and_then(|u| {
+            conn.query_row(
+                "SELECT trusted_folders FROM user_cowork_preferences WHERE user_id = ?1",
+                rusqlite::params![u.user_id],
+                |r| r.get::<_, String>(0),
+            )
+            .ok()
+        })
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_default();
+    drop(conn);
+    let files = crate::continuation::pack_trusted_folders(&folders).unwrap_or_default();
+    let bundles: Vec<crate::continuation::ContinuationBundle> = jobs
+        .iter()
+        .filter_map(|j| {
+            j.envelope.clone().map(|envelope| crate::continuation::ContinuationBundle {
+                envelope,
+                files: files.clone(),
+            })
+        })
+        .collect();
+    if bundles.is_empty() {
+        return Err(ErrorResponse {
+            error: "in-flight jobs have no intent envelopes to replay on the always-on API".to_string(),
+            code: 409,
+        });
+    }
+    let forwarded = crate::continuation::forward_bundles(&state.config, &target, &bundles)
+        .await
+        .map_err(|e| ErrorResponse {
+            error: format!("continuation ingest failed: {e}"),
+            code: 502,
+        })?;
+    info!(count = jobs.len(), forwarded, target = %target, "In-flight jobs forwarded to always-on continuation API");
+    Ok(Json(json!({ "jobs": jobs, "forwarded": forwarded, "target": target })))
 }
 
-/// Replay an intent onto this API as a cloud-continuation job. Used when
-/// the laptop API is going away and an always-on data-plane is the target.
+#[derive(Debug, serde::Deserialize)]
+#[serde(untagged)]
+enum IngestBody {
+    Bundle(crate::continuation::ContinuationBundle),
+    Envelope(allternit_cowork_runtime::IntentEnvelope),
+}
+
+/// Replay an intent onto this always-on API. Auth: user, desktop, or
+/// `x-allternit-continuation-token`.
 async fn ingest_continuation(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    Json(mut envelope): Json<allternit_cowork_runtime::IntentEnvelope>,
-) -> Result<Json<allternit_cowork_runtime::IntentSubmission>, ErrorResponse> {
+    Json(body): Json<IngestBody>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
     require_user_or_desktop(&state, &headers)?;
+    let (mut envelope, files) = match body {
+        IngestBody::Bundle(b) => {
+            let env: allternit_cowork_runtime::IntentEnvelope =
+                serde_json::from_value(b.envelope).map_err(|e| ErrorResponse {
+                    error: format!("invalid envelope: {e}"),
+                    code: 400,
+                })?;
+            (env, b.files)
+        }
+        IngestBody::Envelope(env) => (env, Vec::new()),
+    };
     envelope.compute = Some(json!({ "policy": "cloud" }));
     if envelope.intent_id.is_empty() {
         envelope.intent_id = format!("cont_{}", uuid::Uuid::new_v4());
     } else if !envelope.intent_id.starts_with("cont_") {
         envelope.intent_id = format!("cont_{}", envelope.intent_id);
     }
+    let written = if files.is_empty() {
+        0
+    } else {
+        crate::continuation::write_ingested_files(&state.config.cloud_workspace_dir(), &files)
+            .map_err(|e| ErrorResponse {
+                error: format!("folder handoff write failed: {e}"),
+                code: 500,
+            })?
+    };
     let user = crate::auth::get_user(&headers);
     let mut conn = state.db.connect().map_err(db_error)?;
     let owner = user.as_ref().map(|u| u.user_id.as_str());
     let submission = sqlite_store::submit_intent_for_user(&mut conn, &envelope, owner)
         .map_err(transport_err)?;
-    Ok(Json(submission))
+    Ok(Json(json!({
+        "intent_id": submission.intent_id,
+        "run_id": submission.run_id,
+        "created": submission.created,
+        "files_written": written,
+    })))
 }

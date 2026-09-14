@@ -17,6 +17,7 @@
  *                                                        → ReceiptCheck
  */
 
+import { cloudApiUrl } from "@/lib/cloud-api";
 import { getPlatformComputerUseBaseUrl } from "@/integration/computer-use-engine";
 
 // ============================================================================
@@ -135,6 +136,50 @@ function gatewayBase(): string {
   return getPlatformComputerUseBaseUrl().replace(/\/+$/, "");
 }
 
+/** Fetch a `/v1/browser-skills…` path. Default hits the local ACU gateway. */
+export type WorkflowsFetch = (path: string, init?: RequestInit) => Promise<Response>;
+
+export interface WorkflowsCallOptions {
+  fetch?: WorkflowsFetch;
+}
+
+/**
+ * Fabric Transport PWA transport: relay `/v1/browser-skills` through the
+ * paired machine (desktop maps that path to the ACU gateway on :8760).
+ */
+export function createFabricWorkflowsFetch(
+  runtimeId: string,
+  getToken: () => Promise<string | null>,
+): WorkflowsFetch {
+  return async (path, init) => {
+    const token = await getToken();
+    if (!token) {
+      return new Response(JSON.stringify({ detail: "Sign in required" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const method = (init?.method ?? "GET").toUpperCase();
+    const rawBody = init?.body;
+    const body = typeof rawBody === "string" ? rawBody : rawBody ? String(rawBody) : "";
+    return fetch(cloudApiUrl(`/api/v1/runtime-devices/${encodeURIComponent(runtimeId)}/proxy`), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        method,
+        path,
+        body,
+        bodyEncoding: "utf8",
+      }),
+      signal: init?.signal,
+    });
+  };
+}
+
 async function readErrorMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { detail?: unknown; message?: unknown; error?: unknown };
@@ -147,8 +192,13 @@ async function readErrorMessage(response: Response): Promise<string> {
   return `HTTP ${response.status}`;
 }
 
-async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${gatewayBase()}${path}`, {
+async function requestJson<T>(
+  path: string,
+  init: RequestInit = {},
+  options?: WorkflowsCallOptions,
+): Promise<T> {
+  const doFetch = options?.fetch ?? ((p, i) => fetch(`${gatewayBase()}${p}`, i));
+  const response = await doFetch(path, {
     ...init,
     headers: {
       Accept: "application/json",
@@ -166,14 +216,25 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
 // API
 // ============================================================================
 
-export async function listWorkflowSpecs(): Promise<WorkflowSpecSummary[]> {
-  const body = await requestJson<{ specs?: WorkflowSpecSummary[] }>("/v1/browser-skills");
+export async function listWorkflowSpecs(
+  options?: WorkflowsCallOptions,
+): Promise<WorkflowSpecSummary[]> {
+  const body = await requestJson<{ specs?: WorkflowSpecSummary[] }>(
+    "/v1/browser-skills",
+    {},
+    options,
+  );
   return Array.isArray(body.specs) ? body.specs : [];
 }
 
-export async function getWorkflowSpecDetail(skillId: string): Promise<WorkflowSpecDetail> {
+export async function getWorkflowSpecDetail(
+  skillId: string,
+  options?: WorkflowsCallOptions,
+): Promise<WorkflowSpecDetail> {
   const body = await requestJson<{ workflow?: WorkflowSpecDetail }>(
     `/v1/browser-skills/${encodeURIComponent(skillId)}`,
+    {},
+    options,
   );
   return (
     body.workflow ?? {
@@ -193,24 +254,43 @@ export interface StartVerifyOptions {
   targetUrl?: string;
 }
 
-export async function startWorkflowVerify(options: StartVerifyOptions): Promise<VerifyStart> {
+export async function startWorkflowVerify(
+  options: StartVerifyOptions,
+  call?: WorkflowsCallOptions,
+): Promise<VerifyStart> {
   const body: Record<string, unknown> = {};
   if (options.skillId) body.skill_id = options.skillId;
   if (options.workflow) body.workflow = options.workflow;
   if (options.targetUrl) body.target_url = options.targetUrl;
-  return requestJson<VerifyStart>("/v1/browser-skills/verify", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+  return requestJson<VerifyStart>(
+    "/v1/browser-skills/verify",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+    call,
+  );
 }
 
-export async function getVerifyResult(verifyId: string): Promise<VerifyResult> {
-  return requestJson<VerifyResult>(`/v1/browser-skills/verify/${encodeURIComponent(verifyId)}`);
+export async function getVerifyResult(
+  verifyId: string,
+  call?: WorkflowsCallOptions,
+): Promise<VerifyResult> {
+  return requestJson<VerifyResult>(
+    `/v1/browser-skills/verify/${encodeURIComponent(verifyId)}`,
+    {},
+    call,
+  );
 }
 
-export async function checkVerifyReceipt(verifyId: string): Promise<ReceiptCheck> {
+export async function checkVerifyReceipt(
+  verifyId: string,
+  call?: WorkflowsCallOptions,
+): Promise<ReceiptCheck> {
   return requestJson<ReceiptCheck>(
     `/v1/browser-skills/verify/${encodeURIComponent(verifyId)}/receipt/check`,
+    {},
+    call,
   );
 }
 
@@ -233,11 +313,13 @@ export async function pollVerifyUntilTerminal(
     maxPolls?: number;
     signal?: AbortSignal;
     onUpdate?: (result: VerifyResult) => void;
+    fetch?: WorkflowsFetch;
   } = {},
 ): Promise<VerifyResult> {
   const intervalMs = options.intervalMs ?? 2000;
   const maxPolls = options.maxPolls ?? 90;
-  let last = await getVerifyResult(verifyId);
+  const call = options.fetch ? { fetch: options.fetch } : undefined;
+  let last = await getVerifyResult(verifyId, call);
   options.onUpdate?.(last);
 
   for (let i = 0; i < maxPolls; i += 1) {
@@ -245,7 +327,7 @@ export async function pollVerifyUntilTerminal(
     if (options.signal?.aborted) return last;
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
     if (options.signal?.aborted) return last;
-    last = await getVerifyResult(verifyId);
+    last = await getVerifyResult(verifyId, call);
     options.onUpdate?.(last);
   }
   return last;

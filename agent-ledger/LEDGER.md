@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 13:10 — grok — Status correction: E6 is not a finished feature
+
+- **Session ID / Branch:** `session/status-honest-0914`
+- **Agent:** grok
+- **Summary:** #521 landed a placement/handoff substrate. Tracking had marked E6 CLOSED (bounded). That overstated it. E6 is OPEN. Closing the laptop still stops the work.
+- **How it works:** Docs, changelog, and Fabric Transport labels now say substrate / not shipped. Quit log no longer implies remote ingest ran.
+- **Outstanding work:** Always-on worker the desktop starts; real remote ingest on quit; folder upload; laptop-closed routine ticks; iOS Grant/Deny simulator proof.
+
 ### 2026-09-14 12:44 — grok — Cloud continuation (compute.cloud handoff)
 
 - **Session ID / Branch:** `session/cloudcont-0914`

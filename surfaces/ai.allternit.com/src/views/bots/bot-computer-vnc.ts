@@ -7,6 +7,17 @@
 
 export type BotComputerLayout = "page" | "pane" | "aci" | "strip" | "window";
 
+/** Dedicated computer window must keep streaming even if Electron marks the
+ *  document hidden (unfocused) or the canvas hasn't intersected yet. */
+export function shouldHoldBotDesktopStream(opts: {
+  layout: BotComputerLayout;
+  pageVisible: boolean;
+  isOnscreen: boolean;
+}): boolean {
+  if (opts.layout === "window") return true;
+  return opts.pageVisible && opts.isOnscreen;
+}
+
 const PRIORITY: Record<BotComputerLayout, number> = {
   window: 4,
   aci: 3,

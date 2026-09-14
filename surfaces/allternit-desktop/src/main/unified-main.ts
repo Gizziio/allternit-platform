@@ -2213,15 +2213,15 @@ async function handoffInFlightToCloud(): Promise<void> {
       headers: { ...headers, 'content-type': 'application/json' },
     });
     if (!res.ok) {
-      log.warn(`[Main] cloud continuation handoff: ${res.status}`);
+      const body = await res.text().catch(() => '');
+      log.error(`[Main] cloud continuation handoff failed: ${res.status} ${body.slice(0, 400)}`);
       return;
     }
-    const body = (await res.json()) as { jobs?: Array<{ job_id: string }> };
-    log.info(`[Main] cloud continuation handed off ${body.jobs?.length ?? 0} in-flight job(s)`);
-    const target = process.env.ALLTERNIT_CONTINUATION_API_URL;
-    if (target && body.jobs && body.jobs.length > 0) {
-      log.info(`[Main] continuation ingest target set (${target}); jobs are queued as compute.cloud on this API — ingest is the remote data-plane's POST /continuation/ingest`);
-    }
+    const body = (await res.json()) as { jobs?: Array<{ job_id: string }>; forwarded?: number; target?: string };
+    log.info(
+      `[Main] cloud continuation forwarded ${body.forwarded ?? 0}/${body.jobs?.length ?? 0} job(s)` +
+        (body.target ? ` to ${body.target}` : ''),
+    );
   } catch (err) {
     log.warn('[Main] cloud continuation handoff failed', err);
   }
@@ -3087,7 +3087,7 @@ ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; work
   void sessionWindow.loadURL(url.toString());
 });
 
-ipcMain.handle('shell:open-bot-computer', (_event, options: { botId: string; title?: string }) => {
+ipcMain.handle('shell:open-bot-computer', (_event, options: { botId: string; title?: string; sandboxId?: string }) => {
   if (!options?.botId) throw new Error('A bot ID is required');
 
   const existing = botComputerWindows.get(options.botId);
@@ -3112,10 +3112,12 @@ ipcMain.handle('shell:open-bot-computer', (_event, options: { botId: string; tit
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      backgroundThrottling: false,
     },
   });
 
   installWillNavigateGuard(computerWindow.webContents);
+  computerWindow.webContents.setBackgroundThrottling(false);
   botComputerWindows.set(options.botId, computerWindow);
 
   const url = buildBotComputerWindowUrl(activePlatformUrl, options);

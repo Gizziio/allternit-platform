@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { claimVnc, getVncOwner, releaseVnc } from "./bot-computer-vnc";
+import { claimVnc, getVncOwner, releaseVnc, shouldHoldBotDesktopStream } from "./bot-computer-vnc";
 
 afterEach(() => {
   const owner = getVncOwner();
@@ -25,6 +25,18 @@ describe("bot-computer-vnc", () => {
     expect(getVncOwner()).toEqual({ sandboxId: "sb-1", layout: "window" });
     expect(claimVnc("sb-1", "aci")).toBe(false);
     expect(claimVnc("sb-1", "pane")).toBe(false);
+  });
+
+  it("keeps the detached window streaming when the page is hidden or offscreen", () => {
+    expect(
+      shouldHoldBotDesktopStream({ layout: "window", pageVisible: false, isOnscreen: false }),
+    ).toBe(true);
+    expect(
+      shouldHoldBotDesktopStream({ layout: "pane", pageVisible: false, isOnscreen: true }),
+    ).toBe(false);
+    expect(
+      shouldHoldBotDesktopStream({ layout: "pane", pageVisible: true, isOnscreen: true }),
+    ).toBe(true);
   });
 
   it("releases so a lower-priority host can reconnect", () => {

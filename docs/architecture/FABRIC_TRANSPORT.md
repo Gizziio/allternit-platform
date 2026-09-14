@@ -402,34 +402,37 @@ The manual flow (`ALLTERNIT_GIZZI_TOKEN=… bun worker-daemon-entry.ts`, or
   for a chat turn; payload carries `agentic.task` = the routine message).
   Failed fires back off 5 minutes and do not skip.
 
-## 15d. Cloud continuation (consumer E6)
+## 15d. Cloud continuation substrate (E6 — NOT a finished feature)
 
-Work that must survive the laptop worker dying is placed with
-`compute: { "policy": "cloud" }` → mandatory capability `compute.cloud`.
-The laptop `gizzi` principal declares only `compute.local`, so it cannot
-claim these jobs. The always-on principal
-`a://workspace/{ws}/principal/gizzi-cloud` (`ensure` with `kind=cloud`,
-`GIZZI_COMPUTE_MODE=cloud`) claims them.
+Status: **open**. Placement and handoff APIs exist. A user cannot close the
+laptop and have the job keep running. Do not describe this as shipped.
 
-Handoff of an in-flight local job:
+What is in the tree:
 
-- `POST /fabric/transport/jobs/:id/continue-in-cloud`
-- `POST /fabric/transport/runs/:id/continue-in-cloud`
-- `POST /fabric/transport/continuation/handoff-all` (desktop `before-quit`)
+- `compute: { "policy": "cloud" }` → mandatory `compute.cloud`
+- laptop `gizzi` has `compute.local` only, so it cannot claim those jobs
+- `a://workspace/{ws}/principal/gizzi-cloud` (`kind=cloud`) is the
+  intended always-on claimant
+- `POST …/continue-in-cloud` and `…/continuation/handoff-all` retag
+  in-flight jobs on **this** API
 
-Each call drops the local lease, strips `compute.local`, adds
-`compute.cloud`, and records `continuation.handed_off`. Identity and
-attribution are unchanged.
+What now happens when a target is configured:
 
-Cross-API replay (laptop API going away):
-`POST /fabric/transport/continuation/ingest` on the always-on data-plane
-with the original envelope. `ALLTERNIT_CONTINUATION_API_URL` is the
-operator-configured target.
+- Quit calls `handoff-all`, which POSTs each intent envelope plus a
+  bounded copy of granted folders (skip symlinks, skip files > 1 MiB,
+  cap 20 MiB) to `{url}/api/v1/fabric/transport/continuation/ingest`
+  with `x-allternit-continuation-token`.
+- Enabling the preference or creating a cloud routine without URL+token
+  returns 409.
+- Cloud-continuation routines are inserted on the remote API (local
+  copy is `enabled=0` so the laptop does not tick them).
 
-Honest limits: granted local folders do not follow the job (no upload).
-The cloud worker uses `ALLTERNIT_CLOUD_WORKSPACE` on the always-on host.
-Scheduled ticks still need that API process to be running — a sleeping
-laptop sidecar cannot fire routines.
+What is still operator-owned:
+
+- An always-on allternit-api must already be running.
+- `gizzi-code fabric-worker --compute-mode cloud` must already be
+  running against that API. The desktop does not start it.
+- Folders larger than the cap are not uploaded.
 
 ## 15c. Release engineering (consumer P5)
 

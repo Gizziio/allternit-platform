@@ -450,6 +450,42 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
     }
 
+    /// Always-on allternit-api that receives cloud-continuation ingest.
+    /// Without this, enabling cloud continuation must fail closed.
+    pub fn continuation_api_url(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_CONTINUATION_API_URL")
+            .ok()
+            .map(|s| s.trim().trim_end_matches('/').to_string())
+            .filter(|s| !s.is_empty())
+    }
+
+    /// Shared secret for laptop → always-on ingest (`x-allternit-continuation-token`).
+    pub fn continuation_token(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_CONTINUATION_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
+    }
+
+    /// Workspace directory the always-on cloud worker may write (folder handoff).
+    pub fn cloud_workspace_dir(&self) -> PathBuf {
+        std::env::var("ALLTERNIT_CLOUD_WORKSPACE")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                let root = std::env::var("ALLTERNIT_DATA_DIR")
+                    .ok()
+                    .filter(|s| !s.is_empty())
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| {
+                        dirs::home_dir()
+                            .unwrap_or_else(|| PathBuf::from("."))
+                            .join(".allternit")
+                    });
+                root.join("cloud-workspace")
+            })
+    }
+
     /// One-time setup token for self-hosted deployments. When configured, the
     /// onboarding wizard can authenticate its save-config call by sending this
     /// value in the `X-Allternit-Self-Hosted-Token` header, bypassing Clerk JWT

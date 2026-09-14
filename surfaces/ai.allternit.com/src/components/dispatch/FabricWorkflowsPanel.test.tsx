@@ -1,5 +1,5 @@
 // ============================================================================
-// FabricTransportView — Workflows section (cu29): workflow specs, taught
+// FabricWorkflowsPanel — same tests as the in-app view, extracted for the PWA: workflow specs, taught
 // NetworkTrace, self-check / target verify, verdict + receipt tamper check.
 // ============================================================================
 
@@ -7,7 +7,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ToastProvider } from '@/components/ui/toast-provider';
-import { FabricTransportView } from './FabricTransportView';
+import { FabricWorkflowsPanel } from '@/components/dispatch/FabricWorkflowsPanel';
 import {
   listWorkflowSpecs,
   getWorkflowSpecDetail,
@@ -116,12 +116,12 @@ const PASS_RESULT = {
 function renderView() {
   return render(
     <ToastProvider>
-      <FabricTransportView />
+      <FabricWorkflowsPanel />
     </ToastProvider>,
   );
 }
 
-describe('FabricTransportView — Workflows section', () => {
+describe('FabricWorkflowsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockListSpecs.mockResolvedValue([SPEC_SUMMARY]);
@@ -196,5 +196,15 @@ describe('FabricTransportView — Workflows section', () => {
     });
     fireEvent.click(screen.getByText('Verify against target'));
     expect(mockStartVerify).not.toHaveBeenCalled();
+  });
+
+  it('shows the unavailable reason instead of hitting the gateway', async () => {
+    render(
+      <ToastProvider>
+        <FabricWorkflowsPanel unavailable="Open a paired machine running Allternit Desktop." />
+      </ToastProvider>,
+    );
+    expect(await screen.findByText(/Open a paired machine/)).toBeTruthy();
+    expect(mockListSpecs).not.toHaveBeenCalled();
   });
 });

@@ -26,20 +26,26 @@ partial one. Verdicts are deterministic; nothing is fuzzy.
 
 ## Console (surfaces/ai.allternit.com — the `ui/` mirror)
 
-The console home for this capability is the **live Fabric Transport view**
-(`src/views/FabricTransportView.tsx`), served by `src/shell/ViewRegistry.tsx`
-for both the `remote-control` and `fabric-session` view ids. It carries a
-**Workflows (record → teach → batch → verify)** section (cu28 landed the panel
-in the legacy `src/remote-control/` tree by mistake; cu29 moved it here):
-spec list, NetworkTrace inspection, self-check / target verify runners,
-verdict rendering (deviations, a11y, receipt hash + tamper check). The typed
-client is `src/lib/browser-skills-api.ts`; it reuses
-`getPlatformComputerUseBaseUrl()` from `src/integration/computer-use-engine.ts`,
-so it follows the same override chain as Recordings (manual override →
-electron-injected base URL → `http://127.0.0.1:8760`).
+The in-app control surface is `src/views/FabricTransportView.tsx` (ViewRegistry
+ids `fabric-session` / `remote-control` / `dispatch` all render it). It carries
+a **Workflows (record → teach → batch → verify)** section: spec list,
+NetworkTrace inspection, self-check / target verify, verdict + receipt check.
+Typed client: `src/lib/browser-skills-api.ts`. On this surface the client
+hits the local ACU gateway (`getPlatformComputerUseBaseUrl()`, default
+`http://127.0.0.1:8760`).
+
+## Fabric Transport PWA (`src/fabric-session/`)
+
+The PWA dashboard (`pages/DashboardPage.tsx` at fabrictransport.allternit.com)
+hosts the same `FabricWorkflowsPanel`. Calls go through
+`POST /api/v1/runtime-devices/:id/proxy` with path `/v1/browser-skills…`.
+Allternit Desktop's relay maps that path to the ACU gateway on `:8760`
+(same class as the Desktop drive mapping `/v1/remote-control/desktop` →
+capture on `:8477`). The capture helper is not a separate product — it is
+the Desktop drive's local backend.
 
 The legacy `src/remote-control/` tree (own `main.tsx`, old branding) is
-**out of scope**: it stays untouched legacy and does not surface this panel.
+**out of scope**: it stays untouched and does not surface this panel.
 
 ## SDK (sdk/allternit-sdk — `@allternit/sdk/computer-use`)
 
@@ -62,11 +68,8 @@ computer-use view of its own** (only main-process gateway/driver management),
 so per the cu28 scope no desktop-native UI was added — the console panel is
 the desktop surface.
 
-## Phone-remote (surfaces/phone-remote)
+## Capture helper (`surfaces/phone-remote`)
 
-The phone-remote client (`client/app.js`, vanilla JS) is a screen/mirror
-remote with **no computer-use view and no ACU client config at all** — there
-is nothing to wire. If a future phone view needs verify status, it should
-call the same routes through the SDK methods above against the paired
-machine's gateway base URL; that is a deliberate deferral, not a gap in the
-API surface.
+Local JPEG capture + HID input used by Fabric Transport's **Desktop** drive.
+Not a product surface. Workflows live on the Fabric Transport PWA dashboard
+and the in-app Fabric Transport view, not in this helper.

@@ -129,6 +129,7 @@ fn continue_in_cloud_strips_local_and_refuses_laptop_worker() {
 
     let outcome = sqlite_store::continue_job_in_cloud(&mut conn, &job_id).unwrap();
     assert_eq!(outcome.state, "queued");
+    assert!(outcome.envelope.is_none(), "enqueue_job path has no intent envelope");
     assert!(outcome.required_capabilities.contains(&"compute.cloud".to_string()));
     assert!(!outcome.required_capabilities.contains(&"compute.local".to_string()));
 

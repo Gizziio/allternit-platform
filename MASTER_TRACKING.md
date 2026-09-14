@@ -522,15 +522,17 @@ owner reviews and merges — no self-merge.
   attributed timeline. Live: chat "write a summary report" → weekly-summary.docx
   attached by the worker, previewed, unzipped, exported.
   `tmp/p3-evidence/`.
-- **P4 CLOSED** — reach: iOS `FabricTransportClient` +
-  `FabricApprovalsView` (grant/deny + run timeline from Cowork launchpad);
-  routines table + `/api/v1/cowork/routines` CRUD + run-now + 30s tick
-  that submits a canonical intent (message is the agentic task; failed
-  fires back off 5 min). Desktop FabricTransportView Routines section.
-- **E6 CLOSED (bounded)** — cloud continuation: `compute.cloud` jobs,
-  `gizzi-cloud` principal, continue-in-cloud / handoff-all / ingest,
-  desktop quit handoff, preference toggle. Local folder grants do not
-  upload; always-on API still required for laptop-closed schedules.
+- **P4 PARTIAL** — desktop Routines section and routines API are in.
+  iOS `FabricTransportClient` / `FabricApprovalsView` source is in the
+  Xcode project; Grant/Deny was **not** click-tested on a simulator
+  (Mesh.xcframework blocked that pass). Do not treat iOS reach as shipped.
+- **E6 PARTIAL** — laptop side now **fails closed** without
+  `ALLTERNIT_CONTINUATION_API_URL` + `ALLTERNIT_CONTINUATION_TOKEN`, and
+  quit **POSTs ingest** (envelope + bounded trusted-folder copy) to that
+  API. Cloud-continuation routines are created on the remote API (local
+  row is a disabled pointer). Still operator-owned: someone must run
+  `gizzi-code fabric-worker --compute-mode cloud` against the always-on
+  API. The desktop does not provision that host.
 - **P5 PARTIAL** — updater feed locked to `Gizziio/desktop` (publish +
   `updateElectronApp` + manifest + preflight mismatch gate). Signing /
   notarization / cutting `desktop-v1.2.0` is an owner action (Apple
