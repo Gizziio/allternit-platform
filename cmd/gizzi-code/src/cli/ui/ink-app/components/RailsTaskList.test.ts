@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import {
   actionableKindFor,
+  actionsFor,
   clampSelectionIndex,
   closeEvidenceFor,
   reparentCandidates,
+  type RowAction,
 } from './RailsTaskList.js'
 
 describe('actionableKindFor', () => {
@@ -154,5 +156,40 @@ describe('reparentCandidates', () => {
       'a',
       'b',
     ])
+  })
+})
+
+describe('actionsFor', () => {
+  const me = 'gizzi-session-1'
+  const BASE: RowAction[] = ['edit', 'delete', 'reparent']
+
+  test('READY rows offer take plus the base actions', () => {
+    expect(actionsFor('READY', null, me)).toEqual(['take', ...BASE])
+    expect(actionsFor('READY', 'someone-else', me)).toEqual(['take', ...BASE])
+  })
+
+  test('RUNNING rows owned by this peer offer done/fail plus base', () => {
+    expect(actionsFor('RUNNING', me, me)).toEqual(['done', 'fail', ...BASE])
+  })
+
+  test('RUNNING rows owned by another agent offer only the base actions', () => {
+    expect(actionsFor('RUNNING', 'other-agent', me)).toEqual(BASE)
+  })
+
+  test('RUNNING without an agent id offers only the base actions', () => {
+    expect(actionsFor('RUNNING', null, null)).toEqual(BASE)
+  })
+
+  test('non-actionable statuses still offer edit/delete/reparent', () => {
+    expect(actionsFor('NEW', null, me)).toEqual(BASE)
+    expect(actionsFor('DONE', null, me)).toEqual(BASE)
+    expect(actionsFor('FAILED', null, me)).toEqual(BASE)
+    expect(actionsFor('BLOCKED', null, me)).toEqual(BASE)
+  })
+
+  test('status matches case-insensitively', () => {
+    expect(actionsFor('ready', null, me)).toEqual(['take', ...BASE])
+    expect(actionsFor('running', me, me)).toEqual(['done', 'fail', ...BASE])
+    expect(actionsFor('done', null, me)).toEqual(BASE)
   })
 })
