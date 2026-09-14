@@ -1044,6 +1044,44 @@ async fn main() {
                 allternit_api::cors::origin_gate,
             ))
     };
+        app = app.merge(background_router(Arc::new(bstate)));
+    }
+
+    // Apply CORS for local dev. Mirror the request origin and allow
+    // credentials: a wildcard origin is rejected by browsers whenever the
+    // client uses `credentials: 'include'`, which the local UIs do.
+    let app = app.layer(
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::mirror_request())
+            .allow_credentials(true)
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::PATCH,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_headers([
+                header::ACCEPT,
+                header::AUTHORIZATION,
+                header::CONTENT_TYPE,
+                header::ORIGIN,
+                HeaderName::from_static("x-client-version"),
+                HeaderName::from_static("x-allternit-desktop-access-token"),
+                HeaderName::from_static("x-allternit-user-id"),
+                HeaderName::from_static("x-allternit-user-email"),
+                HeaderName::from_static("x-allternit-user-name"),
+                HeaderName::from_static("x-allternit-tenant-id"),
+                // OfficeCLI document upload headers (browser taskpane)
+                HeaderName::from_static("x-office-filename"),
+                HeaderName::from_static("x-office-host"),
+                HeaderName::from_static("x-office-binding-id"),
+                // LLM gateway (OpenAI-compatible /v1 surface)
+                HeaderName::from_static("idempotency-key"),
+                HeaderName::from_static("x-allternit-session-id"),
+            ]),
+    );
 
     // Record request metrics for all non-preflight requests
     let app = app.layer(axum::middleware::from_fn(
