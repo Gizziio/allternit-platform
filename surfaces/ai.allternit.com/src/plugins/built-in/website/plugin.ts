@@ -21,7 +21,7 @@ export interface WebsiteConfig extends PluginConfig {
   defaultStack?: 'react' | 'nextjs' | 'vue' | 'html';
   includeTailwind?: boolean;
   includeAnimations?: boolean;
-  deploymentTarget?: 'vercel' | 'netlify' | 'static';
+  deploymentTarget?: 'cloudflare' | 'netlify' | 'static';
 }
 
 export interface WebsiteProject {
@@ -58,7 +58,7 @@ class WebsitePlugin implements ModePlugin {
     defaultStack: 'nextjs',
     includeTailwind: true,
     includeAnimations: true,
-    deploymentTarget: 'vercel',
+    deploymentTarget: 'cloudflare',
   };
 
   private eventHandlers: Map<string, Set<PluginEventHandler>> = new Map();
@@ -404,7 +404,7 @@ Format as JSON:
       '```',
       '',
       '## Deployment',
-      `This project is ready for deployment to ${this.config.deploymentTarget === 'vercel' ? '[Vercel](https://vercel.com)' : this.config.deploymentTarget === 'netlify' ? '[Netlify](https://netlify.com)' : 'any static host'}.`,
+      `This project is ready for deployment to ${this.config.deploymentTarget === 'cloudflare' ? '[Cloudflare Pages](https://pages.cloudflare.com)' : this.config.deploymentTarget === 'netlify' ? '[Netlify](https://netlify.com)' : 'any static host'}.`,
     ].join('\n');
   }
 }

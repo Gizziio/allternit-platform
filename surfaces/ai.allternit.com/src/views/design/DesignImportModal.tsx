@@ -248,7 +248,7 @@ export function DesignImportModal({ onClose, onImport }: Props) {
                       </button>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-1.5">
-                      {["linear.app", "vercel.com", "stripe.com", "resend.com", "supabase.com"].map(example => (
+                      {["linear.app", "cloudflare.com", "stripe.com", "resend.com", "supabase.com"].map(example => (
                         <button type="button"
                           key={example}
                           onClick={() => setUrl(`https://${example}`)}

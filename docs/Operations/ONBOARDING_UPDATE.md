@@ -49,7 +49,7 @@ Your backend is running on port 4096 with a tunnel.
 | Commit | `5f058771` |
 |--------|------------|
 | Status | ✅ Pushed to GitHub |
-| Build | ⏳ Deploying to Vercel (2-3 min) |
+| Build | Cloudflare Pages via GitHub Actions |
 
 ## Files Changed
 
@@ -59,7 +59,7 @@ Your backend is running on port 4096 with a tunnel.
 
 ## Testing
 
-1. Wait for Vercel deployment
+1. Wait for the Cloudflare Pages deploy
 2. Go to https://platform.allternit.com
 3. Start onboarding
 4. Select infrastructure option

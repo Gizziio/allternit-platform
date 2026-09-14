@@ -372,7 +372,7 @@ Selected workflows in `.github/workflows/`:
 | `Makefile` | `make api`, `make build`, `make dev`, `make test` |
 | `wrangler.toml` | Cloudflare Pages deployment |
 | ~~`fly.toml`~~ / ~~`railway.json`~~ | removed 2026-09 — cloud API deploys to the Contabo VPS via `deploy-cloud-api-contabo.yml` |
-| `.mcp.json` | MCP server registry (rails, dak-runner, sequential-thinking, context7, superpowers, verceldeploy, remotioncard, iosappbuild) |
+| `.mcp.json` | MCP server registry (rails, dak-runner, sequential-thinking, context7, superpowers, remotioncard, iosappbuild) |
 | `config/system/`, `resources/company.json` | Company config |
 | `surfaces/ai.allternit.com/.env.example`, `.env.local`, `.env.production` | Web surface env |
 | `cmd/gizzi-code/gizzi.json` | Gizzi runtime config |

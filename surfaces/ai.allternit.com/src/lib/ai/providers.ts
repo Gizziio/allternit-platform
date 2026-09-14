@@ -26,7 +26,7 @@ const _telemetryConfig = {
 /**
  * Dev-mode model access: when VITE_LOCAL_AI_BASE_URL is set (see .env.local),
  * every language-model request goes to the local model-proxy sidecar
- * (scripts/model-proxy.mjs) instead of the Vercel AI gateway — which the
+ * (scripts/model-proxy.mjs) instead of the hosted AI gateway — which the
  * browser cannot reach directly (CORS) and which has no credential in local
  * dev. The requested registry model id passes through untouched; the sidecar
  * routes it to the right backend (kimi/* → kimi coding API, anthropic/* →

@@ -48,7 +48,7 @@ This document outlines the infrastructure requirements for the Allternit plugin 
 #### Setup Requirements
 ```
 Domain: dev.allternit.dev
-Hosting: Vercel/Netlify (static) or AWS/GCP (dynamic)
+Hosting: Cloudflare Pages (static) or AWS/GCP (dynamic)
 CDN: CloudFlare (recommended)
 SSL: Let's Encrypt or CloudFlare
 
@@ -103,7 +103,7 @@ Link to GitHub README and inline documentation in PluginManager forms.
 #### Setup Requirements
 ```
 Domain: marketplace.allternit.dev
-Hosting: Vercel/Netlify (frontend) + API backend
+Hosting: Cloudflare Pages (frontend) + API backend
 Database: PostgreSQL (plugins metadata) + Redis (caching)
 CDN: CloudFlare
 Storage: S3/R2 (plugin assets, icons)
@@ -161,8 +161,7 @@ PluginManager's "Browse" overlay with curated GitHub sources and personal market
 #### Setup Requirements
 ```
 Domain: docs.allternit.dev
-Hosting: GitHub Pages (free, automatic deployments)
-       or Vercel/Netlify
+Hosting: Cloudflare Pages (current) or GitHub Pages
 
 Tech Stack:
 - Docusaurus (recommended - versioning built-in)

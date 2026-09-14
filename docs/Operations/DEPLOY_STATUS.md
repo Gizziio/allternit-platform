@@ -6,9 +6,9 @@
 - **Time**: Just pushed
 
 ## Deployment Status
-⏳ **In Progress** - Vercel is building
+Web surfaces deploy to **Cloudflare Pages**, not Vercel.
 
-Check status: https://vercel.com/dashboard → allternit-platform
+Check status: GitHub Actions `deploy-cloudflare-pages.yml` on `Gizziio/allternit-platform`.
 
 ## What's Deployed
 
@@ -57,6 +57,6 @@ Check status: https://vercel.com/dashboard → allternit-platform
 
 ## Next Steps
 
-1. Wait for Vercel deployment (2-3 min)
+1. Wait for the Cloudflare Pages deploy to finish
 2. Test the "Enter Backend URL" flow
 3. Fix local backend auto-detection (add health check probe)
