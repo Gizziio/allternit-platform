@@ -3,6 +3,19 @@ import { getDefaultPluginModel } from '@/lib/ai/providers';
 import { createPluginInstance, type PluginId, type PluginOutput } from '@/lib/plugins';
 import type { ArtifactKind, ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { CanonicalAgentModeId } from './agent-mode-contracts';
+import { parseCreationPayload } from '@/views/create/enrich-prompt';
+import { getDefaultFormatSelection, isCreationMode, type FormatSelection } from '@/views/create/presets';
+import { generateDocxArtifact, generateXlsxArtifact } from './creation-engines';
+import {
+  IMAGE_PROVIDERS,
+  type ImageProviderApiKeys,
+  type ImageProviderId,
+} from './modes/image-generation';
+import {
+  VIDEO_PROVIDERS,
+  type VideoProviderApiKeys,
+  type VideoProviderId,
+} from './modes/video-generation';
 
 export interface AgentModeExecutorCallbacks {
   onToolCall?: (event: { toolCallId: string; toolName: string; input: unknown }) => void;
@@ -10,7 +23,6 @@ export interface AgentModeExecutorCallbacks {
   onArtifact?: (artifact: ArtifactUIPart) => void;
   onChunk?: (content: string) => void;
 }
-
 const MODE_PLUGIN: Partial<Record<CanonicalAgentModeId, PluginId>> = {
   swarms: 'swarms', research: 'research', website: 'website', data: 'data',
   slides: 'slides', image: 'image', video: 'video', code: 'code',
@@ -28,73 +40,143 @@ function escapeHtml(value: string): string {
   })[character]!);
 }
 
-async function ensureVideoProviderKey(): Promise<void> {
-  if (typeof window === 'undefined') return;
-  const status = await fetch('/api/v1/providers/minimax/auth/status');
-  if (status.ok) {
-    const payload = await status.json().catch(() => ({})) as { provider?: { authenticated?: boolean } };
-    if (payload.provider?.authenticated) {
-      localStorage.removeItem('allternit_video_api_keys');
-      return;
-    }
-  }
-  let legacyKey = '';
+function readVideoApiKeys(): VideoProviderApiKeys {
+  if (typeof window === 'undefined') return {};
   try {
-    const saved = JSON.parse(localStorage.getItem('allternit_video_api_keys') || '{}') as Record<string, string>;
-    legacyKey = saved.minimax?.trim() || '';
+    return JSON.parse(localStorage.getItem('allternit_video_api_keys') || '{}') as VideoProviderApiKeys;
   } catch {
-    localStorage.removeItem('allternit_video_api_keys');
+    return {};
   }
-  const key = legacyKey || window.prompt('Connect MiniMax to the selected Allternit runtime. The key is stored by Gizzi, not in this browser.');
-  if (!key?.trim()) throw new Error('Video generation needs a MiniMax API key.');
-  const connected = await fetch('/api/v1/onboarding/provider', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      provider: 'minimax',
-      name: 'MiniMax',
-      apiKey: key.trim(),
-      authType: 'api_key',
-      setDefault: false,
-    }),
-  });
-  if (!connected.ok) throw new Error(`MiniMax could not be connected to the selected runtime (${connected.status}).`);
-  localStorage.removeItem('allternit_video_api_keys');
 }
 
-async function executeDocs(prompt: string, signal?: AbortSignal): Promise<PluginOutput> {
-  const model = await getDefaultPluginModel();
-  const { text } = await generateText({
-    model,
-    temperature: 0.3,
-    abortSignal: signal,
-    prompt: `Create a polished professional document for this request. Return semantic HTML only, with a title, headings, paragraphs, lists, and tables where useful. Do not use markdown fences.\n\n${prompt}`,
-  });
-  const html = /<(?:article|main|html|h1)[\s>]/i.test(text)
-    ? text
-    : `<article><h1>Document</h1><p>${escapeHtml(text)}</p></article>`;
-  return {
-    success: true,
-    content: 'Editable document created.',
-    artifacts: [{ type: 'file', name: 'document.html', url: `data:text/html;charset=utf-8,${encodeURIComponent(html)}`, metadata: { html } }],
-  };
+function ensureVideoProviderKey(providerId: VideoProviderId): void {
+  if (typeof window === 'undefined') return;
+  const entry = VIDEO_PROVIDERS[providerId];
+  if (!entry || entry.type === 'free' || entry.type === 'local') return;
+
+  const keys = readVideoApiKeys();
+  const hasKey = (() => {
+    switch (providerId) {
+      case 'replicate': return !!keys.replicate;
+      case 'fal': return !!keys.fal;
+      case 'huggingface': return !!keys.huggingface;
+      case 'minimax': return !!keys.minimax;
+      case 'kling': return !!keys.kling;
+      case 'runway': return !!keys.runway;
+      case 'pika': return !!keys.pika;
+      case 'luma': return !!keys.luma;
+      case 'stability': return !!keys.stability;
+      case 'custom': return !!(keys.custom && keys.customBaseURL);
+      default: return false;
+    }
+  })();
+
+  if (hasKey) return;
+
+  window.dispatchEvent(
+    new CustomEvent('allternit:open-settings', { detail: { section: 'video-providers' } }),
+  );
+  throw new Error(
+    `${entry.name} needs an API key. Open Settings → Video providers, connect ${entry.name}, then try again.`,
+  );
 }
 
-async function executeSheets(prompt: string, signal?: AbortSignal): Promise<PluginOutput> {
-  const model = await getDefaultPluginModel();
-  const { text } = await generateText({
-    model,
-    temperature: 0.2,
-    abortSignal: signal,
-    prompt: `Create an editable spreadsheet deliverable for the request below. Return valid CSV only, with one header row and at least five data rows. Include typed numeric cells and a Formula column containing formulas beginning with = wherever calculations or forecasting are requested. Keep formulas comma-free so the CSV remains parseable. Include assumption and source fields as columns when relevant. Do not use markdown fences or commentary.\n\n${prompt}`,
-  });
-  const csv = text.replace(/^```(?:csv)?\s*/i, '').replace(/```\s*$/i, '').trim();
-  if (!csv.includes('\n') || !csv.includes(',')) throw new Error('Spreadsheet generation returned invalid CSV data.');
-  return {
-    success: true,
-    content: 'Editable spreadsheet created with formulas and assumptions.',
-    artifacts: [{ type: 'file', name: 'spreadsheet.csv', url: `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`, metadata: { content: csv, format: 'csv' } }],
-  };
+function readImageApiKeys(): ImageProviderApiKeys {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem('allternit_image_api_keys') || '{}') as ImageProviderApiKeys;
+  } catch {
+    return {};
+  }
+}
+
+function ensureImageProviderKey(providerId: ImageProviderId): void {
+  if (typeof window === 'undefined') return;
+  const entry = IMAGE_PROVIDERS[providerId];
+  if (!entry || entry.type !== 'api_key') return;
+  if (entry.isAvailable({ apiKeys: readImageApiKeys() })) return;
+
+  window.dispatchEvent(
+    new CustomEvent('allternit:open-settings', { detail: { section: 'image-providers' } }),
+  );
+  throw new Error(
+    `${entry.name} needs an API key. Open Settings → Image providers, connect ${entry.name}, then try again.`,
+  );
+}
+
+function mapWebsitePages(pagesOption: unknown): string[] {
+  switch (pagesOption) {
+    case '1':
+      return ['home'];
+    case '3':
+      return ['home', 'about', 'contact'];
+    case '5':
+      return ['home', 'about', 'services', 'portfolio', 'contact'];
+    default:
+      return ['home'];
+  }
+}
+
+function mapImageSize(optionId: string): string {
+  switch (optionId) {
+    case 'square': return '1024x1024';
+    case 'landscape': return '1920x1080';
+    case 'portrait': return '1080x1920';
+    case 'vertical': return '1080x1350';
+    default: return '1024x1024';
+  }
+}
+
+function mapVideoDuration(optionId: string): 6 | 10 {
+  switch (optionId) {
+    case '15s':
+    case '30s':
+      return 10;
+    case '6s':
+    default:
+      return 6;
+  }
+}
+
+function buildCreationOptions(
+  modeId: CanonicalAgentModeId,
+  selection: FormatSelection,
+  templateTitle: string | undefined,
+): Record<string, unknown> {
+  const options: Record<string, unknown> = { templateTitle };
+
+  switch (modeId) {
+    case 'website':
+      options.stack = selection.tabId === 'stack' ? selection.optionId : 'nextjs';
+      options.pages = mapWebsitePages(selection.tabId === 'pages' ? selection.optionId : '1');
+      options.style = selection.tabId === 'style' ? selection.optionId : 'modern';
+      break;
+    case 'slides':
+      options.format = 'pptx';
+      options.slideCount = Number(selection.tabId === 'slides' ? selection.optionId : '10') || 10;
+      options.theme = selection.tabId === 'theme' ? selection.optionId : 'modern';
+      options.deckType = selection.tabId === 'type' ? selection.optionId : 'pitch';
+      break;
+    case 'image':
+      options.mode = 'generate';
+      options.n = 1;
+      options.provider = selection.tabId === 'provider' ? selection.optionId : 'pollinations';
+      options.size = selection.tabId === 'aspect-ratio' ? mapImageSize(selection.optionId) : '1024x1024';
+      options.style = selection.tabId === 'style' ? selection.optionId : 'photographic';
+      break;
+    case 'video':
+      options.mode = 'text-to-video';
+      options.provider = selection.tabId === 'provider' ? selection.optionId : 'minimax';
+      options.duration = mapVideoDuration(selection.tabId === 'duration' ? selection.optionId : '6s');
+      options.style = selection.tabId === 'style' ? selection.optionId : 'cinematic';
+      break;
+    case 'docs':
+    case 'data':
+      // Deterministic engines consume the format selection directly.
+      break;
+  }
+
+  return options;
 }
 
 function primaryContent(modeId: CanonicalAgentModeId, output: PluginOutput): string {
@@ -125,6 +207,15 @@ export async function executeAgentMode(
   if (signal?.aborted) throw new DOMException('Mode execution cancelled', 'AbortError');
   const toolCallId = `mode-${modeId}-${Date.now()}`;
   const toolName = `${modeId}_mode_execute`;
+
+  // Parse deterministic creation markers injected by the composer.
+  const creationPayload = parseCreationPayload(prompt);
+  const hasCreationPayload = Boolean(
+    creationPayload && isCreationMode(creationPayload.modeId) && creationPayload.modeId === modeId,
+  );
+  const userPrompt = creationPayload?.prompt ?? prompt;
+  const formatSelection = creationPayload?.formatSelection ?? getDefaultFormatSelection(modeId);
+
   callbacks.onToolCall?.({
     toolCallId,
     toolName,
@@ -132,20 +223,32 @@ export async function executeAgentMode(
   });
 
   const pluginId = MODE_PLUGIN[modeId];
-  if (modeId === 'video') await ensureVideoProviderKey();
+  const options = hasCreationPayload && formatSelection
+    ? buildCreationOptions(modeId, formatSelection, templateTitle)
+    : { templateTitle, format: undefined };
+
+  if (modeId === 'video') {
+    ensureVideoProviderKey(String(options.provider || 'pollinations') as VideoProviderId);
+  }
+
+  if (modeId === 'image') {
+    ensureImageProviderKey(String(options.provider || 'pollinations') as ImageProviderId);
+  }
+
   let plugin: Awaited<ReturnType<typeof createPluginInstance>> | undefined;
+
   const output = modeId === 'docs'
-    ? await executeDocs(prompt, signal)
+    ? await generateDocxArtifact(userPrompt, formatSelection!, signal)
     : modeId === 'data'
-      ? await executeSheets(prompt, signal)
+      ? await generateXlsxArtifact(userPrompt, formatSelection!, signal)
       : await (async () => {
           plugin = await createPluginInstance(pluginId!);
           const cancel = () => void plugin?.cancel();
           signal?.addEventListener('abort', cancel, { once: true });
           try {
             return await plugin.execute({
-              prompt,
-              options: { templateTitle, format: modeId === 'slides' ? 'markdown' : undefined },
+              prompt: userPrompt,
+              options,
             });
           } finally {
             signal?.removeEventListener('abort', cancel);

@@ -294,7 +294,7 @@ function upsertAgentElementsToolPart(
   );
 }
 
-async function persistArtifactToCanvas(
+export async function persistArtifactToCanvas(
   sessionId: string,
   artifact: ArtifactUIPart,
   artifactCanvasIds: Map<string, string>,

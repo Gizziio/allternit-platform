@@ -33,6 +33,8 @@ import {
   Buildings,
   ChatCircleText,
   Database,
+  Image,
+  FilmStrip,
   WebhooksLogo,
 } from '@phosphor-icons/react';
 
@@ -53,6 +55,8 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'privacy', label: 'Privacy', icon: React.createElement(Lock, { size: 18 }), group: 'account' },
   { id: 'appearance', label: 'Appearance', icon: React.createElement(Palette, { size: 18 }), group: 'platform' },
   { id: 'models', label: 'Models', icon: React.createElement(Cpu, { size: 18 }), group: 'platform' },
+  { id: 'image-providers', label: 'Image providers', icon: React.createElement(Image, { size: 18 }), group: 'platform' },
+  { id: 'video-providers', label: 'Video providers', icon: React.createElement(FilmStrip, { size: 18 }), group: 'platform' },
   { id: 'api-keys', label: 'API Keys', icon: React.createElement(Key, { size: 18 }), group: 'platform' },
   { id: 'permissions', label: 'Permissions', icon: React.createElement(ShieldCheck, { size: 18 }), group: 'platform' },
   { id: 'remote-control', label: 'Fabric Transport', icon: React.createElement(DeviceMobile, { size: 18 }), group: 'platform' },

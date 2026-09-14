@@ -100,6 +100,7 @@ import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/ag
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
 import { ModelPicker, type ModelSelection } from '@/components/model-picker';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
+import { enrichCreationPrompt, isCreationMode, getDefaultFormatSelection, type FormatSelection } from '@/views/create/presets';
 import { useNav } from '@/nav/useNav';
 
 const THEME = {
@@ -121,7 +122,6 @@ export interface ChatAttachment {
   dataUrl: string;
   type: 'image' | 'screenshot' | 'gif' | 'document' | 'code' | 'json' | 'spreadsheet' | 'other';
 }
-
 export interface SlashCommand {
   command: string;
   label: string;
@@ -448,6 +448,7 @@ export function ChatComposer({
   // mounted — so the modes never pop in/out on selection changes.
   const [locallyEnabled, setLocallyEnabled] = useState(agentModeSurface === 'bot');
   const [selectedTemplateTitle, setSelectedTemplateTitle] = useState<string | undefined>();
+  const [formatSelections, setFormatSelections] = useState<Record<string, FormatSelection>>({});
   const agentModeEnabled = hasEmbeddedSession || locallyEnabled;
   const [agentModePulse, setAgentModePulse] = useState(0);
   const prevAgentModeEnabledRef = useRef(agentModeEnabled);
@@ -568,6 +569,9 @@ export function ChatComposer({
   const selectedModeId = useAgentSurfaceModeStore((state) =>
     agentModeSurface ? state.selectedModeBySurface[agentModeSurface] : null,
   );
+  const activeFormatSelection = selectedModeId
+    ? formatSelections[selectedModeId] ?? getDefaultFormatSelection(selectedModeId)
+    : null;
   const setSelectedMode = useAgentSurfaceModeStore((state) => state.setSelectedMode);
   const selectedSwarmSubMode = useAgentSurfaceModeStore((state) =>
     agentModeSurface ? state.swarmSubModeBySurface[agentModeSurface] : 'specialist-team',
@@ -1032,7 +1036,11 @@ export function ChatComposer({
       }
     }
 
-    const enrichedInput = buildEnrichedInput(messageText);
+    const enrichedInput = enrichCreationPrompt(
+      buildEnrichedInput(messageText),
+      selectedModeId,
+      activeFormatSelection,
+    );
 
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().startAciSession(enrichedInput);
@@ -1054,6 +1062,7 @@ export function ChatComposer({
   }, [
     agentModeEnabled,
     agentModeSurface,
+    activeFormatSelection,
     buildEnrichedInput,
     isCanonicalAgentMode,
     onAgentSend,
@@ -2482,11 +2491,21 @@ export function ChatComposer({
                 if (agentModeSurface) {
                   setSelectedMode(agentModeSurface, modeId as AgentModeId);
                   setSelectedTemplateTitle(undefined);
+                  if (isCreationMode(modeId)) {
+                    setFormatSelections((prev) => ({
+                      ...prev,
+                      [modeId]: prev[modeId] ?? getDefaultFormatSelection(modeId)!,
+                    }));
+                  }
                 }
               }}
               agentModeSurface={agentModeSurface}
               isLoading={isLoading}
               selectedSurfaceAgent={selectedSurfaceAgent}
+              formatSelection={activeFormatSelection}
+              onFormatChange={(selection) => {
+                setFormatSelections((prev) => ({ ...prev, [selection.modeId]: selection }));
+              }}
             />
           </div>
           {selectedModeId === 'swarms' && (
@@ -2658,5 +2677,3 @@ export function ChatComposer({
     </div>
   );
 }
-
-

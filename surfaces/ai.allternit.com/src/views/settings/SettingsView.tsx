@@ -34,6 +34,8 @@ import { usePlatformAuth, usePlatformUser, usePlatformSignOut, usePlatformHardSi
 import { env } from '@/lib/env';
 import { useThemeStore } from '@/design/ThemeStore';
 import { LocalModelManager } from '@/components/models/LocalModelManager';
+import { ImageProvidersPanel } from '@/components/settings/ImageProvidersPanel';
+import { VideoProvidersPanel } from '@/components/settings/VideoProvidersPanel';
 import { InfrastructureSettings } from './InfrastructureSettings';
 import { EnvironmentSettings } from './EnvironmentSettings';
 import { listOwnedConnectors, connectOwned, disconnectOwned, type OwnedConnector, type OwnedConnectStatus } from '@/lib/design/owned-connector';
@@ -1381,6 +1383,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     switch (activeSection) {
       case 'appearance': return renderAppearancePanel();
       case 'models': return renderModelsPanel();
+      case 'image-providers': return <ImageProvidersPanel />;
+      case 'video-providers': return <VideoProvidersPanel />;
       case 'api-keys': return renderApiKeysPanel();
       case 'permissions': return <PermissionsPanel />;
       case 'remote-control': return <DispatchSettingsPanel />;
