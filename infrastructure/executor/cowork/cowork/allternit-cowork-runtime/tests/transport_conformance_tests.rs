@@ -1434,6 +1434,159 @@ async fn test_al_orchestration_loop() {
     assert!(rows.iter().any(|r| r.0 == "delegation.rejected"));
 }
 
+/// Seam defects (Part 1) — intent-created runs must be owner-stamped,
+/// short-alias Al targets must orchestrate identically to canonical ones,
+/// and store-direct runs must load back through the manager-mirror shape.
+#[tokio::test]
+async fn test_intent_created_run_is_owner_stamped() {
+    let fx = setup().await;
+    let mut conn = open(&fx.db_path);
+    let envelope = allternit_cowork_runtime::IntentEnvelope {
+        version: "a/0.1".to_string(),
+        intent_id: "intent_owner_001".to_string(),
+        workspace: format!("a://workspace/{WORKSPACE}"),
+        initiator: INITIATOR.to_string(),
+        delegator: None,
+        target: Some(format!("a://workspace/{WORKSPACE}/principal/gizzi")),
+        action: allternit_cowork_runtime::IntentAction {
+            action_type: "shell_steps".to_string(),
+            description: "owner stamping".to_string(),
+            payload: None,
+        },
+        permissions: vec![],
+        compute: None, model: None, approval: None, return_channel: None,
+        causation_chain: vec![INITIATOR.to_string()],
+    };
+    let submission = sqlite_store::submit_intent_for_user(&mut conn, &envelope, Some("user-joe"))
+        .unwrap();
+    assert!(submission.created);
+
+    // The run carries the owner: V142/V169 scoping (list_runs,
+    // ensure_run_owner) must see intent-created runs like any other.
+    let (run_user, ): (Option<String>,) = conn
+        .query_row(
+            "SELECT user_id FROM cowork_runs WHERE id = ?1",
+            rusqlite::params![submission.run_id],
+            |row| Ok((row.get(0)?,)),
+        )
+        .unwrap();
+    assert_eq!(run_user.as_deref(), Some("user-joe"));
+
+    // The auto-created canonical job is owner-stamped too.
+    let job_user: Option<String> = conn
+        .query_row(
+            "SELECT user_id FROM cowork_jobs WHERE run_id = ?1",
+            rusqlite::params![submission.run_id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(job_user.as_deref(), Some("user-joe"));
+
+    // The bare submit_intent entry point keeps working (no owner).
+    let bare = sqlite_store::submit_intent(&mut conn, &envelope).unwrap();
+    assert!(!bare.created, "idempotent on intent_id");
+}
+
+#[tokio::test]
+async fn test_orchestrator_accepts_short_alias_target() {
+    let fx = setup().await;
+    let mut conn = open(&fx.db_path);
+    conn.execute(
+        "INSERT OR IGNORE INTO cowork_delegation_rules (workspace, action_type, target_principal, priority)
+         VALUES (?1, 'shell', 'gizzi', 100)",
+        rusqlite::params![WORKSPACE],
+    ).unwrap();
+
+    // A_PROTOCOL §5 short alias for the Al principal.
+    let mut alias = allternit_cowork_runtime::IntentEnvelope {
+        version: "a/0.1".to_string(),
+        intent_id: "intent_orch_alias".to_string(),
+        workspace: format!("a://workspace/{WORKSPACE}"),
+        initiator: INITIATOR.to_string(),
+        delegator: None,
+        target: Some("principal/al".to_string()),
+        action: allternit_cowork_runtime::IntentAction {
+            action_type: "shell_alias".to_string(),
+            description: "short alias probe".to_string(),
+            payload: None,
+        },
+        permissions: vec![],
+        compute: None, model: None, approval: None, return_channel: None,
+        causation_chain: vec![INITIATOR.to_string()],
+    };
+    let submission = sqlite_store::submit_intent(&mut conn, &alias).unwrap();
+
+    // The alias names Al, so the parent gets NO claimable job (the
+    // orchestrator's child carries the executable work).
+    let parent_jobs: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM cowork_jobs WHERE run_id = ?1",
+            rusqlite::params![submission.run_id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(parent_jobs, 0, "Al-targeted parent must not enqueue a job");
+
+    // One tick delegates it exactly like the canonical long form.
+    let actions = sqlite_store::orchestrate_pending_intents(&mut conn).unwrap();
+    let delegated = actions.iter().find(|a| a.intent_id == "intent_orch_alias");
+    let delegated = delegated.expect("short-alias intent must be orchestrated");
+    assert_eq!(delegated.outcome, "delegated");
+    assert!(delegated.child_run_id.is_some());
+
+    // targets_al covers both forms.
+    assert!(sqlite_store::targets_al(Some("principal/al")));
+    assert!(sqlite_store::targets_al(Some(&format!("a://workspace/{WORKSPACE}/principal/al"))));
+    assert!(!sqlite_store::targets_al(Some(&format!("a://workspace/{WORKSPACE}/principal/gizzi"))));
+    assert!(!sqlite_store::targets_al(None));
+
+    // Idempotency guard: the alias intent must not double-delegate.
+    alias.intent_id = "intent_orch_alias_2".to_string();
+    sqlite_store::submit_intent(&mut conn, &alias).unwrap();
+    let _ = delegated;
+    let second = sqlite_store::orchestrate_pending_intents(&mut conn).unwrap();
+    assert_eq!(
+        second.iter().filter(|a| a.outcome == "delegated").count(),
+        1,
+        "exactly the new intent delegates"
+    );
+}
+
+#[tokio::test]
+async fn test_load_run_record_roundtrip() {
+    let fx = setup().await;
+    let mut conn = open(&fx.db_path);
+    let envelope = allternit_cowork_runtime::IntentEnvelope {
+        version: "a/0.1".to_string(),
+        intent_id: "intent_mirror_001".to_string(),
+        workspace: format!("a://workspace/{WORKSPACE}"),
+        initiator: INITIATOR.to_string(),
+        delegator: None,
+        target: Some(format!("a://workspace/{WORKSPACE}/principal/gizzi")),
+        action: allternit_cowork_runtime::IntentAction {
+            action_type: "shell_steps".to_string(),
+            description: "mirror probe".to_string(),
+            payload: None,
+        },
+        permissions: vec![],
+        compute: None, model: None, approval: None, return_channel: None,
+        causation_chain: vec![INITIATOR.to_string()],
+    };
+    let submission = sqlite_store::submit_intent(&mut conn, &envelope).unwrap();
+
+    let run = sqlite_store::load_run_record(&conn, &submission.run_id)
+        .unwrap()
+        .expect("run loads back for the manager mirror");
+    assert_eq!(run.id.to_string(), submission.run_id);
+    assert_eq!(run.workspace_id, WORKSPACE);
+    assert_eq!(run.initiator, INITIATOR);
+    assert_eq!(run.state, RunState::Queued);
+    assert!(sqlite_store::load_run_record(&conn, "not-a-uuid").unwrap().is_none());
+    assert!(sqlite_store::load_run_record(&conn, &uuid::Uuid::new_v4().to_string())
+        .unwrap()
+        .is_none());
+}
+
 /// A-T5 — connector broker: sessions are lease+policy validated, secrets
 /// never leave the server, and the system-side invoke is attributed (and
 /// honest when the env target is unset: simulated, not silent).

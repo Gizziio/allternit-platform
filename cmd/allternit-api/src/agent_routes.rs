@@ -317,15 +317,15 @@ async fn ingest_agent_event(
         }
     }
 
-    let event = allternit_agent_system_rails::AllternitEvent {
+    let event = allternit_commrails::AllternitEvent {
         event_id: String::new(),
         ts: String::new(),
-        actor: allternit_agent_system_rails::Actor {
-            r#type: allternit_agent_system_rails::ActorType::User,
+        actor: allternit_commrails::Actor {
+            r#type: allternit_commrails::ActorType::User,
             id: user_id,
         },
         scope: body.run_id.as_ref().map(|run_id| {
-            allternit_agent_system_rails::EventScope {
+            allternit_commrails::EventScope {
                 project_id: None,
                 dag_id: None,
                 node_id: None,

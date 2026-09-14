@@ -199,10 +199,6 @@ export class FabricSessionClient {
         }),
       }
     );
-  private async request(path: string, init: RequestInit = {}): Promise<Response> {
-    const url = this.apiPath(path);
-    const headers = await this.authHeaders();
-    return fetch(url, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
   }
 
   private async json<T>(path: string, init: RequestInit = {}): Promise<T> {

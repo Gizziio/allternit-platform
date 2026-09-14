@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 use crate::auth::AuthUser;
 use crate::cli_provider_detector::detect_cli_providers;
+use crate::db::DbHandle;
 use crate::AppState;
 
 pub fn inference_router_router() -> Router<Arc<AppState>> {
@@ -35,6 +36,17 @@ async fn cli_status(
 ) -> impl IntoResponse {
     let providers = detect_cli_providers().await;
     Json(json!({ "providers": providers }))
+}
+
+/// Best-effort usage listing for the MCP `inference.get_routed_usage` tool.
+/// Routed turns are not persisted yet, so this returns an empty list rather
+/// than inventing rows.
+pub fn query_routed_usage(
+    _db: &DbHandle,
+    _user_id: &str,
+    _limit: i64,
+) -> Result<Vec<serde_json::Value>, String> {
+    Ok(Vec::new())
 }
 
 // NOTE: A future `POST /inference-router/execute` would accept a provider + model

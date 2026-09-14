@@ -544,21 +544,6 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
     }
 
-    /// URL of the canonical AllternitOS lease authority.
-    /// `None` disables lease issuance through the gateway; callers must configure
-    /// an authority or use the gizzi runtime dev issuer directly (local dev only).
-    pub fn allternitos_lease_authority_url(&self) -> Option<String> {
-        std::env::var("ALLTERNITOS_LEASE_AUTHORITY_URL")
-            .ok()
-            .filter(|s| !s.is_empty())
-            .or_else(|| {
-                self.company
-                    .allternitos_lease_authority_url
-                    .clone()
-                    .filter(|s| !s.is_empty())
-            })
-    }
-
     /// URL of the Etrid native agent wallet service.
     pub fn etrid_url(&self) -> String {
         std::env::var("ALLTERNIT_ETRID_URL")

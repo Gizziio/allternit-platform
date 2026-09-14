@@ -74,6 +74,31 @@ const backendAPI = {
   },
 };
 
+// ─── Engine status (consumer-packaged Cowork P1) ─────────────────────────────
+// One aggregate green/yellow/red indicator over the four managed engines.
+// Present only in the packaged desktop bridge; absent in browser/cloud.
+
+export interface EngineComponentStatus {
+  status: 'pending' | 'up' | 'down';
+  detail: string;
+}
+
+export interface EnginesStatus {
+  api: EngineComponentStatus;
+  gizzi: EngineComponentStatus;
+  fabricWorker: EngineComponentStatus;
+  office: EngineComponentStatus;
+}
+
+const enginesAPI = {
+  getStatus: (): Promise<EnginesStatus> => ipcRenderer.invoke('engines:get-status'),
+  onStatusChange: (handler: (status: EnginesStatus) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, s: EnginesStatus) => handler(s);
+    ipcRenderer.on('engines:status', listener);
+    return () => ipcRenderer.removeListener('engines:status', listener);
+  },
+};
+
 // ─── Bonsai local image companion ─────────────────────────────────────────────
 
 export interface BonsaiStatus {
@@ -404,6 +429,8 @@ const shellAPI = {
     ipcRenderer.invoke('shell:open-office', target, artifactId),
   openSession: (options: { sessionId: string; workspaceId?: string; title?: string }): Promise<void> =>
     ipcRenderer.invoke('shell:open-session', options),
+  openBotComputer: (options: { botId: string; title?: string }): Promise<void> =>
+    ipcRenderer.invoke('shell:open-bot-computer', options),
   getOfficeHostStatus: (): Promise<Record<'word' | 'excel' | 'powerpoint', {
     installed: boolean;
     running: boolean;
@@ -755,18 +782,6 @@ const workerAPI = {
   list: (): Promise<string[]> => ipcRenderer.invoke('worker:list'),
 };
 
-// ─── Browser API Capture ─────────────────────────────────────────────────────
-// Records network traffic from the active Electron session and returns a HAR
-// archive that the platform renderer can ingest as a Site API contract.
-
-const browserCaptureAPI = {
-  isAvailable: (): Promise<boolean> => ipcRenderer.invoke('browser-capture:is-available'),
-  start: (options?: { filterUrls?: string[] }): Promise<{ success: boolean; sessionId?: string; error?: string }> =>
-    ipcRenderer.invoke('browser-capture:start', options),
-  stop: (sessionId: string): Promise<{ success: boolean; har?: string; error?: string }> =>
-    ipcRenderer.invoke('browser-capture:stop', sessionId),
-};
-
 // ─── HyperFrames ─────────────────────────────────────────────────────────────
 
 const hyperframesAPI = {
@@ -802,6 +817,7 @@ const allternitDesktopAPI = {
   sdk: sdkAPI,
   connection: connectionAPI,
   backend: backendAPI,
+  engines: enginesAPI,
   bonsai: bonsaiAPI,
   vm: vmAPI,
   window: windowAPI,

@@ -25,10 +25,11 @@ use allternit_api::agent_cloud_routes::router as agent_cloud_router;
 use allternit_api::agent_operations_routes;
 use allternit_api::federation_routes::router as federation_router;
 use allternit_api::outcome_rubric_routes::router as outcome_rubric_router;
+use allternit_api::page_agent_routes::page_agent_router;
+use allternit_api::allternit_bus_routes::{allternit_bus_router, allternit_bus_webhook_router};
 use allternit_api::quickstart_routes::router as quickstart_router;
 use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
-use allternit_api::inference_router_routes::inference_router_router;
 use allternit_api::agent_runtime_routes::agent_runtime_router;
 use allternit_api::agent_session_routes::agent_session_router;
 use allternit_api::beta_deployment_routes::beta_deployment_router;
@@ -53,12 +54,10 @@ use allternit_api::bot_desktop_capacity;
 use allternit_api::bot_desktop_queue;
 use allternit_api::bot_desktop_routes::bot_desktop_router;
 use allternit_api::bot_desktop_stream::bot_desktop_stream_router;
-use allternit_api::bot_event_routes::bot_event_router;
 use allternit_api::brain_routes::{brain_git_router, brain_router};
 use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
-use allternit_api::har_api_routes::har_api_router;
 use allternit_api::cowork::background_service::CoworkBackgroundService;
 use allternit_api::cowork::routes::{background_router, CoworkBgState};
 use allternit_api::cowork_preferences_routes::cowork_preferences_router;
@@ -66,10 +65,13 @@ use allternit_api::cowork_routes::cowork_router;
 use allternit_api::cowork_team_routes::cowork_team_router;
 use allternit_api::db::DbHandle;
 use allternit_api::design_connector_routes::{design_connector_router, DesignSkillCache};
-use allternit_api::fabric_routes::fabric_router;
 use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
+use allternit_api::har_api_routes::har_api_router;
+use allternit_api::bot_event_routes::bot_event_router;
+use allternit_api::model_training_routes::model_training_router;
+use allternit_api::photon_routes::photon_router;
 use allternit_api::health::health_router;
 use allternit_api::inference_router_routes::inference_router_router;
 use allternit_api::hud_routes::hud_router;
@@ -77,11 +79,13 @@ use allternit_api::idempotency::idempotency_middleware;
 use allternit_api::inbox_routes::inbox_router;
 use allternit_api::library_routes::library_router;
 use allternit_api::local_brain_routes::local_brain_router;
+use allternit_api::local_engine_routes::local_engine_router;
+use allternit_api::local_studio_routes::local_studio_router;
 use allternit_api::mcp_routes::mcp_router;
 use allternit_api::me_routes::me_router;
+use allternit_api::memory_reconstruction_routes::memory_reconstruction_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
-use allternit_api::model_training_routes::model_training_router;
 use allternit_api::oauth_routes::oauth_router;
 use allternit_api::office_cli_routes::office_cli_router;
 use allternit_api::office_engine_routes::{office_engine_router, office_engine_v1_router};
@@ -105,7 +109,6 @@ use allternit_api::ssh_routes::ssh_router;
 use allternit_api::status_routes::status_router;
 use allternit_api::stream::stream_router;
 use allternit_api::swarm_routes::swarm_router;
-use allternit_api::tag_routes::tag_router;
 use allternit_api::task_routes;
 use allternit_api::team_skill_routes::team_skill_router;
 #[cfg(unix)]
@@ -119,6 +122,9 @@ use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
 use allternit_api::web_proxy_routes::web_proxy_router;
 use allternit_api::webhook_routes::webhook_router;
 use allternit_api::webhook_subscription_routes::webhook_subscription_router;
+use allternit_api::webhook_trigger_routes::{
+    webhook_trigger_public_router, webhook_trigger_router,
+};
 use allternit_api::workflow_routes::workflow_router;
 use allternit_api::workspace_routes::workspace_router;
 use allternit_api::AppState;
@@ -364,7 +370,33 @@ async fn main() {
     seed_default_principals(&db).await;
     // A-T3: deterministic Al orchestration loop — processes intents targeted
     // at principal/al (delegation rules → child intent → monitor → record).
-    spawn_al_orchestrator(db.clone());
+    // The manager mirror is passed so store-direct child runs become visible
+    // to the REST run surface within one tick (same contract as the route
+    // mirror in fabric_transport_routes::submit_intent).
+    spawn_al_orchestrator(db.clone(), cowork_run_manager.clone());
+    // Consumer-packaged Cowork P4.2: routines tick — due routines fire one
+    // canonical intent each onto Fabric Transport (claimed/leased like any
+    // other run).
+    {
+        let db = db.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                interval.tick().await;
+                let db = db.clone();
+                let fired = tokio::task::spawn_blocking(move || {
+                    allternit_api::routine_routes::run_due_routines(&db)
+                })
+                .await;
+                if let Ok(fired) = fired {
+                    if fired > 0 {
+                        info!(fired, "Routines tick fired on Fabric Transport");
+                    }
+                }
+            }
+        });
+    }
 
     // Initialize office runtime state (load from disk or start empty)
     let office_runtime = Arc::new(tokio::sync::RwLock::new(
@@ -420,9 +452,6 @@ async fn main() {
     // Data-plane JWT verifier (cloud-api → node, decision A1): fetches and
     // caches cloud-api's JWKS; authenticates relayed calls as the JWT's sub.
     let dp_jwks = allternit_api::auth_dp_jwt::DataPlaneJwks::from_env();
-        .unwrap_or(0.8)
-        .clamp(0.0, 1.0);
-    let _capacity_monitor = bot_desktop_capacity::init_capacity_monitor(capacity_threshold);
 
     // Create application state
     let state = Arc::new(AppState {
@@ -691,7 +720,6 @@ async fn main() {
         .merge(memory_router())
         .merge(me_router())
         .merge(local_brain_router())
-        .merge(model_training_router())
         .merge(library_router())
         .merge(workflow_router())
         .merge(ssh_router())
@@ -700,11 +728,13 @@ async fn main() {
         .merge(cowork_router())
         .merge(cowork_preferences_router())
         .merge(allternit_api::al_persona_routes::al_persona_router())
+        .merge(allternit_api::deliverable_routes::deliverable_router())
+        .merge(allternit_api::routine_routes::routine_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(allternit_api::rails::fabric_transport_routes::fabric_transport_routes())
         .merge(agent_router())
+        .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
-        .merge(inference_router_router())
         .merge(agent_workspace_router())
         .merge(agent_session_router())
         .merge(beta_session_router())
@@ -712,6 +742,7 @@ async fn main() {
         .merge(beta_deployment_router())
         .merge(beta_work_router())
         .merge(webhook_subscription_router())
+        .merge(webhook_trigger_router())
         .merge(beta_memory_store_router())
         .merge(memory_reconstruction_router())
         .merge(allternit_api::memory_notes_routes::memory_notes_router())
@@ -719,8 +750,8 @@ async fn main() {
         .merge(user_profile_router())
         .merge(canvas_router())
         .merge(v1_router())
+        .merge(allternit_bus_router())
         .merge(task_routes::task_router())
-        .merge(tag_router())
         .merge(agent_operations_routes::agent_operations_router())
         .merge(allternit_api::queue_routes::queue_router())
         .merge(audit_log_router())
@@ -745,9 +776,6 @@ async fn main() {
             )),
         )
         .merge(allternit_api::bot_desktop_audit::bot_desktop_audit_router())
-        .merge(bot_desktop_router())
-        .merge(bot_event_router())
-        .merge(agents_v1_router())
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
@@ -756,6 +784,9 @@ async fn main() {
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
         .merge(allternit_api::tag_routes::tag_router())
         .merge(inference_router_router())
+        .merge(bot_event_router())
+        .merge(model_training_router())
+        .merge(photon_router())
         .merge(allternit_api::enterprise_auth::router())
         .merge(allternit_api::eval_routes::router())
         .merge(allternit_api::eval_metric_routes::router())
@@ -785,10 +816,6 @@ async fn main() {
         .merge(allternit_api::computer_ws::computer_api_router())
         .merge(allternit_api::computer_embed::api_router())
         .merge(allternit_api::bot_group_routes::router())
-        .merge(allternit_api::bot_desktop_templates::router())
-        .merge(allternit_api::bot_desktop_capacity::router())
-        .merge(allternit_api::bot_desktop_billing::router())
-        .merge(allternit_api::bot_desktop_admin::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(passkey_router(&state))
         .merge(allternit_api::admin_workspace_routes::router())
@@ -806,6 +833,8 @@ async fn main() {
         .merge(allternit_api::scim_routes::router())
         .merge(allternit_api::admin_audit_routes::router())
         .merge(allternit_api::compliance_routes::router())
+        .merge(allternit_api::data_residency_routes::router())
+        .merge(allternit_api::device_attestation_routes::router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(allternit_api::content_artifact_routes::content_artifact_router())
@@ -842,7 +871,6 @@ async fn main() {
         .nest("/api", local_engine_router())
         .nest("/api", local_studio_router())
         .nest("/api", har_api_router())
-        .nest("/api", model_training_router())
         // Feature routes
         .nest("/viz", viz_router())
         .nest("/sandbox", sandbox_router())
@@ -857,13 +885,8 @@ async fn main() {
             "/ws/computers",
             allternit_api::computer_ws::computer_ws_router(),
         )
-        .nest("/terminal", terminal_router())
         .nest(
             "/mcp",
-            mcp_router().merge(allternit_api::mcp_server_routes::mcp_server_router()),
-        )
-        .nest(
-            "/api/v1/mcp",
             mcp_router().merge(allternit_api::mcp_server_routes::mcp_server_router()),
         )
         .nest("/metrics", metrics_router())
@@ -875,8 +898,6 @@ async fn main() {
         .nest("/api", page_agent_router())
         .nest("/api", analytics_router())
         .nest("/api", allternit_api::group_rooms::router())
-        .nest("/api", analytics_router())
-        .nest("/api", har_api_router())
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())
         .nest("/api", design_connector_router())
@@ -911,6 +932,12 @@ async fn main() {
         // this is public the same way `webhook_router()` above is — no
         // Clerk session exists for a server-to-server call from Slack.
         .merge(allternit_api::slack_webhook_routes::slack_webhook_router())
+        // Photon.codes inbound-message webhook is also server-to-server and
+        // carries no Clerk session; route it to the recipient bot's inbox.
+        .merge(allternit_bus_webhook_router())
+        // mailflare inbound-email webhook is likewise server-to-server; it is
+        // HMAC-verified per handler (ALLTERNIT_MAILFLARE_WEBHOOK_SECRET).
+        .merge(allternit_api::agent_email_routes::agent_email_webhook_router())
         // OAuth provider redirect targets — the browser arrives from the
         // provider's consent screen with no Clerk JWT, so these must be
         // public: the curated-3 loopback callback (moved out of the protected
@@ -1051,44 +1078,6 @@ async fn main() {
                 allternit_api::cors::origin_gate,
             ))
     };
-        app = app.merge(background_router(Arc::new(bstate)));
-    }
-
-    // Apply CORS for local dev. Mirror the request origin and allow
-    // credentials: a wildcard origin is rejected by browsers whenever the
-    // client uses `credentials: 'include'`, which the local UIs do.
-    let app = app.layer(
-        CorsLayer::new()
-            .allow_origin(AllowOrigin::mirror_request())
-            .allow_credentials(true)
-            .allow_methods([
-                Method::GET,
-                Method::POST,
-                Method::PUT,
-                Method::PATCH,
-                Method::DELETE,
-                Method::OPTIONS,
-            ])
-            .allow_headers([
-                header::ACCEPT,
-                header::AUTHORIZATION,
-                header::CONTENT_TYPE,
-                header::ORIGIN,
-                HeaderName::from_static("x-client-version"),
-                HeaderName::from_static("x-allternit-desktop-access-token"),
-                HeaderName::from_static("x-allternit-user-id"),
-                HeaderName::from_static("x-allternit-user-email"),
-                HeaderName::from_static("x-allternit-user-name"),
-                HeaderName::from_static("x-allternit-tenant-id"),
-                // OfficeCLI document upload headers (browser taskpane)
-                HeaderName::from_static("x-office-filename"),
-                HeaderName::from_static("x-office-host"),
-                HeaderName::from_static("x-office-binding-id"),
-                // LLM gateway (OpenAI-compatible /v1 surface)
-                HeaderName::from_static("idempotency-key"),
-                HeaderName::from_static("x-allternit-session-id"),
-            ]),
-    );
 
     // Record request metrics for all non-preflight requests
     let app = app.layer(axum::middleware::from_fn(
@@ -1537,7 +1526,16 @@ async fn load_persisted_cowork_jobs(db: &allternit_api::db::DbHandle, manager: &
 
 /// Spawn the deterministic Al orchestrator tick loop (A-T3). No model
 /// involvement: delegation targets come from cowork_delegation_rules.
-fn spawn_al_orchestrator(db: allternit_api::db::DbHandle) {
+///
+/// Store-direct children created by a delegation are mirrored into the
+/// in-memory RunManager (via `manager`, when available) so the REST run
+/// surface lists/jobs them exactly like route-created runs — the tick is the
+/// only creator of runs outside the routes, and without this mirror its
+/// children were invisible there (404 on job creation).
+fn spawn_al_orchestrator(
+    db: allternit_api::db::DbHandle,
+    manager: Option<std::sync::Arc<allternit_cowork_runtime::RunManager>>,
+) {
     tokio::spawn(async move {
         let mut interval =
             tokio::time::interval(std::time::Duration::from_secs(2));
@@ -1565,20 +1563,49 @@ fn spawn_al_orchestrator(db: allternit_api::db::DbHandle) {
             .await;
             match result {
                 Ok(Ok((delegated, recorded))) => {
-                    for a in delegated {
+                    for a in delegated.iter().chain(recorded.iter()) {
                         info!(
                             intent_id = %a.intent_id,
                             outcome = %a.outcome,
                             detail = %a.detail,
-                            "Al orchestration: delegation"
+                            "Al orchestration: {}",
+                            if a.child_run_id.is_some() { "delegation" } else { "result recorded" }
                         );
                     }
-                    for a in recorded {
-                        info!(
-                            intent_id = %a.intent_id,
-                            outcome = %a.outcome,
-                            "Al orchestration: result recorded"
-                        );
+                    // Mirror store-direct child runs (and parents being
+                    // updated) into the in-memory manager so the REST run
+                    // surface sees them. Best-effort: a mirror failure must
+                    // never break the tick.
+                    if let Some(manager) = manager.as_ref() {
+                        for run_id in delegated
+                            .iter()
+                            .filter_map(|a| a.child_run_id.as_deref())
+                            .chain(recorded.iter().map(|a| a.parent_run_id.as_str()))
+                        {
+                            let mirrored = tokio::task::spawn_blocking({
+                                let db = db.clone();
+                                let run_id = run_id.to_string();
+                                move || {
+                                    let conn = allternit_cowork_runtime::sqlite_store::open_store(
+                                        db.path(),
+                                    )?;
+                                    allternit_cowork_runtime::sqlite_store::load_run_record(
+                                        &conn, &run_id,
+                                    )
+                                }
+                            })
+                            .await;
+                            match mirrored {
+                                Ok(Ok(Some(run))) => {
+                                    if let Err(e) = manager.load_run(run).await {
+                                        warn!("Al orchestrator manager mirror failed: {e}");
+                                    }
+                                }
+                                Ok(Ok(None)) => {}
+                                Ok(Err(e)) => warn!("Al orchestrator mirror load failed: {e}"),
+                                Err(e) => warn!("Al orchestrator mirror task failed: {e}"),
+                            }
+                        }
                     }
                 }
                 Ok(Err(e)) => warn!("Al orchestrator tick failed: {e}"),
@@ -1676,10 +1703,6 @@ struct VmDriverSet {
 async fn initialize_vm_driver(
     app_config: &allternit_api::config::AppConfig,
 ) -> VmDriverSet {
-/// Initialize the appropriate VM driver for the platform
-async fn initialize_vm_driver(
-    app_config: &allternit_api::config::AppConfig,
-) -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
     use allternit_driver_interface::ExecutionDriver;
 
     // Build every configured substrate driver. The heterogeneous router hides
@@ -1722,58 +1745,6 @@ async fn initialize_vm_driver(
                     }
                     Err(e) => warn!("Incus health check failed: {}", e),
                 }
-            }
-            Err(e) => warn!("Failed to initialize Incus driver: {}", e),
-        }
-    }
-
-    let mut tart_driver = None;
-    if std::env::var("TART_HOST_URL").is_ok()
-        || std::env::var("TART_BIN").map_or(false, |s| !s.is_empty())
-    {
-        let mesh = build_mesh_config_from_env();
-        match allternit_computer_cloud::TartDriver::from_env() {
-            Ok(driver) => {
-                let driver = if let Some(mesh) = mesh {
-                    driver.with_mesh(mesh)
-                } else {
-                    driver
-                };
-                match driver.health_check().await {
-                    Ok(health) => {
-                        if health.healthy {
-                            info!("Tart driver initialized");
-                        } else {
-                            warn!("Tart health check returned unhealthy: {:?}", health);
-                        }
-                        tart_driver = Some(Arc::new(driver));
-                    }
-                    Err(e) => warn!("Tart health check failed: {}", e),
-                }
-            }
-            Err(e) => warn!("Failed to initialize Tart driver: {}", e),
-        }
-    }
-
-    if incus_driver.is_some() || tart_driver.is_some() {
-        let router = allternit_computer_cloud::SubstrateRouter::new(incus_driver, tart_driver);
-        if router.has_any_driver() {
-            info!("Substrate router initialized");
-            return Some(Arc::new(router));
-        }
-    }
-
-    // If OpenSandbox is explicitly configured, prefer it over the local
-    // platform driver so bots can use a persistent cloud sandbox.
-    if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {
-        use allternit_driver_interface::ExecutionDriver;
-        use allternit_opensandbox_driver::{OpenSandboxConfig, OpenSandboxDriver};
-        let config = OpenSandboxConfig::new(open_sandbox_url);
-        let driver = OpenSandboxDriver::new(config);
-        match driver.health_check().await {
-            Ok(health) if health.healthy => {
-                info!("OpenSandbox driver initialized from OPEN_SANDBOX_URL");
-                return Some(Arc::new(driver));
             }
             Err(e) => warn!("Failed to initialize Incus driver: {}", e),
         }

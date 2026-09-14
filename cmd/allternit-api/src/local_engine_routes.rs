@@ -4,7 +4,7 @@
 //! running at `LOCAL_ENGINE_URL` (default `http://127.0.0.1:8090`).
 
 use axum::body::Body;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -185,6 +185,20 @@ async fn proxy_chat_completions(
 }
 
 // ─── Generic proxy helpers ────────────────────────────────────────────────────
+
+async fn proxy_get_with_query(
+    path: &str,
+    params: std::collections::HashMap<String, String>,
+) -> Response {
+    if params.is_empty() {
+        return proxy_get(path).await;
+    }
+    let qs: Vec<String> = params
+        .iter()
+        .map(|(k, v)| format!("{k}={v}"))
+        .collect();
+    proxy_get(&format!("{path}?{}", qs.join("&"))).await
+}
 
 async fn proxy_get(path: &str) -> Response {
     let client = reqwest::Client::builder()

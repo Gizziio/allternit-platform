@@ -1344,15 +1344,6 @@ export class DesktopAuthManager {
       const fabricPayload = this.fabricRelayPayload(method, requestPath, body);
       if (fabricPayload) {
         this.sendRelayJson(socket, requestId, 200, fabricPayload);
-      if (requestPath === '/api/v1/fabric/leases' && method === 'POST') {
-        const payload = JSON.parse(body?.toString('utf8') || '{}') as { capabilityId?: string; grantee?: string; ttlSeconds?: number };
-        this.sendRelayJson(socket, requestId, 200, {
-          capabilityId: payload.capabilityId ?? 'harness.session',
-          grantee: payload.grantee ?? 'web-client',
-          ttlSeconds: payload.ttlSeconds ?? 300,
-          signature: 'desktop-local',
-          issuedAt: new Date().toISOString(),
-        });
         return;
       }
       if (requestPath === '/api/v1/session-worker/invoke' && method === 'POST') {
@@ -1482,10 +1473,6 @@ export class DesktopAuthManager {
     const desktopPrefix = '/v1/remote-control/desktop';
     if (requestPath.startsWith(desktopPrefix)) {
       return `http://127.0.0.1:8477${requestPath.slice(desktopPrefix.length) || '/'}`;
-  private relayLocalUrl(requestPath: string): string {
-    const desktopPrefix = '/v1/remote-control/desktop';
-    if (requestPath.startsWith(desktopPrefix)) {
-      return `${'http://127.0.0.1:8477'}${requestPath.slice(desktopPrefix.length) || '/'}`;
     }
     if (requestPath.startsWith('/api/v1/remote-control/')) {
       return `${URLS.GIZZI}${requestPath.replace('/api/v1/remote-control/', '/v1/remote-control/')}`;

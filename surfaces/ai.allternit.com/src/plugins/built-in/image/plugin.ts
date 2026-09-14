@@ -38,10 +38,9 @@ type ImageProviderId = ImageGenerationConfig['provider'];
 type HostedImageProvider = 'gpt-image' | 'flux-fal';
 
 export interface ImageConfig extends PluginConfig {
-  defaultProvider?: BonsaiImageProvider;
+  defaultProvider?: ImageProviderId;
   /** When set, generation uses this metered hosted provider instead of local Bonsai. */
   hostedProvider?: HostedImageProvider;
-  defaultProvider?: ImageProviderId;
   defaultSize?: string;
   defaultQuality?: 'low' | 'medium' | 'high' | 'standard' | 'hd';
   defaultN?: number;
@@ -200,7 +199,7 @@ class ImagePlugin implements ModePlugin {
     };
   }
 
-  private async generateImages(prompt: string): Promise<PluginOutput> {
+  private async generateImages(prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
     const hosted = this.config.hostedProvider;
     if (hosted) {
       // Cost preview before any metered generate (unit price × requested units).
@@ -240,12 +239,6 @@ class ImagePlugin implements ModePlugin {
       };
     }
 
-    const provider = this.selectedProvider();
-    this.emit({ 
-      type: 'progress', 
-      payload: { step: 'generating', message: provider === 'bonsai-webgpu' ? 'Generating locally with fast Bonsai WebGPU…' : 'Generating locally with Bonsai Image 4B...' },
-      timestamp: Date.now() 
-  private async generateImages(prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
     const provider = this.selectedProvider(inputOptions?.provider as ImageProviderId | undefined);
     this.emit({
       type: 'progress',

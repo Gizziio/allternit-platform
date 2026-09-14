@@ -22,6 +22,8 @@ import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
 import { officeEngineManager } from './office-engine-manager.js';
+import { fabricWorkerManager, type FabricWorkerState } from './fabric-worker-manager.js';
+import { readSecret, writeSecret, FABRIC_WORKER_TOKEN_KEY } from './secure-store.js';
 import { localEngineManager } from './local-engine-manager.js';
 import {
   editorForFile,
@@ -29,6 +31,10 @@ import {
   isOfficeTarget,
   type OfficeTarget,
 } from './office-programs.js';
+import {
+  buildBotComputerWindowUrl,
+  isBotComputerWindowUrl,
+} from './bot-computer-window.js';
 import { bonsaiCompanion } from './bonsai-companion-manager.js';
 import { gizziManager } from './gizzi-manager.js';
 import { connectorSidecarManager } from './connector-sidecar-manager.js';
@@ -254,8 +260,6 @@ let hudSessionId: string | null = null;
  * main window has finished loading queue here and flush on did-finish-load.
  */
 const pendingOfficeDeliveries: { channel: string; payload: unknown }[] = [];
-/** One office editor window per target (docs/sheets/slides/pdf/launcher). */
-const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
 
 // Send to the startup window only while it is alive. A destroyed BrowserWindow
@@ -274,6 +278,8 @@ let serviceState = {
   api: { status: 'pending', detail: 'Starting…' },
   gateway: { status: 'pending', detail: 'Starting…' },
   gizzi: { status: 'pending', detail: 'Starting…' },
+  fabricWorker: { status: 'pending', detail: 'Waiting…' },
+  office: { status: 'pending', detail: 'Waiting…' },
   connector: { status: 'pending', detail: 'Waiting…' },
   platform: { status: 'pending', detail: 'Waiting…' },
   research: { status: 'pending', detail: 'Waiting…' },
@@ -398,8 +404,94 @@ async function installAlwaysOnGizziRuntime(): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * Managed Fabric Transport worker (consumer-packaged Cowork P1). One local
+ * ensure call per launch rotates the gizzi principal credential (the API
+ * returns it once; previous tokens die), the Keychain-backed secure store
+ * holds it, and the bundled gizzi-code binary claims work as
+ * `gizzi-code fabric-worker`. The worker manager handles crash-respawn and
+ * graceful quit; failures surface in the engine status, never silently.
+ */
+async function startManagedFabricWorker(): Promise<void> {
+  const headers = backendManager.getLocalAuthHeaders();
+  const ensureRes = await fetch(`${URLS.API}/api/v1/fabric/transport/local/ensure-worker-principal`, {
+    method: 'POST',
+    headers: { ...headers, 'content-type': 'application/json' },
+    body: JSON.stringify({ workspace: 'default' }),
+  });
+  if (!ensureRes.ok) {
+    const body = await ensureRes.text().catch(() => '');
+    throw new Error(`worker credential provision failed: ${ensureRes.status} ${body.slice(0, 200)}`);
+  }
+  const ensured = (await ensureRes.json()) as { principal_id: string; token: string };
+  writeSecret(FABRIC_WORKER_TOKEN_KEY, ensured.token);
+  log.info(`[Main] Fabric worker credential provisioned for ${ensured.principal_id} (stored in Keychain)`);
+  // P2.2/2.3: the worker's agentic jobs use the existing model router (the
+  // api's operator key) and confine file tools to the granted folders.
+  const prefsRes = await fetch(`${URLS.API}/api/v1/cowork-preferences`, { headers });
+  const trustedFolders: string[] = prefsRes.ok
+    ? (((await prefsRes.json().catch(() => ({}))) as { trusted_folders?: string[] }).trusted_folders ?? [])
+    : [];
+  const state = await fabricWorkerManager.start({
+    token: ensured.token,
+    apiUrl: URLS.API,
+    operatorKey: backendManager.getApiKey(),
+    trustedFolders,
+  });
+  serviceState.fabricWorker = { status: state.status === 'up' ? 'up' : state.status, detail: state.detail };
+  pushServiceState();
+}
+
+/** Aggregate engine status for the shell indicator (API / gizzi / worker / office). */
+async function getEngineStatus() {
+  const worker = fabricWorkerManager.getStatus();
+  const office = await officeEngineManager.getStatus().catch(() => null);
+  return {
+    api: serviceState.api,
+    gizzi: serviceState.gizzi,
+    fabricWorker: { status: worker.status, detail: worker.detail },
+    office: office
+      ? office.running
+        ? { status: 'up', detail: `Connected on ${office.url}` }
+        : { status: 'down', detail: 'Unavailable — restart the app' }
+      : serviceState.office,
+  };
+}
+
+async function pushEngineStatus(): Promise<void> {
+  const status = await getEngineStatus();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('engines:status', status);
+  }
+}
+
 /** If set, the permission onboarding flow should start when the renderer signals readiness. */
 let permissionOnboardingResolver: (() => void) | null = null;
+
+/**
+ * Folder-grant onboarding step (consumer-packaged Cowork P1). When the
+ * profile has no trusted_folders yet, the startup window shows a grant step
+ * (Electron directory picker → /cowork-preferences) and boot waits for the
+ * save. The desktop-access local auth gate is used — no Clerk session
+ * exists at this point in first-run onboarding.
+ */
+let folderGrantResolver: (() => void) | null = null;
+
+async function maybeRequestFolderGrants(): Promise<void> {
+  if (!splashWindow || splashWindow.isDestroyed()) return;
+  const headers = { ...backendManager.getLocalAuthHeaders(), 'content-type': 'application/json' };
+  const res = await fetch(`${URLS.API}/api/v1/cowork-preferences`, { headers });
+  if (!res.ok) throw new Error(`preferences read failed: ${res.status}`);
+  const prefs = (await res.json()) as { trusted_folders?: string[] };
+  if (Array.isArray(prefs.trusted_folders) && prefs.trusted_folders.length > 0) return;
+  log.info('[Main] No trusted folders yet — showing grant step in startup window');
+  sendToSplash('folders:show');
+  await new Promise<void>((resolve) => {
+    folderGrantResolver = resolve;
+  });
+  folderGrantResolver = null;
+}
 
 type OfficeHostId = 'word' | 'excel' | 'powerpoint';
 
@@ -721,6 +813,21 @@ function createMainWindow(): BrowserWindow {
           },
         };
       }
+
+      if (isBotComputerWindowUrl(requestedUrl)) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1280,
+            height: 840,
+            minWidth: 820,
+            minHeight: 560,
+            backgroundColor: '#0F0C0A',
+            autoHideMenuBar: true,
+            title: requestedUrl.searchParams.get('title') || 'Bot computer',
+          },
+        };
+      }
     } catch {
       // Invalid or non-standard URLs fall through to the external browser.
     }
@@ -880,6 +987,8 @@ async function initializeBundledMode(): Promise<void> {
     api: { status: 'pending', detail: 'Starting…' },
     gateway: { status: 'pending', detail: 'Starting…' },
     gizzi: { status: 'pending', detail: 'Starting…' },
+    fabricWorker: { status: 'pending', detail: 'Waiting…' },
+    office: { status: 'pending', detail: 'Waiting…' },
     connector: { status: 'pending', detail: 'Waiting…' },
     platform: { status: 'pending', detail: 'Waiting…' },
     research: { status: 'pending', detail: 'Waiting…' },
@@ -947,9 +1056,12 @@ async function initializeBundledMode(): Promise<void> {
       const engineUrl = await officeEngineManager.start();
       if (engineUrl) {
         log.info(`[Main] Office engine ready (${officeEngineManager.getMode()}) at ${engineUrl}`);
+        serviceState.office = { status: 'up', detail: `Connected on ${engineUrl}` };
       } else {
         log.warn('[Main] Office engine unavailable, continuing without it');
+        serviceState.office = { status: 'down', detail: 'Unavailable — restart the app' };
       }
+      pushServiceState();
     }
 
     // Step 2 — allternit-api (Rust operator API, port ${PORTS.API} — VM, rails, terminal)
@@ -1001,6 +1113,21 @@ async function initializeBundledMode(): Promise<void> {
     serviceState.gateway = { status: 'up', detail: `Connected on ${URLS.API}` };
     pushServiceState();
     store.set('backend.lastLocalVersion', PLATFORM_MANIFEST.backend.version);
+
+    // Step 2.5 — managed Fabric Transport worker (consumer-packaged Cowork
+    // P1). The desktop owns the worker lifecycle end-to-end: the loopback
+    // ensure route mints the gizzi principal credential (returned once), the
+    // desktop keeps it in the Keychain-backed secure store, and the bundled
+    // gizzi-code binary runs `fabric-worker` with crash-respawn + graceful
+    // SIGTERM quit. Degrades visibly, never silently.
+    updateSplash('Starting fabric worker…', 45);
+    try {
+      await startManagedFabricWorker();
+    } catch (workerErr) {
+      log.warn('[Main] Fabric worker failed to start, continuing without it:', workerErr);
+      serviceState.fabricWorker = { status: 'down', detail: 'Worker unavailable — restart the app' };
+      pushServiceState();
+    }
 
     // Bonsai companion follows the app lifecycle: auto-start when installed.
     bonsaiCompanion.getStatus()
@@ -1105,6 +1232,15 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     // Complete
+    // Step 2.9 — folder grants (consumer-packaged Cowork P1). Ask once,
+    // during startup, when the profile has no trusted folders yet. Skipped
+    // silently only when the preferences service itself is unreachable —
+    // the wizard remains re-runnable on the next launch.
+    try {
+      await maybeRequestFolderGrants();
+    } catch (folderErr) {
+      log.warn('[Main] Folder-grant step skipped:', folderErr);
+    }
     sendToSplash('complete');
     await new Promise(r => setTimeout(r, 400));
 
@@ -2081,6 +2217,9 @@ app.on('before-quit', async () => {
   if (app.isReady()) {
     globalShortcut.unregisterAll();
   }
+  // SIGTERM first — the worker finishes its in-flight claim and releases the
+  // lease path via the sweeper. Must precede the API shutdown it claims from.
+  await fabricWorkerManager.stop();
   persistedState.flush();
   featureFlagManager.destroy();
   mcpHostManager.shutdown();
@@ -2119,6 +2258,46 @@ voiceManager.registerIpcHandlers();
 
 // Backend management
 ipcMain.handle('backend:get-status', () => backendManager.getStatus());
+
+// Engine status surface (consumer-packaged Cowork P1): one aggregate
+// green/yellow/red indicator over API / gizzi / fabric worker / office engine.
+ipcMain.handle('engines:get-status', async () => getEngineStatus());
+fabricWorkerManager.onStateChange((state: FabricWorkerState) => {
+  serviceState.fabricWorker =
+    state.status === 'stopped'
+      ? serviceState.fabricWorker.status === 'pending'
+        ? { status: 'pending', detail: 'Waiting…' }
+        : { status: 'down', detail: state.detail }
+      : { status: state.status, detail: state.detail };
+  pushServiceState();
+  void pushEngineStatus();
+});
+
+// Folder-grant wizard bridges (startup window preload → main).
+ipcMain.handle('startup:pick-folder', async () => {
+  if (!splashWindow || splashWindow.isDestroyed()) return null;
+  const result = await dialog.showOpenDialog(splashWindow, {
+    title: 'Grant a folder to Allternit Cowork',
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
+});
+ipcMain.handle('startup:save-folders', async (_event, folders: unknown) => {
+  const list = Array.isArray(folders) ? folders.filter((f): f is string => typeof f === 'string') : [];
+  const headers = { ...backendManager.getLocalAuthHeaders(), 'content-type': 'application/json' };
+  const res = await fetch(`${URLS.API}/api/v1/cowork-preferences`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ trusted_folders: list }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`saving trusted folders failed: ${res.status} ${body.slice(0, 200)}`);
+  }
+  sendToSplash('folders:hide');
+  folderGrantResolver?.();
+  return { saved: list.length };
+});
 handleGuarded('backend:restart', async () => {
   await backendManager.stopBackend();
 
@@ -2392,6 +2571,7 @@ function openHudWindow(): void {
 
   log.info('[HUD] Creating new floating HUD window');
   hudWindow = createHudWindow();
+
   log.info('[HUD] HUD window created', { id: hudWindow.id, bounds: hudWindow.getBounds(), visible: hudWindow.isVisible() });
 
   hudWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -2710,7 +2890,6 @@ handleGuarded('shell:hud:annotation:save', async (_event, base64Png: string) => 
 });
 
 function openFabricSessionWindow(): void {
-ipcMain.handle('shell:open-remote-control', () => {
   if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
     remoteControlWindow.show();
     remoteControlWindow.focus();
@@ -2833,6 +3012,7 @@ ipcMain.on('shell:open-office', (_event, target?: unknown, artifactId?: unknown)
 });
 
 const codeSessionWindows = new Map<string, BrowserWindow>();
+const botComputerWindows = new Map<string, BrowserWindow>();
 
 ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; workspaceId?: string; title?: string }) => {
   if (!options?.sessionId) throw new Error('A session ID is required');
@@ -2882,6 +3062,48 @@ ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; work
   });
   void sessionWindow.loadURL(url.toString());
 });
+
+ipcMain.handle('shell:open-bot-computer', (_event, options: { botId: string; title?: string }) => {
+  if (!options?.botId) throw new Error('A bot ID is required');
+
+  const existing = botComputerWindows.get(options.botId);
+  if (existing && !existing.isDestroyed()) {
+    existing.show();
+    existing.focus();
+    return;
+  }
+
+  const computerWindow = new BrowserWindow({
+    width: 1280,
+    height: 840,
+    minWidth: 820,
+    minHeight: 560,
+    title: options.title || 'Bot computer',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  installWillNavigateGuard(computerWindow.webContents);
+  botComputerWindows.set(options.botId, computerWindow);
+
+  const url = buildBotComputerWindowUrl(activePlatformUrl, options);
+  computerWindow.once('ready-to-show', () => computerWindow.show());
+  computerWindow.on('closed', () => { botComputerWindows.delete(options.botId); });
+  computerWindow.webContents.setWindowOpenHandler(({ url: target }) => {
+    void openExternalAllowlisted(target);
+    return { action: 'deny' };
+  });
+  void computerWindow.loadURL(url);
+});
+
 ipcMain.handle('shell:get-office-host-status', async () => detectOfficeHostStatus());
 ipcMain.handle('office-addins:get-status', async () => {
   const manager = await getOfficeAddinManager();
@@ -3103,37 +3325,6 @@ handleGuarded('gizzi-daemon:uninstall', async () => {
     return { success: true, status: await gizziDaemonManager.getStatus() };
   } catch (err) {
     log.error('[IPC] gizzi-daemon:uninstall failed:', err);
-    return { success: false, error: (err as Error).message };
-  }
-});
-
-// ============================================================================
-// IPC: Browser API Capture
-// Records network traffic from the default Electron session and returns a HAR
-// archive for ingestion by the Site APIs surface.
-// ============================================================================
-
-ipcMain.handle('browser-capture:is-available', () => isCaptureAvailable());
-
-ipcMain.handle('browser-capture:start', (_event, options?: { filterUrls?: string[] }) => {
-  try {
-    const { sessionId } = createCaptureSession(options);
-    return { success: true, sessionId };
-  } catch (err) {
-    log.error('[IPC] browser-capture:start failed:', err);
-    return { success: false, error: (err as Error).message };
-  }
-});
-
-ipcMain.handle('browser-capture:stop', (_event, sessionId: string) => {
-  try {
-    const result = stopCaptureSession(sessionId);
-    if (!result) {
-      return { success: false, error: 'Capture session not found' };
-    }
-    return { success: true, har: result.har };
-  } catch (err) {
-    log.error('[IPC] browser-capture:stop failed:', err);
     return { success: false, error: (err as Error).message };
   }
 });

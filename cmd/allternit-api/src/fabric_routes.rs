@@ -245,7 +245,6 @@ async fn list_peers(
     headers: HeaderMap,
     Query(query): Query<HashMap<String, String>>,
 ) -> Response {
-) -> impl IntoResponse {
     let mut path = "/v1/fabric/peers".to_string();
     if !query.is_empty() {
         let params: Vec<String> = query
@@ -261,7 +260,6 @@ async fn list_peers(
         return (StatusCode::OK, Json(json!([local_peer_doc()]))).into_response();
     }
     resp
-    proxy_json(&state, &headers, reqwest::Method::GET, &path, None, None).await
 }
 
 async fn get_local_peer(
@@ -269,7 +267,6 @@ async fn get_local_peer(
     headers: HeaderMap,
     Query(query): Query<HashMap<String, String>>,
 ) -> Response {
-) -> impl IntoResponse {
     let mut path = "/v1/fabric/peers/local".to_string();
     if let Some(format) = query.get("format") {
         path = format!("{}?format={}", path, urlencoding::encode(format));
@@ -281,7 +278,6 @@ async fn get_local_peer(
         return (StatusCode::OK, Json(local_peer_doc())).into_response();
     }
     resp
-    proxy_json(&state, &headers, reqwest::Method::GET, &path, None, None).await
 }
 
 async fn get_directory(
@@ -289,8 +285,6 @@ async fn get_directory(
     headers: HeaderMap,
 ) -> Response {
     let resp = proxy_json(
-) -> impl IntoResponse {
-    proxy_json(
         &state,
         &headers,
         reqwest::Method::GET,
@@ -311,8 +305,6 @@ async fn get_worker_manifest(
     headers: HeaderMap,
 ) -> Response {
     let resp = proxy_json(
-) -> impl IntoResponse {
-    proxy_json(
         &state,
         &headers,
         reqwest::Method::GET,
@@ -355,15 +347,6 @@ async fn issue_lease(
         return (StatusCode::OK, Json(local_lease(&body))).into_response();
     }
     resp
-    warn!("lease authority not configured; returning 503");
-    (
-        StatusCode::SERVICE_UNAVAILABLE,
-        Json(json!({
-            "error": "lease_authority_not_configured",
-            "message": "Canonical AllternitOS lease authority is not configured. Set ALLTERNITOS_LEASE_AUTHORITY_URL for production, or use the gizzi runtime dev issuer directly (local dev only)."
-        })),
-    )
-        .into_response()
 }
 
 async fn proxy_to_canonical_lease_authority(
@@ -434,7 +417,6 @@ async fn invoke_capability(
     };
 
     let resp = proxy_json(
-    proxy_json(
         &state,
         &headers,
         reqwest::Method::POST,
@@ -579,10 +561,6 @@ async fn invoke_via_gizzi_sessions(
         }
         other => Err(format!("unsupported harness capability {other}")),
     }
-        Some(upstream_body),
-        lease_header.as_deref(),
-    )
-    .await
 }
 
 async fn stream_session_events(

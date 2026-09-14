@@ -49,6 +49,49 @@ export function loadTartHostEnv(env: Record<string, string>, file = path.join(os
   }
 }
 
+/**
+ * Incus (dedicated Computer Cloud box) substrate config. Same operator-file
+ * pattern as tart-host.env: keep INCUS_URL, the client cert/key paths, and
+ * stream hosts in ~/.allternit/incus-host.env and inject whatever is not
+ * already in the environment, so a plain app launch routes bot desktops to
+ * the box instead of falling back to whatever other substrate is configured.
+ * Never logged.
+ */
+const INCUS_ENV_KEYS = [
+  'INCUS_URL',
+  'INCUS_URLS',
+  'INCUS_CLIENT_CERT',
+  'INCUS_CLIENT_KEY',
+  'INCUS_CA_CERT',
+  'INCUS_INSECURE_SKIP_VERIFY',
+  'INCUS_VNC_HOST',
+  'INCUS_CDP_HOST',
+] as const;
+
+export function loadIncusHostEnv(env: Record<string, string>, file = path.join(os.homedir(), '.allternit', 'incus-host.env')): void {
+  try {
+    const parsed: Record<string, string> = {};
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line);
+      if (!m) continue;
+      parsed[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+    let injected = false;
+    for (const key of INCUS_ENV_KEYS) {
+      if (!env[key] && parsed[key]) {
+        env[key] = parsed[key];
+        injected = true;
+      }
+    }
+    if (injected && env.INCUS_URL) {
+      log.info('[BackendManager] Incus host config loaded from ~/.allternit/incus-host.env');
+    }
+  } catch {
+    // incus-host.env absent — no Incus substrate; the Tart path (or the
+    // API's actionable 503 when neither is configured) still applies.
+  }
+}
+
 // Port ownership: the packaged app owns the production gateway port (8013)
 // and reclaims it on launch. A dev desktop (worktree Electron, npm run dev)
 // binds the dev port instead, so a dev build can run side by side with the
@@ -84,6 +127,7 @@ export class BackendManager {
   private static instance: BackendManager;
   private kernelProc: ChildProcess | null = null;
   private apiKey: string | null = null;
+  private desktopAccessToken: string | null = null;
   private lastConfig: BackendLaunchConfig | null = null;
   private resolvedBinaryPath: string | null | undefined;
   /**
@@ -172,6 +216,11 @@ export class BackendManager {
     }
 
     this.apiKey = crypto.randomBytes(32).toString('hex');
+    // Spawn-time secret for the managed-runtime local endpoints (fabric
+    // worker auto-provision). Per-boot random; consumed by the API's
+    // desktop-bootstrap auth path via the environment. When absent there
+    // (non-desktop deployments) the endpoints are disabled, not open.
+    this.desktopAccessToken = crypto.randomBytes(32).toString('hex');
 
     const dataDir = path.join(app.getPath('userData'), 'allternit');
     fs.mkdirSync(dataDir, { recursive: true });
@@ -196,6 +245,14 @@ export class BackendManager {
       ALLTERNIT_CLOUD_API_URL: process.env.ALLTERNIT_CLOUD_API_URL || URLS.CLOUD_API,
       ALLTERNIT_SELF_HOSTED: process.env.ALLTERNIT_SELF_HOSTED || 'false',
       ALLTERNIT_OPERATOR_API_KEY: this.apiKey,
+      ALLTERNIT_DESKTOP_ACCESS_TOKEN: this.desktopAccessToken,
+      // HMAC secret for short-lived desktop VNC WebSocket tokens (bot-desktop
+      // Observe/Take Over). Without it the api returns unsigned ws_urls the
+      // /ws/* auth rejects, and the computer pane renders nothing. An explicit
+      // env export wins (dev/test flows); otherwise generate per boot like the
+      // operator key — minted tokens are 5-minute-lived, so per-boot rotation
+      // only invalidates in-flight viewers across a restart.
+      ALLTERNIT_DESKTOP_WS_SECRET: process.env.ALLTERNIT_DESKTOP_WS_SECRET ?? crypto.randomBytes(32).toString('hex'),
       ALLTERNIT_DATA_DIR: dataDir,
       ALLTERNIT_VM_DIR: fs.existsSync(vmDir) ? vmDir : '',
       ALLTERNIT_PLATFORM_STATIC: platformStatic ?? '',
@@ -209,6 +266,7 @@ export class BackendManager {
       ...(config.extraEnv ?? {}),
     };
     loadTartHostEnv(env);
+    loadIncusHostEnv(env);
 
     log.info(`[BackendManager] Starting allternit-api on port ${API_PORT} from ${binaryPath}`);
     const spawned = spawn(binaryPath, developmentCargoProject ? ['run', '--manifest-path', path.join(developmentCargoProject, 'Cargo.toml')] : [], {
@@ -308,6 +366,20 @@ export class BackendManager {
 
   getApiKey(): string | null {
     return this.apiKey;
+  }
+
+  /** Spawn-time secret for managed-runtime local API endpoints (never logged). */
+  getDesktopAccessToken(): string | null {
+    return this.desktopAccessToken;
+  }
+
+  /** Authenticated headers for managed-runtime local API calls from main. */
+  getLocalAuthHeaders(userId = 'desktop-local'): Record<string, string> {
+    return {
+      'x-allternit-desktop-access-token': this.desktopAccessToken ?? '',
+      'x-allternit-user-id': userId,
+      'x-allternit-user-email': `${userId}@desktop.allternit.local`,
+    };
   }
 
   async getStatus(): Promise<BackendStatus> {

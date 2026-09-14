@@ -32,15 +32,11 @@ const VIDEO_API_KEYS = 'allternit_video_api_keys';
 type VideoProviderId = VideoGenerationConfig['provider'];
 
 export interface VideoConfig extends PluginConfig {
-  provider?: 'minimax' | 'minimax-h3' | 'fal-seedance' | 'kling';
-  model?: string;
-  duration?: 6 | 10;
-  resolution?: '768p' | '1080p' | '768P' | '2K' | '720p';
-  falTier?: 'fast' | 'standard';
   provider?: VideoProviderId;
   model?: string;
   duration?: 6 | 10 | 15;
-  resolution?: '768p' | '1080p';
+  resolution?: '768p' | '1080p' | '768P' | '2K' | '720p';
+  falTier?: 'fast' | 'standard';
 }
 
 class VideoPlugin implements ModePlugin {
@@ -127,7 +123,8 @@ class VideoPlugin implements ModePlugin {
         case 'image-to-video':
           return await this.generateFromImage(
             input.options?.imageUrl as string,
-            input.prompt
+            input.prompt,
+            input.options,
           );
         case 'extend':
           return await this.extendVideo(input.options?.videoId as string);
@@ -177,25 +174,6 @@ class VideoPlugin implements ModePlugin {
     };
   }
 
-  private async generateFromText(prompt: string): Promise<PluginOutput> {
-    const meteredProvider: VideoConfig['provider'] = this.config.provider;
-    if (meteredProvider === 'minimax-h3' || meteredProvider === 'fal-seedance') {
-      // Cost preview before any metered generate (unit price × requested units).
-      const preview = previewVideoCost(meteredProvider, this.config.duration ?? 6, {
-        resolution: this.config.resolution,
-        falTier: this.config.falTier,
-      });
-      this.emit({
-        type: 'progress',
-        payload: { step: 'cost-preview', message: preview.summary },
-        timestamp: Date.now(),
-      });
-    }
-
-    this.emit({ 
-      type: 'progress', 
-      payload: { step: 'generating', message: `Generating ${this.config.duration}s video...` },
-      timestamp: Date.now() 
   private resolveConfig(inputOptions?: Record<string, unknown>): {
     provider: VideoProviderId;
     model: string;
@@ -216,6 +194,19 @@ class VideoPlugin implements ModePlugin {
 
   private async generateFromText(prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
     const config = this.resolveConfig(inputOptions);
+    const meteredProvider = config.provider;
+    if (meteredProvider === 'minimax-h3' || meteredProvider === 'fal-seedance') {
+      const preview = previewVideoCost(meteredProvider, config.duration ?? 6, {
+        resolution: config.resolution,
+        falTier: this.config.falTier,
+      });
+      this.emit({
+        type: 'progress',
+        payload: { step: 'cost-preview', message: preview.summary },
+        timestamp: Date.now(),
+      });
+    }
+
     const style = (inputOptions?.style as string) || undefined;
     const promptWithStyle = style ? `${style} style video. ${prompt}` : prompt;
 
@@ -246,11 +237,12 @@ class VideoPlugin implements ModePlugin {
     };
   }
 
-  private async generateFromImage(imageUrl: string, prompt: string): Promise<PluginOutput> {
-    const meteredProvider: VideoConfig['provider'] = this.config.provider;
+  private async generateFromImage(imageUrl: string, prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
+    const config = this.resolveConfig(inputOptions);
+    const meteredProvider = config.provider;
     if (meteredProvider === 'minimax-h3' || meteredProvider === 'fal-seedance') {
-      const preview = previewVideoCost(meteredProvider, this.config.duration ?? 6, {
-        resolution: this.config.resolution,
+      const preview = previewVideoCost(meteredProvider, config.duration ?? 6, {
+        resolution: config.resolution,
         falTier: this.config.falTier,
       });
       this.emit({
@@ -260,14 +252,12 @@ class VideoPlugin implements ModePlugin {
       });
     }
 
-  private async generateFromImage(imageUrl: string, prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
     this.emit({ 
       type: 'progress', 
       payload: { step: 'generating', message: 'Animating image...' },
       timestamp: Date.now() 
     });
 
-    const config = this.resolveConfig(inputOptions);
     const result = await generateVideoFromImage(imageUrl, prompt, {
       provider: this.config.provider! as any,
       model: this.config.model!,

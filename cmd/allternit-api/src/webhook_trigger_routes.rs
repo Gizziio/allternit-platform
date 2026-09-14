@@ -20,16 +20,11 @@ use std::sync::Arc;
 use tracing::info;
 
 use crate::{auth::AuthUser, error::ApiError, AppState};
+use crate::rails::RailsState;
 use allternit_commrails::rails_id::{HierarchicalId, TicketId};
 use allternit_commrails::tickets::{
     Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore,
 };
-use crate::auth::AuthUser;
-use crate::error::ApiError;
-use crate::AppState;
-use crate::rails::RailsState;
-use allternit_agent_system_rails::rails_id::{HierarchicalId, TicketId};
-use allternit_agent_system_rails::tickets::{Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore};
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -218,16 +213,6 @@ fn extract_inbound_signature(headers: &HeaderMap) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-}
-
-fn extract_inbound_signature(headers: &HeaderMap) -> Option<String> {
-    headers
-        .get("x-allternit-signature")
-        .or_else(|| headers.get("X-Allternit-Signature"))
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // Authenticated trigger management
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -386,19 +371,6 @@ async fn update_trigger(
             sets.push("target_agent_id = ?");
             sql_params.push(Box::new(target_agent_id));
         }
-        }
-        if let Some(source) = body.source {
-            sets.push("source = ?");
-            sql_params.push(Box::new(source));
-        }
-        if let Some(event_type) = body.event_type {
-            sets.push("event_type = ?");
-            sql_params.push(Box::new(event_type));
-        }
-        if let Some(target_agent_id) = body.target_agent_id {
-            sets.push("target_agent_id = ?");
-            sql_params.push(Box::new(target_agent_id));
-        }
         if let Some(prompt_template) = body.prompt_template {
             sets.push("prompt_template = ?");
             sql_params.push(Box::new(prompt_template));
@@ -439,11 +411,6 @@ async fn update_trigger(
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))?
     .map_err(|e: rusqlite::Error| ApiError::DbError(e.to_string()))?;
-
-    if affected == 0 {
-        return Err(ApiError::NotFound("trigger not found".into()));
-    }
-
 
     if affected == 0 {
         return Err(ApiError::NotFound("trigger not found".into()));

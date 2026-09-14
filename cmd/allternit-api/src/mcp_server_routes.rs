@@ -296,7 +296,7 @@ pub async fn mcp_tools_internal(
 /// Stdio entry point used by `allternit-mcp-server`. Parses one JSON-RPC
 /// request line, dispatches it, and returns the serialized response (or None
 /// for notifications that require no response body).
-pub async fn mcp_tools_internal_stdio(state: &AppState, user_id: &str, line: &str) -> Option<String> {
+pub async fn mcp_tools_internal_stdio(state: &Arc<AppState>, user_id: &str, line: &str) -> Option<String> {
     let req: JsonRpcRequest = match serde_json::from_str(line) {
         Ok(req) => req,
         Err(e) => {
@@ -339,7 +339,7 @@ async fn handle_rpc_inner(
 /// Value-returning core so the stdio binary can reuse the same dispatch logic
 /// without constructing Axum responses.
 async fn handle_rpc_inner_value(
-    state: &AppState,
+    state: &Arc<AppState>,
     user_id: &str,
     org_id: Option<&str>,
     req: JsonRpcRequest,
@@ -415,7 +415,7 @@ async fn handle_rpc_inner_value(
 }
 
 async fn handle_builtin_dotted_tool(
-    state: &AppState,
+    state: &Arc<AppState>,
     user_id: &str,
     org_id: Option<&str>,
     name: &str,
@@ -435,6 +435,7 @@ async fn handle_builtin_dotted_tool(
             let result = crate::inference_router_executor::execute_routed_turn(
                 provider,
                 prompt,
+                None,
                 None,
             )
             .await;

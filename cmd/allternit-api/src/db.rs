@@ -1,4 +1,5 @@
-use rusqlite::{Connection, OptionalExtension, Result as SqlResult};
+use rusqlite::{Connection, Result as SqlResult};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing::info;
 
@@ -146,65 +147,281 @@ impl DbHandle {
     }
 
     // ─── HAR-derived API capture persistence ────────────────────────────────────
-    // ─── API Capture persistence ─────────────────────────────────────────────
 
     pub fn create_capture_session(
         &self,
         id: &str,
         user_id: &str,
-        domain: &str,
-        source: &str,
+        domain: Option<&str>,
+        source: Option<&str>,
         status: &str,
         started_at: &str,
     ) -> SqlResult<()> {
         let conn = self.connect()?;
         conn.execute(
-            "INSERT INTO api_capture_sessions (id, user_id, domain, source, status, started_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO har_capture_sessions (id, user_id, domain, source, status, started_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(id) DO UPDATE SET
+                 user_id = excluded.user_id,
+                 domain = excluded.domain,
+                 source = excluded.source,
+                 status = excluded.status,
+                 started_at = excluded.started_at,
+                 updated_at = CURRENT_TIMESTAMP",
             rusqlite::params![id, user_id, domain, source, status, started_at],
         )?;
         Ok(())
     }
 
-    pub fn update_capture_session_har(
-        &self,
-        id: &str,
-        user_id: &str,
-        status: &str,
-        ended_at: &str,
-        har_json: &str,
-    ) -> SqlResult<bool> {
-        let conn = self.connect()?;
-        let rows = conn.execute(
-            "UPDATE api_capture_sessions
-             SET status = ?3, ended_at = ?4, har_json = ?5
-             WHERE id = ?1 AND user_id = ?2",
-            rusqlite::params![id, user_id, status, ended_at, har_json],
-        )?;
-        Ok(rows > 0)
-    }
-
-    pub fn list_capture_sessions(&self, user_id: &str) -> SqlResult<Vec<serde_json::Value>> {
+    pub fn get_capture_session(&self, id: &str) -> SqlResult<Option<CaptureSession>> {
         let conn = self.connect()?;
         let mut stmt = conn.prepare(
-            "SELECT id, domain, source, status, started_at, ended_at
-             FROM api_capture_sessions
+            "SELECT id, user_id, domain, source, status, started_at, ended_at
+             FROM har_capture_sessions WHERE id = ?1",
+        )?;
+        let mut rows = stmt.query(rusqlite::params![id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(CaptureSession {
+                id: row.get(0)?,
+                user_id: row.get(1)?,
+                domain: row.get(2)?,
+                source: row.get(3)?,
+                status: row.get(4)?,
+                started_at: row.get(5)?,
+                ended_at: row.get(6)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn update_capture_session_status(
+        &self,
+        id: &str,
+        status: &str,
+        ended_at: Option<&str>,
+    ) -> SqlResult<()> {
+        let conn = self.connect()?;
+        conn.execute(
+            "UPDATE har_capture_sessions
+             SET status = ?1, ended_at = COALESCE(?2, ended_at), updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?3",
+            rusqlite::params![status, ended_at, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_capture_sessions_for_user(&self, user_id: &str) -> SqlResult<Vec<CaptureSession>> {
+        let conn = self.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, domain, source, status, started_at, ended_at
+             FROM har_capture_sessions
              WHERE user_id = ?1
-             ORDER BY created_at DESC",
+             ORDER BY started_at DESC",
         )?;
         let rows = stmt.query_map(rusqlite::params![user_id], |row| {
-            Ok(serde_json::json!({
-                "id": row.get::<_, String>(0)?,
-                "domain": row.get::<_, String>(1)?,
-                "source": row.get::<_, String>(2)?,
-                "status": row.get::<_, String>(3)?,
-                "started_at": row.get::<_, String>(4)?,
-                "ended_at": row.get::<_, Option<String>>(5)?,
-            }))
+            Ok(CaptureSession {
+                id: row.get(0)?,
+                user_id: row.get(1)?,
+                domain: row.get(2)?,
+                source: row.get(3)?,
+                status: row.get(4)?,
+                started_at: row.get(5)?,
+                ended_at: row.get(6)?,
+            })
         })?;
         rows.collect()
     }
 
+    pub fn delete_capture_session(&self, id: &str) -> SqlResult<bool> {
+        let conn = self.connect()?;
+        let changed = conn.execute(
+            "DELETE FROM har_capture_sessions WHERE id = ?1",
+            rusqlite::params![id],
+        )?;
+        Ok(changed > 0)
+    }
+
+    pub fn create_api_contract(
+        &self,
+        id: &str,
+        user_id: &str,
+        domain: &str,
+        source: Option<&str>,
+        derived_at: &str,
+    ) -> SqlResult<()> {
+        let conn = self.connect()?;
+        conn.execute(
+            "INSERT INTO har_api_contracts (id, user_id, domain, source, derived_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(id) DO UPDATE SET
+                 user_id = excluded.user_id,
+                 domain = excluded.domain,
+                 source = excluded.source,
+                 derived_at = excluded.derived_at,
+                 updated_at = CURRENT_TIMESTAMP",
+            rusqlite::params![id, user_id, domain, source, derived_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_contract_with_endpoints(
+        &self,
+        id: &str,
+    ) -> SqlResult<Option<(ApiContract, Vec<ApiEndpoint>)>> {
+        let conn = self.connect()?;
+        let contract: Option<ApiContract> = {
+            let mut stmt = conn.prepare(
+                "SELECT id, user_id, domain, source, derived_at
+                 FROM har_api_contracts WHERE id = ?1",
+            )?;
+            let mut rows = stmt.query(rusqlite::params![id])?;
+            rows.next()?
+                .map(|row| -> SqlResult<ApiContract> {
+                    Ok(ApiContract {
+                        id: row.get(0)?,
+                        user_id: row.get(1)?,
+                        domain: row.get(2)?,
+                        source: row.get(3)?,
+                        derived_at: row.get(4)?,
+                    })
+                })
+                .transpose()?
+        };
+        let Some(contract) = contract else {
+            return Ok(None);
+        };
+        let mut stmt = conn.prepare(
+            "SELECT id, contract_id, method, url, host, path, path_template, summary,
+                    query_params, path_params, headers, body_template, body_mime_type,
+                    body_params, status_code, response_sample, hit_count
+             FROM har_api_endpoints
+             WHERE contract_id = ?1
+             ORDER BY method, path",
+        )?;
+        let endpoints = stmt
+            .query_map(rusqlite::params![id], |row| Ok(endpoint_from_row(row)?))?
+            .collect::<SqlResult<Vec<_>>>()?;
+        Ok(Some((contract, endpoints)))
+    }
+
+    pub fn list_contracts_for_user(&self, user_id: &str) -> SqlResult<Vec<ApiContract>> {
+        let conn = self.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, domain, source, derived_at
+             FROM har_api_contracts
+             WHERE user_id = ?1
+             ORDER BY derived_at DESC",
+        )?;
+        let rows = stmt.query_map(rusqlite::params![user_id], |row| {
+            Ok(ApiContract {
+                id: row.get(0)?,
+                user_id: row.get(1)?,
+                domain: row.get(2)?,
+                source: row.get(3)?,
+                derived_at: row.get(4)?,
+            })
+        })?;
+        rows.collect()
+    }
+
+    pub fn delete_contract(&self, id: &str) -> SqlResult<bool> {
+        let conn = self.connect()?;
+        let changed = conn.execute(
+            "DELETE FROM har_api_contracts WHERE id = ?1",
+            rusqlite::params![id],
+        )?;
+        Ok(changed > 0)
+    }
+
+    pub fn create_api_endpoints(&self, endpoints: &[ApiEndpoint]) -> SqlResult<()> {
+        let conn = self.connect()?;
+        let mut stmt = conn.prepare(
+            "INSERT INTO har_api_endpoints (
+                id, contract_id, method, url, host, path, path_template, summary,
+                query_params, path_params, headers, body_template, body_mime_type,
+                body_params, status_code, response_sample, hit_count
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+            ON CONFLICT(id) DO UPDATE SET
+                contract_id = excluded.contract_id,
+                method = excluded.method,
+                url = excluded.url,
+                host = excluded.host,
+                path = excluded.path,
+                path_template = excluded.path_template,
+                summary = excluded.summary,
+                query_params = excluded.query_params,
+                path_params = excluded.path_params,
+                headers = excluded.headers,
+                body_template = excluded.body_template,
+                body_mime_type = excluded.body_mime_type,
+                body_params = excluded.body_params,
+                status_code = excluded.status_code,
+                response_sample = excluded.response_sample,
+                hit_count = excluded.hit_count,
+                updated_at = CURRENT_TIMESTAMP",
+        )?;
+        for ep in endpoints {
+            stmt.execute(rusqlite::params![
+                &ep.id,
+                &ep.contract_id,
+                &ep.method,
+                &ep.url,
+                ep.host.as_ref(),
+                ep.path.as_ref(),
+                ep.path_template.as_ref(),
+                ep.summary.as_ref(),
+                serde_json::to_string(&ep.query_params).unwrap_or_else(|_| "[]".to_string()),
+                serde_json::to_string(&ep.path_params).unwrap_or_else(|_| "[]".to_string()),
+                serde_json::to_string(&ep.headers).unwrap_or_else(|_| "[]".to_string()),
+                ep.body_template.as_ref(),
+                ep.body_mime_type.as_ref(),
+                serde_json::to_string(&ep.body_params).unwrap_or_else(|_| "[]".to_string()),
+                ep.status_code,
+                ep.response_sample.as_ref(),
+                ep.hit_count,
+            ])?;
+        }
+        Ok(())
+    }
+
+    pub fn get_endpoint_by_id(&self, id: &str) -> SqlResult<Option<ApiEndpoint>> {
+        let conn = self.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, contract_id, method, url, host, path, path_template, summary,
+                    query_params, path_params, headers, body_template, body_mime_type,
+                    body_params, status_code, response_sample, hit_count
+             FROM har_api_endpoints WHERE id = ?1",
+        )?;
+        let mut rows = stmt.query(rusqlite::params![id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(endpoint_from_row(row)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn get_endpoints_by_ids(&self, ids: &[String]) -> SqlResult<Vec<ApiEndpoint>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let placeholders: Vec<String> = (1..=ids.len()).map(|i| format!("?{}", i)).collect();
+        let sql = format!(
+            "SELECT id, contract_id, method, url, host, path, path_template, summary,
+                    query_params, path_params, headers, body_template, body_mime_type,
+                    body_params, status_code, response_sample, hit_count
+             FROM har_api_endpoints WHERE id IN ({})",
+            placeholders.join(", ")
+        );
+        let conn = self.connect()?;
+        let mut stmt = conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::ToSql> = ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
+        let rows = stmt.query_map(params.as_slice(), |row| Ok(endpoint_from_row(row)?))?;
+        rows.collect()
+    }
+
+    /// Site-APIs capture ingest (session/site-apis-capture) writes through these
+    /// helpers onto the same `har_api_*` tables as the typed API.
     pub fn create_contract(
         &self,
         id: &str,
@@ -213,13 +430,7 @@ impl DbHandle {
         source: &str,
         derived_at: &str,
     ) -> SqlResult<()> {
-        let conn = self.connect()?;
-        conn.execute(
-            "INSERT INTO api_capture_contracts (id, user_id, domain, source, derived_at)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            rusqlite::params![id, user_id, domain, source, derived_at],
-        )?;
-        Ok(())
+        self.create_api_contract(id, user_id, domain, Some(source), derived_at)
     }
 
     pub fn create_endpoint(
@@ -242,145 +453,125 @@ impl DbHandle {
         response_sample: Option<&str>,
         hit_count: u32,
     ) -> SqlResult<()> {
-        let conn = self.connect()?;
-        conn.execute(
-            "INSERT INTO api_capture_endpoints
-             (id, contract_id, method, url, host, path, path_template, summary,
-              query_params_json, path_params_json, headers_json, body_template,
-              body_mime_type, body_params_json, status_code, response_sample, hit_count)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
-            rusqlite::params![
-                id, contract_id, method, url, host, path, path_template, summary,
-                query_params_json, path_params_json, headers_json, body_template,
-                body_mime_type, body_params_json, status_code, response_sample, hit_count,
-            ],
-        )?;
-        Ok(())
+        let parse_params = |raw: &str| -> Vec<TemplatedParam> {
+            serde_json::from_str(raw).unwrap_or_default()
+        };
+        let ep = ApiEndpoint {
+            id: id.to_string(),
+            contract_id: contract_id.to_string(),
+            method: method.to_string(),
+            url: url.to_string(),
+            host: Some(host.to_string()),
+            path: Some(path.to_string()),
+            path_template: Some(path_template.to_string()),
+            summary: summary.map(str::to_string),
+            query_params: parse_params(query_params_json),
+            path_params: parse_params(path_params_json),
+            headers: parse_params(headers_json),
+            body_template: body_template.map(str::to_string),
+            body_mime_type: body_mime_type.map(str::to_string),
+            body_params: parse_params(body_params_json),
+            status_code: Some(status_code as i64),
+            response_sample: response_sample.map(str::to_string),
+            hit_count: hit_count as i64,
+        };
+        self.create_api_endpoints(&[ep])
     }
 
     pub fn list_capture_contracts(&self, user_id: &str) -> SqlResult<Vec<serde_json::Value>> {
-        let conn = self.connect()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, domain, source, derived_at
-             FROM api_capture_contracts
-             WHERE user_id = ?1
-             ORDER BY created_at DESC",
-        )?;
-        let rows = stmt.query_map(rusqlite::params![user_id], |row| {
-            Ok(serde_json::json!({
-                "id": row.get::<_, String>(0)?,
-                "domain": row.get::<_, String>(1)?,
-                "source": row.get::<_, String>(2)?,
-                "derived_at": row.get::<_, String>(3)?,
-            }))
-        })?;
-        rows.collect()
-    }
-
-    pub fn get_contract_with_endpoints(
-        &self,
-        contract_id: &str,
-        user_id: &str,
-    ) -> SqlResult<Option<serde_json::Value>> {
-        let conn = self.connect()?;
-        let contract: Option<serde_json::Value> = conn
-            .query_row(
-                "SELECT id, domain, source, derived_at
-                 FROM api_capture_contracts
-                 WHERE id = ?1 AND user_id = ?2",
-                rusqlite::params![contract_id, user_id],
-                |row| {
-                    Ok(serde_json::json!({
-                        "id": row.get::<_, String>(0)?,
-                        "domain": row.get::<_, String>(1)?,
-                        "source": row.get::<_, String>(2)?,
-                        "derived_at": row.get::<_, String>(3)?,
-                    }))
-                },
-            )
-            .optional()?;
-
-        let Some(mut contract) = contract else { return Ok(None); };
-
-        let mut stmt = conn.prepare(
-            "SELECT id, method, url, host, path, path_template, summary,
-                    query_params_json, path_params_json, headers_json, body_template,
-                    body_mime_type, body_params_json, status_code, response_sample, hit_count
-             FROM api_capture_endpoints
-             WHERE contract_id = ?1
-             ORDER BY method, path",
-        )?;
-        let endpoints = stmt.query_map(rusqlite::params![contract_id], |row| {
-            Ok(serde_json::json!({
-                "id": row.get::<_, String>(0)?,
-                "method": row.get::<_, String>(1)?,
-                "url": row.get::<_, String>(2)?,
-                "host": row.get::<_, String>(3)?,
-                "path": row.get::<_, String>(4)?,
-                "path_template": row.get::<_, String>(5)?,
-                "summary": row.get::<_, Option<String>>(6)?,
-                "query_params": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(7)?).unwrap_or(serde_json::json!([])),
-                "path_params": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(8)?).unwrap_or(serde_json::json!([])),
-                "headers": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(9)?).unwrap_or(serde_json::json!([])),
-                "body_template": row.get::<_, Option<String>>(10)?,
-                "body_mime_type": row.get::<_, Option<String>>(11)?,
-                "body_params": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(12)?).unwrap_or(serde_json::json!([])),
-                "status_code": row.get::<_, u16>(13)?,
-                "response_sample": row.get::<_, Option<String>>(14)?,
-                "hit_count": row.get::<_, u32>(15)?,
-            }))
-        })?;
-        let endpoints: Vec<serde_json::Value> = endpoints.collect::<Result<Vec<_>, _>>()?;
-        contract["endpoints"] = serde_json::Value::Array(endpoints);
-        Ok(Some(contract))
+        Ok(self
+            .list_contracts_for_user(user_id)?
+            .into_iter()
+            .map(|c| {
+                serde_json::json!({
+                    "id": c.id,
+                    "domain": c.domain,
+                    "source": c.source,
+                    "derived_at": c.derived_at,
+                })
+            })
+            .collect())
     }
 
     pub fn delete_capture_contract(&self, contract_id: &str, user_id: &str) -> SqlResult<bool> {
-        let conn = self.connect()?;
-        let rows = conn.execute(
-            "DELETE FROM api_capture_contracts WHERE id = ?1 AND user_id = ?2",
-            rusqlite::params![contract_id, user_id],
-        )?;
-        Ok(rows > 0)
+        match self.get_contract_with_endpoints(contract_id)? {
+            Some((contract, _)) if contract.user_id == user_id => self.delete_contract(contract_id),
+            _ => Ok(false),
+        }
     }
+}
 
-    pub fn get_endpoint_by_id(
-        &self,
-        endpoint_id: &str,
-        user_id: &str,
-    ) -> SqlResult<Option<serde_json::Value>> {
-        let conn = self.connect()?;
-        let result = conn.query_row(
-            "SELECT e.id, e.contract_id, e.method, e.url, e.host, e.path, e.path_template,
-                    e.summary, e.query_params_json, e.path_params_json, e.headers_json,
-                    e.body_template, e.body_mime_type, e.body_params_json, e.status_code,
-                    e.response_sample, e.hit_count
-             FROM api_capture_endpoints e
-             JOIN api_capture_contracts c ON c.id = e.contract_id
-             WHERE e.id = ?1 AND c.user_id = ?2",
-            rusqlite::params![endpoint_id, user_id],
-            |row| {
-                Ok(serde_json::json!({
-                    "id": row.get::<_, String>(0)?,
-                    "contract_id": row.get::<_, String>(1)?,
-                    "method": row.get::<_, String>(2)?,
-                    "url": row.get::<_, String>(3)?,
-                    "host": row.get::<_, String>(4)?,
-                    "path": row.get::<_, String>(5)?,
-                    "path_template": row.get::<_, String>(6)?,
-                    "summary": row.get::<_, Option<String>>(7)?,
-                    "query_params": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(8)?).unwrap_or(serde_json::json!([])),
-                    "path_params": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(9)?).unwrap_or(serde_json::json!([])),
-                    "headers": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(10)?).unwrap_or(serde_json::json!([])),
-                    "body_template": row.get::<_, Option<String>>(11)?,
-                    "body_mime_type": row.get::<_, Option<String>>(12)?,
-                    "body_params": serde_json::from_str::<serde_json::Value>(&row.get::<_, String>(13)?).unwrap_or(serde_json::json!([])),
-                    "status_code": row.get::<_, u16>(14)?,
-                    "response_sample": row.get::<_, Option<String>>(15)?,
-                    "hit_count": row.get::<_, u32>(16)?,
-                }))
-            },
-        ).optional()?;
-        Ok(result)
-    }
+pub(crate) fn endpoint_from_row(row: &rusqlite::Row) -> SqlResult<ApiEndpoint> {
+    let query_params_json: String = row.get(8)?;
+    let path_params_json: String = row.get(9)?;
+    let headers_json: String = row.get(10)?;
+    let body_params_json: String = row.get(13)?;
+    Ok(ApiEndpoint {
+        id: row.get(0)?,
+        contract_id: row.get(1)?,
+        method: row.get(2)?,
+        url: row.get(3)?,
+        host: row.get(4)?,
+        path: row.get(5)?,
+        path_template: row.get(6)?,
+        summary: row.get(7)?,
+        query_params: serde_json::from_str(&query_params_json).unwrap_or_default(),
+        path_params: serde_json::from_str(&path_params_json).unwrap_or_default(),
+        headers: serde_json::from_str(&headers_json).unwrap_or_default(),
+        body_template: row.get(11)?,
+        body_mime_type: row.get(12)?,
+        body_params: serde_json::from_str(&body_params_json).unwrap_or_default(),
+        status_code: row.get(14)?,
+        response_sample: row.get(15)?,
+        hit_count: row.get(16)?,
+    })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CaptureSession {
+    pub id: String,
+    pub user_id: String,
+    pub domain: Option<String>,
+    pub source: Option<String>,
+    pub status: String,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiContract {
+    pub id: String,
+    pub user_id: String,
+    pub domain: String,
+    pub source: Option<String>,
+    pub derived_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiEndpoint {
+    pub id: String,
+    pub contract_id: String,
+    pub method: String,
+    pub url: String,
+    pub host: Option<String>,
+    pub path: Option<String>,
+    pub path_template: Option<String>,
+    pub summary: Option<String>,
+    pub query_params: Vec<TemplatedParam>,
+    pub path_params: Vec<TemplatedParam>,
+    pub headers: Vec<TemplatedParam>,
+    pub body_template: Option<String>,
+    pub body_mime_type: Option<String>,
+    pub body_params: Vec<TemplatedParam>,
+    pub status_code: Option<i64>,
+    pub response_sample: Option<String>,
+    pub hit_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemplatedParam {
+    pub name: String,
+    pub value: String,
+    pub templated: bool,
+    pub suggested_default: Option<String>,
 }

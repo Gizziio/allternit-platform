@@ -766,6 +766,7 @@ async fn verify_bot_ownership(state: &AppState, user_id: &str, bot_id: &str) -> 
 
     match result {
         Ok(Ok(true)) => true,
+        Ok(Ok(false)) => false,
         Ok(Err(e)) => {
             warn!(error = %e, "DB error verifying bot ownership");
             false

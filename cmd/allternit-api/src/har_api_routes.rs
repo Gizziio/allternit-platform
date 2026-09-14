@@ -319,8 +319,17 @@ async fn get_contract(
         None => return unauthorized(),
     };
 
-    match state.db.get_contract_with_endpoints(&contract_id, &user.user_id) {
-        Ok(Some(contract)) => (StatusCode::OK, Json(contract)).into_response(),
+    match state.db.get_contract_with_endpoints(&contract_id) {
+        Ok(Some((contract, endpoints))) if contract.user_id == user.user_id => {
+            (StatusCode::OK, Json(serde_json::json!({
+                "id": contract.id,
+                "domain": contract.domain,
+                "source": contract.source,
+                "derived_at": contract.derived_at,
+                "endpoints": endpoints,
+            }))).into_response()
+        }
+        Ok(Some(_)) => (StatusCode::NOT_FOUND, Json(json!({ "error": "Contract not found" }))).into_response(),
         Ok(None) => (StatusCode::NOT_FOUND, Json(json!({ "error": "Contract not found" }))).into_response(),
         Err(err) => {
             warn!(error = %err, "Failed to get API capture contract");
@@ -369,8 +378,8 @@ async fn replay_endpoint(
     };
 
     // Verify the endpoint belongs to a contract owned by the user.
-    let endpoint = match state.db.get_endpoint_by_id(&endpoint_id, &user.user_id) {
-        Ok(Some(ep)) => ep,
+    let endpoint = match state.db.get_endpoint_by_id(&endpoint_id) {
+        Ok(Some(ep)) => serde_json::to_value(ep).unwrap_or_else(|_| json!({})),
         Ok(None) => return (StatusCode::NOT_FOUND, Json(json!({ "error": "Endpoint not found" }))).into_response(),
         Err(err) => {
             warn!(error = %err, "Failed to get API capture endpoint");
@@ -523,8 +532,8 @@ async fn generate_client(State(state): State<Arc<AppState>>, headers: HeaderMap,
     // Resolve the requested endpoints from persisted contracts.
     let mut endpoints: Vec<Value> = Vec::new();
     for endpoint_id in &req.endpoints {
-        match state.db.get_endpoint_by_id(endpoint_id, &user.user_id) {
-            Ok(Some(ep)) => endpoints.push(ep),
+        match state.db.get_endpoint_by_id(endpoint_id) {
+            Ok(Some(ep)) => endpoints.push(serde_json::to_value(ep).unwrap_or_else(|_| json!({}))),
             Ok(None) => {}
             Err(err) => {
                 warn!(error = %err, endpoint_id, "Failed to resolve endpoint for client generation");

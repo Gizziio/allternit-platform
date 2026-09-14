@@ -17,6 +17,27 @@ fn zig_target(target: &str) -> &str {
     }
 }
 
+/// Prefer an explicit `ZIG` env var, then Homebrew's zig 0.15 keg, then `zig` on PATH.
+/// libghostty-vt's vendored `build.zig` requires Zig 0.15.2; Homebrew's default
+/// `zig` formula is currently 0.16 and will fail the build.
+fn resolve_zig() -> String {
+    if let Ok(explicit) = env::var("ZIG") {
+        if !explicit.trim().is_empty() {
+            return explicit;
+        }
+    }
+    let candidates = [
+        "/opt/homebrew/opt/zig@0.15/bin/zig",
+        "/usr/local/opt/zig@0.15/bin/zig",
+    ];
+    for candidate in candidates {
+        if PathBuf::from(candidate).is_file() {
+            return candidate.to_string();
+        }
+    }
+    "zig".into()
+}
+
 fn env_bool(name: &str) -> Option<bool> {
     match env::var(name) {
         Ok(value) => match value.to_ascii_lowercase().as_str() {
@@ -60,7 +81,7 @@ fn main() {
         .trim()
         .to_string();
 
-    let zig = env::var("ZIG").unwrap_or_else(|_| "zig".into());
+    let zig = resolve_zig();
     let mut command = Command::new(&zig);
     command
         .arg("build")

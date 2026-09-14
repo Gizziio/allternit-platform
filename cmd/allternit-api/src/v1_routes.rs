@@ -57,10 +57,9 @@ async fn create_gizzi_chat_session(
     agent_id: Option<&str>,
     run_id: Option<&str>,
 ) -> Result<String, String> {
-    let resp = client
     {
         let lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
-        if let Some(id) = lock.get(chat_id) {
+        if let Some((id, _)) = lock.get(chat_id) {
             return Ok(id.clone());
         }
     }
@@ -78,7 +77,7 @@ async fn create_gizzi_chat_session(
         {
             if resp.status().is_success() {
                 let mut lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
-                lock.insert(chat_id.to_string(), chat_id.to_string());
+                lock.insert(chat_id.to_string(), (chat_id.to_string(), String::new()));
                 return Ok(chat_id.to_string());
             }
         }
@@ -121,6 +120,8 @@ async fn get_or_create_gizzi_session(
     gizzi: &str,
     chat_id: &str,
     permission_mode: &str,
+    agent_id: Option<&str>,
+    run_id: Option<&str>,
 ) -> Result<String, String> {
     let cached = {
         let lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
@@ -143,10 +144,10 @@ async fn get_or_create_gizzi_session(
                     .await
                 {
                     Ok(resp) if resp.status().is_success() => chat_id.to_string(),
-                    _ => create_gizzi_chat_session(client, gizzi, chat_id).await?,
+                    _ => create_gizzi_chat_session(client, gizzi, chat_id, agent_id, run_id).await?,
                 }
             } else {
-                create_gizzi_chat_session(client, gizzi, chat_id).await?
+                create_gizzi_chat_session(client, gizzi, chat_id, agent_id, run_id).await?
             };
             // An empty cached mode forces the mode sync below, so a session
             // we have never configured always gets its mode pushed once.
