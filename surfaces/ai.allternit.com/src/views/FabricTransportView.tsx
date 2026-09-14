@@ -303,7 +303,7 @@ export function FabricTransportView() {
                 }
               }}
             />
-            Cloud continuation
+            Queue as compute.cloud (needs a running gizzi-cloud worker)
           </label>
         </div>
       </header>
@@ -382,7 +382,7 @@ export function FabricTransportView() {
 
       <Section title="Routines (scheduled work on Fabric Transport)">
         <p className="text-xs text-[var(--text-muted)]">
-          Each fire submits a canonical intent (Al as delegator). Schedule: <Mono>*/N</Mono> minutes, <Mono>@hourly</Mono>, or <Mono>@daily</Mono>. Cloud continuation is out of v1.
+          Each fire submits a canonical intent (Al as delegator). Schedule: <Mono>*/N</Mono> minutes, <Mono>@hourly</Mono>, or <Mono>@daily</Mono>. Ticks only while this API process is running — closing the laptop stops them.
         </p>
         <ul className="space-y-2">
           {routines.map((r) => (
@@ -501,7 +501,7 @@ export function FabricTransportView() {
                 }
               }}
             >
-              Continue in cloud
+              Retag for compute.cloud
             </button>
           </div>
           {jobView && (

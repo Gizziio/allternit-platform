@@ -2220,7 +2220,10 @@ async function handoffInFlightToCloud(): Promise<void> {
     log.info(`[Main] cloud continuation handed off ${body.jobs?.length ?? 0} in-flight job(s)`);
     const target = process.env.ALLTERNIT_CONTINUATION_API_URL;
     if (target && body.jobs && body.jobs.length > 0) {
-      log.info(`[Main] continuation ingest target set (${target}); jobs are queued as compute.cloud on this API — ingest is the remote data-plane's POST /continuation/ingest`);
+      log.warn(
+        `[Main] ALLTERNIT_CONTINUATION_API_URL is set but quit does not POST ingest to it. ` +
+          `${body.jobs.length} job(s) were only retagged on this local API, which is about to stop.`,
+      );
     }
   } catch (err) {
     log.warn('[Main] cloud continuation handoff failed', err);
