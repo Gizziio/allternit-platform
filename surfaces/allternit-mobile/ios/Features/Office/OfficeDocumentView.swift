@@ -27,18 +27,22 @@ struct OfficeDocumentView: View {
                 ProgressView("Loading document…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error {
-                ContentUnavailableView(
-                    "Couldn't load document",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(error)
+                FriendlyStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load document",
+                    message: FriendlyErrorMessage.from(error),
+                    actionTitle: "Retry",
+                    action: { Task { await loadDocument() } }
                 )
             } else if let artifact, !artifact.sections.isEmpty {
                 documentBody(artifact)
             } else {
-                ContentUnavailableView(
-                    "No office content",
-                    systemImage: "doc.questionmark",
-                    description: Text("This artifact has no office-editor sections.")
+                FriendlyStateView(
+                    style: .empty,
+                    icon: "doc.questionmark",
+                    title: "No office content",
+                    message: "This artifact has no office-editor sections."
                 )
             }
         }
@@ -63,14 +67,18 @@ struct OfficeDocumentView: View {
             }
         }
         .task {
-            do {
-                artifact = try await OfficeArtifactClient.shared.getArtifact(id: artifactId)
-                isLoading = false
-            } catch {
-                self.error = error.localizedDescription
-                isLoading = false
-            }
+            await loadDocument()
         }
+    }
+
+    private func loadDocument() async {
+        do {
+            artifact = try await OfficeArtifactClient.shared.getArtifact(id: artifactId)
+            error = nil
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isLoading = false
     }
 
     @ViewBuilder

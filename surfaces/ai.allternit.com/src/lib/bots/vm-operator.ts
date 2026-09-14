@@ -617,6 +617,13 @@ function botDesktopActionUrl(botId: string, sandboxId: string, action: string) {
   return `${botDesktopBaseUrl(botId)}/${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
 }
 
+// Control actions are path segments on the server (`POST …/desktop/observe`
+// etc., bot_desktop_routes.rs), with sandbox_id as a query param — appending
+// the verb after the query string would land it inside the sandbox_id value.
+function botDesktopActionUrl(botId: string, sandboxId: string, action: 'observe' | 'take-over' | 'hand-back') {
+  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop/${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
+}
+
 /**
  * Provision a persistent virtual computer for a bot.
  *

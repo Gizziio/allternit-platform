@@ -74,6 +74,7 @@ pub mod bot_desktop_quotas;
 pub mod bot_desktop_snapshots;
 pub mod bot_desktop_templates;
 pub mod bot_desktop_windows;
+pub mod bot_event_routes;
 pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;

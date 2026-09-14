@@ -23,6 +23,88 @@ Integrate and polish the Phase 1 creation surfaces, verify focused behavior, doc
 
 ### Open questions
 - The focused tests should be rerun when the workspace Vitest link is repaired; dependency repair is outside this phase and was not attempted.
+## iOS bot parity Phase 2 integration complete (2026-08-26)
+
+### Goal
+Complete the event-ledger, runtime/web bridge, web bot-state, and native iOS
+integration audit from `docs/IOS_BOT_PARITY_PHASE_2_TASK.md` without entering
+Phase 3.
+
+### Just did
+- Renumbered the bot ledger migration from V92 to V93 because current main
+  already owns V92 for agent email; verified migration versions are unique.
+- Made event appends reject non-object payloads and reserve SQLite's write lock
+  before selecting the next per-bot sequence.
+- Mirrored runtime wait/resume/block events and agent run lifecycle events into
+  the canonical bot ledger while preserving Rails SSE delivery for iOS.
+- Wired web bot roster/hub cards to poll and render the authoritative server
+  projection rather than dormant or inferred state.
+- Fixed iOS bootstrap to fetch the newest ledger tail and dedupe replayed agent
+  SSE frames so reconnects cannot double-count approvals.
+- Added Rust coverage for payload validation, dual-ledger ingest, and retry
+  idempotency.
+- Passed Rust parse via rustfmt emit, Swift parse via `swiftc -parse`, Bun parse
+  for all changed TS/TSX, unique-migration validation, and `git diff --check`.
+  Focused Vitest execution could not start because this worktree's existing
+  Vitest symlink targets a missing package; dependencies were not installed.
+- Committed the reviewed Phase 2 integration as `9dcd564d4`.
+
+### Next
+1. Push `session/ios-bot-parity` to origin as the final Phase 2 action.
+
+### Open questions
+- None.
+
+---
+
+## iOS bot parity Phase 2 integration audit started (2026-08-26)
+
+### Goal
+Audit and complete the API event ledger, Gizzi-to-web event bridge, web bot
+activity state, and native iOS bot parity integrations specified by
+`docs/IOS_BOT_PARITY_PHASE_2_TASK.md`, without beginning Phase 3.
+
+### Just did
+- Read the full Phase 2 task and Phase 1 handoff/map.
+- Confirmed the worktree is on `session/ios-bot-parity`, aligned with its
+  remote, with the three Phase 1 feature commits and cleanup commits present.
+- Created `scratch/IOS_BOT_PARITY_PHASE_2_PLAN.md` as the session source of
+  truth.
+
+### Next
+1. Trace API contracts, route/state registration, migration ordering, and tests.
+2. Trace runtime bridge output through web clients/stores/hooks.
+3. Trace the native iOS clients/stores/views against those contracts.
+
+### Open questions
+- None yet; integration findings will determine the focused fixes.
+
+---
+
+## iOS bot parity Phase 1 cleanup complete (2026-08-26)
+
+### Goal
+Clean/split the WIP commit, merge current `origin/main`, resolve conflicts, run
+cheap syntax checks, and push `session/ios-bot-parity` without starting Phase 2.
+
+### Just did
+- Replaced WIP `1708779e4` with three coherent feature commits covering the API
+  event ledger, runtime/web bridge, and native iOS bot parity.
+- Fetched and merged `origin/main` at `30739a95d`, resolving all iOS conflicts
+  while preserving branch feature behavior and main's non-conflicting changes.
+- Resolved a hidden case-only wordmark asset collision in favor of the branch's
+  tracked SVG-backed catalog; main's competing catalog referenced absent PNGs.
+- Parsed all 13 changed TS/TSX files and 6 changed Rust files successfully; no
+  build, typecheck, or dev server was run.
+- Wrote `docs/IOS_BOT_PARITY_PHASE_1_NOTES.md` with the completed handoff.
+
+### Next
+- Push `session/ios-bot-parity` and stop. Do not begin Phase 2.
+
+### Open questions
+- None.
+
+---
 
 ## Hermes floating chat HUD port — completion (2026-08-26)
 

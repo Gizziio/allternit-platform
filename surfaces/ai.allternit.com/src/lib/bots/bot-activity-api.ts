@@ -1,18 +1,25 @@
 /**
  * Bot Activity API
  *
- * Local-first cursor-paginated query interface over the durable goal/task event
- * store. Supports filtering by bot, session, goal, WIH, and task, with
- * duplicate-tolerant resume semantics for offline replicas.
+ * Cursor-paginated query interface over the server-owned bot event ledger
+ * (`GET /api/v1/bots/:id/events`). Server rows are mapped to ActivityEvent via
+ * the pure `botEventRowToActivityEvent` so tests can exercise mapping without
+ * fetch.
+ *
+ * `search()` remains local: the server has no search endpoint yet, so it scans
+ * the offline replica in `bot-event-store.ts`. Server-backed search replaces
+ * it in a later Wave 3 step.
  *
  * @module bot-activity-api
  */
 
-import { createModuleLogger } from '@/lib/logger';
-import { type BotEventStore, botEventStore, type StoredGoalEvent } from './bot-event-store';
+import { type BotEventStore, botEventStore, type StoredGoalEvent, type StoredEventType } from './bot-event-store';
+import {
+  botEventsApi,
+  type BotEventsApi,
+  type BotEventRow,
+} from './bot-events-api';
 import { type ActivityEvent, ActivityEventSchema, type ActivityActor } from './wih-session-contracts';
-
-const logger = createModuleLogger('BotActivityAPI');
 
 // ============================================================================
 // Query types
@@ -25,7 +32,7 @@ export interface ActivityQuery {
   wihId?: string;
   taskId?: string;
   eventTypes?: string[];
-  /** Inclusive start sequence (cursor resume). */
+  /** Exclusive start sequence (cursor resume). */
   afterSequence?: number;
   /** Maximum events to return. */
   limit?: number;
@@ -40,6 +47,23 @@ export interface ActivityPage {
 // ============================================================================
 // Conversion
 // ============================================================================
+
+/** Map a server ledger row to a client ActivityEvent. Pure; no I/O. */
+export function botEventRowToActivityEvent(row: BotEventRow): ActivityEvent {
+  return ActivityEventSchema.parse({
+    id: row.id,
+    sequence: row.sequence,
+    botId: row.botId,
+    sessionId: row.sessionId,
+    goalId: row.goalId,
+    wihId: row.wihId,
+    taskId: row.taskId,
+    eventType: row.eventType,
+    actor: row.actor,
+    payload: row.payload,
+    occurredAt: row.occurredAt,
+  });
+}
 
 function storedToActivityEvent(stored: StoredGoalEvent, actor: ActivityActor = { type: 'bot', id: stored.botId }): ActivityEvent {
   return ActivityEventSchema.parse({
@@ -59,75 +83,44 @@ function storedToActivityEvent(stored: StoredGoalEvent, actor: ActivityActor = {
 // ============================================================================
 
 export class BotActivityAPI {
-  constructor(private eventStore: BotEventStore = botEventStore) {}
+  constructor(
+    private eventsApi: BotEventsApi = botEventsApi,
+    private eventStore: BotEventStore = botEventStore,
+  ) {}
 
   /**
-   * Query activity events with cursor pagination. The returned `nextCursor`
-   * is the sequence number of the last returned event; clients resume with
-   * `afterSequence: parseInt(nextCursor) + 1`.
+   * Query activity events from the server ledger with cursor pagination. The
+   * returned `nextCursor` is the sequence number of the last returned event;
+   * clients resume with `afterSequence: parseInt(nextCursor)`.
+   *
+   * The server filters by `eventTypes`/`afterSequence`/`limit`; goal/session/
+   * WIH/task filters are applied to the returned page client-side (they are
+   * first-class columns on the row but not yet server-side query params), so
+   * a filtered page may contain fewer than `limit` events while `hasMore` is
+   * still true.
    */
-  query(query: ActivityQuery): ActivityPage {
+  async query(query: ActivityQuery): Promise<ActivityPage> {
     const { botId, sessionId, goalId, wihId, taskId, eventTypes, afterSequence, limit = 50 } = query;
 
-    let events = this.eventStore.readAllEvents(botId);
+    const page = await this.eventsApi.queryBotEvents(botId, { afterSequence, limit, eventTypes });
 
-    if (goalId) {
-      events = events.filter((e) => e.goalId === goalId);
-    }
-
-    if (eventTypes && eventTypes.length > 0) {
-      events = events.filter((e) => eventTypes.includes(e.type));
-    }
-
-    // sessionId/wihId/taskId are not stored on every event; filter by payload
-    // correlation where available.
-    if (sessionId) {
-      events = events.filter(
-        (e) =>
-          (e.payload as Record<string, unknown>)?.sessionId === sessionId ||
-          this.payloadHasId(e.payload, 'sessionId', sessionId),
-      );
-    }
-
-    if (wihId) {
-      events = events.filter((e) => this.payloadHasId(e.payload, 'wihId', wihId));
-    }
-
-    if (taskId) {
-      events = events.filter(
-        (e) =>
-          e.type.startsWith('task.') ||
-          e.type.startsWith('attempt.') ||
-          e.type.startsWith('validation.'),
-      );
-      events = events.filter((e) => this.payloadHasId(e.payload, 'id', taskId) || this.payloadHasId(e.payload, 'taskId', taskId));
-    }
-
-    // Sort ascending by sequence, then timestamp.
-    events = events.sort((a, b) => a.sequence - b.sequence || a.occurredAt.localeCompare(b.occurredAt));
-
-    // Resume cursor.
-    let startIndex = 0;
-    if (afterSequence !== undefined) {
-      startIndex = events.findIndex((e) => e.sequence > afterSequence);
-      if (startIndex < 0) startIndex = events.length;
-    }
-
-    const page = events.slice(startIndex, startIndex + limit);
-    const hasMore = startIndex + limit < events.length;
-    const nextCursor = page.length > 0 ? String(page[page.length - 1]?.sequence) : undefined;
+    let rows = page.events;
+    if (goalId) rows = rows.filter((r) => r.goalId === goalId);
+    if (sessionId) rows = rows.filter((r) => r.sessionId === sessionId);
+    if (wihId) rows = rows.filter((r) => r.wihId === wihId);
+    if (taskId) rows = rows.filter((r) => r.taskId === taskId);
 
     return {
-      events: page.map((e) => storedToActivityEvent(e)),
-      nextCursor,
-      hasMore,
+      events: rows.map(botEventRowToActivityEvent),
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
     };
   }
 
   /**
    * Full-text search over event payloads. Returns matching events sorted by
-   * sequence. This is a client-side scan; server-backed search will replace it
-   * in Wave 3 server reconciliation.
+   * sequence. This is a client-side scan of the local offline replica; the
+   * server ledger has no search endpoint yet.
    */
   search(botId: string, query: string): ActivityEvent[] {
     const lower = query.toLowerCase();
@@ -139,28 +132,39 @@ export class BotActivityAPI {
   }
 
   /**
-   * Rebuild the latest GoalLoopState for a goal from stored events. Convenience
-   * wrapper around the persistence reducer.
+   * Rebuild the latest GoalLoopState for a goal from the server event ledger.
+   * Pages through the bot's full history, collecting the goal's events, then
+   * runs the persistence reducer.
    */
   async replayGoal(goalId: string, botId: string): Promise<import('./goal-loop-controller').GoalLoopState | null> {
     const { rebuildGoalLoopState } = await import('./goal-loop-persistence');
-    const events = this.eventStore.readEvents(botId, goalId);
-    return rebuildGoalLoopState(events);
-  }
 
-  private payloadHasId(payload: unknown, key: string, id: string): boolean {
-    if (payload === null || typeof payload !== 'object') return false;
-    const record = payload as Record<string, unknown>;
-    if (record[key] === id) return true;
-    // Nested payload (e.g., { plan, receipt }).
-    for (const value of Object.values(record)) {
-      if (value && typeof value === 'object' && (value as Record<string, unknown>)[key] === id) {
-        return true;
+    const stored: StoredGoalEvent[] = [];
+    let afterSequence: number | undefined;
+    for (;;) {
+      const page = await this.eventsApi.queryBotEvents(botId, { afterSequence, limit: 200 });
+      for (const row of page.events) {
+        if (row.goalId !== goalId) continue;
+        stored.push({
+          sequence: row.sequence,
+          botId: row.botId,
+          goalId: row.goalId,
+          type: row.eventType as StoredEventType,
+          payload: row.payload,
+          occurredAt: row.occurredAt,
+        });
       }
+      if (!page.hasMore || page.events.length === 0) break;
+      const cursor = page.nextCursor !== undefined
+        ? Number(page.nextCursor)
+        : page.events[page.events.length - 1]?.sequence;
+      if (cursor === undefined || Number.isNaN(cursor)) break;
+      afterSequence = cursor;
     }
-    return false;
+
+    return rebuildGoalLoopState(stored);
   }
 }
 
-/** Singleton API instance backed by the browser event store. */
+/** Singleton API instance backed by the server ledger and the local replica. */
 export const botActivityAPI = new BotActivityAPI();

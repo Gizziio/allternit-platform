@@ -65,11 +65,11 @@ final class AppModeStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         let mode: AppMode
-        if CommandLine.arguments.contains("-chat") {
+        if launchArgumentEnabled("chat") {
             mode = .chat
-        } else if CommandLine.arguments.contains("-code") {
+        } else if launchArgumentEnabled("code") {
             mode = .code
-        } else if CommandLine.arguments.contains("-browser") {
+        } else if launchArgumentEnabled("browser") {
             mode = .browser
         } else {
             let saved = defaults.string(forKey: Self.storageKey)
@@ -95,7 +95,7 @@ final class AppModeStore: ObservableObject {
 }
 
 /// The destinations of the sidebar's tab list.
-enum ModeBarItem: CaseIterable {
+enum ModeBarItem: String, CaseIterable {
     case chats, projects, artifacts, agents, automation, models, code, aci
 
     var label: String {

@@ -56,6 +56,7 @@ pub fn agent_router() -> Router<Arc<AppState>> {
         )
         .route("/agents/:id/runs", post(run_agent).get(list_agent_runs))
         .route("/agents/:id/events", get(stream_agent_events))
+        .route("/agents/:id/events/ingest", post(ingest_agent_event))
         .route(
             "/agents/:id/subagents",
             get(list_subagents).post(create_subagent),
@@ -147,6 +148,207 @@ async fn stream_agent_events(
             .interval(Duration::from_secs(15))
             .text("keepalive"),
     )
+}
+
+// ─── Agent event ingest (runtime bridge) ─────────────────────────────────────
+
+/// Event types a runtime bridge (gizzi-code's `agent-event-bridge.ts`, which
+/// forwards permission.asked/replied, question.asked/replied, and
+/// session.error bus signals) may append through
+/// `POST /api/v1/agents/:id/events/ingest`. Anything else is rejected with
+/// 400 so the ledger stays a curated vocabulary — `stream_agent_events` is
+/// type-agnostic and would forward whatever lands here.
+const INGESTABLE_AGENT_EVENT_TYPES: [&str; 4] = [
+    "agent.run.waiting_approval",
+    "agent.run.approval_resolved",
+    "agent.run.waiting_input",
+    "agent.run.blocked",
+];
+
+#[derive(Deserialize)]
+struct IngestAgentEventBody {
+    #[serde(rename = "type")]
+    event_type: String,
+    run_id: Option<String>,
+    payload: Option<serde_json::Value>,
+}
+
+/// Append a runtime-bridged agent event to the Rails ledger so it shows up on
+/// `GET /agents/:id/events` (the SSE feed iOS BotStatusStore folds into
+/// waiting_approval / waiting_input / blocked operational states). The
+/// caller's payload is merged under `agent_id` (and `run_id` when given),
+/// mirroring `append_run_ledger_event`.
+async fn ingest_agent_event(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(agent_id): Path<String>,
+    Json(body): Json<IngestAgentEventBody>,
+) -> impl IntoResponse {
+    if !INGESTABLE_AGENT_EVENT_TYPES.contains(&body.event_type.as_str()) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("unsupported event type: {}", body.event_type)})),
+        )
+            .into_response();
+    }
+
+    // Ownership: same `agents.id AND user_id` check as get_agent.
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let user_id_for_db = user_id.clone();
+    let agent_id_for_db = agent_id.clone();
+    let owned = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let found: bool = conn
+            .query_row(
+                "SELECT 1 FROM agents WHERE id = ?1 AND user_id = ?2",
+                params![agent_id_for_db, user_id_for_db],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+        Ok::<_, rusqlite::Error>(found)
+    })
+    .await;
+    match owned {
+        Ok(Ok(true)) => {}
+        Ok(Ok(false)) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Agent not found"})),
+            )
+                .into_response();
+        }
+        Ok(Err(e)) => {
+            warn!("DB error checking agent ownership for event ingest: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            warn!("DB task panicked during event ingest: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response();
+        }
+    }
+
+    let mut payload = match body.payload {
+        Some(serde_json::Value::Object(map)) => map,
+        Some(other) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("payload must be an object, got {}", other)})),
+            )
+                .into_response();
+        }
+        None => serde_json::Map::new(),
+    };
+    payload.insert("agent_id".to_string(), json!(agent_id));
+    if let Some(run_id) = body.run_id.as_ref() {
+        payload.insert("run_id".to_string(), json!(run_id));
+    }
+
+    // Mirror runtime wait-state events into the bot ledger consumed by the
+    // web activity/state APIs. Rails remains the live SSE transport for iOS.
+    let bot_event_type = match body.event_type.as_str() {
+        "agent.run.waiting_approval" => "task.waiting_for_approval",
+        "agent.run.approval_resolved" => "task.resumed",
+        "agent.run.waiting_input" => "task.waiting_for_input",
+        "agent.run.blocked" => "run.blocked",
+        _ => unreachable!("event type was allowlisted above"),
+    };
+    let session_id = payload
+        .get("session_id")
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    let request_id = payload
+        .get("request_id")
+        .and_then(|value| value.as_str())
+        .unwrap_or("none");
+    let idempotency_key = format!(
+        "runtime:{}:{}:{}",
+        body.event_type,
+        session_id.as_deref().unwrap_or("none"),
+        request_id
+    );
+    let bot_body = crate::bot_event_routes::AppendEventBody {
+        event_type: bot_event_type.to_string(),
+        actor: crate::bot_event_routes::ActorBody {
+            r#type: "bot".to_string(),
+            id: agent_id.clone(),
+        },
+        payload: serde_json::Value::Object(payload.clone()),
+        occurred_at: None,
+        session_id,
+        goal_id: None,
+        wih_id: None,
+        task_id: None,
+        run_id: body.run_id.clone(),
+        idempotency_key: Some(idempotency_key),
+    };
+    let bot_db = state.db.clone();
+    let bot_id = agent_id.clone();
+    let occurred_at = chrono::Utc::now().to_rfc3339();
+    let bot_append = tokio::task::spawn_blocking(move || {
+        crate::bot_event_routes::append_event(&bot_db, &bot_id, &bot_body, &occurred_at)
+    })
+    .await;
+    match bot_append {
+        Ok(Ok(_)) => {}
+        Ok(Err(error)) => {
+            warn!("Failed to append runtime event to bot ledger: {}", error);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "bot event append failed"})),
+            )
+                .into_response();
+        }
+        Err(error) => {
+            warn!("Bot event append task panicked: {}", error);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "bot event append failed"})),
+            )
+                .into_response();
+        }
+    }
+
+    let event = allternit_agent_system_rails::AllternitEvent {
+        event_id: String::new(),
+        ts: String::new(),
+        actor: allternit_agent_system_rails::Actor {
+            r#type: allternit_agent_system_rails::ActorType::User,
+            id: user_id,
+        },
+        scope: body.run_id.as_ref().map(|run_id| {
+            allternit_agent_system_rails::EventScope {
+                project_id: None,
+                dag_id: None,
+                node_id: None,
+                wih_id: None,
+                run_id: Some(run_id.clone()),
+                team_workspace_id: None,
+                team_name: None,
+            }
+        }),
+        r#type: body.event_type.clone(),
+        payload: serde_json::Value::Object(payload),
+        provenance: None,
+    };
+    if let Err(e) = state.rails.ledger.append(event).await {
+        warn!("Failed to append {} ledger event: {}", body.event_type, e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("ledger append failed: {}", e)})),
+        )
+            .into_response();
+    }
+
+    (StatusCode::ACCEPTED, Json(json!({"ok": true}))).into_response()
 }
 
 // ─── Data models ──────────────────────────────────────────────────────────────
@@ -3075,7 +3277,7 @@ async fn run_agent(
     )
     .await;
 
-    let outcome = execute_agent_run(&state, &agent, &input).await;
+    let outcome = execute_agent_run(&state, &agent, &run_id, &input).await;
     let duration_ms = started_at.elapsed().as_millis() as i64;
 
     match outcome {
@@ -3168,10 +3370,14 @@ enum RunFailure {
 /// The gizzi round-trip half of `run_agent`: create a session, post the
 /// message, extract the text output. Split out so the handler can record the
 /// run lifecycle around a single Result instead of minting an untracked
-/// run_id per early return.
+/// run_id per early return. The `x-allternit-agent-id` / `x-allternit-run-id`
+/// headers bind the gizzi session to this run so gizzi's agent-event-bridge
+/// can report permission/question waits back to `POST /agents/:id/events/ingest`
+/// (cmd/gizzi-code/src/runtime/services/agent-event-bridge.ts).
 async fn execute_agent_run(
     state: &AppState,
     agent: &AgentRunRow,
+    run_id: &str,
     input: &str,
 ) -> Result<(String, String), RunFailure> {
     let gizzi = state
@@ -3191,6 +3397,8 @@ async fn execute_agent_run(
     });
     let session = match client
         .post(format!("{}/v1/session", gizzi))
+        .header("x-allternit-agent-id", &agent.id)
+        .header("x-allternit-run-id", run_id)
         .json(&session_payload)
         .send()
         .await
@@ -3245,6 +3453,8 @@ async fn execute_agent_run(
     }
     let message = match client
         .post(format!("{}/v1/session/{}/message", gizzi, session_id))
+        .header("x-allternit-agent-id", &agent.id)
+        .header("x-allternit-run-id", run_id)
         .json(&message_payload)
         .send()
         .await
@@ -3444,9 +3654,9 @@ async fn record_run_metrics(
     }
 }
 
-/// Append an agent run lifecycle event to the same Rails ledger
-/// `agent.created` uses, so `GET /agents/:id/events` replays run activity.
-/// Best-effort, same posture as the creation write.
+/// Append an agent run lifecycle event to the Rails ledger used by the iOS SSE
+/// feed and mirror its canonical equivalent into the bot ledger used by web
+/// activity/status APIs. Best-effort, same posture as the creation write.
 async fn append_run_ledger_event(
     state: &AppState,
     user_id: &str,
@@ -3455,6 +3665,47 @@ async fn append_run_ledger_event(
     payload: serde_json::Value,
 ) {
     let event = allternit_commrails::AllternitEvent {
+    if let Some(agent_id) = payload.get("agent_id").and_then(|value| value.as_str()) {
+        let bot_event_type = match event_type {
+            "agent.run.started" => Some("run.started"),
+            "agent.run.completed" => Some("run.completed"),
+            "agent.run.failed" => Some("run.failed"),
+            _ => None,
+        };
+        if let Some(bot_event_type) = bot_event_type {
+            let body = crate::bot_event_routes::AppendEventBody {
+                event_type: bot_event_type.to_string(),
+                actor: crate::bot_event_routes::ActorBody {
+                    r#type: "bot".to_string(),
+                    id: agent_id.to_string(),
+                },
+                payload: payload.clone(),
+                occurred_at: None,
+                session_id: None,
+                goal_id: None,
+                wih_id: None,
+                task_id: None,
+                run_id: Some(run_id.to_string()),
+                idempotency_key: Some(format!("run:{}:{}", run_id, event_type)),
+            };
+            let db = state.db.clone();
+            let bot_id = agent_id.to_string();
+            let occurred_at = chrono::Utc::now().to_rfc3339();
+            match tokio::task::spawn_blocking(move || {
+                crate::bot_event_routes::append_event(&db, &bot_id, &body, &occurred_at)
+            })
+            .await
+            {
+                Ok(Ok(_)) => {}
+                Ok(Err(error)) => {
+                    warn!("Failed to mirror {} into bot ledger: {}", event_type, error)
+                }
+                Err(error) => warn!("Bot lifecycle mirror task panicked: {}", error),
+            }
+        }
+    }
+
+    let event = allternit_agent_system_rails::AllternitEvent {
         event_id: String::new(),
         ts: String::new(),
         actor: allternit_commrails::Actor {
@@ -4849,5 +5100,255 @@ mod tests {
             assert!(table_exists);
         }
         let _ = std::fs::remove_dir_all(&dir);
+    use axum::http::Request;
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
+
+    fn test_user(id: &str) -> AuthUser {
+        AuthUser {
+            user_id: id.to_string(),
+            email: Some(format!("{}@example.test", id)),
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        }
+    }
+
+    async fn agent_event_ingest_setup(tag: &str) -> (Router, Arc<AppState>) {
+        let dir = std::env::temp_dir().join(format!(
+            "allternit-agent-event-ingest-{}-{}",
+            tag,
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let state = crate::test_helpers::app_state(&dir).await;
+        let app = agent_router().with_state(state.clone());
+        (app, state)
+    }
+
+    fn seed_agent(state: &AppState, agent_id: &str, user_id: &str) {
+        let conn = state.db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO agents (id, user_id, name, model, provider) VALUES (?1, ?2, ?3, 'm', 'p')",
+            params![agent_id, user_id, format!("Agent {}", agent_id)],
+        )
+        .unwrap();
+    }
+
+    async fn post_ingest(
+        app: &Router,
+        agent_id: &str,
+        user_id: &str,
+        body: serde_json::Value,
+    ) -> (StatusCode, serde_json::Value) {
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/agents/{}/events/ingest", agent_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user(user_id))
+                    .body(Body::from(body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = resp.status();
+        let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+        let json = serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null);
+        (status, json)
+    }
+
+    #[tokio::test]
+    async fn agent_event_ingest_appends_allowlisted_event_to_ledger() {
+        let (app, state) = agent_event_ingest_setup("append").await;
+        seed_agent(&state, "agent-1", "user-a");
+
+        let (status, body) = post_ingest(
+            &app,
+            "agent-1",
+            "user-a",
+            json!({
+                "type": "agent.run.waiting_approval",
+                "run_id": "run-1",
+                "payload": {
+                    "permission": "bash",
+                    "request_id": "perm-1",
+                    "session_id": "session-1"
+                },
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        assert_eq!(body["ok"], true);
+
+        let events = state
+            .rails
+            .ledger
+            .query(LedgerQuery::default())
+            .await
+            .unwrap();
+        let event = events
+            .iter()
+            .find(|e| e.r#type == "agent.run.waiting_approval")
+            .expect("ledger should hold the ingested event");
+        assert_eq!(
+            event.payload.get("agent_id").and_then(|v| v.as_str()),
+            Some("agent-1")
+        );
+        assert_eq!(
+            event.payload.get("run_id").and_then(|v| v.as_str()),
+            Some("run-1")
+        );
+        assert_eq!(
+            event.payload.get("permission").and_then(|v| v.as_str()),
+            Some("bash")
+        );
+        assert_eq!(
+            event.scope.as_ref().and_then(|s| s.run_id.as_deref()),
+            Some("run-1")
+        );
+
+        let conn = state.db.connect().unwrap();
+        let bot_row: (String, String, String, i64) = conn
+            .query_row(
+                "SELECT event_type, session_id, run_id, seq FROM bot_events WHERE bot_id = 'agent-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            bot_row,
+            (
+                "task.waiting_for_approval".to_string(),
+                "session-1".to_string(),
+                "run-1".to_string(),
+                1
+            )
+        );
+        drop(conn);
+
+        // Runtime/HTTP retries must not create a second bot-ledger row.
+        let (status, _) = post_ingest(
+            &app,
+            "agent-1",
+            "user-a",
+            json!({
+                "type": "agent.run.waiting_approval",
+                "run_id": "run-1",
+                "payload": {
+                    "permission": "bash",
+                    "request_id": "perm-1",
+                    "session_id": "session-1"
+                },
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        let conn = state.db.connect().unwrap();
+        let bot_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM bot_events WHERE bot_id = 'agent-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(bot_count, 1);
+    }
+
+    #[tokio::test]
+    async fn agent_event_ingest_rejects_unknown_type() {
+        let (app, state) = agent_event_ingest_setup("unknown-type").await;
+        seed_agent(&state, "agent-1", "user-a");
+
+        let (status, _) = post_ingest(
+            &app,
+            "agent-1",
+            "user-a",
+            json!({"type": "agent.run.started"}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+
+        let events = state
+            .rails
+            .ledger
+            .query(LedgerQuery::default())
+            .await
+            .unwrap();
+        assert!(events.is_empty());
+    }
+
+    #[tokio::test]
+    async fn agent_event_ingest_rejects_non_object_payload() {
+        let (app, state) = agent_event_ingest_setup("bad-payload").await;
+        seed_agent(&state, "agent-1", "user-a");
+
+        let (status, _) = post_ingest(
+            &app,
+            "agent-1",
+            "user-a",
+            json!({"type": "agent.run.blocked", "payload": "nope"}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn agent_event_ingest_requires_ownership() {
+        let (app, state) = agent_event_ingest_setup("ownership").await;
+        seed_agent(&state, "agent-1", "user-a");
+
+        let (status, _) = post_ingest(
+            &app,
+            "agent-1",
+            "user-b",
+            json!({"type": "agent.run.blocked"}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+
+        let events = state
+            .rails
+            .ledger
+            .query(LedgerQuery::default())
+            .await
+            .unwrap();
+        assert!(events.is_empty());
+    }
+
+    #[tokio::test]
+    async fn agent_event_ingest_allows_all_bridge_types_without_run_id() {
+        let (app, state) = agent_event_ingest_setup("all-types").await;
+        seed_agent(&state, "agent-1", "user-a");
+
+        for event_type in INGESTABLE_AGENT_EVENT_TYPES {
+            let (status, _) = post_ingest(
+                &app,
+                "agent-1",
+                "user-a",
+                json!({"type": event_type}),
+            )
+            .await;
+            assert_eq!(status, StatusCode::ACCEPTED, "type {}", event_type);
+        }
+
+        let events = state
+            .rails
+            .ledger
+            .query(LedgerQuery::default())
+            .await
+            .unwrap();
+        assert_eq!(events.len(), INGESTABLE_AGENT_EVENT_TYPES.len());
+        for event in &events {
+            assert_eq!(
+                event.payload.get("agent_id").and_then(|v| v.as_str()),
+                Some("agent-1")
+            );
+        }
     }
 }

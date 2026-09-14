@@ -70,7 +70,7 @@ final class LoopLiveActivityManager {
         }
     }
 
-    private static func contentState(for loop: Loop) -> LoopActivityAttributes.ContentState {
+    static func contentState(for loop: Loop) -> LoopActivityAttributes.ContentState {
         LoopActivityAttributes.ContentState(
             iterationsCompleted: loop.iterationLog.count,
             maxIterations: loop.maxIterations,

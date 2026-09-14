@@ -122,7 +122,7 @@ struct ACIWebBrowserView: View {
                 .presentationDragIndicator(.visible)
         }
         .onAppear {
-            if CommandLine.arguments.contains("-extension") {
+            if launchArgumentEnabled("extension") {
                 isExtensionChatOpen = true
             }
         }

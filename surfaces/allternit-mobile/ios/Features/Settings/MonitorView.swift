@@ -71,9 +71,7 @@ struct MonitorView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
-            .accessibilityLabel("Refresh")
-
-            tabMenu
+            .accessibilityLabel("Refresh monitor")
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
@@ -99,27 +97,21 @@ struct MonitorView: View {
             Spacer()
         } else if let loadError = store.loadError, store.agents.isEmpty && store.systemMetrics.isEmpty {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Couldn't load monitor")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load monitor",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else {
             ScrollView {
                 VStack(spacing: 16) {
                     metricsRow
                     statsRow
+                    tabBar
 
                     switch activeTab {
                     case .agents:
@@ -225,35 +217,25 @@ struct MonitorView: View {
         )
     }
 
-    private var tabMenu: some View {
-        Menu {
+    // MARK: - Tabs
+
+    private var tabBar: some View {
+        HStack(spacing: 0) {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Button(action: { activeTab = tab }) {
-                    HStack {
-                        if activeTab == tab { Image(systemName: "checkmark") }
+                    VStack(spacing: 6) {
                         Text(tab.rawValue)
+                            .font(.system(size: 14, weight: tab == activeTab ? .bold : .regular))
+                            .foregroundColor(tab == activeTab ? Color("TextPrimary") : Color("TextSecondary"))
+                        Rectangle()
+                            .fill(tab == activeTab ? Color("AccentChat") : Color.clear)
+                            .frame(height: 2)
                     }
                 }
+                .buttonStyle(.plain)
             }
-        } label: {
-            HStack(spacing: 4) {
-                Text(activeTab.rawValue)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color("TextPrimary"))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(Color("TextSecondary"))
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 28)
-            .background(Color("BgPanel"))
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
-            )
         }
-        .accessibilityLabel("Switch view")
+        .padding(.top, 8)
     }
 
     // MARK: - Agents tab

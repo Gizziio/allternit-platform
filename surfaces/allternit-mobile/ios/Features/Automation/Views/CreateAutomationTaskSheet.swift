@@ -83,6 +83,25 @@ struct CreateAutomationTaskSheet: View {
                             .foregroundColor(Color("TextSecondary"))
                     }
 
+                    // Day-of-week shortcut (parity with the web cowork
+                    // `DayOfWeekSelector`). Only shown for cron-shaped input —
+                    // plain-language schedules have no dow field to edit.
+                    if schedule.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || schedule.split(separator: " ").count == 5 {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Days of week")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color("TextSecondary"))
+                            DayOfWeekSelector(
+                                selectedDays: CronDays.parseCronDays(schedule),
+                                onChange: { days in
+                                    schedule = CronDays.applyCronDays(schedule, days: days)
+                                }
+                            )
+                        }
+                    }
+
                     Button(action: create) {
                         Text("Create task")
                             .font(.system(size: 15, weight: .semibold))

@@ -121,9 +121,15 @@ struct PlatformSettingsView: View {
                     ProgressView()
                 }
             } else if let error = modelStore.loadError {
-                Text("Couldn't load models: \(error)")
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                let offline = isConnectionFailure(error)
+                FriendlyInlineStateView(
+                    style: offline ? .offline : .error,
+                    icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                    title: "Could not load models",
+                    message: FriendlyErrorMessage.from(error),
+                    actionTitle: "Retry",
+                    action: { modelStore.fetchModelsIfNeeded(force: true) }
+                )
             } else {
                 Picker("Default model", selection: Binding(
                     get: { modelStore.selectedModelId },
@@ -256,7 +262,7 @@ struct PlatformSettingsView: View {
                 case .up(let ip):
                     Text(ip).font(.caption).foregroundColor(Color("TextPrimary"))
                 case .failed(let message):
-                    Text(message).font(.caption).foregroundColor(.red).lineLimit(1)
+                    Text(message).font(.caption).foregroundColor(Theme.statusError).lineLimit(1)
                 }
             }
 
@@ -273,15 +279,22 @@ struct PlatformSettingsView: View {
     private var cloudInstancesSection: some View {
         Section {
             if let error = instanceStore.lastError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                let offline = isConnectionFailure(error)
+                FriendlyInlineStateView(
+                    style: offline ? .offline : .error,
+                    icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                    title: "Could not load cloud instances",
+                    message: FriendlyErrorMessage.from(error)
+                )
             }
 
             if instanceStore.instances.isEmpty {
-                Text("No registered instances.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "desktopcomputer",
+                    title: "No registered instances",
+                    message: "Cloud instances will appear here once registered."
+                )
             } else {
                 ForEach(instanceStore.instances) { instance in
                     HStack {
@@ -297,7 +310,7 @@ struct PlatformSettingsView: View {
                         Spacer()
                         Text(instance.status)
                             .font(.caption)
-                            .foregroundColor(instance.isOnline ? Color.green : Color("TextSecondary"))
+                            .foregroundColor(instance.isOnline ? Theme.statusSuccess : Color("TextSecondary"))
                     }
                 }
             }
@@ -343,6 +356,15 @@ struct PlatformSettingsView: View {
 }
 
 // MARK: - Shortcuts data
+
+private func isConnectionFailure(_ error: String) -> Bool {
+    let lowered = error.lowercased()
+    return lowered.contains("could not connect")
+        || lowered.contains("failed to connect")
+        || lowered.contains("offline")
+        || lowered.contains("no network")
+        || lowered.contains("network connection was lost")
+}
 
 private enum KeyboardShortcutItem: String, CaseIterable {
     case newChat = "New chat"

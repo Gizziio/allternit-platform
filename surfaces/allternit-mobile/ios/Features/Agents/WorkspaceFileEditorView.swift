@@ -85,23 +85,14 @@ struct WorkspaceFileEditorView: View {
                 ProgressView()
                 Spacer()
             } else if let loadError {
-                Spacer()
-                VStack(spacing: 12) {
-                    Text("Couldn't load the file")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextPrimary"))
-                    Text(loadError)
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
-                        Task { await loadContent() }
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-                }
-                .padding(.horizontal, 20)
-                Spacer()
+                FriendlyStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load the file",
+                    message: FriendlyErrorMessage.from(loadError),
+                    actionTitle: "Retry",
+                    action: { Task { await loadContent() } }
+                )
             } else {
                 // Meta strip: category tag + live character count.
                 HStack(spacing: 8) {

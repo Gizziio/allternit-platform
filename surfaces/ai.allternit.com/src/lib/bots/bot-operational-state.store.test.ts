@@ -2,8 +2,10 @@
  * Tests for the bot operational state projection store.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useBotOperationalStateStore } from './bot-operational-state.store';
+import { getBotOperationalState } from './bot-events-api';
+import { type BotOperationalState } from './orpc-contracts';
 import { type GoalLoopState } from './goal-loop-controller';
 import {
   GoalSchema,
@@ -13,6 +15,12 @@ import {
   LoopPolicySchema,
   type Task,
 } from './goal-task-contracts';
+
+vi.mock('./bot-events-api', () => ({
+  getBotOperationalState: vi.fn(),
+}));
+
+const mockGetBotOperationalState = vi.mocked(getBotOperationalState);
 
 const now = new Date().toISOString();
 
@@ -85,6 +93,7 @@ describe('bot-operational-state.store', () => {
       cursors: {},
       fetchingBotIds: new Set(),
     });
+    mockGetBotOperationalState.mockReset();
   });
 
   it('maps a running goal loop to working status', () => {
@@ -187,5 +196,80 @@ describe('bot-operational-state.store', () => {
     const status = useBotOperationalStateStore.getState().getStatus('b_1');
     expect(status).toBe('blocked');
     expect(useBotOperationalStateStore.getState().needsAttention('b_1')).toBe(true);
+  });
+});
+
+describe('fetchOperationalState', () => {
+  function serverState(overrides: Partial<BotOperationalState> = {}): BotOperationalState {
+    return {
+      status: 'idle',
+      pendingApprovalsCount: 0,
+      unreadMessagesCount: 0,
+      computerState: 'none',
+      lastEventSequence: 0,
+      updatedAt: now,
+      ...overrides,
+    };
+  }
+
+  it('merges server fields into the entry and preserves subscription state and cursors', async () => {
+    const store = useBotOperationalStateStore.getState();
+
+    // Seed a local entry with goal-loop-sourced fields plus subscription
+    // bookkeeping and a resume cursor that the server fetch must not clobber.
+    store.applyGoalLoopState('b_1', makeLoopState({
+      status: 'running',
+      tasks: { t_1: makeTask({ status: 'running' }) },
+    }));
+    store.markStale('b_1');
+    store.setCursor('b_1', { botId: 'b_1', lastSequence: 99, updatedAt: now });
+
+    mockGetBotOperationalState.mockResolvedValue(serverState({
+      status: 'working',
+      activityLabel: 'Server-side run',
+      computerState: 'running',
+      lastEventSequence: 42,
+      updatedAt: '2026-08-19T00:00:00.000Z',
+    }));
+
+    const ok = await useBotOperationalStateStore.getState().fetchOperationalState('b_1');
+    expect(ok).toBe(true);
+    expect(mockGetBotOperationalState).toHaveBeenCalledWith('b_1');
+
+    const projection = useBotOperationalStateStore.getState().getProjection('b_1');
+    // Server-sourced fields win.
+    expect(projection?.state.status).toBe('working');
+    expect(projection?.state.activityLabel).toBe('Server-side run');
+    expect(projection?.state.computerState).toBe('running');
+    expect(projection?.state.lastEventSequence).toBe(42);
+    expect(projection?.state.updatedAt).toBe('2026-08-19T00:00:00.000Z');
+    // Subscription bookkeeping and resume cursor are preserved.
+    expect(projection?.subscriptionState).toBe('stale');
+    expect(useBotOperationalStateStore.getState().cursors.b_1).toEqual({
+      botId: 'b_1',
+      lastSequence: 99,
+      updatedAt: now,
+    });
+    // Fetching flag is cleared once the fetch completes.
+    expect(useBotOperationalStateStore.getState().fetchingBotIds.has('b_1')).toBe(false);
+  });
+
+  it('returns false and leaves the entry untouched when the fetch fails', async () => {
+    const store = useBotOperationalStateStore.getState();
+    store.applyGoalLoopState('b_1', makeLoopState({
+      status: 'running',
+      tasks: { t_1: makeTask({ status: 'running' }) },
+    }));
+    const before = useBotOperationalStateStore.getState().getProjection('b_1');
+
+    mockGetBotOperationalState.mockRejectedValue(new Error('server unreachable'));
+
+    const ok = await useBotOperationalStateStore.getState().fetchOperationalState('b_1');
+    expect(ok).toBe(false);
+
+    const after = useBotOperationalStateStore.getState().getProjection('b_1');
+    expect(after?.state).toEqual(before?.state);
+    expect(after?.subscriptionState).toBe(before?.subscriptionState);
+    expect(useBotOperationalStateStore.getState().fetchingBotIds.has('b_1')).toBe(false);
   });
 });

@@ -32,7 +32,7 @@ struct FileDiffDetailView: View {
                 }
                 if diff.deletions > 0 {
                     Text("-\(diff.deletions)")
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.statusError)
                 }
             }
             .font(.system(.caption, design: .monospaced).weight(.semibold))

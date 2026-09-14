@@ -86,42 +86,29 @@ struct MemorySettingsView: View {
                 Spacer()
             }
         } else if let loadError, documents.isEmpty {
-            VStack(spacing: 12) {
-                Image(systemName: "brain.head.profile")
-                    .font(.title2)
-                    .foregroundColor(Color("TextSecondary"))
-                Text("Couldn't load memory")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") { Task { await load() } }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 32)
-            .padding(.top, 60)
+            FriendlyStateView(
+                style: .offline,
+                icon: "brain.head.profile",
+                title: "Couldn't load memory",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await load() } }
+            )
             .frame(maxWidth: .infinity)
         } else {
             VStack(alignment: .leading, spacing: 0) {
                 if let loadError {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(Theme.statusWarning)
-                        Text("Refresh failed: \(loadError)")
-                            .font(.caption)
-                            .foregroundColor(Color("TextSecondary"))
-                            .lineLimit(2)
-                        Spacer()
-                        Button("Retry") { Task { await load() } }
-                            .font(.caption)
-                            .foregroundColor(Color("AccentPrimary"))
-                    }
+                    FriendlyInlineStateView(
+                        style: .error,
+                        icon: "exclamationmark.triangle",
+                        title: "Refresh failed",
+                        message: FriendlyErrorMessage.from(loadError),
+                        actionTitle: "Retry",
+                        action: { Task { await load() } }
+                    )
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color("BgSecondary"))
+                    .padding(.top, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 statsHeader
@@ -145,11 +132,15 @@ struct MemorySettingsView: View {
                 Divider().background(Color("BorderSubtle")).padding(.leading, 20)
 
                 if filtered.isEmpty {
-                    Text(searchText.isEmpty ? "No memories yet." : "No memories match your search.")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextSecondary"))
-                        .padding(.top, 40)
-                        .frame(maxWidth: .infinity)
+                    FriendlyStateView(
+                        style: .empty,
+                        icon: searchText.isEmpty ? "brain" : "magnifyingglass",
+                        title: searchText.isEmpty ? "No memories yet" : "No matches",
+                        message: searchText.isEmpty
+                            ? "Memories Allternit learns from your chats will appear here."
+                            : "No memories match your search."
+                    )
+                    .frame(maxWidth: .infinity)
                 } else {
                     LazyVStack(spacing: 0) {
                         ForEach(filtered) { document in

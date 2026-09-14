@@ -1,0 +1,22 @@
+appId: com.allternit.mobile
+---
+# Smoke test for the path that triggers a Loop Live Activity.
+# A real loop requires a running gizzi-code server; this flow verifies the
+# sheet opens and the loop list renders without crashing.
+- launchApp:
+    appId: com.allternit.mobile
+    clearState: true
+    arguments:
+      skip-auth: true
+      sidebar: true
+- tapOn: "Automation Tasks"
+- tapOn: "Loops"
+- takeScreenshot: live_activity_loops_list
+- tapOn: "New loop"
+
+- takeScreenshot: live_activity_create_loop_sheet
+- tapOn: "Command to run each iteration"
+- inputText: "echo hello"
+- tapOn: "Create loop"
+- takeScreenshot: live_activity_after_create
+- stopApp
