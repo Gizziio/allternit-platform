@@ -278,6 +278,8 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         </div>
       </div>
     );
+    window.location.replace('/sign-in');
+    return null;
   }
 
   return (

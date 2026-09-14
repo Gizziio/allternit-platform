@@ -181,6 +181,7 @@ declare global {
         };
         openRemoteControl: () => Promise<void>;
         openFabricSession: () => Promise<void>;
+        openRemoteControl: (runtimeId?: string) => Promise<void>;
         openSession: (options: { sessionId: string; workspaceId?: string; title?: string }) => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;
