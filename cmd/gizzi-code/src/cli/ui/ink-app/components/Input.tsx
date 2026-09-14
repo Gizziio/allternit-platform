@@ -52,6 +52,7 @@ export const Input: React.FC<InputProps> = ({
       onChange('');
     } else if (!key.ctrl && !key.meta && input) {
       const newValue = value.slice(0, cursorPos) + input + value.slice(cursorPos);
+      onChange(newValue);
     }
   });
   const displayValue = value || placeholder || '';
