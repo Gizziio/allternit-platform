@@ -23,6 +23,7 @@ import {
   listDelegationRules, upsertDelegationRule, deleteDelegationRule,
   listConnectorSessions,
   listRoutines, createRoutine, deleteRoutine, runRoutineNow,
+  continueRunInCloud, getCoworkPreferences, setCloudContinuation,
   type TransportRun, TransportEvent, ApprovalRow, IntentSubmission,
   type PrincipalRow, DelegationRuleRow, ConnectorSessionRow, RoutineRow,
 } from '@/lib/fabric-transport-api';
@@ -89,6 +90,7 @@ export function FabricTransportView() {
   const [routineName, setRoutineName] = useState('');
   const [routineMessage, setRoutineMessage] = useState('');
   const [routineSchedule, setRoutineSchedule] = useState('*/30');
+  const [cloudContinuation, setCloudContinuationPref] = useState(false);
 
   // Intent form
   const [initiator, setInitiator] = useState('a://workspace/ws-allternit/user/joe');
@@ -102,13 +104,14 @@ export function FabricTransportView() {
   const refresh = useCallback(async () => {
     try {
       setError(null);
-      const [runList, approvalList, principalList, ruleList, sessionList, routineList] = await Promise.all([
+      const [runList, approvalList, principalList, ruleList, sessionList, routineList, prefs] = await Promise.all([
         listRuns(getToken),
         listApprovals(getToken, workspace),
         listPrincipals(getToken, workspace),
         listDelegationRules(getToken, workspace),
         listConnectorSessions(getToken),
         listRoutines(getToken),
+        getCoworkPreferences(getToken).catch(() => ({ cloud_continuation: false, trusted_folders: [] as string[] })),
       ]);
       setRuns((runList as TransportRun[]).slice(0, 25));
       setApprovals(approvalList.approvals);
@@ -116,6 +119,7 @@ export function FabricTransportView() {
       setRules(ruleList.rules);
       setSessions(sessionList.sessions.slice(0, 25));
       setRoutines(routineList.routines);
+      setCloudContinuationPref(Boolean(prefs.cloud_continuation));
     } catch (e) {
       setError((e as Error).message);
     }
@@ -285,6 +289,22 @@ export function FabricTransportView() {
             aria-label="Workspace"
           />
           <button className="rounded border px-2 py-1 text-xs" onClick={refresh}>Refresh</button>
+          <label className="flex items-center gap-1 text-xs">
+            <input
+              type="checkbox"
+              checked={cloudContinuation}
+              onChange={async (e) => {
+                const on = e.target.checked;
+                try {
+                  await setCloudContinuation(getToken, on);
+                  setCloudContinuationPref(on);
+                } catch (err) {
+                  setError((err as Error).message);
+                }
+              }}
+            />
+            Cloud continuation
+          </label>
         </div>
       </header>
       {error && <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-500">{error}</div>}
@@ -465,8 +485,24 @@ export function FabricTransportView() {
 
       {selectedRun && (
         <Section title={`Run detail — ${selectedRun.slice(0, 8)}`}>
-          <div className="text-xs text-[var(--text-muted)]">
-            Jobs: {jobs.map((j) => `${j.job_type}(${j.state})`).join(', ') || 'none created yet'}
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs text-[var(--text-muted)]">
+              Jobs: {jobs.map((j) => `${j.job_type}(${j.state})`).join(', ') || 'none created yet'}
+            </div>
+            <button
+              className="rounded border px-2 py-0.5 text-xs"
+              onClick={async () => {
+                try {
+                  setError(null);
+                  await continueRunInCloud(getToken, selectedRun);
+                  await refresh();
+                } catch (e) {
+                  setError((e as Error).message);
+                }
+              }}
+            >
+              Continue in cloud
+            </button>
           </div>
           {jobView && (
             <div className="rounded border border-[var(--border-default)] p-2 text-xs">

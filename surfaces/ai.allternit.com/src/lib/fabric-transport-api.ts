@@ -155,6 +155,22 @@ export function getIntent(getToken: TokenGetter, intentId: string): Promise<{ in
   return req(getToken, `/fabric/transport/intents/${intentId}`);
 }
 
+export function continueJobInCloud(getToken: TokenGetter, jobId: string): Promise<{ job_id: string; run_id: string; state: string }> {
+  return req(getToken, `/fabric/transport/jobs/${encodeURIComponent(jobId)}/continue-in-cloud`, { method: 'POST' });
+}
+
+export function continueRunInCloud(getToken: TokenGetter, runId: string): Promise<{ run_id: string; jobs: unknown[] }> {
+  return req(getToken, `/fabric/transport/runs/${encodeURIComponent(runId)}/continue-in-cloud`, { method: 'POST' });
+}
+
+export function getCoworkPreferences(getToken: TokenGetter): Promise<{ trusted_folders: string[]; cloud_continuation: boolean }> {
+  return req(getToken, '/cowork-preferences');
+}
+
+export function setCloudContinuation(getToken: TokenGetter, enabled: boolean): Promise<{ cloud_continuation: boolean }> {
+  return req(getToken, '/cowork-preferences', { method: 'PUT', body: JSON.stringify({ cloud_continuation: enabled }) });
+}
+
 // ─── P-T6: principals / delegation rules / connector sessions ───────────────
 
 export interface PrincipalRow {

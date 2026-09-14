@@ -92,6 +92,22 @@ pub fn fabric_transport_routes() -> Router<Arc<AppState>> {
             "/fabric/transport/connector-sessions",
             get(list_connector_sessions),
         )
+        .route(
+            "/fabric/transport/jobs/:job_id/continue-in-cloud",
+            post(continue_job_in_cloud),
+        )
+        .route(
+            "/fabric/transport/runs/:run_id/continue-in-cloud",
+            post(continue_run_in_cloud),
+        )
+        .route(
+            "/fabric/transport/continuation/handoff-all",
+            post(handoff_all_in_flight),
+        )
+        .route(
+            "/fabric/transport/continuation/ingest",
+            post(ingest_continuation),
+        )
 }
 
 fn db_error(e: rusqlite::Error) -> ErrorResponse {
@@ -175,6 +191,9 @@ async fn sync_run_state(state: &AppState, run_id: &str, to: RunState) {
 pub struct EnsureWorkerPrincipalRequest {
     #[serde(default = "default_worker_workspace")]
     pub workspace: String,
+    /// `local` (laptop gizzi) or `cloud` (always-on gizzi-cloud).
+    #[serde(default)]
+    pub kind: Option<String>,
 }
 
 fn default_worker_workspace() -> String {
@@ -200,8 +219,12 @@ async fn ensure_worker_principal(
         });
     }
     let mut conn = state.db.connect().map_err(db_error)?;
-    let principal_id =
-        sqlite_store::ensure_gizzi_principal(&mut conn, &req.workspace).map_err(transport_err)?;
+    let kind = req.kind.as_deref().unwrap_or("local");
+    let principal_id = if kind == "cloud" {
+        sqlite_store::ensure_gizzi_cloud_principal(&mut conn, &req.workspace).map_err(transport_err)?
+    } else {
+        sqlite_store::ensure_gizzi_principal(&mut conn, &req.workspace).map_err(transport_err)?
+    };
     let token =
         sqlite_store::provision_principal_token(&mut conn, &principal_id).map_err(transport_err)?;
     let workspace = req
@@ -982,4 +1005,80 @@ async fn invoke_connector_session(
     .await
     .map_err(transport_err)?;
     Ok(Json(outcome))
+}
+
+fn require_user_or_desktop(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<(), ErrorResponse> {
+    if crate::auth::get_user(headers).is_some() {
+        return Ok(());
+    }
+    if crate::auth::verify_desktop_access_token(headers, &state.config) {
+        return Ok(());
+    }
+    Err(ErrorResponse {
+        error: "authentication required".to_string(),
+        code: 401,
+    })
+}
+
+/// Promote one job to `compute.cloud` and drop any local lease.
+async fn continue_job_in_cloud(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(job_id): Path<String>,
+) -> Result<Json<sqlite_store::CloudContinuation>, ErrorResponse> {
+    require_user_or_desktop(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let outcome = sqlite_store::continue_job_in_cloud(&mut conn, &job_id).map_err(transport_err)?;
+    info!(job = %job_id, run = %outcome.run_id, "Job handed off to cloud continuation");
+    Ok(Json(outcome))
+}
+
+/// Promote every non-terminal job on a run.
+async fn continue_run_in_cloud(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(run_id): Path<String>,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    require_user_or_desktop(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let jobs = sqlite_store::continue_run_in_cloud(&mut conn, &run_id).map_err(transport_err)?;
+    Ok(Json(json!({ "run_id": run_id, "jobs": jobs })))
+}
+
+/// Desktop quit: promote every in-flight job so an always-on cloud worker
+/// can claim them (same API) or an ingest target can replay them.
+async fn handoff_all_in_flight(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
+    require_user_or_desktop(&state, &headers)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let jobs = sqlite_store::handoff_all_in_flight(&mut conn).map_err(transport_err)?;
+    info!(count = jobs.len(), "In-flight jobs handed off to cloud continuation");
+    Ok(Json(json!({ "jobs": jobs })))
+}
+
+/// Replay an intent onto this API as a cloud-continuation job. Used when
+/// the laptop API is going away and an always-on data-plane is the target.
+async fn ingest_continuation(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(mut envelope): Json<allternit_cowork_runtime::IntentEnvelope>,
+) -> Result<Json<allternit_cowork_runtime::IntentSubmission>, ErrorResponse> {
+    require_user_or_desktop(&state, &headers)?;
+    envelope.compute = Some(json!({ "policy": "cloud" }));
+    if envelope.intent_id.is_empty() {
+        envelope.intent_id = format!("cont_{}", uuid::Uuid::new_v4());
+    } else if !envelope.intent_id.starts_with("cont_") {
+        envelope.intent_id = format!("cont_{}", envelope.intent_id);
+    }
+    let user = crate::auth::get_user(&headers);
+    let mut conn = state.db.connect().map_err(db_error)?;
+    let owner = user.as_ref().map(|u| u.user_id.as_str());
+    let submission = sqlite_store::submit_intent_for_user(&mut conn, &envelope, owner)
+        .map_err(transport_err)?;
+    Ok(Json(submission))
 }
