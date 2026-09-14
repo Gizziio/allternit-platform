@@ -126,6 +126,11 @@ export async function createCoworkSession(options?: CreateModeSessionOptions): P
       projectId: options?.projectId ?? null,
       status: 'active',
       mode: options?.sessionMode === 'agent' ? 'agent' : 'regular',
+      // The A:// DAG linkage keys the session run by the native chat id —
+      // without it the agent-chat bridge cannot resolve row → run, and the
+      // POST is the idempotency key for session rows (reposts return the
+      // existing row instead of duplicating it).
+      nativeSessionId: sessionId,
     }),
   })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))

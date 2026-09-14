@@ -31,6 +31,7 @@ import {
 import type { ChatMessage } from '@/lib/ai/rust-stream-adapter';
 import { useTaskStore } from './useTaskStore';
 import { useRailsAgentId, useRailsDags } from '@/lib/rails/use-rails-dags';
+import { useSessionDag } from '@/lib/cowork/use-a-dag';
 import RailsTaskList from '@/components/rails/RailsTaskList';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -506,6 +507,78 @@ function RailsWorkSection({ open, onToggle }: { open: boolean; onToggle: () => v
   );
 }
 
+// ─── A:// run section (session's canonical DAG state) ────────────────────────
+
+const ADAG_STATE_COLORS: Record<string, string> = {
+  queued: '#d9a03f',
+  running: '#4f8ef7',
+  completed: '#3fb27f',
+  failed: '#d9534f',
+  cancelled: '#888',
+};
+
+function parseJsonField(raw: string | null): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw) as unknown;
+    return v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function ADagSection({ sessionId, open, onToggle }: {
+  sessionId: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const { data } = useSessionDag(open ? sessionId : null);
+  if (!data || (!data.run && data.jobs.length === 0 && data.events.length === 0)) return null;
+  const run = data.run;
+  return (
+    <Section
+      title="A:// run"
+      icon={<Pulse size={11} style={{ color: RAIL_MUTED }} />}
+      open={open}
+      onToggle={onToggle}
+    >
+      <div style={{ maxHeight: 260, overflowY: 'auto', margin: '0 -4px', padding: '0 4px' }}>
+        {run && (
+          <div style={{ fontSize: 11, color: RAIL_TEXT, marginBottom: 6, fontFamily: 'monospace' }}>
+            <span style={{ color: ADAG_STATE_COLORS[run.state] ?? RAIL_MUTED }}>●</span>{' '}
+            {run.state} · {run.entrypoint}
+          </div>
+        )}
+        {data.jobs.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6 }}>
+            {data.jobs.slice(0, 12).map((j) => {
+              const payload = parseJsonField(j.payload);
+              const tool = typeof payload.tool === 'string' ? payload.tool : j.job_type;
+              return (
+                <div key={j.id} style={{ fontSize: 11, color: RAIL_TEXT, display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ color: ADAG_STATE_COLORS[j.state] ?? RAIL_MUTED }}>●</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tool}</span>
+                  <span style={{ color: RAIL_MUTED, fontSize: 10 }}>{j.state}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {data.events.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {data.events.slice(0, 8).map((e, i) => (
+              <div key={`${e.created_at}-${i}`} style={{ fontSize: 10, color: RAIL_MUTED, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {e.event_type}
+                {e.executor ? ` → ${e.executor.split('/').pop()}` : ''}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 // ─── Artifacts section ────────────────────────────────────────────────────────
 
 const LANG_COLORS: Record<string, string> = {
@@ -618,10 +691,13 @@ export const CoworkRightRail = memo(function CoworkRightRail({
   onClose,
   liveMessages = [],
   liveIsStreaming = false,
+  nativeSessionId = null,
 }: {
   onClose?: () => void;
   liveMessages?: ChatMessage[];
   liveIsStreaming?: boolean;
+  /** Native (mode-session) chat id — resolves the session's A:// run. */
+  nativeSessionId?: string | null;
 }) {
   const tools     = useMemo(() => parseToolsFromMessages(liveMessages), [liveMessages]);
   const todos     = useMemo(() => parseTodosFromMessages(liveMessages), [liveMessages]);
@@ -662,7 +738,7 @@ export const CoworkRightRail = memo(function CoworkRightRail({
   const completedCount = todos.filter(t => t.status === 'completed').length;
   const totalCount     = todos.length;
 
-  const [open, setOpen] = useState({ folder: true, context: true, artifacts: false, audit: false, rails: true });
+  const [open, setOpen] = useState({ folder: true, context: true, artifacts: false, audit: false, rails: true, aDag: true });
   const toggle = useCallback((k: keyof typeof open) => setOpen(o => ({ ...o, [k]: !o[k] })), []);
 
   return (
@@ -702,6 +778,11 @@ export const CoworkRightRail = memo(function CoworkRightRail({
 
         {/* Rails work — CommRails WIH DAG ready nodes */}
         <RailsWorkSection open={open.rails} onToggle={() => toggle('rails')} />
+
+        {/* A:// run — this session's canonical DAG state (run/jobs/events) */}
+        {nativeSessionId && (
+          <ADagSection sessionId={nativeSessionId} open={open.aDag} onToggle={() => toggle('aDag')} />
+        )}
 
         {/* Working folder */}
         <Section
