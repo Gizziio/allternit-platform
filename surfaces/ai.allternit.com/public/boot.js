@@ -11,11 +11,51 @@
     document.documentElement.style.colorScheme = r;
   } catch (e) {}
 
+  function recoverFromStaleAssets() {
+    if (!('sessionStorage' in window)) return;
+    try {
+      if (sessionStorage.getItem('allternit-sw-recover')) return;
+      sessionStorage.setItem('allternit-sw-recover', '1');
+    } catch (e) {
+      return;
+    }
+    var clearing = [];
+    if ('caches' in window) {
+      clearing.push(caches.keys().then(function (keys) {
+        return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+      }));
+    }
+    if ('serviceWorker' in navigator) {
+      clearing.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+        return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
+      }));
+    }
+    Promise.all(clearing).then(function () {
+      location.reload();
+    }).catch(function () {
+      location.reload();
+    });
+  }
+
+  // Capture phase: script/link load failures do not bubble. A 404 on a hashed
+  // Vite chunk after a Pages deploy is the stale-SW index.html footgun.
   window.addEventListener('error', function (event) {
-    console.error('[APP ERROR]', event.message, 'at', event.filename + ':' + event.lineno + ':' + event.colno, event.error);
-  });
+    var target = event.target;
+    if (target && target !== window && target.src && String(target.src).indexOf('/assets/') !== -1) {
+      console.error('[APP ERROR] hashed asset failed to load', target.src);
+      recoverFromStaleAssets();
+      return;
+    }
+    if (event.message) {
+      console.error('[APP ERROR]', event.message, 'at', event.filename + ':' + event.lineno + ':' + event.colno, event.error);
+    }
+  }, true);
   window.addEventListener('unhandledrejection', function (event) {
     console.error('[UNHANDLED REJECTION]', event.reason);
+    var reason = event.reason && (event.reason.message || String(event.reason));
+    if (reason && /Loading chunk|Failed to fetch dynamically imported module|error loading dynamically imported module/i.test(reason)) {
+      recoverFromStaleAssets();
+    }
   });
 
   if ('serviceWorker' in navigator) {

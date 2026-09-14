@@ -1070,7 +1070,21 @@ function AuthGate({ children }: { children: React.ReactNode }): React.ReactNode 
     }
   }, [isLoaded, isSignedIn, navigate, companyConfigLoading, desktopSelfHosted]);
 
-  if (!allowed) return null;
+  if (!allowed) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        aria-label="Loading Allternit Platform"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#1A1612',
+        }}
+      />
+    );
+  }
 
   return <>{children}</>;
 }
