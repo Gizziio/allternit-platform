@@ -7,6 +7,7 @@
  * fingerprint, errors swallowed, gated on Rails peer mode.
  */
 
+import { spawn } from 'node:child_process'
 import { logForDiagnosticsNoPII } from 'src/shared/utils/diagLogs.js'
 import { errorMessage } from 'src/shared/utils/errors.js'
 import {
@@ -77,7 +78,12 @@ export function railsPeerAgentId(): string | null {
 // (network, 400/403/409 with the server's error message) come back as
 // {ok:false, error} for inline display in the todo panel.
 
-export type WihMutationResult = { ok: boolean; error?: string }
+export type WihMutationResult = {
+  ok: boolean
+  /** Present on a successful pickup: the WIH the server created for us. */
+  wih_id?: string
+  error?: string
+}
 
 async function postWihMutation(
   path: string,
@@ -104,7 +110,17 @@ async function postWihMutation(
       })
       return { ok: false, error: `${message} (${res.status})` }
     }
-    return { ok: true }
+    // Success bodies may carry fields we want (pickup returns wih_id);
+    // parse best-effort — an empty/non-JSON body is fine.
+    let wihId: string | undefined
+    try {
+      const text = await res.text().catch(() => '')
+      const parsed = JSON.parse(text) as { wih_id?: unknown }
+      if (typeof parsed.wih_id === 'string') wihId = parsed.wih_id
+    } catch {
+      // No JSON body — nothing to extract.
+    }
+    return { ok: true, wih_id: wihId }
   } catch (error) {
     logForDiagnosticsNoPII('info', 'rails_wih_mutation_failed', {
       path,
@@ -115,9 +131,52 @@ async function postWihMutation(
 }
 
 /**
+ * Best-effort, fire-and-forget metadata stamp: report the picked-up WIH id
+ * (plus dag/node ids) onto the AO pane via `ao pane report-metadata` so the
+ * pane's provenance ledger can tie a tmux pane to a WIH. Only runs when the
+ * orchestrator exported ALLTERNIT_AO_PANE_ID. A stamp failure (missing `ao`
+ * binary, spawn error, non-zero exit) must NEVER break or delay pickup —
+ * everything here is untracked and swallowed to a debug log.
+ */
+function stampPickupOnPane(dagId: string, nodeId: string, wihId: string): void {
+  const paneId = process.env.ALLTERNIT_AO_PANE_ID
+  if (!paneId) return
+  try {
+    const child = spawn(
+      'ao',
+      [
+        'pane',
+        'report-metadata',
+        paneId,
+        '--token',
+        `wihId=${wihId}`,
+        '--token',
+        `dagId=${dagId}`,
+        '--token',
+        `nodeId=${nodeId}`,
+      ],
+      { detached: true, stdio: 'ignore', shell: false },
+    )
+    child.on('error', error => {
+      // Most commonly ENOENT when the `ao` binary isn't on PATH — log and
+      // skip; the pickup itself already succeeded.
+      logForDiagnosticsNoPII('debug', 'rails_pickup_stamp_failed', {
+        error: errorMessage(error),
+      })
+    })
+    child.unref()
+  } catch (error) {
+    logForDiagnosticsNoPII('debug', 'rails_pickup_stamp_failed', {
+      error: errorMessage(error),
+    })
+  }
+}
+
+/**
  * Pick up a READY node: creates a WIH owned by this peer. 409 when the node
  * is not pickup-able (already taken, not ready); error message is surfaced
- * verbatim for inline panel display.
+ * verbatim for inline panel display. On success the returned wih_id (when the
+ * pane env carries ALLTERNIT_AO_PANE_ID) is stamped onto the AO pane.
  */
 export function pickupWih(
   dagId: string,
@@ -131,6 +190,11 @@ export function pickupWih(
     dag_id: dagId,
     node_id: nodeId,
     agent_id: agentId,
+  }).then(result => {
+    if (result.ok && result.wih_id) {
+      stampPickupOnPane(dagId, nodeId, result.wih_id)
+    }
+    return result
   })
 }
 
