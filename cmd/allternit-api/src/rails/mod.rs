@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
     Json, Router,
 };
 pub mod routes_cowork;
@@ -277,6 +277,8 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/dags/:dag_id/render", get(dag_render))
         .route("/dags/:dag_id/execute", post(dag_execute))
         .route("/dags/:dag_id/nodes", post(create_dag_node))
+        .route("/dags/:dag_id/nodes/:node_id", patch(update_dag_node))
+        .route("/dags/:dag_id/nodes/:node_id", delete(delete_dag_node))
         .route("/runs/:run_id/cancel", post(run_cancel))
         // Leases
         .route("/leases", get(list_leases).post(request_lease))
@@ -2964,6 +2966,150 @@ async fn create_dag_node(
             Json(json!({ "node_id": node_id })),
         )
             .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateDagNodeRequest {
+    title: Option<String>,
+}
+
+async fn update_dag_node(
+    State(state): State<Arc<AppState>>,
+    Path((dag_id, node_id)): Path<(String, String)>,
+    Json(req): Json<UpdateDagNodeRequest>,
+) -> impl IntoResponse {
+    info!(dag_id = %dag_id, node_id = %node_id, "Updating DAG node");
+
+    let title = req.title.unwrap_or_default();
+    let title = title.trim();
+    if title.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "title is required" })),
+        )
+            .into_response();
+    }
+
+    let events = match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => events,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+    let dag = project_dag(&events, &dag_id);
+    if !dag.nodes.contains_key(&node_id) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "node not found" })),
+        )
+            .into_response();
+    }
+
+    match state
+        .rails
+        .gate
+        .mutate_with_decision(
+            &dag_id,
+            "api node rename",
+            None,
+            vec![DagMutation::UpdateNode {
+                node_id: node_id.clone(),
+                patch: serde_json::json!({ "title": title }),
+            }],
+        )
+        .await
+    {
+        Ok(_) => (StatusCode::OK, Json(json!({ "node_id": node_id }))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn delete_dag_node(
+    State(state): State<Arc<AppState>>,
+    Path((dag_id, node_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    info!(dag_id = %dag_id, node_id = %node_id, "Deleting DAG node");
+
+    let events = match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => events,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+    let dag = project_dag(&events, &dag_id);
+    let node = match dag.nodes.get(&node_id) {
+        Some(node) => node,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "node not found" })),
+            )
+                .into_response();
+        }
+    };
+
+    if let Some(wih_id) = &node.current_wih_id {
+        if let Some(wih) = project_wih(&events, wih_id) {
+            if !matches!(wih.status.as_str(), "CLOSED" | "FAILED" | "VAULTED") {
+                return (
+                    StatusCode::CONFLICT,
+                    Json(json!({
+                        "error": format!("node has an active WIH ({wih_id}); close it before deleting the node")
+                    })),
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    let open_children: Vec<String> = dag
+        .nodes
+        .values()
+        .filter(|n| n.parent_node_id.as_deref() == Some(node_id.as_str()))
+        .filter(|n| n.status != "DONE")
+        .map(|n| n.node_id.clone())
+        .collect();
+    if !open_children.is_empty() {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "node has children that are not DONE",
+                "children": open_children
+            })),
+        )
+            .into_response();
+    }
+
+    match state
+        .rails
+        .gate
+        .mutate_with_decision(
+            &dag_id,
+            "api node delete",
+            None,
+            vec![DagMutation::DeleteNode { node_id }],
+        )
+        .await
+    {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({ "error": e.to_string() })),
