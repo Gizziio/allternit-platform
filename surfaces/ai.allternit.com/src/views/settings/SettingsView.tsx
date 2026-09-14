@@ -16,7 +16,6 @@ import {
   DeviceMobile,
   HardDrives,
   Cloud,
-  X,
   CaretRight,
   CheckCircle,
   ArrowsClockwise,
@@ -41,6 +40,9 @@ import { EnvironmentSettings } from './EnvironmentSettings';
 import { listOwnedConnectors, connectOwned, disconnectOwned, type OwnedConnector, type OwnedConnectStatus } from '@/lib/design/owned-connector';
 import { getConnectorLogoUrl } from '@/lib/design/connector-logo';
 import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, normalizeSettingsSection, type SettingsSection } from './settings.config';
+import { SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
+import { SettingsLayout } from './SettingsLayout';
+import { SECTION_COMPONENTS } from './settings-sections';
 import { SettingsRow } from '@/components/settings/SettingsRow';
 import { Toggle } from '@/components/settings/Toggle';
 import { SectionHeading } from '@/components/settings/SectionHeading';
@@ -84,25 +86,6 @@ interface SettingsViewProps {
 
 
 // ─── Sub-components (extracted to module scope) ───────────────────────────────
-
-const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: () => void }> = ({ item, activeSection, onClick }) => {
-  const isActive = activeSection === item.id;
-  return (
-    <button type="button"
-      onClick={onClick}
-      title={item.label}
-      className={cn(
-        "w-full flex items-center gap-2.5 px-3 py-2 border-none rounded-lg text-left cursor-pointer transition-colors duration-150",
-        isActive
-          ? "bg-[var(--bg-secondary)] text-[var(--text-primary)]"
-          : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-      )}
-    >
-      <span className="shrink-0 flex items-center">{item.icon}</span>
-      <span className="truncate text-[14px]">{item.label}</span>
-    </button>
-  );
-};
 
 const PermissionRow: React.FC<{
   label: string;
@@ -1380,6 +1363,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 
   const renderContent = () => {
+    const RegistryPanel = SECTION_COMPONENTS[activeSection];
+    if (RegistryPanel) {
+      return <RegistryPanel />;
+    }
     switch (activeSection) {
       case 'appearance': return renderAppearancePanel();
       case 'models': return renderModelsPanel();
@@ -1411,13 +1398,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       default: return null;
     }
   };
-
-  const navigationItems = SETTINGS_NAV_ITEMS;
-
-  const navSearch = navQuery.trim().toLowerCase();
-  const filteredNavItems = navSearch
-    ? navigationItems.filter((item: any) => item.label.toLowerCase().includes(navSearch))
-    : navigationItems;
 
   const closeSettings = () => {
     window.dispatchEvent(new CustomEvent('allternit:close-settings'));
@@ -1506,6 +1486,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         onOpenSettings={() => setFullManagerTab(null)}
       />
     )}
+      <SettingsLayout
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        navQuery={navQuery}
+        onNavQueryChange={setNavQuery}
+        onClose={closeSettings}
+      >
+        {renderContent()}
+      </SettingsLayout>
+      {fullManagerTab !== null && (
+        <PluginManager
+          isOpen
+          initialTab={fullManagerTab}
+          onClose={() => setFullManagerTab(null)}
+          onOpenSettings={() => setFullManagerTab(null)}
+        />
+      )}
     </>
   );
 };

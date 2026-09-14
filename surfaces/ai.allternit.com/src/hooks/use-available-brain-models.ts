@@ -41,6 +41,8 @@ function getProviderDiscoveryUrl(): string {
     if (stored) {
       const snap = JSON.parse(stored) as { resolved_gateway_url?: string };
       return operatorProviderDiscoveryUrl(snap?.resolved_gateway_url);
+      const gw = snap?.resolved_gateway_url ?? "";
+      if (gw && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(gw)) return `${gw}/api/v1/providers`;
     }
   } catch {
     // storage unavailable
@@ -74,6 +76,11 @@ async function fetchRegisteredProviders(signal: AbortSignal): Promise<Response> 
       }
     } catch {
       // Sidecar URL probe hung or failed — fall through to the operator gateway.
+    const apiUrl = await sidecar.getApiUrl();
+    if (apiUrl) {
+      return fetch(`${apiUrl.replace(/\/$/, "")}/provider`, {
+        signal,
+      });
     }
   }
   return fetch(getProviderDiscoveryUrl(), { signal });
@@ -193,6 +200,7 @@ function writeProviderDiscoveryCache(models: ModelOption[]): void {
  */
 export function useAvailableBrainModels() {
   const { discoveryResult, fetchProviders, realModels, providers } = useModelDiscovery();
+  const { discoveryResult, fetchProviders, realModels } = useModelDiscovery();
 
   const cachedProviderModels = useMemo(() => readProviderDiscoveryCache(), []);
   const [terminalModels, setTerminalModels] = useState<ModelOption[]>(cachedProviderModels ?? []);
@@ -245,6 +253,7 @@ export function useAvailableBrainModels() {
                 providerName: provider.name || provider.id,
                 description: modelData?.description,
                 capabilities: normalizeCapabilities(modelData?.capabilities),
+                capabilities: modelData?.capabilities,
                 context_window: modelData?.context_window ?? modelData?.context,
               });
             });
@@ -346,6 +355,8 @@ export function useAvailableBrainModels() {
       if (!activeProviderIds.has(provider.id)) return;
       const providerId = provider.id;
       if (!providerId) return;
+    // 3) Registry models from Allternit Brain / Gizzi provider catalog
+    (realModels || []).forEach((provider: any) => {
       const modelsList = Array.isArray(provider.models)
         ? provider.models
         : provider.models
@@ -405,6 +416,24 @@ export function useAvailableBrainModels() {
 
     return Array.from(modelMap.values());
   }, [cloudModels, discoveryResult, localModels, providers, realModels, terminalModels]);
+        const existing = modelMap.get(model.id);
+        const enriched = {
+          ...model,
+          providerId: provider.id,
+          providerName: provider.name,
+        };
+        modelMap.set(model.id, existing ? { ...existing, ...enriched } : enriched);
+      });
+    });
+
+    // 4) Provider-specific discovery result (lowest priority, fills gaps)
+    (discoveryResult?.models || []).forEach((model: any) => {
+      if (!model?.id || modelMap.has(model.id)) return;
+      modelMap.set(model.id, model);
+    });
+
+    return Array.from(modelMap.values());
+  }, [discoveryResult, localModels, realModels, terminalModels]);
 
   return {
     models: availableModels,

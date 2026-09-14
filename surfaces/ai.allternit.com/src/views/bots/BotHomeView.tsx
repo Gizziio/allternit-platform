@@ -57,6 +57,7 @@ import {
 import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { getConnectorLogoUrl } from "@/lib/design/connector-logo";
 import { listWebhookTriggers, type WebhookTrigger } from "@/lib/webhook-api";
+import { usePlatformOrganization } from "@/lib/platform-auth-client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GlassSurface } from "@/design/GlassSurface";
@@ -122,7 +123,14 @@ function relativeTime(iso: string): string {
 }
 
 export function BotHomeView({ botId }: BotHomeViewProps) {
-  const { agents } = useAgentStore();
+  const { agents, fetchAgents, isLoadingAgents } = useAgentStore();
+
+  useEffect(() => {
+    if (agents.length === 0 && !isLoadingAgents) {
+      void fetchAgents();
+    }
+  }, [agents.length, isLoadingAgents, fetchAgents]);
+
   const chatSessions = useChatSessionStore((s) => s.sessions);
   const createChatSession = useChatSessionStore((s) => s.createSession);
   const setActiveChatSession = useChatSessionStore((s) => s.setActiveSession);
@@ -227,11 +235,13 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
         agentId: bot.id,
         agentName: bot.name,
         systemPrompt: bot.systemPrompt,
+        skipBackend: true,
         metadata: {
           isBot: true,
           botProfile: bot.botProfile,
           projectId,
           originSurface: "chat",
+          executionPersistence: "local",
         },
       });
       if (!sessionId) return;
@@ -301,7 +311,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
   if (!bot || !isBot(bot)) {
     return (
       <div className="flex h-full items-center justify-center text-[var(--text-secondary)]">
-        Bot not found.
+        {isLoadingAgents ? 'Loading bot…' : 'Bot not found.'}
       </div>
     );
   }
@@ -829,14 +839,20 @@ function WebhooksCard({
 }) {
   const [triggers, setTriggers] = useState<WebhookTrigger[]>([]);
   const [loading, setLoading] = useState(false);
+  const { organization } = usePlatformOrganization();
 
   useEffect(() => {
+    if (!organization?.id) {
+      setTriggers([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     listWebhookTriggers()
       .then((rows) => setTriggers(rows.filter((t) => t.target_bot_id === botId)))
       .catch(() => setTriggers([]))
       .finally(() => setLoading(false));
-  }, [botId]);
+  }, [botId, organization]);
 
   const openSettings = () => {
     window.dispatchEvent(

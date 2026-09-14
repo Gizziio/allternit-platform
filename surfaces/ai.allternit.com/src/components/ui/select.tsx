@@ -1,4 +1,21 @@
-import React, { useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
+
+interface SelectContextValue {
+  isOpen: boolean;
+  setIsOpen: (value: boolean | ((prev: boolean) => boolean)) => void;
+  value?: string;
+  onValueChange?: (value: string) => void;
+}
+
+const SelectContext = createContext<SelectContextValue | null>(null);
+
+const useSelectContext = () => {
+  const ctx = useContext(SelectContext);
+  if (!ctx) {
+    throw new Error('Select compound components must be used inside <Select>');
+  }
+  return ctx;
+};
 
 interface SelectProps {
   value?: string;
@@ -8,33 +25,15 @@ interface SelectProps {
 
 export const Select: React.FC<SelectProps> = ({ children, value, onValueChange }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   return (
-    <div style={{ position: 'relative' }}>
-      {React.Children.map(children, child => {
-        if (React.isValidElement(child)) {
-          if (child.type === SelectTrigger) {
-            return React.cloneElement(child as React.ReactElement, {
-              onClick: () => setIsOpen(!isOpen),
-              value,
-            });
-          }
-          if (child.type === SelectContent && isOpen) {
-            return React.cloneElement(child as React.ReactElement, {
-              onSelect: (val: string) => {
-                onValueChange?.(val);
-                setIsOpen(false);
-              },
-            });
-          }
-        }
-        return null;
-      })}
-    </div>
+    <SelectContext.Provider value={{ isOpen, setIsOpen, value, onValueChange }}>
+      <div style={{ position: 'relative' }}>{children}</div>
+    </SelectContext.Provider>
   );
 };
 
-interface SelectTriggerProps {
+interface SelectTriggerProps extends React.AriaAttributes {
   children: React.ReactNode;
   value?: string;
   onClick?: () => void;
@@ -74,47 +73,92 @@ export const SelectTrigger: React.FC<SelectTriggerProps> = ({
     {children ?? value}
   </button>
 );
+  ...ariaProps
+}) => {
+  const { setIsOpen } = useSelectContext();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setIsOpen((prev) => !prev);
+        onClick?.();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setIsOpen((prev) => !prev);
+        }
+      }}
+      className={className}
+      {...ariaProps}
+      style={{
+        width: '100%',
+        padding: '10px 14px',
+        borderRadius: '8px',
+        border: '1px solid var(--ui-border-default)',
+        background: 'var(--surface-hover)',
+        color: 'var(--text-primary)',
+        fontSize: '14px',
+        cursor: 'pointer',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        ...style,
+      }}
+    >
+      {children ?? value}
+    </button>
+  );
+};
 
 export const SelectValue: React.FC<{ placeholder?: string }> = ({ placeholder }) => (
   <span style={{ color: 'var(--ui-text-muted)' }}>{placeholder}</span>
 );
 
-export const SelectContent: React.FC<{ children: React.ReactNode; onSelect?: (val: string) => void; className?: string; align?: 'start' | 'end' | 'center'; style?: React.CSSProperties }> = ({
+export const SelectContent: React.FC<{ children: React.ReactNode; className?: string; align?: 'start' | 'end' | 'center'; style?: React.CSSProperties }> = ({
   className, 
   children, 
-  onSelect,
   style
-}) => (
-  <div
-    className={className}
-    style={{
-      position: 'absolute',
-      top: '100%',
-      left: 0,
-      right: 0,
-      marginTop: '4px',
-      background: 'var(--surface-panel)',
-      border: '1px solid var(--ui-border-default)',
-      borderRadius: '8px',
-      zIndex: 50,
-      ...style,
-    }}
-  >
-    {React.Children.map(children, child => {
-      if (React.isValidElement(child) && child.type === SelectItem) {
-        return React.cloneElement(child as React.ReactElement, {
-          onClick: () => onSelect?.((child.props as any).value),
-        });
-      }
-      return child;
-    })}
-  </div>
-);
+}) => {
+  const { isOpen } = useSelectContext();
+  if (!isOpen) return null;
+  return (
+    <div
+      className={className}
+      style={{
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        right: 0,
+        marginTop: '4px',
+        background: 'var(--surface-panel)',
+        border: '1px solid var(--ui-border-default)',
+        borderRadius: '8px',
+        zIndex: 50,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+};
 
 export const SelectItem: React.FC<{ value: string; children: React.ReactNode; onClick?: () => void; className?: string; disabled?: boolean }> = ({
   className,
   children,
+interface SelectItemProps {
+  value: string;
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+  disabled?: boolean;
+}
+
+export const SelectItem: React.FC<SelectItemProps> = ({
+  className, 
+  children, 
   onClick,
+  value,
   disabled
 }) => {
   const [hovered, setHovered] = useState(false);
@@ -123,6 +167,24 @@ export const SelectItem: React.FC<{ value: string; children: React.ReactNode; on
       onClick={disabled ? undefined : onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+  const { setIsOpen, onValueChange } = useSelectContext();
+  const handleSelect = () => {
+    if (disabled) return;
+    onValueChange?.(value);
+    setIsOpen(false);
+    onClick?.();
+  };
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleSelect();
+        }
+      }}
       className={className}
       style={{
         padding: '10px 14px',
@@ -131,6 +193,9 @@ export const SelectItem: React.FC<{ value: string; children: React.ReactNode; on
         fontSize: '14px',
         opacity: disabled ? 0.5 : 1,
         background: hovered && !disabled ? 'var(--surface-hover)' : 'transparent',
+        color: disabled ? 'var(--ui-text-muted)' : '#fff',
+        fontSize: '14px',
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       {children}

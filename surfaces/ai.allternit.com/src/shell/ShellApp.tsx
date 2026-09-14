@@ -148,6 +148,11 @@ function ShellAppInner(): React.ReactNode {
   const { startSession: startBotSession } = useStartBotSession(
     useCallback((sessionId: string, botId: string) => {
       dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
+    useCallback((sessionId: string) => {
+      // Bot sessions render in the standard chat surface so they match regular
+      // sessions and stay in the Bots section of the rail.
+      useChatSessionStore.getState().setActiveSession(sessionId);
+      dispatch({ type: 'OPEN_VIEW', viewType: 'chat', context: { sessionId, originView: active.viewType } });
     }, [active.viewType])
   );
   useStackProviders();

@@ -19,6 +19,8 @@ import {
   ProjectEditDetailsModal,
 } from '@/views/BaseProjectView';
 import { ChatComposer } from '@/views/chat/ChatComposer';
+import { ModelSelectionProvider } from '@/providers/model-selection-provider';
+import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { useChatStore, type ProjectFile } from '@/views/chat/ChatStore';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { useMiniAppDiscovery } from '@/views/aci/use-mini-app-discovery';
@@ -62,6 +64,7 @@ export function ChatProjectDetail({ projectId, onBack }: ChatProjectDetailProps)
 
   const { dispatch } = useNav();
   const { all: allMiniApps } = useMiniAppDiscovery();
+  const defaultSelection = useDefaultModelSelection();
 
   const project = useMemo(
     () => projects.find((p) => p.id === projectId),
@@ -251,13 +254,15 @@ export function ChatProjectDetail({ projectId, onBack }: ChatProjectDetailProps)
   );
 
   const inputBar = (
-    <ChatComposer
-      onSend={handleSend}
-      placeholder={`Message ${project.title}`}
-      showTopActions={false}
-      showModeToggle={false}
-      variant="default"
-    />
+    <ModelSelectionProvider defaultSelection={defaultSelection}>
+      <ChatComposer
+        onSend={handleSend}
+        placeholder={`Message ${project.title}`}
+        showTopActions={false}
+        showModeToggle={false}
+        variant="default"
+      />
+    </ModelSelectionProvider>
   );
 
   const sidebarSectionsData = {

@@ -101,6 +101,8 @@ import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
 import { ModelPicker, type ModelSelection } from '@/components/model-picker';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
 import { enrichCreationPrompt, isCreationMode, getDefaultFormatSelection, type FormatSelection } from '@/views/create/presets';
+import { ModelPicker } from '@/components/model-picker';
+import { ProviderGallery } from '@/components/chat/ProviderGallery';
 import { useNav } from '@/nav/useNav';
 
 const THEME = {
@@ -395,6 +397,14 @@ export function ChatComposer({
       internalSelectModel(selection);
     }
   }, [isExternalModelSelection, externalOnSelectModel, internalSelectModel]);
+    isSelecting: isModelSelecting,
+    selectModel,
+    startSelection: startModelSelection,
+    cancelSelection: cancelModelSelection,
+  } = useModelSelection();
+
+  const selectedModel = modelSelection?.modelId ?? null;
+  const selectedModelDisplayName = modelSelection?.modelName || modelSelection?.modelId || null;
 
   const [input, setInput] = useState(inputValue);
   const isMobile = useIsMobile();
@@ -431,6 +441,8 @@ export function ChatComposer({
   const chatCreateProject = useChatStore((s) => s.createProject);
   const [githubUrl, setGithubUrl] = useState('');
   const [githubLoading, setGithubLoading] = useState(false);
+  const [showAgentMenu, setShowAgentMenu] = useState(false);
+  const [showModeSelectorMenu, setShowModeSelectorMenu] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
   const [providerConnectInitial, setProviderConnectInitial] = useState<string | null>(null);
   const [showConnectorMarketplace, setShowConnectorMarketplace] = useState(false);
@@ -1044,6 +1056,10 @@ export function ChatComposer({
 
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().startAciSession(enrichedInput);
+    const enrichedInput = buildEnrichedInput(messageText);
+
+    if (selectedModeId === 'computer-use') {
+      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
     }
 
     if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
@@ -1058,6 +1074,7 @@ export function ChatComposer({
       // CoworkRoot.handleSend) already surface a visible error message in the
       // transcript, so nothing but the console would hear an unhandled one.
       void Promise.resolve(onSend(enrichedInput)).catch(() => {});
+      onSend(enrichedInput);
     }
   }, [
     agentModeEnabled,
@@ -2478,6 +2495,16 @@ export function ChatComposer({
           onOpenModelLab={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'model-lab' })}
         />
       )}
+      <ModelPicker
+        open={isModelSelecting}
+        onOpenChange={(open) => {
+          if (!open) cancelModelSelection();
+        }}
+        onSelect={selectModel}
+        onCancel={cancelModelSelection}
+        onOpenProviderConnect={() => setShowProviderConnect(true)}
+        onOpenModelLab={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'model-lab' })}
+      />
 
       {/* Agent-mode bottom deck — tray tucked behind the card's bottom
           edge (z-0 under the composer card's z-10), sliding down from behind

@@ -10,20 +10,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
+import type { InferenceProvider } from '@/lib/inference-router';
 
 interface OnboardingPreferences {
   // API Configuration
   defaultProvider?: string;
   apiKeysConfigured?: boolean;
-  
+  inferenceProvider?: InferenceProvider;
+
   // UI Preferences
   theme?: 'dark' | 'light' | 'system';
   sidebarCollapsed?: boolean;
-  
+
   // Feature Flags
   enableNotifications?: boolean;
   enableTelemetry?: boolean;
-  
+
   // Workspace Setup
   defaultWorkspacePath?: string;
   preferredModes?: string[];

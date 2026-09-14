@@ -201,6 +201,21 @@ impl StdioTransport {
             // Try to parse as raw JSON-RPC message first
             match serde_json::from_str::<JsonRpcMessage>(&line) {
                 Ok(message) => {
+                    // Route response-shaped messages to pending requests so
+                    // `request()` callers receive answers even when the server
+                    // speaks strict JSON-RPC.
+                    if let JsonRpcMessage::Response(response) = &message {
+                        let result = if let Some(error) = response.error.clone() {
+                            Err(McpError::JsonRpc {
+                                code: error.code,
+                                message: error.message,
+                                data: error.data,
+                            })
+                        } else {
+                            Ok(response.result.clone().unwrap_or(Value::Null))
+                        };
+                        let _ = self.response_tx.send((response.id, result));
+                    }
                     // Send raw message for receive() method
                     let _ = self.raw_message_tx.send(Ok(message));
                 }

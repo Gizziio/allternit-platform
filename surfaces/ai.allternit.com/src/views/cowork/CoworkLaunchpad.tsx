@@ -25,7 +25,7 @@ interface CoworkLaunchpadProps {
 
 export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpadProps) {
   const agentModeEnabled = useSurfaceAgentModeEnabled('cowork');
-  const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
+  const { selectModel, isSelecting, cancelSelection } = useModelSelection();
   // Same session greeting as the Chat launch screen — must not re-roll on toggle.
   const [greeting, setGreeting] = useState(() => peekLaunchGreeting() ?? DEFAULT_LAUNCH_GREETING);
 
@@ -70,14 +70,10 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
           maxWidth: LAUNCH_COMPOSER_WIDTH,
           margin: `0 auto ${LAUNCH_SECTION_GAP}px`,
         }}>
-          <ChatComposer 
+          <ChatComposer
             onSend={onStartChat}
             variant="large"
             placeholder="What should we coordinate, build, or review?"
-            selectedModel={modelSelection?.modelId}
-            selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
-            onOpenModelPicker={startSelection}
-            onSelectModel={selectModel}
             showTopActions={false}
             inputValue=""
             agentModeSurface="cowork"

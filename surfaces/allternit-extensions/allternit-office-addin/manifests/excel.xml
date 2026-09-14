@@ -35,6 +35,11 @@
   </AppDomains>
   <Hosts><Host Name="Workbook" /></Hosts>
   <DefaultSettings>
+    <AppDomain>http://localhost:3000</AppDomain>
+    <AppDomain>http://localhost:3013</AppDomain>
+  </AppDomains>
+  <Hosts><Host Name="Workbook" /></Hosts>
+  <DefaultSettings>
     <SourceLocation DefaultValue="http://localhost:3000/src/taskpane/index.html?product=excel" />
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>

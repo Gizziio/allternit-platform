@@ -10,7 +10,7 @@
 import { registerStackProvider } from './registry';
 import { createHermesProvider, HERMES_PROVIDER_ID } from './hermes-provider';
 import { createOpenClawProvider, OPENCLAW_PROVIDER_ID } from './openclaw-provider';
-import { createGrokProvider, GROK_PROVIDER_ID } from './grok-provider';
+import { createKimiProvider, KIMI_PROVIDER_ID } from './kimi-provider';
 import { stackedAgentService } from '../stacked-agent.service';
 import { createModuleLogger } from '@/lib/logger';
 
@@ -19,18 +19,26 @@ const logger = createModuleLogger('StackProvidersInit');
 const MINI_APP_IDS: Record<string, string> = {
   [HERMES_PROVIDER_ID]: 'hermes-agent',
   [OPENCLAW_PROVIDER_ID]: 'openclaw-agent',
-  [GROK_PROVIDER_ID]: 'grok-agent',
+  [KIMI_PROVIDER_ID]: 'kimi-agent',
 };
 
+let defaultProvidersRegistered = false;
+
 export function registerDefaultStackProviders(): void {
+  if (defaultProvidersRegistered) {
+    logger.debug('Default stack providers already registered; skipping');
+    return;
+  }
+  defaultProvidersRegistered = true;
+
   registerStackProvider(HERMES_PROVIDER_ID, createHermesProvider);
   registerStackProvider(OPENCLAW_PROVIDER_ID, createOpenClawProvider);
-  registerStackProvider(GROK_PROVIDER_ID, createGrokProvider);
+  registerStackProvider(KIMI_PROVIDER_ID, createKimiProvider);
 
   const providers = [
     createHermesProvider(),
     createOpenClawProvider(),
-    createGrokProvider(),
+    createKimiProvider(),
   ];
   stackedAgentService.registerProviders(providers);
   stackedAgentService.startPolling();

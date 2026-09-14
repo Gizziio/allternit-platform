@@ -328,50 +328,30 @@ Begin Wave 4 by establishing a duplication-safe bot clone contract and service.
 ### Goal
 
 Complete the remaining duplication acceptance work for W4-046, W4-047, and W4-049.
+## Allternit Bot 0.18.0 reconstruction integration into Allternit Platform
+
+### Goal
+Port differentiated Allternit Bot features and UI patterns into the Allternit Platform,
+following the approved plan: real implementations only, 1000–1500 LOC per feature,
+one real end-to-end screen recording per feature.
+
+### Constraints
+- No mock, stub, or placeholder code.
+- Each feature must work end-to-end and be recorded.
+- Work in session worktree `allternit-session-allternit-bot-0-18-integration`.
 
 ### Just did
-
-- Expanded `bot-duplication-contracts.ts`:
-  - Added `IdentityKindSchema`, `ProvisionedIdentitySchema`,
-    `ChildBotGraphNodeSchema`, `ChildBotGraphPreviewSchema`,
-    `BotClonePreviewSchema`, `BotCloneGraphOptionsSchema`, and `BotCloneError`.
-- Expanded `bot-clone.service.ts`:
-  - `provisionIdentities()` returns redacted placeholder identities for email,
-    phone, wallet, handle, WebAuthn, and OAuth when requested (W4-046).
-  - `previewChildBotGraph()` walks child topology, enforces recursion limit,
-    detects cycles, and flags policy reauthorization (W4-047).
-  - `cloneBotGraph()` recursively clones root + children, remaps IDs, and rolls
-    back on cycle/depth failure (W4-047).
-  - `previewClone()` builds a duplication preview with identity provisions and
-    child-graph summary.
-  - `cloneBot()` now records identity mappings on the receipt and includes
-    explicit warnings.
-- Added `agentToBot()` in `bot-profile.ts` to convert a packaged `Agent` into the
-  canonical `Bot` contract.
-- Wired `BotRoster.tsx` `handleDuplicate` to the clone service:
-  - Looks up the source template, converts its `Agent` to a `Bot`, calls
-    `cloneBot()`, and invokes the new optional `onDuplicate` callback with the
-    result.
-- Added tests:
-  - `bot-clone.service.test.ts` expanded to 19 tests covering identities,
-    child-graph preview, graph cloning, cycle/depth rollback, and preview.
-  - New `bot-profile.test.ts` with 3 tests for `agentToBot`.
-- Checked W4-046, W4-047, and W4-049 in the master tracker.
-
-### Verification
-
-- `vitest run src/lib/bots/*.test.ts` ✅ 80 passed.
-- `tsc --noEmit` across `surfaces/ai.allternit.com` reports no new errors in
-  Wave 4 files. Pre-existing errors remain in unrelated files
-  (`comrails-store.ts`, `bot-profile.ts` line now shifted to 194,
-  `subagent-service.ts`).
+- Created session worktree on branch `session/allternit-bot-0-18-integration`.
+- Approved plan written to session plan file.
+- Started Feature 0.1: Settings Shell Refactor.
+- Audited `SettingsView.tsx` and `settings.config.ts`.
 
 ### Next
-
-1. Build versioned canonical workspace serializer (W4-001–W4-008).
-2. Add memory isolation namespaces (W4-020–W4-028).
-3. Decide whether to implement the transactional backend clone endpoint now or
-   after the client-side contract stabilizes.
+- Extract `SettingsLayout` component from `SettingsView.tsx`.
+- Create section registry in `settings-sections.tsx` so new panels (Router, Usage, Computer) can be added without touching `SettingsView.tsx`.
+- Keep all existing settings panels working.
+- Run typecheck/lint.
+- Record `00-01-settings-shell.mov`.
 
 ### Open questions
 
@@ -1059,3 +1039,4 @@ Re-implement slices 1–6 of the brain-selection handoff so the frontend-selecte
 ### Next
 1. Resolve/merge the pre-existing office-package and frontend merge-conflict state if this branch is to land.
 2. Steering review and commit if the changes look good.
+- None.

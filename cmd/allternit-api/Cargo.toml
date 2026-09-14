@@ -7,6 +7,10 @@ edition = "2021"
 name = "allternit-api"
 path = "src/main.rs"
 
+[[bin]]
+name = "allternit-mcp-server"
+path = "src/bin/mcp_server.rs"
+
 [dependencies]
 # Vendored OpenSSL: allternit-api links openssl transitively (webauthn-rs-core),
 # and CI cross-compiles x86_64-apple-darwin from arm64 hosts where no

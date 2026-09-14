@@ -14,7 +14,7 @@ Allternit already has a production-grade multi-layer agent platform: a canonical
 2. **No local model training/fine-tuning stack** — only inference/download exists.
 3. **Thin native mobile OS harness** — only basic ADB/idb UI-tree actions.
 4. **No cross-device session continuity / remote handoff** for iOS.
-5. **No agent-bot packaging layer** (à la OpenMausBot / Grok Bot) in the left rail.
+5. **No agent-bot packaging layer** (à la OpenMausBot / Allternit Bot) in the left rail.
 6. **No deep-research CLI integration** comparable to alphaXiv/hyperresearch.
 7. **No unified agent tool marketplace / credential proxy** comparable to treg.
 
@@ -27,7 +27,7 @@ This roadmap assigns every item a priority, recommendation, integration target, 
 | Priority | Count | Items |
 |----------|-------|-------|
 | **P1** | 6 | Allternit Tagging Subsystem, Unsloth, droidrun/mobile-harness, ShawnPana/phone-harness, agent-desktop, treg |
-| **P2** | 12 | Model Studio, OpenMausBot, Grok Bot, agency-agents, OpenManus, prime-agent, browse.sh, diagram-design, Happier, Claude cookbooks, Vercel agent plugins, Qwen-MM-Plugins, openresearch-cli/hyperresearch |
+| **P2** | 12 | Model Studio, OpenMausBot, Allternit Bot, agency-agents, OpenManus, prime-agent, browse.sh, diagram-design, Happier, Claude cookbooks, Vercel agent plugins, Qwen-MM-Plugins, openresearch-cli/hyperresearch |
 | **P3** | 11 | OpenTag (Slack/Teams bridge only), computer-use-mcp, page-agent, apitap.io, hermes-eats-world PR, GuppyLM, loopany.ai templates, SPAWN.md, Vercel AI CLI, Qwen-MM-Plugins (fallback), agency-agents (fallback) |
 
 > **P1 definition:** Closes a critical platform gap or is explicitly called a linchpin/priority by product leadership.  
@@ -232,12 +232,12 @@ This roadmap assigns every item a priority, recommendation, integration target, 
   4. Seed with OpenMausBot UX patterns (welcome card, task input, progress feed, deliverable panel).
 - **Priority:** **P2** — high UX value; fits the user's "tabs in left rail sessions" vision.
 
-#### 4.3.6 Grok Bot (x.ai/bot)
+#### 4.3.6 Allternit Bot (x.ai/bot)
 - **URL:** https://x.ai/bot
 - **What it is:** X.AI's packaged agent bot (early beta), similar to what Cursor offers: a bot that can be summoned across surfaces, takes tasks, and produces artifacts.
 - **License:** Proprietary.
 - **Gap vs Allternit:** Same as OpenMausBot; adds a polished consumer reference.
-- **Recommendation:** **REVERSE-ENGINEER / ADAPT.** Use Grok Bot as a UX reference while building Allternit's own packaged bot layer (OpenMausBot provides the open forkable base).
+- **Recommendation:** **REVERSE-ENGINEER / ADAPT.** Use Allternit Bot as a UX reference while building Allternit's own packaged bot layer (OpenMausBot provides the open forkable base).
 - **Integration target:** Same as OpenMausBot.
 - **Priority:** **P2** — reference design, not code to fork.
 

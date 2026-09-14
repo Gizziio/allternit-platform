@@ -716,6 +716,7 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
     /// Create a snapshot of the execution environment's disk state.
     ///
     /// Default implementation returns `NotSupported`.
+    /// Create a snapshot of the execution environment's disk state.
     async fn create_snapshot(
         &self,
         _handle: &ExecutionHandle,

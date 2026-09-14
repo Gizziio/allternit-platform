@@ -20,6 +20,7 @@ import type { ViewContext, ViewType } from '../nav/nav.types';
 import { HudShell } from './hud/HudShell';
 const AnnotationView = lazy(() => import('./hud/annotate/AnnotationView').then(m => ({ default: m.AnnotationView })));
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
+import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import type { AppMode } from './ShellHeader';
 import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import type { Agent } from '@/lib/agents/agent.types';
@@ -45,6 +46,7 @@ import { useUnifiedRoster } from '@/lib/bots/use-unified-roster';
 import type { GroupChatMember } from '@/lib/bots/group-chat.types';
 
 const GroupChatSessionView = lazy(() => import('../views/bots/GroupChatSessionView').then(m => ({ default: m.GroupChatSessionView })));
+const GroupChatView = lazy(() => import('../views/bots/GroupChatView').then(m => ({ default: m.GroupChatView })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -434,6 +436,11 @@ export function getShellViewRegistry(handlers: {
     'agent-hub': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Hub" />}>
         <AgentHub onSessionStarted={(sessionId, botId) => open('bot-chat-session', { sessionId, botId })} />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
+        <AgentHub onSessionStarted={(sessionId) => {
+          useChatSessionStore.getState().setActiveSession(sessionId);
+          open('chat', { sessionId });
+        }} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -494,6 +501,15 @@ export function getShellViewRegistry(handlers: {
         <TagManagerView />
       </ErrorBoundary>
     ),
+    'bot-group-chat': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string } | undefined;
+      const sessionId = ctx?.sessionId ?? context?.viewId ?? '';
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
+          <GroupChatView sessionId={sessionId} onBack={() => open('agent-hub')} />
+        </ErrorBoundary>
+      );
+    },
     "native-agent": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Native Agent" />}>
         <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />

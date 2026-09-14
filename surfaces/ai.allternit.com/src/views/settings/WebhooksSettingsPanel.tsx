@@ -19,6 +19,14 @@ import {
   Note,
 } from '@phosphor-icons/react';
 import { useAgentStore } from '@/lib/agents/agent.store';
+import { usePlatformOrganization } from '@/lib/platform-auth-client';
+import { PanelHeader } from '@/components/settings/PanelHeader';
+import { SettingsTable, SettingsTableCell } from '@/components/settings/SettingsTable';
+import { SkeletonRow } from '@/components/settings/SkeletonRow';
+import { EmptyState } from '@/components/settings/EmptyState';
+import { Toggle } from '@/components/settings/Toggle';
+import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from '@/components/settings/buttonStyles';
+import { cn } from '@/lib/utils';
 import {
   listWebhookTriggers,
   createWebhookTrigger,
@@ -114,6 +122,7 @@ export function WebhooksSettingsPanel(): React.ReactNode {
   const [form, setForm] = useState<WebhookFormData>(emptyForm());
   const [showSecret, setShowSecret] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { organization } = usePlatformOrganization();
 
   const bots = useMemo(
     () => agents.filter((a) => (a as any).isBot === true || (a as any).botProfile != null),
@@ -121,6 +130,12 @@ export function WebhooksSettingsPanel(): React.ReactNode {
   );
 
   const load = useCallback(async () => {
+    if (!organization?.id) {
+      setTriggers([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -133,6 +148,7 @@ export function WebhooksSettingsPanel(): React.ReactNode {
       setLoading(false);
     }
   }, [fetchAgents]);
+  }, [organization]);
 
   useEffect(() => {
     void load();

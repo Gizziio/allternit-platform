@@ -605,6 +605,16 @@ function botDesktopUrl(botId: string, sandboxId: string, action = '') {
   // The action goes in the PATH, before the query string — appending it
   // after `?sandbox_id=…` lands on the GET-only /desktop route (405).
   return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
+function botDesktopBaseUrl(botId: string) {
+  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop`;
+}
+
+function botDesktopUrl(botId: string, sandboxId: string) {
+  return `${botDesktopBaseUrl(botId)}?sandbox_id=${encodeURIComponent(sandboxId)}`;
+}
+
+function botDesktopActionUrl(botId: string, sandboxId: string, action: string) {
+  return `${botDesktopBaseUrl(botId)}/${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
 }
 
 /**
@@ -663,6 +673,7 @@ export async function observeBotDesktop(
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
     const res = await fetch(botDesktopUrl(botId, sandboxId, '/observe'), { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'observe'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -684,6 +695,7 @@ export async function takeOverBotDesktop(
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
     const res = await fetch(botDesktopUrl(botId, sandboxId, '/take-over'), { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'take-over'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -705,6 +717,7 @@ export async function handBackBotDesktop(
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
     const res = await fetch(botDesktopUrl(botId, sandboxId, '/hand-back'), { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'hand-back'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -858,3 +871,13 @@ export async function getBotDesktopScreenshot(
 }
 
 export { deleteComputer };
+ * Build the screenshot URL for a bot's desktop. The returned URL returns an
+ * image (SVG placeholder when no live VM stream is available) that can be
+ * polled to implement a screenshot feed.
+ */
+export function getBotDesktopScreenshotUrl(botId: string, sandboxId: string, cacheBust?: number): string {
+  const url = botDesktopActionUrl(botId, sandboxId, 'screenshot');
+  if (cacheBust === undefined) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}ts=${cacheBust}`;
+}

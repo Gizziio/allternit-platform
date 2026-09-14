@@ -12,6 +12,8 @@ import {
   Users,
   X,
 } from "@phosphor-icons/react";
+import React, { useMemo, useState } from "react";
+import { MagnifyingGlass, Plus, Robot, Users } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { getBots, getBotDisplayName, BOT_CATEGORIES } from "@/lib/bots/bot-profile";
@@ -30,6 +32,7 @@ import {
 import { BotHubCard } from "./BotHubCard";
 import { BotGroupChatModal } from "./BotGroupChatModal";
 import { startBotGroupChat } from "@/lib/bots/startBotGroupChat";
+import { CreateBotGroupChatModal } from "./CreateBotGroupChatModal";
 import { cn } from "@/lib/utils";
 
 export function BotHubHomeTab() {
@@ -64,6 +67,7 @@ export function BotHubHomeTab() {
     setSections(next);
     saveBotHubSections(next);
   }, []);
+  const [isGroupChatModalOpen, setIsGroupChatModalOpen] = useState(false);
 
   const bots = useMemo(() => getBots(agents), [agents]);
 
@@ -270,6 +274,24 @@ export function BotHubHomeTab() {
                 {fleetBusy ? "Provisioning…" : "Provision computers"}
               </button>
             )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsGroupChatModalOpen(true)}
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 text-[13px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
+              >
+                <Users size={16} />
+                Group chat
+              </button>
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
+              >
+                <Plus size={16} />
+                Create bot
+              </button>
+            </div>
           </div>
 
           {fleetSummary && (
@@ -488,6 +510,10 @@ function SectionHeading({
           </button>
         )}
       </span>
+      <CreateBotGroupChatModal
+        isOpen={isGroupChatModalOpen}
+        onClose={() => setIsGroupChatModalOpen(false)}
+      />
     </div>
   );
 }

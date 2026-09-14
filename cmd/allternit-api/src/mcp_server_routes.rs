@@ -151,6 +151,26 @@ async fn tool_catalog(state: &AppState) -> Vec<Value> {
             "description": "Get the current UTC time.",
             "inputSchema": { "type": "object", "properties": {} }
         }),
+        json!({
+            "name": "inference.execute_routed_turn",
+            "description": "Run a prompt through a local CLI inference provider (codex, claude-code, cursor, openrouter).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "provider": { "type": "string", "enum": ["codex", "claude-code", "cursor", "openrouter"] },
+                    "prompt": { "type": "string" }
+                },
+                "required": ["provider", "prompt"]
+            }
+        }),
+        json!({
+            "name": "inference.get_routed_usage",
+            "description": "Return recent routed CLI inference usage events.",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "limit": { "type": "integer", "default": 50 } }
+            }
+        }),
     ];
 
     // Office-engine markdown conversion tools — descriptors shared with the
@@ -273,6 +293,31 @@ pub async fn mcp_tools_internal(
     }
 }
 
+/// Stdio entry point used by `allternit-mcp-server`. Parses one JSON-RPC
+/// request line, dispatches it, and returns the serialized response (or None
+/// for notifications that require no response body).
+pub async fn mcp_tools_internal_stdio(state: &AppState, user_id: &str, line: &str) -> Option<String> {
+    let req: JsonRpcRequest = match serde_json::from_str(line) {
+        Ok(req) => req,
+        Err(e) => {
+            return Some(serde_json::to_string(&rpc_error(
+                serde_json::Value::Null,
+                -32700,
+                format!("Parse error: {e}"),
+            )).unwrap_or_default());
+        }
+    };
+
+    let id = req.id.clone().unwrap_or_default();
+    if req.id.is_none() {
+        // Notification: no response body required.
+        return None;
+    }
+
+    let response = handle_rpc_inner_value(state, user_id, None, req).await;
+    Some(serde_json::to_string(&response).unwrap_or_default())
+}
+
 /// Shared JSON-RPC core behind both the Clerk-gated `/mcp/server` route and
 /// the internal-token-gated `/internal/tools/mcp` route.
 async fn handle_rpc_inner(
@@ -288,20 +333,32 @@ async fn handle_rpc_inner(
         return StatusCode::ACCEPTED.into_response();
     };
 
+    Json(handle_rpc_inner_value(state, user_id, org_id, req).await).into_response()
+}
+
+/// Value-returning core so the stdio binary can reuse the same dispatch logic
+/// without constructing Axum responses.
+async fn handle_rpc_inner_value(
+    state: &AppState,
+    user_id: &str,
+    org_id: Option<&str>,
+    req: JsonRpcRequest,
+) -> Value {
+    let id = req.id.clone().unwrap_or_default();
+
     match req.method.as_str() {
-        "initialize" => Json(success(
+        "initialize" => success(
             id,
             json!({
                 "protocolVersion": PROTOCOL_VERSION,
-                "capabilities": { "tools": {} },
+                "capabilities": { "tools": { "listChanged": false } },
                 "serverInfo": { "name": SERVER_NAME, "version": SERVER_VERSION }
             }),
-        ))
-        .into_response(),
+        ),
 
-        "ping" => Json(success(id, json!({}))).into_response(),
+        "ping" => success(id, json!({})),
 
-        "tools/list" => Json(success(id, json!({ "tools": tool_catalog(state).await }))).into_response(),
+        "tools/list" => success(id, json!({ "tools": tool_catalog(state).await })),
 
         "tools/call" => {
             let name = req
@@ -316,49 +373,93 @@ async fn handle_rpc_inner(
                 .cloned()
                 .unwrap_or_else(|| json!({}));
 
-            // First, see if the requested tool belongs to an attached MCP server.
-            let remote_result = if name.contains('.') {
-                state.mcp_dispatcher.dispatch_call(&name, arguments.clone()).await.ok()
+            let result = if name.starts_with("inference.") || name == "time.now" {
+                handle_builtin_dotted_tool(state, user_id, org_id, &name, arguments).await
+            } else if name.contains('.') {
+                state
+                    .mcp_dispatcher
+                    .dispatch_call(&name, arguments.clone())
+                    .await
+                    .map_err(|e| e.to_string())
             } else {
-                None
-            };
-
-            let result = match remote_result {
-                Some(result) => Ok(result),
-                None => {
-                    let exec_request = ExecuteToolRequest {
-                        tool: name,
-                        args: arguments,
-                        timeout: None,
-                        workspace_id: None,
-                        ..Default::default()
-                    };
-                    execute_tool_internal(state, &exec_request, user_id, org_id).await
-                }
+                let exec_request = ExecuteToolRequest {
+                    tool: name,
+                    args: arguments,
+                    timeout: None,
+                    workspace_id: None,
+                    ..Default::default()
+                };
+                execute_tool_internal(state, &exec_request, user_id, org_id).await
             };
 
             match result {
-                Ok(result) => Json(success(
+                Ok(result) => success(
                     id,
                     json!({
                         "content": [{ "type": "text", "text": result.to_string() }],
                         "isError": false
                     }),
-                ))
-                .into_response(),
-                Err(err) => Json(success(
+                ),
+                Err(err) => success(
                     id,
                     json!({
                         "content": [{ "type": "text", "text": err }],
                         "isError": true
                     }),
-                ))
-                .into_response(),
+                ),
             }
         }
 
-        other => Json(rpc_error(id, -32601, format!("Method not found: {other}")))
-            .into_response(),
+        other => rpc_error(id, -32601, format!("Method not found: {other}")),
+    }
+}
+
+async fn handle_builtin_dotted_tool(
+    state: &AppState,
+    user_id: &str,
+    org_id: Option<&str>,
+    name: &str,
+    arguments: Value,
+) -> Result<Value, String> {
+    match name {
+        "inference.execute_routed_turn" => {
+            let provider = arguments
+                .get("provider")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "provider is required".to_string())?;
+            let prompt = arguments
+                .get("prompt")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "prompt is required".to_string())?;
+
+            let result = crate::inference_router_executor::execute_routed_turn(
+                provider,
+                prompt,
+                None,
+            )
+            .await;
+            Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
+        }
+        "inference.get_routed_usage" => {
+            let limit = arguments
+                .get("limit")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(50)
+                .clamp(1, 1000) as i64;
+            let events = crate::inference_router_routes::query_routed_usage(&state.db, user_id, limit)
+                .map_err(|e| e.to_string())?;
+            Ok(json!({ "events": events }))
+        }
+        _ => {
+            let exec_request = ExecuteToolRequest {
+                tool: name.to_string(),
+                args: arguments,
+                timeout: None,
+                workspace_id: None,
+                ..Default::default()
+            };
+            execute_tool_internal(state, &exec_request, user_id, org_id).await
+        }
     }
 }
 

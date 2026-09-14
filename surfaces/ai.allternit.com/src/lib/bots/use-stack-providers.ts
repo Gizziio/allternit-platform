@@ -2,7 +2,7 @@
  * useStackProviders Hook
  *
  * Initializes the multi-platform agent stack on mount:
- * - Registers Hermes, OpenClaw, and Grok providers.
+ * - Registers Hermes, OpenClaw, and Kimi providers.
  * - Starts polling for external agents.
  * - Returns the current stacked agents and loading state.
  *

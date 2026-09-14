@@ -93,6 +93,7 @@ pub struct DesktopTokenClaims {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[derive(Debug, thiserror::Error)]
 pub enum DesktopTokenError {
     #[error("token has expired")]
     Expired,
@@ -233,6 +234,7 @@ pub fn verify_desktop_token(secret: &str, token: &str) -> Result<DesktopTokenCla
 }
 
 pub(crate) fn hmac_sign(secret: &str, input: &str) -> String {
+fn hmac_sign(secret: &str, input: &str) -> String {
     type HmacSha256 = Hmac<Sha256>;
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     mac.update(input.as_bytes());
@@ -241,16 +243,19 @@ pub(crate) fn hmac_sign(secret: &str, input: &str) -> String {
 }
 
 pub(crate) fn b64_encode(input: &[u8]) -> String {
+fn b64_encode(input: &[u8]) -> String {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     URL_SAFE_NO_PAD.encode(input)
 }
 
 pub(crate) fn b64_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
+fn b64_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     URL_SAFE_NO_PAD.decode(input)
 }
 
 pub(crate) fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
     }

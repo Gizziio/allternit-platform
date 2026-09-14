@@ -155,6 +155,8 @@ export function getProviderLabel(providerId: string): string {
       return 'Hermes';
     case 'openclaw':
       return 'OpenClaw';
+    case 'kimi':
+      return 'Kimi';
     default:
       return providerId;
   }

@@ -100,6 +100,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           onOpenModelPicker={startSelection}
           onSelectModel={selectModel}
           placeholder={'Reply…'}
+          placeholder="Reply…"
           showTopActions={false}
           showModeToggle={false}
           compact={hudMode}

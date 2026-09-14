@@ -7,6 +7,10 @@
  * - CLI metadata (binary, install command, homepage) mirrors the backend
  *   CLI_PROVIDER_SPECS in cmd/allternit-api/src/provider_routes.rs — the user
  *   brings their own installed + authenticated CLI, Allternit routes to it.
+ * Maps provider IDs to visual metadata:
+ * - Brand names
+ * - Hex colors
+ * - Icons (SVG names from assets/runtime-logos/)
  */
 
 export type ProviderKind = 'api' | 'cli' | 'local';
@@ -79,6 +83,13 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     homepage: 'https://claude.ai/',
     description: 'Anthropic Claude Code agentic coding CLI (subscription or Pro).',
   },
+  'claude-cli': {
+    id: 'claude-cli',
+    name: 'Claude CLI',
+    color: '#D97757',
+    icon: 'claude-logo.svg',
+    textColor: '#FFFFFF',
+  },
   openai: {
     id: 'openai',
     name: 'OpenAI',
@@ -115,6 +126,20 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     homepage: 'https://chatgpt.com/',
     description: 'Alias for the OpenAI Codex CLI.',
     aliasOf: 'codex-cli',
+  },
+  'codex-cli': {
+    id: 'codex-cli',
+    name: 'Codex CLI',
+    color: '#10A37F',
+    icon: 'openai-logo.svg',
+    textColor: '#FFFFFF',
+  },
+  codex: { // Alias
+    id: 'codex',
+    name: 'Codex',
+    color: '#10A37F',
+    icon: 'openai-logo.svg',
+    textColor: '#FFFFFF',
   },
   google: {
     id: 'google',
@@ -181,6 +206,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     authCommand: 'kimi login',
     homepage: 'https://www.kimi.com/',
     description: 'Moonshot Kimi Code CLI (subscription or API key).',
+    icon: 'kimi-logo.svg',
+    textColor: '#FFFFFF',
   },
   zai: {
     id: 'zai',
@@ -214,6 +241,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     authCommand: 'qwen auth',
     homepage: 'https://qwen.ai/',
     description: 'Alibaba Qwen Code agentic coding CLI (subscription).',
+    icon: 'qwen-logo.svg',
+    textColor: '#FFFFFF',
   },
   xai: {
     id: 'xai',
@@ -236,6 +265,16 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g @xai-official/grok',
     homepage: 'https://grok.com/',
     description: 'xAI Grok Build coding CLI (SuperGrok subscription).',
+    color: '#000000',
+    icon: 'xai-logo.svg',
+    textColor: '#FFFFFF',
+  },
+  grok: { // Alias for xAI
+    id: 'grok',
+    name: 'Grok',
+    color: '#000000',
+    icon: 'xai-logo.svg',
+    textColor: '#FFFFFF',
   },
   deepseek: {
     id: 'deepseek',
@@ -364,6 +403,17 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     homepage: 'https://openrouter.ai/',
     description: 'Unified API for LLMs via OpenRouter (OPENROUTER_API_KEY).',
   },
+    icon: 'allternit-logo.svg',
+    textColor: '#FFFFFF',
+  },
+  agy: {
+    id: 'agy',
+    name: 'Antigravity',
+    color: '#6366F1',
+    icon: 'allternit-logo.svg',
+    textColor: '#FFFFFF',
+  },
+  // Agent-runtime CLI tools (Multica-style: user brings their own installed CLI).
   'cursor-agent': {
     id: 'cursor-agent',
     name: 'Cursor Agent',
@@ -375,6 +425,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'curl https://cursor.com/install -fsS | bash',
     homepage: 'https://cursor.com/',
     description: 'Cursor agentic coding CLI (Cursor subscription).',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   copilot: {
     id: 'copilot',
@@ -387,6 +439,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g @github/copilot',
     homepage: 'https://github.com/features/copilot',
     description: 'GitHub Copilot coding agent CLI (Copilot subscription).',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   opencode: {
     id: 'opencode',
@@ -399,6 +453,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g opencode-ai',
     homepage: 'https://opencode.ai/',
     description: 'Open-source agentic coding CLI (bring your own provider).',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   openclaw: {
     id: 'openclaw',
@@ -411,6 +467,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g openclaw@latest',
     homepage: 'https://openclaw.ai/',
     description: 'OpenClaw local-first personal AI assistant and agent gateway.',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   hermes: {
     id: 'hermes',
@@ -423,6 +481,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash',
     homepage: 'https://hermes.cx/',
     description: 'Nous Research Hermes agent runtime (ACP).',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   pi: {
     id: 'pi',
@@ -435,6 +495,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g @mariozechner/pi-coding-agent',
     homepage: 'https://pi.ai/',
     description: 'Minimalist high-performance coding agent CLI (pi-mono).',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   codebuddy: {
     id: 'codebuddy',
@@ -447,6 +509,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g @tencent-ai/codebuddy-code',
     homepage: 'https://codebuddy.ai/',
     description: 'Tencent CodeBuddy Code agentic coding CLI.',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   deveco: {
     id: 'deveco',
@@ -459,6 +523,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     // Bundled with Huawei DevEco Studio — no standalone CLI install command.
     homepage: 'https://developer.huawei.com/',
     description: 'Huawei DevEco Code AI assistant CLI for HarmonyOS development.',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   'kiro-cli': {
     id: 'kiro-cli',
@@ -471,6 +537,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'curl -fsSL https://cli.kiro.dev/install | bash',
     homepage: 'https://kiro.dev/',
     description: 'AWS Kiro agentic coding CLI (formerly Amazon Q Developer CLI).',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   qodercli: {
     id: 'qodercli',
@@ -483,6 +551,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g @qoder-ai/qodercli',
     homepage: 'https://qoder.ai/',
     description: 'Alibaba Qoder agentic coding CLI.',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   qoderclicn: {
     id: 'qoderclicn',
@@ -495,6 +565,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'curl -fsSL https://qoder.com.cn/install | bash',
     homepage: 'https://qoder.ai/',
     description: 'Alibaba Qoder agentic coding CLI (China region).',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   qwenpaw: {
     id: 'qwenpaw',
@@ -507,6 +579,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'pip install qwenpaw',
     homepage: 'https://qwen.ai/',
     description: 'AgentScope QwenPaw personal AI assistant (ACP).',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   reasonix: {
     id: 'reasonix',
@@ -519,6 +593,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g reasonix',
     homepage: 'https://reasonix.ai/',
     description: 'DeepSeek-native terminal coding agent CLI.',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   traecli: {
     id: 'traecli',
@@ -531,6 +607,8 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g traecli',
     homepage: 'https://trae.ai/',
     description: 'ByteDance Trae agentic coding CLI.',
+    icon: '',
+    textColor: '#FFFFFF',
   },
   dsh: {
     id: 'dsh',
@@ -543,12 +621,29 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'npm install -g @deepseek-ai/dsh',
     homepage: 'https://deepseek.com/',
     description: 'DeepSeek Harness open-source agent runtime (plugin-based).',
+    icon: 'deepseek-logo.svg',
+    textColor: '#FFFFFF',
   },
   omp: {
     id: 'omp',
     name: 'Oh-My-Pi',
     color: '#F97316',
     icon: 'omp.svg',
+    icon: '',
+    textColor: '#FFFFFF',
+  },
+  mcode: {
+    id: 'mcode',
+    name: 'MiniMax Code',
+    color: '#FF6B6B',
+    icon: '',
+    textColor: '#FFFFFF',
+  },
+  dim: {
+    id: 'dim',
+    name: 'Dim',
+    color: '#8B5CF6',
+    icon: '',
     textColor: '#FFFFFF',
     kind: 'cli',
     cliCommand: 'omp',
@@ -610,6 +705,20 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     kind: 'local',
     homepage: 'https://allternit.com/',
     description: 'Allternit sidecar runtime backed by local Ollama models.',
+  },
+  'allternit-local-engine': {
+    id: 'allternit-local-engine',
+    name: 'Local Engine',
+    color: '#22c55e',
+    icon: 'allternit-logo.svg',
+    textColor: '#FFFFFF',
+  },
+  'allternit-sidecar': {
+    id: 'allternit-sidecar',
+    name: 'Sidecar',
+    color: '#22c55e',
+    icon: 'ollama-logo.svg',
+    textColor: '#FFFFFF',
   },
 };
 
@@ -678,6 +787,14 @@ export function getProviderMeta(id: string | undefined): ProviderMeta {
   const key = Object.keys(PROVIDER_REGISTRY)
     .filter((k) => normalized.includes(k))
     .sort((a, b) => b.length - a.length)[0];
+  const normalized = id.toLowerCase();
+
+  // Try direct match
+  const meta = PROVIDER_REGISTRY[normalized];
+  if (meta) return meta;
+
+  // Try partial match for CLI suffixes and compound IDs
+  const key = Object.keys(PROVIDER_REGISTRY).find((k) => normalized.includes(k));
   if (key) return PROVIDER_REGISTRY[key];
 
   // Default fallback

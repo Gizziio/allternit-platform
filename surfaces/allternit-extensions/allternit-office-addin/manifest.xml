@@ -35,6 +35,11 @@
   </AppDomains>
   <Hosts><Host Name="Document" /></Hosts>
   <DefaultSettings>
+    <AppDomain>http://localhost:3000</AppDomain>
+    <AppDomain>http://localhost:3013</AppDomain>
+  </AppDomains>
+  <Hosts><Host Name="Document" /></Hosts>
+  <DefaultSettings>
     <SourceLocation DefaultValue="http://localhost:3000/src/taskpane/index.html?product=word" />
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
