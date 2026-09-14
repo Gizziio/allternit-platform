@@ -154,3 +154,67 @@ export function submitIntent(getToken: TokenGetter, input: IntentInput): Promise
 export function getIntent(getToken: TokenGetter, intentId: string): Promise<{ intent_id: string; run_id: string; envelope: unknown }> {
   return req(getToken, `/fabric/transport/intents/${intentId}`);
 }
+
+// ─── P-T6: principals / delegation rules / connector sessions ───────────────
+
+export interface PrincipalRow {
+  id: string;
+  workspace: string;
+  capabilities: string[];
+  roles: string[];
+  status: string;
+  created_at: string;
+}
+
+export interface DelegationRuleRow {
+  workspace: string;
+  action_type: string;
+  target_principal: string;
+  priority: number;
+  created_at: string;
+}
+
+export interface ConnectorSessionRow {
+  id: string;
+  principal: string;
+  run_id: string;
+  job_id: string;
+  capability: string;
+  status: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export function listPrincipals(getToken: TokenGetter, workspace?: string): Promise<{ principals: PrincipalRow[] }> {
+  const q = workspace ? `?workspace=${encodeURIComponent(workspace)}` : '';
+  return req(getToken, `/fabric/transport/principals${q}`);
+}
+
+/** Provisions a NEW principal token (returned exactly once). */
+export function provisionPrincipalToken(getToken: TokenGetter, principalId: string): Promise<{ principal_id: string; token: string }> {
+  return req(getToken, `/fabric/transport/principals/${encodeURIComponent(principalId)}/provision-token`, { method: 'POST' });
+}
+
+export function listDelegationRules(getToken: TokenGetter, workspace: string): Promise<{ workspace: string; rules: DelegationRuleRow[] }> {
+  return req(getToken, `/fabric/transport/delegation-rules?workspace=${encodeURIComponent(workspace)}`);
+}
+
+export function upsertDelegationRule(
+  getToken: TokenGetter,
+  input: { workspace: string; action_type: string; target_principal: string; priority?: number },
+): Promise<DelegationRuleRow> {
+  return req(getToken, '/fabric/transport/delegation-rules', { method: 'PUT', body: JSON.stringify(input) });
+}
+
+export function deleteDelegationRule(getToken: TokenGetter, workspace: string, actionType: string): Promise<{ deleted: boolean }> {
+  return req(
+    getToken,
+    `/fabric/transport/delegation-rules/${encodeURIComponent(workspace)}/${encodeURIComponent(actionType)}`,
+    { method: 'DELETE' },
+  );
+}
+
+export function listConnectorSessions(getToken: TokenGetter, runId?: string): Promise<{ sessions: ConnectorSessionRow[] }> {
+  const q = runId ? `?run_id=${encodeURIComponent(runId)}` : '';
+  return req(getToken, `/fabric/transport/connector-sessions${q}`);
+}

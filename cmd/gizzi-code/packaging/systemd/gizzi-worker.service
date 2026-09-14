@@ -1,0 +1,36 @@
+[Unit]
+# Gizzi fabric-transport worker — systemd unit (P-T3).
+# Install (see cmd/gizzi-code/docs/FABRIC_WORKER_DAEMON.md):
+#   1. Provision the worker token once:
+#        curl -X POST "$API/api/v1/fabric/transport/principals/<principal>/provision-token"
+#      and write it to /etc/allternit/gizzi-worker/token (mode 0600, owner root).
+#   2. cp this file to /etc/systemd/system/gizzi-worker.service
+#   3. Edit WorkingDirectory / Environment paths for this checkout.
+#   4. systemctl daemon-reload && systemctl enable --now gizzi-worker
+Description=Gizzi fabric-transport worker (A://)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/allternit/cmd/gizzi-code
+Environment=ALLTERNIT_API_URL=http://127.0.0.1:8013
+Environment=ALLTERNIT_GIZZI_TOKEN_FILE=/etc/allternit/gizzi-worker/token
+# GIZZI_COMPUTE_MODE: "local" (default; bubblewrap sandbox on Linux) or "vm"
+# (Lima VM steps). In vm mode also declare compute.vm on the principal.
+ExecStart=/usr/bin/env bun src/runtime/fabric-transport/worker-daemon-entry.ts
+Restart=always
+RestartSec=5
+# Graceful stop: SIGTERM → finishes the in-flight job (≤ one claim long-poll),
+# then exits; abandoned leases are requeued by the control-plane sweeper.
+TimeoutStopSec=120
+# Hardening (adjust for local deployment needs).
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/log/gizzi-worker
+StandardOutput=append:/var/log/gizzi-worker/worker.log
+StandardError=append:/var/log/gizzi-worker/worker.log
+
+[Install]
+WantedBy=multi-user.target

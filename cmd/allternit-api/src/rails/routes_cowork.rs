@@ -19,9 +19,47 @@ use allternit_cowork_runtime::{
     Attachment, ClientType, CreateJobSpec, CreateRunSpec, Job, JobId, JobState, PermissionSet,
     RunId, RunManager, RunMode, RunState,
 };
+use allternit_cowork_runtime::sqlite_store as canonical;
 
 use crate::auth::{get_user, AuthUser};
 use crate::AppState;
+
+/// Map a canonical-store transport error onto the HTTP error vocabulary.
+fn transport_err(e: allternit_cowork_runtime::transport::TransportError) -> ErrorResponse {
+    ErrorResponse {
+        error: format!("{}: {}", e.wire(), e.message),
+        code: e.http_status(),
+    }
+}
+
+/// Projection run-state transition through the canonical store; computes
+/// terminal `completed_at` exactly as the legacy raw write did.
+fn update_run_state_in_db(
+    conn: &rusqlite::Connection,
+    run_id: &str,
+    state: RunState,
+) -> Result<(), allternit_cowork_runtime::transport::TransportError> {
+    let completed_at = if state.is_terminal() {
+        Some(chrono::Utc::now().to_rfc3339())
+    } else {
+        None
+    };
+    canonical::update_run_state_record(conn, run_id, &state.to_string(), completed_at)
+}
+
+/// Append a product-surface run event through the canonical idempotent
+/// insert (A:// §5), preserving V142 ownership attribution.
+fn record_event(
+    conn: &mut rusqlite::Connection,
+    run_id: &str,
+    event_type: &str,
+    payload: serde_json::Value,
+    user_id: &str,
+) -> Result<(), ErrorResponse> {
+    canonical::record_run_event_projection(conn, run_id, event_type, payload, user_id)
+        .map(|_| ())
+        .map_err(transport_err)
+}
 
 /// Request to create a new run. `tenant_id` and `initiator` are taken from the
 /// authenticated user, never from the request body; client-supplied copies are
@@ -297,6 +335,10 @@ fn not_found() -> ErrorResponse {
     }
 }
 
+// All run/job/event writes go through the canonical store projection
+// helpers (P-T1 consolidation boundary); this module holds no raw SQL
+// writers for `cowork_runs` / `cowork_jobs` / `cowork_run_events`.
+
 /// Verify that the run belongs to the requesting user. Returns 404 (never
 /// 403) so the endpoint cannot be used as an oracle for other users' run
 /// IDs. Rows with NULL user_id (pre-ownership-migration) match no one.
@@ -321,110 +363,6 @@ fn ensure_run_owner(
     }
 }
 
-fn persist_run(
-    conn: &rusqlite::Connection,
-    run: &allternit_cowork_runtime::Run,
-    user_id: &str,
-) -> Result<(), rusqlite::Error> {
-    conn.execute(
-        "INSERT INTO cowork_runs (id, tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id, current_job_id, current_checkpoint_id, policy_profile, created_at, updated_at, completed_at, user_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
-         ON CONFLICT(id) DO UPDATE SET
-            state=excluded.state,
-            current_job_id=excluded.current_job_id,
-            current_checkpoint_id=excluded.current_checkpoint_id,
-            updated_at=excluded.updated_at,
-            completed_at=excluded.completed_at",
-        rusqlite::params![
-            run.id.to_string(),
-            run.tenant_id,
-            run.workspace_id,
-            run.initiator,
-            run.mode.to_string(),
-            run.state.to_string(),
-            run.entrypoint,
-            run.dag_id,
-            run.current_job_id.map(|j| j.to_string()),
-            run.current_checkpoint_id,
-            run.policy_profile,
-            run.created_at.to_rfc3339(),
-            run.updated_at.to_rfc3339(),
-            run.completed_at.map(|dt| dt.to_rfc3339()),
-            user_id,
-        ],
-    )?;
-    Ok(())
-}
-
-fn persist_job(
-    conn: &rusqlite::Connection,
-    job: &Job,
-    user_id: &str,
-) -> Result<(), rusqlite::Error> {
-    conn.execute(
-        "INSERT INTO cowork_jobs (id, run_id, dag_node_id, job_type, priority, state, lease_owner, retry_count, max_retries, timeout_sec, payload, created_at, updated_at, started_at, completed_at, user_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
-         ON CONFLICT(id) DO UPDATE SET
-            state=excluded.state,
-            lease_owner=excluded.lease_owner,
-            retry_count=excluded.retry_count,
-            updated_at=excluded.updated_at,
-            started_at=excluded.started_at,
-            completed_at=excluded.completed_at",
-        rusqlite::params![
-            job.id.to_string(),
-            job.run_id.to_string(),
-            job.dag_node_id,
-            job.job_type,
-            job.priority,
-            job.state.to_string(),
-            job.lease_owner,
-            job.retry_count,
-            job.max_retries,
-            job.timeout_sec,
-            job.payload.to_string(),
-            job.created_at.to_rfc3339(),
-            job.updated_at.to_rfc3339(),
-            job.started_at.map(|dt| dt.to_rfc3339()),
-            job.completed_at.map(|dt| dt.to_rfc3339()),
-            user_id,
-        ],
-    )?;
-    Ok(())
-}
-
-fn update_run_state_in_db(
-    conn: &rusqlite::Connection,
-    run_id: &str,
-    state: RunState,
-) -> Result<(), rusqlite::Error> {
-    let completed_at = if state.is_terminal() {
-        Some(chrono::Utc::now().to_rfc3339())
-    } else {
-        None
-    };
-    conn.execute(
-        "UPDATE cowork_runs SET state = ?1, updated_at = CURRENT_TIMESTAMP, completed_at = COALESCE(?2, completed_at) WHERE id = ?3",
-        rusqlite::params![state.to_string(), completed_at, run_id],
-    )?;
-    Ok(())
-}
-
-fn insert_run_event(
-    conn: &rusqlite::Connection,
-    run_id: &str,
-    event_type: &str,
-    payload: serde_json::Value,
-    user_id: &str,
-) -> Result<(), rusqlite::Error> {
-    let id = uuid::Uuid::new_v4().to_string();
-    conn.execute(
-        "INSERT INTO cowork_run_events (id, run_id, event_type, payload, user_id) VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![id, run_id, event_type, payload.to_string(), user_id],
-    )?;
-    Ok(())
-}
-
 /// Create a new run
 async fn create_run(
     State(state): State<Arc<AppState>>,
@@ -446,23 +384,19 @@ async fn create_run(
 
     let run = manager.create_run(spec).await?;
 
-    let conn = state.db.connect().map_err(db_error)?;
-    persist_run(&conn, &run, &user_id).map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
+    canonical::persist_run_record(&conn, &run, &user_id).map_err(transport_err)?;
     if let Some(delegator) = &req.delegator {
-        conn.execute(
-            "UPDATE cowork_runs SET delegator = ?1 WHERE id = ?2",
-            rusqlite::params![delegator, run.id.to_string()],
-        )
-        .map_err(db_error)?;
+        canonical::set_run_delegator(&conn, &run.id.to_string(), delegator).map_err(transport_err)?;
     }
-    insert_run_event(
-        &conn,
+    canonical::record_run_event_projection(
+        &mut conn,
         &run.id.to_string(),
         "run_created",
         json!({ "dag_id": run.dag_id, "mode": run.mode.to_string() }),
         &user_id,
     )
-    .map_err(db_error)?;
+    .map_err(transport_err)?;
 
     Ok(Json(run.into()))
 }
@@ -477,7 +411,7 @@ async fn start_run(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    let conn = state.db.connect().map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id.to_string(), &user.user_id)?;
 
     // §8.2 honesty: RUNNING means a worker holds a valid lease. start_run only
@@ -490,15 +424,8 @@ async fn start_run(
         .transition_run_state(run_id, RunState::Queued)
         .await?;
 
-    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Queued).map_err(db_error)?;
-    insert_run_event(
-        &conn,
-        &run_id.to_string(),
-        "run_queued",
-        json!({}),
-        &user.user_id,
-    )
-    .map_err(db_error)?;
+    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Queued).map_err(transport_err)?;
+    record_event(&mut conn, &run_id.to_string(), "run_queued", json!({}), &user.user_id)?;
 
     Ok(Json(json!({ "started": true, "state": "queued" })))
 }
@@ -526,7 +453,7 @@ fn fetch_runs_for_user(
     )?;
 
     let runs = stmt
-        .query_map(rusqlite::params![user_id], |row| RunResponse::from_row(row))?
+        .query_map(rusqlite::params![user_id], RunResponse::from_row)?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(runs)
 }
@@ -559,7 +486,7 @@ fn fetch_run_for_user(
         "SELECT id, tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id, current_job_id, current_checkpoint_id, policy_profile, created_at, updated_at, completed_at
          FROM cowork_runs WHERE id = ?1 AND user_id = ?2",
         rusqlite::params![run_id, user_id],
-        |row| RunResponse::from_row(row),
+        RunResponse::from_row,
     )
 }
 
@@ -579,20 +506,19 @@ async fn transition_run(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    let conn = state.db.connect().map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id.to_string(), &user.user_id)?;
 
     manager.transition_run_state(run_id, req.state).await?;
 
-    update_run_state_in_db(&conn, &run_id.to_string(), req.state).map_err(db_error)?;
-    insert_run_event(
-        &conn,
+    update_run_state_in_db(&conn, &run_id.to_string(), req.state).map_err(transport_err)?;
+    record_event(
+        &mut conn,
         &run_id.to_string(),
         "run_state_changed",
         json!({ "state": req.state.to_string() }),
         &user.user_id,
-    )
-    .map_err(db_error)?;
+    )?;
 
     Ok(Json(json!({ "ok": true })))
 }
@@ -606,20 +532,19 @@ async fn cancel_run(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    let conn = state.db.connect().map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id.to_string(), &user.user_id)?;
 
     manager.cancel(run_id).await?;
 
-    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Cancelled).map_err(db_error)?;
-    insert_run_event(
-        &conn,
+    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Cancelled).map_err(transport_err)?;
+    record_event(
+        &mut conn,
         &run_id.to_string(),
         "run_cancelled",
         json!({}),
         &user.user_id,
-    )
-    .map_err(db_error)?;
+    )?;
 
     Ok(Json(json!({ "cancelled": true })))
 }
@@ -687,7 +612,7 @@ async fn create_job(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    let conn = state.db.connect().map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id.to_string(), &user.user_id)?;
 
     let spec = CreateJobSpec {
@@ -709,45 +634,27 @@ async fn create_job(
     // chain must be well-formed within the run's workspace.
     let chain = req.causation_chain.clone().unwrap_or_default();
     if !chain.is_empty() {
-        let run_ws: String = conn_ws(&state, run_id)?;
-        allternit_cowork_runtime::sqlite_store::validate_delegation_chain(
-            &conn,
-            &run_ws,
-            &chain,
-        )
-        .map_err(|e| ErrorResponse {
-            error: format!("{}: {}", e.wire(), e.message),
-            code: e.http_status(),
-        })?;
+        let run_ws = conn_ws(&state, run_id)?;
+        canonical::validate_delegation_chain(&conn, &run_ws, &chain).map_err(transport_err)?;
     }
-    persist_job(&conn, &job, &user.user_id).map_err(db_error)?;
-    conn.execute(
-        "UPDATE cowork_jobs SET state = 'queued', required_capabilities = ?1,
-            initiator = (SELECT initiator FROM cowork_runs WHERE id = ?2),
-            delegator = (SELECT delegator FROM cowork_runs WHERE id = ?2),
-            causation_chain = ?4
-         WHERE id = ?3",
-        rusqlite::params![
-            serde_json::to_string(&req.required_capabilities.unwrap_or_default()).unwrap(),
-            run_id.to_string(),
-            job.id.to_string(),
-            serde_json::to_string(&chain).unwrap(),
-        ],
-    )
-    .map_err(db_error)?;
-    conn.execute(
-        "UPDATE cowork_runs SET current_job_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
-        rusqlite::params![job.id.to_string(), run_id.to_string()],
-    )
-    .map_err(db_error)?;
-    insert_run_event(
+    canonical::persist_job_record(&conn, &job, &user.user_id).map_err(transport_err)?;
+    canonical::mark_job_queued_for_transport(
         &conn,
+        &job.id.to_string(),
+        &run_id.to_string(),
+        &serde_json::to_string(&req.required_capabilities.unwrap_or_default()).unwrap(),
+        &serde_json::to_string(&chain).unwrap(),
+    )
+    .map_err(transport_err)?;
+    canonical::set_current_run_job(&conn, &run_id.to_string(), &job.id.to_string())
+        .map_err(transport_err)?;
+    record_event(
+        &mut conn,
         &run_id.to_string(),
         "job_created",
         json!({ "job_id": job.id.to_string(), "job_type": job.job_type }),
         &user.user_id,
-    )
-    .map_err(db_error)?;
+    )?;
 
     Ok(Json(job.into()))
 }
@@ -762,7 +669,37 @@ async fn list_jobs(
     let conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id.to_string(), &user.user_id)?;
     let jobs = manager.list_jobs(run_id).await;
-    Ok(Json(jobs.into_iter().map(JobResponse::from).collect()))
+    if !jobs.is_empty() {
+        return Ok(Json(jobs.into_iter().map(JobResponse::from).collect()));
+    }
+    // P-T1 boundary: the in-memory mirror is a legacy projection; runs/jobs
+    // created on the canonical fabric-transport path exist only in the
+    // canonical store. Fall back to it before reporting an empty list.
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, run_id, dag_node_id, job_type, priority, state, payload, created_at, updated_at
+             FROM cowork_jobs WHERE run_id = ?1 ORDER BY created_at ASC",
+        )
+        .map_err(db_error)?;
+    let rows = stmt
+        .query_map(rusqlite::params![run_id.to_string()], |row| {
+            let payload_str: String = row.get(6)?;
+            Ok(JobResponse {
+                id: row.get(0)?,
+                run_id: row.get(1)?,
+                dag_node_id: row.get(2)?,
+                job_type: row.get(3)?,
+                priority: row.get(4)?,
+                state: row.get(5)?,
+                payload: serde_json::from_str(&payload_str).unwrap_or(serde_json::Value::Null),
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+            })
+        })
+        .map_err(db_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(db_error)?;
+    Ok(Json(rows))
 }
 
 /// Transition a job to a new state
@@ -782,10 +719,16 @@ async fn transition_job(
     let job_id = parse_job_id(&job_id)?;
     let manager = run_manager(&state)?;
 
-    let conn = state.db.connect().map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id, &user.user_id)?;
 
-    manager.transition_job_state(job_id, req.state).await?;
+    // Legacy mirror transition only when the mirror actually holds the job
+    // (Rails-created runs). Jobs created on the canonical fabric-transport
+    // path exist only in the canonical store; the projection helper below
+    // owns their state transitions.
+    if manager.get_job(job_id).await.is_ok() {
+        manager.transition_job_state(job_id, req.state).await?;
+    }
 
     let completed_at = if req.state.is_terminal() {
         Some(chrono::Utc::now().to_rfc3339())
@@ -797,20 +740,25 @@ async fn transition_job(
     } else {
         None
     };
-    conn.execute(
-        "UPDATE cowork_jobs SET state = ?1, updated_at = CURRENT_TIMESTAMP, started_at = COALESCE(?2, started_at), completed_at = COALESCE(?3, completed_at) WHERE id = ?4",
-        rusqlite::params![req.state.to_string(), started_at, completed_at, job_id.to_string()],
-    ).map_err(db_error)?;
-    insert_run_event(
+    // Consolidation boundary: refused (no write) when the job holds a
+    // fabric-transport lease — the transport owns that state machine.
+    let applied = canonical::transition_job_record(
         &conn,
+        &job_id.to_string(),
+        &req.state.to_string(),
+        started_at,
+        completed_at,
+    )
+    .map_err(transport_err)?;
+    record_event(
+        &mut conn,
         &run_id,
         "job_state_changed",
-        json!({ "job_id": job_id.to_string(), "state": req.state.to_string() }),
+        json!({ "job_id": job_id.to_string(), "state": req.state.to_string(), "projection_applied": applied }),
         &user.user_id,
-    )
-    .map_err(db_error)?;
+    )?;
 
-    Ok(Json(json!({ "ok": true })))
+    Ok(Json(json!({ "ok": true, "projection_applied": applied })))
 }
 
 /// Handoff a run to another agent/task
@@ -845,7 +793,7 @@ async fn create_handoff(
     let _run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    let conn = state.db.connect().map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id_str, &user.user_id)?;
 
     // Create a handoff job in the runtime so the DAG reflects the handoff.
@@ -869,15 +817,7 @@ async fn create_handoff(
     let chain = req.causation_chain.clone().unwrap_or_default();
     if !chain.is_empty() {
         let run_ws = conn_ws(&state, _run_id)?;
-        allternit_cowork_runtime::sqlite_store::validate_delegation_chain(
-            &conn,
-            &run_ws,
-            &chain,
-        )
-        .map_err(|e| ErrorResponse {
-            error: format!("{}: {}", e.wire(), e.message),
-            code: e.http_status(),
-        })?;
+        canonical::validate_delegation_chain(&conn, &run_ws, &chain).map_err(transport_err)?;
     }
     conn.execute(
         "INSERT INTO cowork_handoffs (id, run_id, to_agent_id, task_id, note, status, user_id, job_id, causation_chain)
@@ -894,14 +834,10 @@ async fn create_handoff(
             serde_json::to_string(&chain).unwrap(),
         ],
     ).map_err(db_error)?;
-    persist_job(&conn, &job, &user.user_id).map_err(db_error)?;
-    conn.execute(
-        "UPDATE cowork_runs SET current_job_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
-        rusqlite::params![job.id.to_string(), run_id_str],
-    )
-    .map_err(db_error)?;
-    insert_run_event(
-        &conn,
+    canonical::persist_job_record(&conn, &job, &user.user_id).map_err(transport_err)?;
+    canonical::set_current_run_job(&conn, &run_id_str, &job.id.to_string()).map_err(transport_err)?;
+    record_event(
+        &mut conn,
         &run_id_str,
         "handoff_created",
         json!({
@@ -911,8 +847,7 @@ async fn create_handoff(
             "job_id": job.id.to_string(),
         }),
         &user.user_id,
-    )
-    .map_err(db_error)?;
+    )?;
 
     Ok(Json(HandoffResponse {
         id: handoff_id,
@@ -1068,25 +1003,22 @@ async fn create_checkpoint(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    let conn = state.db.connect().map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id.to_string(), &user.user_id)?;
 
     let checkpoint = manager
         .checkpoint(run_id, None, req.step_index, req.cursor_state)
         .await?;
 
-    conn.execute(
-        "UPDATE cowork_runs SET current_checkpoint_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
-        rusqlite::params![checkpoint.id, run_id.to_string()],
-    ).map_err(db_error)?;
-    insert_run_event(
-        &conn,
+    canonical::set_run_checkpoint(&conn, &run_id.to_string(), &checkpoint.id)
+        .map_err(transport_err)?;
+    record_event(
+        &mut conn,
         &run_id.to_string(),
         "checkpoint_created",
         json!({ "checkpoint_id": checkpoint.id }),
         &user.user_id,
-    )
-    .map_err(db_error)?;
+    )?;
 
     Ok(Json(checkpoint.into()))
 }
@@ -1121,23 +1053,22 @@ async fn recover_run(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    let conn = state.db.connect().map_err(db_error)?;
+    let mut conn = state.db.connect().map_err(db_error)?;
     ensure_run_owner(&conn, &run_id.to_string(), &user.user_id)?;
 
     let result = manager.recover(run_id).await?;
 
-    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Recovering).map_err(db_error)?;
+    update_run_state_in_db(&conn, &run_id.to_string(), RunState::Recovering).map_err(transport_err)?;
 
     match result {
         Some((checkpoint, cursor)) => {
-            insert_run_event(
-                &conn,
+            record_event(
+                &mut conn,
                 &run_id.to_string(),
                 "run_recovered",
                 json!({ "checkpoint_id": checkpoint.id, "cursor": cursor }),
                 &user.user_id,
-            )
-            .map_err(db_error)?;
+            )?;
             Ok(Json(
                 json!({ "recovered": true, "checkpoint_id": checkpoint.id, "cursor": cursor }),
             ))
@@ -1288,6 +1219,11 @@ pub struct RunEventResponse {
     pub run_id: String,
     pub event_type: String,
     pub payload: serde_json::Value,
+    /// Attribution triple (§8.18): the event ledger names initiator,
+    /// delegator, and executor independently of narration.
+    pub initiator: Option<String>,
+    pub delegator: Option<String>,
+    pub executor: Option<String>,
     pub created_at: String,
 }
 
@@ -1300,9 +1236,9 @@ async fn get_run_events(
     ensure_run_owner(&conn, &run_id, &user.user_id)?;
     let mut stmt = conn
         .prepare(
-            "SELECT id, run_id, event_type, payload, created_at 
-             FROM cowork_run_events 
-             WHERE run_id = ?1 
+            "SELECT id, run_id, event_type, payload, initiator, delegator, executor, created_at
+             FROM cowork_run_events
+             WHERE run_id = ?1
              ORDER BY created_at ASC",
         )
         .map_err(db_error)?;
@@ -1311,13 +1247,16 @@ async fn get_run_events(
         .query_map(rusqlite::params![&run_id], |row| {
             let payload_str: String = row.get(3)?;
             let payload: serde_json::Value =
-                serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::Value::Null);
+                serde_json::from_str(&payload_str).unwrap_or(serde_json::Value::Null);
             Ok(RunEventResponse {
                 id: row.get(0)?,
                 run_id: row.get(1)?,
                 event_type: row.get(2)?,
                 payload,
-                created_at: row.get(4)?,
+                initiator: row.get(4)?,
+                delegator: row.get(5)?,
+                executor: row.get(6)?,
+                created_at: row.get(7)?,
             })
         })
         .map_err(db_error)?

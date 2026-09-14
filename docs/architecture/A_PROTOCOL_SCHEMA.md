@@ -258,6 +258,7 @@ bearer token.
 | `GET /intents/:intent_id` | open (read-only) | → `{intent_id, run_id, envelope}` |
 | `GET /approvals` | user | `?workspace=&status=` → approval inbox (control surface) |
 | `POST /principals/:principal_id/provision-token` | user | rotate/provision a principal token (returned once) |
+| `PUT /principals/:principal_id/capabilities` | user | `{capabilities: [...]}` → replace declared capabilities (P-T2; workers declare `compute.vm` for VM mode) |
 | `POST /jobs/:job_id/connector-sessions` | worker | `{lease_id, lease_generation, capability, ttl_secs?}` → ConnectorBrokerSession |
 | `POST /connector-sessions/:session_id/invoke` | worker | `{job_id, lease_id, lease_generation, payload}` → `{delivered, simulated, detail}` |
 | `POST /runs/:run_id/handoffs` | user | `{to_agent_id, task_id?, note?, causation_chain?}` → handoff (chain validated) |
@@ -289,6 +290,36 @@ returned or embedded in job payloads.** Invocation is system-side:
 principal-bound session, server-clock expiry) performs the external call with
 the registered secret read from its env var at invoke time; the result and an
 attributed `connector.invoked` event report delivered/simulated honestly.
+
+**Connector breadth (P-T4, v0.1):** beyond the reference webhook connector
+(`connector.webhook.send` → `ALLTERNIT_BROKER_WEBHOOK_URL`), the broker ships
+a **GitHub connector** (`connector.github.read` / `connector.github.write` →
+`ALLTERNIT_BROKER_GITHUB_TOKEN`; payloads `{repo: "owner/name", path?, ref?}`
+/ `{repo, path, content, message}`; write is approval-gated, read
+auto-approves by default) and a **files/local connector**
+(`connector.files.read` / `connector.files.write` →
+`ALLTERNIT_BROKER_FILES_ROOT`; every payload path is confined under the
+root — absolute paths and `..` escapes are refused; write is
+approval-gated). Unknown registered capabilities keep the generic
+webhook-POST behavior.
+
+## 8c. Al persona runtime — **Implemented (v0.1, P-T5)**
+
+| Endpoint | Auth | Body → Response |
+|---|---|---|
+| `POST /cowork/al/chat` | user | `{session_id?, message, workspace?}` → `{session_id, reply, delegated, intent_id?, run_id?, target?, run_state?, pending_approvals?, extracted}` |
+| `GET /cowork/al/sessions/:session_id` | user (owner-scoped) | → transcript with observed canonical run states per turn |
+
+Talk to Al; Al turns the request into a canonical intent. Extraction is
+model-assisted through the existing model router/gateway (`run_completion`,
+shared with `/v1/responses`; `ALLTERNIT_AL_MODEL`, default
+`openai/gpt-4o-mini`) and falls back to a deterministic normalizer when no
+OS control plane is configured. Target resolution uses the workspace
+delegation rules (`resolve_delegation_rule` — identical to the orchestrator
+loop). Submitted intents carry `initiator = user`, `delegator =
+a://…/principal/al`, chain `[user, al]`; with no matching rule nothing is
+submitted and Al says so. Al holds zero capabilities: it never claims,
+executes, or holds secrets. Transcript: `cowork_al_messages` (V168).
 
 ## 8b. MemoryGrant — **Implemented (v0.1)**
 
@@ -330,6 +361,18 @@ chain persisted; an attributed `intent.accepted` event is written.
 ```
 
 → `{ "intent_id": "...", "run_id": "<uuid>", "created": true|false }`
+
+**Job enqueue (P-T2):** submission also enqueues the run's canonical job
+(`action.payload` as the job payload), completing Intent → Run → Job →
+queue. The intent's `compute` policy resolves to mandatory job capabilities
+(§8.8 placement): `vm` → `compute.vm`, `local` → `compute.local`,
+`byo`/`cloud` → `compute.byo`/`compute.cloud`; `auto`/absent stays
+capability-neutral and resolves by capability intersection at claim time.
+Claim eligibility then refuses under-capable workers with
+`A_CAPABILITY_MISSING`. Placement never rewrites identity/attribution.
+Intents targeted at `…/principal/al` are the exception: the parent run gets
+no claimable job (Al plans; the orchestrator's child intent carries the
+job), so delegation cannot be bypassed.
 
 The legacy `POST /cowork/run-agent` and `/cowork/team-execute` endpoints now
 submit canonical intents (the `cowork_executions` dead-end inserts are gone).

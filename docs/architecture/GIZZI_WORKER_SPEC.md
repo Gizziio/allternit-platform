@@ -34,10 +34,15 @@ roles: [worker, code, terminal]   # repository, filesystem, build, debug, develo
   - **macOS host execution** runs without bwrap (bubblewrap is Linux-only);
     isolation on macOS comes from the VM path (below), not from a
     seatbelt-wrapped shell.
-- VM/developer-runtime mode — lazy vfkit manager
-  (`cmd/gizzi-code/src/runtime/cowork/cowork.runtime.ts:17-23`,
-  `createVFKitManager()`); local VMs via the `allternit-vm-executor` /
-  `allternit-apple-vf-driver` crates.
+- VM execution mode — `GIZZI_COMPUTE_MODE=vm` on the fabric-transport worker
+  (`src/runtime/fabric-transport/worker.ts`) runs steps through the repo's
+  current VM machinery: the Lima-based executor
+  (`src/runtime/vm/lima-executor.ts`, `limactl shell allternit`; Lima runs on
+  macOS and Linux hosts). The legacy vfkit manager was removed in the
+  2026-09 dead-code cleanup — the Lima path is the supported VM surface. The
+  worker's principal must declare `compute.vm` for placement to route
+  vm-required jobs to it (§8.8; operator action via
+  `PUT /api/v1/fabric/transport/principals/:id/capabilities`).
 - Repository/code/build work — the gizzi-code tool surface (edit, grep, git,
   build, test runners) and the Cowork runtime loop (`cowork.runtime.ts`).
 - Cron-triggered cowork execution — `src/runtime/automation/cron/executors/cowork-executor.ts`.
@@ -76,8 +81,7 @@ require explicit workspace policy + approval bindings.
 ## 5. How Gizzi claims work over Fabric Transport
 
 **Implemented (A-T4).** `cmd/gizzi-code/src/runtime/fabric-transport/worker.ts`
-(+ `worker-entry.ts`) is the claim loop; it runs on-demand via bun (installed
-service packaging is product work). Operator token flow: provision once via
+(+ `worker-entry.ts`) is the claim loop. Operator token flow: provision once via
 `POST /api/v1/fabric/transport/principals/<principal>/provision-token`, then
 `ALLTERNIT_GIZZI_TOKEN=atok_… bun src/runtime/fabric-transport/worker-entry.ts`
 (or `ALLTERNIT_GIZZI_TOKEN_FILE`). The loop:
@@ -85,14 +89,22 @@ service packaging is product work). Operator token flow: provision once via
 1. Authenticates as `a://workspace/{ws}/principal/gizzi` (env-provided token).
 2. Long-poll claim (`POST /fabric/transport/claim`, `lease_ttl_secs` from
    `ALLTERNIT_GIZZI_LEASE_SECS`); eligibility = job `required_capabilities` ⊆
-   the seeded Gizzi capability set.
-3. Executes `payload.steps` via `Sandbox.wrap` (bwrap on Linux /
-   sandbox-exec on macOS — the existing posture; falls back to an unsandboxed
-   shell only when no driver exists, loudly logged by `Sandbox.wrap`).
+   the seeded Gizzi capability set (now including `compute.local`).
+3. Executes `payload.steps` per `GIZZI_COMPUTE_MODE`: local → `Sandbox.wrap`
+   (bwrap Linux / sandbox-exec macOS); vm → Lima VM via `executeInVM`.
 4. Heartbeats at `lease_ttl/3`; checkpoints after each committed step.
 5. Completes with the typed Result envelope (per-step exit codes in
    `outputs.steps`); exactly-once; ledger attributes
    `executor = …/principal/gizzi`, never Al.
+
+**P-T2 (implemented 2026-09-13):** placement is server-side and capability
+based — an intent declaring `compute: vm` enqueues its job with
+`compute.vm` as a mandatory capability, so only principals that declared it
+(including a vm-mode gizzi worker) can claim it; a local-only worker's claim
+is refused with `A_CAPABILITY_MISSING`. Identity/attribution are unchanged:
+the executor column names the principal, not the compute target. Proof:
+`compute_placement_tests.rs` (5 tests) + live claim evidence in the P-T2
+session notes.
 
 Protected actions gate on `approvals/check` under the current generation (not
 yet exercised by the worker — see honest status).

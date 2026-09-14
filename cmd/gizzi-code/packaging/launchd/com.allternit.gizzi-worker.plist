@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Gizzi fabric-transport worker — launchd unit (P-T3).
+
+  Install (see cmd/gizzi-code/docs/FABRIC_WORKER_DAEMON.md):
+    1. Provision the worker token once:
+         curl -X POST "$API/api/v1/fabric/transport/principals/<principal>/provision-token"
+       and write it to /etc/allternit/gizzi-worker/token (mode 0600).
+    2. cp this file to ~/Library/LaunchAgents/com.allternit.gizzi-worker.plist
+    3. Edit WorkingDirectory / GIZZI_CODE_DIR to this checkout.
+    4. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.allternit.gizzi-worker.plist
+    5. launchctl kickstart -k gui/$(id -u)/com.allternit.gizzi-worker
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.allternit.gizzi-worker</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/usr/bin/env</string>
+      <string>bun</string>
+      <string>src/runtime/fabric-transport/worker-daemon-entry.ts</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/CHANGE_ME/allternit-workspace/allternit/cmd/gizzi-code</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>ALLTERNIT_API_URL</key>
+      <string>http://127.0.0.1:8013</string>
+      <key>ALLTERNIT_GIZZI_TOKEN_FILE</key>
+      <string>/etc/allternit/gizzi-worker/token</string>
+      <!-- GIZZI_COMPUTE_MODE: "local" (default) or "vm" (Lima VM steps).
+           In vm mode also declare compute.vm on the principal. -->
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/usr/local/var/log/gizzi-worker.log</string>
+    <key>StandardErrorPath</key>
+    <string>/usr/local/var/log/gizzi-worker.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+  </dict>
+</plist>

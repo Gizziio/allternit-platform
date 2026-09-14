@@ -316,12 +316,51 @@ Transport does not redefine principal identity, run state, attribution, or appro
 
 - approval-to-lease binding coverage across all protected tools/connectors
   (the binding mechanism is implemented; tool/connector coverage is not universal)
-- canonical multi-store consolidation beyond the proof slice
-- Cowork visualization depth (a control surface now exists at
-  `/fabric-transport`; full protocol-entity rendering is ongoing)
 - complete capability vocabulary across all workers
-- Gizzi's TS claim loop ships in cmd/gizzi-code (`fabric-transport/worker.ts`);
-  packaging/install automation for always-on operation is product work
+
+### Implemented in the product-depth pass (P-T1, 2026-09-13)
+
+- **canonical multi-store consolidation boundary** — the Rails cowork REST
+  surface persists RunManager state through canonical, lease-safe projection
+  helpers in `allternit-cowork-runtime` (raw lease-clobbering upserts
+  removed); cloud-api Postgres tables are an explicitly-marked product-local
+  projection (`store_boundary.rs`); gizzi-code Drizzle cowork writes are
+  gated by a store-boundary module when paired with a canonical API. See
+  `A_STORE_BOUNDARY.md` for per-store status and honest deferrals.
+
+### Implemented in the product-depth pass (P-T2…P-T6, session/aproduct-0913)
+
+- **non-local compute placement (§8.8)** — intent `compute` policy resolves
+  to mandatory job capabilities (`vm`/`local`/`byo`/`cloud`; `auto` stays
+  capability-neutral); `submit_intent` enqueues the claimable job (Al-
+  targeted parents excepted so delegation can't be bypassed); workers
+  declare placement caps via
+  `PUT /fabric/transport/principals/:id/capabilities`; gizzi runs VM mode
+  through the Lima executor (`GIZZI_COMPUTE_MODE=vm`). Identity/attribution
+  unchanged.
+- **worker daemon packaging** — `worker-daemon-entry.ts` (structured logs,
+  exponential backoff, graceful stop with sweeper requeue), launchd plist,
+  systemd unit, end-to-end install doc.
+- **connector breadth** — GitHub (`connector.github.read/write`,
+  approval-gated write) and files/local (`connector.files.read/write`,
+  root confinement, approval-gated write) through the existing broker;
+  secrets system-side only.
+- **Al persona runtime v0.1** — `POST /cowork/al/chat` +
+  `GET /cowork/al/sessions/:id`; model-assisted extraction reuses the model
+  router/gateway; zero-capability posture.
+- **Cowork protocol rendering** — principals management, delegation rules
+  editor, connector sessions view, attributed + approvals-interleaved run
+  timeline in `/fabric-transport`.
+
+Live behavioral evidence for all six items (vm-job claim grant/refusal,
+boundary projection refusal, brokered files read/write + approval gate +
+path-confinement refusal, Al chat fallback + end-to-end delegation, daemon
+claim → execute → SIGTERM stop, control-surface reads) was captured against
+a fresh-migrated dev database on 2026-09-13: `tmp/aproduct-evidence/LIVE_EVIDENCE.md`
+(rerun via `tmp/aproduct-evidence/run.sh`). The same pass fixed pre-existing
+main breakage: duplicate migration versions V142–V144 (renumbered
+V169–V171) and the embed_migrations no-rebuild gotcha — see CHANGELOG
+[Unreleased] → Fixed.
 
 ### Planned / not implied by v0.1
 

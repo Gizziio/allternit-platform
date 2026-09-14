@@ -2,6 +2,11 @@
 //!
 //! Provides data structures for run orchestration, job queue,
 //! scheduling, events, and checkpoints.
+//!
+//! **Store status (A:// P-T1):** these tables are this service's
+//! product-local projection — NOT the canonical A:// cowork state. See
+//! [`super::store_boundary`] for the consolidation boundary and honest
+//! removability status.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

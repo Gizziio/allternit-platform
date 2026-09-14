@@ -15,6 +15,7 @@ import {
   ApprovalTable,
   CheckpointTable,
 } from "@/runtime/cowork/cowork.sql"
+import { assertCoworkWriteAllowed } from "@/runtime/cowork/store-boundary"
 import { Log } from "@/shared/util/log"
 import { randomUUID } from "crypto"
 
@@ -186,6 +187,7 @@ export namespace RunService {
   }
 
   export function create(input: { name: string; mode: RunMode; config?: RunConfig; auto_start?: boolean }): Run {
+    assertCoworkWriteAllowed("run")
     const id = `run-${randomUUID()}`
     const status: RunStatus = input.auto_start ? "queued" : "pending"
     const now = Date.now()
@@ -211,6 +213,7 @@ export namespace RunService {
     status: RunStatus,
     updates?: Partial<Pick<Run, "step_cursor" | "total_steps" | "completed_steps" | "error_message">>,
   ): Run | undefined {
+    assertCoworkWriteAllowed("run status")
     return Database.use((db) => {
       const setClause: any = { status, time_updated: Date.now() }
       if (updates?.step_cursor !== undefined) setClause.step_cursor = updates.step_cursor
@@ -231,6 +234,7 @@ export namespace RunService {
   }
 
   export function appendEvent(runId: string, eventType: string, payload?: Record<string, unknown>): RunEvent {
+    assertCoworkWriteAllowed("run event")
     const id = `evt-${randomUUID()}`
     const sequence = getNextSequence(runId)
     const now = Date.now()
@@ -300,6 +304,7 @@ export namespace ScheduleService {
     enabled?: boolean
     mode?: RunMode
   }): Schedule {
+    assertCoworkWriteAllowed("schedule")
     const id = `sched-${randomUUID()}`
     const now = Date.now()
     Database.use((db) => {
@@ -318,6 +323,7 @@ export namespace ScheduleService {
   }
 
   export function updateEnabled(id: string, enabled: boolean): void {
+    assertCoworkWriteAllowed("schedule")
     Database.use((db) => {
       db.update(ScheduleTable)
         .set({ enabled: enabled ? 1 : 0, time_updated: Date.now() })
@@ -327,6 +333,7 @@ export namespace ScheduleService {
   }
 
   export function incrementRunCount(id: string): void {
+    assertCoworkWriteAllowed("schedule")
     Database.use((db) => {
       db.update(ScheduleTable)
         .set({ run_count: sql`${ScheduleTable.run_count} + 1`, time_updated: Date.now() })
@@ -336,6 +343,7 @@ export namespace ScheduleService {
   }
 
   export function delete_(id: string): void {
+    assertCoworkWriteAllowed("schedule")
     Database.use((db) => {
       db.delete(ScheduleTable).where(eq(ScheduleTable.id, id)).run()
     })
@@ -375,6 +383,7 @@ export namespace ApprovalService {
     reasoning?: string
     requested_by?: string
   }): Approval {
+    assertCoworkWriteAllowed("approval")
     const id = `appr-${randomUUID()}`
     const now = Date.now()
     Database.use((db) => {
@@ -401,6 +410,7 @@ export namespace ApprovalService {
     resolution: "approved" | "denied",
     opts?: { message?: string; responded_by?: string },
   ): Approval | undefined {
+    assertCoworkWriteAllowed("approval")
     return Database.use((db) => {
       db.update(ApprovalTable)
         .set({
@@ -441,6 +451,7 @@ export namespace CheckpointService {
     description?: string
     step_cursor?: string
   }): Checkpoint {
+    assertCoworkWriteAllowed("checkpoint")
     const id = `ckpt-${randomUUID()}`
     const now = Date.now()
     const run = RunService.get(input.run_id)
@@ -460,6 +471,7 @@ export namespace CheckpointService {
   }
 
   export function restore(id: string): Checkpoint | undefined {
+    assertCoworkWriteAllowed("checkpoint")
     return Database.use((db) => {
       db.update(CheckpointTable)
         .set({ time_restored: Date.now(), time_updated: Date.now() })
@@ -470,6 +482,7 @@ export namespace CheckpointService {
   }
 
   export function delete_(id: string): void {
+    assertCoworkWriteAllowed("checkpoint")
     Database.use((db) => {
       db.delete(CheckpointTable).where(eq(CheckpointTable.id, id)).run()
     })
