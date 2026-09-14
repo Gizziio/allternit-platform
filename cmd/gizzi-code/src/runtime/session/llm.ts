@@ -313,10 +313,12 @@ export namespace LLM {
       maxOutputTokens,
       abortSignal: input.abort,
       headers: {
+        // Always present so subprocess/ACP drivers can resolve the session
+        // even if AsyncLocalStorage is not on the doStream call stack.
+        "x-gizzi-session": input.sessionID,
         ...(input.model.providerID.startsWith("gizzi")
           ? {
               "x-gizzi-project": Instance.project.id,
-              "x-gizzi-session": input.sessionID,
               "x-gizzi-request": input.user.id,
               "x-gizzi-client": Flag.GIZZI_CLIENT,
             }

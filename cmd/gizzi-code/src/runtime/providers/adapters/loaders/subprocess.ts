@@ -11,7 +11,7 @@
 import type { LanguageModelV2, LanguageModelV2StreamPart } from "@ai-sdk/provider"
 import { RuntimeService } from "@/runtime/runtime-service"
 import { RuntimeDriverFactory } from "@/runtime/runtime-driver-factory"
-import { getStreamContext } from "@/runtime/session/stream-context"
+import { resolveTaskSessionID } from "@/runtime/session/stream-context"
 import { Log } from "@/shared/util/log"
 
 const log = Log.create({ service: "subprocess-lm" })
@@ -67,7 +67,7 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
       // The CLI executes its own tools opaquely; the session id lets the
       // driver's ACP permission requests gate through the session's
       // PermissionNext policy instead of auto-approving.
-      sessionID: getStreamContext()?.sessionID,
+      sessionID: resolveTaskSessionID(options?.headers),
     })
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({

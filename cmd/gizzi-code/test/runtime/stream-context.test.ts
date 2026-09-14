@@ -4,7 +4,12 @@
  * permission requests gate through the session's PermissionNext policy.
  */
 import { describe, expect, test } from "bun:test"
-import { getStreamContext, runWithStreamContext } from "@/runtime/session/stream-context"
+import {
+  getStreamContext,
+  resolveTaskSessionID,
+  runWithStreamContext,
+  SESSION_HEADER,
+} from "@/runtime/session/stream-context"
 
 describe("stream-context", () => {
   test("context is visible inside the marked scope", () => {
@@ -32,5 +37,22 @@ describe("stream-context", () => {
       })
       expect(getStreamContext()?.sessionID).toBe("outer")
     })
+  })
+})
+
+describe("resolveTaskSessionID", () => {
+  test("prefers ALS over the request header", () => {
+    runWithStreamContext({ sessionID: "ses_als" }, () => {
+      expect(resolveTaskSessionID({ [SESSION_HEADER]: "ses_header" })).toBe("ses_als")
+    })
+  })
+
+  test("falls back to x-gizzi-session when ALS is empty", () => {
+    expect(resolveTaskSessionID({ [SESSION_HEADER]: "ses_header" })).toBe("ses_header")
+  })
+
+  test("returns undefined when neither source is present", () => {
+    expect(resolveTaskSessionID()).toBeUndefined()
+    expect(resolveTaskSessionID({})).toBeUndefined()
   })
 })

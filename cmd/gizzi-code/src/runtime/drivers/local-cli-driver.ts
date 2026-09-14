@@ -51,6 +51,16 @@ const log = Log.create({ service: "local-cli-driver" })
  *
  * Exported for unit tests.
  */
+/** ACP agents (kimi-cli) often return a successful empty prompt on quota/auth
+ *  403s instead of throwing. Treat those stderr signatures as fatal so the
+ *  cowork SSE cannot report status:complete with 0 tokens. */
+export function acpStderrLooksFatal(tail: string): boolean {
+  if (!tail) return false
+  return /provider\.auth_error|You've reached your (?:monthly|5-hour) usage limit|401 Unauthorized|403 .*(?:quota|usage limit|auth)/i.test(
+    tail,
+  )
+}
+
 export function acpPermissionFor(tool: { kind?: unknown; title?: unknown }): {
   permission: string
   pattern: string
@@ -958,6 +968,21 @@ export class LocalCliDriver implements RuntimeDriver {
       }
 
       const result = await promptPromise
+      const fatalTail = stderrTail.tail()
+      if (acpStderrLooksFatal(fatalTail)) {
+        const error = new Error(fatalTail.trim())
+        log.error("acp prompt completed with fatal agent stderr", {
+          taskId: handle.taskId,
+          error: error.message.slice(0, 500),
+        })
+        const errorEv = { type: "error", error } as AgentEvent
+        yield errorEv
+        await this.logEvent(handle.taskId, errorEv)
+        const failEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
+        yield failEv
+        await this.logEvent(handle.taskId, failEv)
+        return
+      }
       // Per-turn token counts come from the prompt response's `usage`
       // (ACP Usage: input/output totals across the agent's internal calls).
       // Only when the agent omits it do we fall back to the last context

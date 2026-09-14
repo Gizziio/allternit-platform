@@ -126,3 +126,25 @@ describe("acpPermissionFor — ACP tool → gizzi permission mapping", () => {
     expect(mapped.pattern).toBe("Write /tmp/proof.txt")
   })
 })
+
+describe("acpStderrLooksFatal — quota/auth must not look like a successful empty turn", () => {
+  test("matches kimi-cli 5-hour and monthly quota 403s", async () => {
+    const { acpStderrLooksFatal } = await import("@/runtime/drivers/local-cli-driver")
+    expect(
+      acpStderrLooksFatal(
+        "error: failed to run prompt: provider.auth_error: 403 You've reached your 5-hour usage limit.",
+      ),
+    ).toBe(true)
+    expect(
+      acpStderrLooksFatal(
+        "provider.auth_error: 403 You've reached your monthly usage limit for this billing cycle.",
+      ),
+    ).toBe(true)
+  })
+
+  test("does not flag ordinary agent stderr", async () => {
+    const { acpStderrLooksFatal } = await import("@/runtime/drivers/local-cli-driver")
+    expect(acpStderrLooksFatal("")).toBe(false)
+    expect(acpStderrLooksFatal("warn: deprecated config key max_retries_per_step")).toBe(false)
+  })
+})
