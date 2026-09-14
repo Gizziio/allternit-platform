@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 12:44 — grok — Cloud continuation (compute.cloud handoff)
+
+- **Session ID / Branch:** `session/cloudcont-0914`
+- **Agent:** grok
+- **Summary:** Merged PR #521 (`66480c77a`) — in-flight A:// jobs can be handed to an always-on `gizzi-cloud` worker when the laptop worker dies.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/521 · 66480c77a
+- **How it works:** Opt-in preference + continue-in-cloud / handoff-all / ingest. Placement requires `compute.cloud`; laptop `gizzi` cannot reclaim. Desktop quit calls handoff-all before stopping the API.
+- **Verification:** compute_placement_tests 8/8; allternit-api lib check clean.
+- **Outstanding work:** Always-on worker still operator-started; local folders do not upload; laptop-closed routine ticks need an always-on API.
+- **Summary file:** [2026-09-14-1244-cloudcont-0914-grok-cloud-continuation.md](./summaries/2026-09-14-1244-cloudcont-0914-grok-cloud-continuation.md)
+
 ### 2026-09-14 09:50 — grok — Consumer-packaged Cowork P4 reach + P5 updater feed
 
 - **Session ID / Branch:** `session/coworkp1-0914` (resume of Kimi `session_93cc7789`)
