@@ -254,6 +254,8 @@ let hudSessionId: string | null = null;
  * main window has finished loading queue here and flush on did-finish-load.
  */
 const pendingOfficeDeliveries: { channel: string; payload: unknown }[] = [];
+/** One office editor window per target (docs/sheets/slides/pdf/launcher). */
+const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
 
 // Send to the startup window only while it is alive. A destroyed BrowserWindow
@@ -2390,7 +2392,6 @@ function openHudWindow(): void {
 
   log.info('[HUD] Creating new floating HUD window');
   hudWindow = createHudWindow();
-
   log.info('[HUD] HUD window created', { id: hudWindow.id, bounds: hudWindow.getBounds(), visible: hudWindow.isVisible() });
 
   hudWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -2709,6 +2710,7 @@ handleGuarded('shell:hud:annotation:save', async (_event, base64Png: string) => 
 });
 
 function openFabricSessionWindow(): void {
+ipcMain.handle('shell:open-remote-control', () => {
   if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
     remoteControlWindow.show();
     remoteControlWindow.focus();

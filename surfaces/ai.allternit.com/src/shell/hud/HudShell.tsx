@@ -148,6 +148,7 @@ export function HudShell(): React.ReactNode {
         data-hud-composer-bounds
         data-hud-grabbing={grabbing ? "" : undefined}
         className="flex w-full flex-col overflow-visible rounded-2xl border border-white/25 dark:border-white/10 bg-white/75 dark:bg-neutral-900/75 text-neutral-900 dark:text-neutral-100 shadow-xl backdrop-blur-xl"
+        className="flex w-full flex-col overflow-visible rounded-2xl border border-[var(--chat-composer-border)] bg-[var(--chat-composer-bg)] text-[var(--ui-text-primary)] shadow-xl backdrop-blur-xl"
         onPointerDown={onComposerPointerDown}
       >
         {/* Drag strip — immediate grab for moving the HUD; buttons stay clickable. */}
@@ -161,6 +162,7 @@ export function HudShell(): React.ReactNode {
           <div
             data-hud-grabber
             className="flex items-center gap-1 text-neutral-400 dark:text-neutral-500"
+            className="flex items-center gap-1 text-[var(--ui-text-muted)] cursor-grab active:cursor-grabbing hover:text-[var(--ui-text-secondary)]"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <circle cx="5" cy="8" r="1.5" />
@@ -193,6 +195,7 @@ export function HudShell(): React.ReactNode {
               type="button"
               onClick={() => window.allternit?.shell?.hud?.close?.()}
               className="rounded p-0.5 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-neutral-100"
+              className="rounded p-0.5 text-[var(--ui-text-muted)] hover:bg-[var(--ui-border-muted)] hover:text-[var(--ui-text-primary)]"
               aria-label="Close HUD"
             >
               <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor">
