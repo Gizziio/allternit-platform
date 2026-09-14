@@ -26,6 +26,16 @@
   <Hosts><Host Name="Presentation" /></Hosts>
   <DefaultSettings>
     <SourceLocation DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/?product=powerpoint" />
+  <IconUrl DefaultValue="http://localhost:3000/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="http://localhost:3000/icon-80.png" />
+  <SupportUrl DefaultValue="https://allternit.com" />
+  <AppDomains>
+    <AppDomain>http://localhost:3000</AppDomain>
+    <AppDomain>http://localhost:3013</AppDomain>
+  </AppDomains>
+  <Hosts><Host Name="Presentation" /></Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="http://localhost:3000/src/taskpane/index.html?product=powerpoint" />
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -73,6 +83,13 @@
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/?product=powerpoint" />
         <bt:Url id="Taskpane.Url" DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/?product=powerpoint" />
+        <bt:Image id="Icon.16x16" DefaultValue="http://localhost:3000/icon-16.png" />
+        <bt:Image id="Icon.32x32" DefaultValue="http://localhost:3000/icon-32.png" />
+        <bt:Image id="Icon.80x80" DefaultValue="http://localhost:3000/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Commands.Url" DefaultValue="http://localhost:3000/src/taskpane/index.html?product=powerpoint" />
+        <bt:Url id="Taskpane.Url" DefaultValue="http://localhost:3000/src/taskpane/index.html?product=powerpoint" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="CommandsGroup.Label" DefaultValue="Allternit for PowerPoint" />
