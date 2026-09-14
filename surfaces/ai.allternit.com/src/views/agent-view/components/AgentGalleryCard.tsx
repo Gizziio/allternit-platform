@@ -26,6 +26,8 @@ import { MascotPreview } from "./AgentMascotPreview";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { cn } from "@/lib/utils";
 import { isBot } from "@/lib/bots/bot-profile";
+import { TagCloud } from "@/components/tagging";
+import { useTagStore } from "@/lib/tags/tag.store";
 
 interface AgentGalleryCardProps {
   agent: Agent;
@@ -200,6 +202,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
   const capabilities = useMemo(() => agent.capabilities || [], [agent.capabilities]);
   const visibleCapabilities = capabilities.slice(0, 2);
   const hiddenCapabilityCount = Math.max(0, capabilities.length - visibleCapabilities.length);
+  const agentTags = useTagStore((state) => state.getTagsForTarget(agent.id, "agent"));
   const updatedAt = formatUpdatedAt(agent.updatedAt);
   const hasRuns = typeof agent.totalRuns === "number" && agent.totalRuns > 0;
   const hasRating = typeof agent.rating === "number" && agent.rating > 0;
@@ -311,6 +314,15 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
 
           {/* Surfaces — only meaningful for non-bot agents */}
           {!isBotAgent && surfaces.length > 0 && (
+          {/* Tags */}
+          {agentTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <TagCloud tags={agentTags} />
+            </div>
+          )}
+
+          {/* Surfaces */}
+          {surfaces.length > 0 && (
             <div className="mt-auto flex items-center gap-2">
               <span className="text-[10px] font-medium text-[var(--text-tertiary)]">Works in</span>
               <div className="flex items-center gap-1">

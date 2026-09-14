@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { MagnifyingGlass, Faders } from '@phosphor-icons/react';
 import type { Agent } from "@/lib/agents/agent.types";
 import { AgentGalleryCard } from "../components/AgentGalleryCard";
+import { TagFilter } from "@/components/tagging";
+import { useTagStore } from "@/lib/tags/tag.store";
+import { useTags } from "@/lib/tags/useTags";
 
 interface AgentGalleryGridProps {
   agents: Agent[];
@@ -16,18 +19,29 @@ interface AgentGalleryGridProps {
 }
 
 export function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelectAgent, compact }: AgentGalleryGridProps) {
+  useTags();
+  const [showFilters, setShowFilters] = useState(false);
+  const getTagsForTarget = useTagStore((state) => state.getTagsForTarget);
+  const filter = useTagStore((state) => state.filter);
+
   const filtered = agents.filter((a) => {
     const q = searchQuery.trim().toLowerCase();
     const name = typeof a.name === 'string' ? a.name : '';
     const description = typeof a.description === 'string' ? a.description : '';
     const capabilities = Array.isArray(a.capabilities) ? a.capabilities : [];
-    return (
+    const matchesSearch =
       name.toLowerCase().includes(q) ||
       description.toLowerCase().includes(q) ||
       capabilities.some((capability) =>
         typeof capability === 'string' && capability.toLowerCase().includes(q)
-      )
-    );
+      );
+
+    const agentTagIds = new Set(getTagsForTarget(a.id, "agent").map((t) => t.id));
+    const matchesTags =
+      filter.includedTagIds.length === 0 ||
+      filter.includedTagIds.every((tagId) => agentTagIds.has(tagId));
+
+    return matchesSearch && matchesTags;
   });
 
   const myAgents = filtered.filter((a) => (a.source || "personal") === "personal");
@@ -47,11 +61,18 @@ export function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelect
           />
         </div>
         <button type="button"
+          onClick={() => setShowFilters((s) => !s)}
           className="flex size-11 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)]"
+          aria-label="Toggle tag filters"
+          aria-pressed={showFilters}
         >
           <Faders size={16} />
         </button>
       </div>
+
+      {showFilters && (
+        <TagFilter scope="agent" />
+      )}
 
       {/* My agents */}
       <AgentSection

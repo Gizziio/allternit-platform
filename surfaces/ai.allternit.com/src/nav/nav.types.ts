@@ -23,6 +23,7 @@ export type ViewType =
   | "group-chat"
   | "groups-list"
   | "bot-chat-session"
+  | "tag-manager"
   | "native-agent"
   | "registry"
   | "memory"
