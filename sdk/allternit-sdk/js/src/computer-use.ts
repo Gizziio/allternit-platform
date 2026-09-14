@@ -218,6 +218,94 @@ export interface CompatibilityComputerActionRequest {
   key?: string
 }
 
+// ---------------------------------------------------------------------------
+// Browser-workflow specs + deterministic network-trace verify (cu28).
+// Distilled shapes only — the gateway never sends raw HAR or step payload
+// values across these routes.
+// ---------------------------------------------------------------------------
+
+export interface BrowserSkillSpecSummary {
+  skill_id: string
+  source: string
+  valid: boolean
+  error: string | null
+  workflowId?: string
+  title?: string
+  provider?: string
+  stepCount?: number
+  hasNetworkTrace?: boolean
+  networkTraceEntries?: number
+}
+
+export interface BrowserSkillNetworkTraceEntry {
+  method: string
+  host: string
+  pathTemplate: string
+  payloadKeysHash: string | null
+  verifiable: boolean
+}
+
+export interface BrowserSkillNetworkTrace {
+  version: number
+  entries: BrowserSkillNetworkTraceEntry[]
+}
+
+export interface BrowserSkillSpecDetail {
+  workflowId?: string
+  title?: string
+  provider?: string
+  schemaVersion?: string
+  sourceRunId?: string
+  inputCount?: number
+  steps: Array<{ id?: string; kind?: string; target?: string; reason?: string }>
+  stepCount?: number
+  safety: { requiresApprovalFor: string[]; redactionCount: number }
+  networkTrace: BrowserSkillNetworkTrace | null
+}
+
+export interface BrowserSkillDeviation {
+  kind: string
+  index: number
+  live_index: number | null
+  expected: Partial<BrowserSkillNetworkTraceEntry>
+  actual: Partial<BrowserSkillNetworkTraceEntry> | null
+}
+
+export interface BrowserSkillVerifyResult {
+  verify_id: string
+  status: string
+  mode: string
+  workflow_id?: string
+  target_url?: string
+  network?: { status: string; deviations: BrowserSkillDeviation[] }
+  a11y?: { added: number; removed: number; modified: number } | { status: "unverifiable" }
+  workflow_status?: string
+  approvals?: string[]
+  grant_requests?: number
+  receipt_id?: string
+  receipt_hash?: string
+  trace?: BrowserSkillNetworkTrace
+  error?: string | null
+}
+
+export interface BrowserSkillReceiptCheck {
+  verify_id: string
+  receipt_id?: string
+  valid: boolean
+  stored_hash: string
+  recomputed_hash: string
+  tampered: boolean
+}
+
+export interface StartBrowserSkillVerifyOptions {
+  /** Skill package id; the spec is read + validated server-side. */
+  skillId?: string
+  /** Explicit spec object (server validates + distills). */
+  workflow?: Record<string, unknown>
+  /** Absolute http(s) URL. Omit for the canned deterministic self-check. */
+  targetUrl?: string
+}
+
 export class AllternitComputerUseClient {
   readonly baseUrl: string
   readonly fetch: typeof fetch
@@ -633,6 +721,80 @@ export class AllternitComputerUseClient {
         await new Promise((resolve) => setTimeout(resolve, intervalMs))
       }
     }
+  }
+
+  /**
+   * List compiled browser-workflow specs (distilled summaries, shapes only).
+   * GET /v1/browser-skills
+   */
+  async listBrowserSkills(): Promise<{ specs: BrowserSkillSpecSummary[]; count: number; skills_dir: string }> {
+    const response = await this.fetch(`${this.baseUrl}/v1/browser-skills`, {
+      method: "GET",
+      headers: this.headers,
+    })
+    if (!response.ok) {
+      throw new Error(`List browser skills failed: ${response.status} ${response.statusText}`)
+    }
+    return response.json()
+  }
+
+  /** Inspect one spec's distilled shape, incl. its taught NetworkTrace. */
+  async getBrowserSkill(skillId: string): Promise<{ skill_id: string; workflow: BrowserSkillSpecDetail }> {
+    const response = await this.fetch(
+      `${this.baseUrl}/v1/browser-skills/${encodeURIComponent(skillId)}`,
+      { method: "GET", headers: this.headers },
+    )
+    if (!response.ok) {
+      throw new Error(`Get browser skill failed: ${response.status} ${response.statusText}`)
+    }
+    return response.json()
+  }
+
+  /**
+   * Run the deterministic record → teach → batch → verify chain. Without a
+   * targetUrl this is the canned self-check; with one, the spec'd workflow is
+   * batch-verified against that URL. Poll with getBrowserSkillVerify.
+   */
+  async startBrowserSkillVerify(
+    options: StartBrowserSkillVerifyOptions = {},
+  ): Promise<{ verify_id: string; status: string; mode?: string; poll?: string }> {
+    const body: Record<string, unknown> = {}
+    if (options.skillId) body.skill_id = options.skillId
+    if (options.workflow) body.workflow = options.workflow
+    if (options.targetUrl) body.target_url = options.targetUrl
+    const response = await this.fetch(`${this.baseUrl}/v1/browser-skills/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.headers },
+      body: JSON.stringify(body),
+    })
+    if (!response.ok) {
+      throw new Error(`Start browser skill verify failed: ${response.status} ${response.statusText}`)
+    }
+    return response.json()
+  }
+
+  /** Fetch a stored verify verdict (network deviations, a11y, receipts). */
+  async getBrowserSkillVerify(verifyId: string): Promise<BrowserSkillVerifyResult> {
+    const response = await this.fetch(
+      `${this.baseUrl}/v1/browser-skills/verify/${encodeURIComponent(verifyId)}`,
+      { method: "GET", headers: this.headers },
+    )
+    if (!response.ok) {
+      throw new Error(`Get browser skill verify failed: ${response.status} ${response.statusText}`)
+    }
+    return response.json()
+  }
+
+  /** Recompute the content-derived receipt hash (tamper check). */
+  async checkBrowserSkillVerifyReceipt(verifyId: string): Promise<BrowserSkillReceiptCheck> {
+    const response = await this.fetch(
+      `${this.baseUrl}/v1/browser-skills/verify/${encodeURIComponent(verifyId)}/receipt/check`,
+      { method: "GET", headers: this.headers },
+    )
+    if (!response.ok) {
+      throw new Error(`Check browser skill receipt failed: ${response.status} ${response.statusText}`)
+    }
+    return response.json()
   }
 
   async waitForRun(runId: string, options: WaitForRunOptions = {}) {
