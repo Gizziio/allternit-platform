@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Spinner, Warning } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { getBotAccentColor } from "@/lib/bots/bot-profile";
@@ -12,8 +12,15 @@ export function BotComputerWindow({ botId, sandboxId }: { botId: string; sandbox
   const agents = useAgentStore((s) => s.agents);
   const isLoadingAgents = useAgentStore((s) => s.isLoadingAgents);
   const agentError = useAgentStore((s) => s.error);
+  const fetchAgents = useAgentStore((s) => s.fetchAgents);
   const bot = useMemo(() => agents.find((a) => a.id === botId) ?? null, [agents, botId]);
   const activeVM = useBotActiveVm(botId, sandboxId);
+
+  useEffect(() => {
+    if (agents.length === 0 && !isLoadingAgents) {
+      void fetchAgents();
+    }
+  }, [agents.length, isLoadingAgents, fetchAgents]);
   const accentColor = bot
     ? getBotAccentColor(bot) ?? bot.botProfile?.accentColor ?? "var(--accent-primary)"
     : "var(--accent-primary)";

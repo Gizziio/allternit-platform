@@ -41,6 +41,7 @@ import {
   type BotDesktopScreenshot,
   type BotDesktopStatus,
 } from "@/lib/bots/vm-operator";
+import { sendDesktopKeyboard, sendDesktopMouse } from "@/lib/desktop-cloud-api";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
 import { Button } from "@/components/ui/button";
 import { GlassSurface } from "@/design/GlassSurface";
@@ -198,6 +199,7 @@ export function BotComputerViewport({
   const vncProtocol = status?.protocol;
   const vncControlState = status?.control_state;
   const canConnectVnc =
+    layout !== "window" &&
     (vncControlState === "human_controls" || vncControlState === "human_observing") &&
     !!wsUrl &&
     vncProtocol === "vnc";
@@ -305,7 +307,7 @@ export function BotComputerViewport({
       return;
     }
 
-    const baseIntervalMs = 4000;
+    const baseIntervalMs = layout === "window" ? 400 : 4000;
     const failureBackoff = Math.min(screenshotFailuresRef.current, 5);
     const intervalMs = baseIntervalMs * (failureBackoff === 0 ? 1 : 2 ** failureBackoff);
 
@@ -409,7 +411,13 @@ export function BotComputerViewport({
   }, [disconnectVnc, vncControlState]);
 
   useEffect(() => {
-    const wantsVnc = streamActive && canConnectVnc;
+    if (layout !== "window" || !sandboxId) return;
+    claimVnc(sandboxId, "window");
+    return () => releaseVnc(sandboxId, "window");
+  }, [layout, sandboxId]);
+
+  useEffect(() => {
+    const wantsVnc = layout !== "window" && streamActive && canConnectVnc;
     const holdsClaim = Boolean(sandboxId && wantsVnc && claimVnc(sandboxId, layout));
     if (wantsVnc && holdsClaim && wsUrl) {
       void connectVnc(wsUrl);
@@ -487,6 +495,41 @@ export function BotComputerViewport({
     autoTakeoverRef.current = true;
     void handleTakeOver();
   }, [layout, sandboxId, status?.status, vncControlState]);
+
+  const handleScreenMouse = useCallback(
+    (event: React.MouseEvent<HTMLImageElement>) => {
+      if (layout !== "window" || !sandboxId) return;
+      if (vncControlState !== "human_controls") return;
+      const img = event.currentTarget;
+      const rect = img.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const naturalW = img.naturalWidth || 1280;
+      const naturalH = img.naturalHeight || 720;
+      const x = Math.round(((event.clientX - rect.left) / rect.width) * naturalW);
+      const y = Math.round(((event.clientY - rect.top) / rect.height) * naturalH);
+      const action =
+        event.type === "dblclick"
+          ? "doubleclick"
+          : event.button === 2
+            ? "rightclick"
+            : "click";
+      void sendDesktopMouse(bot.id, sandboxId, { action, x, y }).catch(() => {});
+    },
+    [layout, sandboxId, vncControlState, bot.id],
+  );
+
+  useEffect(() => {
+    if (layout !== "window" || !sandboxId) return;
+    if (vncControlState !== "human_controls") return;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      event.preventDefault();
+      void sendDesktopKeyboard(bot.id, sandboxId, { action: "key", key: event.key }).catch(() => {});
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [layout, sandboxId, vncControlState, bot.id]);
 
   const handleHandBack = async () => {
     if (!sandboxId) return;
@@ -744,11 +787,24 @@ export function BotComputerViewport({
           style={{ width: "100%", height: "100%" }}
         />
 
-        {screenshot && !rfbConnected && (
+        {screenshot && (layout === "window" || !rfbConnected) && (
           <img
             src={`data:${screenshot.mime};base64,${screenshot.png}`}
             alt={`${displayName}'s desktop preview`}
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            onMouseDown={layout === "window" ? handleScreenMouse : undefined}
+            onDoubleClick={layout === "window" ? handleScreenMouse : undefined}
+            onContextMenu={
+              layout === "window"
+                ? (event) => {
+                    event.preventDefault();
+                    handleScreenMouse(event);
+                  }
+                : undefined
+            }
+            className={cn(
+              "absolute inset-0 w-full h-full object-contain",
+              layout === "window" ? "cursor-crosshair" : "pointer-events-none",
+            )}
           />
         )}
 
