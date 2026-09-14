@@ -30,6 +30,15 @@ pub fn project_dag(events: &[AllternitEvent], dag_id: &str) -> DagState {
                     }
                 }
             }
+            "DagNodeRemoved" => {
+                if get_str(&evt.payload, "dag_id").as_deref() == Some(dag_id) {
+                    if let Some(node_id) = get_str(&evt.payload, "node_id") {
+                        dag.nodes.remove(&node_id);
+                        dag.edges
+                            .retain(|e| e.from_node_id != node_id && e.to_node_id != node_id);
+                    }
+                }
+            }
             "DagEdgeAdded" => {
                 if let Some(edge) = parse_edge_added(&evt.payload) {
                     dag.edges.push(edge);
