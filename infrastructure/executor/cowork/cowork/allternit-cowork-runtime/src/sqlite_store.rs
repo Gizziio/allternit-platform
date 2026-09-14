@@ -13,7 +13,8 @@
 //! "Consolidation boundary projections" section below — never through raw
 //! SQL — so a product projection can never clobber fabric-transport lease
 //! ownership. Only `enqueue_job` / `claim_job` / `record_heartbeat` /
-//! `renew_lease` / `complete_job` / `expire_leases` may write lease columns.
+//! `renew_lease` / `complete_job` / `expire_leases` / `continue_job_in_cloud`
+//! may write lease columns.
 
 use std::path::Path;
 use std::time::Duration;
@@ -344,6 +345,168 @@ pub fn ensure_gizzi_principal(
         &["worker".into(), "code".into(), "terminal".into()],
     )?;
     Ok(id)
+}
+
+/// Always-on cloud worker principal (consumer cloud continuation).
+/// Distinct from the laptop `gizzi` principal: it declares `compute.cloud`
+/// and never `compute.local`, so laptop-closed jobs cannot be reclaimed by
+/// the desktop worker. Idempotent; never touches credentials.
+pub fn ensure_gizzi_cloud_principal(
+    conn: &mut Connection,
+    workspace: &str,
+) -> Result<String, TransportError> {
+    let ws = workspace.strip_prefix("a://workspace/").unwrap_or(workspace);
+    let id = format!("a://workspace/{ws}/principal/gizzi-cloud");
+    let caps: Vec<String> = GIZZI_CAPABILITIES
+        .iter()
+        .filter(|c| **c != "compute.local")
+        .map(|s| s.to_string())
+        .chain(std::iter::once("compute.cloud".to_string()))
+        .collect();
+    mint_principal(
+        conn,
+        &id,
+        ws,
+        &caps,
+        &["worker".into(), "code".into(), "terminal".into()],
+    )?;
+    Ok(id)
+}
+
+/// Outcome of promoting a job to cloud continuation.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CloudContinuation {
+    /// Job that was handed off.
+    pub job_id: String,
+    /// Parent run.
+    pub run_id: String,
+    /// Capabilities after the handoff (`compute.cloud`, no `compute.local`).
+    pub required_capabilities: Vec<String>,
+    /// Job state after the handoff (`queued`).
+    pub state: String,
+}
+
+/// Hand a job to the cloud worker: drop any local lease, require
+/// `compute.cloud`, strip `compute.local` so the laptop worker cannot
+/// reclaim it. Terminal jobs are refused. Identity/attribution unchanged.
+pub fn continue_job_in_cloud(
+    conn: &mut Connection,
+    job_id: &str,
+) -> Result<CloudContinuation, TransportError> {
+    let now = Utc::now().to_rfc3339();
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(store_err)?;
+    let row: Option<(String, String, String)> = tx
+        .query_row(
+            "SELECT run_id, state, required_capabilities FROM cowork_jobs WHERE id = ?1",
+            params![job_id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .optional()
+        .map_err(store_err)?;
+    let Some((run_id, state, caps_json)) = row else {
+        return Err(TransportError::new(
+            Code::JobNotFound,
+            format!("job {job_id} not found"),
+        ));
+    };
+    if matches!(state.as_str(), "completed" | "failed" | "dead_letter") {
+        return Err(TransportError::new(
+            Code::ResultAlreadyCommitted,
+            format!("job {job_id} is terminal ({state}); cannot continue in cloud"),
+        ));
+    }
+    let mut caps: Vec<String> = serde_json::from_str(&caps_json).unwrap_or_default();
+    caps.retain(|c| c != "compute.local");
+    if !caps.iter().any(|c| c == "compute.cloud") {
+        caps.push("compute.cloud".to_string());
+    }
+    let caps_out = serde_json::to_string(&caps).unwrap();
+    tx.execute(
+        "UPDATE cowork_jobs SET
+            required_capabilities = ?1,
+            state = 'queued',
+            lease_id = NULL,
+            lease_owner = NULL,
+            lease_expires_at = NULL,
+            updated_at = ?2
+         WHERE id = ?3 AND state NOT IN ('completed','failed','dead_letter')",
+        params![caps_out, now, job_id],
+    )
+    .map_err(store_err)?;
+    let attr = load_run_attribution(&tx, &run_id)?;
+    insert_event(
+        &tx,
+        &run_id,
+        "continuation.handed_off",
+        serde_json::json!({
+            "job_id": job_id,
+            "from_state": state,
+            "required_capabilities": caps,
+        }),
+        attr.initiator.as_deref(),
+        attr.delegator.as_deref(),
+        None,
+    )?;
+    tx.commit().map_err(store_err)?;
+    Ok(CloudContinuation {
+        job_id: job_id.to_string(),
+        run_id,
+        required_capabilities: caps,
+        state: "queued".to_string(),
+    })
+}
+
+/// Promote every non-terminal job on a run.
+pub fn continue_run_in_cloud(
+    conn: &mut Connection,
+    run_id: &str,
+) -> Result<Vec<CloudContinuation>, TransportError> {
+    let ids: Vec<String> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT id FROM cowork_jobs WHERE run_id = ?1
+                 AND state NOT IN ('completed','failed','dead_letter')",
+            )
+            .map_err(store_err)?;
+        let rows = stmt
+            .query_map(params![run_id], |r| r.get(0))
+            .map_err(store_err)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(store_err)?;
+        rows
+    };
+    let mut out = Vec::new();
+    for id in ids {
+        out.push(continue_job_in_cloud(conn, &id)?);
+    }
+    Ok(out)
+}
+
+/// Promote every in-flight job (queued / leased / running) — desktop quit.
+pub fn handoff_all_in_flight(
+    conn: &mut Connection,
+) -> Result<Vec<CloudContinuation>, TransportError> {
+    let ids: Vec<String> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT id FROM cowork_jobs
+                 WHERE state IN ('queued','leased','running')",
+            )
+            .map_err(store_err)?;
+        let rows = stmt
+            .query_map([], |r| r.get(0))
+            .map_err(store_err)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(store_err)?;
+        rows
+    };
+    let mut out = Vec::new();
+    for id in ids {
+        out.push(continue_job_in_cloud(conn, &id)?);
+    }
+    Ok(out)
 }
 
 /// Compute placement resolution (§8.8, P-T2): an explicit compute policy on

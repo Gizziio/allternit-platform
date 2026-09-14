@@ -400,8 +400,36 @@ The manual flow (`ALLTERNIT_GIZZI_TOKEN=… bun worker-daemon-entry.ts`, or
   intent per due row (initiator = owning user, delegator = Al, target
   from the principal override or the same delegation-rule lookup Al uses
   for a chat turn; payload carries `agentic.task` = the routine message).
-  Failed fires back off 5 minutes and do not skip. Cloud continuation is
-  out of v1.
+  Failed fires back off 5 minutes and do not skip.
+
+## 15d. Cloud continuation (consumer E6)
+
+Work that must survive the laptop worker dying is placed with
+`compute: { "policy": "cloud" }` → mandatory capability `compute.cloud`.
+The laptop `gizzi` principal declares only `compute.local`, so it cannot
+claim these jobs. The always-on principal
+`a://workspace/{ws}/principal/gizzi-cloud` (`ensure` with `kind=cloud`,
+`GIZZI_COMPUTE_MODE=cloud`) claims them.
+
+Handoff of an in-flight local job:
+
+- `POST /fabric/transport/jobs/:id/continue-in-cloud`
+- `POST /fabric/transport/runs/:id/continue-in-cloud`
+- `POST /fabric/transport/continuation/handoff-all` (desktop `before-quit`)
+
+Each call drops the local lease, strips `compute.local`, adds
+`compute.cloud`, and records `continuation.handed_off`. Identity and
+attribution are unchanged.
+
+Cross-API replay (laptop API going away):
+`POST /fabric/transport/continuation/ingest` on the always-on data-plane
+with the original envelope. `ALLTERNIT_CONTINUATION_API_URL` is the
+operator-configured target.
+
+Honest limits: granted local folders do not follow the job (no upload).
+The cloud worker uses `ALLTERNIT_CLOUD_WORKSPACE` on the always-on host.
+Scheduled ticks still need that API process to be running — a sleeping
+laptop sidecar cannot fire routines.
 
 ## 15c. Release engineering (consumer P5)
 

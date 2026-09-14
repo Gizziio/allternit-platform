@@ -138,7 +138,11 @@ async fn prepare_delegation(
             })),
         },
         permissions: vec![],
-        compute: None,
+        compute: if crate::cowork_preferences_routes::cloud_continuation_enabled(&conn, &user.user_id) {
+            Some(json!({ "policy": "cloud" }))
+        } else {
+            None
+        },
         model: None,
         approval: None,
         return_channel: Some(json!({ "channel": "cowork", "session_id": session_id })),

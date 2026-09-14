@@ -281,6 +281,7 @@ pub fn run_due_routines(db: &crate::db::DbHandle) -> usize {
                 })?,
             };
             let al_principal = format!("a://workspace/{workspace}/principal/al");
+            let cloud = crate::cowork_preferences_routes::cloud_continuation_enabled(&conn, &user_id);
             let envelope = allternit_cowork_runtime::IntentEnvelope {
                 version: "a/0.1".to_string(),
                 intent_id: format!("{id}_{}", uuid::Uuid::new_v4()),
@@ -300,7 +301,11 @@ pub fn run_due_routines(db: &crate::db::DbHandle) -> usize {
                     })),
                 },
                 permissions: vec![],
-                compute: None,
+                compute: if cloud {
+                    Some(json!({ "policy": "cloud" }))
+                } else {
+                    None
+                },
                 model: None,
                 approval: None,
                 return_channel: Some(json!({ "channel": "cowork", "routine_id": id })),

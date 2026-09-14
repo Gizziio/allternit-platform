@@ -18,7 +18,7 @@ export const FabricWorkerCommand = cmd({
   builder: (yargs) =>
     yargs.option("compute-mode", {
       type: "string",
-      choices: ["local", "vm"] as const,
+      choices: ["local", "vm", "cloud"] as const,
       describe: "execution posture for claimed steps (default: env GIZZI_COMPUTE_MODE or local)",
     }),
   handler: async (args) => {

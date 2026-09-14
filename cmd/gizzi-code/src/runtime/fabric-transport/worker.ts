@@ -19,6 +19,10 @@
  *         { "capabilities": [..., "compute.vm"] }
  *     Identity/attribution are unchanged: the executor remains
  *     `a://workspace/{ws}/principal/gizzi` wherever the steps run.
+ *   - `GIZZI_COMPUTE_MODE=cloud`: always-on worker as
+ *     `a://workspace/{ws}/principal/gizzi-cloud` (`compute.cloud`). Runs
+ *     on the host that stays up when the laptop sleeps. Does not see
+ *     laptop trusted folders — uses ALLTERNIT_CLOUD_WORKSPACE.
  *
  * Operator flow for the token (provisioned once, V162):
  *   POST /api/v1/fabric/transport/principals/<url-encoded principal>/provision-token
@@ -195,7 +199,13 @@ export async function runFabricWorker(opts: RunFabricWorkerOptions = {}): Promis
           apiBase: API,
           operatorKey: process.env.ALLTERNIT_OPERATOR_API_KEY ?? null,
           model: agentic.model ?? process.env.ALLTERNIT_AGENTIC_MODEL ?? "openai/gpt-4o-mini",
-          grants: (await import("./agentic")).parseGrants(process.env.ALLTERNIT_WORKER_TRUSTED_FOLDERS),
+          grants: (await import("./agentic")).parseGrants(
+            COMPUTE_MODE === "cloud"
+              ? (process.env.ALLTERNIT_CLOUD_WORKSPACE
+                  ? JSON.stringify([process.env.ALLTERNIT_CLOUD_WORKSPACE])
+                  : "[]")
+              : process.env.ALLTERNIT_WORKER_TRUSTED_FOLDERS,
+          ),
           checkpoint: (stepIndex, cursor) =>
             api(`/runs/${grant.run_id}/checkpoints`, {
               method: "POST",

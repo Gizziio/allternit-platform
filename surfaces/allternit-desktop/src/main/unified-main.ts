@@ -2204,9 +2204,33 @@ app.on('window-all-closed', () => {
   if (!isMac) app.quit();
 });
 
+async function handoffInFlightToCloud(): Promise<void> {
+  const headers = backendManager.getLocalAuthHeaders();
+  const api = backendManager.getUrl();
+  try {
+    const res = await fetch(`${api}/api/v1/fabric/transport/continuation/handoff-all`, {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json' },
+    });
+    if (!res.ok) {
+      log.warn(`[Main] cloud continuation handoff: ${res.status}`);
+      return;
+    }
+    const body = (await res.json()) as { jobs?: Array<{ job_id: string }> };
+    log.info(`[Main] cloud continuation handed off ${body.jobs?.length ?? 0} in-flight job(s)`);
+    const target = process.env.ALLTERNIT_CONTINUATION_API_URL;
+    if (target && body.jobs && body.jobs.length > 0) {
+      log.info(`[Main] continuation ingest target set (${target}); jobs are queued as compute.cloud on this API — ingest is the remote data-plane's POST /continuation/ingest`);
+    }
+  } catch (err) {
+    log.warn('[Main] cloud continuation handoff failed', err);
+  }
+}
+
 app.on('before-quit', async () => {
   // Electron does not await this handler. Reap gizzi before any await or it
   // survives quit (spawned detached, ppid 1).
+  await handoffInFlightToCloud();
   gizziManager.stop({ reapExternal: true });
   try {
     gizziDaemonManager.stopSync();

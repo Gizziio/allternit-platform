@@ -34,7 +34,20 @@ pub fn cowork_preferences_router() -> Router<Arc<AppState>> {
 struct CoworkPreferencesPayload {
     trusted_folders: Vec<String>,
     global_instructions: String,
+    cloud_continuation: bool,
     updated_at: String,
+}
+
+/// Whether the user opted into cloud continuation (laptop-closed handoff).
+pub fn cloud_continuation_enabled(conn: &rusqlite::Connection, user_id: &str) -> bool {
+    conn.query_row(
+        "SELECT cloud_continuation FROM user_cowork_preferences WHERE user_id = ?1",
+        params![user_id],
+        |row| row.get::<_, i64>(0),
+    )
+    .ok()
+    .map(|v| v != 0)
+    .unwrap_or(false)
 }
 
 fn parse_trusted_folders(raw: &str) -> Vec<String> {
@@ -52,17 +65,18 @@ async fn get_cowork_preferences(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let pref: (String, String, String) = conn
+        let pref: (String, String, i64, String) = conn
             .query_row(
-                "SELECT trusted_folders, global_instructions, updated_at
+                "SELECT trusted_folders, global_instructions, cloud_continuation, updated_at
                  FROM user_cowork_preferences WHERE user_id = ?1",
                 params![user_id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )
             .unwrap_or_else(|_| {
                 (
                     "[]".to_string(),
                     String::new(),
+                    0,
                     chrono::Utc::now().to_rfc3339(),
                 )
             });
@@ -71,10 +85,11 @@ async fn get_cowork_preferences(
     .await;
 
     match result {
-        Ok(Ok((trusted_folders_raw, global_instructions, updated_at))) => Json(
+        Ok(Ok((trusted_folders_raw, global_instructions, cloud_continuation, updated_at))) => Json(
             CoworkPreferencesPayload {
                 trusted_folders: parse_trusted_folders(&trusted_folders_raw),
                 global_instructions,
+                cloud_continuation: cloud_continuation != 0,
                 updated_at,
             },
         )
@@ -104,6 +119,7 @@ async fn get_cowork_preferences(
 struct SetCoworkPreferencesBody {
     trusted_folders: Option<Vec<String>>,
     global_instructions: Option<String>,
+    cloud_continuation: Option<bool>,
 }
 
 fn validate_trusted_folders(folders: &[String]) -> Result<Vec<String>, String> {
@@ -169,28 +185,33 @@ async fn set_cowork_preferences(
         let conn = db.connect()?;
 
         // Merge with the existing row so omitted fields keep their values.
-        let current: (String, String) = conn
+        let current: (String, String, i64) = conn
             .query_row(
-                "SELECT trusted_folders, global_instructions
+                "SELECT trusted_folders, global_instructions, cloud_continuation
                  FROM user_cowork_preferences WHERE user_id = ?1",
                 params![user_id],
-                |row| Ok((row.get(0)?, row.get(1)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )
-            .unwrap_or(("[]".to_string(), String::new()));
+            .unwrap_or(("[]".to_string(), String::new(), 0));
 
         let trusted_folders = trusted_folders.unwrap_or_else(|| parse_trusted_folders(&current.0));
         let global_instructions = body.global_instructions.unwrap_or(current.1);
+        let cloud_continuation = body
+            .cloud_continuation
+            .map(|v| if v { 1 } else { 0 })
+            .unwrap_or(current.2);
         let trusted_folders_raw =
             serde_json::to_string(&trusted_folders).unwrap_or_else(|_| "[]".to_string());
 
         conn.execute(
-            "INSERT INTO user_cowork_preferences (user_id, trusted_folders, global_instructions)
-             VALUES (?1, ?2, ?3)
+            "INSERT INTO user_cowork_preferences (user_id, trusted_folders, global_instructions, cloud_continuation)
+             VALUES (?1, ?2, ?3, ?4)
              ON CONFLICT(user_id) DO UPDATE SET
                 trusted_folders = excluded.trusted_folders,
                 global_instructions = excluded.global_instructions,
+                cloud_continuation = excluded.cloud_continuation,
                 updated_at = CURRENT_TIMESTAMP",
-            params![user_id, trusted_folders_raw, global_instructions],
+            params![user_id, trusted_folders_raw, global_instructions, cloud_continuation],
         )?;
 
         let updated_at: String = conn.query_row(
@@ -202,6 +223,7 @@ async fn set_cowork_preferences(
         Ok::<_, rusqlite::Error>(CoworkPreferencesPayload {
             trusted_folders,
             global_instructions,
+            cloud_continuation: cloud_continuation != 0,
             updated_at,
         })
     })

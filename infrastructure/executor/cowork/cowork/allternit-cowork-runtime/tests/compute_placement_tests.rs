@@ -94,6 +94,78 @@ fn compute_requirements_map_explicit_policies() {
     // auto / absent stay capability-neutral.
     assert!(sqlite_store::compute_requirements(&Some(serde_json::json!({ "policy": "auto" }))).is_empty());
     assert!(sqlite_store::compute_requirements(&None).is_empty());
+    assert_eq!(
+        sqlite_store::compute_requirements(&Some(serde_json::json!({ "policy": "cloud" }))),
+        vec!["compute.cloud".to_string()]
+    );
+}
+
+#[test]
+fn continue_in_cloud_strips_local_and_refuses_laptop_worker() {
+    let (_tmp, db_path) = fresh();
+    let mut conn = open(&db_path);
+    seed_principals(&mut conn);
+    let cloud_id = sqlite_store::ensure_gizzi_cloud_principal(&mut conn, WORKSPACE).unwrap();
+    assert!(cloud_id.ends_with("/principal/gizzi-cloud"));
+    let token = sqlite_store::provision_principal_token(&mut conn, &cloud_id).unwrap();
+
+    let run_id = uuid::Uuid::new_v4().to_string();
+    insert_run(&conn, &run_id);
+    let job_id = sqlite_store::enqueue_job(
+        &mut conn,
+        &run_id,
+        "shell_steps",
+        serde_json::json!({ "steps": ["echo hi"] }),
+        &["compute.local".to_string()],
+        60,
+        2,
+        Some(INITIATOR),
+        None,
+    )
+    .unwrap();
+
+    // Laptop worker can claim the local job.
+    assert!(claim_err(&mut conn, "token-local", Some(&job_id)).is_none());
+
+    let outcome = sqlite_store::continue_job_in_cloud(&mut conn, &job_id).unwrap();
+    assert_eq!(outcome.state, "queued");
+    assert!(outcome.required_capabilities.contains(&"compute.cloud".to_string()));
+    assert!(!outcome.required_capabilities.contains(&"compute.local".to_string()));
+
+    // Laptop worker can no longer claim.
+    let err = claim_err(&mut conn, "token-local", Some(&job_id));
+    assert_eq!(err, Some(TransportErrorCode::CapabilityMissing));
+
+    // Cloud principal claims.
+    assert!(claim_err(&mut conn, &token, Some(&job_id)).is_none());
+}
+
+#[test]
+fn continue_in_cloud_refuses_terminal_job() {
+    let (_tmp, db_path) = fresh();
+    let mut conn = open(&db_path);
+    seed_principals(&mut conn);
+    let run_id = uuid::Uuid::new_v4().to_string();
+    insert_run(&conn, &run_id);
+    let job_id = sqlite_store::enqueue_job(
+        &mut conn,
+        &run_id,
+        "shell_steps",
+        serde_json::json!({ "steps": ["echo hi"] }),
+        &[],
+        60,
+        2,
+        Some(INITIATOR),
+        None,
+    )
+    .unwrap();
+    conn.execute(
+        "UPDATE cowork_jobs SET state = 'completed' WHERE id = ?1",
+        rusqlite::params![job_id],
+    )
+    .unwrap();
+    let err = sqlite_store::continue_job_in_cloud(&mut conn, &job_id).unwrap_err();
+    assert_eq!(err.code, TransportErrorCode::ResultAlreadyCommitted);
 }
 
 #[test]

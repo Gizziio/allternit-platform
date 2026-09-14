@@ -408,6 +408,18 @@ Transport does not redefine principal identity, run state, attribution, or appro
   auto-update target; preflight refuses a mismatch. Signed/notarized
   `desktop-v1.2.0` remains an owner action (Apple secrets).
 
+### Implemented in cloud continuation (E6, session/cloudcont-0914)
+
+- **`compute.cloud` placement** — opt-in preference and Al/routine
+  intents with that policy are only claimable by
+  `a://workspace/{ws}/principal/gizzi-cloud`. Laptop `gizzi` cannot
+  reclaim after handoff.
+- **Handoff API** — continue-in-cloud on job/run/all-in-flight; desktop
+  quit calls handoff-all while the local API is still up. Ingest replays
+  an envelope onto an always-on data-plane.
+- **Honest limit** — local folder grants do not upload; cloud worker
+  filesystem is `ALLTERNIT_CLOUD_WORKSPACE` on the always-on host.
+
 Live behavioral evidence for all six items (vm-job claim grant/refusal,
 boundary projection refusal, brokered files read/write + approval gate +
 path-confinement refusal, Al chat fallback + end-to-end delegation, daemon
