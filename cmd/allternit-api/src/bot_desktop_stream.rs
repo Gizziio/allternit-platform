@@ -371,7 +371,7 @@ async fn handle_bot_desktop_socket(
                                 tcp_write.write_all(&pipe.to_server).await.map_err(|e| -> HsErr { e.into() })?;
                             }
                             if !pipe.to_client.is_empty() {
-                                ws_tx.send(Message::Binary(pipe.to_client)).await.map_err(|e| -> HsErr { e.into() })?;
+                                ws_sender.send(Message::Binary(pipe.to_client)).await.map_err(|e| -> HsErr { e.into() })?;
                             }
                             if auth.handshake_done() { break; }
                         }
@@ -384,13 +384,13 @@ async fn handle_bot_desktop_socket(
                                 tcp_write.write_all(&pipe.to_server).await.map_err(|e| -> HsErr { e.into() })?;
                             }
                             if !pipe.to_client.is_empty() {
-                                ws_tx.send(Message::Binary(pipe.to_client)).await.map_err(|e| -> HsErr { e.into() })?;
+                                ws_sender.send(Message::Binary(pipe.to_client)).await.map_err(|e| -> HsErr { e.into() })?;
                             }
                             if auth.handshake_done() { break; }
                         }
                         Some(Ok(Message::Close(_))) | None => break,
                         Some(Ok(Message::Ping(data))) => {
-                            let _ = ws_tx.send(Message::Pong(data)).await;
+                            let _ = ws_sender.send(Message::Pong(data)).await;
                         }
                         _ => {}
                     },
