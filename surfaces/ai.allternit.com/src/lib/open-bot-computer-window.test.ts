@@ -1,19 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  BOT_COMPUTER_DETACHED_SURFACE,
   botComputerWindowHref,
   launchBotComputerWindow,
 } from "./open-bot-computer-window";
 
 describe("botComputerWindowHref", () => {
-  it("builds a detached /shell URL", () => {
+  it("builds a lightweight /bot-computer URL", () => {
     const href = botComputerWindowHref("https://platform.example", {
       botId: "bot-1",
       title: "Gizzi's computer",
     });
     const url = new URL(href);
-    expect(url.pathname).toBe("/shell");
-    expect(url.searchParams.get("detachedSurface")).toBe(BOT_COMPUTER_DETACHED_SURFACE);
+    expect(url.pathname).toBe("/bot-computer");
     expect(url.searchParams.get("botId")).toBe("bot-1");
     expect(url.searchParams.get("title")).toBe("Gizzi's computer");
   });
@@ -51,7 +49,7 @@ describe("launchBotComputerWindow", () => {
     launchBotComputerWindow({ botId: "bot-9" });
     expect(open).toHaveBeenCalled();
     const href = String(open.mock.calls[0][0]);
-    expect(href).toContain("detachedSurface=bot-computer");
+    expect(href).toContain("/bot-computer");
     expect(href).toContain("botId=bot-9");
     expect(open.mock.calls[0][1]).toBe("allternit-bot-computer-bot-9");
   });

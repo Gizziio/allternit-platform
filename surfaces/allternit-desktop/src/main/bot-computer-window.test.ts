@@ -1,19 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BOT_COMPUTER_DETACHED_SURFACE,
   buildBotComputerWindowUrl,
   isBotComputerWindowUrl,
 } from './bot-computer-window.js';
 
 describe('buildBotComputerWindowUrl', () => {
-  it('builds a detached /shell URL for the bot computer', () => {
+  it('builds a lightweight /bot-computer URL', () => {
     const href = buildBotComputerWindowUrl('https://platform.example', {
       botId: 'bot-1',
       title: "Gizzi's computer",
     });
     const url = new URL(href);
-    expect(url.pathname).toBe('/shell');
-    expect(url.searchParams.get('detachedSurface')).toBe(BOT_COMPUTER_DETACHED_SURFACE);
+    expect(url.pathname).toBe('/bot-computer');
     expect(url.searchParams.get('botId')).toBe('bot-1');
     expect(url.searchParams.get('title')).toBe("Gizzi's computer");
   });
@@ -34,11 +32,11 @@ describe('buildBotComputerWindowUrl', () => {
 });
 
 describe('isBotComputerWindowUrl', () => {
-  it('matches /shell and legacy /platform detached computer URLs', () => {
-    const shell = new URL(buildBotComputerWindowUrl('https://platform.example', { botId: 'b' }));
-    expect(isBotComputerWindowUrl(shell)).toBe(true);
-    const platform = new URL('https://platform.example/platform?detachedSurface=bot-computer&botId=b');
-    expect(isBotComputerWindowUrl(platform)).toBe(true);
+  it('matches /bot-computer and legacy /shell detached computer URLs', () => {
+    const lite = new URL(buildBotComputerWindowUrl('https://platform.example', { botId: 'b' }));
+    expect(isBotComputerWindowUrl(lite)).toBe(true);
+    const legacy = new URL('https://platform.example/shell?detachedSurface=bot-computer&botId=b');
+    expect(isBotComputerWindowUrl(legacy)).toBe(true);
   });
 
   it('rejects other detached surfaces', () => {

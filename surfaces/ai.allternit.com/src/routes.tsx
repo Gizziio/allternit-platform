@@ -92,6 +92,7 @@ const PdfPage = lazy(() => import('./pages/PdfPage'))
 const MarkdownPreviewPage = lazy(() => import('./pages/MarkdownPreviewPage'))
 const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'))
 const HudPage = lazy(() => import('./pages/HudPage'))
+const BotComputerPage = lazy(() => import('./pages/BotComputerPage'))
 
 // Debug/test-only pages. Registered only in dev builds — in production these
 // routes are absent, so the wildcard below renders the redirect-to-home 404
@@ -173,6 +174,7 @@ export default function AppRoutes() {
         <Route path="/office" element={<OfficePage />} />
         <Route path="/sign" element={<SignDocumentPage />} />
         <Route path="/hud" element={<HudPage />} />
+        <Route path="/bot-computer" element={<BotComputerPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

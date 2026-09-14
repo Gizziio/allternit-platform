@@ -22,8 +22,7 @@ export function botComputerWindowHref(
   if (!options?.botId) {
     throw new Error("A bot ID is required");
   }
-  const url = new URL("/shell", origin);
-  url.searchParams.set("detachedSurface", BOT_COMPUTER_DETACHED_SURFACE);
+  const url = new URL("/bot-computer", origin);
   url.searchParams.set("botId", options.botId);
   if (options.title) url.searchParams.set("title", options.title);
   if (options.sandboxId) url.searchParams.set("sandboxId", options.sandboxId);
