@@ -610,7 +610,8 @@ PW = pytest.mark.skipif(not _playwright_available(), reason="playwright chromium
 
 @PW
 class TestRecorderHarCapture:
-    def test_capture_scrub_and_storage(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_capture_scrub_and_storage(self, tmp_path):
         server = ThreadingHTTPServer(("127.0.0.1", 0), _CanaryHandler)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -620,28 +621,33 @@ class TestRecorderHarCapture:
                 recording_id="rec-har", task="form", session_id="s", run_id="r",
                 output_dir=tmp_path, record_har=True,
             )
-            from playwright.sync_api import sync_playwright
+            from playwright.async_api import async_playwright
 
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(recorder.start())
-            with sync_playwright() as pw:
-                browser = pw.chromium.launch(headless=True)
-                context = browser.new_context(**recorder.har_context_options())
-                page = context.new_page()
-                page.goto(url)
-                page.evaluate("() => { window.__csrf = %s; }" % json.dumps(CANARY))
-                page.fill("#name", "Eoj")
-                page.fill("#email", "e@x.com")
-                page.click("#submit")
-                page.wait_for_timeout(500)  # let the fetch land in the HAR
-                loop.run_until_complete(recorder.record_frame(RecordedFrame(
+            await recorder.start()
+            pw = await async_playwright().start()
+            browser = await pw.chromium.launch(headless=True)
+            context = await browser.new_context(**recorder.har_context_options())
+            try:
+                page = await context.new_page()
+                await page.goto(url)
+                await page.evaluate(
+                    "() => { window.__csrf = %s; }" % json.dumps(CANARY))
+                await page.fill("#name", "Eoj")
+                await page.fill("#email", "e@x.com")
+                async with page.expect_response(
+                    lambda r: r.url.endswith("/submit")
+                ) as info:
+                    await page.click("#submit")
+                await info.value
+                await recorder.record_frame(RecordedFrame(
                     recording_id="rec-har", step=1, action_type="click",
                     action_target="#submit",
-                )))
-                context.close()  # Playwright writes the raw HAR here
-                browser.close()
-            loop.run_until_complete(recorder.stop())
-            loop.close()
+                ))
+            finally:
+                await context.close()  # Playwright writes the raw HAR here
+                await browser.close()
+                await pw.stop()
+            await recorder.stop()
 
             har_file = tmp_path / "rec-har.har"
             assert har_file.is_file()
