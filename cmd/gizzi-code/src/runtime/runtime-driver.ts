@@ -13,6 +13,13 @@ export interface AgentTask {
   env?: Record<string, string>
   systemPrompt?: string
   attachments?: Attachment[]
+  /**
+   * Gizzi session this task belongs to, when the task originates from a
+   * session turn (set from the stream context by the subprocess language
+   * model). Lets session-agnostic driver events (ACP permission requests)
+   * resolve the session they belong to.
+   */
+  sessionID?: string
 }
 
 export interface TaskHandle {

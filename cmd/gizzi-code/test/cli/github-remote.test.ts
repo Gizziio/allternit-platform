@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { test, expect } from "bun:test"
-import { parseGitHubRemote } from "../../src/cli/commands/github"
+import { parseGitHubRemote } from "../../src/cli/cmd/github"
 
 test("parses https URL with .git suffix", () => {
   expect(parseGitHubRemote("https://github.com/sst/gizzi.git")).toEqual({ owner: "sst", repo: "gizzi" })

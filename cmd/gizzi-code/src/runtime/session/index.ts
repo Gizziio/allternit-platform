@@ -195,7 +195,7 @@ export namespace Session {
         })
         .optional(),
       agentID: z.string().optional(),
-      surface: z.enum(["chat", "cowork", "code", "browser", "design", "fabric-session"]).optional(),
+      surface: z.enum(["chat", "cowork", "code", "browser", "design"]).optional(),
       defaultModel: z
         .object({
           providerID: z.string(),
@@ -1006,13 +1006,9 @@ export namespace Session {
       )
 
       const total = iife(() => {
-        // Anthropic-family providers don't provide a reliable total_tokens; ai-sdk will
-        // undercount if we don't sum the components ourselves.
-        if (
-          input.model.api.npm === "@ai-sdk/anthropic" ||
-          input.model.api.npm === "@ai-sdk/amazon-bedrock" ||
-          input.model.api.npm === "@ai-sdk/google-vertex/anthropic"
-        ) {
+        // Anthropic doesn't provide total_tokens, also ai sdk will vastly undercount if we
+        // don't compute from components
+        if (input.model.api.npm === "@ai-sdk/anthropic") {
           return adjustedInputTokens + outputTokens + cacheReadInputTokens + cacheWriteInputTokens
         }
         return input.usage.totalTokens

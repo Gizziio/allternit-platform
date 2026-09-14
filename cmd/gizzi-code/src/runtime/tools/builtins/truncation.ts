@@ -60,12 +60,10 @@ export namespace Truncate {
   }
 
   export async function cleanup() {
-    const cutoff = Date.now() - RETENTION_MS
+    const cutoff = Identifier.timestamp(Identifier.create("tool", false, Date.now() - RETENTION_MS))
     const entries = await Glob.scan("tool_*", { cwd: DIR, include: "file" }).catch(() => [] as string[])
     for (const entry of entries) {
-      const stat = await fs.stat(path.join(DIR, entry)).catch(() => undefined)
-      if (!stat) continue
-      if (stat.mtimeMs >= cutoff) continue
+      if (Identifier.timestamp(entry) >= cutoff) continue
       await fs.unlink(path.join(DIR, entry)).catch((e) => log.debug("Failed to clean up tool temp file", { entry, error: e }))
     }
   }

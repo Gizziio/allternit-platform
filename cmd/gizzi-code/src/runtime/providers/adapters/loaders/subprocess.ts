@@ -11,6 +11,7 @@
 import type { LanguageModelV2, LanguageModelV2StreamPart } from "@ai-sdk/provider"
 import { RuntimeService } from "@/runtime/runtime-service"
 import { RuntimeDriverFactory } from "@/runtime/runtime-driver-factory"
+import { resolveTaskSessionID } from "@/runtime/session/stream-context"
 import { Log } from "@/shared/util/log"
 
 const log = Log.create({ service: "subprocess-lm" })
@@ -63,6 +64,10 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
     const task = await driver.assign({
       taskId: generateTaskId(),
       prompt: message,
+      // The CLI executes its own tools opaquely; the session id lets the
+      // driver's ACP permission requests gate through the session's
+      // PermissionNext policy instead of auto-approving.
+      sessionID: resolveTaskSessionID(options?.headers),
     })
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
@@ -110,8 +115,36 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
               finish(event.finishReason, event.usage)
             }
 
-            // status / tool_call / tool_result events are intentionally not
-            // forwarded to the AI SDK stream.
+            // Observed tool events (ACP / stream-json drivers): the CLI
+            // executes these tools itself — gizzi must neither run them nor
+            // ignore them. Forward them as raw model parts (the AI SDK's
+            // sanctioned sideband, enabled via includeRawChunks) so the
+            // session processor can publish tool parts on the event stream.
+            if (event.type === "tool_call") {
+              controller.enqueue({
+                type: "raw",
+                raw: {
+                  __gizzi: "observed_tool_call",
+                  id: event.id,
+                  name: event.name,
+                  arguments: event.arguments,
+                },
+              } as unknown as LanguageModelV2StreamPart)
+              continue
+            }
+
+            if (event.type === "tool_result") {
+              controller.enqueue({
+                type: "raw",
+                raw: {
+                  __gizzi: "observed_tool_result",
+                  id: event.id,
+                  content: event.content,
+                  isError: Boolean(event.isError),
+                },
+              } as unknown as LanguageModelV2StreamPart)
+              continue
+            }
           }
 
           if (!finished) {

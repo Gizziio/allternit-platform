@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { test, expect } from "bun:test"
-import { parseShareUrl, transformShareData, type ShareData } from "../../src/cli/commands/import"
+import { parseShareUrl, transformShareData, type ShareData } from "../../src/cli/cmd/import"
 
 // parseShareUrl tests
 test("parses valid share URLs", () => {

@@ -177,7 +177,6 @@ export async function loginApiKey(
   options: {
     profile?: string
     provider?: string
-    baseURL?: string
     credentialStore?: CredentialStore
     writer?: CredentialWriter
     /** Directory for the insecure-fallback file (defaults to ~/.gizzi). */
@@ -195,7 +194,7 @@ export async function loginApiKey(
   const profile: AuthProfile = {
     provider: options.provider ?? existing?.provider ?? "allternit",
     api_key_env: existing?.api_key_env,
-    base_url: options.baseURL ?? existing?.base_url,
+    base_url: existing?.base_url,
   }
 
   let storedIn: "file" | "keyring"

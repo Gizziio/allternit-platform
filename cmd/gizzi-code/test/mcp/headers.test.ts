@@ -1,9 +1,5 @@
 // @ts-nocheck
-import { test, expect, mock, beforeEach, afterAll } from "bun:test"
-
-afterAll(() => {
-  mock.restore()
-})
+import { test, expect, mock, beforeEach } from "bun:test"
 
 // Track what options were passed to each transport constructor
 const transportCalls: Array<{

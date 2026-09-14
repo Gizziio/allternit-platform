@@ -260,9 +260,6 @@ const bundlePlugin = {
         build.onResolve({ filter: /^@allternit\/orchestrator$/ }, () => ({
             path: resolve("../../packages/@allternit/orchestrator/src/index.ts"),
         }));
-        build.onResolve({ filter: /^@allternit\/request-scorer$/ }, () => ({
-            path: resolve("../../packages/@allternit/request-scorer/src/index.ts"),
-        }));
         // Redirect @allternit/extension to the local stub (real extension package isn't vendored)
         build.onResolve({ filter: /^@allternit\/extension$/ }, () => ({
             path: resolve("src/vendor/anthropic-stubs/allternit-extension.ts"),
@@ -332,7 +329,6 @@ const bundlePlugin = {
 };
 console.log("");
 console.log("🔨 Step 1: Bundling...");
-console.log("🔨 Step 1: Bundling with React JSX transform...");
 // Ensure build directory exists
 await mkdir("./.build", { recursive: true });
 // Temporarily move bunfig.toml for the bundle step too
@@ -366,12 +362,11 @@ const workerBundleResult = await Bun.build({
     entrypoints: ["./src/cli/ui/ink-app/worker.ts"],
     target: "bun",
     sourcemap: "none",
-    minify: { whitespace: true, syntax: true, identifiers: false },
+    minify: { whitespace: true, syntax: false, identifiers: false },
     define,
     conditions: ["browser"],
     external: ["electron", "chromium-bidi/*", "playwright-core/*"],
     plugins: [wasmEmbedPlugin, textEmbedPlugin, bundlePlugin],
-    plugins: [wasmEmbedPlugin, textEmbedPlugin, solidPlugin],
 });
 if (!workerBundleResult.success) {
     console.error("Worker bundle failed:");
@@ -386,7 +381,7 @@ const bundleResult = await Bun.build({
     entrypoints: ["./src/cli/main.ts"],
     target: "bun",
     sourcemap: "none",
-    minify: { whitespace: true, syntax: true, identifiers: false },
+    minify: { whitespace: true, syntax: false, identifiers: false },
     define: {
         ...define,
         "GIZZI_WORKER_CODE": JSON.stringify(workerCode),
@@ -394,7 +389,6 @@ const bundleResult = await Bun.build({
     conditions: ["browser"],
     external: ["electron", "chromium-bidi/*", "playwright-core/*"],
     plugins: [wasmEmbedPlugin, textEmbedPlugin, bundlePlugin],
-    plugins: [wasmEmbedPlugin, textEmbedPlugin, solidPlugin],
 });
 if (!bundleResult.success) {
     console.error("Bundle failed:");

@@ -1,18 +1,4 @@
-/**
- * Session worker routes — capability-native harness access.
- *
- * This module exposes the durable session harness as worker functions that can
- * be invoked over the Fabric. It replaces the remote-control abstraction with
- * typed capability invocations:
- *
- *   harness.session           → list/get sessions
- *   harness.session.message   → send a message and start the agent loop
- *   harness.session.abort     → cancel the running agent loop
- *   harness.session.events    → stream session observations
- *
- * A generic /invoke endpoint accepts { capability, inputs, lease? } so the
- * scheduler can dispatch any capability without path-specific logic.
- */
+// @ts-nocheck
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
 import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
@@ -27,70 +13,31 @@ import { Log } from "@/shared/util/log"
 import { lazy } from "@/shared/util/lazy"
 import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { Question } from "@/runtime/integrations/question"
-import { LeaseCheck } from "@/runtime/server/middleware/lease-check"
-import { CapabilityExecutors } from "@/runtime/fabric/executor"
-import { buildNodeIdentity } from "@/runtime/fabric/capability-catalog"
-import { randomUUID } from "node:crypto"
 
-const log = Log.create({ service: "session-worker" })
+const log = Log.create({ service: "remote-control" })
 
 // NOTE: `Session`/`SessionStatus` live in a module that (transitively)
 // imports these routes, so their `.Info` schemas may only be touched inside
 // the lazy factory — module-scope access races the circular import and
 // crashes with "undefined is not an object" at import time.
-const CapabilityInvocation = z.object({
-  capability: z.string().min(1),
-  inputs: z.record(z.string(), z.unknown()).default({}),
-})
+export const RemoteControlRoutes = lazy(() => {
+  const RemoteSessionStatus = z.object({
+    session: Session.Info,
+    status: SessionStatus.Info,
+  })
 
-const SessionStatusInfo = z.object({
-  session: Session.Info,
-  status: SessionStatus.Info,
-})
-
-export const SessionWorkerRoutes = lazy(() =>
+  return (
   new Hono()
-    .use(LeaseCheck.enforce())
-    .post(
-      "/invoke",
-      describeRoute({
-        summary: "Invoke a capability",
-        description: "Generic worker invocation for any harness capability.",
-        operationId: "sessionWorker.invoke",
-        responses: {
-          200: { description: "Invocation result", content: { "application/json": { schema: resolver(z.any()) } } },
-          ...errors(400, 404),
-        },
-      }),
-      validator("json", CapabilityInvocation),
-      async (c) => {
-        const body = c.req.valid("json")
-        const base = new URL(c.req.url)
-        const node = buildNodeIdentity({
-          endpoints: [{ transport: "local", url: `${base.protocol}//${base.host}`, priority: 0 }],
-        })
-        const result = await CapabilityExecutors.dispatch(body.capability, body.inputs, {
-          requestId: c.get("requestID") ?? randomUUID(),
-          node,
-          lease: c.get("fabricLease"),
-        })
-        if (result.ok) {
-          return c.json(result)
-        }
-        const status = result.error.startsWith("lease_") ? 403 : 501
-        return c.json(result, status as any)
-      },
-    )
     .get(
       "/sessions",
       describeRoute({
-        summary: "List sessions",
+        summary: "List remote-controllable sessions",
         description: "List non-archived sessions with their current busy/idle status.",
-        operationId: "sessionWorker.sessions.list",
+        operationId: "remoteControl.sessions.list",
         responses: {
           200: {
             description: "List of sessions and statuses",
-            content: { "application/json": { schema: resolver(z.array(SessionStatusInfo)) } },
+            content: { "application/json": { schema: resolver(z.array(RemoteSessionStatus)) } },
           },
         },
       }),
@@ -106,11 +53,14 @@ export const SessionWorkerRoutes = lazy(() =>
     .get(
       "/sessions/:sessionID",
       describeRoute({
-        summary: "Get a session",
-        description: "Return session metadata, status, and full message history.",
-        operationId: "sessionWorker.session.get",
+        summary: "Get a session for remote control",
+        description: "Return session metadata and its full message history.",
+        operationId: "remoteControl.session.get",
         responses: {
-          200: { description: "Session details and messages", content: { "application/json": { schema: resolver(z.any()) } } },
+          200: {
+            description: "Session details and messages",
+            content: { "application/json": { schema: resolver(z.any()) } },
+          },
           ...errors(404),
         },
       }),
@@ -129,9 +79,9 @@ export const SessionWorkerRoutes = lazy(() =>
     .post(
       "/sessions/:sessionID/messages",
       describeRoute({
-        summary: "Send a session message",
+        summary: "Send a remote message",
         description: "Append a user message to a session and start the agent loop.",
-        operationId: "sessionWorker.session.message",
+        operationId: "remoteControl.session.message",
         responses: {
           200: {
             description: "The created user message and accepted status",
@@ -172,17 +122,20 @@ export const SessionWorkerRoutes = lazy(() =>
         }
 
         SessionPrompt.prompt({ sessionID, parts })
-        return c.json({ accepted: true, sessionID, capability: "harness.session.message" })
+        return c.json({ accepted: true, sessionID })
       },
     )
     .post(
       "/sessions/:sessionID/abort",
       describeRoute({
-        summary: "Abort a session",
+        summary: "Abort a remote session",
         description: "Cancel the running agent loop for a session.",
-        operationId: "sessionWorker.session.abort",
+        operationId: "remoteControl.session.abort",
         responses: {
-          200: { description: "Abort signalled", content: { "application/json": { schema: resolver(z.boolean()) } } },
+          200: {
+            description: "Abort signalled",
+            content: { "application/json": { schema: resolver(z.boolean()) } },
+          },
           ...errors(404),
         },
       }),
@@ -199,14 +152,16 @@ export const SessionWorkerRoutes = lazy(() =>
       describeRoute({
         summary: "Stream session events",
         description:
-          "Server-sent events for a single session: metadata changes, new messages, part updates, and status changes. Requires a `harness.session.events` lease when lease enforcement is enabled.",
-        operationId: "sessionWorker.session.events",
+          "Server-sent events for a single session: metadata changes, new messages, part updates, and status changes.",
+        operationId: "remoteControl.session.events",
         responses: {
-          200: { description: "SSE stream", content: { "text/event-stream": { schema: resolver(z.any()) } } },
-          ...errors(403, 404),
+          200: {
+            description: "SSE stream",
+            content: { "text/event-stream": { schema: resolver(z.any()) } },
+          },
+          ...errors(404),
         },
       }),
-      LeaseCheck.requireCapability("harness.session.events"),
       validator("param", z.object({ sessionID: z.string() })),
       async (c) => {
         const { sessionID } = c.req.valid("param")
@@ -221,7 +176,7 @@ export const SessionWorkerRoutes = lazy(() =>
           }
 
           await writeEvent({
-            type: "session-worker.connected",
+            type: "remote.connected",
             properties: { sessionID, status: SessionStatus.get(sessionID) },
           })
 
@@ -249,7 +204,7 @@ export const SessionWorkerRoutes = lazy(() =>
 
           const heartbeat = setInterval(() => {
             stream.writeSSE({
-              data: JSON.stringify({ type: "session-worker.heartbeat", properties: { sessionID } }),
+              data: JSON.stringify({ type: "remote.heartbeat", properties: { sessionID } }),
             })
           }, 10_000)
 
@@ -258,7 +213,7 @@ export const SessionWorkerRoutes = lazy(() =>
               clearInterval(heartbeat)
               for (const unsub of unsubs) unsub()
               resolve()
-              log.info("session worker events disconnected", { sessionID })
+              log.info("remote session events disconnected", { sessionID })
             })
           })
         })

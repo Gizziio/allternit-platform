@@ -13,7 +13,6 @@ export type ToolType =
   | "gemini_cli"
   | "droid"
   | "gizzi_shell"
-  | "opencode"
   | "qwen"
   | "kimi"
   | "minimax"

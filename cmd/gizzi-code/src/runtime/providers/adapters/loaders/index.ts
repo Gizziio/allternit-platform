@@ -8,7 +8,6 @@
 import type { ProviderLoader } from "../../types"
 import { allternitLoader } from "./allternit"
 import { openaiLoader } from "./openai"
-import { bedrockLoader } from "./bedrock"
 import { gizziLoader, gizziioLoader } from "./misc"
 import { localLoader } from "./local"
 
@@ -17,7 +16,6 @@ export const CUSTOM_LOADERS: Record<string, ProviderLoader> = {
   // models.dev catalog id for Claude models — same Messages-API loader
   "anthropic": allternitLoader,
   "openai": openaiLoader,
-  "amazon-bedrock": bedrockLoader,
   "gizzi": gizziLoader,
   "gizziio": gizziioLoader,
   "local-mlx": localLoader,

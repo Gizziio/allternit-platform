@@ -9,7 +9,6 @@
     "incremental": true,
     "jsx": "preserve",
     "jsxImportSource": "react",
-    "jsx": "react-jsx",
     "lib": [
       "ESNext",
       "DOM",

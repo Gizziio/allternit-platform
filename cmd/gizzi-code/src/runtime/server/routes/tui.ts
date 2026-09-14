@@ -8,7 +8,6 @@ import { TuiEvent } from "@/cli/ui/ink-app/event"
 import { AsyncQueue } from "@/shared/util/queue"
 import { errors } from "@/runtime/server/error"
 import { lazy } from "@/shared/util/lazy"
-import { Identifier } from "@/shared/id/id"
 
 const TuiRequest = z.object({
   path: z.string(),
@@ -363,14 +362,9 @@ export const TuiRoutes = lazy(() =>
           ...errors(400, 404),
         },
       }),
-      validator(
-        "json",
-        z.object({
-          sessionID: Identifier.schema("session"),
-        }),
-      ),
+      validator("json", z.any()),
       async (c) => {
-        const { sessionID } = c.req.valid("json")
+        const { sessionID } = c.req.valid("json") as any
         await Session.get(sessionID)
         await Bus.publish(TuiEvent.SessionSelect, { sessionID })
         return c.json(true)

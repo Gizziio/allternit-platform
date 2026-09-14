@@ -3,8 +3,8 @@ import { describe, expect, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/runtime/context/project/instance"
-import { ProviderAuth } from "../../src/runtime/providers/adapters/auth"
+import { Instance } from "../../src/project/instance"
+import { ProviderAuth } from "../../src/provider/auth"
 
 describe("plugin.auth-override", () => {
   test("user plugin overrides built-in github-copilot auth", async () => {
@@ -13,9 +13,8 @@ describe("plugin.auth-override", () => {
         const pluginDir = path.join(dir, ".gizzi", "plugin")
         await fs.mkdir(pluginDir, { recursive: true })
 
-        const pluginPath = path.join(pluginDir, "custom-copilot-auth.ts")
         await Bun.write(
-          pluginPath,
+          path.join(pluginDir, "custom-copilot-auth.ts"),
           [
             "export default async () => ({",
             "  auth: {",
@@ -28,14 +27,6 @@ describe("plugin.auth-override", () => {
             "})",
             "",
           ].join("\n"),
-        )
-
-        await Bun.write(
-          path.join(dir, "gizzi.json"),
-          JSON.stringify({
-            $schema: "https://gizzi.io/config.json",
-            plugin: [pluginPath],
-          }),
         )
       },
     })

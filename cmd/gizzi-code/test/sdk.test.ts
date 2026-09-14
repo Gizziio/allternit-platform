@@ -25,9 +25,8 @@ describe("@allternit/sdk — exports", () => {
   })
 
   test("PROVIDER_REGISTRY is defined", () => {
-    expect(PROVIDER_REGISTRY).toBeDefined()
-    expect(typeof PROVIDER_REGISTRY).toBe("object")
-    expect(Object.keys(PROVIDER_REGISTRY).length).toBeGreaterThan(0)
+    expect(Array.isArray(PROVIDER_REGISTRY)).toBe(true)
+    expect(PROVIDER_REGISTRY.length).toBeGreaterThan(0)
   })
 
   test("createProvider is a function", () => {
