@@ -17,7 +17,6 @@ import { MachinesPanel } from "@/components/dispatch/MachinesPanel";
 import { RemoteSessionPanel } from "@/components/dispatch/RemoteSessionPanel";
 import { FabricDesktopDrive } from "@/components/dispatch/FabricDesktopDrive";
 import { RecordingsPanel } from "../recordings/RecordingsPanel";
-import { WorkflowsPanel } from "../recordings/WorkflowsPanel";
 import { useRuntimes, type RuntimeViewModel } from "@/components/dispatch/useRuntimes";
 import { useRuntimeSelection } from "@/components/dispatch/useRuntimeSelection";
 import { useRemotePendingCounts } from "@/components/dispatch/useRemotePendingCounts";
@@ -407,11 +406,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         <section className="mt-10">
           <h2 className="text-[16px] font-semibold mb-3">Recordings</h2>
           <RecordingsPanel />
-        </section>
-
-        <section className="mt-10">
-          <h2 className="text-[16px] font-semibold mb-3">Workflows</h2>
-          <WorkflowsPanel />
         </section>
       </div>
     </div>
