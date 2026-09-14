@@ -153,6 +153,7 @@ export function useCommRailSections(): {
         label: need.label,
         payload: need.id,
         status: 'waiting_input',
+        metadata: need.node ? { dagNodeTitle: need.node.title } : undefined,
       });
     }
 

@@ -9,7 +9,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GATEWAY_BASE_URL } from '@/lib/agents/api-config';
 import { usePlatformUser } from '@/lib/platform-auth-client';
-import { fetchVisibility } from '@/lib/bots/commrails-visibility';
+import { fetchVisibility, type VisibilityNeed } from '@/lib/bots/commrails-visibility';
 
 /** Fallback agent identity when no platform user is signed in. */
 export const DEFAULT_RAILS_AGENT_ID = 'web-user';
@@ -275,6 +275,21 @@ export function useRailsNeedsYouCount(): number {
     retry: false,
   });
   return data?.needsYou.length ?? 0;
+}
+
+/**
+ * needsYou entries (agents waiting on the user) from the visibility DTO.
+ * Fail-closed: fetchVisibility already returns an empty DTO on error → [].
+ * Shares NEEDS_YOU_QUERY_KEY with useRailsNeedsYouCount (single fetch).
+ */
+export function useRailsNeedsYouEntries(): VisibilityNeed[] {
+  const { data } = useQuery({
+    queryKey: NEEDS_YOU_QUERY_KEY,
+    queryFn: () => fetchVisibility(),
+    refetchInterval: 10_000,
+    retry: false,
+  });
+  return data?.needsYou ?? [];
 }
 
 /**
