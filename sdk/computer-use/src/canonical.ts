@@ -31,7 +31,6 @@ export interface ComputerCapabilityManifest {
   mobile: boolean;
   max_concurrency: number;
   limitations: string[];
-  tools?: string[];
 }
 
 // =============================================================================
