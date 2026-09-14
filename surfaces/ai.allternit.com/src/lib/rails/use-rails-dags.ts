@@ -85,6 +85,13 @@ export interface DeleteDagNodeInput {
   node_id: string;
 }
 
+export interface ReparentDagNodeInput {
+  dag_id: string;
+  node_id: string;
+  /** null moves the node to the dag root. */
+  parent_node_id: string | null;
+}
+
 function railsUrl(path: string): string {
   return `${GATEWAY_BASE_URL.replace(/\/+$/, '')}${path}`;
 }
@@ -256,6 +263,18 @@ export function useDeleteDagNode() {
     mutationFn: (input: DeleteDagNodeInput) =>
       deleteJson(
         `/api/commrails/dags/${encodeURIComponent(input.dag_id)}/nodes/${encodeURIComponent(input.node_id)}`
+      ) as Promise<Record<string, unknown>>,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: RAILS_DAGS_QUERY_KEY }),
+  });
+}
+
+export function useReparentDagNode() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ReparentDagNodeInput) =>
+      patchJson(
+        `/api/commrails/dags/${encodeURIComponent(input.dag_id)}/nodes/${encodeURIComponent(input.node_id)}`,
+        { parent_node_id: input.parent_node_id }
       ) as Promise<Record<string, unknown>>,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: RAILS_DAGS_QUERY_KEY }),
   });

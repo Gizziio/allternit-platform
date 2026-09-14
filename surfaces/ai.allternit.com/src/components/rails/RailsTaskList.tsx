@@ -11,6 +11,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ArrowsMerge,
+  Check,
   CheckCircle,
   Circle,
   CircleHalf,
@@ -29,6 +31,7 @@ import {
   useDeleteDagNode,
   usePickupWih,
   useRailsDags,
+  useReparentDagNode,
   useUpdateDagNode,
   type RailsDagNode,
   type RailsDagSummary,
@@ -38,6 +41,7 @@ import {
 import {
   findRootNodeId,
   organizeDagNodes,
+  reparentCandidates,
   type OrganizedDag,
   type OrganizedRow,
 } from "./organize";
@@ -85,6 +89,9 @@ function DagRow({
   onFail,
   onRename,
   onDelete,
+  onReparent,
+  moveCandidates,
+  currentParentId,
   compact,
 }: {
   row: OrganizedRow;
@@ -98,11 +105,16 @@ function DagRow({
   onFail: (node: RailsDagNode) => void;
   onRename: (node: RailsDagNode, title: string) => void;
   onDelete: (node: RailsDagNode) => void;
+  onReparent: (node: RailsDagNode, parentNodeId: string | null) => void;
+  /** Same-dag nodes valid as a new parent (excludes self + descendants). */
+  moveCandidates: RailsDagNode[];
+  currentParentId: string | null;
   compact: boolean;
 }) {
   const pad = { paddingLeft: row.depth * 16 };
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
+  const [moveOpen, setMoveOpen] = useState(false);
   const editInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -161,7 +173,10 @@ function DagRow({
   };
 
   return (
-    <li style={pad} className={cn("flex items-center gap-1.5", compact ? "py-0.5" : "py-1")}>
+    <li
+      style={pad}
+      className={cn("relative flex items-center gap-1.5", compact ? "py-0.5" : "py-1")}
+    >
       <StatusIcon status={node.status} />
       {editing ? (
         <input
@@ -205,12 +220,64 @@ function DagRow({
           <button
             type="button"
             disabled={pending}
+            onClick={() => setMoveOpen((o) => !o)}
+            aria-label={`Move task ${node.title}`}
+            className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] disabled:opacity-40"
+          >
+            <ArrowsMerge size={11} />
+          </button>
+          <button
+            type="button"
+            disabled={pending}
             onClick={() => onDelete(node)}
             aria-label={`Delete task ${node.title}`}
             className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--status-error)] disabled:opacity-40"
           >
             <Trash size={11} />
           </button>
+        </>
+      )}
+      {moveOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMoveOpen(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] py-1 shadow-xl">
+            {currentParentId !== null && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setMoveOpen(false);
+                  onReparent(node, null);
+                }}
+                className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-white/5 disabled:opacity-40"
+              >
+                <ArrowsMerge size={11} className="shrink-0 opacity-60" />
+                <span className="min-w-0 flex-1 truncate">Move to root</span>
+              </button>
+            )}
+            {moveCandidates.map((c) => (
+              <button
+                type="button"
+                key={c.node_id}
+                disabled={pending}
+                onClick={() => {
+                  setMoveOpen(false);
+                  onReparent(node, c.node_id);
+                }}
+                className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] text-[var(--text-primary)] hover:bg-white/5 disabled:opacity-40"
+              >
+                <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                {c.node_id === currentParentId && (
+                  <Check size={11} className="shrink-0 text-[var(--status-success)]" />
+                )}
+              </button>
+            ))}
+            {currentParentId === null && moveCandidates.length === 0 && (
+              <p className="px-2 py-1 text-[11px] text-[var(--text-tertiary)]">
+                Nothing to move to
+              </p>
+            )}
+          </div>
         </>
       )}
       {interactive && node.status === "READY" && (
@@ -328,8 +395,9 @@ export function RailsTaskList({
   const create = useCreateDagNode();
   const update = useUpdateDagNode();
   const remove = useDeleteDagNode();
+  const reparent = useReparentDagNode();
   const [expandedDone, setExpandedDone] = useState<Record<string, boolean>>({});
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   // Write-back probe: if the pickup endpoint is unsupported (405/5xx/network),
   // silently degrade to read-only. 404 means the route answered (unknown node).
   const [writeBackOk, setWriteBackOk] = useState(true);
@@ -381,7 +449,8 @@ export function RailsTaskList({
     close.isPending ||
     create.isPending ||
     update.isPending ||
-    remove.isPending;
+    remove.isPending ||
+    reparent.isPending;
 
   return (
     <div className={cn("flex min-w-0 flex-col", compact ? "gap-1" : "gap-2")}>
@@ -437,13 +506,13 @@ export function RailsTaskList({
                 }
                 onDelete={(node) => {
                   if (!window.confirm(`Delete task "${node.title}"?`)) return;
-                  setDeleteError(null);
+                  setActionError(null);
                   remove.mutate(
                     { dag_id: dag.dag_id, node_id: node.node_id },
                     {
                       onError: (err) => {
                         const status = (err as Error & { status?: number }).status;
-                        setDeleteError(
+                        setActionError(
                           status === 409
                             ? `Cannot delete "${node.title}": it has active work or unfinished subtasks`
                             : `Delete failed for "${node.title}"${status ? ` (${status})` : ""}`
@@ -452,12 +521,38 @@ export function RailsTaskList({
                     }
                   );
                 }}
+                onReparent={(node, parentNodeId) => {
+                  setActionError(null);
+                  reparent.mutate(
+                    {
+                      dag_id: dag.dag_id,
+                      node_id: node.node_id,
+                      parent_node_id: parentNodeId,
+                    },
+                    {
+                      onError: (err) => {
+                        const status = (err as Error & { status?: number }).status;
+                        setActionError(
+                          status === 409
+                            ? `Cannot move "${node.title}": it would create a cycle`
+                            : `Move failed for "${node.title}"${status ? ` (${status})` : ""}`
+                        );
+                      },
+                    }
+                  );
+                }}
+                moveCandidates={
+                  row.kind === "node"
+                    ? reparentCandidates(dag.nodes, row.node.node_id)
+                    : []
+                }
+                currentParentId={row.kind === "node" ? row.node.parent_node_id : null}
                 compact={compact}
               />
             ))}
           </ul>
-          {deleteError && (
-            <p className="text-[10px] text-[var(--status-error)]">{deleteError}</p>
+          {actionError && (
+            <p className="text-[10px] text-[var(--status-error)]">{actionError}</p>
           )}
           {canAct && (
             <AddTaskRow

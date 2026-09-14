@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   findRootNodeId,
   organizeDagNodes,
+  reparentCandidates,
   selectDags,
   type OrganizedDoneRow,
   type OrganizedNodeRow,
@@ -221,5 +222,67 @@ describe('findRootNodeId', () => {
 
   it('treats empty-string parents as parentless', () => {
     expect(findRootNodeId(dag([node({ node_id: 'root', parent_node_id: '' })]))).toBe('root');
+  });
+});
+
+describe('reparentCandidates', () => {
+  // root ── a ── a1 ── a1x
+  //      └ b
+  const tree: RailsDagNode[] = [
+    node({ node_id: 'root' }),
+    node({ node_id: 'a', parent_node_id: 'root', status: 'READY' }),
+    node({ node_id: 'b', parent_node_id: 'root', status: 'READY' }),
+    node({ node_id: 'a1', parent_node_id: 'a', status: 'READY' }),
+    node({ node_id: 'a1x', parent_node_id: 'a1', status: 'READY' }),
+  ];
+
+  it('excludes the node itself and its own descendants', () => {
+    const ids = reparentCandidates(tree, 'a').map((n) => n.node_id);
+    expect(ids).not.toContain('a');
+    expect(ids).not.toContain('a1');
+    expect(ids).not.toContain('a1x');
+  });
+
+  it('includes the root, sibling branches, and unrelated nodes', () => {
+    const ids = reparentCandidates(tree, 'a').map((n) => n.node_id);
+    expect(ids).toEqual(['root', 'b']);
+  });
+
+  it('walks multi-level chains: descendants of a1 are blocked when moving a1', () => {
+    const ids = reparentCandidates(tree, 'a1').map((n) => n.node_id);
+    expect(ids).toEqual(['root', 'a', 'b']);
+  });
+
+  it('blocks descendants even when children precede parents in the array', () => {
+    const shuffled: RailsDagNode[] = [
+      node({ node_id: 'a1x', parent_node_id: 'a1', status: 'READY' }),
+      node({ node_id: 'a1', parent_node_id: 'a', status: 'READY' }),
+      node({ node_id: 'a', parent_node_id: 'root', status: 'READY' }),
+      node({ node_id: 'root' }),
+    ];
+    const ids = reparentCandidates(shuffled, 'a').map((n) => n.node_id);
+    expect(ids).toEqual(['root']);
+  });
+
+  it('returns every other node when moving a leaf', () => {
+    const ids = reparentCandidates(tree, 'a1x').map((n) => n.node_id);
+    expect(ids).toEqual(['root', 'a', 'b', 'a1']);
+  });
+
+  it('returns an empty list for a single-node dag', () => {
+    expect(reparentCandidates([node({ node_id: 'only' })], 'only')).toEqual([]);
+  });
+
+  it('keeps orphans (missing parent) as valid candidates', () => {
+    const ids = reparentCandidates(
+      [node({ node_id: 'root' }), node({ node_id: 'orphan', parent_node_id: 'gone' })],
+      'root'
+    ).map((n) => n.node_id);
+    expect(ids).toEqual(['orphan']);
+  });
+
+  it('treats an unknown nodeId as blocking nothing', () => {
+    const ids = reparentCandidates(tree, 'nope').map((n) => n.node_id);
+    expect(ids).toEqual(['root', 'a', 'b', 'a1', 'a1x']);
   });
 });
