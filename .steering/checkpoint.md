@@ -3,11 +3,17 @@
 **Goal:** Surface the landed HAR record→teach→batch→verify capability (PR #499)
 across gateway HTTP, console UI, desktop/phone-remote (joe 2026-09-14).
 
-**Just did:** Worktree allternit-cu28 on session/cu28-cu-surfaces from origin/main.
-Explored: core network_trace/workflow_runner/har_chain_e2e, browser_skills_router,
-console computer-use area (ui/remote-control), SDK client, desktop acu-gateway-manager.
-Baseline suite run in progress. Plan written to .steering/plan-cu28.md.
+**Just did:**
+- S1 (commit c9b533e0f): gateway/network_traces_router.py — list/inspect/verify/
+  receipt-check routes on /v1/browser-skills, distilled shapes only, fail-closed.
+  14 route tests green (incl. real chain runs: canned pass, target pass,
+  mismatch deviations, determinism ×2).
+- S2+S3 (commit f051f21cd): console Workflows panel in remote-control Dashboard
+  (api/workflows.ts + WorkflowsPanel.tsx + mount), 10 vitest cases green;
+  SDK client methods + dist artifacts; surfaces doc.
+- release-preflight 36/0. Console tsc: 0 errors in touched files (22 pre-existing
+  elsewhere under skewed symlinked node_modules; CI main is green).
 
-**Next:** S1 gateway routes + tests, commit.
+**Next:** final pytest suite run (background), then push, PR, merge, attest, cleanup.
 
 **Open questions:** none.
