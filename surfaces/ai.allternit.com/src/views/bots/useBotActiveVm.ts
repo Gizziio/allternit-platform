@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
-import { getSandboxForAgent } from "@/lib/bots/vm-operator";
+import { resolveLiveBotDesktop } from "@/lib/bots/vm-operator";
 import { useBotOperationalStateStore } from "@/lib/bots/bot-operational-state.store";
 
 export type BotActiveVm = {
@@ -25,7 +25,7 @@ function vmFromSessionMetadata(value: unknown): BotActiveVm | null {
 }
 
 /** Resolve the bot's live cloud-desktop from session metadata, then the computers API. */
-export function useBotActiveVm(botId?: string): BotActiveVm | null {
+export function useBotActiveVm(botId?: string, hintSandboxId?: string | null): BotActiveVm | null {
   const sessions = useChatSessionStore((s) => s.sessions);
   const computerState = useBotOperationalStateStore(
     (s) => (botId ? s.projections[botId]?.state.computerState : undefined),
@@ -41,6 +41,11 @@ export function useBotActiveVm(botId?: string): BotActiveVm | null {
     return vmFromSessionMetadata(session?.metadata?.vmSandbox) ?? null;
   }, [sessions, botId]);
 
+  const fromHint = useMemo(() => {
+    if (!hintSandboxId) return null;
+    return { id: hintSandboxId, provider: "cloud-desktop", status: "running" };
+  }, [hintSandboxId]);
+
   const [fromApi, setFromApi] = useState<BotActiveVm | null>(null);
 
   useEffect(() => {
@@ -49,7 +54,7 @@ export function useBotActiveVm(botId?: string): BotActiveVm | null {
       return;
     }
     let cancelled = false;
-    void getSandboxForAgent(botId).then((result) => {
+    void resolveLiveBotDesktop(botId, hintSandboxId).then((result) => {
       if (cancelled) return;
       if (result.ok && result.data) {
         setFromApi({
@@ -65,9 +70,9 @@ export function useBotActiveVm(botId?: string): BotActiveVm | null {
     return () => {
       cancelled = true;
     };
-  }, [botId, computerState]);
+  }, [botId, computerState, hintSandboxId]);
 
-  return fromApi ?? fromSession;
+  return fromApi ?? fromHint ?? fromSession;
 }
 
 export function isBotComputerLive(vm: BotActiveVm | null, computerState?: string): boolean {

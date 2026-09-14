@@ -23,7 +23,9 @@ use crate::agent_session_routes::gizzi_client;
 use crate::agent_workspace_paths::workspace_dir_for;
 use crate::auth::AuthUser;
 use crate::config::build_gizzi_harness_for_provider;
-use crate::gizzi_chat_stream::configure_harness_on_gizzi;
+use crate::gizzi_chat_stream::{
+    configure_harness_on_gizzi, cowork_turn_finish, cowork_turn_finish_frame, gizzi_error_text,
+};
 use crate::{default_model, AppState};
 
 /// In-memory map from platform chatId → (Gizzi session ID, last applied
@@ -1241,6 +1243,9 @@ async fn agent_chat_bridge(
         let mut buf = String::new();
         let mut byte_stream = event_resp.bytes_stream();
         let mut was_busy = false;
+        let mut saw_text = false;
+        let mut saw_tool = false;
+        let mut turn_error: Option<String> = None;
         // partID → type tracking: `message.part.updated` carries the part's
         // type ("text" | "reasoning" | "tool" | …) while the deltas don't,
         // so reasoning streams can be forwarded as thinking deltas instead
@@ -1300,6 +1305,14 @@ async fn agent_chat_bridge(
                                     "outputTokens": output.unwrap_or(0),
                                 }));
                             }
+                            if turn_error.is_none() {
+                                if let Some(err) = info.get("error") {
+                                    let msg = gizzi_error_text(err);
+                                    if msg != "Gizzi session error" {
+                                        turn_error = Some(msg);
+                                    }
+                                }
+                            }
                         }
                     }
                     "message.part.updated" => {
@@ -1311,7 +1324,17 @@ async fn agent_chat_bridge(
                         }
                         // A:// §7: gizzi tool executions become lightweight
                         // DAG jobs on the session run (see cowork::dag).
+                        if part_type == "text" {
+                            if part
+                                .get("text")
+                                .and_then(|v| v.as_str())
+                                .is_some_and(|t| !t.is_empty())
+                            {
+                                saw_text = true;
+                            }
+                        }
                         if part_type == "tool" {
+                            saw_tool = true;
                             if let (Some(tool), Some(call_id)) = (
                                 part.get("tool").and_then(|v| v.as_str()),
                                 part.get("callID").and_then(|v| v.as_str()),
@@ -1378,27 +1401,26 @@ async fn agent_chat_bridge(
                         let part_id = props.get("partID").and_then(|v| v.as_str()).unwrap_or("text-1");
 
                         if reasoning_parts.contains(part_id) {
-                            if reasoning_parts.contains(part_id) {
-                                // Reasoning part → thinking delta (the frontend's
-                                // thought stream), not visible reply text.
-                                yield Ok(Event::default().data(json!({
-                                    "type": "content_block_delta",
-                                    "messageId": msg_id,
-                                    "partId": part_id,
-                                    "delta": { "type": "thinking_delta", "thinking": delta_text },
-                                }).to_string()));
-                            } else {
-                                reply_text.push_str(&delta_text);
-                                if reply_text.len() > 2000 {
-                                    reply_text.truncate(2000);
-                                }
-                                yield Ok(Event::default().data(json!({
-                                    "type": "content_block_delta",
-                                    "messageId": msg_id,
-                                    "partId": part_id,
-                                    "delta": { "type": "text_delta", "text": delta_text },
-                                }).to_string()));
+                            // Reasoning part → thinking delta (the frontend's
+                            // thought stream), not visible reply text.
+                            yield Ok(Event::default().data(json!({
+                                "type": "content_block_delta",
+                                "messageId": msg_id,
+                                "partId": part_id,
+                                "delta": { "type": "thinking_delta", "thinking": delta_text },
+                            }).to_string()));
+                        } else if !delta_text.is_empty() {
+                            saw_text = true;
+                            reply_text.push_str(&delta_text);
+                            if reply_text.len() > 2000 {
+                                reply_text.truncate(2000);
                             }
+                            yield Ok(Event::default().data(json!({
+                                "type": "content_block_delta",
+                                "messageId": msg_id,
+                                "partId": part_id,
+                                "delta": { "type": "text_delta", "text": delta_text },
+                            }).to_string()));
                         }
                     }
                     "session.status" => {
@@ -1412,6 +1434,17 @@ async fn agent_chat_bridge(
                         } else if status_type == "idle" && was_busy {
                             break 'event_loop;
                         }
+                    }
+                    "session.error" => {
+                        let error = props.get("error").cloned().unwrap_or(json!({"message": "Unknown Gizzi error"}));
+                        let error_text = gizzi_error_text(&error);
+                        turn_error = Some(error_text.clone());
+                        yield Ok(Event::default().data(json!({
+                            "type": "error",
+                            "messageId": msg_id,
+                            "error": error_text,
+                        }).to_string()));
+                        break 'event_loop;
                     }
                     "session.compacted" => {
                         // Context compaction ran on this session mid-turn —
@@ -1497,15 +1530,32 @@ async fn agent_chat_bridge(
         }
 
         // Turn end: typed Result on the session run + the A-T2 memory grant.
-        // Idempotent on the assistant message id, so an SSE replay does not
-        // duplicate them.
+        // Idle with no text and no tools is an error (quota 403s used to
+        // look like a successful empty complete). Idempotent on the
+        // assistant message id, so an SSE replay does not duplicate them.
+        let finish = cowork_turn_finish(saw_text, saw_tool, turn_error);
+        if finish.status == "error" {
+            if let Some(err) = &finish.error {
+                yield Ok(Event::default().data(json!({
+                    "type": "error",
+                    "messageId": msg_id,
+                    "error": err,
+                }).to_string()));
+            }
+        }
         if let Some(link) = dag_link {
             let db = state.db.clone();
             let uid = user_id_for_record.clone();
             let msg_id_for_dag = msg_id.clone();
             let usage = last_usage.clone().unwrap_or_else(|| json!({}));
             let mode = permission_mode.clone();
-            let summary = if reply_text.trim().is_empty() {
+            let turn_status = finish.status.to_string();
+            let summary = if finish.status == "error" {
+                format!(
+                    "cowork turn {msg_id} failed: {}",
+                    finish.error.as_deref().unwrap_or("no model output")
+                )
+            } else if reply_text.trim().is_empty() {
                 format!("cowork turn {msg_id} (no text output)")
             } else {
                 format!("cowork turn: {}", reply_text.trim())
@@ -1519,7 +1569,7 @@ async fn agent_chat_bridge(
                     &run_id,
                     &uid,
                     &msg_id_for_dag,
-                    "complete",
+                    &turn_status,
                     usage,
                     &mode,
                 )?;
@@ -1535,17 +1585,15 @@ async fn agent_chat_bridge(
             .await;
         }
 
-        settle_chat_run(&chat_run, true, None).await;
-        let mut finish_frame = json!({
-            "type": "finish",
-            "messageId": msg_id,
-            "status": "complete",
-            "metadata": { "status": "complete" },
-        });
-        if let Some(usage) = &last_usage {
-            finish_frame["usage"] = usage.clone();
-        }
-        yield Ok(Event::default().data(finish_frame.to_string()));
+        settle_chat_run(
+            &chat_run,
+            finish.status == "complete",
+            finish.error.as_deref(),
+        )
+        .await;
+        yield Ok(Event::default().data(
+            cowork_turn_finish_frame(&msg_id, &finish, last_usage.as_ref()).to_string(),
+        ));
     };
 
     Sse::new(stream)

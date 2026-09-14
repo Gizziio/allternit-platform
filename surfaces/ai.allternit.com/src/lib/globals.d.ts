@@ -183,7 +183,7 @@ declare global {
         openFabricSession: () => Promise<void>;
         openRemoteControl: (runtimeId?: string) => Promise<void>;
         openSession: (options: { sessionId: string; workspaceId?: string; title?: string }) => Promise<void>;
-        openBotComputer: (options: { botId: string; title?: string }) => Promise<void>;
+        openBotComputer: (options: { botId: string; title?: string; sandboxId?: string }) => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;
           running: boolean;

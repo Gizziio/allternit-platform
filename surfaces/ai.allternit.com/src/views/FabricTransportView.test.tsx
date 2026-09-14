@@ -39,6 +39,9 @@ vi.mock('@/lib/fabric-transport-api', () => ({
   createRoutine: vi.fn(async () => ({})),
   deleteRoutine: vi.fn(async () => ({})),
   runRoutineNow: vi.fn(async () => ({ fired: 0 })),
+  continueRunInCloud: vi.fn(async () => ({ jobs: [] })),
+  getCoworkPreferences: vi.fn(async () => ({ trusted_folders: [], cloud_continuation: false })),
+  setCloudContinuation: vi.fn(async () => ({ cloud_continuation: false })),
 }));
 
 vi.mock('@/lib/browser-skills-api', () => ({

@@ -527,7 +527,10 @@ owner reviews and merges — no self-merge.
   routines table + `/api/v1/cowork/routines` CRUD + run-now + 30s tick
   that submits a canonical intent (message is the agentic task; failed
   fires back off 5 min). Desktop FabricTransportView Routines section.
-  Cloud continuation remains out of v1.
+- **E6 CLOSED (bounded)** — cloud continuation: `compute.cloud` jobs,
+  `gizzi-cloud` principal, continue-in-cloud / handoff-all / ingest,
+  desktop quit handoff, preference toggle. Local folder grants do not
+  upload; always-on API still required for laptop-closed schedules.
 - **P5 PARTIAL** — updater feed locked to `Gizziio/desktop` (publish +
   `updateElectronApp` + manifest + preflight mismatch gate). Signing /
   notarization / cutting `desktop-v1.2.0` is an owner action (Apple

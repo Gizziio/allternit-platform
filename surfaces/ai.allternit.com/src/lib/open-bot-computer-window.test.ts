@@ -17,6 +17,14 @@ describe("botComputerWindowHref", () => {
     expect(url.searchParams.get("botId")).toBe("bot-1");
     expect(url.searchParams.get("title")).toBe("Gizzi's computer");
   });
+
+  it("forwards sandboxId so the window binds the existing computer", () => {
+    const href = botComputerWindowHref("https://platform.example", {
+      botId: "bot-1",
+      sandboxId: "account-box",
+    });
+    expect(new URL(href).searchParams.get("sandboxId")).toBe("account-box");
+  });
 });
 
 describe("launchBotComputerWindow", () => {

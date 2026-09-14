@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   createSandbox,
   getSandboxForAgent,
+  resolveLiveBotDesktop,
   deleteComputer,
   snapshotSandbox,
   restoreSandbox,
@@ -338,6 +339,61 @@ describe('vm-operator', () => {
       expect.stringContaining('/api/v1/computers?bot_id=agent-1'),
       expect.anything(),
     );
+  });
+
+  it('resolves a live desktop from the bot mapping, not computers?bot_id=', async () => {
+    const fetchMock = mockFetchSequence({
+      sandbox_id: 'allternit-user-account',
+      status: 'running',
+      provider: 'incus',
+      control_state: 'bot_controls',
+      protocol: 'vnc',
+    });
+
+    const result = await resolveLiveBotDesktop('agent-1');
+    expect(result.ok).toBe(true);
+    expect(result.data?.id).toBe('allternit-user-account');
+    expect(fetchMock.mock.calls[0][0]).toContain('/bots/agent-1/desktop');
+    expect(String(fetchMock.mock.calls[0][0])).not.toContain('bot_id=');
+  });
+
+  it('attaches to a running account computer when the bot has no mapping', async () => {
+    const fetchMock = vi.fn();
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        text: async () => 'sandbox_id is required (bot has no persisted desktop sandbox)',
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          computers: [
+            {
+              id: 'account-box',
+              native_id: 'account-box',
+              status: 'running',
+              provider: 'incus',
+              kind: 'cloud_desktop',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          sandbox_id: 'account-box',
+          status: 'running',
+          provider: 'incus',
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await resolveLiveBotDesktop('agent-1');
+    expect(result.ok).toBe(true);
+    expect(result.data?.id).toBe('account-box');
+    expect(String(fetchMock.mock.calls[2][0])).toContain('/desktop/provision');
   });
 
   it('returns error when no active computer exists for agent', async () => {
