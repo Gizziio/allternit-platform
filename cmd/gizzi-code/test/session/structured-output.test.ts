@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import { MessageV2 } from "../../src/session/message-v2"
-import { SessionPrompt } from "../../src/session/prompt"
+import { MessageV2 } from "../../src/runtime/session/message-v2"
+import { SessionPrompt } from "../../src/runtime/session/prompt"
 
 describe("structured-output.OutputFormat", () => {
   test("parses text format", () => {

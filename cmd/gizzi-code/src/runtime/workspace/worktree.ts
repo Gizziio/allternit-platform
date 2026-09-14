@@ -51,9 +51,12 @@ export namespace Worktree {
 
   export const RemoveInput = z
     .object({
-      name: z.string(),
+      name: z.string().optional(),
+      directory: z.string().optional(),
     })
-    
+    .refine((input) => input.name || input.directory, {
+      message: "Either name or directory is required",
+    })
 
   export type RemoveInput = z.infer<typeof RemoveInput>
 
@@ -135,17 +138,53 @@ export namespace Worktree {
 
   export const remove = fn(
     RemoveInput,
-    async (input): Promise<void> => {
-      const directory = path.join(Path.root, input.name)
+    async (input): Promise<boolean> => {
+      const directory = input.directory ?? path.join(Path.root, input.name!)
       log.info("removing worktree", { name: input.name, directory })
+
+      // Capture the branch checked out in the worktree before we remove it,
+      // so we can clean it up afterwards even if git worktree remove fails.
+      let branch: string | undefined
+      try {
+        branch = await $`git rev-parse --abbrev-ref HEAD`.quiet().cwd(directory).text().then((x) => x.trim())
+        if (branch === "HEAD") branch = undefined
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        log.warn("could not determine worktree branch", { name: input.name, directory, error: message })
+      }
 
       try {
         await $`git worktree remove ${directory} --force`.quiet().cwd(Instance.worktree)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        log.warn("git worktree remove failed, continuing with directory cleanup", { name: input.name, directory, error: message })
+      }
+
+      try {
         await fs.rm(directory, { recursive: true, force: true })
       } catch (error) {
-        log.error("failed to remove worktree", { name: input.name, error })
+        const message = error instanceof Error ? error.message : String(error)
+        log.error("failed to remove worktree directory", { name: input.name, directory, error: message })
         throw error
       }
+
+      try {
+        await $`git worktree prune`.quiet().cwd(Instance.worktree)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        log.warn("git worktree prune failed", { name: input.name, directory, error: message })
+      }
+
+      if (branch) {
+        try {
+          await $`git branch -D ${branch}`.quiet().cwd(Instance.worktree)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          log.warn("failed to delete worktree branch", { name: input.name, branch, error: message })
+        }
+      }
+
+      return true
     },
   )
 }

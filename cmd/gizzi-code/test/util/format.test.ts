@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import { formatDuration } from "../../src/util/format"
+import { formatDuration } from "../../src/shared/util/format"
 
 describe("util.format", () => {
   describe("formatDuration", () => {

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, test, expect, beforeEach, afterEach } from "bun:test"
-import { Patch } from "../../src/patch"
+import { Patch } from "../../src/runtime/integrations/patch/patch"
 import * as fs from "fs/promises"
 import * as path from "path"
 import { tmpdir } from "os"

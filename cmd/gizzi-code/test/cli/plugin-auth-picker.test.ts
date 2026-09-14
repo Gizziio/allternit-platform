@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { test, expect, describe } from "bun:test"
-import { resolvePluginProviders } from "../../src/cli/cmd/auth"
+import { resolvePluginProviders } from "../../src/cli/commands/connect"
 import type { Hooks } from "@allternit/plugin"
 
 function hookWithAuth(provider: string): Hooks {

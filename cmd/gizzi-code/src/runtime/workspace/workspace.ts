@@ -23,7 +23,7 @@ const log = Log.create({ service: "workspace" })
 
 export namespace Workspace {
   /** Absolute path to the global .gizzi/ workspace */
-  export const globalPath = path.join(Global.Path.home, ".gizzi")
+  export const globalPath = path.join(Global.Path.home(), ".gizzi")
 
   /** Resolve workspace path: local if exists, global otherwise */
   export async function resolvePath(cwd = process.cwd()): Promise<string> {
@@ -153,7 +153,7 @@ You wake up fresh each session. Files are your continuity:
     targetPath: string = globalPath,
     opts: { force?: boolean } = {},
   ): Promise<{ imported: string[]; skipped: string[] }> {
-    const openclawWorkspace = path.join(Global.Path.home, ".openclaw", "workspace")
+    const openclawWorkspace = path.join(Global.Path.home(), ".openclaw", "workspace")
 
     if (!(await Filesystem.exists(openclawWorkspace))) {
       throw new Error(`No OpenClaw workspace found at ${openclawWorkspace}`)

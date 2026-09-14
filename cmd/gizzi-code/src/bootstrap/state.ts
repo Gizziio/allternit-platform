@@ -185,34 +185,6 @@ export function initializeBootstrapState(): void {
   log('info', 'Bootstrap state initialized')
 }
 
-// Default export
-export default {
-  createSession,
-  getCurrentSession,
-  getSessionId,
-  setSessionId,
-  updateSessionActivity,
-  clearSession,
-  getModelSetting,
-  setModelSetting,
-  subscribeToSession,
-  subscribeToModelSetting,
-  addSlowOperation,
-  getSlowOperations,
-  clearSlowOperations,
-  setOriginalCwd,
-  getOriginalCwd,
-  setKairosActive,
-  getKairosActive,
-  setIsRemoteMode,
-  getIsRemoteMode,
-  setPermissionMode,
-  getPermissionMode,
-  setDebugMode,
-  isDebugMode,
-  initializeBootstrapState,
-}
-
 // ─── Merge-rot repair ────────────────────────────────────────────────────────
 // This file was a partial merge of the bootstrap state module; the complete
 // implementation lives in the ink-app tree. Re-export everything it provides

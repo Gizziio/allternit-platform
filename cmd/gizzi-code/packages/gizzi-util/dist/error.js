@@ -12,11 +12,12 @@ class NamedErrorBase extends Error {
   }
 
   toObject() {
-    return {
+    const obj = {
       name: this.name,
-      message: this.message,
       data: this.data,
     }
+    if (this.message) obj.message = this.message
+    return obj
   }
 }
 

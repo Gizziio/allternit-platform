@@ -3,7 +3,7 @@ import { test, expect } from "bun:test"
 import { $ } from "bun"
 import fs from "fs/promises"
 import { Snapshot } from "../../src/snapshot"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 

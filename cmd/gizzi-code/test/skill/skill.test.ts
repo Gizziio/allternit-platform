@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { test, expect, beforeAll, afterAll } from "bun:test"
 import { Skill } from "../../src/runtime/skills/skill"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"

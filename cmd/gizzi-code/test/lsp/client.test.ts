@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { describe, expect, test, beforeEach } from "bun:test"
 import path from "path"
-import { LSPClient } from "../../src/lsp/client"
+import { LSPClient } from "../../src/runtime/integrations/lsp/client"
 import { LSPServer } from "../../src/lsp/server"
-import { Instance } from "../../src/project/instance"
-import { Log } from "../../src/util/log"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Log } from "../../src/shared/util/log"
 
 // Minimal fake LSP server that speaks JSON-RPC over stdio
 function spawnFakeServer() {

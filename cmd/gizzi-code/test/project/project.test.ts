@@ -1,7 +1,11 @@
 // @ts-nocheck
-import { describe, expect, mock, test } from "bun:test"
+import { afterAll, describe, expect, mock, test } from "bun:test"
 import { Project } from "../../src/runtime/context/project/project"
 import { Log } from "../../src/shared/util/log"
+
+afterAll(() => {
+  mock.restore()
+})
 import { $ } from "bun"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"

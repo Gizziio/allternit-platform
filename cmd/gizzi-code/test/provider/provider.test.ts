@@ -3,9 +3,9 @@ import { test, expect } from "bun:test"
 import path from "path"
 
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider/provider"
-import { Env } from "../../src/env"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Provider } from "../../src/runtime/providers/provider"
+import { Env } from "../../src/runtime/context/env/env"
 
 test.skip("provider loaded from env variable", async () => {
   await using tmp = await tmpdir({

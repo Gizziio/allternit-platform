@@ -134,8 +134,7 @@ export namespace PermissionNext {
     }
   })
 
-  export async function getMode(sessionID: string): Promise<Mode> {
-    const s = await state()
+  function getModeNow(sessionID: string, s: ReturnType<typeof state>): Mode {
     if (s.modes[sessionID]) return s.modes[sessionID]
     const row = Database.use((db) => db
       .select({ mode: SessionTable.permission_mode })
@@ -146,6 +145,10 @@ export namespace PermissionNext {
     const mode = configured.success ? configured.data : "default"
     s.modes[sessionID] = mode
     return mode
+  }
+
+  export async function getMode(sessionID: string): Promise<Mode> {
+    return getModeNow(sessionID, state())
   }
 
   export async function setMode(sessionID: string, mode: Mode): Promise<void> {
@@ -167,25 +170,19 @@ export namespace PermissionNext {
       mode: Mode.optional(),
     }),
     async (input) => {
-      const s = await state()
+      const s = state()
       const { ruleset, mode: modeOverride, ...request } = input
       for (const pattern of request.patterns ?? []) {
         const rule = evaluatePolicy(request.permission, pattern, {
           configured: ruleset,
           approvals: s.approved,
-          mode: modeOverride ?? (await getMode(request.sessionID)),
+          mode: modeOverride ?? getModeNow(request.sessionID, s),
         })
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         if (rule.action === "deny")
           throw new DeniedError(ruleset.filter((r) => Wildcard.match(request.permission, r.permission)))
         if (rule.action === "ask") {
           const id = input.id ?? Identifier.ascending("permission")
-          await HookDispatcher.emit({
-            name: "PermissionRequest",
-            timestamp: Date.now(),
-            sessionId: request.sessionID,
-            payload: { tool: request.permission, patterns: request.patterns, requestID: id },
-          })
           return new Promise<void>((resolve, reject) => {
             const info: Request = {
               id,
@@ -197,7 +194,18 @@ export namespace PermissionNext {
               resolve,
               reject,
             }
-            Bus.publish(Event.Asked, info)
+            Bus.publish(Event.Asked, info).catch((error) =>
+              log.warn("failed to publish permission.asked", { error, requestID: id }),
+            )
+            // Notify hooks asynchronously; permission resolution must never wait
+            // for observers. Registering the pending request synchronously above
+            // lets a caller reply immediately, even before this hook fires.
+            HookDispatcher.emit({
+              name: "PermissionRequest",
+              timestamp: Date.now(),
+              sessionId: request.sessionID,
+              payload: { tool: request.permission, patterns: request.patterns, requestID: id },
+            }).catch((error) => log.warn("permission hook failed", { error, requestID: id }))
           })
         }
         if (rule.action === "allow") continue
@@ -212,42 +220,49 @@ export namespace PermissionNext {
       message: z.string().optional(),
     }),
     async (input) => {
-      const s = await state()
+      const s = state()
       const existing = s.pending[input.requestID]
       if (!existing) return
       delete s.pending[input.requestID]
-      Bus.publish(Event.Replied, {
-        sessionID: existing.info.sessionID,
-        requestID: existing.info.id,
-        reply: input.reply,
-      })
-      await HookDispatcher.emit({
-        name: "PermissionResult",
-        timestamp: Date.now(),
-        sessionId: existing.info.sessionID,
-        payload: { tool: existing.info.permission, requestID: existing.info.id, reply: input.reply },
-      })
+
+      const notifyResult = () => {
+        Bus.publish(Event.Replied, {
+          sessionID: existing.info.sessionID,
+          requestID: existing.info.id,
+          reply: input.reply,
+        }).catch((error) => log.warn("failed to publish permission.replied", { error, requestID: existing.info.id }))
+        HookDispatcher.emit({
+          name: "PermissionResult",
+          timestamp: Date.now(),
+          sessionId: existing.info.sessionID,
+          payload: { tool: existing.info.permission, requestID: existing.info.id, reply: input.reply },
+        }).catch((error) => log.warn("permission result hook failed", { error, requestID: existing.info.id }))
+      }
+
       if (input.reply === "reject") {
         existing.reject(input.message ? new CorrectedError(input.message) : new RejectedError())
         // Reject all other pending permissions for this session
         const sessionID = existing.info.sessionID
         for (const [id, pending] of Object.entries(s.pending)) {
-          if (pending.info.sessionID === sessionID) {
-            delete s.pending[id]
-            Bus.publish(Event.Replied, {
-              sessionID: pending.info.sessionID,
-              requestID: pending.info.id,
-              reply: "reject",
-            })
-            pending.reject(new RejectedError())
-          }
+          if (pending.info.sessionID !== sessionID) continue
+          delete s.pending[id]
+          Bus.publish(Event.Replied, {
+            sessionID: pending.info.sessionID,
+            requestID: pending.info.id,
+            reply: "reject",
+          }).catch((error) => log.warn("failed to publish permission.replied", { error, requestID: pending.info.id }))
+          pending.reject(new RejectedError())
         }
+        notifyResult()
         return
       }
+
       if (input.reply === "once") {
         existing.resolve()
+        notifyResult()
         return
       }
+
       if (input.reply === "always") {
         for (const pattern of existing.info.always) {
           s.approved.push({
@@ -260,7 +275,7 @@ export namespace PermissionNext {
         existing.resolve()
 
         const sessionID = existing.info.sessionID
-        const mode = await getMode(sessionID)
+        const mode = getModeNow(sessionID, s)
         for (const [id, pending] of Object.entries(s.pending)) {
           if (pending.info.sessionID !== sessionID) continue
           const ok = pending.info.patterns.every(
@@ -276,7 +291,7 @@ export namespace PermissionNext {
             sessionID: pending.info.sessionID,
             requestID: pending.info.id,
             reply: "always",
-          })
+          }).catch((error) => log.warn("failed to publish permission.replied", { error, requestID: pending.info.id }))
           pending.resolve()
         }
 
@@ -291,6 +306,7 @@ export namespace PermissionNext {
             })
             .run(),
         )
+        notifyResult()
         return
       }
     },

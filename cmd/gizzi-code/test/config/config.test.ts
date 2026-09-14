@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { test, expect, describe, mock, afterEach } from "bun:test"
 import { Config } from "../../src/config/config"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { Auth } from "../../src/runtime/integrations/auth"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
@@ -642,7 +642,11 @@ test("updates config and writes to file", async () => {
 })
 
 test("gets config directories", async () => {
-  await using tmp = await tmpdir()
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await fs.mkdir(path.join(dir, ".gizzi"), { recursive: true })
+    },
+  })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {

@@ -549,6 +549,38 @@ async function readWithTimeout(stdout: ReadableStream, kill: () => void): Promis
   clearTimeout(timer!)
   if (out === null) kill()
   return out
+const PROBE_TIMEOUT_MS = 5000
+
+async function spawnWithTimeout(
+  cmd: string[],
+  options?: { timeoutMs?: number },
+): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+  const timeoutMs = options?.timeoutMs ?? PROBE_TIMEOUT_MS
+  const proc = Bun.spawn(cmd, {
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      try {
+        proc.kill()
+      } catch {}
+      reject(new Error(`probe timed out after ${timeoutMs}ms: ${cmd.join(" ")}`))
+    }, timeoutMs)
+  })
+
+  try {
+    const [stdout, stderr] = await Promise.race([
+      Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]),
+      timeout,
+    ])
+    const exitCode = await proc.exited
+    return { stdout, stderr, exitCode }
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
 }
 
 async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
@@ -566,8 +598,9 @@ async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
       }
     })
     if (out === null) return false // timed out — treat as not available
+    const { stdout } = await spawnWithTimeout([bin, ...spec.probe.args])
     const { expect } = spec.probe
-    return typeof expect === "string" ? out.includes(expect) : expect.test(out)
+    return typeof expect === "string" ? stdout.includes(expect) : expect.test(stdout)
   } catch {
     return false
   }
@@ -585,6 +618,8 @@ async function probeOllamaModels(binPath: string): Promise<DiscoveredModel[]> {
     })
     if (out === null) return [] // timed out — treat as not available
     const lines = out.split("\n").slice(1).filter(Boolean)
+    const { stdout } = await spawnWithTimeout([binPath, "list"])
+    const lines = stdout.split("\n").slice(1).filter(Boolean)
     return lines.map((line) => {
       const [id] = line.trim().split(/\s+/)
       return { id, name: id, context: 128000, output: 8192 }

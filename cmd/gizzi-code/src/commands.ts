@@ -34,3 +34,8 @@ export {
   splitCommand_DEPRECATED,
   splitCommandWithOperators,
 } from './shared/utils/bash/commands.js'
+export {
+  clearCommandPrefixCaches,
+  extractOutputRedirections,
+  splitCommandWithOperators,
+} from './cli/ui/ink-app/utils/bash/commands.js'

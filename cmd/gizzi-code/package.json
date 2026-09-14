@@ -27,6 +27,8 @@
     "typecheck": "bash script/ensure-sdk-dist.sh && NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
     "test": "bash script/ci-smoke-test.sh",
     "test:full": "bun test --timeout 30000 --preload ./test/preload.ts test/",
+    "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
+    "test": "bash script/test.sh",
     "build": "bun run script/build.ts",
     "dev": "bun --conditions=browser ./src/cli/main.ts",
     "start": "bun --conditions=browser ./src/cli/main.ts",
@@ -81,13 +83,11 @@
     "@types/turndown": "5.0.5",
     "@types/yargs": "17.0.33",
     "drizzle-kit": "1.0.0-beta.12-a5629fb",
-    "drizzle-orm": "1.0.0-beta.12-a5629fb",
     "fflate": "^0.8.2",
     "supports-hyperlinks": "^4.4.0",
     "typescript": "*",
     "vscode-languageserver-types": "3.17.5",
-    "why-is-node-running": "3.2.2",
-    "zod-to-json-schema": "3.24.5"
+    "why-is-node-running": "3.2.2"
   },
   "dependencies": {
     "@actions/core": "1.11.1",

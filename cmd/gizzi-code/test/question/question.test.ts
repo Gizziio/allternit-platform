@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { test, expect } from "bun:test"
-import { Question } from "../../src/question"
-import { Instance } from "../../src/project/instance"
+import { Question } from "../../src/runtime/integrations/question/index"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { tmpdir } from "../fixture/fixture"
 
 test("ask - returns pending promise", async () => {

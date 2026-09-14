@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { GrepTool } from "../../src/runtime/tools/builtins/grep"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { tmpdir } from "../fixture/fixture"
 
 const ctx = {

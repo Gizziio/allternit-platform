@@ -2,8 +2,8 @@
 import { describe, expect, test } from "bun:test"
 import type { NamedError } from "@allternit/util/error"
 import { APICallError } from "ai"
-import { SessionRetry } from "../../src/session/retry"
-import { MessageV2 } from "../../src/session/message-v2"
+import { SessionRetry } from "../../src/runtime/session/retry"
+import { MessageV2 } from "../../src/runtime/session/message-v2"
 
 function apiError(headers?: Record<string, string>): MessageV2.APIError {
   return new MessageV2.APIError({

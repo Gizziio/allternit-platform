@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { ToolRegistry } from "../../src/runtime/tools/builtins/registry"
 
 describe("tool.registry", () => {

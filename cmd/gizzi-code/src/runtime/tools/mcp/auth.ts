@@ -35,7 +35,7 @@ export namespace McpAuth {
 
   const filepath = path.join(Global.Path.data, "mcp-auth.json")
   const legacyFilepath = path.join(
-    xdgData ?? path.join(Global.Path.home, ".local/share"),
+    xdgData ?? path.join(Global.Path.home(), ".local/share"),
     "gizzi",
     "mcp-auth.json",
   )

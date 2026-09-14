@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { test, expect } from "bun:test"
-import { Wildcard } from "../../src/util/wildcard"
+import { Wildcard } from "../../src/shared/util/wildcard"
 
 test("match handles glob tokens", () => {
   expect(Wildcard.match("file1.txt", "file?.txt")).toBe(true)

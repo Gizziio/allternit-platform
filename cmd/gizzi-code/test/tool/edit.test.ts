@@ -3,7 +3,7 @@ import { describe, test, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { EditTool } from "../../src/runtime/tools/builtins/edit"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import { FileTime } from "../../src/shared/file/time"
 

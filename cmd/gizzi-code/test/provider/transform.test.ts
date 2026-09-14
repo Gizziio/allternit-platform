@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import { ProviderTransform } from "../../src/provider/transform"
+import { ProviderTransform } from "../../src/runtime/providers/adapters/transform"
 
 const OUTPUT_TOKEN_MAX = 32000
 

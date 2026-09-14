@@ -2,8 +2,8 @@
 import { describe, test, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
-import { File } from "../../src/file"
-import { Instance } from "../../src/project/instance"
+import { File } from "../../src/shared/file/index"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 

@@ -32,9 +32,16 @@ export namespace Flag {
     GIZZI_DISABLE_LEGACY_INSTRUCTIONS || truthy("GIZZI_DISABLE_LEGACY_PROMPT")
   export const GIZZI_DISABLE_LEGACY_SKILLS =
     GIZZI_DISABLE_LEGACY_INSTRUCTIONS || truthy("GIZZI_DISABLE_LEGACY_SKILLS")
+  export const GIZZI_DISABLE_PROVIDER_DISCOVERY = truthy("GIZZI_DISABLE_PROVIDER_DISCOVERY")
+  export const GIZZI_DISABLE_CLAUDE_CODE = truthy("GIZZI_DISABLE_CLAUDE_CODE")
+  export const GIZZI_DISABLE_CLAUDE_CODE_PROMPT =
+    GIZZI_DISABLE_CLAUDE_CODE || truthy("GIZZI_DISABLE_CLAUDE_CODE_PROMPT")
+  export const GIZZI_DISABLE_CLAUDE_CODE_SKILLS =
+    GIZZI_DISABLE_CLAUDE_CODE || truthy("GIZZI_DISABLE_CLAUDE_CODE_SKILLS")
   export const GIZZI_DISABLE_EXTERNAL_SKILLS =
     GIZZI_DISABLE_LEGACY_SKILLS || truthy("GIZZI_DISABLE_EXTERNAL_SKILLS")
   export declare const GIZZI_DISABLE_PROJECT_CONFIG: boolean
+  export declare const GIZZI_DISABLE_DURABLE_TRACE: boolean
   export const GIZZI_FAKE_VCS = env("GIZZI_FAKE_VCS")
   export declare const GIZZI_CLIENT: string
   export const GIZZI_SERVER_PASSWORD = env("GIZZI_SERVER_PASSWORD")
@@ -85,7 +92,6 @@ export namespace Flag {
   // Emergency rollback switches for the Kimi-parity runtime rollout. New
   // installations keep these capabilities enabled; flags only suppress the
   // corresponding projection/surface without deleting durable data.
-  export const GIZZI_DISABLE_DURABLE_TRACE = truthy("GIZZI_DISABLE_DURABLE_TRACE")
   export const GIZZI_DISABLE_CONTEXT_PROJECTION = truthy("GIZZI_DISABLE_CONTEXT_PROJECTION")
   export const GIZZI_DISABLE_ACP_CONFIG_OPTIONS = truthy("GIZZI_DISABLE_ACP_CONFIG_OPTIONS")
   export const GIZZI_DYNAMIC_TOOL_SELECTION = truthy("GIZZI_DYNAMIC_TOOL_SELECTION")
@@ -172,6 +178,17 @@ export namespace Flag {
     return entries.length ? entries : undefined
   }
 }
+
+// Dynamic getter for GIZZI_DISABLE_DURABLE_TRACE
+// Tests disable durable trace globally for speed but individual durable-replay
+// tests need to turn it back on at runtime.
+Object.defineProperty(Flag, "GIZZI_DISABLE_DURABLE_TRACE", {
+  get() {
+    return truthy("GIZZI_DISABLE_DURABLE_TRACE")
+  },
+  enumerable: true,
+  configurable: false,
+})
 
 // Dynamic getter for GIZZI_CONFIG_DIR
 Object.defineProperty(Flag, "GIZZI_CONFIG_DIR", {

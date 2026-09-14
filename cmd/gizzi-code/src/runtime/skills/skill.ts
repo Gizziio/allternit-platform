@@ -187,7 +187,7 @@ export namespace Skill {
 
     if (!Flag.GIZZI_DISABLE_EXTERNAL_SKILLS) {
       for (const brand of [".claude", ".agents", ".openclaw"]) {
-        await scanRoot({ path: path.join(Global.Path.home, brand, "skills"), source: "user", label: brand })
+        await scanRoot({ path: path.join(Global.Path.home(), brand, "skills"), source: "user", label: brand })
       }
       for await (const found of Filesystem.up({
         targets: [".claude", ".agents", ".openclaw"],

@@ -17,7 +17,7 @@ import { Scratchpad } from "@/runtime/session/scratchpad"
 
 const SECRET_KEY = /(?:api[-_]?key|authorization|password|secret|token|cookie|credential|private[-_]?key)/i
 const SECRET_VALUE = /\b(?:sk|key|token|Bearer)[-_][A-Za-z0-9._-]{12,}\b/g
-const HOME = Global.Path.home
+const HOME = Global.Path.home()
 
 export namespace SessionSupportBundle {
   export async function create(sessionID: string): Promise<Uint8Array> {

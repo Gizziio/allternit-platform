@@ -2,7 +2,7 @@
 import { describe, test, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
-import { Glob } from "../../src/util/glob"
+import { Glob } from "../../src/shared/util/glob"
 import { tmpdir } from "../fixture/fixture"
 
 describe("Glob", () => {

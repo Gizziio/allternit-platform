@@ -341,7 +341,7 @@ export function WorkspaceRoutes() {
       })),
       async (c) => {
         const body = c.req.valid("json")
-        const globalGizzi = path.join(Global.Path.home, ".gizzi")
+        const globalGizzi = path.join(Global.Path.home(), ".gizzi")
         await fs.mkdir(globalGizzi, { recursive: true })
 
         const write = async (file: string, content: string | undefined) => {

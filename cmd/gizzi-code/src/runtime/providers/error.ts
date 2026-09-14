@@ -43,6 +43,9 @@ export namespace ProviderError {
   }
 
   function error(providerID: string, error: APICallError) {
+    if (providerID === "github-copilot" && error.statusCode === 403) {
+      return "Please reauthenticate with the copilot provider to ensure your credentials work properly with Gizzi."
+    }
     return error.message
   }
 

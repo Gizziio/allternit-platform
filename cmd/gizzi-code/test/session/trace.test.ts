@@ -1,13 +1,27 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, test, beforeAll, afterAll } from "bun:test"
 import { Instance } from "../../src/runtime/context/project/instance"
 import { Session } from "../../src/runtime/session"
 import { SessionTrace } from "../../src/runtime/session/trace"
 import { SessionSupportBundle } from "../../src/runtime/session/support-bundle"
 import { Identifier } from "../../src/shared/id/id"
+import { Global } from "../../src/runtime/context/global"
 import { tmpdir } from "../fixture/fixture"
 
 describe.skip("durable session replay", () => {
   test.skip("records ordered message, part, and delta events behind a cursor", async () => {
+describe("durable session replay", () => {
+  const prevDisableTrace = process.env.GIZZI_DISABLE_DURABLE_TRACE
+
+  beforeAll(() => {
+    delete process.env.GIZZI_DISABLE_DURABLE_TRACE
+  })
+
+  afterAll(() => {
+    if (prevDisableTrace === undefined) delete process.env.GIZZI_DISABLE_DURABLE_TRACE
+    else process.env.GIZZI_DISABLE_DURABLE_TRACE = prevDisableTrace
+  })
+
+  test("records ordered message, part, and delta events behind a cursor", async () => {
     await using tmp = await tmpdir({ git: true })
     await Instance.provide({
       directory: tmp.path,
@@ -43,7 +57,7 @@ describe.skip("durable session replay", () => {
   test.skip("support redaction removes secret-shaped keys, values, and home paths", () => {
     const redacted = SessionSupportBundle.redact({
       apiKey: "literal-secret",
-      message: `Authorization: Bearer token-abcdefghijklmnopqrstuvwxyz ${process.env.HOME}/project`,
+      message: `Authorization: Bearer token-abcdefghijklmnopqrstuvwxyz ${Global.Path.home()}/project`,
     }) as { apiKey: string; message: string }
     expect(redacted.apiKey).toBe("<REDACTED>")
     expect(redacted.message).not.toContain("abcdefghijklmnopqrstuvwxyz")

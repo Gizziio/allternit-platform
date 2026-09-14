@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 
-import { buildReasoningTrace } from "../../src/server/routes/reasoning-trace"
+import { buildReasoningTrace } from "../../src/runtime/server/routes/reasoning-trace"
 
 describe("buildReasoningTrace", () => {
   test("labels AI SDK doc searches without leaking raw prompt fragments", () => {

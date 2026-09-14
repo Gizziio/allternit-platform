@@ -29,6 +29,12 @@
     "superpowers": {
       "command": "node",
       "args": ["tools/mcp-servers/superpowers/superpowers-mcp.js"]
+    "verceldeploy": {
+      "command": "node",
+      "args": ["plugins/verceldeploy-plugin/adapters/mcp.js"],
+      "env": {
+        "VERCEL_TOKEN": ""
+      }
     },
     "remotioncard": {
       "command": "node",

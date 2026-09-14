@@ -3,7 +3,7 @@ export function blockedModelReason(input: { providerID: string; modelID: string;
   const model = input.modelID.toLowerCase()
   const name = (input.name ?? "").toLowerCase()
 
-  if ((provider === "gizzi" || provider === "gizzi") && model.includes("-nano")) {
+  if ((provider === "gizzi" || provider === "gizziio" || provider === "opencode") && model.includes("-nano")) {
     return "nano tier hidden for runtime stability"
   }
 
