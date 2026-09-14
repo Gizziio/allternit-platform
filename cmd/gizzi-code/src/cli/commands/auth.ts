@@ -25,8 +25,6 @@ const LoginCommand = cmd({
     yargs
       .option("api-key", { type: "string", describe: "API key" })
       .option("provider", { type: "string", describe: "provider id", default: "allternit" })
-      .option("profile", { type: "string", describe: "profile name", default: "default" }),
-      .option("provider", { type: "string", describe: "provider id", default: "anthropic" })
       .option("profile", { type: "string", describe: "profile name", default: "default" })
       .option("base-url", { type: "string", describe: "provider base URL" }),
   async handler(args) {

@@ -22,7 +22,14 @@
     <AppDomain>https://*.clerk.dev</AppDomain>
     <AppDomain>https://*.accounts.dev</AppDomain>
     <AppDomain>https://challenges.cloudflare.com</AppDomain>
+    <AppDomain>http://localhost:3000</AppDomain>
+    <AppDomain>http://localhost:3013</AppDomain>
   </AppDomains>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="{{HOST_API}}" MinVersion="1.1"/>
+    </Sets>
+  </Requirements>
   <Hosts><Host Name="{{HOST_NAME}}" /></Hosts>
   <DefaultSettings>
     <SourceLocation DefaultValue="{{TASKPANE_URL}}" />
