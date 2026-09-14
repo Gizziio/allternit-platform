@@ -74,8 +74,23 @@ export function resolveOperatorGatewayUrl(input: OperatorGatewayInput): string {
     return fallback;
   }
 
-  const hosted = windowUrl || viteUrl || fallback;
-  return hosted || fallback;
+  // Hosted *.allternit.com must never fall through to the desktop loopback
+  // default. Cloudflare Git Pages builds omit VITE_ALLTERNIT_GATEWAY_URL and
+  // a 127.0.0.1 fallback is blocked by CSP, which leaves the SPA blank.
+  const hosted = windowUrl || viteUrl;
+  if (hosted) return hosted;
+  if (origin && isAllternitHostedOrigin(origin)) return "https://api.allternit.com";
+  return fallback;
+}
+
+function isAllternitHostedOrigin(value: string): boolean {
+  try {
+    const parsed = new URL(value.includes("://") ? value : `https://${value}`);
+    const host = parsed.hostname.toLowerCase();
+    return host === "allternit.com" || host.endsWith(".allternit.com");
+  } catch {
+    return /\.allternit\.com$/i.test(value);
+  }
 }
 
 /**

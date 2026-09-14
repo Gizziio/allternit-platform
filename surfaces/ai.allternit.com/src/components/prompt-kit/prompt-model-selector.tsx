@@ -338,10 +338,6 @@ export function PromptModelSelector({
                   <Cloud size={18} className="mx-auto mb-2 opacity-60" />
                   <p>No providers discovered yet.</p>
                   <p className="text-[var(--text-xs)] mt-1">
-                <div className="p-4 text-center text-[var(--ui-text-muted)] text-sm">
-                  <Cloud size={18} className="mx-auto mb-2 opacity-60" />
-                  <p>No providers discovered yet.</p>
-                  <p className="text-xs mt-1">
                     Connect a provider to see available models.
                   </p>
                 </div>
@@ -375,7 +371,6 @@ export function PromptModelSelector({
                 setOpen(false);
               }}
               className="flex items-center justify-center gap-1.5 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--accent-primary)] transition-colors"
-              className="flex items-center justify-center gap-1.5 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--accent-chat)] transition-colors"
             >
               <Plus size={12} weight="bold" />
               Connect

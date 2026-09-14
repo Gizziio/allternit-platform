@@ -200,8 +200,6 @@ export type ViewType =
   | "hud-annotate"
   // Rail "Customize" — theme / plugins / skills (same surface as Settings)
   | "customize";
-  // API capture / HAR-derived site API contracts
-  | "site-apis";
 
 export type ViewId = string;
 

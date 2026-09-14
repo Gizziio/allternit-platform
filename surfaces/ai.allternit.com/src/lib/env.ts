@@ -85,10 +85,15 @@ export function validatePlatformEnv(): EnvValidationResult {
  * property names.
  */
 export function getBuildTimeClerkPublishableKey(): string {
-  const value = typeof import.meta.env !== 'undefined'
+  const next = typeof import.meta.env !== 'undefined'
     ? import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
     : undefined;
-  return typeof value === 'string' ? value : '';
+  const vite = typeof import.meta.env !== 'undefined'
+    ? import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+    : undefined;
+  if (typeof next === 'string' && next.trim() !== '') return next;
+  if (typeof vite === 'string' && vite.trim() !== '') return vite;
+  return '';
 }
 
 export function isClerkDisabledByEnv(): boolean {

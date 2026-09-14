@@ -120,7 +120,6 @@ export function HomeView({ onAction, context: _context }: HomeViewProps) {
     },
     [bots, startSession]
   );
-  }, [chatSessions, coworkSessions, agents]);
 
   return (
     <div className="p-10 h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.05),transparent_400px)] flex flex-col gap-12">
