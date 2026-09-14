@@ -34,17 +34,19 @@ deviations:
     confidence.
 remaining:
   - >
-    A human with Vercel dashboard access (team `gizzi-io-6138s-projects`)
-    needs to disconnect the GitHub repo from all three Vercel projects
-    (a2rchitech, allternit, platform): open each project → Settings → Git →
-    "Disconnect" the `Gizziio/allternit-platform` connection (or delete the
-    projects outright if nothing else depends on them). This cannot be done
-    from this checkout — there is no vercel.json/.vercel/project.json wiring
-    the link from the repo side; the link lives entirely in Vercel's own
-    project settings / GitHub App installation. Until that's done, the 3
-    "Vercel – *" checks will keep appearing (and failing/hanging) on every
-    push and PR, though they don't currently block merges since `main` has
-    no branch protection rule requiring them.
+    STILL OPEN as of 2026-09-14: a human with Vercel dashboard access (team
+    `gizzi-io-6138s-projects`) needs to disconnect the GitHub repo from all
+    three Vercel projects (a2rchitech, allternit, platform): open each
+    project → Settings → Git → "Disconnect" the `Gizziio/allternit-platform`
+    connection (or delete the projects outright if nothing else depends on
+    them). This cannot be done from this checkout — there is no
+    vercel.json/.vercel/project.json wiring the link from the repo side; the
+    link lives entirely in Vercel's own project settings / GitHub App
+    installation. Until that's done, the 3 "Vercel – *" checks will keep
+    appearing (and failing) on every push and PR. Confirmed still failing
+    on `main` 2026-09-14 (`Vercel – platform`, `Vercel – allternit`,
+    `Vercel – a2rchitech`). They don't block merges (`main` has no branch
+    protection requiring them) but they are the thing that "pops up."
 ---
 
 ## 1. Vercel deployments (`a2rchitech`, `allternit`, `platform`) — removed, not fixed

@@ -501,19 +501,6 @@ const externalTips: Tip[] = [
       }),
   },
   {
-    id: 'vercel-plugin',
-    content: async ctx => {
-      const blue = color('suggestion', ctx.theme)
-      return `Working with Vercel? Install the vercel plugin:\n${blue(`/plugin install vercel@${OFFICIAL_MARKETPLACE_NAME}`)}`
-    },
-    cooldownSessions: 3,
-    isRelevant: async context =>
-      isMarketplacePluginRelevant('vercel', context, {
-        filePath: /(?:^|[/\\])vercel\.json$/i,
-        cli: ['vercel'],
-      }),
-  },
-  {
     id: 'effort-high-nudge',
     content: async ctx => {
       const blue = color('suggestion', ctx.theme)

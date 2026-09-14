@@ -59,7 +59,7 @@ If auto-detect fails (CORS issues), use:
 | `9b89f761` | ✅ Pushed |
 | Build | ⏳ In Progress |
 
-Check: https://vercel.com/dashboard
+Check: GitHub Actions Cloudflare Pages deploy on `Gizziio/allternit-platform`
 
 ## Testing Checklist
 

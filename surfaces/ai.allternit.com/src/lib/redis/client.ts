@@ -2,11 +2,10 @@
  * Redis client — Upstash REST backend.
  *
  * Uses @upstash/redis which speaks HTTP instead of TCP.
- * No persistent connections, no pool exhaustion, works in every
- * Vercel serverless function invocation.
+ * No persistent connections, no pool exhaustion, works in serverless
+ * and static-host environments.
  *
- * Auto-reads KV_REST_API_URL + KV_REST_API_TOKEN (provisioned by the
- * Vercel / Upstash marketplace integration).
+ * Auto-reads KV_REST_API_URL + KV_REST_API_TOKEN (Upstash REST).
  *
  * Returns a thin wrapper whose API matches the ioredis subset used
  * throughout this codebase so existing callers need no changes:

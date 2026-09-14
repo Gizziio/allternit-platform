@@ -196,7 +196,6 @@ const recommendedProviderServices = [
   "deepseek",
   "gitlab",
   "dockerhub",
-  "vercel",
   "cloudflareworker",
   "awss3",
   "cloudflarer2",

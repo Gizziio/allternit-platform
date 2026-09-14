@@ -64,7 +64,7 @@ async function scanPlatform(): Promise<PlatformTopic[]> {
     {
       name: 'Build & Deployment Pipeline',
       patterns: ['next.config.*', 'Dockerfile', 'package.json', '.github/workflows/**'],
-      concepts: ['next.js build', 'docker', 'ci/cd', 'deployment', 'vercel'],
+      concepts: ['vite build', 'docker', 'ci/cd', 'deployment', 'cloudflare pages'],
     },
   ];
 

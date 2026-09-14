@@ -32,16 +32,6 @@ mintlify build
 # Via dashboard: https://dash.cloudflare.com → Pages → docs-allternit
 ```
 
-### Option 3: Vercel
-
-```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Deploy
-vercel --prod
-```
-
 ## Structure
 
 ```
