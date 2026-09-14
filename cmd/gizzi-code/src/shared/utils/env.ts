@@ -245,7 +245,6 @@ export const detectDeploymentEnvironment = memoize((): string => {
   if (process.env.PROJECT_DOMAIN) return 'glitch'
 
   // Cloud platforms
-  if (isEnvTruthy(process.env.VERCEL)) return 'vercel'
   if (
     process.env.RAILWAY_ENVIRONMENT_NAME ||
     process.env.RAILWAY_SERVICE_NAME

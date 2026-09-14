@@ -1,14 +1,16 @@
 # Cloudflare Pages Deployment - Handoff Document
 
 **Date:** April 9, 2026
-**Status:** INCOMPLETE - Deployment blocked
+**Status (2026-09-14):** Historical. Vercel hosting is retired. Web surfaces
+deploy to Cloudflare Pages via `.github/workflows/deploy-cloudflare-pages.yml`.
+Do not wait on a Vercel rate-limit reset and do not revert to Vercel.
 **Last Commit:** 73024ca0
 
 ---
 
 ## What We Were Trying To Do
 
-Deploy the Allternit Platform to Cloudflare Pages to bypass Vercel's 100 deployments/day rate limit.
+Move the Allternit Platform off the old Next.js host onto Cloudflare Pages.
 
 ---
 
@@ -85,27 +87,9 @@ Despite `generateStaticParams()` being present in the file.
 
 ## Recommended Path Forward
 
-### Option 1: Wait for Vercel Rate Limit Reset (RECOMMENDED)
-**Pros:**
-- App was working fine on Vercel
-- No architectural changes needed
-- API routes work normally
-- Dynamic routes work without `generateStaticParams()` hacks
+Vercel is not a path. The live deploy is Cloudflare Pages (Vite static export).
 
-**Cons:**
-- Rate limit resets at 04:28 UTC daily (~6 hours from now)
-- Limited to 100 deployments/day
-
-**Action:**
-```bash
-# Revert Cloudflare changes
-git revert --no-commit 73024ca0 7d2d71d2 9f26325c
-# Restore deleted files from git history
-git show 5df174b9:surfaces/platform/src/app/shell/pair/[code]/page.tsx > surfaces/allternit-platform/src/app/shell/pair/[code]/page.tsx
-git show 5df174b9:surfaces/platform/src/app/shell/session/[id]/page.tsx > surfaces/allternit-platform/src/app/shell/session/[id]/page.tsx
-```
-
-### Option 2: Docker/VPS Deployment
+### Option 1: Docker/VPS Deployment
 **Pros:**
 - Full Next.js server functionality
 - No static export limitations
@@ -120,10 +104,9 @@ git show 5df174b9:surfaces/platform/src/app/shell/session/[id]/page.tsx > surfac
 - Deploy to Railway, Fly.io, or VPS
 - Set up environment variables
 
-### Option 3: Netlify
+### Option 2: Netlify
 **Pros:**
 - Next.js server functions supported
-- No rate limits like Vercel
 - Easy migration
 
 **Cons:**
@@ -166,10 +149,9 @@ CLOUDFLARE_ACCOUNT_ID=
 
 ## Next Steps
 
-1. **DECIDE:** Pick one of the three options above
-2. **If Vercel:** Revert Cloudflare changes, restore deleted files, wait for rate limit reset
-3. **If Docker:** Create Dockerfile, docker-compose.yml, deploy to VPS
-4. **If Netlify:** Create netlify.toml, install Netlify Next.js plugin
+1. **Current:** Cloudflare Pages via GitHub Actions (see `surfaces/ai.allternit.com/DEPLOYMENT.md`)
+2. **If Docker:** Create Dockerfile, docker-compose.yml, deploy to VPS
+3. **If Netlify:** Create netlify.toml, install Netlify Next.js plugin
 
 ---
 
@@ -192,7 +174,7 @@ CLOUDFLARE_ACCOUNT_ID=
 - Dynamic routes with runtime parameters
 - Database connections (Prisma)
 
-These are fundamentally incompatible with static hosting. A serverful deployment (Vercel, Docker, Netlify with functions) is required.
+These were incompatible with a Next.js static export. The later Vite SPA rewrite is what made Cloudflare Pages the live path. Do not go back to Vercel.
 
 ---
 

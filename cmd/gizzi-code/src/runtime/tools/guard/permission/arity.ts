@@ -153,7 +153,6 @@ This dictionary is used to identify the "human-understandable command" from an i
     vault: 2, // vault login
     "vault auth": 3, // vault auth list
     "vault kv": 3, // vault kv get secret/api
-    vercel: 2, // vercel deploy
     volta: 2, // volta install node
     wp: 2, // wp plugin install
     yarn: 2, // yarn add react

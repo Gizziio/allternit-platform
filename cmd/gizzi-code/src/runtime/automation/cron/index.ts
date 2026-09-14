@@ -18,7 +18,6 @@
  * 
  * Architecture based on research from:
  * - Supabase Cron (best-in-class UX)
- * - Vercel Cron (config-based simplicity)
  * - GitHub Actions (workflow integration)
  */
 
