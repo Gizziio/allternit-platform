@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 08:32 — grok — stop hidden noVNC streams from starving the desktop
+
+- **Session ID / Branch:** `session/novnc-cpu-tame`
+- **Agent:** grok (handoff from kimi-code session_02f5f410)
+- **Summary:** Merged PR #515 (`e016ed8ee`) — watch-strip thumbnail is screenshot-only; computer viewport pauses RFB when hidden, drops `resizeSession`, and does not reconnect on every 5s status poll. Fixes Fabric Transport terminal glitching caused by ~470% renderer CPU.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/515 · e016ed8ee
+- **How it works:** The 140×88 watch thumb was decoding a full-resolution VNC stream; the viewport also tore the socket down on every status object identity change. Both are gone. ACI sidecar already unmounts on minimize.
+- **Verification:** vitest 5/5 on watch-strip + VNC-claim tests; typecheck clean on touched files.
+- **Outstanding work:** Live CPU re-profile after :8013 serves this merge; joint PWA daemon test; no desktop DMG rebuild this session.
+- **Summary file:** [2026-09-14-0832-novnc-cpu-tame-grok-hidden-novnc-streams.md](./summaries/2026-09-14-0832-novnc-cpu-tame-grok-hidden-novnc-streams.md)
+
 ### 2026-09-13 18:15 — kimi — phone-remote input-helper bundle fix
 
 - **Session ID / Branch:** `session/phone-remote-bundle-fix`
