@@ -50,6 +50,7 @@ import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
 import { HudShell } from './hud/HudShell';
+import { BotComputerWindow } from '@/views/bots/BotComputerWindow';
 import { NativeSessionPickerHost } from '@/components/native-sessions/NativeSessionPicker';
 import { BotPickerHost } from '@/views/bots/BotPickerHost';
 import { useHudHandoff } from './hud/handoff';
@@ -139,7 +140,9 @@ function ShellAppInner(): React.ReactNode {
 
   const detachedSessionId = detachedParams.get('detachedSessionId');
   const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
+  const detachedBotId = detachedParams.get('botId');
   const isDetachedCodeSession = detachedParams.get('detachedSurface') === 'code' && Boolean(detachedSessionId);
+  const isDetachedBotComputer = detachedParams.get('detachedSurface') === 'bot-computer' && Boolean(detachedBotId);
   // The Electron desktop opens HUD-mode windows at /hud and /hud/*.  In those
   // windows we strip the normal shell chrome (rail, header, rail controls) and
   // render only the HUD/annotation view.
@@ -710,6 +713,18 @@ function ShellAppInner(): React.ReactNode {
         <VoiceProvider>
           <SessionProvider session={session}>
             <HudShell />
+          </SessionProvider>
+        </VoiceProvider>
+      </TooltipProvider>
+    );
+  }
+
+  if (isDetachedBotComputer && detachedBotId) {
+    return (
+      <TooltipProvider>
+        <VoiceProvider>
+          <SessionProvider session={session}>
+            <BotComputerWindow botId={detachedBotId} />
           </SessionProvider>
         </VoiceProvider>
       </TooltipProvider>

@@ -31,6 +31,10 @@ import {
   isOfficeTarget,
   type OfficeTarget,
 } from './office-programs.js';
+import {
+  buildBotComputerWindowUrl,
+  isBotComputerWindowUrl,
+} from './bot-computer-window.js';
 import { bonsaiCompanion } from './bonsai-companion-manager.js';
 import { gizziManager } from './gizzi-manager.js';
 import { connectorSidecarManager } from './connector-sidecar-manager.js';
@@ -806,6 +810,21 @@ function createMainWindow(): BrowserWindow {
             backgroundColor: '#0F0C0A',
             autoHideMenuBar: true,
             title: 'Allternit Code Session',
+          },
+        };
+      }
+
+      if (isBotComputerWindowUrl(requestedUrl)) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1280,
+            height: 840,
+            minWidth: 820,
+            minHeight: 560,
+            backgroundColor: '#0F0C0A',
+            autoHideMenuBar: true,
+            title: requestedUrl.searchParams.get('title') || 'Bot computer',
           },
         };
       }
@@ -2993,6 +3012,7 @@ ipcMain.on('shell:open-office', (_event, target?: unknown, artifactId?: unknown)
 });
 
 const codeSessionWindows = new Map<string, BrowserWindow>();
+const botComputerWindows = new Map<string, BrowserWindow>();
 
 ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; workspaceId?: string; title?: string }) => {
   if (!options?.sessionId) throw new Error('A session ID is required');
@@ -3042,6 +3062,48 @@ ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; work
   });
   void sessionWindow.loadURL(url.toString());
 });
+
+ipcMain.handle('shell:open-bot-computer', (_event, options: { botId: string; title?: string }) => {
+  if (!options?.botId) throw new Error('A bot ID is required');
+
+  const existing = botComputerWindows.get(options.botId);
+  if (existing && !existing.isDestroyed()) {
+    existing.show();
+    existing.focus();
+    return;
+  }
+
+  const computerWindow = new BrowserWindow({
+    width: 1280,
+    height: 840,
+    minWidth: 820,
+    minHeight: 560,
+    title: options.title || 'Bot computer',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  installWillNavigateGuard(computerWindow.webContents);
+  botComputerWindows.set(options.botId, computerWindow);
+
+  const url = buildBotComputerWindowUrl(activePlatformUrl, options);
+  computerWindow.once('ready-to-show', () => computerWindow.show());
+  computerWindow.on('closed', () => { botComputerWindows.delete(options.botId); });
+  computerWindow.webContents.setWindowOpenHandler(({ url: target }) => {
+    void openExternalAllowlisted(target);
+    return { action: 'deny' };
+  });
+  void computerWindow.loadURL(url);
+});
+
 ipcMain.handle('shell:get-office-host-status', async () => detectOfficeHostStatus());
 ipcMain.handle('office-addins:get-status', async () => {
   const manager = await getOfficeAddinManager();
