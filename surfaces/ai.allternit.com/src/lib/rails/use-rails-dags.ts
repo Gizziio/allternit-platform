@@ -74,6 +74,17 @@ export interface CreateDagNodeInput {
   parent_node_id: string;
 }
 
+export interface UpdateDagNodeInput {
+  dag_id: string;
+  node_id: string;
+  title: string;
+}
+
+export interface DeleteDagNodeInput {
+  dag_id: string;
+  node_id: string;
+}
+
 function railsUrl(path: string): string {
   return `${GATEWAY_BASE_URL.replace(/\/+$/, '')}${path}`;
 }
@@ -155,6 +166,33 @@ async function postJson(path: string, body: unknown): Promise<unknown> {
   return res.json().catch(() => ({}));
 }
 
+async function patchJson(path: string, body: unknown): Promise<unknown> {
+  const res = await fetch(railsUrl(path), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = new Error(`commrails ${path} ${res.status}`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
+  return res.json().catch(() => ({}));
+}
+
+async function deleteJson(path: string): Promise<unknown> {
+  const res = await fetch(railsUrl(path), {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  });
+  if (!res.ok) {
+    const err = new Error(`commrails ${path} ${res.status}`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
+  return res.status === 204 ? {} : res.json().catch(() => ({}));
+}
+
 export function useRailsDags(view: RailsDagView) {
   return useQuery({
     queryKey: [...RAILS_DAGS_QUERY_KEY, view],
@@ -196,6 +234,29 @@ export function useCreateDagNode() {
         `/api/commrails/dags/${encodeURIComponent(input.dag_id)}/nodes`,
         { title: input.title, parent_node_id: input.parent_node_id }
       ) as Promise<{ node_id: string }>,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: RAILS_DAGS_QUERY_KEY }),
+  });
+}
+
+export function useUpdateDagNode() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateDagNodeInput) =>
+      patchJson(
+        `/api/commrails/dags/${encodeURIComponent(input.dag_id)}/nodes/${encodeURIComponent(input.node_id)}`,
+        { title: input.title }
+      ) as Promise<Record<string, unknown>>,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: RAILS_DAGS_QUERY_KEY }),
+  });
+}
+
+export function useDeleteDagNode() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: DeleteDagNodeInput) =>
+      deleteJson(
+        `/api/commrails/dags/${encodeURIComponent(input.dag_id)}/nodes/${encodeURIComponent(input.node_id)}`
+      ) as Promise<Record<string, unknown>>,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: RAILS_DAGS_QUERY_KEY }),
   });
 }
