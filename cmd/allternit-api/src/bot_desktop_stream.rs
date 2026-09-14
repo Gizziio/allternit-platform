@@ -342,7 +342,7 @@ async fn handle_bot_desktop_socket(
         }
     };
 
-    let _vnc_token = endpoint.token;
+    let vnc_token = endpoint.token;
 
     let (mut ws_sender, mut ws_receiver) = socket.split();
     let (mut tcp_read, mut tcp_write) = tokio::io::split(tcp);
@@ -350,6 +350,59 @@ async fn handle_bot_desktop_socket(
     // Channel for messages that need to go to the browser.
     let (ws_tx, mut ws_rx) = mpsc::channel::<Message>(128);
     let ws_tx2 = ws_tx.clone();
+
+    // Guests run x11vnc with a driver-known password (BOT_DESKTOP_VNC_PASSWORD,
+    // default "allternit") and offer no None-security, so browser viewers
+    // cannot complete the RFB handshake themselves. Run the handshake inline
+    // here — the interceptor answers the DES challenge with the shared
+    // password and only then becomes a transparent pipe.
+    if let Some(token) = vnc_token {
+        type HsErr = Box<dyn std::error::Error + Send + Sync>;
+        let mut auth = crate::vnc_auth::VncAuthInterceptor::new(&token);
+        let mut buf = vec![0u8; 16384];
+        let handshake = async {
+            loop {
+                tokio::select! {
+                    n = tcp_read.read(&mut buf) => match n {
+                        Ok(0) => break,
+                        Ok(n) => {
+                            let pipe = auth.server_bytes(&buf[..n]).map_err(|e| -> HsErr { e.into() })?;
+                            if !pipe.to_server.is_empty() {
+                                tcp_write.write_all(&pipe.to_server).await.map_err(|e| -> HsErr { e.into() })?;
+                            }
+                            if !pipe.to_client.is_empty() {
+                                ws_tx.send(Message::Binary(pipe.to_client)).await.map_err(|e| -> HsErr { e.into() })?;
+                            }
+                            if auth.handshake_done() { break; }
+                        }
+                        Err(e) => return Err(e.into()),
+                    },
+                    msg = ws_receiver.next() => match msg {
+                        Some(Ok(Message::Binary(data))) => {
+                            let pipe = auth.client_bytes(&data).map_err(|e| -> HsErr { e.into() })?;
+                            if !pipe.to_server.is_empty() {
+                                tcp_write.write_all(&pipe.to_server).await.map_err(|e| -> HsErr { e.into() })?;
+                            }
+                            if !pipe.to_client.is_empty() {
+                                ws_tx.send(Message::Binary(pipe.to_client)).await.map_err(|e| -> HsErr { e.into() })?;
+                            }
+                            if auth.handshake_done() { break; }
+                        }
+                        Some(Ok(Message::Close(_))) | None => break,
+                        Some(Ok(Message::Ping(data))) => {
+                            let _ = ws_tx.send(Message::Pong(data)).await;
+                        }
+                        _ => {}
+                    },
+                }
+            }
+            Ok::<(), HsErr>(())
+        };
+        if let Err(e) = tokio::time::timeout(std::time::Duration::from_secs(15), handshake).await {
+            warn!(bot_id, sandbox_id, error = %e, "VNC auth handshake failed");
+            return;
+        }
+    }
 
     // Forward channel -> WebSocket sender.
     let forward_to_ws = tokio::spawn(async move {
