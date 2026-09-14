@@ -153,6 +153,7 @@ function ShellAppInner(): React.ReactNode {
       // sessions and stay in the Bots section of the rail.
       useChatSessionStore.getState().setActiveSession(sessionId);
       dispatch({ type: 'OPEN_VIEW', viewType: 'chat', context: { sessionId, originView: active.viewType } });
+      dispatch({ type: 'OPEN_VIEW', viewType: 'cowork-agent-session', context: { sessionId, originView: active.viewType } });
     }, [active.viewType])
   );
   useStackProviders();

@@ -22,6 +22,19 @@ export interface BaseAgentSessionProps {
   showWorkbench?: boolean;
 }
 
+// Cowork Mode: Task and scheduling-focused
+export interface CoworkModeAgentTasksProps extends BaseAgentSessionProps {
+  mode: 'cowork';
+  /** Initial task view */
+  initialView?: 'tasks' | 'schedule' | 'runs' | 'drafts';
+  /** Project identifier */
+  projectId?: string;
+  /** Show scheduling panel */
+  showScheduler?: boolean;
+  /** Task filter */
+  taskFilter?: 'all' | 'pending' | 'running' | 'completed';
+}
+
 interface AgentSessionState {
   isLoading: boolean;
   isStreaming: boolean;

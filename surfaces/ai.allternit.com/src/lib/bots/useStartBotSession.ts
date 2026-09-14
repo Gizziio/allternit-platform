@@ -37,6 +37,9 @@ export interface UseStartBotSessionReturn {
  *
  * The session-start core lives in `./start-bot-session` so non-React callers
  * (rail rows, toasts, bot home) can start sessions without mounting a hook.
+ * system prompt. The resulting sessionId can be passed to
+ * `open('cowork-agent-session', { sessionId })` so the existing chat surface
+ * renders it.
  */
 export function useStartBotSession(
   onSessionStarted?: (sessionId: string, botId: string) => void

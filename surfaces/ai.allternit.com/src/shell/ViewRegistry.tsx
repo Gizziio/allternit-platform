@@ -441,6 +441,7 @@ export function getShellViewRegistry(handlers: {
           useChatSessionStore.getState().setActiveSession(sessionId);
           open('chat', { sessionId });
         }} />
+        <AgentHub onSessionStarted={(sessionId) => open('cowork-agent-session', { sessionId })} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -1040,7 +1041,7 @@ export function getShellViewRegistry(handlers: {
         }
       }, [ctx?.sessionId]);
       return (
-        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Agent Workspace" />}>
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName=\"Cowork Agent Workspace\" />}>
           <CoworkRoot />
         </ErrorBoundary>
       );

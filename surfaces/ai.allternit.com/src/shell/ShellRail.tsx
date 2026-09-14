@@ -418,6 +418,9 @@ export function ShellRail({
       // sessions and stay in the Bots section of the rail.
       useChatSessionStore.getState().setActiveSession(sessionId);
       onOpen?.('chat', { sessionId, originView: activeViewType ?? 'chat' });
+      // Open the bot session view so the rail entry is tied to a real session,
+      // not a generic home chat.
+      onOpen?.('cowork-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
     }, [onOpen, activeViewType])
   );
 
