@@ -1474,6 +1474,9 @@ export class DesktopAuthManager {
     if (requestPath.startsWith(desktopPrefix)) {
       return `http://127.0.0.1:8477${requestPath.slice(desktopPrefix.length) || '/'}`;
     }
+    if (requestPath.startsWith('/v1/browser-skills')) {
+      return `${URLS.ACU}${requestPath}`;
+    }
     if (requestPath.startsWith('/api/v1/remote-control/')) {
       return `${URLS.GIZZI}${requestPath.replace('/api/v1/remote-control/', '/v1/remote-control/')}`;
     }

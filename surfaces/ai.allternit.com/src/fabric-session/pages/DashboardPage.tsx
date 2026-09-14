@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bell,
   BellSlash,
@@ -45,6 +45,8 @@ import type { BeforeInstallPromptEvent } from "../types";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { getBots } from "@/lib/bots/bot-profile";
 import { BotsRosterSection } from "./BotsRosterSection";
+import { FabricWorkflowsPanel } from "@/components/dispatch/FabricWorkflowsPanel";
+import { createFabricWorkflowsFetch } from "@/lib/browser-skills-api";
 
 interface DashboardPageProps {
   installPrompt: BeforeInstallPromptEvent | null;
@@ -267,6 +269,12 @@ export function DashboardPage({
 
   const vapidKey = useVapidKey();
   const { pushByRuntime, setPushByRuntime } = usePushByRuntime(runtimes, auth.getToken);
+
+  const workflowRuntime = runtimes.find((r) => r.id === selectedId) ?? runtimes.find((r) => r.status === "online") ?? runtimes[0];
+  const workflowFetch = useMemo(
+    () => (workflowRuntime ? createFabricWorkflowsFetch(workflowRuntime.id, auth.getToken) : undefined),
+    [workflowRuntime?.id, auth.getToken],
+  );
 
   const togglePush = useCallback(
     async (rt: RuntimeViewModel) => {
@@ -615,6 +623,18 @@ export function DashboardPage({
             attention={(rt) => byRuntime[rt.id]}
             emptyMessage="Open Allternit Desktop or a hosted node while signed in to this account."
           />
+
+          <div className="mt-8">
+            <FabricWorkflowsPanel
+              fetch={workflowFetch}
+              machineLabel={workflowRuntime ? `On ${workflowRuntime.name}` : undefined}
+              unavailable={
+                workflowRuntime
+                  ? undefined
+                  : "Open a paired machine running Allternit Desktop. Workflows run on that machine's computer-use gateway."
+              }
+            />
+          </div>
 
           <BotsRosterSection
             bots={roster}
