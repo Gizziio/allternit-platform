@@ -6,7 +6,6 @@ on:
     paths:
       - 'surfaces/allternit-desktop/**'
       - 'cmd/allternit-api/**'
-      - 'surfaces/ai.allternit.com/**'
       - '.github/workflows/ci-desktop.yml'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -15,7 +14,6 @@ on:
     paths:
       - 'surfaces/allternit-desktop/**'
       - 'cmd/allternit-api/**'
-      - 'surfaces/ai.allternit.com/**'
       - '.github/workflows/ci-desktop.yml'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'

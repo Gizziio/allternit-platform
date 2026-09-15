@@ -1,5 +1,7 @@
 name: Discovery Features
 
+# Disabled 2026-09-15: discovery artifacts live in Gizziio/allternit-ai.
+
 on:
   schedule:
     # Every Wednesday at 09:00 UTC (after the weekly news, so it can bundle it)
@@ -12,6 +14,7 @@ permissions:
 
 jobs:
   generate:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

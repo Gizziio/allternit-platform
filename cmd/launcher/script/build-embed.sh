@@ -10,10 +10,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LAUNCHER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT_DIR="$(cd "$LAUNCHER_DIR/../.." && pwd)"
+# shellcheck source=../../../scripts/hosted-ui.sh
+. "$ROOT_DIR/scripts/hosted-ui.sh"
 
 EMBED_DIR="$LAUNCHER_DIR/embed"
 API_SOURCE="$ROOT_DIR/target/release/allternit-api"
-UI_SOURCE="$ROOT_DIR/surfaces/ai.allternit.com/dist"
+HOSTED_UI="$(resolve_hosted_ui "$ROOT_DIR")"
+UI_SOURCE="$HOSTED_UI/dist"
 
 mkdir -p "$EMBED_DIR"
 
@@ -25,8 +28,9 @@ echo "[launcher-embed] Copying API binary..."
 cp "$API_SOURCE" "$EMBED_DIR/allternit-api"
 chmod +x "$EMBED_DIR/allternit-api"
 
-echo "[launcher-embed] Building UI assets..."
-cd "$ROOT_DIR/surfaces/ai.allternit.com"
+echo "[launcher-embed] Building workspace UI (ai.allternit.com)..."
+link_oss_platform "$HOSTED_UI" "$ROOT_DIR"
+cd "$HOSTED_UI"
 if ! command -v pnpm >/dev/null 2>&1; then
   echo "[launcher-embed] ERROR: pnpm is required to build the UI" >&2
   exit 1

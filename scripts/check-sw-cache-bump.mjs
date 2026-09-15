@@ -4,6 +4,8 @@
 // old cached assets (this blanked the PWA for a user after a deploy).
 import { execSync } from 'node:child_process';
 
+import { existsSync } from 'node:fs';
+
 const SW_PATH = 'surfaces/ai.allternit.com/public/fabric-session-service-worker.js';
 const WATCH_PATHS = [
   SW_PATH,
@@ -14,6 +16,11 @@ const WATCH_PATHS = [
   'surfaces/ai.allternit.com/public/fabric-session-splash-1170x2532.png',
   'surfaces/ai.allternit.com/src/fabric-session/',
 ];
+
+if (!existsSync(SW_PATH)) {
+  console.log('Fabric Session SW lives in Gizziio/allternit-ai now; skipping guard in this repo.');
+  process.exit(0);
+}
 
 function sh(cmd) {
   return execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();

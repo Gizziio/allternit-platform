@@ -1,0 +1,46 @@
+name: Build hosted workspace UI
+description: Checkout Gizziio/allternit-ai and copy dist into desktop resources/platform. Never use the cloud console.
+
+inputs:
+  token:
+    description: PAT that can read private Gizziio/allternit-ai (ALLTERNIT_AI_CHECKOUT_TOKEN)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout ai.allternit.com UI
+      uses: actions/checkout@v4
+      with:
+        repository: Gizziio/allternit-ai
+        path: .hosted-ui
+        token: ${{ inputs.token }}
+
+    - name: Link this public repo as OSS package source
+      shell: bash
+      run: ln -sfn "$GITHUB_WORKSPACE" .hosted-ui/.oss-platform
+
+    - name: Build workspace static export
+      shell: bash
+      working-directory: .hosted-ui
+      env:
+        NODE_OPTIONS: --max-old-space-size=8192
+        NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: '1'
+        VITE_ALLTERNIT_GATEWAY_URL: 'http://127.0.0.1:8013'
+        NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL: 'http://127.0.0.1:8013'
+        NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com'
+        VITE_CLOUD_API_URL: 'https://api.allternit.com'
+      run: |
+        corepack enable
+        corepack prepare pnpm@10.28.0 --activate
+        pnpm install --no-frozen-lockfile --ignore-scripts
+        pnpm build
+
+    - name: Copy static export into desktop resources
+      shell: bash
+      run: |
+        DEST=surfaces/allternit-desktop/resources/platform
+        rm -rf "$DEST"
+        mkdir -p "$DEST"
+        cp -r .hosted-ui/dist/. "$DEST/"
+        test -f "$DEST/index.html"

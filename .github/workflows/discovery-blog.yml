@@ -1,5 +1,8 @@
 name: Discovery Blog
 
+# Disabled 2026-09-15: discovery artifacts live in Gizziio/allternit-ai
+# (ai.allternit.com), not this public repo. Re-enable there, not here.
+
 on:
   schedule:
     # Every Thursday at 09:00 UTC
@@ -12,6 +15,7 @@ permissions:
 
 jobs:
   generate:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -24,6 +24,10 @@ repo is the control-plane binary for `api.allternit.com`, not the workspace UI.
 
 **This public repo must never `wrangler pages deploy --project-name=ai-allternit`.**
 
+Desktop release checks out `Gizziio/allternit-ai` with repo secret
+`ALLTERNIT_AI_CHECKOUT_TOKEN` (PAT, contents:read on that private repo).
+Without it, `release-desktop.yml` cannot bundle the workspace UI.
+
 ## Active Projects
 
 ### Deployed from this repo (GitHub Actions → wrangler)

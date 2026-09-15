@@ -12,8 +12,28 @@ const { execFileSync } = require('child_process');
 
 const desktopDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(desktopDir, '..', '..');
-const platformDir = path.join(repoRoot, 'surfaces', 'ai.allternit.com');
 const platformResourcesDir = path.join(desktopDir, 'resources', 'platform');
+
+function resolveHostedUiDir() {
+  const envPath = process.env.ALLTERNIT_AI_PATH;
+  if (envPath && fs.existsSync(path.join(envPath, 'package.json'))) {
+    return path.resolve(envPath);
+  }
+  const candidates = [
+    path.join(repoRoot, '.hosted-ui'),
+    path.resolve(repoRoot, '..', 'allternit-ai'),
+    path.join(repoRoot, 'surfaces', 'ai.allternit.com'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(path.join(c, 'package.json'))) {
+      return c;
+    }
+  }
+  log('ERROR: ai.allternit.com UI not found.');
+  log('Clone Gizziio/allternit-ai next to this repo, or set ALLTERNIT_AI_PATH.');
+  log('Do not package surfaces/platform.allternit.com — that is the cloud console.');
+  process.exit(1);
+}
 
 function log(message) {
   process.stdout.write(`[prepare-platform-static] ${message}\n`);
@@ -146,12 +166,17 @@ function loadCompanyClerkKey() {
 function main() {
   checkRequiredBinaries();
 
-  if (!fs.existsSync(platformDir)) {
-    log(`Platform surface not found at ${platformDir}. Skipping static export.`);
-    process.exit(0);
+  const platformDir = resolveHostedUiDir();
+  log(`Workspace UI (ai.allternit.com) at ${platformDir}`);
+  const ossLink = path.join(platformDir, '.oss-platform');
+  try {
+    fs.symlinkSync(repoRoot, ossLink, 'dir');
+  } catch (e) {
+    if (e && e.code !== 'EEXIST') {
+      log(`note: could not link .oss-platform (${e.message})`);
+    }
   }
 
-  // Build and copy platform static export
   // NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH activates the renderer's desktop
   // runtime-pairing bridge (useDesktopSession/buildDesktopAuthValue in
   // platform-auth-client.tsx). Without it, every packaged desktop build falls
@@ -178,7 +203,7 @@ function main() {
     buildEnv.VITE_CLERK_PUBLISHABLE_KEY = clerkKey;
   }
   runBuild(platformDir, 'build', buildEnv);
-  copyExport(path.join(platformDir, 'dist'), platformResourcesDir, 'Platform');
+  copyExport(path.join(platformDir, 'dist'), platformResourcesDir, 'Workspace UI');
 }
 
 main();
