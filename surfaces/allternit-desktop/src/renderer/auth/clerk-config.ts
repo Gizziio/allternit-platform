@@ -10,7 +10,6 @@
 interface ClerkConfig {
   publishableKey: string;
   proxyUrl?: string;
-  clerkJSUrl?: string;
   signInUrl?: string;
   signUpUrl?: string;
 }
