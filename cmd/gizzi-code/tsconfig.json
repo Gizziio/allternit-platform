@@ -136,9 +136,6 @@
       "@anthropic-ai/foundry-sdk": [
         "./src/vendor/anthropic-stubs/foundry-sdk.ts"
       ],
-      "@anthropic-ai/vertex-sdk": [
-        "./src/vendor/anthropic-stubs/vertex-sdk.ts"
-      ],
       "@allternit/extension": [
         "./src/vendor/anthropic-stubs/allternit-extension.ts"
       ],
