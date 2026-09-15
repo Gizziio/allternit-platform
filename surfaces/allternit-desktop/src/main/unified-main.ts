@@ -85,9 +85,25 @@ import {
   openExternalAllowlisted,
   assertTrustedSender,
 } from './security.js';
+import { resolveDevUserDataPath } from './desktop-data-dir.js';
 
 // Fix PATH for macOS
 fixPath();
+
+// Unpackaged launches must not share the packaged app's Electron profile
+// (`<appData>/@allternit/desktop`) — that SQLite is what cargo/dev
+// migrations kept rewriting. Must run before any getPath('userData').
+{
+  const isolated = resolveDevUserDataPath({
+    isPackaged: app.isPackaged,
+    appData: app.getPath('appData'),
+    envUserData: process.env.ALLTERNIT_USER_DATA_DIR,
+    argv: process.argv,
+  });
+  if (isolated) {
+    app.setPath('userData', isolated);
+  }
+}
 
 // ============================================================================
 // Connectivity helpers
@@ -160,6 +176,9 @@ function resolveLocalPlatformStaticPath(): string | null {
 log.transports.file.resolvePath = () => join(app.getPath('userData'), 'main.log');
 log.initialize();
 log.transports.file.level = 'info';
+if (!app.isPackaged) {
+  log.info(`[Main] unpackaged userData=${app.getPath('userData')} (isolated from packaged @allternit/desktop)`);
+}
 
 // Last-resort crash handlers: log everything, keep the process alive where
 // Electron allows it, and surface a fatal dialog only once the app is ready.
