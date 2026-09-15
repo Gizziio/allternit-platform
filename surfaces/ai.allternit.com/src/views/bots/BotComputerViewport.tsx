@@ -51,8 +51,14 @@ import {
   releaseVnc,
   shouldHoldBotDesktopStream,
   subscribeVncOwner,
+  vncEndpointKey,
   type BotComputerLayout,
 } from "./bot-computer-vnc";
+
+function isRateLimitError(error?: string | null): boolean {
+  if (!error) return false;
+  return error.includes("429") || error.includes("rate_limited") || /rate limit/i.test(error);
+}
 
 export type { BotComputerLayout };
 
@@ -136,7 +142,6 @@ export function BotComputerViewport({
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [mode, setMode] = useState<DesktopMode>(() => modeFromProvider(bot.vmOperator?.provider));
   const [hostOptIn, setHostOptIn] = useState(false);
-  const [vncEpoch, setVncEpoch] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const screenshotPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -147,6 +152,7 @@ export function BotComputerViewport({
   const screenshotFailuresRef = useRef(0);
   const RFBModuleRef = useRef<any>(null);
   const connectedWsUrlRef = useRef<string | null>(null);
+  const connectingRef = useRef(false);
   const [rfbConnected, setRfbConnected] = useState(false);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([]);
@@ -171,8 +177,6 @@ export function BotComputerViewport({
       setVm({ sandbox_id: activeVM.id, status: activeVM.status, provider: activeVM.provider });
     }
   }, [activeVM]);
-
-  useEffect(() => subscribeVncOwner(() => setVncEpoch((n) => n + 1)), []);
 
   // Pause when scrolled out of view (IntersectionObserver on the whole pane;
   // document.hidden alone doesn't catch a viewport buried in a long chat).
@@ -225,7 +229,7 @@ export function BotComputerViewport({
       if (result.ok && result.data) {
         setStatus(result.data);
         setError(null);
-      } else {
+      } else if (!isRateLimitError(result.error)) {
         setError(result.error ?? "Could not load desktop status");
       }
     } finally {
@@ -283,7 +287,6 @@ export function BotComputerViewport({
         setScreenshot(result.data);
         screenshotFailuresRef.current = 0;
       } else {
-        setScreenshot(null);
         screenshotFailuresRef.current += 1;
       }
     } catch (err) {
@@ -309,7 +312,10 @@ export function BotComputerViewport({
       return;
     }
 
-    const baseIntervalMs = layout === "window" ? 400 : 4000;
+    // Window used to poll every 400ms, which 429'd the bot-desktop bucket
+    // (30 rpm) and wiped the last frame. Live VNC is the window path;
+    // screenshots are a slow fallback until the first RFB frame.
+    const baseIntervalMs = canConnectVnc ? 8000 : layout === "window" ? 2500 : 4000;
     const failureBackoff = Math.min(screenshotFailuresRef.current, 5);
     const intervalMs = baseIntervalMs * (failureBackoff === 0 ? 1 : 2 ** failureBackoff);
 
@@ -356,30 +362,43 @@ export function BotComputerViewport({
   const connectVnc = useCallback(async (wsPath: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    if (rfbRef.current && connectedWsUrlRef.current === wsPath) return;
-    if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
-      await new Promise<void>((resolve) => {
-        if (typeof ResizeObserver === "undefined") {
-          resolve();
-          return;
-        }
-        const ro = new ResizeObserver(() => {
-          if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+    const sameEndpoint =
+      connectedWsUrlRef.current &&
+      vncEndpointKey(connectedWsUrlRef.current) === vncEndpointKey(wsPath);
+    if ((rfbRef.current || connectingRef.current) && sameEndpoint) {
+      return;
+    }
+    if (connectingRef.current) return;
+    connectingRef.current = true;
+    try {
+      if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+        await new Promise<void>((resolve) => {
+          if (typeof ResizeObserver === "undefined") {
+            resolve();
+            return;
+          }
+          const ro = new ResizeObserver(() => {
+            if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+              ro.disconnect();
+              resolve();
+            }
+          });
+          ro.observe(canvas);
+          window.setTimeout(() => {
             ro.disconnect();
             resolve();
-          }
+          }, 2000);
         });
-        ro.observe(canvas);
-        window.setTimeout(() => {
-          ro.disconnect();
-          resolve();
-        }, 2000);
-      });
-    }
-    if (rfbRef.current && connectedWsUrlRef.current === wsPath) return;
-    disconnectVnc();
+      }
+      if (
+        rfbRef.current &&
+        connectedWsUrlRef.current &&
+        vncEndpointKey(connectedWsUrlRef.current) === vncEndpointKey(wsPath)
+      ) {
+        return;
+      }
+      disconnectVnc();
 
-    try {
       if (!RFBModuleRef.current) {
         RFBModuleRef.current = await import("@novnc/novnc");
       }
@@ -400,6 +419,7 @@ export function BotComputerViewport({
       rfb.addEventListener("connect", () => setRfbConnected(true));
       rfb.addEventListener("disconnect", () => {
         setRfbConnected(false);
+        connectingRef.current = false;
         if (rfbRef.current === rfb) {
           rfbRef.current = null;
           connectedWsUrlRef.current = null;
@@ -410,32 +430,50 @@ export function BotComputerViewport({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start VNC viewer");
       setRfbConnected(false);
+    } finally {
+      connectingRef.current = false;
     }
   }, [disconnectVnc, vncControlState]);
 
   useEffect(() => {
-    if (layout !== "window" || !sandboxId) return;
-    claimVnc(sandboxId, "window");
-    return () => releaseVnc(sandboxId, "window");
-  }, [layout, sandboxId]);
+    if (!sandboxId) return;
+    return () => releaseVnc(sandboxId, layout);
+  }, [sandboxId, layout]);
+
+  const wsEndpoint = wsUrl ? vncEndpointKey(wsUrl) : null;
 
   useEffect(() => {
-    const wantsVnc = streamActive && canConnectVnc;
-    const holdsClaim = Boolean(sandboxId && wantsVnc && claimVnc(sandboxId, layout));
-    if (wantsVnc && holdsClaim && wsUrl) {
-      void connectVnc(wsUrl);
-    } else {
+    const wantsVnc = streamActive && canConnectVnc && Boolean(sandboxId) && Boolean(wsUrl);
+    if (!wantsVnc) {
       disconnectVnc();
+      return;
     }
-
+    if (!claimVnc(sandboxId!, layout)) {
+      disconnectVnc();
+      return;
+    }
+    void connectVnc(wsUrl!);
+    // Do not releaseVnc here — cleanup used to claim→emit→vncEpoch→reconnect
+    // in a tight loop that never painted a frame.
     return () => {
       disconnectVnc();
-      if (sandboxId) releaseVnc(sandboxId, layout);
     };
     // connectVnc identity changes with control state (viewOnly). Do not
     // tear the socket down on take-over — that is the blank-canvas bug.
+    // Token rotation must not reconnect (wsEndpoint strips token).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wsUrl, canConnectVnc, sandboxId, layout, vncEpoch, streamActive]);
+  }, [wsEndpoint, canConnectVnc, sandboxId, layout, streamActive]);
+
+  useEffect(() => {
+    return subscribeVncOwner(() => {
+      if (!sandboxId || !streamActive || !canConnectVnc || !wsUrl) return;
+      if (!claimVnc(sandboxId, layout)) {
+        disconnectVnc();
+        return;
+      }
+      void connectVnc(wsUrl);
+    });
+  }, [sandboxId, layout, streamActive, canConnectVnc, wsUrl, connectVnc, disconnectVnc]);
 
   useEffect(() => {
     if (rfbRef.current) {
