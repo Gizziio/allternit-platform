@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-15 12:05 — grok — Unpackaged is scratch, not a second product
+
+- **Session ID / Branch:** grok `01a0a52b` / `session/datadir-scratch-0915`
+- **Agent:** grok
+- **Summary:** Merged PR #549 (`e546f83eb`) — dropped the standing `@allternit/desktop-dev` profile from #545. Unpackaged is explicit scratch or ephemeral temp. One Desktop: the installed app.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/549 · `e546f83eb` / `08d0172e3`
+- **How it works:** `resolveDevUserDataPath` returns unchanged (packaged / `--user-data-dir`), path (`ALLTERNIT_USER_DATA_DIR`), or ephemeral (mkdtemp). 8013 fuse unchanged.
+- **Verification:** vitest 155/155.
+- **Outstanding work:** Packaged DMG not rebuilt (no-op). ACU/uvicorn, mesh 502, Clerk auth-renderer still deferred.
+- **Summary file:** [2026-09-15-1205-datadir-scratch-0915-grok-unpackaged-scratch.md](./summaries/2026-09-15-1205-datadir-scratch-0915-grok-unpackaged-scratch.md)
+
 ### 2026-09-15 08:21 — grok — Isolate unpackaged desktop SQLite from the packaged app
 
 - **Session ID / Branch:** grok `01a0a52b` / `session/datadir-dev-0915`
