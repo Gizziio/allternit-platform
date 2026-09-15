@@ -1,22 +1,7 @@
-CREATE TABLE IF NOT EXISTS session_memory (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    session_id TEXT NOT NULL,
-    memory_key TEXT NOT NULL,
-    value TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, session_id, memory_key)
-);
-
-CREATE INDEX IF NOT EXISTS session_memory_user_session_idx
-    ON session_memory(user_id, session_id);
-CREATE INDEX IF NOT EXISTS session_memory_key_idx
-    ON session_memory(memory_key);
--- Production tables for autonomous bot primitives.
--- Secrets are encrypted at rest via token_crypto.rs (AES-256-GCM when a key is set).
-
--- ── Agent secrets ────────────────────────────────────────────────────────────
+-- Agent secrets / Photon inbox / identity channels.
+-- Split out of a renamed V47 so production DBs that already applied
+-- V47__session_memory keep a matching checksum. IF NOT EXISTS so this
+-- is a no-op on DBs that already created these tables via the combined V47.
 CREATE TABLE IF NOT EXISTS agent_secrets (
     id          TEXT PRIMARY KEY,
     agent_id    TEXT NOT NULL,
@@ -33,7 +18,6 @@ CREATE TABLE IF NOT EXISTS agent_secrets (
 CREATE INDEX IF NOT EXISTS idx_agent_secrets_agent ON agent_secrets(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_secrets_user ON agent_secrets(user_id);
 
--- ── Photon inbox ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS agent_photon_inbox (
     id          TEXT PRIMARY KEY,
     agent_id    TEXT NOT NULL,
@@ -47,7 +31,6 @@ CREATE TABLE IF NOT EXISTS agent_photon_inbox (
 CREATE INDEX IF NOT EXISTS idx_agent_photon_inbox_agent ON agent_photon_inbox(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_photon_inbox_created ON agent_photon_inbox(created_at);
 
--- ── Agent identity channels ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS agent_identity_channels (
     id            TEXT PRIMARY KEY,
     agent_id      TEXT NOT NULL UNIQUE,
