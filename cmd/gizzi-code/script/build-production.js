@@ -279,6 +279,24 @@ const bundlePlugin = {
         }, () => ({
             path: resolve("src/vendor/anthropic-stubs/optional-otel.ts"),
         }));
+        // Vertex / GCP auth are dynamic import() in api/client.ts. Bun.build
+        // does not apply tsconfig `paths` to those, so point them at the
+        // same throwing stubs used for the static aliases.
+        build.onResolve({ filter: /^google-auth-library$/ }, () => ({
+            path: resolve("src/vendor/anthropic-stubs/google-auth-library.ts"),
+        }));
+        build.onResolve({ filter: /^@anthropic-ai\/vertex-sdk$/ }, () => ({
+            path: resolve("src/vendor/anthropic-stubs/vertex-sdk.ts"),
+        }));
+        build.onResolve({ filter: /^@anthropic-ai\/bedrock-sdk$/ }, () => ({
+            path: resolve("src/vendor/anthropic-stubs/bedrock-sdk.ts"),
+        }));
+        build.onResolve({ filter: /^@anthropic-ai\/foundry-sdk$/ }, () => ({
+            path: resolve("src/vendor/anthropic-stubs/foundry-sdk.ts"),
+        }));
+        build.onResolve({ filter: /^@anthropic-ai\/sandbox-runtime$/ }, () => ({
+            path: resolve("src/vendor/anthropic-stubs/sandbox-runtime.ts"),
+        }));
         // @allternit/gizzi-sdk lives at packages/sdk (not packages/gizzi-sdk).
         // Without this alias Bun.build cannot resolve provider subpaths and
         // the production binary ships without Bot Mode / provider adapters.

@@ -2385,7 +2385,6 @@ src/utils/sliceAnsi.ts
 src/utils/startupProfiler.ts
 src/utils/textHighlighting.ts
 src/utils/worktreeModeEnabled.ts
-src/vendor/anthropic-stubs/optional-otel.ts
 src/vim/motions.ts
 src/vim/operators.ts
 src/vim/textObjects.ts
