@@ -15,7 +15,9 @@
 import { createServer } from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Capture, checkScreenRecordingPermission } from './lib/capture.mjs';
@@ -142,10 +144,41 @@ async function serveStatic(res, relPath, extraHeaders = {}) {
   }
 }
 
+function persistableTokenPath() {
+  if (process.env.PHONE_REMOTE_TOKEN_FILE) return process.env.PHONE_REMOTE_TOKEN_FILE;
+  if (process.env.ELECTRON_RUN_AS_NODE === '1') {
+    return join(homedir(), 'Library/Application Support/@allternit/desktop/phone-remote-token');
+  }
+  return null;
+}
+
+function loadOrCreateToken(explicit) {
+  if (explicit) return explicit;
+  const file = persistableTokenPath();
+  if (file) {
+    try {
+      const existing = readFileSync(file, 'utf8').trim();
+      if (existing.length >= 16) return existing;
+    } catch {
+      /* first boot — create below */
+    }
+  }
+  const token = randomBytes(24).toString('base64url');
+  if (file) {
+    try {
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, token, { encoding: 'utf8', mode: 0o600 });
+    } catch {
+      /* clipboard/log still carry the in-memory token */
+    }
+  }
+  return token;
+}
+
 async function main() {
   const cfg = parseArgs(process.argv.slice(2));
   if (!cfg.bind) cfg.bind = tailscaleIPv4() || '100.88.98.69';
-  if (!cfg.token) cfg.token = randomBytes(24).toString('base64url');
+  cfg.token = loadOrCreateToken(cfg.token);
 
   const capture = cfg.capture === 'none' ? null : new Capture({
     mode: cfg.capture, fps: cfg.fps, scale: cfg.scale, quality: cfg.quality,
@@ -252,13 +285,6 @@ async function main() {
         capture, captureMode: cfg.capture, fps: cfg.fps,
         input, inputDryRun: cfg.inputDryRun, display: input?.display ?? null,
       })));
-      const body = Buffer.from(JSON.stringify({
-        capture: { mode: capture?.actualMode ?? cfg.capture, fps: cfg.fps, ...((capture?.lastInfo) || {}) },
-        input: input ? { enabled: true, dryRun: cfg.inputDryRun, accessibilityTrusted: input.ready?.accessibilityTrusted ?? null } : { enabled: false },
-        display: input?.display ?? null,
-        hasFrame: Boolean(capture?.lastFrame),
-        locked: screenLocked(),
-      }));
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'content-length': body.length });
       return res.end(body);
     }
@@ -368,11 +394,16 @@ async function main() {
   const url = `http://${cfg.bind}:${cfg.port}/?t=${cfg.token}`;
   console.log(`\n  phone-remote ready. Open on the iPhone (Tailscale on):\n\n    ${url}\n`);
   console.log(`  local test: http://127.0.0.1:${cfg.port}/?t=${cfg.token}\n`);
-  try {
-    execFileSync('pbcopy', { input: url, encoding: 'utf8' });
-    console.log('  (URL copied to the Mac clipboard — AirDrop / Messages it to the phone)\n');
-  } catch {
-    /* pbcopy absent or not a Mac clipboard session; URL is still printed */
+  // Supervised Desktop restarts used to pbcopy a new URL on every capture
+  // crash, which spammed Messages / Universal Clipboard. Only copy when a
+  // human launched the server themselves.
+  if (process.env.ELECTRON_RUN_AS_NODE !== '1') {
+    try {
+      execFileSync('pbcopy', { input: url, encoding: 'utf8' });
+      console.log('  (URL copied to the Mac clipboard — AirDrop / Messages it to the phone)\n');
+    } catch {
+      /* pbcopy absent or not a Mac clipboard session; URL is still printed */
+    }
   }
 
   const shutdown = () => {
