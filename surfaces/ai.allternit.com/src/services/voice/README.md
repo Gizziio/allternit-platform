@@ -256,7 +256,7 @@ The voice service connects to Chatterbox TTS at `localhost:8001`:
 
 ```bash
 # Start the voice service
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 docker-compose up voice-service
 
 # Or manually

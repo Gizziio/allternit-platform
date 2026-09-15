@@ -35,7 +35,7 @@ export class RealFileSystem implements FileSystemAPI {
     this.childProcess = cpModule?.default ?? cpModule;
     this.homeDir = typeof this.os?.homedir === 'function'
       ? this.os.homedir()
-      : ((globalThis as any)?.process?.env?.HOME || '/Users/macbook');
+      : ((globalThis as any)?.process?.env?.HOME || '~');
     this.isNode = Boolean(this.fs && this.path && this.os && this.childProcess);
   }
 
@@ -77,7 +77,7 @@ export class RealFileSystem implements FileSystemAPI {
     }
 
     this.isNode = false;
-    this.homeDir = (globalThis as any)?.process?.env?.HOME || '/Users/macbook';
+    this.homeDir = (globalThis as any)?.process?.env?.HOME || '~';
   }
 
   private ensureNode() {

@@ -2,7 +2,7 @@
 
 > **Audit date:** 2026-09-03 ~18:45–18:54 CDT
 > **Audited HEAD:** `88baa91abdfdf5b0107c143b318883d6efb7b210` on `main`, working tree clean
-> **Repo:** `/Users/joe/Desktop/allternit-workspace/allternit` (GitHub `Gizziio/allternit-platform`)
+> **Repo:** `~/Desktop/allternit-workspace/allternit` (GitHub `Gizziio/allternit-platform`)
 > **Method:** five independent investigation passes — (1) web architecture deep-read, (2) web build/test verification with real command runs, (3) web deployment/CI/CD audit, (4) agent-ledger trustworthiness audit, (5) desktop architecture+security audit, (6) desktop build verification with real command runs. Every claim below carries its evidence; Appendix A lists the exact commands to reproduce each finding.
 > **Bottom line:** Web is **deployable tomorrow after ~2–4 hours of fixes**. Desktop is **not deployable**; same-day unsigned internal arm64 build is feasible after fixing committed merge damage. Live credentials are committed in git and need same-day rotation.
 
@@ -297,7 +297,7 @@ Ledger index `agent-ledger/LEDGER.md` and newest summaries reviewed. **Verdict: 
 | cacb228c / 72ac1efa / omb / model-picker merges (09-03 14:00) | Merged ✅ with attestations | Merge attestations flagged `env.ts:88` + DispatchView missing components as pre-existing breakage; commit `c1875af69` (09-03 14:26) repaired exactly that. Claims were real at the time; now fixed. Full surface `tsc --noEmit` exits 0 today. |
 | Worktree cleanup ×4 (09-03 11:41) | 4 worktrees removed, WIP on pushed `wip/*` branches | ✅ **Verified.** All four cited SHAs (`e310b5689`, `c55c15758`, `ec0b7b500`, `3dd921673`) exist on origin exactly as claimed. |
 | Typography fix (09-03 08:16) | Font CI exemption, hardcoded monospace replaced, "TYPOGRAPHY VALIDATION: PASS" | Plausible; not independently re-run. |
-| HANDOFF.md (committed 2026-07-26 via `2bda61382`) | Recents rail + Agent Studio cleanup done; only pre-existing TS errors in DocumentEditorPack/SheetEditorPack | ✅ Work is real (`src/shell/ShellRail.tsx:1774` `RecentItemMenu`, used at :1360,:1560; `RecentsView.tsx` exists). ⚠️ But it's a **month-old handoff still sitting in the surface root**, and its error claim is stale — both packs type-check clean today. Written on a different machine (`/Users/macbook/…` paths). |
+| HANDOFF.md (committed 2026-07-26 via `2bda61382`) | Recents rail + Agent Studio cleanup done; only pre-existing TS errors in DocumentEditorPack/SheetEditorPack | ✅ Work is real (`src/shell/ShellRail.tsx:1774` `RecentItemMenu`, used at :1360,:1560; `RecentsView.tsx` exists). ⚠️ But it's a **month-old handoff still sitting in the surface root**, and its error claim is stale — both packs type-check clean today. Written on a different machine (`~/…` paths). |
 
 **Orphaned worktree:** `git worktree list` shows 2 worktrees. `allternit-session-os-console-20260902` on `session/os-console-20260902` — working tree clean, **1 commit ahead / 153 behind main**; tip `bc1397f14` ("AllternitOS Fabric console page") is **local-only: not pushed, not merged**. It touches `surfaces/platform.allternit.com` (not the ai surface) and adds a `package-lock.json` (3,334 lines) into a pnpm/bun workspace — a lockfile conflict waiting if merged naively.
 
@@ -336,7 +336,7 @@ Ledger index `agent-ledger/LEDGER.md` and newest summaries reviewed. **Verdict: 
 
 ## Appendix A — corroboration commands
 
-Run from `/Users/joe/Desktop/allternit-workspace/allternit` unless noted. HEAD under test: `88baa91ab`.
+Run from `~/Desktop/allternit-workspace/allternit` unless noted. HEAD under test: `88baa91ab`.
 
 **Identity / stack**
 - `grep '"build"' surfaces/ai.allternit.com/package.json` → `vite build`
@@ -510,7 +510,7 @@ Five independent agent reports were reconciled against this one. Sources:
 
 1. This repo mandates **session worktrees** (`AGENTS.md`): never edit the shared `main` checkout. Create/reuse your own worktree on branch `session/<id>` — a SessionStart hook normally injects the ritual; if it doesn't:
    ```bash
-   cd /Users/joe/Desktop/allternit-workspace/allternit
+   cd ~/Desktop/allternit-workspace/allternit
    git worktree add ../allternit-session-<id> -b session/<id>
    cd ../allternit-session-<id>
    ```

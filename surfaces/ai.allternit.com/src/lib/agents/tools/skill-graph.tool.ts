@@ -17,7 +17,7 @@ export const skillGraphTool: any = {
   execute: async ({ action, nodeId, content }: any) => {
     console.debug(`[SkillGraph Tool] Executing ${action}`);
     
-    const graphDir = '/Users/macbook/Desktop/content-skill-graph';
+    const graphDir = '~/Desktop/content-skill-graph';
     
     try {
       const req =

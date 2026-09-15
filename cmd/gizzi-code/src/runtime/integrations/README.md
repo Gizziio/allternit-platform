@@ -6,7 +6,7 @@
 
 ### 1. Send a Message
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 bun run src/cli/commands/ac.ts send "@validator Ready for review" --to validator
 ```
 
@@ -72,7 +72,7 @@ ac git bundle extract <id> <repo>
 
 ```bash
 # Core tests
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 bun run test-communication-core.ts
 
 # Future features

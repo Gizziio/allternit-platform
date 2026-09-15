@@ -4,7 +4,7 @@
 
 ### Starting Gizzi Code
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 bun run dev
 ```
 

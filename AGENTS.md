@@ -240,7 +240,7 @@ Module requirements:
 
 **Incremental (recommended):**
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 npx tsx scripts/sync-incremental.ts \
   --html-file alabs-generated-courses/ALABS-ADV-WORKFLOW-module2.html \
   --course-id 14612861 \
@@ -422,7 +422,7 @@ Design: Self-contained, dark theme, JetBrains Mono + Inter,
   progress bar, fixed nav, scroll-reveal, syntax highlighting,
   ONE Canvas animation, fully inline CSS/JS.
 
-Output: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-courses/ALABS-ADV-[COURSE]-module[N].html
+Output: ~/Desktop/allternit-workspace/allternit/alabs-generated-courses/ALABS-ADV-[COURSE]-module[N].html
 ```
 
 ## Future Work (Backlog)

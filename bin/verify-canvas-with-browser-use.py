@@ -9,7 +9,7 @@ from langchain_openai import ChatOpenAI
 
 async def verify_canvas_modules():
     canvas_url = "https://canvas.instructure.com/courses/14389375/modules"
-    screenshot_path = "/Users/macbook/Desktop/canvas_verification.png"
+    screenshot_path = "~/Desktop/canvas_verification.png"
     
     # Configure LLM
     llm = ChatOpenAI(

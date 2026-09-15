@@ -21,7 +21,7 @@
 
 ```bash
 # Navigate to gizzi-code root
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 
 # Create Allternit workspace structure
 mkdir -p .allternit/{state/{locks,checkpoints},contracts/{schemas},context/{pack.history},memory}
@@ -380,8 +380,8 @@ export class WorkspaceLock {
 
 ```bash
 # Create runtime package
-mkdir -p /Users/macbook/Desktop/allternit-workspace/allternit/cmd/runtime
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/runtime
+mkdir -p ~/Desktop/allternit-workspace/allternit/cmd/runtime
+cd ~/Desktop/allternit-workspace/allternit/cmd/runtime
 
 # Initialize package
 bun init

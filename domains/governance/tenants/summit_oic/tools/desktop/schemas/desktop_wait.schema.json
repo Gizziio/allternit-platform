@@ -1,8 +1,0 @@
-{
-  "type": "object",
-  "required": ["session_id", "seconds"],
-  "properties": {
-    "session_id": {"type": "string"},
-    "seconds": {"type": "number", "minimum": 0.1, "maximum": 60}
-  }
-}

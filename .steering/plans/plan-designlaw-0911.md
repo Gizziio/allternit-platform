@@ -7,7 +7,7 @@ Date: 2026-09-11. Locked decisions being executed (Eoj, 2026-09-11):
    cowork violet #A78BFA, code mint #79C47C, browser steel #69A8C8) are removed;
    amber #B08D6E family is the sole accent. Mode distinction via
    typography/iconography is follow-up UX work (NOT this session).
-Governing doc: `/Users/joe/allternit-design-gap-analysis.md` §4-§5.
+Governing doc: `~/allternit-design-gap-analysis.md` §4-§5.
 
 ## Tasks
 

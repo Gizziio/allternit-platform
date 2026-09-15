@@ -238,19 +238,19 @@ Your Canvas account is on the **Free For Teacher** plan. This plan does **not** 
 
 ### Download all enrolled courses
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 tsx scripts/udemy-pipeline.ts
 ```
 
 ### Open more free courses
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 bash scripts/open-more-free-courses.sh
 ```
 
 ### Re-extract token (if needed)
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 tsx scripts/udemy-token-watcher.ts
 ```
 

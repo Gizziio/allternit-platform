@@ -10,7 +10,7 @@ import {
 } from '@phosphor-icons/react';
 import { useDesignSessionStore, useDesignSessionActions } from '../DesignSessionStore';
 
-// ── Node data built from /Users/macbook/Desktop/content-skill-graph/ ─────────
+// ── Node data built from ~/Desktop/content-skill-graph/ ─────────
 
 const GRAPH_NODES = {
   root: {

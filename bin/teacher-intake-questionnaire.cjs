@@ -277,7 +277,7 @@ async function runQuestionnaire() {
   console.log('🎬 You can stop recording now.\n');
   
   // Save profile
-  const profilePath = '/Users/macbook/Desktop/Allternit_Skills_Test_Results/teacher_profile.json';
+  const profilePath = '~/Desktop/Allternit_Skills_Test_Results/teacher_profile.json';
   const fs = require('fs');
   fs.writeFileSync(profilePath, JSON.stringify({
     teacher_id: 'demo_teacher',

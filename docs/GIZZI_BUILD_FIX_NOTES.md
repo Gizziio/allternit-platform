@@ -22,7 +22,7 @@ remaining: []
    - Removed `com.apple.quarantine` extended attribute on vendored binaries (`vendor/ripgrep/arm64-darwin/rg`, `vendor/allternit-mux/darwin-arm64/allternit-mux`, `target/debug/allternit-mux`) that was causing macOS Gatekeeper to block execution.
 
 3. **React Compiler Runtime Stub Fix**:
-   - Fixed `REACT_COMPILER_RUNTIME_STUB` in [script/build-production.js](file:///Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code/script/build-production.js#L120) so `c(size)` returns a valid `React.useState` memoization array (`React.useState(function() { return new Array(size); })[0]`) instead of a function pointer `(fn) => fn()`. This fixed the `ReactSharedInternals.H.useState is null` error on React component boot.
+   - Fixed `REACT_COMPILER_RUNTIME_STUB` in [script/build-production.js](file://~/Desktop/allternit-workspace/allternit/cmd/gizzi-code/script/build-production.js#L120) so `c(size)` returns a valid `React.useState` memoization array (`React.useState(function() { return new Array(size); })[0]`) instead of a function pointer `(fn) => fn()`. This fixed the `ReactSharedInternals.H.useState is null` error on React component boot.
 
 4. **Production Build & Verification**:
    - `bun run script/build-production.js --target=darwin-arm64` exits 0 with binary compiled to `dist/gizzi-code-darwin-arm64` (166.2 MB).

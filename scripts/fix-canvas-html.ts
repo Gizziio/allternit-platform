@@ -230,7 +230,7 @@ function markdownToHtml(md: string): string {
 async function fixCoursePages(courseId: number, courseCode: string) {
   console.log(`\n--- Fixing HTML for ${courseCode} ---`);
   const pages = await getCoursePages(courseId);
-  const contentDir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
+  const contentDir = path.join('~/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
   const files = await fs.readdir(contentDir).catch(() => [] as string[]);
   
   let updated = 0;

@@ -1747,7 +1747,7 @@ The **Runner** implements the Ralph loop—a self-managing execution pipeline:
 ## Directory Structure
 
 ```
-/Users/macbook/Desktop/allternit-workspace/
+~/Desktop/allternit-workspace/
 │
 ├── 📁 allternit/                          ← MAIN PROJECT
 │   │

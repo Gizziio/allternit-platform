@@ -1,6 +1,6 @@
 # Open-Connector Sidecar — Phase 2 Notes
 
-> 2026-07-12. Follow-up to the phase 1 integration (see `docs/gap-analysis/OPEN_CONNECTOR_GAP_ANALYSIS.md` and `/Users/macbook/.claude/plans/reactive-wibbling-wilkinson.md`). Fixes two issues found during phase 1 live verification.
+> 2026-07-12. Follow-up to the phase 1 integration (see `docs/gap-analysis/OPEN_CONNECTOR_GAP_ANALYSIS.md` and `~/.claude/plans/reactive-wibbling-wilkinson.md`). Fixes two issues found during phase 1 live verification.
 
 ## What changed
 

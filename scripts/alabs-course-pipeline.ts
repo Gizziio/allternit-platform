@@ -142,7 +142,7 @@ function parseArgs() {
 async function runScript(scriptPath: string, env?: Record<string, string>) {
   return new Promise<void>((resolve, reject) => {
     const proc = spawn('npx', ['tsx', scriptPath], {
-      cwd: '/Users/macbook/Desktop/allternit-workspace/allternit',
+      cwd: '~/Desktop/allternit-workspace/allternit',
       shell: true,
       env: { ...process.env, ...env },
       stdio: 'inherit',
@@ -172,7 +172,7 @@ async function runPhase(phase: string, courses: string[]) {
     case 'covers': {
       console.log('Generating cover images...');
       const coverProc = spawn('python3', ['scripts/generate-course-covers.py'], {
-        cwd: '/Users/macbook/Desktop/allternit-workspace/allternit',
+        cwd: '~/Desktop/allternit-workspace/allternit',
         stdio: 'inherit',
       });
       await new Promise<void>((resolve, reject) => {
@@ -209,7 +209,7 @@ async function runPhase(phase: string, courses: string[]) {
           '--module-title', `Module 1: ${def.name}`,
           '--html-file', htmlFile,
         ], {
-          cwd: '/Users/macbook/Desktop/allternit-workspace/allternit',
+          cwd: '~/Desktop/allternit-workspace/allternit',
           stdio: 'inherit',
           shell: true,
         });

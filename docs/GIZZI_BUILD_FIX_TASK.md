@@ -6,7 +6,7 @@
 
 ## Working directory
 
-`/Users/macbook/Desktop/allternit-workspace/allternit` (monorepo root).
+`~/Desktop/allternit-workspace/allternit` (monorepo root).
 All paths below are relative to it.
 
 ## Current state (already done — do NOT redo)
@@ -63,7 +63,7 @@ RAM DISCIPLINE: do NOT run full `script/build-production.js` until the worker
 bundle is green. Use the driver (worker-only, ~1-2GB):
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 NODE_OPTIONS=--max-old-space-size=2048 bun .driver-build.ts 2>&1 | grep -vE "BABEL|deoptimised" | tail -15
 ```
 

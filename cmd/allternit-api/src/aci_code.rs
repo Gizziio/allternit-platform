@@ -1125,7 +1125,7 @@ mod tests {
     fn host_paths_outside_the_sandbox_are_refused() {
         for (snippet, label) in [
             ("const s = fs.readFileSync('/etc/passwd');", "system path"),
-            ("fs.copyFile('/Users/joe/secret.txt', 'out');", "user home path"),
+            ("fs.copyFile('~/secret.txt', 'out');", "user home path"),
             ("fs.readFile('../../outside.txt');", "path traversal"),
         ] {
             let mut d = benign();

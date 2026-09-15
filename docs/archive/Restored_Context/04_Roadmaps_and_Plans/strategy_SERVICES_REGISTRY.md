@@ -217,7 +217,7 @@ Create `start-services.sh`:
 echo "Starting allternit Services..."
 
 # Start backend services
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 echo "Starting Registry (8080)..."
 cargo run -p registry-service &

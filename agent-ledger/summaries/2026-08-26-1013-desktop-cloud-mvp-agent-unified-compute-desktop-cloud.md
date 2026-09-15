@@ -1,7 +1,7 @@
 # Allternit Unified Compute & Desktop Cloud — Work Summary
 
 **Branch:** `session/desktop-cloud-mvp`  
-**Main repo:** `/Users/joe/Desktop/allternit-workspace/allternit`  
+**Main repo:** `~/Desktop/allternit-workspace/allternit`  
 **Pushed to:** `origin/session/desktop-cloud-mvp`  
 **Last commit:** `6295201ec` — Merge local desktop-cloud MVP state with unified compute work
 
@@ -86,11 +86,11 @@
 - **Video/screen recording proof:** Not recorded for the final unified settings or bot-tool state.
 - **Pricing finalization:** `computer_minute` rate is a placeholder pending business decision.
 - **True unified "My Computers" list:** `ComputeSettings.tsx` currently reuses existing panels (`VPSConnectionsPanel`, `CloudInstancesPanel`, etc.); a single list rendered directly from `/api/v1/computers` can be wired in later.
-- **Cleanup of old allternit-platform worktrees:** `/Users/joe/Desktop/Allternit/allternit-platform-session-*` directories still exist if other sessions use them; only the active desktop-cloud-mvp worktree and wrong checkout were removed.
+- **Cleanup of old allternit-platform worktrees:** `~/Desktop/Allternit/allternit-platform-session-*` directories still exist if other sessions use them; only the active desktop-cloud-mvp worktree and wrong checkout were removed.
 
 ---
 
 ## Notes
 
-- Work was initially done in the wrong checkout (`/Users/joe/Desktop/Allternit/allternit-platform`), then moved to the correct main repo worktree, merged with the local desktop-cloud MVP state, and pushed.
+- Work was initially done in the wrong checkout (`~/Desktop/Allternit/allternit-platform`), then moved to the correct main repo worktree, merged with the local desktop-cloud MVP state, and pushed.
 - The merge commit `6295201ec` includes a local backup WIP commit (`b28207ffb`) in its history used to preserve uncommitted desktop-cloud MVP state before pulling the unified compute commits.

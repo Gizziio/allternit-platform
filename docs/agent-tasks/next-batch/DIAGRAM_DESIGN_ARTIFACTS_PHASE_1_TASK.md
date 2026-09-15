@@ -3,7 +3,7 @@
 **Scope:** Integrate the `cathrynlavery/diagram-design` pattern into Allternit's artifact system as a new editorial SVG diagram kind. The user wants diagram generation added to Gizzi Code artifacts.
 
 **Agent:** kimi
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-diagram-design`
 
 ## Deliverables

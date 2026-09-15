@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd $HOME/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 
 echo "=== Phase 21: Multi-host Incus pool ==="
 echo

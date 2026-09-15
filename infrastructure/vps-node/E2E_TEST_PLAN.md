@@ -31,7 +31,7 @@
 
 ```bash
 # Navigate to node agent directory
-cd /Users/macbook/Desktop/allternit-workspace/allternit/8-cloud/allternit-node
+cd ~/Desktop/allternit-workspace/allternit/8-cloud/allternit-node
 
 # Build release binary
 cargo build --release
@@ -172,7 +172,7 @@ systemctl status allternit-node --no-pager
 
 ```bash
 # On your local machine
-cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/api
+cd ~/Desktop/allternit-workspace/allternit/7-apps/api
 
 # Start API server
 cargo run

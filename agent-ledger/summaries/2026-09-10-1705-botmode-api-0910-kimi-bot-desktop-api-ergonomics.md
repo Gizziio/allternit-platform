@@ -21,7 +21,7 @@ A bare `POST /bots/:id/desktop/provision` defaulted `os` to `linux`, which the s
 ## Verification
 
 - **Unit:** `cargo test -p allternit-api bot_desktop` → **72 pass / 0 fail**, including 7 new tests: bare-route status/start/observe fallback, 400 when no record, JSON-body validation 400, query-wins-over-body, and the `pick_default_os` matrix.
-- **Full suite:** `cargo test -p allternit-api --lib` → 830 pass, 4 fail — all four are `agent_cloud_routes::…_through_real_os_control_plane`, which spawn `/Users/joe/Desktop/AllternitOS/target/debug/allternitos_control_plane` and fail identically on clean main in the shared checkout (pre-existing environment issue, unrelated to this diff).
+- **Full suite:** `cargo test -p allternit-api --lib` → 830 pass, 4 fail — all four are `agent_cloud_routes::…_through_real_os_control_plane`, which spawn `~/Desktop/AllternitOS/target/debug/allternitos_control_plane` and fail identically on clean main in the shared checkout (pre-existing environment issue, unrelated to this diff).
 - **Production config:** `cargo build -p allternit-api --release` green (AGENTS.md #4).
 - **Release gate:** `node scripts/release-preflight.mjs` → 35 passed / 0 failed.
 - **Live probe** (isolated API on :18013, worktree release binary, `TART_HOST_URL=http://100.88.98.69:8020` + token, `BOT_DESKTOP_IMAGE=allternit-desktop`, local-dev bypass):

@@ -60,7 +60,7 @@ Phase 5: Cowork Mode (Post-Stability)
 ## Key Directories in Project
 
 ```
-/Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code/
+~/Desktop/allternit-workspace/allternit/cmd/gizzi-code/
 ├── src/
 │   ├── bus/           # Event system (to port/adapt)
 │   ├── cli/           # CLI commands & UI

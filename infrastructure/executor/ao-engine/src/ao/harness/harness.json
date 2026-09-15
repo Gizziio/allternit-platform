@@ -1,13 +1,13 @@
 {
   "version": 2,
   "source": {
-    "skillsDir": "/Users/joe/Desktop/Allternit/.claude/skills",
-    "rulesFile": "/Users/joe/Desktop/Allternit/CLAUDE.md",
+    "skillsDir": "~/Desktop/Allternit/.claude/skills",
+    "rulesFile": "~/Desktop/Allternit/CLAUDE.md",
     "mcpServer": {
       "name": "allternit-ops",
       "command": "node",
       "args": [
-        "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"
+        "~/Desktop/Allternit/Allternit Brain/Ops/index.js"
       ]
     }
   },
@@ -89,7 +89,7 @@
           "user",
           "--",
           "node",
-          "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"
+          "~/Desktop/Allternit/Allternit Brain/Ops/index.js"
         ],
         "removeArgs": [
           "mcp",
@@ -165,7 +165,7 @@
           "add",
           "allternit-ops",
           "node",
-          "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"
+          "~/Desktop/Allternit/Allternit Brain/Ops/index.js"
         ],
         "removeArgs": [
           "mcp",
@@ -202,7 +202,7 @@
           "allternit-ops",
           "--",
           "node",
-          "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js"
+          "~/Desktop/Allternit/Allternit Brain/Ops/index.js"
         ],
         "removeArgs": null,
         "configPath": "~/.config/opencode/opencode.jsonc",
@@ -233,7 +233,7 @@
           "add",
           "allternit-ops",
           "node",
-          "/Users/joe/Desktop/Allternit/Allternit Brain/Ops/index.js",
+          "~/Desktop/Allternit/Allternit Brain/Ops/index.js",
           "-s",
           "user"
         ],

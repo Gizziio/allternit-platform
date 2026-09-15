@@ -3,7 +3,7 @@
 **Scope:** Curate loop templates from `https://loopany.ai/templates` into Allternit's loop library.
 
 **Agent:** kimi
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-loopany-templates`
 
 ## Deliverables

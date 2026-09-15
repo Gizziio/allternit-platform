@@ -3,8 +3,8 @@
 import re
 from pathlib import Path
 
-HANDOFF = Path('/Users/joe/Desktop/allternit-parity-handoff.md')
-DOCS_DIR = Path('/Users/joe/Desktop/allternit-parity-workspace/docs/public/parity')
+HANDOFF = Path('~/Desktop/allternit-parity-handoff.md')
+DOCS_DIR = Path('~/Desktop/allternit-parity-workspace/docs/public/parity')
 
 def slugify(name):
     return re.sub(r'[^a-z0-9]+', '-', name.lower().strip()).strip('-')

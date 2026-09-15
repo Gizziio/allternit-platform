@@ -1153,7 +1153,7 @@ mod tests {
     async fn spawn_real_os_control_plane() -> Option<(String, tokio::process::Child)> {
         let temp = tempfile::tempdir().unwrap().keep();
         let bin = std::env::var("ALLTERNITOS_CONTROL_PLANE_BIN").unwrap_or_else(|_| {
-            "/Users/joe/Desktop/AllternitOS/target/debug/allternitos_control_plane".to_string()
+            "~/Desktop/AllternitOS/target/debug/allternitos_control_plane".to_string()
         });
         if !std::path::Path::new(&bin).exists() {
             eprintln!(

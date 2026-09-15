@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
-const OUT_DIR = '/Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/docs/desktop-cloud-mvp';
+const OUT_DIR = '~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/docs/desktop-cloud-mvp';
 const OUT_PATH = path.join(OUT_DIR, 'phase27-platform-integration-demo.webm');
 
 fs.mkdirSync(OUT_DIR, { recursive: true });

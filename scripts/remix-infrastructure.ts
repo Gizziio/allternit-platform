@@ -256,7 +256,7 @@ async function generateRemixPlan(targetCode: string) {
 }
 
 async function writeRemixPlan(plan: any) {
-  const outDir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', 'plans');
+  const outDir = path.join('~/Desktop/allternit-workspace/allternit', 'remix-content', 'plans');
   await fs.mkdir(outDir, { recursive: true });
   const outPath = path.join(outDir, `${plan.courseCode}.json`);
   await fs.writeFile(outPath, JSON.stringify(plan, null, 2));
@@ -264,7 +264,7 @@ async function writeRemixPlan(plan: any) {
 }
 
 async function generateBridgeModuleFiles(plan: any) {
-  const outDir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', plan.courseCode);
+  const outDir = path.join('~/Desktop/allternit-workspace/allternit', 'remix-content', plan.courseCode);
   await fs.mkdir(outDir, { recursive: true });
   
   for (let i = 0; i < plan.modules.length; i++) {

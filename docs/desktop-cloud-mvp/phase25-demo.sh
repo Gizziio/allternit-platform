@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd $HOME/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 
 echo "=== Phase 25: Billing / metering for desktop usage ==="
 echo
@@ -14,7 +14,7 @@ cargo test -q -p allternit-api bot_desktop
 
 echo
 echo "--- Pricing seeded in DB ---"
-sqlite3 "/Users/joe/Library/Application Support/allternit/allternit.db" \
+sqlite3 "$HOME/Library/Application Support/allternit/allternit.db" \
   "SELECT provider, os, price_per_minute FROM desktop_pricing;"
 
 echo

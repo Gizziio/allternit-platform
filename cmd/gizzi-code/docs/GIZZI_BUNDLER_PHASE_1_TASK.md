@@ -8,7 +8,7 @@ status: ready
 
 ## Goal
 
-Make `bun run build` succeed for `/Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code`, then run `bun run typecheck` and fix type errors.
+Make `bun run build` succeed for `~/Desktop/allternit-workspace/allternit/cmd/gizzi-code`, then run `bun run typecheck` and fix type errors.
 
 ## Exact scope
 
@@ -42,12 +42,12 @@ Make `bun run build` succeed for `/Users/joe/Desktop/allternit-workspace/alltern
    - Remove them from the `messages.ts` import block.
 
 6. **Iterate the build**:
-   - Run `cd /Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run build 2>&1 | tail -80`.
+   - Run `cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run build 2>&1 | tail -80`.
    - If it fails with a new `await` error, read the bundle line, identify the async `init_*` wrapper, map it back to the source module, and break that cycle by extracting leaf exports or replacing static imports with dynamic imports inside async functions.
    - Repeat until `bun run build` exits 0.
 
 7. **Typecheck**:
-   - Run `cd /Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run typecheck`.
+   - Run `cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run typecheck`.
    - Fix any type errors introduced by the moves. Do not suppress errors with `@ts-ignore` unless the original code already used it. Do not change unrelated types.
 
 ## Constraints

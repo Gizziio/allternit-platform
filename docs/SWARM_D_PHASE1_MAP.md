@@ -1,6 +1,6 @@
 # Swarm D — gizzi-code / Admin CLI — Phase 1 Map
 
-Master handoff: `/Users/joe/Desktop/allternit-parity-handoff.md`
+Master handoff: `~/Desktop/allternit-parity-handoff.md`
 
 ## Scope
 
@@ -30,4 +30,4 @@ Master handoff: `/Users/joe/Desktop/allternit-parity-handoff.md`
 - Do NOT start Phase 2 work.
 - Do NOT run builds, dev servers, or tests that require external services.
 - Match existing repo idioms.
-- Work only in `/Users/joe/Desktop/allternit-parity-p1-swarm-d`.
+- Work only in `~/Desktop/allternit-parity-p1-swarm-d`.

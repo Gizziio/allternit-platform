@@ -62,18 +62,18 @@ curl "https://api.allternit.com/api/files/list?path=~/projects/app&recursive=fal
 
 ```json
 {
-  "path": "/Users/joe/projects/app",
+  "path": "~/projects/app",
   "entries": [
     {
       "name": "src",
-      "path": "/Users/joe/projects/app/src",
+      "path": "~/projects/app/src",
       "type": "directory",
       "size": null,
       "modified_at": "2026-08-13T12:00:00Z"
     },
     {
       "name": "package.json",
-      "path": "/Users/joe/projects/app/package.json",
+      "path": "~/projects/app/package.json",
       "type": "file",
       "size": 1024,
       "modified_at": "2026-08-13T11:00:00Z"
@@ -184,7 +184,7 @@ The path may be supplied either as a query parameter or in the JSON body. Parent
 ```json
 {
   "ok": true,
-  "path": "/Users/joe/projects/app/readme.md",
+  "path": "~/projects/app/readme.md",
   "bytesWritten": 17,
   "operation": "write"
 }

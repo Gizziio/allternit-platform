@@ -74,7 +74,7 @@ commits on `surfaces/ai.allternit.com` + `surfaces/allternit-desktop`:
 - Live CDP smoke against the running desktop app (Electron, remote
   debugging :9222, app at :8013): typed `pwd` into a console-drawer tile —
   it rendered wrapped correctly and executed (output
-  `/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com`);
+  `~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com`);
   computed `letter-spacing: normal` with WebGL active (2 canvases in the
   tile); composer bottom bar showed only the `>_ Console` chip.
 - Desktop app relaunched and used by the owner throughout (task still

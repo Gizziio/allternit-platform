@@ -1,6 +1,6 @@
 # Allternit Design — Agent Handoff Document
 **Session cutoff:** 2026-05-09
-**Working directory:** `/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com`
+**Working directory:** `~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com`
 
 ---
 

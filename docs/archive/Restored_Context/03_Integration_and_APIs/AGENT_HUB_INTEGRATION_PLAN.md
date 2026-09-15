@@ -194,7 +194,7 @@ interface AgentHubState {
 
 ### Files to Create
 ```
-/Users/macbook/Desktop/allternit-workspace/allternit/
+~/Desktop/allternit-workspace/allternit/
 ├── surfaces/allternit-platform/src/
 │   ├── lib/agents/
 │   │   ├── agent-templates.specialist.ts    # 10 specialist templates

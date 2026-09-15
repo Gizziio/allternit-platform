@@ -41,7 +41,7 @@ install_service() {
     
     # Update plist with current user's paths
     local temp_plist=$(mktemp)
-    sed "s|/Users/macbook|$HOME|g" "$PLIST_FILE" > "$temp_plist"
+    sed "s|$HOME|$HOME|g" "$PLIST_FILE" > "$temp_plist"
     
     # Copy plist to LaunchAgents
     cp "$temp_plist" "$LAUNCHD_DIR/$LAUNCHD_LABEL.plist"

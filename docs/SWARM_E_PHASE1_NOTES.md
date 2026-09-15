@@ -15,6 +15,6 @@ Added organization-scoped inference hook configuration, exposed to organization 
 
 Verification: `cargo check -p allternit-api --lib` passes. `cargo test -p allternit-api --lib` is currently blocked by a pre-existing unrelated test compilation error in `llm_gateway/translate.rs`, where `OpenAiErrorResponse` does not implement `Debug` for an existing `Result::unwrap` call. The Phase 1 source itself compiles successfully.
 
-The requested git commit could not be created in this session because the linked worktree's git index is stored under `/Users/joe/Desktop/allternit-workspace/allternit/.git`, which is read-only to the workspace sandbox; `git add` fails while creating `index.lock`. All working-tree changes are complete and ready to stage.
+The requested git commit could not be created in this session because the linked worktree's git index is stored under `~/Desktop/allternit-workspace/allternit/.git`, which is read-only to the workspace sandbox; `git add` fails while creating `index.lock`. All working-tree changes are complete and ready to stage.
 
 Phase 2 can add hook signing/retry delivery, richer response metadata, vault sharing policies, and credential retrieval/use flows when those items enter scope.

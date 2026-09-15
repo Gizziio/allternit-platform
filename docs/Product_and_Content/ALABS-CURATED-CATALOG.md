@@ -373,13 +373,13 @@ Create **7 Canvas courses** using the names below. Each maps to one Remix Course
 ### Download the Keeper courses (Phase 1)
 Enroll in the Phase 1 courses above, then run:
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 tsx scripts/udemy-pipeline.ts
 ```
 
 ### Re-extract token (if needed)
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 tsx scripts/udemy-token-watcher.ts
 ```
 

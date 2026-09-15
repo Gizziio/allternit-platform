@@ -106,7 +106,7 @@ For each module:
 ### Phase 5: Build and audit
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-5e9f20da-b157-41e1-a340-91ec19bdef56
+cd ~/Desktop/allternit-workspace/allternit-session-5e9f20da-b157-41e1-a340-91ec19bdef56
 npx tsx alabs-module-template/scripts/build.ts \
   --content alabs-generated-courses/content/ALABS-{TIER}-{COURSE}-module{N}.json \
   --output alabs-generated-courses/ALABS-{TIER}-{COURSE}-module{N}.html

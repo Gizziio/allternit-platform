@@ -203,7 +203,7 @@ BRAIN_GATEWAY_URL=http://localhost:3000
 
 ### 1. Install Dependencies
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/services/allternit-operator
+cd ~/Desktop/allternit-workspace/allternit/services/allternit-operator
 pip install -r requirements.txt
 ```
 

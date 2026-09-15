@@ -2,7 +2,7 @@
 # Verify Canvas Modules using Browser-Use Agent
 
 CANVAS_URL="https://canvas.instructure.com/courses/14389375/modules"
-OUTPUT_FILE="/Users/macbook/Desktop/canvas_verification_screenshot.png"
+OUTPUT_FILE="$HOME/Desktop/canvas_verification_screenshot.png"
 
 echo "=== Canvas Module Verification via Browser-Use ==="
 echo ""

@@ -37,7 +37,7 @@
 
 All documentation in:
 ```
-/Users/macbook/Desktop/allternit-workspace/allternit/
+~/Desktop/allternit-workspace/allternit/
 ├── WIZARD_QUICK_REFERENCE.md      # START HERE
 ├── WIZARD_HANDOFF_PACKAGE.md      # Full handoff
 ├── AGENT_WIZARD_CRITICAL_FIXES.md # Detailed fixes

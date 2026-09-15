@@ -15,7 +15,7 @@ echo "Starting Allternit Operator daemon..."
 pkill -f operator-daemon.js 2>/dev/null || true
 sleep 1
 
-cd /Users/macbook/Desktop/allternit-workspace/allternit/1-kernel/agent-systems/allternit-dak-runner
+cd $HOME/Desktop/allternit-workspace/allternit/1-kernel/agent-systems/allternit-dak-runner
 nohup node dist/operator-daemon.js --port 3010 > /tmp/operator.log 2>&1 &
 sleep 3
 

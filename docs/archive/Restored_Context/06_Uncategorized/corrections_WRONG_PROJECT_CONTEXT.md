@@ -4,7 +4,7 @@
 
 I was working in:
 ```
-/Users/macbook/Desktop/allternit-workspace/Project Gizzi/
+~/Desktop/allternit-workspace/Project Gizzi/
 ```
 
 Files created (deleted):
@@ -20,7 +20,7 @@ Files created (deleted):
 
 ## 2. EVIDENCE: Correct Project Identity
 
-**Working Directory:** `/Users/macbook/Desktop/allternit-workspace/allternit/`
+**Working Directory:** `~/Desktop/allternit-workspace/allternit/`
 
 **Project Type:** Rust workspace with Cargo.toml
 
@@ -51,13 +51,13 @@ crates/capsule-runtime/src/registry.rs
 
 ## 3. EVIDENCE: Beads File Mismatch
 
-**Beads File Found:** `/Users/macbook/.beads/Marketplace_Control_Plane.md`
+**Beads File Found:** `~/.beads/Marketplace_Control_Plane.md`
 
 **Key Assumption in Beads:**
 ```markdown
 ## Notes
 
-- All file paths assume `/Users/macbook/mcp_agent_mail/` as repository root
+- All file paths assume `~/mcp_agent_mail/` as repository root
 - Adjust paths if using different location
 ```
 

@@ -1,6 +1,6 @@
 # Swarm D — Phase 5 Task
 
-**Worktree:** `/Users/joe/Desktop/allternit-parity-p2-swarm-d`  
+**Worktree:** `~/Desktop/allternit-parity-p2-swarm-d`  
 **Branch:** `ao/p5-d`  
 **Base:** `parity/swarm-sprint`
 

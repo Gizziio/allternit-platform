@@ -17,8 +17,8 @@ Audit the Allternit platform and all its surfaces, analyze bb (https://getbb.app
 Produced a comprehensive set of audit documents comparing Allternit and bb:
 
 - `.parity-reports/allternit-audit.md` — full Allternit platform surface inventory.
-- `/Users/joe/bb-fork-analysis/docs/allternit-mapping/bb-audit.md` — bb monorepo surface inventory.
-- `/Users/joe/bb-fork-analysis/docs/allternit-mapping/bb-data-model-deep-dive.md` — bb SQLite/D1 schema deep dive (28 local tables + 9 cloud tables).
+- `~/bb-fork-analysis/docs/allternit-mapping/bb-audit.md` — bb monorepo surface inventory.
+- `~/bb-fork-analysis/docs/allternit-mapping/bb-data-model-deep-dive.md` — bb SQLite/D1 schema deep dive (28 local tables + 9 cloud tables).
 - `.parity-reports/allternit-api-schema-deep-dive.md` — Allternit API schema + route tree.
 - `.parity-reports/allternit-web-schema-deep-dive.md` — Allternit web surface schema + views.
 - `.parity-reports/bb-allternit-gap-spec.md` — concrete 1:1 mapping and Phase 1 implementation plan.

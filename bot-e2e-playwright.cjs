@@ -1,7 +1,7 @@
 const { _electron: electron } = require('@playwright/test');
 const path = require('path');
 
-const desktopDir = '/Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/surfaces/allternit-desktop';
+const desktopDir = '~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/surfaces/allternit-desktop';
 const userDataDir = '/tmp/allternit-desktop-e2e';
 
 const BOT_A = 'Echo Alpha';

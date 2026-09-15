@@ -11,21 +11,21 @@ Make sure you have these running:
 
 ### Terminal 1: Start Kernel
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 ./target/debug/kernel
 # Should see: "Kernel Service listening on 127.0.0.1:3004"
 ```
 
 ### Terminal 2: Start Gateway (if using gateway)
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/domains/kernel/communication/allternit-gateway
+cd ~/Desktop/allternit-workspace/allternit/domains/kernel/communication/allternit-gateway
 cargo run
 # Should see: "Gateway listening on 127.0.0.1:8013"
 ```
 
 ### Terminal 3: Start TUI
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-platform
+cd ~/Desktop/allternit-workspace/allternit/surfaces/allternit-platform
 npm run dev
 # Should see: "Local: http://localhost:5177/"
 ```
@@ -44,7 +44,7 @@ curl -s http://127.0.0.1:3004/v1/providers/auth/status \
 
 Or run the test script:
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 ./test-model-discovery.sh
 ```
 

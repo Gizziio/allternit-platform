@@ -265,7 +265,7 @@ Requirements:
 
 ### Phase 3: Onboarding Wizard (Priority: CRITICAL)
 
-**File:** `/Users/macbook/surfaces/ONBOARDING_WIZARD_SPEC.md`
+**File:** `~/surfaces/ONBOARDING_WIZARD_SPEC.md`
 
 **Key features:**
 1. Internet connectivity check
@@ -400,24 +400,24 @@ allternit-vm-image-builder build --dry-run
 
 ## Resources Created
 
-- `/Users/macbook/ARCHITECTURE_PARITY.md` - This document
-- `/Users/macbook/surfaces/ONBOARDING_WIZARD_SPEC.md` - Onboarding UI spec
-- `/Users/macbook/domains/kernel/execution/allternit-vm-executor/` - VM executor binary
-- `/Users/macbook/domains/kernel/execution/allternit-vm-image-builder/` - Image builder tool
-- `/Users/macbook/domains/kernel/infrastructure/allternit-guest-agent-protocol/` - Protocol library
-- `/Users/macbook/.github/workflows/vm-images.yml` - CI/CD pipeline
-- `/Users/macbook/surfaces/desktop/src/vm/manager.ts` - Desktop VM manager
-- `/Users/macbook/surfaces/desktop/src/vm/socket-server.ts` - Unix socket server
-- `/Users/macbook/surfaces/desktop/src/components/onboarding/Wizard.tsx` - Onboarding UI
-- `/Users/macbook/cmd/gizzi-code/src/runtime/automation/cron/` - Unified TypeScript Cron
+- `~/ARCHITECTURE_PARITY.md` - This document
+- `~/surfaces/ONBOARDING_WIZARD_SPEC.md` - Onboarding UI spec
+- `~/domains/kernel/execution/allternit-vm-executor/` - VM executor binary
+- `~/domains/kernel/execution/allternit-vm-image-builder/` - Image builder tool
+- `~/domains/kernel/infrastructure/allternit-guest-agent-protocol/` - Protocol library
+- `~/.github/workflows/vm-images.yml` - CI/CD pipeline
+- `~/surfaces/desktop/src/vm/manager.ts` - Desktop VM manager
+- `~/surfaces/desktop/src/vm/socket-server.ts` - Unix socket server
+- `~/surfaces/desktop/src/components/onboarding/Wizard.tsx` - Onboarding UI
+- `~/cmd/gizzi-code/src/runtime/automation/cron/` - Unified TypeScript Cron
   - `types.ts` - Core type definitions
   - `parser.ts` - Natural language schedule parsing
   - `database.ts` - SQLite persistence layer
   - `service.ts` - Core CronService with job execution
   - `daemon.ts` - HTTP daemon for background scheduling
   - `index.ts` - Public API exports
-- `/Users/macbook/cmd/gizzi-code/src/cli/commands/cron.ts` - CLI commands for cron
-- `/Users/macbook/CRON_MIGRATION.md` - Migration guide from Rust to TypeScript
+- `~/cmd/gizzi-code/src/cli/commands/cron.ts` - CLI commands for cron
+- `~/CRON_MIGRATION.md` - Migration guide from Rust to TypeScript
 
 ---
 

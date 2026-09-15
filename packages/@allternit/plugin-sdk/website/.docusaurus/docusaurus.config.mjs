@@ -18,11 +18,11 @@ export default {
       "classic",
       {
         "docs": {
-          "sidebarPath": "/Users/macbook/allternit-plugin-sdk/website/sidebars.js",
+          "sidebarPath": "~/allternit-plugin-sdk/website/sidebars.js",
           "editUrl": "https://github.com/allternit/plugin-sdk/tree/main/website/"
         },
         "theme": {
-          "customCss": "/Users/macbook/allternit-plugin-sdk/website/src/css/custom.css"
+          "customCss": "~/allternit-plugin-sdk/website/src/css/custom.css"
         }
       }
     ]

@@ -1,6 +1,0 @@
-{
-  "type": "module",
-  "dependencies": {
-    "@allternit/sdk": "workspace:*"
-  }
-}

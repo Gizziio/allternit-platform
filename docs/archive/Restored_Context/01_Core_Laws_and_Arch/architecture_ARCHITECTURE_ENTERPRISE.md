@@ -339,7 +339,7 @@ const DEFAULT_API_URL = "http://127.0.0.1:3000";  // Or through gateway:8013
 ## 5. File Structure (Canonical)
 
 ```
-/Users/macbook/Desktop/allternit-workspace/allternit/
+~/Desktop/allternit-workspace/allternit/
 │
 ├── infrastructure/              # Shared libraries, types, contracts
 │   └── rust/

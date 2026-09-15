@@ -184,7 +184,7 @@ async function fixCapstonePages(courseId: number, courseCode: string) {
     return;
   }
   
-  const contentDir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
+  const contentDir = path.join('~/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
   const files = await fs.readdir(contentDir).catch(() => [] as string[]);
   const capFile = files.find(f => f.toLowerCase().includes('capstone') && f.endsWith('.md'));
   

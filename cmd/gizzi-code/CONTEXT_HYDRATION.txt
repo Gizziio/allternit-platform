@@ -7,7 +7,7 @@ SUMMARY:
 Port the full Claude Code TUI from free-code (Ink/React) to gizzi-code's 
 Ink implementation. Move away from OpenTUI (SolidJS) entirely.
 
-SOURCE:  /Users/macbook/free-code/  (1,909 files, 33MB, full Ink TUI)
+SOURCE:  ~/free-code/  (1,909 files, 33MB, full Ink TUI)
 DEST:    src/cli/ui/ink-app/        (minimal, needs full port)
 
 WHAT'S WORKING:
@@ -29,10 +29,10 @@ P3: All hooks from /free-code/src/hooks/
 
 KEY FILES TO READ:
 ------------------
-/Users/macbook/free-code/src/screens/REPL.tsx        (3000+ lines, main screen)
-/Users/macbook/free-code/src/ink.tsx                 (core exports)
-/Users/macbook/free-code/src/components/Messages.tsx (message rendering)
-/Users/macbook/free-code/src/commands.ts             (207 slash commands)
+~/free-code/src/screens/REPL.tsx        (3000+ lines, main screen)
+~/free-code/src/ink.tsx                 (core exports)
+~/free-code/src/components/Messages.tsx (message rendering)
+~/free-code/src/commands.ts             (207 slash commands)
 
 INTEGRATION POINTS:
 -------------------
@@ -48,7 +48,7 @@ from '../hooks/' → from './hooks/'
 
 BUILD & TEST:
 -------------
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 bun run build
 ./dist/gizzi-code-darwin-arm64 ink
 

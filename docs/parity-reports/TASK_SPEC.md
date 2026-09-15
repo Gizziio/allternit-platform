@@ -2,11 +2,11 @@
 
 ## Context
 
-- Handoff doc: `/Users/joe/Desktop/allternit-parity-handoff.md`
-- Worktree: `/Users/joe/Desktop/allternit-parity-workspace`
+- Handoff doc: `~/Desktop/allternit-parity-handoff.md`
+- Worktree: `~/Desktop/allternit-parity-workspace`
 - Branch: `parity/swarm-sprint`
-- Report dir: `/Users/joe/Desktop/allternit-parity-workspace/.parity-reports`
-- Output docs dir: `/Users/joe/Desktop/allternit-parity-workspace/docs/public/parity/`
+- Report dir: `~/Desktop/allternit-parity-workspace/.parity-reports`
+- Output docs dir: `~/Desktop/allternit-parity-workspace/docs/public/parity/`
 
 ## Goal
 
@@ -21,7 +21,7 @@ Close as many unchecked parity gaps as possible by creating accurate, Allternit-
    - If it is not applicable to Allternit's self-host/BYOC model, document it as **Not applicable / roadmap** and explain why.
    - If it is a genuine missing feature that should be implemented, document the gap and the planned path; do **not** mark it as done.
 3. Create new docs pages under `docs/public/parity/<category-slug>.md` (or update an existing page when the category clearly maps to one). Match the style of `docs/public/api/reference.md` and other existing docs.
-4. Do **not** edit `/Users/joe/Desktop/allternit-parity-handoff.md`.
+4. Do **not** edit `~/Desktop/allternit-parity-handoff.md`.
 5. Do **not** run `git commit`, `git push`, or other git mutations.
 6. Run `cargo check -p allternit-api` only if you changed Rust code; docs-only changes do not need builds.
 7. When finished, write a report file in `docs/parity-reports/<report-name>.md` with YAML frontmatter:

@@ -214,7 +214,7 @@ export function createCodeModeFixtureState(): CodeModeStateShape {
     workspaces: [
       {
         workspace_id: 'ws_allternit',
-        root_path: '/Users/macbook/allternit',
+        root_path: '~/allternit',
         display_name: 'Allternit Platform',
         repo_status: {
           branch: 'main',
@@ -233,7 +233,7 @@ export function createCodeModeFixtureState(): CodeModeStateShape {
       },
       {
         workspace_id: 'ws_summit_demo',
-        root_path: '/Users/macbook/summit',
+        root_path: '~/summit',
         display_name: 'Summit Demo',
         repo_status: {
           branch: 'demo/launch-readiness',

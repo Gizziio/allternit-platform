@@ -1,7 +1,7 @@
 # Plugins, CLI, Artifacts, iOS, Docs, Loops Integration — Phase 1 Task
 
 **Agent:** qwen  
-**Worktree:** /Users/joe/Desktop/allternit-workspace/allternit  
+**Worktree:** ~/Desktop/allternit-workspace/allternit  
 **Goal:** Research and plan integrations for multimodal plugins, AI CLI tools, artifacts, iOS, docs, and loop templates; implement the highest-value surface integrations.
 
 ## Projects to research

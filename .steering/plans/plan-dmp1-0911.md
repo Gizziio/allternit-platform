@@ -1,8 +1,8 @@
 # Plan — session/dmp1-0911: Design Mode P0 + P1 (locked gap-analysis plan)
 
 Date: 2026-09-11. Author: kimi-code session dmp1-0911.
-Governing docs: `/Users/joe/allternit-design-mode-gap-analysis.md` (LOCKED),
-`/Users/joe/allternit-design-competitive-mapping.md` (LOCKED, incl. Eoj artifacts-API amendment).
+Governing docs: `~/allternit-design-mode-gap-analysis.md` (LOCKED),
+`~/allternit-design-competitive-mapping.md` (LOCKED, incl. Eoj artifacts-API amendment).
 
 ## P0 — honesty-critical
 

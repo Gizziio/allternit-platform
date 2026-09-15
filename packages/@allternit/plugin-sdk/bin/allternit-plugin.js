@@ -28,7 +28,7 @@ program
   .command('create <name>')
   .description('Create a new plugin (from template or scratch)')
   .option('-t, --template <name>', 'Use template (market-research, code-review, image-gen, etc.)')
-  .option('-d, --templates-dir <path>', 'Templates directory', '/Users/macbook/allternit/templates')
+  .option('-d, --templates-dir <path>', 'Templates directory', '~/allternit/templates')
   .option('--adapters <list>', 'Adapters to include (mcp,http,cli,vscode)', 'mcp,http,cli')
   .option('--category <type>', 'Plugin category', 'custom')
   .action(async (name, options) => {

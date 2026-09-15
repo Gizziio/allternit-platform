@@ -75,7 +75,7 @@ The API is running but registry is empty:
 ### Option 1: Start the Backend API (Recommended)
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/api
+cd ~/Desktop/allternit-workspace/allternit/cmd/api
 cargo run
 ```
 

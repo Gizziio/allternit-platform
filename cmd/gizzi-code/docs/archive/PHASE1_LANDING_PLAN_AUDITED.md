@@ -2,7 +2,7 @@
 ## Based on Actual File System Audit
 
 ### Audit Date
-Generated from actual filesystem scan of `/Users/macbook/claude-code`
+Generated from actual filesystem scan of `~/claude-code`
 
 ---
 
@@ -50,12 +50,12 @@ timeBasedMCConfig.ts
 
 ### Step 1: Create Landing Zone
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 mkdir -p migration/claude
-cp -r /Users/macbook/claude-code/src migration/claude/
-cp /Users/macbook/claude-code/package.json migration/claude/
-cp /Users/macbook/claude-code/tsconfig.json migration/claude/
-cp /Users/macbook/claude-code/README.md migration/claude/
+cp -r ~/claude-code/src migration/claude/
+cp ~/claude-code/package.json migration/claude/
+cp ~/claude-code/tsconfig.json migration/claude/
+cp ~/claude-code/README.md migration/claude/
 ```
 
 ### Step 2: Verify Landing
@@ -70,7 +70,7 @@ test -f migration/claude/src/QueryEngine.ts && echo "OK"
 test -f migration/claude/src/commands.ts && echo "OK"
 
 # Verify structure preserved
-diff <(ls /Users/macbook/claude-code/src | sort) <(ls migration/claude/src | sort)
+diff <(ls ~/claude-code/src | sort) <(ls migration/claude/src | sort)
 ```
 
 ---
@@ -189,9 +189,9 @@ Based on audit, these claimed components are MISSING:
 Execute landing now:
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 mkdir -p migration/claude
-cp -r /Users/macbook/claude-code/src migration/claude/
+cp -r ~/claude-code/src migration/claude/
 echo "Landing complete. Verify with: find migration/claude/src -type f | wc -l"
 ```
 

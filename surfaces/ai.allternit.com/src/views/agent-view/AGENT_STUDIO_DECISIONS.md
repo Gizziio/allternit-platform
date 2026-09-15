@@ -221,7 +221,7 @@ All architectural decisions from the original audit are implemented. The only re
 ## Verification
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com
+cd ~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com
 pnpm exec tsc --project tsconfig.typecheck.json --noEmit
 pnpm exec eslint src/views/agent-view/**/*.tsx src/views/AgentHub.tsx src/views/agent-hub/main/*.tsx
 ```

@@ -42,7 +42,7 @@ commit `875d8ed1f` (reviewed: 44 vitest, tsc clean). **Preserve 1A/1B.** Do not 
 - ACI: `FabricSessionPanel.tsx` ~L199-222 **always** loops `fabricClient.streamAci(runId)`
   whenever `driveKind === 'aci'`. `FabricAciDrive` is presentational (screenshot prop).
 - PWA smoke: repo-root `bot-e2e-pwa.cjs` (Playwright, 1280×900 today). MODULE_FALLBACK
-  currently points at `/Users/joe/altw/allternit/node_modules` — if you touch the file,
+  currently points at `~/altw/allternit/node_modules` — if you touch the file,
   also accept the worktree's `node_modules` / `surfaces/ai.allternit.com/node_modules`.
 - Desktop lock: changes under `src/components/` and `src/fabric-session/` reach the
   desktop static bundle. Before claiming done, run

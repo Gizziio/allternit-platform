@@ -1,7 +1,7 @@
 react-doctor v0.1.6
 
 ✔ Select projects to scan › @allternit/ai
-Scanning /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com...
+Scanning ~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com...
 
 
 

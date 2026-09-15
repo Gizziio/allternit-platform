@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IOS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SCREENS_DIR="$SCRIPT_DIR/screenshots"
 UDID="${UDID:-2CC27A61-C301-41C2-9B9E-76BF4DF3C84B}"
-export JAVA_HOME="${JAVA_HOME:-/Users/joe/.local/share/jdk-21.0.7+6-jre/Contents/Home}"
+export JAVA_HOME="${JAVA_HOME:-$HOME/.local/share/jdk-21.0.7+6-jre/Contents/Home}"
 
 rm -rf "$SCREENS_DIR"
 mkdir -p "$SCREENS_DIR"
@@ -44,7 +44,7 @@ for flow in "${FLOWS[@]}"; do
   echo ""
   echo "==> Running $name..."
   set +e
-  /Users/joe/.maestro/bin/maestro test --udid "$UDID" "$flow"
+  $HOME/.maestro/bin/maestro test --udid "$UDID" "$flow"
   status=$?
   set -e
 

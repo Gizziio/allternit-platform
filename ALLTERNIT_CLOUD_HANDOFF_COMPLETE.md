@@ -4,7 +4,7 @@
 **Date:** 2026-08-30  
 **Branch:** `session/desktop-cloud-mvp`  
 **Base commit:** `68361ae2c7cf65a4ed5d54cad52d15e79bacfd44`  
-**Architecture v2 folder:** `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2`
+**Architecture v2 folder:** `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2`
 
 ---
 
@@ -27,15 +27,15 @@ This handoff completes the Cloud donor/product agent scope for canonical Alltern
 
 | Artifact | Path |
 |----------|------|
-| Main architecture brief (Markdown) | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.md` |
-| Styled HTML render | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.html` |
-| Printable PDF | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.pdf` |
-| Main ecosystem diagram (SVG) | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.svg` |
-| Main ecosystem diagram (PNG) | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.png` |
-| Additional diagrams | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/diagram-*.svg/png` |
-| Reproducible generator script | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/generate-architecture-v2.py` |
-| TODO list snapshot | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/MASTER_TRACKING_snapshot.md` |
-| This handoff completion file | `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/ALLTERNIT_CLOUD_HANDOFF_COMPLETE.md` |
+| Main architecture brief (Markdown) | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.md` |
+| Styled HTML render | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.html` |
+| Printable PDF | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.pdf` |
+| Main ecosystem diagram (SVG) | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.svg` |
+| Main ecosystem diagram (PNG) | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/allternit-cloud-architecture-v2.png` |
+| Additional diagrams | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/diagram-*.svg/png` |
+| Reproducible generator script | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/generate-architecture-v2.py` |
+| TODO list snapshot | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/MASTER_TRACKING_snapshot.md` |
+| This handoff completion file | `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2/ALLTERNIT_CLOUD_HANDOFF_COMPLETE.md` |
 
 ### Product lanes status
 
@@ -52,7 +52,7 @@ This handoff completes the Cloud donor/product agent scope for canonical Alltern
 Commands run:
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd ~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 cargo check -p allternit-api
 cargo test -p allternit-api --lib
 ```

@@ -10,7 +10,7 @@
 
 | Attribute | Value |
 |-----------|-------|
-| **Repository** | `/Users/macbook/Desktop/allternit-workspace/allternit` |
+| **Repository** | `~/Desktop/allternit-workspace/allternit` |
 | **Primary Languages** | Rust (~70%), TypeScript (~20%), Python (~10%) |
 | **Workspace Members** | 99 Rust crates |
 | **Architecture** | Layered Microservices with Strict Dependency Hierarchy |

@@ -1,6 +1,6 @@
 # Allternit Patch Plan (Law Layer Implementation)
 
-Repo root: `/Users/macbook/Desktop/allternit-workspace/allternit`
+Repo root: `~/Desktop/allternit-workspace/allternit`
 
 This plan is concrete, per-file, and scoped to the stated invariants. It avoids speculative features.
 

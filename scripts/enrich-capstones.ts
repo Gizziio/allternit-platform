@@ -41,7 +41,7 @@ async function getMyCourses() {
 }
 
 async function loadCapstoneMarkdown(courseCode: string): Promise<string | null> {
-  const dir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
+  const dir = path.join('~/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
   const files = await fs.readdir(dir).catch(() => [] as string[]);
   const capFile = files.find(f => f.toLowerCase().includes('capstone') && f.endsWith('.md'));
   if (!capFile) return null;

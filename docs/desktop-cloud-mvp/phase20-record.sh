@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-WORKSPACE="/Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp"
+WORKSPACE="$HOME/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp"
 DEMO_SCRIPT="$WORKSPACE/docs/desktop-cloud-mvp/phase20-demo.sh"
 DONE_FILE="/tmp/phase20-demo.done"
 RAW_VIDEO="/tmp/phase20-demo.mp4"

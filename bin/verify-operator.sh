@@ -7,7 +7,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-REPORT_FILE="/Users/macbook/Desktop/verification_report_full.md"
+REPORT_FILE="$HOME/Desktop/verification_report_full.md"
 TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Colors

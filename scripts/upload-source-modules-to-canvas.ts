@@ -86,7 +86,7 @@ function markdownToHtml(md: string): string {
 }
 
 async function loadRemixPlan(courseCode: string): Promise<any | null> {
-  const planPath = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', 'plans', `${courseCode}.json`);
+  const planPath = path.join('~/Desktop/allternit-workspace/allternit', 'remix-content', 'plans', `${courseCode}.json`);
   try {
     const content = await fs.readFile(planPath, 'utf-8');
     return JSON.parse(content);
@@ -96,7 +96,7 @@ async function loadRemixPlan(courseCode: string): Promise<any | null> {
 }
 
 async function loadSourceModule(courseCode: string, moduleName: string, moduleIndex: number): Promise<string | null> {
-  const dir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
+  const dir = path.join('~/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
   const fileName = `module-${String(moduleIndex + 1).padStart(2, '0')}-${moduleName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`;
   try {
     const content = await fs.readFile(path.join(dir, fileName), 'utf-8');

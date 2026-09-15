@@ -7,7 +7,7 @@ risk_level: medium
 # GenOffice → Allternit Fork Integration Audit
 
 **Scope:** Four forked GenOffice engine packages + the new `services/office-engine` prototype.  
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`  
+**Repo:** `~/Desktop/allternit-workspace/allternit`  
 **Audit date:** 2026-08-04  
 **Auditor:** Kimi Code CLI (read-only pass)
 

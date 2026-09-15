@@ -3,7 +3,7 @@
  * Receipt Service - Production receipt generation and storage
  * 
  * Aligned with:
- * - Receipts.json schema (/Users/macbook/Desktop/spec/BrowserAgent/Receipts.json)
+ * - Receipts.json schema (~/Desktop/spec/BrowserAgent/Receipts.json)
  * - LAW-AUT-004 (Evidence/Receipts Queryability)
  * - LAW-ENF-002 (Auditability)
  * - LAW-SWM-005 (Evidence-First Outputs)

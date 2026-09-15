@@ -1,7 +1,7 @@
 # Agent Hub & Packaged Bots Integration — Phase 1 Task
 
 **Agent:** qwen  
-**Worktree:** /Users/joe/Desktop/allternit-workspace/allternit  
+**Worktree:** ~/Desktop/allternit-workspace/allternit  
 **Goal:** Research agent-hub and packaged-bot projects and implement a first-class Agent Hub presentation layer for packaged bots as left-rail sessions.
 
 ## Projects to research

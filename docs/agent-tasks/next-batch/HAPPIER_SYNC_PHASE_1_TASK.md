@@ -3,7 +3,7 @@
 **Scope:** Audit `happier-dev/happier` for cross-device sync architecture that can benefit Allternit iOS and other surfaces.
 
 **Agent:** kimi
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-happier-audit`
 
 ## Deliverables

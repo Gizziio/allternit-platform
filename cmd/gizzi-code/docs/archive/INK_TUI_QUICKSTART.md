@@ -1,14 +1,14 @@
 # Ink TUI Quick Start for New Agent
 
 ## 30-Second Context
-We need to port **free-code's Ink TUI** (`/Users/macbook/free-code/`) to **gizzi-code** (`src/cli/ui/ink-app/`). 
+We need to port **free-code's Ink TUI** (`~/free-code/`) to **gizzi-code** (`src/cli/ui/ink-app/`). 
 
 free-code = Full Claude Code implementation in Ink (React)
 gizzi-code = Has minimal Ink app, needs full features
 
 ## Key Commands
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 
 # Build and test
 bun run build && ./dist/gizzi-code-darwin-arm64 ink
@@ -20,7 +20,7 @@ bun run ink
 ## Critical Files to Copy First
 
 ### 1. Core Ink Components
-Source: `/Users/macbook/free-code/src/ink/components/`
+Source: `~/free-code/src/ink/components/`
 Dest: `src/cli/ui/ink-app/core/`
 Files:
 - `Box.tsx`, `Text.tsx`, `ScrollBox.tsx`
@@ -28,11 +28,11 @@ Files:
 - All context files (`*Context.ts`)
 
 ### 2. Main Screen
-Source: `/Users/macbook/free-code/src/screens/REPL.tsx`
+Source: `~/free-code/src/screens/REPL.tsx`
 Dest: `src/cli/ui/ink-app/screens/MainScreen.tsx`
 
 ### 3. Message Components
-Source: `/Users/macbook/free-code/src/components/Messages.tsx`
+Source: `~/free-code/src/components/Messages.tsx`
 Dest: `src/cli/ui/ink-app/components/Messages.tsx`
 
 Also copy:
@@ -41,7 +41,7 @@ Also copy:
 - `VirtualMessageList.tsx`
 
 ### 4. Input Component
-Source: `/Users/macbook/free-code/src/components/PromptInput/`
+Source: `~/free-code/src/components/PromptInput/`
 Dest: `src/cli/ui/ink-app/components/PromptInput/`
 
 ## Import Mapping
@@ -93,8 +93,8 @@ File: `src/cli/ui/ink-app/app.tsx`
 ## Getting Help
 
 Read the source:
-- `/Users/macbook/free-code/src/screens/REPL.tsx` - Main reference
-- `/Users/macbook/free-code/src/ink.tsx` - Core exports
+- `~/free-code/src/screens/REPL.tsx` - Main reference
+- `~/free-code/src/ink.tsx` - Core exports
 
 Check what's working:
 - Run `./dist/gizzi-code-darwin-arm64 ink`

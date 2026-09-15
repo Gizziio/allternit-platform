@@ -1,6 +1,6 @@
 # Swarm A — Phase 8 Task
 
-**Worktree:** `/Users/joe/Desktop/allternit-parity-p2-swarm-a`  
+**Worktree:** `~/Desktop/allternit-parity-p2-swarm-a`  
 **Branch:** `ao/p8-a`  
 **Base:** `parity/swarm-sprint`
 

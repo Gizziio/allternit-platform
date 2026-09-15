@@ -3,8 +3,8 @@
 > **Single source of truth for the Allternit Cloud build.**  
 > This file contains the strategy, scope, todo list, file map, research notes, and next action. Check items off as they are completed; do not ask "what is next" — consult the **Next Action** section at the bottom.
 
-- **Branch / worktree:** `session/desktop-cloud-mvp` (`/Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp`)
-- **Strategic plan:** `/Users/joe/Downloads/Allternit_Cloud_Strategy_Gameplan_v1.2.docx`
+- **Branch / worktree:** `session/desktop-cloud-mvp` (`~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp`)
+- **Strategic plan:** `~/Downloads/Allternit_Cloud_Strategy_Gameplan_v1.2.docx`
 - **Last updated:** 2026-09-06
 - **Status:** Foundation + Fabric control plane + Model Gateway + Customer Cloud Console + Cloud CLI + Model Gateway surface + Agent Cloud surface in place; L1.1 + L1.2 + L1.3 + L1.8 complete; L2.6 Model Gateway adapters complete; L3.1 Customer Cloud Console complete; L3.2 CLI commands complete; L3.3 Model Gateway surface complete; L3.4 Agent Cloud surface complete.
 - **Last verification:** `cargo check -p allternit-api` clean (pre-existing warnings); `cargo test -p allternit-api` 588 passed (lib); `pnpm exec tsc --noEmit` has no errors in changed files; `pnpm exec vitest run src/lib/agent-cloud-api.test.ts src/lib/model-gateway-api.test.ts` 15 passed.
@@ -31,7 +31,7 @@ Allternit Cloud launches **capital-light and multi-provider**: own the control p
 
 ## Governing Documents
 
-1. **Allternit Cloud Strategy Gameplan v1.2** (`/Users/joe/Downloads/Allternit_Cloud_Strategy_Gameplan_v1.2.docx`) — strategic scope, revenue model, service catalog, scheduler economics, execution roadmap, phased end-state.
+1. **Allternit Cloud Strategy Gameplan v1.2** (`~/Downloads/Allternit_Cloud_Strategy_Gameplan_v1.2.docx`) — strategic scope, revenue model, service catalog, scheduler economics, execution roadmap, phased end-state.
 2. **Phase notes** in `docs/desktop-cloud-mvp/` — implementation details for desktop-cloud substrate, billing, capacity, etc.
 3. **This tracker** — execution list and file map.
 

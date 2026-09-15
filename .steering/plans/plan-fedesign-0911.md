@@ -1,6 +1,6 @@
 # Plan — session/fedesign-0911 (Session G)
 
-Mapping doc: `/Users/joe/allternit-design-competitive-mapping.md` (LOCKED) §2 row 5 / §4.
+Mapping doc: `~/allternit-design-competitive-mapping.md` (LOCKED) §2 row 5 / §4.
 Goal: vendor Anthropic's verified `frontend-design` skill (github.com/anthropics/skills) as the
 base of the studio steering layer, ADAPTED to Allternit brand law. Steering only — NOT a
 bundled creation skill (the catalog is for creation workflows).

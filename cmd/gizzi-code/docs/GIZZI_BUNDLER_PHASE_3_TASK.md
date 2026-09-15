@@ -111,7 +111,7 @@ After these changes, `utils/auth.ts` should have **no** static import from `serv
 
 ## Iteration
 
-1. Run `cd /Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run build 2>&1 | tail -80`.
+1. Run `cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run build 2>&1 | tail -80`.
 2. If it still fails with a new `"await" can only be used inside an "async" function` error, read the bundled line, identify the `init_*` pair, map it back to source modules, and break that cycle by either:
    - Extracting pure leaf exports to a new file, OR
    - Replacing a static import with a dynamic import inside an async function.
@@ -119,7 +119,7 @@ After these changes, `utils/auth.ts` should have **no** static import from `serv
 
 ## Typecheck
 
-Run `cd /Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run typecheck`. Fix any type errors introduced by the moves. Do not suppress errors with `@ts-ignore` unless the original code already used it. Do not change unrelated types.
+Run `cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run typecheck`. Fix any type errors introduced by the moves. Do not suppress errors with `@ts-ignore` unless the original code already used it. Do not change unrelated types.
 
 ## Constraints
 

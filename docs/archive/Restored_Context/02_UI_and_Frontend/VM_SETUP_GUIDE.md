@@ -17,7 +17,7 @@ Trigger the GitHub Actions workflow to build images automatically:
 
 ```bash
 # Using GitHub CLI
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # Trigger the workflow
 gh workflow run vm-images.yml \
@@ -44,7 +44,7 @@ The workflow will:
 For development or custom images:
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # Build the executor binary
 cargo build --release -p allternit-vm-executor
@@ -183,7 +183,7 @@ zstd -d ubuntu-22.04-allternit-v1.1.0.ext4.zst
 ### Build Everything
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # 1. Build VM executor (runs inside VM)
 cargo build --release -p allternit-vm-executor

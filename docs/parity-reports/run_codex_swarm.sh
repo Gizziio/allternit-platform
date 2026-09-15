@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
-PROMPT_DIR="/Users/joe/Desktop/allternit-parity-workspace/docs/parity-reports/prompts"
-LOG_DIR="/Users/joe/Desktop/allternit-parity-workspace/docs/parity-reports/logs"
+PROMPT_DIR="$HOME/Desktop/allternit-parity-workspace/docs/parity-reports/prompts"
+LOG_DIR="$HOME/Desktop/allternit-parity-workspace/docs/parity-reports/logs"
 mkdir -p "$LOG_DIR"
 
 run_one() {

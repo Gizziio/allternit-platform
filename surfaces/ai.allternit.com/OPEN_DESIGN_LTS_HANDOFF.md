@@ -1,6 +1,6 @@
 # Open Design → Allternit Design LTS Handoff
 **Session:** 2026-07-03  
-**Working directory:** `/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com`  
+**Working directory:** `~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com`  
 **Upstream:** `nexu-io/open-design` (Apache-2.0)
 
 ---

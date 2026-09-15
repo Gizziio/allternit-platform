@@ -2,7 +2,7 @@
 
 ## Problem
 
-`bun run build` in `/Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code` bundles the app into `.build/gizzi-code-bundle.js`, then compiles a native binary. The binary compile step fails because Bun emits synchronous `__esm(() => { ... await ... })` module wrappers for circular ESM dependency groups. A synchronous wrapper containing `await` is a syntax error.
+`bun run build` in `~/Desktop/allternit-workspace/allternit/cmd/gizzi-code` bundles the app into `.build/gizzi-code-bundle.js`, then compiles a native binary. The binary compile step fails because Bun emits synchronous `__esm(() => { ... await ... })` module wrappers for circular ESM dependency groups. A synchronous wrapper containing `await` is a syntax error.
 
 ## Failure mode
 
@@ -83,7 +83,7 @@ Then:
 After each code change, run:
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 bun run build 2>&1 | tail -80
 ```
 

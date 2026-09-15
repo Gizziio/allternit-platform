@@ -126,7 +126,7 @@ const BINARY_FILE_EXTENSIONS = new Set([
 // ============================================================================
 
 class ApiFileSystem implements FileSystemAPI {
-  private homeDir = '/Users/macbook';
+  private homeDir = '~';
   private ready = false;
   private apiConfigured = false;
   private apiBases: string[] = [];
@@ -241,7 +241,7 @@ class ApiFileSystem implements FileSystemAPI {
     await this.detectApiConfig();
 
     const candidates = new Set<string>();
-    candidates.add('/Users/macbook');
+    candidates.add('~');
     candidates.add('/home/user');
     candidates.add('.');
 

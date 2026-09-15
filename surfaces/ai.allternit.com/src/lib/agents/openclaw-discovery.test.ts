@@ -9,8 +9,8 @@ import {
 const candidate: OpenClawDiscoveredAgent = {
   agent_id: "main",
   display_name: "Main",
-  agent_dir: "/Users/macbook/.openclaw/agents/main",
-  workspace_path: "/Users/macbook/.openclaw/workspace",
+  agent_dir: "~/.openclaw/agents/main",
+  workspace_path: "~/.openclaw/workspace",
   session_count: 48,
   auth_providers: ["google-gemini-cli"],
   models: ["google-gemini-cli/gemini-3-pro-preview"],
@@ -33,8 +33,8 @@ describe("openclaw discovery matching", () => {
           source: "openclaw",
           openclaw: {
             agentId: "main",
-            agentDir: "/Users/macbook/.openclaw/agents/main",
-            workspacePath: "/Users/macbook/.openclaw/workspace",
+            agentDir: "~/.openclaw/agents/main",
+            workspacePath: "~/.openclaw/workspace",
           },
         },
       },
@@ -50,7 +50,7 @@ describe("openclaw discovery matching", () => {
         config: {
           source: "openclaw",
           openclaw: {
-            workspacePath: "/Users/macbook/.openclaw/workspace/",
+            workspacePath: "~/.openclaw/workspace/",
           },
         },
       },
@@ -66,7 +66,7 @@ describe("openclaw discovery matching", () => {
         config: {
           source: "openclaw",
           openclaw: {
-            agentDir: "/Users/macbook/.openclaw/agents/main",
+            agentDir: "~/.openclaw/agents/main",
           },
         },
       },

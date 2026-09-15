@@ -9,7 +9,7 @@ npm run build        # Successful
 ```
 
 ### 2. Templates Created ✅
-Created 12 sample templates in `/Users/macbook/allternit/templates/`:
+Created 12 sample templates in `~/allternit/templates/`:
 - `APISpecCard.tsx`
 - `ChatbotCard.tsx`
 - `CodeReviewCard.tsx`
@@ -24,7 +24,7 @@ Created 12 sample templates in `/Users/macbook/allternit/templates/`:
 - `TranslationCard.tsx`
 
 ### 3. Templates Converted to Plugins ✅
-All 12 templates converted to plugins in `/Users/macbook/allternit-plugins/`:
+All 12 templates converted to plugins in `~/allternit-plugins/`:
 - `apispeccard-plugin/`
 - `chatbotcard-plugin/`
 - `codereviewcard-plugin/`
@@ -77,14 +77,14 @@ npm login
 ### Step 3: Publish SDK
 
 ```bash
-cd /Users/macbook/allternit-plugin-sdk
+cd ~/allternit-plugin-sdk
 npm publish --access public
 ```
 
 ### Step 4: Publish Converted Plugins
 
 ```bash
-cd /Users/macbook/allternit-plugins
+cd ~/allternit-plugins
 
 for d in */; do
   cd "$d"
@@ -111,7 +111,7 @@ git push origin v1.0.0
 ### Step 6: Deploy Documentation
 
 ```bash
-cd /Users/macbook/allternit-plugin-sdk/website
+cd ~/allternit-plugin-sdk/website
 
 # Install dependencies
 npm install
@@ -154,7 +154,7 @@ allternit-plugin run marketresearchcard --input "test"
 ## File Locations
 
 ```
-/Users/macbook/
+~/
 ├── allternit-plugin-sdk/           # Main SDK
 │   ├── bin/allternit-plugin.js     # CLI
 │   ├── src/                        # Source code

@@ -119,7 +119,7 @@ const api = await createWorkspaceAuto('/path/to/workspace');
 ## Building WASM
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
+cd ~/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
 
 # Install wasm-pack
 cargo install wasm-pack

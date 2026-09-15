@@ -1041,7 +1041,7 @@ export function BrowserCapsuleEnhanced({
   guidanceMessages = [],
   onHumanCheckpoint,
 }: BrowserCapsuleEnhancedProps = {}) {
-  const ALLTERNIT_DESKTOP_DEV_COMMAND = 'cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-desktop && pnpm dev';
+  const ALLTERNIT_DESKTOP_DEV_COMMAND = 'cd ~/Desktop/allternit-workspace/allternit/surfaces/allternit-desktop && pnpm dev';
   const {
     tabs, activeTabId, addTab, closeTab, closeAllTabs, setActiveTab, updateTab,
     goBack, goForward, canGoBack, canGoForward, pushHistory,

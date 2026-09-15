@@ -12,7 +12,7 @@
 
 ## Immediate Boundary
 
-Inside `/Users/macbook/Desktop/allternit-workspace/allternit/cmd`, these are the relevant boundaries:
+Inside `~/Desktop/allternit-workspace/allternit/cmd`, these are the relevant boundaries:
 
 - Keep active: `gizzi-code`
 - Keep as donor/reference: `gizzi-code-claude`

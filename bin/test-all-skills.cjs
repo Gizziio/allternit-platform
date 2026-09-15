@@ -17,7 +17,7 @@ const CANVAS_API_TOKEN = '7~xG8tXkuEFa4fQ7zykECKhmKNuWVw9Feh84BGaeL92xP4nGxVJ8wQ
 const COURSE_ID = '14389375';
 
 // Output directory for screenshots and results
-const OUTPUT_DIR = '/Users/macbook/Desktop/Allternit_Skills_Test_Results';
+const OUTPUT_DIR = '~/Desktop/Allternit_Skills_Test_Results';
 
 // Create output directory
 if (!fs.existsSync(OUTPUT_DIR)) {

@@ -131,7 +131,7 @@ say "- canonical run $RUN2 job: $JOB2"
 
 DAEMON_LOG=/tmp/aproduct-evidence/daemon.log
 : > "$DAEMON_LOG"
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-aproduct-0913/cmd/gizzi-code
+cd $HOME/Desktop/allternit-workspace/allternit-session-aproduct-0913/cmd/gizzi-code
 ALLTERNIT_API_URL=http://127.0.0.1:18013 ALLTERNIT_GIZZI_TOKEN="$TOK_DAEMON" ALLTERNIT_GIZZI_LEASE_SECS=60 \
   bun src/runtime/fabric-transport/worker-daemon-entry.ts > "$DAEMON_LOG" 2>&1 &
 DPID=$!

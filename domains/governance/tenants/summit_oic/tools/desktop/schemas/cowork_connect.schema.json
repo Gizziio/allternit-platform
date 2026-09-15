@@ -1,8 +1,0 @@
-{
-  "type": "object",
-  "required": ["endpoint_ref"],
-  "properties": {
-    "endpoint_ref": {"type": "string"},
-    "display_name": {"type": "string", "nullable": true}
-  }
-}

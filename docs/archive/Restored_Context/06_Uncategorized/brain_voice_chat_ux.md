@@ -291,14 +291,14 @@ The following type errors existed before this implementation and are NOT fixed:
 
 ```bash
 # Kernel (brain sessions)
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 cargo run -p allternit-cli -- up  # Starts at localhost:3004
 
 # Voice service (optional, uses browser fallback if unavailable)
 # localhost:8001
 
 # Shell
-cd /Users/macbook/Desktop/allternit-workspace/allternit/apps/shell
+cd ~/Desktop/allternit-workspace/allternit/apps/shell
 npm run dev
 ```
 

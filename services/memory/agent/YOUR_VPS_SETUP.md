@@ -31,7 +31,7 @@ Models: qwen3.5:0.8b, qwen3.5:2b, qwen3.5:4b
 ### Step 1: Edit .env with Your VPS IP
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
+cd ~/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Edit .env file - replace <YOUR_VPS_IP> with actual IP
 nano .env

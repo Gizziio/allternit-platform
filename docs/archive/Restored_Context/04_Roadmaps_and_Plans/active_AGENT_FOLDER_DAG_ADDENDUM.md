@@ -2,7 +2,7 @@
 
 **Document Type:** Addendum to MASTER_DAG_TASK_BREAKDOWN.md  
 **Date:** 2026-02-20  
-**Source:** `/Users/macbook/Desktop/allternit-workspace/allternit/agent/` folder analysis  
+**Source:** `~/Desktop/allternit-workspace/allternit/agent/` folder analysis  
 **Priority:** P0 - CRITICAL (Agent/Runner architecture is core to system)
 
 ---

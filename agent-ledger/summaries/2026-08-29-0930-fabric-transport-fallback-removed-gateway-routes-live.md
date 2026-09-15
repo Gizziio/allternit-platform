@@ -42,8 +42,8 @@ Completed the server-side transport layer and removed the legacy `/api/agent-cha
 
 ### Documentation
 
-- Updated `/Users/joe/Downloads/TRANSPORT_CAPABILITY_DONOR_HANDOFF.md`.
-- Appended section 15 to `/Users/joe/Downloads/ALLTERNIT_CANONICAL_CONVERGENCE_HANDOFF_v2.md`.
+- Updated `~/Downloads/TRANSPORT_CAPABILITY_DONOR_HANDOFF.md`.
+- Appended section 15 to `~/Downloads/ALLTERNIT_CANONICAL_CONVERGENCE_HANDOFF_v2.md`.
 
 ---
 

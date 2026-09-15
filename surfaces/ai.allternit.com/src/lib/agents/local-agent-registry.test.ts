@@ -45,8 +45,8 @@ describe("local-agent-registry", () => {
         source: "openclaw",
         openclaw: {
           agentId: "main",
-          agentDir: "/Users/macbook/.openclaw/agents/main",
-          workspacePath: "/Users/macbook/.openclaw/workspace",
+          agentDir: "~/.openclaw/agents/main",
+          workspacePath: "~/.openclaw/workspace",
         },
       },
     });
@@ -72,8 +72,8 @@ describe("local-agent-registry", () => {
         source: "openclaw",
         openclaw: {
           agentId: "main",
-          agentDir: "/Users/macbook/.openclaw/agents/main",
-          workspacePath: "/Users/macbook/.openclaw/workspace",
+          agentDir: "~/.openclaw/agents/main",
+          workspacePath: "~/.openclaw/workspace",
         },
       },
     });
@@ -94,8 +94,8 @@ describe("local-agent-registry", () => {
           source: "openclaw",
           openclaw: {
             agentId: "main",
-            agentDir: "/Users/macbook/.openclaw/agents/main",
-            workspacePath: "/Users/macbook/.openclaw/workspace",
+            agentDir: "~/.openclaw/agents/main",
+            workspacePath: "~/.openclaw/workspace",
           },
         },
         status: "idle",

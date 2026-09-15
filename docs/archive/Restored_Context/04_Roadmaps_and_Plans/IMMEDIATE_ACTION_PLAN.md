@@ -53,7 +53,7 @@
 # STEP 4: Prepare Repository
 # ───────────────────────────
 
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # Create production branch
 git checkout -b production
@@ -113,7 +113,7 @@ npm i -g vercel
 vercel login
 
 # Link project
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 vercel
 
 # Answer prompts:

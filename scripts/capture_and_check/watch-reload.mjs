@@ -8,8 +8,8 @@ import { watch } from 'fs';
 import { execSync } from 'child_process';
 
 const WATCH_DIRS = [
-  '/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src',
-  '/Users/macbook/Desktop/allternit-workspace/allternit/7-apps/shell/web/src',
+  '~/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src',
+  '~/Desktop/allternit-workspace/allternit/7-apps/shell/web/src',
 ];
 
 console.log('╔══════════════════════════════════════════════════════════╗');

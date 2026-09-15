@@ -211,7 +211,7 @@ To verify functionality:
 
 ```bash
 # Build
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 bun run build
 
 # Test binary

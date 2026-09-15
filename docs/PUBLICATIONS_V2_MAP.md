@@ -104,13 +104,13 @@ type PublicationEditorial = {
 Platform/pipeline:
 
 ```text
-/Users/macbook/Desktop/allternit-workspace/allternit
+~/Desktop/allternit-workspace/allternit
 ```
 
 Website:
 
 ```text
-/Users/macbook/Desktop/allternit-websites/projects/www.allternit.com/source
+~/Desktop/allternit-websites/projects/www.allternit.com/source
 ```
 
 ## Global constraints

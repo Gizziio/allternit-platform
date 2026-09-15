@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Files were moved from `/Users/macbook/domains/kernel/` and `/Users/macbook/cmd/` to the allternit workspace. **These are NOT duplicates** - they represent a parallel Rust-based implementation (Allternit) alongside the existing TypeScript/Rust hybrid codebase.
+Files were moved from `~/domains/kernel/` and `~/cmd/` to the allternit workspace. **These are NOT duplicates** - they represent a parallel Rust-based implementation (Allternit) alongside the existing TypeScript/Rust hybrid codebase.
 
 ---
 

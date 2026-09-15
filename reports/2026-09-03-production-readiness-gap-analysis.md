@@ -1,7 +1,7 @@
 # Allternit Platform — Production Readiness Gap Analysis
 **Date:** 2026-09-03 (day before announced production launch)
 **Scope:** ai.allternit.com (web platform) + Allternit Desktop (app, distribution, and packaging) + supporting backend (allternit-cloud-api, allternit-api), Allternit Cloud product integration, and gizzi-code.
-**Method:** 7 parallel read-only audits across the monorepo at `/Users/joe/Desktop/allternit-workspace/allternit`, with live probing of production endpoints (curl), CI state (gh), npm registry, and local build/typecheck runs. Every claim below carries evidence. Each finding lists a **Verify** command so a second agent can corroborate independently.
+**Method:** 7 parallel read-only audits across the monorepo at `~/Desktop/allternit-workspace/allternit`, with live probing of production endpoints (curl), CI state (gh), npm registry, and local build/typecheck runs. Every claim below carries evidence. Each finding lists a **Verify** command so a second agent can corroborate independently.
 **Repo state audited:** `main` @ `88baa91ab` (1 docs commit ahead of `origin/main` @ `97ecec0bb`, unpushed).
 
 ---

@@ -35,7 +35,7 @@ The branch also carried the earlier phone-home commit `ec501f045`. Merging requi
 
 - `cargo check -p herdr -p allternit-api -p allternit-cowork-runtime` on the merged tree — clean (only pre-existing warnings). Note: at the pre-merge branch tip, `allternit-cowork-runtime` failed with 40 errors; merging main resolved it (main completed an in-flight cowork refactor) — not a change made here.
 - `cargo test -p herdr --bin ao ao::` — 123 passed / 0 failed (14 new catalog tests). `cargo test -p allternit-api rails::visibility` — 2/2.
-- Live smoke: `ao visibility --root /Users/joe` over 4,122 native rows — claude, gizzi, codex, grok, kimi, kimi-cli populate both fields correctly against real session files (grok chunk-join and kimi `prompt.accepted` times hand-verified).
+- Live smoke: `ao visibility --root ~` over 4,122 native rows — claude, gizzi, codex, grok, kimi, kimi-cli populate both fields correctly against real session files (grok chunk-join and kimi `prompt.accepted` times hand-verified).
 - `pnpm run typecheck:fast` in `surfaces/ai.allternit.com` — 0 errors in-surface (15 pre-existing errors in sibling office/xterm packages, identical with changes stashed); `pnpm run build` (vite) — succeeded.
 
 ## Honest deferrals

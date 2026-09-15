@@ -73,7 +73,7 @@ Before copying ANY file, verify:
 ### Step 1: Source Exists
 ```bash
 # Verify each file exists in claude-code before claiming it
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code-claude
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code-claude
 
 # Check claimed files actually exist:
 ls -la src/assistant/sessionDiscovery.ts     # VERIFY BEFORE CLAIMING
@@ -110,7 +110,7 @@ grep -r "from './utils" src/ | wc -l
 Copy files that are imported by many others:
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd
+cd ~/Desktop/allternit-workspace/allternit/cmd
 
 # Create landing zone
 mkdir -p gizzi-code/migration/claude/src
@@ -126,7 +126,7 @@ diff <(ls gizzi-code-claude/src | sort) <(ls gizzi-code/migration/claude/src | s
 Verify landing integrity:
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code/migration/claude
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code/migration/claude
 
 # Count files - should match source
 find src -type f | wc -l

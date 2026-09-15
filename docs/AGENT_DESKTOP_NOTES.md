@@ -4,7 +4,7 @@
 Wired `lahfir/agent-desktop` as a new canonical computer-use provider `desktop.agent-desktop.canonical` in Allternit. The provider spawns the upstream Rust CLI as a subprocess, translates its JSON envelopes into canonical observations/actions, and leases an `allternit.host` environment before driving the local GUI.
 
 ## Worktree
-- **Path:** `/Users/joe/Desktop/allternit-workspace/allternit-session-agent-desktop-p1`
+- **Path:** `~/Desktop/allternit-workspace/allternit-session-agent-desktop-p1`
 - **Branch:** `session/agent-desktop-p1`
 
 ## Files added
@@ -54,7 +54,7 @@ Wired `lahfir/agent-desktop` as a new canonical computer-use provider `desktop.a
 If the CLI is not already installed:
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-agent-desktop-p1/domains/computer-use/core/native/agent-desktop-rs
+cd ~/Desktop/allternit-workspace/allternit-session-agent-desktop-p1/domains/computer-use/core/native/agent-desktop-rs
 cargo build --release
 # binary will be at target/release/agent-desktop
 ```
@@ -62,13 +62,13 @@ cargo build --release
 ### 2. Python syntax/import validation
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-agent-desktop-p1/domains/computer-use/core
-/Users/joe/Desktop/allternit-workspace/allternit/.venv/bin/python -m py_compile \
+cd ~/Desktop/allternit-workspace/allternit-session-agent-desktop-p1/domains/computer-use/core
+~/Desktop/allternit-workspace/allternit/.venv/bin/python -m py_compile \
   providers/agent_desktop_transport.py \
   providers/agent_desktop_canonical.py \
   gateway/canonical_router.py
 
-/Users/joe/Desktop/allternit-workspace/allternit/.venv/bin/python -c \
+~/Desktop/allternit-workspace/allternit/.venv/bin/python -c \
   "from providers.agent_desktop_transport import AgentDesktopTransport; \
    from providers.agent_desktop_canonical import AgentDesktopCanonicalProvider; \
    print('imports ok')"

@@ -1,8 +1,8 @@
 # Allternit Parity Audit — Canonical Codebase
 
 **Date:** 2026-08-13  
-**Canonical repo:** `/Users/joe/Desktop/allternit-workspace/allternit`  
-**Handoff source:** `/Users/joe/Desktop/allternit-parity-handoff.md`
+**Canonical repo:** `~/Desktop/allternit-workspace/allternit`  
+**Handoff source:** `~/Desktop/allternit-parity-handoff.md`
 
 ## Executive summary
 

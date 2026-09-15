@@ -55,7 +55,7 @@ The wizard prompts for:
 For a local server, provide the shell command to start it:
 
 ```bash
-Enter command to run: npx -y @modelcontextprotocol/server-filesystem /Users/joe/projects
+Enter command to run: npx -y @modelcontextprotocol/server-filesystem ~/projects
 ```
 
 This writes an entry like:
@@ -65,7 +65,7 @@ This writes an entry like:
   "mcp": {
     "filesystem": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/Users/joe/projects"]
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "~/projects"]
     }
   }
 }

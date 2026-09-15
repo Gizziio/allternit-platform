@@ -4,13 +4,13 @@
 Port the **complete Ink-based TUI implementation** from `free-code` to `gizzi-code`, replacing the current minimal Ink app with full Claude Code feature parity.
 
 ## Source of Truth
-**free-code repository** (`/Users/macbook/free-code/`)
+**free-code repository** (`~/free-code/`)
 - This is the leaked Claude Code codebase ported to Ink (React)
 - 1,909 TypeScript files, 33MB of source
 - Fully functional Ink-based TUI with all features
 
 ## Destination
-**gizzi-code** (`/Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/cli/ui/ink-app/`)
+**gizzi-code** (`~/Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/cli/ui/ink-app/`)
 - Currently has minimal Ink implementation (boot, discretion, basic main screen)
 - Build compiles to 80MB binary ✓
 - Needs full feature port from free-code
@@ -19,7 +19,7 @@ Port the **complete Ink-based TUI implementation** from `free-code` to `gizzi-co
 
 ### Source (free-code)
 ```
-/Users/macbook/free-code/src/
+~/free-code/src/
 ├── ink/                          # Core Ink components
 │   ├── components/               # Box, Text, ScrollBox, etc.
 │   ├── hooks/                    # Terminal hooks
@@ -136,7 +136,7 @@ Current: `src/cli/ui/ink-app/context/ThemeContext.tsx`
 ## Build & Test
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 
 # Build
 bun run build
@@ -150,11 +150,11 @@ bun run ink
 
 ## Critical Files to Read First
 
-1. `/Users/macbook/free-code/src/screens/REPL.tsx` - Main entry point
-2. `/Users/macbook/free-code/src/ink.tsx` - Ink exports
-3. `/Users/macbook/free-code/src/components/Messages.tsx` - Message rendering
-4. `/Users/macbook/free-code/src/commands.ts` - Command definitions
-5. `/Users/macbook/free-code/src/hooks/` - Custom hooks
+1. `~/free-code/src/screens/REPL.tsx` - Main entry point
+2. `~/free-code/src/ink.tsx` - Ink exports
+3. `~/free-code/src/components/Messages.tsx` - Message rendering
+4. `~/free-code/src/commands.ts` - Command definitions
+5. `~/free-code/src/hooks/` - Custom hooks
 
 ## Architecture Decision
 

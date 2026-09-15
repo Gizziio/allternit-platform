@@ -26,7 +26,7 @@
 ## Step 1: Start Gateway
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/services/gateway/http
+cd ~/Desktop/allternit-workspace/allternit/services/gateway/http
 
 # Install if needed
 npm install
@@ -53,7 +53,7 @@ curl http://localhost:3210/health
 ## Step 2: Start UI
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform
+cd ~/Desktop/allternit-workspace/allternit/6-ui/allternit-platform
 
 # Install if needed
 npm install

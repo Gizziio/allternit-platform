@@ -19,7 +19,7 @@
 //
 // Run: E2E_CLERK_PASSWORD=... node bot-e2e-desktop-live.cjs   (from the repo root)
 const path = require('path');
-const MODULE_FALLBACK = '/Users/joe/altw/allternit/node_modules';
+const MODULE_FALLBACK = '~/altw/allternit/node_modules';
 function requireDep(name) {
   try {
     return require(name);

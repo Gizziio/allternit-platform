@@ -3,7 +3,7 @@
 ## 1. Convert Your 76 Templates
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-platform
+cd ~/Desktop/allternit-workspace/allternit/surfaces/allternit-platform
 
 npx @allternit/convert-templates \
   --input src/components/chat/TemplatePreviewCards.tsx \

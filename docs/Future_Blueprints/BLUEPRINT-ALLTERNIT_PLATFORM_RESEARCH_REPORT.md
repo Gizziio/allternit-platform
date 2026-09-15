@@ -390,8 +390,8 @@ reliability:
 ### 5.1 Fix Branding in Config Files
 
 **Files:**
-- `/Users/macbook/allternit/system/config.json`
-- `/Users/macbook/.gizzi/package.json`
+- `~/allternit/system/config.json`
+- `~/.gizzi/package.json`
 
 **Action:** Update any remaining old branding references.
 
@@ -432,8 +432,8 @@ Mark incomplete implementations:
 
 **Current State:**
 ```
-/Users/macbook/                    # This workspace
-/Users/macbook/Desktop/allternit-workspace/  # Rails system
+~/                    # This workspace
+~/Desktop/allternit-workspace/  # Rails system
 ```
 
 **Recommendation:** Merge or use git submodules

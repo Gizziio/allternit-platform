@@ -32,7 +32,7 @@ for any bot through the unified control-plane API.
 
 ### Automated tests
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd ~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 node --test docs/desktop-cloud-mvp/desktop-cloud-admin.test.mjs
 ```
 All 6 tests pass.

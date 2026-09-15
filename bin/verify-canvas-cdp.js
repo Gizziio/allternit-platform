@@ -10,7 +10,7 @@ import CDP from 'chrome-remote-interface';
 import fs from 'fs';
 
 const CANVAS_URL = 'https://canvas.instructure.com/courses/14389375/modules';
-const SCREENSHOT_PATH = '/Users/macbook/Desktop/canvas_verification_cdp.png';
+const SCREENSHOT_PATH = '~/Desktop/canvas_verification_cdp.png';
 
 async function verifyCanvas() {
   console.log('=== Canvas Verification via Chrome CDP ===\n');

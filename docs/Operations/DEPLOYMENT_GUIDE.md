@@ -284,7 +284,7 @@ NODE_ENV=production
 ## Directory Structure
 
 ```
-/Users/macbook/Desktop/allternit-websites/
+~/Desktop/allternit-websites/
 ├── README.md                          # Main overview
 ├── DEPLOYMENT_GUIDE.md               # This file
 ├── projects/

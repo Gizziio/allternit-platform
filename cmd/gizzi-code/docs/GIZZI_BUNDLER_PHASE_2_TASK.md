@@ -25,14 +25,14 @@ Make `bun run build` succeed, then run `bun run typecheck` and fix type errors.
    - If you make `clearPluginAgentCache` or similar async, update any callers.
 
 2. **Iterate the build**:
-   - Run `cd /Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run build 2>&1 | tail -80`.
+   - Run `cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run build 2>&1 | tail -80`.
    - If it fails with a new `"await" can only be used inside an "async" function` error, read the bundled line, identify the `init_*` wrapper, map it back to the source module, and break that cycle by:
      - Extracting leaf exports to a new file, OR
      - Replacing a static import with a dynamic import inside an async function.
    - Repeat until `bun run build` exits 0.
 
 3. **Typecheck**:
-   - Run `cd /Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run typecheck`.
+   - Run `cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code && bun run typecheck`.
    - Fix any type errors introduced by the moves. Do not suppress errors with `@ts-ignore` unless the original code already used it. Do not change unrelated types.
 
 ## Constraints

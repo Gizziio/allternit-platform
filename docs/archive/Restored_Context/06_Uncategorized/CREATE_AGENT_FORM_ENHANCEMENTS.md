@@ -1,6 +1,6 @@
 # CreateAgentForm (AgentView.tsx) - Enhancement Plan
 
-**File:** `/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-platform/src/views/AgentView.tsx`  
+**File:** `~/Desktop/allternit-workspace/allternit/surfaces/allternit-platform/src/views/AgentView.tsx`  
 **Function:** `CreateAgentForm` (starts at line 1509)
 
 ---

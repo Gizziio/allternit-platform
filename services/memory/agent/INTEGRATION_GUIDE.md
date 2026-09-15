@@ -37,7 +37,7 @@ ollama pull phi3:mini
 ### 2. Start Memory Agent HTTP Server
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
+cd ~/Desktop/allternit-workspace/allternit/memory
 
 # Install dependencies (if not done)
 pnpm install
@@ -203,7 +203,7 @@ curl -X POST http://localhost:3201/api/ingest/bulk \
 ### Ingest All Receipts
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
+cd ~/Desktop/allternit-workspace/allternit/memory
 
 # Set workspace root (if different from default)
 export Allternit_WORKSPACE_ROOT=/path/to/allternit-workspace
@@ -615,7 +615,7 @@ let similar_tasks = memory.query(&format!(
 ### Start as Background Daemon
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
+cd ~/Desktop/allternit-workspace/allternit/memory
 
 # Start daemon
 pnpm run daemon start
@@ -668,7 +668,7 @@ MEMORY_CONSOLIDATION_INTERVAL_MINUTES=30
 ### Copy and Edit .env
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
+cd ~/Desktop/allternit-workspace/allternit/memory
 cp .env.example .env
 # Edit .env with your settings
 ```

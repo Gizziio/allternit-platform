@@ -105,7 +105,7 @@ is in `src/remote/` — SSH-based remote-pane management, which is user-invoked
 ## How to verify
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-ao-allternit-runtime-fork
+cd ~/Desktop/allternit-workspace/allternit-ao-allternit-runtime-fork
 export ZIG=/opt/homebrew/opt/zig@0.15/bin/zig   # zig 0.15.2 required by upstream build.rs
 
 cargo build -p herdr            # green; produces target/debug/ao

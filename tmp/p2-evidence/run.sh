@@ -34,7 +34,7 @@ say ""
 say "## 2.2/2.3 — agentic worker claims, writes ONLY inside grants; killed mid-run; recovers"
 WLOG=/tmp/p2-demo/worker.log
 : > "$WLOG"
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-coworkp1-0914/cmd/gizzi-code
+cd $HOME/Desktop/allternit-workspace/allternit-session-coworkp1-0914/cmd/gizzi-code
 ALLTERNIT_API_URL=$MOCK ALLTERNIT_GIZZI_TOKEN="$TOK" ALLTERNIT_OPERATOR_API_KEY=p2-operator-key \
   ALLTERNIT_WORKER_TRUSTED_FOLDERS='["/tmp/p2-demo/granted"]' ALLTERNIT_GIZZI_LEASE_SECS=20 \
   bun run src/runtime/fabric-transport/worker-daemon-entry.ts > "$WLOG" 2>&1 &

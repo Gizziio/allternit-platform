@@ -7,7 +7,7 @@ provider `mobile.phone.canonical` in Allternit.
 ## Worktree
 
 ```
-/Users/joe/Desktop/allternit-workspace/allternit/allternit-session-phone-harness-p1
+~/Desktop/allternit-workspace/allternit/allternit-session-phone-harness-p1
 ```
 
 Branch: `session/phone-harness-p1`
@@ -53,7 +53,7 @@ raise a clear error.
 ## Validation run
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit/allternit-session-phone-harness-p1/domains/computer-use/core
+cd ~/Desktop/allternit-workspace/allternit/allternit-session-phone-harness-p1/domains/computer-use/core
 
 # Syntax check
 python3 -m py_compile \
@@ -63,7 +63,7 @@ python3 -m py_compile \
   mobile-harness/phone-harness/src/phone_harness/*.py
 
 # Import / registration check (uses repo venv)
-/Users/joe/Desktop/allternit-workspace/allternit/domains/computer-use/core/.venv/bin/python -c "
+~/Desktop/allternit-workspace/allternit/domains/computer-use/core/.venv/bin/python -c "
 import asyncio
 from providers.phone_harness_canonical import PhoneHarnessCanonicalProvider
 from core.canonical_service import CanonicalComputerService

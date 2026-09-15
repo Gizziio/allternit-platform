@@ -375,12 +375,12 @@ mod tests {
     fn launchd_plist_runs_as_pairing_user_with_user_home_logs() {
         let plist = launchd_plist(
             Path::new("/usr/local/bin/allternit-node"),
-            Path::new("/Users/joe/.config/allternit/runtime-identity.json"),
-            Some(("joe", Path::new("/Users/joe"))),
+            Path::new("~/.config/allternit/runtime-identity.json"),
+            Some(("joe", Path::new("~"))),
         );
         assert!(plist.contains("<key>UserName</key>"));
         assert!(plist.contains("<string>joe</string>"));
-        assert!(plist.contains("/Users/joe/Library/Logs/allternit/node.log"));
+        assert!(plist.contains("~/Library/Logs/allternit/node.log"));
         // The root-owned log dir must not appear as a standalone path.
         assert!(!plist.contains("<string>/Library/Logs/allternit/node.log</string>"));
     }

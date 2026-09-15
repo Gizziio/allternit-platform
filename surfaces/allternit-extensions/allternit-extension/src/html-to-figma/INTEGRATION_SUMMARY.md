@@ -125,7 +125,7 @@ const [showHTMLToFigma, setShowHTMLToFigma] = useState(false)
 ## Building
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-extension
+cd ~/Desktop/allternit-workspace/allternit/surfaces/allternit-extension
 
 # Install dependencies
 npm install

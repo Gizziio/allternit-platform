@@ -1,1 +1,0 @@
-[{"task": "form", "fields": {"name": "Ada Lovelace", "email": "ada@example.com"}, "ts": 1789280854.6154509}, {"task": "nav", "fields": {}, "ts": 1789280928.421547}, {"task": "select", "fields": {"plan": ""}, "ts": 1789281088.4866781}, {"task": "extract", "fields": {"code": "AUTH-7391"}, "ts": 1789281450.064585}]

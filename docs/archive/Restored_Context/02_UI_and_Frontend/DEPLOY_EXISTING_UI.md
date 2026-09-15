@@ -341,7 +341,7 @@ export default defineConfig({
 ### Step 1: Install Dependencies
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/shell/web
+cd ~/Desktop/allternit-workspace/allternit/cmd/shell/web
 
 # Install dependencies
 pnpm install

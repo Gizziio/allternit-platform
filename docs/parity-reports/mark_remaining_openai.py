@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-HANDOFF = Path('/Users/joe/Desktop/allternit-parity-handoff.md')
+HANDOFF = Path('~/Desktop/allternit-parity-handoff.md')
 
 mapping = {
     'Auto-review': 'docs/public/parity/codex-cicd-and-security.md',

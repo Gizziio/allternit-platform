@@ -1,6 +1,6 @@
 # GC Engine — Phase 1 Task (only phase — read GC_ENGINE_MAP.md first)
 
-You are executing inside `/Users/macbook/Desktop/allternit-workspace/allternit`. Read
+You are executing inside `~/Desktop/allternit-workspace/allternit`. Read
 `docs/GC_ENGINE_MAP.md` in full before starting — it contains file:line references you need and
 explains *why* project scoping matters, don't skip it.
 

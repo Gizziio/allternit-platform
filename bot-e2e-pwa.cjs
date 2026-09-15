@@ -18,7 +18,7 @@
 //
 // RUN: node bot-e2e-pwa.cjs
 const path = require('path');
-const MODULE_FALLBACK = '/Users/joe/altw/allternit/node_modules';
+const MODULE_FALLBACK = '~/altw/allternit/node_modules';
 function requireDep(name) {
   try {
     return require(name);

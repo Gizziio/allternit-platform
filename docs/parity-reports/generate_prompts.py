@@ -3,8 +3,8 @@
 import re
 from pathlib import Path
 
-HANDOFF = Path('/Users/joe/Desktop/allternit-parity-handoff.md')
-OUT_DIR = Path('/Users/joe/Desktop/allternit-parity-workspace/docs/parity-reports/prompts')
+HANDOFF = Path('~/Desktop/allternit-parity-handoff.md')
+OUT_DIR = Path('~/Desktop/allternit-parity-workspace/docs/parity-reports/prompts')
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 with HANDOFF.open() as f:
@@ -52,7 +52,7 @@ def make_prompt(categories):
     cat_list = ", ".join(f"{c[0].strip('# ')}" for c in categories)
     slugs = [slugify(c[0]) for c in categories]
     files = "\n".join(f"- docs/public/parity/{s}.md" for s in slugs)
-    return f"""You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+    return f"""You are a technical documentation writer working in `~/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
 
 Read the task spec at `docs/parity-reports/TASK_SPEC.md` for context.
 
@@ -70,7 +70,7 @@ Each page should:
 - Include concrete examples (TOML config, curl, CLI commands) where applicable.
 - If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
 
-Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+Do NOT edit `~/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
 
 When finished, write a report file `docs/parity-reports/{'-'.join(slugs)}.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
 

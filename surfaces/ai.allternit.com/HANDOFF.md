@@ -43,7 +43,7 @@ Type-check and lint are clean for all files touched in this work. The only remai
 ### Verification
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com
+cd ~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com
 pnpm exec tsc --project tsconfig.typecheck.json --noEmit
 pnpm exec eslint src/shell/ShellRail.tsx src/shell/ShellApp.tsx src/shell/ViewRegistry.tsx src/views/RecentsView.tsx src/views/settings/SettingsView.tsx src/nav/nav.types.ts src/nav/nav.policy.ts
 ```
@@ -82,7 +82,7 @@ pnpm exec eslint src/shell/ShellRail.tsx src/shell/ShellApp.tsx src/shell/ViewRe
 ### Verification
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com
+cd ~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com
 pnpm exec tsc --project tsconfig.typecheck.json --noEmit
 pnpm exec eslint src/views/agent-view/**/*.tsx src/views/AgentHub.tsx src/views/agent-hub/main/*.tsx
 ```
@@ -124,7 +124,7 @@ The decisions listed in `src/views/agent-view/AGENT_STUDIO_DECISIONS.md` have be
 ## Commands That Should Stay Green
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com
+cd ~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com
 pnpm exec tsc --project tsconfig.typecheck.json --noEmit
 pnpm exec eslint src/shell/ShellRail.tsx src/shell/ShellApp.tsx src/shell/ViewRegistry.tsx src/views/RecentsView.tsx src/views/settings/SettingsView.tsx src/nav/nav.types.ts src/nav/nav.policy.ts src/views/agent-view/**/*.tsx src/views/AgentHub.tsx src/views/agent-hub/main/*.tsx
 ```

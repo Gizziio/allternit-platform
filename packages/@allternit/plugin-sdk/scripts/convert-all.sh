@@ -19,9 +19,9 @@ echo "╚═══════════════════════�
 echo -e "${NC}"
 
 # Configuration
-SDK_DIR="${SDK_DIR:-/Users/macbook/allternit-plugin-sdk}"
-OUTPUT_DIR="${OUTPUT_DIR:-/Users/macbook/allternit-plugins}"
-TEMPLATE_DIR="${TEMPLATE_DIR:-/Users/macbook/allternit}"
+SDK_DIR="${SDK_DIR:-$HOME/allternit-plugin-sdk}"
+OUTPUT_DIR="${OUTPUT_DIR:-$HOME/allternit-plugins}"
+TEMPLATE_DIR="${TEMPLATE_DIR:-$HOME/allternit}"
 ADAPTERS="${ADAPTERS:-mcp,http,cli}"
 
 # Check SDK exists

@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const BASE_DIR = '/Users/macbook/Desktop/allternit-workspace/allternit/remix-content';
+const BASE_DIR = '~/Desktop/allternit-workspace/allternit/remix-content';
 
 interface SourceModule {
   courseCode: string;

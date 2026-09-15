@@ -15,6 +15,6 @@ Focused verification passed with 8 tests and 25 assertions in `tool-belt.test.ts
 
 There were no implementation blockers. The map named the Rust provider/gateway and MCP directories as starting points, but the model-facing Tool Belt itself lives in the TypeScript AI runtime, so changes were intentionally limited to that SDK surface and its existing tests.
 
-The requested Git commit could not be created in this session. This linked worktree stores its index under `/Users/joe/Desktop/allternit-workspace/allternit/.git/worktrees/allternit-parity-swarm-c/`, which the active filesystem policy exposes read-only; `git add` failed with `Operation not permitted` before staging any files. The completed changes remain in the `ao/swarm-c` working tree.
+The requested Git commit could not be created in this session. This linked worktree stores its index under `~/Desktop/allternit-workspace/allternit/.git/worktrees/allternit-parity-swarm-c/`, which the active filesystem policy exposes read-only; `git add` failed with `Operation not permitted` before staging any files. The completed changes remain in the `ao/swarm-c` working tree.
 
 Phase 1 can build on these primitives with production search-index adapters, cache persistence/expiry, richer content extraction, MCP lifecycle detach/refresh, and broader provider-specific strict-schema compatibility.

@@ -111,7 +111,7 @@ allternit-plugin create <name> [options]
 
 Options:
   -t, --template <name>       Use template as starting point
-  -d, --templates-dir <path>  Templates directory (default: /Users/macbook/allternit/templates)
+  -d, --templates-dir <path>  Templates directory (default: ~/allternit/templates)
   --adapters <list>           Comma-separated adapters (default: mcp,http,cli)
   --category <type>           Plugin category (default: custom)
 

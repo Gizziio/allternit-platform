@@ -76,7 +76,7 @@
 ### Installation
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
+cd ~/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Install dependencies
 pnpm install

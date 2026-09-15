@@ -246,7 +246,7 @@ function App() {
 
 1. **Backend:**
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 cargo build --release
 ```
 

@@ -107,7 +107,7 @@ Converted `for...of` loops to `.forEach()`:
 ## Verification
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform
+cd ~/Desktop/allternit-workspace/allternit/6-ui/allternit-platform
 npx tsc --noEmit --jsx react-jsx src/allternit-os/index.ts
 # Exit code: 0 (success)
 ```

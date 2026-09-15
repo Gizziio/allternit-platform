@@ -12,7 +12,7 @@
  * - External: Allowlist check
  * 
  * Aligned with:
- * - /Users/macbook/Desktop/spec/BrowserAgent/PolicyTiers.md
+ * - ~/Desktop/spec/BrowserAgent/PolicyTiers.md
  * - SYSTEM_LAW.md LAW-TOOL-002
  */
 

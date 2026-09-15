@@ -7,11 +7,11 @@ This implementation adds comprehensive state persistence, file validation, brows
 **Version**: 4.1.0  
 **Date**: March 11, 2026  
 **Files Modified**: 
-- `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AgentCreationWizardEnhanced.tsx`
+- `~/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AgentCreationWizardEnhanced.tsx`
 
 **Files Created**:
-- `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AgentCreationWizard.validations.ts`
-- `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AgentCreationWizard.persistence.tsx`
+- `~/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AgentCreationWizard.validations.ts`
+- `~/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AgentCreationWizard.persistence.tsx`
 
 ---
 

@@ -119,7 +119,7 @@ SwarmMonitorLayout
 
 Run the following to verify:
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform
+cd ~/Desktop/allternit-workspace/allternit/surfaces/platform
 pnpm run typecheck
 pnpm run dev
 ```
