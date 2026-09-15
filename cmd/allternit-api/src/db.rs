@@ -17,8 +17,16 @@ pub struct DbHandle {
 impl DbHandle {
     pub fn new(path: PathBuf) -> SqlResult<Self> {
         let mut conn = Connection::open(&path)?;
-        // Run refinery migrations (idempotent — CREATE TABLE IF NOT EXISTS)
-        embedded::migrations::runner().run(&mut conn).map_err(|e| {
+        // Union-merge lineage left version gaps (V49, V88/V89) on some DBs:
+        // the file exists, current version is already past it, history never
+        // recorded the row. Refinery's default abort_missing treats that as
+        // "missing from the filesystem" and panics. Keep both V87 and V88
+        // files (VPS recorded V88; desktops recorded the V87 union) and do
+        // not abort on those gaps — later versions still apply.
+        embedded::migrations::runner()
+            .set_abort_missing(false)
+            .run(&mut conn)
+            .map_err(|e| {
             rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(1),
                 Some(format!("Migration failed: {}", e)),
