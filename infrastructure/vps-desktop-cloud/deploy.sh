@@ -27,8 +27,15 @@ print_banner() {
   echo ""
 }
 
-ssh_cmd() { ssh "root@${VPS_HOST}" "$@"; }
-scp_cmd() { scp "$1" "root@${VPS_HOST}:$2"; }
+# CI copies the binary then runs this script *on* the VPS. Nested ssh to the
+# laptop alias `mail` fails host-key checks. `local` means operate in-place.
+if [ "${VPS_HOST}" = "local" ] || [ "${VPS_HOST}" = "localhost" ] || [ "${VPS_HOST}" = "127.0.0.1" ]; then
+  ssh_cmd() { bash -lc "$*"; }
+  scp_cmd() { cp "$1" "$2"; }
+else
+  ssh_cmd() { ssh "root@${VPS_HOST}" "$@"; }
+  scp_cmd() { scp "$1" "root@${VPS_HOST}:$2"; }
+fi
 
 ensure_src() {
   if ! ssh_cmd "test -f ${SRC_DIR}/target/release/allternit-api"; then

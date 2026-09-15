@@ -65,9 +65,10 @@ jobs:
       - name: Deploy binary and service
         if: steps.vps.outputs.present == 'true'
         run: |
-          ssh vps "mkdir -p /opt/allternit-src/target/release"
+          ssh vps "mkdir -p /opt/allternit-src/target/release /opt/allternit-src/infrastructure/vps-desktop-cloud"
           scp target/release/allternit-api vps:/opt/allternit-src/target/release/allternit-api
-          ssh vps "cd /opt/allternit-src/infrastructure/vps-desktop-cloud && ./deploy.sh"
+          scp infrastructure/vps-desktop-cloud/deploy.sh vps:/opt/allternit-src/infrastructure/vps-desktop-cloud/deploy.sh
+          ssh vps "chmod +x /opt/allternit-src/infrastructure/vps-desktop-cloud/deploy.sh && cd /opt/allternit-src/infrastructure/vps-desktop-cloud && ./deploy.sh local"
 
       - name: Extract self-hosted setup token
         if: steps.vps.outputs.present == 'true'
