@@ -48,7 +48,9 @@ ensure_src() {
 
 install_binary() {
   log_info "Installing allternit-api binary..."
-  ssh_cmd "systemctl stop allternit-api || true"
+  # Crash-looping Restart=always will come back during the checksum repair
+  # and race SQLite. Mask until start_service.
+  ssh_cmd "systemctl mask --now allternit-api || true"
   ssh_cmd "mkdir -p ${API_DIR}/bin/backups ${DATA_DIR} ${ETC_DIR} ${LOG_DIR}"
   # Keep a timestamped binary backup so rollback.sh can restore it.
   ssh_cmd "cp ${API_DIR}/bin/allternit-api ${API_DIR}/bin/backups/allternit-api.$(date +%Y%m%d-%H%M%S) || true"
@@ -164,8 +166,10 @@ repair_collision_checksums() {
 
 start_service() {
   log_info "Starting allternit-api..."
+  ssh_cmd "systemctl unmask allternit-api || true"
+  ssh_cmd "systemctl enable allternit-api || true"
   ssh_cmd "systemctl restart allternit-api"
-  sleep 3
+  sleep 8
   if ssh_cmd "systemctl is-active --quiet allternit-api"; then
     log_info "Service is active"
   else
