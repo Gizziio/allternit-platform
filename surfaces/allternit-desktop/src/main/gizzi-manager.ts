@@ -43,7 +43,7 @@ export interface GizziStartConfig {
   extraEnv?: Record<string, string>;
 }
 
-type GizziProbeResult = 'ready' | 'unauthorized' | 'unhealthy' | 'unreachable';
+type GizziProbeResult = 'ready' | 'unauthorized' | 'unhealthy' | 'refused' | 'unreachable';
 
 export class GizziManager {
   private static instance: GizziManager;
@@ -53,6 +53,8 @@ export class GizziManager {
   private usingExternalRuntime = false;
   private stopping = false;
   private resolvedBinaryPath: string | null | undefined;
+  /** Ring buffer of recent stderr lines for crash diagnostics (startup fail-fast). */
+  private stderrLines: string[] = [];
 
   static getInstance(): GizziManager {
     if (!GizziManager.instance) {
@@ -84,6 +86,28 @@ export class GizziManager {
     }
     if (existingRuntime === 'unhealthy') {
       throw new Error(`Another unhealthy Gizzi runtime is already using port ${GIZZI_PORT}`);
+    }
+    if (existingRuntime === 'unreachable') {
+      // Timeout/reset rather than ECONNREFUSED — possibly a runtime mid-start
+      // (e.g. the always-on daemon launchd just spawned). Poll patiently for
+      // the health window to adopt it; a dead port short-circuits above via
+      // 'refused', so the cold-boot path never pays this wait.
+      const adopted = await this.waitForExistingRuntime(existingPassword, HEALTH_TIMEOUT_MS);
+      if (adopted === 'ready') {
+        this.password = existingPassword;
+        this.usingExternalRuntime = true;
+        log.info(`[GizziManager] Reusing existing Gizzi runtime at ${this.getUrl()}`);
+        return this.getUrl();
+      }
+      if (adopted === 'unauthorized') {
+        throw new Error(
+          `A password-protected Gizzi runtime is already using port ${GIZZI_PORT}, ` +
+          'but its configured daemon credential did not match.'
+        );
+      }
+      if (adopted === 'unhealthy') {
+        throw new Error(`Another unhealthy Gizzi runtime is already using port ${GIZZI_PORT}`);
+      }
     }
 
     const binaryPath = this.resolveBinaryPath();
@@ -159,9 +183,10 @@ export class GizziManager {
     proc.stdout?.on('data', (d: Buffer) =>
       log.info('[Gizzi]', d.toString().trim())
     );
-    proc.stderr?.on('data', (d: Buffer) =>
-      log.warn('[Gizzi]', d.toString().trim())
-    );
+    proc.stderr?.on('data', (d: Buffer) => {
+      log.warn('[Gizzi]', d.toString().trim());
+      this.pushStderrLine(d.toString());
+    });
     proc.on('exit', (code) => {
       log.warn(`[GizziManager] exited (code ${code})`);
       const intentionalStop = this.stopping;
@@ -248,26 +273,65 @@ export class GizziManager {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS;
     const url = `http://127.0.0.1:${GIZZI_PORT}/v1/global/health`;
     const authHeader = this.getAuthHeader();
+    const child = this.proc;
+    const crashState = { crashed: false, code: null as number | null };
+    const onExit = (code: number | null) => {
+      crashState.crashed = true;
+      crashState.code = code;
+    };
+    child?.once('exit', onExit);
 
-    while (Date.now() < deadline) {
-      if (!this.proc) {
-        throw new Error('gizzi-code exited before becoming ready');
-      }
-      try {
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(2000),
-          headers: authHeader ? { Authorization: authHeader } : undefined,
-        });
-        if (res.ok || res.status === 404) {
-          // 404 = server up, no health route (fine)
-          return;
+    try {
+      while (Date.now() < deadline) {
+        if (crashState.crashed) {
+          throw new Error(
+            `gizzi-code exited during startup (code ${crashState.code}): ${this.recentStderr().join(' | ')}`,
+          );
         }
-      } catch {
-        // Not ready yet
+        try {
+          const res = await fetch(url, {
+            signal: AbortSignal.timeout(2000),
+            headers: authHeader ? { Authorization: authHeader } : undefined,
+          });
+          if (res.ok || res.status === 404) {
+            // 404 = server up, no health route (fine)
+            return;
+          }
+        } catch {
+          // Not ready yet
+        }
+        await new Promise(r => setTimeout(r, 200));
       }
-      await new Promise(r => setTimeout(r, 200));
+      throw new Error(`gizzi-code did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
+    } finally {
+      if (child) child.removeListener('exit', onExit);
     }
-    throw new Error(`gizzi-code did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
+  }
+
+  /** Patiently poll for a runtime that may be mid-start, to adopt it. */
+  private async waitForExistingRuntime(password: string | null, timeoutMs: number): Promise<GizziProbeResult> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const result = await this.probe(password);
+      if (result === 'ready' || result === 'unauthorized' || result === 'unhealthy') {
+        return result;
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    return 'unreachable';
+  }
+
+  private pushStderrLine(text: string): void {
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      this.stderrLines.push(trimmed);
+      if (this.stderrLines.length > 20) this.stderrLines.shift();
+    }
+  }
+
+  private recentStderr(): string[] {
+    return this.stderrLines.slice(-5);
   }
 
   private async probe(password: string | null): Promise<GizziProbeResult> {
@@ -282,7 +346,13 @@ export class GizziManager {
       if (res.ok || res.status === 404) return 'ready';
       if (res.status === 401) return 'unauthorized';
       return 'unhealthy';
-    } catch {
+    } catch (probeErr) {
+      // ECONNREFUSED means nothing is (or will be) listening — the caller
+      // spawns immediately instead of paying a patient poll for a port that
+      // can never answer.
+      if ((probeErr as { cause?: { code?: string } })?.cause?.code === 'ECONNREFUSED') {
+        return 'refused';
+      }
       return 'unreachable';
     }
   }

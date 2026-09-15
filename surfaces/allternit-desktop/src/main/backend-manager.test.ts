@@ -87,6 +87,52 @@ describe('BackendManager.probeExistingBackend', () => {
   });
 });
 
+describe('BackendManager waitForUrl fail-fast', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('rejects immediately when the spawned child exits during readiness', async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error('not up'));
+    const { EventEmitter } = await import('node:events');
+    const fakeChild = new EventEmitter() as import('node:child_process').ChildProcess;
+    const manager = new BackendManager();
+
+    const startedAt = Date.now();
+    const promise = (
+      manager as unknown as {
+        waitForUrl: (url: string, label: string, child: unknown) => Promise<void>;
+      }
+    ).waitForUrl('http://127.0.0.1:18013/health', 'allternit-api', fakeChild);
+    // The sidecar dies right after spawn, the way a missing binary or a bad
+    // platform-static export does.
+    setTimeout(() => fakeChild.emit('exit', 1), 10);
+
+    await expect(promise).rejects.toThrow('allternit-api exited during startup (code 1)');
+    // Regression guard: without the exit race this burns the full 90s
+    // HEALTH_TIMEOUT_MS before the backoff retry ladder even starts.
+    expect(Date.now() - startedAt).toBeLessThan(2_000);
+  });
+
+  it('removes the exit listener as soon as health answers OK', async () => {
+    vi.mocked(fetch).mockResolvedValue(healthResponse());
+    const { EventEmitter } = await import('node:events');
+    const fakeChild = new EventEmitter() as import('node:child_process').ChildProcess;
+    const manager = new BackendManager();
+
+    await (
+      manager as unknown as {
+        waitForUrl: (url: string, label: string, child: unknown) => Promise<void>;
+      }
+    ).waitForUrl('http://127.0.0.1:18013/health', 'allternit-api', fakeChild);
+
+    expect(fakeChild.listenerCount('exit')).toBe(0);
+  });
+});
+
 describe('loadIncusHostEnv', () => {
   it('injects Incus substrate keys from the operator file when absent from env', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incus-env-'));

@@ -477,6 +477,8 @@ let permissionOnboardingResolver: (() => void) | null = null;
  * exists at this point in first-run onboarding.
  */
 let folderGrantResolver: (() => void) | null = null;
+/** True while the splash folder-grant step is waiting on the user. */
+let folderGrantsPending = false;
 
 async function maybeRequestFolderGrants(): Promise<void> {
   if (!splashWindow || splashWindow.isDestroyed()) return;
@@ -486,11 +488,13 @@ async function maybeRequestFolderGrants(): Promise<void> {
   const prefs = (await res.json()) as { trusted_folders?: string[] };
   if (Array.isArray(prefs.trusted_folders) && prefs.trusted_folders.length > 0) return;
   log.info('[Main] No trusted folders yet — showing grant step in startup window');
+  folderGrantsPending = true;
   sendToSplash('folders:show');
   await new Promise<void>((resolve) => {
     folderGrantResolver = resolve;
   });
   folderGrantResolver = null;
+  folderGrantsPending = false;
 }
 
 type OfficeHostId = 'word' | 'excel' | 'powerpoint';
@@ -1027,88 +1031,128 @@ async function initializeBundledMode(): Promise<void> {
       }
     }
 
-    // Step 1.5 — gizzi-code (AI runtime, port ${PORTS.GIZZI})
-    // All agent sessions, conversations, tool calls and provider routing go through here.
-    updateSplash('Starting AI runtime…', 10);
-    let gizziUrl: string | null = null;
-    try {
-      gizziUrl = await startGizziRuntime();
-      activeBackendUrl = gizziUrl;
-      updateSidecarConfig(gizziUrl);
-      log.info('[Main] Gizzi-code started successfully');
-      serviceState.gizzi = { status: 'up', detail: `Connected on ${gizziUrl}` };
-      pushServiceState();
-      void meshManager.start().catch((error) => {
-        log.warn('[Mesh] Fabric mesh unavailable (relay still works):', error);
-      });
-    } catch (gizziErr) {
-      log.warn('[Main] Gizzi-code failed to start, continuing without AI runtime:', gizziErr);
-      serviceState.gizzi = { status: 'down', detail: `Failed to start on ${PORTS.GIZZI}` };
-      pushServiceState();
-      updateSplash('AI runtime unavailable, continuing…', 15);
-      await new Promise(r => setTimeout(r, 1000));
-    }
-
-    // Step 1.6 — office-engine sidecar (services/office-engine, port 8099).
-    // The gateway's /api/office/* routes proxy to this; non-fatal if it fails
-    // (the gateway answers 502, same pattern as the connector sidecar).
-    {
-      const engineUrl = await officeEngineManager.start();
-      if (engineUrl) {
-        log.info(`[Main] Office engine ready (${officeEngineManager.getMode()}) at ${engineUrl}`);
-        serviceState.office = { status: 'up', detail: `Connected on ${engineUrl}` };
-      } else {
-        log.warn('[Main] Office engine unavailable, continuing without it');
+    // Step 1.5–1.7 — runtime sidecars, all CONCURRENTLY. The connector sidecar
+    // above had to be first (API + gizzi env depend on its announced URL);
+    // these five are independent of each other. Each task owns its
+    // serviceState update, never throws, and resolves null when degraded —
+    // the API below only needs gizziUrl, localEngineUrl, and the launch
+    // environments from the driver/ACU managers.
+    updateSplash('Starting services…', 10);
+    const gizziTask = (async (): Promise<string | null> => {
+      try {
+        const url = await startGizziRuntime();
+        activeBackendUrl = url;
+        updateSidecarConfig(url);
+        log.info('[Main] Gizzi-code started successfully');
+        serviceState.gizzi = { status: 'up', detail: `Connected on ${url}` };
+        pushServiceState();
+        void meshManager.start().catch((error) => {
+          log.warn('[Mesh] Fabric mesh unavailable (relay still works):', error);
+        });
+        return url;
+      } catch (gizziErr) {
+        log.warn('[Main] Gizzi-code failed to start, continuing without AI runtime:', gizziErr);
+        serviceState.gizzi = { status: 'down', detail: `Failed to start on ${PORTS.GIZZI}` };
+        pushServiceState();
+        return null;
+      }
+    })();
+    const officeTask = (async (): Promise<void> => {
+      try {
+        const engineUrl = await officeEngineManager.start();
+        if (engineUrl) {
+          log.info(`[Main] Office engine ready (${officeEngineManager.getMode()}) at ${engineUrl}`);
+          serviceState.office = { status: 'up', detail: `Connected on ${engineUrl}` };
+        } else {
+          log.warn('[Main] Office engine unavailable, continuing without it');
+          serviceState.office = { status: 'down', detail: 'Unavailable — restart the app' };
+        }
+      } catch (officeErr) {
+        log.warn('[Main] Office engine failed to start, continuing without it:', officeErr);
         serviceState.office = { status: 'down', detail: 'Unavailable — restart the app' };
       }
       pushServiceState();
-    }
+    })();
+    const driverTask = (async () => {
+      try {
+        // Spawn the embedded driver from the GUI app itself so macOS attributes
+        // both privacy grants to Allternit, then give the backend only its socket.
+        const driver = await computerUseDriverManager.start();
+        if (!driver.running) {
+          log.warn('[Main] Embedded computer-use driver unavailable:', driver.error);
+        }
+        return driver;
+      } catch (driverErr) {
+        log.warn('[Main] Computer-use driver failed to start, continuing without it:', driverErr);
+        return null;
+      }
+    })();
+    const acuTask = (async (): Promise<string | null> => {
+      try {
+        const acuUrl = await acuGatewayManager.start();
+        if (acuUrl) {
+          log.info(`[Main] ACU computer-use gateway ready at ${acuUrl}`);
+        } else {
+          log.warn('[Main] ACU computer-use gateway unavailable; Open computer will 502 until it is started');
+        }
+        return acuUrl;
+      } catch (acuErr) {
+        log.warn('[Main] ACU gateway failed to start, continuing without it:', acuErr);
+        return null;
+      }
+    })();
+    // Local engine: allternit-api reads LOCAL_ENGINE_URL at request time (it
+    // proxies /api/local-engine/* per request), but readiness is ~1s with the
+    // ECONNREFUSED fast-path, so it still starts in the parallel group.
+    const localEngineTask = (async (): Promise<string | null> => {
+      try {
+        const url = await localEngineManager.ensureStarted();
+        log.info(`[Main] Local engine ready at ${url}`);
+        return url;
+      } catch (engineErr) {
+        log.warn('[Main] Local engine failed to start, continuing without it:', engineErr);
+        return null;
+      }
+    })();
+    const [gizziUrl, , , , localEngineUrl] = await Promise.all([
+      gizziTask,
+      officeTask,
+      driverTask,
+      acuTask,
+      localEngineTask,
+    ]);
 
     // Step 2 — allternit-api (Rust operator API, port ${PORTS.API} — VM, rails, terminal)
     const apiStatus = await backendManager.getStatus();
     if (!apiStatus.installed) {
-      updateSplash('Setting up Allternit Desktop for the first time…', 25);
+      updateSplash('Setting up Allternit Desktop for the first time…', 30);
     } else if (apiStatus.version && shouldUpdateBackend(apiStatus.version)) {
-      updateSplash('Updating Allternit Desktop…', 25);
+      updateSplash('Updating Allternit Desktop…', 30);
     } else {
       updateSplash('Starting operator backend…', 30);
     }
 
-    // Spawn the embedded driver from the GUI app itself so macOS attributes
-    // both privacy grants to Allternit, then give the backend only its socket.
-    const computerUseDriver = await computerUseDriverManager.start();
-    if (!computerUseDriver.running) {
-      log.warn('[Main] Embedded computer-use driver unavailable:', computerUseDriver.error);
-    }
-    const acuUrl = await acuGatewayManager.start();
-    if (acuUrl) {
-      log.info(`[Main] ACU computer-use gateway ready at ${acuUrl}`);
-    } else {
-      log.warn('[Main] ACU computer-use gateway unavailable; Open computer will 502 until it is started');
-    }
-    // Step 1.7 — local-engine sidecar (services/local-engine, port ${PORTS.LOCAL_ENGINE}).
-    // Serves Model Lab machine telemetry (/status); allternit-api proxies
-    // /api/local-engine/* to it. Non-fatal if it fails (telemetry shows
-    // "Unavailable", same pattern as the office engine above).
-    let localEngineUrl: string | null = null;
     try {
-      localEngineUrl = await localEngineManager.ensureStarted();
-      log.info(`[Main] Local engine ready at ${localEngineUrl}`);
-    } catch (engineErr) {
-      log.warn('[Main] Local engine failed to start, continuing without it:', engineErr);
+      await backendManager.ensureBackend({
+        gizziUrl,
+        gizziPassword: gizziManager.getPassword(),
+        gizziUsername: 'gizzi',
+        extraEnv: {
+          ...(localEngineUrl ? { LOCAL_ENGINE_URL: localEngineUrl } : {}),
+          ...computerUseDriverManager.getLaunchEnvironment(),
+          ...acuGatewayManager.getLaunchEnvironment(),
+          ...authManager.getPlatformEncryptionEnvironment(),
+          ...authManager.getConnectorSidecarEnvironment(),
+        },
+      });
+    } catch (apiErr) {
+      const message = (apiErr as Error).message ?? String(apiErr);
+      sendToSplash('error', message);
+      serviceState.api = { status: 'down', detail: message.slice(0, 120) };
+      serviceState.gateway = { status: 'down', detail: message.slice(0, 120) };
+      pushServiceState();
+      throw apiErr;
     }
-    const apiUrl = await backendManager.ensureBackend({
-      gizziUrl,
-      gizziPassword: gizziManager.getPassword(),
-      gizziUsername: 'gizzi',
-      extraEnv: {
-        ...(localEngineUrl ? { LOCAL_ENGINE_URL: localEngineUrl } : {}),
-        ...computerUseDriverManager.getLaunchEnvironment(),
-        ...acuGatewayManager.getLaunchEnvironment(),
-        ...authManager.getPlatformEncryptionEnvironment(),
-        ...authManager.getConnectorSidecarEnvironment(),
-      },
-    });
     serviceState.api = { status: 'up', detail: `Connected on ${URLS.API}` };
     serviceState.gateway = { status: 'up', detail: `Connected on ${URLS.API}` };
     pushServiceState();
@@ -1120,7 +1164,7 @@ async function initializeBundledMode(): Promise<void> {
     // desktop keeps it in the Keychain-backed secure store, and the bundled
     // gizzi-code binary runs `fabric-worker` with crash-respawn + graceful
     // SIGTERM quit. Degrades visibly, never silently.
-    updateSplash('Starting fabric worker…', 45);
+    updateSplash('Starting fabric worker…', 60);
     try {
       await startManagedFabricWorker();
     } catch (workerErr) {
@@ -1134,7 +1178,7 @@ async function initializeBundledMode(): Promise<void> {
       .then((status) => (status.installed && !status.running ? bonsaiCompanion.start() : undefined))
       .catch((err) => log.warn('[Bonsai] auto-start skipped:', err));
 
-    updateSplash('Connecting to platform…', 60);
+    updateSplash('Connecting to platform…', 80);
 
     // Step 3 — Platform URL
     // Dev:        local Next.js dev server on port ${PORTS.DEV_UI}
@@ -1231,35 +1275,50 @@ async function initializeBundledMode(): Promise<void> {
       store.set('startupWizardCompleted', true);
     }
 
-    // Complete
-    // Step 2.9 — folder grants (consumer-packaged Cowork P1). Ask once,
-    // during startup, when the profile has no trusted folders yet. Skipped
-    // silently only when the preferences service itself is unreachable —
-    // the wizard remains re-runnable on the next launch.
-    try {
-      await maybeRequestFolderGrants();
-    } catch (folderErr) {
-      log.warn('[Main] Folder-grant step skipped:', folderErr);
-    }
+    // Complete — the runtime is up. The main window loads immediately; the
+    // splash stays on screen only until that window has finished loading AND
+    // the folder-grant step (when shown) has resolved.
+    sendToSplash('progress', 100);
     sendToSplash('complete');
-    await new Promise(r => setTimeout(r, 400));
-
-    if (splashWindow && !splashWindow.isDestroyed()) {
-      splashWindow.close();
-    }
-    splashWindow = null;
 
     mainWindow = createMainWindow();
 
     log.info(`[Main] Loading platform URL: ${platformUrl}`);
-    
+
+    // Splash dismissal state. Grants never gate launch: the main window loads
+    // underneath the splash, and a 15s force-close bounds the wait so the
+    // splash (and boot) can never hang on the grant dialog.
+    let mainWindowLoaded = false;
+    let folderGrantsDone = false;
+    let splashClosed = false;
+    const maybeCloseSplash = () => {
+      if (splashClosed || !mainWindowLoaded || !folderGrantsDone || folderGrantsPending) return;
+      splashClosed = true;
+      clearTimeout(splashForceClose);
+      // Brief beat so the 'Ready' state paints before the window swaps.
+      setTimeout(() => {
+        if (splashWindow && !splashWindow.isDestroyed()) {
+          splashWindow.close();
+        }
+        splashWindow = null;
+      }, 150);
+    };
+    const splashForceClose = setTimeout(() => {
+      log.warn('[Main] Splash force-close timer fired (window load or folder grants still pending)');
+      mainWindowLoaded = true;
+      folderGrantsDone = true;
+      maybeCloseSplash();
+    }, 15_000);
+
     // Log loading events for debugging
     mainWindow.webContents.on('did-start-loading', () => {
       log.info('[Main] Window started loading');
     });
     mainWindow.webContents.on('did-finish-load', () => {
+      mainWindowLoaded = true;
       log.info('[Main] Window finished loading');
       mainWindow?.show();
+      maybeCloseSplash();
     });
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
       log.error(`[Main] Window failed to load: ${errorDescription} (${errorCode}) at ${validatedURL}`);
@@ -1278,6 +1337,20 @@ async function initializeBundledMode(): Promise<void> {
     });
     
     mainWindow.loadURL(activePlatformUrl);
+
+    // Step 2.9 — folder grants (consumer-packaged Cowork P1). Ask once, while
+    // the platform loads underneath, when the profile has no trusted folders
+    // yet. Awaited for bookkeeping only — the splash close above does not
+    // depend on it beyond the force-close bound.
+    void (async () => {
+      try {
+        await maybeRequestFolderGrants();
+      } catch (folderErr) {
+        log.warn('[Main] Folder-grant step skipped:', folderErr);
+      }
+      folderGrantsDone = true;
+      maybeCloseSplash();
+    })();
 
     // First launch: used for permission onboarding gating below
     const isFirstLaunch = !store.get('onboardingComplete');
@@ -2348,6 +2421,7 @@ ipcMain.handle('startup:save-folders', async (_event, folders: unknown) => {
     throw new Error(`saving trusted folders failed: ${res.status} ${body.slice(0, 200)}`);
   }
   sendToSplash('folders:hide');
+  folderGrantsPending = false;
   folderGrantResolver?.();
   return { saved: list.length };
 });

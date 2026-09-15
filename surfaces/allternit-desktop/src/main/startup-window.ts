@@ -4,6 +4,9 @@
  * First launch / signed-out launches show a welcome step, then load the native
  * Clerk auth renderer for sign-in. Returning signed-in launches go straight to
  * the loading step.
+ *
+ * Design: splash option A — A://TERNIT wordmark, thin coral progress bar,
+ * single status line, and a bottom "Details" toggle for the live service list.
  */
 
 import { BrowserWindow } from 'electron';
@@ -26,48 +29,9 @@ const TAGLINE = 'Your AI platform, right on your desktop';
 const TERMS_URL = 'https://allternit.com/terms';
 const PRIVACY_URL = 'https://allternit.com/privacy';
 
-const MATRIX_LOGO_SVG = `
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" width="88" height="88">
-  <defs>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-  <rect width="100" height="100" fill="transparent"/>
-  <g stroke="#B08D6E" stroke-width="0.5" opacity="0.2">
-    <line x1="50" y1="50" x2="50" y2="20"/>
-    <line x1="50" y1="50" x2="50" y2="80"/>
-    <line x1="50" y1="50" x2="25" y2="50"/>
-    <line x1="50" y1="50" x2="75" y2="50"/>
-    <line x1="50" y1="50" x2="30" y2="30" opacity="0.1"/>
-    <line x1="50" y1="50" x2="70" y2="30" opacity="0.1"/>
-    <line x1="50" y1="50" x2="30" y2="70" opacity="0.1"/>
-    <line x1="50" y1="50" x2="70" y2="70" opacity="0.1"/>
-  </g>
-  <g fill="#B08D6E" opacity="0.4">
-    <rect x="49" y="19" width="2" height="2"/>
-    <rect x="49" y="79" width="2" height="2"/>
-    <rect x="24" y="49" width="2" height="2"/>
-    <rect x="74" y="49" width="2" height="2"/>
-  </g>
-  <rect x="30" y="70" width="10" height="10" fill="#B08D6E" opacity="0.8"/>
-  <rect x="30" y="58" width="10" height="10" fill="#B08D6E" opacity="0.9"/>
-  <rect x="30" y="46" width="10" height="10" fill="#B08D6E"/>
-  <rect x="38" y="36" width="10" height="10" fill="#B08D6E"/>
-  <rect x="60" y="70" width="10" height="10" fill="#B08D6E" opacity="0.8"/>
-  <rect x="60" y="58" width="10" height="10" fill="#B08D6E" opacity="0.9"/>
-  <rect x="60" y="46" width="10" height="10" fill="#B08D6E"/>
-  <rect x="52" y="36" width="10" height="10" fill="#B08D6E"/>
-  <rect x="38" y="46" width="10" height="10" fill="#B08D6E" opacity="0.7"/>
-  <rect x="52" y="46" width="10" height="10" fill="#B08D6E" opacity="0.7"/>
-  <rect x="45" y="24" width="10" height="10" fill="#B08D6E"/>
-  <rect x="45" y="58" width="10" height="10" fill="#9A7658" opacity="0.9"/>
-  <circle cx="50" cy="50" r="3" fill="#B08D6E" filter="url(#glow)"/>
-</svg>`;
+// A://TERNIT wordmark, ink (dark-on-light) variant. Canonical source:
+// surfaces/ai.allternit.com/public/brand/a-protocol/a-ternit-wordmark.svg
+const WORDMARK_SVG = `<svg class="wordmark" width="510" height="50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 510 50" shape-rendering="geometricPrecision"><rect x="20.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#D97757"/><rect x="20.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="10.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="30.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="0.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="10.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="30.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="40.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="0.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="40.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="0.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="40.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="60.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="60.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="80.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="80.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="90.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="100.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="100.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="120.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="120.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="130.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="140.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="140.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="160.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="170.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="180.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="190.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="200.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="180.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="180.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="180.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="180.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="220.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="230.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="240.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="250.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="260.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="220.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="220.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="230.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="240.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="250.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="220.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="220.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="230.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="240.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="250.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="260.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="280.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="290.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="300.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="310.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="280.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="320.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="280.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="290.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="300.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="310.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="280.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="300.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="280.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="310.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="320.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="340.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="380.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="340.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="350.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="380.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="340.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="360.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="380.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="340.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="370.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="380.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="340.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="380.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="410.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="420.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="430.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="420.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="420.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="420.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="410.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="420.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="430.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="460.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="470.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="480.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="490.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="500.75" y="0.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="480.75" y="10.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="480.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="480.75" y="30.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/><rect x="480.75" y="40.75" width="8.5" height="8.5" rx="1.5" fill="#141413"/></svg>`;
 
 function buildStartupHtml(initialStep: StartupInitialStep): string {
   return `<!DOCTYPE html>
@@ -79,13 +43,10 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       --bg: #faf9f7;
       --panel: #fffefc;
       --border: #e1e5eb;
-      --border-strong: #c9d0da;
       --text: #1a1916;
-      --text-strong: #0d0c0a;
       --muted: #74716b;
       --soft: #989590;
-      --accent: #B08D6E;
-      --accent-hover: #9A7658;
+      --coral: #D97757;
       --up: #1f7a3a;
       --down: #9c2a25;
       --btn-primary-bg: #1a1916;
@@ -101,8 +62,8 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 52px 48px 32px 48px;
       user-select: none;
+      position: relative;
     }
     /* Drag only a title-bar strip. Putting drag on body (a flex container)
        makes Chromium swallow clicks on child buttons even with no-drag. */
@@ -123,15 +84,8 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
     }
     .step { display: none; flex-direction: column; align-items: center; width: 100%; -webkit-app-region: no-drag; }
     .step.active { display: flex; }
-    .brand {
-      font-family: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
-      font-size: 34px;
-      font-weight: 700;
-      color: var(--text-strong);
-      margin-top: 28px;
-      margin-bottom: 10px;
-      letter-spacing: 0.4px;
-    }
+    .wordmark { width: 180px; height: auto; margin-bottom: 48px; }
+
     .tagline {
       font-size: 15px;
       color: var(--muted);
@@ -151,6 +105,7 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       align-items: center;
       justify-content: center;
       gap: 10px;
+      font-family: inherit;
     }
     .btn-primary {
       background: var(--btn-primary-bg);
@@ -170,63 +125,136 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       line-height: 1.5;
     }
     .footer-legal a { color: var(--muted); text-decoration: none; }
-    .footer-legal a:hover { color: var(--accent); }
-    .spinner {
-      width: 28px;
-      height: 28px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 20px;
+    .footer-legal a:hover { color: var(--coral); }
+
+    /* ---- progress ---- */
+    .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 240px;
+      margin-bottom: 14px;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .status { font-size: 14px; margin-bottom: 20px; text-align: center; min-height: 22px; color: var(--muted); }
-    .progress-container {
-      width: 100%;
-      max-width: 340px;
-      height: 3px;
+    .progress-track {
+      flex: 1;
+      height: 2px;
       background: var(--border);
       border-radius: 2px;
       overflow: hidden;
-      margin-bottom: 12px;
     }
-    .progress-bar {
+    .progress-fill {
       height: 100%;
-      background: var(--accent);
+      background: var(--coral);
       border-radius: 2px;
-      transition: width 0.3s ease;
       width: 0%;
+      transition: width 0.3s ease;
     }
-    .progress-text { font-size: 11px; color: var(--soft); }
-    .stack-status {
-      width: 100%;
-      max-width: 380px;
-      display: grid;
-      gap: 8px;
-      margin-bottom: 24px;
+    .progress-pct {
+      font-size: 11px;
+      color: var(--soft);
+      font-variant-numeric: tabular-nums;
+      min-width: 30px;
+      text-align: right;
     }
-    .stack-row {
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 20px;
+      text-align: center;
+    }
+
+    /* ---- details toggle ---- */
+    .details-btn {
+      position: absolute;
+      bottom: 24px;
+      left: 0; right: 0;
+      margin: 0 auto;
+      width: fit-content;
+      background: none;
+      border: none;
+      font-size: 11px;
+      color: var(--soft);
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.3px;
+    }
+    .details-btn:hover { color: var(--muted); }
+    .details {
+      margin-top: 36px;
+      width: 240px;
+      font-size: 11.5px;
+    }
+    .details.hidden { display: none; }
+    .detail-row {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      font-size: 12px;
+      padding: 5px 0;
+      color: var(--muted);
     }
-    .stack-name { color: var(--text); }
-    .stack-value { color: var(--soft); text-align: right; word-break: break-word; }
-    .stack-value.up { color: var(--up); }
-    .stack-value.down { color: var(--down); }
+    .detail-row + .detail-row { border-top: 1px solid rgba(0,0,0,0.04); }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: 1px;
+      background: #c9c5bf;
+    }
+    .dot.up { background: var(--up); }
+    .dot.down { background: var(--down); }
+    .dot.wait { background: #d8d4cd; }
+    .detail-state { color: var(--soft); font-variant-numeric: tabular-nums; text-align: right; }
+
+    /* ---- folder grants ---- */
+    .folders-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .folders-hint {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 380px;
+      text-align: center;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
     .folder-list { width: 380px; max-height: 180px; overflow-y: auto; margin-bottom: 10px; }
-    .folder-empty { color: var(--soft); font-size: 12px; text-align: center; padding: 14px 0; border: 1px dashed var(--border, #ddd); border-radius: 8px; }
-    .folder-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; margin-bottom: 6px; background: var(--panel); }
-    .folder-path { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; }
-    .folder-remove { border: none; background: none; color: var(--soft); cursor: pointer; font-size: 11px; }
+    .folder-empty {
+      color: var(--soft);
+      font-size: 12px;
+      text-align: center;
+      padding: 14px 0;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .folder-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      background: var(--panel);
+    }
+    .folder-path {
+      font-size: 12px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      direction: rtl;
+    }
+    .folder-remove { border: none; background: none; color: var(--soft); cursor: pointer; font-size: 11px; font-family: inherit; }
     .folder-remove:hover { color: var(--down); }
-    .btn:disabled { opacity: 0.5; cursor: default; }
+    .folder-actions { display: flex; gap: 10px; margin-top: 14px; }
+    .folder-actions .btn { border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+    .folder-actions .btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: var(--btn-primary-bg); }
+
     .version {
       position: absolute;
       bottom: 12px;
@@ -238,9 +266,9 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
 </head>
 <body>
   <div class="drag-bar"></div>
+
   <div class="step ${initialStep === 'welcome' ? 'active' : ''}" id="step-welcome">
-    ${MATRIX_LOGO_SVG}
-    <div class="brand">${BRAND_NAME}</div>
+    ${WORDMARK_SVG}
     <div class="tagline">${TAGLINE}</div>
     <button type="button" class="btn btn-primary" id="btn-get-started">Get started</button>
     <div class="footer-legal">
@@ -252,33 +280,32 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
   </div>
 
   <div class="step ${initialStep === 'loading' ? 'active' : ''}" id="step-loading">
-    ${MATRIX_LOGO_SVG}
-    <div class="brand" style="font-size: 24px; margin-top: 20px; margin-bottom: 24px;">${BRAND_NAME}</div>
-    <div class="stack-status">
-      <div class="stack-row"><div class="stack-name">Allternit API</div><div class="stack-value" id="svc-api">Starting…</div></div>
-      <div class="stack-row"><div class="stack-name">Gateway</div><div class="stack-value" id="svc-gateway">Starting…</div></div>
-      <div class="stack-row"><div class="stack-name">Gizzi Runtime</div><div class="stack-value" id="svc-gizzi">Starting…</div></div>
-      <div class="stack-row"><div class="stack-name">Fabric Worker</div><div class="stack-value" id="svc-fabricWorker">Waiting…</div></div>
-      <div class="stack-row"><div class="stack-name">Office Engine</div><div class="stack-value" id="svc-office">Waiting…</div></div>
-      <div class="stack-row"><div class="stack-name">Platform</div><div class="stack-value" id="svc-platform">Waiting…</div></div>
+    ${WORDMARK_SVG}
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-pct" id="progress-pct"></div>
     </div>
-    <div id="loading">
-      <div class="spinner"></div>
-      <div class="status" id="status">Starting...</div>
-      <div class="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
-      <div class="progress-text" id="progress-text"></div>
+    <div class="status" id="status">Starting…</div>
+    <div class="details hidden" id="details">
+      <div class="detail-row" data-key="api"><span><span class="dot wait"></span>Allternit API</span><span class="detail-state">Starting…</span></div>
+      <div class="detail-row" data-key="gateway"><span><span class="dot wait"></span>Gateway</span><span class="detail-state">Starting…</span></div>
+      <div class="detail-row" data-key="gizzi"><span><span class="dot wait"></span>Gizzi Runtime</span><span class="detail-state">Starting…</span></div>
+      <div class="detail-row" data-key="fabricWorker"><span><span class="dot wait"></span>Fabric Worker</span><span class="detail-state">Waiting…</span></div>
+      <div class="detail-row" data-key="office"><span><span class="dot wait"></span>Office Engine</span><span class="detail-state">Waiting…</span></div>
+      <div class="detail-row" data-key="platform"><span><span class="dot wait"></span>Platform</span><span class="detail-state">Waiting…</span></div>
     </div>
+    <button class="details-btn" type="button" id="btn-details">Details</button>
   </div>
 
   <div class="step" id="step-folders">
-    ${MATRIX_LOGO_SVG}
-    <div class="brand" style="font-size: 22px; margin-top: 18px;">Grant workspace folders</div>
-    <div class="tagline" style="max-width: 380px; text-align: center; margin-bottom: 14px;">
+    ${WORDMARK_SVG}
+    <div class="folders-title">Grant workspace folders</div>
+    <div class="folders-hint">
       Allternit Cowork only works in folders you grant. Pick one or more — you can change this later in Settings.
     </div>
     <div class="folder-list" id="folder-list"></div>
     <button type="button" class="btn" id="btn-add-folder">＋ Add folder</button>
-    <div style="display: flex; gap: 10px; margin-top: 14px;">
+    <div class="folder-actions">
       <button type="button" class="btn" id="btn-skip-folders">Skip for now</button>
       <button type="button" class="btn btn-primary" id="btn-save-folders" disabled>Save &amp; continue</button>
     </div>
@@ -305,16 +332,29 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
         console.error('window.startup is undefined');
         return;
       }
+
+      // Details toggle (option A): shows/hides the live service list.
+      var details = document.getElementById('details');
+      var detailsBtn = document.getElementById('btn-details');
+      if (details && detailsBtn) {
+        detailsBtn.addEventListener('click', function () {
+          var hidden = details.classList.toggle('hidden');
+          detailsBtn.textContent = hidden ? 'Details' : 'Hide details';
+        });
+      }
+
       api.onServices(function (services) {
-        var entries = [['api', 'svc-api'], ['gateway', 'svc-gateway'], ['gizzi', 'svc-gizzi'], ['fabricWorker', 'svc-fabricWorker'], ['office', 'svc-office'], ['platform', 'svc-platform']];
-        for (var i = 0; i < entries.length; i++) {
-          var key = entries[i][0];
-          var nodeId = entries[i][1];
-          var node = document.getElementById(nodeId);
-          var state = services && services[key];
-          if (!node || !state) continue;
-          node.textContent = state.detail || state.status;
-          node.className = 'stack-value ' + (state.status === 'up' ? 'up' : state.status === 'down' ? 'down' : '');
+        var rows = document.querySelectorAll('#details .detail-row');
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          var state = services && services[row.getAttribute('data-key')];
+          if (!state) continue;
+          var dot = row.querySelector('.dot');
+          var label = row.querySelector('.detail-state');
+          if (dot) {
+            dot.className = 'dot ' + (state.status === 'up' ? 'up' : state.status === 'down' ? 'down' : 'wait');
+          }
+          if (label) label.textContent = state.detail || state.status;
         }
       });
       api.onStatus(function (message) {
@@ -322,13 +362,17 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
         if (node) node.textContent = message;
       });
       api.onProgress(function (percent) {
-        document.getElementById('progress-bar').style.width = percent + '%';
-        document.getElementById('progress-text').textContent = percent > 0 ? percent + '%' : '';
+        document.getElementById('progress-fill').style.width = percent + '%';
+        document.getElementById('progress-pct').textContent = percent > 0 ? percent + '%' : '';
       });
       api.onComplete(function () {
-        document.getElementById('loading').innerHTML =
-          '<div style="font-size: 24px; margin-bottom: 8px; color: var(--accent); text-align: center;">✓</div>' +
-          '<div style="color: var(--text); text-align: center;">Local backend connected</div>';
+        document.getElementById('progress-fill').style.width = '100%';
+        document.getElementById('progress-pct').textContent = '100%';
+        var node = document.getElementById('status');
+        if (node) {
+          node.textContent = 'Ready';
+          node.style.color = 'var(--text)';
+        }
       });
       api.onError(function (message) {
         var node = document.getElementById('status');
@@ -442,4 +486,3 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
  * In packaged builds this is dist/renderer/auth/index.html; in development
  * Vite serves it from src/renderer/auth/index.html.
  */
-
