@@ -437,9 +437,6 @@ export default function AuthApp() {
     <ClerkProvider
       publishableKey={config.publishableKey}
       proxyUrl={config.proxyUrl}
-      clerkJSUrl={
-        config.proxyUrl ? new URL('clerk.browser.js', window.location.href).href : undefined
-      }
       appearance={clerkAppearance}
       localization={clerkLocalization}
       signInFallbackRedirectUrl={selfRedirectUrl}

@@ -1,7 +1,5 @@
-# Steering checkpoint — session/clerk-js-load-0915
+# Steering checkpoint — session/clerk-js-proxy-0915
 
-- **Goal:** Fix desktop auth renderer `failed_to_load_clerk_js`.
-- **Just did:** net.fetch + bypass for intercepted https; persist Set-Cookie; clerk-js staged into the auth renderer and loaded from the same origin.
-- **Verified:** vitest 159/159; `node scripts/build-auth-renderer.cjs` staged clerk.browser.js (314K).
-- **Next:** commit, PR, merge, rebuild/install the packaged app so the running Desktop picks this up.
-- **Open questions:** None.
+- **Goal:** Follow-up to #550. Local clerkJSUrl made clerk-js look for sibling chunks on the auth origin (ChunkLoadError). Load clerk-js from the proxy via net.fetch instead.
+- **Verified live:** after asar patch, `Clerk session token received from renderer` twice (`gizzi_io@proton.me`). `/health` 200. No `failed_to_load_clerk_js`.
+- **Next:** commit, PR, merge, attest, cleanup.
