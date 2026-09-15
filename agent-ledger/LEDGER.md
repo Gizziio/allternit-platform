@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-15 12:52 — grok — Desktop auth renderer Clerk JS load
+
+- **Session ID / Branch:** grok `01a0a52b` / `session/clerk-js-load-0915` + `session/clerk-js-proxy-0915`
+- **Agent:** grok
+- **Summary:** Merged PRs #550 and #552. Auth partition no longer deadlocks clerk-js through `session.fetch`. Proxy URL loads via `net.fetch`. Local `clerkJSUrl` reverted after it broke chunk loads.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/550 · https://github.com/Gizziio/allternit-platform/pull/552 · `d07b085e3` / `5dd567b0e`
+- **How it works:** `protocol.handle('https')` still serves the fake accounts.* origin; everything else uses `net.fetch` + `bypassCustomProtocolHandlers` with Cookie/Set-Cookie copied onto the auth jar.
+- **Verification:** live asar patch — Clerk session token received from renderer; `/health` 200; `failed_to_load_clerk_js` loop gone. vitest 159/159.
+- **Outstanding work:** notarized CI Desktop still has to ship this. ACU/uvicorn, mesh 502s unchanged.
+- **Summary file:** [2026-09-15-1252-clerk-js-load-0915-grok-auth-renderer.md](./summaries/2026-09-15-1252-clerk-js-load-0915-grok-auth-renderer.md)
+
 ### 2026-09-15 12:05 — grok — Unpackaged is scratch, not a second product
 
 - **Session ID / Branch:** grok `01a0a52b` / `session/datadir-scratch-0915`
