@@ -228,6 +228,21 @@ function checkToolchain(jobs) {
       pass(`toolchain: job \`${name}\` cargo-builds the voice-service crate`);
     }
   }
+
+  const macosJob = jobs['build-macos'] || '';
+  if (
+    !/build-whisper\.sh arm64/.test(macosJob) ||
+    !/build-whisper\.sh x86_64/.test(macosJob) ||
+    !/whisper-cli-arm64/.test(macosJob) ||
+    !/whisper-cli-x86_64/.test(macosJob)
+  ) {
+    fail(
+      'toolchain: build-macos must cmake whisper-cli for arm64 and x86_64 and lipo them ' +
+        '(host-arch-only whisper-cli leaves the Intel app with an arm64 STT binary).'
+    );
+  } else {
+    pass('toolchain: build-macos lipos whisper-cli for arm64 and x86_64');
+  }
 }
 
 /* ── Check 3: packaging dry-run — every required resources/bin artifact ── */

@@ -1,9 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { claimVnc, getVncOwner, releaseVnc, shouldHoldBotDesktopStream } from "./bot-computer-vnc";
+import {
+  claimVnc,
+  getRemoteVncHolder,
+  getVncOwner,
+  noteRemoteClaim,
+  noteRemoteRelease,
+  releaseVnc,
+  resetVncOwnership,
+  shouldHoldBotDesktopStream,
+  vncEndpointKey,
+} from "./bot-computer-vnc";
 
 afterEach(() => {
-  const owner = getVncOwner();
-  if (owner) releaseVnc(owner.sandboxId, owner.layout);
+  resetVncOwnership();
 });
 
 describe("bot-computer-vnc", () => {
@@ -43,5 +52,39 @@ describe("bot-computer-vnc", () => {
     expect(claimVnc("sb-1", "aci")).toBe(true);
     releaseVnc("sb-1", "aci");
     expect(claimVnc("sb-1", "pane")).toBe(true);
+  });
+
+  it("does not let a remote pane steal the window's VNC claim", () => {
+    expect(claimVnc("sb-1", "window")).toBe(true);
+    noteRemoteClaim("sb-1", "pane");
+    expect(getVncOwner()).toEqual({ sandboxId: "sb-1", layout: "window" });
+    expect(claimVnc("sb-1", "window")).toBe(true);
+  });
+
+  it("yields the pane when a remote window claims VNC", () => {
+    expect(claimVnc("sb-1", "pane")).toBe(true);
+    noteRemoteClaim("sb-1", "window");
+    expect(getVncOwner()).toBeNull();
+    expect(getRemoteVncHolder()).toEqual({ sandboxId: "sb-1", layout: "window" });
+    expect(claimVnc("sb-1", "pane")).toBe(false);
+  });
+
+  it("lets the pane reclaim after the remote window releases", () => {
+    noteRemoteClaim("sb-1", "window");
+    expect(claimVnc("sb-1", "pane")).toBe(false);
+    noteRemoteRelease("sb-1");
+    expect(claimVnc("sb-1", "pane")).toBe(true);
+  });
+
+  it("strips rotating VNC tokens so reconnects are not identity changes", () => {
+    expect(
+      vncEndpointKey(
+        "/ws/bots/b1/desktop/vnc?sandbox_id=sb-1&token=aaa",
+      ),
+    ).toBe(
+      vncEndpointKey(
+        "/ws/bots/b1/desktop/vnc?sandbox_id=sb-1&token=bbb",
+      ),
+    );
   });
 });

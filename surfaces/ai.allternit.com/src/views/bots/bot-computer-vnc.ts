@@ -29,6 +29,8 @@ const PRIORITY: Record<BotComputerLayout, number> = {
 type Owner = { sandboxId: string; layout: BotComputerLayout };
 
 let owner: Owner | null = null;
+/** Claim held in another JS heap (other Electron window / tab) via BroadcastChannel. */
+let remoteHolder: Owner | null = null;
 const listeners = new Set<() => void>();
 const tabId =
   typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -41,6 +43,16 @@ type OwnerMessage = {
   layout: BotComputerLayout;
   origin: string;
 };
+
+export function vncEndpointKey(wsUrl: string): string {
+  try {
+    const url = new URL(wsUrl, "http://local.invalid");
+    url.searchParams.delete("token");
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return wsUrl.replace(/([?&])token=[^&]*/g, "$1").replace(/[?&]$/, "");
+  }
+}
 
 function getOwnerChannel(): BroadcastChannel | null {
   if (typeof BroadcastChannel === "undefined") return null;
@@ -55,9 +67,10 @@ const ownerChannel = getOwnerChannel();
 ownerChannel?.addEventListener("message", (event: MessageEvent<OwnerMessage>) => {
   const msg = event.data;
   if (!msg || msg.origin === tabId) return;
-  if (msg.type === "claim" && owner?.sandboxId === msg.sandboxId) {
-    owner = null;
-    emit();
+  if (msg.type === "claim") {
+    noteRemoteClaim(msg.sandboxId, msg.layout);
+  } else if (msg.type === "release") {
+    noteRemoteRelease(msg.sandboxId);
   }
 });
 
@@ -82,8 +95,47 @@ export function getVncOwner(): Owner | null {
   return owner;
 }
 
+export function getRemoteVncHolder(): Owner | null {
+  return remoteHolder;
+}
+
+/** Another heap claimed this sandbox. Drop local ownership only if they outrank us. */
+export function noteRemoteClaim(sandboxId: string, layout: BotComputerLayout): void {
+  const previous = remoteHolder;
+  const previousOwner = owner;
+  remoteHolder = { sandboxId, layout };
+  if (owner?.sandboxId === sandboxId && PRIORITY[owner.layout] < PRIORITY[layout]) {
+    owner = null;
+  }
+  if (
+    previous?.sandboxId !== sandboxId ||
+    previous?.layout !== layout ||
+    previousOwner !== owner
+  ) {
+    emit();
+  }
+}
+
+export function noteRemoteRelease(sandboxId: string): void {
+  if (remoteHolder?.sandboxId !== sandboxId) return;
+  remoteHolder = null;
+  emit();
+}
+
+function blockedByRemote(sandboxId: string, layout: BotComputerLayout): boolean {
+  return Boolean(
+    remoteHolder &&
+      remoteHolder.sandboxId === sandboxId &&
+      PRIORITY[layout] < PRIORITY[remoteHolder.layout],
+  );
+}
+
 /** True if this layout should hold the live VNC socket. */
 export function claimVnc(sandboxId: string, layout: BotComputerLayout): boolean {
+  if (blockedByRemote(sandboxId, layout)) return false;
+  if (remoteHolder?.sandboxId === sandboxId && PRIORITY[layout] >= PRIORITY[remoteHolder.layout]) {
+    remoteHolder = null;
+  }
   if (!owner || owner.sandboxId !== sandboxId) {
     owner = { sandboxId, layout };
     emit();
@@ -106,4 +158,10 @@ export function releaseVnc(sandboxId: string, layout: BotComputerLayout): void {
     emit();
     broadcast("release", sandboxId, layout);
   }
+}
+
+/** Test helper — not used in production. */
+export function resetVncOwnership(): void {
+  owner = null;
+  remoteHolder = null;
 }

@@ -1,21 +1,47 @@
 #!/usr/bin/env bash
-# Build whisper.cpp's whisper-cli for the host, targeting the oldest
-# supported macOS so we do not repeat the pyinstaller min-version bug.
+# Build whisper.cpp's whisper-cli.
+#
+# Usage:
+#   ./build-whisper.sh                 # host arch → dist/whisper-cli
+#   ./build-whisper.sh arm64           # → dist/whisper-cli-arm64
+#   ./build-whisper.sh x86_64          # → dist/whisper-cli-x86_64
+#
+# Release CI lipos the two Darwin artifacts into a universal binary.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 DIST="$ROOT/dist"
 mkdir -p "$DIST"
 
-if [[ -x "$DIST/whisper-cli" ]]; then
-  echo "whisper-cli already at $DIST/whisper-cli"
+normalize_arch() {
+  case "${1:-}" in
+    "" ) echo "" ;;
+    arm64|aarch64) echo "arm64" ;;
+    x86_64|x64|amd64) echo "x86_64" ;;
+    *)
+      echo "unsupported whisper arch: $1" >&2
+      exit 1
+      ;;
+  esac
+}
+
+ARCH="$(normalize_arch "${1:-}")"
+if [[ -n "$ARCH" ]]; then
+  OUT="$DIST/whisper-cli-$ARCH"
+else
+  OUT="$DIST/whisper-cli"
+fi
+
+if [[ -x "$OUT" && -z "${WHISPER_FORCE:-}" ]]; then
+  echo "whisper-cli already at $OUT"
   exit 0
 fi
 
-if command -v whisper-cli >/dev/null 2>&1; then
-  cp "$(command -v whisper-cli)" "$DIST/whisper-cli"
-  chmod +x "$DIST/whisper-cli"
-  echo "copied PATH whisper-cli → $DIST/whisper-cli"
+# Host-only shortcut: never use PATH when targeting a specific arch.
+if [[ -z "$ARCH" ]] && command -v whisper-cli >/dev/null 2>&1; then
+  cp "$(command -v whisper-cli)" "$OUT"
+  chmod +x "$OUT"
+  echo "copied PATH whisper-cli → $OUT"
   exit 0
 fi
 
@@ -25,14 +51,23 @@ if [[ ! -d "$SRC/.git" ]]; then
 fi
 
 export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-13.0}"
-cmake -S "$SRC" -B "$SRC/build" -DCMAKE_BUILD_TYPE=Release
-cmake --build "$SRC/build" -j --target whisper-cli
+BUILD_DIR="$SRC/build"
+CMAKE_ARGS=(-S "$SRC" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}")
+if [[ -n "$ARCH" ]]; then
+  BUILD_DIR="$SRC/build-$ARCH"
+  CMAKE_ARGS=(-S "$SRC" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_OSX_ARCHITECTURES="$ARCH"
+    -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}")
+fi
+
+cmake "${CMAKE_ARGS[@]}"
+cmake --build "$BUILD_DIR" -j --target whisper-cli
 
 BIN=""
 for candidate in \
-  "$SRC/build/bin/whisper-cli" \
-  "$SRC/build/whisper-cli" \
-  "$SRC/build/examples/cli/whisper-cli"
+  "$BUILD_DIR/bin/whisper-cli" \
+  "$BUILD_DIR/whisper-cli" \
+  "$BUILD_DIR/examples/cli/whisper-cli"
 do
   if [[ -x "$candidate" ]]; then
     BIN="$candidate"
@@ -41,6 +76,9 @@ do
 done
 [[ -n "$BIN" ]] || { echo "whisper-cli build produced no binary" >&2; exit 1; }
 
-cp "$BIN" "$DIST/whisper-cli"
-chmod +x "$DIST/whisper-cli"
-echo "whisper-cli → $DIST/whisper-cli"
+cp "$BIN" "$OUT"
+chmod +x "$OUT"
+echo "whisper-cli → $OUT"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  lipo -info "$OUT" || true
+fi

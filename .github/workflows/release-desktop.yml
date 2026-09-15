@@ -242,12 +242,18 @@ jobs:
       - name: Build whisper-cli sidecar
         # prepare-platform-static also hard-requires resources/bin/whisper-cli
         # (local /voice dictation shells out to it; the model ggml-tiny.en.bin
-        # is downloaded at runtime). build-whisper.sh cmake-builds
-        # ggml-org/whisper.cpp for the host.
+        # is downloaded at runtime). Cross-compile both Darwin archs and lipo
+        # so the x64 app is not stuck with an arm64 host binary.
         run: |
-          services/voice/build-whisper.sh
-          cp services/voice/dist/whisper-cli surfaces/allternit-desktop/resources/bin/whisper-cli
+          services/voice/build-whisper.sh arm64
+          services/voice/build-whisper.sh x86_64
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          lipo -create \
+            services/voice/dist/whisper-cli-arm64 \
+            services/voice/dist/whisper-cli-x86_64 \
+            -output surfaces/allternit-desktop/resources/bin/whisper-cli
           chmod +x surfaces/allternit-desktop/resources/bin/whisper-cli
+          lipo -info surfaces/allternit-desktop/resources/bin/whisper-cli
           ls -lh surfaces/allternit-desktop/resources/bin/whisper-cli
 
       # ── Step 3d: Build local-engine sidecar (Rust) ──────────────────────────
