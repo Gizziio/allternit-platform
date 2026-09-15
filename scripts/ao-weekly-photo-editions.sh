@@ -7,7 +7,7 @@
 # Notes: ~/.agent-orchestrator/evidence/weekly-photo-editions/NOTES.md
 set -uo pipefail
 
-REPO=/Users/joe/Desktop/allternit-workspace/allternit
+REPO=$HOME/Desktop/allternit-workspace/allternit
 SLUG=weekly-photo-editions
 ENV_FILE="$HOME/.config/allternit/photo-editions.env"
 EVIDENCE_DIR="$HOME/.agent-orchestrator/evidence/$SLUG"

@@ -4,8 +4,8 @@
 **Base commit:** `68361ae2c7cf65a4ed5d54cad52d15e79bacfd44`  
 **Date:** 2026-08-29  
 **Donor agent scope:** Cloud-side commercial/product layer. No AllternitOS source code was modified.  
-**Architecture v2 docs:** `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2` (MD + HTML + PDF + SVG + PNG + generator script + tracker snapshot).  
-**Handoff completion file:** `/Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/ALLTERNIT_CLOUD_HANDOFF_COMPLETE.md`
+**Architecture v2 docs:** `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2` (MD + HTML + PDF + SVG + PNG + generator script + tracker snapshot).  
+**Handoff completion file:** `~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/ALLTERNIT_CLOUD_HANDOFF_COMPLETE.md`
 
 ---
 
@@ -15,8 +15,8 @@
 
 The final Allternit Cloud donor handoff architecture document set has been generated and is ready for the AllternitOS integration session.
 
-- **Architecture v2 folder:** `/Users/joe/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2`
-- **Handoff completion file:** `/Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/ALLTERNIT_CLOUD_HANDOFF_COMPLETE.md`
+- **Architecture v2 folder:** `~/Desktop/AllternitCloud-Architecture/AllternitCloud-Architecture-v2`
+- **Handoff completion file:** `~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/ALLTERNIT_CLOUD_HANDOFF_COMPLETE.md`
 - **Deliverables:** `allternit-cloud-architecture-v2.md`, `.html`, `.pdf`, `.svg`, `.png`, additional diagram SVGs/PNGs, `generate-architecture-v2.py`, `MASTER_TRACKING_snapshot.md`, and `ALLTERNIT_CLOUD_HANDOFF_COMPLETE.md`.
 - **Test results:** `cargo check -p allternit-api` clean; `cargo test -p allternit-api --lib` 601 passed, 0 failed.
 - **Confirmation:** No competing generic Fabric authority was created.

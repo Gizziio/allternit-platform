@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd $HOME/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 
 echo "=== Phase 23: Desktop quotas and usage tracking ==="
 echo
@@ -21,7 +21,7 @@ cargo test -q -p allternit-api bot_desktop
 
 echo
 echo "--- Set concurrent quota = 1 for local-dev-user ---"
-sqlite3 "/Users/joe/Library/Application Support/allternit/allternit.db" \
+sqlite3 "$HOME/Library/Application Support/allternit/allternit.db" \
   "INSERT OR REPLACE INTO desktop_quotas (user_id, max_concurrent, max_monthly_minutes) VALUES ('local-dev-user', 1, 10000);"
 echo "quota set"
 
@@ -46,7 +46,7 @@ curl -s -X POST \
   -H "Authorization: Bearer dev"
 echo
 sleep 2
-sqlite3 "/Users/joe/Library/Application Support/allternit/allternit.db" \
+sqlite3 "$HOME/Library/Application Support/allternit/allternit.db" \
   "SELECT bot_id, provider, minutes FROM desktop_usage WHERE user_id='local-dev-user' ORDER BY id DESC LIMIT 1;"
 
 echo

@@ -1,7 +1,7 @@
 # Swarm B — Agent Runtime Foundation — Map
 
 This is the context map for Swarm B — Agent Runtime Foundation. The master handoff checklist is at:
-`/Users/joe/Desktop/allternit-parity-handoff.md`
+`~/Desktop/allternit-parity-handoff.md`
 
 ## Scope for Phase 0
 - Scaffold `beta/sessions` CRUD API (create/list/get/archive/update).
@@ -18,4 +18,4 @@ This is the context map for Swarm B — Agent Runtime Foundation. The master han
 - Do NOT start Phase 1 work yet.
 - Do NOT run builds, dev servers, or tests that require external services.
 - Match existing repo idioms (naming, module structure, error handling).
-- Do NOT mutate the canonical repo; work only in `/Users/joe/Desktop/allternit-parity-swarm-b`.
+- Do NOT mutate the canonical repo; work only in `~/Desktop/allternit-parity-swarm-b`.

@@ -35,7 +35,7 @@ Unchanged per the fabric constraints: Bots rail still uses `getBots(agents)` pac
 
 ## Incidents / notes
 
-- Mid-session, `/Users/joe/allternit-main` (a secondary clone this session had created its first worktree from) was deleted by an external cleanup, and macOS TCC briefly blocked `~/Desktop`. The in-flight worktree was re-homed: a fresh worktree was created from the shared checkout at `~/Desktop/allternit-workspace/allternit` (forward-only, shared checkout untouched), the 8 changed files copied over (verified zero upstream drift on them), and the orphaned directory removed. A first commit accidentally swept `dist-fabric-session/` build output in; amended out and force-pushed before PR creation (branch had no other consumers).
+- Mid-session, `~/allternit-main` (a secondary clone this session had created its first worktree from) was deleted by an external cleanup, and macOS TCC briefly blocked `~/Desktop`. The in-flight worktree was re-homed: a fresh worktree was created from the shared checkout at `~/Desktop/allternit-workspace/allternit` (forward-only, shared checkout untouched), the 8 changed files copied over (verified zero upstream drift on them), and the orphaned directory removed. A first commit accidentally swept `dist-fabric-session/` build output in; amended out and force-pushed before PR creation (branch had no other consumers).
 - Phone users must hard-refresh / clear Fabric Transport site data to pick up SW v37.
 - Deferred: desktop app rebuild to bundle this (b2095 predates PR #375). Offered separately; not started.
 

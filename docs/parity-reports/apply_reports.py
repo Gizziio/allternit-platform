@@ -4,8 +4,8 @@ import re
 from pathlib import Path
 import yaml
 
-HANDOFF = Path('/Users/joe/Desktop/allternit-parity-handoff.md')
-REPORT_DIR = Path('/Users/joe/Desktop/allternit-parity-workspace/.parity-reports')
+HANDOFF = Path('~/Desktop/allternit-parity-handoff.md')
+REPORT_DIR = Path('~/Desktop/allternit-parity-workspace/.parity-reports')
 
 def parse_frontmatter(text):
     if text.startswith('---'):

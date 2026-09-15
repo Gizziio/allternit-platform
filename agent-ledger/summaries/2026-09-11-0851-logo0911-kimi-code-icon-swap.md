@@ -4,7 +4,7 @@
 - **Agent family:** kimi-code · **Date:** 2026-09-11 08:51 local
 - **PR:** #320 · **Merge SHA:** `4a5c96218` · branch commit `8d188c02c`
 - **Approved plan:** swap every Allternit AI-product web surface to the master
-  icon `/Users/joe/Desktop/icon-candidates-v7/01-a-only-cream-squircle.png`
+  icon `~/Desktop/icon-candidates-v7/01-a-only-cream-squircle.png`
   (Eoj-approved scope; favicon.svg retirement in scope; docs gets a different
   icon later; platform/shell removal handled separately — sync export was
   already retired on main before this session).

@@ -391,7 +391,7 @@ fn runtime_bin() -> Result<PathBuf, InferenceExecutorError> {
             }
         }
     }
-    let fallback = PathBuf::from("/Users/joe/Desktop/AllternitOS/target/debug/allternitos-runtime");
+    let fallback = PathBuf::from("~/Desktop/AllternitOS/target/debug/allternitos-runtime");
     if fallback.exists() {
         return Ok(fallback);
     }
@@ -429,7 +429,7 @@ fn mock_llama_server_bin() -> Result<PathBuf, InferenceExecutorError> {
             }
         }
     }
-    let fallback = PathBuf::from("/Users/joe/Desktop/AllternitOS/target/debug/mock-llama-server");
+    let fallback = PathBuf::from("~/Desktop/AllternitOS/target/debug/mock-llama-server");
     if fallback.exists() {
         return Ok(fallback);
     }

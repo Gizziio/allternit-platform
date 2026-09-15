@@ -17,7 +17,7 @@
 ## Verification
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd ~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 cargo check -p allternit-computer-cloud
 ```
 

@@ -199,7 +199,7 @@ Options:
 ## Quick Start
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 
 # Build
 bun run build

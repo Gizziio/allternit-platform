@@ -5,7 +5,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPORT_FILE="/Users/macbook/Desktop/verification_report.md"
+REPORT_FILE="$HOME/Desktop/verification_report.md"
 TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
 echo "========================================"

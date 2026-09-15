@@ -1,6 +1,6 @@
 # Gizzi Code Cleanup Audit
 
-- **Worktree:** `/Users/joe/Desktop/allternit-workspace/allternit-session-gizzi-cleanup/cmd/gizzi-code`
+- **Worktree:** `~/Desktop/allternit-workspace/allternit-session-gizzi-cleanup/cmd/gizzi-code`
 - **Entry points analyzed:** `src/cli/main.ts`, `src/cli/ui/ink-app/worker.ts`
 - **Build status:** `bun run build` failed because workspace packages are not resolvable in this isolated worktree (missing `@allternit/*` workspace siblings). Static import analysis was used as the authoritative source.
 

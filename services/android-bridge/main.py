@@ -32,7 +32,7 @@ from typing import Any, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-HARNESS_DIR = Path(os.environ.get("HARNESS_PATH", "/Users/joe/phone-harness-android")).resolve()
+HARNESS_DIR = Path(os.environ.get("HARNESS_PATH", "~/phone-harness-android")).resolve()
 sys.path.insert(0, str(HARNESS_DIR))
 
 try:

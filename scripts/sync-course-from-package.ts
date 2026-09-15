@@ -220,12 +220,12 @@ Requirements:
 - Capstone project suggestion at the end
 - All CSS and JS inline, no external dependencies except Google Fonts CDN
 
-Write the output to: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-courses/${moduleTitle.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.html
+Write the output to: ~/Desktop/allternit-workspace/allternit/alabs-generated-courses/${moduleTitle.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.html
 `;
 
   return new Promise((resolve, reject) => {
     const proc = spawn('claude', ['--print', prompt], {
-      cwd: '/Users/macbook/Desktop/allternit-workspace/allternit',
+      cwd: '~/Desktop/allternit-workspace/allternit',
       shell: true,
       env: { ...process.env, CLAUDE_SKILL: 'allternit-codebase-to-course' },
     });
@@ -263,7 +263,7 @@ async function main() {
     console.log('🔍 Collecting package docs and source files...');
     const context = await collectPackageDocs(resolvedPackage);
 
-    const outDir = '/Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-courses';
+    const outDir = '~/Desktop/allternit-workspace/allternit/alabs-generated-courses';
     await fs.mkdir(outDir, { recursive: true });
 
     htmlPath = path.join(outDir, `${args.moduleTitle.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.html`);

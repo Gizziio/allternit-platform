@@ -92,7 +92,7 @@ npm install -g @allternit/plugin-sdk
 # Convert all templates
 ./scripts/convert-all.sh
 
-# Output: /Users/macbook/allternit-plugins/
+# Output: ~/allternit-plugins/
 ```
 
 **What it does:**
@@ -111,12 +111,12 @@ For complex templates that need custom logic:
 
 ```bash
 # Create plugin directory
-mkdir -p /Users/macbook/allternit-plugins/my-template-plugin
+mkdir -p ~/allternit-plugins/my-template-plugin
 
 # Run CLI convert
 allternit-plugin convert \
   --input /path/to/template.tsx \
-  --output /Users/macbook/allternit-plugins/my-template-plugin \
+  --output ~/allternit-plugins/my-template-plugin \
   --format universal
 ```
 
@@ -156,7 +156,7 @@ npm run build
 ### Step 1: Validate SDK Build
 
 ```bash
-cd /Users/macbook/allternit-plugin-sdk
+cd ~/allternit-plugin-sdk
 npm ci
 npm run build
 npm test
@@ -168,7 +168,7 @@ npm test
 # Run the conversion script
 ./scripts/convert-all.sh
 
-# Output goes to: /Users/macbook/allternit-plugins/
+# Output goes to: ~/allternit-plugins/
 ```
 
 ### Step 3: Create NPM Organization
@@ -222,7 +222,7 @@ npm run deploy
 ## 📁 Project Structure
 
 ```
-/Users/macbook/allternit-plugin-sdk/
+~/allternit-plugin-sdk/
 ├── src/
 │   ├── types.ts                 # Core interfaces
 │   ├── index.ts                 # Main exports
@@ -277,7 +277,7 @@ npm run deploy
 After completion:
 - ✅ `npm install -g @allternit/plugin-sdk` works
 - ✅ CLI commands execute successfully
-- ✅ 76 plugins in `/Users/macbook/allternit-plugins/`
+- ✅ 76 plugins in `~/allternit-plugins/`
 - ✅ Docs live at chosen domain
 - ✅ GitHub Actions auto-publishes on tags
 

@@ -3,9 +3,9 @@
 You are running inside an agent harness that supports **multiple concurrent sessions**. Create a lead orchestrator and a small swarm. The objective is to complete Phase 1–3 of the Shell UI plan without creating files outside the repo root.
 
 ## Absolute constraints (must obey)
-- REPO_ROOT is fixed: `/Users/macbook/Desktop/allternit-workspace/allternit/`
+- REPO_ROOT is fixed: `~/Desktop/allternit-workspace/allternit/`
 - NEVER use relative paths without prefixing REPO_ROOT.
-- Do not create parallel “scratch projects” in `/Users/macbook/apps/*` or `/Users/macbook/aibos/*`.
+- Do not create parallel “scratch projects” in `~/apps/*` or `~/aibos/*`.
 - All file writes must be under:
   - `REPO_ROOT/apps/shell/` OR
   - `REPO_ROOT/vendor/` (only for quarantined imports) OR

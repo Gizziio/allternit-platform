@@ -1,8 +1,0 @@
-{
-  "type": "object",
-  "required": ["session_id", "keys"],
-  "properties": {
-    "session_id": {"type": "string"},
-    "keys": {"type": "array", "items": {"type": "string"}, "description": "e.g., ['command', 'c']"}
-  }
-}

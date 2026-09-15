@@ -11,11 +11,11 @@
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/macbook/Desktop/allternit-workspace/allternit/1-kernel/agent-systems/allternit-dak-runner/dist/daemon.js</string>
+        <string>~/Desktop/allternit-workspace/allternit/1-kernel/agent-systems/allternit-dak-runner/dist/daemon.js</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/macbook/Desktop/allternit-workspace/allternit</string>
+    <string>~/Desktop/allternit-workspace/allternit</string>
 
     <key>RunAtLoad</key>
     <false/>
@@ -37,11 +37,11 @@
         <key>NODE_ENV</key>
         <string>production</string>
         <key>Allternit_RAILS_CLI</key>
-        <string>/Users/macbook/Desktop/allternit-workspace/allternit/target/release/allternit-rails</string>
+        <string>~/Desktop/allternit-workspace/allternit/target/release/allternit-rails</string>
         <key>Allternit_PROJECT_PATH</key>
-        <string>/Users/macbook/Desktop/allternit-workspace/allternit</string>
+        <string>~/Desktop/allternit-workspace/allternit</string>
         <key>Allternit_OUTPUT_DIR</key>
-        <string>/Users/macbook/Desktop/allternit-workspace/allternit/.allternit/runner</string>
+        <string>~/Desktop/allternit-workspace/allternit/.allternit/runner</string>
         <key>Allternit_MAX_CONCURRENT</key>
         <string>3</string>
         <key>Allternit_BUDGET_MAX</key>
@@ -49,10 +49,10 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/macbook/Library/Logs/allternit/dak-runner.out.log</string>
+    <string>~/Library/Logs/allternit/dak-runner.out.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/macbook/Library/Logs/allternit/dak-runner.err.log</string>
+    <string>~/Library/Logs/allternit/dak-runner.err.log</string>
 
     <key>Nice</key>
     <integer>10</integer>

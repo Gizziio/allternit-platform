@@ -15,7 +15,7 @@ const http = require('http');
 
 const WORKTREE_NM = path.join(__dirname, 'node_modules');
 const SURFACE_NM = path.join(__dirname, 'surfaces/ai.allternit.com/node_modules');
-const MODULE_FALLBACK = '/Users/joe/altw/allternit/node_modules';
+const MODULE_FALLBACK = '~/altw/allternit/node_modules';
 
 function requireDep(name) {
   const tries = [name, path.join(WORKTREE_NM, name), path.join(SURFACE_NM, name), path.join(MODULE_FALLBACK, name)];

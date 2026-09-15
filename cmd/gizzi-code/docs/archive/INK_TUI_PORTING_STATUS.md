@@ -128,7 +128,7 @@ The ThemeContext needs to be connected to the free-code theme system.
 ## Quick Test Commands
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 
 # Build
 bun run build

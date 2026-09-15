@@ -52,8 +52,8 @@ curl https://api.allternit.com/api/cowork-preferences \
 ```json
 {
   "trusted_folders": [
-    "/Users/joe/projects",
-    "/Users/joe/workspace"
+    "~/projects",
+    "~/workspace"
   ],
   "global_instructions": "Always run tests after editing code. Prefer cargo for Rust projects.",
   "updated_at": "2026-08-13T10:00:00Z"
@@ -88,7 +88,7 @@ curl -X PUT https://api.allternit.com/api/cowork-preferences \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "trusted_folders": ["/Users/joe/projects", "/Users/joe/workspace"],
+    "trusted_folders": ["~/projects", "~/workspace"],
     "global_instructions": "Always run tests after editing code. Prefer cargo for Rust projects."
   }'
 ```
@@ -98,8 +98,8 @@ curl -X PUT https://api.allternit.com/api/cowork-preferences \
 ```json
 {
   "trusted_folders": [
-    "/Users/joe/projects",
-    "/Users/joe/workspace"
+    "~/projects",
+    "~/workspace"
   ],
   "global_instructions": "Always run tests after editing code. Prefer cargo for Rust projects.",
   "updated_at": "2026-08-13T10:05:00Z"

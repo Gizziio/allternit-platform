@@ -1,6 +1,6 @@
 # Kimi → Allternit Gap Implementation Plan
 
-**Generated from:** /Users/joe/Desktop/kimi-docs/kimi_allternit_gap_analysis.md
+**Generated from:** ~/Desktop/kimi-docs/kimi_allternit_gap_analysis.md
 **Total gaps:** 12 | **Total partials:** 77
 
 This plan groups every identified gap/partial into implementable initiatives,

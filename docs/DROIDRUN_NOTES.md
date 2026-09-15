@@ -1,6 +1,6 @@
 # DroidRun Mobile Harness P1 Integration Notes
 
-**Worktree:** `/Users/joe/Desktop/allternit-workspace/allternit-session-droidrun-p1`  
+**Worktree:** `~/Desktop/allternit-workspace/allternit-session-droidrun-p1`  
 **Branch:** `session/droidrun-p1`  
 **Provider ID:** `mobile.droidrun.canonical`
 
@@ -74,7 +74,7 @@ Other backends:
 ## Validation Performed
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-droidrun-p1/domains/computer-use/core
+cd ~/Desktop/allternit-workspace/allternit-session-droidrun-p1/domains/computer-use/core
 
 # Syntax check
 python3 -m py_compile providers/droidrun_canonical.py gateway/canonical_router.py

@@ -10,7 +10,7 @@
 ## What was done
 
 Session G of the multi-session build program — locked mapping doc
-(`/Users/joe/allternit-design-competitive-mapping.md`) §2 row 5 / §4: vendor
+(`~/allternit-design-competitive-mapping.md`) §2 row 5 / §4: vendor
 Anthropic's verified `frontend-design` skill as the **base of the studio steering
 layer**, adapted to Allternit brand law. Deliberately NOT a bundled creation skill —
 the skill catalog is for creation workflows; this is steering.

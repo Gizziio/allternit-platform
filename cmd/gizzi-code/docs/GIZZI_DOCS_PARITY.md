@@ -1,6 +1,6 @@
 # gizzi-code Docs-to-Code Parity Audit
 
-**Worktree:** `/Users/joe/Desktop/allternit-workspace/allternit-session-gizzi-cleanup`  
+**Worktree:** `~/Desktop/allternit-workspace/allternit-session-gizzi-cleanup`  
 **Doc source:** `surfaces/docs/` (Mintlify site)  
 **Code scope:** `cmd/gizzi-code/src/`  
 **Date:** 2026-08-17

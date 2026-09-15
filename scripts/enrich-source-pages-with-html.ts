@@ -4,7 +4,7 @@ import path from 'path';
 import { getCanvasToken } from './canvas-token.ts';
 const CANVAS_TOKEN = getCanvasToken();
 const BASE_URL = 'https://canvas.instructure.com/api/v1';
-const EXTRACTED_DIR = '/Users/macbook/Desktop/allternit-workspace/allternit/remix-content/extracted-html';
+const EXTRACTED_DIR = '~/Desktop/allternit-workspace/allternit/remix-content/extracted-html';
 
 async function canvasApi(method: string, pathStr: string, body?: any) {
   const url = `${BASE_URL}${pathStr}`;

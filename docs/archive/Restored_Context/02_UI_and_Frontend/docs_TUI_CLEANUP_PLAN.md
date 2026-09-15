@@ -63,14 +63,14 @@ This is the marketplace browser TUI, which is a different use case.
 ### Remove agent-shell (safe to remove)
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 rm -rf cmd/agent-shell
 ```
 
 ### Remove agent-shell-clone (if Emacs integration not needed)
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 rm -rf cmd/agent-shell-clone
 ```
 

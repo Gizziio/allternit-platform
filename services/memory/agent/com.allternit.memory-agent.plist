@@ -15,12 +15,12 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>cd /Users/macbook/Desktop/allternit-workspace/allternit/memory &amp;&amp; /opt/homebrew/bin/pnpm run daemon start</string>
+        <string>cd ~/Desktop/allternit-workspace/allternit/memory &amp;&amp; /opt/homebrew/bin/pnpm run daemon start</string>
     </array>
 
     <!-- Working directory -->
     <key>WorkingDirectory</key>
-    <string>/Users/macbook/Desktop/allternit-workspace/allternit/memory</string>
+    <string>~/Desktop/allternit-workspace/allternit/memory</string>
 
     <!-- Run at login -->
     <key>RunAtLoad</key>
@@ -51,11 +51,11 @@
 
     <!-- Standard output log -->
     <key>StandardOutPath</key>
-    <string>/Users/macbook/Library/Logs/allternit/memory-agent.out.log</string>
+    <string>~/Library/Logs/allternit/memory-agent.out.log</string>
 
     <!-- Standard error log -->
     <key>StandardErrorPath</key>
-    <string>/Users/macbook/Library/Logs/allternit/memory-agent.err.log</string>
+    <string>~/Library/Logs/allternit/memory-agent.err.log</string>
 
     <!-- Nice value (lower priority) -->
     <key>Nice</key>

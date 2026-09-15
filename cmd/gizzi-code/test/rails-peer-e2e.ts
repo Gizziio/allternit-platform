@@ -14,7 +14,7 @@ const API_URL = process.env.ALLTERNIT_API_URL || 'http://127.0.0.1:8015'
 const USER_ID = process.env.ALLTERNIT_USER_ID || 'e2e-test-user'
 const DATA_DIR =
   process.env.ALLTERNIT_DATA_DIR ||
-  '/Users/joe/Desktop/allternit-workspace/allternit-test'
+  '~/Desktop/allternit-workspace/allternit-test'
 
 interface PeerRegisterResponse {
   peer_id: string

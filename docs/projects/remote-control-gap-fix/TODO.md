@@ -1,9 +1,9 @@
 # Remote Control Gap Fix — TODO
 
-**Worktree:** `/Users/joe/Desktop/allternit-workspace/allternit-session-remote-control-gap-fix`
+**Worktree:** `~/Desktop/allternit-workspace/allternit-session-remote-control-gap-fix`
 **Branch:** `session/remote-control-gap-fix`
 **Started:** 2026-08-26
-**Goal:** Finish the Remote Control product by closing all remaining gaps from `/Users/joe/Desktop/allternit-remote-control-gap-analysis.md`.
+**Goal:** Finish the Remote Control product by closing all remaining gaps from `~/Desktop/allternit-remote-control-gap-analysis.md`.
 
 ## Setup
 

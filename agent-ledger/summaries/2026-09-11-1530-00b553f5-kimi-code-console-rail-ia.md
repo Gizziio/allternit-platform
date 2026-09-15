@@ -40,10 +40,10 @@ screenshot's expanded state).
 
 ## Incidents / notes
 
-- Desktop TCC block: `ls`/`git` on /Users/joe/Desktop returned "Operation not
+- Desktop TCC block: `ls`/`git` on ~/Desktop returned "Operation not
   permitted" all session. Worked around by exporting the repo's `.git` via Finder
-  AppleScript to /Users/joe/allternit-repo-export and cloning to
-  /Users/joe/allternit-main (shallow). All work happened in home-dir worktrees;
+  AppleScript to ~/allternit-repo-export and cloning to
+  ~/allternit-main (shallow). All work happened in home-dir worktrees;
   the shared Desktop checkout and the parallel console-backend session were never
   touched. Eoj may want to re-grant the terminal Desktop access.
 - The parallel agent's console-backend phases (G8–G10 etc.) were not touched.

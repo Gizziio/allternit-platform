@@ -335,7 +335,7 @@ test result: ok. 0 passed; 0 failed   # doc tests
 - No changes to `cmd/cli/` (already correct)
 
 ### 9.2 Proof Pack
-- Location: `/Users/macbook/Desktop/PROOF_PACK_ACP_V2_FINAL.zip`
+- Location: `~/Desktop/PROOF_PACK_ACP_V2_FINAL.zip`
 - Contents: 11 files with raw command outputs
 - Size: 8.3 KB
 

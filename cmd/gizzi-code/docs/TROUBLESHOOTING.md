@@ -18,7 +18,7 @@ The gizzi-code TUI hangs or freezes when trying to open. This is typically cause
 Run the fix script before starting gizzi-code:
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 bun run fix:hang
 ```
 
@@ -85,7 +85,7 @@ bun run start        # Start TUI
 bun run doctor       # System health check
 
 # View logs
-tail -f /Users/macbook/.local/share/gizzi-code/log/dev.log
+tail -f ~/.local/share/gizzi-code/log/dev.log
 ```
 
 ### Still Having Issues?
@@ -94,19 +94,19 @@ tail -f /Users/macbook/.local/share/gizzi-code/log/dev.log
 2. **Check disk space**: Ensure you have free disk space
 3. **Database issues**: 
    ```bash
-   cd /Users/macbook/.local/share/gizzi-code
+   cd ~/.local/share/gizzi-code
    # Backup and remove database WAL files
    cp gizzi.db-wal gizzi.db-wal.backup 2>/dev/null || true
    rm gizzi.db-wal gizzi.db-shm 2>/dev/null || true
    ```
 4. **Reinstall dependencies**:
    ```bash
-   cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+   cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
    rm -rf node_modules
    bun install
    ```
 
 ### Contact
 If issues persist, check the logs at:
-- `/Users/macbook/.local/share/gizzi-code/log/dev.log`
-- `/Users/macbook/.local/share/gizzi-code/log/*.log`
+- `~/.local/share/gizzi-code/log/dev.log`
+- `~/.local/share/gizzi-code/log/*.log`

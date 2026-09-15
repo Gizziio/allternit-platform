@@ -140,6 +140,6 @@ These command directories have `index.js` but not `index.ts`:
 Check if Gizzi Code has compatible types:
 
 ```bash
-ls /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/types/
-grep -r "Message" /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/types/ | head -10
+ls ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/types/
+grep -r "Message" ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/types/ | head -10
 ```

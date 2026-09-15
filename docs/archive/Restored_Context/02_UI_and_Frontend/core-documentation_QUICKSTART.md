@@ -7,7 +7,7 @@ All services are now integrated with a **one-command startup**!
 ## One-Command Startup
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # Start everything (voice, webvm, kernel)
 make dev

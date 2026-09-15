@@ -21,12 +21,12 @@ The stronger move is:
 
 The current codebase is not a manufacturing system yet, but it does contain the right primitives for becoming a hardware and robotics control plane:
 
-- Multi-provider AI harness and SDK in [/Users/macbook/packages/sdk/src/index.ts](/Users/macbook/packages/sdk/src/index.ts#L1)
-- AI gateway and streaming backend in [/Users/macbook/src/runtime/server/routes/ai-gateway.ts](/Users/macbook/src/runtime/server/routes/ai-gateway.ts#L1)
-- Agent orchestration and workflow abstractions in [/Users/macbook/Desktop/Allternit-Platform-Source/src/lib/agents/agent.service.ts](/Users/macbook/Desktop/Allternit-Platform-Source/src/lib/agents/agent.service.ts#L1)
-- Desktop and shell UX for operators in [/Users/macbook/Desktop/Allternit-Platform-Source/src/app/shell/page.tsx](/Users/macbook/Desktop/Allternit-Platform-Source/src/app/shell/page.tsx#L1)
-- Infrastructure UI patterns for remote systems and telemetry in [/Users/macbook/Desktop/Allternit-Platform-Source/src/components/infrastructure/VpsMetricsDashboard.tsx](/Users/macbook/Desktop/Allternit-Platform-Source/src/components/infrastructure/VpsMetricsDashboard.tsx#L1)
-- A broad agent platform direction documented in [/Users/macbook/Desktop/Allternit-Platform-Source/src/lib/agents/README.md](/Users/macbook/Desktop/Allternit-Platform-Source/src/lib/agents/README.md#L1)
+- Multi-provider AI harness and SDK in [~/packages/sdk/src/index.ts](~/packages/sdk/src/index.ts#L1)
+- AI gateway and streaming backend in [~/src/runtime/server/routes/ai-gateway.ts](~/src/runtime/server/routes/ai-gateway.ts#L1)
+- Agent orchestration and workflow abstractions in [~/Desktop/Allternit-Platform-Source/src/lib/agents/agent.service.ts](~/Desktop/Allternit-Platform-Source/src/lib/agents/agent.service.ts#L1)
+- Desktop and shell UX for operators in [~/Desktop/Allternit-Platform-Source/src/app/shell/page.tsx](~/Desktop/Allternit-Platform-Source/src/app/shell/page.tsx#L1)
+- Infrastructure UI patterns for remote systems and telemetry in [~/Desktop/Allternit-Platform-Source/src/components/infrastructure/VpsMetricsDashboard.tsx](~/Desktop/Allternit-Platform-Source/src/components/infrastructure/VpsMetricsDashboard.tsx#L1)
+- A broad agent platform direction documented in [~/Desktop/Allternit-Platform-Source/src/lib/agents/README.md](~/Desktop/Allternit-Platform-Source/src/lib/agents/README.md#L1)
 
 In plain terms: Allternit already looks like a software operating layer for deployed compute, agents, and workflows.
 
@@ -42,10 +42,10 @@ That is exactly the right foundation for:
 
 The codebase also shows clear production gaps:
 
-- The AI gateway still uses legacy imports and mock-style auth paths in [/Users/macbook/src/runtime/server/routes/ai-gateway.ts](/Users/macbook/src/runtime/server/routes/ai-gateway.ts#L8) and [/Users/macbook/src/runtime/server/routes/ai-gateway.ts](/Users/macbook/src/runtime/server/routes/ai-gateway.ts#L141)
-- The platform docs explicitly say the frontend is ahead of backend service verification in [/Users/macbook/Desktop/Allternit-Platform-Source/docs/BACKEND_SERVICES_CHECKLIST.md](/Users/macbook/Desktop/Allternit-Platform-Source/docs/BACKEND_SERVICES_CHECKLIST.md#L1)
-- The component audit says test coverage is very low and integration remains incomplete in [/Users/macbook/Desktop/Allternit-Platform-Source/docs/COMPONENT_GAPS.md](/Users/macbook/Desktop/Allternit-Platform-Source/docs/COMPONENT_GAPS.md#L1)
-- Infrastructure metrics are partly simulated today, for example random network I/O placeholders in [/Users/macbook/Desktop/Allternit-Platform-Source/src/components/infrastructure/VpsMetricsDashboard.tsx](/Users/macbook/Desktop/Allternit-Platform-Source/src/components/infrastructure/VpsMetricsDashboard.tsx#L81)
+- The AI gateway still uses legacy imports and mock-style auth paths in [~/src/runtime/server/routes/ai-gateway.ts](~/src/runtime/server/routes/ai-gateway.ts#L8) and [~/src/runtime/server/routes/ai-gateway.ts](~/src/runtime/server/routes/ai-gateway.ts#L141)
+- The platform docs explicitly say the frontend is ahead of backend service verification in [~/Desktop/Allternit-Platform-Source/docs/BACKEND_SERVICES_CHECKLIST.md](~/Desktop/Allternit-Platform-Source/docs/BACKEND_SERVICES_CHECKLIST.md#L1)
+- The component audit says test coverage is very low and integration remains incomplete in [~/Desktop/Allternit-Platform-Source/docs/COMPONENT_GAPS.md](~/Desktop/Allternit-Platform-Source/docs/COMPONENT_GAPS.md#L1)
+- Infrastructure metrics are partly simulated today, for example random network I/O placeholders in [~/Desktop/Allternit-Platform-Source/src/components/infrastructure/VpsMetricsDashboard.tsx](~/Desktop/Allternit-Platform-Source/src/components/infrastructure/VpsMetricsDashboard.tsx#L81)
 
 That means Allternit is currently closer to:
 

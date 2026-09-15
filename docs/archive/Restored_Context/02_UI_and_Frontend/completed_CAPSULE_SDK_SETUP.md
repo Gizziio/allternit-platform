@@ -3,7 +3,7 @@
 ## Step 1: Install TypeScript at Root
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 pnpm add -D typescript
 ```
 
@@ -38,7 +38,7 @@ pnpm install
 
 ```bash
 # Typecheck SDK package
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 npx tsc --noEmit -p packages/capsule-sdk/tsconfig.json
 
 # Or with pnpm exec

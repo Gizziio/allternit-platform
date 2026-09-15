@@ -3,7 +3,7 @@
 **Scope:** Audit `PrimeIntellect-ai/prime-agent` for its dual-loop (RL + sequential) harness design. Determine what Allternit can adopt for its own agent runtime.
 
 **Agent:** qwen
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-prime-agent-audit`
 
 ## Deliverables

@@ -72,7 +72,7 @@ A visually pleasing and dynamic TUI marketplace interface has been implemented f
 
 ### Launch TUI Marketplace
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 a2 marketplace tui
 ```
 

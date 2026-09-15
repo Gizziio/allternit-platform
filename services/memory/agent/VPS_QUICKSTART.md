@@ -19,7 +19,7 @@
 
 ```bash
 # Navigate to memory agent
-cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
+cd ~/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Run configuration script
 ./scripts/configure-vps.sh <YOUR_VPS_IP>
@@ -69,7 +69,7 @@ curl http://<YOUR_VPS_IP>:11434/api/tags
 ### Step 3: Install & Start
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
+cd ~/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 pnpm install
 

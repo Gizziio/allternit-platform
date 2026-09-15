@@ -214,7 +214,7 @@ async function addCapstoneContextPages(courseId: number, courseCode: string) {
   }
   
   // Load the capstone bridge module content
-  const dir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
+  const dir = path.join('~/Desktop/allternit-workspace/allternit', 'remix-content', courseCode);
   const files = await fs.readdir(dir).catch(() => [] as string[]);
   const capFile = files.find(f => f.toLowerCase().includes('capstone') && f.endsWith('.md'));
   

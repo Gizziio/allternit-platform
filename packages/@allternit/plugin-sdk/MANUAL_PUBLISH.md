@@ -6,7 +6,7 @@ Your NPM account requires 2FA for publishing. Here's how to publish manually:
 
 The SDK package is ready at:
 ```
-/Users/macbook/allternit-plugin-sdk/allternit-plugin-sdk-1.0.0.tgz
+~/allternit-plugin-sdk/allternit-plugin-sdk-1.0.0.tgz
 ```
 
 ## Method 1: Publish via NPM Website (Easiest)
@@ -30,7 +30,7 @@ Open your authenticator app (Google Authenticator/Authy) and get the 6-digit cod
 
 ### Step 2: Publish with OTP
 ```bash
-cd /Users/macbook/allternit-plugin-sdk
+cd ~/allternit-plugin-sdk
 npm publish --access public --otp=123456
 ```
 Replace `123456` with your actual OTP code.
@@ -45,7 +45,7 @@ Replace `123456` with your actual OTP code.
 
 ### Step 2: Publish
 ```bash
-cd /Users/macbook/allternit-plugin-sdk
+cd ~/allternit-plugin-sdk
 npm publish --access public
 ```
 
@@ -60,7 +60,7 @@ After the SDK is published, publish the plugins:
 
 ### Option A: One by One
 ```bash
-cd /Users/macbook/allternit-plugins
+cd ~/allternit-plugins
 
 # For each plugin:
 cd marketresearchcard-plugin
@@ -75,7 +75,7 @@ cd ..
 
 ### Option B: Batch Script
 ```bash
-cd /Users/macbook/allternit-plugins
+cd ~/allternit-plugins
 
 for d in */; do
   echo "Building $d..."
@@ -95,21 +95,21 @@ done
 ## Files Ready to Publish
 
 ### SDK
-- `/Users/macbook/allternit-plugin-sdk/allternit-plugin-sdk-1.0.0.tgz`
+- `~/allternit-plugin-sdk/allternit-plugin-sdk-1.0.0.tgz`
 
 ### Plugins (need build first)
-- `/Users/macbook/allternit-plugins/marketresearchcard-plugin/`
-- `/Users/macbook/allternit-plugins/codereviewcard-plugin/`
-- `/Users/macbook/allternit-plugins/imagegencard-plugin/`
-- `/Users/macbook/allternit-plugins/datatablecard-plugin/`
-- `/Users/macbook/allternit-plugins/documentanalyzercard-plugin/`
-- `/Users/macbook/allternit-plugins/emailcomposercard-plugin/`
-- `/Users/macbook/allternit-plugins/chatbotcard-plugin/`
-- `/Users/macbook/allternit-plugins/apispeccard-plugin/`
-- `/Users/macbook/allternit-plugins/prdescriptioncard-plugin/`
-- `/Users/macbook/allternit-plugins/socialmediacard-plugin/`
-- `/Users/macbook/allternit-plugins/testgeneratorcard-plugin/`
-- `/Users/macbook/allternit-plugins/translationcard-plugin/`
+- `~/allternit-plugins/marketresearchcard-plugin/`
+- `~/allternit-plugins/codereviewcard-plugin/`
+- `~/allternit-plugins/imagegencard-plugin/`
+- `~/allternit-plugins/datatablecard-plugin/`
+- `~/allternit-plugins/documentanalyzercard-plugin/`
+- `~/allternit-plugins/emailcomposercard-plugin/`
+- `~/allternit-plugins/chatbotcard-plugin/`
+- `~/allternit-plugins/apispeccard-plugin/`
+- `~/allternit-plugins/prdescriptioncard-plugin/`
+- `~/allternit-plugins/socialmediacard-plugin/`
+- `~/allternit-plugins/testgeneratorcard-plugin/`
+- `~/allternit-plugins/translationcard-plugin/`
 
 ---
 

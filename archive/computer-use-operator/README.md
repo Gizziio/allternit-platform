@@ -61,7 +61,7 @@ BRAIN_GATEWAY_URL=http://localhost:3000  # Brain gateway endpoint
 ## Running the Service
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/services/allternit-operator
+cd ~/Desktop/allternit-workspace/allternit/services/allternit-operator
 python -m uvicorn src.main:app --reload --port 3008
 ```
 

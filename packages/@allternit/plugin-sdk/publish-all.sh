@@ -32,7 +32,7 @@ echo -e "${BLUE}STEP 1: PUBLISHING SDK${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════════════${NC}"
 echo ""
 
-cd /Users/macbook/allternit-plugin-sdk
+cd $HOME/allternit-plugin-sdk
 
 echo "Building SDK..."
 npm run build
@@ -49,7 +49,7 @@ echo -e "${BLUE}STEP 2: PUBLISHING 12 PLUGINS${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════════════${NC}"
 echo ""
 
-cd /Users/macbook/allternit-plugins
+cd $HOME/allternit-plugins
 
 PUBLISHED=0
 FAILED=0

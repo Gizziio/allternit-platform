@@ -6,7 +6,7 @@ import os
 import re
 from pathlib import Path
 
-ROOT = Path("/Users/joe/Desktop/allternit-workspace/allternit")
+ROOT = Path("~/Desktop/allternit-workspace/allternit")
 GIZZI = ROOT / "cmd/gizzi-code"
 SDK = GIZZI / "packages/sdk"
 EXTS = {".ts", ".tsx", ".js", ".mjs", ".json", ".md"}

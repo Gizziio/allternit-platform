@@ -162,7 +162,7 @@ After the pick:
 - `cmd/gizzi-code` — `/speak` builtin (same registration style as `/voice`)
 - `cmd/allternit-api` voice proxy — keep `/api/v1/voice/*` working
 - `docs/public/parity/chatgpt-voice.md` — rewrite to the real product
-- `THIRD_PARTY_NOTICES.md`
+- `THIRD-PARTY-NOTICES.md`
 
 ## Phased scope
 

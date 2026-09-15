@@ -17,7 +17,7 @@ Substrate-agnostic HTTP lifecycle API for agent desktops in `cmd/allternit-compu
 ## Verification
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd ~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 cargo test -p allternit-computer-cloud
 ```
 

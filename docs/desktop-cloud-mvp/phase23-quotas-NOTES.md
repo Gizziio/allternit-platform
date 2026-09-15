@@ -42,7 +42,7 @@ All 3 quota tests + 36 desktop tests pass.
 ### End-to-end
 Set a concurrent limit of 1 for the dev user:
 ```bash
-sqlite3 "/Users/joe/Library/Application Support/allternit/allternit.db" \
+sqlite3 "~/Library/Application Support/allternit/allternit.db" \
   "INSERT OR REPLACE INTO desktop_quotas (user_id, max_concurrent, max_monthly_minutes) VALUES ('local-dev-user', 1, 10000);"
 ```
 

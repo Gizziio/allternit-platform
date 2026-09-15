@@ -32,23 +32,23 @@ The Android Bridge runs on a host with an authorized Android device attached ove
 ### Install dependencies
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit/services/android-bridge
+cd ~/Desktop/allternit-workspace/allternit/services/android-bridge
 pip install fastapi pydantic uvicorn
 ```
 
 ### Start the service
 
 ```bash
-HARNESS_PATH=/Users/joe/phone-harness-android PORT=8020 python main.py
+HARNESS_PATH=~/phone-harness-android PORT=8020 python main.py
 ```
 
-By default the service binds to `127.0.0.1:8020` and looks for the harness at `/Users/joe/phone-harness-android`.
+By default the service binds to `127.0.0.1:8020` and looks for the harness at `~/phone-harness-android`.
 
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HARNESS_PATH` | `/Users/joe/phone-harness-android` | Directory containing `harness.py` |
+| `HARNESS_PATH` | `~/phone-harness-android` | Directory containing `harness.py` |
 | `PORT` | `8020` | HTTP listen port |
 
 The harness directory must contain a `harness.py` module with at least the following helpers:
@@ -84,7 +84,7 @@ Response:
 {
   "ok": true,
   "ready": true,
-  "harness_dir": "/Users/joe/phone-harness-android"
+  "harness_dir": "~/phone-harness-android"
 }
 ```
 

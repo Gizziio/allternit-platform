@@ -119,7 +119,7 @@ This document outlines the complete migration from **allternit/allternit/alltern
 ### Phase 1: User Space Files
 
 #### 1.1 Main Codebase
-- **Location**: `/Users/macbook/Desktop/allternit-workspace/`
+- **Location**: `~/Desktop/allternit-workspace/`
 - **Files**: ~10,000+
 - **Actions**:
   - Rename root directory `allternit` → `allternit`

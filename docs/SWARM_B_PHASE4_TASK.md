@@ -1,6 +1,6 @@
 # Swarm B — Phase 4 Docs / GTM Task
 
-**Worktree:** `/Users/joe/Desktop/allternit-parity-p2-swarm-b`  
+**Worktree:** `~/Desktop/allternit-parity-p2-swarm-b`  
 **Branch:** `ao/p4-swarm-b`  
 **Base:** `parity/swarm-sprint`
 

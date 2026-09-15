@@ -14,7 +14,7 @@ if ! curl -s http://127.0.0.1:5177 > /dev/null 2>&1; then
     echo "⚠️  Vite dev server not running!"
     echo ""
     echo "Starting Vite..."
-    cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/shell/web
+    cd $HOME/Desktop/allternit-workspace/allternit/7-apps/shell/web
     pnpm dev &
     VITE_PID=$!
     echo "   Vite PID: $VITE_PID"

@@ -164,7 +164,7 @@ entryTimerRef.current = setTimeout(() => {
 
 Run tests:
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform
+cd ~/Desktop/allternit-workspace/allternit/6-ui/allternit-platform
 npm test -- --run AgentModeGizzi GizziMascot
 ```
 

@@ -95,7 +95,7 @@ cd services/model-training
 PYTHONPATH=services/model-training .venv/bin/python tests/test_import.py
 
 # Rust API compile check
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-unsloth-p1
+cd ~/Desktop/allternit-workspace/allternit-session-unsloth-p1
 cargo check -p allternit-api
 ```
 

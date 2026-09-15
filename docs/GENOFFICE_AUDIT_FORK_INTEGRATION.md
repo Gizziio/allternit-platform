@@ -7,7 +7,7 @@ risk_level: medium
 # GenOffice → Allternit Fork Integration Audit
 
 **Scope:** Four forked GenOffice engine packages + the new `services/office-engine` prototype.  
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`  
+**Repo:** `~/Desktop/allternit-workspace/allternit`  
 **Audit date:** 2026-08-04  
 **Auditor:** Kimi Code CLI (read-only pass)
 
@@ -15,7 +15,7 @@ risk_level: medium
 
 The forked packages (`@allternit/office-docx-engine`, `@allternit/office-pptx-engine`, `@allternit/office-pptx-render`, `@allternit/office-file-parse`) were successfully rebranded from `@genspark/*` to `@allternit/*`, adapted to the Allternit tsconfig conventions (`moduleResolution: bundler`, `esModuleInterop`), and wired into the pnpm workspace. Individual `typecheck` and `test` scripts pass for all four packages, and the `office-engine` service typechecks and starts correctly.
 
-However, the integration is still **prototype-grade** and carries several production/CI risks that should be fixed before broader adoption. The highest-impact items are: (1) the root `package.json` `pnpm` field is silently ignored by pnpm 10, so declared overrides/patches are not enforced on fresh lockfile generation; (2) the forked packages ship raw `.ts` source files with no build step, which will break consumers that are not tsx/Vite-based; (3) the new service has zero tests, no production build, and no deployment manifest; (4) GenOffice Apache-2.0 attribution is missing from the packages and from `THIRD_PARTY_NOTICES.md`; and (5) there is a significant Vitest/Vite version schism between the engine packages (Vitest 4.x / Vite 8.x) and the rest of the monorepo (Vitest 1.x / Vite 5.x).
+However, the integration is still **prototype-grade** and carries several production/CI risks that should be fixed before broader adoption. The highest-impact items are: (1) the root `package.json` `pnpm` field is silently ignored by pnpm 10, so declared overrides/patches are not enforced on fresh lockfile generation; (2) the forked packages ship raw `.ts` source files with no build step, which will break consumers that are not tsx/Vite-based; (3) the new service has zero tests, no production build, and no deployment manifest; (4) GenOffice Apache-2.0 attribution is missing from the packages and from `THIRD-PARTY-NOTICES.md`; and (5) there is a significant Vitest/Vite version schism between the engine packages (Vitest 4.x / Vite 8.x) and the rest of the monorepo (Vitest 1.x / Vite 5.x).
 
 | Package | Version | Tests | Typecheck | Build script | Notes |
 |---|---|---|---|---|---|
@@ -152,14 +152,14 @@ This is the highest-impact engineering fix after the pnpm overrides.
 
 * each package.json says `"license": "Apache-2.0"` (correct);
 * but the packages contain no `LICENSE`, `NOTICE`, or source-header attribution;
-* `THIRD_PARTY_NOTICES.md` at repo root does not mention GenOffice.
+* `THIRD-PARTY-NOTICES.md` at repo root does not mention GenOffice.
 
 This is a license-compliance gap that should be closed before distribution.
 
 **Fix:**
 
 1. Copy/adapt GenOffice’s `LICENSE` and `NOTICE` into each forked package (or add a single `packages/@allternit/office-docx-engine/LICENSE` etc.);
-2. Add a GenOffice entry to root `THIRD_PARTY_NOTICES.md` citing the source (https://github.com/genspark-ai/genoffice) and the packages it was used in;
+2. Add a GenOffice entry to root `THIRD-PARTY-NOTICES.md` citing the source (https://github.com/genspark-ai/genoffice) and the packages it was used in;
 3. Optionally add a short header comment to the top-level `src/index.ts` files noting the GenOffice origin.
 
 ### Risk 5 — Vitest/Vite version schism (MEDIUM)
@@ -208,7 +208,7 @@ This package is named `@allternit/office` and uses Vite 6 / Vitest 4, but it doe
 1. **Move root `pnpm` overrides into `pnpm-workspace.yaml`** and remove the ignored `pnpm` field from `package.json`. Regenerate the lockfile and verify the warning is gone.
 2. **Add build outputs to the four engine packages** (`dist/index.js` + `.d.ts`) and update `exports` to point at the built artifacts. This unblocks production consumers.
 3. **Add tests, a build script, and a deployment manifest to `services/office-engine`** so it can graduate from prototype.
-4. **Add GenOffice `LICENSE`/`NOTICE` attribution** to the forked packages and to root `THIRD_PARTY_NOTICES.md`.
+4. **Add GenOffice `LICENSE`/`NOTICE` attribution** to the forked packages and to root `THIRD-PARTY-NOTICES.md`.
 5. **Resolve the Vitest/Vite version split** by either downgrading the engine packages to Vitest 1.x or upgrading the root monorepo, to reduce lockfile duplication and peer warnings.
 
 ## 6. Conclusion

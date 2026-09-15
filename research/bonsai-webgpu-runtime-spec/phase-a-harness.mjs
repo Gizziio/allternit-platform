@@ -22,7 +22,7 @@ function log(message) {
 
 async function freeSpaceBytes() {
   try {
-    const out = execFileSync('df', ['-b', '/Users/macbook'], { encoding: 'utf8' });
+    const out = execFileSync('df', ['-b', '~'], { encoding: 'utf8' });
     const cols = out.trim().split('\n').pop().trim().split(/\s+/);
     return Number(cols[3]) * 512;
   } catch {

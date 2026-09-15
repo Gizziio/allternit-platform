@@ -45,6 +45,6 @@
 - [x] Remove all feature flags from .env.local and all source files
 - [x] Verify no COWORK_FEATURES_ references remain in source code
 - [ ] Delete tools/cowork-integration/ entirely (keep until final verification) — NOTE: no longer fully deletable; `tools/cowork-integration/stack/` now hosts the compose stack moved from `domains/cowork/`. Only `sources/` remains a cleanup candidate.
-- [x] Verify THIRD_PARTY_NOTICES.md is present and complete (legal requirement only)
+- [x] Verify THIRD-PARTY-NOTICES.md is present and complete (legal requirement only)
 - [x] Run full TypeScript type check — zero cowork-related errors
 - [x] Run prisma generate + db push — CoworkSuggestion model added and synced

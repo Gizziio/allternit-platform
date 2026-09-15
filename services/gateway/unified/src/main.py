@@ -118,7 +118,7 @@ class UsageAggregateResponse(BaseModel):
 async def get_usage_aggregate():
     """Aggregate real usage data from allternit receipts with deep telemetry"""
     try:
-        receipts_root = Path("/Users/macbook/Desktop/allternit-workspace/allternit/.allternit/receipts")
+        receipts_root = Path("~/Desktop/allternit-workspace/allternit/.allternit/receipts")
         gateway_receipts = glob.glob(str(receipts_root / "dev-session" / "gateway-*.json"))
 
         total_requests = len(gateway_receipts)
@@ -129,7 +129,7 @@ async def get_usage_aggregate():
         skill_distribution = {}
         daily_map = {}
 
-        operator_receipt_paths = glob.glob("/Users/macbook/Desktop/allternit-workspace/allternit/**/receipts/*.json", recursive=True)
+        operator_receipt_paths = glob.glob("~/Desktop/allternit-workspace/allternit/**/receipts/*.json", recursive=True)
 
         for path in operator_receipt_paths:
             try:
@@ -204,7 +204,7 @@ async def get_usage_aggregate():
 async def export_usage_data():
     """Export all usage receipts as a single audit bundle"""
     try:
-        operator_receipt_paths = glob.glob("/Users/macbook/Desktop/allternit-workspace/allternit/**/receipts/*.json", recursive=True)
+        operator_receipt_paths = glob.glob("~/Desktop/allternit-workspace/allternit/**/receipts/*.json", recursive=True)
         bundle = []
 
         for path in operator_receipt_paths:

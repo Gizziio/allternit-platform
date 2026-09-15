@@ -20,7 +20,7 @@ FAIL=0
 
 # Test 1.1: Check if DAK operator runner exists
 echo -n "Test 1.1: Checking DAK operator build... "
-DAK_PATH="/Users/macbook/Desktop/allternit-workspace/allternit/1-kernel/agent-systems/allternit-dak-runner"
+DAK_PATH="$HOME/Desktop/allternit-workspace/allternit/1-kernel/agent-systems/allternit-dak-runner"
 
 if [ -f "$DAK_PATH/dist/operator-daemon.js" ]; then
     echo -e "${GREEN}PASS${NC} (dist/operator-daemon.js exists)"

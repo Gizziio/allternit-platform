@@ -100,7 +100,7 @@ Gizziio/gizzi-code/                 ← Standalone repo
 #### Step 1.1: Create Clean Export
 ```bash
 # From monorepo root
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 
 # Create temp export folder
 mkdir -p /tmp/gizzi-export
@@ -380,7 +380,7 @@ zip -r gizzi-install-final.zip .
 
 #### Step 6.1: Remove from Monorepo
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # Remove gizzi-code from cmd/
 rm -rf cmd/gizzi-code

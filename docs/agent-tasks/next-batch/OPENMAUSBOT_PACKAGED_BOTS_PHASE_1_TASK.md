@@ -3,7 +3,7 @@
 **Scope:** Add a "Bots" presentation layer to Agent Hub that lets users discover, configure, and launch packaged bot sessions from the left rail. This is a surface-only integration; it does not replace the existing agent runtime. It reuses the existing session/composer infrastructure.
 
 **Agent:** kimi
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-openmausbot`
 
 ## Deliverables

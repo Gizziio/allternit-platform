@@ -1,6 +1,6 @@
 # OpenAI → Allternit Gap Implementation Plan
 
-**Generated from:** /Users/joe/Desktop/openai-docs/openai_allternit_gap_analysis.md
+**Generated from:** ~/Desktop/openai-docs/openai_allternit_gap_analysis.md
 **Total gaps:** 1533 | **Total partials:** 2498
 
 This plan groups every identified gap/partial into implementable initiatives,

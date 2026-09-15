@@ -126,7 +126,7 @@ Results: 14 passed, 0 failed
 ## How to Run Tests
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 bun run validate-agent-hub.ts
 ```
 

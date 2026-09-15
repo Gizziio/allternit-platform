@@ -21,13 +21,13 @@ observable in one place.
 
 ### Run command
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd ~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 mkdir -p docs/desktop-cloud-mvp
 INCUS_URL=https://mail:8443 \
 INCUS_VNC_HOST=mail \
 INCUS_CDP_HOST=100.108.37.126 \
-INCUS_CLIENT_CERT=/Users/joe/.config/allternit/incus/client.crt \
-INCUS_CLIENT_KEY=/Users/joe/.config/allternit/incus/client.key \
+INCUS_CLIENT_CERT=~/.config/allternit/incus/client.crt \
+INCUS_CLIENT_KEY=~/.config/allternit/incus/client.key \
 INCUS_INSECURE_SKIP_VERIFY=true \
 ACU_URL=http://localhost:8760 \
 ACU_PROOF_PATH=docs/desktop-cloud-mvp/phase4-acu-proof.png \

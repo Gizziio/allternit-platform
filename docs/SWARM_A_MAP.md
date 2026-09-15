@@ -1,7 +1,7 @@
 # Swarm A — Core API / Harness — Map
 
 This is the context map for Swarm A — Core API / Harness. The master handoff checklist is at:
-`/Users/joe/Desktop/allternit-parity-handoff.md`
+`~/Desktop/allternit-parity-handoff.md`
 
 ## Scope for Phase 0
 - Add normalized reasoning/thinking parameters to AllternitHarness ( Anthropic `thinking`, OpenAI `reasoning_effort`, Kimi `thinking` ).
@@ -22,4 +22,4 @@ This is the context map for Swarm A — Core API / Harness. The master handoff c
 - Do NOT start Phase 1 work yet.
 - Do NOT run builds, dev servers, or tests that require external services.
 - Match existing repo idioms (naming, module structure, error handling).
-- Do NOT mutate the canonical repo; work only in `/Users/joe/Desktop/allternit-parity-swarm-a`.
+- Do NOT mutate the canonical repo; work only in `~/Desktop/allternit-parity-swarm-a`.

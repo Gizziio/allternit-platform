@@ -58,7 +58,7 @@ Completed the rename of Allternit's internal messaging bus from "Photon" to "All
 ## Verification
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 cargo check --package allternit-api
 # passes
 

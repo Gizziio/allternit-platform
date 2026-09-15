@@ -22,7 +22,7 @@ This document provides a comprehensive demo guide for the Allternit Ops Center i
 ### 1. Start the Kernel (Terminal 1)
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/services/kernel
+cd ~/Desktop/allternit-workspace/allternit/services/kernel
 cargo run
 ```
 
@@ -38,7 +38,7 @@ Expected output:
 ### 2. Start the Shell UI (Terminal 2)
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/apps/shell
+cd ~/Desktop/allternit-workspace/allternit/apps/shell
 pnpm dev
 ```
 
@@ -54,7 +54,7 @@ VITE v5.4.21  ready in 300 ms
 ### 3. Start UI-TARS Operator (Terminal 3)
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/services/ui-tars-operator
+cd ~/Desktop/allternit-workspace/allternit/services/ui-tars-operator
 python -m uvicorn src.main:app --host 0.0.0.0 --port 3008
 ```
 
@@ -130,7 +130,7 @@ a2 brain stop --session-id <session-id>
 Starting Brain Session
 ═══════════════════════════════════════════════════
   → Tool: gizzi
-  → Workspace: /Users/macbook/Desktop/allternit-workspace
+  → Workspace: ~/Desktop/allternit-workspace
 
 ✓ Brain session created successfully!
 

@@ -8,7 +8,7 @@ status: ready
 
 ## Current state
 
-- `bun run build` in `/Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code` now succeeds.
+- `bun run build` in `~/Desktop/allternit-workspace/allternit/cmd/gizzi-code` now succeeds.
 - `bun run typecheck` exits clean.
 - **Runtime is broken**. Both the compiled binary and the raw bundle crash on `--help` with:
   ```
@@ -25,7 +25,7 @@ Make `./dist/gizzi-code --help` and `bun .build/gizzi-code-bundle.js --help` run
 
 1. **Reproduce and inspect**
    ```bash
-   cd /Users/joe/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+   cd ~/Desktop/allternit-workspace/allternit/cmd/gizzi-code
    bun .build/gizzi-code-bundle.js --help 2>&1 | head -40
    ./dist/gizzi-code --help 2>&1 | head -40
    ```

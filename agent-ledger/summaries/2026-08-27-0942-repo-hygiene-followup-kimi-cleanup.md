@@ -38,7 +38,7 @@ These changes continue the root-level consolidation started in the first hygiene
 ## Known gaps / remaining work
 
 - `.allternit/`, `.gizzi/`, `.steering/` remain at root because live code and `AGENTS.md` depend on those paths.
-- `.parity-reports/` scripts still reference the external `/Users/joe/Desktop/allternit-parity-workspace/` with absolute paths; those may need to be made relative or migrated to the main repo layout in a future pass.
+- `.parity-reports/` scripts still reference the external `~/Desktop/allternit-parity-workspace/` with absolute paths; those may need to be made relative or migrated to the main repo layout in a future pass.
 
 ## Files changed
 

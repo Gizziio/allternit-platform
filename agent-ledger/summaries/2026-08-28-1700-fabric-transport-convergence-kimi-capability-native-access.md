@@ -4,7 +4,7 @@
 **Session ID / Branch:** `session/fabric-transport-convergence`  
 **Agent:** kimi  
 **Commit:** `af2403577` (base) + uncommitted convergence changes  
-**Worktree:** `/Users/joe/Desktop/allternit-workspace/allternit-session-fabric-transport-convergence`
+**Worktree:** `~/Desktop/allternit-workspace/allternit-session-fabric-transport-convergence`
 
 ## Summary
 

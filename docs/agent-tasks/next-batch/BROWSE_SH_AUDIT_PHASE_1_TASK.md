@@ -3,7 +3,7 @@
 **Scope:** Audit `https://browse.sh` CLI for browser-use UX patterns that can be borrowed for gizzi-code's browser command.
 
 **Agent:** kimi
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-browse-sh-audit`
 
 ## Deliverables

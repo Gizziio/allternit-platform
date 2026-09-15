@@ -3,7 +3,7 @@
 **Scope:** Add a Qwen multimodal plugin adapter to Allternit's plugin SDK so that Qwen MM plugins can be registered and invoked natively in gizzi-code / Allternit surfaces. This is a Rust/TypeScript SDK integration; no UI is required in Phase 1.
 
 **Agent:** qwen
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-qwen-mm-plugins`
 
 ## Deliverables

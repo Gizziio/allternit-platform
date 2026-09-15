@@ -12,7 +12,7 @@ reference for selected runtime capabilities.
 This file records source-derived work. An entry marked **behavioral reference** contains an
 Allternit implementation informed by upstream behavior but no copied source. An entry marked
 **derived** requires the upstream license/copyright notice in the derived directory and an entry in
-the repository `THIRD_PARTY_NOTICES.md`.
+the repository `THIRD-PARTY-NOTICES.md`.
 
 | Allternit path | Upstream path | Kind | Notes |
 |---|---|---|---|
@@ -48,5 +48,5 @@ the repository `THIRD_PARTY_NOTICES.md`.
 1. Record the exact upstream commit before copying or adapting behavior.
 2. Port upstream tests or create equivalent fixtures before changing runtime ownership.
 3. Keep copied/derived modules isolated enough to diff against upstream.
-4. Mark copied code as **derived** in the table above and update `THIRD_PARTY_NOTICES.md`.
+4. Mark copied code as **derived** in the table above and update `THIRD-PARTY-NOTICES.md`.
 5. Review upstream changes monthly while Kimi-derived work is active.

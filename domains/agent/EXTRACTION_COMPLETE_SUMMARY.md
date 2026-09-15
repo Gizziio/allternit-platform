@@ -31,7 +31,7 @@ Successfully extracted the `agent_workspace` module from the CLI into a **standa
 ### Verification
 
 ```bash
-$ cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/cli && cargo check
+$ cd ~/Desktop/allternit-workspace/allternit/7-apps/cli && cargo check
     Finished dev [unoptimized + debug info]
 ```
 
@@ -72,7 +72,7 @@ $ cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/cli && cargo ch
 ### Verification
 
 ```bash
-$ cd /Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
+$ cd ~/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
 $ cargo check --features wasm
     Finished dev [unoptimized + debug info]
 ```
@@ -277,7 +277,7 @@ cargo run -p allternit-agent-workspace --bin workspace-cli -- check filesystem.w
 ### Build Shared Crate
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # Native
 cargo check -p allternit-agent-workspace
@@ -292,14 +292,14 @@ cargo build -p allternit-agent-workspace --bin workspace-cli
 ### Build CLI
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/cli
+cd ~/Desktop/allternit-workspace/allternit/7-apps/cli
 cargo check
 ```
 
 ### Build WASM for Web
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
+cd ~/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
 wasm-pack build --target web --out-dir pkg
 ```
 

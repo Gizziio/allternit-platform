@@ -1395,7 +1395,7 @@ mod tests {
         std::fs::create_dir_all(&other).unwrap();
         std::fs::write(other.join("s2.jsonl"), "{}\n").unwrap();
 
-        let rows = list_native_sessions(home.path(), Some(&["claude"]), Some("/Users/joe/demo"));
+        let rows = list_native_sessions(home.path(), Some(&["claude"]), Some("~/demo"));
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].session_id, "s1");
     }

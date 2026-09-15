@@ -63,7 +63,7 @@ secrets rotation list were delivered to the user in-session.
 ## Scratch state left behind (intentional)
 
 - `target` symlink in worktree → main checkout's shared 76G cargo target (remove when worktree is cleaned post-merge).
-- `/Users/joe/Desktop/allternit-workspace/.cache-desktop-node_modules-b6d6153b` — desktop node_modules moved aside for CI-typecheck env; restorable.
+- `~/Desktop/allternit-workspace/.cache-desktop-node_modules-b6d6153b` — desktop node_modules moved aside for CI-typecheck env; restorable.
 - `/tmp/gitleaks-history.json`, `/tmp/gitleaks-postrebase.json` — regenerable scan reports.
 - `surfaces/ai.allternit.com/public/discovery-feed.json` untracked — build-generated, not committed.
 

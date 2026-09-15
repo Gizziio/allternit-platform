@@ -1,10 +1,9 @@
-name: Deploy AI + Platform to Cloudflare Pages
+name: Deploy Platform to Cloudflare Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'surfaces/ai.allternit.com/**'
       - 'surfaces/platform.allternit.com/**'
       - 'surfaces/allternit-extensions/allternit-office-addin/**'
       - 'surfaces/allternit-extensions/extension-shared/**'
@@ -16,116 +15,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  verify-ai:
-    name: Typecheck + unit tests (ai.allternit.com)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.0
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Generate Prisma client
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm prisma generate
-
-      - name: Typecheck ai.allternit.com
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm typecheck
-
-      - name: Unit tests (ai.allternit.com)
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm test
-
-  deploy-ai:
-    name: Deploy ai.allternit.com
-    runs-on: ubuntu-latest
-    needs: verify-ai
-    permissions:
-      contents: read
-      deployments: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.0
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Generate Prisma client
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm prisma generate
-
-      - name: Copy discovery feed to public
-        run: |
-          if [ -f surfaces/ai.allternit.com/src/data/discovery-pipeline.json ]; then
-            cp surfaces/ai.allternit.com/src/data/discovery-pipeline.json surfaces/ai.allternit.com/public/discovery-feed.json
-            echo "Copied discovery-pipeline.json to public/discovery-feed.json"
-          else
-            echo "No discovery-pipeline.json found, skipping"
-          fi
-
-      - name: Verify Clerk publishable key secret is present
-        # Hard gate: never build/deploy a site with an empty Clerk key again
-        # (the 2026-08-01 silent Clerk outage was an empty secret deploying "green").
-        run: |
-          if [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" ]; then
-            echo "::error ::NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY secret is empty — refusing to build ai.allternit.com without Clerk auth."
-            exit 1
-          fi
-          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set (${#NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} chars)."
-        env:
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-
-      - name: Build ai.allternit.com static export
-        run: pnpm --filter "@allternit/ai..." build
-        env:
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
-          NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com'
-          NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API: '1'
-          NEXT_PUBLIC_ALLTERNIT_OFFICE_API: '1'
-          NEXT_PUBLIC_ALLTERNIT_BETA_API: '1'
-          # Previously sourced from the committed surfaces/ai.allternit.com/.env.production
-          # (removed — build-time config belongs here, not in a tracked file).
-          # These are the same values that file carried.
-          NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
-          VITE_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
-          NEXT_PUBLIC_CLERK_PROXY_URL: 'https://allternit.com/__clerk'
-          VITE_REMOTE_CONTROL_PUSH_URL: ${{ secrets.VITE_REMOTE_CONTROL_PUSH_URL }}
-          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-
-      - name: Deploy ai.allternit.com to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/ai.allternit.com/dist --project-name=ai-allternit --branch=main
-
   deploy-platform:
     name: Deploy platform.allternit.com
     runs-on: ubuntu-latest
@@ -212,46 +101,3 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy surfaces/platform.allternit.com/dist --project-name=allternit-platform --branch=main
-
-  clerk-smoke-ai:
-    name: Post-deploy Clerk smoke (ai.allternit.com)
-    runs-on: ubuntu-latest
-    # Runs after the deploy so it exercises the live hosted site. The smoke
-    # script (surfaces/ai.allternit.com/scripts/clerk-e2e-verify.mjs) has no
-    # soft-fail mode — a failure here fails the workflow on purpose so a
-    # broken Clerk deploy cannot go unnoticed.
-    needs: deploy-ai
-    permissions:
-      contents: read
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.0
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Install Playwright Chromium
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Run Clerk e2e smoke against deployed ai.allternit.com
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm test:clerk:e2e
-        env:
-          CLERK_TARGET_ORIGIN: 'https://ai.allternit.com'
-          CLERK_TEST_EMAIL: ${{ secrets.CLERK_TEST_EMAIL }}
-          CLERK_TEST_PASSWORD: ${{ secrets.CLERK_TEST_PASSWORD }}
-          CLERK_SECONDARY_EMAIL: ${{ secrets.CLERK_TEST_SECONDARY_EMAIL }}
-          CLERK_SECONDARY_PASSWORD: ${{ secrets.CLERK_TEST_SECONDARY_PASSWORD }}
-          HEADLESS: '1'

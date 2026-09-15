@@ -43,7 +43,7 @@ Self-contained interactive HTML modules generated directly from the Allternit co
 The demo index is auto-generated. To rebuild:
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 npx tsx scripts/generate-demo-index.ts
 ```
 

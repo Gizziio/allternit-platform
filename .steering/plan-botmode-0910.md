@@ -2,7 +2,7 @@
 
 **Owner decision (2026-09-10):** prove-it-works sweep, against LIVE `api.allternit.com`, full depth (chat + groups + routines/messaging + computer viewport).
 
-**Repo:** `/Users/joe/altw/allternit` (symlink → `~/Desktop/allternit-workspace/allternit`). All repo conventions per root `AGENTS.md` (session worktree ritual, steering checkpoints, ledger attestation).
+**Repo:** `~/altw/allternit` (symlink → `~/Desktop/allternit-workspace/allternit`). All repo conventions per root `AGENTS.md` (session worktree ritual, steering checkpoints, ledger attestation).
 
 ## Topology facts that shape the plan (verified by recon)
 

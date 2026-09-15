@@ -33,7 +33,7 @@ Due to code signing requirements and environment issues, you need to build the f
 
 ```bash
 # Navigate to desktop
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-desktop
+cd ~/Desktop/allternit-workspace/allternit/surfaces/allternit-desktop
 
 # Install dependencies (if not done)
 pnpm install
@@ -69,7 +69,7 @@ https://github.com/Gizziio/allternit-platform/releases/latest/download/Allternit
 
 ```bash
 # Rebuild deploy package
-cd /Users/macbook/Desktop/allternit-websites/projects/gizziio
+cd ~/Desktop/allternit-websites/projects/gizziio
 cd source
 zip -r ../deploy.zip .
 
@@ -102,7 +102,7 @@ Desktop App (Electron)
 
 ### Source Code
 ```
-/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-desktop/
+~/Desktop/allternit-workspace/allternit/surfaces/allternit-desktop/
 ├── src/main/                  # Electron main process
 │   ├── tunnel-manager.ts      # Cloudflare Tunnel
 │   ├── platform-server.ts     # Next.js server manager
@@ -116,14 +116,14 @@ Desktop App (Electron)
 
 ### Website
 ```
-/Users/macbook/Desktop/allternit-websites/projects/gizziio/
+~/Desktop/allternit-websites/projects/gizziio/
 ├── source/index.html          # Updated with downloads
 └── deploy.zip                 # Rebuild this
 ```
 
 ### Documentation
 ```
-/Users/macbook/Desktop/allternit-websites/projects/platform-desktop/
+~/Desktop/allternit-websites/projects/platform-desktop/
 ├── README.md                  # Architecture docs
 ├── BUILD.md                   # Build instructions
 ├── DISTRIBUTION.md            # Distribution guide

@@ -29,7 +29,7 @@ The write path now only emits `allternit:setting-changed` when the persisted val
 ## Honest deferrals
 
 - Full `bun run build` remains broken by another session's in-flight univerjs install (0.25.1 vs 0.21.1 alias mismatch) — not ours to fix, pre-existing.
-- The preview worktree (`/Users/joe/altw/allternit-desktop-preview`) carries a PREVIEW-ONLY hardcoded univerjs alias patch in `vite.config.ts`; it must be preserved across pulls.
+- The preview worktree (`~/altw/allternit-desktop-preview`) carries a PREVIEW-ONLY hardcoded univerjs alias patch in `vite.config.ts`; it must be preserved across pulls.
 
 ## Commits
 

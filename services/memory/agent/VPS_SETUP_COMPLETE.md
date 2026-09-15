@@ -31,7 +31,7 @@ Status: Ready to configure
 ### Step 1: Configure VPS Connection
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
+cd ~/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Run the configuration script
 ./scripts/configure-vps.sh <YOUR_VPS_IP>

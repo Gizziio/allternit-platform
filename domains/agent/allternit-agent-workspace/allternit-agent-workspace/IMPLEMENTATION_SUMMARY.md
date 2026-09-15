@@ -176,7 +176,7 @@ Run these commands to verify:
 
 ```bash
 # Check the crate builds
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 cargo check -p allternit-agent-workspace
 
 # Run tests (when added)

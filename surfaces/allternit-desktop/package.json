@@ -200,8 +200,8 @@
         "to": "licenses/LICENSE.txt"
       },
       {
-        "from": "../../THIRD_PARTY_NOTICES.md",
-        "to": "licenses/THIRD_PARTY_NOTICES.md"
+        "from": "../../THIRD-PARTY-NOTICES.md",
+        "to": "licenses/THIRD-PARTY-NOTICES.md"
       }
     ],
     "asarUnpack": [

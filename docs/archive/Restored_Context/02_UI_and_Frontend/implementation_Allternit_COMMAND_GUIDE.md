@@ -10,7 +10,7 @@
 
 ```bash
 # Navigate to project
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # Install the allternit command
 ./scripts/install-allternit-alias.sh
@@ -72,7 +72,7 @@ The platform orchestrator handles:
 ### Automatic Installation
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 ./scripts/install-allternit-alias.sh
 ```
 
@@ -81,7 +81,7 @@ cd /Users/macbook/Desktop/allternit-workspace/allternit
 Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
 
 ```bash
-export PATH="/Users/macbook/Desktop/allternit-workspace/allternit/bin:$PATH"
+export PATH="~/Desktop/allternit-workspace/allternit/bin:$PATH"
 ```
 
 Then reload:

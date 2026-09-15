@@ -4,7 +4,7 @@
 
 ### Start Allternit Operator
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/services/allternit-operator
+cd ~/Desktop/allternit-workspace/allternit/services/allternit-operator
 python -m uvicorn src.main:app --reload --port 3008
 ```
 
@@ -149,7 +149,7 @@ curl http://localhost:3008/v1/parallel/runs/run-123/results \
 
 ### Install Dependencies
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/services/allternit-operator
+cd ~/Desktop/allternit-workspace/allternit/services/allternit-operator
 pip install -r requirements.txt
 ```
 

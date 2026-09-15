@@ -3,7 +3,7 @@
 **Scope:** Port the "Dynamic Workflows" cookbook pattern from Anthropic's `claude-cookbooks/claude_agent_sdk/08_Dynamic_workflows.ipynb` into Allternit's docs surface as a runnable, editable guide. The user explicitly requested cookbooks be added to Allternit docs.
 
 **Agent:** kimi
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-claude-cookbooks`
 
 ## Deliverables

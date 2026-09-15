@@ -1,6 +1,6 @@
 # Allternit Platform — Comprehensive Read-Only Audit
 
-> Repository: `/Users/joe/Desktop/allternit-workspace/allternit`  
+> Repository: `~/Desktop/allternit-workspace/allternit`  
 > Generated: 2026-08-27  
 > Scope: catalog every major surface, service, component, and capability for 1:1 comparison with bb (getbb.app).
 

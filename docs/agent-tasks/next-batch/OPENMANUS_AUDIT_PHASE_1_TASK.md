@@ -3,7 +3,7 @@
 **Scope:** Audit `FoundationAgents/OpenManus` for planning/tool-use patterns that can be adopted in Allternit surfaces. Produce an actionable audit report with a gap analysis and integration recommendations.
 
 **Agent:** kimi
-**Repo:** `/Users/joe/Desktop/allternit-workspace/allternit`
+**Repo:** `~/Desktop/allternit-workspace/allternit`
 **Branch target:** `ao/p1-openmanus-audit`
 
 ## Deliverables

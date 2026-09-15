@@ -1,4 +1,4 @@
-const WebSocket = require('/Users/joe/Desktop/allternit-workspace/allternit/node_modules/ws');
+const WebSocket = require('~/Desktop/allternit-workspace/allternit/node_modules/ws');
 const http = require('http');
 
 http.get('http://127.0.0.1:9222/json/list', (res) => {

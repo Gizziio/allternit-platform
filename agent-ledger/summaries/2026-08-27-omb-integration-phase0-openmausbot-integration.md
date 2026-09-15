@@ -1,7 +1,7 @@
 # Session Summary: OpenMausBot → Allternit Integration
 
 **Session branch:** `session/omb-integration-phase0`  
-**Worktree:** `/Users/joe/Desktop/allternit-workspace/allternit-session-omb-integration-phase0`  
+**Worktree:** `~/Desktop/allternit-workspace/allternit-session-omb-integration-phase0`  
 **Final commit:** `559639520`  
 **Pushed to:** `origin/session/omb-integration-phase0`
 
@@ -35,6 +35,6 @@ Completed the full OpenMausBot → Allternit integration across all six phases o
 ## How to review
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-omb-integration-phase0
+cd ~/Desktop/allternit-workspace/allternit-session-omb-integration-phase0
 git log --oneline main..HEAD
 ```

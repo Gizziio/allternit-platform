@@ -11,7 +11,7 @@
 ### Step 1: Run Configuration Script
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
+cd ~/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Replace with your actual VPS IP
 ./scripts/configure-vps.sh <YOUR_VPS_IP>

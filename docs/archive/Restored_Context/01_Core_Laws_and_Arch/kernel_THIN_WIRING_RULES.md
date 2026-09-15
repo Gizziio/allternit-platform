@@ -124,7 +124,7 @@ domains/kernel/infrastructure/allternit-runtime/src/
 #!/bin/bash
 # run-boundary-checks.sh
 
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 ERRORS=0
 

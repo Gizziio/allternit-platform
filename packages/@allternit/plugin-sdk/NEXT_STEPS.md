@@ -9,7 +9,7 @@ This document outlines the exact steps to convert all 76 Allternit templates int
 ### 1.1 Build and Test
 
 ```bash
-cd /Users/macbook/allternit-plugin-sdk
+cd ~/allternit-plugin-sdk
 npm ci
 npm run build
 npm test
@@ -30,10 +30,10 @@ npm test
 
 ```bash
 # Create output directory
-mkdir -p /Users/macbook/allternit-plugins
+mkdir -p ~/allternit-plugins
 
 # Find all template files
-cd /Users/macbook/allternit
+cd ~/allternit
 globstar templates/**/*.tsx > /tmp/templates.list
 globstar templates/**/*.ts >> /tmp/templates.list
 globstar templates/**/*.js >> /tmp/templates.list
@@ -47,12 +47,12 @@ wc -l /tmp/templates.list
 Create this conversion script:
 
 ```bash
-# File: /Users/macbook/allternit-plugin-sdk/scripts/convert-all.sh
+# File: ~/allternit-plugin-sdk/scripts/convert-all.sh
 #!/bin/bash
 
-SDK_DIR="/Users/macbook/allternit-plugin-sdk"
-OUTPUT_DIR="/Users/macbook/allternit-plugins"
-TEMPLATE_DIR="/Users/macbook/allternit/templates"
+SDK_DIR="~/allternit-plugin-sdk"
+OUTPUT_DIR="~/allternit-plugins"
+TEMPLATE_DIR="~/allternit/templates"
 
 cd "$SDK_DIR" || exit 1
 
@@ -91,10 +91,10 @@ For templates that don't auto-convert well:
 
 ```bash
 # Manual conversion pattern
-mkdir -p /Users/macbook/allternit-plugins/{name}-plugin/{src,docs}
+mkdir -p ~/allternit-plugins/{name}-plugin/{src,docs}
 
 # Copy and wrap
-cat > /Users/macbook/allternit-plugins/{name}-plugin/src/index.ts << 'EOF'
+cat > ~/allternit-plugins/{name}-plugin/src/index.ts << 'EOF'
 import { PluginHost } from '@allternit/plugin-sdk';
 import { manifest } from './manifest';
 
@@ -112,7 +112,7 @@ EOF
 
 ```bash
 # Validation script
-for dir in /Users/macbook/allternit-plugins/*/; do
+for dir in ~/allternit-plugins/*/; do
     echo "Validating: $(basename "$dir")"
     cd "$dir" || continue
     npm run validate 2>/dev/null || echo "  ⚠️  Needs fixing"
@@ -157,7 +157,7 @@ npm token create --read-only=false
 ### 4.1 Prepare Release
 
 ```bash
-cd /Users/macbook/allternit-plugin-sdk
+cd ~/allternit-plugin-sdk
 
 # Update version if needed
 npm version 1.0.0
@@ -202,7 +202,7 @@ npm publish --access public
 ### 5.1 Build Site
 
 ```bash
-cd /Users/macbook/allternit-plugin-sdk/website
+cd ~/allternit-plugin-sdk/website
 
 # Install dependencies
 npm install
@@ -313,7 +313,7 @@ EOF
 
 ```bash
 # Build SDK
-cd /Users/macbook/allternit-plugin-sdk && npm run build
+cd ~/allternit-plugin-sdk && npm run build
 
 # Convert templates
 ./scripts/convert-all.sh
@@ -348,7 +348,7 @@ npm publish --access public
 
 After completion:
 - ✅ Package available: `npm install @allternit/plugin-sdk`
-- ✅ 76 plugins in `/Users/macbook/allternit-plugins/`
+- ✅ 76 plugins in `~/allternit-plugins/`
 - ✅ Docs live at your chosen domain
 - ✅ GitHub Actions auto-publish working
 

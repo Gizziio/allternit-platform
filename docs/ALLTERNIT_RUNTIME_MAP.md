@@ -10,7 +10,7 @@ Vendor herdr v0.9.0 (https://github.com/herdrdev/herdr, tag v0.9.0) into this Ru
 
 herdr is a single-crate Rust binary (not a workspace), ~395 files under src/, toolchain channel 1.96.1 (rust-toolchain.toml), deps include tokio, ratatui 0.30, crossterm, vendored portable-pty patch, interprocess, clap 4.5, schemars, bincode. It is a background server owning PTYs with a JSON socket API, agent state detection, session persistence, and multi-machine SSH management. Its internal crate name is `herdr` — KEEP that name so future upstream merges stay textual. The user-facing binary target is `ao`.
 
-License: Apache-2.0 since 0.8.0 (was AGPL before — never copy pre-0.8.0 code). No NOTICE file upstream. Preserve LICENSE in-crate; attribute in the workspace THIRD_PARTY_NOTICES.md.
+License: Apache-2.0 since 0.8.0 (was AGPL before — never copy pre-0.8.0 code). No NOTICE file upstream. Preserve LICENSE in-crate; attribute in the workspace THIRD-PARTY-NOTICES.md.
 
 ## Gut list (the entire phone-home surface — remove/replace)
 

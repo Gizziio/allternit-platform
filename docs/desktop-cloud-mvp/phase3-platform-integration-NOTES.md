@@ -43,7 +43,7 @@ export BOT_DESKTOP_IMAGE=ubuntu/24.04/cloud
 ### Unit tests
 
 ```bash
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
+cd ~/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp
 cargo test -p allternit-computer-cloud
 ```
 

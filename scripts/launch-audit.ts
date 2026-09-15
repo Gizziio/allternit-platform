@@ -188,7 +188,7 @@ async function main() {
     }
   }
 
-  const outputPath = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'ALABS-LAUNCH-AUDIT.json');
+  const outputPath = path.join('~/Desktop/allternit-workspace/allternit', 'ALABS-LAUNCH-AUDIT.json');
   await fs.writeFile(outputPath, JSON.stringify(reports, null, 2));
   console.log(`\n📄 Full audit written to ${outputPath}`);
 

@@ -4,7 +4,7 @@
 **Session ID / Branch:** `session/fabric-transport-convergence`  
 **Agent:** kimi  
 **Base attestation:** `agent-ledger/summaries/2026-08-28-1700-fabric-transport-convergence-kimi-capability-native-access.md`  
-**Worktree:** `/Users/joe/Desktop/allternit-workspace/allternit-session-fabric-transport-convergence`
+**Worktree:** `~/Desktop/allternit-workspace/allternit-session-fabric-transport-convergence`
 
 ## Summary
 

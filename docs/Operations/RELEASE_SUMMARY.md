@@ -44,7 +44,7 @@
 **Why you need to do this**: Code signing requires your Apple Developer credentials
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-desktop
+cd ~/Desktop/allternit-workspace/allternit/surfaces/allternit-desktop
 
 # Install deps
 pnpm install

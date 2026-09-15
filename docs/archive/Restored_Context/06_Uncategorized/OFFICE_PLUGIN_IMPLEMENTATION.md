@@ -279,7 +279,7 @@ The code is written but uses stubs where external libraries are needed:
 ## Files on Disk
 
 ```
-/Users/macbook/Desktop/allternit-workspace/allternit/
+~/Desktop/allternit-workspace/allternit/
 ├── research/anthropic-office/
 │   ├── excel-ppt-plugin/
 │   │   ├── notes/analysis.md

@@ -1,7 +1,7 @@
 # Computer Use Harness Integration — Phase 1 Task
 
 **Agent:** kimi  
-**Worktree:** /Users/joe/Desktop/allternit-workspace/allternit  
+**Worktree:** ~/Desktop/allternit-workspace/allternit  
 **Goal:** Research the listed computer-use / browser-use / mobile harness projects and produce a concrete integration plan plus the highest-priority implementation: promote the existing Page Agent into a shared service and wire HAR-derived API capture into ACI.
 
 ## Projects to research

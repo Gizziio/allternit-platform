@@ -1,7 +1,7 @@
 # Plan — session/cu17-batchgate (P1 of stagehand-batch-fork)
 
 Spec: `Allternit Brain/Research/specs/stagehand-batch-fork.md` (P1: batch grant gate).
-Worktree: `/Users/joe/Desktop/allternit-workspace/allternit-cu17`, branch `session/cu17-batchgate` from `origin/main` (P0 = PR #415 already merged).
+Worktree: `~/Desktop/allternit-workspace/allternit-cu17`, branch `session/cu17-batchgate` from `origin/main` (P0 = PR #415 already merged).
 
 ## Slice 1 — Batch grant gate (Rust)
 - [ ] 1.1 Read `aci_safety.rs` (enforce_confirmation, ConfirmationClass), `aci_approvals.rs` (hash_action_payload, grant request/approval/redeem), entry routes (computer_routes.rs, tool_routes.rs, computer_ws.rs). Baseline `cargo test` counts for affected crates (aci suites ~40).

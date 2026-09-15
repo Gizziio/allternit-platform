@@ -17,7 +17,7 @@
 ### Step 1: Build Backend Binaries (Today)
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 
 # Build backend for current platform
 cd cmd/allternit-api
@@ -30,7 +30,7 @@ cargo build --release
 ### Step 2: Create Bundled Backend Directory
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/allternit-desktop
+cd ~/Desktop/allternit-workspace/allternit/cmd/allternit-desktop
 
 # Create bundled-backend structure
 mkdir -p bundled-backend/darwin/arm64/bin

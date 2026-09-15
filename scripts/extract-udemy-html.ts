@@ -1,8 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const UDEMY_DIR = '/Users/macbook/Downloads/UdemyCourses/courses';
-const OUTPUT_DIR = '/Users/macbook/Desktop/allternit-workspace/allternit/remix-content/extracted-html';
+const UDEMY_DIR = '~/Downloads/UdemyCourses/courses';
+const OUTPUT_DIR = '~/Desktop/allternit-workspace/allternit/remix-content/extracted-html';
 
 interface ExtractedLecture {
   courseDir: string;

@@ -1,7 +1,7 @@
 # Model Lab / Local Engine / Training Integration — Phase 1 Task
 
 **Agent:** kimi  
-**Worktree:** /Users/joe/Desktop/allternit-workspace/allternit  
+**Worktree:** ~/Desktop/allternit-workspace/allternit  
 **Goal:** Deeply integrate Unsloth and Local Studio into Allternit Model Lab as native first-class features, and fix UI consistency across Model Lab panels.
 
 ## Projects to research

@@ -51,7 +51,7 @@ say ""
 say "## worker claim loop with the provisioned token (managed spawn shape)"
 WLOG=/tmp/coworkp1-evidence/worker.log
 : > "$WLOG"
-cd /Users/joe/Desktop/allternit-workspace/allternit-session-coworkp1-0914/cmd/gizzi-code
+cd $HOME/Desktop/allternit-workspace/allternit-session-coworkp1-0914/cmd/gizzi-code
 ALLTERNIT_API_URL="$API" ALLTERNIT_GIZZI_TOKEN="$TOKEN2" GIZZI_COMPUTE_MODE=local \
   bun run src/runtime/fabric-transport/worker-daemon-entry.ts > "$WLOG" 2>&1 &
 WPID=$!

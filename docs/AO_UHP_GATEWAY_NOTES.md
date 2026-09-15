@@ -21,7 +21,7 @@ substrate. **No herdr engine internals changed**; the only herdr diff is additiv
 
 HarnessRouter CE is vendored at `vendor/harnessrouter-ce/` (Apache-2.0, HEAD `60c9a45`)
 as **reference + test oracles only** — no shipped Python, nothing invoked from ao.
-Attribution in `THIRD_PARTY_NOTICES.md`; inventory in `docs/UHP_VENDOR_INVENTORY.md`.
+Attribution in `THIRD-PARTY-NOTICES.md`; inventory in `docs/UHP_VENDOR_INVENTORY.md`.
 
 ## What works (verified live, 2026-09-10, this machine)
 

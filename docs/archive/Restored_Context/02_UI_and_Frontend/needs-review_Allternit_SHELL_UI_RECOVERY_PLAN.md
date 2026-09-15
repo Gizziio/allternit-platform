@@ -1,6 +1,6 @@
 # Allternit Shell UI Recovery + Upgrade Plan (post-salvage)
 
-This plan is written against the **real repo** (REPO_ROOT = `/Users/macbook/Desktop/allternit-workspace/allternit/`) and the code you uploaded (`src.zip`). It focuses on (1) restoring correctness and (2) applying the glass design system without losing the existing primitives.
+This plan is written against the **real repo** (REPO_ROOT = `~/Desktop/allternit-workspace/allternit/`) and the code you uploaded (`src.zip`). It focuses on (1) restoring correctness and (2) applying the glass design system without losing the existing primitives.
 
 ---
 

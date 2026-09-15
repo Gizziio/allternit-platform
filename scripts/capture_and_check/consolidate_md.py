@@ -2,7 +2,7 @@ import os
 import glob
 import shutil
 
-root_dir = "/Users/macbook/Desktop/allternit-workspace/allternit"
+root_dir = "~/Desktop/allternit-workspace/allternit"
 spec_dir = os.path.join(root_dir, "spec")
 archive_dir = os.path.join(root_dir, "_archive")
 

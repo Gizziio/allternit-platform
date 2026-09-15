@@ -54,7 +54,7 @@ package.json ×2, install/gizzi.rb, deb control, rpm spec + CHANGELOG.
 - Also verified the onboarding "local CLI brain" path on this machine:
   the saved `kimi-cli` `subprocess_cmd` in `~/.config/gizzi-code/config.json`
   was missing `-p` (provider test failed with exit 1); fixed to
-  `/Users/joe/.kimi-code/bin/kimi -p` — `gizzi provider test kimi-cli`
+  `~/.kimi-code/bin/kimi -p` — `gizzi provider test kimi-cli`
   passes and `gizzi exec --model kimi-cli/kimi-for-coding` round-trips.
 
 ## Shipped

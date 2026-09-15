@@ -47,7 +47,7 @@ ollama pull mxbai-embed-large
 ### 3. Start Memory Agent
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
+cd ~/Desktop/allternit-workspace/allternit/memory
 pnpm install
 pnpm run start:http
 ```

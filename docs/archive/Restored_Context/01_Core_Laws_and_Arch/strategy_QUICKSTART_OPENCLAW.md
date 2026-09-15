@@ -30,12 +30,12 @@ openclaw gateway --port 18789
 
 Open your browser to:
 ```
-file:///Users/macbook/Desktop/allternit-workspace/allternit/openclaw-bridge.html
+file://~/Desktop/allternit-workspace/allternit/openclaw-bridge.html
 ```
 
 Or serve it:
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 python3 -m http.server 8080
 # Then visit: http://localhost:8080/openclaw-bridge.html
 ```

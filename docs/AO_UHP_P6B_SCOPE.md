@@ -76,7 +76,7 @@ Full-class surface to implement (check ids in
 ## Rules
 
 - No herdr engine internals changed — additive only (`src/ao/*`, uhp-gateway
-  crate). `THIRD_PARTY_NOTICES.md` already covers the vendor; update only if
+  crate). `THIRD-PARTY-NOTICES.md` already covers the vendor; update only if
   you import new referenced material.
 - Honest reporting: fixture-tested ≠ live-verified. Say which is which.
 - Commit per driver + per surface area (logical commits); push branch often.

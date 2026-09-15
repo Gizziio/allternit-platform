@@ -45,7 +45,7 @@ This starts:
 ### 1. Start Platform
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
+cd ~/Desktop/allternit-workspace/allternit
 pnpm dev:platform-stack  # from repo root (start-platform.sh retired → archive/bin-legacy/)
 ```
 

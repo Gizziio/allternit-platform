@@ -1,9 +1,0 @@
-{
-  "type": "object",
-  "required": ["course_id", "module_id", "published"],
-  "properties": {
-    "course_id": {"type": "integer"},
-    "module_id": {"type": "integer"},
-    "published": {"type": "boolean"}
-  }
-}

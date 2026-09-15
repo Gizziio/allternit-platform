@@ -1,7 +1,7 @@
 # P5: BROWSER AGENT SYSTEM - DAG TASK BREAKDOWN
 
 **Date:** 2026-02-20  
-**Source:** `/Users/macbook/Desktop/agenticbrowserext.md`, `/Users/macbook/Desktop/spec/BrowserAgent/`  
+**Source:** `~/Desktop/agenticbrowserext.md`, `~/Desktop/spec/BrowserAgent/`  
 **Total Effort:** ~14 weeks (including research)  
 **Priority:** CRITICAL
 

@@ -39,7 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Known build gotcha (not a runtime bug)
 
 - `refinery::embed_migrations!` in `cmd/allternit-api/src/db.rs` is a proc macro and cannot emit `cargo:rerun-if-changed`: adding a file under `cmd/allternit-api/migrations/` does **not** trigger a rebuild. `touch cmd/allternit-api/src/db.rs` (or any clean build) before running, or the binary silently embeds the previous migration set.
-- Updated `/Users/joe/Desktop/allternit-parity-handoff.md` to reflect Phase 9 slices 9 and 10.
+- Updated `~/Desktop/allternit-parity-handoff.md` to reflect Phase 9 slices 9 and 10.
 
 ## [2026.08.09] — Phase 9 admin control plane closes (in progress)
 

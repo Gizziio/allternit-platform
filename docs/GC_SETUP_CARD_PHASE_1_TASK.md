@@ -1,6 +1,6 @@
 # GC Setup Card — Phase 1 Task (only phase — read GC_SETUP_CARD_MAP.md first)
 
-You are executing inside `/Users/macbook/Desktop/allternit-workspace/allternit`. Read
+You are executing inside `~/Desktop/allternit-workspace/allternit`. Read
 `docs/GC_SETUP_CARD_MAP.md` in full before starting.
 
 ## Constraints

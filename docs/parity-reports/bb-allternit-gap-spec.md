@@ -2,7 +2,7 @@
 
 > Scope: core agent-IDE entities (Projects, Threads, Environments, Hosts, Events) and their API/web surfaces.
 > Strategy: Option A — implement bb semantics inside Allternit's existing architecture rather than vendoring bb source.
-> Target worktree: `/Users/joe/Desktop/allternit-workspace/allternit-session-cacb228c-026d-4ea5-85fe-aa09788e3c7c`
+> Target worktree: `~/Desktop/allternit-workspace/allternit-session-cacb228c-026d-4ea5-85fe-aa09788e3c7c`
 
 ---
 
@@ -21,7 +21,7 @@ bb's product model is built around five first-class entities:
 
 Plus supporting tables: `terminal_sessions`, `plugins`, `plugin_*`, `app_settings_values`, `app_theme`, `system_experiments`.
 
-Full detail: `/Users/joe/bb-fork-analysis/docs/allternit-mapping/bb-data-model-deep-dive.md`
+Full detail: `~/bb-fork-analysis/docs/allternit-mapping/bb-data-model-deep-dive.md`
 
 ### 1.2 Allternit (target)
 Allternit has partially-overlapping concepts spread across three subsystems:

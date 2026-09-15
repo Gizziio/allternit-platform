@@ -38,4 +38,4 @@ Fixed the Allternit platform monorepo so `pnpm install --frozen-lockfile` and `p
 ## Outstanding work
 
 - Pre-existing typecheck errors in `packages/@allternit/office-sheets-app` and related office-suite packages remain. These are unrelated to the install/build failures.
-- The main checkout at `/Users/joe/Desktop/allternit-workspace/allternit` had unrelated uncommitted changes from another session at the time of merge; `origin/main` was updated directly via fast-forward.
+- The main checkout at `~/Desktop/allternit-workspace/allternit` had unrelated uncommitted changes from another session at the time of merge; `origin/main` was updated directly via fast-forward.

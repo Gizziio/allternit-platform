@@ -1,6 +1,6 @@
 import os, json
 
-base_dir = '/Users/macbook/Desktop/allternit-workspace/allternit'
+base_dir = '~/Desktop/allternit-workspace/allternit'
 dag_file = os.path.join(base_dir, 'docs/IMPLEMENTATION_DAG.md')
 
 # Read DAG to find phases

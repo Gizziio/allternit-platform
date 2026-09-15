@@ -140,7 +140,7 @@ ollama pull phi3:mini
 ### 2. Start Memory Agent
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
+cd ~/Desktop/allternit-workspace/allternit/memory
 
 # Install dependencies
 pnpm install

@@ -44,13 +44,13 @@ That makes MCP Apps an app runtime and distribution layer for MCP-capable hosts.
 There are three nearby systems in the repo:
 
 - MCP tool transport
-  - [`api/gateway/routing/src/mcp_bridge.rs`](/Users/macbook/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_bridge.rs)
+  - [`api/gateway/routing/src/mcp_bridge.rs`](~/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_bridge.rs)
 - Internal rich UI transport via A2UI/canvas
-  - [`surfaces/ai.allternit.com/docs/A2UI_GUIDE.md`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/docs/A2UI_GUIDE.md)
-  - [`platform/protocols/allternit-canvas-protocol/src/lib.rs`](/Users/macbook/Desktop/allternit-workspace/allternit/platform/protocols/allternit-canvas-protocol/src/lib.rs)
+  - [`surfaces/ai.allternit.com/docs/A2UI_GUIDE.md`](~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/docs/A2UI_GUIDE.md)
+  - [`platform/protocols/allternit-canvas-protocol/src/lib.rs`](~/Desktop/allternit-workspace/allternit/platform/protocols/allternit-canvas-protocol/src/lib.rs)
 - A custom "capsule" iframe runtime that already uses the phrase "MCP Apps" (consolidated into `api/gateway/routing`; CapsuleFrame components were removed from surfaces)
-  - [`api/gateway/routing/src/mcp_apps_routes.rs`](/Users/macbook/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_apps_routes.rs) (if present)
-  - [`surfaces/ai.allternit.com/src/components/CapsuleFrame/`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/components/CapsuleFrame/)
+  - [`api/gateway/routing/src/mcp_apps_routes.rs`](~/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_apps_routes.rs) (if present)
+  - [`surfaces/ai.allternit.com/src/components/CapsuleFrame/`](~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/components/CapsuleFrame/)
 
 That is useful because the product already understands:
 
@@ -68,8 +68,8 @@ Today allternit is not an MCP Apps host yet.
 
 The current backend MCP bridge lists tools and calls tools, but it does not implement the UI-resource half of the spec.
 
-- [`api/gateway/routing/src/mcp_bridge.rs:217`](/Users/macbook/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_bridge.rs:217)
-- [`api/gateway/routing/src/mcp_bridge.rs:268`](/Users/macbook/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_bridge.rs:268)
+- [`api/gateway/routing/src/mcp_bridge.rs:217`](~/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_bridge.rs:217)
+- [`api/gateway/routing/src/mcp_bridge.rs:268`](~/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_bridge.rs:268)
 
 What is missing there:
 
@@ -82,8 +82,8 @@ What is missing there:
 
 The current capsule path is REST plus SSE plus a custom `postMessage` API.
 
-- [`api/gateway/routing/src/mcp_apps_routes.rs:1`](/Users/macbook/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_apps_routes.rs:1) (consolidated from `services/gateway/routing/routing/`)
-- [`surfaces/ai.allternit.com/src/components/CapsuleFrame/`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/components/CapsuleFrame/) (relocated from `surfaces/platform/; currently empty)
+- [`api/gateway/routing/src/mcp_apps_routes.rs:1`](~/Desktop/allternit-workspace/allternit/api/gateway/routing/src/mcp_apps_routes.rs:1) (consolidated from `services/gateway/routing/routing/`)
+- [`surfaces/ai.allternit.com/src/components/CapsuleFrame/`](~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/components/CapsuleFrame/) (relocated from `surfaces/platform/; currently empty)
 
 That differs from the stable MCP Apps spec in material ways:
 
@@ -98,7 +98,7 @@ That differs from the stable MCP Apps spec in material ways:
 
 For web hosts, the spec requires a sandbox proxy between host and app content. allternit currently renders custom iframe content directly.
 
-- [`surfaces/ai.allternit.com/src/components/CapsuleFrame/`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/components/CapsuleFrame/) (relocated from `surfaces/platform/; currently empty)
+- [`surfaces/ai.allternit.com/src/components/CapsuleFrame/`](~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/components/CapsuleFrame/) (relocated from `surfaces/platform/; currently empty)
 
 The spec requires:
 
@@ -111,7 +111,7 @@ The spec requires:
 
 The platform already has a browser-side MCP client wrapper and can list resources, which is exactly the right place to extend for MCP Apps.
 
-- [`surfaces/ai.allternit.com/src/agent-workspace/`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/agent-workspace/) (MCP client code relocated from `surfaces/platform/src/lib/ai/mcp/`)
+- [`surfaces/ai.allternit.com/src/agent-workspace/`](~/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/agent-workspace/) (MCP client code relocated from `surfaces/platform/src/lib/ai/mcp/`)
 
 What is missing:
 
@@ -121,7 +121,7 @@ What is missing:
 
 ### 5. Parts of the UI are still stubs
 
-- [`surfaces/platform/src/views/CapsuleManagerView.tsx:1`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/src/views/CapsuleManagerView.tsx:1)
+- [`surfaces/platform/src/views/CapsuleManagerView.tsx:1`](~/Desktop/allternit-workspace/allternit/surfaces/platform/src/views/CapsuleManagerView.tsx:1)
 
 That view still uses a dummy capsule instead of a real MCP Apps host path.
 
@@ -154,7 +154,7 @@ Work:
 
 Artifacts:
 
-- [`surfaces/platform/src/lib/ai/mcp/apps.ts`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/src/lib/ai/mcp/apps.ts)
+- [`surfaces/platform/src/lib/ai/mcp/apps.ts`](~/Desktop/allternit-workspace/allternit/surfaces/platform/src/lib/ai/mcp/apps.ts)
 
 ### Phase 2: Backend resource bridge
 
@@ -170,8 +170,8 @@ Work:
 
 Likely files:
 
-- [`services/gateway/routing/src/mcp_bridge.rs`](/Users/macbook/Desktop/allternit-workspace/allternit/services/gateway/routing/src/mcp_bridge.rs)
-- [`services/gateway/routing/routing/src/tools_routes.rs`](/Users/macbook/Desktop/allternit-workspace/allternit/services/gateway/routing/routing/src/tools_routes.rs)
+- [`services/gateway/routing/src/mcp_bridge.rs`](~/Desktop/allternit-workspace/allternit/services/gateway/routing/src/mcp_bridge.rs)
+- [`services/gateway/routing/routing/src/tools_routes.rs`](~/Desktop/allternit-workspace/allternit/services/gateway/routing/routing/src/tools_routes.rs)
 
 ### Phase 3: Real host bridge on the platform surface
 
@@ -198,9 +198,9 @@ Work:
 
 Likely files:
 
-- [`surfaces/platform/src/lib/ai/mcp/mcp-client.ts`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/src/lib/ai/mcp/mcp-client.ts)
-- [`surfaces/platform/src/views/chat/ChatMessageParts.tsx`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/src/views/chat/ChatMessageParts.tsx)
-- [`surfaces/platform/src/views/chat/ChatMessageTypes.ts`](/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/src/views/chat/ChatMessageTypes.ts)
+- [`surfaces/platform/src/lib/ai/mcp/mcp-client.ts`](~/Desktop/allternit-workspace/allternit/surfaces/platform/src/lib/ai/mcp/mcp-client.ts)
+- [`surfaces/platform/src/views/chat/ChatMessageParts.tsx`](~/Desktop/allternit-workspace/allternit/surfaces/platform/src/views/chat/ChatMessageParts.tsx)
+- [`surfaces/platform/src/views/chat/ChatMessageTypes.ts`](~/Desktop/allternit-workspace/allternit/surfaces/platform/src/views/chat/ChatMessageTypes.ts)
 
 ### Phase 4: Web-safe sandbox proxy
 

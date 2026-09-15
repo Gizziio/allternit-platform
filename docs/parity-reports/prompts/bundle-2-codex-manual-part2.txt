@@ -1,4 +1,4 @@
-You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+You are a technical documentation writer working in `~/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
 
 Read the task spec at `docs/parity-reports/TASK_SPEC.md` for context.
 
@@ -16,7 +16,7 @@ Each page should:
 - Include concrete examples (TOML config, curl, CLI commands) where applicable.
 - If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
 
-Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+Do NOT edit `~/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
 
 When finished, write a report file `docs/parity-reports/codex-manual-part2.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
 

@@ -817,7 +817,7 @@ mod tests {
     ) -> (String, tokio::process::Child) {
         let temp = tempfile::tempdir().unwrap().keep();
         let bin = std::env::var("ALLTERNITOS_CONTROL_PLANE_BIN").unwrap_or_else(|_| {
-            "/Users/joe/Desktop/AllternitOS/target/debug/allternitos_control_plane".to_string()
+            "~/Desktop/AllternitOS/target/debug/allternitos_control_plane".to_string()
         });
         let db_path = temp.join("cp.db");
         let mut cmd = Command::new(&bin);
