@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-15 08:21 — grok — Isolate unpackaged desktop SQLite from the packaged app
+
+- **Session ID / Branch:** grok `01a0a52b` / `session/datadir-dev-0915`
+- **Agent:** grok
+- **Summary:** Merged PR #545 (`a6c20f1d5`) — unpackaged / `npm run dev` launches no longer share Electron userData with the installed app. Follow-up to fastload-0914's migration-mismatch churn.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/545 · `a6c20f1d5` / `8754ad358`
+- **How it works:** Unpackaged default userData is `<appData>/@allternit/desktop-dev`. `ALLTERNIT_USER_DATA_DIR` / `ALLTERNIT_DATA_DIR` win only when unpackaged (same rule as `ALLTERNIT_API_PORT`). Packaged and `--user-data-dir` unchanged.
+- **Verification:** desktop typecheck clean; vitest 155/155 (8 new in `desktop-data-dir.test.ts`).
+- **Outstanding work:** Packaged DMG not rebuilt (packaged path is a no-op). ACU/uvicorn, mesh 502, Clerk auth-renderer hiccup still deferred.
+- **Summary file:** [2026-09-15-0821-datadir-dev-0915-grok-desktop-data-dir.md](./summaries/2026-09-15-0821-datadir-dev-0915-grok-desktop-data-dir.md)
+
 ### 2026-09-14 21:51 — grok — Bot-computer live VNC + whisper-cli lipo on main
 
 - **Session ID / Branch:** grok `01a0a014` / `session/bot-computer-vnc-whisper-0915`
