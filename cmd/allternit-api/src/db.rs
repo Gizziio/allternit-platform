@@ -5,7 +5,7 @@ use tracing::info;
 
 mod embedded {
     use refinery::embed_migrations;
-    // V177__agent_secrets_photon_identity.sql
+    // V47__session_memory.sql (name must match production refinery history)
     embed_migrations!("migrations");
 }
 

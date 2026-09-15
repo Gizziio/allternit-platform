@@ -149,6 +149,23 @@ install_backup() {
   ssh_cmd "systemctl daemon-reload && systemctl enable --now allternit-desktop-backup.timer"
 }
 
+# V47 was applied as session_memory then the SQL file was edited/renamed.
+# All statements are CREATE IF NOT EXISTS, so deleting the history row lets
+# refinery re-apply and rewrite the checksum without touching data.
+repair_v47_checksum() {
+  local db="${DATA_DIR}/allternit.db"
+  if ! ssh_cmd "test -f ${db}"; then
+    return 0
+  fi
+  local name
+  name=$(ssh_cmd "sqlite3 ${db} \"SELECT name FROM refinery_schema_history WHERE version=47;\"")
+  if [ -z "${name}" ]; then
+    return 0
+  fi
+  log_warn "Re-recording V47 (${name}) so refinery checksum matches the binary. Tables use IF NOT EXISTS; no data drop."
+  ssh_cmd "sqlite3 ${db} \"DELETE FROM refinery_schema_history WHERE version=47;\""
+}
+
 start_service() {
   log_info "Starting allternit-api..."
   ssh_cmd "systemctl restart allternit-api"
@@ -184,5 +201,6 @@ install_env
 install_incus_certs
 install_service
 install_backup
+repair_v47_checksum
 start_service
 print_summary
