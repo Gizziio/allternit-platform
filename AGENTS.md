@@ -2,7 +2,17 @@
 
 > **STATUS:** Production-ready. 10 courses, 65 modules, 0 audit issues.
 >
-> **LAST UPDATED:** 2026-09-10
+> **LAST UPDATED:** 2026-09-14
+
+## Commandment: approved work lands on main — no stranded branches, no stale checkouts
+
+Eoj's rule, effective 2026-09-14: **if work is approved, it is merged to `origin/main` and every local checkout is refreshed before the session ends.** The 2026-09-14 incident: three local checkouts sat 475–1218 commits behind `origin/main` — the Fabric Transport UI had been reshaped and production had been broken and restored by merges that none of the local checkouts contained, so answers given from those checkouts described a product that no longer existed. Approved work that lives only on a `session/*` branch or in one machine's folder does not exist for anyone else.
+
+1. **Merge before you leave.** A session is not done at "PR open." Steps 5–6 of the session lifecycle below are mandatory: merge the PR (merge commit, not squash), then sync the shared checkout. An approved-but-unmerged PR is unfinished work, and the session summary must say so honestly.
+2. **No orphaned session branches.** After merge, delete the session branch local AND remote (lifecycle step 9). If you find a stale `session/*`/`ao/*`/`wip/*` branch — including ones that predate this rule — verify it is merged (`git branch --merged origin/main`) and delete it; if it is NOT merged, that is a red flag: surface it in `.steering/checkpoint.md` and to the owner before touching it.
+3. **Every long-lived checkout stays on `main`, fast-forwarded.** Machine checkouts (e.g. `allternit-main-check`, `allternit-ao-fabric-*`) live on a local `main` that tracks `origin/main`. First action when opening one for real work: `git fetch origin && git pull --ff-only`. Never start work from a detached HEAD, never from a branch a previous session left behind.
+4. **Check freshness before answering questions about the codebase.** If asked "what changed", "does X exist", or "why does X look different" — `git fetch origin` and compare `HEAD..origin/main` before answering. A stale checkout lies. State the SHA you based the answer on.
+5. **Worktrees are still the default for implementation** (see below) — this commandment is about where work ENDS: merged to `origin/main`, local checkouts fast-forwarded, session branches deleted.
 
 ## Commandment: desktop-v1.1.1 release lock
 
