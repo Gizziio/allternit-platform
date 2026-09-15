@@ -18,9 +18,10 @@ long-term support branches at this time.
 
 ## Scope notes
 
-- The hosted Allternit cloud backend (ai.allternit.com) is proprietary and
-  is not part of this repository; vulnerabilities in the hosted service
-  should be reported the same way and will be routed internally.
+- The agent workspace website (https://ai.allternit.com) is proprietary and
+  is not part of this repository. It is not Allternit Cloud. The cloud
+  console is https://platform.allternit.com. Vulnerabilities in those hosted
+  surfaces should be reported the same way and will be routed internally.
 - This repository must never contain real credentials, API keys, or tokens.
   Configuration is via environment variables; see each package's
   `.env.example` files. If you find a committed secret, report it

@@ -1,5 +1,9 @@
 /**
- * Canonical Allternit cloud hosts.
+ * Canonical Allternit production hosts.
+ *
+ * `ai` is the workspace website (https://ai.allternit.com) — not Allternit Cloud.
+ * `platform` is the cloud console (https://platform.allternit.com).
+ * `api` is the control plane (https://api.allternit.com).
  *
  * Single source of truth for production URLs. Do not hardcode these
  * hostnames elsewhere — import from here so a host change touches one file.

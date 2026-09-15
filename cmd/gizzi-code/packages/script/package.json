@@ -3,7 +3,7 @@
   "name": "@allternit/script",
   "version": "1.0.0",
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "exports": {
     ".": {
       "import": "./dist/index.js",

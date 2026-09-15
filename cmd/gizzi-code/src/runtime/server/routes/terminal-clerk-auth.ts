@@ -5,6 +5,7 @@ import open from "open"
 import { Log } from "@/shared/util/log"
 import { Auth } from "@/runtime/integrations/auth"
 import { errors } from "@/runtime/server/error"
+import { ALLTERNIT_WORKSPACE_URL } from "@/constants/allternit-auth"
 import { lazy } from "@/shared/util/lazy"
 
 const log = Log.create({ service: "terminal-clerk-auth" })
@@ -14,7 +15,7 @@ const SESSION_RETENTION_MS = 60 * 60 * 1000
 const DEFAULT_BRIDGE_PATH = "/terminal/clerk"
 
 const StartInput = z.object({
-  platformURL: z.string().min(1),
+  platformURL: z.string().min(1).optional(),
   bridgePath: z.string().optional(),
 })
 
@@ -224,7 +225,7 @@ export const TerminalClerkAuthRoutes = lazy(() =>
         cleanupSessions()
 
         const input = c.req.valid("json")
-        const platformURL = normalizePlatformURL(input.platformURL)
+        const platformURL = normalizePlatformURL(input.platformURL?.trim() || ALLTERNIT_WORKSPACE_URL)
         const bridgePath = normalizeBridgePath(input.bridgePath)
 
         const sessionID = crypto.randomUUID()

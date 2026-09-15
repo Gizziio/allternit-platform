@@ -1,20 +1,17 @@
-gizzi-code — attribution notices
-================================
+gizzi-code
+Copyright 2026 Allternit LLC
 
-This directory contains Allternit-original code and portions derived from
-Anthropic's Claude Code CLI.
+This product includes software developed by Allternit LLC.
 
-Derived portions
-----------------
-Portions of this software are derived from Anthropic's Claude Code.
-Copyright © Anthropic PBC. All rights reserved. Used under a basis to be
-confirmed by counsel. This NOTICE does not grant a license to those portions
-and does not relicense them under MIT.
+Licensed under the Apache License, Version 2.0. See LICENSE.
 
-Third-party packages
---------------------
-@anthropic-ai/sdk — MIT License, Copyright Anthropic PBC.
-color-diff-napi — see its package.json / license file.
+Trademarks: Allternit, Gizzi, Gizziio, and the A:// glyph are trademarks of
+Allternit LLC. Use of these marks is not granted by the Apache License,
+Version 2.0, except as required for reasonable and customary use in
+describing the origin of this software.
+
+Third-party npm packages (including @anthropic-ai/sdk and other dependencies)
+remain under their own licenses. See each package's LICENSE / package.json.
 
 Nominative / protocol references that remain in the source (API hosts,
 OAuth URLs, model names, package names of real dependencies) are listed in

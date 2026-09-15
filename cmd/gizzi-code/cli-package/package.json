@@ -19,7 +19,7 @@
     "url": "https://github.com/Gizziio/allternit-platform.git",
     "directory": "cmd/gizzi-code/cli-package"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Allternit Technologies <team@allternit.io>",
   "type": "module",
   "main": "./dist/gizzi.js",

@@ -3,7 +3,7 @@ Version:        2.0.7
 Release:        1%{?dist}
 Summary:        AI-powered terminal interface for the Allternit ecosystem
 
-License:        MIT
+License:        Apache-2.0
 URL:            https://docs.gizziio.com
 # Binary release asset (version-named tarball, tag gizzi-code/v%{version})
 Source0:        https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v%{version}/gizzi-code-v%{version}-linux-x64.tar.gz

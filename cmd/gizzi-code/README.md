@@ -111,4 +111,4 @@ or `GIZZI_TELEMETRY=off`. Full field-level inventory: [docs/telemetry.md](./docs
 
 ## License
 
-MIT
+Apache License 2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).
