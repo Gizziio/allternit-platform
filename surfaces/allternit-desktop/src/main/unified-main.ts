@@ -1291,8 +1291,8 @@ async function initializeBundledMode(): Promise<void> {
     let mainWindowLoaded = false;
     let folderGrantsDone = false;
     let splashClosed = false;
-    const maybeCloseSplash = () => {
-      if (splashClosed || !mainWindowLoaded || !folderGrantsDone || folderGrantsPending) return;
+    const maybeCloseSplash = (force = false) => {
+      if (splashClosed || (!force && (!mainWindowLoaded || !folderGrantsDone || folderGrantsPending))) return;
       splashClosed = true;
       clearTimeout(splashForceClose);
       // Brief beat so the 'Ready' state paints before the window swaps.
@@ -1304,10 +1304,12 @@ async function initializeBundledMode(): Promise<void> {
       }, 150);
     };
     const splashForceClose = setTimeout(() => {
+      // The force-close must win over a still-pending grant prompt, or the
+      // always-on-top splash would sit on top of the loaded app forever when
+      // the user walks away from the dialog. Ungranted profiles are simply
+      // re-asked on the next launch.
       log.warn('[Main] Splash force-close timer fired (window load or folder grants still pending)');
-      mainWindowLoaded = true;
-      folderGrantsDone = true;
-      maybeCloseSplash();
+      maybeCloseSplash(true);
     }, 15_000);
 
     // Log loading events for debugging
