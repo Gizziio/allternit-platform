@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Allternit Docs \u2014 GenOffice-powered document editor surface",
   "scripts": {
-    "dev": "vite --port 3014",
+    "dev": "vite --port 3014 --strictPort",
     "build": "vite build",
-    "preview": "vite preview --port 3014",
+    "preview": "vite preview --port 3014 --strictPort",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

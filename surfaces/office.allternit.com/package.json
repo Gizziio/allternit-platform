@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Allternit Office — standalone web surface for Docs, Sheets, Slides, PDF, and Sign",
   "scripts": {
-    "dev": "vite --port 3015",
+    "dev": "vite --port 3015 --strictPort",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 vite build",
-    "preview": "vite preview --port 3015",
+    "preview": "vite preview --port 3015 --strictPort",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import atexit
 import logging
 import os
 import platform
@@ -122,13 +123,19 @@ def launch_chrome(cfg: BrowserCDPConfig) -> subprocess.Popen:
 
     sys_platform = platform.system().lower()
     kwargs: dict = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
-    if sys_platform != "windows" and hasattr(os, "setsid"):
-        kwargs["preexec_fn"] = os.setsid
-    elif sys_platform == "windows":
+    if sys_platform == "windows":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
 
     logger.info("[cdp-bootstrap] launching Chrome: %s", chrome)
     return subprocess.Popen(args, **kwargs)
+
+
+def _terminate_best_effort(proc: subprocess.Popen) -> None:
+    """Terminate a launched process; never raise from cleanup."""
+    try:
+        proc.terminate()
+    except OSError:
+        pass
 
 
 def wait_for_cdp(port: int, timeout: float = 20.0) -> bool:
@@ -166,16 +173,28 @@ async def bootstrap_browser_cdp(
     cfg = cfg or BrowserCDPConfig()
     executor = ComputerUseExecutor()
 
+    # Keep the handle of a Chrome we launched so it dies with this process:
+    # no setsid (it would reparent to init and outlive the session), an atexit
+    # terminate as the normal-exit backstop, and a best-effort terminate on any
+    # bootstrap failure below.
+    proc: Optional[subprocess.Popen] = None
     if not is_cdp_reachable(cfg.port):
         logger.info("[cdp-bootstrap] CDP port %d not reachable — launching Chrome", cfg.port)
-        launch_chrome(cfg)
+        proc = launch_chrome(cfg)
+        atexit.register(proc.terminate)
         if not wait_for_cdp(cfg.port):
+            _terminate_best_effort(proc)
             raise RuntimeError(f"Chrome did not open CDP port {cfg.port} within 20s")
     else:
         logger.info("[cdp-bootstrap] CDP port %d already reachable", cfg.port)
 
-    adapter = PlaywrightCDPAdapter(port=cfg.port)
-    await adapter.initialize()
+    try:
+        adapter = PlaywrightCDPAdapter(port=cfg.port)
+        await adapter.initialize()
+    except BaseException:
+        if proc is not None:
+            _terminate_best_effort(proc)
+        raise
     executor.register("browser.cdp", adapter)
     logger.info("[cdp-bootstrap] ready — adapter registered as browser.cdp")
     return executor

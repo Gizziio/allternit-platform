@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import atexit
 import logging
 import os
 import platform
@@ -117,13 +118,19 @@ def launch_electron_app(cfg: ElectronAppConfig) -> subprocess.Popen:
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
     }
-    if sys_platform != "windows" and hasattr(os, "setsid"):
-        kwargs["preexec_fn"] = os.setsid
-    elif sys_platform == "windows":
+    if sys_platform == "windows":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
 
     logger.info("[electron-bootstrap] launching: %s --remote-debugging-port=%d", exe, cfg.port)
     return subprocess.Popen(args, **kwargs)
+
+
+def _terminate_best_effort(proc: subprocess.Popen) -> None:
+    """Terminate a launched process; never raise from cleanup."""
+    try:
+        proc.terminate()
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -157,23 +164,35 @@ async def bootstrap_electron_app(
 
     executor = ComputerUseExecutor()
 
+    # Keep the handle of an app we launched so it dies with this process:
+    # no setsid (it would reparent to init and outlive the session), an atexit
+    # terminate as the normal-exit backstop, and a best-effort terminate on any
+    # bootstrap failure below.
+    proc: Optional[subprocess.Popen] = None
     if not is_cdp_reachable(cfg.port):
         if not cfg.app_path:
             raise RuntimeError(
                 f"CDP port {cfg.port} not reachable and no app_path provided. "
                 "Either launch the Electron app manually or provide app_path."
             )
-        launch_electron_app(cfg)
+        proc = launch_electron_app(cfg)
+        atexit.register(proc.terminate)
         logger.info("[electron-bootstrap] waiting for CDP port %d...", cfg.port)
         if not wait_for_cdp(cfg.port, timeout=cfg.startup_timeout):
+            _terminate_best_effort(proc)
             raise RuntimeError(
                 f"Electron app did not open CDP port {cfg.port} within {cfg.startup_timeout}s"
             )
     else:
         logger.info("[electron-bootstrap] CDP port %d already reachable", cfg.port)
 
-    adapter = PlaywrightCDPAdapter(port=cfg.port)
-    await adapter.initialize()
+    try:
+        adapter = PlaywrightCDPAdapter(port=cfg.port)
+        await adapter.initialize()
+    except BaseException:
+        if proc is not None:
+            _terminate_best_effort(proc)
+        raise
     executor.register("browser.cdp", adapter)
     logger.info("[electron-bootstrap] ready — Electron app attached via browser.cdp")
     return executor

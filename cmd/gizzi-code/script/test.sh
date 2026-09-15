@@ -47,4 +47,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-exec bun test --preload ./test/preload.ts --isolate --timeout 30000 "$@"
+# Outer bound on the whole run even if bun's per-test --timeout never fires
+# (SMOKE_TIMEOUT_SECONDS, default 900s). timeout's exit 124 fails the script.
+SMOKE_TIMEOUT_SECONDS="${SMOKE_TIMEOUT_SECONDS:-900}"
+
+if command -v timeout >/dev/null 2>&1; then
+  exec timeout "$SMOKE_TIMEOUT_SECONDS" bun test --preload ./test/preload.ts --isolate --timeout 30000 "$@"
+else
+  exec perl -e 'alarm shift; exec @ARGV' -- "$SMOKE_TIMEOUT_SECONDS" bun test --preload ./test/preload.ts --isolate --timeout 30000 "$@"
+fi
