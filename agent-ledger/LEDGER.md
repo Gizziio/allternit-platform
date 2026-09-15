@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 21:51 — grok — Bot-computer live VNC + whisper-cli lipo on main
+
+- **Session ID / Branch:** grok `01a0a014` / `session/bot-computer-vnc-whisper-0915`
+- **Agent:** grok
+- **Summary:** Merged PR #534 (`655236401`) — dedicated computer window keeps the VNC claim (priority across heaps, no token-rotation reconnect storm, keep last frame on 429). macOS release lipos whisper-cli arm64+x86_64.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/534 · `655236401`
+- **How it works:** `noteRemoteClaim` only yields to a higher-priority layout; `vncEndpointKey` ignores `token=`. Window screenshot poll is 8s while VNC is connecting. `build-whisper.sh <arch>` + lipo in `release-desktop.yml`.
+- **Verification:** vnc tests 9/9; release-preflight 52/0; Desktop CI + Pages green.
+- **Outstanding work:** Notarization still blocked on missing `APPLE_*`. No new signed `desktop-v*` tag from this merge.
+- **Summary file:** [2026-09-14-2151-01a0a014-grok-bot-computer-vnc-whisper.md](./summaries/2026-09-14-2151-01a0a014-grok-bot-computer-vnc-whisper.md)
+
 ### 2026-09-14 21:40 — grok — Lume + mux now required in the desktop production package
 
 - **Session ID / Branch:** grok `01a0a014` / `session/desktop-lume-mux-contract-0914`
