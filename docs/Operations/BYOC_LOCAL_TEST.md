@@ -5,7 +5,7 @@
 **Local Backend:**
 - URL: http://localhost:4096
 - Username: `gizzi`
-- Password: `c5d4656e7f3753bc0d8996d4dbebf48cecbd7362be06e60f`
+- Password: `<rotated-see-vault>`
 
 **Public Tunnel (for the Cloudflare Pages frontend):**
 - URL: https://molecules-dsc-specifications-dangerous.trycloudflare.com
