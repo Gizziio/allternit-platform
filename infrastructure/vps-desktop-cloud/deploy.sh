@@ -158,8 +158,8 @@ repair_collision_checksums() {
   if ! ssh_cmd "test -f ${db}"; then
     return 0
   fi
-  log_warn "Re-recording V47/V83/V86/V93 checksums (IF NOT EXISTS; no data drop)."
-  ssh_cmd "sqlite3 ${db} \"DELETE FROM refinery_schema_history WHERE version IN (47, 83, 86, 93);\""
+  log_warn "Re-recording collision versions in refinery history (IF NOT EXISTS; no data drop)."
+  ssh_cmd "sqlite3 ${db} \"DELETE FROM refinery_schema_history WHERE version IN (47, 83, 86, 87, 88, 93);\""
 }
 
 start_service() {
