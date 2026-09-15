@@ -4,6 +4,8 @@
  * Spawns and manages the unified Rust API backend.
  *   - Rust API on port 8013 (allternit-api binary) in the packaged app,
  *     port 18013 in dev launches (see API_PORT below)
+ *   - SQLite under userData/allternit; unpackaged isolates to
+ *     @allternit/desktop-dev (see desktop-data-dir.ts)
  *
  * The legacy Python gateway and Memory Agent sidecars have been removed;
  * the Rust API now proxies directly to Gizzi (port 4096).
@@ -19,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import log from 'electron-log';
 import { PORTS, URLS, webhookReceiverUrl } from './config.js';
+import { resolveApiDataDir } from './desktop-data-dir.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -224,8 +227,13 @@ export class BackendManager {
     // (non-desktop deployments) the endpoints are disabled, not open.
     this.desktopAccessToken = crypto.randomBytes(32).toString('hex');
 
-    const dataDir = path.join(app.getPath('userData'), 'allternit');
+    const dataDir = resolveApiDataDir({
+      isPackaged: app.isPackaged,
+      userData: app.getPath('userData'),
+      envDataDir: process.env.ALLTERNIT_DATA_DIR,
+    });
     fs.mkdirSync(dataDir, { recursive: true });
+    log.info(`[BackendManager] ALLTERNIT_DATA_DIR=${dataDir}`);
 
     const vmDir = path.join(process.resourcesPath ?? '', 'vm');
 
