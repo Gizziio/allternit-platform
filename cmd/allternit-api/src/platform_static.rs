@@ -39,17 +39,12 @@ pub fn resolve_static_path() -> PathBuf {
         if packaged.exists() {
             return packaged;
         }
-        let ai_dist = root.join("surfaces/ai.allternit.com/dist");
-        if ai_dist.exists() {
-            return ai_dist;
-        }
-        let ai_out = root.join("surfaces/ai.allternit.com/out");
-        if ai_out.exists() {
-            return ai_out;
-        }
-        let legacy = root.join("surfaces/platform/out");
-        if legacy.exists() {
-            return legacy;
+        // Dev: sibling private checkout of Gizziio/allternit-ai, or CI .hosted-ui
+        for rel in ["../allternit-ai/dist", ".hosted-ui/dist"] {
+            let p = root.join(rel);
+            if p.exists() {
+                return p;
+            }
         }
     }
     PathBuf::from("./resources/platform")

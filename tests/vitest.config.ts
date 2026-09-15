@@ -7,9 +7,7 @@ const repoRoot = path.resolve(__dirname, '..');
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@': path.resolve(repoRoot, 'surfaces/ai.allternit.com/src'),
-    },
+    alias: {},
   },
   test: {
     globals: true,
@@ -22,6 +20,9 @@ export default defineConfig({
     exclude: [
       'node_modules',
       'dist',
+      // Workspace UI tests live in Gizziio/allternit-ai now.
+      'integration/cowork-team.test.ts',
+      'integration/intelli-schedule.test.ts',
     ],
     testTimeout: 30000,
     hookTimeout: 10000,

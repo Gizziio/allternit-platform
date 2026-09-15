@@ -8,9 +8,6 @@ on:
       - 'cmd/allternit-computer-cloud/**'
       - 'cmd/allternit-mux/**'
       - 'infrastructure/vps-desktop-cloud/**'
-      - 'surfaces/ai.allternit.com/src/views/desktop-cloud/**'
-      - 'surfaces/ai.allternit.com/src/lib/desktop-cloud-api.ts'
-      - 'surfaces/ai.allternit.com/tests/desktop-cloud.spec.ts'
       - '.github/workflows/deploy-desktop-cloud-vps.yml'
   workflow_dispatch:
 

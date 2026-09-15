@@ -6,14 +6,16 @@
 #   ./scripts/build-cloudflare-ai.sh [--no-zip]
 #
 # Outputs:
-#   surfaces/ai.allternit.com/dist/        (static export)
-#   allternit-websites/projects/ai.allternit.com/deploy.zip
+#   <allternit-ai>/dist/        (static export)
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLATFORM_DIR="$REPO_ROOT/surfaces/ai.allternit.com"
+# shellcheck source=hosted-ui.sh
+. "$REPO_ROOT/scripts/hosted-ui.sh"
+PLATFORM_DIR="$(resolve_hosted_ui "$REPO_ROOT")"
+link_oss_platform "$PLATFORM_DIR" "$REPO_ROOT"
 WEBSITES_DIR="$HOME/Desktop/allternit-websites/projects/ai.allternit.com"
 
 CREATE_ZIP=true

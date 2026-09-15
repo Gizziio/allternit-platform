@@ -11,7 +11,8 @@ set -e
 # Detect directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PLATFORM_DIR="$WORKSPACE_ROOT/surfaces/ai.allternit.com"
+# shellcheck source=hosted-ui.sh
+. "$SCRIPT_DIR/hosted-ui.sh"
 API_DIR="$WORKSPACE_ROOT/cmd/allternit-api"
 GIZZI_DIR="$WORKSPACE_ROOT/cmd/gizzi-code"
 DESKTOP_DIR="$WORKSPACE_ROOT/surfaces/allternit-desktop"
@@ -45,7 +46,9 @@ cd "$WORKSPACE_ROOT"
 # legacy Next.js standalone server build is skipped because the platform is
 # now a Vite app and the standalone output is no longer consumed.
 if [ "$SKIP_PLATFORM" = false ]; then
-  step "Building platform static export (Vite)…"
+  step "Building workspace UI (ai.allternit.com)…"
+  PLATFORM_DIR="$(resolve_hosted_ui "$WORKSPACE_ROOT")" || die "ai.allternit.com UI not found"
+  link_oss_platform "$PLATFORM_DIR" "$WORKSPACE_ROOT"
   cd "$PLATFORM_DIR"
   NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH=1 pnpm run build
   

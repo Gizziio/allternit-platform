@@ -1,5 +1,10 @@
 name: Release Allternit Desktop
 
+# Workspace UI is built from private Gizziio/allternit-ai via
+# .github/actions/build-hosted-ui. Repo secret ALLTERNIT_AI_CHECKOUT_TOKEN
+# must be a PAT (or GitHub App token) with read access to that repo.
+# Do not package surfaces/platform.allternit.com — that is the cloud console.
+
 on:
   push:
     tags: ['desktop-v*']
@@ -109,27 +114,11 @@ jobs:
         with:
           key: allternit-api-macos
 
-      # ── Step 1: Build Next.js platform as standalone server ──────────────────
-      - name: Install platform dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: surfaces/ai.allternit.com
-
-      - name: Build platform static export for desktop
-        env:
-          # The platform bundle is multi-GB of chunks; default node heap can
-          # OOM on runners (observed as the Linux build failure).
-          NODE_OPTIONS: --max-old-space-size=8192
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build:cloudflare
-        working-directory: surfaces/ai.allternit.com
-
-      - name: Copy static export to desktop resources
-        run: |
-          DEST=surfaces/allternit-desktop/resources/platform
-          rm -rf "$DEST"
-          mkdir -p "$DEST"
-          cp -r surfaces/ai.allternit.com/dist/. "$DEST/"
+      # ── Step 1: Build workspace UI from private Gizziio/allternit-ai ────────
+      - name: Build workspace UI (ai.allternit.com)
+        uses: ./.github/actions/build-hosted-ui
+        with:
+          token: ${{ secrets.ALLTERNIT_AI_CHECKOUT_TOKEN }}
 
       # ── Step 2: Build gizzi-code (AI runtime — the brain) ───────────────────
       - name: Setup Bun
@@ -428,28 +417,10 @@ jobs:
           mkdir -p surfaces/allternit-desktop/resources/bin
           cp cmd/gizzi-code/dist/gizzi-code-win32-x64.exe surfaces/allternit-desktop/resources/bin/gizzi-code.exe
 
-      - name: Install platform dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: surfaces/ai.allternit.com
-
-      - name: Build platform static export for desktop
-        shell: bash
-        env:
-          # The platform bundle is multi-GB of chunks; default node heap can
-          # OOM on runners (observed as the Linux build failure).
-          NODE_OPTIONS: --max-old-space-size=8192
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build:cloudflare
-        working-directory: surfaces/ai.allternit.com
-
-      - name: Copy static export to desktop resources
-        shell: bash
-        run: |
-          DEST=surfaces/allternit-desktop/resources/platform
-          rm -rf "$DEST"
-          mkdir -p "$DEST"
-          cp -r surfaces/ai.allternit.com/dist/. "$DEST/"
+      - name: Build workspace UI (ai.allternit.com)
+        uses: ./.github/actions/build-hosted-ui
+        with:
+          token: ${{ secrets.ALLTERNIT_AI_CHECKOUT_TOKEN }}
 
       - name: Build allternit-api (Windows)
         run: cargo build --release --target x86_64-pc-windows-msvc --manifest-path cmd/allternit-api/Cargo.toml
@@ -619,26 +590,10 @@ jobs:
           cp cmd/gizzi-code/dist/gizzi-code-linux-x64 surfaces/allternit-desktop/resources/bin/gizzi-code
           chmod +x surfaces/allternit-desktop/resources/bin/gizzi-code
 
-      - name: Install platform dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: surfaces/ai.allternit.com
-
-      - name: Build platform static export for desktop
-        env:
-          # The platform bundle is multi-GB of chunks; default node heap can
-          # OOM on runners (observed as the Linux build failure).
-          NODE_OPTIONS: --max-old-space-size=8192
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build:cloudflare
-        working-directory: surfaces/ai.allternit.com
-
-      - name: Copy static export to desktop resources
-        run: |
-          DEST=surfaces/allternit-desktop/resources/platform
-          rm -rf "$DEST"
-          mkdir -p "$DEST"
-          cp -r surfaces/ai.allternit.com/dist/. "$DEST/"
+      - name: Build workspace UI (ai.allternit.com)
+        uses: ./.github/actions/build-hosted-ui
+        with:
+          token: ${{ secrets.ALLTERNIT_AI_CHECKOUT_TOKEN }}
 
       - name: Install protobuf compiler
         # prost-build (transitive dep of allternit-api) shells out to protoc;
