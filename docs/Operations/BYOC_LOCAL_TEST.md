@@ -15,7 +15,7 @@
 
 ### 1. Test Backend Health
 ```bash
-curl -u "gizzi:c5d4656e7f3753bc0d8996d4dbebf48cecbd7362be06e60f" \
+curl -u "gizzi:<rotated-see-vault>" \
   https://molecules-dsc-specifications-dangerous.trycloudflare.com/v1/global/health
 ```
 
@@ -48,7 +48,7 @@ localStorage.setItem('allternit.runtime-backend.snapshot', JSON.stringify({
   source: 'user-preference',
   gateway_url: 'https://molecules-dsc-specifications-dangerous.trycloudflare.com',
   gateway_ws_url: 'wss://molecules-dsc-specifications-dangerous.trycloudflare.com',
-  gateway_token: 'Basic ' + btoa('gizzi:c5d4656e7f3753bc0d8996d4dbebf48cecbd7362be06e60f'),
+  gateway_token: 'Basic ' + btoa('gizzi:<rotated-see-vault>'),
   fetched_at: new Date().toISOString()
 }));
 window.location.reload();
