@@ -20,7 +20,7 @@ export default defineConfig({
   webServer: {
     command: 'pnpm --dir ../ai.allternit.com exec vite --port 3013 --strictPort',
     url: 'http://localhost:3013',
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
 });

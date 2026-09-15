@@ -29,6 +29,13 @@ pnpm dev
 
 The dev server runs on `http://localhost:3016`.
 
+### Preview hygiene
+
+Start previews in the foreground and kill them before ending a session.
+`pnpm preview` binds 3016 with `--strictPort`, so a second preview now fails
+fast instead of silently stacking on another port. Sessions that leave
+orphaned processes behind are reaped by the workspace janitor after 12h.
+
 ### Skip auth in local dev
 
 If you are working on UI that does not need Clerk, set in `.env.local`:

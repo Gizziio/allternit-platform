@@ -60,12 +60,22 @@ echo "=== gizzi-code smoke tests ==="
 echo "entries: ${#entries[@]}  (quarantined, not run: $quar_count)"
 echo
 
-bun test --preload ./test/preload.ts --timeout 30000 "${entries[@]}"
+# Outer bound on the whole run: even if bun's per-test --timeout never fires,
+# the run fails after SMOKE_TIMEOUT_SECONDS (default 900s).
+SMOKE_TIMEOUT_SECONDS="${SMOKE_TIMEOUT_SECONDS:-900}"
+
+if command -v timeout >/dev/null 2>&1; then
+  timeout "$SMOKE_TIMEOUT_SECONDS" bun test --preload ./test/preload.ts --timeout 30000 "${entries[@]}"
+else
+  perl -e 'alarm shift; exec @ARGV' -- "$SMOKE_TIMEOUT_SECONDS" bun test --preload ./test/preload.ts --timeout 30000 "${entries[@]}"
+fi
 rc=$?
 
 echo
 if [ $rc -eq 0 ]; then
   echo "SMOKE PASS: ${#entries[@]} entries green"
+elif [ $rc -eq 124 ]; then
+  echo "SMOKE FAIL: timed out after ${SMOKE_TIMEOUT_SECONDS}s" >&2
 else
   echo "SMOKE FAIL: bun test exited $rc" >&2
 fi

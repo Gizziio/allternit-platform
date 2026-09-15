@@ -13,7 +13,7 @@
   },
   "scripts": {
     "postinstall": "test -f prisma/schema.prisma && prisma generate --schema=./prisma/schema.prisma || true",
-    "dev": "bash ../../services/open-notebook/dev.sh; vite --port 3013",
+    "dev": "bash ../../services/open-notebook/dev.sh; vite --port 3013 --strictPort",
     "dev:clean": "rm -rf dist && bash ../../services/open-notebook/dev.sh; vite --port 3013",
     "dev:research": "bash ../../services/open-notebook/dev.sh",
     "build": "vite build",
@@ -21,7 +21,7 @@
     "build:desktop-server": "vite build && node scripts/build-desktop-server.cjs",
     "analyze": "ANALYZE=1 vite build",
     "start": "vite preview --port 3013",
-    "preview": "vite build && vite preview --port 3013",
+    "preview": "vite build && vite preview --port 3013 --strictPort",
     "typecheck": "NODE_OPTIONS=--max-old-space-size=4096 pnpm exec tsc --noEmit",
     "typecheck:fast": "NODE_OPTIONS=--max-old-space-size=4096 pnpm exec tsc --project tsconfig.typecheck.json --noEmit",
     "audit:theme:shell": "node scripts/audit-shell-theme.mjs",

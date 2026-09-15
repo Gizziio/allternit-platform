@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Allternit Platform Cloud Console — orgs, billing, compute, API keys, docs",
   "scripts": {
-    "dev": "vite --port 3016",
+    "dev": "vite --port 3016 --strictPort",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 vite build && node scripts/postbuild.mjs",
-    "preview": "vite preview --port 3016",
+    "preview": "vite preview --port 3016 --strictPort",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
