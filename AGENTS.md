@@ -2,7 +2,7 @@
 
 > **STATUS:** Production-ready. 10 courses, 65 modules, 0 audit issues.
 >
-> **LAST UPDATED:** 2026-09-14
+> **LAST UPDATED:** 2026-09-14 (disk hygiene added)
 
 ## Commandment: approved work lands on main — no stranded branches, no stale checkouts
 
@@ -13,6 +13,16 @@ Eoj's rule, effective 2026-09-14: **if work is approved, it is merged to `origin
 3. **Every long-lived checkout stays on `main`, fast-forwarded.** Machine checkouts (e.g. `allternit-main-check`, `allternit-ao-fabric-*`) live on a local `main` that tracks `origin/main`. First action when opening one for real work: `git fetch origin && git pull --ff-only`. Never start work from a detached HEAD, never from a branch a previous session left behind.
 4. **Check freshness before answering questions about the codebase.** If asked "what changed", "does X exist", or "why does X look different" — `git fetch origin` and compare `HEAD..origin/main` before answering. A stale checkout lies. State the SHA you based the answer on.
 5. **Worktrees are still the default for implementation** (see below) — this commandment is about where work ENDS: merged to `origin/main`, local checkouts fast-forwarded, session branches deleted.
+
+## Commandment: disk hygiene — shared build dirs, teardown cleanup, no orphaned artifacts
+
+The 2026-09-14 audit found **234 GB** in `~/Desktop/allternit-workspace`: a 42 GB Rust `target/` in the main clone, a 24 GB `target/` left behind by one dead session worktree, ~9 GB `node_modules` per worktree, and 19 GB of desktop DMGs — with macOS swap squeezed at 77% disk full. Dep/build artifacts are reproducible; keeping them is never worth the space. Rules:
+
+1. **Shared Rust target dir.** Every session exports `CARGO_TARGET_DIR="$HOME/Desktop/allternit-workspace/.shared-target"` (created on first use) before running cargo. One physical build cache for the whole workspace; cargo's file lock serializes concurrent builds across sessions (this also caps the rustc-process RAM spikes). Never `cargo clean` the shared dir to "fix" a build — diagnose instead.
+2. **pnpm only.** Worktrees install deps with `pnpm install` only. Never `npm install` / `npm ci` in a worktree — it physically duplicates what the pnpm global store already hardlinks. (Root uses pnpm 10 via `packageManager` in `package.json`.)
+3. **Teardown cleanup is part of step 9.** Before `git worktree remove`, the session deletes its own `node_modules/`, `target/` (never the shared one), `release/`, and `dist/` directories — all reproducible from lockfiles. A worktree is not "removed" until its artifacts are.
+4. **Desktop artifacts:** `surfaces/allternit-desktop` keeps exactly one verified DMG plus the current sidecar set in `resources/bin/`. Older DMGs and stale `release/` outputs are deleted once the new bundle is verified (lifecycle step 8) — not archived locally.
+5. **Session-start disk gate.** Before creating a session worktree, check free disk (`df -h`). If the workspace is over 150 GB or free space is under 50 GB, stop and surface it: cleanup is the task, not a side effect. Growth without cleanup is how the 234 GB happened.
 
 ## Commandment: desktop-v1.1.1 release lock
 
