@@ -32,9 +32,8 @@ import {
   hasTelemetryNoticeBeenShown,
   markTelemetryNoticeShown,
 } from "@/shared/utils/telemetrySettings"
-import { getActiveSubsystems, getHarnessMode, shouldUseHarness } from "@/cli/ui/ink-app/utils/feature-flags"
+import { getActiveSubsystems, getHarnessMode, shouldUseHarness, getIsInteractive } from "@/cli/feature-flags"
 import { Workspace } from "@/runtime/workspace/workspace"
-import { getIsInteractive } from "@/cli/ui/ink-app/utils/feature-flags"
 // ResolveMessage is a global class from bun-types
 declare class ResolveMessage {
   readonly name: "ResolveMessage"
