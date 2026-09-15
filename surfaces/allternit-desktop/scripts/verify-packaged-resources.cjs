@@ -31,6 +31,7 @@ const localEngineName = process.platform === 'win32' ? 'allternit-local-engine.e
 const gizziName = process.platform === 'win32' ? 'gizzi-code.exe' : 'gizzi-code';
 const voiceName = process.platform === 'win32' ? 'allternit-voice-service.exe' : 'allternit-voice-service';
 const whisperName = process.platform === 'win32' ? 'whisper-cli.exe' : 'whisper-cli';
+const muxName = process.platform === 'win32' ? 'allternit-mux.exe' : 'allternit-mux';
 
 const required = [
   {
@@ -57,6 +58,11 @@ const required = [
     path: path.join(resourcesDir, 'bin', whisperName),
     label: 'whisper-cli (local STT engine)',
     buildStep: 'services/voice/build-whisper.sh (via scripts/build-desktop.sh)',
+  },
+  {
+    path: path.join(resourcesDir, 'bin', muxName),
+    label: 'allternit-mux (PTY daemon gizzi auto-spawns for /pty)',
+    buildStep: 'npm run prepare:mux (or scripts/build-desktop.sh)',
   },
   {
     path: path.join(resourcesDir, 'platform', 'index.html'),
@@ -104,6 +110,36 @@ for (const item of required) {
     `    Expected at: ${item.path}\n` +
     `    Build it with: ${item.buildStep}\n`
   );
+}
+
+
+if (process.platform === 'darwin') {
+  const hostArch = process.arch === 'arm64' ? 'arm64' : 'x64';
+  const lumeArchs = process.env.ALLTERNIT_LUME_ARCHS
+    ? process.env.ALLTERNIT_LUME_ARCHS.split(/[,\s]+/).filter(Boolean)
+    : ['arm64', 'x64'];
+  for (const arch of lumeArchs) {
+    const launcher = path.join(resourcesDir, 'lume', arch, 'lume');
+    const realBin = path.join(resourcesDir, 'lume', arch, 'lume.app', 'Contents', 'MacOS', 'lume');
+    const launcherOk = fs.existsSync(launcher);
+    let realOk = false;
+    try {
+      realOk = fs.existsSync(realBin) && fs.statSync(realBin).size > 1024 * 1024;
+    } catch {
+      realOk = false;
+    }
+    if (launcherOk && realOk) {
+      log(`✓ Lume ${arch} (${fs.statSync(realBin).size} bytes) (${realBin})`);
+    } else {
+      failed = true;
+      process.stderr.write(
+        `[verify-packaged-resources] ✗ Missing Lume ${arch} (launcher + lume.app Mach-O)\n` +
+        `    Expected launcher: ${launcher}\n` +
+        `    Expected binary:   ${realBin} (>1MB)\n` +
+        '    Build it with: npm run prepare:lume\n'
+      );
+    }
+  }
 }
 
 const catalogFiles = fs.existsSync(connectorCatalogDir)

@@ -155,6 +155,10 @@ fi
 # ── 4. Download Lume Virtualization (macOS) ──────────────────────────────────
 if [[ "$OSTYPE" == "darwin"* ]]; then
   step "Downloading Lume virtualization binary…"
+  if [ -f "$DESKTOP_DIR/scripts/prepare-lume.cjs" ]; then
+    (cd "$DESKTOP_DIR" && node scripts/prepare-lume.cjs) || die "prepare-lume.cjs failed"
+    ok "Lume staged via prepare-lume.cjs"
+  else
   LUME_VERSION="v0.3.9"
   # Strip the 'v' for the filename
   LUME_VER_SHORT=${LUME_VERSION#v}
@@ -177,6 +181,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     ok "Lume → $RESOURCES_DIR/bin/lume"
   else
     ok "Lume already present at $RESOURCES_DIR/bin/lume"
+  fi
   fi
 fi
 
