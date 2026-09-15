@@ -1,5 +1,5 @@
 import chalk from '@/shared/util/chalk'
-import { supportsHyperlinks } from '../../cli/ui/ink-renderer/supports-hyperlinks.js'
+import { supportsHyperlinks } from '../../cli/ui/ink-app/ink/supports-hyperlinks.js'
 
 // OSC 8 hyperlink escape sequences
 // Format: \e]8;;URL\e\\TEXT\e]8;;\e\\

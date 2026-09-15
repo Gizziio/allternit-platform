@@ -1,3 +1,3 @@
 // @ts-nocheck
-export type { ClickEvent } from '../../cli/ui/ink-renderer/events/click-event.js'
-export { ClickEvent } from '../../cli/ui/ink-renderer/events/click-event.js'
+export type { ClickEvent } from '../../cli/ui/ink-app/ink/events/click-event.js'
+export { ClickEvent } from '../../cli/ui/ink-app/ink/events/click-event.js'

@@ -3,7 +3,7 @@ import {
   formatPastedTextRef,
   getPastedTextRefNumLines,
 } from '../../cli/ui/ink-app/components/history.js'
-import instances from '../../cli/ui/ink-renderer/instances.js'
+import instances from '../../cli/ui/ink-app/ink/instances.js'
 import type { PastedContent } from './config.js'
 import { classifyGuiEditor, getExternalEditor } from './editor.js'
 import { execSync_DEPRECATED } from './execSyncWrapper.js'
