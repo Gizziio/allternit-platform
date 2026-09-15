@@ -15,7 +15,7 @@ export interface ViewRegistry {
   create: (ctx: ViewContext) => ViewInstance;
 }
 
-export function createViewRegistry(map: Record<ViewType, React.ComponentType<{ context?: ViewContext }>>): ViewRegistry {
+export function createViewRegistry(map: Partial<Record<ViewType, React.ComponentType<{ context?: ViewContext }>>>): ViewRegistry {
   return {
     create(ctx) {
       const Cmp = map[ctx.viewType];

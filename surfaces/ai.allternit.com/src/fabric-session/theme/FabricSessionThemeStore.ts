@@ -13,7 +13,6 @@ export const useFabricSessionThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
       theme: 'light',
-      theme: 'system',
       setTheme: (theme) => set({ theme }),
     }),
     {
@@ -26,7 +25,6 @@ export const useFabricSessionThemeStore = create<ThemeState>()(
 export function getSystemTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') {
     return 'light';
-    return 'dark';
   }
 
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

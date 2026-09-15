@@ -30,7 +30,19 @@ export interface CommRailItem {
   label: string;
   icon?: Icon;
   payload: string;
-  status?: 'idle' | 'running' | 'paused' | 'completed' | 'error';
+  status?:
+    | 'idle'
+    | 'running'
+    | 'paused'
+    | 'completed'
+    | 'error'
+    | 'offline'
+    | 'failed'
+    | 'degraded'
+    | 'working'
+    | 'blocked'
+    | 'waiting_input'
+    | 'waiting_approval';
   badge?: number;
   accentColor?: string;
   metadata?: Record<string, unknown>;

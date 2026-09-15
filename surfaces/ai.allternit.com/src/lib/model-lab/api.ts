@@ -156,6 +156,7 @@ export interface EngineDiskMetrics {
 
 export interface EngineStatus {
   status: 'healthy' | 'degraded' | 'unavailable';
+  apple_chip?: string;
   platform: EnginePlatformInfo;
   cpu: EngineCpuInfo;
   ram: EngineRamInfo;
@@ -374,7 +375,7 @@ export interface HuggingFaceModel {
   sizeBytes?: number;
 }
 
-export type HfSortOption = 'downloads' | 'likes' | 'recent';
+export type HfSortOption = 'downloads' | 'likes' | 'recent' | 'recommended';
 
 export async function searchHuggingFaceModels(
   query: string,

@@ -1,7 +1,7 @@
 /**
  * Bot Migration / Import
  *
- * Imports a packaged bot from a ZIP archive (similar to Allternit Bot's profile
+ * Imports a packaged bot from a ZIP archive (similar to Grok Bot's profile
  * migration). The archive must contain a root `bot.json` that satisfies the
  * BotPackage contract. Optional directories are copied into the bot's
  * workspace and any schedules/tasks are registered.
@@ -221,7 +221,7 @@ function buildCreateInput(bot: BotPackage, options: BotImportOptions): CreateAge
     allowedSurfaces: ['chat', 'cowork', 'code', 'design', 'browser'],
     trustTier: 'standard',
     source: 'organization',
-    category: bot.category ?? 'general',
+    category: (bot.category as Agent['category']) ?? 'general',
     tags: bot.tags ?? [],
     config: {
       ...(bot.config ?? {}),

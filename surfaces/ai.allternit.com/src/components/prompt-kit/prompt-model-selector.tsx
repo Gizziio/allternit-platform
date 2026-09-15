@@ -68,17 +68,6 @@ function ProviderIcon({ providerId }: { providerId: string }) {
         size={18}
         className="text-[var(--ui-text-muted)]"
       />
-  const [error, setError] = useState(false);
-  const src = meta.icon ? `/assets/runtime-logos/${meta.icon}` : "";
-
-  if (!src || error) {
-    return (
-      <span
-        className="size-3.5 flex items-center justify-center text-[8px] font-bold rounded"
-        style={{ color: meta.color }}
-      >
-        {meta.name.charAt(0).toUpperCase()}
-      </span>
     );
   }
 
@@ -88,10 +77,6 @@ function ProviderIcon({ providerId }: { providerId: string }) {
       alt=""
       className="size-5 object-contain"
       onError={() => setAttempt((i) => i + 1)}
-      src={src}
-      alt=""
-      className="size-3.5 object-contain"
-      onError={() => setError(true)}
     />
   );
 }
@@ -186,12 +171,6 @@ export function PromptModelSelector({
             <span className="text-secondary">
               {selected?.name || enrichedModels[0]?.name || "Select model"}
             </span>
-            <span className="text-composer-muted">
-              <ProviderIcon providerId={getProviderId(selected || enrichedModels[0])} />
-            </span>
-            <span className="text-secondary">
-              {selected?.name || enrichedModels[0]?.name || "Select model"}
-            </span>
             <CaretDown
               size={12}
               className={cn(
@@ -211,7 +190,6 @@ export function PromptModelSelector({
           avoidCollisions
           collisionPadding={16}
           className="w-[min(92vw,300px)] max-h-[min(460px,70vh)] rounded-xl bg-[var(--shell-view-bg)] border border-[var(--ui-border-default)] shadow-xl p-0 z-[200] flex flex-col overflow-hidden"
-          className="w-[min(92vw,300px)] max-h-[min(460px,70vh)] rounded-xl bg-[var(--shell-menu-bg)] backdrop-blur-[20px] border border-[var(--shell-menu-border)] shadow-xl p-0 z-[200] flex flex-col overflow-hidden"
         >
           {/* Search */}
           <div className="flex-none p-2 border-b border-[var(--ui-border-default)] flex items-center gap-2">
@@ -234,7 +212,6 @@ export function PromptModelSelector({
             <ScrollArea.Viewport className="w-full h-full p-1.5">
               {grouped.length === 0 ? (
                 <div className="p-4 text-center text-[var(--ui-text-muted)] text-[var(--text-sm)]">
-                <div className="p-4 text-center text-[var(--ui-text-muted)] text-sm">
                   <Warning
                     size={18}
                     className="mx-auto mb-2 opacity-60"
@@ -253,28 +230,6 @@ export function PromptModelSelector({
                       <div className="px-2 py-1 flex items-center gap-2">
                         <ProviderIcon providerId={getProviderId(providerModels[0])} />
                         <span className="text-[var(--text-xs)] font-semibold uppercase tracking-wider text-[var(--ui-text-muted)]">
-                      <div className="px-2 py-1 flex items-center gap-1.5">
-                        <div
-                          className="size-4 rounded flex items-center justify-center"
-                          style={{
-                            background: `${meta.color}18`,
-                            border: `1px solid ${meta.color}40`,
-                          }}
-                        >
-                          <img
-                            src={`/assets/runtime-logos/${meta.icon}`}
-                            alt=""
-                            className="size-2.5 object-contain"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display =
-                                "none";
-                            }}
-                          />
-                        </div>
-                        <span
-                          className="text-[10px] font-bold uppercase tracking-wider"
-                          style={{ color: meta.color }}
-                        >
                           {providerName}
                         </span>
                       </div>
@@ -299,20 +254,6 @@ export function PromptModelSelector({
                               </span>
                               {model.description ? (
                                 <p className="text-[var(--text-xs)] text-[var(--ui-text-muted)] truncate">
-                            <div
-                              className={cn(
-                                "flex items-center justify-center size-7 rounded-md bg-[var(--chat-composer-soft)] text-[var(--ui-text-muted)]",
-                                isSelected && "text-[var(--accent-chat)]"
-                              )}
-                            >
-                              <ProviderIcon providerId={getProviderId(model)} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium truncate">
-                                {model.name}
-                              </span>
-                              {model.description ? (
-                                <p className="text-xs text-[var(--ui-text-muted)] truncate">
                                   {model.description}
                                 </p>
                               ) : null}
@@ -322,7 +263,6 @@ export function PromptModelSelector({
                                 size={14}
                                 weight="bold"
                                 className="text-[var(--accent-primary)]"
-                                className="text-[var(--accent-chat)]"
                               />
                             )}
                           </button>

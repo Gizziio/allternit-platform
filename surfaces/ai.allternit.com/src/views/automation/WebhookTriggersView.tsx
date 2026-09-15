@@ -194,7 +194,7 @@ export function WebhookTriggersView({
 
   const startEdit = (trigger: WebhookTrigger) => {
     setEditingTrigger(trigger);
-    setForm({ name: trigger.name, target_bot_id: trigger.target_bot_id });
+    setForm({ name: trigger.name, target_bot_id: trigger.target_bot_id ?? trigger.target_agent_id ?? '' });
     setIsCreating(false);
   };
 
@@ -202,6 +202,8 @@ export function WebhookTriggersView({
     pending: "var(--status-warning)",
     delivered: "var(--status-success)",
     failed: "var(--status-error)",
+    accepted: "var(--status-success)",
+    rejected: "var(--status-error)",
   };
 
   return (

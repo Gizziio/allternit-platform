@@ -75,7 +75,7 @@ export function WebhooksSettingsPanel(): React.ReactNode {
     return triggers.filter(
       (t) =>
         t.name.toLowerCase().includes(q) ||
-        t.target_bot_id.toLowerCase().includes(q)
+        (t.target_bot_id ?? t.target_agent_id ?? '').toLowerCase().includes(q)
     );
   }, [triggers, search]);
 
@@ -96,7 +96,7 @@ export function WebhooksSettingsPanel(): React.ReactNode {
     setIsCreating(false);
     setEditingId(t.id);
     setFormName(t.name);
-    setFormBotId(t.target_bot_id);
+    setFormBotId(t.target_bot_id ?? t.target_agent_id ?? '');
   };
 
   const handleSave = async () => {
@@ -293,7 +293,7 @@ export function WebhooksSettingsPanel(): React.ReactNode {
                   <SettingsTableCell>
                     <span className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)]">
                       <Robot size={14} />
-                      {botName(t.target_bot_id)}
+                      {botName(t.target_bot_id ?? t.target_agent_id ?? '')}
                     </span>
                   </SettingsTableCell>
                   <SettingsTableCell>

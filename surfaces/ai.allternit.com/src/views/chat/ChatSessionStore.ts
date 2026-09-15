@@ -150,7 +150,6 @@ function useChatSessionActions() {
     setActiveSession: state.setActiveSession,
     sendMessage: state.sendMessage,
     sendMessageStream: state.sendMessageStream,
-    sendRoutedTurn: state.sendRoutedTurn,
     loadSessions: state.loadSessions,
     refreshContext: state.refreshContext,
     setSessionMode: state.setSessionMode,

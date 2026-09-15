@@ -139,8 +139,6 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
         detail: {
           viewType: isGroupChat ? "chat-group-session" : "bot-chat-session",
           context: { sessionId: session.id, botId, originView: "chat" },
-          viewType: "cowork-agent-session",
-          context: { sessionId: session.id, originView: "chat" },
         },
       })
     );

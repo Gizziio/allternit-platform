@@ -22,6 +22,7 @@ export interface WebhookTrigger {
   source: string;
   event_type: string;
   target_agent_id: string;
+  target_bot_id?: string | null;
   prompt_template?: string | null;
   execution_mode: WebhookExecutionMode;
   active: boolean;
@@ -35,7 +36,8 @@ export interface WebhookTriggerDelivery {
   event: string;
   payload: Record<string, unknown>;
   signature_valid: boolean;
-  status: 'pending' | 'accepted' | 'rejected' | 'failed';
+  status: 'pending' | 'accepted' | 'rejected' | 'failed' | 'delivered';
+  response_status?: number | null;
   ticket_id?: string | null;
   error?: string | null;
   attempts: number;
@@ -45,12 +47,13 @@ export interface WebhookTriggerDelivery {
 
 export interface CreateWebhookTriggerInput {
   name: string;
-  source: string;
-  event_type: string;
-  target_agent_id: string;
+  source?: string;
+  event_type?: string;
+  target_agent_id?: string;
+  target_bot_id?: string | null;
   prompt_template?: string | null;
   execution_mode?: WebhookExecutionMode;
-  secret: string;
+  secret?: string;
 }
 
 export interface UpdateWebhookTriggerInput {
@@ -58,6 +61,7 @@ export interface UpdateWebhookTriggerInput {
   source?: string;
   event_type?: string;
   target_agent_id?: string;
+  target_bot_id?: string | null;
   prompt_template?: string | null;
   execution_mode?: WebhookExecutionMode;
   secret?: string;

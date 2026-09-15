@@ -97,9 +97,9 @@ export const botPackageSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(100),
   description: z.string().max(2000),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant', 'bot']),
   model: z.string().min(1),
-  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom', 'allternit']),
   capabilities: z.array(z.string()),
   systemPrompt: z.string().max(50000).optional(),
   tools: z.array(z.string()),
@@ -108,6 +108,9 @@ export const botPackageSchema = z.object({
   status: z.enum(['idle', 'running', 'paused', 'error']),
   createdAt: z.string(),
   updatedAt: z.string(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  config: z.record(z.unknown()).optional(),
 
   // Required bot marker
   isBot: z.literal(true),

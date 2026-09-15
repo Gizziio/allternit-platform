@@ -9,25 +9,20 @@
  *   - approvals inbox with grant/deny and auto-decision reasons
  *   - attributed event stream (initiator/delegator/executor)
  *   - terminal results
- *   - workflow specs + network-trace verify (ACU gateway /v1/browser-skills,
- *     distilled shapes only; cu28/cu29)
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { usePlatformAuth } from '@/lib/platform-auth-client';
 import {
   listRuns, listRunEvents, listRunJobs, getJob,
   listApprovals, decideApproval, submitIntent, getIntent,
   listPrincipals, provisionPrincipalToken,
   listDelegationRules, upsertDelegationRule, deleteDelegationRule,
   listConnectorSessions,
-  listRoutines, createRoutine, deleteRoutine, runRoutineNow,
-  continueRunInCloud, getCoworkPreferences, setCloudContinuation,
   type TransportRun, TransportEvent, ApprovalRow, IntentSubmission,
-  type PrincipalRow, DelegationRuleRow, ConnectorSessionRow, RoutineRow,
+  type PrincipalRow, DelegationRuleRow, ConnectorSessionRow,
 } from '@/lib/fabric-transport-api';
-import { FabricWorkflowsPanel } from '@/components/dispatch/FabricWorkflowsPanel';
 import { cn } from '@/lib/utils';
-import { usePlatformAuth } from '@/lib/platform-auth-client';
 
 const POLL_MS = 5000;
 
@@ -73,12 +68,6 @@ export function FabricTransportView() {
   const [ruleTarget, setRuleTarget] = useState('gizzi');
   const [rulePriority, setRulePriority] = useState('100');
   const [sessions, setSessions] = useState<ConnectorSessionRow[]>([]);
-  const [routines, setRoutines] = useState<RoutineRow[]>([]);
-  const [routineName, setRoutineName] = useState('');
-  const [routineMessage, setRoutineMessage] = useState('');
-  const [routineSchedule, setRoutineSchedule] = useState('*/30');
-  const [cloudContinuation, setCloudContinuationPref] = useState(false);
-  const [continuationApiUrl, setContinuationApiUrl] = useState('');
 
   // Intent form
   const [initiator, setInitiator] = useState('a://workspace/ws-allternit/user/joe');
@@ -92,23 +81,18 @@ export function FabricTransportView() {
   const refresh = useCallback(async () => {
     try {
       setError(null);
-      const [runList, approvalList, principalList, ruleList, sessionList, routineList, prefs] = await Promise.all([
+      const [runList, approvalList, principalList, ruleList, sessionList] = await Promise.all([
         listRuns(getToken),
         listApprovals(getToken, workspace),
         listPrincipals(getToken, workspace),
         listDelegationRules(getToken, workspace),
         listConnectorSessions(getToken),
-        listRoutines(getToken),
-        getCoworkPreferences(getToken).catch(() => ({ cloud_continuation: false, trusted_folders: [] as string[] })),
       ]);
       setRuns((runList as TransportRun[]).slice(0, 25));
       setApprovals(approvalList.approvals);
       setPrincipals(principalList.principals);
       setRules(ruleList.rules);
       setSessions(sessionList.sessions.slice(0, 25));
-      setRoutines(routineList.routines);
-      setCloudContinuationPref(Boolean(prefs.cloud_continuation));
-      if (prefs.continuation_api_url) setContinuationApiUrl(prefs.continuation_api_url);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -202,43 +186,6 @@ export function FabricTransportView() {
     }
   };
 
-  const addRoutine = async () => {
-    try {
-      setError(null);
-      await createRoutine(getToken, {
-        name: routineName.trim(),
-        message: routineMessage.trim(),
-        schedule: routineSchedule.trim(),
-        workspace,
-      });
-      setRoutineName('');
-      setRoutineMessage('');
-      await refresh();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
-
-  const removeRoutine = async (id: string) => {
-    try {
-      setError(null);
-      await deleteRoutine(getToken, id);
-      await refresh();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
-
-  const fireRoutine = async (id: string) => {
-    try {
-      setError(null);
-      await runRoutineNow(getToken, id);
-      await refresh();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
-
   // Run-scoped timeline entries: approval bindings interleaved with events,
   // both carrying the attribution triple (§8.18).
   const runApprovals = selectedRun
@@ -278,29 +225,6 @@ export function FabricTransportView() {
             aria-label="Workspace"
           />
           <button className="rounded border px-2 py-1 text-xs" onClick={refresh}>Refresh</button>
-          <input
-            className="w-56 rounded border border-[var(--border-default)] bg-transparent px-2 py-1 text-xs"
-            placeholder="Always-on API URL"
-            value={continuationApiUrl}
-            onChange={(e) => setContinuationApiUrl(e.target.value)}
-            aria-label="Continuation API URL"
-          />
-          <label className="flex items-center gap-1 text-xs">
-            <input
-              type="checkbox"
-              checked={cloudContinuation}
-              onChange={async (e) => {
-                const on = e.target.checked;
-                try {
-                  await setCloudContinuation(getToken, on, continuationApiUrl || undefined);
-                  setCloudContinuationPref(on);
-                } catch (err) {
-                  setError((err as Error).message);
-                }
-              }}
-            />
-            Continue on always-on API (needs URL + token + gizzi-cloud)
-          </label>
         </div>
       </header>
       {error && <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-500">{error}</div>}
@@ -376,37 +300,6 @@ export function FabricTransportView() {
         </Section>
       </div>
 
-      <Section title="Routines (scheduled work on Fabric Transport)">
-        <p className="text-xs text-[var(--text-muted)]">
-          Each fire submits a canonical intent (Al as delegator). Schedule: <Mono>*/N</Mono> minutes, <Mono>@hourly</Mono>, or <Mono>@daily</Mono>. Ticks only while this API process is running — closing the laptop stops them.
-        </p>
-        <ul className="space-y-2">
-          {routines.map((r) => (
-            <li key={r.id} className="rounded border border-[var(--border-default)] p-2 text-xs">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{r.name}</span>
-                <span className="text-[var(--text-muted)]"><Mono>{r.schedule}</Mono></span>
-              </div>
-              <div className="mt-1 text-[var(--text-muted)]">{r.message}</div>
-              <div className="mt-1 text-[var(--text-muted)]">
-                next {r.next_run_at ?? '—'}{r.last_run_at ? ` · last ${r.last_run_at}` : ''}
-              </div>
-              <div className="mt-2 flex gap-2">
-                <button className="rounded border px-2 py-0.5" onClick={() => fireRoutine(r.id)}>Run now</button>
-                <button className="rounded border px-2 py-0.5 text-red-500" onClick={() => removeRoutine(r.id)}>Delete</button>
-              </div>
-            </li>
-          ))}
-          {routines.length === 0 && <li className="text-xs text-[var(--text-muted)]">No routines yet.</li>}
-        </ul>
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-          <label className="text-xs">Name<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={routineName} onChange={(e) => setRoutineName(e.target.value)} /></label>
-          <label className="text-xs">Schedule<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={routineSchedule} onChange={(e) => setRoutineSchedule(e.target.value)} /></label>
-          <label className="text-xs md:col-span-3">What to do<input className="mt-1 w-full rounded border border-[var(--border-default)] bg-transparent px-2 py-1" value={routineMessage} onChange={(e) => setRoutineMessage(e.target.value)} /></label>
-        </div>
-        <button className="rounded bg-blue-600 px-3 py-1 text-white" onClick={addRoutine} disabled={!routineName.trim() || !routineMessage.trim()}>Add routine</button>
-      </Section>
-
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title="Principals / bots (management)">
           {provisionedToken && (
@@ -477,28 +370,10 @@ export function FabricTransportView() {
         </ul>
       </Section>
 
-      <FabricWorkflowsPanel />
-
       {selectedRun && (
         <Section title={`Run detail — ${selectedRun.slice(0, 8)}`}>
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-xs text-[var(--text-muted)]">
-              Jobs: {jobs.map((j) => `${j.job_type}(${j.state})`).join(', ') || 'none created yet'}
-            </div>
-            <button
-              className="rounded border px-2 py-0.5 text-xs"
-              onClick={async () => {
-                try {
-                  setError(null);
-                  await continueRunInCloud(getToken, selectedRun);
-                  await refresh();
-                } catch (e) {
-                  setError((e as Error).message);
-                }
-              }}
-            >
-              Retag for compute.cloud
-            </button>
+          <div className="text-xs text-[var(--text-muted)]">
+            Jobs: {jobs.map((j) => `${j.job_type}(${j.state})`).join(', ') || 'none created yet'}
           </div>
           {jobView && (
             <div className="rounded border border-[var(--border-default)] p-2 text-xs">

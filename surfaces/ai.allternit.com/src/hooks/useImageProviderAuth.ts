@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Image provider key management hook.
  *

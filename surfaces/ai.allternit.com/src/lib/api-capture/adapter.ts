@@ -18,6 +18,9 @@ export interface CaptureAdapter {
 export interface AdapterChoice {
   adapter: CaptureAdapter;
   fallback?: CaptureAdapter;
+  name: CaptureAdapter['mode'];
+  start: CaptureAdapter['start'];
+  stop: CaptureAdapter['stop'];
 }
 
 function getDesktopAdapter(): CaptureAdapter | undefined {
@@ -118,12 +121,22 @@ const uploadAdapter: CaptureAdapter = {
  *
  * Order: desktop shell > Chrome extension > upload-only fallback.
  */
+function wrapAdapter(adapter: CaptureAdapter, fallback?: CaptureAdapter): AdapterChoice {
+  return {
+    adapter,
+    fallback,
+    name: adapter.mode,
+    start: (options) => adapter.start(options),
+    stop: (sessionId) => adapter.stop(sessionId),
+  };
+}
+
 export function getCaptureAdapter(): AdapterChoice {
   const desktop = getDesktopAdapter();
-  if (desktop) return { adapter: desktop, fallback: getExtensionAdapter() ?? uploadAdapter };
+  if (desktop) return wrapAdapter(desktop, getExtensionAdapter() ?? uploadAdapter);
 
   const extension = getExtensionAdapter();
-  if (extension) return { adapter: extension, fallback: uploadAdapter };
+  if (extension) return wrapAdapter(extension, uploadAdapter);
 
-  return { adapter: uploadAdapter };
+  return wrapAdapter(uploadAdapter);
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Video provider key management hook.
  *

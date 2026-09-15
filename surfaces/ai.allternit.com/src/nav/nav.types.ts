@@ -7,6 +7,8 @@ export type ViewType =
   | "project"
   | "elements"
   | "playground"
+  | "allternit-playground"
+  | "agent-studio"
   | "workspace"
   | "browser"
   | "mini-apps-store"
