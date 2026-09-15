@@ -93,7 +93,7 @@ const PROD_OAUTH_CONFIG = {
   CONSOLE_SUCCESS_URL: 'https://platform.allternit.com/billing',
   CLAUDEAI_SUCCESS_URL: 'https://platform.allternit.com/billing',
   MANUAL_REDIRECT_URL: 'https://platform.allternit.com/sign-in',
-  CLIENT_ID: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
+  CLIENT_ID: 'allternit-gizzi-code',
   OAUTH_FILE_SUFFIX: '',
   MCP_PROXY_URL: 'https://api.allternit.com/mcp-proxy',
   MCP_PROXY_PATH: '/v1/mcp/{server_id}',
@@ -124,7 +124,7 @@ const STAGING_OAUTH_CONFIG =
         CONSOLE_SUCCESS_URL: 'https://platform.allternit.com/billing',
         CLAUDEAI_SUCCESS_URL: 'https://platform.allternit.com/billing',
         MANUAL_REDIRECT_URL: 'https://platform.allternit.com/sign-in',
-        CLIENT_ID: '22422756-60c9-4084-8eb7-27705fd5cf9a',
+        CLIENT_ID: 'allternit-gizzi-code',
         OAUTH_FILE_SUFFIX: '-staging-oauth',
         MCP_PROXY_URL: 'https://api-staging.allternit.com/mcp-proxy',
         MCP_PROXY_PATH: '/v1/mcp/{server_id}',
@@ -155,7 +155,7 @@ function getLocalOauthConfig(): OauthConfig {
     CONSOLE_SUCCESS_URL: `${consoleBase}/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dgizzi`,
     CLAUDEAI_SUCCESS_URL: `${consoleBase}/oauth/code/success?app=gizzi`,
     MANUAL_REDIRECT_URL: `${consoleBase}/oauth/code/callback`,
-    CLIENT_ID: '22422756-60c9-4084-8eb7-27705fd5cf9a',
+    CLIENT_ID: 'allternit-gizzi-code',
     OAUTH_FILE_SUFFIX: '-local-oauth',
     MCP_PROXY_URL: 'http://localhost:8205',
     MCP_PROXY_PATH: '/v1/toolbox/shttp/mcp/{server_id}',
@@ -166,9 +166,9 @@ function getLocalOauthConfig(): OauthConfig {
 // Only FedStart/PubSec deployments are permitted to prevent OAuth tokens
 // from being sent to arbitrary endpoints.
 const ALLOWED_OAUTH_BASE_URLS = [
-  'https://beacon.claude-ai.staging.ant.dev',
-  'https://claude.fedstart.com',
-  'https://claude-staging.fedstart.com',
+  'https://api.allternit.com',
+  'https://ai.allternit.com',
+  'https://platform.allternit.com',
 ]
 
 // Default to prod config, override with test/staging if enabled

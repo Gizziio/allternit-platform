@@ -8,8 +8,11 @@ Allternit LLC. Use of these marks is not granted by the Apache License,
 Version 2.0, except as required for reasonable and customary use in
 describing the origin of this software.
 
-The hosted Allternit cloud backend (ai.allternit.com) is proprietary and is
-not distributed with this repository.
+The agent workspace website (https://ai.allternit.com) is proprietary and is
+not distributed with this repository. It is not Allternit Cloud and does not
+live at allternit.cloud. The cloud console is https://platform.allternit.com.
+Hosted inference / A:// routing / cmd/allternit-cloud-api are the control
+plane (https://api.allternit.com), not the workspace site.
 
 This repository bundles third-party components. See THIRD-PARTY-NOTICES.md
 for attribution.

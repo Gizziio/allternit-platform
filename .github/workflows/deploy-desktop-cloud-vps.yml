@@ -81,8 +81,8 @@ jobs:
         run: |
           ssh vps "cd /opt/allternit-src/infrastructure/vps-desktop-cloud && SELF_HOSTED_TOKEN='$SETUP_TOKEN' ./seed-e2e.sh"
 
-      # Hosted UI moved to Gizziio/allternit-cloud; skip Playwright when
-      # this repo no longer has surfaces/ai.allternit.com.
+      # Workspace UI lives in Gizziio/allternit-ai (ai.allternit.com), not
+      # this public repo. Skip Playwright when surfaces/ai.allternit.com is absent.
       - name: Install Node.js
         if: ${{ steps.vps.outputs.present == 'true' && hashFiles('surfaces/ai.allternit.com/package.json') != '' }}
         uses: actions/setup-node@v4
