@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { getDirectConnectServerUrl, getSessionId } from '@/bootstrap/state.js'
-import { stringWidth } from '../../cli/ui/ink-renderer/stringWidth.js'
+import { stringWidth } from '../../cli/ui/ink-app/ink/stringWidth.js'
 import type { LogOption } from '@/types/logs.js'
 import { getSubscriptionName, isClaudeAISubscriber } from './auth.js'
 import { getCwd } from './cwd.js'

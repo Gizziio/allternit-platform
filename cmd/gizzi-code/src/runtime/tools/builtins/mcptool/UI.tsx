@@ -7,7 +7,7 @@ import type { z } from 'zod/v4';
 import { ProgressBar } from '../../../../cli/ui/components/design-system/ProgressBar.js';
 import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { linkifyUrlsInText, OutputLine } from '../../../../cli/ui/ink-app/components/shell/OutputLine.js';
-import { stringWidth } from '../../../../cli/ui/ink-renderer/stringWidth.js';
+import { stringWidth } from '../../../../cli/ui/ink-app/ink/stringWidth.js';
 import { Ansi, Box, Text } from '@/ink.js';
 import type { ToolProgressData } from '@/Tool.js';
 import type { ProgressMessage } from '@/types/message.js';

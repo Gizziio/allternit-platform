@@ -10,25 +10,25 @@ import {
   getSessionId,
   isSessionPersistenceDisabled,
 } from '@/bootstrap/state.js'
-import instances from '../../cli/ui/ink-renderer/instances.js'
+import instances from '../../cli/ui/ink-app/ink/instances.js'
 import {
   DISABLE_KITTY_KEYBOARD,
   DISABLE_MODIFY_OTHER_KEYS,
-} from '../../cli/ui/ink-renderer/termio/csi.js'
+} from '../../cli/ui/ink-app/ink/termio/csi.js'
 import {
   DBP,
   DFE,
   DISABLE_MOUSE_TRACKING,
   EXIT_ALT_SCREEN,
   SHOW_CURSOR,
-} from '../../cli/ui/ink-renderer/termio/dec.js'
+} from '../../cli/ui/ink-app/ink/termio/dec.js'
 import {
   CLEAR_ITERM2_PROGRESS,
   CLEAR_TAB_STATUS,
   CLEAR_TERMINAL_TITLE,
   supportsTabStatus,
   wrapForMultiplexer,
-} from '../../cli/ui/ink-renderer/termio/osc.js'
+} from '../../cli/ui/ink-app/ink/termio/osc.js'
 import { shutdownDatadog } from '../../runtime/services/analytics/datadog.js'
 import { shutdown1PEventLogging } from '../../runtime/services/analytics/firstPartyEventLogger.js'
 import { flushGizziUsageTelemetry } from '../../runtime/services/telemetry/gizziUsageTelemetry.js'
