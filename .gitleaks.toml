@@ -78,6 +78,7 @@ paths = [
   '''^surfaces/ai\.allternit\.com/\.env\.production$''',
   '''^surfaces/ai\.allternit\.com/scripts/build-desktop-server\.cjs$''',
   '''^surfaces/allternit-mobile/ios/''',
+  '''^cmd/gizzi-code/src/constants/allternit-auth\.ts$''',
   '''^cmd/gizzi-code/src/runtime/services/analytics/datadog\.ts$''',
   '''^cmd/gizzi-code/src/cli/ui/ink-app/services/analytics/datadog\.ts$''',
 
