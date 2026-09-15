@@ -30,9 +30,25 @@ jobs:
       - name: Build release binary
         run: cargo build -p allternit-api --release
 
-      - name: Install SSH key
+      - name: Check VPS secrets
+        id: vps
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          HOST=$(printf '%s' "$VPS_HOST" | tr -d '\r\n')
+          if [ -n "$HOST" ] && [ -n "$VPS_SSH_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::VPS_HOST or VPS_SSH_KEY is empty; skipping remote deploy and e2e. Rust build already succeeded."
+          fi
+
+      - name: Install SSH key
+        if: steps.vps.outputs.present == 'true'
+        env:
+          VPS_HOST: ${{ steps.vps.outputs.host }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
@@ -40,47 +56,55 @@ jobs:
           chmod 600 ~/.ssh/vps.key
           cat >> ~/.ssh/config <<EOF
           Host vps
-            HostName $VPS_HOST
+            HostName ${VPS_HOST}
             User root
             IdentityFile ~/.ssh/vps.key
             StrictHostKeyChecking no
           EOF
 
       - name: Deploy binary and service
+        if: steps.vps.outputs.present == 'true'
         run: |
           ssh vps "mkdir -p /opt/allternit-src/target/release"
           scp target/release/allternit-api vps:/opt/allternit-src/target/release/allternit-api
           ssh vps "cd /opt/allternit-src/infrastructure/vps-desktop-cloud && ./deploy.sh"
 
       - name: Extract self-hosted setup token
+        if: steps.vps.outputs.present == 'true'
         id: token
         run: |
           TOKEN=$(ssh vps "grep '^ALLTERNIT_SELF_HOSTED_SETUP_TOKEN=' /etc/allternit-api/api.env | cut -d= -f2")
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
       - name: Seed e2e bot and templates
+        if: steps.vps.outputs.present == 'true'
         env:
           SETUP_TOKEN: ${{ steps.token.outputs.token }}
         run: |
           ssh vps "cd /opt/allternit-src/infrastructure/vps-desktop-cloud && SELF_HOSTED_TOKEN='$SETUP_TOKEN' ./seed-e2e.sh"
 
       - name: Install Node.js
+        if: steps.vps.outputs.present == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Install pnpm
+        if: steps.vps.outputs.present == 'true'
         run: npm install -g pnpm
 
       - name: Install frontend dependencies
+        if: steps.vps.outputs.present == 'true'
         working-directory: surfaces/ai.allternit.com
         run: pnpm install
 
       - name: Install Playwright browsers
+        if: steps.vps.outputs.present == 'true'
         working-directory: surfaces/ai.allternit.com
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run remote Desktop Cloud e2e test
+        if: steps.vps.outputs.present == 'true'
         working-directory: surfaces/ai.allternit.com
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
