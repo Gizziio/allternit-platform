@@ -1,7 +1,7 @@
 /**
  * Unified Cron Types for Gizzi CLI
  * 
- * Based on research from Supabase Cron, Vercel Cron, and GitHub Actions
+ * Based on research from Supabase Cron and GitHub Actions
  * - Multiple job types (Shell, HTTP, Agent, Cowork)
  * - Natural language + cron expression support
  * - Comprehensive run tracking

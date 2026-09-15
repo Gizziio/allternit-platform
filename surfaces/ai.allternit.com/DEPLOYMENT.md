@@ -1,10 +1,7 @@
 # Allternit Platform Deployment Guide
 
-> **STATUS: Rewritten 2026-09-03.** The previous version of this document
-> described a Vercel + Next.js deployment. The platform is now a **Vite +
-> React SPA** deployed as a static export to **Cloudflare Pages** by GitHub
-> Actions. The Vercel project (`prj_veXmWY1vWUn6N9aBWA4gTRyeSmrx`) and the
-> `deploy-platform.yml` workflow referenced below are retired.
+> **STATUS: Rewritten 2026-09-03.** The platform is a **Vite + React SPA**
+> deployed as a static export to **Cloudflare Pages** by GitHub Actions.
 >
 > Last verified: 2026-09-03 against a0f8230b5.
 

@@ -52,7 +52,6 @@ const KNOWN_PROVIDER_NAMES: Record<string, string> = {
   spotify: "Spotify",
   stripe: "Stripe",
   supabase: "Supabase",
-  vercel: "Vercel",
 };
 
 /** Human label for an OAuth provider id ("github" → "GitHub"). */

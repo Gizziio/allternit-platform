@@ -1,7 +1,7 @@
 # BYOC (Bring Your Own Compute) Test Plan
 
 ## Goal
-Test the complete flow: Vercel frontend → SSH to VPS → Install backend → Connect directly to backend
+Test the complete flow: Cloudflare Pages frontend → SSH to VPS → Install backend → Connect directly to backend
 
 ## Prerequisites
 
@@ -12,8 +12,8 @@ Test the complete flow: Vercel frontend → SSH to VPS → Install backend → C
 - Ports: 22 (SSH), 4096 (backend)
 - Architecture: x86_64 or ARM64
 
-### 2. Vercel Environment Variables
-Set these in Vercel Dashboard → Project Settings → Environment Variables:
+### 2. Frontend environment variables
+Set these in GitHub Actions secrets / Cloudflare Pages project env (not Vercel):
 
 ```
 # Database (for connection metadata storage)
@@ -45,15 +45,11 @@ The installer needs to download the backend binary. Options:
 
 ## Test Flow
 
-### Phase 1: Deploy Frontend to Vercel
+### Phase 1: Deploy frontend to Cloudflare Pages
 
 ```bash
-# Push to GitHub (triggers GitHub Actions)
+# Push to GitHub (triggers deploy-cloudflare-pages.yml)
 git push origin main
-
-# Or deploy manually
-cd surfaces/platform
-pnpm dlx vercel --prod
 ```
 
 **Verify**: https://platform.allternit.com loads without errors
@@ -79,7 +75,7 @@ pnpm dlx vercel --prod
 
 **What happens behind the scenes**:
 ```
-Vercel API → SSH to VPS → Download install.sh → Run installer
+Cloudflare Pages frontend → SSH to VPS → Download install.sh → Run installer
                                            ↓
                               Creates systemd service
                               Starts on port 4096
@@ -131,7 +127,7 @@ ssh -v user@vps-ip
 sudo ufw status
 sudo iptables -L | grep 22
 
-# Check Vercel function logs (maxDuration may be too short)
+# Check Cloudflare Pages / GitHub Actions deploy logs
 ```
 
 ### Backend Install Fails

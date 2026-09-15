@@ -276,6 +276,7 @@ export namespace Provider {
     const enabled = config.enabled_providers ? new Set(config.enabled_providers) : null
 
     function isProviderAllowed(providerID: string): boolean {
+      if (providerID === "vercel") return false
       if (enabled && !enabled.has(providerID)) return false
       if (disabled.has(providerID)) return false
       return true

@@ -7,7 +7,6 @@
  * API Design inspired by:
  * - Supabase Cron API
  * - GitHub Actions API
- * - Vercel Cron webhooks
  */
 
 import { CronService, type CronJob, type CronRun, type CreateJobInput, type UpdateJobInput } from "./service";
