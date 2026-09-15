@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-14 21:40 — grok — Lume + mux now required in the desktop production package
+
+- **Session ID / Branch:** grok `01a0a014` / `session/desktop-lume-mux-contract-0914`
+- **Agent:** grok
+- **Summary:** Merged PR #532 (`2f84e3684`) — release-desktop.yml and stock `build:electron`/`dist` stage CUA Lume (both Mac archs) and allternit-mux; verify + release-preflight hard-require them. Also dropped broken gitlinks that were failing Desktop CI checkout on main.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/532 · `2f84e3684`
+- **How it works:** `prepare-lume.cjs` fetches launcher+lume.app per arch into `resources/lume/${arch}/`; extraResources overlays into `bin/`. `prepare-mux.cjs` stages the PTY binary (lipo on macOS). Checkout no longer hits empty `.gitmodules` gitlinks.
+- **Verification:** release-preflight 51/0; Desktop CI unit tests + typecheck green; Pages/gitleaks/typography pass.
+- **Outstanding work:** No Apple notarization secrets (unsigned `desktop-v*` still Gatekeeper-blocked). whisper-cli still host-arch in CI. Local unsigned DMG rebuild from this merge is follow-on, not a production cut.
+- **Summary file:** [2026-09-14-2140-01a0a014-grok-desktop-lume-mux.md](./summaries/2026-09-14-2140-01a0a014-grok-desktop-lume-mux.md)
+
 ### 2026-09-14 14:39 — grok — Cowork ACP caveats landed; live Kimi proof did not complete
 
 - **Session ID / Branch:** `session/cowork-caveats-0914` (resume of Kimi `session_a9f18780`)
