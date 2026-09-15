@@ -9,7 +9,7 @@ import {
 
 // Type cast to fix declaration mismatch
 const ansiCodesToString = _ansiCodesToString as (codes: AnsiCode[]) => string
-import { stringWidth } from '../../cli/ui/ink-renderer/stringWidth.js'
+import { stringWidth } from '../../cli/ui/ink-app/ink/stringWidth.js'
 
 // A code is an "end code" if its code equals its endCode (e.g., hyperlink close)
 function isEndCode(code: AnsiCode): boolean {

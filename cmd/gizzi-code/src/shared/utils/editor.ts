@@ -6,7 +6,7 @@ import {
 } from 'child_process'
 import memoize from 'lodash-es/memoize.js'
 import { basename } from 'path'
-import instances from '../../cli/ui/ink-renderer/instances.js'
+import instances from '../../cli/ui/ink-app/ink/instances.js'
 import { logForDebugging } from './debug.js'
 import { whichSync } from './which.js'
 

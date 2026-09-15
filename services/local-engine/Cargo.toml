@@ -43,6 +43,13 @@ bytes = { workspace = true }
 # Directories
 dirs = { workspace = true }
 
+# Hardware hash
+blake3 = { workspace = true }
+
+# Model assessment
+regex = { workspace = true }
+urlencoding = { workspace = true }
+
 [dev-dependencies]
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
