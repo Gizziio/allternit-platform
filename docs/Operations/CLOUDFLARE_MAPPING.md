@@ -7,7 +7,22 @@ Quick reference for Cloudflare Pages projects and their domains.
 > repo and listed projects that no longer exist. The table below reflects the
 > live projects (via `wrangler pages list`) and this repo's deploy workflows.
 >
-> Last verified: 2026-09-03 against a0f8230b5.
+> Last verified: 2026-09-15. OSS split moved the workspace UI out of this
+> repo. Cloudflare Git auto-builds on `ai-allternit` are disabled
+> (`deployments_enabled=false`, `preview_deployment_setting=none`).
+
+## Naming (do not mix these up)
+
+| Product | Domain | GitHub source | Pages project |
+|---------|--------|---------------|---------------|
+| Agent workspace | **ai.allternit.com** | private **Gizziio/allternit-ai** (renamed from `allternit-cloud`) | `ai-allternit` |
+| Cloud console | **platform.allternit.com** | this repo `surfaces/platform.allternit.com` | `allternit-platform` |
+
+`allternit-cloud` is not a product name. The workspace site is `ai.allternit.com`.
+The cloud console is `platform.allternit.com`. `cmd/allternit-cloud-api` in this
+repo is the control-plane binary for `api.allternit.com`, not the workspace UI.
+
+**This public repo must never `wrangler pages deploy --project-name=ai-allternit`.**
 
 ## Active Projects
 
@@ -15,11 +30,17 @@ Quick reference for Cloudflare Pages projects and their domains.
 
 | Pages Project | Domain(s) | Source in this repo | Workflow |
 |---------------|-----------|---------------------|----------|
-| **ai-allternit** | ai.allternit.com | `surfaces/ai.allternit.com/dist` (Vite build) | `.github/workflows/deploy-cloudflare-pages.yml` |
 | **allternit-platform** | platform.allternit.com | `surfaces/platform.allternit.com/dist` (Vite build) | `.github/workflows/deploy-cloudflare-pages.yml` |
 | **allternit-docs** | docs.allternit.com | `surfaces/docs/dist` (unzipped `export.zip`) | `.github/workflows/deploy-docs-cloudflare.yml` |
 | **allternit-office** | office.allternit.com | `surfaces/office.allternit.com/dist` | `.github/workflows/deploy-office-cloudflare.yml` |
-| **allternit-remote-control** | remotecontrol.allternit.com | (see `deploy-remote-control-cloudflare.yml` / `deploy-remote-control-push.yml`) | remote-control workflows |
+| **allternit-office-addins** | allternit-office-addins.pages.dev | office add-in `pages-deploy/` | `.github/workflows/deploy-cloudflare-pages.yml` |
+| **allternit-remote-control** | fabrictransport.allternit.com | Fabric Session PWA (moving to Gizziio/allternit-ai) | wrangler CLI / allternit-ai |
+
+### Deployed from Gizziio/allternit-ai (private) — not this repo
+
+| Pages Project | Domain(s) | Notes |
+|---------------|-----------|-------|
+| **ai-allternit** | ai.allternit.com | Workspace UI. Git provider still listed as Gizziio/allternit-platform but auto production + preview builds are off. Production deploys: wrangler from allternit-ai only. |
 
 ### Live projects deployed outside this repo (Allternit Websites repo / manual)
 

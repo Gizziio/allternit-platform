@@ -1,5 +1,14 @@
 name: Deploy Platform to Cloudflare Pages
 
+# This workflow deploys the CLOUD CONSOLE (platform.allternit.com) and the
+# Office add-in runtime. It must NEVER deploy --project-name=ai-allternit.
+#
+# ai.allternit.com is the agent workspace. Its source lives in the private
+# repo Gizziio/allternit-ai (not this public repo; not Gizziio/allternit-cloud —
+# that name was a misleading dump label and has been renamed). Cloudflare Git
+# auto-builds on project ai-allternit are disabled; production deploys of the
+# workspace come only from Gizziio/allternit-ai via wrangler.
+
 on:
   push:
     branches: [main]

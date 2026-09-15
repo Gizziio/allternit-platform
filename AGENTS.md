@@ -14,6 +14,20 @@ Eoj's rule, effective 2026-09-14: **if work is approved, it is merged to `origin
 4. **Check freshness before answering questions about the codebase.** If asked "what changed", "does X exist", or "why does X look different" — `git fetch origin` and compare `HEAD..origin/main` before answering. A stale checkout lies. State the SHA you based the answer on.
 5. **Worktrees are still the default for implementation** (see below) — this commandment is about where work ENDS: merged to `origin/main`, local checkouts fast-forwarded, session branches deleted.
 
+## Commandment: ai.allternit.com is the workspace, platform.allternit.com is the cloud console
+
+Do not call the workspace "Allternit Cloud" or put it in a repo named `allternit-cloud`.
+
+| Product | Domain | Source | Pages project |
+|---|---|---|---|
+| Agent workspace | `ai.allternit.com` | private `Gizziio/allternit-ai` | `ai-allternit` |
+| Cloud console | `platform.allternit.com` | this repo `surfaces/platform.allternit.com` | `allternit-platform` |
+
+- This public repo **must never** `wrangler pages deploy --project-name=ai-allternit`.
+- Desktop packages the workspace UI from `allternit-ai` at build time, not from `surfaces/platform.allternit.com`.
+- Editing the console does not change Desktop or `ai.allternit.com`.
+- The GitHub name `allternit-cloud` was a dump label from the 2026-09-15 OSS split and has been renamed to `allternit-ai`. GitHub redirects the old URL.
+
 ## Commandment: disk hygiene — shared build dirs, teardown cleanup, no orphaned artifacts
 
 The 2026-09-14 audit found **234 GB** in `~/Desktop/allternit-workspace`: a 42 GB Rust `target/` in the main clone, a 24 GB `target/` left behind by one dead session worktree, ~9 GB `node_modules` per worktree, and 19 GB of desktop DMGs — with macOS swap squeezed at 77% disk full. Dep/build artifacts are reproducible; keeping them is never worth the space. Rules:
