@@ -91,17 +91,19 @@ import { resolveDevUserDataPath } from './desktop-data-dir.js';
 fixPath();
 
 // Unpackaged launches must not share the packaged app's Electron profile
-// (`<appData>/@allternit/desktop`) — that SQLite is what cargo/dev
-// migrations kept rewriting. Must run before any getPath('userData').
+// (`<appData>/@allternit/desktop`) — that SQLite is what worktree
+// migrations kept rewriting. Not a second product: explicit scratch or
+// an ephemeral temp dir. Must run before any getPath('userData').
 {
-  const isolated = resolveDevUserDataPath({
+  const decision = resolveDevUserDataPath({
     isPackaged: app.isPackaged,
-    appData: app.getPath('appData'),
     envUserData: process.env.ALLTERNIT_USER_DATA_DIR,
     argv: process.argv,
   });
-  if (isolated) {
-    app.setPath('userData', isolated);
+  if (decision.kind === 'path') {
+    app.setPath('userData', decision.path);
+  } else if (decision.kind === 'ephemeral') {
+    app.setPath('userData', fs.mkdtempSync(join(os.tmpdir(), 'allternit-desktop-')));
   }
 }
 
@@ -177,7 +179,9 @@ log.transports.file.resolvePath = () => join(app.getPath('userData'), 'main.log'
 log.initialize();
 log.transports.file.level = 'info';
 if (!app.isPackaged) {
-  log.info(`[Main] unpackaged userData=${app.getPath('userData')} (isolated from packaged @allternit/desktop)`);
+  log.info(
+    `[Main] unpackaged userData=${app.getPath('userData')} (scratch, not a product profile; packaged sqlite stays at @allternit/desktop)`,
+  );
 }
 
 // Last-resort crash handlers: log everything, keep the process alive where

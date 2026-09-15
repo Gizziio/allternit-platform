@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  DEV_USER_DATA_LEAF,
   PACKAGED_USER_DATA_LEAF,
   hasUserDataDirSwitch,
   resolveApiDataDir,
@@ -10,7 +9,7 @@ import {
 
 const appData = path.join('/tmp', 'app-data');
 const packagedUserData = path.join(appData, ...PACKAGED_USER_DATA_LEAF);
-const devUserData = path.join(appData, ...DEV_USER_DATA_LEAF);
+const scratchUserData = path.join('/tmp', 'scratch-profile');
 
 describe('hasUserDataDirSwitch', () => {
   it('detects equals, space-separated, and absent forms', () => {
@@ -25,37 +24,33 @@ describe('resolveDevUserDataPath', () => {
     expect(
       resolveDevUserDataPath({
         isPackaged: true,
-        appData,
         envUserData: '/tmp/scratch-profile',
         argv: ['electron', '--user-data-dir=/tmp/p'],
       }),
-    ).toBeNull();
+    ).toEqual({ kind: 'unchanged' });
   });
 
-  it('defaults unpackaged launches to the desktop-dev sibling of the packaged profile', () => {
-    expect(resolveDevUserDataPath({ isPackaged: false, appData })).toBe(devUserData);
-    expect(devUserData).not.toBe(packagedUserData);
+  it('does not create a standing second product profile', () => {
+    expect(resolveDevUserDataPath({ isPackaged: false })).toEqual({ kind: 'ephemeral' });
   });
 
   it('honors ALLTERNIT_USER_DATA_DIR in unpackaged launches', () => {
     expect(
       resolveDevUserDataPath({
         isPackaged: false,
-        appData,
         envUserData: '  /tmp/scratch-profile  ',
       }),
-    ).toBe('/tmp/scratch-profile');
+    ).toEqual({ kind: 'path', path: '/tmp/scratch-profile' });
   });
 
   it('leaves Electron --user-data-dir alone (Playwright / e2e)', () => {
     expect(
       resolveDevUserDataPath({
         isPackaged: false,
-        appData,
         envUserData: '/tmp/scratch-profile',
         argv: ['electron', '--user-data-dir=/tmp/playwright'],
       }),
-    ).toBeNull();
+    ).toEqual({ kind: 'unchanged' });
   });
 });
 
@@ -72,15 +67,15 @@ describe('resolveApiDataDir', () => {
 
   it('uses userData/allternit for unpackaged when env is unset', () => {
     expect(
-      resolveApiDataDir({ isPackaged: false, userData: devUserData }),
-    ).toBe(path.join(devUserData, 'allternit'));
+      resolveApiDataDir({ isPackaged: false, userData: scratchUserData }),
+    ).toBe(path.join(scratchUserData, 'allternit'));
   });
 
   it('honors ALLTERNIT_DATA_DIR in unpackaged launches', () => {
     expect(
       resolveApiDataDir({
         isPackaged: false,
-        userData: devUserData,
+        userData: scratchUserData,
         envDataDir: ' /tmp/scratch-api ',
       }),
     ).toBe('/tmp/scratch-api');
