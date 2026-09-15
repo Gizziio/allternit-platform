@@ -3,9 +3,11 @@
  *
  * Spawns and manages the unified Rust API backend.
  *   - Rust API on port 8013 (allternit-api binary) in the packaged app,
- *     port 18013 in dev launches (see API_PORT below)
- *   - SQLite under userData/allternit; unpackaged isolates to
- *     @allternit/desktop-dev (see desktop-data-dir.ts)
+ *     port 18013 in unpackaged launches so cargo cannot steal 8013
+ *     (see API_PORT below). 18013 is a fuse, not a second Desktop.
+ *   - SQLite under userData/allternit. Unpackaged never uses the
+ *     packaged profile; explicit ALLTERNIT_DATA_DIR or ephemeral
+ *     scratch (see desktop-data-dir.ts).
  *
  * The legacy Python gateway and Memory Agent sidecars have been removed;
  * the Rust API now proxies directly to Gizzi (port 4096).

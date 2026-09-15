@@ -1,20 +1,21 @@
 /**
- * Packaged vs unpackaged data-dir ownership.
+ * Packaged Desktop owns `<appData>/@allternit/desktop` (sqlite + profile).
+ * A worktree binary must never migrate that database — that is the V47
+ * mismatch. Unpackaged is not a second product: explicit scratch, or an
+ * ephemeral temp dir. 8013 vs 18013 is only a fuse so cargo cannot steal
+ * the installed gateway; it is not a second Allternit.
  *
- * The installed app and `npm run dev` share Electron's default userData
- * (`<appData>/@allternit/desktop`, from package.json "name") — so cargo/dev
- * migrations used to rewrite the production SQLite and the next packaged
- * boot died on a version mismatch. Port 8013 vs 18013 already splits the
- * gateway; these helpers split the profile and the API sqlite the same way.
- *
- * Packaged launches ignore ALLTERNIT_USER_DATA_DIR / ALLTERNIT_DATA_DIR,
- * matching ALLTERNIT_API_PORT. Unpackaged: env wins, else a sibling
- * `desktop-dev` profile. `--user-data-dir` (Playwright / e2e) is left alone.
+ * Packaged ignores ALLTERNIT_USER_DATA_DIR / ALLTERNIT_DATA_DIR, matching
+ * ALLTERNIT_API_PORT. `--user-data-dir` (Playwright / e2e) is left alone.
  */
 import * as path from 'node:path';
 
 export const PACKAGED_USER_DATA_LEAF = ['@allternit', 'desktop'] as const;
-export const DEV_USER_DATA_LEAF = ['@allternit', 'desktop-dev'] as const;
+
+export type DevUserDataDecision =
+  | { kind: 'unchanged' }
+  | { kind: 'path'; path: string }
+  | { kind: 'ephemeral' };
 
 export function hasUserDataDirSwitch(argv: readonly string[]): boolean {
   return argv.some((arg) => arg === '--user-data-dir' || arg.startsWith('--user-data-dir='));
@@ -22,15 +23,14 @@ export function hasUserDataDirSwitch(argv: readonly string[]): boolean {
 
 export function resolveDevUserDataPath(opts: {
   isPackaged: boolean;
-  appData: string;
   envUserData?: string | undefined;
   argv?: readonly string[];
-}): string | null {
-  if (opts.isPackaged) return null;
-  if (hasUserDataDirSwitch(opts.argv ?? [])) return null;
+}): DevUserDataDecision {
+  if (opts.isPackaged) return { kind: 'unchanged' };
+  if (hasUserDataDirSwitch(opts.argv ?? [])) return { kind: 'unchanged' };
   const override = opts.envUserData?.trim();
-  if (override) return override;
-  return path.join(opts.appData, ...DEV_USER_DATA_LEAF);
+  if (override) return { kind: 'path', path: override };
+  return { kind: 'ephemeral' };
 }
 
 export function resolveApiDataDir(opts: {
