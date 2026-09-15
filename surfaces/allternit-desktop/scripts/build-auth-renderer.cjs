@@ -93,6 +93,21 @@ async function main() {
     ),
   );
 
+  // clerk-js is served from the auth renderer origin so the https intercept
+  // never has to fetch the 300KB script (that path deadlocked session.fetch
+  // and timed out as failed_to_load_clerk_js). FAPI still uses proxyUrl.
+  if (!selfHosted) {
+    const clerkJsUrl =
+      process.env.ALLTERNIT_CLERK_JS_URL?.trim() ||
+      `${proxyUrl || 'https://allternit.com/__clerk'}/npm/@clerk/clerk-js@5/dist/clerk.browser.js`;
+    const clerkJs = await fetch(clerkJsUrl);
+    if (!clerkJs.ok) {
+      throw new Error(`clerk-js download failed: ${clerkJs.status} ${clerkJsUrl}`);
+    }
+    fs.writeFileSync(path.join(outDir, 'clerk.browser.js'), Buffer.from(await clerkJs.arrayBuffer()));
+    console.log(`[build-auth-renderer] clerk-js staged (${clerkJsUrl})`);
+  }
+
   console.log(`[build-auth-renderer] Renderer built to ${outDir}`);
 }
 
