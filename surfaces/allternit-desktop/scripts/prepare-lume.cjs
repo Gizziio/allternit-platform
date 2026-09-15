@@ -116,9 +116,12 @@ async function main() {
     return;
   }
   const args = process.argv.slice(2).filter(Boolean);
+  // CUA lume-v0.3.9 ships darwin-arm64 only (no darwin-x64 asset). Default
+  // matches this file's header: host arch. Pass `arm64 x64` for a release
+  // that needs both — x64 will 404 until CUA publishes it.
   const archs = args.length > 0
     ? args
-    : (process.platform === 'darwin' ? ['arm64', 'x64'] : []);
+    : (process.platform === 'darwin' ? [process.arch === 'arm64' ? 'arm64' : 'x64'] : []);
   if (archs.length === 0) return;
   for (const arch of archs) {
     await fetchArch(arch);

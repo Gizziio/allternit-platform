@@ -126,7 +126,7 @@ if (process.platform === 'darwin') {
   const hostArch = process.arch === 'arm64' ? 'arm64' : 'x64';
   const lumeArchs = process.env.ALLTERNIT_LUME_ARCHS
     ? process.env.ALLTERNIT_LUME_ARCHS.split(/[,\s]+/).filter(Boolean)
-    : ['arm64', 'x64'];
+    : [hostArch];
   for (const arch of lumeArchs) {
     const launcher = path.join(resourcesDir, 'lume', arch, 'lume');
     const realBin = path.join(resourcesDir, 'lume', arch, 'lume.app', 'Contents', 'MacOS', 'lume');
