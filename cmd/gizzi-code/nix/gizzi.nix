@@ -91,7 +91,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   meta = {
     description = "AI-powered terminal interface for the Allternit ecosystem";
     homepage = "https://docs.gizziio.com/";
-    license = lib.licenses.mit;
+    license = lib.licenses.asl20;
     mainProgram = "gizzi-code";
     inherit (node_modules.meta) platforms;
   };

@@ -87,4 +87,4 @@ Configuration is stored at:
 
 ## License
 
-MIT License - see [LICENSE](./LICENSE)
+Apache License 2.0. See [LICENSE](../LICENSE) and [NOTICE](../NOTICE).

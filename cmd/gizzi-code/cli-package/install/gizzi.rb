@@ -8,7 +8,7 @@ class GizziCode < Formula
   desc "AI-powered terminal interface and runtime for the Allternit ecosystem"
   homepage "https://docs.gizziio.com"
   version "2.0.7"
-  license "MIT"
+  license "Apache-2.0"
 
   # Release tags look like "gizzi-code/v1.0.2"; assets are version-named:
   # gizzi-code-v1.0.2-<target>.tar.gz

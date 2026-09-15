@@ -147,4 +147,4 @@ const frontier = GitDAGTracker.getFrontier()
 
 ## License
 
-MIT
+Apache License 2.0. See [LICENSE](../../../LICENSE) and [NOTICE](../../../NOTICE).
