@@ -74,6 +74,15 @@ const required = [
     label: 'ACU computer-use gateway (launch.py)',
     buildStep: 'npm run prepare:acu-gateway',
   },
+  {
+    path: path.join(repoRoot, 'surfaces', 'phone-remote', 'client', 'index.html'),
+    label: 'phone-remote viewer (client/index.html)',
+    buildStep: 'surfaces/phone-remote/client must ship in extraResources',
+  },
+  // NOTE: the compiled sc_capture helper is deliberately NOT hard-required
+  // here — it is a gitignored runtime artifact (capture.mjs swiftc-builds it
+  // on first launch) and no CI step produces it. Requiring it would red the
+  // release workflow. extraResources ships the prebuilt binary when present.
 ];
 
 let failed = false;

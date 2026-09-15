@@ -172,8 +172,13 @@
         "filter": [
           "index.mjs",
           "lib/**",
-          "capture/sc_capture.swift"
+          "capture/sc_capture.swift",
+          "capture/sc_capture"
         ]
+      },
+      {
+        "from": "../phone-remote/client",
+        "to": "phone-remote/client"
       },
       {
         "from": "../phone-remote/input",

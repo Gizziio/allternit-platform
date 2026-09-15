@@ -56,13 +56,19 @@ fi
 
 # ── 2. Build Gizzi Code Binary ───────────────────────────────────────────────
 step "Building gizzi-code binary…"
-cd "$GIZZI_DIR"
 # Detect target triple for this machine
 ARCH=$(uname -m | sed 's/arm64/arm64/;s/x86_64/x64/')
 OS=$(uname | tr '[:upper:]' '[:lower:]' | sed 's/darwin/darwin/')
 GIZZI_TARGET="${OS}-${ARCH}"   # e.g. darwin-arm64
 
-bun install && bun run script/build-production.js --target="$GIZZI_TARGET"
+# bun install inside cmd/gizzi-code fails: it is a pnpm workspace package
+# (workspace:* deps). Match CI (gizzi-code-quality.yml): install/build from
+# the repo root, then compile the binary.
+cd "$WORKSPACE_ROOT"
+pnpm --filter "@allternit/gizzi-code^..." run build
+pnpm --filter "@allternit/gizzi-sdk" run build
+cd "$GIZZI_DIR"
+bun run script/build-production.js --target="$GIZZI_TARGET"
 
 GIZZI_BIN="$GIZZI_DIR/dist/gizzi-code"
 # The build script might suffix it with the target, check both
