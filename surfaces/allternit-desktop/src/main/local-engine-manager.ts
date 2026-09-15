@@ -47,6 +47,8 @@ export class LocalEngineManager {
   private respawnTimer: ReturnType<typeof setTimeout> | null = null;
   /** True while a shutdown was requested — exit events from that kill must not respawn. */
   private intentionalStop = false;
+  /** Ring buffer of recent stderr lines for crash diagnostics (startup fail-fast). */
+  private stderrLines: string[] = [];
 
   static getInstance(): LocalEngineManager {
     if (!LocalEngineManager.instance) {
@@ -67,13 +69,24 @@ export class LocalEngineManager {
       return this.getUrl();
     }
 
-    try {
-      await this.waitForUrl(`${this.getUrl()}/health`, 'existing local-engine');
+    // Fast path: a single probe that fails with ECONNREFUSED means nothing is
+    // (or will be) listening on the port, so skip the patient 20s reuse poll
+    // and spawn immediately. Other probe failures (timeouts, resets) may be an
+    // engine mid-start, so those fall through to the patient poll to adopt it.
+    const existing = await this.probeExistingEngine();
+    if (existing === 'ready') {
       log.info(`[LocalEngine] Reusing existing local-engine at ${this.getUrl()}`);
       return this.getUrl();
-    } catch {
-      // No healthy engine on the target port; check whether something else
-      // occupies the port and reap it before spawning.
+    }
+    if (existing === 'unknown') {
+      try {
+        await this.waitForUrl(`${this.getUrl()}/health`, 'existing local-engine');
+        log.info(`[LocalEngine] Reusing existing local-engine at ${this.getUrl()}`);
+        return this.getUrl();
+      } catch {
+        // No healthy engine on the target port; check whether something else
+        // occupies the port and reap it before spawning.
+      }
     }
 
     if (this.portListenerPids().length > 0) {
@@ -125,9 +138,10 @@ export class LocalEngineManager {
     spawned.stdout?.on('data', (d: Buffer) =>
       log.info('[LocalEngine]', d.toString().trim())
     );
-    spawned.stderr?.on('data', (d: Buffer) =>
-      log.warn('[LocalEngine]', d.toString().trim())
-    );
+    spawned.stderr?.on('data', (d: Buffer) => {
+      log.warn('[LocalEngine]', d.toString().trim());
+      this.pushStderrLine(d.toString());
+    });
     spawned.on('exit', (code) => {
       log.warn(`[LocalEngine] local-engine exited (code ${code})`);
       // A newer spawn (e.g. a manual restart) may already own engineProc; do
@@ -157,7 +171,7 @@ export class LocalEngineManager {
       }
     });
 
-    await this.waitForUrl(`${this.getUrl()}/health`, 'local-engine');
+    await this.waitForUrl(`${this.getUrl()}/health`, 'local-engine', spawned);
 
     log.info(`[LocalEngine] Ready at ${this.getUrl()}`);
     return this.getUrl();
@@ -235,22 +249,77 @@ export class LocalEngineManager {
     }
   }
 
-  private async waitForUrl(url: string, label: string): Promise<void> {
-    const deadline = Date.now() + HEALTH_TIMEOUT_MS;
-
-    while (Date.now() < deadline) {
-      try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(500) });
-        if (res.ok) {
-          return;
-        }
-      } catch {
-        // Not ready yet.
+  /**
+   * Classify whatever is on the engine port with a single short probe.
+   * - 'ready': an existing healthy engine answers /health — reuse it.
+   * - 'none': ECONNREFUSED — nothing is listening, spawn immediately.
+   * - 'unknown': any other failure (timeout/reset — possibly an engine
+   *   mid-start) — caller falls through to the patient waitForUrl poll.
+   */
+  private async probeExistingEngine(): Promise<'ready' | 'none' | 'unknown'> {
+    try {
+      const res = await fetch(`${this.getUrl()}/health`, {
+        signal: AbortSignal.timeout(800),
+      });
+      return res.ok ? 'ready' : 'unknown';
+    } catch (probeErr) {
+      if ((probeErr as { cause?: { code?: string } })?.cause?.code === 'ECONNREFUSED') {
+        return 'none';
       }
-      await new Promise((r) => setTimeout(r, 200));
+      return 'unknown';
     }
+  }
 
-    throw new Error(`${label} did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
+  /**
+   * Poll a health URL until it answers OK. When a freshly spawned child is
+   * provided, its exit fails the wait immediately instead of burning the full
+   * HEALTH_TIMEOUT_MS against a process that already crashed, and the exit
+   * listener is removed as soon as health wins.
+   */
+  private async waitForUrl(url: string, label: string, child?: ChildProcess): Promise<void> {
+    const deadline = Date.now() + HEALTH_TIMEOUT_MS;
+    const crashState = { crashed: false, code: null as number | null };
+    const onExit = (code: number | null) => {
+      crashState.crashed = true;
+      crashState.code = code;
+    };
+    if (child) child.once('exit', onExit);
+
+    try {
+      while (Date.now() < deadline) {
+        if (crashState.crashed) {
+          throw new Error(
+            `${label} exited during startup (code ${crashState.code}): ${this.recentStderr().join(' | ')}`,
+          );
+        }
+        try {
+          const res = await fetch(url, { signal: AbortSignal.timeout(500) });
+          if (res.ok) {
+            return;
+          }
+        } catch {
+          // Not ready yet.
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
+
+      throw new Error(`${label} did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
+    } finally {
+      if (child) child.removeListener('exit', onExit);
+    }
+  }
+
+  private pushStderrLine(text: string): void {
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      this.stderrLines.push(trimmed);
+      if (this.stderrLines.length > 20) this.stderrLines.shift();
+    }
+  }
+
+  private recentStderr(): string[] {
+    return this.stderrLines.slice(-5);
   }
 
   private resolveBinaryPath(logDiscovery = true): string | null {

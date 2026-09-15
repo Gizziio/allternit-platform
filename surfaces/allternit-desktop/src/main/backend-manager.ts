@@ -144,6 +144,8 @@ export class BackendManager {
   private respawnTimer: ReturnType<typeof setTimeout> | null = null;
   /** True while a shutdown was requested — exit events from that kill must not respawn. */
   private intentionalStop = false;
+  /** Ring buffer of recent stderr lines for crash diagnostics (startup fail-fast). */
+  private stderrLines: string[] = [];
 
   static getInstance(): BackendManager {
     if (!BackendManager.instance) {
@@ -282,9 +284,10 @@ export class BackendManager {
     spawned.stdout?.on('data', (d: Buffer) =>
       log.info('[Kernel]', d.toString().trim())
     );
-    spawned.stderr?.on('data', (d: Buffer) =>
-      log.warn('[Kernel]', d.toString().trim())
-    );
+    spawned.stderr?.on('data', (d: Buffer) => {
+      log.warn('[Kernel]', d.toString().trim());
+      this.pushStderrLine(d.toString());
+    });
     spawned.on('exit', (code) => {
       log.warn(`[BackendManager] allternit-api exited (code ${code})`);
       // A newer spawn (e.g. a manual restart) may already own kernelProc; do
@@ -317,7 +320,7 @@ export class BackendManager {
       }
     });
 
-    await this.waitForUrl(`${this.getUrl()}/health`, 'allternit-api');
+    await this.waitForUrl(`${this.getUrl()}/health`, 'allternit-api', spawned);
 
     // Self-heal a missed platform static export (seen on the first launch
     // after a fresh install): the api answers /health but serves the 501 stub
@@ -484,29 +487,64 @@ export class BackendManager {
     }
   }
 
-  private async waitForUrl(url: string, label: string): Promise<void> {
+  /**
+   * Poll a health URL until it answers OK. Cold starts can edge past 30s, so
+   * the full HEALTH_TIMEOUT_MS stays the ceiling for a slow-but-alive backend.
+   * When a freshly spawned child is provided, its exit fails the wait
+   * immediately instead of burning that timeout against a process that
+   * already crashed, and the exit listener is removed as soon as health wins.
+   */
+  private async waitForUrl(url: string, label: string, child?: ChildProcess): Promise<void> {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS;
+    const crashState = { crashed: false, code: null as number | null };
+    const onExit = (code: number | null) => {
+      crashState.crashed = true;
+      crashState.code = code;
+    };
+    if (child) child.once('exit', onExit);
 
-    while (Date.now() < deadline) {
-      try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(500) });
-        if (res.ok || res.status === 401) {
-          return;
+    try {
+      while (Date.now() < deadline) {
+        if (crashState.crashed) {
+          throw new Error(
+            `${label} exited during startup (code ${crashState.code}): ${this.recentStderr().join(' | ')}`,
+          );
         }
-        if (url.endsWith('/health')) {
-          const health = await res.json().catch(() => null) as { live?: boolean } | null;
-          if (health?.live === true) {
-            log.warn(`[BackendManager] ${label} is live but degraded; continuing startup`);
+        try {
+          const res = await fetch(url, { signal: AbortSignal.timeout(500) });
+          if (res.ok || res.status === 401) {
             return;
           }
+          if (url.endsWith('/health')) {
+            const health = await res.json().catch(() => null) as { live?: boolean } | null;
+            if (health?.live === true) {
+              log.warn(`[BackendManager] ${label} is live but degraded; continuing startup`);
+              return;
+            }
+          }
+        } catch {
+          // Not ready yet.
         }
-      } catch {
-        // Not ready yet.
+        await new Promise((r) => setTimeout(r, 200));
       }
-      await new Promise((r) => setTimeout(r, 200));
-    }
 
-    throw new Error(`${label} did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
+      throw new Error(`${label} did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
+    } finally {
+      if (child) child.removeListener('exit', onExit);
+    }
+  }
+
+  private pushStderrLine(text: string): void {
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      this.stderrLines.push(trimmed);
+      if (this.stderrLines.length > 20) this.stderrLines.shift();
+    }
+  }
+
+  private recentStderr(): string[] {
+    return this.stderrLines.slice(-5);
   }
 
   private resolveBinaryPath(logDiscovery = true): string | null {
