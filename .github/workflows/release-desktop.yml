@@ -263,6 +263,30 @@ jobs:
           chmod +x surfaces/allternit-desktop/resources/bin/allternit-local-engine
           lipo -info surfaces/allternit-desktop/resources/bin/allternit-local-engine
 
+      # ── Step 3e: Build allternit-mux (PTY daemon) ───────────────────────────
+      - name: Build allternit-mux sidecar
+        # gizzi auto-spawns this for /pty. GizziManager resolves
+        # resources/bin/allternit-mux first. Universal lipo matches api/gizzi.
+        run: |
+          cargo build --release -p allternit-mux --target x86_64-apple-darwin
+          cargo build --release -p allternit-mux --target aarch64-apple-darwin
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          lipo -create \
+            target/x86_64-apple-darwin/release/allternit-mux \
+            target/aarch64-apple-darwin/release/allternit-mux \
+            -output surfaces/allternit-desktop/resources/bin/allternit-mux
+          chmod +x surfaces/allternit-desktop/resources/bin/allternit-mux
+          lipo -info surfaces/allternit-desktop/resources/bin/allternit-mux
+
+      # ── Step 3f: Stage CUA Lume (Apple Virtualization) ──────────────────────
+      - name: Stage Lume virtualization helper
+        # allternit-api looks for Resources/bin/lume next to itself. The CUA
+        # tarball is a launcher + lume.app; prepare-lume.cjs downloads both
+        # darwin archs so electron-builder extraResources ${arch} overlays
+        # the matching bundle into bin/.
+        run: node scripts/prepare-lume.cjs arm64 x64
+        working-directory: surfaces/allternit-desktop
+
       # ── Step 4: Patch checksums into manifest.ts ─────────────────────────────
       - name: Patch manifest.ts checksums
         run: |
@@ -474,6 +498,16 @@ jobs:
           if (-not $bin) { throw "whisper-cli.exe not found under build tree" }
           Copy-Item $bin.FullName surfaces\allternit-desktop\resources\bin\whisper-cli.exe
           Get-Item surfaces\allternit-desktop\resources\bin\whisper-cli.exe | Select-Object Name,Length
+
+      - name: Build allternit-mux sidecar (Windows)
+        # gizzi auto-spawns this for /pty. Staged as resources/bin/allternit-mux.exe.
+        shell: bash
+        run: |
+          cargo build --release -p allternit-mux --target x86_64-pc-windows-msvc
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          cp target/x86_64-pc-windows-msvc/release/allternit-mux.exe \
+             surfaces/allternit-desktop/resources/bin/allternit-mux.exe
+          ls -lh surfaces/allternit-desktop/resources/bin/allternit-mux.exe
 
       - name: Build open-connector sidecar bundle
         # services/open-connector is a plain npm project excluded from the

@@ -283,6 +283,8 @@ function checkPackagingDryRun(jobs) {
     return;
   }
   bins.push({ name: 'mesh-node', optional: false, flag: null });
+  bins.push({ name: 'allternit-mux', optional: false, flag: null });
+  bins.push({ name: 'lume', optional: false, flag: null, darwinOnly: true });
 
   // Platform jobs = jobs that invoke electron-builder. Jobs that invoke it
   // via an npm script (build:electron / dist / pack) run the
@@ -301,6 +303,7 @@ function checkPackagingDryRun(jobs) {
   for (const [jobName, text] of platformJobs) {
     const gated = /prepare:platform-static|npm run (build:electron|dist|pack)\b/.test(text);
     for (const bin of bins) {
+      if (bin.darwinOnly && /runs-on:\s*windows/i.test(text)) continue;
       const produced = text.includes(bin.name);
       const optedOut = bin.optional && bin.flag && new RegExp(`${bin.flag}:\\s*["']1["']`).test(text);
       if (produced) {
@@ -327,6 +330,40 @@ function checkPackagingDryRun(jobs) {
         );
       }
     }
+  }
+}
+
+
+function checkDesktopPrepareScripts() {
+  const pkgPath = path.join(desktopDir, 'package.json');
+  let pkg;
+  try {
+    pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  } catch {
+    fail('packaging: surfaces/allternit-desktop/package.json missing');
+    return;
+  }
+  const scripts = pkg.scripts || {};
+  for (const name of ['prepare:lume', 'prepare:mux']) {
+    if (!scripts[name]) {
+      fail(`packaging: package.json is missing script ${name}`);
+    } else {
+      pass(`packaging: package.json has ${name}`);
+    }
+  }
+  for (const chain of ['build:electron', 'build:electron:dmg', 'dist', 'pack']) {
+    const cmd = scripts[chain] || '';
+    if (!cmd.includes('prepare:lume') || !cmd.includes('prepare:mux')) {
+      fail(`packaging: ${chain} must run prepare:lume and prepare:mux before verify`);
+    } else {
+      pass(`packaging: ${chain} runs prepare:lume and prepare:mux`);
+    }
+  }
+  const extra = JSON.stringify(pkg.build || {});
+  if (!extra.includes('resources/lume/${arch}')) {
+    fail('packaging: electron-builder extraResources must overlay resources/lume/${arch}/ into bin/');
+  } else {
+    pass('packaging: extraResources overlays per-arch Lume into bin/');
   }
 }
 
@@ -581,6 +618,7 @@ function main() {
   checkScriptExistence(workflowText);
   checkToolchain(jobs);
   checkPackagingDryRun(jobs);
+checkDesktopPrepareScripts();
   checkNotarize(jobs);
   checkWindowsPnpmShim();
   checkSidecarGuards(jobs);
