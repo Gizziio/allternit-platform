@@ -72,6 +72,7 @@ tokio-stream = { version = "0.1", features = ["sync"] }
 allternit-commrails = { workspace = true }
 
 # P6a Bus mailbox (src/ao/mailbox.rs): durable SQLite Bus + Ledger shim crate.
+# Also used by the P5 visibility panel (src/ao/peers/*, src/ao/visibility/*).
 allternit-agent-system-rails = { workspace = true }
 
 # P6a UHP gateway (src/ao/serve.rs): `ao serve` mounts the UHP HTTP surface

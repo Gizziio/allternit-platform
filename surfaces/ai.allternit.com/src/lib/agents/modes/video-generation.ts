@@ -277,7 +277,60 @@ export async function editVideo(
 }
 
 // API Providers Registry for Video Mode
-export const VIDEO_PROVIDERS = {
+export type VideoProviderApiKeys = {
+  pollinations?: string;
+  replicate?: string;
+  fal?: string;
+  huggingface?: string;
+  minimax?: string;
+  kling?: string;
+  runway?: string;
+  pika?: string;
+  luma?: string;
+  stability?: string;
+  custom?: string;
+  customBaseURL?: string;
+};
+
+export interface VideoProviderInfo {
+  id?: string;
+  name: string;
+  description?: string;
+  type?: string;
+  url?: string;
+  models?: unknown[];
+  isAvailable?: (opts: { apiKeys: VideoProviderApiKeys }) => boolean;
+}
+
+export function getVideoProviders(_opts?: { apiKeys?: VideoProviderApiKeys }): Array<VideoProviderInfo & { id: string }> {
+  return Object.entries(VIDEO_PROVIDERS).map(([id, p]) => ({
+    id,
+    ...p,
+  }));
+}
+
+export const VIDEO_PROVIDERS: Record<string, VideoProviderInfo> = {
+  pollinations: {
+    id: 'pollinations',
+    name: 'Pollinations',
+    description: 'Free text-to-video',
+    type: 'free',
+    isAvailable: () => true,
+  },
+  replicate: {
+    id: 'replicate',
+    name: 'Replicate',
+    description: 'Requires API token',
+    type: 'api_key',
+    isAvailable: ({ apiKeys }) => Boolean(apiKeys.replicate),
+  },
+  fal: {
+    id: 'fal',
+    name: 'fal.ai',
+    description: 'Requires fal.ai key',
+    type: 'api_key',
+    isAvailable: ({ apiKeys }) => Boolean(apiKeys.fal),
+  },
   'minimax-h3': {
     name: 'MiniMax H3',
     url: 'api.minimax.io',

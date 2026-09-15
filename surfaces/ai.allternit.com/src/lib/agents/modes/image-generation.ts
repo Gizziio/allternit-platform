@@ -511,76 +511,66 @@ function parseSize(size: string): { width: number; height: number } {
   return { width: width || 1024, height: height || 1024 };
 }
 
+export type ImageProviderApiKeys = {
+  openai?: string;
+  cloudflareAccountId?: string;
+  cloudflareToken?: string;
+  huggingface?: string;
+  nvidia?: string;
+  google?: string;
+  seedDance?: string;
+};
+
+export interface ImageProviderInfo {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  isDefault?: boolean;
+  isAvailable: (opts: { apiKeys: ImageProviderApiKeys }) => boolean;
+}
+
+export const IMAGE_PROVIDERS: Record<string, ImageProviderInfo> = {
+  'bonsai-local': {
+    id: 'bonsai-local',
+    name: 'Bonsai Image 4B (Local)',
+    description: 'Runs on this device through the Allternit loopback companion',
+    type: 'local',
+    isAvailable: () => true,
+  },
+  pollinations: {
+    id: 'pollinations',
+    name: 'Pollinations.ai',
+    description: 'Free, no signup required',
+    type: 'free',
+    isAvailable: () => true,
+  },
+  openai: {
+    id: 'openai',
+    name: 'DALL-E 3 (OpenAI)',
+    description: 'High quality, requires API key',
+    type: 'api_key',
+    isAvailable: ({ apiKeys }) => Boolean(apiKeys.openai),
+  },
+  cloudflare: {
+    id: 'cloudflare',
+    name: 'Cloudflare Workers AI',
+    description: 'Requires account ID and API token',
+    type: 'api_key',
+    isAvailable: ({ apiKeys }) => Boolean(apiKeys.cloudflareAccountId && apiKeys.cloudflareToken),
+  },
+};
+
 /**
  * Get available providers with their setup status
  */
-function getImageProviders(userSettings?: any) {
-  return [
-    {
-      id: 'bonsai-local',
-      name: 'Bonsai Image 4B (Local)',
-      description: 'Runs on this device through the Allternit loopback companion',
-      type: 'local',
-      isAvailable: true,
-      isDefault: !userSettings?.preferredProvider || userSettings.preferredProvider === 'bonsai-local',
-    },
-    {
-      id: 'bonsai-webgpu',
-      name: 'Bonsai Image 4B (WebGPU)',
-      description: 'Fast local GPU mode; downloads a pinned unaudited runtime after explicit consent',
-      type: 'local-unverified',
-      isAvailable: typeof navigator !== 'undefined' && 'gpu' in navigator,
-      isDefault: userSettings?.preferredProvider === 'bonsai-webgpu',
-    },
-    {
-      id: 'pollinations',
-      name: 'Pollinations.ai',
-      description: 'Free, no signup required',
-      type: 'free',
-      isAvailable: true,
-      isDefault: userSettings?.preferredProvider === 'pollinations',
-    },
-    {
-      id: 'openai',
-      name: 'DALL-E 3 (OpenAI)',
-      description: 'High quality, requires API key',
-      type: 'api_key',
-      isAvailable: !!userSettings?.apiKeys?.openai,
-      isDefault: userSettings?.preferredProvider === 'openai',
-    },
-    {
-      id: 'gpt-image',
-      name: 'gpt-image (OpenAI)',
-      description: 'Metered; runs through the Allternit media plane with your own OpenAI key (BYOK) or the operator-funded lane',
-      type: 'api_key',
-      isAvailable: true,
-      isDefault: userSettings?.preferredProvider === 'gpt-image',
-    },
-    {
-      id: 'flux-fal',
-      name: 'FLUX schnell (fal)',
-      description: 'Burst/draft images, metered per megapixel; runs through the Allternit media plane with your own fal key (BYOK) or the operator-funded lane',
-      type: 'api_key',
-      isAvailable: true,
-      isDefault: userSettings?.preferredProvider === 'flux-fal',
-    },
-    {
-      id: 'stability',
-      name: 'Stability AI',
-      description: 'Not yet integrated — use Local Bonsai or OpenAI',
-      type: 'api_key',
-      isAvailable: false,
-      isDefault: false,
-    },
-    {
-      id: 'midjourney',
-      name: 'Midjourney',
-      description: 'Requires Discord setup',
-      type: 'subscription',
-      isAvailable: false,
-      isDefault: false,
-    },
-  ];
+export function getImageProviders(userSettings?: { apiKeys?: ImageProviderApiKeys }) {
+  const apiKeys = userSettings?.apiKeys ?? {};
+  return Object.values(IMAGE_PROVIDERS).map((p) => ({
+    ...p,
+    isAvailable: p.isAvailable({ apiKeys }),
+    isDefault: false,
+  }));
 }
 
 // ==========================================
