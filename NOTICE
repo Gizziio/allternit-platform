@@ -1,0 +1,15 @@
+Allternit Platform
+Copyright 2026 Allternit LLC
+
+This product includes software developed by Allternit LLC.
+
+Trademarks: Allternit, Gizzi, Gizziio, and the A:// glyph are trademarks of
+Allternit LLC. Use of these marks is not granted by the Apache License,
+Version 2.0, except as required for reasonable and customary use in
+describing the origin of this software.
+
+The hosted Allternit cloud backend (ai.allternit.com) is proprietary and is
+not distributed with this repository.
+
+This repository bundles third-party components. See THIRD-PARTY-NOTICES.md
+for attribution.

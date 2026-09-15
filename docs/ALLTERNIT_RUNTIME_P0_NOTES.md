@@ -15,7 +15,7 @@ files_changed:
   - infrastructure/executor/ao-engine/tests/                       # 14 files: CARGO_BIN_EXE_herdr → CARGO_BIN_EXE_ao
   - Cargo.toml (root)            # member added + [patch.crates-io] portable-pty = ao-engine/vendor/portable-pty (version-specific 0.9.x)
   - Cargo.lock                   # ao-engine + vendor deps resolved
-  - THIRD_PARTY_NOTICES.md       # herdr Apache-2.0 attribution entry
+  - THIRD-PARTY-NOTICES.md       # herdr Apache-2.0 attribution entry
   - docs/ALLTERNIT_RUNTIME_MAP.md / docs/ALLTERNIT_RUNTIME_P0_TASK.md  # spec docs (pre-existing in worktree)
 deviations:
   - "`herdr channel` subcommand removed alongside `herdr update` (both rode the update manifest; channel had no purpose without it)."
