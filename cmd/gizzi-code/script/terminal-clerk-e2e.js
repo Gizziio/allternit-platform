@@ -1,4 +1,4 @@
-import { Auth } from "@/runtime/integrations/auth/auth";
+import { Auth } from "@/runtime/integrations/auth";
 import { Server } from "@/runtime/server/server";
 function assert(condition, message) {
     if (!condition)

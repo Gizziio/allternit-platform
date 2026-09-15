@@ -135,12 +135,21 @@ describe("deleted-paths guard", () => {
         for (const m of text.matchAll(IMPORT_RE)) specs.add(m[1])
         for (const m of text.matchAll(DYNAMIC_RE)) specs.add(m[1])
         for (const spec of specs) {
-          for (const c of candidates(spec, rel)) {
-            if (deleted.has(c)) {
-              violations.push(`${rel}: '${spec}' -> ${c}`)
-              break
+          const cs = candidates(spec, rel)
+          if (cs.length === 0) continue
+          // A deleted shadow file (foo.ts next to live foo/index.ts) is still
+          // listed in the manifest so it cannot come back and steal resolution.
+          // Only flag the import when nothing on disk still satisfies it.
+          const existing = cs.filter(c => {
+            try {
+              return statSync(join(ROOT, c)).isFile()
+            } catch {
+              return false
             }
-          }
+          })
+          if (existing.length > 0) continue
+          const hit = cs.find(c => deleted.has(c))
+          if (hit) violations.push(`${rel}: '${spec}' -> ${hit}`)
         }
       }
     }
