@@ -1,7 +1,12 @@
-import { app, BrowserWindow, ipcMain, safeStorage, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, net, safeStorage, session, shell } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openClerkOAuthPopup, setCookieOnSession } from './clerk-oauth-popup.js';
+import {
+  buildAuthForwardInit,
+  cookieFromSetCookieHeader,
+  setCookiesFromResponse,
+} from './auth-https-forward.js';
 import { PORTS } from './config.js';
 import { connectorSidecarManager } from './connector-sidecar-manager.js';
 
@@ -785,41 +790,37 @@ export class DesktopAuthManager {
   }
 
   /**
-   * Forward intercepted https (Clerk FAPI, CDN, captcha) through the auth
-   * partition. `protocol.handle('https')` owns the whole scheme, so Chromium
-   * does not attach partition cookies to the Request we receive. net.fetch()
-   * also uses the default session — Set-Cookie from GET /v1/client never
-   * lands, POST /attempt_first_factor goes out without `__client`, and Clerk
-   * returns 401 `signed_out` ("You are signed out").
+   * Forward intercepted https (Clerk FAPI, captcha, anything not the local
+   * auth renderer). `protocol.handle('https')` owns the whole scheme, so
+   * Chromium does not attach partition cookies to the Request we receive, and
+   * session.fetch() on this partition re-enters the handler (Clerk JS then
+   * times out). net.fetch + bypassCustomProtocolHandlers hits the real
+   * network; we copy Cookie / Set-Cookie against the auth jar ourselves.
    */
   private async forwardThroughAuthSession(
     authSession: Electron.Session,
     request: Request,
   ): Promise<Response> {
-    const headers = new Headers(request.headers);
-    if (!headers.has('cookie')) {
+    try {
       const cookies = await authSession.cookies.get({ url: request.url });
-      if (cookies.length > 0) {
-        headers.set(
-          'Cookie',
-          cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; '),
-        );
+      const init = await buildAuthForwardInit(request, cookies);
+      const response = await net.fetch(request.url, init);
+      for (const raw of setCookiesFromResponse(response)) {
+        try {
+          await setCookieOnSession(authSession, cookieFromSetCookieHeader(raw, request.url));
+        } catch (error) {
+          log.warn('[Auth] Failed to persist forwarded Set-Cookie:', error);
+        }
       }
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    } catch (error) {
+      log.error(`[Auth] https forward failed for ${request.url}:`, error);
+      return new Response('Bad gateway', { status: 502 });
     }
-    const body = request.method !== 'GET' && request.method !== 'HEAD'
-      ? await request.arrayBuffer()
-      : null;
-
-    const init: RequestInit & { bypassCustomProtocolHandlers: boolean } = {
-      method: request.method,
-      headers,
-      bypassCustomProtocolHandlers: true,
-    };
-    if (body && body.byteLength > 0) {
-      init.body = body;
-    }
-    const response = await authSession.fetch(request.url, init);
-    return response;
   }
 
   private serveAuthFile(authDir: string, requestPath: string): Response {
