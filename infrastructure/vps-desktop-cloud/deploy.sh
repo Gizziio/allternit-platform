@@ -48,9 +48,9 @@ ensure_src() {
 
 install_binary() {
   log_info "Installing allternit-api binary..."
-  # Crash-looping Restart=always will come back during the checksum repair
-  # and race SQLite. Mask until start_service.
-  ssh_cmd "systemctl mask --now allternit-api || true"
+  # Restart=always will respawn a crashing binary and race SQLite. Pin
+  # Restart=no in a runtime drop-in, then kill leftovers.
+  ssh_cmd "mkdir -p /run/systemd/system/allternit-api.service.d && printf '[Service]\\nRestart=no\\n' > /run/systemd/system/allternit-api.service.d/norestart.conf && systemctl daemon-reload && systemctl stop allternit-api || true && killall -9 allternit-api 2>/dev/null || true"
   ssh_cmd "mkdir -p ${API_DIR}/bin/backups ${DATA_DIR} ${ETC_DIR} ${LOG_DIR}"
   # Keep a timestamped binary backup so rollback.sh can restore it.
   ssh_cmd "cp ${API_DIR}/bin/allternit-api ${API_DIR}/bin/backups/allternit-api.$(date +%Y%m%d-%H%M%S) || true"
@@ -151,22 +151,9 @@ install_backup() {
   ssh_cmd "systemctl daemon-reload && systemctl enable --now allternit-desktop-backup.timer"
 }
 
-# Duplicate version files (two V83/V86/V93, a renamed V47) made refinery's
-# filesystem name disagree with production history. SQL is CREATE IF NOT
-# EXISTS, so dropping those history rows lets refinery re-apply and rewrite
-# checksums. No tables dropped.
-repair_collision_checksums() {
-  local db="${DATA_DIR}/allternit.db"
-  if ! ssh_cmd "test -f ${db}"; then
-    return 0
-  fi
-  log_warn "Re-recording collision versions in refinery history (IF NOT EXISTS; no data drop)."
-  ssh_cmd "sqlite3 ${db} \"DELETE FROM refinery_schema_history WHERE version IN (47, 83, 86, 87, 88, 93);\""
-}
-
 start_service() {
   log_info "Starting allternit-api..."
-  ssh_cmd "systemctl unmask allternit-api || true"
+  ssh_cmd "rm -f /run/systemd/system/allternit-api.service.d/norestart.conf && rmdir /run/systemd/system/allternit-api.service.d 2>/dev/null || true && systemctl daemon-reload"
   ssh_cmd "systemctl enable allternit-api || true"
   ssh_cmd "systemctl restart allternit-api"
   sleep 8
@@ -201,6 +188,5 @@ install_env
 install_incus_certs
 install_service
 install_backup
-repair_collision_checksums
 start_service
 print_summary
