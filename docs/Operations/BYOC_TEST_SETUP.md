@@ -24,7 +24,7 @@ curl -X POST https://platform.allternit.com/api/v1/runtime/backend/manual \
 |-----------|--------|
 | Backend on MacBook | ✅ Running on port 4096 |
 | Tunnel URL | ✅ https://molecules-dsc-specifications-dangerous.trycloudflare.com |
-| Auth | Username: `gizzi`, Password: `c5d4656e7f3753bc0d8996d4dbebf48cecbd7362be06e60f` |
+| Auth | Username: `gizzi`, Password: `<rotated-see-vault>` |
 | Health Check | ✅ Pass |
 
 ## What's Missing

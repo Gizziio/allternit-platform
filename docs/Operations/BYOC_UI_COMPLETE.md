@@ -36,7 +36,7 @@ cloudflared tunnel --url http://localhost:4096
 |-----------|-------|
 | Backend Running | ✅ Port 4096 |
 | Tunnel URL | `https://molecules-dsc-specifications-dangerous.trycloudflare.com` |
-| Auth | Username: `gizzi`, Password: `c5d4656e7f3753bc0d8996d4dbebf48cecbd7362be06e60f` |
+| Auth | Username: `gizzi`, Password: `<rotated-see-vault>` |
 
 ### Test Steps
 1. Go to https://platform.allternit.com
