@@ -4,7 +4,7 @@
   "name": "@allternit/gizzi-code",
   "description": "AI-powered terminal interface for the Allternit ecosystem",
   "type": "module",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "homepage": "https://docs.gizziio.com",
   "packageManager": "bun@1.3.14",
   "repository": {

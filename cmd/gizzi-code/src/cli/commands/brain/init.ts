@@ -1,6 +1,7 @@
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { getApiUrl } from "@/constants/allternit-api"
+import { updateSettingsForSource } from "@/cli/ui/ink-app/utils/settings/settings"
 import { Log } from "@/shared/util/log"
 import { BrainError, expandBrainPath, initBrain, setBrainRemote } from "./lib"
 
@@ -64,11 +65,22 @@ export const BrainInitCommand = cmd({
       throw e
     }
 
-    UI.println(
-      UI.Style.TEXT_DIM +
-        `Set "brain.path": "${result.path}" in your user settings if it is not picked up automatically.` +
-        UI.Style.RESET,
-    )
+    // D1-R3: wire the brain into the local agent layer via user settings so
+    // memory ingestion / the taste-corpus wiki connector can find it.
+    const { error } = updateSettingsForSource("userSettings", {
+      brain: { path: result.path },
+    })
+    if (error) {
+      log.warn("could not write brain.path to user settings", {
+        error: error.message,
+      })
+      UI.println(
+        UI.Style.TEXT_WARNING +
+          `⚠️  brain created, but writing settings failed (${error.message}). ` +
+          `Set "brain.path": "${result.path}" in your user settings manually.` +
+          UI.Style.RESET,
+      )
+    }
 
     UI.println(
       UI.Style.TEXT_SUCCESS + `🧠 Brain created at ${result.path}` + UI.Style.RESET,

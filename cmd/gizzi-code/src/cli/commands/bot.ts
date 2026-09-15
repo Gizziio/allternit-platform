@@ -16,7 +16,7 @@ import { UI } from "@/cli/ui"
 import * as prompts from "@clack/prompts"
 import { bootstrap } from "@/cli/bootstrap"
 import { RunCommand } from "@/cli/commands/run"
-import { TuiThreadCommand } from "@/cli/ui/tui/thread"
+import { TuiThreadCommand } from "@/cli/ui/ink-app/thread"
 import { describeSchedule } from "@/runtime/automation/cron/parser"
 import {
   BotStoreError,

@@ -1,0 +1,15 @@
+// @ts-nocheck
+import type { Command } from '../../commands'
+import { isConsumerSubscriber } from '../../utils/auth'
+
+const privacySettings = {
+  type: 'local-jsx',
+  name: 'privacy-settings',
+  aliases: ['privacy'],
+  description: 'View and update your privacy settings',
+  isEnabled: () => {
+    return isConsumerSubscriber()
+  },
+  load: () => import('./privacy-settings.js'),
+} satisfies Command
+export default privacySettings

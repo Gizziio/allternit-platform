@@ -11,10 +11,8 @@ import { mkdir, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { z } from 'zod/v4'
 import { TEAMMATE_MESSAGE_TAG } from '@/constants/xml.js'
-
-const PermissionModeSchema = () =>
-  z.enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk'])
-const SEND_MESSAGE_TOOL_NAME = 'SendMessage'
+import { PermissionModeSchema } from '../../cli/ui/ink-app/entrypoints/sdk/coreSchemas.js'
+import { SEND_MESSAGE_TOOL_NAME } from '../../cli/ui/ink-app/tools/SendMessageTool/constants.js'
 import type { Message } from '@/types/message.js'
 import { generateRequestId } from './agentId.js'
 import { count } from './array.js'
