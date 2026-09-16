@@ -2,7 +2,7 @@
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { removeSandboxViolationTags } from '@/shared/utils/sandbox/sandbox-ui-utils.js';
-import { KeyboardShortcutHint } from '../../../../cli/ui/components/design-system/KeyboardShortcutHint.js';
+import { KeyboardShortcutHint } from '../../../../cli/ui/ink-app/components/design-system/KeyboardShortcutHint.js';
 import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { OutputLine } from '../../../../cli/ui/ink-app/components/shell/OutputLine.js';
 import { ShellTimeDisplay } from '../../../../cli/ui/ink-app/components/shell/ShellTimeDisplay.js';
