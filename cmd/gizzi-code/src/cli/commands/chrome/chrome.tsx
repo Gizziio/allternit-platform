@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useState } from 'react';
-import { type OptionWithDescription, Select } from '../../ui/components/CustomSelect/select.js';
-import { Dialog } from '../../ui/components/design-system/Dialog.js';
+import { type OptionWithDescription, Select } from '../../ui/ink-app/components/CustomSelect/select.js';
+import { Dialog } from '../../ui/ink-app/components/design-system/Dialog.js';
 import { Box, Text } from '@/ink.js';
 import { useAppState } from '@/state/AppState.js';
 import { isClaudeAISubscriber } from '../../utils/auth.js';

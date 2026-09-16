@@ -4,7 +4,7 @@ import { feature } from 'bun:bundle';
 import figures from 'figures';
 import * as React from 'react';
 import type { z } from 'zod/v4';
-import { ProgressBar } from '../../../../cli/ui/components/design-system/ProgressBar.js';
+import { ProgressBar } from '../../../../cli/ui/ink-app/components/design-system/ProgressBar.js';
 import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { linkifyUrlsInText, OutputLine } from '../../../../cli/ui/ink-app/components/shell/OutputLine.js';
 import { stringWidth } from '../../../../cli/ui/ink-app/ink/stringWidth.js';

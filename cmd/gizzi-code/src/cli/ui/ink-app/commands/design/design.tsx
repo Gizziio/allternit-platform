@@ -8,7 +8,7 @@ import {
 } from '../../../../../shared/utils/desktopDeepLink.js';
 import { readDesignAck } from '../../../../../shared/utils/designPromptAck.js';
 import { errorMessage } from '../../../../../shared/utils/errors.js';
-import { LoadingState } from '../../../components/design-system/LoadingState.js';
+import { LoadingState } from '../../components/design-system/LoadingState.js';
 
 const DESKTOP_DOWNLOAD_URL = 'https://github.com/Gizziio/desktop/releases';
 

@@ -2,7 +2,7 @@
 import { c as _c } from "react/compiler-runtime";
 import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
-import { KeyboardShortcutHint } from '../../../../cli/ui/components/design-system/KeyboardShortcutHint.js';
+import { KeyboardShortcutHint } from '../../../../cli/ui/ink-app/components/design-system/KeyboardShortcutHint.js';
 import { FallbackToolUseErrorMessage } from '../../../../cli/ui/ink-app/components/FallbackToolUseErrorMessage.js';
 import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { ShellProgressMessage } from '../../../../cli/ui/ink-app/components/shell/ShellProgressMessage.js';
