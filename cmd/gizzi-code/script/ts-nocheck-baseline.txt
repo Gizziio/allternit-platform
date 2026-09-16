@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=2345
+count=2340
 --- files ---
 cli/ci.ts
 cli/commands/chrome/chrome.tsx
@@ -2012,10 +2012,6 @@ config/permissionProfiles.ts
 config/profiles.ts
 coordinator/coordinatorMode.ts
 hooks/useCanUseTool.ts
-ink/events/click-event.ts
-ink/events/focus-event.ts
-ink/events/input-event.ts
-ink/events/keyboard-event.ts
 keybindings/KeybindingContext.tsx
 keybindings/match.ts
 keybindings/parser.ts
@@ -2032,7 +2028,6 @@ runtime/context/config/config.ts
 runtime/cowork/cowork.runtime.ts
 runtime/cowork/cowork.service.ts
 runtime/file/file.ts
-runtime/gizzi-core/ink.ts
 runtime/gizzi-core/services/railsPeer.ts
 runtime/gizzi-core/setup.ts
 runtime/integrations/bridgeEnabled.ts

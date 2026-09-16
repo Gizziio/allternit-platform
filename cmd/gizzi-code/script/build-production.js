@@ -204,11 +204,8 @@ const bundlePlugin = {
             } else if (head === "cli") {
                 candidates = [resolve("src/cli", rel)];
             } else if (head === "ink") {
-                // Complete implementation lives under ink-app. src/ink/ is a
-                // tsc-only shim that re-exported deleted ink-renderer paths.
                 candidates = [
                     resolve("src/cli/ui/ink-app/ink", rel),
-                    resolve("src/ink", rel),
                 ];
             } else if (head === "utils") {
                 candidates = [
