@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Tailscale/Headscale mesh integration for `gizzi serve --mesh`. Joins the
-// Allternit tailnet (coordination server: https://allternit-headscale.fly.dev)
+// Allternit tailnet (coordination server: https://mail.news.allternit.com:8444)
 // so clients on the tailnet (iOS app with embedded tsnet) can reach this
 // server over WireGuard instead of a public tunnel. Mirrors tunnel.ts: one
 // discovery chain, one spawn path, `stop()` lifecycle owned by this process.

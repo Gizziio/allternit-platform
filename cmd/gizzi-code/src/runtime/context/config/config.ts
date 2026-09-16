@@ -1171,7 +1171,7 @@ export namespace Config {
       mesh_control_url: z
         .string()
         .optional()
-        .describe("Headscale coordination server URL (default https://headscale.allternit.com)"),
+        .describe("Headscale coordination server URL (default https://mail.news.allternit.com:8444)"),
     })
     .strict()
     

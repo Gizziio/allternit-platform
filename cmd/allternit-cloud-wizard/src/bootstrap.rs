@@ -63,7 +63,7 @@ pub const GIZZI_DOWNLOAD_BASE: &str =
 pub const GIZZI_PORT: u16 = 4096;
 
 /// Default Headscale control URL (same default as the cloud-api mesh route).
-pub const DEFAULT_MESH_CONTROL_URL: &str = "https://allternit-headscale.fly.dev";
+pub const DEFAULT_MESH_CONTROL_URL: &str = "https://mail.news.allternit.com:8444";
 
 /// SSH authentication for the bootstrap connection
 #[derive(Debug, Clone)]

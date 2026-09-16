@@ -92,7 +92,7 @@ targets:
         # Headscale control plane for the embedded mesh (tsnet) node. Same
         # value in debug+release; AppConfig falls back to this URL when the
         # plist key is missing.
-        ALLTERNIT_MESH_CONTROL_URL: https://allternit-headscale.fly.dev
+        ALLTERNIT_MESH_CONTROL_URL: https://mail.news.allternit.com:8444
       configs:
         debug:
           # Point Debug simulator builds at the hosted gateway so chats work

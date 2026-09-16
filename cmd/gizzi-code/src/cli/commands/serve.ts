@@ -43,7 +43,7 @@ export const ServeCommand = cmd({
       })
       .option("mesh-control-url", {
         type: "string",
-        describe: "Headscale coordination server URL (default https://headscale.allternit.com)",
+        describe: "Headscale coordination server URL (default https://mail.news.allternit.com:8444)",
       }),
   describe: "starts a headless gizzi server",
   handler: async (args) => {
