@@ -6,7 +6,7 @@ import { KeyboardShortcutHint } from '../../../../cli/ui/ink-app/components/desi
 import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { OutputLine } from '../../../../cli/ui/ink-app/components/shell/OutputLine.js';
 import { ShellTimeDisplay } from '../../../../cli/ui/ink-app/components/shell/ShellTimeDisplay.js';
-import { Box, Text } from '@/cli/ink.js';
+import { Box, Text } from '@/ink.js';
 import type { Out as BashOut } from './BashTool.js';
 type Props = {
   content: Omit<BashOut, 'interrupted'>;

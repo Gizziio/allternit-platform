@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=2282
+count=2278
 --- files ---
 cli/ci.ts
 cli/commands/chrome/chrome.tsx
@@ -15,7 +15,6 @@ cli/commands/remote/index.ts
 cli/commands/skills.ts
 cli/commands/theme/index.ts
 cli/hooks/useChromeExtensionNotification.tsx
-cli/ink.ts
 cli/main.ts
 cli/ui/ink-app/Task.ts
 cli/ui/ink-app/Tool.ts
@@ -539,7 +538,6 @@ cli/ui/ink-app/components/diff/DiffDetailView.tsx
 cli/ui/ink-app/components/diff/DiffDialog.tsx
 cli/ui/ink-app/components/diff/DiffFileList.tsx
 cli/ui/ink-app/components/grove/Grove.tsx
-cli/ui/ink-app/components/history.ts
 cli/ui/ink-app/components/hooks/HooksConfigMenu.tsx
 cli/ui/ink-app/components/hooks/PromptDialog.tsx
 cli/ui/ink-app/components/hooks/SelectEventMode.tsx
@@ -1379,7 +1377,6 @@ cli/ui/ink-app/types/generated/events_mono/claude_code/v1/claude_code_internal_e
 cli/ui/ink-app/types/generated/events_mono/common/v1/auth.ts
 cli/ui/ink-app/types/generated/events_mono/growthbook/v1/growthbook_experiment_event.ts
 cli/ui/ink-app/types/generated/google/protobuf/timestamp.ts
-cli/ui/ink-app/types/global.d.ts
 cli/ui/ink-app/types/hooks.ts
 cli/ui/ink-app/types/ids.ts
 cli/ui/ink-app/types/index.ts
@@ -1389,7 +1386,6 @@ cli/ui/ink-app/types/messageQueueTypes.ts
 cli/ui/ink-app/types/notebook.ts
 cli/ui/ink-app/types/permissions.ts
 cli/ui/ink-app/types/plugin.ts
-cli/ui/ink-app/types/react.d.ts
 cli/ui/ink-app/types/statusLine.ts
 cli/ui/ink-app/types/textInputTypes.ts
 cli/ui/ink-app/types/tools.ts

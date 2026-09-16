@@ -6,7 +6,7 @@ import { KeyboardShortcutHint } from '../../../../cli/ui/ink-app/components/desi
 import { FallbackToolUseErrorMessage } from '../../../../cli/ui/ink-app/components/FallbackToolUseErrorMessage.js';
 import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { ShellProgressMessage } from '../../../../cli/ui/ink-app/components/shell/ShellProgressMessage.js';
-import { Box, Text } from '@/cli/ink.js';
+import { Box, Text } from '@/ink.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
 import { useShortcutDisplay } from '@/keybindings/useShortcutDisplay.js';
 import { useAppStateStore, useSetAppState } from '@/state/AppState.js';
