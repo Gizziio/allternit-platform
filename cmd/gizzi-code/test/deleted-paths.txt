@@ -1653,6 +1653,11 @@ src/hooks/useTerminalSize.d.ts
 src/hooks/useTerminalSize.ts
 src/id/id.ts
 src/index.ts
+src/ink.ts
+src/ink/events/click-event.ts
+src/ink/events/focus-event.ts
+src/ink/events/input-event.ts
+src/ink/events/keyboard-event.ts
 src/jobs/classifier.ts
 src/keybindings/KeybindingProviderSetup.tsx
 src/keybindings/schema.ts
@@ -1741,6 +1746,8 @@ src/runtime/format/formatter.ts
 src/runtime/gizzi-core/QueryEngine.ts
 src/runtime/gizzi-core/Task.ts
 src/runtime/gizzi-core/components/TrustDialog/TrustDialog.ts
+src/runtime/gizzi-core/components/design-system/ThemedBox.ts
+src/runtime/gizzi-core/components/design-system/ThemedText.ts
 src/runtime/gizzi-core/components/design-system/color.ts
 src/runtime/gizzi-core/context.ts
 src/runtime/gizzi-core/context/stats.ts
@@ -1748,6 +1755,7 @@ src/runtime/gizzi-core/cost-tracker.ts
 src/runtime/gizzi-core/costHook.ts
 src/runtime/gizzi-core/dialogLaunchers.tsx
 src/runtime/gizzi-core/history.ts
+src/runtime/gizzi-core/ink.ts
 src/runtime/gizzi-core/interactiveHelpers.tsx
 src/runtime/gizzi-core/projectOnboardingState.ts
 src/runtime/gizzi-core/query.ts

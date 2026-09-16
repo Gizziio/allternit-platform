@@ -22,12 +22,13 @@
     ],
     "paths": {
       "@/ink": [
-        "./src/cli/ui/ink-app/ink.ts",
-        "./src/ink.ts"
+        "./src/cli/ui/ink-app/ink.ts"
+      ],
+      "@/ink.js": [
+        "./src/cli/ui/ink-app/ink.ts"
       ],
       "@/ink/*": [
-        "./src/cli/ui/ink-app/ink/*",
-        "./src/ink/*"
+        "./src/cli/ui/ink-app/ink/*"
       ],
       "@/*": [
         "./src/*",
