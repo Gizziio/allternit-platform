@@ -85,17 +85,26 @@ pub async fn rate_limit_middleware(
     request: Request,
     next: Next,
 ) -> Response {
-    match rate_limit_middleware_inner(&state.db, request, next).await {
+    match rate_limit_middleware_inner(&state, request, next).await {
         Ok(response) => response,
         Err(response) => response,
     }
 }
 
 async fn rate_limit_middleware_inner(
-    db: &DbHandle,
+    state: &AppState,
     request: Request,
     next: Next,
 ) -> Result<Response, Response> {
+    // The packaged desktop's own UI boot-straps dozens of operator calls in
+    // parallel. The public Clerk RPM cap is for api.allternit.com, not the
+    // loopback kernel talking to itself. Only a header that matches the
+    // spawn-time secret bypasses — spoofing the header on a public node does
+    // nothing because no secret is configured there.
+    if crate::auth::verify_desktop_access_token(request.headers(), &state.config) {
+        return Ok(next.run(request).await);
+    }
+
     let user = match request.extensions().get::<AuthUser>().cloned() {
         Some(user) => user,
         None => return Ok(next.run(request).await),
@@ -106,7 +115,7 @@ async fn rate_limit_middleware_inner(
         .clone()
         .unwrap_or_else(|| user.user_id.clone());
 
-    let limit = lookup_org_limit(db, &scope)
+    let limit = lookup_org_limit(&state.db, &scope)
         .await
         .unwrap_or(None)
         .unwrap_or(DEFAULT_PUBLIC_API_RATE_LIMIT_RPM)
@@ -456,6 +465,69 @@ mod tests {
             .to_str()
             .unwrap();
         assert!(!retry_after.is_empty());
+    }
+
+    #[tokio::test]
+    async fn verified_desktop_access_token_bypasses_public_rate_limit() {
+        let _guard = crate::test_helpers::computer_use_dir_test_lock();
+        std::env::set_var("ALLTERNIT_DESKTOP_ACCESS_TOKEN", "desktop-secret");
+
+        let temp = tempfile::tempdir().unwrap();
+        let state = crate::test_helpers::app_state(temp.path()).await;
+        {
+            let conn = state.db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO organizations (id, name, api_rate_limit_rpm)
+                 VALUES ('org-desktop-bypass', 'Desktop Org', 1)",
+                [],
+            )
+            .unwrap();
+        }
+        let app = Router::new()
+            .route("/test", get(|| async { StatusCode::NO_CONTENT }))
+            .layer(axum::middleware::from_fn_with_state(
+                state,
+                rate_limit_middleware,
+            ));
+
+        fn with_desktop_token(org: &str, token: &str) -> Request<Body> {
+            Request::builder()
+                .method("GET")
+                .uri("/test")
+                .header("x-allternit-desktop-access-token", token)
+                .extension(test_user(Some(org)))
+                .body(Body::empty())
+                .unwrap()
+        }
+
+        for i in 0..5 {
+            let resp = app
+                .clone()
+                .oneshot(with_desktop_token("org-desktop-bypass", "desktop-secret"))
+                .await
+                .unwrap();
+            assert_eq!(
+                resp.status(),
+                StatusCode::NO_CONTENT,
+                "verified desktop request {i} should skip the 1 RPM cap"
+            );
+        }
+
+        let spoofed = app
+            .clone()
+            .oneshot(with_desktop_token("org-desktop-bypass", "wrong-secret"))
+            .await
+            .unwrap();
+        assert_eq!(spoofed.status(), StatusCode::NO_CONTENT);
+
+        let blocked = app
+            .clone()
+            .oneshot(with_desktop_token("org-desktop-bypass", "wrong-secret"))
+            .await
+            .unwrap();
+        assert_eq!(blocked.status(), StatusCode::TOO_MANY_REQUESTS);
+
+        std::env::remove_var("ALLTERNIT_DESKTOP_ACCESS_TOKEN");
     }
 
     #[tokio::test]

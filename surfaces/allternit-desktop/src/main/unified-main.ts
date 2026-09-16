@@ -40,6 +40,7 @@ import { gizziManager } from './gizzi-manager.js';
 import { connectorSidecarManager } from './connector-sidecar-manager.js';
 import { gizziDaemonManager } from './gizzi-daemon-manager.js';
 import { PORTS, URLS, devUiUrl, apiUrl, notebookUrl, staticUiUrl } from './config.js';
+import { isPublicCloudCatalogPath, rewriteCloudApiToProtocol, shouldInjectDesktopIdentity } from './api-protocol.js';
 import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus, launchMiniAppDesktop, getMiniAppApproval, reviewAndApproveMiniApp, revokeMiniAppApproval, removeMiniAppRuntime, rollbackMiniAppRuntime, setMiniAppOAuthTokenResolver } from './mini-apps-manager.js';
 import { installReleaseFromRegistry, rollbackReleaseInstall, removeReleaseInstall, listReleaseInstalls, getReleaseInstallState } from './mini-app-release-installer.js';
 import { createMiniAppOAuthBroker, type MiniAppOAuthBroker, type MiniAppOAuthProvider } from './mini-app-oauth-broker.js';
@@ -713,14 +714,16 @@ function createMainWindow(): BrowserWindow {
     flushPendingOfficeDeliveries();
   });
 
-  // Route /api/* through the allternit-api custom protocol so main can inject
-  // the paired device token. Cloud control-plane calls stay on api.allternit.com
-  // (host `cloud`); same-origin calls from the local static UI stay on loopback.
+  // Route operator + cloud-api calls through the allternit-api custom protocol.
+  // Local `/api/*` gets the paired device token. Cloud host `cloud` is a
+  // CORS-free broker that MUST keep the renderer's Clerk JWT — swapping in the
+  // desktop device token is what produced the billing 401s.
   const platformOrigin = activePlatformUrl;
   const publicApiOrigin = URLS.CLOUD_API;
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
-    if (details.url.startsWith(`${publicApiOrigin}/api/`)) {
-      callback({ redirectURL: details.url.replace(publicApiOrigin, 'allternit-api://cloud') });
+    const cloudRedirect = rewriteCloudApiToProtocol(details.url, publicApiOrigin);
+    if (cloudRedirect) {
+      callback({ redirectURL: cloudRedirect });
       return;
     }
     if (details.url.startsWith(`${platformOrigin}/api/`)) {
@@ -734,17 +737,8 @@ function createMainWindow(): BrowserWindow {
 
   window.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
     const session = authManager.getSessionSnapshot();
-    let isOperatorApi = false;
-    try {
-      const target = new URL(details.url);
-      isOperatorApi =
-        target.origin === URLS.API ||
-        target.origin === URLS.CLOUD_API ||
-        target.protocol === 'allternit-api:';
-    } catch {
-      isOperatorApi = false;
-    }
-    if (session && isOperatorApi) {
+    const injectDesktop = shouldInjectDesktopIdentity(details.url, URLS.API, URLS.CLOUD_API);
+    if (session && injectDesktop) {
       details.requestHeaders.Authorization = `Bearer ${session.accessToken}`;
       details.requestHeaders['X-Allternit-Desktop-Access-Token'] = session.accessToken;
       details.requestHeaders['X-Allternit-User-Id'] = session.userId;
@@ -2086,10 +2080,8 @@ app.whenReady().then(async () => {
   protocol.handle('allternit-api', async (request) => {
     const url = new URL(request.url);
     const pathAndQuery = `${url.pathname}${url.search}`;
-    const targetUrl =
-      url.hostname === 'cloud' || url.host === 'cloud'
-        ? `${URLS.CLOUD_API}${pathAndQuery}`
-        : apiUrl(pathAndQuery);
+    const isCloud = url.hostname === 'cloud' || url.host === 'cloud';
+    const targetUrl = isCloud ? `${URLS.CLOUD_API}${pathAndQuery}` : apiUrl(pathAndQuery);
 
     // CORS preflight for custom-protocol cross-origin requests
     if (request.method === 'OPTIONS') {
@@ -2105,29 +2097,52 @@ app.whenReady().then(async () => {
     }
 
     const headers = new Headers(request.headers);
-    const desktopSession = await authManager.getSession().catch((error) => {
-      log.warn('[Protocol] Paired runtime identity is temporarily unavailable:', error);
-      return null;
-    });
-    if (desktopSession) {
-      // The renderer never receives this credential. Electron main brokers the
-      // scoped identity plus user metadata to the loopback-only API.
-      headers.set('Authorization', `Bearer ${desktopSession.accessToken}`);
-      headers.set('X-Allternit-Desktop-Access-Token', desktopSession.accessToken);
-      headers.set('X-Allternit-User-Id', desktopSession.userId);
-      headers.set('X-Allternit-User-Email', desktopSession.userEmail);
-      headers.set('X-Allternit-User-Name', desktopSession.userEmail);
-      if (desktopSession.organizationId) {
-        headers.set('X-Allternit-Tenant-Id', desktopSession.organizationId);
+    if (isCloud) {
+      // Pairing device tokens are not Clerk JWTs. Cloud-api rejects them with
+      // 401. Public catalog routes take no bearer at all.
+      headers.delete('X-Allternit-Desktop-Access-Token');
+      headers.delete('X-Allternit-User-Id');
+      headers.delete('X-Allternit-User-Email');
+      headers.delete('X-Allternit-User-Name');
+      headers.delete('X-Allternit-Tenant-Id');
+      if (isPublicCloudCatalogPath(pathAndQuery)) {
+        headers.delete('Authorization');
+      } else {
+        const clerk = await authManager.getClerkToken().catch((error) => {
+          log.warn('[Protocol] Clerk JWT unavailable for cloud request:', error);
+          return null;
+        });
+        if (clerk) {
+          headers.set('Authorization', `Bearer ${clerk}`);
+        } else {
+          headers.delete('Authorization');
+        }
       }
-    } else if (isDev && !headers.has('X-Allternit-Desktop-Access-Token')) {
-      // Chromium strips the renderer's custom identity headers when
-      // onBeforeRequest redirects /api/* across origins to this protocol.
-      // Development-only bootstrap; packaged apps must have a paired runtime.
-      headers.set('X-Allternit-Desktop-Access-Token', 'desktop-dev-bootstrap');
-      headers.set('X-Allternit-User-Id', 'desktop-dev-user');
-      headers.set('X-Allternit-User-Email', 'desktop@allternit.local');
-      headers.set('X-Allternit-User-Name', 'Desktop Dev User');
+    } else {
+      const desktopSession = await authManager.getSession().catch((error) => {
+        log.warn('[Protocol] Paired runtime identity is temporarily unavailable:', error);
+        return null;
+      });
+      if (desktopSession) {
+        // The renderer never receives this credential. Electron main brokers the
+        // scoped identity plus user metadata to the loopback-only API.
+        headers.set('Authorization', `Bearer ${desktopSession.accessToken}`);
+        headers.set('X-Allternit-Desktop-Access-Token', desktopSession.accessToken);
+        headers.set('X-Allternit-User-Id', desktopSession.userId);
+        headers.set('X-Allternit-User-Email', desktopSession.userEmail);
+        headers.set('X-Allternit-User-Name', desktopSession.userEmail);
+        if (desktopSession.organizationId) {
+          headers.set('X-Allternit-Tenant-Id', desktopSession.organizationId);
+        }
+      } else if (isDev && !headers.has('X-Allternit-Desktop-Access-Token')) {
+        // Chromium strips the renderer's custom identity headers when
+        // onBeforeRequest redirects /api/* across origins to this protocol.
+        // Development-only bootstrap; packaged apps must have a paired runtime.
+        headers.set('X-Allternit-Desktop-Access-Token', 'desktop-dev-bootstrap');
+        headers.set('X-Allternit-User-Id', 'desktop-dev-user');
+        headers.set('X-Allternit-User-Email', 'desktop@allternit.local');
+        headers.set('X-Allternit-User-Name', 'Desktop Dev User');
+      }
     }
 
     try {
