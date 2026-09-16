@@ -15,7 +15,7 @@ import type { QuerySource } from '@/constants/querySource.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
 import type { Tool, ToolUseContext } from '../../../runtime/tools/Tool.js'
 import type { LocalAgentTaskState } from '../../../shared/tasks/LocalAgentTask/LocalAgentTask.js'
-import { FileReadTool } from '../../tools/builtins/file-read/FileReadTool.js'
+import { FileReadTool } from '../../../cli/ui/ink-app/tools/FileReadTool/FileReadTool.js'
 import {
   FILE_READ_TOOL_NAME,
   FILE_UNCHANGED_STUB,

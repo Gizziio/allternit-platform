@@ -14,7 +14,7 @@ import {
   getImageProcessor,
   type SharpFunction,
   type SharpInstance,
-} from '../../runtime/tools/builtins/file-read/imageProcessor.js'
+} from '../../cli/ui/ink-app/tools/FileReadTool/imageProcessor.js'
 import { logForDebugging } from './debug.js'
 import { errorMessage } from './errors.js'
 import { formatFileSize } from './format.js'
