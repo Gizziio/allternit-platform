@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=2278
+count=2256
 --- files ---
 cli/ci.ts
 cli/commands/chrome/chrome.tsx
@@ -1950,11 +1950,6 @@ config/permissionProfiles.ts
 config/profiles.ts
 coordinator/coordinatorMode.ts
 hooks/useCanUseTool.ts
-keybindings/KeybindingContext.tsx
-keybindings/match.ts
-keybindings/parser.ts
-keybindings/resolver.ts
-keybindings/useKeybinding.ts
 memdir/findRelevantMemories.ts
 memdir/memoryScan.ts
 memdir/paths.ts
@@ -2082,20 +2077,7 @@ runtime/tools/builtins/AgentTool/built-in/verificationAgent.ts
 runtime/tools/builtins/AgentTool/builtInAgents.ts
 runtime/tools/builtins/AgentTool/forkSubagent.ts
 runtime/tools/builtins/AgentTool/prompt.ts
-runtime/tools/builtins/askuserquestiontool/AskUserQuestionTool.tsx
 runtime/tools/builtins/bash.ts
-runtime/tools/builtins/bash/BashTool.tsx
-runtime/tools/builtins/bash/BashToolResultMessage.tsx
-runtime/tools/builtins/bash/UI.tsx
-runtime/tools/builtins/bash/bashCommandHelpers.ts
-runtime/tools/builtins/bash/bashPermissions.ts
-runtime/tools/builtins/bash/modeValidation.ts
-runtime/tools/builtins/bash/pathValidation.ts
-runtime/tools/builtins/bash/prompt.ts
-runtime/tools/builtins/bash/readOnlyValidation.ts
-runtime/tools/builtins/bash/utils.ts
-runtime/tools/builtins/exitplanmodetool/ExitPlanModeV2Tool.ts
-runtime/tools/builtins/exitplanmodetool/UI.tsx
 runtime/tools/builtins/file-edit/FileEditTool.ts
 runtime/tools/builtins/file-edit/UI.tsx
 runtime/tools/builtins/file-read/FileReadTool.ts
@@ -2103,7 +2085,6 @@ runtime/tools/builtins/file-read/UI.tsx
 runtime/tools/builtins/file-read/imageProcessor.ts
 runtime/tools/builtins/file-write/FileWriteTool.ts
 runtime/tools/builtins/file-write/UI.tsx
-runtime/tools/builtins/grep/prompt.ts
 runtime/tools/builtins/listmcpresourcestool/ListMcpResourcesTool.ts
 runtime/tools/builtins/listmcpresourcestool/UI.tsx
 runtime/tools/builtins/mcpauthtool/McpAuthTool.ts
@@ -2111,9 +2092,6 @@ runtime/tools/builtins/mcptool/MCPTool.ts
 runtime/tools/builtins/mcptool/UI.tsx
 runtime/tools/builtins/notebookedittool/NotebookEditTool.ts
 runtime/tools/builtins/registry.ts
-runtime/tools/builtins/webfetchtool/UI.tsx
-runtime/tools/builtins/webfetchtool/WebFetchTool.ts
-runtime/tools/builtins/webfetchtool/utils.ts
 runtime/tools/mcp/index.ts
 runtime/tools/mcp/oauth-provider.ts
 runtime/util/filesystem.ts
