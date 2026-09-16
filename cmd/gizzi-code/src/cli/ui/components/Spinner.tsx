@@ -21,7 +21,7 @@ import { useTasksV2 } from '@/hooks/useTasksV2.js';
 import type { Task } from '../../../shared/utils/tasks.js';
 import { useAppState } from '@/state/AppState.js';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
-import { stringWidth } from '../ink-renderer/stringWidth.js';
+import { stringWidth } from '../ink-app/ink/stringWidth.js';
 import { getDefaultCharacters, type SpinnerMode } from './Spinner/index.js';
 import { SpinnerAnimationRow } from './Spinner/SpinnerAnimationRow.js';
 import { useSettings } from '@/hooks/useSettings.js';

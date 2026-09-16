@@ -3,7 +3,7 @@ import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
 import { useMemo, useRef } from 'react';
-import { stringWidth } from '../../ink-renderer/stringWidth.js';
+import { stringWidth } from '../../ink-app/ink/stringWidth.js';
 import { Box, Text, useAnimationFrame } from '@/ink.js';
 import type { InProcessTeammateTaskState } from '../../tasks/InProcessTeammateTask/types.js';
 import { formatDuration, formatNumber } from '../../../../shared/utils/format.js';

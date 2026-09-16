@@ -2,8 +2,8 @@
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { pathToFileURL } from 'url';
-import Link from '../ink-renderer/components/Link.js';
-import { supportsHyperlinks } from '../ink-renderer/supports-hyperlinks.js';
+import Link from '../ink-app/ink/components/Link.js';
+import { supportsHyperlinks } from '../ink-app/ink/supports-hyperlinks.js';
 import { Text } from '@/ink.js';
 import { getStoredImagePath } from '../../../shared/utils/imageStore.js';
 import type { Theme } from '../../../shared/utils/theme.js';

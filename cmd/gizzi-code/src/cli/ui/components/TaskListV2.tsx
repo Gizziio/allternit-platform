@@ -3,7 +3,7 @@ import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
-import { stringWidth } from '../ink-renderer/stringWidth.js';
+import { stringWidth } from '../ink-app/ink/stringWidth.js';
 import { Box, Text } from '@/ink.js';
 import { useAppState } from '@/state/AppState.js';
 import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js';

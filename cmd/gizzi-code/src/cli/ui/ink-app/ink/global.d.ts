@@ -9,7 +9,7 @@
  * not exist on type 'JSX.IntrinsicElements'".
  */
 
-import type { Styles } from "../../ink-renderer/styles.js"
+import type { Styles } from "./styles.js"
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

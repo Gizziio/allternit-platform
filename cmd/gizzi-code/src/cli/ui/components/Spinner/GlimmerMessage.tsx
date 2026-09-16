@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { stringWidth } from '../../ink-renderer/stringWidth.js';
+import { stringWidth } from '../../ink-app/ink/stringWidth.js';
 import { Text, useTheme } from '@/ink.js';
 import { getGraphemeSegmenter } from '../../../../shared/utils/intl.js';
 import { getTheme, type Theme } from '../../../../shared/utils/theme.js';
