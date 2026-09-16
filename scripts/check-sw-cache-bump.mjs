@@ -6,19 +6,19 @@ import { execSync } from 'node:child_process';
 
 import { existsSync } from 'node:fs';
 
-const SW_PATH = 'surfaces/ai.allternit.com/public/fabric-session-service-worker.js';
+const SW_PATH = 'public/fabric-session-service-worker.js';
 const WATCH_PATHS = [
   SW_PATH,
-  'surfaces/ai.allternit.com/fabric-session.html',
-  'surfaces/ai.allternit.com/public/fabric-session.webmanifest',
-  'surfaces/ai.allternit.com/public/fabric-session-icon-192.png',
-  'surfaces/ai.allternit.com/public/fabric-session-icon-512.png',
-  'surfaces/ai.allternit.com/public/fabric-session-splash-1170x2532.png',
-  'surfaces/ai.allternit.com/src/fabric-session/',
+  'fabric-session.html',
+  'public/fabric-session.webmanifest',
+  'public/fabric-session-icon-192.png',
+  'public/fabric-session-icon-512.png',
+  'public/fabric-session-splash-1170x2532.png',
+  'src/fabric-session/',
 ];
 
 if (!existsSync(SW_PATH)) {
-  console.log('Fabric Session SW lives in Gizziio/allternit-ai now; skipping guard in this repo.');
+  console.log('Fabric Session SW lives in Gizziio/allternit-ai; skipping this public-repo guard.');
   process.exit(0);
 }
 

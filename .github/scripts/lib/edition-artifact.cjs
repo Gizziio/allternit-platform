@@ -21,10 +21,8 @@ const { buildCoverSvg } = require('./cover.cjs');
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
-const EDITIONS_DIR = path.resolve(
-  __dirname,
-  '../../../surfaces/ai.allternit.com/public/editions',
-);
+const { resolveWorkspaceUi } = require('./workspace-ui.cjs');
+const EDITIONS_DIR = path.join(resolveWorkspaceUi(), 'public/editions');
 const EDITIONS_URL_BASE = 'https://ai.allternit.com/editions';
 
 const INK = '#1A1A1A';

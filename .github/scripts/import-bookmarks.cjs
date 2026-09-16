@@ -22,16 +22,11 @@ const fs = require('fs');
 const path = require('path');
 
 const { loadPipeline, savePipeline, buildPublication } = require('./lib/pipeline.cjs');
+const { resolveWorkspaceUi } = require('./lib/workspace-ui.cjs');
 
-const BOOKMARKS_FILE = path.resolve(
-  __dirname,
-  '../../surfaces/ai.allternit.com/src/data/bookmarks.json',
-);
-
-const DATA_FILE = path.resolve(
-  __dirname,
-  '../../surfaces/ai.allternit.com/src/data/discovery-pipeline.json',
-);
+const WORKSPACE_UI = resolveWorkspaceUi();
+const BOOKMARKS_FILE = path.join(WORKSPACE_UI, 'src/data/bookmarks.json');
+const DATA_FILE = path.join(WORKSPACE_UI, 'src/data/discovery-pipeline.json');
 
 function loadBookmarks() {
   try {

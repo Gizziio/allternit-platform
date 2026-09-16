@@ -10,6 +10,7 @@
  */
 
 import Database from 'better-sqlite3';
+import { existsSync } from 'node:fs';
 
 import { getCanvasToken } from './canvas-token.ts';
 const CANVAS_TOKEN = getCanvasToken();
@@ -66,7 +67,13 @@ async function getModuleProgress(courseId: string, userId: string): Promise<Modu
 }
 
 function getDb() {
-  return new Database('surfaces/ai.allternit.com/data/sqlite.db');
+  const ui =
+    process.env.ALLTERNIT_AI_PATH ||
+    (existsSync('../allternit-ai/package.json') ? '../allternit-ai' : '');
+  if (!ui) {
+    throw new Error('Workspace UI not found. Set ALLTERNIT_AI_PATH or clone Gizziio/allternit-ai as a sibling.');
+  }
+  return new Database(`${ui}/data/sqlite.db`);
 }
 
 function updateProgress(db: Database, userId: string, courseCode: string, progress: ModuleProgress[]) {
