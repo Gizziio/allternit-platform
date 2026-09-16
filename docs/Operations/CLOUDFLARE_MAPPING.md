@@ -8,8 +8,8 @@ Quick reference for Cloudflare Pages projects and their domains.
 > live projects (via `wrangler pages list`) and this repo's deploy workflows.
 >
 > Last verified: 2026-09-15. OSS split moved the workspace UI out of this
-> repo. Cloudflare Git auto-builds on `ai-allternit` are disabled
-> (`deployments_enabled=false`, `preview_deployment_setting=none`).
+> repo. Cloudflare Pages Git on `ai-allternit` is **Gizziio/allternit-ai**
+> (`repo_id` 1370871216); merge to that repo's `main` auto-deploys production.
 
 ## Naming (do not mix these up)
 
@@ -44,7 +44,7 @@ Without it, `release-desktop.yml` cannot bundle the workspace UI.
 
 | Pages Project | Domain(s) | Notes |
 |---------------|-----------|-------|
-| **ai-allternit** | ai.allternit.com | Workspace UI. Git provider still listed as Gizziio/allternit-platform but auto production + preview builds are off. Production deploys: wrangler from allternit-ai only. |
+| **ai-allternit** | ai.allternit.com | Workspace UI. Pages Git is `Gizziio/allternit-ai`. Merge to `main` auto-deploys. Public-repo GHA must never wrangler this project. Optional wrangler fallback: allternit-ai `workflow_dispatch` `deploy=true`. |
 
 ### Live projects deployed outside this repo (Allternit Websites repo / manual)
 

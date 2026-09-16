@@ -13,8 +13,7 @@ resolve_hosted_ui() {
   local c
   for c in \
     "$root/.hosted-ui" \
-    "$root/../allternit-ai" \
-    "$root/surfaces/ai.allternit.com"
+    "$root/../allternit-ai"
   do
     if [ -f "$c/package.json" ]; then
       (cd "$c" && pwd)
