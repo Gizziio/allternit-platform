@@ -2646,6 +2646,15 @@ src/utils/startupProfiler.ts
 src/utils/textHighlighting.ts
 src/utils/worktreeModeEnabled.ts
 src/vendor/@allternit/extension/index.ts
+src/vendor/anthropic-stubs/allternit-extension.ts
+src/vendor/anthropic-stubs/audio-capture-napi.ts
+src/vendor/anthropic-stubs/bedrock-sdk.ts
+src/vendor/anthropic-stubs/foundry-sdk.ts
+src/vendor/anthropic-stubs/google-auth-library.ts
+src/vendor/anthropic-stubs/optional-otel.ts
+src/vendor/anthropic-stubs/react-compiler-runtime.ts
+src/vendor/anthropic-stubs/sandbox-runtime.ts
+src/vendor/anthropic-stubs/vertex-sdk.ts
 src/vim/motions.ts
 src/vim/operators.ts
 src/vim/textObjects.ts

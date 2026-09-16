@@ -61,7 +61,7 @@
         "../../../../src/runtime/*"
       ],
       "react/compiler-runtime": [
-        "../../../../src/vendor/anthropic-stubs/react-compiler-runtime.ts"
+        "../../../../src/vendor/react-compiler-runtime.ts"
       ]
     }
   },

@@ -910,7 +910,7 @@ export const connectToServer = memoize(
           '../../utils/allternitInChrome/mcpServer.js'
         )
         const { createClaudeForChromeMcpServer } = await import(
-          '@allternit/extension'
+          '../../../shared/utils/allternitInChrome/extension.js'
         )
         const { createLinkedTransportPair } = await import(
           './InProcessTransport.js'
