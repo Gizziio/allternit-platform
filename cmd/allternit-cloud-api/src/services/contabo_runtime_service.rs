@@ -534,7 +534,7 @@ fi
 # Join tailnet (Headscale)
 if ! tailscale ip -4 >/dev/null 2>&1; then
     tailscale up \
-        --login-server "https://headscale.allternit.com" \
+        --login-server "https://mail.news.allternit.com:8444" \
         --auth-key "$ALLTERNIT_HEADSCALE_PREAUTH_KEY" \
         --hostname "$ALLTERNIT_INSTANCE_NAME" \
         --timeout 60s || true
