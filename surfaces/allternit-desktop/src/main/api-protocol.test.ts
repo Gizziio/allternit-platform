@@ -4,7 +4,7 @@ import {
   isPublicCloudCatalogPath,
   rewriteCloudApiToProtocol,
   shouldInjectDesktopIdentity,
-} from './api-protocol';
+} from './api-protocol.js';
 
 const CLOUD = 'https://api.allternit.com';
 const LOCAL = 'http://127.0.0.1:8013';
