@@ -15,5 +15,4 @@ export {
   type ISandboxManager,
   type SandboxViolationEvent,
   type SandboxRuntimeConfig,
-  type SandboxFilesystemConfig,
-} from '../../shared/utils/sandbox/sandbox-adapter.js'
+} from '../../cli/ui/ink-app/utils/sandbox/sandbox-adapter.js'

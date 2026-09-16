@@ -4,7 +4,7 @@ import {
   createClaudeForChromeMcpServer,
   type Logger,
   type PermissionMode,
-} from '@allternit/extension'
+} from './extension.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { format } from 'util'
 import { shutdownDatadog } from '@/services/analytics/datadog.js'

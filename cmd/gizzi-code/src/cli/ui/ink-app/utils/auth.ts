@@ -845,24 +845,9 @@ const GCP_CREDENTIALS_CHECK_TIMEOUT_MS = 5_000
  * This uses the same authentication chain that the Vertex SDK uses.
  */
 export async function checkGcpCredentialsValid(): Promise<boolean> {
-  try {
-    // Dynamically import to avoid loading google-auth-library unnecessarily
-    const { GoogleAuth } = await import('google-auth-library')
-    const auth = new GoogleAuth({
-      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    })
-    const probe = (async () => {
-      const client = await auth.getClient()
-      await client.getAccessToken()
-    })()
-    const timeout = sleep(GCP_CREDENTIALS_CHECK_TIMEOUT_MS).then(() => {
-      throw new GcpCredentialsTimeoutError('GCP credentials check timed out')
-    })
-    await Promise.race([probe, timeout])
-    return true
-  } catch {
-    return false
-  }
+  // Vertex/GCP ADC is not a supported auth path. Always false so callers
+  // fall through to Allternit credentials.
+  return false
 }
 
 /** Default GCP credential TTL - 1 hour to match typical ADC token lifetime */

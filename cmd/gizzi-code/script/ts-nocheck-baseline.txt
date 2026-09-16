@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=2243
+count=2235
 --- files ---
 cli/ci.ts
 cli/commands/chrome/chrome.tsx
@@ -2196,7 +2196,6 @@ shared/utils/promptShellExecution.ts
 shared/utils/protectedNamespace.ts
 shared/utils/proxy.ts
 shared/utils/releaseNotes.ts
-shared/utils/sandbox/sandbox-adapter.ts
 shared/utils/sdkEventQueue.ts
 shared/utils/secureStorage/macOsKeychainStorage.ts
 shared/utils/sessionFileAccessHooks.ts
@@ -2238,11 +2237,4 @@ ui/allternit/runtime-mode.ts
 ui/allternit/status-runtime.ts
 utils/theme.ts
 vault/mcp-server.ts
-vendor/anthropic-stubs/allternit-extension.ts
-vendor/anthropic-stubs/audio-capture-napi.ts
-vendor/anthropic-stubs/bedrock-sdk.ts
-vendor/anthropic-stubs/foundry-sdk.ts
-vendor/anthropic-stubs/google-auth-library.ts
-vendor/anthropic-stubs/react-compiler-runtime.ts
-vendor/anthropic-stubs/sandbox-runtime.ts
-vendor/anthropic-stubs/vertex-sdk.ts
+vendor/react-compiler-runtime.ts

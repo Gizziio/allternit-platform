@@ -111,7 +111,7 @@ const REACT_COMPILER_RUNTIME_STUB = `
 import * as React from "react";
 // The compiled components in src/ guard on the older
 // Symbol.for("react.memo_cache_sentinel"); fill the cache with exactly that,
-// matching src/vendor/anthropic-stubs/react-compiler-runtime.ts.
+// matching src/vendor/react-compiler-runtime.ts.
 var MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel");
 function makeCache(size) {
   var cache = new Array(size);
@@ -264,42 +264,45 @@ const bundlePlugin = {
         build.onResolve({ filter: /^@allternit\/orchestrator$/ }, () => ({
             path: resolve("../../packages/@allternit/orchestrator/src/index.ts"),
         }));
-        // Redirect @allternit/extension to the local stub (real extension package isn't vendored)
-        build.onResolve({ filter: /^@allternit\/extension$/ }, () => ({
-            path: resolve("src/vendor/anthropic-stubs/allternit-extension.ts"),
-        }));
-        // Redirect audio-capture-napi (optional native voice capture) to its
-        // throwing stub: Bun.build does not apply tsconfig `paths` to dynamic
-        // import(), so the worker bundle fails with "Could not resolve"
-        // (desktop release run 11). The voice service catches the throw and
-        // falls back at runtime.
-        build.onResolve({ filter: /^audio-capture-napi$/ }, () => ({
-            path: resolve("src/vendor/anthropic-stubs/audio-capture-napi.ts"),
-        }));
-        // Optional OTel exporters/SDKs — not all are declared in package.json;
-        // without a stub Bun.build fails before the binary is produced.
+        // OTel metrics/trace/exporters are optional; not all are in
+        // package.json. Inline a no-op module so Bun.build does not fail.
+        const otelNs = "optional-otel";
         build.onResolve({
             filter: /^@opentelemetry\/(sdk-metrics|sdk-trace-base|exporter-.*)$/,
-        }, () => ({
-            path: resolve("src/vendor/anthropic-stubs/optional-otel.ts"),
-        }));
-        // Vertex / GCP auth are dynamic import() in api/client.ts. Bun.build
-        // does not apply tsconfig `paths` to those, so point them at the
-        // same throwing stubs used for the static aliases.
-        build.onResolve({ filter: /^google-auth-library$/ }, () => ({
-            path: resolve("src/vendor/anthropic-stubs/google-auth-library.ts"),
-        }));
-        build.onResolve({ filter: /^@anthropic-ai\/vertex-sdk$/ }, () => ({
-            path: resolve("src/vendor/anthropic-stubs/vertex-sdk.ts"),
-        }));
-        build.onResolve({ filter: /^@anthropic-ai\/bedrock-sdk$/ }, () => ({
-            path: resolve("src/vendor/anthropic-stubs/bedrock-sdk.ts"),
-        }));
-        build.onResolve({ filter: /^@anthropic-ai\/foundry-sdk$/ }, () => ({
-            path: resolve("src/vendor/anthropic-stubs/foundry-sdk.ts"),
-        }));
-        build.onResolve({ filter: /^@anthropic-ai\/sandbox-runtime$/ }, () => ({
-            path: resolve("src/vendor/anthropic-stubs/sandbox-runtime.ts"),
+        }, () => ({ path: otelNs, namespace: otelNs }));
+        build.onLoad({ filter: /.*/, namespace: otelNs }, () => ({
+            contents: [
+                "const Dummy = function Dummy() {};",
+                "Dummy.prototype = Dummy;",
+                "const dummy = new Proxy(Dummy, { get: () => Dummy, construct: () => Dummy, apply: () => Dummy });",
+                "export default dummy;",
+                "export const MeterProvider = dummy;",
+                "export const PeriodicExportingMetricReader = dummy;",
+                "export const ConsoleMetricExporter = dummy;",
+                "export const BasicTracerProvider = dummy;",
+                "export const BatchSpanProcessor = dummy;",
+                "export const SimpleSpanProcessor = dummy;",
+                "export const ConsoleSpanExporter = dummy;",
+                "export const AlwaysOnSampler = dummy;",
+                "export const PrometheusExporter = dummy;",
+                "export const OTLPMetricExporter = dummy;",
+                "export const OTLPTraceExporter = dummy;",
+                "export const OTLPLogExporter = dummy;",
+                "export const AggregationTemporality = dummy;",
+                "export const InMemorySpanExporter = dummy;",
+                "export const NodeTracerProvider = dummy;",
+                "export const Resource = dummy;",
+                "export const OTLPGrpcTraceExporter = dummy;",
+                "export const OTLPHttpTraceExporter = dummy;",
+                "export const OTLPProtoTraceExporter = dummy;",
+                "export const OTLPGrpcMetricExporter = dummy;",
+                "export const OTLPHttpMetricExporter = dummy;",
+                "export const OTLPProtoMetricExporter = dummy;",
+                "export const OTLPGrpcLogExporter = dummy;",
+                "export const OTLPHttpLogExporter = dummy;",
+                "export const OTLPProtoLogExporter = dummy;",
+            ].join("\n"),
+            loader: "js",
         }));
         // @allternit/gizzi-sdk lives at packages/sdk (not packages/gizzi-sdk).
         // Without this alias Bun.build cannot resolve provider subpaths and

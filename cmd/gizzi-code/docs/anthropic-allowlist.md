@@ -12,7 +12,6 @@ on-disk/install artifact — not our product.
 | Item | Why it stays |
 |------|----------------|
 | `@ai-sdk/anthropic` | Vercel AI SDK npm package we import |
-| `@anthropic-ai/bedrock-sdk`, `@anthropic-ai/vertex-sdk`, `@anthropic-ai/foundry-sdk`, `@anthropic-ai/sandbox-runtime` | Optional npm package names (typed stubs in `src/vendor/anthropic-stubs/`) |
 | models.dev provider id `"anthropic"` | External catalog id for Claude models |
 | Model names (`claude-sonnet-*`, Claude Sonnet/Opus/Haiku) | Names of the model being called |
 

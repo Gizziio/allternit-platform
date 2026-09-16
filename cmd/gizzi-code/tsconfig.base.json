@@ -42,23 +42,8 @@
         "./src/*",
         "./src/cli/ui/ink-app/*"
       ],
-      "@anthropic-ai/sandbox-runtime": [
-        "./src/vendor/anthropic-stubs/sandbox-runtime.ts"
-      ],
-      "@anthropic-ai/bedrock-sdk": [
-        "./src/vendor/anthropic-stubs/bedrock-sdk.ts"
-      ],
-      "@anthropic-ai/foundry-sdk": [
-        "./src/vendor/anthropic-stubs/foundry-sdk.ts"
-      ],
-      "@allternit/extension": [
-        "./src/vendor/anthropic-stubs/allternit-extension.ts"
-      ],
-      "audio-capture-napi": [
-        "./src/vendor/anthropic-stubs/audio-capture-napi.ts"
-      ],
       "react/compiler-runtime": [
-        "./src/vendor/anthropic-stubs/react-compiler-runtime.ts"
+        "./src/vendor/react-compiler-runtime.ts"
       ]
     }
   }

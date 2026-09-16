@@ -23,16 +23,6 @@ process.env["GIZZI_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures"
 const logDir = path.join(dir, "share", "gizzi-code", "log")
 await fs.mkdir(logDir, { recursive: true })
 
-// Mock @anthropic-ai/sandbox-runtime
-import { mock } from "bun:test"
-mock.module("@anthropic-ai/sandbox-runtime", () => ({
-  SandboxManager: class {},
-  SandboxViolationStore: class {},
-  SandboxRuntimeConfigSchema: {
-    safeParse: (d: any) => ({ success: true, data: d }),
-  },
-}))
-
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
 const testHome = path.join(dir, "home")
