@@ -21,6 +21,14 @@
       "browser"
     ],
     "paths": {
+      "@/ink": [
+        "./src/cli/ui/ink-app/ink.ts",
+        "./src/ink.ts"
+      ],
+      "@/ink/*": [
+        "./src/cli/ui/ink-app/ink/*",
+        "./src/ink/*"
+      ],
       "@/*": [
         "./src/*",
         "./src/runtime/*",
