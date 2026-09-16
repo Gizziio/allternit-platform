@@ -34,10 +34,12 @@ pub mod proto {
 use proto::headscale_service_client::HeadscaleServiceClient;
 
 /// Default address of the Headscale gRPC admin API.
-const DEFAULT_GRPC_ADDR: &str = "https://headscale.allternit.com:50443";
+const DEFAULT_GRPC_ADDR: &str = "https://allternit-headscale.fly.dev:50443";
 
 /// Public control URL handed to clients for `tailscale up --login-server`.
-const DEFAULT_CONTROL_URL: &str = "https://headscale.allternit.com";
+/// Headscale is the Fly app `allternit-headscale` (see infrastructure/mesh/headscale/OPS.md).
+/// `headscale.allternit.com` has no DNS and is what produced desktop enroll 502s.
+const DEFAULT_CONTROL_URL: &str = "https://allternit-headscale.fly.dev";
 
 /// Minted keys are single-use and short-lived; the app is expected to
 /// enroll immediately.
