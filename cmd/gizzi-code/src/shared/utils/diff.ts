@@ -4,7 +4,7 @@ import { logEvent } from '@/services/analytics/index.js'
 import { recordAcceptedEdit } from '@/runtime/services/telemetry/gizziUsageTelemetry.js'
 import { getLocCounter } from '@/bootstrap/state.js'
 import { addToTotalLinesChanged } from '../cost-tracker.js'
-import type { FileEdit } from '../../runtime/tools/builtins/file-edit/types.js'
+import type { FileEdit } from '../../cli/ui/ink-app/tools/FileEditTool/types.js'
 import { count } from './array.js'
 import { convertLeadingTabsToSpaces } from './file.js'
 

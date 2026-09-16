@@ -1,10 +1,10 @@
 // @ts-nocheck
-import { FILE_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
+import { FILE_EDIT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileEditTool/constants.js'
 import { FILE_READ_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
 import { FILE_WRITE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
 import { GLOB_TOOL_NAME } from '../../../cli/ui/ink-app/tools/GlobTool/prompt.js'
 import { GREP_TOOL_NAME } from '../../../tools/GrepTool/prompt.js'
-import { NOTEBOOK_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
+import { NOTEBOOK_EDIT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/NotebookEditTool/constants.js'
 import { WEB_FETCH_TOOL_NAME } from '../../../cli/ui/ink-app/tools/WebFetchTool/prompt.js'
 import { WEB_SEARCH_TOOL_NAME } from '../../../cli/ui/ink-app/tools/WebSearchTool/prompt.js'
 import { SHELL_TOOL_NAMES } from '../../../shared/utils/shell/shellToolUtils.js'

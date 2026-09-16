@@ -49,9 +49,9 @@ import { PRODUCT_URL } from '@/constants/product.js'
 import type { AppState } from '@/state/AppState.js'
 import { type Tool, toolMatchesName } from '../../../runtime/tools/Tool.js';
 import { type ToolCallProgress } from '../../../cli/ui/ink-app/Tool.js';
-import { ListMcpResourcesTool } from '../../tools/builtins/listmcpresourcestool/ListMcpResourcesTool.js'
-import { type MCPProgress, MCPTool } from '../../tools/builtins/mcptool/MCPTool.js'
-import { createMcpAuthTool } from '../../tools/builtins/mcpauthtool/McpAuthTool.js'
+import { ListMcpResourcesTool } from '../../../cli/ui/ink-app/tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
+import { type MCPProgress, MCPTool } from '../../../cli/ui/ink-app/tools/MCPTool/MCPTool.js'
+import { createMcpAuthTool } from '../../../cli/ui/ink-app/tools/McpAuthTool/McpAuthTool.js'
 import { ReadMcpResourceTool } from '../../../cli/ui/ink-app/tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
 import { createAbortController } from '../../../shared/utils/abortController.js'
 import { count } from '../../../utils/array.js'
@@ -122,7 +122,7 @@ const fetchMcpSkillsForClient = feature('MCP_SKILLS')
 import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js'
 import type { AssistantMessage } from '@/types/message.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
-import { classifyMcpToolForCollapse } from '../../tools/builtins/mcptool/classifyForCollapse.js'
+import { classifyMcpToolForCollapse } from '../../../cli/ui/ink-app/tools/MCPTool/classifyForCollapse.js'
 import { clearKeychainCache } from '../../../shared/utils/secureStorage/macOsKeychainHelpers.js'
 import { sleep } from '../../../utils/sleep.js'
 import {
