@@ -1,6 +1,7 @@
 # Repo-relative paths deleted by the dead-code cleanup (branch
 # session/gizzi-p3-inkapp-20260904). Guarded by
 # test/dead-code-guard.test.ts — do not reintroduce.
+
 src/acp/agent.ts
 src/agent/agent.ts
 src/bootstrap/state.d.ts
@@ -13,6 +14,9 @@ src/buddy/useBuddyNotification.tsx
 src/bus.ts
 src/cli/allternit.ts
 src/cli/bg.ts
+src/cli/cmd/auth.ts
+src/cli/cmd/github.ts
+src/cli/cmd/import.ts
 src/cli/commands-claude.ts
 src/cli/commands/add-dir/add-dir.tsx
 src/cli/commands/add-dir/index.ts
@@ -57,6 +61,7 @@ src/cli/commands/commit-push-pr.ts
 src/cli/commands/compact/compact.ts
 src/cli/commands/compact/index.ts
 src/cli/commands/config/config.tsx
+src/cli/commands/config/index.ts
 src/cli/commands/context/context-noninteractive.ts
 src/cli/commands/context/context.tsx
 src/cli/commands/context/index.ts
@@ -74,6 +79,7 @@ src/cli/commands/desktop/index.ts
 src/cli/commands/diff/diff.tsx
 src/cli/commands/diff/index.ts
 src/cli/commands/doctor/doctor.tsx
+src/cli/commands/doctor/index.ts
 src/cli/commands/effort/effort.tsx
 src/cli/commands/effort/index.ts
 src/cli/commands/env/index.js
@@ -81,6 +87,7 @@ src/cli/commands/env/index.ts
 src/cli/commands/exit/exit.tsx
 src/cli/commands/exit/index.ts
 src/cli/commands/export/export.tsx
+src/cli/commands/export/index.ts
 src/cli/commands/extra-usage/extra-usage-core.ts
 src/cli/commands/extra-usage/extra-usage-noninteractive.ts
 src/cli/commands/extra-usage/extra-usage.tsx
@@ -131,6 +138,7 @@ src/cli/commands/keybindings/keybindings.ts
 src/cli/commands/login/login.tsx
 src/cli/commands/marketplace.ts
 src/cli/commands/mcp/addCommand.ts
+src/cli/commands/mcp/index.ts
 src/cli/commands/mcp/mcp.tsx
 src/cli/commands/mcp/xaaIdpCommand.ts
 src/cli/commands/mobile/index.ts
@@ -153,7 +161,10 @@ src/cli/commands/review/index.ts
 src/cli/commands/rewind/index.ts
 src/cli/commands/sandbox-toggle/index.ts
 src/cli/commands/security-review/index.ts
+src/cli/commands/session/index.ts
 src/cli/commands/share/index.ts
+src/cli/commands/skills/index.ts
+src/cli/commands/status/index.ts
 src/cli/commands/stickers/index.ts
 src/cli/commands/summary/index.ts
 src/cli/commands/swarm.ts
@@ -678,6 +689,7 @@ src/cli/ui/ink-app/components/LogoV2/GuestPassesUpsell.tsx
 src/cli/ui/ink-app/components/LogoV2/LogoV2.tsx
 src/cli/ui/ink-app/components/LogoV2/Opus1mMergeNotice.tsx
 src/cli/ui/ink-app/components/LogoV2/VoiceModeNotice.tsx
+src/cli/ui/ink-app/components/LogoV2/WelcomeInfoBox.tsx
 src/cli/ui/ink-app/components/LogoV2/WelcomeV2.tsx
 src/cli/ui/ink-app/components/LogoV2/feedConfigs.tsx
 src/cli/ui/ink-app/components/MCPServerApprovalDialog.tsx
@@ -685,6 +697,7 @@ src/cli/ui/ink-app/components/MCPServerDesktopImportDialog.tsx
 src/cli/ui/ink-app/components/MCPServerDialogCopy.tsx
 src/cli/ui/ink-app/components/MCPServerMultiselectDialog.tsx
 src/cli/ui/ink-app/components/Onboarding.tsx
+src/cli/ui/ink-app/components/RailsTaskList.test.ts
 src/cli/ui/ink-app/components/ResumeTask.tsx
 src/cli/ui/ink-app/components/Settings/Gates.tsx
 src/cli/ui/ink-app/components/TeleportProgress.tsx
@@ -883,6 +896,7 @@ src/cli/ui/ink-app/components/keybindings/shortcutFormat.ts
 src/cli/ui/ink-app/components/keybindings/types.ts
 src/cli/ui/ink-app/components/keybindings/useKeybinding.ts
 src/cli/ui/ink-app/components/keybindings/useShortcutDisplay.ts
+src/cli/ui/ink-app/components/messages/index.ts
 src/cli/ui/ink-app/components/moreright/useMoreRight.tsx
 src/cli/ui/ink-app/components/screens/Doctor.tsx
 src/cli/ui/ink-app/components/screens/ResumeConversation.tsx
@@ -1258,6 +1272,7 @@ src/cli/ui/ink-app/environment-runner/main.ts
 src/cli/ui/ink-app/hooks/tools.ts
 src/cli/ui/ink-app/hooks/useTeleportResume.tsx
 src/cli/ui/ink-app/hooks/useTimeout.ts
+src/cli/ui/ink-app/hooks/useVoice.ts
 src/cli/ui/ink-app/hooks/vendored/fileSuggestions.ts
 src/cli/ui/ink-app/hooks/vendored/notifs/useAutoModeUnavailableNotification.ts
 src/cli/ui/ink-app/hooks/vendored/notifs/useCanSwitchToExistingSubscription.tsx
@@ -1380,6 +1395,7 @@ src/cli/ui/ink-app/native-ts/color-diff/index.ts
 src/cli/ui/ink-app/plugins/bundled/index.ts
 src/cli/ui/ink-app/replLauncher.tsx
 src/cli/ui/ink-app/screens/ResumeConversation.tsx
+src/cli/ui/ink-app/screens/bots-pane/index.ts
 src/cli/ui/ink-app/sdk/allternit-api/index.ts
 src/cli/ui/ink-app/sdk/allternit-api/resources/index.ts
 src/cli/ui/ink-app/self-hosted-runner/main.ts
@@ -1387,9 +1403,12 @@ src/cli/ui/ink-app/server/createDirectConnectSession.ts
 src/cli/ui/ink-app/server/types.ts
 src/cli/ui/ink-app/services/api/bootstrap.ts
 src/cli/ui/ink-app/services/automations.ts
+src/cli/ui/ink-app/services/localVoiceSTT.test.ts
 src/cli/ui/ink-app/services/mcpServerApproval.tsx
 src/cli/ui/ink-app/services/plugins/pluginCliCommands.ts
 src/cli/ui/ink-app/services/ultraplan.ts
+src/cli/ui/ink-app/services/voiceKeyterms.ts
+src/cli/ui/ink-app/services/voiceStreamSTT.ts
 src/cli/ui/ink-app/setup.ts
 src/cli/ui/ink-app/skills/bundled/allternitInChrome.ts
 src/cli/ui/ink-app/skills/bundled/batch.ts
@@ -1445,6 +1464,7 @@ src/cli/ui/ink-app/utils/deepLink/banner.ts
 src/cli/ui/ink-app/utils/deepLink/protocolHandler.ts
 src/cli/ui/ink-app/utils/deepLink/terminalLauncher.ts
 src/cli/ui/ink-app/utils/deepLink/terminalPreference.ts
+src/cli/ui/ink-app/utils/errorLogSink.ts
 src/cli/ui/ink-app/utils/filePersistence/filePersistence.ts
 src/cli/ui/ink-app/utils/github/ghAuthStatus.ts
 src/cli/ui/ink-app/utils/githubRepoPathMapping.ts
@@ -1456,10 +1476,12 @@ src/cli/ui/ink-app/utils/plugins/zipCacheAdapters.ts
 src/cli/ui/ink-app/utils/preflightChecks.tsx
 src/cli/ui/ink-app/utils/queryContext.ts
 src/cli/ui/ink-app/utils/sessionUrl.ts
+src/cli/ui/ink-app/utils/sinks.ts
 src/cli/ui/ink-app/utils/streamJsonStdoutGuard.ts
 src/cli/ui/ink-app/utils/streamlinedTransform.ts
 src/cli/ui/ink-app/utils/telemetry/skillLoadedEvent.ts
 src/cli/ui/ink-app/utils/warningHandler.ts
+src/cli/ui/ink-app/utils/withResolvers.ts
 src/cli/ui/ink-renderer/Ansi.tsx
 src/cli/ui/ink-renderer/clearTerminal.ts
 src/cli/ui/ink-renderer/components/AlternateScreen.tsx
@@ -1503,6 +1525,7 @@ src/cli/ui/ink-renderer/hooks/use-tab-status.ts
 src/cli/ui/ink-renderer/hooks/use-terminal-focus.ts
 src/cli/ui/ink-renderer/hooks/use-terminal-title.ts
 src/cli/ui/ink-renderer/ink.tsx
+src/cli/ui/ink-renderer/instances.ts
 src/cli/ui/ink-renderer/log-update.ts
 src/cli/ui/ink-renderer/measure-element.ts
 src/cli/ui/ink-renderer/optimizer.ts
@@ -1518,9 +1541,12 @@ src/cli/ui/ink-renderer/terminal-focus-state.ts
 src/cli/ui/ink-renderer/terminal-querier.ts
 src/cli/ui/ink-renderer/terminal.ts
 src/cli/ui/ink-renderer/termio.ts
+src/cli/ui/ink-renderer/termio/dec.ts
 src/cli/ui/ink-renderer/termio/esc.ts
+src/cli/ui/ink-renderer/termio/osc.ts
 src/cli/ui/ink-renderer/termio/parser.ts
 src/cli/ui/ink-renderer/termio/sgr.ts
+src/cli/ui/ink-renderer/termio/types.ts
 src/cli/ui/ink-renderer/useTerminalNotification.ts
 src/cli/ui/tools.ts
 src/cli/ui/ui.ts
@@ -1928,6 +1954,7 @@ src/runtime/tools/Task.ts
 src/runtime/tools/TeamCreateTool/TeamCreateTool.ts
 src/runtime/tools/TeamDeleteTool/TeamDeleteTool.ts
 src/runtime/tools/Tool-gizzi.ts
+src/runtime/tools/Tool.d.ts
 src/runtime/tools/builtins/AgentTool/AgentTool.tsx
 src/runtime/tools/builtins/AgentTool/UI.tsx
 src/runtime/tools/builtins/AgentTool/agentColorManager.ts
@@ -1941,7 +1968,9 @@ src/runtime/tools/builtins/FileEditTool/types.ts
 src/runtime/tools/builtins/FileReadTool/prompt.ts
 src/runtime/tools/builtins/FileWriteTool/prompt.ts
 src/runtime/tools/builtins/GlobTool/prompt.ts
+src/runtime/tools/builtins/GrepTool/GrepTool.ts
 src/runtime/tools/builtins/GrepTool/prompt.ts
+src/runtime/tools/builtins/bash/index.ts
 src/runtime/tools/builtins/bash/stripSafeWrappers.ts
 src/runtime/tools/builtins/brieftool/BriefTool.ts
 src/runtime/tools/builtins/brieftool/UI.tsx
@@ -1954,15 +1983,25 @@ src/runtime/tools/builtins/configtool/constants.ts
 src/runtime/tools/builtins/configtool/prompt.ts
 src/runtime/tools/builtins/configtool/supportedSettings.ts
 src/runtime/tools/builtins/discoverskillstool/prompt.ts
+src/runtime/tools/builtins/edit/index.ts
 src/runtime/tools/builtins/enterplanmodetool/EnterPlanModeTool.ts
 src/runtime/tools/builtins/enterplanmodetool/UI.tsx
+src/runtime/tools/builtins/enterplanmodetool/constants.ts
 src/runtime/tools/builtins/enterplanmodetool/prompt.ts
 src/runtime/tools/builtins/enterworktreetool/EnterWorktreeTool.ts
 src/runtime/tools/builtins/enterworktreetool/UI.tsx
+src/runtime/tools/builtins/enterworktreetool/constants.ts
 src/runtime/tools/builtins/enterworktreetool/prompt.ts
 src/runtime/tools/builtins/exitworktreetool/ExitWorktreeTool.ts
 src/runtime/tools/builtins/exitworktreetool/UI.tsx
+src/runtime/tools/builtins/exitworktreetool/constants.ts
 src/runtime/tools/builtins/exitworktreetool/prompt.ts
+src/runtime/tools/builtins/glob/GlobTool.ts
+src/runtime/tools/builtins/glob/UI.tsx
+src/runtime/tools/builtins/glob/index.ts
+src/runtime/tools/builtins/grep/GrepTool.ts
+src/runtime/tools/builtins/grep/UI.tsx
+src/runtime/tools/builtins/grep/index.ts
 src/runtime/tools/builtins/lsptool/LSPTool.ts
 src/runtime/tools/builtins/lsptool/UI.tsx
 src/runtime/tools/builtins/lsptool/formatters.ts
@@ -1971,6 +2010,8 @@ src/runtime/tools/builtins/lsptool/schemas.ts
 src/runtime/tools/builtins/lsptool/symbolContext.ts
 src/runtime/tools/builtins/memory-query.ts
 src/runtime/tools/builtins/monitortool/MonitorTool.ts
+src/runtime/tools/builtins/read/index.ts
+src/runtime/tools/builtins/syntheticoutputtool/SyntheticOutputTool.ts
 src/runtime/tools/builtins/taskcreatetool/TaskCreateTool.ts
 src/runtime/tools/builtins/taskcreatetool/prompt.ts
 src/runtime/tools/builtins/taskgettool/TaskGetTool.ts
@@ -1980,9 +2021,11 @@ src/runtime/tools/builtins/tasklisttool/TaskListTool.ts
 src/runtime/tools/builtins/tasklisttool/constants.ts
 src/runtime/tools/builtins/tasklisttool/prompt.ts
 src/runtime/tools/builtins/taskoutputtool/TaskOutputTool.tsx
+src/runtime/tools/builtins/taskoutputtool/constants.ts
 src/runtime/tools/builtins/taskstool/apiTasks.ts
 src/runtime/tools/builtins/taskstoptool/TaskStopTool.ts
 src/runtime/tools/builtins/taskstoptool/UI.tsx
+src/runtime/tools/builtins/taskstoptool/prompt.ts
 src/runtime/tools/builtins/taskupdatetool/TaskUpdateTool.ts
 src/runtime/tools/builtins/taskupdatetool/prompt.ts
 src/runtime/tools/builtins/teamcreatetool/TeamCreateTool.ts
@@ -1994,9 +2037,12 @@ src/runtime/tools/builtins/teamdeletetool/UI.tsx
 src/runtime/tools/builtins/teamdeletetool/constants.ts
 src/runtime/tools/builtins/teamdeletetool/prompt.ts
 src/runtime/tools/builtins/todowritetool/TodoWriteTool.ts
+src/runtime/tools/builtins/todowritetool/constants.ts
 src/runtime/tools/builtins/todowritetool/prompt.ts
 src/runtime/tools/builtins/websearchtool/UI.tsx
 src/runtime/tools/builtins/websearchtool/WebSearchTool.ts
+src/runtime/tools/builtins/websearchtool/prompt.ts
+src/runtime/tools/builtins/write/index.ts
 src/runtime/tools/components/Markdown.ts
 src/runtime/tools/context.ts
 src/runtime/tools/entrypoints/agentSdkTypes.ts
@@ -2215,6 +2261,7 @@ src/shared/utils/fpsTracker.ts
 src/shared/utils/ghPrStatus.ts
 src/shared/utils/github/ghAuthStatus.ts
 src/shared/utils/githubRepoPathMapping.ts
+src/shared/utils/glob.ts
 src/shared/utils/groupToolUses.ts
 src/shared/utils/handlePromptSubmit.ts
 src/shared/utils/heapDumpService.ts
@@ -2253,6 +2300,7 @@ src/shared/utils/plugins/installCounts.ts
 src/shared/utils/plugins/lspPluginIntegration.ts
 src/shared/utils/plugins/lspRecommendation.ts
 src/shared/utils/plugins/officialMarketplaceStartupCheck.ts
+src/shared/utils/plugins/orphanedPluginFilter.ts
 src/shared/utils/plugins/parseMarketplaceInput.ts
 src/shared/utils/plugins/performStartupChecks.tsx
 src/shared/utils/plugins/pluginAutoupdate.ts
@@ -2349,6 +2397,7 @@ src/skills/bundled/verify.ts
 src/skills/bundled/verifyContent.ts
 src/skills/bundled/workspaceSkills.ts
 src/skills/bundledSkills.ts
+src/skills/loadSkillsDir.ts
 src/skills/mcpSkillBuilders.ts
 src/state/AppStateStore.d.ts
 src/state/AppStateStore.ts
@@ -2385,7 +2434,7 @@ src/utils/sliceAnsi.ts
 src/utils/startupProfiler.ts
 src/utils/textHighlighting.ts
 src/utils/worktreeModeEnabled.ts
-src/vendor/anthropic-stubs/optional-otel.ts
+src/vendor/@allternit/extension/index.ts
 src/vim/motions.ts
 src/vim/operators.ts
 src/vim/textObjects.ts
@@ -2398,3 +2447,4 @@ src/workspace/loader.d.ts
 src/workspace/loader.ts
 src/workspace/types.d.ts
 src/workspace/types.ts
+test/components/WelcomeInfoBox.test.ts

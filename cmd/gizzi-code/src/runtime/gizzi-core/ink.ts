@@ -33,9 +33,9 @@ export async function createRoot(options?: RenderOptions): Promise<Root> {
 
 export { color } from '../../cli/ui/ink-app/components/design-system/color.js'
 export type { Props as BoxProps } from './components/design-system/ThemedBox.js'
-export { default as Box } from '../../cli/ui/components/design-system/ThemedBox.js'
+export { default as Box } from '../../cli/ui/ink-app/components/design-system/ThemedBox.js'
 export type { Props as TextProps } from './components/design-system/ThemedText.js'
-export { default as Text } from '../../cli/ui/components/design-system/ThemedText.js'
+export { default as Text } from '../../cli/ui/ink-app/components/design-system/ThemedText.js'
 export {
   ThemeProvider,
   usePreviewTheme,
