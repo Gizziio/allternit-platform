@@ -3,7 +3,7 @@ import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { renderPlaceholder } from '@/hooks/renderPlaceholder.js';
 import { usePasteHandler } from '@/hooks/usePasteHandler.js';
-import { useDeclaredCursor } from '../ink-renderer/hooks/use-declared-cursor.js';
+import { useDeclaredCursor } from '../ink-app/ink/hooks/use-declared-cursor.js';
 import { Ansi, Box, Text, useInput } from '@/ink.js';
 import type { BaseInputState, BaseTextInputProps } from '@/types/textInputTypes.js';
 import type { TextHighlight } from '../../../shared/utils/textHighlighting.js';

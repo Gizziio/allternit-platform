@@ -3,7 +3,7 @@ import { c as _c } from "react/compiler-runtime";
 import React, { Suspense, use, useMemo } from 'react';
 import { useSettings } from '@/hooks/useSettings.js';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
-import { stringWidth } from '../../../ink-renderer/stringWidth.js';
+import { stringWidth } from '../../../ink-app/ink/stringWidth.js';
 import { Ansi, Box, Text, useTheme } from '@/ink.js';
 import { type CliHighlight, getCliHighlightPromise } from '../../../../../shared/utils/cliHighlight.js';
 import { applyMarkdown } from '../../../../../shared/utils/markdown.js';

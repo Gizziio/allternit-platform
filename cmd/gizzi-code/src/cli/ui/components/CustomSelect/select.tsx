@@ -2,8 +2,8 @@
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import React, { type ReactNode, useEffect, useRef, useState } from 'react';
-import { useDeclaredCursor } from '../../ink-renderer/hooks/use-declared-cursor.js';
-import { stringWidth } from '../../ink-renderer/stringWidth.js';
+import { useDeclaredCursor } from '../../ink-app/ink/hooks/use-declared-cursor.js';
+import { stringWidth } from '../../ink-app/ink/stringWidth.js';
 import { Ansi, Box, Text } from '@/ink.js';
 import { count } from '../../../../shared/utils/array.js';
 import type { PastedContent } from '../../../../shared/utils/config.js';

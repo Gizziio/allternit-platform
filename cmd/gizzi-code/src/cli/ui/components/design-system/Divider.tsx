@@ -2,7 +2,7 @@
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
-import { stringWidth } from '../../ink-renderer/stringWidth.js';
+import { stringWidth } from '../../ink-app/ink/stringWidth.js';
 import { Ansi, Text } from '@/ink.js';
 import type { Theme } from '../../../../shared/utils/theme.js';
 type DividerProps = {

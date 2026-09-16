@@ -4,7 +4,7 @@ import type { Base64ImageSource, ImageBlockParam } from '@allternit/gizzi-sdk/pr
 import React, { Suspense, use, useCallback, useMemo, useRef, useState } from 'react';
 import { useSettings } from '@/hooks/useSettings.js';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
-import { stringWidth } from '../../../ink-renderer/stringWidth.js';
+import { stringWidth } from '../../../ink-app/ink/stringWidth.js';
 import { useTheme } from '@/ink.js';
 import { useKeybindings } from '@/keybindings/useKeybinding.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '@/services/analytics/index.js';

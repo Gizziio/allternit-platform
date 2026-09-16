@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=2389
+count=2345
 --- files ---
 cli/ci.ts
 cli/commands/chrome/chrome.tsx
@@ -13,8 +13,6 @@ cli/commands/permission-profile/index.ts
 cli/commands/profile/index.ts
 cli/commands/remote/index.ts
 cli/commands/skills.ts
-cli/commands/skills/index.ts
-cli/commands/status/index.ts
 cli/commands/theme/index.ts
 cli/hooks/useChromeExtensionNotification.tsx
 cli/ink.ts
@@ -49,7 +47,6 @@ cli/ui/components/design-system/Divider.tsx
 cli/ui/components/design-system/KeyboardShortcutHint.tsx
 cli/ui/components/design-system/Ratchet.tsx
 cli/ui/components/design-system/ThemeProvider.tsx
-cli/ui/components/design-system/ThemedBox.tsx
 cli/ui/components/design-system/ThemedText.tsx
 cli/ui/components/permissions/AskUserQuestionPermissionRequest/AskUserQuestionPermissionRequest.tsx
 cli/ui/components/permissions/AskUserQuestionPermissionRequest/PreviewBox.tsx
@@ -181,6 +178,8 @@ cli/ui/ink-app/commands/dash/dash.ts
 cli/ui/ink-app/commands/dash/index.ts
 cli/ui/ink-app/commands/dashboard/dashboard.tsx
 cli/ui/ink-app/commands/dashboard/index.ts
+cli/ui/ink-app/commands/design/design.tsx
+cli/ui/ink-app/commands/design/index.ts
 cli/ui/ink-app/commands/desktop/desktop.tsx
 cli/ui/ink-app/commands/desktop/index.ts
 cli/ui/ink-app/commands/diff/diff.tsx
@@ -208,8 +207,6 @@ cli/ui/ink-app/commands/files/files.ts
 cli/ui/ink-app/commands/files/index.ts
 cli/ui/ink-app/commands/find/find.tsx
 cli/ui/ink-app/commands/find/index.ts
-cli/ui/ink-app/commands/fork/fork.tsx
-cli/ui/ink-app/commands/fork/index.ts
 cli/ui/ink-app/commands/gc/index.ts
 cli/ui/ink-app/commands/goal.ts
 cli/ui/ink-app/commands/grep/grep.tsx
@@ -454,7 +451,6 @@ cli/ui/ink-app/components/LanguagePicker.tsx
 cli/ui/ink-app/components/LogSelector.tsx
 cli/ui/ink-app/components/LogoV2/Feed.tsx
 cli/ui/ink-app/components/LogoV2/OverageCreditUpsell.tsx
-cli/ui/ink-app/components/LogoV2/WelcomeInfoBox.tsx
 cli/ui/ink-app/components/LspRecommendation/LspRecommendationMenu.tsx
 cli/ui/ink-app/components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.tsx
 cli/ui/ink-app/components/ManagedSettingsSecurityDialog/utils.ts
@@ -675,7 +671,6 @@ cli/ui/ink-app/components/messages/UserToolResultMessage/UserToolRejectMessage.t
 cli/ui/ink-app/components/messages/UserToolResultMessage/UserToolResultMessage.tsx
 cli/ui/ink-app/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx
 cli/ui/ink-app/components/messages/UserToolResultMessage/utils.tsx
-cli/ui/ink-app/components/messages/index.ts
 cli/ui/ink-app/components/messages/nullRenderingAttachments.ts
 cli/ui/ink-app/components/messages/teamMemCollapsed.tsx
 cli/ui/ink-app/components/messages/teamMemSaved.ts
@@ -927,7 +922,6 @@ cli/ui/ink-app/hooks/useTypeahead.tsx
 cli/ui/ink-app/hooks/useUpdateNotification.ts
 cli/ui/ink-app/hooks/useVimInput.ts
 cli/ui/ink-app/hooks/useVirtualScroll.ts
-cli/ui/ink-app/hooks/useVoice.ts
 cli/ui/ink-app/hooks/useVoiceEnabled.ts
 cli/ui/ink-app/hooks/useVoiceIntegration.tsx
 cli/ui/ink-app/ink.ts
@@ -1078,7 +1072,6 @@ cli/ui/ink-app/screens/Doctor.tsx
 cli/ui/ink-app/screens/REPL.tsx
 cli/ui/ink-app/screens/bots-pane/BotsPaneScreen.tsx
 cli/ui/ink-app/screens/bots-pane/BotsRowList.tsx
-cli/ui/ink-app/screens/bots-pane/index.ts
 cli/ui/ink-app/screens/bots-pane/keys.ts
 cli/ui/ink-app/screens/bots-pane/open-bot-chat.ts
 cli/ui/ink-app/screens/bots-pane/rows.ts
@@ -1228,8 +1221,6 @@ cli/ui/ink-app/services/tools/toolHooks.ts
 cli/ui/ink-app/services/tools/toolOrchestration.ts
 cli/ui/ink-app/services/vcr.ts
 cli/ui/ink-app/services/voice.ts
-cli/ui/ink-app/services/voiceKeyterms.ts
-cli/ui/ink-app/services/voiceStreamSTT.ts
 cli/ui/ink-app/skills/bundledSkills.ts
 cli/ui/ink-app/skills/loadSkillsDir.ts
 cli/ui/ink-app/skills/mcpSkillBuilders.ts
@@ -1588,7 +1579,6 @@ cli/ui/ink-app/utils/env.ts
 cli/ui/ink-app/utils/envDynamic.ts
 cli/ui/ink-app/utils/envUtils.ts
 cli/ui/ink-app/utils/envValidation.ts
-cli/ui/ink-app/utils/errorLogSink.ts
 cli/ui/ink-app/utils/errors.ts
 cli/ui/ink-app/utils/exampleCommands.ts
 cli/ui/ink-app/utils/execFileNoThrow.ts
@@ -1890,7 +1880,6 @@ cli/ui/ink-app/utils/shellConfig.ts
 cli/ui/ink-app/utils/sideQuery.ts
 cli/ui/ink-app/utils/sideQuestion.ts
 cli/ui/ink-app/utils/signal.ts
-cli/ui/ink-app/utils/sinks.ts
 cli/ui/ink-app/utils/skills/skillChangeDetector.ts
 cli/ui/ink-app/utils/slashCommandParsing.ts
 cli/ui/ink-app/utils/sleep.ts
@@ -2001,7 +1990,6 @@ cli/ui/ink-app/utils/userPromptKeywords.ts
 cli/ui/ink-app/utils/uuid.ts
 cli/ui/ink-app/utils/which.ts
 cli/ui/ink-app/utils/windowsPaths.ts
-cli/ui/ink-app/utils/withResolvers.ts
 cli/ui/ink-app/utils/words.ts
 cli/ui/ink-app/utils/workloadContext.ts
 cli/ui/ink-app/utils/worktree.ts
@@ -2018,27 +2006,12 @@ cli/ui/ink-app/vim/types.ts
 cli/ui/ink-app/voice/voiceModeEnabled.ts
 cli/ui/ink-app/win32.ts
 cli/ui/ink-app/worker.ts
-cli/ui/ink-renderer/components/Link.tsx
-cli/ui/ink-renderer/components/Text.tsx
-cli/ui/ink-renderer/global.d.ts
-cli/ui/ink-renderer/instances.ts
-cli/ui/ink-renderer/layout/yoga.ts
-cli/ui/ink-renderer/output.ts
-cli/ui/ink-renderer/supports-hyperlinks.ts
-cli/ui/ink-renderer/wrap-text.ts
-cli/ui/ink-renderer/wrapAnsi.ts
 cli/ui/utils/permissions/PermissionUpdateSchema.ts
 cli/ui/utils/settings/settings.ts
 config/permissionProfiles.ts
 config/profiles.ts
-constants/outputStyleConfig.ts
-constants/outputStyleConstants.ts
-constants/outputStyles.ts
-constants/prompts.ts
-constants/tools.ts
 coordinator/coordinatorMode.ts
 hooks/useCanUseTool.ts
-hooks/useExitOnCtrlCDWithKeybindings.ts
 ink/events/click-event.ts
 ink/events/focus-event.ts
 ink/events/input-event.ts
@@ -2049,10 +2022,8 @@ keybindings/parser.ts
 keybindings/resolver.ts
 keybindings/useKeybinding.ts
 memdir/findRelevantMemories.ts
-memdir/memdir.ts
 memdir/memoryScan.ts
 memdir/paths.ts
-outputStyles/loadOutputStylesDir.ts
 runtime/automation/cron/service-enhanced.ts
 runtime/automation/cron/service.ts
 runtime/brain/brain.service.ts
@@ -2061,8 +2032,6 @@ runtime/context/config/config.ts
 runtime/cowork/cowork.runtime.ts
 runtime/cowork/cowork.service.ts
 runtime/file/file.ts
-runtime/file/time.ts
-runtime/file/watcher.ts
 runtime/gizzi-core/ink.ts
 runtime/gizzi-core/services/railsPeer.ts
 runtime/gizzi-core/setup.ts
@@ -2117,7 +2086,6 @@ runtime/server/routes/vm-session.ts
 runtime/server/routes/workspace.ts
 runtime/server/server.ts
 runtime/server/tunnel.ts
-runtime/services/SessionMemory/sessionMemory.ts
 runtime/services/SessionMemory/sessionMemoryUtils.ts
 runtime/services/analytics/datadog.ts
 runtime/services/analytics/firstPartyEventLogger.ts
@@ -2157,8 +2125,6 @@ runtime/services/oauth/getOauthProfile.ts
 runtime/services/oauth/scopes.ts
 runtime/services/pairing/pairing.ts
 runtime/services/rateLimitMocking.ts
-runtime/services/remoteManagedSettings/syncCacheState.ts
-runtime/services/teamMemorySync/teamMemSecretGuard.ts
 runtime/services/tokenEstimation.ts
 runtime/services/vcr.ts
 runtime/services/voice.ts
@@ -2195,7 +2161,6 @@ runtime/tools/builtins/bash/pathValidation.ts
 runtime/tools/builtins/bash/prompt.ts
 runtime/tools/builtins/bash/readOnlyValidation.ts
 runtime/tools/builtins/bash/utils.ts
-runtime/tools/builtins/edit/index.ts
 runtime/tools/builtins/exitplanmodetool/ExitPlanModeV2Tool.ts
 runtime/tools/builtins/exitplanmodetool/UI.tsx
 runtime/tools/builtins/file-edit/FileEditTool.ts
@@ -2205,11 +2170,6 @@ runtime/tools/builtins/file-read/UI.tsx
 runtime/tools/builtins/file-read/imageProcessor.ts
 runtime/tools/builtins/file-write/FileWriteTool.ts
 runtime/tools/builtins/file-write/UI.tsx
-runtime/tools/builtins/glob/GlobTool.ts
-runtime/tools/builtins/glob/UI.tsx
-runtime/tools/builtins/grep/GrepTool.ts
-runtime/tools/builtins/grep/UI.tsx
-runtime/tools/builtins/grep/index.ts
 runtime/tools/builtins/grep/prompt.ts
 runtime/tools/builtins/listmcpresourcestool/ListMcpResourcesTool.ts
 runtime/tools/builtins/listmcpresourcestool/UI.tsx
@@ -2217,13 +2177,10 @@ runtime/tools/builtins/mcpauthtool/McpAuthTool.ts
 runtime/tools/builtins/mcptool/MCPTool.ts
 runtime/tools/builtins/mcptool/UI.tsx
 runtime/tools/builtins/notebookedittool/NotebookEditTool.ts
-runtime/tools/builtins/read/index.ts
 runtime/tools/builtins/registry.ts
-runtime/tools/builtins/syntheticoutputtool/SyntheticOutputTool.ts
 runtime/tools/builtins/webfetchtool/UI.tsx
 runtime/tools/builtins/webfetchtool/WebFetchTool.ts
 runtime/tools/builtins/webfetchtool/utils.ts
-runtime/tools/builtins/write/index.ts
 runtime/tools/mcp/index.ts
 runtime/tools/mcp/oauth-provider.ts
 runtime/util/filesystem.ts
@@ -2260,7 +2217,6 @@ shared/utils/config.ts
 shared/utils/createUserMessage.ts
 shared/utils/cwd.ts
 shared/utils/debug.ts
-shared/utils/deepLink/registerProtocol.ts
 shared/utils/diff.ts
 shared/utils/doctorDiagnostic.ts
 shared/utils/dxt/helpers.ts
@@ -2377,7 +2333,6 @@ shared/utils/toolSearchMode.ts
 shared/utils/user.ts
 shared/utils/userAgent.ts
 shared/utils/which.ts
-types/hooks.ts
 ui/allternit/ars-contexta-runtime.ts
 ui/allternit/inline-coerce.ts
 ui/allternit/runtime-lane.ts
@@ -2389,6 +2344,7 @@ vendor/anthropic-stubs/allternit-extension.ts
 vendor/anthropic-stubs/audio-capture-napi.ts
 vendor/anthropic-stubs/bedrock-sdk.ts
 vendor/anthropic-stubs/foundry-sdk.ts
+vendor/anthropic-stubs/google-auth-library.ts
 vendor/anthropic-stubs/react-compiler-runtime.ts
 vendor/anthropic-stubs/sandbox-runtime.ts
 vendor/anthropic-stubs/vertex-sdk.ts

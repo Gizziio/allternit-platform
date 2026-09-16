@@ -7,7 +7,7 @@ import { getSpinnerVerbs } from '@/constants/spinnerVerbs.js';
 import { TURN_COMPLETION_VERBS } from '@/constants/turnCompletionVerbs.js';
 import { useElapsedTime } from '@/hooks/useElapsedTime.js';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
-import { stringWidth } from '../../ink-renderer/stringWidth.js';
+import { stringWidth } from '../../ink-app/ink/stringWidth.js';
 import { Box, Text } from '@/ink.js';
 import type { InProcessTeammateTaskState } from '../../tasks/InProcessTeammateTask/types.js';
 import { summarizeRecentActivities } from '../../../../shared/utils/collapseReadSearch.js';
