@@ -206,10 +206,7 @@ allternit/
 │   ├── analyze-packages.ts               ← Codebase → topics/challenges
 │   ├── platform-as-course.ts             ← Platform → course outline
 │   └── fix-unpublished-modules.ts        ← Publishes + sets prerequisites
-├── surfaces/ai.allternit.com/
-│   └── src/views/
-│       ├── LabsView.tsx                  ← Platform UI (shows all courses)
-│       └── CertificationsPanel.tsx       ← Certification badge gallery
+├── (workspace UI) Gizziio/allternit-ai   ← LabsView / demos live there, not here
 └── .agents/skills/
     └── alabs-course-pipeline/
         └── SKILL.md                      ← Agent skill for pipeline usage
@@ -467,7 +464,7 @@ Phase 4 added public docs for the agent runtime surfaces. When working on tools,
 - **Canvas Instance:** Free For Teacher, `canvas.instructure.com`
 - **Node Version:** v25.6.1 with `tsx`
 - **Database:** SQLite (`better-sqlite3`) + PostgreSQL (Prisma)
-- **Platform:** Vite + React SPA in `surfaces/ai.allternit.com/` (was Next.js; migrated)
+- **Workspace UI:** private `Gizziio/allternit-ai` (Vite + React). Console is `surfaces/platform.allternit.com/`.
 - **Course IDs:** See catalog table above
 - **Generated modules:** Stored in `alabs-generated-courses/`
 - **Demo site:** `alabs-generated-courses/demos/index.html` — works offline
@@ -485,7 +482,7 @@ Phase 4 added public docs for the agent runtime surfaces. When working on tools,
 Demo HTML files must be copied to the platform's public directory to be served:
 
 ```bash
-cp alabs-generated-courses/demos/*.html surfaces/ai.allternit.com/public/demos/
+cp alabs-generated-courses/demos/*.html ../allternit-ai/public/demos/
 ```
 
 The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1.html` which resolves to `public/demos/` in the Vite app.
@@ -494,14 +491,14 @@ The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1
 
 After generating new modules:
 1. Copy to `alabs-generated-courses/demos/`
-2. Copy to `surfaces/ai.allternit.com/public/demos/`
+2. Copy to `Gizziio/allternit-ai` `public/demos/`
 3. Regenerate index: `npx tsx scripts/generate-demo-index.ts`
 4. Copy updated index to both locations
 
 ### Platform UI Updates
 
 When adding new courses/modules, update:
-- `surfaces/ai.allternit.com/src/views/LabsView.tsx` — `ALABS_COURSES` array
+- `Gizziio/allternit-ai` `src/views/LabsView.tsx` — `ALABS_COURSES` array
 - Module counts, descriptions, demo URLs
 
 ---

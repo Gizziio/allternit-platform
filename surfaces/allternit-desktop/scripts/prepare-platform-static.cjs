@@ -22,7 +22,6 @@ function resolveHostedUiDir() {
   const candidates = [
     path.join(repoRoot, '.hosted-ui'),
     path.resolve(repoRoot, '..', 'allternit-ai'),
-    path.join(repoRoot, 'surfaces', 'ai.allternit.com'),
   ];
   for (const c of candidates) {
     if (fs.existsSync(path.join(c, 'package.json'))) {

@@ -81,44 +81,8 @@ jobs:
         run: |
           ssh vps "cd /opt/allternit-src/infrastructure/vps-desktop-cloud && SELF_HOSTED_TOKEN='$SETUP_TOKEN' ./seed-e2e.sh"
 
-      # Workspace UI lives in Gizziio/allternit-ai (ai.allternit.com), not
-      # this public repo. Skip Playwright when surfaces/ai.allternit.com is absent.
-      - name: Install Node.js
-        if: ${{ steps.vps.outputs.present == 'true' && hashFiles('surfaces/ai.allternit.com/package.json') != '' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install pnpm
-        if: ${{ steps.vps.outputs.present == 'true' && hashFiles('surfaces/ai.allternit.com/package.json') != '' }}
-        run: npm install -g pnpm
-
-      - name: Install frontend dependencies
-        if: ${{ steps.vps.outputs.present == 'true' && hashFiles('surfaces/ai.allternit.com/package.json') != '' }}
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm install
-
-      - name: Install Playwright browsers
-        if: ${{ steps.vps.outputs.present == 'true' && hashFiles('surfaces/ai.allternit.com/package.json') != '' }}
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Run remote Desktop Cloud e2e test
-        if: ${{ steps.vps.outputs.present == 'true' && hashFiles('surfaces/ai.allternit.com/package.json') != '' }}
-        working-directory: surfaces/ai.allternit.com
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          SETUP_TOKEN: ${{ steps.token.outputs.token }}
-        run: |
-          VITE_ALLTERNIT_GATEWAY_URL="https://$VPS_HOST" \
-          VITE_ALLTERNIT_SELF_HOSTED_TOKEN="$SETUP_TOKEN" \
-          DESKTOP_CLOUD_TEMPLATE_LABEL="Ubuntu 24.04 Desktop (linux)" \
-          pnpm exec playwright test tests/desktop-cloud.spec.ts --project chromium --reporter=list
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: surfaces/ai.allternit.com/test-results/
-          retention-days: 3
+      # Workspace Playwright lived in Gizziio/allternit-ai. This public repo
+      # no longer has that tree. VPS seed above is the remaining check here.
+      - name: Skip workspace Playwright (UI not in this repo)
+        if: steps.vps.outputs.present == 'true'
+        run: echo "desktop-cloud.spec.ts lives in Gizziio/allternit-ai, not this public repo."
