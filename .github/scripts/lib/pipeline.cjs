@@ -19,10 +19,8 @@ const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
 
-const DATA_FILE = path.resolve(
-  __dirname,
-  '../../../surfaces/ai.allternit.com/src/data/discovery-pipeline.json',
-);
+const { resolveWorkspaceUi } = require('./workspace-ui.cjs');
+const DATA_FILE = path.join(resolveWorkspaceUi(), 'src/data/discovery-pipeline.json');
 
 // ─── Brand Voice & Taxonomy ─────────────────────────────────────────────────
 

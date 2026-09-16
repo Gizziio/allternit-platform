@@ -10,9 +10,15 @@
  */
 
 import * as fs from 'fs/promises';
+import { existsSync } from 'node:fs';
 import * as path from 'path';
 
-const PLATFORM_DIR = 'surfaces/ai.allternit.com';
+const PLATFORM_DIR =
+  process.env.ALLTERNIT_AI_PATH ||
+  (existsSync('../allternit-ai/package.json') ? '../allternit-ai' : '');
+if (!PLATFORM_DIR) {
+  throw new Error('Workspace UI not found. Set ALLTERNIT_AI_PATH or clone Gizziio/allternit-ai as a sibling.');
+}
 
 interface PlatformTopic {
   name: string;

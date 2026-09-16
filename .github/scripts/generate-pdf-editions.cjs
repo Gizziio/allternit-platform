@@ -21,15 +21,11 @@
 const fs = require('fs');
 const path = require('path');
 const { buildPdfEditionHtml } = require('./lib/pdf-edition.cjs');
+const { resolveWorkspaceUi } = require('./lib/workspace-ui.cjs');
 
-const DATA_FILE = path.resolve(
-  __dirname,
-  '../../surfaces/ai.allternit.com/src/data/discovery-pipeline.json',
-);
-const EDITIONS_DIR = path.resolve(
-  __dirname,
-  '../../surfaces/ai.allternit.com/public/editions',
-);
+const WORKSPACE_UI = resolveWorkspaceUi();
+const DATA_FILE = path.join(WORKSPACE_UI, 'src/data/discovery-pipeline.json');
+const EDITIONS_DIR = path.join(WORKSPACE_UI, 'public/editions');
 const EDITIONS_URL_BASE = 'https://ai.allternit.com/editions';
 
 // ─── CLI ────────────────────────────────────────────────────────────────────

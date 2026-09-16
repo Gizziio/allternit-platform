@@ -20,10 +20,8 @@ const path = require('path');
 const WIDTH = 1200;
 const HEIGHT = 630;
 
-const COVER_DIR = path.resolve(
-  __dirname,
-  '../../../surfaces/ai.allternit.com/public/images/discovery',
-);
+const { resolveWorkspaceUi } = require('./workspace-ui.cjs');
+const COVER_DIR = path.join(resolveWorkspaceUi(), 'public/images/discovery');
 const COVER_URL_BASE = 'https://ai.allternit.com/images/discovery';
 
 const INK = '#1A1A1A';

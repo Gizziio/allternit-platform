@@ -33,18 +33,11 @@ const { buildPhotoEditionHtml } = require('./lib/photo-edition.cjs');
 const { harvestSourceImages } = require('./lib/source-images.cjs');
 const { buildPhotoBriefs } = require('./lib/photo-briefs.cjs');
 
-const DATA_FILE = path.resolve(
-  __dirname,
-  '../../surfaces/ai.allternit.com/src/data/discovery-pipeline.json',
-);
-const EDITIONS_DIR = path.resolve(
-  __dirname,
-  '../../surfaces/ai.allternit.com/public/editions',
-);
-const IMAGES_BASE = path.resolve(
-  __dirname,
-  '../../surfaces/ai.allternit.com/public/images/editions',
-);
+const { resolveWorkspaceUi } = require('./lib/workspace-ui.cjs');
+const WORKSPACE_UI = resolveWorkspaceUi();
+const DATA_FILE = path.join(WORKSPACE_UI, 'src/data/discovery-pipeline.json');
+const EDITIONS_DIR = path.join(WORKSPACE_UI, 'public/editions');
+const IMAGES_BASE = path.join(WORKSPACE_UI, 'public/images/editions');
 const EDITIONS_URL_BASE = 'https://ai.allternit.com/editions';
 
 const CODEX_HOME = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
