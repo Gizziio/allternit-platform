@@ -295,6 +295,7 @@ src/cli/hooks/useVirtualScroll.ts
 src/cli/hooks/useVoice.ts
 src/cli/hooks/useVoiceEnabled.ts
 src/cli/hooks/useVoiceIntegration.tsx
+src/cli/ink.ts
 src/cli/main-gizzi.tsx
 src/cli/ndjsonSafeStringify.ts
 src/cli/platform/daemon.ts
@@ -987,6 +988,7 @@ src/cli/ui/ink-app/components/constants/spinnerVerbs.ts
 src/cli/ui/ink-app/components/constants/tools.ts
 src/cli/ui/ink-app/components/constants/turnCompletionVerbs.ts
 src/cli/ui/ink-app/components/constants/xml.ts
+src/cli/ui/ink-app/components/history.ts
 src/cli/ui/ink-app/components/keybindings/shortcutFormat.ts
 src/cli/ui/ink-app/components/keybindings/types.ts
 src/cli/ui/ink-app/components/keybindings/useKeybinding.ts
@@ -1543,7 +1545,9 @@ src/cli/ui/ink-app/tools/TeamDeleteTool/TeamDeleteTool.ts
 src/cli/ui/ink-app/tools/TeamDeleteTool/UI.tsx
 src/cli/ui/ink-app/tools/TeamDeleteTool/prompt.ts
 src/cli/ui/ink-app/tools/WorkflowTool/createWorkflowCommand.ts
+src/cli/ui/ink-app/types/global.d.ts
 src/cli/ui/ink-app/types/mcp.ts
+src/cli/ui/ink-app/types/react.d.ts
 src/cli/ui/ink-app/types/screen.ts
 src/cli/ui/ink-app/upstreamproxy/relay.ts
 src/cli/ui/ink-app/upstreamproxy/upstreamproxy.ts
@@ -2455,6 +2459,7 @@ src/shared/utils/processUserInput/processSlashCommand.tsx
 src/shared/utils/processUserInput/processTextPrompt.ts
 src/shared/utils/processUserInput/processUserInput.ts
 src/shared/utils/promptCategory.ts
+src/shared/utils/promptEditor.ts
 src/shared/utils/queryContext.ts
 src/shared/utils/queryHelpers.ts
 src/shared/utils/queueProcessor.ts
