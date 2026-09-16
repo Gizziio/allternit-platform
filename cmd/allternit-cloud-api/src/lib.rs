@@ -34,6 +34,20 @@ pub use db::models::*;
 pub use error::ApiError;
 pub use websocket::DeploymentEvent;
 
+/// Origins allowed to call production cloud-api from a browser.
+/// Includes the packaged Desktop UI (`:8013`) — without these, Chromium
+/// reports CORS on `GET /v1/models` from `http://127.0.0.1:8013`.
+pub const DEFAULT_CORS_ORIGINS: &[&str] = &[
+    "http://localhost:3013",
+    "http://127.0.0.1:3013",
+    "http://localhost:8013",
+    "http://127.0.0.1:8013",
+    "https://platform.allternit.com",
+    "https://ai.allternit.com",
+    "https://fabrictransport.allternit.com",
+    "https://fabric-session.allternit.com",
+];
+
 /// API application state
 pub struct ApiState {
     pub db: sqlx::PgPool,
@@ -460,13 +474,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         CorsLayer::permissive()
     } else {
         // Production: Restrictive CORS
-        let mut origin_list = vec![
-            "http://localhost:3013".to_string(),
-            "https://platform.allternit.com".to_string(),
-            "https://ai.allternit.com".to_string(),
-            "https://fabrictransport.allternit.com".to_string(),
-            "https://fabric-session.allternit.com".to_string(),
-        ];
+        let mut origin_list = DEFAULT_CORS_ORIGINS
+            .iter()
+            .map(|origin| origin.to_string())
+            .collect::<Vec<_>>();
         if let Ok(extra) = std::env::var("CORS_ALLOWED_ORIGINS") {
             for origin in extra.split(',') {
                 let origin = origin.trim();
@@ -639,6 +650,17 @@ pub async fn start_server(state: Arc<ApiState>, addr: &str) -> Result<(), ApiErr
 
     tracing::info!("Server shutdown complete");
     Ok(())
+}
+
+#[cfg(test)]
+mod cors_origin_tests {
+    use super::DEFAULT_CORS_ORIGINS;
+
+    #[test]
+    fn desktop_loopback_ui_is_an_allowed_origin() {
+        assert!(DEFAULT_CORS_ORIGINS.contains(&"http://127.0.0.1:8013"));
+        assert!(DEFAULT_CORS_ORIGINS.contains(&"http://localhost:8013"));
+    }
 }
 
 #[cfg(test)]

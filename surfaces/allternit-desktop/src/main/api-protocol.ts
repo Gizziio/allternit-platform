@@ -39,3 +39,21 @@ export function rewriteCloudApiToProtocol(url: string, cloudApiOrigin: string): 
   if (!url.startsWith(`${cloudApiOrigin}/`)) return null;
   return url.replace(cloudApiOrigin, 'allternit-api://cloud');
 }
+
+/**
+ * Cloud-api `GET /v1/models` is a public catalog. Pairing device tokens and
+ * Clerk JWTs must not be attached — they turn a simple GET into a CORS
+ * preflight / 401.
+ */
+export function isPublicCloudCatalogPath(urlOrPath: string): boolean {
+  let path = urlOrPath;
+  try {
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(urlOrPath)) {
+      path = new URL(urlOrPath).pathname;
+    }
+  } catch {
+    path = urlOrPath;
+  }
+  const normalized = path.split('?')[0];
+  return normalized === '/v1/models' || normalized.startsWith('/v1/models/');
+}

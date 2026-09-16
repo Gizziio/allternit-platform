@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isCloudControlPlaneUrl,
+  isPublicCloudCatalogPath,
   rewriteCloudApiToProtocol,
   shouldInjectDesktopIdentity,
 } from './api-protocol';
@@ -32,5 +33,14 @@ describe('api-protocol routing', () => {
     expect(rewriteCloudApiToProtocol(`${CLOUD}/v1/models`, CLOUD)).toBe('allternit-api://cloud/v1/models');
     expect(rewriteCloudApiToProtocol(CLOUD, CLOUD)).toBeNull();
     expect(rewriteCloudApiToProtocol(`${LOCAL}/api/v1/me`, CLOUD)).toBeNull();
+  });
+
+  it('treats /v1/models as a public catalog (no device token, no Clerk)', () => {
+    expect(isPublicCloudCatalogPath('/v1/models')).toBe(true);
+    expect(isPublicCloudCatalogPath('/v1/models/llama-3.1-8b')).toBe(true);
+    expect(isPublicCloudCatalogPath('allternit-api://cloud/v1/models')).toBe(true);
+    expect(isPublicCloudCatalogPath(`${CLOUD}/v1/models`)).toBe(true);
+    expect(isPublicCloudCatalogPath('/api/v1/billing/subscription')).toBe(false);
+    expect(isPublicCloudCatalogPath('allternit-api://cloud/api/v1/billing/credits')).toBe(false);
   });
 });

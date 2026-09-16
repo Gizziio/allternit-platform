@@ -40,7 +40,7 @@ import { gizziManager } from './gizzi-manager.js';
 import { connectorSidecarManager } from './connector-sidecar-manager.js';
 import { gizziDaemonManager } from './gizzi-daemon-manager.js';
 import { PORTS, URLS, devUiUrl, apiUrl, notebookUrl, staticUiUrl } from './config.js';
-import { rewriteCloudApiToProtocol, shouldInjectDesktopIdentity } from './api-protocol.js';
+import { isPublicCloudCatalogPath, rewriteCloudApiToProtocol, shouldInjectDesktopIdentity } from './api-protocol.js';
 import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus, launchMiniAppDesktop, getMiniAppApproval, reviewAndApproveMiniApp, revokeMiniAppApproval, removeMiniAppRuntime, rollbackMiniAppRuntime, setMiniAppOAuthTokenResolver } from './mini-apps-manager.js';
 import { installReleaseFromRegistry, rollbackReleaseInstall, removeReleaseInstall, listReleaseInstalls, getReleaseInstallState } from './mini-app-release-installer.js';
 import { createMiniAppOAuthBroker, type MiniAppOAuthBroker, type MiniAppOAuthProvider } from './mini-app-oauth-broker.js';
@@ -2097,7 +2097,28 @@ app.whenReady().then(async () => {
     }
 
     const headers = new Headers(request.headers);
-    if (!isCloud) {
+    if (isCloud) {
+      // Pairing device tokens are not Clerk JWTs. Cloud-api rejects them with
+      // 401. Public catalog routes take no bearer at all.
+      headers.delete('X-Allternit-Desktop-Access-Token');
+      headers.delete('X-Allternit-User-Id');
+      headers.delete('X-Allternit-User-Email');
+      headers.delete('X-Allternit-User-Name');
+      headers.delete('X-Allternit-Tenant-Id');
+      if (isPublicCloudCatalogPath(pathAndQuery)) {
+        headers.delete('Authorization');
+      } else {
+        const clerk = await authManager.getClerkToken().catch((error) => {
+          log.warn('[Protocol] Clerk JWT unavailable for cloud request:', error);
+          return null;
+        });
+        if (clerk) {
+          headers.set('Authorization', `Bearer ${clerk}`);
+        } else {
+          headers.delete('Authorization');
+        }
+      }
+    } else {
       const desktopSession = await authManager.getSession().catch((error) => {
         log.warn('[Protocol] Paired runtime identity is temporarily unavailable:', error);
         return null;
