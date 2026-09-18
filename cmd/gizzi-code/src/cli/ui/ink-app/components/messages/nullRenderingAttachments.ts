@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Attachment } from './../../utils/attachments.ts'
 import type { Message, NormalizedMessage } from '../../types/message.js'
 
@@ -47,12 +46,21 @@ const NULL_RENDERING_TYPES = [
   'current_session_memory',
   'compaction_reminder',
   'date_change',
-] as const satisfies readonly Attachment['type'][]
+  // TODO(types): utils/attachments.ts Attachment['type'] union omits
+  // pen_mode_enter/pen_mode_exit (runtime carries them) — widen the satisfies
+] as const satisfies readonly (
+  | Attachment['type']
+  | 'pen_mode_enter'
+  | 'pen_mode_exit'
+)[]
 
 export type NullRenderingAttachmentType = (typeof NULL_RENDERING_TYPES)[number]
 
-const NULL_RENDERING_ATTACHMENT_TYPES: ReadonlySet<Attachment['type']> =
-  new Set(NULL_RENDERING_TYPES)
+// TODO(types): ReadonlySet<Attachment['type']>.has() cannot accept the string
+// attachment.type — widen to string; the satisfies above is the real guard
+const NULL_RENDERING_ATTACHMENT_TYPES: ReadonlySet<string> = new Set(
+  NULL_RENDERING_TYPES,
+)
 
 /**
  * True when this message is an attachment that AttachmentMessage renders as

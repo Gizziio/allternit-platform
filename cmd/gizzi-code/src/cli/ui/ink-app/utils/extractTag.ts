@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Leaf module for extractTag, extracted from messages.ts so the many UI
  * components that only need tag extraction don't pull in the heavy

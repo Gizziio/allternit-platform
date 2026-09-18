@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * This testing-only tool will always pop up a permission dialog when called by
  * the model.
@@ -26,7 +25,9 @@ export const TestingPermissionTool: Tool<InputSchema, string> = buildTool({
     return 'TestingPermission';
   },
   isEnabled() {
-    return "production" === 'test';
+    // TODO(types): literal-vs-literal comparison is always false at runtime;
+    // preserved as-is (was `process.env.NODE_ENV`-style intent?) — type-only cast
+    return ("production" as string) === 'test';
   },
   isConcurrencySafe() {
     return true;

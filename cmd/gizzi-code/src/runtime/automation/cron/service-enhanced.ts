@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Enhanced CronService with Production Features
  * 
@@ -29,6 +28,7 @@ import type {
   CronEvent,
   DaemonStatus,
   RunStatus,
+  JobType,
 } from "./types";
 import { homedir } from "os";
 import { join } from "path";
@@ -76,6 +76,7 @@ const DEFAULT_CONFIG: ServiceState["config"] = {
   maxConcurrentJobs: 10,
   defaultTimeoutSeconds: 300,
   defaultMaxRetries: 0,
+  agentQueue: undefined,
   onJobExecute: async () => {},
   onJobComplete: async () => {},
   onJobError: async () => {},
@@ -733,7 +734,9 @@ export const CronServiceEnhanced = {
   },
 
   async _executeJobByType(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
-    switch (job.type) {
+    // TODO(types): CronJob union omits VaultJob even though the daemon
+    // registers vault jobs at runtime — cast until the union is widened.
+    switch (job.type as JobType) {
       case "shell":
         await this._executeShell(job, run, signal);
         break;
@@ -760,7 +763,8 @@ export const CronServiceEnhanced = {
         break;
       default: {
         // Exhaustiveness check - should never reach here if all job types are handled
-        const _exhaustiveCheck: never = job;
+        // TODO(types): CronJob union omits VaultJob (see switch cast above)
+        const _exhaustiveCheck: never = job as never;
         throw new Error(`Unknown job type: ${(_exhaustiveCheck as { type: string }).type}`);
       }
     }

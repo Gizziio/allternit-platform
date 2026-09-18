@@ -1,6 +1,19 @@
-// @ts-nocheck
 import type { Key } from '../ink.js'
-import type { ParsedBinding, ParsedKeystroke } from './types.js'
+
+// TODO(types): keybindings/types.ts is an unimplemented stub — mirror the
+// Parsed* shapes from its eventual contract (see also useShortcutDisplay.ts)
+interface ParsedKeystroke {
+  key: string
+  ctrl?: boolean
+  shift?: boolean
+  alt?: boolean
+  meta?: boolean
+  super?: boolean
+}
+
+interface ParsedBinding {
+  chord: ParsedKeystroke[]
+}
 
 /**
  * Modifier keys from Ink's Key type that we care about for matching.

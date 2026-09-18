@@ -1,4 +1,3 @@
-// @ts-nocheck
 import z from 'zod/v4'
 // Types extracted to src/types/permissions.ts to break import cycles
 import type {

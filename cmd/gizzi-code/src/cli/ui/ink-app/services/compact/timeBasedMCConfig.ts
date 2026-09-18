@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 
 /**
