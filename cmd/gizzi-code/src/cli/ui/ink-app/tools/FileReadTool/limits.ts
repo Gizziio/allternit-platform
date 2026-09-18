@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Read tool output limits.  Two caps apply to text reads:
  *

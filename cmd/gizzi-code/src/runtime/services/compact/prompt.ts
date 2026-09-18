@@ -1,12 +1,13 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { PartialCompactDirection } from '@/types/message.js'
 
 // Dead code elimination: conditional import for proactive mode
+// TODO(types): the proactive/components modules are dormant stubs; mirror the
+// runtime shape this file relies on locally (b0009 keybindings-stub pattern).
 /* eslint-disable @typescript-eslint/no-require-imports */
-const proactiveModule =
+const proactiveModule: { isProactiveActive?: () => boolean } | null =
   feature('PROACTIVE') || feature('KAIROS')
-    ? (require('../../../cli/ui/ink-app/components/index.js') as typeof import('../../../cli/ui/ink-app/components/index.js'))
+    ? (require('../../../cli/ui/ink-app/components/index.js') as unknown as { isProactiveActive?: () => boolean })
     : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 

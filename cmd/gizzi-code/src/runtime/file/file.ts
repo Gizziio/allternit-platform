@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import z from "zod/v4"
 import { $ } from "bun"
@@ -14,7 +13,14 @@ import fuzzysort from "fuzzysort"
 import { Global } from "@/runtime/context/global/index"
 
 export namespace File {
-  const log = Log.create({ service: "file" })
+  // TODO(types): the runtime/util/log Logger interface has no `.time` timer;
+  // the file service expects the shared/util/log Logger shape (log.time).
+  const log = Log.create({ service: "file" }) as ReturnType<typeof Log.create> & {
+    time: (
+      message: string,
+      extra?: Record<string, any>,
+    ) => { stop(): void; [Symbol.dispose](): void }
+  }
 
   export const Info = z
     .object({

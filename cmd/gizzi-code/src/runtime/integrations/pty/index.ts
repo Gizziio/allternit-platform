@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Mux-backed PTY integration (phase 3 of the terminal consolidation plan).
 // Same namespace surface as the old bun-pty implementation, but sessions are
 // real PTYs owned by the allternit-mux daemon: they survive `gizzi serve`
@@ -331,7 +330,13 @@ export namespace Pty {
     }
 
     const cwd = input.cwd || Instance.directory
-    const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} })
+    const shellEnv = await Plugin.trigger(
+      // "shell.env" is not declared in the plugin SDK Hooks type yet
+      // (runtime/tools/builtins/bash.ts calls it the same way)
+      "shell.env" as any,
+      { cwd },
+      { env: {} },
+    )
     const env = {
       ...input.env,
       ...shellEnv.env,
