@@ -27,8 +27,7 @@ allternit/
 │   ├── gizzi-code/           # Gizzi Code CLI source
 │   ├── gizzi-core/
 │   └── launcher/
-├── api/                      # Backend API services (being dissolved into services/ — remaining: gateway/routing, services/workspace-service, services/ssh-bridge, services/replies-runtime)
-├── services/                 # Long-running services (memory, voice, registry, orchestration; vendored: open-connector, docmost*)
+├── services/                 # Long-running services (memory, voice, registry, orchestration; includes gateway/routing — allternit-tools-gateway Rust crate, workspace-service, ssh-bridge, replies-runtime; vendored: open-connector, docmost*)
 ├── domains/                  # Domain logic (agent, computer-use, governance, kernel; agent-swarm archived → archive/agent-swarm, live agent tools at tools/agent-swarm/; cowork compose stack moved to tools/cowork-integration/stack/, cowork runtime crates remain in infrastructure/executor/cowork/)
 ├── infrastructure/           # Cloud providers, executors, bridges (alias: infra/ symlink)
 ├── mcp/                      # Model Context Protocol servers and crates (computers-server, core, mcp-client, servers)
@@ -115,7 +114,7 @@ Where new code goes — adopted 2026-09-18 (S0 of the folder reorganization):
 - **`sdk/`** = public SDK surface only. **Location frozen** — do not move without an explicit decision.
 - **`domains/`, `infrastructure/`, `surfaces/`** = existing semantics (domain logic; cloud providers/executors/bridges; web + desktop apps).
 
-`packages/@allternit/` is legacy and is being consolidated into `platform/`. `api/` is being dissolved into `services/` (remaining live packages listed in the tree above).
+`packages/@allternit/` is legacy and is being consolidated into `platform/`. The former `api/` root was dissolved into `services/` on 2026-09-18 (S2): `gateway/routing` (allternit-tools-gateway), `workspace-service`, `ssh-bridge`, and `replies-runtime` now live under `services/`.
 
 ## Three SDKs
 

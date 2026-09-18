@@ -11,7 +11,7 @@ import Foundation
 //
 // Mirrors `Reply` / `ReplyStatus` in
 // packages/@allternit/replies-contract/src/index.ts, plus the response of
-// `POST /v1/replies` (api/services/replies-runtime/src/replies.router.ts).
+// `POST /v1/replies` (services/replies-runtime/src/replies.router.ts).
 // -----------------------------------------------------------------------------
 
 enum ReplyStatus: String, Codable, Sendable {
