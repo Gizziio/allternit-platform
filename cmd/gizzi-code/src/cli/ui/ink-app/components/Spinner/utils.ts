@@ -1,6 +1,11 @@
-// @ts-nocheck
 import type { RGBColor as RGBColorString } from '../../ink/styles.js'
-import type { RGBColor as RGBColorType } from './types.js'
+// TODO(types): './types.js' (TEMPORARY SHIM) does not export this yet; define
+// locally until the shim grows the real export.
+interface RGBColorType {
+  r: number
+  g: number
+  b: number
+}
 
 export function getDefaultCharacters(): string[] {
   if (process.env.TERM === 'xterm-ghostty') {

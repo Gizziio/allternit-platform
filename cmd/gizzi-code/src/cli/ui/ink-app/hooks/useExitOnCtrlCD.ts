@@ -1,8 +1,23 @@
-// @ts-nocheck
 import { useCallback, useMemo, useState } from 'react'
 import useApp from '../ink/hooks/use-app.js'
-import type { KeybindingContextName } from '../keybindings/types.js'
 import { useDoublePress } from './useDoublePress.js'
+// TODO(types): '../keybindings/types.js' is a TEMPORARY SHIM that exports
+// nothing; the wildcard ambient decl in src/types/global.d.ts is shadowed by
+// the real file. Define locally until the shim is implemented.
+type KeybindingContextName =
+  | 'global'
+  | 'Global'
+  | 'input'
+  | 'chat'
+  | 'sidebar'
+  | 'modal'
+  | 'Scroll'
+  | 'MessageActions'
+  | 'Plugin'
+  | 'DiffDialog'
+  | 'ModelPicker'
+  | 'Select'
+  | 'RailsDag'
 
 export type ExitState = {
   pending: boolean

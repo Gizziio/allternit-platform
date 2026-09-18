@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Builds runtime hook functions from a .claude-plugin hooks.json configuration.
  *

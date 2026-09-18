@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Hono } from "hono"
 import { describeRoute, validator } from "@/runtime/server/openapi"
 import { resolver } from "@/runtime/server/openapi"

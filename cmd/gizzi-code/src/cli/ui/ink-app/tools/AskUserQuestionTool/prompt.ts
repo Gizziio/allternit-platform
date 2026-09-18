@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { EXIT_PLAN_MODE_TOOL_NAME } from '../ExitPlanModeTool/constants.js'
 
 export const ASK_USER_QUESTION_TOOL_NAME = 'AskUserQuestion'

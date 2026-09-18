@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Auth } from "@/runtime/integrations/auth"
 import { Log } from "@/shared/util/log"
 import type {
