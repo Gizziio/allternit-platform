@@ -4,7 +4,7 @@
 
 import { log as runtimeLog } from '../../runtime/util/log.js'
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+export type LogLevel = 'debug' | 'info' | 'success' | 'warn' | 'error'
 
 export function log(level: LogLevel, message: string, ...args: unknown[]): void {
   runtimeLog(level, message, ...args)

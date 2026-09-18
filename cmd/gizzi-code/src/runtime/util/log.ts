@@ -4,7 +4,7 @@
 
 import { feature } from 'bun:bundle'
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent'
+export type LogLevel = 'debug' | 'info' | 'success' | 'warn' | 'error' | 'silent'
 
 let currentLogLevel: LogLevel = 'info'
 let globalLogFile: string | undefined
@@ -12,6 +12,7 @@ let globalLogFile: string | undefined
 const LOG_LEVELS: Record<LogLevel, number> = {
   debug: 0,
   info: 1,
+  success: 1,
   warn: 2,
   error: 3,
   silent: 4,
