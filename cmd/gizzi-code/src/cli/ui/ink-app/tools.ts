@@ -135,12 +135,6 @@ const ListPeersTool =
   feature('UDS_INBOX') || !isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)
     ? safeRequire('./tools/ListPeersTool/ListPeersTool.js')?.ListPeersTool
     : null
-const WorkflowTool = feature('WORKFLOW_SCRIPTS')
-  ? (() => {
-      safeRequire('./tools/WorkflowTool/bundled/index.js')?.initBundledWorkflows()
-      return safeRequire('./tools/WorkflowTool/WorkflowTool.js')?.WorkflowTool
-    })()
-  : null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import type { ToolPermissionContext } from './Tool.js'
 import { getDenyRuleForTool } from './utils/permissions/permissions.js'
@@ -237,7 +231,6 @@ export function getAllBaseTools(): Tools {
       : []),
     ...(VerifyPlanExecutionTool ? [VerifyPlanExecutionTool] : []),
     ...(process.env.USER_TYPE === 'ant' && REPLTool ? [REPLTool] : []),
-    ...(WorkflowTool ? [WorkflowTool] : []),
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,
     ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),

@@ -15,8 +15,6 @@ import type { LocalAgentTaskState } from './../../tasks/LocalAgentTask/LocalAgen
 import { LocalAgentTask } from './../../tasks/LocalAgentTask/LocalAgentTask.tsx';
 import type { LocalShellTaskState } from './../../tasks/LocalShellTask/guards.ts';
 import { LocalShellTask } from './../../tasks/LocalShellTask/LocalShellTask.tsx';
-// Type import is erased at build time — safe even though module is ant-gated.
-import type { LocalWorkflowTaskState } from './../../tasks/LocalWorkflowTask/LocalWorkflowTask.ts';
 import type { MonitorMcpTaskState } from './../../tasks/MonitorMcpTask/MonitorMcpTask.ts';
 import { RemoteAgentTask, type RemoteAgentTaskState } from './../../tasks/RemoteAgentTask/RemoteAgentTask.tsx';
 import { type BackgroundTaskState, isBackgroundTask, type TaskState } from './../../tasks/types.ts';
@@ -80,12 +78,6 @@ type ListItem = {
   task: DeepImmutable<InProcessTeammateTaskState>;
 } | {
   id: string;
-  type: 'local_workflow';
-  label: string;
-  status: string;
-  task: DeepImmutable<LocalWorkflowTaskState>;
-} | {
-  id: string;
   type: 'monitor_mcp';
   label: string;
   status: string;
@@ -103,15 +95,6 @@ type ListItem = {
   status: 'running';
 };
 
-// WORKFLOW_SCRIPTS is ant-only (build_flags.yaml). Static imports would leak
-// ~1.3K lines into external builds. Gate with feature() + require so the
-// bundler can dead-code-eliminate the branch.
-/* eslint-disable @typescript-eslint/no-require-imports */
-const WorkflowDetailDialog = feature('WORKFLOW_SCRIPTS') ? (require('./WorkflowDetailDialog.js') as typeof import('./WorkflowDetailDialog.js')).WorkflowDetailDialog : null;
-const workflowTaskModule = feature('WORKFLOW_SCRIPTS') ? require('src/tasks/LocalWorkflowTask/LocalWorkflowTask.js') as typeof import('./../../tasks/LocalWorkflowTask/LocalWorkflowTask.ts') : null;
-const killWorkflowTask = workflowTaskModule?.killWorkflowTask ?? null;
-const skipWorkflowAgent = workflowTaskModule?.skipWorkflowAgent ?? null;
-const retryWorkflowAgent = workflowTaskModule?.retryWorkflowAgent ?? null;
 // Relative path, not `src/...` path-mapping — Bun's DCE can statically
 // resolve + eliminate `./` requires, but path-mapped strings stay opaque
 // and survive as dead literals in the bundle. Matches tasks.ts pattern.
@@ -274,8 +257,6 @@ export function BackgroundTasksDialog({
         void killAgentTask(currentSelection_0.id);
       } else if (currentSelection_0.type === 'in_process_teammate' && currentSelection_0.status === 'running') {
         void killTeammateTask(currentSelection_0.id);
-      } else if (currentSelection_0.type === 'local_workflow' && currentSelection_0.status === 'running' && killWorkflowTask) {
-        killWorkflowTask(currentSelection_0.id, setAppState);
       } else if (currentSelection_0.type === 'monitor_mcp' && currentSelection_0.status === 'running' && killMonitorMcp) {
         killMonitorMcp(currentSelection_0.id, setAppState);
       } else if (currentSelection_0.type === 'dream' && currentSelection_0.status === 'running') {
@@ -326,9 +307,7 @@ export function BackgroundTasksDialog({
   useEffect(() => {
     if (viewState.mode !== 'list') {
       const task = (typedTasks ?? {})[viewState.itemId];
-      // Workflow tasks get a grace: their detail view stays open through
-      // completion so the user sees the final state before eviction.
-      if (!task || task.type !== 'local_workflow' && !isBackgroundTask(task)) {
+      if (!task || !isBackgroundTask(task)) {
         // Task was removed or is no longer a background task (e.g. killed).
         // If we skipped the list on mount, close the dialog entirely.
         if (skippedListOnMount.current) {
@@ -387,9 +366,6 @@ export function BackgroundTasksDialog({
             display: 'system'
           });
         } : undefined} key={`teammate-${task_0.id}`} />;
-      case 'local_workflow':
-        if (!WorkflowDetailDialog) return null;
-        return <WorkflowDetailDialog workflow={task_0} onDone={onDone} onKill={task_0.status === 'running' && killWorkflowTask ? () => killWorkflowTask(task_0.id, setAppState) : undefined} onSkipAgent={task_0.status === 'running' && skipWorkflowAgent ? agentId => skipWorkflowAgent(task_0.id, agentId, setAppState) : undefined} onRetryAgent={task_0.status === 'running' && retryWorkflowAgent ? agentId_0 => retryWorkflowAgent(task_0.id, agentId_0, setAppState) : undefined} onBack={goBackToList} key={`workflow-${task_0.id}`} />;
       case 'monitor_mcp':
         if (!MonitorMcpDetailDialog) return null;
         return <MonitorMcpDetailDialog task={task_0} onKill={task_0.status === 'running' && killMonitorMcp ? () => killMonitorMcp(task_0.id, setAppState) : undefined} onBack={goBackToList} key={`monitor-mcp-${task_0.id}`} />;

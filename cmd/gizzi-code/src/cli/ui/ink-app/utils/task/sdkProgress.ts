@@ -4,9 +4,9 @@ import { enqueueSdkEvent } from '../sdkEventQueue'
 
 /**
  * Emit a `task_progress` SDK event. Shared by background agents (per tool_use
- * in runAsyncAgentLifecycle) and workflows (per flushProgress batch). Accepts
+ * in runAsyncAgentLifecycle). Accepts
  * already-computed primitives so callers can derive them from their own state
- * shapes (ProgressTracker for agents, LocalWorkflowTaskState for workflows).
+ * shapes (ProgressTracker for agents).
  */
 export function emitTaskProgress(params: {
   taskId: string

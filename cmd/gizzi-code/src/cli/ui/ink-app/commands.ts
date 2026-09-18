@@ -116,9 +116,6 @@ const remoteControlServerCommand =
 const forceSnip = feature('HISTORY_SNIP')
   ? safeRequire('./commands/force-snip.js')?.default
   : null
-const workflowsCmd = feature('WORKFLOW_SCRIPTS')
-  ? safeRequire('./commands/workflows/index.js')?.default
-  : null
 const webCmd = feature('CCR_REMOTE_SETUP')
   ? safeRequire('./commands/remote-setup/index.js')?.default
   : null
@@ -414,7 +411,6 @@ const COMMANDS = memoize((): Command[] => [
   passes,
   ...(peersCmd ? [peersCmd] : []),
   tasks,
-  ...(workflowsCmd ? [workflowsCmd] : []),
   ...(torch ? [torch] : []),
   ...(process.env.USER_TYPE === 'ant' && !process.env.IS_DEMO
     ? INTERNAL_ONLY_COMMANDS
@@ -473,12 +469,6 @@ async function getSkills(cwd: string): Promise<{
   }
 }
 
-/* eslint-disable @typescript-eslint/no-require-imports */
-const getWorkflowCommands = feature('WORKFLOW_SCRIPTS')
-  ? safeRequire('./tools/WorkflowTool/createWorkflowCommand.js')?.getWorkflowCommands
-  : null
-/* eslint-enable @typescript-eslint/no-require-imports */
-
 /**
  * Filters commands by their declared `availability` (auth/provider requirement).
  * Commands without `availability` are treated as universal.
@@ -517,25 +507,19 @@ export function meetsAvailabilityRequirement(cmd: Command): boolean {
 }
 
 /**
- * Loads all command sources (skills, plugins, workflows). Memoized by cwd
+ * Loads all command sources (skills, plugins). Memoized by cwd
  * because loading is expensive (disk I/O, dynamic imports).
  */
 const loadAllCommands = memoize(async (cwd: string): Promise<Command[]> => {
   const [
     { skillDirCommands, pluginSkills, bundledSkills, builtinPluginSkills },
     pluginCommands,
-    workflowCommands,
-  ] = await Promise.all([
-    getSkills(cwd),
-    getPluginCommands(),
-    getWorkflowCommands ? Promise.resolve(getWorkflowCommands(cwd)) : Promise.resolve([]),
-  ])
+  ] = await Promise.all([getSkills(cwd), getPluginCommands()])
 
   return [
     ...bundledSkills,
     ...builtinPluginSkills,
     ...skillDirCommands,
-    ...workflowCommands,
     ...pluginCommands,
     ...pluginSkills,
     ...COMMANDS(),

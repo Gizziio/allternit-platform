@@ -34,8 +34,6 @@ import { SkillPermissionRequest } from './SkillPermissionRequest/SkillPermission
 import { WebFetchPermissionRequest } from './WebFetchPermissionRequest/WebFetchPermissionRequest';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const WorkflowTool = feature('WORKFLOW_SCRIPTS') ? (require('../../tools/WorkflowTool/WorkflowTool.js') as typeof import('../../tools/WorkflowTool/WorkflowTool.js')).WorkflowTool : null;
-const WorkflowPermissionRequest = feature('WORKFLOW_SCRIPTS') ? (require('../../tools/WorkflowTool/WorkflowPermissionRequest.js') as typeof import('../../tools/WorkflowTool/WorkflowPermissionRequest.js')).WorkflowPermissionRequest : null;
 const MonitorTool = feature('MONITOR_TOOL') ? (require('../../tools/MonitorTool/MonitorTool.js') as typeof import('../../tools/MonitorTool/MonitorTool.js')).MonitorTool : null;
 const MonitorPermissionRequest = feature('MONITOR_TOOL') ? (require('./MonitorPermissionRequest/MonitorPermissionRequest.js') as typeof import('./MonitorPermissionRequest/MonitorPermissionRequest.js')).MonitorPermissionRequest : null;
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
@@ -65,8 +63,6 @@ function permissionComponentForTool(tool: Tool): React.ComponentType<PermissionR
       return SkillPermissionRequest;
     case AskUserQuestionTool:
       return AskUserQuestionPermissionRequest;
-    case WorkflowTool:
-      return WorkflowPermissionRequest ?? FallbackPermissionRequest;
     case MonitorTool:
       return MonitorPermissionRequest ?? FallbackPermissionRequest;
     case GlobTool:
