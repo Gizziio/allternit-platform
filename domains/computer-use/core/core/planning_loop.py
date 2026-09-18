@@ -131,6 +131,20 @@ class PlanningLoopConfig:
     # carrying a `code` payload falls through to the whitelist/batch paths
     # unchanged.
     code_mode_enabled: bool = False
+    # SHADOW mode (core/element_table.py + core/decision_head.py): a fully
+    # local, non-generative policy head proposes a typed closed-set decision
+    # beside the LLM decide step. It proposes but NEVER acts: the plan, the
+    # executed action sequence, and every executed step are untouched — the
+    # head's answer is logged as a `shadow.decision` event only. Default off;
+    # off is byte-identical to a loop without a head.
+    shadow_head_enabled: bool = False
+    # Element-table cap fed to the shadow head (default matches the
+    # jev-ultrafast reference pattern).
+    shadow_head_max_elements: int = 250
+    # Optional DecisionHead instance (core/decision_head.py). When None and
+    # shadow_head_enabled is True, the default mlx-lm direct-logit head is
+    # built lazily (requires the optional `shadow-head` extra).
+    shadow_head: Optional[Any] = None
 
 
 @dataclass
@@ -192,6 +206,9 @@ LOOP_EVENTS = [
     "page.observed",
     "run.completed",
     "run.failed",
+    # Shadow policy head (core/decision_head.py): logged beside the LLM decide
+    # step, never acted on. Same "shadow" vocabulary as core/shadow_comparison.py.
+    "shadow.decision",
 ]
 
 
@@ -442,6 +459,24 @@ class PlanningLoop:
                                        "ref_map": step.element_refs})
                     except Exception:
                         pass
+
+                # SHADOW head — local non-generative policy head proposes a
+                # typed closed-set decision beside the LLM plan (logged as a
+                # `shadow.decision` event). NEVER mutates ``plan`` and never
+                # affects the executed action sequence; failures degrade to a
+                # warning, never to a step failure.
+                if self.config.shadow_head_enabled:
+                    try:
+                        await self._run_shadow_head(
+                            step=step,
+                            task=augmented_task,
+                            run_id=run_id,
+                            step_num=step_num,
+                        )
+                    except Exception as shadow_err:
+                        logger.warning(
+                            "Shadow head failed at step %s: %s", step_num, shadow_err
+                        )
 
                 # ACT phase — C2 code mode: when the run explicitly opted in
                 # AND the plan carries a code payload, ship it as ONE grant-
@@ -861,6 +896,79 @@ class PlanningLoop:
         except Exception as e:
             logger.warning("Screenshot capture failed: %s", e)
             return b""
+
+    async def _run_shadow_head(
+        self,
+        step: "LoopStep",
+        task: str,
+        run_id: str,
+        step_num: int,
+    ) -> None:
+        """Ask the shadow decision head for a typed closed-set proposal.
+
+        Builds the element table from this step's AX skeleton observation,
+        asks the head one operation Choice plus speculative
+        ``<operation>_target`` Choices in a single pass, and attaches the
+        answer to the loop log as a ``shadow.decision`` event with head
+        latency and confidence. Purely observational: ``step``'s plan/action
+        fields and ``plan`` are never touched.
+        """
+        from .element_table import build_element_table
+        from .decision_head import Question, build_default_head
+
+        tree = step.ax_tree_snapshot
+        if not tree:
+            logger.debug(
+                "Shadow head skipped at step %s: no AX observation on the step",
+                step_num,
+            )
+            return
+
+        table = build_element_table(
+            tree, max_elements=self.config.shadow_head_max_elements
+        )
+        operation_options = table.supported_operations()
+        if not operation_options:
+            logger.debug(
+                "Shadow head skipped at step %s: no closed-set operations in table",
+                step_num,
+            )
+            return
+
+        questions = [Question(name="operation", options=operation_options)]
+        for operation in operation_options:
+            targets = table.target_options(operation)
+            if len(targets) >= 2:
+                questions.append(Question(name=f"{operation}_target", options=targets))
+        # Goal/stuck gates (reference pattern): boolean closed-set checks in
+        # the same single pass, with per-option probabilities like everything
+        # else. Proposed only — the loop's own done/stall detection stays
+        # authoritative.
+        questions.append(Question(name="goal_satisfied", options=["true", "false"]))
+        questions.append(Question(name="stuck", options=["true", "false"]))
+
+        head = self.config.shadow_head or build_default_head()
+        state_text = (
+            f"[TASK]\n{task}\n\n"
+            f"[OBSERVED ELEMENTS]\n{table.to_prompt_text()}\n\n"
+            "[INSTRUCTIONS]\n"
+            "Choose the next browser operation, then the target element index "
+            "for each operation you would consider. Answer only with the given "
+            "options."
+        )
+        decision = head.decide(state_text, questions)
+        decision.validate()
+
+        self._emit({
+            "type": "shadow.decision",
+            "run_id": run_id,
+            "step": step_num,
+            "head": decision.model_id,
+            "latency_ms": decision.latency_ms,
+            "element_count": len(table),
+            "pruned_count": table.pruned_count,
+            "decision": decision.to_dict(),
+        })
 
     async def _execute_action(self, action, session_id: str) -> Dict:
         """Execute a VisionAction through the adapter or executor."""
