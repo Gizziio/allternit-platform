@@ -5,5 +5,8 @@
   "description": "JSON Schema definitions for all Allternit domain types",
   "exports": {
     "./*.schema.json": "./*.schema.json"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
   }
 }
