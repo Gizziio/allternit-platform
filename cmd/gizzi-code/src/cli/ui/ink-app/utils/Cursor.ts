@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { stringWidth } from '../ink/stringWidth.js'
 import { wrapAnsi } from '../ink/wrapAnsi.js'
 import {
