@@ -1,0 +1,6 @@
+# Branches intentionally unmerged into origin/main. One per line, # comments allowed.
+# The git-discipline gate (Stop hook) and scripts/git-discipline-check.sh ignore these.
+# Remove an entry when the branch merges or is deleted — never add without an
+# entry in .steering/checkpoint.md saying why.
+ao/swarm-mirofish   # Eoj 2026-09-18: real feature work (90 commits), "needs to be worked out more"
+ao/p8-d             # Swarm D permission policies, likely part of swarm-mirofish effort

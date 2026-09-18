@@ -5,9 +5,11 @@
 #   1. HEAD is on `main` (never detached, never a leftover session branch)
 #   2. local `main` == `origin/main` (neither behind nor ahead)
 #   3. no local branch is unmerged into origin/main, except:
-#      - branches checked out in another worktree (live sessions), and
-#      - branches passed as arguments (intentional, e.g. `ao/swarm-mirofish`)
-#   4. the working tree is clean
+#      - branches checked out in another worktree (live sessions),
+#      - branches listed in .steering/git-discipline-allowlist, and
+#      - branches passed as arguments
+#   4. the working tree is clean (with GIT_DISCIPLINE_SOFT_DIRTY=1, a dirty
+#      tree is a warning instead of a failure — used by the Stop-hook gate)
 #
 # On success it prints an evidence block — paste it verbatim into the
 # session summary. On failure it prints every violation and exits 1;
@@ -45,11 +47,16 @@ if [ "$ahead" != "0" ]; then
   fail=1
 fi
 
-# --- 3. no unmerged branches (beyond live worktrees + explicit allowlist) -----
+# --- 3. no unmerged branches (beyond live worktrees + allowlist) --------------
 # branches checked out in any worktree (these belong to live sessions)
 worktree_branches=$(git for-each-ref --format='%(refname:short) %(worktreepath)' refs/heads \
   | awk '$2 != "" {print $1}')
-allowed=$(printf '%s\n' "$@" | sort -u)
+# intentional unmerged branches: CLI args + .steering/git-discipline-allowlist
+allowlist_file=".steering/git-discipline-allowlist"
+allowed=$(printf '%s\n' "$@" | sed '/^$/d')
+[ -f "$allowlist_file" ] && allowed=$(printf '%s\n%s\n' "$allowed" \
+  "$(sed -e 's/#.*$//' -e 's/[[:space:]]*$//' "$allowlist_file" | sed '/^$/d')")
+allowed=$(printf '%s\n' "$allowed" | sort -u)
 skip=$(printf '%s\n' $worktree_branches | sort -u)
 
 unmerged=$(git branch --no-merged origin/main --format='%(refname:short)' | sort -u)
@@ -64,11 +71,19 @@ if [ -n "$flagged" ]; then
 fi
 
 # --- 4. clean tree ------------------------------------------------------------
+# GIT_DISCIPLINE_SOFT_DIRTY=1 downgrades a dirty tree to a warning (used by the
+# Stop-hook gate: the shared checkout may legitimately hold another session's
+# in-flight uncommitted work, which must be left untouched — AGENTS.md).
 dirty=$(git status --porcelain)
 if [ -n "$dirty" ]; then
-  echo "FAIL: working tree is not clean:"
-  printf '%s\n' "$dirty" | sed 's/^/  /' | head -20
-  fail=1
+  if [ "${GIT_DISCIPLINE_SOFT_DIRTY:-}" = "1" ]; then
+    echo "WARN: working tree is not clean (left untouched per worktree rules):"
+    printf '%s\n' "$dirty" | sed 's/^/  /' | head -20
+  else
+    echo "FAIL: working tree is not clean:"
+    printf '%s\n' "$dirty" | sed 's/^/  /' | head -20
+    fail=1
+  fi
 fi
 
 # --- verdict ------------------------------------------------------------------

@@ -49,7 +49,7 @@ api/
 
 | Server | Language | Purpose |
 |---|---|---|
-| `rails-api` | Node.js/Express | **Allternit Agent Rails System API** — Agents, Providers, Sessions, WIHs. Awaiting full integration. |
+| ~~`rails-api`~~ | — | Deleted (Node/Express prototype with in-memory stores; the real Rails API is `cmd/allternit-api/src/rails/`) |
 | `rails-service` | Rust/Axum | Agent Rails execution engine (Rust backend) — WIH execution |
 | `presentation-kernel` | Rust/Axum | UI rendering and state management server |
 | `launcher` | Rust | Single-binary platform launcher with embedded assets and process management |

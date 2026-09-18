@@ -28,19 +28,18 @@ allternit/
 ├── infrastructure/           # Cloud providers, executors, bridges (alias: infra/ symlink)
 ├── mcp/                      # Model Context Protocol crates
 ├── drivers/                  # VM and hardware drivers (firecracker, apple-vf)
-├── rails/                    # Agent Rails execution engine
+├── commrails/                # CommRails agent communication/coordination substrate (Rust; crate allternit-commrails)
 ├── packages/@allternit/      # Internal SDK packages (being consolidated into platform/)
 ├── platform/                 # Contracts, protocols, SDK, plugin runtime, shared packages
 ├── sdk/                      # Public SDK packages
 ├── surfaces/                 # Web apps and desktop surfaces
-│   ├── ai.allternit.com/     # Main web surface (alias: ui/ symlink → its src/)
 │   ├── allternit-desktop/    # Desktop shell (Electron)
 │   ├── allternit-extensions/ # Browser extensions
 │   ├── allternit-mobile/     # Mobile surface
 │   └── docs/                 # Docs surface
 ├── docs/                     # Documentation hub (archive/, gap-analysis/, learnings/, reports/, specs/)
 ├── research/                 # Active research & planning docs (+ adr/)
-├── spec/                     # Contract schemas + specs (wired into rails)
+├── spec/                     # Contract schemas + specs (wired into commrails)
 ├── scripts/                  # Repo automation (A://Labs Canvas pipeline, builds; adhoc/ for one-offs)
 ├── bin/                      # Executable helpers (dev-up, ci-gate, ...)
 ├── dev/                      # Dev-ops + migration scripts
