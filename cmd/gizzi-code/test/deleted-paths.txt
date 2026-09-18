@@ -2696,3 +2696,5 @@ src/cli/ui/ink-app/services/skillSearch/remoteSkillState.ts
 src/cli/ui/ink-app/services/skillSearch/telemetry.ts
 src/runtime/services/compact/cachedMicrocompact.ts
 src/cli/ui/ink-app/services/compact/cachedMicrocompact.ts
+src/runtime/services/contextCollapse/operations.ts
+src/cli/ui/ink-app/services/contextCollapse/operations.ts
