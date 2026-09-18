@@ -326,18 +326,20 @@ def _make_scorer(u_dim: int, v_dim: int, device: str) -> Any:
     """Row-structured option scorer.
 
     State (u, u_dim) and option (v, v_dim) vectors are projected to a
-    common dim, then scored by an MLP over ``[u; v; u*v]`` — a bilinear
-    interaction so the model can condition the option's semantics on the
-    state's content. ``abstain_bias`` is a learned scalar added to the
-    abstain pseudo-option's score (always the LAST menu entry).
+    small common dim, then scored by an MLP over ``[u; v; u*v]`` — a
+    bilinear interaction so the model can condition the option's semantics
+    on the state's content. The inner dim is deliberately SMALL (256): the
+    scorer sees a few hundred distinct training groups, and a wide inner
+    layer (measured at 4608 -> a 63M-param fc1) both explodes CPU cost
+    per step and overfits noise. ``abstain_bias`` is a learned scalar added
+    to the abstain pseudo-option's score (always the LAST menu entry).
     """
     import torch
     from torch import nn
 
     class _Scorer(nn.Module):
-        def __init__(self, u_in: int, v_in: int) -> None:
+        def __init__(self, u_in: int, v_in: int, dim: int = 256) -> None:
             super().__init__()
-            dim = max(u_in, v_in)
             self.u_proj = nn.Linear(u_in, dim)
             self.v_proj = nn.Linear(v_in, dim)
             self.fc1 = nn.Linear(dim * 3, dim)
@@ -704,10 +706,11 @@ def train_tier_a(
         # Two LR groups: a fresh MLP head wants ~1e-3; an encoder being
         # fine-tuned wants ~2e-5. Applying encoder LRs to the scorer leaves
         # it effectively untrained (measured: val op accuracy 0.54).
-        parameters = [
+        optimizer_params: List[Any] = [
             {"params": list(model.parameters()), "lr": encoder_lr},
             {"params": list(scorer.parameters()), "lr": scorer_lr},
         ]
+        parameters = [p for group in optimizer_params for p in group["params"]]
     else:
         model.eval()
         cache = _EncoderCache(model, tokenizer, device)
@@ -717,8 +720,9 @@ def train_tier_a(
         )
         encode = cache
         eval_encode = cache
-        parameters = list(scorer.parameters())
-    optimizer = torch.optim.AdamW(parameters, lr=scorer_lr)
+        optimizer_params = list(scorer.parameters())
+        parameters = optimizer_params
+    optimizer = torch.optim.AdamW(optimizer_params, lr=scorer_lr)
     train_weights = [float(g["weight"]) for g in train_groups]
 
     best_val_ce = math.inf
@@ -726,7 +730,7 @@ def train_tier_a(
     bad_epochs = 0
     epochs_run = 0
     started = time.time()
-    steps_per_epoch = max(1, (len(train_groups) * 4) // batch_groups)
+    steps_per_epoch = max(1, (len(train_groups) * 8) // batch_groups)
     for _ in range(int(epochs)):
         scorer.train()
         for _step in range(steps_per_epoch):
@@ -854,6 +858,16 @@ class TierAClassifierHead:
         self._scorer = _scorer
         self._temperature = float(_temperature)
         self._model_id = "tier-a:unloaded"
+        # State encodings keyed by raw state_text. The encoding is a pure
+        # function of the state, and the shadow harness re-presents the same
+        # state text on every step of a static task — caching the task/status/
+        # control blocks turns steps 2..N into scoring-only (~5 ms). Bounded
+        # to a few entries; only the state's own vectors are cached, never
+        # the decision (menus vary per pass).
+        self._state_encode_cache: Dict[str, Tuple[Any, Any, Any]] = {}
+        # Option-label encodings (bounded LRU-ish): operation/gate labels
+        # repeat across tasks, target labels within a task.
+        self._option_encode_cache: Dict[str, Any] = {}
 
     def _load(self) -> None:
         if self._model is not None:
@@ -940,32 +954,51 @@ class TierAClassifierHead:
 
         # One fused encoder forward per decision: the task line, every
         # element row (status + control), and every menu option in a single
-        # batch (per-call launch overhead dominates small CPU batches).
-        task = state_task_text(state_text)
-        status_rows, control_rows = split_row_texts(state_text)
-        flat = [label for menu in menus for label in menu]
-        vectors = _encode(
-            self._model,
-            self._tokenizer,
-            [task] + status_rows + control_rows + flat,
-            self.max_state_tokens,
-            self.device,
-        )
-        s1 = 1 + len(status_rows)
-        s2 = s1 + len(control_rows)
-        task_vec = vectors[0:1]
-        status_block = (
-            vectors[1:s1].sum(dim=0, keepdim=True) if status_rows
-            else torch_zeros_like(task_vec)
-        )
-        control_block = (
-            vectors[s1:s2].sum(dim=0, keepdim=True) if control_rows
-            else torch_zeros_like(task_vec)
-        )
+        # batch (per-call launch overhead dominates small CPU batches). The
+        # state blocks are cached by state_text — the harness re-presents
+        # the same state on every step of a static task, and the encoding
+        # is a pure function of the state.
+        cached = self._state_encode_cache.get(state_text)
+        if cached is None:
+            task = state_task_text(state_text)
+            status_rows, control_rows = split_row_texts(state_text)
+            vectors = _encode(
+                self._model,
+                self._tokenizer,
+                [task] + status_rows + control_rows,
+                self.max_state_tokens,
+                self.device,
+            )
+            s1 = 1 + len(status_rows)
+            s2 = s1 + len(control_rows)
+            task_vec = vectors[0:1]
+            status_block = (
+                vectors[1:s1].sum(dim=0, keepdim=True) if status_rows
+                else torch_zeros_like(task_vec)
+            )
+            control_block = (
+                vectors[s1:s2].sum(dim=0, keepdim=True) if control_rows
+                else torch_zeros_like(task_vec)
+            )
+            if len(self._state_encode_cache) >= 8:
+                self._state_encode_cache.clear()
+            self._state_encode_cache[state_text] = (task_vec, status_block, control_block)
+        else:
+            task_vec, status_block, control_block = cached
         u = torch_cat_dim(
             torch_cat_dim(task_vec, status_block, dim=1), control_block, dim=1,
         )
-        v = vectors[s2:]
+        flat = [label for menu in menus for label in menu]
+        missing = [t for t in dict.fromkeys(flat) if t not in self._option_encode_cache]
+        if missing:
+            fresh = _encode(
+                self._model, self._tokenizer, missing, _MAX_OPTION_TOKENS, self.device,
+            )
+            if len(self._option_encode_cache) > 512:
+                self._option_encode_cache.clear()
+            for text, vec in zip(missing, fresh):
+                self._option_encode_cache[text] = vec
+        v = torch_stack([self._option_encode_cache[t] for t in flat])
 
         scores_per_menu = []
         offset = 0
@@ -998,6 +1031,12 @@ def torch_cat_keep_grad(a: Any, b: Any) -> Any:
     import torch
 
     return torch.cat([a, b])
+
+
+def torch_stack(items: Sequence[Any]) -> Any:
+    import torch
+
+    return torch.stack(list(items))
 
 
 def torch_cat_dim(a: Any, b: Any, dim: int) -> Any:

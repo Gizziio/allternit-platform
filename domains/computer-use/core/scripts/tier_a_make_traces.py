@@ -39,6 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--val", type=int, default=4, help="variants reserved for val")
     parser.add_argument("--heldout-steps", type=int, default=22,
                         help="decide steps per held-out canonical task")
+    parser.add_argument("--train-mixes", type=int, default=2,
+                        help="extra name-mixed copies of each train trace")
     args = parser.parse_args(argv)
 
     from core.tier_a_traces import build_traces, split_counts, write_traces
@@ -48,6 +50,7 @@ def main(argv: list[str] | None = None) -> int:
         n_variants=args.variants,
         n_val=args.val,
         heldout_steps=args.heldout_steps,
+        train_mixes=args.train_mixes,
     )
     write_traces(traces, args.out)
     counts = split_counts(traces)

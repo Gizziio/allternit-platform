@@ -76,6 +76,19 @@ SPLIT_VAL = "val"
 SPLIT_HELDOUT = "heldout"
 _SPLITS = (SPLIT_TRAIN, SPLIT_VAL, SPLIT_HELDOUT)
 
+# Name-mixing augmentation: control-row names re-rolled from these pools so
+# the model cannot memorize surface strings and must learn structure/
+# position policies (the canonical eval uses names the variants must never
+# touch — held-out integrity — so transfer rides on structure, not names).
+_MIX_ADJECTIVES = [
+    "Quick", "Silent", "Bright", "Nimble", "Amber", "Cobalt", "Dusky",
+    "Mellow", "Brisk", "Polished", "Quiet", "Sturdy",
+]
+_MIX_NOUNS = [
+    "field", "box", "button", "link", "panel", "input", "control", "entry",
+    "switch", "tile", "marker", "slot",
+]
+
 CANONICAL_TASK_IDS = ("search-flow", "form-fill", "settings-toggle")
 
 # Name pools — every entry is asserted disjoint from every canonical element
@@ -471,18 +484,76 @@ def task_traces(task: SyntheticTask, split: str) -> List[Dict[str, Any]]:
     return traces
 
 
+def _mixed_name(rng: random.Random, canonical: set) -> str:
+    for _ in range(50):
+        name = f"{rng.choice(_MIX_ADJECTIVES)} {rng.choice(_MIX_NOUNS)}"
+        if name not in canonical:
+            return name
+    raise ValueError("could not draw a mixed name disjoint from canonical names")
+
+
+def augment_record_names(record: Dict[str, Any], rng: random.Random) -> Dict[str, Any]:
+    """Copy of a trace with every CONTROL row's name re-rolled from the
+    mix pools (status rows keep their text — they are the phase signal).
+    Row order, roles, indices, questions and golds are untouched, so the
+    structure/position policy is the only consistent way to fit the mixed
+    copies — which is exactly the policy that transfers to the canonical
+    held-out names the variant pools are forbidden to use.
+    """
+    from .element_table import ROLE_OPERATIONS
+
+    canonical = canonical_names()
+    out_lines = []
+    in_block = False
+    for line in record["state_text"].splitlines():
+        stripped = line.strip()
+        if stripped == "[OBSERVED ELEMENTS]":
+            in_block = True
+            out_lines.append(line)
+            continue
+        if in_block:
+            if stripped.startswith("[") and "] " in stripped and ": " in stripped:
+                ident, rest = stripped[1:].split("] ", 1)
+                role, _name = rest.split(": ", 1)
+                if role in ROLE_OPERATIONS:
+                    out_lines.append(f"[{ident}] {role}: {_mixed_name(rng, canonical)}")
+                else:
+                    out_lines.append(line)
+                continue
+            if stripped.startswith("["):
+                in_block = False
+            out_lines.append(line)
+            continue
+        out_lines.append(line)
+    mixed = dict(record)
+    mixed["state_text"] = "\n".join(out_lines)
+    mixed["trace_id"] = f"{record['trace_id']}+mix{rng.randint(100, 999)}"
+    return mixed
+
+
 def build_traces(
     seed: int = 42,
     n_variants: int = 22,
     n_val: int = 4,
     heldout_steps: int = 22,
+    train_mixes: int = 2,
 ) -> List[Dict[str, Any]]:
     """The full labelled set: train + val variants + the held-out canonical
-    tasks. Deterministic for a given ``seed``."""
+    tasks. Deterministic for a given ``seed``.
+
+    Train traces are emitted ``train_mixes`` extra times with control-row
+    names re-rolled (see :func:`augment_record_names`); val and held-out
+    stay name-original so val still measures pool-name generalization.
+    """
     train_tasks, val_tasks = make_variant_tasks(seed=seed, n_variants=n_variants, n_val=n_val)
     traces: List[Dict[str, Any]] = []
+    mix_rng = random.Random(seed + 1)
     for task in train_tasks:
-        traces.extend(task_traces(task, SPLIT_TRAIN))
+        train_traces = task_traces(task, SPLIT_TRAIN)
+        traces.extend(train_traces)
+        for _ in range(train_mixes):
+            for record in train_traces:
+                traces.append(augment_record_names(record, mix_rng))
     for task in val_tasks:
         traces.extend(task_traces(task, SPLIT_VAL))
     for task in default_tasks(heldout_steps):
