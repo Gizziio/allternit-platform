@@ -948,13 +948,28 @@ class PlanningLoop:
         questions.append(Question(name="stuck", options=["true", "false"]))
 
         head = self.config.shadow_head or build_default_head()
+        # The closed-set options must be visible in the prompt: the head reads
+        # per-option first-token logits at the final position, which is only a
+        # decision (not a vocabulary prior) when the model can condition on
+        # the options. Target lists are truncated for display only — the
+        # Question still carries the full closed set.
+        options_text = "\n".join(
+            f"{q.name}: {', '.join(list(q.options[:64]) + (['…'] if len(q.options) > 64 else []))}"
+            for q in questions
+        )
         state_text = (
             f"[TASK]\n{task}\n\n"
             f"[OBSERVED ELEMENTS]\n{table.to_prompt_text()}\n\n"
+            f"[OPTIONS]\n{options_text}\n\n"
             "[INSTRUCTIONS]\n"
             "Choose the next browser operation, then the target element index "
-            "for each operation you would consider. Answer only with the given "
-            "options."
+            "for each operation you would consider, using only the given "
+            "options.\n\n"
+            # The readout happens at the final prompt position: the prompt
+            # must end where the answer begins, otherwise the per-option
+            # first-token logits measure a discourse prior instead of a
+            # decision (measured: constant answers across all states).
+            "The next browser operation is:"
         )
         decision = head.decide(state_text, questions)
         decision.validate()

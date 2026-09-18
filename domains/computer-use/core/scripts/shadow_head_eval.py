@@ -5,17 +5,22 @@ Runs the shadow decision head beside scripted (recorded) LLM decide steps
 over three synthetic task observations and writes the eval report:
 
     python domains/computer-use/core/scripts/shadow_head_eval.py [--steps N]
-        [--out-dir DIR] [--quiet]
+        [--head {mock,mlx}] [--out-dir DIR] [--quiet]
 
-Fully offline and deterministic: the LLM provider replays a recorded
-transcript, the AX observation is scripted, and the head is a deterministic
-MockHead (the mlx-lm head needs weights this script never downloads).
-See core/shadow_eval.py for what the numbers do and do not mean.
+The LLM provider replays a recorded transcript and the AX observation is
+scripted, so the run is deterministic except for the head itself:
+``--head mock`` (default) uses a deterministic MockHead with a scripted
+opinion transcript (fully offline, no downloads); ``--head mlx`` uses the
+real MlxDirectLogitHead (mlx-lm, Qwen3-4B-Instruct-2507-4bit) — the first
+run downloads ~2.5GB of weights from a public ungated HF repo, then runs
+fully local. See core/shadow_eval.py for what the numbers do and do not
+mean.
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import logging
 import sys
 from pathlib import Path
@@ -28,6 +33,29 @@ for _extra in (str(DOMAIN_CORE_ROOT),):
 DEFAULT_OUT_DIR = DOMAIN_CORE_ROOT / "evaluation" / "shadow-eval"
 
 
+def build_head(name: str) -> "tuple[object, str]":
+    """Construct the decision head for ``--head``; (head, report-stem-suffix)."""
+    if name == "mock":
+        return None, ""
+
+    # mlx path — fail fast with an actionable error before the harness runs.
+    if importlib.util.find_spec("mlx_lm") is None:
+        raise SystemExit(
+            "--head mlx needs the optional 'shadow-head' extra, which is not "
+            "installed in this environment. Install it with:\n"
+            "    uv pip install -e '.[shadow-head]'\n"
+            "(mlx is Apple-silicon only; no hosted fallback exists by design.)"
+        )
+    from core.decision_head import MlxDirectLogitHead
+
+    head = MlxDirectLogitHead()
+    print(
+        "Using MlxDirectLogitHead "
+        f"({head.model_repo}); first run downloads ~2.5GB of weights."
+    )
+    return head, "-mlx"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -35,6 +63,12 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=22,
         help="decide steps per task (default 22, >= 20 required by the acceptance criteria)",
+    )
+    parser.add_argument(
+        "--head",
+        choices=("mock", "mlx"),
+        default="mock",
+        help="decision head to score (default mock; mlx = real local mlx-lm weights)",
     )
     parser.add_argument(
         "--out-dir",
@@ -53,10 +87,17 @@ def main(argv: list[str] | None = None) -> int:
         format="%(levelname)s %(name)s: %(message)s",
     )
 
+    head, stem_suffix = build_head(args.head)
+
     from core.shadow_eval import default_tasks, run_eval, write_reports
 
-    report = run_eval(tasks=default_tasks(args.steps), steps_per_task=args.steps)
-    json_path, md_path = write_reports(report, args.out_dir)
+    report = run_eval(
+        tasks=default_tasks(args.steps),
+        steps_per_task=args.steps,
+        head=head,
+        head_label=args.head,
+    )
+    json_path, md_path = write_reports(report, args.out_dir, stem=f"shadow-eval-report{stem_suffix}")
 
     agg = report["aggregate"]
     print(f"\nShadow eval complete — reports written:")

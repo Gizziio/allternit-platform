@@ -81,3 +81,32 @@ def test_reports_written(tmp_path):
     assert "Agreement rate" in markdown
     for task_id in ("search-flow", "form-fill", "settings-toggle"):
         assert task_id in markdown
+
+
+def _load_eval_script():
+    import importlib.util
+    from pathlib import Path
+
+    script = (
+        Path(shadow_eval.__file__).resolve().parents[1]
+        / "scripts" / "shadow_head_eval.py"
+    )
+    spec = importlib.util.spec_from_file_location("shadow_head_eval", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_head_flag_parsing():
+    """--head accepts only mock|mlx (default mock); mlx needs the extra."""
+    script = _load_eval_script()
+
+    head, suffix = script.build_head("mock")
+    assert head is None and suffix == ""
+
+    try:
+        script.main(["--head", "bogus"])
+    except SystemExit as exc:
+        assert exc.code == 2  # argparse: invalid choice
+    else:
+        raise AssertionError("invalid --head value must exit 2")

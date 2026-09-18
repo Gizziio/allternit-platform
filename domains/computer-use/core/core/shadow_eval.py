@@ -32,6 +32,8 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import os
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -445,6 +447,14 @@ async def run_task(
     shadow_head = head or scripted_head(task)
     step_trees = _step_trees(task)
 
+    # Isolate the disk-backed ACU scratchpad for this eval run: the loop
+    # injects scratchpad context into the task text and reflects after the
+    # run, so without isolation evals would be nondeterministic across
+    # machines AND pollute the operator's real scratchpad.
+    scratch_dir = tempfile.mkdtemp(prefix="acu-shadow-eval-")
+    prev_scratch_dir = os.environ.get("ACU_SCRATCHPAD_DIR")
+    os.environ["ACU_SCRATCHPAD_DIR"] = scratch_dir
+
     _, restore = _patch_inspector(step_trees)
     events: List[Dict[str, Any]] = []
     try:
@@ -453,6 +463,10 @@ async def run_task(
             adapter=adapter,
             config=PlanningLoopConfig(
                 max_steps=len(task.turns) + 2,
+                # The real mlx head takes ~1s per decide step; scale the
+                # wall-clock budget with the transcript so a slow head
+                # surfaces as a metric, not a silent mid-run timeout.
+                timeout_ms=max(120_000, (len(task.turns) + 2) * 15_000),
                 approval_policy="never",
                 reflect_after_each_step=False,
                 batch_enabled=False,
@@ -465,6 +479,10 @@ async def run_task(
         result = await loop.run(task.task, session_id=f"shadow-{task.task_id}")
     finally:
         restore()
+        if prev_scratch_dir is None:
+            os.environ.pop("ACU_SCRATCHPAD_DIR", None)
+        else:
+            os.environ["ACU_SCRATCHPAD_DIR"] = prev_scratch_dir
 
     shadow_events = [e for e in events if e.get("type") == "shadow.decision"]
 
@@ -564,10 +582,17 @@ async def run_task(
 def run_eval(
     tasks: Optional[Sequence[SyntheticTask]] = None,
     steps_per_task: int = DEFAULT_STEPS_PER_TASK,
+    head: Optional[DecisionHead] = None,
+    head_label: str = "mock",
 ) -> Dict[str, Any]:
-    """Run the full shadow eval over the synthetic task set."""
+    """Run the full shadow eval over the synthetic task set.
+
+    ``head`` overrides the scripted MockHead (e.g. MlxDirectLogitHead for
+    real-weights agreement numbers); ``head_label`` identifies the head in
+    the report.
+    """
     task_list = list(tasks) if tasks is not None else default_tasks(steps_per_task)
-    reports = [run_task_sync(t) for t in task_list]
+    reports = [run_task_sync(t, head=head) for t in task_list]
 
     all_steps = [s for r in reports for s in r["steps"]]
     successes = [s for s in all_steps if s["llm_success"]]
@@ -599,6 +624,11 @@ def run_eval(
             sum(s["llm_latency_ms"] for s in all_steps) / len(all_steps), 3
         ) if all_steps else None,
         "note": (
+            "MlxDirectLogitHead real-weights numbers — the local mlx-lm head "
+            "answers the same closed-set questions as the scripted LLM "
+            "transcript; agreement measures how often its first-token choices "
+            "match the recorded LLM decisions."
+            if head is not None else
             "MockHead plumbing numbers — scripted head agrees with the scripted "
             "LLM transcript except deterministic disagreements; real agreement "
             "needs the mlx-lm head weights."
@@ -608,34 +638,49 @@ def run_eval(
     return {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "steps_per_task": steps_per_task,
+        "head": head_label,
         "aggregate": aggregate,
         "tasks": reports,
     }
 
 
-def write_reports(report: Dict[str, Any], out_dir: Path) -> Tuple[Path, Path]:
+def write_reports(
+    report: Dict[str, Any],
+    out_dir: Path,
+    stem: str = "shadow-eval-report",
+) -> Tuple[Path, Path]:
     """Write the eval report as JSON + markdown; returns both paths."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    json_path = out_dir / "shadow-eval-report.json"
+    json_path = out_dir / f"{stem}.json"
     json_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
-    md_path = out_dir / "shadow-eval-report.md"
+    md_path = out_dir / f"{stem}.md"
     md_path.write_text(render_markdown(report), encoding="utf-8")
     return json_path, md_path
 
 
 def render_markdown(report: Dict[str, Any]) -> str:
     agg = report["aggregate"]
+    if report.get("head") == "mock":
+        head_lines = [
+            "> **Head:** MockHead (scripted stand-in for the mlx-lm direct-logit head).",
+            "> Agreement numbers validate the eval plumbing offline; they are NOT",
+            "> measurements of real head quality (weights are not downloaded in-session).",
+        ]
+    else:
+        head_lines = [
+            f"> **Head:** {report['head']} (real weights, local mlx-lm inference).",
+            "> The LLM side is still the recorded transcript; agreement measures",
+            "> head-vs-LLM first-token choice match on identical observations.",
+        ]
     lines = [
         "# Shadow Head Eval Report",
         "",
         f"Generated: {report['generated_at']}",
         "",
-        "> **Head:** MockHead (scripted stand-in for the mlx-lm direct-logit head).",
-        "> Agreement numbers validate the eval plumbing offline; they are NOT",
-        "> measurements of real head quality (weights are not downloaded in-session).",
+        *head_lines,
         "",
         "## Aggregate",
         "",
