@@ -12,7 +12,6 @@ members = [
     "cmd/launcher",
     "commrails",
     "commrails/cli",
-    "commrails/compat",
     "domains/kernel/core/kernel-contracts",
     "domains/kernel/core/wasm-runtime",
     "platform/contracts/driver-interface",
@@ -150,7 +149,6 @@ allternit-session-manager = { path = "services/session-manager" }
 allternit-vm-executor = { path = "services/vm-executor" }
 allternit-self-improve = { path = "services/self-improve" }
 allternit-commrails = { path = "commrails" }
-allternit-agent-system-rails = { path = "commrails/compat" }
 allternit-cowork-runtime = { path = "infrastructure/executor/cowork/cowork/allternit-cowork-runtime" }
 allternit-cowork-scheduler = { path = "infrastructure/executor/cowork/cowork/allternit-cowork-scheduler" }
 allternit-workspace-service = { path = "api/services/workspace-service" }
