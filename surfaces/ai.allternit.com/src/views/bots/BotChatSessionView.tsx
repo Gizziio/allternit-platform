@@ -17,6 +17,7 @@ import {
   BellSlash,
   Broadcast,
   Desktop,
+  Gear,
   Paperclip,
   Robot,
   ShareNetwork,
@@ -31,6 +32,8 @@ import type { ModeSession } from "@/lib/agents/mode-session-store";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
 import { cn } from "@/lib/utils";
 import { BotAvatar } from "./BotAvatar";
+import { ScreenControlAsk } from "./ScreenControlAsk";
+import { useScreenControlStore } from "@/lib/bots/screen-control-ask";
 import { BotComposer, type BotComposerAction } from "@/components/bot-chat/BotComposer";
 import { BotTranscript } from "@/components/bot-chat/BotTranscript";
 import {
@@ -51,9 +54,14 @@ import {
   routinesToComposerProps,
   transcriptToShareText,
 } from "@/lib/bots/bot-chat-composer";
-import { ModelSelectionProvider, useModelSelection } from "@/providers/model-selection-provider";
-import { ModelPicker, type ModelSelection } from "@/components/model-picker";
-import { getProviderMeta } from "@/lib/providers/provider-registry";
+import { ProviderGallery } from "@/components/chat/ProviderGallery";
+import { BotModeModelPicker } from "./BotModeModelPicker";
+import {
+  THREAD_MODEL_PIN_KEY,
+  parseThreadModelPin,
+  resolveBotRuntimeModel,
+  runtimeModelIdOf,
+} from "@/lib/bots/bot-mode-model";
 import { BotComputerViewport } from "./BotComputerViewport";
 import { launchBotComputerWindow } from "@/lib/open-bot-computer-window";
 import { PolicyGovernance } from "./PolicyGovernance";
@@ -74,37 +82,13 @@ import {
   summarizeOlderMessages,
 } from "@/lib/bots/bot-session-chrome";
 import { useBotRoutineStore } from "@/lib/bots/bot-routine.service";
+import { EditBotForm } from "@/views/agent-view/components/create-bot/EditBotForm";
+import { isPendingBotSessionId } from "@/lib/bots/bot-canonical-chat.service";
 
 export interface BotChatSessionViewProps {
   sessionId?: string;
   botId?: string;
   onBack?: () => void;
-}
-
-function parseRuntimeModelId(runtimeModelId: string): {
-  providerId: string;
-  modelId: string;
-} {
-  const separator = runtimeModelId.indexOf("/");
-  if (separator <= 0) {
-    return { providerId: "allternit", modelId: runtimeModelId };
-  }
-  return {
-    providerId: runtimeModelId.slice(0, separator),
-    modelId: runtimeModelId.slice(separator + 1),
-  };
-}
-
-function runtimeModelToSelection(runtimeModelId?: string): ModelSelection | null {
-  if (!runtimeModelId) return null;
-  const { providerId, modelId } = parseRuntimeModelId(runtimeModelId);
-  const meta = getProviderMeta(providerId);
-  return {
-    providerId,
-    profileId: providerId,
-    modelId,
-    modelName: `${meta.name} · ${modelId}`,
-  };
 }
 
 export function BotChatSessionView({
@@ -120,9 +104,16 @@ export function BotChatSessionView({
     [agents, botId]
   );
 
+  const pendingPlaceholder = isPendingBotSessionId(sessionIdProp);
+
   const session = useMemo(() => {
-    if (sessionIdProp) {
-      return sessions.find((s) => s.id === sessionIdProp) ?? null;
+    // A real thread id (including local temp-… sessions) must win so
+    // sub-thread switches keep their session. Placeholder ids are not in
+    // the store — fall through to the bot's latest session, which startSession
+    // may have just written.
+    if (sessionIdProp && !pendingPlaceholder) {
+      const exact = sessions.find((s) => s.id === sessionIdProp);
+      if (exact) return exact;
     }
     if (botId) {
       return (
@@ -130,7 +121,9 @@ export function BotChatSessionView({
           .filter(
             (s) =>
               s.metadata?.isBot === true &&
-              (s.metadata?.agentId === botId || s.metadata?.agentName === bot?.name)
+              (s.metadata?.agentId === botId ||
+                s.metadata?.botCanonicalFor === botId ||
+                s.metadata?.agentName === bot?.name)
           )
           .sort(
             (a, b) =>
@@ -140,37 +133,26 @@ export function BotChatSessionView({
       );
     }
     return null;
-  }, [sessions, sessionIdProp, botId, bot?.name]);
+  }, [sessions, sessionIdProp, pendingPlaceholder, botId, bot?.name]);
 
   // Deliberately no bot.provider/bot.model fallback: that pair is the agent
   // *catalog* default (config.models.defaults.primary), which on desktop is
   // frequently a provider gizzi does not serve (ProviderModelNotFoundError,
-  // silent no-reply). Session metadata is also skipped: older builds stamped
-  // every bot session with the broken catalog default at create time, and
-  // restoring it on reopen re-pins a model the runtime cannot serve. The
-  // bot-level config pin (bot.config.runtimeModelId) is the only deliberate
-  // default. With nothing pinned, the composer falls back to the persisted
-  // picker choice and the send path resolves the local Kimi brain
-  // (resolveAgentChatRuntimeModelId → kimi-cli/kimi-k3).
-  const runtimeModelId = useMemo(
-    () => bot?.config?.runtimeModelId as string | undefined,
-    [bot?.config]
-  );
-
-  const defaultSelection = useMemo(
-    () => runtimeModelToSelection(runtimeModelId),
-    [runtimeModelId]
-  );
-
+  // silent no-reply). Session `runtimeModelId` is also skipped: older builds
+  // stamped every bot session with the broken catalog default at create time.
+  // A deliberate thread pin (`threadModelPin`) from the Bot Mode picker is
+  // the only session-level override; the picker also applies the runtime
+  // model in-memory on a successful save (pickerRuntimeModelId), and with
+  // nothing pinned the send path falls back to the persisted composer
+  // selection (resolveAgentChatRuntimeModelId → kimi-cli/kimi-k3).
   return (
-    <ModelSelectionProvider defaultSelection={defaultSelection}>
-      <BotChatSessionContent
-        session={session}
-        bot={bot}
-        botId={botId}
-        onBack={onBack}
-      />
-    </ModelSelectionProvider>
+    <BotChatSessionContent
+      session={session}
+      bot={bot}
+      botId={botId}
+      pendingOpen={!session && pendingPlaceholder}
+      onBack={onBack}
+    />
   );
 }
 
@@ -178,6 +160,7 @@ interface BotChatSessionContentProps {
   session: ModeSession | null;
   bot: import("@/lib/agents/agent.types").Agent | null;
   botId?: string;
+  pendingOpen?: boolean;
   onBack?: () => void;
 }
 
@@ -185,6 +168,7 @@ function BotChatSessionContent({
   session,
   bot,
   botId,
+  pendingOpen = false,
   onBack,
 }: BotChatSessionContentProps) {
   const setActiveSession = useChatSessionStore((s) => s.setActiveSession);
@@ -193,13 +177,20 @@ function BotChatSessionContent({
   const abortGeneration = useChatSessionStore((s) => s.abortGeneration);
   const fetchMessages = useChatSessionStore((s) => s.fetchMessages);
   const streamingBySession = useChatSessionStore((s) => s.streamingBySession);
-  const {
-    selection: modelSelection,
-    isSelecting,
-    selectModel,
-    startSelection,
-    cancelSelection,
-  } = useModelSelection();
+  const [pickerRuntimeModelId, setPickerRuntimeModelId] = useState<string | undefined>();
+  // ProviderGallery open state. Closing the gallery bumps galleryEpoch, which
+  // the picker watches so it refetches discovery + CLI status and un-dims the
+  // rail after a connect.
+  const [providerConnectInitial, setProviderConnectInitial] = useState<string | null>(null);
+  const [showProviderConnect, setShowProviderConnect] = useState(false);
+  const [galleryEpoch, setGalleryEpoch] = useState(0);
+  const pinnedRuntime = useMemo(() => {
+    const pinned = resolveBotRuntimeModel({
+      threadPin: parseThreadModelPin(session?.metadata?.[THREAD_MODEL_PIN_KEY]),
+      bot,
+    });
+    return pinned ? runtimeModelIdOf(pinned.providerId, pinned.modelId) : undefined;
+  }, [session?.metadata, bot]);
 
   const sessionId = session?.id ?? null;
   useEffect(() => {
@@ -246,6 +237,26 @@ function BotChatSessionContent({
   const setAciSidecarExpanded = useBrowserAgentStore((s) => s.setAciSidecarExpanded);
   const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const [computerOpen, setComputerOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [screenAskOpen, setScreenAskOpen] = useState(false);
+  const isAlwaysAllowed = useScreenControlStore((s) => (botId ? s.isAlwaysAllowed(botId) : false));
+  const rememberAlways = useScreenControlStore((s) => s.rememberAlways);
+  const requestComputer = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        setComputerOpen(false);
+        setScreenAskOpen(false);
+        return;
+      }
+      if (computerOpen) return;
+      if (!botId || isAlwaysAllowed) {
+        setComputerOpen(true);
+        return;
+      }
+      setScreenAskOpen(true);
+    },
+    [botId, computerOpen, isAlwaysAllowed],
+  );
   const [sendError, setSendError] = useState<string | null>(null);
   const [streamMetrics, setStreamMetrics] = useState<StreamMetrics | null>(null);
   const [notifyMode, setNotifyMode] = useState<BotThreadNotifyMode>(() =>
@@ -257,7 +268,10 @@ function BotChatSessionContent({
   useEffect(() => {
     setNotifyMode(getBotThreadNotifyMode(session?.id));
     setShowOlder(false);
-  }, [session?.id]);
+    // A thread-only pick must not leak into a different thread or bot in the
+    // same mounted component.
+    setPickerRuntimeModelId(undefined);
+  }, [session?.id, bot?.id]);
 
   // The computer pane is user-driven only: it opens via the top-right
   // "Computer" button, never on its own. Connect the bot to the global
@@ -279,9 +293,10 @@ function BotChatSessionContent({
       applyFold(userSendEvent(text.trim()));
       setSendCount((count) => count + 1);
 
-      const modelId = modelSelection
-        ? `${modelSelection.providerId}/${modelSelection.modelId}`
-        : undefined;
+      // No modelSelection fallback here: with nothing pinned, the session
+      // store's send path already falls back to the persisted composer
+      // selection (readComposerRuntimeModelId → resolveAgentChatRuntimeModelId).
+      const modelId = pickerRuntimeModelId ?? pinnedRuntime;
 
       let sid = sessionId;
       // A persisted temp- session is a zombie from a failed backend create:
@@ -354,7 +369,7 @@ function BotChatSessionContent({
         );
       }
     },
-    [isStreaming, sessionId, sessionHasLocalMode, botId, bot, modelSelection, createSession, setActiveSession, sendMessageStream, applyFold]
+    [isStreaming, sessionId, sessionHasLocalMode, botId, bot, pickerRuntimeModelId, pinnedRuntime, createSession, setActiveSession, sendMessageStream, applyFold]
   );
 
   const handleStop = useCallback(() => {
@@ -428,7 +443,7 @@ function BotChatSessionContent({
         title: computerOpen ? "Hide computer" : "Open computer",
         subtitle: hasVm ? "Show or hide the computer pane" : "Attach or provision a computer",
         onSelect: () => {
-          setComputerOpen((open) => !open);
+          requestComputer(!computerOpen);
         },
       },
       {
@@ -450,17 +465,19 @@ function BotChatSessionContent({
       });
     }
     return rows;
-  }, [computerOpen, handleShare, handleStop, hasVm, isStreaming]);
+  }, [computerOpen, handleShare, handleStop, hasVm, isStreaming, requestComputer]);
 
   const sessionStatus = useMemo(
     () =>
-      botSessionStatus({
-        botName,
-        isStreaming,
-        sendError,
-        computerOpen,
-      }),
-    [botName, isStreaming, sendError, computerOpen]
+      pendingOpen || !session
+        ? { label: "opening chat", tone: "waiting" as const }
+        : botSessionStatus({
+            botName,
+            isStreaming,
+            sendError,
+            computerOpen,
+          }),
+    [pendingOpen, session, botName, isStreaming, sendError, computerOpen]
   );
   const metricsLabel = streamMetrics ? formatStreamMetrics(streamMetrics) : "";
   // Nearest enabled routine for this bot (client-local schedule store; no
@@ -479,7 +496,7 @@ function BotChatSessionContent({
   return (
     <div className="flex h-full flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] pt-12">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2.5">
         <div className="flex items-center gap-3 min-w-0">
           {onBack && (
             <Button
@@ -552,43 +569,55 @@ function BotChatSessionContent({
               {notifyMode === "muted" ? <BellSlash size={16} /> : <Bell size={16} />}
             </Button>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={startSelection}
-            className="max-w-[160px] truncate"
-            aria-label="Select model"
-          >
-            {modelSelection?.modelName ?? "Model"}
-          </Button>
+          <BotModeModelPicker
+            bot={bot}
+            sessionId={sessionId}
+            compact={computerOpen}
+            busy={isStreaming}
+            refetchSignal={galleryEpoch}
+            onRuntimeModel={(runtimeModelId) => {
+              // Thread pin + in-memory runtime only. Deliberately NOT the
+              // global Chat/Cowork default (selectModel): a bot pick must not
+              // reset the platform default.
+              setPickerRuntimeModelId(runtimeModelId);
+            }}
+            onConnectProvider={(providerId) => {
+              setProviderConnectInitial(providerId);
+              setShowProviderConnect(true);
+            }}
+          />
+          {bot && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setEditOpen(true)}
+              className="gap-1.5 shrink-0"
+              aria-label="Edit bot"
+              title="Edit bot"
+            >
+              <Gear size={14} />
+              <span className={computerOpen ? "sr-only" : undefined}>Edit</span>
+            </Button>
+          )}
           {bot && (
             <Button
               type="button"
               variant={computerOpen ? "secondary" : "outline"}
               size="sm"
-              onClick={() => setComputerOpen((open) => !open)}
+              onClick={() => requestComputer(!computerOpen)}
               className="gap-1.5 shrink-0"
               aria-pressed={computerOpen}
               title={hasVm ? "Toggle computer viewport" : "Open bot computer"}
             >
               <Desktop size={14} />
-              Computer
+              <span className={computerOpen ? "sr-only" : undefined}>Computer</span>
               {activeVM?.status === "running" && (
                 <span className="h-2 w-2 rounded-full bg-[var(--status-success)] animate-pulse" />
               )}
             </Button>
           )}
         </div>
-        <ModelPicker
-          open={isSelecting}
-          onOpenChange={(open) => {
-            if (open) startSelection();
-            else cancelSelection();
-          }}
-          onSelect={selectModel}
-          onCancel={cancelSelection}
-        />
       </div>
 
       <PolicyGovernance
@@ -604,7 +633,7 @@ function BotChatSessionContent({
           botId={botId}
           sandboxId={activeVM?.status === "running" ? activeVM.id : undefined}
           computerOpen={computerOpen}
-          onOpenComputer={() => setComputerOpen(true)}
+          onOpenComputer={() => requestComputer(true)}
           transcript={transcript}
           parentName={botName}
         />
@@ -631,6 +660,17 @@ function BotChatSessionContent({
           {olderSummary}
         </button>
       )}
+      {screenAskOpen && (
+        <ScreenControlAsk
+          botName={botName}
+          onDecide={(decision) => {
+            setScreenAskOpen(false);
+            if (decision === "deny") return;
+            if (decision === "always" && botId) rememberAlways(botId);
+            setComputerOpen(true);
+          }}
+        />
+      )}
       {transcript.rows.length === 0 && !transcript.activeTurn ? (
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center text-center">
@@ -651,7 +691,9 @@ function BotChatSessionContent({
               Chat with {botName}
             </p>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Send a message or pick a routine below.
+              {pendingOpen
+                ? "Opening locally — you can type while the session catches up."
+                : "Send a message or pick a routine below."}
             </p>
           </div>
         </div>
@@ -699,6 +741,23 @@ function BotChatSessionContent({
         </aside>
       )}
       </div>
+      {bot && (
+        <EditBotForm
+          bot={bot}
+          isOpen={editOpen}
+          onClose={() => setEditOpen(false)}
+        />
+      )}
+      <ProviderGallery
+        isOpen={showProviderConnect}
+        onClose={() => {
+          setShowProviderConnect(false);
+          setProviderConnectInitial(null);
+          // Un-dim the rail: the picker refetches discovery + CLI status.
+          setGalleryEpoch((epoch) => epoch + 1);
+        }}
+        initialProvider={providerConnectInitial}
+      />
     </div>
   );
 }
