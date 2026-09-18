@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "generatedFrom": "840f8470b224c9b5feac202ba60a3c87ebcf7613",
+  "generatedFrom": "c26a5e9358d5972e89b9dd4917d99ddce75a0b8b",
   "batchCount": 103,
   "stats": {
-    "totalNocheck": 2006,
+    "totalNocheck": 2005,
     "excludedCompilerArtifacts": 361,
     "excludedVendored": 93,
-    "totalQueueFiles": 1518,
-    "totalQueueLoc": 492198,
-    "quarantined": 34,
+    "totalQueueFiles": 1526,
+    "totalQueueLoc": 492358,
+    "quarantined": 25,
     "quarantinedByReason": {
-      "suspect-dead-shim": 20,
-      "suspect-malformed": 14
+      "suspect-dead-shim": 19,
+      "suspect-malformed": 6
     },
-    "zeroImporter": 252,
-    "totalAccounted": 1778
+    "zeroImporter": 254,
+    "totalAccounted": 1777
   },
   "batches": [
     {
@@ -73,22 +73,6 @@
         {
           "path": "src/cli/ui/ink-app/utils/udsMessaging.ts",
           "reason": "unbalanced braces — invalid JS grammar (stub)"
-        },
-        {
-          "path": "src/cli/ui/ink-app/utils/udsClient.ts",
-          "reason": "re-exports from nonexistent module src/shared/utils/udsClient.js; zero importers; fixing needs import-specifier change (banned by type-only rule)"
-        },
-        {
-          "path": "src/runtime/components/Markdown.ts",
-          "reason": "import specifier casing mismatch (Markdown.js vs markdown.ts) surfaces TS1261; fixing needs import-specifier change (banned by type-only rule)"
-        },
-        {
-          "path": "src/cli/ui/utils/permissions/PermissionUpdateSchema.ts",
-          "reason": "re-export shim uses wrong relative path (./ink-app/... should be ../ink-app/...); zero importers; fixing needs import-specifier change (banned by type-only rule)"
-        },
-        {
-          "path": "src/cli/ui/utils/settings/settings.ts",
-          "reason": "re-export shim uses wrong relative path (./ink-app/... should be ../ink-app/...); zero importers; fixing needs import-specifier change (banned by type-only rule)"
         }
       ],
       "note": "Pilot batch b0001 (2026-09-18): 226/242 files burned (headers removed, type errors fixed type-onlyly). 16 files escalated (kept headers, listed above) — 12 malformed TEMPORARY SHIM stubs with invalid JS grammar, 4 dead/broken re-export shims needing import-specifier changes. Escalations need a dedicated cleanup pass with behavior-change approval."
@@ -97,14 +81,22 @@
       "id": "b0002",
       "files": [
         "src/cli/ui/ink-app/tools/SleepTool/prompt.ts",
+        "src/cli/ui/ink-app/tools/WorkflowTool/WorkflowPermissionRequest.tsx",
+        "src/cli/ui/ink-app/services/skillSearch/remoteSkillLoader.ts",
         "src/cli/ui/ink-app/commands/plugin/unifiedTypes.ts",
         "src/cli/ui/ink-app/components/wizard/useWizard.ts",
+        "src/cli/ui/ink-app/jobs/classifier.ts",
+        "src/cli/ui/ink-app/utils/postCommitAttribution.ts",
         "src/cli/ui/ink-app/services/compact/compactWarningState.ts",
         "src/cli/ui/ink-app/tools/GrepTool/prompt.ts",
         "src/cli/ui/ink-app/utils/todo/types.ts",
+        "src/cli/ui/ink-app/utils/attributionHooks.ts",
+        "src/cli/ui/ink-app/memdir/memoryShapeTelemetry.ts",
         "src/cli/ui/ink-app/services/policyLimits/types.ts",
         "src/cli/ui/ink-app/utils/uuid.ts",
         "src/cli/ui/ink-app/tools/WebSearchTool/prompt.ts",
+        "src/cli/ui/ink-app/services/skillSearch/localSearch.ts",
+        "src/cli/ui/ink-app/tasks/MonitorMcpTask/MonitorMcpTask.ts",
         "src/cli/ui/ink-app/utils/syntheticMessages.ts",
         "src/cli/ui/ink-app/tools/AskUserQuestionTool/prompt.ts",
         "src/cli/ui/ink-app/services/settingsSync/types.ts",
@@ -165,16 +157,16 @@
         "src/cli/ui/ink-app/entrypoints/sandboxTypes.ts",
         "src/cli/ui/ink-app/services/teamMemorySync/types.ts",
         "src/cli/ui/ink-app/utils/debugFilter.ts",
-        "src/runtime/server/routes/skill.ts",
-        "src/runtime/integrations/question/question.ts"
+        "src/runtime/server/routes/skill.ts"
       ],
-      "loc": 7108,
+      "loc": 7124,
       "twins": [],
       "state": "NEW"
     },
     {
       "id": "b0003",
       "files": [
+        "src/runtime/integrations/question/question.ts",
         "src/cli/ui/ink-app/utils/settings/validationTips.ts",
         "src/runtime/session/message.ts",
         "src/cli/ui/ink-app/tools/WebFetchTool/preapproved.ts",
@@ -207,16 +199,16 @@
         "src/config/profiles.ts",
         "src/cli/ui/ink-app/memdir/memoryTypes.ts",
         "src/cli/ui/ink-app/utils/ansiToSvg.ts",
-        "src/cli/ui/ink-app/utils/git/gitConfigParser.ts",
-        "src/shared/installation/index.ts"
+        "src/cli/ui/ink-app/utils/git/gitConfigParser.ts"
       ],
-      "loc": 7150,
+      "loc": 7036,
       "twins": [],
       "state": "NEW"
     },
     {
       "id": "b0004",
       "files": [
+        "src/shared/installation/index.ts",
         "src/runtime/integrations/plugin/claude/loader.ts",
         "src/cli/ui/ink-app/utils/hooks/ssrfGuard.ts",
         "src/cli/ui/ink-app/utils/cron.ts",
@@ -234,10 +226,9 @@
         "src/cli/ui/ink-app/utils/bash/treeSitterAnalysis.ts",
         "src/runtime/brain/brain.service.ts",
         "src/runtime/services/mcp/types.ts",
-        "src/cli/ui/ink-app/services/mcp/types.ts",
-        "src/runtime/server/routes/automations.ts"
+        "src/cli/ui/ink-app/services/mcp/types.ts"
       ],
-      "loc": 7408,
+      "loc": 7102,
       "twins": [
         {
           "runtime": "src/runtime/services/mcp/types.ts",
@@ -249,6 +240,7 @@
     {
       "id": "b0005",
       "files": [
+        "src/runtime/server/routes/automations.ts",
         "src/cli/commands/theme/index.ts",
         "src/cli/ui/ink-app/utils/feature-flags.ts",
         "src/cli/ui/ink-app/tools/MCPTool/classifyForCollapse.ts",
@@ -258,19 +250,8 @@
         "src/cli/ui/ink-app/utils/bash/heredoc.ts",
         "src/runtime/automation/cron/service.ts",
         "src/cli/ui/ink-app/utils/words.ts",
-        "src/runtime/automation/cron/service-enhanced.ts",
         "src/cli/ui/ink-app/utils/messagePredicates.ts",
-        "src/cli/ui/ink-app/commands/desktop/desktop.tsx"
-      ],
-      "loc": 7005,
-      "twins": [],
-      "state": "NEW"
-    },
-    {
-      "id": "b0006",
-      "files": [
-        "src/cli/ui/ink-app/types/message.ts",
-        "src/cli/ui/ink-app/utils/sandbox/sandbox-adapter.ts",
+        "src/cli/ui/ink-app/commands/desktop/desktop.tsx",
         "src/cli/ui/ink-app/commands/add-dir/index.ts",
         "src/cli/ui/ink-app/commands/ide/index.ts",
         "src/cli/ui/ink-app/commands/mobile/index.ts",
@@ -292,7 +273,18 @@
         "src/cli/ui/ink-app/utils/classifierApprovalsHook.ts",
         "src/cli/ui/ink-app/hooks/useAfterFirstRender.ts",
         "src/cli/ui/ink-app/hooks/useSettings.ts",
-        "src/cli/ui/ink-app/components/messages/teamMemSaved.ts",
+        "src/cli/ui/ink-app/components/messages/teamMemSaved.ts"
+      ],
+      "loc": 7003,
+      "twins": [],
+      "state": "NEW"
+    },
+    {
+      "id": "b0006",
+      "files": [
+        "src/runtime/automation/cron/service-enhanced.ts",
+        "src/cli/ui/ink-app/types/message.ts",
+        "src/cli/ui/ink-app/utils/sandbox/sandbox-adapter.ts",
         "src/cli/ui/ink-app/utils/bash/specs/timeout.ts",
         "src/cli/ui/ink-app/hooks/useMergedClients.ts",
         "src/cli/ui/ink-app/services/analytics/sinkKillswitch.ts",
@@ -350,13 +342,9 @@
         "src/cli/ui/ink-app/commands/receipts/index.ts",
         "src/runtime/providers/adapters/auth.ts",
         "src/cli/ui/ink-app/commands/purpose/index.ts",
-        "src/cli/ui/ink-app/tools/AgentTool/built-in/statuslineSetup.ts",
-        "src/cli/ui/ink-app/buddy/types.ts",
-        "src/cli/ui/ink-app/components/CustomSelect/use-select-state.ts",
-        "src/cli/commands/profile/index.ts",
-        "src/cli/ui/ink-app/utils/textHighlighting.ts"
+        "src/cli/ui/ink-app/tools/AgentTool/built-in/statuslineSetup.ts"
       ],
-      "loc": 7116,
+      "loc": 7066,
       "twins": [],
       "state": "NEW"
     },
@@ -381,6 +369,10 @@
     {
       "id": "b0009",
       "files": [
+        "src/cli/ui/ink-app/buddy/types.ts",
+        "src/cli/ui/ink-app/components/CustomSelect/use-select-state.ts",
+        "src/cli/commands/profile/index.ts",
+        "src/cli/ui/ink-app/utils/textHighlighting.ts",
         "src/cli/ui/ink-app/services/roughTokenEstimation.ts",
         "src/cli/ui/ink-app/commands/security/index.ts",
         "src/cli/ui/ink-app/utils/truncate.ts",
@@ -405,16 +397,14 @@
         "src/runtime/tools/builtins/bash.ts",
         "src/runtime/integrations/lsp/index.ts",
         "src/runtime/integrations/pty/index.ts",
-        "src/runtime/integrations/plugin/codex.ts",
         "src/cli/ui/ink-app/commands/chrome/index.ts",
         "src/cli/ui/ink-app/commands/thinkback/index.ts",
         "src/cli/ui/ink-app/commands/rewind/rewind.ts",
         "src/cli/ui/ink-app/commands/session/index.ts",
         "src/cli/ui/ink-app/commands/rate-limit-options/index.ts",
-        "src/cli/ui/ink-app/components/agents/utils.ts",
-        "src/runtime/server/routes/lsp.ts"
+        "src/cli/ui/ink-app/components/agents/utils.ts"
       ],
-      "loc": 7013,
+      "loc": 7002,
       "twins": [
         {
           "runtime": "src/runtime/services/SessionMemory/sessionMemoryUtils.ts",
@@ -430,12 +420,14 @@
     {
       "id": "b0010",
       "files": [
+        "src/runtime/integrations/plugin/codex.ts",
         "src/runtime/file/file.ts",
         "src/cli/ui/ink-app/entrypoints/sdk/controlSchemas.ts",
         "src/runtime/server/routes/ars-contexta.ts",
         "src/runtime/services/compact/prompt.ts",
         "src/cli/ui/ink-app/services/compact/prompt.ts",
         "src/cli/ui/ink-app/utils/sessionStoragePortable.ts",
+        "src/runtime/server/routes/lsp.ts",
         "src/runtime/services/oauth/scopes.ts",
         "src/cli/ui/ink-app/services/oauth/scopes.ts",
         "src/cli/ui/ink-app/utils/task/sdkProgress.ts",
@@ -459,11 +451,9 @@
         "src/runtime/session/native-source.ts",
         "src/cli/ui/ink-app/services/mcp/channelPermissions.ts",
         "src/cli/ui/ink-app/utils/memoize.ts",
-        "src/cli/ui/ink-app/utils/bash/shellQuote.ts",
-        "src/runtime/services/pairing/pairing.ts",
-        "src/runtime/server/routes/pty.ts"
+        "src/cli/ui/ink-app/utils/bash/shellQuote.ts"
       ],
-      "loc": 7404,
+      "loc": 7278,
       "twins": [
         {
           "runtime": "src/runtime/services/compact/prompt.ts",
@@ -497,6 +487,8 @@
     {
       "id": "b0013",
       "files": [
+        "src/runtime/services/pairing/pairing.ts",
+        "src/runtime/server/routes/pty.ts",
         "src/cli/ui/ink-app/utils/listSessionsImpl.ts",
         "src/cli/ui/ink-app/buddy/sprites.ts",
         "src/cli/ui/ink-app/utils/fsOperations.ts",
@@ -533,17 +525,17 @@
         "src/cli/ui/ink-app/utils/teammate.ts",
         "src/cli/ui/ink-app/utils/bash/bashPipeCommand.ts",
         "src/cli/ui/ink-app/utils/format.ts",
-        "src/cli/ui/ink-app/utils/swarm/backends/types.ts",
-        "src/cli/ui/ink-app/tools/BashTool/sedEditParser.ts",
-        "src/cli/ui/ink-app/entrypoints/sdk/controlTypes.ts"
+        "src/cli/ui/ink-app/utils/swarm/backends/types.ts"
       ],
-      "loc": 7098,
+      "loc": 7203,
       "twins": [],
       "state": "NEW"
     },
     {
       "id": "b0014",
       "files": [
+        "src/cli/ui/ink-app/tools/BashTool/sedEditParser.ts",
+        "src/cli/ui/ink-app/entrypoints/sdk/controlTypes.ts",
         "src/runtime/loop/agent.ts",
         "src/runtime/server/routes/cowork.ts",
         "src/runtime/tools/mcp/index.ts",
@@ -580,11 +572,9 @@
         "src/cli/ui/ink-app/tools/EnterPlanModeTool/prompt.ts",
         "src/cli/ui/ink-app/utils/tokens.ts",
         "src/cli/ui/ink-app/utils/json.ts",
-        "src/cli/ui/ink-app/services/mcp/elicitationHandler.ts",
-        "src/cli/ui/ink-app/services/SessionMemory/prompts.ts",
-        "src/cli/ui/ink-app/utils/releaseNotes.ts"
+        "src/cli/ui/ink-app/services/mcp/elicitationHandler.ts"
       ],
-      "loc": 7180,
+      "loc": 7162,
       "twins": [
         {
           "runtime": "src/runtime/services/oauth/getOauthProfile.ts",
@@ -596,6 +586,8 @@
     {
       "id": "b0015",
       "files": [
+        "src/cli/ui/ink-app/services/SessionMemory/prompts.ts",
+        "src/cli/ui/ink-app/utils/releaseNotes.ts",
         "src/cli/ui/ink-app/keybindings/defaultBindings.ts",
         "src/cli/ui/ink-app/utils/git/gitFilesystem.ts",
         "src/cli/ui/ink-app/utils/shell/shellToolUtils.ts",
@@ -631,16 +623,9 @@
         "src/cli/ui/ink-app/utils/swarm/backends/detection.ts",
         "src/cli/ui/ink-app/services/preventSleep.ts",
         "src/cli/ui/ink-app/utils/gizziHints.ts",
-        "src/runtime/session/llm.ts",
-        "src/cli/ui/ink-app/utils/shell/outputLimits.ts",
-        "src/cli/ui/ink-app/utils/plugins/officialMarketplace.ts",
-        "src/cli/ui/ink-app/utils/telemetry/logger.ts",
-        "src/cli/ui/ink-app/services/mcp/officialRegistry.ts",
-        "src/cli/ui/ink-app/utils/appleTerminalBackup.ts",
-        "src/cli/ui/ink-app/utils/editor.ts",
-        "src/cli/ui/ink-app/commands/init.ts"
+        "src/runtime/session/llm.ts"
       ],
-      "loc": 7162,
+      "loc": 7109,
       "twins": [],
       "state": "NEW"
     },
@@ -665,6 +650,13 @@
     {
       "id": "b0018",
       "files": [
+        "src/cli/ui/ink-app/utils/shell/outputLimits.ts",
+        "src/cli/ui/ink-app/utils/plugins/officialMarketplace.ts",
+        "src/cli/ui/ink-app/utils/telemetry/logger.ts",
+        "src/cli/ui/ink-app/services/mcp/officialRegistry.ts",
+        "src/cli/ui/ink-app/utils/appleTerminalBackup.ts",
+        "src/cli/ui/ink-app/utils/editor.ts",
+        "src/cli/ui/ink-app/commands/init.ts",
         "src/cli/ui/ink-app/services/rateLimitMessages.ts",
         "src/shared/utils/settings/types.ts",
         "src/cli/ui/ink-app/tools/EnterPlanModeTool/UI.tsx",
@@ -694,12 +686,11 @@
         "src/cli/ui/ink-app/utils/plugins/parseMarketplaceInput.ts",
         "src/runtime/server/routes/experimental.ts",
         "src/cli/ui/ink-app/bridge/bridgeApi.ts",
-        "src/cli/ui/ink-app/services/api/filesApi.ts",
         "src/cli/ui/ink-app/utils/bash/specs/index.ts",
         "src/cli/ui/ink-app/utils/secureStorage/plainTextStorage.ts",
         "src/cli/ui/ink-app/utils/imageStore.ts"
       ],
-      "loc": 7152,
+      "loc": 7142,
       "twins": [],
       "state": "NEW"
     },
@@ -715,6 +706,7 @@
     {
       "id": "b0020",
       "files": [
+        "src/cli/ui/ink-app/services/api/filesApi.ts",
         "src/cli/ui/ink-app/utils/authFileDescriptor.ts",
         "src/cli/ui/ink-app/utils/queryProfiler.ts",
         "src/cli/ui/ink-app/tools/BriefTool/upload.ts",
@@ -734,12 +726,9 @@
         "src/cli/ui/ink-app/utils/envDynamic.ts",
         "src/cli/ui/ink-app/utils/fullscreen.ts",
         "src/cli/ui/ink-app/utils/swarm/backends/it2Setup.ts",
-        "src/cli/ui/ink-app/utils/tasks.ts",
-        "src/cli/ui/ink-app/utils/swarm/spawnUtils.ts",
-        "src/cli/ui/ink-app/services/api/metricsOptOut.ts",
-        "src/cli/ui/ink-app/utils/windowsPaths.ts"
+        "src/cli/ui/ink-app/utils/tasks.ts"
       ],
-      "loc": 7151,
+      "loc": 7419,
       "twins": [
         {
           "runtime": "src/runtime/services/mcp/claudeai.ts",
@@ -755,6 +744,9 @@
     {
       "id": "b0021",
       "files": [
+        "src/cli/ui/ink-app/utils/swarm/spawnUtils.ts",
+        "src/cli/ui/ink-app/services/api/metricsOptOut.ts",
+        "src/cli/ui/ink-app/utils/windowsPaths.ts",
         "src/cli/ui/ink-app/utils/shell/specPrefix.ts",
         "src/cli/ui/ink-app/commands/heapdump/index.ts",
         "src/cli/ui/ink-app/tools/TaskGetTool/TaskGetTool.ts",
@@ -779,9 +771,9 @@
         "src/cli/ui/ink-app/utils/mtls.ts",
         "src/cli/ui/ink-app/utils/secureStorage/macOsKeychainStorage.ts",
         "src/cli/ui/ink-app/services/lsp/LSPServerInstance.ts",
-        "src/cli/ui/ink-app/utils/ripgrep.ts"
+        "src/cli/ui/ink-app/services/oauth/auth-code-listener.ts"
       ],
-      "loc": 7078,
+      "loc": 7091,
       "twins": [
         {
           "runtime": "src/runtime/services/oauth/client.ts",
@@ -802,7 +794,7 @@
     {
       "id": "b0023",
       "files": [
-        "src/cli/ui/ink-app/services/oauth/auth-code-listener.ts",
+        "src/cli/ui/ink-app/utils/ripgrep.ts",
         "src/cli/ui/ink-app/hooks/useTaskListWatcher.ts",
         "src/cli/ui/ink-app/history.ts",
         "src/cli/ui/ink-app/utils/plugins/pluginCachePaths.ts",
@@ -827,10 +819,9 @@
         "src/cli/ui/ink-app/utils/suggestions/shellHistoryCompletion.ts",
         "src/cli/ui/ink-app/utils/telemetry/bigqueryExporter.ts",
         "src/cli/ui/ink-app/utils/frontmatterParser.ts",
-        "src/cli/ui/ink-app/utils/imagePaste.ts",
-        "src/cli/ui/ink-app/utils/permissions/tempDir.ts"
+        "src/cli/ui/ink-app/utils/imagePaste.ts"
       ],
-      "loc": 7057,
+      "loc": 7397,
       "twins": [],
       "state": "NEW"
     },
@@ -846,6 +837,7 @@
     {
       "id": "b0025",
       "files": [
+        "src/cli/ui/ink-app/utils/permissions/tempDir.ts",
         "src/cli/ui/ink-app/tools/PowerShellTool/powershellSecurity.ts",
         "src/cli/ui/ink-app/utils/teammateMailbox.ts",
         "src/cli/ui/ink-app/utils/plugins/orphanedPluginFilter.ts",
@@ -869,7 +861,7 @@
         "src/cli/ui/ink-app/utils/getWorktreePaths.ts",
         "src/cli/ui/ink-app/services/oauth/index.ts"
       ],
-      "loc": 7066,
+      "loc": 7194,
       "twins": [],
       "state": "NEW"
     },
@@ -1435,7 +1427,7 @@
         "src/cli/ui/ink-app/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts",
         "src/cli/ui/ink-app/tools/EnterWorktreeTool/EnterWorktreeTool.ts"
       ],
-      "loc": 7128,
+      "loc": 7108,
       "twins": [],
       "state": "NEW"
     },
@@ -2612,16 +2604,6 @@
       "detail": "unresolved: ../bridge/webhookSanitizer.js"
     },
     {
-      "path": "src/cli/ui/ink-app/jobs/classifier.ts",
-      "reason": "suspect-malformed",
-      "detail": "export declaration at brace depth 1"
-    },
-    {
-      "path": "src/cli/ui/ink-app/memdir/memoryShapeTelemetry.ts",
-      "reason": "suspect-malformed",
-      "detail": "export declaration at brace depth 1"
-    },
-    {
       "path": "src/cli/ui/ink-app/query.ts",
       "reason": "suspect-dead-shim",
       "detail": "unresolved: ./query/transitions.js"
@@ -2652,32 +2634,12 @@
       "detail": "unresolved: ../../skills/mcpSkills.js"
     },
     {
-      "path": "src/cli/ui/ink-app/services/skillSearch/localSearch.ts",
-      "reason": "suspect-malformed",
-      "detail": "export declaration at brace depth 1"
-    },
-    {
-      "path": "src/cli/ui/ink-app/services/skillSearch/remoteSkillLoader.ts",
-      "reason": "suspect-malformed",
-      "detail": "export declaration at brace depth 1"
-    },
-    {
-      "path": "src/cli/ui/ink-app/tasks/MonitorMcpTask/MonitorMcpTask.ts",
-      "reason": "suspect-malformed",
-      "detail": "export declaration at brace depth 2"
-    },
-    {
       "path": "src/cli/ui/ink-app/tools/MonitorTool/MonitorTool.ts",
       "reason": "suspect-malformed",
       "detail": "export declaration at brace depth 1"
     },
     {
       "path": "src/cli/ui/ink-app/tools/ReviewArtifactTool/ReviewArtifactTool.ts",
-      "reason": "suspect-malformed",
-      "detail": "export declaration at brace depth 1"
-    },
-    {
-      "path": "src/cli/ui/ink-app/tools/WorkflowTool/WorkflowPermissionRequest.tsx",
       "reason": "suspect-malformed",
       "detail": "export declaration at brace depth 1"
     },
@@ -2697,24 +2659,9 @@
       "detail": "unresolved: ../services/sessionTranscript/sessionTranscript.js, ../services/skillSearch/signals.js"
     },
     {
-      "path": "src/cli/ui/ink-app/utils/attributionHooks.ts",
-      "reason": "suspect-malformed",
-      "detail": "export declaration at brace depth 1"
-    },
-    {
       "path": "src/cli/ui/ink-app/utils/model/modelOptions.ts",
       "reason": "suspect-dead-shim",
       "detail": "unresolved: ../../../../runtime/providers/discovery/index.js"
-    },
-    {
-      "path": "src/cli/ui/ink-app/utils/postCommitAttribution.ts",
-      "reason": "suspect-malformed",
-      "detail": "export declaration at brace depth 1"
-    },
-    {
-      "path": "src/cli/ui/ink-app/utils/udsClient.ts",
-      "reason": "suspect-dead-shim",
-      "detail": "unresolved: ../../../shared/utils/udsClient.js"
     },
     {
       "path": "src/cli/ui/ink-app/utils/udsMessaging.ts",
