@@ -1,16 +1,9 @@
 // @ts-nocheck
-import { feature } from 'bun:bundle'
 import type { Task, TaskType } from './Task.js'
 import { DreamTask } from './tasks/DreamTask/DreamTask.js'
 import { LocalAgentTask } from './tasks/LocalAgentTask/LocalAgentTask.js'
 import { LocalShellTask } from './tasks/LocalShellTask/LocalShellTask.js'
 import { RemoteAgentTask } from './tasks/RemoteAgentTask/RemoteAgentTask.js'
-
-/* eslint-disable @typescript-eslint/no-require-imports */
-const MonitorMcpTask: Task | null = feature('MONITOR_TOOL')
-  ? require('./tasks/MonitorMcpTask/MonitorMcpTask.js').MonitorMcpTask
-  : null
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
  * Get all tasks.
@@ -24,7 +17,6 @@ export function getAllTasks(): Task[] {
     RemoteAgentTask,
     DreamTask,
   ]
-  if (MonitorMcpTask) tasks.push(MonitorMcpTask)
   return tasks
 }
 

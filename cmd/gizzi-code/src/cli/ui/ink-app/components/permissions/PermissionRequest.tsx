@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { EnterPlanModeTool } from './../../tools/EnterPlanModeTool/EnterPlanModeTool.ts';
 import { ExitPlanModeV2Tool } from './../../tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts';
@@ -33,11 +32,7 @@ import { PowerShellPermissionRequest } from './PowerShellPermissionRequest/Power
 import { SkillPermissionRequest } from './SkillPermissionRequest/SkillPermissionRequest';
 import { WebFetchPermissionRequest } from './WebFetchPermissionRequest/WebFetchPermissionRequest';
 
-/* eslint-disable @typescript-eslint/no-require-imports */
-const MonitorTool = feature('MONITOR_TOOL') ? (require('../../tools/MonitorTool/MonitorTool.js') as typeof import('../../tools/MonitorTool/MonitorTool.js')).MonitorTool : null;
-const MonitorPermissionRequest = feature('MONITOR_TOOL') ? (require('./MonitorPermissionRequest/MonitorPermissionRequest.js') as typeof import('./MonitorPermissionRequest/MonitorPermissionRequest.js')).MonitorPermissionRequest : null;
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
-/* eslint-enable @typescript-eslint/no-require-imports */
 import type { z } from 'zod/v4';
 import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema';
 import type { WorkerBadgeProps } from './WorkerBadge';
@@ -63,8 +58,6 @@ function permissionComponentForTool(tool: Tool): React.ComponentType<PermissionR
       return SkillPermissionRequest;
     case AskUserQuestionTool:
       return AskUserQuestionPermissionRequest;
-    case MonitorTool:
-      return MonitorPermissionRequest ?? FallbackPermissionRequest;
     case GlobTool:
     case GrepTool:
     case FileReadTool:

@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { feature } from 'bun:bundle';
 import { stat } from 'fs/promises';
 import { OUTPUT_FILE_TAG, STATUS_TAG, SUMMARY_TAG, TASK_ID_TAG, TASK_NOTIFICATION_TAG, TOOL_USE_ID_TAG } from '../../constants/xml';
 import { abortSpeculation } from '../../services/PromptSuggestion/speculation';
@@ -127,34 +126,16 @@ function enqueueShellNotification(taskId: string, description: string, status: '
   // preserved; only the pre-computed response is discarded.
   abortSpeculation(setAppState);
   let summary: string;
-  if (feature('MONITOR_TOOL') && kind === 'monitor') {
-    // Monitor is streaming-only (post-#22764) — the script exiting means
-    // the stream ended, not "condition met". Distinct from the bash prefix
-    // so Monitor completions don't fold into the "N background commands
-    // completed" collapse.
-    switch (status) {
-      case 'completed':
-        summary = `Monitor "${description}" stream ended`;
-        break;
-      case 'failed':
-        summary = `Monitor "${description}" script failed${exitCode !== undefined ? ` (exit ${exitCode})` : ''}`;
-        break;
-      case 'killed':
-        summary = `Monitor "${description}" stopped`;
-        break;
-    }
-  } else {
-    switch (status) {
-      case 'completed':
-        summary = `${BACKGROUND_BASH_SUMMARY_PREFIX}"${description}" completed${exitCode !== undefined ? ` (exit code ${exitCode})` : ''}`;
-        break;
-      case 'failed':
-        summary = `${BACKGROUND_BASH_SUMMARY_PREFIX}"${description}" failed${exitCode !== undefined ? ` with exit code ${exitCode}` : ''}`;
-        break;
-      case 'killed':
-        summary = `${BACKGROUND_BASH_SUMMARY_PREFIX}"${description}" was stopped`;
-        break;
-    }
+  switch (status) {
+    case 'completed':
+      summary = `${BACKGROUND_BASH_SUMMARY_PREFIX}"${description}" completed${exitCode !== undefined ? ` (exit code ${exitCode})` : ''}`;
+      break;
+    case 'failed':
+      summary = `${BACKGROUND_BASH_SUMMARY_PREFIX}"${description}" failed${exitCode !== undefined ? ` with exit code ${exitCode}` : ''}`;
+      break;
+    case 'killed':
+      summary = `${BACKGROUND_BASH_SUMMARY_PREFIX}"${description}" was stopped`;
+      break;
   }
   const outputPath = getTaskOutputPath(taskId);
   const toolUseIdLine = toolUseId ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>` : '';
@@ -167,7 +148,7 @@ function enqueueShellNotification(taskId: string, description: string, status: '
   enqueuePendingNotification({
     value: message,
     mode: 'task-notification',
-    priority: feature('MONITOR_TOOL') ? 'next' : 'later',
+    priority: 'later',
     agentId
   });
 }

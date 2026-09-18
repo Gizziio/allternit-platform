@@ -1560,8 +1560,8 @@ async function* queryLoop(
     // These will be sent as attachments so Claude can respond to them in the current turn.
     //
     // Drain pending notifications. LocalShellTask completions are 'next'
-    // (when MONITOR_TOOL is on) and drain without Sleep. Other task types
-    // (agent/workflow/framework) still default to 'later' — the Sleep flush
+    // and drain without Sleep. Other task types
+    // (agent/framework) still default to 'later' — the Sleep flush
     // covers those. If all task types move to 'next', this branch could go.
     //
     // Slash commands are excluded from mid-turn drain — they must go through

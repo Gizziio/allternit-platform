@@ -13,7 +13,6 @@ export type TaskState =
   | LocalAgentTaskState
   | RemoteAgentTaskState
   | InProcessTeammateTaskState
-  | MonitorMcpTaskState
   | DreamTaskState
 
 // Task types that can appear in the background tasks indicator
@@ -22,7 +21,6 @@ export type BackgroundTaskState =
   | LocalAgentTaskState
   | RemoteAgentTaskState
   | InProcessTeammateTaskState
-  | MonitorMcpTaskState
   | DreamTaskState
 
 /**

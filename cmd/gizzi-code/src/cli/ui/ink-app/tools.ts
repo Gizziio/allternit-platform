@@ -47,9 +47,6 @@ const RemoteTriggerTool = feature('AGENT_TRIGGERS_REMOTE')
   ? safeRequire('./tools/RemoteTriggerTool/RemoteTriggerTool.js')
       ?.RemoteTriggerTool
   : null
-const MonitorTool = feature('MONITOR_TOOL')
-  ? safeRequire('./tools/MonitorTool/MonitorTool.js')?.MonitorTool
-  : null
 const SendUserFileTool = feature('KAIROS')
   ? safeRequire('./tools/SendUserFileTool/SendUserFileTool.js')?.SendUserFileTool
   : null
@@ -234,7 +231,6 @@ export function getAllBaseTools(): Tools {
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,
     ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
-    ...(MonitorTool ? [MonitorTool] : []),
     BriefTool,
     ...(SendUserFileTool ? [SendUserFileTool] : []),
     ...(PushNotificationTool ? [PushNotificationTool] : []),
