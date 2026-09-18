@@ -10,7 +10,7 @@ import Foundation
 // ReplyItem — output union of a Reply.
 //
 // Mirrors `ReplyItem` and its supporting types in
-// packages/@allternit/replies-contract/src/index.ts. Items flow server →
+// platform/packages/replies-contract/src/index.ts. Items flow server →
 // client only, so `Encodable` is intentionally omitted. Fields typed
 // `unknown` / `Record<string, unknown>` in the contract are skipped (not
 // decoded) and noted inline.

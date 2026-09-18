@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'surfaces/office.allternit.com/**'
-      - 'packages/@allternit/**'
+      - 'platform/packages/**'
       - '.github/workflows/deploy-office-cloudflare.yml'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'

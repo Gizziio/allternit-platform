@@ -348,7 +348,7 @@ Scans `alabs-generated-courses/` and `alabs-generated-courses/demos/` → genera
 ### 8. Analyze a Package for Topics
 
 ```bash
-npx tsx scripts/analyze-packages.ts --package packages/@allternit/plugin-sdk
+npx tsx scripts/analyze-packages.ts --package platform/packages/plugin-sdk
 ```
 
 Outputs:

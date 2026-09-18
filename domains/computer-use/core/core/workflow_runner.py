@@ -1,7 +1,7 @@
 """
 Allternit Computer Use — Workflow Spec Runner
 
-Executes a ``BrowserWorkflowSpec`` (packages/@allternit/computer-use-protocol)
+Executes a ``BrowserWorkflowSpec`` (platform/packages/computer-use-protocol)
 or a skill package produced by the chrome-stream compiler (``{workflow,
 manifest}`` — the same ``workflow`` JSON). This closes the
 record → replay → teach → run loop: a recorded trajectory compiled to a

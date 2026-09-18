@@ -171,7 +171,7 @@ importers:
         version: link:../../sdk/allternit-sdk
       '@allternit/types':
         specifier: workspace:*
-        version: link:../../packages/@allternit/types/allternit-types
+        version: link:../../platform/packages/types-allternit-types
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -232,19 +232,19 @@ importers:
         version: link:packages/gizzi-util
       '@allternit/native-sessions':
         specifier: workspace:*
-        version: link:../../packages/@allternit/native-sessions
+        version: link:../../platform/packages/native-sessions
       '@allternit/orchestrator':
         specifier: workspace:*
         version: link:../../services/orchestration/control-plane/allternit-orchestrator
       '@allternit/os-contracts':
         specifier: workspace:*
-        version: link:../../packages/@allternit/os-contracts
+        version: link:../../platform/packages/os-contracts
       '@allternit/plugin':
         specifier: workspace:*
         version: link:packages/plugin
       '@allternit/request-scorer':
         specifier: workspace:*
-        version: link:../../packages/@allternit/request-scorer
+        version: link:../../platform/packages/request-scorer
       '@allternit/script':
         specifier: workspace:*
         version: link:packages/script
@@ -697,7 +697,7 @@ importers:
         version: link:../../../sdk/allternit-sdk
       '@allternit/types':
         specifier: workspace:*
-        version: link:../../../packages/@allternit/types/allternit-types
+        version: link:../../../platform/packages/types-allternit-types
       fast-glob:
         specifier: ^3.3.0
         version: 3.3.3
@@ -865,7 +865,7 @@ importers:
     dependencies:
       '@allternit/computer-use-protocol':
         specifier: workspace:*
-        version: link:../../../../packages/@allternit/computer-use-protocol
+        version: link:../../../../platform/packages/computer-use-protocol
       chokidar:
         specifier: ^3.5.3
         version: 3.6.0
@@ -1114,7 +1114,7 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.40)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0)(canvas@3.2.1))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/allternit-office-suite:
+  platform/packages/allternit-office-suite:
     dependencies:
       '@allternit/office-ai':
         specifier: workspace:*
@@ -1175,7 +1175,7 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@25.6.2)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/api-client:
+  platform/packages/api-client:
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -1187,7 +1187,7 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/avatar-adapters:
+  platform/packages/avatar-adapters:
     dependencies:
       '@allternit/visual-state':
         specifier: workspace:*
@@ -1199,7 +1199,7 @@ importers:
         specifier: ^18.0.0
         version: 18.3.1
 
-  packages/@allternit/browser-tools:
+  platform/packages/browser-tools:
     dependencies:
       '@allternit/mcp-apps-adapter':
         specifier: workspace:*
@@ -1227,7 +1227,7 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/computer-use-protocol:
+  platform/packages/computer-use-protocol:
     dependencies:
       zod:
         specifier: ^3.25.0
@@ -1240,7 +1240,7 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@25.6.2)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/cowork-engine:
+  platform/packages/cowork-engine:
     dependencies:
       croner:
         specifier: ^9.0.0
@@ -1253,9 +1253,9 @@ importers:
         specifier: ^5.4.0
         version: 5.9.3
 
-  packages/@allternit/executor-core: {}
+  platform/packages/executor-core: {}
 
-  packages/@allternit/form-surfaces:
+  platform/packages/form-surfaces:
     dependencies:
       '@phosphor-icons/react':
         specifier: ^2.1.7
@@ -1264,7 +1264,7 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1
 
-  packages/@allternit/ix:
+  platform/packages/ix:
     dependencies:
       react:
         specifier: ^18.0.0
@@ -1298,9 +1298,9 @@ importers:
         specifier: ^3.5.29
         version: 3.5.29(typescript@5.9.3)
 
-  packages/@allternit/native-sessions: {}
+  platform/packages/native-sessions: {}
 
-  packages/@allternit/office-ai:
+  platform/packages/office-ai:
     devDependencies:
       typescript:
         specifier: ^5.9.3
@@ -1309,7 +1309,7 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@25.6.2)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/office-docs-app:
+  platform/packages/office-docs-app:
     dependencies:
       '@allternit/office-docx-engine':
         specifier: workspace:*
@@ -1346,7 +1346,7 @@ importers:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@25.6.2)(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/office-docs-editor:
+  platform/packages/office-docs-editor:
     dependencies:
       '@allternit/office-docx-engine':
         specifier: workspace:*
@@ -1365,7 +1365,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/@allternit/office-docx-engine:
+  platform/packages/office-docx-engine:
     dependencies:
       fast-xml-parser:
         specifier: ^5.3.4
@@ -1387,7 +1387,7 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@24.10.11)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/office-file-parse:
+  platform/packages/office-file-parse:
     dependencies:
       '@allternit/office-docx-engine':
         specifier: workspace:*
@@ -1412,7 +1412,7 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@24.10.11)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/office-pdf-app:
+  platform/packages/office-pdf-app:
     dependencies:
       buffer:
         specifier: ^6.0.3
@@ -1443,7 +1443,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/@allternit/office-pdf-viewer:
+  platform/packages/office-pdf-viewer:
     dependencies:
       pdfjs-dist:
         specifier: ^6.3.289
@@ -1462,7 +1462,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/@allternit/office-pptx-engine:
+  platform/packages/office-pptx-engine:
     dependencies:
       buffer:
         specifier: ^6.0.3
@@ -1493,7 +1493,7 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@24.10.11)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/office-pptx-render:
+  platform/packages/office-pptx-render:
     dependencies:
       '@allternit/office-pptx-engine':
         specifier: workspace:*
@@ -1521,7 +1521,7 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@24.10.11)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/office-sheets-app:
+  platform/packages/office-sheets-app:
     dependencies:
       '@fluentui/react-icons':
         specifier: ^2.0.333
@@ -1588,7 +1588,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/@allternit/office-sheets-editor:
+  platform/packages/office-sheets-editor:
     dependencies:
       jszip:
         specifier: ^3.10.1
@@ -1610,7 +1610,7 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@25.6.2)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/office-slides-app:
+  platform/packages/office-slides-app:
     dependencies:
       '@allternit/office-pptx-engine':
         specifier: workspace:*
@@ -1653,7 +1653,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/@allternit/office-slides-editor:
+  platform/packages/office-slides-editor:
     dependencies:
       '@allternit/office-pptx-engine':
         specifier: workspace:*
@@ -1672,7 +1672,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/@allternit/office-xlsx-engine:
+  platform/packages/office-xlsx-engine:
     dependencies:
       '@univerjs/core':
         specifier: ^0.25.1
@@ -1694,9 +1694,9 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@24.10.11)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/orchestrator: {}
+  platform/packages/orchestrator: {}
 
-  packages/@allternit/os-contracts:
+  platform/packages/os-contracts:
     dependencies:
       zod:
         specifier: ^3.25.0
@@ -1712,9 +1712,9 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@24.10.11)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/parallel-run: {}
+  platform/packages/parallel-run: {}
 
-  packages/@allternit/plugin-sdk:
+  platform/packages/plugin-sdk:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^0.4.0
@@ -1763,7 +1763,7 @@ importers:
         specifier: ^0.34.6
         version: 0.34.6(@edge-runtime/vm@3.2.0)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(playwright@1.58.2)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/plugin-sdk/website:
+  platform/packages/plugin-sdk/website:
     dependencies:
       '@docusaurus/core':
         specifier: 3.0.0
@@ -1794,7 +1794,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
-  packages/@allternit/provider-adapters:
+  platform/packages/provider-adapters:
     dependencies:
       '@allternit/replies-contract':
         specifier: workspace:*
@@ -1807,13 +1807,13 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@25.6.2)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/replies-contract:
+  platform/packages/replies-contract:
     devDependencies:
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
 
-  packages/@allternit/replies-reducer:
+  platform/packages/replies-reducer:
     dependencies:
       '@allternit/replies-contract':
         specifier: workspace:*
@@ -1826,25 +1826,25 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@25.6.2)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/request-scorer:
+  platform/packages/request-scorer:
     devDependencies:
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
 
-  packages/@allternit/types/allternit-types:
+  platform/packages/types-allternit-types:
     devDependencies:
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
 
-  packages/@allternit/util:
+  platform/packages/util:
     devDependencies:
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
 
-  packages/@allternit/visual-state:
+  platform/packages/visual-state:
     dependencies:
       '@types/react':
         specifier: ^18.3.28
@@ -1853,7 +1853,7 @@ importers:
         specifier: ^18.0.0
         version: 18.3.1
 
-  packages/@allternit/viz:
+  platform/packages/viz:
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -1865,7 +1865,7 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  packages/@allternit/workflow-engine:
+  platform/packages/workflow-engine:
     dependencies:
       uuid:
         specifier: ^9.0.0
@@ -1891,7 +1891,7 @@ importers:
         version: link:../../sdk/allternit-sdk
       '@allternit/types':
         specifier: workspace:*
-        version: link:../../packages/@allternit/types/allternit-types
+        version: link:../../platform/packages/types-allternit-types
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -1927,13 +1927,13 @@ importers:
     dependencies:
       '@allternit/computer-use-protocol':
         specifier: workspace:*
-        version: link:../../packages/@allternit/computer-use-protocol
+        version: link:../../platform/packages/computer-use-protocol
       '@allternit/replies-contract':
         specifier: workspace:*
-        version: link:../../packages/@allternit/replies-contract
+        version: link:../../platform/packages/replies-contract
       '@allternit/replies-reducer':
         specifier: workspace:*
-        version: link:../../packages/@allternit/replies-reducer
+        version: link:../../platform/packages/replies-reducer
       eventsource:
         specifier: ^2.0.2
         version: 2.0.2
@@ -2071,16 +2071,16 @@ importers:
     dependencies:
       '@allternit/office-docx-engine':
         specifier: workspace:*
-        version: link:../../packages/@allternit/office-docx-engine
+        version: link:../../platform/packages/office-docx-engine
       '@allternit/office-file-parse':
         specifier: workspace:*
-        version: link:../../packages/@allternit/office-file-parse
+        version: link:../../platform/packages/office-file-parse
       '@allternit/office-pptx-engine':
         specifier: workspace:*
-        version: link:../../packages/@allternit/office-pptx-engine
+        version: link:../../platform/packages/office-pptx-engine
       '@allternit/office-xlsx-engine':
         specifier: workspace:*
-        version: link:../../packages/@allternit/office-xlsx-engine
+        version: link:../../platform/packages/office-xlsx-engine
       '@firecrawl/anydoc':
         specifier: 0.1.6
         version: 0.1.6
@@ -2166,10 +2166,10 @@ importers:
     dependencies:
       '@allternit/replies-contract':
         specifier: workspace:*
-        version: link:../../../packages/@allternit/replies-contract
+        version: link:../../../platform/packages/replies-contract
       '@allternit/replies-reducer':
         specifier: workspace:*
-        version: link:../../../packages/@allternit/replies-reducer
+        version: link:../../../platform/packages/replies-reducer
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -2494,7 +2494,7 @@ importers:
     dependencies:
       '@allternit/office-docs-app':
         specifier: workspace:*
-        version: link:../../packages/@allternit/office-docs-app
+        version: link:../../platform/packages/office-docs-app
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -2525,7 +2525,7 @@ importers:
     dependencies:
       '@allternit/computer-use-protocol':
         specifier: workspace:*
-        version: link:../../../packages/@allternit/computer-use-protocol
+        version: link:../../../platform/packages/computer-use-protocol
       '@page-agent/core':
         specifier: workspace:*
         version: link:packages/core
@@ -3054,10 +3054,10 @@ importers:
     dependencies:
       '@allternit/office-ai':
         specifier: workspace:*
-        version: link:../../packages/@allternit/office-ai
+        version: link:../../platform/packages/office-ai
       '@allternit/office-suite':
         specifier: workspace:*
-        version: link:../../packages/@allternit/allternit-office-suite
+        version: link:../../platform/packages/allternit-office-suite
       '@clerk/clerk-react':
         specifier: ^5.30.0
         version: 5.61.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)

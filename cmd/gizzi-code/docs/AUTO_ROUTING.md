@@ -83,7 +83,7 @@ for await (const chunk of harness.stream({ messages })) { ... }
 
 ### `@allternit/request-scorer` package
 
-Located at `packages/@allternit/request-scorer/`. Zero runtime dependencies. Exports a single function:
+Located at `platform/packages/request-scorer/`. Zero runtime dependencies. Exports a single function:
 
 ```ts
 import { scoreRequest } from '@allternit/request-scorer'

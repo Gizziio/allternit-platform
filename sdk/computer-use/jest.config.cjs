@@ -19,8 +19,8 @@ module.exports = {
   moduleNameMapper: {
     // allow importing from '../src/...' in tests
     '^../src/(.*)$': '<rootDir>/src/$1',
-    '^@allternit/computer-use-protocol$': '<rootDir>/../../packages/@allternit/computer-use-protocol/src/index.ts',
-    '^@allternit/replies-contract$': '<rootDir>/../../packages/@allternit/replies-contract/src/index.ts',
-    '^@allternit/replies-reducer$': '<rootDir>/../../packages/@allternit/replies-reducer/src/index.ts',
+    '^@allternit/computer-use-protocol$': '<rootDir>/../../platform/packages/computer-use-protocol/src/index.ts',
+    '^@allternit/replies-contract$': '<rootDir>/../../platform/packages/replies-contract/src/index.ts',
+    '^@allternit/replies-reducer$': '<rootDir>/../../platform/packages/replies-reducer/src/index.ts',
   },
 };

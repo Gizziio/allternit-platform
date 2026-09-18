@@ -95,13 +95,13 @@
         "./src/entrypoints/*"
       ],
       "@allternit/util": [
-        "../../packages/@allternit/util/src"
+        "../../platform/packages/util/src"
       ],
       "@allternit/orchestrator": [
-        "../../packages/@allternit/orchestrator/src/index.ts"
+        "../../platform/packages/orchestrator/src/index.ts"
       ],
       "@allternit/orchestrator/*": [
-        "../../packages/@allternit/orchestrator/src/*"
+        "../../platform/packages/orchestrator/src/*"
       ],
       "@allternit/remote-control": [
         "./packages/remote-control/src/index"

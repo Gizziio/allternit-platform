@@ -1,4 +1,4 @@
-// packages/@allternit/orchestrator/src/backends/local-terminal.backend.ts
+// platform/packages/orchestrator/src/backends/local-terminal.backend.ts
 // tmux-backed executor sessions (ADR-0044). Encodes the semantics proven by the
 // dev-machine ao-* reference scripts: script(1) transcripts from the first byte,
 // verified send (paste → read back → submit only on match, C-u never C-c),

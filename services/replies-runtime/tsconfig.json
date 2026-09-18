@@ -9,8 +9,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "paths": {
-      "@allternit/replies-contract": ["../../../packages/@allternit/replies-contract/src/index.ts"],
-      "@allternit/replies-reducer": ["../../../packages/@allternit/replies-reducer/src/index.ts"]
+      "@allternit/replies-contract": ["../../../platform/packages/replies-contract/src/index.ts"],
+      "@allternit/replies-reducer": ["../../../platform/packages/replies-reducer/src/index.ts"]
     }
   },
   "include": ["src/**/*"]

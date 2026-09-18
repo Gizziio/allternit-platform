@@ -26,7 +26,7 @@ export function resolveSidecarBinary(env: NodeJS.ProcessEnv = process.env): stri
 
   const candidates = [
     join(packageRoot, 'crate', 'target', 'release', BINARY_NAME),
-    // packages/@allternit/office-xlsx-engine → repo root is three levels up.
+    // platform/packages/office-xlsx-engine → repo root is three levels up.
     resolve(packageRoot, '..', '..', '..', 'target', 'release', BINARY_NAME),
   ]
   for (const candidate of candidates) {

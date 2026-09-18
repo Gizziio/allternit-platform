@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       path:
-        description: 'Package directory relative to repo root (e.g. packages/@allternit/api-client)'
+        description: 'Package directory relative to repo root (e.g. platform/packages/api-client)'
         required: true
         type: string
       version:
@@ -32,7 +32,7 @@ jobs:
         # typo or misuse can never point the workflow at an arbitrary directory.
         run: |
           case "${{ inputs.path }}" in
-            packages/@allternit/*|sdk/*) ;;
+            platform/packages/*|sdk/*) ;;
             *) echo "::error::refusing to publish from unexpected path: ${{ inputs.path }}"; exit 1 ;;
           esac
           test -f "${{ inputs.path }}/package.json" || { echo "::error::no package.json at ${{ inputs.path }}"; exit 1; }

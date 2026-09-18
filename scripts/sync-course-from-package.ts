@@ -6,7 +6,7 @@
  *
  * Usage:
  *   npx tsx scripts/sync-course-from-package.ts \
- *     --package packages/@allternit/plugin-sdk \
+ *     --package platform/packages/plugin-sdk \
  *     --course-id 14593493 \
  *     --module-title "Module 1: Plugin SDK Architecture"
  *

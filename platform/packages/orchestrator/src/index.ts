@@ -1,4 +1,4 @@
-// packages/@allternit/orchestrator/src/index.ts
+// platform/packages/orchestrator/src/index.ts
 
 export * from './orchestrator.interface.js';
 export { parseCompletionNotes, readCompletionNotes } from './completion-contract.js';

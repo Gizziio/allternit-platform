@@ -2,7 +2,7 @@
 //! catalog **list half** (P5 binding decision 3, spec
 //! `Research/specs/ao-visibility-peers.md`).
 //!
-//! Port source: `packages/@allternit/native-sessions/src/{types,harness,
+//! Port source: `platform/packages/native-sessions/src/{types,harness,
 //! catalog,fingerprint}.ts`. Scope: the `NativeSession` schema, the 27-entry
 //! harness table, the directory/jsonl catalog walkers, and the sha256
 //! fingerprint scheme. **Deferred** (not ported, by binding decision):

@@ -16,7 +16,7 @@ import Foundation
 // ReplyEvent — canonical SSE wire format.
 //
 // Mirrors the `ReplyEvent` discriminated union in
-// packages/@allternit/replies-contract/src/index.ts (single source of truth —
+// platform/packages/replies-contract/src/index.ts (single source of truth —
 // do not hand-model; update this file when the contract package changes).
 //
 // Events flow server → client only, so `Encodable` is intentionally omitted.

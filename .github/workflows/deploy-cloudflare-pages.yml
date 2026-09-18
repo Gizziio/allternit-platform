@@ -15,7 +15,7 @@ on:
       - 'surfaces/platform.allternit.com/**'
       - 'surfaces/allternit-extensions/allternit-office-addin/**'
       - 'surfaces/allternit-extensions/extension-shared/**'
-      - 'packages/@allternit/**'
+      - 'platform/packages/**'
       - 'services/runtime/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
       - 'pnpm-workspace.yaml'

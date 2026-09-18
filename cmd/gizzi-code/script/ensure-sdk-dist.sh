@@ -88,12 +88,12 @@ if [ "$cu_stale" -eq 1 ]; then
   echo "ensure-sdk-dist: computer-use dist rebuilt"
 fi
 
-# ── @allternit/os-contracts (packages/@allternit/os-contracts) ────────────────
+# ── @allternit/os-contracts (platform/packages/os-contracts) ────────────────
 # src/runtime/fabric/* imports '@allternit/os-contracts' (workspace:*). Only
 # its dist is consumable (main/types point at ./dist) and dist is gitignored,
 # so a fresh clone/worktree typechecks with 3x TS2307. Build it when missing
 # or stale, same contract as the SDK blocks above.
-OC_SDK="../../packages/@allternit/os-contracts"
+OC_SDK="../../platform/packages/os-contracts"
 OC_SENTINEL="$OC_SDK/dist/index.js"
 
 if [ ! -d "$OC_SDK/src" ]; then
@@ -107,11 +107,11 @@ if [ ! -f "$OC_SENTINEL" ]; then
   oc_reason="missing $OC_SENTINEL"
 elif find "$OC_SDK/src" -type f -name '*.ts' -newer "$OC_SENTINEL" | grep -q .; then
   oc_stale=1
-  oc_reason="packages/@allternit/os-contracts/src is newer than $OC_SENTINEL"
+  oc_reason="platform/packages/os-contracts/src is newer than $OC_SENTINEL"
 fi
 
 if [ "$oc_stale" -eq 1 ]; then
-  echo "ensure-sdk-dist: rebuilding packages/@allternit/os-contracts dist ($oc_reason)"
+  echo "ensure-sdk-dist: rebuilding platform/packages/os-contracts dist ($oc_reason)"
   (cd "$OC_SDK" && bun run build)
   if [ ! -f "$OC_SENTINEL" ]; then
     echo "ERROR: ensure-sdk-dist: build finished but $OC_SENTINEL is still missing" >&2

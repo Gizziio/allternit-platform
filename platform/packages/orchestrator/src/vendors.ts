@@ -1,4 +1,4 @@
-// packages/@allternit/orchestrator/src/vendors.ts
+// platform/packages/orchestrator/src/vendors.ts
 // Launch matrix for known executor vendors (ADR-0044). Verify flags with --help
 // before first use of a new vendor version — do not guess.
 

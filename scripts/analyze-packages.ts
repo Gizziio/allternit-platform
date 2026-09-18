@@ -10,7 +10,7 @@
  * - Challenge ideas based on code patterns
  *
  * Usage:
- *   npx tsx scripts/analyze-packages.ts [--package packages/@allternit/plugin-sdk]
+ *   npx tsx scripts/analyze-packages.ts [--package platform/packages/plugin-sdk]
  */
 
 import * as fs from 'fs/promises';
@@ -69,7 +69,7 @@ interface ChallengeIdea {
   skills: string[];
 }
 
-const PACKAGE_ROOT = 'packages/@allternit';
+const PACKAGE_ROOT = 'platform/packages';
 
 // Keywords that map to curriculum topics
 const TOPIC_KEYWORDS: Record<string, string[]> = {

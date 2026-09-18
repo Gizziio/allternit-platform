@@ -41,7 +41,7 @@ Build a native SwiftUI iOS client for the Allternit platform with UX parity to t
 
 ## 2. Platform Contracts (verified in the codebase — do not reinvent)
 
-The v1 scaffold invented endpoints that do not exist. The real contracts, confirmed in `services/replies-runtime` and `packages/@allternit/replies-contract`:
+The v1 scaffold invented endpoints that do not exist. The real contracts, confirmed in `services/replies-runtime` and `platform/packages/replies-contract`:
 
 ### Replies / Streaming (SSE)
 | Call | Contract |
@@ -51,7 +51,7 @@ The v1 scaffold invented endpoints that do not exist. The real contracts, confir
 | `GET /v1/replies/:replyId` | Current reduced reply state |
 | `POST /v1/replies/:replyId/cancel` | Cancel an in-flight reply |
 
-**`ReplyEvent` wire types** (`packages/@allternit/replies-contract/src/index.ts:210`):
+**`ReplyEvent` wire types** (`platform/packages/replies-contract/src/index.ts:210`):
 `reply.started`, `reply.item.added`, `reply.text.delta`, `reply.reasoning.delta`, `tool_call.started` / `.progress` / `.completed` / `.failed`, **`artifact.created`**, `citation.added`, `mcp_app.created`, `code.added`, `terminal.added`, `plan.created`, `plan.updated`, `file_op.added`, `reply.item.done`, `reply.completed`, `reply.failed`.
 
 → **Generate the Swift models from this contract package** (single source of truth; the client must never hand-model these).

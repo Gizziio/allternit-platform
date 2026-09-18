@@ -20,12 +20,9 @@ packages:
   - 'infrastructure/*/*'
   - 'infrastructure/*/*/*'
 
-  # Internal SDK packages (being consolidated to platform/)
-  - 'packages/*'
-  - 'packages/@allternit/*'
-  - 'packages/@allternit/*/*'
-  - 'packages/@allternit/*/*/*'
-  - 'packages/@allternit/*/*/*/*'
+  # Internal @allternit/* TS libraries (consolidated into platform/packages/, S3)
+  - 'platform/packages/*'
+  - 'platform/packages/*/*'
 
   # Platform packages
   - 'platform/*'

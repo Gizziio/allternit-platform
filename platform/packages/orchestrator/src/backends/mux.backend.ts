@@ -1,4 +1,4 @@
-// packages/@allternit/orchestrator/src/backends/mux.backend.ts
+// platform/packages/orchestrator/src/backends/mux.backend.ts
 // allternit-mux-backed executor sessions (ADR-0044). Same semantics as the
 // tmux backend — runner-script spawn, verified send, sentinel-file completion,
 // worktree isolation — but the terminal layer is the mux daemon's owned PTYs

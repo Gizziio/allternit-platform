@@ -29,13 +29,13 @@ cp -r .agents/skills/allternit-codebase-to-course ~/YOUR_AGENT/skills/
 
 Then invoke it:
 
-> "Turn `packages/@allternit/plugin-sdk` into an A://Labs module"
+> "Turn `platform/packages/plugin-sdk` into an A://Labs module"
 
 ### Via the automated pipeline
 
 ```bash
 npx tsx scripts/sync-course-from-package.ts \
-  --package packages/@allternit/plugin-sdk \
+  --package platform/packages/plugin-sdk \
   --course-id 14593499 \
   --module-title "ADV Module: Plugin SDK Deep Dive"
 ```

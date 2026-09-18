@@ -2,7 +2,7 @@
 //! actions (A:// §8.14 unification).
 //!
 //! The rule model mirrors the cowork-engine `ApprovalGate`
-//! (`packages/@allternit/cowork-engine/src/approval/gate.ts`): first matching
+//! (`platform/packages/cowork-engine/src/approval/gate.ts`): first matching
 //! rule on (actionType, riskLevel) decides `approve`/`reject`; the default
 //! policy auto-approves low-risk actions. Risk rules decide WHETHER a
 //! protected action needs an approval at all; `cowork_approval_bindings`

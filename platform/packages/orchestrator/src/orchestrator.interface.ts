@@ -1,4 +1,4 @@
-// packages/@allternit/orchestrator/src/orchestrator.interface.ts
+// platform/packages/orchestrator/src/orchestrator.interface.ts
 // Vendor-neutral agent orchestration primitives. See ADR-0044.
 
 export type AgentVendor = 'claude' | 'kimi' | 'codex' | 'agy' | (string & {});

@@ -1,10 +1,10 @@
-// packages/@allternit/orchestrator/test/mux-backend.e2e.mjs
+// platform/packages/orchestrator/test/mux-backend.e2e.mjs
 // End-to-end verification of MuxBackend against a live allternit-mux daemon.
 // Spawns a fake agent (shell script), exercises the full ExecutorBackend
 // surface: spawn → status → send (verified) → tail → watch (sentinel) →
 // footprint → kill. Exits non-zero on any failure.
 //
-// Run: npx tsx packages/@allternit/orchestrator/test/mux-backend.e2e.mjs
+// Run: npx tsx platform/packages/orchestrator/test/mux-backend.e2e.mjs
 
 import { spawn as spawnProc, execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, chmodSync, existsSync } from 'node:fs';

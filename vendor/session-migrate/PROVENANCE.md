@@ -10,7 +10,7 @@ Vendored copy of [xhluca/session-migrate](https://github.com/xhluca/session-migr
 
 session-migrate is the production-grade reader/writer matrix for 18 native coding-agent session formats. Allternit uses it as the **format contract and optional CLI bridge**, not as a live migrator that writes back into canonical native journals.
 
-Allternit’s production path (`packages/@allternit/native-sessions`):
+Allternit’s production path (`platform/packages/native-sessions`):
 
 1. Read-only catalog of every harness (installed or not — missing roots list empty).
 2. Snapshot + new Gizzi session with a first-class `source_ref`.

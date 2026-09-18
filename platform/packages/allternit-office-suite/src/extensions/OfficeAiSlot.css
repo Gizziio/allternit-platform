@@ -1,6 +1,6 @@
 /* OfficeAiSlot — agent panes occupying an app's AI chat section (no tab
  * strip: a single agent pane's own header identifies it).
- * Tokens come from the suite theme (packages/@allternit/allternit-office-suite
+ * Tokens come from the suite theme (platform/packages/allternit-office-suite
  * theme/allternit-office-suite.css) and are overridden by the platform shell. */
 
 .office-ai-slot {
