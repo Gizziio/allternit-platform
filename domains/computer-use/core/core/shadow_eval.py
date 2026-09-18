@@ -215,6 +215,11 @@ class SyntheticTask:
     tree: Any                                   # base AX observation
     turns: List[ScriptedTurn]                   # recorded LLM answers
     fail_targets: List[str] = field(default_factory=list)
+    # Optional per-step observation overrides (task variants with dynamic
+    # observations): trees[i] is the observation for decide step i, with
+    # trees[0] consumed as the pre-step snapshot. When None, _step_trees
+    # derives the sequence from the base tree + recorded fill values.
+    step_trees: Optional[List[Any]] = field(default=None)
 
 
 def _search_task(steps: int) -> SyntheticTask:
@@ -391,7 +396,13 @@ def _patch_inspector(trees: Sequence[Any]) -> Tuple[Any, Callable[[], Any]]:
 
 
 def _step_trees(task: SyntheticTask) -> List[Any]:
-    """Initial tree + one variant per action turn (fill values appear)."""
+    """Initial tree + one variant per action turn (fill values appear).
+
+    Tasks carrying explicit ``step_trees`` (dynamic-observation variants) use
+    them verbatim — derived sequences would flatten the scripted mutations.
+    """
+    if task.step_trees:
+        return [copy.deepcopy(t) for t in task.step_trees]
     trees = [copy.deepcopy(task.tree)]
     pending_value: Optional[Tuple[str, str]] = None
     for turn in task.turns:

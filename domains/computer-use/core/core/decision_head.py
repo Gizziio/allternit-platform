@@ -85,6 +85,12 @@ _OPERATION_ALIASES: Dict[str, str] = {
     "dragdrop": "dragAndDrop",
 }
 
+# Pseudo-option for "the reference policy does not answer this question"
+# (e.g. speculative target menus for operations the recorded policy did not
+# choose). Used by labelled-trace consumers (core/tier_a_traces.py) to mark
+# gold abstention without colliding with any real option string.
+ABSTAIN_OPTION = "__abstain__"
+
 # Boolean gate aliases (goal_satisfied / stuck questions).
 _GATE_ALIASES: Dict[str, str] = {
     "yes": "true", "true": "true", "1": "true",
@@ -517,6 +523,11 @@ class KimiCliHead:
       gates (small menus), pass 2 asks only the chosen operation's target
       menu — 2 subprocess calls per step, smaller menus per pass.
 
+    ``few_shot_block`` optionally carries a pre-rendered exemplar block
+    (selected from train-split Tier A traces, never the held-out eval tasks)
+    injected before ``[STATE]`` — prompt-space distillation; the JSON answer
+    contract is unchanged.
+
     Answers follow a strict JSON contract (question-id -> {answer,
     confidence}); parse failures retry once with a repair prompt, then the
     question records a miss and falls back to a uniform choice — the eval
@@ -532,6 +543,7 @@ class KimiCliHead:
         timeout_s: float = 240.0,
         max_repair_retries: int = 1,
         model_id: str = "kimi-cli",
+        few_shot_block: Optional[str] = None,
     ) -> None:
         self.binary = binary or os.environ.get(_KIMI_BIN_ENV_VAR, "") or "kimi"
         resolved = shutil.which(self.binary)
@@ -550,6 +562,12 @@ class KimiCliHead:
         self.timeout_s = float(timeout_s)
         self.max_repair_retries = int(max_repair_retries)
         self.model_id = model_id + (f":{questioning}" if questioning != "batched" else "")
+        # Optional pre-rendered few-shot exemplar block (prompt-space
+        # distillation from train-split traces; core/kimi_fewshot.py renders
+        # it). Injected before [STATE]; None keeps the zero-shot prompt.
+        self.few_shot_block = few_shot_block
+        if few_shot_block:
+            self.model_id += ":fewshot"
         # Every non-canonical / out-of-vocab answer, for the vocab-miss metric.
         self.vocab_misses: List[Dict[str, Any]] = []
 
@@ -605,9 +623,14 @@ class KimiCliHead:
             "JSON object — no prose, no markdown fences, no explanation.\n"
             if repair_of is not None else ""
         )
+        few_shot = (
+            f"{self.few_shot_block}\n\n"
+            if self.few_shot_block else ""
+        )
         return (
             "You are the shadow decision head for a browser automation loop.\n"
             f"{repair}"
+            f"{few_shot}"
             "[STATE]\n"
             f"{state_text}\n\n"
             "Answer the closed-set questions below. Each answer must be the "
