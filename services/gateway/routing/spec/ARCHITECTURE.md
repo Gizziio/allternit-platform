@@ -1,6 +1,6 @@
 # Allternit Tools Gateway — Architecture
 
-The `allternit-tools-gateway` crate at `api/gateway/routing/` is the IO/tools gateway: a standalone Axum service that is the only permitted path for executing side effects in Allternit.
+The `allternit-tools-gateway` crate at `services/gateway/routing/` is the IO/tools gateway: a standalone Axum service that is the only permitted path for executing side effects in Allternit.
 
 ---
 
@@ -140,7 +140,7 @@ Integration tests live in [`../tests/`](../tests/) and use `axum::extract::Reque
 ## Standalone service layout
 
 ```
-api/gateway/routing/
+services/gateway/routing/
 ├── Cargo.toml              # crate manifest
 ├── README.md               # user-facing overview
 ├── src/

@@ -9,7 +9,7 @@
 
 ## 2.0 ⚠️ WIRE-PROTOCOL CORRECTION (v2.1, verified 2026-07-18)
 
-Liveness verification found that §2's `replies-runtime` contract is **scaffold-only**: `/v1/replies` is an in-memory Express app (`api/services/replies-runtime`, port 4200), not deployed (absent from `fly.toml`/`wrangler.toml`/docker-compose), not mounted in any gateway route table, and called by zero code in the web app. §2's contract remains the **future** target (the typed contract package is real and well-designed); the **live** platform protocol — what the web app uses today, and what this client must speak — is:
+Liveness verification found that §2's `replies-runtime` contract is **scaffold-only**: `/v1/replies` is an in-memory Express app (`services/replies-runtime`, port 4200), not deployed (absent from `fly.toml`/`wrangler.toml`/docker-compose), not mounted in any gateway route table, and called by zero code in the web app. §2's contract remains the **future** target (the typed contract package is real and well-designed); the **live** platform protocol — what the web app uses today, and what this client must speak — is:
 
 | Stage | Endpoint (allternit-api, dev `:8013`, Clerk `auth_middleware`) | Status |
 |---|---|---|
@@ -41,7 +41,7 @@ Build a native SwiftUI iOS client for the Allternit platform with UX parity to t
 
 ## 2. Platform Contracts (verified in the codebase — do not reinvent)
 
-The v1 scaffold invented endpoints that do not exist. The real contracts, confirmed in `api/services/replies-runtime` and `packages/@allternit/replies-contract`:
+The v1 scaffold invented endpoints that do not exist. The real contracts, confirmed in `services/replies-runtime` and `packages/@allternit/replies-contract`:
 
 ### Replies / Streaming (SSE)
 | Call | Contract |
@@ -62,7 +62,7 @@ Web client reference: `surfaces/ai.allternit.com/src/api/conversations.ts` → b
 - `POST ""` create → full `ConversationRecord` (`id`, `title: string|null`, `message_count`, …)
 - `GET /:id/messages` list, `POST /:id/messages` add
 - `POST /:id/fork` — branching (powers edit/retry UX)
-- Backend routers: `api/services/replies-runtime/src/conversations.router.ts`
+- Backend routers: `services/replies-runtime/src/conversations.router.ts`
 
 ### Auth
 - Clerk JWT, sent as `Authorization: Bearer <token>`. The web injects it via `fetch-interceptor.ts` using Clerk's `getToken()` — iOS does the same via the Clerk SDK.

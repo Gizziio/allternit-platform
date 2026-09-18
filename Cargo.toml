@@ -38,7 +38,7 @@ members = [
     "services/orchestration/control-plane/allternit-agent-orchestration/workflows",
     "services/orchestration/policy-service",
     "services/voice",
-    "api/services/workspace-service",
+    "services/workspace-service",
     "services/orchestration/control-plane/unified-registry/registry",
     "domains/agent/allternit-agent-workspace/allternit-agent-workspace",
     "domains/kernel/drivers/allternit-acp-driver/allternit-acp-driver",
@@ -81,7 +81,7 @@ members = [
     "platform/rust-sdk/rust/sdk-functions",
     "platform/rust-sdk/rust/sdk-policy",
     "platform/rust-sdk/rust/sdk-transport",
-    "api/gateway/routing",
+    "services/gateway/routing",
     "platform/types/allternit-substrate",
     "domains/kernel/core/runtime-execution-core",
     "services/orchestration/control-plane/allternit-control/context-router",
@@ -151,7 +151,7 @@ allternit-self-improve = { path = "services/self-improve" }
 allternit-commrails = { path = "commrails" }
 allternit-cowork-runtime = { path = "infrastructure/executor/cowork/cowork/allternit-cowork-runtime" }
 allternit-cowork-scheduler = { path = "infrastructure/executor/cowork/cowork/allternit-cowork-scheduler" }
-allternit-workspace-service = { path = "api/services/workspace-service" }
+allternit-workspace-service = { path = "services/workspace-service" }
 allternit-capsule = { path = "platform/contracts/capsule/capsule-system/allternit-capsule" }
 allternit-capsule-sdk = { path = "platform/contracts/capsule/capsule-system/allternit-capsule-sdk" }
 allternit-canvas-protocol = { path = "platform/protocols/canvas-protocol" }
@@ -246,7 +246,7 @@ marketplace = { path = "platform/rust-sdk/adapters/rust/marketplace" }
 a2ui-types = { path = "platform/types/a2ui-types" }
 
 
-allternit-tools-gateway = { path = "api/gateway/routing" }
+allternit-tools-gateway = { path = "services/gateway/routing" }
 allternit-harness-engineering = { path = "domains/kernel/drivers/harness-engineering" }
 mcp = { path = "mcp/core" }
 mcp-client = { path = "mcp/mcp-client" }

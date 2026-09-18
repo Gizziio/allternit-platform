@@ -1,8 +1,5 @@
 packages:
-  # Top-level command / API packages
-  - 'api/*'
-  - 'api/*/*'
-  - 'api/*/*/*'
+  # Top-level command packages
   - 'bin/*'
   - 'cmd/*'
   - 'cmd/*/*'

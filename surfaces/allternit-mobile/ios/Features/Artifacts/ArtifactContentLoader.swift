@@ -22,7 +22,7 @@ enum ArtifactContentError: Error, LocalizedError, Sendable {
 /// Loads the content of an `ArtifactRecord`.
 ///
 /// The backend has no content-serving endpoint yet — `GET /v1/artifacts/:id`
-/// is a stub that always 404s (api/services/replies-runtime/src/index.ts:42),
+/// is a stub that always 404s (services/replies-runtime/src/index.ts:42),
 /// and the `artifact.created` event itself is the content carrier
 /// (packages/@allternit/replies-contract). So resolution is a fallback chain
 /// over the fields the event can carry, mirroring the web client
