@@ -77,6 +77,23 @@ EOF
   ok "added session-worktree + guard hooks to $KIMI_HOME/config.toml"
 fi
 
+if [ -f "$KIMI_HOME/config.toml" ] && grep -q 'git-discipline-gate\.sh' "$KIMI_HOME/config.toml"; then
+  skip "git-discipline gate already registered in $KIMI_HOME/config.toml"
+else
+  mkdir -p "$KIMI_HOME"; touch "$KIMI_HOME/config.toml"
+  cat >> "$KIMI_HOME/config.toml" <<'EOF'
+
+# Git-discipline gate: a session cannot end while the shared checkout is
+# detached, behind/ahead origin/main, or holding unmerged stale branches
+# (AGENTS.md commandment 6). Runs before the steering Stop consult.
+[[hooks]]
+event = "Stop"
+command = "bash .steering/bin/git-discipline-gate.sh"
+timeout = 60
+EOF
+  ok "added git-discipline Stop gate to $KIMI_HOME/config.toml"
+fi
+
 echo "== Claude Code =="
 if [ -f "$REPO/.claude/settings.json" ]; then
   skip "project .claude/settings.json is committed — active automatically (approve the trust prompt on first run)"
@@ -92,7 +109,8 @@ import json, os, sys
 home = sys.argv[1]
 path = os.path.join(home, "hooks.json")
 stop_entry = {"type": "command", "command": "bash .steering/bin/steer-stop.sh", "timeout": 600}
-gate_entry = {"type": "command", "command": "bash .steering/bin/steer-pre-commit-gate.sh", "timeout": 600}
+gate_entry = {"type": "command", "command": "bash .steering/bin/git-discipline-gate.sh", "timeout": 60}
+commit_gate_entry = {"type": "command", "command": "bash .steering/bin/steer-pre-commit-gate.sh", "timeout": 600}
 wt_entry = {"type": "command", "command": "bash .steering/bin/session-worktree.sh", "timeout": 10}
 guard_entry = {"type": "command", "command": "bash .steering/bin/guard-main-checkout.sh", "timeout": 10}
 cfg = {"hooks": {}}
@@ -101,7 +119,7 @@ if os.path.exists(path):
         cfg = json.load(f)
     cfg.setdefault("hooks", {})
 changed = False
-for event, entry, matcher in (("Stop", stop_entry, None), ("PreToolUse", gate_entry, "Bash|shell"),
+for event, entry, matcher in (("Stop", stop_entry, None), ("PreToolUse", commit_gate_entry, "Bash|shell"),
                               ("UserPromptSubmit", wt_entry, None), ("PreToolUse", guard_entry, "Bash|shell")):
     groups = cfg["hooks"].setdefault(event, [])
     if any(entry["command"].split()[-1] in h.get("command", "")
@@ -114,6 +132,12 @@ for event, entry, matcher in (("Stop", stop_entry, None), ("PreToolUse", gate_en
     groups.append(group)
     changed = True
     print(f"  [ok] added {event} hook to hooks.json")
+# git-discipline gate: deterministic, runs before the steering Stop consult.
+stop_groups = cfg["hooks"].setdefault("Stop", [])
+if not any("git-discipline-gate" in h.get("command", "") for g in stop_groups for h in g.get("hooks", [])):
+    stop_groups.insert(0, {"hooks": [gate_entry]})
+    changed = True
+    print("  [ok] added git-discipline Stop gate to hooks.json (first in Stop order)")
 if changed:
     with open(path, "w") as f:
         json.dump(cfg, f, indent=2)

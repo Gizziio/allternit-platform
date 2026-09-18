@@ -5,6 +5,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash .steering/bin/git-discipline-gate.sh",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "bash .steering/bin/steer-stop.sh",
             "timeout": 600
           }

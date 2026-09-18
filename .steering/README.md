@@ -66,6 +66,27 @@ native `--worktree`, default-on tracked as phase W2):
 
 Tests: `bash .steering/bin/worktree-guard-test.sh`.
 
+## Git-discipline gate (Stop hook)
+
+`git-discipline-gate.sh` runs at every turn end, BEFORE the steering consult
+(it is registered first in Stop order). It runs `scripts/git-discipline-check.sh`
+against the SHARED checkout — resolved via `git worktree list`, so it works when
+a session stops from inside its own worktree — and BLOCKS the stop while the
+checkout has drifted:
+
+- detached HEAD, or not on `main`
+- `main` behind or ahead of `origin/main`
+- unmerged stale branches (beyond branches checked out in live worktrees and
+  branches listed in `.steering/git-discipline-allowlist`)
+
+A dirty working tree does NOT block — the shared checkout may legitimately hold
+another session's in-flight uncommitted work (soft-warn instead). Escape hatch
+for humans/orchestrators: `STEER_GUARD_OFF=1` (same as the other hooks). The
+gate enforces AGENTS.md commandment 6; it is mechanical and never consults an
+agent. Intentional long-lived unmerged branches are recorded one per line in
+`.steering/git-discipline-allowlist` with a reason (see the checkpoint for the
+current entries).
+
 ## Controls
 
 - Kill switch: `touch .steering/off` (delete to re-enable).
