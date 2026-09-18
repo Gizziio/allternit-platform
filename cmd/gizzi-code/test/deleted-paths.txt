@@ -1,7 +1,7 @@
+
 # Repo-relative paths deleted by the dead-code cleanup (branch
 # session/gizzi-p3-inkapp-20260904). Guarded by
 # test/dead-code-guard.test.ts — do not reintroduce.
-
 src/acp/agent.ts
 src/agent/agent.ts
 src/bootstrap/state.d.ts
@@ -995,12 +995,16 @@ src/cli/ui/ink-app/components/keybindings/useKeybinding.ts
 src/cli/ui/ink-app/components/keybindings/useShortcutDisplay.ts
 src/cli/ui/ink-app/components/messages/index.ts
 src/cli/ui/ink-app/components/moreright/useMoreRight.tsx
+src/cli/ui/ink-app/components/permissions/MonitorPermissionRequest/MonitorPermissionRequest.tsx
+src/cli/ui/ink-app/components/permissions/ReviewArtifactPermissionRequest/ReviewArtifactPermissionRequest.tsx
 src/cli/ui/ink-app/components/screens/Doctor.tsx
 src/cli/ui/ink-app/components/screens/ResumeConversation.tsx
 src/cli/ui/ink-app/components/state/AppState.tsx
 src/cli/ui/ink-app/components/state/AppStateStore.ts
 src/cli/ui/ink-app/components/state/onChangeAppState.ts
 src/cli/ui/ink-app/components/state/store.ts
+src/cli/ui/ink-app/components/tasks/MonitorMcpDetailDialog.tsx
+src/cli/ui/ink-app/components/tasks/WorkflowDetailDialog.tsx
 src/cli/ui/ink-app/components/tools/AgentTool/AgentTool.tsx
 src/cli/ui/ink-app/components/tools/AgentTool/UI.tsx
 src/cli/ui/ink-app/components/tools/AgentTool/agentDisplay.ts
@@ -1524,13 +1528,17 @@ src/cli/ui/ink-app/skills/bundled/stuck.ts
 src/cli/ui/ink-app/skills/bundled/updateConfig.ts
 src/cli/ui/ink-app/skills/bundled/verify.ts
 src/cli/ui/ink-app/skills/bundled/verifyContent.ts
+src/cli/ui/ink-app/tasks/LocalWorkflowTask/LocalWorkflowTask.ts
+src/cli/ui/ink-app/tasks/MonitorMcpTask/MonitorMcpTask.ts
 src/cli/ui/ink-app/tools/ListPeersTool/ListPeersTool.ts
 src/cli/ui/ink-app/tools/ListPeersTool/UI.tsx
 src/cli/ui/ink-app/tools/ListPeersTool/constants.ts
 src/cli/ui/ink-app/tools/ListPeersTool/prompt.ts
+src/cli/ui/ink-app/tools/MonitorTool/MonitorTool.ts
 src/cli/ui/ink-app/tools/RemoteTriggerTool/RemoteTriggerTool.ts
 src/cli/ui/ink-app/tools/RemoteTriggerTool/UI.tsx
 src/cli/ui/ink-app/tools/RemoteTriggerTool/prompt.ts
+src/cli/ui/ink-app/tools/ReviewArtifactTool/ReviewArtifactTool.ts
 src/cli/ui/ink-app/tools/ScheduleCronTool/CronCreateTool.ts
 src/cli/ui/ink-app/tools/ScheduleCronTool/CronDeleteTool.ts
 src/cli/ui/ink-app/tools/ScheduleCronTool/CronListTool.ts
@@ -1544,6 +1552,9 @@ src/cli/ui/ink-app/tools/TeamCreateTool/prompt.ts
 src/cli/ui/ink-app/tools/TeamDeleteTool/TeamDeleteTool.ts
 src/cli/ui/ink-app/tools/TeamDeleteTool/UI.tsx
 src/cli/ui/ink-app/tools/TeamDeleteTool/prompt.ts
+src/cli/ui/ink-app/tools/WorkflowTool/WorkflowPermissionRequest.tsx
+src/cli/ui/ink-app/tools/WorkflowTool/WorkflowTool.ts
+src/cli/ui/ink-app/tools/WorkflowTool/constants.ts
 src/cli/ui/ink-app/tools/WorkflowTool/createWorkflowCommand.ts
 src/cli/ui/ink-app/types/global.d.ts
 src/cli/ui/ink-app/types/mcp.ts
@@ -1579,6 +1590,7 @@ src/cli/ui/ink-app/utils/sinks.ts
 src/cli/ui/ink-app/utils/streamJsonStdoutGuard.ts
 src/cli/ui/ink-app/utils/streamlinedTransform.ts
 src/cli/ui/ink-app/utils/telemetry/skillLoadedEvent.ts
+src/cli/ui/ink-app/utils/udsMessaging.ts
 src/cli/ui/ink-app/utils/warningHandler.ts
 src/cli/ui/ink-app/utils/withResolvers.ts
 src/cli/ui/ink-renderer/Ansi.tsx
@@ -1686,6 +1698,8 @@ src/cli/ui/tools.ts
 src/cli/ui/ui.ts
 src/cli/ui/utils/ink-app/utils/xml2js.ts
 src/cli/ui/utils/ink-app/utils/xmlUtils.ts
+src/cli/ui/utils/permissions/PermissionUpdateSchema.ts
+src/cli/ui/utils/settings/settings.ts
 src/cli/ui/utils/xml2js.ts
 src/cli/ui/utils/xmlUtils.ts
 src/cli/update.ts
@@ -1832,6 +1846,7 @@ src/runtime/brand/sanitize.ts
 src/runtime/bus/bus-event.ts
 src/runtime/bus/global.ts
 src/runtime/components/ManagedSettingsSecurityDialog/utils.ts
+src/runtime/components/Markdown.ts
 src/runtime/constants/oauth.ts
 src/runtime/context/context.ts
 src/runtime/context/env/env.ts
@@ -2582,6 +2597,7 @@ src/shared/utils/toolPool.ts
 src/shared/utils/transcriptSearch.ts
 src/shared/utils/treeify.ts
 src/shared/utils/udsClient.ts
+src/shared/utils/udsMessaging.ts
 src/shared/utils/ultraplan/ccrSession.ts
 src/shared/utils/ultraplan/keyword.ts
 src/shared/utils/userPromptKeywords.ts
@@ -2668,7 +2684,3 @@ src/workspace/loader.ts
 src/workspace/types.d.ts
 src/workspace/types.ts
 test/components/WelcomeInfoBox.test.ts
-src/runtime/components/Markdown.ts
-src/cli/ui/utils/permissions/PermissionUpdateSchema.ts
-src/cli/ui/utils/settings/settings.ts
-src/cli/ui/ink-app/utils/udsClient.ts

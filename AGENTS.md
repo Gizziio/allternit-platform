@@ -546,11 +546,11 @@ allternit-commrails steer commit-gate --cwd <dir>
 From gizzi-code, the runtime exposes:
 
 - `ListPeers` (alias `ListAgents`) — discover local agent peers.
-- `SendMessage` (alias `SendMessageToPeer`) — send to a CommRails peer by name, with `uds:` and `bridge:` address support and teammate-mailbox fallback.
+- `SendMessage` (alias `SendMessageToPeer`) — send to a CommRails peer by name, with teammate-mailbox fallback.
 
 ### Enabling CommRails peer mode in gizzi-code
 
-The `UDS_INBOX` bundle feature is disabled in local dev builds. To opt into CommRails peer registration and the new messaging tools:
+CommRails peer registration is default-on (set `GIZZI_ENABLE_RAILS_PEER=0` to opt out). To register and poll the HTTP inbox explicitly:
 
 ```bash
 GIZZI_ENABLE_RAILS_PEER=1 gizzi

@@ -446,8 +446,9 @@ gizzi-code integrates with the Allternit Agent System Rails so any local agent s
 
 `SendMessage.to` accepts:
 - A Rails peer name from `ListPeers` (tries Rails first, falls back to teammate mailbox).
-- `uds:/path/to.sock` for direct UDS delivery.
-- `bridge:<session_id>` for the existing Remote Control inter-session path (requires `UDS_INBOX`).
+
+> HTTP polling of the durable Bus inbox is the only gizzi-code transport; the
+> never-implemented UDS socket variant was removed 2026-09-18.
 
 ### Files
 
@@ -462,7 +463,7 @@ gizzi-code integrates with the Allternit Agent System Rails so any local agent s
 
 ### Enabling
 
-Local dev builds have `UDS_INBOX` disabled. To register as a Rails peer and enable the new tools:
+CommRails peer registration is default-on (set `GIZZI_ENABLE_RAILS_PEER=0` to opt out). To register as a Rails peer and poll the HTTP inbox explicitly:
 
 ```bash
 GIZZI_ENABLE_RAILS_PEER=1 gizzi

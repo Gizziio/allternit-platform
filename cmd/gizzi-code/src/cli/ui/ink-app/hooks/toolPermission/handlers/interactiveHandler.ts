@@ -239,8 +239,8 @@ function handleInteractivePermission(
   //
   // All tools are forwarded — CCR's generic allow/deny modal handles any
   // tool, and can return `updatedInput` when it has a dedicated renderer
-  // (e.g. plan edit). Tools whose local dialog injects fields (ReviewArtifact
-  // `selected`, AskUserQuestion `answers`) tolerate the field being missing
+  // (e.g. plan edit). Tools whose local dialog injects fields
+  // (AskUserQuestion `answers`) tolerate the field being missing
   // so generic remote approval degrades gracefully instead of throwing.
   if (bridgeCallbacks && bridgeRequestId) {
     bridgeCallbacks.sendRequest(
@@ -307,8 +307,8 @@ function handleInteractivePermission(
   //
   // Unlike the bridge block, this still guards on `requiresUserInteraction` —
   // channel replies are pure yes/no with no `updatedInput` path. In practice
-  // the guard is dead code today: all three `requiresUserInteraction` tools
-  // (ExitPlanMode, AskUserQuestion, ReviewArtifact) return `isEnabled()===false`
+  // the guard is dead code today: the `requiresUserInteraction` tools
+  // (ExitPlanMode, AskUserQuestion) return `isEnabled()===false`
   // when channels are configured, so they never reach this handler.
   //
   // Fire-and-forget send: if callTool fails (channel down, tool missing),

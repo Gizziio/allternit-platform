@@ -47,9 +47,6 @@ const RemoteTriggerTool = feature('AGENT_TRIGGERS_REMOTE')
   ? safeRequire('./tools/RemoteTriggerTool/RemoteTriggerTool.js')
       ?.RemoteTriggerTool
   : null
-const MonitorTool = feature('MONITOR_TOOL')
-  ? safeRequire('./tools/MonitorTool/MonitorTool.js')?.MonitorTool
-  : null
 const SendUserFileTool = feature('KAIROS')
   ? safeRequire('./tools/SendUserFileTool/SendUserFileTool.js')?.SendUserFileTool
   : null
@@ -132,15 +129,9 @@ const SnipTool = feature('HISTORY_SNIP')
   ? safeRequire('./tools/SnipTool/SnipTool.js')?.SnipTool
   : null
 const ListPeersTool =
-  feature('UDS_INBOX') || !isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)
+  !isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)
     ? safeRequire('./tools/ListPeersTool/ListPeersTool.js')?.ListPeersTool
     : null
-const WorkflowTool = feature('WORKFLOW_SCRIPTS')
-  ? (() => {
-      safeRequire('./tools/WorkflowTool/bundled/index.js')?.initBundledWorkflows()
-      return safeRequire('./tools/WorkflowTool/WorkflowTool.js')?.WorkflowTool
-    })()
-  : null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import type { ToolPermissionContext } from './Tool.js'
 import { getDenyRuleForTool } from './utils/permissions/permissions.js'
@@ -237,11 +228,9 @@ export function getAllBaseTools(): Tools {
       : []),
     ...(VerifyPlanExecutionTool ? [VerifyPlanExecutionTool] : []),
     ...(process.env.USER_TYPE === 'ant' && REPLTool ? [REPLTool] : []),
-    ...(WorkflowTool ? [WorkflowTool] : []),
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,
     ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
-    ...(MonitorTool ? [MonitorTool] : []),
     BriefTool,
     ...(SendUserFileTool ? [SendUserFileTool] : []),
     ...(PushNotificationTool ? [PushNotificationTool] : []),

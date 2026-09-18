@@ -88,23 +88,9 @@ export async function setup(
     switchSession(asSessionId(customSessionId))
   }
 
-  // --bare / SIMPLE: skip UDS messaging server and teammate snapshot.
+  // --bare / SIMPLE: skip Rails peer registration and teammate snapshot.
   // Scripted calls don't receive injected messages and don't use swarm teammates.
-  // Explicit --messaging-socket-path is the escape hatch (per #23222 gate pattern).
-  if (!isBareMode() || messagingSocketPath !== undefined) {
-    // Start UDS messaging server (Mac/Linux only).
-    // Enabled by default for ants — creates a socket in tmpdir if no
-    // --messaging-socket-path is passed. Awaited so the server is bound
-    // and $GIZZI_MESSAGING_SOCKET is exported before any hook
-    // (SessionStart in particular) can spawn and snapshot process.env.
-    if (feature('UDS_INBOX')) {
-      const m = await import('src/shared/utils/udsMessaging.js')
-      await m.startUdsMessaging(
-        messagingSocketPath ?? m.getDefaultUdsSocketPath(),
-        { isExplicit: messagingSocketPath !== undefined },
-      )
-    }
-
+  if (!isBareMode()) {
     // Register this gizzi-code session as a Rails peer so other local agents
     // can discover and message it. The inbox listener routes incoming
     // envelopes into the command queue as task notifications.
@@ -301,9 +287,7 @@ export async function setup(
   // Background jobs - only critical registrations that must happen before first query
   logForDiagnosticsNoPII('info', 'setup_background_jobs_starting')
   // Bundled skills/plugins are registered in main.tsx before the parallel
-  // getCommands() kick — see comment there. Moved out of setup() because
-  // the await points above (startUdsMessaging, ~20ms) meant getCommands()
-  // raced ahead and memoized an empty bundledSkills list.
+  // getCommands() kick — see comment there.
   if (!isBareMode()) {
     initSessionMemory() // Synchronous - registers hook, gate check happens lazily
     if (feature('CONTEXT_COLLAPSE')) {
