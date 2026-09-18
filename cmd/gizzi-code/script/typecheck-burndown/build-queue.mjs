@@ -18,12 +18,32 @@
 //      break by LOC ascending.
 //   5. Packs batches of 5,000-7,000 LOC (hard cap 7,500). A single file over
 //      1,500 LOC gets a dedicated batch; twin pairs are never split.
+//   6. Quarantines files the burn-down cannot fix type-onlyly (pilot batch
+//      b0001 escalated 16 files, all from three avoidable causes):
+//        a. suspect-malformed — not valid JS/TS grammar (TEMPORARY SHIM stubs
+//           with unclosed function bodies). Detected by a string/comment/
+//           regex/template-aware bracket-pairing scan plus an ESM rule:
+//           `export`/`import` declarations at brace depth > 0 (outside
+//           namespace/declare blocks) mean an enclosing body was never closed.
+//        b. suspect-dead-shim — a relative import specifier that does not
+//           resolve on disk, or resolves only with different casing (TS1261
+//           on case-insensitive filesystems). Fixing needs import-specifier
+//           changes, banned by the type-only burn rule.
+//        c. alias — queued paths sharing one realpath (symlink pairs). One
+//           physical file must burn once: the canonical path (its own
+//           realpath) stays in the queue; symlink aliases are quarantined
+//           with an `aliasOf` note.
+//      Quarantined files are excluded from batches and counted separately.
+//
+// Batches whose entire file list moved to quarantine are kept as retired
+// records (files: [], state/escalated/note preserved) so burn history is not
+// lost; new batches continue numbering after the highest retired id.
 //
 // Output: script/typecheck-burndown/queue.json — deterministic (stable sorts,
 // no timestamps) so re-runs diff cleanly. generatedFrom pins the git SHA.
 
 import { execFileSync } from "node:child_process"
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync, mkdirSync } from "node:fs"
 import { dirname, join, normalize, relative } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
@@ -209,6 +229,316 @@ export function scanQueue() {
   return { queue, excludedCompilerArtifacts, excludedVendored, totalNocheck }
 }
 
+// ── Quarantine check (a): malformed grammar ────────────────────────────────────
+
+// Keywords after which a regex literal or string may legally begin. Used for
+// the regex-vs-division heuristic; deliberately conservative (a word like
+// `from`/`as` is a common identifier, so it only counts for strings, below).
+const LITERAL_KEYWORDS = new Set([
+  "return", "typeof", "case", "in", "of", "do", "else", "void",
+  "delete", "throw", "new", "yield", "await", "instanceof",
+])
+// TS contextual keywords that can precede a string literal (`x as 'a'`,
+// `from 'mod'`, `T satisfies 'x'`) — apostrophe decision only, never regex.
+const STRING_KEYWORDS = new Set([...LITERAL_KEYWORDS, "as", "from", "satisfies"])
+
+// Structural grammar check, string/comment/regex/template-aware. Not a parser:
+// it tokenizes enough of the language to pair (), {}, [] and to locate module
+// keywords, which is exactly what the malformed TEMPORARY SHIM stubs violate
+// (their unclosed function bodies leave `export` declarations at brace depth
+// > 0, and their piled-up trailing closers pair to the wrong openers... or
+// happen to pair cleanly, which is why the export-at-depth rule carries the
+// detection). Returns null when the file passes, else a short reason.
+export function malformedReason(text, isTsx = false) {
+  let i = 0
+  const n = text.length
+  let prev = "" // last significant char in code mode
+  let bangPostfix = false // last emitted "!" was postfix (non-null assertion)
+  let word = "" // identifier chars since the last non-word token
+  let lastWord = "" // previous completed identifier
+  let wordStartPrev = "" // char preceding the current word (`.` access check)
+  let pendingKw = null // completed export/import awaiting its next token
+  let pendingBraceKind = null // "ns" | "declare" — next `{` is namespace/declare block
+  const stack = [] // [{ch, interp, ns, line}] — interp marks a template `${` opener
+
+  const canStartLiteral = () => {
+    if (prev === "!") return !bangPostfix // `x! / y` divides, `! /re/` negates
+    return prev === "" || prev === "`" || LITERAL_KEYWORDS.has(word) ||
+      LITERAL_KEYWORDS.has(lastWord) || "(,=:[&|?{};+-*%^~<>\\".includes(prev)
+  }
+  const canStartString = () =>
+    canStartLiteral() || STRING_KEYWORDS.has(word) || STRING_KEYWORDS.has(lastWord)
+
+  while (i < n) {
+    const c = text[i]
+    // template-literal mode: only backtick, escape, and ${ matter
+    if (stack.length && stack[stack.length - 1].ch === "T") {
+      if (c === "\\") { i += 2; continue }
+      if (c === "`") { stack.pop(); prev = "`"; word = ""; bangPostfix = false; i++; continue }
+      if (c === "$" && text[i + 1] === "{") {
+        stack.push({ ch: "{", interp: true })
+        prev = "{"; word = ""
+        i += 2; continue
+      }
+      i++; continue
+    }
+    // string mode
+    if (stack.length && stack[stack.length - 1].ch === "S") {
+      const q = stack[stack.length - 1].q
+      if (c === "\\") { i += 2; continue }
+      if (c === q) { stack.pop(); prev = q; word = ""; bangPostfix = false }
+      i++; continue
+    }
+    // code mode
+    if (c === " " || c === "\t" || c === "\n" || c === "\r") {
+      if (word) {
+        if ((word === "export" || word === "import") && wordStartPrev !== ".") {
+          pendingKw = { kw: word, depth: stack.filter(e => e.ch === "{").length }
+        }
+        if (word === "namespace") pendingBraceKind = "ns"
+        else if ((word === "module" || word === "global") && lastWord === "declare") {
+          pendingBraceKind = "declare"
+        }
+        lastWord = word
+      }
+      word = ""
+      i++; continue
+    }
+    const c2 = text[i + 1]
+    if (c === "/" && c2 === "/") { while (i < n && text[i] !== "\n") i++; continue }
+    if (c === "/" && c2 === "*") { i += 2; while (i < n && !(text[i] === "*" && text[i + 1] === "/")) i++; i += 2; continue }
+    // regex literal: `/` where an expression can begin, excluding JSX closes
+    // (`</tag`, `/>` in .tsx) and `</` which never starts a real regex
+    const jsxClose = isTsx && (prev === ">" || prev === "}") && /[A-Za-z>]/.test(c2)
+    if (c === "/" && !jsxClose && !(isTsx && c2 === ">") && prev !== "<" && canStartLiteral()) {
+      i++
+      let inClass = false
+      while (i < n) {
+        const rc = text[i]
+        if (rc === "\\") { i += 2; continue }
+        if (rc === "[") inClass = true
+        else if (rc === "]") inClass = false
+        else if (rc === "/" && !inClass) break
+        else if (rc === "\n") break
+        i++
+      }
+      i++ // closing / (or bail position)
+      while (i < n && /[a-z]/i.test(text[i])) i++ // flags
+      prev = "/"; word = ""
+      continue
+    }
+    if (c === '"' || c === "`") {
+      stack.push({ ch: c === "`" ? "T" : "S", q: c })
+      i++; continue
+    }
+    if (c === "'") {
+      // an apostrophe can only open a string where a literal may begin;
+      // elsewhere it is JSX text or a possessive — a code char
+      if (canStartString()) stack.push({ ch: "S", q: c })
+      else { prev = c; word = "" }
+      i++; continue
+    }
+    if (c === "{" || c === "(" || c === "[") {
+      stack.push({ ch: c, ns: c === "{" ? pendingBraceKind : undefined, line: undefined })
+      pendingBraceKind = null
+      prev = c; word = ""
+      i++; continue
+    }
+    if (c === "}" || c === ")" || c === "]") {
+      const top = stack[stack.length - 1]
+      if (!top || top.ch === "T" || top.ch === "S") return `stray closing "${c}"`
+      const open = c === "}" ? "{" : c === ")" ? "(" : "["
+      if (top.ch !== open) return `mismatched "${c}" closes "${top.ch}"`
+      stack.pop()
+      if (c === "}" && top.interp) { prev = "`"; word = ""; bangPostfix = false }
+      else { prev = c; word = "" }
+      i++; continue
+    }
+    if (c === "!") {
+      bangPostfix = /[A-Za-z0-9_$)\]}]/.test(prev)
+      prev = c; word = ""
+      i++; continue
+    }
+    if (/[A-Za-z0-9_$]/.test(c)) {
+      if (word === "") wordStartPrev = prev
+      word += c
+      bangPostfix = false
+      if (word.length > 12) word = word.slice(-12)
+    } else {
+      if (word) {
+        if ((word === "export" || word === "import") && wordStartPrev !== ".") {
+          pendingKw = { kw: word, depth: stack.filter(e => e.ch === "{").length }
+        }
+        if (word === "namespace") pendingBraceKind = "ns"
+        else if ((word === "module" || word === "global") && lastWord === "declare") {
+          pendingBraceKind = "declare"
+        }
+        lastWord = word
+        if (";=(,)&|!?".includes(c)) pendingBraceKind = null
+      }
+      word = ""
+      bangPostfix = false
+    }
+    // export/import declarations are only legal at module top level; inside a
+    // block (and outside namespace/declare blocks, which legitimately nest
+    // them) some enclosing body was never closed — the malformed-shim signature
+    if (pendingKw) {
+      const keyOrMethod = c === ":" || c === "(" // `{ export: 1 }`, `{ export() {} }`
+      const dynamic = pendingKw.kw === "import" && (c === "(" || c === "." || c2 === "(")
+      const inNsBlock = stack.some(e => e.ch === "{" && e.ns)
+      if (!keyOrMethod && !dynamic && pendingKw.depth > 0 && !inNsBlock) {
+        return `${pendingKw.kw} declaration at brace depth ${pendingKw.depth}`
+      }
+      pendingKw = null
+    }
+    prev = c
+    i++
+  }
+  if (stack.length) {
+    const top = stack[stack.length - 1]
+    if (top.ch === "T") return "unterminated template literal"
+    if (top.ch === "S") return "unterminated string literal"
+    return `unclosed "${top.ch}" at end of file`
+  }
+  return null
+}
+
+// ── Quarantine check (b): dead re-export shims ────────────────────────────────
+
+// Relative specifiers that point at assets, not TS modules — unresolvable is
+// expected for these, so they never quarantine.
+const ASSET_SPEC_RE = /\.(css|scss|less|sass|svg|png|jpe?g|gif|webp|ico|wasm|txt|md|ya?ml|csv|sql|html?)$/i
+
+const dirEntryCache = new Map()
+function dirEntries(relDir) {
+  if (!dirEntryCache.has(relDir)) {
+    try {
+      dirEntryCache.set(relDir, new Set(readdirSync(join(ROOT, relDir))))
+    } catch {
+      dirEntryCache.set(relDir, new Set())
+    }
+  }
+  return dirEntryCache.get(relDir)
+}
+
+// Case-sensitive existence: on a case-insensitive FS (macOS), statSync happily
+// confirms `Markdown.ts` when the disk says `markdown.ts` — the TS1261 trap.
+function exactCaseExists(rel) {
+  const parts = rel.split("/")
+  return dirEntries(parts.slice(0, -1).join("/")).has(parts[parts.length - 1])
+}
+
+// Like resolveBase, but distinguishes "does not exist" from "exists with
+// different casing". Returns { hit } | { caseMismatch: true } | {}.
+function resolveBaseExact(base) {
+  const dot = base.lastIndexOf(".")
+  const hasKnownExt = dot > base.lastIndexOf("/") && RESOLVE_EXTENSIONS.includes(base.slice(dot))
+  const stem = hasKnownExt ? base.slice(0, dot) : base
+  const candidates = []
+  if (!hasKnownExt) {
+    for (const e of RESOLVE_EXTENSIONS) candidates.push(base + e)
+  } else {
+    // `.js`/`.mjs`/`.jsx` spec remaps to TS sources
+    for (const e of [".ts", ".tsx"]) candidates.push(stem + e)
+  }
+  for (const e of RESOLVE_EXTENSIONS) candidates.push(stem + e)
+  for (const i of INDEX_FILES) candidates.push(join(stem, i).replace(/\\/g, "/"))
+  let caseMismatch = false
+  for (const c of candidates) {
+    if (!isFile(c)) continue
+    if (!exactCaseExists(c)) { caseMismatch = true; continue }
+    return { hit: c }
+  }
+  return caseMismatch ? { caseMismatch: true } : {}
+}
+
+// Resolve every relative import specifier of a queued file against the disk.
+// Returns { unresolved: [spec...], caseMismatch: [spec...] } — both empty for
+// healthy files. Alias/wildcard specs (`export * as ns from` is still a plain
+// path; glob-like specs simply fail resolution and land in `unresolved`).
+export function deadShimSpecs(rel, text) {
+  const specs = new Set()
+  for (const m of text.matchAll(STATIC_IMPORT_RE)) specs.add(m[1])
+  for (const m of text.matchAll(DYNAMIC_IMPORT_RE)) specs.add(m[1])
+  const unresolved = []
+  const caseMismatch = []
+  for (const spec of specs) {
+    if (!spec.startsWith(".")) continue
+    if (ASSET_SPEC_RE.test(spec)) continue
+    const base = normalize(join(dirname(rel), spec)).replace(/\\/g, "/")
+    const r = resolveBaseExact(base)
+    if (r.caseMismatch) caseMismatch.push(spec)
+    else if (!r.hit) unresolved.push(spec)
+  }
+  unresolved.sort()
+  caseMismatch.sort()
+  return { unresolved, caseMismatch }
+}
+
+// ── Quarantine check (c): symlink alias pairs ──────────────────────────────────
+
+// Groups queued paths by realpath. Returns { canonical: [paths kept in the
+// queue], aliases: [{path, aliasOf}] } — one physical file burns once, so a
+// symlink that resolves to another queued file is quarantined as an alias of
+// the canonical path (a path that is its own realpath wins; tie-break lexical).
+function splitAliases(queueFiles) {
+  const byReal = new Map()
+  for (const f of queueFiles) {
+    const rp = realpathSync(join(ROOT, f.path))
+    if (!byReal.has(rp)) byReal.set(rp, [])
+    byReal.get(rp).push(f.path)
+  }
+  const aliases = []
+  const canonical = []
+  for (const paths of byReal.values()) {
+    paths.sort()
+    if (paths.length === 1) {
+      canonical.push(paths[0])
+      continue
+    }
+    const self = paths.filter(p => realpathSync(join(ROOT, p)) === join(ROOT, p))
+    const keep = self.length > 0 ? self.sort()[0] : paths[0]
+    canonical.push(keep)
+    for (const p of paths) {
+      if (p !== keep) aliases.push({ path: p, aliasOf: keep })
+    }
+  }
+  return { canonical: canonical.sort(), aliases }
+}
+
+// Runs the full quarantine pipeline over the live scan. Shared by buildQueue
+// and the guard test: { kept: [{path, loc}], quarantined: [entry...] }.
+export function scanQuarantined() {
+  const { queue } = scanQueue()
+  const { canonical, aliases } = splitAliases(queue)
+  const quarantined = []
+  for (const a of aliases) {
+    quarantined.push({ path: a.path, reason: "alias", aliasOf: a.aliasOf })
+  }
+  const kept = []
+  for (const rel of canonical) {
+    const f = queue.find(q => q.path === rel)
+    const text = readFileSync(join(ROOT, rel), "utf8")
+    const malformed = malformedReason(text, rel.endsWith(".tsx"))
+    if (malformed) {
+      quarantined.push({ path: rel, reason: "suspect-malformed", detail: malformed })
+      continue
+    }
+    const dead = deadShimSpecs(rel, text)
+    if (dead.unresolved.length > 0 || dead.caseMismatch.length > 0) {
+      const parts = []
+      if (dead.unresolved.length > 0) parts.push(`unresolved: ${dead.unresolved.join(", ")}`)
+      if (dead.caseMismatch.length > 0) parts.push(`case-mismatch: ${dead.caseMismatch.join(", ")}`)
+      quarantined.push({ path: rel, reason: "suspect-dead-shim", detail: parts.join("; ") })
+      continue
+    }
+    kept.push(f)
+  }
+  kept.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+  quarantined.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+  return { kept, quarantined }
+}
+
 // ── Dependency graph + leaf-first ordering ─────────────────────────────────────
 
 function buildGraph(queueFiles) {
@@ -264,17 +594,32 @@ function findTwins(queueFiles) {
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
+// Loads the committed queue.json (if any) so batch history (DONE state, burned
+// counts, escalations, notes) survives regeneration. Batches whose entire file
+// list moved to quarantine retire to a zero-file record instead of vanishing.
+function loadPreviousBatches() {
+  try {
+    const prev = JSON.parse(readFileSync(OUT_FILE, "utf8"))
+    return Array.isArray(prev.batches) ? prev.batches : []
+  } catch {
+    return []
+  }
+}
+
 export function buildQueue() {
   const { queue, excludedCompilerArtifacts, excludedVendored, totalNocheck } = scanQueue()
-  const edges = buildGraph(queue)
-  const sizes = closureSizes(queue, edges)
-  const twinOf = findTwins(queue)
-  const byPath = new Map(queue.map(f => [f.path, f]))
+  const { kept, quarantined } = scanQuarantined()
+  const quarantinedPaths = new Set(quarantined.map(q => q.path))
+
+  const edges = buildGraph(kept)
+  const sizes = closureSizes(kept, edges)
+  const twinOf = findTwins(kept)
+  const byPath = new Map(kept.map(f => [f.path, f]))
 
   // Group into twin units so pairs stay adjacent (runtime before ink-app).
   const units = []
   const claimed = new Set()
-  for (const f of queue) {
+  for (const f of kept) {
     if (claimed.has(f.path)) continue
     if (twinOf.has(f.path)) {
       const ink = byPath.get(twinOf.get(f.path))
@@ -342,7 +687,6 @@ export function buildQueue() {
   function mkBatch(files, loc) {
     return { id: "", files: files.map(f => f.path), loc, twins: [], state: "NEW" }
   }
-  batches.forEach((b, i) => (b.id = `b${String(i + 1).padStart(4, "0")}`))
 
   // Record twin pairs per batch (runtime path -> ink-app path), batch order.
   for (const batch of batches) {
@@ -354,20 +698,71 @@ export function buildQueue() {
     }
   }
 
+  // Retire fully-quarantined historical batches, carrying their record over.
+  // Already-retired records (files: []) carry forward verbatim so re-runs are
+  // idempotent.
+  const retired = []
+  for (const old of loadPreviousBatches()) {
+    const hasHistory = old.state !== "NEW" || old.escalated || old.note !== undefined
+    if (!hasHistory) continue
+    if (old.files.length === 0) {
+      retired.push({ ...old })
+      continue
+    }
+    if (old.files.every(f => quarantinedPaths.has(f))) {
+      retired.push({
+        id: old.id,
+        files: [],
+        loc: 0,
+        twins: [],
+        state: old.state,
+        burnedFiles: old.burnedFiles,
+        burnedLoc: old.burnedLoc,
+        escalated: old.escalated,
+        note: old.note,
+      })
+    }
+  }
+  retired.sort((a, b) => (a.id < b.id ? -1 : 1))
+  const retiredCount = retired.length
+  batches.forEach((b, i) => (b.id = `b${String(i + 1 + retiredCount).padStart(4, "0")}`))
+
+  // Zero-importer files (informational only — many are entrypoints): counted
+  // over the packed queue via the intra-queue dependency graph.
+  const importedBy = new Set()
+  for (const deps of edges.values()) {
+    for (const d of deps) importedBy.add(d)
+  }
+  const zeroImporter = kept.filter(f => !importedBy.has(f.path)).length
+
   const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT }).toString().trim()
-  const totalQueueLoc = queue.reduce((n, f) => n + f.loc, 0)
+  const totalQueueLoc = kept.reduce((n, f) => n + f.loc, 0)
+  const byReason = {}
+  for (const q of quarantined) byReason[q.reason] = (byReason[q.reason] ?? 0) + 1
+  // Burn-accounting baseline: the handwritten population the queue accounts
+  // for. live nocheck files + recorded burns must always equal this number —
+  // a header removed without recording its burn breaks the identity.
+  const totalBurned = retired.reduce(
+    (n, b) => n + (typeof b.burnedFiles === "number" ? b.burnedFiles : 0),
+    0,
+  )
   return {
     version: 1,
     generatedFrom: sha,
-    batchCount: batches.length,
+    batchCount: retired.length + batches.length,
     stats: {
       totalNocheck: totalNocheck,
       excludedCompilerArtifacts: excludedCompilerArtifacts,
       excludedVendored: excludedVendored,
-      totalQueueFiles: queue.length,
+      totalQueueFiles: kept.length,
       totalQueueLoc: totalQueueLoc,
+      quarantined: quarantined.length,
+      quarantinedByReason: byReason,
+      zeroImporter: zeroImporter,
+      totalAccounted: kept.length + quarantined.length + totalBurned,
     },
-    batches,
+    batches: [...retired, ...batches],
+    quarantined,
   }
 }
 
@@ -376,12 +771,18 @@ if (isMain) {
   const result = buildQueue()
   mkdirSync(OUT_DIR, { recursive: true })
   writeFileSync(OUT_FILE, JSON.stringify(result, null, 2) + "\n")
-  const locs = result.batches.map(b => b.loc)
+  const active = result.batches.filter(b => b.files.length > 0)
+  const locs = active.map(b => b.loc)
   const min = Math.min(...locs)
   const max = Math.max(...locs)
   console.log(
     `queue.json: ${result.stats.totalQueueFiles} files, ${result.stats.totalQueueLoc} LOC, ` +
       `${result.batchCount} batches (loc min ${min} / max ${max})`,
+  )
+  console.log(
+    `quarantined: ${result.stats.quarantined} ` +
+      `(${Object.entries(result.stats.quarantinedByReason).map(([k, v]) => `${k} ${v}`).join(", ")}), ` +
+      `zero-importer ${result.stats.zeroImporter}`,
   )
   console.log(
     `excluded: ${result.stats.excludedCompilerArtifacts} compiler artifacts, ` +
