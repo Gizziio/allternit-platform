@@ -2693,3 +2693,4 @@ src/cli/ui/ink-app/tools/TerminalCaptureTool/prompt.ts
 src/cli/ui/ink-app/tools/VerifyPlanExecutionTool/constants.ts
 src/cli/ui/ink-app/services/skillSearch/featureCheck.ts
 src/cli/ui/ink-app/services/skillSearch/remoteSkillState.ts
+src/cli/ui/ink-app/services/skillSearch/telemetry.ts
