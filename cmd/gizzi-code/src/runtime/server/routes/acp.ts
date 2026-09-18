@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ACP (Agent Connection Protocol) Server Routes
  * 
@@ -424,9 +423,11 @@ async function spawnAcpAgentSdk({ connectionId, connection, command, args, env, 
     connection.permissionSessionId = Identifier.ascending("session")
     proc.stderr?.on("data", (data: Buffer) => log.warn("acp_agent_stderr", { connectionId, data: data.toString().slice(0, 500) }))
 
+    // TODO(types): Readable.toWeb types stdout as ReadableStream<any>;
+    // ndJsonStream needs ReadableStream<Uint8Array>.
     const stream = ndJsonStream(
       Writable.toWeb(proc.stdin!) as WritableStream<Uint8Array>,
-      Readable.toWeb(proc.stdout!) as ReadableStream<Uint8Array>,
+      Readable.toWeb(proc.stdout!) as unknown as ReadableStream<Uint8Array>,
     )
     const client = {
       async sessionUpdate(params: unknown) { connection.lastActivity = new Date(); connection.updates?.push(params) },

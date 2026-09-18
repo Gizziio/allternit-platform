@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import type { CommandResultDisplay } from '../../commands';
 import { DesktopHandoff } from '../../components/DesktopHandoff';

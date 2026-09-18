@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Enhanced CronService with SQLite Persistence
  * 
@@ -27,6 +26,7 @@ import type {
   CreateJobInput,
   UpdateJobInput,
   JobStatus,
+  JobType,
   CronServiceConfig,
   CronEvent,
   DaemonStatus,
@@ -67,6 +67,7 @@ const DEFAULT_CONFIG: Required<CronServiceConfig> = {
   maxConcurrentJobs: 10,
   defaultTimeoutSeconds: 300,  // 5 minutes
   defaultMaxRetries: 0,
+  agentQueue: undefined,
   onJobExecute: async () => {},
   onJobComplete: async () => {},
   onJobError: async () => {},
@@ -568,7 +569,9 @@ export const CronService = {
       await state.config.onJobExecute(job, run);
 
       // Execute based on job type
-      switch (job.type) {
+      // TODO(types): CronJob union omits VaultJob even though the daemon
+      // registers vault jobs at runtime — cast until the union is widened.
+      switch (job.type as JobType) {
         case "shell":
           await this._executeShell(job, run, controller.signal);
           break;

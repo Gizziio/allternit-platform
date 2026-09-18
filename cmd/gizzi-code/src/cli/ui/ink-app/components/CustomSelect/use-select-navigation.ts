@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   useCallback,
   useEffect,
@@ -10,6 +9,15 @@ import {
 import { isDeepStrictEqual } from 'util'
 import OptionMap from './option-map.js'
 import type { OptionWithDescription } from './select.js'
+
+// TODO(types): the repo's permissive ambient react declarations
+// (src/types/react.d.ts) type useReducer without the optional initializer
+// argument — mirror the real 3-arg signature (same runtime function).
+const useReducerWithInit: <S, I, A>(
+  reducer: (state: S, action: A) => S,
+  initializerArg: I,
+  initializer: (arg: I) => S,
+) => [S, (action: A) => void] = useReducer as never
 
 type State<T> = {
   /**
@@ -510,7 +518,7 @@ export function useSelectNavigation<T>({
   onFocus,
   focusValue,
 }: UseSelectNavigationProps<T>): SelectNavigation<T> {
-  const [state, dispatch] = useReducer(
+  const [state, dispatch] = useReducerWithInit(
     reducer<T>,
     {
       visibleOptionCount,
