@@ -131,6 +131,14 @@ byoc = [
     "azure-mgmt-resource>=23.0.0",
 ]
 
+# Shadow-mode local policy head (core/decision_head.py): mlx-lm direct-logit
+# head (Qwen3.5-4B class). Optional and lazily imported — the package imports
+# and the full test suite pass without it (MockHead covers tests/evals).
+# mlx is Apple-silicon only, matching the shadow head's fully-local target.
+shadow-head = [
+    "mlx-lm>=0.24.0; platform_machine=='arm64' and platform_system=='Darwin'",
+]
+
 # All dependencies (browser + desktop + operator)
 all = [
     "playwright>=1.40.0",
