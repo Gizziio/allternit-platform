@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useRef } from 'react'
 
 // Hook to handle the transition to red when tokens stop flowing.

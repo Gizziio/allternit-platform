@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Transport Interface
  * TEMPORARY SHIM

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Cached MC config stub
  */

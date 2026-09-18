@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Query source constants
  * TEMPORARY SHIM

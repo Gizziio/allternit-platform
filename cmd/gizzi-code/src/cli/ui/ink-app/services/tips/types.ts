@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tips types stub
  */

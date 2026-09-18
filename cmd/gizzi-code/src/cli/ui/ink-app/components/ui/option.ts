@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function moduleExport(): void {
   // Not yet implemented
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * User-Agent string helpers.
  *

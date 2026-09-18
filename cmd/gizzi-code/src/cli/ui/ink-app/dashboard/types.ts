@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Dashboard types — the UI is source-agnostic.
  *

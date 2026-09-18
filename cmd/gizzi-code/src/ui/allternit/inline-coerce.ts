@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function inlineText(value: unknown): string {
   if (value == null || typeof value === "boolean") return ""
   if (typeof value === "string" || typeof value === "number" || typeof value === "bigint") return String(value)

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * If the first line of a bash command is a `# comment` (not a `#!` shebang),
  * return the comment text stripped of the `#` prefix. Otherwise undefined.

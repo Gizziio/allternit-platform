@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Generated Settings Types
  * Auto-generated from settings schemas

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Permission result types - re-export from shared
  */

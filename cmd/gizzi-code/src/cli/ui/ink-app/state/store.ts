@@ -1,4 +1,3 @@
-// @ts-nocheck
 type Listener = () => void
 type OnChange<T> = (args: { newState: T; oldState: T }) => void
 

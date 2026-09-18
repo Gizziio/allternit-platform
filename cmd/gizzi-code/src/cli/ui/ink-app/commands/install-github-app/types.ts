@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * GitHub App installation types
  * TEMPORARY SHIM

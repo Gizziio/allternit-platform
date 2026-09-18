@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react'
 import { major, minor, patch } from 'semver'
 

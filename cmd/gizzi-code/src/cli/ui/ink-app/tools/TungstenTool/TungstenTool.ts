@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function TungstenTool_ts(): void {
   // Not yet implemented
 }

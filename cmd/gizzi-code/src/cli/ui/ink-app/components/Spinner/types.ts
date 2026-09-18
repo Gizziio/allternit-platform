@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Spinner Types
  * TEMPORARY SHIM

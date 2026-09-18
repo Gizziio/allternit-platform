@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Worktree mode is now unconditionally enabled for all users.
  *

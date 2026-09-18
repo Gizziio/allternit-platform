@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Session ID tag translation helpers for the CCR v2 compat layer.
  *

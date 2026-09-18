@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Discover skills prompt stub
  */

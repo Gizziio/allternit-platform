@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Workflow Tool Constants
  * TEMPORARY SHIM

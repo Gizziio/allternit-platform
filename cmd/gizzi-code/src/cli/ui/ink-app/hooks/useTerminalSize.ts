@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useContext } from 'react'
 import {
   type TerminalSize,

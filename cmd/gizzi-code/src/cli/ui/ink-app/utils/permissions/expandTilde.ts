@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { homedir } from 'os'
 
 /**

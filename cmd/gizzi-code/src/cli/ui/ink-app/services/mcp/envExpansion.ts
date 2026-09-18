@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Shared utilities for expanding environment variables in MCP server configurations
  */

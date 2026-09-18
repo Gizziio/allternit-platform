@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Pure key dispatcher for the /bots pane (Phase B5). BotsPaneScreen's
  * useInput funnels list-focus keys through here; unit tests drive the same

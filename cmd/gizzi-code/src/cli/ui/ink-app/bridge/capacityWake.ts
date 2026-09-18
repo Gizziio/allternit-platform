@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Shared capacity-wake primitive for bridge poll loops.
  *

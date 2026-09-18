@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Holds beta memoization caches so they can be cleared without creating an
  * import cycle between auth.ts and betas.ts.

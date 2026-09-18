@@ -1,4 +1,3 @@
-// @ts-nocheck
 export const LSP_TOOL_NAME = 'LSP' as const
 
 export const DESCRIPTION = `Interact with Language Server Protocol (LSP) servers to get code intelligence features.

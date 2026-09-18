@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Types extracted to src/types/permissions.ts to break import cycles
 import type {
   PermissionAllowDecision,

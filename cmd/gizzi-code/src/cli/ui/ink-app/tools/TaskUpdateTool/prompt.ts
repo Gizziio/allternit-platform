@@ -1,4 +1,3 @@
-// @ts-nocheck
 export const DESCRIPTION = 'Update a task in the task list'
 
 export const PROMPT = `Use this tool to update a task in the task list.
