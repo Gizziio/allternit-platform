@@ -85,18 +85,6 @@ const briefToolModule =
   feature('KAIROS') || feature('KAIROS_BRIEF')
     ? (require('../tools/BriefTool/BriefTool.js') as typeof import('../tools/BriefTool/BriefTool.js'))
     : null
-const DISCOVER_SKILLS_TOOL_NAME: string | null = feature(
-  'EXPERIMENTAL_SKILL_SEARCH',
-)
-  ? (
-      require('../tools/DiscoverSkillsTool/prompt.js') as typeof import('../tools/DiscoverSkillsTool/prompt.js')
-    ).DISCOVER_SKILLS_TOOL_NAME
-  : null
-// Capture the module (not .isSkillSearchEnabled directly) so spyOn() in tests
-// patches what we actually call — a captured function ref would point past the spy.
-const skillSearchFeatureCheck = feature('EXPERIMENTAL_SKILL_SEARCH')
-  ? (require('../services/skillSearch/featureCheck.js') as typeof import('../services/skillSearch/featureCheck.js'))
-  : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 import type { OutputStyleConfig } from './outputStyles.js'
 import { CYBER_RISK_INSTRUCTION } from './cyberRiskInstruction.js'
@@ -322,27 +310,6 @@ function getAgentToolSection(): string {
 }
 
 /**
- * Guidance for the skill_discovery attachment ("Skills relevant to your
- * task:") and the DiscoverSkills tool. Shared between the main-session
- * getUsingYourToolsSection bullet and the subagent path in
- * enhanceSystemPromptWithEnvDetails — subagents receive skill_discovery
- * attachments (post #22830) but don't go through getSystemPrompt, so
- * without this they'd see the reminders with no framing.
- *
- * feature() guard is internal — external builds DCE the string literal
- * along with the DISCOVER_SKILLS_TOOL_NAME interpolation.
- */
-function getDiscoverSkillsGuidance(): string | null {
-  if (
-    feature('EXPERIMENTAL_SKILL_SEARCH') &&
-    DISCOVER_SKILLS_TOOL_NAME !== null
-  ) {
-    return `Relevant skills are automatically surfaced each turn as "Skills relevant to your task:" reminders. If you're about to do something those don't cover — a mid-task pivot, an unusual workflow, a multi-step plan — call ${DISCOVER_SKILLS_TOOL_NAME} with a specific description of what you're doing. Skills already visible or loaded are filtered automatically. Skip this if the surfaced skills already cover your next action.`
-  }
-  return null
-}
-
-/**
  * Session-variant guidance that would fragment the cacheScope:'global'
  * prefix if placed before SYSTEM_PROMPT_DYNAMIC_BOUNDARY. Each conditional
  * here is a runtime bit that would otherwise multiply the Blake2b prefix
@@ -383,11 +350,6 @@ function getSessionSpecificGuidanceSection(
       : []),
     hasSkills
       ? `/<skill-name> (e.g., /commit) is shorthand for users to invoke a user-invocable skill. When executed, the skill gets expanded to a full prompt. Use the ${SKILL_TOOL_NAME} tool to execute them. IMPORTANT: Only use ${SKILL_TOOL_NAME} for skills listed in its user-invocable skills section - do not guess or use built-in CLI commands.`
-      : null,
-    DISCOVER_SKILLS_TOOL_NAME !== null &&
-    hasSkills &&
-    enabledTools.has(DISCOVER_SKILLS_TOOL_NAME)
-      ? getDiscoverSkillsGuidance()
       : null,
     hasAgentTool &&
     feature('VERIFICATION_AGENT') &&
@@ -775,24 +737,10 @@ export async function enhanceSystemPromptWithEnvDetails(
 - In your final response, share file paths (always absolute, never relative) that are relevant to the task. Include code snippets only when the exact text is load-bearing (e.g., a bug you found, a function signature the caller asked for) — do not recap code you merely read.
 - For clear communication with the user the assistant MUST avoid using emojis.
 - Do not use a colon before tool calls. Text like "Let me read the file:" followed by a read tool call should just be "Let me read the file." with a period.`
-  // Subagents get skill_discovery attachments (prefetch.ts runs in query(),
-  // no agentId guard since #22830) but don't go through getSystemPrompt —
-  // surface the same DiscoverSkills framing the main session gets. Gated on
-  // enabledToolNames when the caller provides it (runAgent.ts does).
-  // AgentTool.tsx:768 builds the prompt before assembleToolPool:830 so it
-  // omits this param — `?? true` preserves guidance there.
-  const discoverSkillsGuidance =
-    feature('EXPERIMENTAL_SKILL_SEARCH') &&
-    skillSearchFeatureCheck?.isSkillSearchEnabled() &&
-    DISCOVER_SKILLS_TOOL_NAME !== null &&
-    (enabledToolNames?.has(DISCOVER_SKILLS_TOOL_NAME) ?? true)
-      ? getDiscoverSkillsGuidance()
-      : null
   const envInfo = await computeEnvInfo(model, additionalWorkingDirectories)
   return [
     ...existingSystemPrompt,
     notes,
-    ...(discoverSkillsGuidance !== null ? [discoverSkillsGuidance] : []),
     envInfo,
   ]
 }
