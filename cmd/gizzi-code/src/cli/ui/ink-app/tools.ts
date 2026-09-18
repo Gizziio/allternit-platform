@@ -111,10 +111,6 @@ import { feature } from 'bun:bundle'
 const CtxInspectTool = feature('CONTEXT_COLLAPSE')
   ? safeRequire('./tools/CtxInspectTool/CtxInspectTool.js')?.CtxInspectTool
   : null
-const TerminalCaptureTool = feature('TERMINAL_PANEL')
-  ? safeRequire('./tools/TerminalCaptureTool/TerminalCaptureTool.js')
-      ?.TerminalCaptureTool
-  : null
 const WebBrowserTool = feature('WEB_BROWSER_TOOL')
   ? safeRequire('./tools/WebBrowserTool/WebBrowserTool.js')?.WebBrowserTool
   : null
@@ -213,7 +209,6 @@ export function getAllBaseTools(): Tools {
       ? [TaskCreateTool, TaskGetTool, TaskUpdateTool, TaskListTool]
       : []),
     ...(CtxInspectTool ? [CtxInspectTool] : []),
-    ...(TerminalCaptureTool ? [TerminalCaptureTool] : []),
     ...(isEnvTruthy(process.env.ENABLE_LSP_TOOL) ? [LSPTool] : []),
     ...(isWorktreeModeEnabled() ? [EnterWorktreeTool, ExitWorktreeTool] : []),
     getSendMessageTool(),

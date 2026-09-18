@@ -25,11 +25,6 @@ import { YOLO_CLASSIFIER_TOOL_NAME } from './yoloClassifier.js'
 // Ant-only tool names: conditional require so Bun can DCE these in external builds.
 // Gates mirror tools.ts. Keeps the tool name strings out of cli.js.
 /* eslint-disable @typescript-eslint/no-require-imports */
-const TERMINAL_CAPTURE_TOOL_NAME = feature('TERMINAL_PANEL')
-  ? (
-      require('../../../cli/ui/ink-app/context/prompt.js') as typeof import('../../../cli/ui/ink-app/context/prompt.js')
-    ).TERMINAL_CAPTURE_TOOL_NAME
-  : null
 const VERIFY_PLAN_EXECUTION_TOOL_NAME =
   process.env.GIZZI_CODE_VERIFY_PLAN === 'true'
     ? (
@@ -75,7 +70,6 @@ const SAFE_YOLO_ALLOWLISTED_TOOLS = new Set([
   // Misc safe
   SLEEP_TOOL_NAME,
   // Ant-only safe tools (gates mirror tools.ts)
-  ...(TERMINAL_CAPTURE_TOOL_NAME ? [TERMINAL_CAPTURE_TOOL_NAME] : []),
   ...(VERIFY_PLAN_EXECUTION_TOOL_NAME ? [VERIFY_PLAN_EXECUTION_TOOL_NAME] : []),
   // Internal classifier tool
   YOLO_CLASSIFIER_TOOL_NAME,
