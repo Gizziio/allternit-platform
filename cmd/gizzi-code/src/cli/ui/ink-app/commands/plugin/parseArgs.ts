@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Parse plugin subcommand arguments into structured commands
 export type ParsedCommand =
   | { type: 'menu' }

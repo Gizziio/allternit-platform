@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { BuiltInAgentDefinition } from '../loadAgentsDir.js'
 
 const STATUSLINE_SYSTEM_PROMPT = `You are a status line setup agent for Gizzi. Your job is to create or update the statusLine command in the user's Gizzi settings.
@@ -132,7 +131,12 @@ Guidelines:
   Also ensure that the user is informed that they can ask Gizzi to continue to make changes to the status line.
 `
 
-export const STATUSLINE_SETUP_AGENT: BuiltInAgentDefinition = {
+// TODO(types): BuiltInAgentDefinition (../loadAgentsDir.js, another batch's
+// file) does not declare `model`/`color` yet; intersect locally until it does.
+export const STATUSLINE_SETUP_AGENT: BuiltInAgentDefinition & {
+  model: string
+  color: string
+} = {
   agentType: 'statusline-setup',
   whenToUse:
     "Use this agent to configure the user's Gizzi status line setting.",

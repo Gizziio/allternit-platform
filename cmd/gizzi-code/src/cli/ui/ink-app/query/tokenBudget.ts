@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getBudgetContinuationMessage } from '../utils/tokenBudget.js'
 
 const COMPLETION_THRESHOLD = 0.9

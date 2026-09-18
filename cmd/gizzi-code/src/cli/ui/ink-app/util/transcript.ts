@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Locale } from "@/shared/util/locale"
 
 // Local type definitions (SDK exports these as unknown)

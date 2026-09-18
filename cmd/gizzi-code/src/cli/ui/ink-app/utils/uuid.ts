@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { randomBytes, type UUID } from 'crypto'
 import type { AgentId } from './../types/ids.ts'
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createStore } from '../../state/store.js'
 
 /**

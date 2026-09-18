@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getLocalMonthYear } from './../../constants/common.ts'
 
 export const WEB_SEARCH_TOOL_NAME = 'WebSearch'

@@ -1,8 +1,9 @@
-// @ts-nocheck
 import { randomUUID } from 'crypto';
 import { useCallback, useRef, useState } from 'react';
 import type { TranscriptShareResponse } from './TranscriptSharePrompt';
-import type { FeedbackSurveyResponse } from './utils';
+// TODO(types): './utils' (TEMPORARY SHIM) does not export this yet; define
+// locally until the shim grows the real export.
+type FeedbackSurveyResponse = 'dismissed' | 'bad' | 'fine' | 'good';
 type SurveyState = 'closed' | 'open' | 'thanks' | 'transcript_prompt' | 'submitting' | 'submitted';
 type UseSurveyStateOptions = {
   hideThanksAfterMs: number;

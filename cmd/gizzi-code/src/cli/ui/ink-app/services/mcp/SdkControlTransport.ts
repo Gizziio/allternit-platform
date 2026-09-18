@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * SDK MCP Transport Bridge
  *

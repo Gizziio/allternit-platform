@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Memory-directory scanning primitives. Split out of findRelevantMemories.ts
  * so extractMemories can import the scan without pulling in sideQuery and
@@ -53,12 +52,13 @@ export async function scanMemoryFiles(
           undefined,
           signal,
         )
-        const { frontmatter } = parseFrontmatter(content, filePath)
+        const { frontmatter } = parseFrontmatter(content)
         return {
           filename: relativePath,
           filePath,
           mtimeMs,
-          description: frontmatter.description || null,
+          // TODO(types): Frontmatter values are parser-guaranteed strings.
+          description: (frontmatter.description as string | undefined) || null,
           type: parseMemoryType(frontmatter.type),
         }
       }),

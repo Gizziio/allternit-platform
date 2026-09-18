@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { tui } from "@/cli/ui/ink-app/app"

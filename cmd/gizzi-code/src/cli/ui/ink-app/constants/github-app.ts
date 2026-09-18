@@ -1,4 +1,3 @@
-// @ts-nocheck
 export const PR_TITLE = 'Add Gizzi Code GitHub Workflow'
 
 export const GITHUB_ACTION_SETUP_DOCS_URL =

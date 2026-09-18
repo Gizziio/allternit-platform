@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Utility for checking git availability.
  *
@@ -27,6 +26,13 @@ async function isCommandAvailable(command: string): Promise<boolean> {
   }
 }
 
+// TODO(types): the ambient 'lodash-es/memoize.js' decl in src/types/global.d.ts
+// returns plain T (no .cache); the real lodash memoize exposes .cache. Intersect
+// until the ambient decl carries MemoizedFunction.
+type MemoizedGitCheck = (() => Promise<boolean>) & {
+  cache?: Map<unknown, Promise<boolean>>
+}
+
 /**
  * Check if git is available on the system.
  *
@@ -40,7 +46,7 @@ async function isCommandAvailable(command: string): Promise<boolean> {
  *
  * @returns True if git is installed and executable
  */
-export const checkGitAvailable = memoize(async (): Promise<boolean> => {
+export const checkGitAvailable: MemoizedGitCheck = memoize(async (): Promise<boolean> => {
   return isCommandAvailable('git')
 })
 

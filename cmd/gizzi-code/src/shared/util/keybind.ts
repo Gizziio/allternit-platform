@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isDeepEqual } from "remeda"
 
 type ParsedKey = {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Sandbox types for the gizzi-code Agent SDK
  *

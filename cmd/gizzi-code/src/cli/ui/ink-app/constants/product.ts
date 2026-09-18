@@ -1,4 +1,3 @@
-// @ts-nocheck
 export const PRODUCT_URL = 'https://docs.gizziio.com'
 
 // gizzi-code Remote session URLs
