@@ -1556,6 +1556,9 @@ importers:
       '@univerjs/core':
         specifier: ^0.25.1
         version: 0.25.1(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-formula':
+        specifier: ^0.25.1
+        version: 0.25.1(react@18.3.1)(rxjs@7.8.2)
       '@univerjs/preset-sheets-conditional-formatting':
         specifier: ^0.25.1
         version: 0.25.1(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
@@ -1583,9 +1586,15 @@ importers:
       '@univerjs/preset-sheets-table':
         specifier: ^0.25.1
         version: 0.25.1(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets':
+        specifier: ^0.25.1
+        version: 0.25.1(react@18.3.1)(rxjs@7.8.2)
       '@univerjs/sheets-filter':
         specifier: ^0.25.1
         version: 0.25.1(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-ui':
+        specifier: ^0.25.1
+        version: 0.25.1(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs/themes':
         specifier: ^0.25.1
         version: 0.25.1
@@ -1645,6 +1654,9 @@ importers:
       '@allternit/office-pptx-render':
         specifier: workspace:*
         version: link:../office-pptx-render
+      acorn:
+        specifier: ^8.16.0
+        version: 8.16.0
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1654,6 +1666,9 @@ importers:
       konva:
         specifier: ^9.3.20
         version: 9.3.22
+      opentype.js:
+        specifier: ^2.0.0
+        version: 2.0.0
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -1663,6 +1678,9 @@ importers:
       react-konva:
         specifier: ^18.2.11
         version: 18.2.16(@types/react@18.3.28)(konva@9.3.22)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      undici:
+        specifier: ^5.29.0
+        version: 5.29.0
       utif2:
         specifier: ^4.1.0
         version: 4.1.0
@@ -1933,19 +1951,33 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@22.19.11)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  platform/types/schemas: {}
+  platform/types/schemas:
+    dependencies:
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
 
   sdk/allternit-sdk:
     dependencies:
       '@napi-rs/canvas':
         specifier: ^0.1.88
         version: 0.1.94
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
       pdfjs-dist:
         specifier: ^5.4.54
         version: 5.4.624
       zod:
         specifier: ^3.x
         version: 3.25.76
+      zod-to-json-schema:
+        specifier: ^3.20.4
+        version: 3.24.5(zod@3.25.76)
+    devDependencies:
+      vitest:
+        specifier: ^0.34.6
+        version: 0.34.6(@edge-runtime/vm@3.2.0)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(playwright@1.58.2)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
   sdk/capsule-sdk:
     devDependencies:
@@ -47141,6 +47173,10 @@ snapshots:
   zod-to-json-schema@3.20.4(zod@3.24.0):
     dependencies:
       zod: 3.24.0
+
+  zod-to-json-schema@3.24.5(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
 
   zod-to-json-schema@3.24.5(zod@4.3.6):
     dependencies:

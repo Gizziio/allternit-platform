@@ -100,7 +100,12 @@
   "dependencies": {
     "pdfjs-dist": "^5.4.54",
     "@napi-rs/canvas": "^0.1.88",
-    "zod": "^3.x"
+    "jszip": "^3.10.1",
+    "zod": "^3.x",
+    "zod-to-json-schema": "^3.20.4"
+  },
+  "devDependencies": {
+    "vitest": "^0.34.6"
   },
   "files": [
     "dist",
