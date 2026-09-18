@@ -8,7 +8,7 @@
  *
  * Source format:
  * {
- *   "file": "packages/@allternit/provider-adapters/src/ai-sdk.ts",
+ *   "file": "platform/packages/provider-adapters/src/ai-sdk.ts",
  *   "language": "typescript",
  *   "steps": [
  *     { "title": "Import the adapter", "lines": [1, 2, 3], "note": "..." },

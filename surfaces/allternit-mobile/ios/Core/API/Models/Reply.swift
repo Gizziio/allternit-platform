@@ -10,7 +10,7 @@ import Foundation
 // Reply — the public runtime object of the Replies API.
 //
 // Mirrors `Reply` / `ReplyStatus` in
-// packages/@allternit/replies-contract/src/index.ts, plus the response of
+// platform/packages/replies-contract/src/index.ts, plus the response of
 // `POST /v1/replies` (services/replies-runtime/src/replies.router.ts).
 // -----------------------------------------------------------------------------
 

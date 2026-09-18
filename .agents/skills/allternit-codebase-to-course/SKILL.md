@@ -14,7 +14,7 @@ When the skill is first triggered and the user hasn't specified a codebase yet, 
 > **I can turn any Allternit package into an interactive A://Labs course module.**
 >
 > Just point me at a package:
-> - **A local folder** — e.g., "turn packages/@allternit/plugin-sdk into a course"
+> - **A local folder** — e.g., "turn platform/packages/plugin-sdk into a course"
 > - **The current project** — if you're already in a codebase, just say "turn this package into a course"
 >
 > I'll read through the code, figure out how everything fits together, and generate a beautiful single-page HTML course with animated diagrams, plain-English code explanations, and interactive quizzes. The whole thing runs in the browser — no setup needed. The output is ready to drop directly into a Canvas course as a wiki page.

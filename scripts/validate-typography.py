@@ -9,7 +9,7 @@ EXTS = {".css", ".scss", ".sass", ".less", ".tsx", ".ts", ".jsx", ".js", ".html"
 APPROVED_FILES = {"DESIGN.md", "typography.css", "typography.json", "validate-typography.py"}
 
 # Paths exempt from the product typography system. Each falls into one of:
-#   - internal/dev tooling, not shipped product UI (packages/@allternit/ix,
+#   - internal/dev tooling, not shipped product UI (platform/packages/ix,
 #     plugin-sdk's own docs-site/website/adapters, Storybook fixtures)
 #   - the AI design/artifact-generation subsystem, whose entire job is to
 #     produce or analyze *other*, user-chosen font stacks for generated
@@ -22,29 +22,29 @@ APPROVED_FILES = {"DESIGN.md", "typography.css", "typography.json", "validate-ty
 #     product UI (newsletter editions, demo pages, plugin examples, docs)
 # See docs/CI_ISSUE_6_NOTES.md for the evidence behind each entry.
 EXEMPT_PATH_PREFIXES = [
-    "packages/@allternit/ix",
-    "packages/@allternit/plugin-sdk/docs-site",
-    "packages/@allternit/plugin-sdk/website",
-    "packages/@allternit/plugin-sdk/src/adapters",
+    "platform/packages/ix",
+    "platform/packages/plugin-sdk/docs-site",
+    "platform/packages/plugin-sdk/website",
+    "platform/packages/plugin-sdk/src/adapters",
     # Office suite packages intentionally reference system fonts (Arial,
     # Times New Roman, Calibri, etc.) for document fidelity when rendering or
     # editing user-provided Office files. Their own chrome should still use
     # Allternit tokens, but the document-rendering engine must preserve
     # external font names.
-    "packages/@allternit/allternit-office-suite",
-    "packages/@allternit/office-docs-app",
-    "packages/@allternit/office-docs-editor",
-    "packages/@allternit/office-docx-engine",
-    "packages/@allternit/office-file-parse",
-    "packages/@allternit/office-pdf-app",
-    "packages/@allternit/office-pdf-viewer",
-    "packages/@allternit/office-pptx-engine",
-    "packages/@allternit/office-pptx-render",
-    "packages/@allternit/office-sheets-app",
-    "packages/@allternit/office-sheets-editor",
-    "packages/@allternit/office-slides-app",
-    "packages/@allternit/office-slides-editor",
-    "packages/@allternit/office-xlsx-engine",
+    "platform/packages/allternit-office-suite",
+    "platform/packages/office-docs-app",
+    "platform/packages/office-docs-editor",
+    "platform/packages/office-docx-engine",
+    "platform/packages/office-file-parse",
+    "platform/packages/office-pdf-app",
+    "platform/packages/office-pdf-viewer",
+    "platform/packages/office-pptx-engine",
+    "platform/packages/office-pptx-render",
+    "platform/packages/office-sheets-app",
+    "platform/packages/office-sheets-editor",
+    "platform/packages/office-slides-app",
+    "platform/packages/office-slides-editor",
+    "platform/packages/office-xlsx-engine",
     "surfaces/ai.allternit.com/src/lib/design",
     "surfaces/ai.allternit.com/src/lib/openui",
     "surfaces/ai.allternit.com/src/lib/agents/tools/design-extractor.tool.ts",

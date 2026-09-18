@@ -12,11 +12,11 @@ This file contains notices for open-source software incorporated into this produ
 **Source:** https://github.com/genspark-ai/genoffice
 
 **Used in:**
-- `packages/@allternit/office-docx-engine/`
-- `packages/@allternit/office-pptx-engine/`
-- `packages/@allternit/office-pptx-render/`
-- `packages/@allternit/office-file-parse/`
-- `packages/@allternit/office-xlsx-engine/` (Rust crate from `apps/sheets/native/xlsx-engine` + Node sidecar client)
+- `platform/packages/office-docx-engine/`
+- `platform/packages/office-pptx-engine/`
+- `platform/packages/office-pptx-render/`
+- `platform/packages/office-file-parse/`
+- `platform/packages/office-xlsx-engine/` (Rust crate from `apps/sheets/native/xlsx-engine` + Node sidecar client)
 
 **GenOffice document office engines forked and adapted for the Allternit workspace. Each package retains a copy of the GenOffice `LICENSE` and `NOTICE` files.
 
@@ -102,7 +102,7 @@ This file contains notices for open-source software incorporated into this produ
 
 ## open-cowork
 **License:** MIT  
-**Used in:** `packages/@allternit/cowork-engine/src/scheduler/`, `packages/@allternit/cowork-engine/src/memory/`, `packages/@allternit/cowork-engine/src/sandbox/`  
+**Used in:** `platform/packages/cowork-engine/src/scheduler/`, `platform/packages/cowork-engine/src/memory/`, `platform/packages/cowork-engine/src/sandbox/`  
 **Portions ported to TypeScript with Prisma/async adaptations.**
 
 ---
@@ -134,7 +134,7 @@ This file contains notices for open-source software incorporated into this produ
 ## cline
 **License:** Apache-2.0  
 **Source:** https://github.com/cline/cline  
-**Used in:** `packages/@allternit/cowork-engine/src/approval/`  
+**Used in:** `platform/packages/cowork-engine/src/approval/`  
 **ApprovalGate class; auto-rules engine with timeout.**
 
 ---
@@ -188,14 +188,14 @@ This file contains notices for open-source software incorporated into this produ
 
 ## AionUi
 **License:** Apache-2.0  
-**Used in:** `packages/@allternit/cowork-engine/src/sub-agent/`  
+**Used in:** `platform/packages/cowork-engine/src/sub-agent/`  
 **TeamSession and AgentFactory; concurrency cap and HTTP sub-agent runner.**
 
 ---
 
 ## agent-zero
 **License:** MIT  
-**Used in:** `packages/@allternit/cowork-engine/src/personas/`  
+**Used in:** `platform/packages/cowork-engine/src/personas/`  
 **CoworkPersonaStore with built-in persona definitions.**
 
 ---
@@ -219,4 +219,4 @@ The following were written from scratch for this product:
 - `domains/cowork/connectors/github/`
 - `domains/cowork/connectors/notion/`
 - All platform API routes under `surfaces/allternit-platform/src/app/api/v1/cowork/`
-- `packages/@allternit/cowork-engine/src/memory/service.ts`
+- `platform/packages/cowork-engine/src/memory/service.ts`

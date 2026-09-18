@@ -24,3 +24,9 @@ landed versions of it) — owner should verify it is superseded and delete it, o
 add it to .steering/git-discipline-allowlist with a reason. I passed it as an
 intentional argument to git-discipline-check for my session attestation only.
 Open questions: who owns src/types/global.d.ts corrections?
+
+## 2026-09-18 S3 packages→platform/packages move (ao/folder-s3-packages)
+Goal: consolidate packages/@allternit/* → platform/packages/* (S3 of folder reorg).
+Just did: 38 dirs git mv'd (types/allternit-types flattened to types-allternit-types; computer-use container moved too; packages/ root deleted). Sweep: pnpm-workspace globs, 3 deploy/publish workflows, scripts (analyze-packages PACKAGE_ROOT, alabs-course-pipeline, validate-typography, sync-course), tsconfig paths (replies-runtime, cmd/gizzi-code), cmd/gizzi-code build scripts (.driver-build.ts, build-production.js, ensure-sdk-dist.sh), bun.lock, sdk jest config, code comments (orchestrator headers, Rust port comments, Swift comments), root docs (README/AGENTS/REPO_STRUCTURE/THIRD-PARTY-NOTICES/NATIVE_SESSIONS). Lockfile: hand-edited 58 importer/link renames on pristine HEAD (the initial plain `pnpm install` churned @babel/core 8.0.1 — discarded, per S2 playbook); `pnpm install --frozen-lockfile` exit 0.
+Next: fresh frozen reinstall (stale workspace symlinks), re-run gates, commit, PR, merge, ledger attestation.
+Open questions: none. Left intentionally: agent-ledger, docs/{audit,archive,learnings,parity-reports*,*audit,research,programs,Core_System,Business_Strategy,agent-tasks,Audits_and_Research,upstream,public/parity}, alabs-generated-courses (dated/generated records); cmd/gizzi-code/src fabric/transport.ts + codemap/render-html.ts stale path comments (src edits forbidden); surfaces/allternit-desktop py comment (tree forbidden).

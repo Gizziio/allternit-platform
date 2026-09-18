@@ -17,9 +17,9 @@ Key code:
 
 | Layer | Path |
 |-------|------|
-| Catalog/adapters (27 harnesses) | `packages/@allternit/native-sessions/src/harness.ts`, `catalog.ts` |
-| Transcript projectors | `packages/@allternit/native-sessions/src/project.ts` |
-| Exporters (direct + session-migrate bridge) | `packages/@allternit/native-sessions/src/export.ts`, `migrate-bridge.ts` |
+| Catalog/adapters (27 harnesses) | `platform/packages/native-sessions/src/harness.ts`, `catalog.ts` |
+| Transcript projectors | `platform/packages/native-sessions/src/project.ts` |
+| Exporters (direct + session-migrate bridge) | `platform/packages/native-sessions/src/export.ts`, `migrate-bridge.ts` |
 | Session integration (pickup/fetch/export/origin prompt block) | `cmd/gizzi-code/src/runtime/session/native-source.ts` |
 | gizzi HTTP routes | `cmd/gizzi-code/src/runtime/server/routes/native-session.ts`, mounted at `/native-session` and `/v1/native-session` (`server.ts:383`, `server.ts:477`) |
 | TUI command (`/native`, alias `/cli-session`) | `cmd/gizzi-code/src/cli/ui/ink-app/commands/native/native.ts`, registered `commands.ts:368` |

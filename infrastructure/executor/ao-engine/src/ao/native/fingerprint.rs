@@ -1,4 +1,4 @@
-//! Port of `packages/@allternit/native-sessions/src/fingerprint.ts`.
+//! Port of `platform/packages/native-sessions/src/fingerprint.ts`.
 //!
 //! The fingerprint is a sha256 over path, stat triple (size, truncated mtime
 //! ms, inode), and — for directories — sorted child names with their stat

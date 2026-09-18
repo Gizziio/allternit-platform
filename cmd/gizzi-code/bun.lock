@@ -151,7 +151,7 @@
         "vitest": "^1.0.0"
       }
     },
-    "../../../../packages/@allternit/computer-use-protocol": {
+    "../../../../platform/packages/computer-use-protocol": {
       "name": "@allternit/computer-use-protocol",
       "version": "1.0.0",
       "dependencies": {
@@ -210,14 +210,14 @@
         "zod": "4.3.6"
       }
     },
-    "../../packages/@allternit/request-scorer": {
+    "../../platform/packages/request-scorer": {
       "name": "@allternit/request-scorer",
       "version": "1.0.0",
       "devDependencies": {
         "typescript": "^5.0.0"
       }
     },
-    "../../packages/@allternit/native-sessions": {
+    "../../platform/packages/native-sessions": {
       "name": "@allternit/native-sessions",
       "version": "0.1.0"
     },
@@ -431,7 +431,7 @@
       "@allternit/browser@workspace:../../../../infrastructure/chrome-stream/agent-systems/allternit-browser"
     ],
     "@allternit/computer-use-protocol": [
-      "@allternit/computer-use-protocol@workspace:../../../../packages/@allternit/computer-use-protocol"
+      "@allternit/computer-use-protocol@workspace:../../../../platform/packages/computer-use-protocol"
     ],
     "@allternit/engine": [
       "@allternit/engine@workspace:../../../../domains/kernel/core"
@@ -440,7 +440,7 @@
       "@allternit/gizzi-util@workspace:packages/gizzi-util"
     ],
     "@allternit/native-sessions": [
-      "@allternit/native-sessions@workspace:../../packages/@allternit/native-sessions"
+      "@allternit/native-sessions@workspace:../../platform/packages/native-sessions"
     ],
     "@allternit/governor": [
       "@allternit/governor@workspace:../../../../domains/governance/governor"
@@ -452,7 +452,7 @@
       "@allternit/plugin@workspace:packages/plugin"
     ],
     "@allternit/request-scorer": [
-      "@allternit/request-scorer@workspace:../../packages/@allternit/request-scorer"
+      "@allternit/request-scorer@workspace:../../platform/packages/request-scorer"
     ],
     "@allternit/script": [
       "@allternit/script@workspace:packages/script"

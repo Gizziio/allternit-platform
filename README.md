@@ -44,7 +44,7 @@ Ownership rules (source of truth: [REPO_STRUCTURE.md](./REPO_STRUCTURE.md)):
 - **`infrastructure/`** — cloud providers, executors, bridges
 - **`surfaces/`** — web apps and desktop surfaces (desktop, mobile, extensions, console, docs)
 
-Legacy consolidations in flight: `packages/@allternit/` → `platform/`; `api/` → `services/`.
+Legacy consolidations completed 2026-09-18: `packages/@allternit/` → `platform/packages/` (S3); `api/` → `services/` (S2).
 
 Three SDKs: public TS SDK in `sdk/` (tag `sdk/v*`), Rust SDK in `platform/rust-sdk/rust/`
 (was `platform/sdk/`; renamed 2026-09-18 so `sdk/` is unambiguous), gizzi SDK in

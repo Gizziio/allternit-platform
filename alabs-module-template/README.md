@@ -40,7 +40,7 @@ npx tsx alabs-module-template/scripts/build.ts \
 {
   "title": "Module 2: The Scheduler & Execution Model",
   "tier": "ADV",
-  "sourcePackage": "packages/@allternit/workflow-engine",
+  "sourcePackage": "platform/packages/workflow-engine",
   "accentColor": "#f59e0b",
   "navLinks": [
     { "label": "Overview", "section": "overview" },

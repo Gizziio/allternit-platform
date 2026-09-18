@@ -33,8 +33,8 @@ allternit/
 ├── mcp/                      # Model Context Protocol servers and crates (computers-server, core, mcp-client, servers)
 ├── drivers/                  # VM and hardware drivers (firecracker, apple-vf)
 ├── commrails/                # CommRails agent communication/coordination substrate (Rust; crate allternit-commrails)
-├── packages/@allternit/      # Internal SDK packages (38; being consolidated into platform/)
 ├── platform/                 # Contracts, protocols, SDK, plugin runtime, shared packages
+├── platform/packages/        # Internal @allternit/* TS libraries (38; consolidated from packages/@allternit/ on 2026-09-18, S3)
 ├── sdk/                      # Public SDK packages
 ├── surfaces/                 # Web apps and desktop surfaces
 │   ├── allternit-desktop/    # Desktop shell (Electron)
@@ -114,7 +114,7 @@ Where new code goes — adopted 2026-09-18 (S0 of the folder reorganization):
 - **`sdk/`** = public SDK surface only. **Location frozen** — do not move without an explicit decision.
 - **`domains/`, `infrastructure/`, `surfaces/`** = existing semantics (domain logic; cloud providers/executors/bridges; web + desktop apps).
 
-`packages/@allternit/` is legacy and is being consolidated into `platform/`. The former `api/` root was dissolved into `services/` on 2026-09-18 (S2): `gateway/routing` (allternit-tools-gateway), `workspace-service`, `ssh-bridge`, and `replies-runtime` now live under `services/`.
+`packages/@allternit/` was dissolved into `platform/packages/` on 2026-09-18 (S3): all internal `@allternit/*` TypeScript libraries now live there (workspace resolution is by package `name`, so consumers were unaffected). The former `api/` root was dissolved into `services/` on 2026-09-18 (S2): `gateway/routing` (allternit-tools-gateway), `workspace-service`, `ssh-bridge`, and `replies-runtime` now live under `services/`.
 
 ## Three SDKs
 

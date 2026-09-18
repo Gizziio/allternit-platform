@@ -1,4 +1,4 @@
-// packages/@allternit/orchestrator/src/completion-contract.ts
+// platform/packages/orchestrator/src/completion-contract.ts
 // The completion contract (ADR-0044): the executor's notes file starts with YAML
 // frontmatter — status, files_changed, deviations, remaining — followed by prose.
 // The file existing is the completion signal; this parses it into a CompletionReport.

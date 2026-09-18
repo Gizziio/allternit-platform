@@ -13,7 +13,7 @@ set -euo pipefail
 PARITY_DIR="$(cd "$(dirname "$0")" && pwd)"
 AOE_ROOT="$(cd "$PARITY_DIR/../.." && pwd)"
 REPO_ROOT="$(cd "$PARITY_DIR/../../../../.." && pwd)"
-FP_TS="$REPO_ROOT/packages/@allternit/native-sessions/src/fingerprint.ts"
+FP_TS="$REPO_ROOT/platform/packages/native-sessions/src/fingerprint.ts"
 
 FIXTURE="$(mktemp -d /tmp/ao-visibility-parity.XXXXXX)"
 trap 'rm -rf "$FIXTURE"' EXIT

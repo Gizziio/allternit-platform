@@ -1,4 +1,4 @@
-//! Port of `packages/@allternit/native-sessions/src/catalog.ts` (list half).
+//! Port of `platform/packages/native-sessions/src/catalog.ts` (list half).
 //!
 //! One walker per non-sqlite harness, mirroring the TS layout logic exactly
 //! (directory shapes, id derivation, updatedAt sources, fingerprint inputs).

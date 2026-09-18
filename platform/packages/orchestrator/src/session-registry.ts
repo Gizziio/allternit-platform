@@ -1,4 +1,4 @@
-// packages/@allternit/orchestrator/src/session-registry.ts
+// platform/packages/orchestrator/src/session-registry.ts
 // Session registry + the three delegation verbs (ADR-0044):
 //   handoff     — synchronous: spawn, prompt, block until completion, return report + footprint
 //   assign      — asynchronous: spawn (+ optional prompt), return the live session

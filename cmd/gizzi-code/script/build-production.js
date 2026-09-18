@@ -262,7 +262,7 @@ const bundlePlugin = {
             path: resolve("node_modules/@modelcontextprotocol/sdk/dist/cjs/types.js"),
         }));
         build.onResolve({ filter: /^@allternit\/orchestrator$/ }, () => ({
-            path: resolve("../../packages/@allternit/orchestrator/src/index.ts"),
+            path: resolve("../../platform/packages/orchestrator/src/index.ts"),
         }));
         // OTel metrics/trace/exporters are optional; not all are in
         // package.json. Inline a no-op module so Bun.build does not fail.
