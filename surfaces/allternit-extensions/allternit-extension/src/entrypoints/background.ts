@@ -6,11 +6,10 @@
  * Connection channels:
  *   Native (BA)  com.allternit.desktop  — browser-agent cowork mode (TCP 3011 bridge)
  *   Native (PA)  com.allternit.desktop  — page-agent remote task mode (TCP 3011 bridge)
- *   Cloud WS     wss://api.allternit.com/v1/extension  — browser-agent cloud mode
  *
  * Populated by:
  *   MERGE-2  page-agent core (TabsController, RemotePageController, agent)
- *   MERGE-3  browser-agent connection layer (WebSocketClient, NativeMessaging)
+ *   MERGE-3  browser-agent connection layer (NativeMessaging)
  */
 
 import { handlePageControlMessage } from '@/agent/RemotePageController.background'
@@ -130,8 +129,7 @@ export default defineBackground(() => {
 
   // ── Browser-agent setup ───────────────────────────────────────────────────
 
-  // Connects via com.allternit.desktop native messaging (cowork mode, default)
-  // or wss://api.allternit.com/v1/extension (cloud mode)
+  // Connects via com.allternit.desktop native messaging (cowork mode)
   browserAgentConnection.initialize()
 
   // ── HTML to Figma setup ───────────────────────────────────────────────────
