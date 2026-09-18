@@ -14,7 +14,7 @@ Verified: `vitest run` on the three picker files → 39/39 pass. `typecheck:fast
 
 # Next
 
-Joe to smoke-test in the app (pick a Gizzi/cloud/CLI model Chat already shows; confirm next bot send uses it; bot default persists after reload). Packaged-Desktop proof still open (needs a release build — out of bounds here). Then commit/push `session/openmaus-botmode-0915` when Joe says so.
+Pushed: commit `9e7781d0d` on `session/openmaus-botmode-0915` (origin). Joe to smoke-test in the app (pick a Gizzi/cloud/CLI model Chat already shows; confirm next bot send uses it; bot default persists after reload). Packaged-Desktop proof still open (needs a release build). PR/merge waits until the rest of the dirty Bot Mode work (P0-A/B/C/D from prior sessions) is committed and hub evidence exists.
 
 # Open questions
 
