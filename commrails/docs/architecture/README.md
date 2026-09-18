@@ -95,12 +95,12 @@ Spawn requests (fresh contexts / subagents) are recorded via `RailsLoopIteration
 
 Manual verification steps (to run after documentation is reviewed):
 
-1. `cargo fmt` inside `allternit-agent-system-rails`.
+1. `cargo fmt` inside `allternit-commrails`.
 2. `allternit rails runner once` to ensure the runner drains the ledger and emits the expected loop/vault events.
 3. `allternit rails bus tmux-runner ...` plus `tmux-send` to validate busy gating and `transport tmux-inspect`.
 4. `allternit rails bus socket-runner ...` plus `socket-send` to validate structured JSON responses and `transport socket-inspect`.
 
-Automated suites live in `tests/` and `allternit-agent-system-rails/tests`; run them once the architecture docs are vetted. Detailed test plans will follow after this documentation step.
+Automated suites live in `tests/` and `allternit-commrails/tests`; run them once the architecture docs are vetted. Detailed test plans will follow after this documentation step.
 
 ## References
 
