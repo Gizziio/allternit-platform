@@ -16,6 +16,7 @@ The monorepo contains everything needed to build, test, and deploy the full Allt
 ```
 allternit/
 ├── cmd/                      # CLI binaries and API servers
+│   ├── allternit/
 │   ├── allternit-api/        # Main API server (Rust)
 │   ├── allternit-cloud-api/  # Cloud deployment API (Rust)
 │   ├── allternit-cloud-wizard/
@@ -24,6 +25,7 @@ allternit/
 │   ├── allternit-computer-cloud/
 │   ├── allternit-hosted-runtime/
 │   ├── agent-daemon/
+│   ├── cli/
 │   ├── gizzi-code/           # Gizzi Code CLI source
 │   ├── gizzi-core/
 │   └── launcher/
@@ -33,15 +35,19 @@ allternit/
 ├── mcp/                      # Model Context Protocol servers and crates (computers-server, core, mcp-client, servers)
 ├── drivers/                  # VM and hardware drivers (firecracker, apple-vf)
 ├── commrails/                # CommRails agent communication/coordination substrate (Rust; crate allternit-commrails)
-├── platform/                 # Contracts, protocols, SDK, plugin runtime, shared packages
-├── platform/packages/        # Internal @allternit/* TS libraries (38; consolidated from packages/@allternit/ on 2026-09-18, S3)
+├── platform/                 # Contracts, protocols, Rust SDK, plugin runtime, shared packages
+├── platform/packages/        # Internal @allternit/* TS libraries (39; consolidated from packages/@allternit/ on 2026-09-18, S3)
 ├── sdk/                      # Public SDK packages
 ├── surfaces/                 # Web apps and desktop surfaces
 │   ├── allternit-desktop/    # Desktop shell (Electron)
 │   ├── allternit-docs/       # Docs site content
 │   ├── allternit-extensions/ # Browser extensions
 │   ├── allternit-mobile/     # Mobile surface
+│   ├── computer-embed/       # Embeddable computer-use surface
+│   ├── gizzi-github-action/  # GitHub Action surface
+│   ├── gizzi-vscode/         # VS Code extension surface
 │   ├── office.allternit.com/ # Office surface
+│   ├── phone-remote/         # Phone remote-control surface
 │   ├── platform.allternit.com/ # Cloud console
 │   └── docs/                 # Docs surface
 ├── vendor/                   # Vendored third-party code (harnessrouter-ce, session-migrate)
@@ -55,6 +61,8 @@ allternit/
 ├── config/                   # allternit.json + system config (read by live code)
 ├── resources/                # company.json (config:company:write output) + vm/
 ├── patches/                  # pnpm patchedDependencies
+├── templates/                # System templates (system/ VM YAML: base-desktop, node-dev)
+├── tmp/                      # Scratch evidence dirs + test scripts (tracked, session-scoped)
 ├── archive/                  # Retired material: card plugins, orphan crates, card-templates, alabs-curator
 ├── agent-ledger/             # Signed session record (LEDGER.md + summaries/) — stays at root by design
 ├── alabs-generated-courses/  # A://Labs courseware source of truth (+ demos/)
@@ -103,6 +111,8 @@ The following dot-directories are hardcoded into live code or required by `AGENT
 > Reorganized 2026-08-27: removed improperly-linked nested worktrees (`allternit-session-grok-bot-0-18-integration`, `allternit-session-multica-runtime-align`) and scratch `.tmp-*` entries from the index; deleted `.beads/`; moved `marketing/`, `upstream/`, `remix-content/`, `.pipeline/`, `.parity-reports/`, `.parity-reports-archive/`, and `.shared/` into `docs/`; moved ad-hoc root scripts into `scripts/audit/`.
 >
 > Reorganized 2026-09-18 (S6/S7): root `reports/`, `research/`, and most of `spec/` moved into `docs/reports/`, `docs/research/`, and `docs/specs/`; root `MASTER_TRACKING.md` and the `ALLTERNIT_CLOUD_*HANDOFF*.md` pair moved to `docs/projects/allternit-cloud/` (+ `handoffs/`); `DESIGN.md` → `docs/design/`, `AGENT_CREATION_CHECKLIST.md` → `docs/`, `ANTHROPIC_TO_ALABS_MAPPING.md` → `docs/learnings/`; loose `docs/` depth-1 program docs filed into `docs/programs/<program>/` (S7). Deliberate root exceptions, kept because live code reads them from repo root: `spec/Contracts/` (validate_law.py, context-pack-builder, gateway service), `GIZZI.md` (workspace-instruction file loaded by allternit-api/gizzi-code from cwd), `THIRD-PARTY-NOTICES.md` (electron-builder extraFiles in the desktop release).
+>
+> Dissolved roots (2026-09-18 reorg): `api/` → `services/` (S2, PR #595); `packages/@allternit/*` → `platform/packages/*` (S3, PR #597, 39 packages); `platform/sdk` → `platform/rust-sdk` (S4, PR #584).
 
 ## Ownership rules (source of truth)
 
@@ -113,6 +123,7 @@ Where new code goes — adopted 2026-09-18 (S0 of the folder reorganization):
 - **`platform/`** = contracts, protocols, types, plugins, and internal `@allternit/*` TypeScript libraries.
 - **`sdk/`** = public SDK surface only. **Location frozen** — do not move without an explicit decision.
 - **`domains/`, `infrastructure/`, `surfaces/`** = existing semantics (domain logic; cloud providers/executors/bridges; web + desktop apps).
+- **No new root-level markdown.** The sanctioned root docs are exactly six — `README.md`, `AGENTS.md`, `REPO_STRUCTURE.md`, `SECURITY.md`, `CHANGELOG.md`, `LICENSE` — plus the two documented live-code exceptions (`GIZZI.md`, `THIRD-PARTY-NOTICES.md`). Every other doc goes to `docs/` per the `docs/README.md` taxonomy. Docs conventions are linted by `scripts/docs-lint.cjs` (the docs lint gate — run it when touching `surfaces/docs/`).
 
 `packages/@allternit/` was dissolved into `platform/packages/` on 2026-09-18 (S3): all internal `@allternit/*` TypeScript libraries now live there (workspace resolution is by package `name`, so consumers were unaffected). The former `api/` root was dissolved into `services/` on 2026-09-18 (S2): `gateway/routing` (allternit-tools-gateway), `workspace-service`, `ssh-bridge`, and `replies-runtime` now live under `services/`.
 
@@ -126,7 +137,7 @@ The repo carries three distinct SDKs — keep them straight:
 | Rust SDK | `platform/rust-sdk/rust/` (crates `sdk-core`, `sdk-transport`, `sdk-policy`, `sdk-functions`, `sdk-apps`) | Rust | cargo workspace |
 | Gizzi SDK | `cmd/gizzi-code/packages/sdk/` | TypeScript | `gizzi-sdk/v*` |
 
-> NOTE: `platform/sdk/` → `platform/rust-sdk/` rename is **done** (2026-09-18) so `sdk/` (public TS SDK) is unambiguous.
+> NOTE: `platform/sdk/` → `platform/rust-sdk/` rename is **done** (2026-09-18, S4, PR #584) so `sdk/` (public TS SDK) is unambiguous.
 
 ## Satellite Repos
 
