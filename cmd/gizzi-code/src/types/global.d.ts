@@ -1006,9 +1006,6 @@ declare module '@modelcontextprotocol/sdk/server/stdio.js' {
 declare module 'image-processor-napi' {
   export function processImage(input: unknown): Promise<unknown>
 }
-declare module 'cli-highlight' {
-  export function highlight(code: string, options?: { language?: string }): string
-}
 
 declare module 'proper-lockfile' {
   export interface LockOptions {
@@ -1034,21 +1031,6 @@ declare module 'proper-lockfile' {
   export function lockSync(file: string, options?: LockOptions): () => void
   export function unlock(file: string, options?: UnlockOptions): Promise<void>
   export function check(file: string, options?: CheckOptions): Promise<boolean>
-}
-// TODO(types): cli-highlight and highlight.js are optional runtime deps —
-// src/{shared,cli/ui/ink-app}/utils/cliHighlight.ts dynamic-imports them inside
-// a try/catch and they are not installed in this workspace. These declarations
-// mirror their public APIs so the typeof-import types resolve.
-declare module 'cli-highlight' {
-  export function highlight(code: string, options?: { language?: string }): string
-  export function supportsLanguage(language: string): boolean
-}
-declare module 'highlight.js' {
-  export interface HighlightLanguage {
-    name?: string
-    [key: string]: unknown
-  }
-  export function getLanguage(name: string): HighlightLanguage | undefined
 }
 declare module '@anthropic-ai/sandbox-runtime' {
   export interface SandboxRuntimeConfigSchema {

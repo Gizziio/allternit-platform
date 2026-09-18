@@ -82,6 +82,7 @@
     "@types/react-dom": "^19.2.7",
     "@types/turndown": "5.0.5",
     "@types/yargs": "17.0.33",
+    "cowsay": "^1.6.0",
     "drizzle-kit": "1.0.0-beta.12-a5629fb",
     "drizzle-orm": "1.0.0-beta.12-a5629fb",
     "fflate": "^0.8.2",
@@ -141,6 +142,7 @@
     "bun-pty": "0.4.8",
     "chalk": "4.1.2",
     "chokidar": "4.0.3",
+    "cli-highlight": "2.1.11",
     "clipboardy": "4.0.0",
     "decimal.js": "10.5.0",
     "diff": "*",
@@ -150,6 +152,7 @@
     "fuzzysort": "3.1.0",
     "glob": "13.0.5",
     "gray-matter": "4.0.3",
+    "highlight.js": "11.12.0",
     "hono": "*",
     "hono-openapi": "*",
     "ignore": "7.0.5",
@@ -169,6 +172,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-reconciler": "0.33.0",
+    "redis": "4.7.1",
     "remeda": "*",
     "sharp": "0.35.4",
     "signal-exit": "^4.1.0",
@@ -186,6 +190,10 @@
     "yargs": "18.0.0",
     "zod": "4.3.6",
     "zod-to-json-schema": "3.24.5"
+  },
+  "optionalDependencies": {
+    "image-processor-napi": "*",
+    "playwright": "^1.58.2"
   },
   "overrides": {
     "drizzle-orm": "1.0.0-beta.12-a5629fb"
