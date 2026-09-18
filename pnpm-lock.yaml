@@ -2232,7 +2232,27 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.33)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
-  services/ssh-bridge: {}
+  services/ssh-bridge:
+    dependencies:
+      node-ssh:
+        specifier: ^13.2.1
+        version: 13.2.1
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
+      ws:
+        specifier: ^8.20.0
+        version: 8.20.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.30
+        version: 20.19.40
+      '@types/pg':
+        specifier: ^8.18.0
+        version: 8.18.0
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
 
   services/vault-viewer:
     devDependencies:

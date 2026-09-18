@@ -8,5 +8,15 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "node-ssh": "^13.2.1",
+    "pg": "^8.20.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.30",
+    "@types/pg": "^8.18.0",
+    "@types/ws": "^8.18.1"
   }
 }
