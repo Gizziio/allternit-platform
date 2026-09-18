@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchInput } from '../../hooks/useSearchInput';
 import { useTerminalSize } from '../../hooks/useTerminalSize';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event';
@@ -154,18 +154,24 @@ export function FuzzyPicker<T>({
       }
     }
   };
+  // Mirror callbacks into refs so the [query]/[focused] effects below never
+  // capture a stale closure — callers passing a new callback get the new one.
+  const onQueryChangeRef = useRef(onQueryChange);
+  const onFocusRef = useRef(onFocus);
   useEffect(() => {
-    onQueryChange(query);
+    onQueryChangeRef.current = onQueryChange;
+    onFocusRef.current = onFocus;
+  });
+  useEffect(() => {
+    onQueryChangeRef.current(query);
     setFocusedIndex(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
   useEffect(() => {
     setFocusedIndex(i => clamp(i, 0, items.length - 1));
   }, [items.length]);
   const focused = items[focusedIndex];
   useEffect(() => {
-    onFocus?.(focused);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    onFocusRef.current?.(focused);
   }, [focused]);
   const windowStart = clamp(focusedIndex - visibleCount + 1, 0, items.length - visibleCount);
   const visible = items.slice(windowStart, windowStart + visibleCount);
