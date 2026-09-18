@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type {
   RenderableMessage,
   SystemStopHookSummaryMessage,
@@ -6,7 +5,7 @@ import type {
 
 function isLabeledHookSummary(
   msg: RenderableMessage,
-): msg is SystemStopHookSummaryMessage {
+): msg is SystemStopHookSummaryMessage & RenderableMessage {
   return (
     msg.type === 'system' &&
     msg.subtype === 'stop_hook_summary' &&

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isEnvTruthy } from './envUtils.js'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 

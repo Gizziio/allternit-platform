@@ -1,4 +1,3 @@
-// @ts-nocheck
 // skill.ts exposes a single `Skill` namespace (Skill.Info, Skill.all(), ...) —
 // the named members are not top-level exports, so only the namespace can be
 // re-exported here.
@@ -12,14 +11,19 @@ export type { SkillCreatorToolInput, SkillCreatorToolOutput } from "@/runtime/sk
 
 import type { Skill } from "@/runtime/skills/skill"
 
-export function createSkill(def: Skill.SkillDefinition): Skill.Skill {
-  return def as unknown as Skill.Skill
+// TODO(types): the Skill namespace has no Skill/SkillDefinition members — local
+// mirrors of Skill.Info (skill.ts is the source of truth)
+type SkillRecord = Skill.Info
+type SkillDefinition = Skill.Info
+
+export function createSkill(def: SkillDefinition): SkillRecord {
+  return def as unknown as SkillRecord
 }
 
-export function listSkills(): Skill.Skill[] {
+export function listSkills(): SkillRecord[] {
   return []
 }
 
-export function getSkill(name: string): Skill.Skill | undefined {
+export function getSkill(name: string): SkillRecord | undefined {
   return undefined
 }

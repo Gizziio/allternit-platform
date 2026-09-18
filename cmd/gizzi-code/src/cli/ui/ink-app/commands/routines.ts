@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.js'
 import type { Command } from '../commands.js'
 import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'

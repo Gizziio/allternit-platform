@@ -1,11 +1,13 @@
-// @ts-nocheck
 import { useEffect, useRef } from 'react'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../services/analytics/index'
 import { useOptionalKeybindingContext } from './KeybindingContext'
-import type { KeybindingContextName } from './types'
+
+// TODO(types): keybindings/types.ts is an unimplemented stub — mirror of the
+// context-name type until it exists there
+type KeybindingContextName = string
 
 // TODO(keybindings-migration): Remove fallback parameter after migration is complete
 // and we've confirmed no 'keybinding_fallback_used' events are being logged.

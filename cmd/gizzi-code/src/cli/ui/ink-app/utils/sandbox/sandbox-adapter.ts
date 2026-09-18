@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Production Sandbox Adapter
  * 
@@ -50,7 +49,7 @@ export interface SandboxRuntimeConfig {
     allowWrite: string[];
     denyWrite: string[];
   };
-  ignoreViolations?: string[];
+  ignoreViolations?: IgnoreViolationsConfig;
   enableWeakerNestedSandbox?: boolean;
   enableWeakerNetworkIsolation?: boolean;
   ripgrep?: {
@@ -1079,7 +1078,7 @@ export interface ISandboxManager {
   getFsReadConfig(): FsReadRestrictionConfig;
   getFsWriteConfig(): FsWriteRestrictionConfig;
   getNetworkRestrictionConfig(): NetworkRestrictionConfig;
-  getAllowUnixSockets(): string[] | undefined;
+  getAllowUnixSockets(): boolean | undefined;
   getAllowLocalBinding(): boolean | undefined;
   getIgnoreViolations(): IgnoreViolationsConfig | undefined;
   getEnableWeakerNestedSandbox(): boolean | undefined;
@@ -1135,7 +1134,7 @@ function getNetworkRestrictionConfig(): NetworkRestrictionConfig {
   return config.network;
 }
 
-function getAllowUnixSockets(): string[] | undefined {
+function getAllowUnixSockets(): boolean | undefined {
   return getSettings_DEPRECATED()?.sandbox?.network?.allowUnixSockets;
 }
 
@@ -1287,17 +1286,5 @@ export class SandboxViolationStore {
 // ============================================================================
 // Re-exports
 // ============================================================================
-
-export type {
-  SandboxAskCallback,
-  SandboxDependencyCheck,
-  FsReadRestrictionConfig,
-  FsWriteRestrictionConfig,
-  NetworkRestrictionConfig,
-  NetworkHostPattern,
-  SandboxViolationEvent,
-  SandboxRuntimeConfig,
-  IgnoreViolationsConfig,
-};
 
 export default SandboxManager;

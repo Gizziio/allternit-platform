@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Line-number formatting helpers.
  *

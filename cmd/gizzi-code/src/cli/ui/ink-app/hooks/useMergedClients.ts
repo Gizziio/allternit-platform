@@ -1,4 +1,3 @@
-// @ts-nocheck
 import uniqBy from 'lodash-es/uniqBy.js'
 import { useMemo } from 'react'
 import type { MCPServerConnection } from '../services/mcp/types.js'

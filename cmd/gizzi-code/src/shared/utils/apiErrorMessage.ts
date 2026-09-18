@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Leaf module for creating assistant API-error messages.
  *
@@ -12,8 +11,18 @@ import type { BetaUsage as Usage } from '@allternit/gizzi-sdk/providers/allterni
 import { randomUUID } from 'crypto'
 import { NO_CONTENT_MESSAGE } from '@/constants/messages.js'
 import type { AssistantMessage, ContentBlock } from '@/types/message.js'
-import type { SDKAssistantMessageError } from '../entrypoints/agentSdkTypes.js'
 import { SYNTHETIC_MODEL } from './syntheticMessages.js'
+
+// TODO(types): SDKAssistantMessageError is a zod-enum type in ink-app
+// coreSchemas.ts, not re-exported from agentSdkTypes — local mirror
+type SDKAssistantMessageError =
+  | 'authentication_failed'
+  | 'billing_error'
+  | 'rate_limit'
+  | 'invalid_request'
+  | 'server_error'
+  | 'unknown'
+  | 'max_output_tokens'
 
 export function baseCreateAssistantMessage({
   content,

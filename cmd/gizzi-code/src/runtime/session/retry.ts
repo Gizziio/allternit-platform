@@ -1,7 +1,18 @@
-// @ts-nocheck
-import type { NamedError } from "@allternit/gizzi-util/error.js"
 import { MessageV2 } from "@/runtime/session/message-v2"
 import { describeProviderError } from "@/shared/util/provider-error"
+
+// TODO(types): @allternit/gizzi-util ships no type declarations — NamedError
+// is a runtime value object; mirror of NamedErrorBase#toObject()'s shape
+type NamedErrorObject = {
+  name: string
+  message: string
+  data?: {
+    isRetryable?: boolean
+    responseBody?: unknown
+    message?: string
+    [key: string]: unknown
+  }
+}
 
 export namespace SessionRetry {
   export const RETRY_INITIAL_DELAY = 2000
@@ -59,7 +70,7 @@ export namespace SessionRetry {
     return Math.min(RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1), RETRY_MAX_DELAY_NO_HEADERS)
   }
 
-  export function retryable(error: ReturnType<NamedError["toObject"]>) {
+  export function retryable(error: NamedErrorObject) {
     const nonRetryableCodes = new Set(["insufficient_balance", "auth", "unsupported_model", "context_overflow"])
 
     // context overflow errors should not be retried

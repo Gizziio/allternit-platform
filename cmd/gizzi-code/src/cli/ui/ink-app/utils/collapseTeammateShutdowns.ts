@@ -1,14 +1,34 @@
-// @ts-nocheck
-import type { AttachmentMessage, RenderableMessage } from '../types/message.js'
+import type {
+  AttachmentMessage,
+  MessageAttachment,
+  RenderableMessage,
+} from '../types/message.js'
+
+// TODO(types): message.ts MessageAttachment does not declare the task_status
+// payload fields or the teammate_shutdown_batch count field
+interface TaskStatusAttachment extends MessageAttachment {
+  type: 'task_status'
+  taskType?: string
+  status?: string
+}
+
+interface TeammateShutdownBatchAttachment extends MessageAttachment {
+  type: 'teammate_shutdown_batch'
+  count: number
+}
+
+type TeammateShutdownMessage = RenderableMessage &
+  AttachmentMessage<TaskStatusAttachment>
 
 function isTeammateShutdownAttachment(
   msg: RenderableMessage,
-): msg is AttachmentMessage {
+): msg is TeammateShutdownMessage {
+  const m = msg as TeammateShutdownMessage
   return (
-    msg.type === 'attachment' &&
-    msg.attachment.type === 'task_status' &&
-    msg.attachment.taskType === 'in_process_teammate' &&
-    msg.attachment.status === 'completed'
+    m.type === 'attachment' &&
+    m.attachment.type === 'task_status' &&
+    m.attachment.taskType === 'in_process_teammate' &&
+    m.attachment.status === 'completed'
   )
 }
 
@@ -43,8 +63,10 @@ export function collapseTeammateShutdowns(
           attachment: {
             type: 'teammate_shutdown_batch',
             count,
-          },
-        })
+          } as TeammateShutdownBatchAttachment,
+          // TODO(types): the synthesized batch entry is a RenderableMessage at
+          // runtime (isRenderable carried by the render pipeline) — cast only
+        } as unknown as RenderableMessage)
       }
     } else {
       result.push(msg)

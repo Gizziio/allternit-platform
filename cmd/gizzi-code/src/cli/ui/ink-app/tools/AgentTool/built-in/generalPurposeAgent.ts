@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { BuiltInAgentDefinition } from '../loadAgentsDir.js'
 
 const SHARED_PREFIX = `You are an agent for Gizzi Code, the Gizzi agentic CLI. Given the user's message, you should use the tools available to complete the task. Complete the task fully—don't gold-plate, but don't leave it half-done.`

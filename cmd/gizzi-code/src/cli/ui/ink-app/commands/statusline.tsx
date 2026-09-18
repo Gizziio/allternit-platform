@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import type { Command } from '../commands';
 import { AGENT_TOOL_NAME } from '../tools/AgentTool/constants';

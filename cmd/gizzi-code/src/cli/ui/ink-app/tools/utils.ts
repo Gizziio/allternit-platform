@@ -1,7 +1,7 @@
-// @ts-nocheck
 import type {
   AssistantMessage,
   AttachmentMessage,
+  ContentBlock,
   SystemMessage,
   UserMessage,
 } from './../types/message.ts'
@@ -32,7 +32,11 @@ export function getToolUseIDFromParentMessage(
   parentMessage: AssistantMessage,
   toolName: string,
 ): string | undefined {
-  const toolUseBlock = parentMessage.message.content.find(
+  // TODO(types): NestedMessage.content is string | arrays | unknown — runtime
+  // always carries the ContentBlock[] shape here
+  const toolUseBlock = (
+    parentMessage.message.content as ContentBlock[]
+  ).find(
     block => block.type === 'tool_use' && block.name === toolName,
   )
   return toolUseBlock && toolUseBlock.type === 'tool_use'
