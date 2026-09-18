@@ -129,7 +129,7 @@ When Rails is unavailable, agents MUST fall back to previous mechanisms:
 | gizzi peer service | `cmd/gizzi-code/src/runtime/gizzi-core/services/railsPeer.ts` |
 | gizzi Rails inbox bridge | `cmd/gizzi-code/src/cli/ui/ink-app/components/RailsInboxBridge.tsx` |
 | gizzi Rails API client | `cmd/gizzi-code/src/runtime/services/api/allternitApi.ts` |
-| gizzi UDS client | `cmd/gizzi-code/src/shared/utils/udsClient.ts` |
+| UDS socket transport | `commrails/src/peer/socket.rs` |
 | ListPeers tool | `cmd/gizzi-code/src/runtime/tools/ListPeersTool/ListPeersTool.ts` |
 | SendMessage tool | `cmd/gizzi-code/src/runtime/tools/SendMessageTool/SendMessageTool.ts` |
 | Orchestrator shims | `tools/agent-orchestrator/scripts/ao-*` |

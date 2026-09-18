@@ -2668,3 +2668,6 @@ src/workspace/loader.ts
 src/workspace/types.d.ts
 src/workspace/types.ts
 test/components/WelcomeInfoBox.test.ts
+src/runtime/components/Markdown.ts
+src/cli/ui/utils/permissions/PermissionUpdateSchema.ts
+src/cli/ui/utils/settings/settings.ts

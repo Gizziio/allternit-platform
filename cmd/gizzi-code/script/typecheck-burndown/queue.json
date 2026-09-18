@@ -3,11 +3,11 @@
   "generatedFrom": "3a2ab23a6095905d94c93c5b4c399b1c8a501ca6",
   "batchCount": 108,
   "stats": {
-    "totalNocheck": 2009,
+    "totalNocheck": 2006,
     "excludedCompilerArtifacts": 361,
     "excludedVendored": 93,
-    "totalQueueFiles": 1555,
-    "totalQueueLoc": 515342
+    "totalQueueFiles": 1552,
+    "totalQueueLoc": 515334
   },
   "batches": [
     {
@@ -25,12 +25,9 @@
         "src/cli/ui/ink-app/utils/attributionHooks.ts",
         "src/cli/ui/ink-app/utils/postCommitAttribution.ts",
         "src/cli/ui/ink-app/utils/udsMessaging.ts",
-        "src/cli/ui/ink-app/utils/udsClient.ts",
-        "src/runtime/components/Markdown.ts",
-        "src/cli/ui/utils/permissions/PermissionUpdateSchema.ts",
-        "src/cli/ui/utils/settings/settings.ts"
+        "src/cli/ui/ink-app/utils/udsClient.ts"
       ],
-      "loc": 241,
+      "loc": 233,
       "twins": [
         {
           "runtime": "src/runtime/services/api/emptyUsage.ts",
@@ -96,21 +93,9 @@
         {
           "path": "src/cli/ui/ink-app/utils/udsClient.ts",
           "reason": "re-exports from nonexistent module src/shared/utils/udsClient.js; zero importers; fixing needs import-specifier change (banned by type-only rule)"
-        },
-        {
-          "path": "src/runtime/components/Markdown.ts",
-          "reason": "import specifier casing mismatch (Markdown.js vs markdown.ts) surfaces TS1261; fixing needs import-specifier change (banned by type-only rule)"
-        },
-        {
-          "path": "src/cli/ui/utils/permissions/PermissionUpdateSchema.ts",
-          "reason": "re-export shim uses wrong relative path (./ink-app/... should be ../ink-app/...); zero importers; fixing needs import-specifier change (banned by type-only rule)"
-        },
-        {
-          "path": "src/cli/ui/utils/settings/settings.ts",
-          "reason": "re-export shim uses wrong relative path (./ink-app/... should be ../ink-app/...); zero importers; fixing needs import-specifier change (banned by type-only rule)"
         }
       ],
-      "note": "Pilot batch b0001 (2026-09-18): 226/242 files burned (headers removed, type errors fixed type-onlyly). 16 files escalated (kept headers, listed above) \u2014 12 malformed TEMPORARY SHIM stubs with invalid JS grammar, 4 dead/broken re-export shims needing import-specifier changes. Escalations need a dedicated cleanup pass with behavior-change approval."
+      "note": "Pilot batch b0001 (2026-09-18): 226/242 files burned (headers removed, type errors fixed type-onlyly). 3 dead/broken re-export shims deleted in shim-triage (ao/shim-triage-1): src/runtime/components/Markdown.ts, src/cli/ui/utils/permissions/PermissionUpdateSchema.ts, src/cli/ui/utils/settings/settings.ts. 13 files escalated (kept headers, listed above) \u2014 12 malformed TEMPORARY SHIM stubs with invalid JS grammar, 1 dead/broken re-export shim (src/cli/ui/ink-app/utils/udsClient.ts) deferred: it has a live dynamic importer (conversationRecovery.ts) and needs an import-specifier change (banned by type-only rule). Escalations need a dedicated cleanup pass with behavior-change approval."
     },
     {
       "id": "b0002",
