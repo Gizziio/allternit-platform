@@ -190,6 +190,10 @@
     "zod": "4.3.6",
     "zod-to-json-schema": "3.24.5"
   },
+  "optionalDependencies": {
+    "image-processor-napi": "*",
+    "playwright": "^1.58.2"
+  },
   "overrides": {
     "drizzle-orm": "1.0.0-beta.12-a5629fb"
   }

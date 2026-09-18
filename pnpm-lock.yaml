@@ -566,6 +566,13 @@ importers:
       why-is-node-running:
         specifier: 3.2.2
         version: 3.2.2
+    optionalDependencies:
+      image-processor-napi:
+        specifier: '*'
+        version: 0.0.1
+      playwright:
+        specifier: ^1.58.2
+        version: 1.58.2
 
   cmd/gizzi-code/cli-package:
     dependencies:
@@ -14953,6 +14960,9 @@ packages:
   ignore@7.0.5:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
+
+  image-processor-napi@0.0.1:
+    resolution: {integrity: sha512-BJH2djIrJ+8doiXsLYUjj1fuIIL8KdZcuEtsVCjtyKMNyT6pVEL14Ug30PkGSR1V2yHdzhDVwZlQHWAS9Kd8fg==}
 
   image-size@1.2.1:
     resolution: {integrity: sha512-rH+46sQJ2dlwfjfhCyNx5thzrv+dtmBIhPHk0zgRUukHzZ/kRueTJXoYYsclBaKcSMBWuGbOFXtioLpzTb5euw==}
@@ -37742,6 +37752,9 @@ snapshots:
   ignore@5.3.2: {}
 
   ignore@7.0.5: {}
+
+  image-processor-napi@0.0.1:
+    optional: true
 
   image-size@1.2.1:
     dependencies:
