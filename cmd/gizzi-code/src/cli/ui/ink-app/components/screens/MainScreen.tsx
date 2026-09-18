@@ -3,7 +3,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Box, Text, useApp, useInput } from '../../ink';
 import type { Session, ToolUse, ToolResult, CommandOption } from '../../types';
 import { getHarnessModel, getHarnessService } from '../../services/harness';
-import { CommandPalette } from '../CommandPalette';
 import { useCommandRegistry } from '../../hooks/useCommandRegistry';
 
 interface MainScreenProps {
@@ -35,7 +34,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   onExit,
 }) => {
   const { exit } = useApp();
-  const { register, visibleOptions, suggestedOptions, trigger } = useCommandRegistry();
+  const { register, visibleOptions } = useCommandRegistry();
   
   // Output history
   const [items, setItems] = useState<OutputItem[]>([]);
@@ -47,7 +46,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentResponse, setCurrentResponse] = useState('');
   // UI state
-  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [currentAgent, setCurrentAgent] = useState('default');
   const [currentModel, setCurrentModel] = useState(getHarnessModel());
   // Spinner animation
@@ -150,17 +148,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   }, [isProcessing]);
 
   useInput((value, key) => {
-    // Command palette trigger
-    if (key.ctrl && value === 'p') {
-      setShowCommandPalette(true);
-      return;
-    }
-    // Slash command trigger
-    if (value === '/' && input === '' && !isProcessing && !showCommandPalette) {
-      setShowCommandPalette(true);
-      return;
-    }
-    if (showCommandPalette) return; // Let palette handle input
     if (key.escape) {
       if (onExit) onExit();
       exit();
@@ -252,37 +239,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
   const workspaceName = session?.workspace?.split('/').pop() || 'gizzi-code';
 
-  // Command palette handler
-  if (showCommandPalette) {
-    return (
-      <Box flexDirection="column" height="100%">
-        <Box 
-          flexDirection="row" 
-          paddingX={1} 
-          borderStyle="single" 
-          borderColor="#30363d"
-          borderTop={false}
-          borderLeft={false}
-          borderRight={false}
-        >
-          <Text color="#d4b08c">⏺</Text>
-          <Text> {workspaceName}</Text>
-          <Box flexGrow={1} />
-          <Text dimColor>Command Palette</Text>
-        </Box>
-        <CommandPalette
-          title="Commands"
-          options={visibleOptions}
-          suggestedOptions={suggestedOptions}
-          onSelect={(option) => {
-            option.onSelect?.();
-            setShowCommandPalette(false);
-          }}
-          onCancel={() => setShowCommandPalette(false)}
-        />
-      </Box>
-    );
-  }
 
   return (
     <Box flexDirection="column" height="100%">
@@ -335,7 +291,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       {/* Footer */}
       <Box flexDirection="row" paddingX={1}>
         <Text dimColor>
-          ^C Interrupt • ^P Commands • / Slash • ↑↓ History
+          ^C Interrupt • / Slash • ↑↓ History
           {harnessEnabled && ' • Harness'}
         </Text>
       </Box>

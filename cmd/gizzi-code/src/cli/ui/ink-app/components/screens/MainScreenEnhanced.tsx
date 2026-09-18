@@ -12,7 +12,6 @@ import { Box, Text, useApp, useInput } from '../../ink';
 import { useTerminalSize } from '../../hooks/useTerminalSize';
 import type { Session, Message, ToolUse, ToolResult } from '../../types';
 import { getHarnessModel, getHarnessService } from '../../services/harness';
-import { CommandPalette } from '../CommandPalette';
 import { useCommandRegistry } from '../../hooks/useCommandRegistry';
 
 interface MainScreenEnhancedProps {
@@ -75,7 +74,7 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
 }) => {
   const { exit } = useApp();
   const { width, height } = useTerminalSize();
-  const { register, visibleOptions, suggestedOptions } = useCommandRegistry();
+  const { register, visibleOptions } = useCommandRegistry();
   
   // Output history
   const [items, setItems] = useState<OutputItem[]>([]);
@@ -90,7 +89,6 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
   const [currentResponse, setCurrentResponse] = useState('');
   const [activeTools, setActiveTools] = useState<Array<{ id: string; name: string; status: any; input?: Record<string, any> }>>([]);
   // UI state
-  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [currentModel, setCurrentModel] = useState(getHarnessModel());
   const [totalCost, setTotalCost] = useState(0);
@@ -131,7 +129,7 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
         onSelect: () => {
           addItem({ 
             type: 'system', 
-            content: 'Commands: /new, /models, /help, /exit | Shortcuts: Ctrl+P (palette), Ctrl+C (interrupt), Esc (exit)' 
+            content: 'Commands: /new, /models, /help, /exit | Shortcuts: Ctrl+C (interrupt), Esc (exit)' 
           });
         },
       },
@@ -160,17 +158,6 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
 
   // Input handling
   useInput((value, key) => {
-    // Command palette trigger
-    if (key.ctrl && value === 'p') {
-      setShowCommandPalette(true);
-      return;
-    }
-    // Slash command trigger
-    if (value === '/' && input === '' && !isProcessing && !showCommandPalette) {
-      setShowCommandPalette(true);
-      return;
-    }
-    if (showCommandPalette) return;
     if (showModelPicker) return;
     // Exit handlers
     if (key.escape) {
@@ -318,38 +305,6 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
   const workspaceName = session?.title || 'gizzi-code';
   const sessionId = session?.id?.slice(0, 8) || 'new';
 
-  // Command palette
-  if (showCommandPalette) {
-    return (
-      <Box flexDirection="column" height={height}>
-        <Box 
-          flexDirection="row" 
-          paddingX={1} 
-          borderStyle="single" 
-          borderColor="#30363d"
-          borderTop={false}
-          borderLeft={false}
-          borderRight={false}
-        >
-          <Text color="#d4b08c">⏺</Text>
-          <Text> {workspaceName}</Text>
-          <Box flexGrow={1} />
-          <Text dimColor>Command Palette</Text>
-        </Box>
-        <CommandPalette
-          title="Commands"
-          options={visibleOptions}
-          suggestedOptions={suggestedOptions}
-          onSelect={(option) => {
-            option.onSelect?.();
-            setShowCommandPalette(false);
-          }}
-          onCancel={() => setShowCommandPalette(false)}
-        />
-      </Box>
-    );
-  }
-
   // Model picker (simplified)
   if (showModelPicker) {
     return (
@@ -444,7 +399,7 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
           {totalCost > 0 && ` • $${totalCost.toFixed(4)}`}
         </Text>
         <Box flexGrow={1} />
-        <Text dimColor>^C Interrupt • ^P Commands • /help</Text>
+        <Text dimColor>^C Interrupt • /help</Text>
       </Box>
     </Box>
   );
