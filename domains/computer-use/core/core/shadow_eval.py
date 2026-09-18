@@ -655,6 +655,14 @@ def run_eval(
         **({"vocab_miss_count": sum(len(t.get("vocab_misses", [])) for t in reports)}
            if any("vocab_misses" in t for t in reports) else {}),
         "note": (
+            "KimiCliHead numbers — the kimi CLI subprocess head answers the "
+            "same closed-set questions as the scripted LLM transcript under a "
+            "strict JSON contract; agreement measures how often its chosen "
+            "answers match the recorded LLM decisions. Per-option "
+            "probabilities are the chosen option at kimi's stated confidence "
+            "with the remainder split uniformly (confidence-scalar, not a "
+            "distribution — an mlx/local-tier property)."
+            if head_label == "kimi" else
             "MlxDirectLogitHead real-weights numbers — the local mlx-lm head "
             "answers the same closed-set questions as the scripted LLM "
             "transcript; agreement measures how often its first-token choices "
