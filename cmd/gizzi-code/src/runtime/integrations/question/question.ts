@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Bus } from "@/runtime/bus/bus"
+import { Bus } from "@/shared/bus"
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Identifier } from "@/shared/id/id"
 import { Instance } from "@/runtime/context/project/instance"
@@ -109,11 +109,6 @@ export namespace Question {
         resolve,
         reject,
       }
-      // TODO(runtime): Bus.publish does not exist on the Bus class from
-      // "@/runtime/bus/bus" (it has instance handlers only). The correct import
-      // is the Bus namespace from "@/shared/bus" (Bus.publish(def, properties)).
-      // All three call sites (ask/reply/reject) need that swap — behavior change
-      // deferred to the owning batch.
       Bus.publish(Event.Asked, info)
     })
   }
