@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Permission Profile Command
  *

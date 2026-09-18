@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import { Log } from "@/shared/util/log"
@@ -94,27 +93,33 @@ export namespace LSP {
       filterExperimentalServers(servers)
 
       for (const [name, item] of Object.entries(cfg.lsp ?? {})) {
-        const existing = servers[name]
         if (item.disabled) {
           log.info(`LSP server ${name} is disabled`)
           delete servers[name]
           continue
         }
+        const entry = item as {
+          command: string[]
+          extensions?: string[]
+          env?: Record<string, string>
+          initialization?: Record<string, any>
+        }
+        const existing = servers[name]
         servers[name] = {
           ...existing,
           id: name,
           root: existing?.root ?? (async () => Instance.directory),
-          extensions: item.extensions ?? existing?.extensions ?? [],
+          extensions: entry.extensions ?? existing?.extensions ?? [],
           spawn: async (root) => {
             return {
-              process: spawn(item.command[0], item.command.slice(1), {
+              process: spawn(entry.command[0], entry.command.slice(1), {
                 cwd: root,
                 env: {
                   ...process.env,
-                  ...item.env,
+                  ...entry.env,
                 },
               }),
-              initialization: item.initialization,
+              initialization: entry.initialization,
             }
           },
         }

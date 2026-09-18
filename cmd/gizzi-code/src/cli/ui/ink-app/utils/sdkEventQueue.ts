@@ -1,8 +1,9 @@
-// @ts-nocheck
 import type { UUID } from 'crypto'
 import { randomUUID } from 'crypto'
 import { getIsNonInteractiveSession, getSessionId } from '../bootstrap/state.js'
-import type { SdkWorkflowProgress } from '../types/tools.js'
+// ../../types/tools is the dormant ink-app stub; the real types live in
+// src/types/tools.ts.
+import type { SdkWorkflowProgress } from '../../../../types/tools.js'
 
 type TaskStartedEvent = {
   type: 'system'

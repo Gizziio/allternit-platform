@@ -1,4 +1,3 @@
-// @ts-nocheck
 import z from "zod/v4"
 import { spawn } from "child_process"
 import { Tool } from "@/runtime/tools/builtins/tool"
@@ -170,7 +169,9 @@ export const BashTool = Tool.define("bash", async () => {
       }
 
       const shellEnv = await Plugin.trigger(
-        "shell.env",
+        // "shell.env" is not declared in the plugin SDK Hooks type yet
+        // (pty/index.ts and session/prompt.ts call it the same way)
+        "shell.env" as any,
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )

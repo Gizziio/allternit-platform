@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Cowork Runtime Execution Engine
  *
@@ -14,12 +13,21 @@ import { VmSession } from "@/runtime/context/vm/vm-session"
 
 const log = Log.create({ service: "cowork-runtime" })
 
+// RunConfig in cowork.service.ts omits timeout_ms/runtime, but runs carry
+// both at runtime.
+type RuntimeRunConfig = Omit<RunConfig, "runtime"> & {
+  timeout_ms?: number
+  runtime?: string
+}
+
 // Lazy-loaded vfkit manager (only created when VM mode is used)
+// NOTE: the vfkit manager was removed in the 2026-09 dead-code cleanup
+// (Lima replaced it); this dynamic import has no matching export at runtime.
 let vfkitManager: any = null
 
 async function getVfkitManager() {
   if (!vfkitManager) {
-    const { createVFKitManager } = await import("@/runtime/vm")
+    const { createVFKitManager } = (await import("@/runtime/vm")) as any
     vfkitManager = createVFKitManager()
     if (!(await vfkitManager.checkImages())) {
       throw new Error(
@@ -33,11 +41,13 @@ async function getVfkitManager() {
 
 export namespace CoworkRuntime {
   export async function execute(run: Run): Promise<void> {
-    RunService.updateStatus(run.id, "running", { started_at: Date.now() as any })
+    RunService.updateStatus(run.id, "running", { started_at: Date.now() } as any)
     RunService.appendEvent(run.id, "run_started", { run_id: run.id, name: run.name })
 
     try {
-      const config = (run.config ?? {}) as RunConfig
+      // RunConfig in cowork.service.ts omits timeout_ms/runtime, but runs
+      // carry both at runtime.
+      const config = (run.config ?? {}) as RuntimeRunConfig
       const command = config.command
 
       if (!command) {
@@ -67,7 +77,7 @@ export namespace CoworkRuntime {
     }
   }
 
-  async function executeLocal(run: Run, config: RunConfig): Promise<void> {
+  async function executeLocal(run: Run, config: RuntimeRunConfig): Promise<void> {
     const steps = ["prepare", "execute", "finalize"]
     RunService.updateStatus(run.id, "running", { total_steps: steps.length })
 
@@ -106,7 +116,7 @@ export namespace CoworkRuntime {
     finishRun(run.id, "completed")
   }
 
-  async function executeRemote(run: Run, config: RunConfig): Promise<void> {
+  async function executeRemote(run: Run, config: RuntimeRunConfig): Promise<void> {
     RunService.appendEvent(run.id, "stdout", {
       content: `[remote] Would execute on ${config.host}:${config.port || 22}\n`,
     })
@@ -114,7 +124,7 @@ export namespace CoworkRuntime {
     finishRun(run.id, "completed")
   }
 
-  async function executeCloud(run: Run, config: RunConfig): Promise<void> {
+  async function executeCloud(run: Run, config: RuntimeRunConfig): Promise<void> {
     RunService.appendEvent(run.id, "stdout", {
       content: `[cloud] Would deploy to ${config.provider || "hetzner"} / ${config.region || "nbg1"}\n`,
     })
@@ -122,7 +132,7 @@ export namespace CoworkRuntime {
     finishRun(run.id, "completed")
   }
 
-  async function executeVM(run: Run, config: RunConfig): Promise<void> {
+  async function executeVM(run: Run, config: RuntimeRunConfig): Promise<void> {
     const vm = await getVfkitManager()
     const steps = ["prepare", "execute", "finalize"]
     RunService.updateStatus(run.id, "running", { total_steps: steps.length })

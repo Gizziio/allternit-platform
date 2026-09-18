@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Pure, synchronous token-estimation helpers, extracted from tokenEstimation.ts
  * so callers that only need rough estimates don't pull in that module's much
@@ -130,7 +129,12 @@ function roughTokenCountEstimationForBlock(
     return 2000
   }
   if (block.type === 'tool_result') {
-    return roughTokenCountEstimationForContent(block.content)
+    return roughTokenCountEstimationForContent(
+      block.content as
+        | string
+        | Array<AllternitAI.ContentBlock>
+        | Array<AllternitAI.ContentBlockParam>,
+    )
   }
   if (block.type === 'tool_use') {
     // input is the JSON the model generated — arbitrarily large (bash

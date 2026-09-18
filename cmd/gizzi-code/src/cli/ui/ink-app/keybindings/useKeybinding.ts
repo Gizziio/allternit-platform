@@ -1,9 +1,11 @@
-// @ts-nocheck
 import { useCallback, useEffect } from 'react'
 import type { InputEvent } from '../ink/events/input-event.js'
 import { type Key, useInput } from '../ink.js'
 import { useOptionalKeybindingContext } from './KeybindingContext.js'
-import type { KeybindingContextName } from './types.js'
+
+// keybindings/types.ts is a dormant stub; context names are free-form strings
+// ('Global', 'ThemePicker', ...) until the real types land.
+type KeybindingContextName = string
 
 type Options = {
   /** Which context this binding belongs to (default: 'Global') */

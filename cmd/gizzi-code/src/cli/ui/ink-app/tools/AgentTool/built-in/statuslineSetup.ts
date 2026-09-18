@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { BuiltInAgentDefinition } from '../loadAgentsDir.js'
 
 const STATUSLINE_SYSTEM_PROMPT = `You are a status line setup agent for Gizzi Code. Your job is to create or update the statusLine command in the user's Gizzi Code settings.

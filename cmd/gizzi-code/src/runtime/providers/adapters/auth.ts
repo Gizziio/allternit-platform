@@ -1,22 +1,52 @@
-// @ts-nocheck
 import { Instance } from "@/runtime/context/project/instance"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { map, filter, pipe, fromEntries, mapValues } from "remeda"
 import z from "zod/v4"
 import { fn } from "@/shared/util/fn"
-import type { AuthOuathResult, Hooks } from "@allternit/plugin"
 import { NamedError } from "@allternit/gizzi-util/error.js"
 import { Auth } from "@/runtime/integrations/auth"
+
+// The plugin SDK's declared AuthMethod/AuthOuathResult shapes are narrower
+// than what auth-capable plugins actually provide at runtime (labels,
+// authorize/callback flows). These local types describe the runtime surface
+// this adapter relies on without touching the SDK package.
+type RuntimeAuthMethod = {
+  label: string
+  type: "oauth" | "api" | "api_key"
+  authorize: () => Promise<RuntimeAuthorizeResult>
+}
+
+type RuntimeAuthorizeResult = {
+  url: string
+  method: "auto" | "code"
+  instructions: string
+  callback: (code?: string) => Promise<RuntimeCallbackResult>
+}
+
+type RuntimeCallbackResult = {
+  type: string
+  key?: string
+  access?: string
+  refresh?: string
+  expires?: number
+  accountId?: string
+}
 
 export namespace ProviderAuth {
   const state = Instance.state(async () => {
     const methods = pipe(
       await Plugin.list(),
       filter((x) => x.auth?.provider !== undefined),
-      map((x) => [x.auth!.provider, x.auth!] as const),
+      map(
+        (x) =>
+          [
+            x.auth!.provider,
+            x.auth! as unknown as { methods: RuntimeAuthMethod[] },
+          ] as const,
+      ),
       fromEntries(),
     )
-    return { methods, pending: {} as Record<string, AuthOuathResult> }
+    return { methods, pending: {} as Record<string, RuntimeAuthorizeResult> }
   })
 
   export const Method = z
@@ -32,7 +62,7 @@ export namespace ProviderAuth {
     return mapValues(s, (x) =>
       x.methods.map(
         (y): Method => ({
-          type: y.type,
+          type: y.type as Method["type"],
           label: y.label,
         }),
       ),
