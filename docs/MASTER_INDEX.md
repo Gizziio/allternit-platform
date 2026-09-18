@@ -1,9 +1,9 @@
 # Allternit Documentation — Master Index
 
-**Last Updated:** April 14, 2026  
+**Last Updated:** September 18, 2026 (refreshed after the docs/ consolidation — loose depth-1 program docs filed into `programs/<program>/` and `learnings/`)
 **Status:** Unified, Bridge-Mapped, and Surgically Sorted
 
-> 🤖 **ATTENTION AI AGENTS:** Start by reading [MASTER_HANDOFF_PROMPT.md](./MASTER_HANDOFF_PROMPT.md) for your exact initialization context and instructions on how to parse this repository without hallucinations.
+> **Taxonomy:** stable capitalized dir families (`Core_System/`, `Operations/`, `Future_Blueprints/`) and stable lower-case dirs (`architecture/`, `audit/`, `design/`, `marketing/`, `pipeline/`, `projects/`, `public/`, `research/`, `specs/`, `reports/`, `upstream/`, `archive/`, …) do not move. Loose program docs live under `programs/<program>/`; one-off orphans live under `learnings/`. See [README.md](./README.md) for the full rules.
 
 ---
 
@@ -13,7 +13,7 @@
 ### 📂 [01-Reality](./Core_System/01-Reality/) (Active Code Architecture)
 *What is actually running in the monorepo today.*
 - **System Map:** [ARCH-Global-System-Map.md](./Core_System/01-Reality/ARCH-Global-System-Map.md)
-- **State Engines:** 
+- **State Engines:**
   - [SPEC-Reality-Rails-Control-Plane.md](./Core_System/01-Reality/SPEC-Reality-Rails-Control-Plane.md)
   - [SPEC-Reality-Data-Fabric.md](./Core_System/01-Reality/SPEC-Reality-Data-Fabric.md)
   - [SPEC-Reality-Memory-Ars-Contexta.md](./Core_System/01-Reality/SPEC-Reality-Memory-Ars-Contexta.md)
@@ -56,24 +56,59 @@
 
 ## 🚀 2. Future Blueprints
 *Advanced research and visionary proposals (The "Good Ideas").*
-- **Robotics:** [BLUEPRINT-Allternit_Embodiment_RoboticsControlPlane_FullSpec.md](./Future_Blueprints/BLUEPRINT-Allternit_Embodiment_RoboticsControlPlane_FullSpec.md)
-- **RLM:** [BLUEPRINT-RLM_Integration_Plan.md](./Future_Blueprints/BLUEPRINT-RLM_Integration_Plan.md)
-- **Roadmaps:** [BLUEPRINT-ALLTERNIT_BLUEPRINTS_ROADMAP.md](./Future_Blueprints/BLUEPRINT-ALLTERNIT_BLUEPRINTS_ROADMAP.md) | [BLUEPRINT-Intent-Compiler.md](./Future_Blueprints/BLUEPRINT-Intent-Compiler.md)
-- **Visions:** [BLUEPRINT-Vision-Always-On.md](./Future_Blueprints/BLUEPRINT-Vision-Always-On.md) | [BLUEPRINT-Vision-Code-Mode.md](./Future_Blueprints/BLUEPRINT-Vision-Code-Mode.md) | [BLUEPRINT-Ecosystem-Parity-Mobile.md](./Future_Blueprints/BLUEPRINT-Ecosystem-Parity-Mobile.md)
+- [BLUEPRINT-Allternit_Embodiment_RoboticsControlPlane_FullSpec.md](./Future_Blueprints/BLUEPRINT-Allternit_Embodiment_RoboticsControlPlane_FullSpec.md) | [BLUEPRINT-RLM_Integration_Plan.md](./Future_Blueprints/BLUEPRINT-RLM_Integration_Plan.md) | [BLUEPRINT-ALLTERNIT_BLUEPRINTS_ROADMAP.md](./Future_Blueprints/BLUEPRINT-ALLTERNIT_BLUEPRINTS_ROADMAP.md) | [BLUEPRINT-Intent-Compiler.md](./Future_Blueprints/BLUEPRINT-Intent-Compiler.md) | [BLUEPRINT-Vision-Always-On.md](./Future_Blueprints/BLUEPRINT-Vision-Always-On.md) | [BLUEPRINT-Vision-Code-Mode.md](./Future_Blueprints/BLUEPRINT-Vision-Code-Mode.md) | [BLUEPRINT-Ecosystem-Parity-Mobile.md](./Future_Blueprints/BLUEPRINT-Ecosystem-Parity-Mobile.md)
 
 ---
 
 ## 💼 3. Business, Product & Content
-- **Business:** [ALLTERNIT_MANUFACTURING_STRATEGY_2026-04-07.md](./Business_Strategy/ALLTERNIT_MANUFACTURING_STRATEGY_2026-04-07.md)
-- **Identity:** [ALLTERNIT_BRAND_AUTHORITY.md](./Business_Strategy/ALLTERNIT_BRAND_AUTHORITY.md)
+- **Business:** [ALLTERNIT_MANUFACTURING_STRATEGY_2026-04-07.md](./Business_Strategy/ALLTERNIT_MANUFACTURING_STRATEGY_2026-04-07.md) | [ALLTERNIT_BRAND_AUTHORITY.md](./Business_Strategy/ALLTERNIT_BRAND_AUTHORITY.md)
 - **Product:** [ALABS-COURSE-CATALOG.md](./Product_and_Content/ALABS-COURSE-CATALOG.md)
 - **Skills & Templates:** [Allternit_Identity_SKILL.md](./Product_and_Content/Skills_and_Templates/Allternit_Identity_SKILL.md) | [UNIT.template.md](./Product_and_Content/Skills_and_Templates/UNIT.template.md)
+
+---
 
 ## 🛠️ 4. Operations
 *Practical guides, deployment tracking, and setup instructions.*
 - **Deployment:** [PRODUCTION_DEPLOYMENT_GUIDE.md](./Operations/PRODUCTION_DEPLOYMENT_GUIDE.md) | [ENTERPRISE_DEPLOYMENT_CHECKLIST.md](./Operations/ENTERPRISE_DEPLOYMENT_CHECKLIST.md) | [PORT_REGISTRY.md](./Operations/PORT_REGISTRY.md)
 - **Computer Use:** [README.md](./Operations/Computer_Use/README.md) | [AGENT_NATIVE_USAGE_GUIDE.md](./Operations/Computer_Use/AGENT_NATIVE_USAGE_GUIDE.md) | [DEMONSTRATION_SUMMARY.md](./Operations/Computer_Use/DEMONSTRATION_SUMMARY.md)
 
-## 📦 5. Archive
+---
+
+## 📚 5. Programs (`programs/<program>/`)
+*Phase-organized program docs: MAP (orchestrator analysis) → TASK (spec) → NOTES (sentinel-capped outcome). Filmed from the loose depth-1 caps-lock docs on 2026-09-18.*
+
+| Program | Dir | Files | Key docs |
+|---|---|---|---|
+| Swarm builds | [swarm/](./programs/swarm/) | 68 | `SWARM_{A..E}_MAP.md`, `SWARM_*_PHASE*_NOTES.md` |
+| CommRails | [rails/](./programs/rails/) | 24 | [RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md](./programs/rails/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md), `RAILS_{GRAPH,MAIL,PARITY}_*` |
+| Gizzi-code | [gizzi/](./programs/gizzi/) | 24 | [GIZZI_BOT_MODE_SPEC.md](./programs/gizzi/GIZZI_BOT_MODE_SPEC.md), `GIZZI_W2*`, `FABRIC_PWA_BOT_MODE_*`, `GC_*` |
+| iOS | [ios/](./programs/ios/) | 15 | `IOS_BOT_PARITY_*`, `IOS_LOCAL_MODELS_MARKETPLACE_*` |
+| Cloud agents | [cloud-agents/](./programs/cloud-agents/) | 8 | `CLOUD_AGENTS_PHASE_*` |
+| AO engine / UHP | [ao/](./programs/ao/) | 11 | [UHP.md](./programs/ao/UHP.md), [UHP_VENDOR_INVENTORY.md](./programs/ao/UHP_VENDOR_INVENTORY.md), `AO_*_NOTES.md` |
+| ACU shadow head | [acu/](./programs/acu/) | 3 | `ACU_SHADOW_HEAD_*` |
+| Media plugins | [media-plugins/](./programs/media-plugins/) | 3 | `MEDIAPLUG1_NOTES.md`, [MEDIA_PLUGINS_MAP.md](./programs/media-plugins/MEDIA_PLUGINS_MAP.md) |
+
+---
+
+## 🧠 6. Learnings (`learnings/`)
+*One-off and non-prefixed depth-1 orphans filed here on 2026-09-18 (214 files): audit tasks, triage notes, surface audits, agent-activity phases, setup guides, runbooks.*
+
+Kept at depth 1 deliberately: [NATIVE_SESSIONS.md](./NATIVE_SESSIONS.md) and [AGENT_EMAIL_RAIL.md](./AGENT_EMAIL_RAIL.md) (both linked from the root `AGENTS.md`, which is path-frozen).
+
+---
+
+## 🗂️ 7. Stable Taxonomy Dirs
+*Do not reorganize without an explicit decision (see [README.md](./README.md)).*
+
+- **Specs & research:** [specs/](./specs/) (3) | [research/](./research/) (2) | [reports/](./reports/) (2) | [Audits_and_Research/](./Audits_and_Research/) (9) | [audit/](./audit/) (1) | [kimi-audit/](./kimi-audit/) (8) | [openai-audit/](./openai-audit/) (12) | [parity-reports/](./parity-reports/) (72) | [parity-reports-archive/](./parity-reports-archive/) (9) | [gap-analysis/](./gap-analysis/) (11)
+- **Design & product:** [design/](./design/) (30) | [architecture/](./architecture/) (18) | [marketing/](./marketing/) (8) | [demos/](./demos/) (2) | [assets/](./assets/) (1)
+- **Agent systems:** [a-protocol/](./a-protocol/) (2) | [agent-activity-design/](./agent-activity-design/) (5) | [agent-tasks/](./agent-tasks/) (46) | [bots/](./bots/) (2) | [desktop-cloud-mvp/](./desktop-cloud-mvp/) (48)
+- **Pipeline & planning:** [pipeline/](./pipeline/) (44) | [plans/](./plans/) (1) | [development/](./development/) (1) | [infra/](./infra/) (1) | [jobs/](./jobs/) (1) | [learning/](./learning/) (67)
+- **Upstream & public:** [upstream/](./upstream/) (10) | [public/](./public/) (119)
+- **Projects & archive:** [projects/](./projects/) (2) | [archive/](./archive/) (708)
+
+---
+
+## 📦 8. Archive
 - [Legacy Relics & Summaries](./Archive/)
 - [Agent Examples & Workspaces](./Archive/Examples/)

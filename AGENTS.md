@@ -568,13 +568,13 @@ This registers the session as `gizzi-<sessionId>` with the CommRails API and pol
 - `bun run typecheck` in `cmd/gizzi-code` ✅
 - `cmd/gizzi-code/test/rails-peer-e2e.ts` registers two peers, lists them, and confirms Bus/UDS message delivery.
 - `tmp/rails-two-session-test/run.sh` automates a two-session `GIZZI_ENABLE_RAILS_PEER=1 gizzi-code` TUI exchange and saves evidence to `tmp/rails-two-session-test/evidence/`.
-- Two live `GIZZI_ENABLE_RAILS_PEER=1 gizzi` sessions exchanged a `ListPeers` / `SendMessage` round-trip (see `docs/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md`).
+- Two live `GIZZI_ENABLE_RAILS_PEER=1 gizzi` sessions exchanged a `ListPeers` / `SendMessage` round-trip (see `docs/programs/rails/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md`).
 
 ### Product-update system prompts
 
 Load these into agent sessions to teach the Rails workflow:
 
-- `docs/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md` — full product update / system prompt.
+- `docs/programs/rails/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md` — full product update / system prompt.
 - `.allternit/context-packs/rails-product-update/inputs/INSTRUCTIONS.md` — concise agent-instruction context pack.
 - `.allternit/context-packs/rails-product-update/inputs/templates/QUICKSTART.md` — copy-paste quickstart.
 

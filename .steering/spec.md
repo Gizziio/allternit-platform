@@ -1,5 +1,5 @@
 # Cloud Computer Phase 2 plan and verification
-Source of truth: docs/CLOUD_COMPUTER_PHASE_2_TASK.md; reference docs/CLOUD_COMPUTER_PHASE_2_DESIGN.md.
+Source of truth: docs/learnings/CLOUD_COMPUTER_PHASE_2_TASK.md; reference docs/learnings/CLOUD_COMPUTER_PHASE_2_DESIGN.md.
 - [x] Resize: validated PATCH, Incus live limits/stopped root disk, unsupported 501, default false capabilities.
 - [x] Clone: credit gate, stateful snapshot/create/start, transactional owner/resource/billing mirror, retained restore snapshot, isolated native instance.
 - [x] Idle: nullable timeout PATCH, activity touches, shutdown-aware sweeper, human-controls skip/recheck, shared stop and bot usage cleanup.

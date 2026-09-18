@@ -1,6 +1,6 @@
 # Plan — A:// dispatcher proof slice (session/adispatch-0912)
 
-Spec: `docs/A_COORDINATION_CONTRACT_V0_1.md` §8, Appendix B. Exit criterion: §8.24
+Spec: `docs/learnings/A_COORDINATION_CONTRACT_V0_1.md` §8, Appendix B. Exit criterion: §8.24
 adversarial two-worker test passes behaviorally. Canonical store = Rust runtime
 SQLite (as wired inside cmd/allternit-api). Stop before merge.
 
@@ -27,7 +27,7 @@ SQLite (as wired inside cmd/allternit-api). Stop before merge.
 
 ## Todos
 
-- [x] Step 0: commit contract (`docs/A_COORDINATION_CONTRACT_V0_1.md`)
+- [x] Step 0: commit contract (`docs/learnings/A_COORDINATION_CONTRACT_V0_1.md`)
 - [ ] Steps 1–2: migrations V152 principals, V153 job lease columns, V154 event attribution
 - [ ] Steps 1–3: runtime dispatch types + sqlite_store (auth, CAS claim, heartbeat, renew, complete, sweep) + RunManager sweeper wiring
 - [ ] Step 3: API routes `rails/routes_a_dispatch.rs` (principal create, claim long-poll, heartbeat, renew, complete, result read), bearer-token auth
