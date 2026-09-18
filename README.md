@@ -1,328 +1,80 @@
 # allternit Platform
 
 > **Enterprise Agentic Operating System**
-> A comprehensive backend infrastructure for AI agents with a layered microservices architecture.
+> Agent runtime, desktop shell, cloud gateway, and services — one pnpm + Cargo workspace.
 
----
+This repo (`Gizziio/allternit-platform`) is the core platform monorepo: the Allternit agent
+runtime (gizzi-code), the desktop app, the Rust API gateway, and the supporting services.
+The agent workspace UI (`ai.allternit.com`) lives in the private satellite repo
+`Gizziio/allternit-ai`, not here.
 
-## Quick Start
+## Quick start
+
+Requires Node 22+ (pnpm 10 via `packageManager` field) and the stable Rust toolchain
+(`rust-toolchain.toml`).
 
 ```bash
-# Install dependencies
-./install.sh
+# Install Node dependencies (pnpm only — never npm/bun for workspace deps)
+pnpm install
 
-# Start the development environment
-make dev
+# Build the main Rust API server
+cargo build -p allternit-api
 
-# Or start the platform surfaces explicitly
-pnpm dev:platform                # Next.js platform app on :3013
-pnpm dev:platform-stack          # Platform app + Rust API on :8013
+# Run it in dev mode (binds :18013 by default; :8013 only with ALLTERNIT_API_PORT=8013)
+make api              # or: pnpm dev:api
 
-# Rails CLI (ticket/DAG workflow)
-cargo build -p rails
-./target/debug/rails init
-./target/debug/rails ticket new "Example task" --priority P1
+# Full dev stack (API + runtime + desktop, via concurrently)
+pnpm dev
+
+# Gizzi Code CLI (TUI) dev loop
+pnpm tui              # or: bun run --cwd cmd/gizzi-code dev
 ```
 
----
+Common checks: `pnpm test` (vitest), `pnpm typecheck`, `make test` (cargo workspace tests).
 
-## Directory Structure
+## Where things live
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           PROJECT STRUCTURE                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  0-substrate/           # Layer 0: Foundational infrastructure              │
-│  ├── allternit-substrate/     # Core runtime and helper utilities                 │
-│  ├── allternit-intent-graph-kernel/  # Persistent graph of intent nodes          │
-│  └── types/             # Shared TypeScript interfaces                      │
-│                                                                             │
-│  1-kernel/              # Layer 1: Execution engine, sandboxing             │
-│                                                                             │
-│  2-governance/          # Layer 2: Policy enforcement, WIH, receipts        │
-│                                                                             │
-│  3-adapters/            # Layer 3: Runtime boundaries, vendor adapters      │
-│                                                                             │
-│  4-services/            # Layer 4: Orchestration services                   │
-│  ├── ai/                # AI services (voice, vision, operator)             │
-│  ├── memory/            # State and context management                      │
-│  ├── registry/          # Agent, skill, and tool definitions                │
-│  └── orchestration/     # Kernel, workflow management                       │
-│                                                                             │
-│  5-agents/              # Layer 5: Agent implementations                    │
-│                                                                             │
-│  6-ui/                  # Layer 6: UI components and platform               │
-│  ├── allternit-platform/      # React component library (main)                    │
-│  │   ├── src/types/     # TypeScript types (browser, runtime, workflow)     │
-│  │   ├── src/services/  # Business logic services                           │
-│  │   ├── src/hooks/     # React hooks (useBudget, usePrewarm, useWorkflow)  │
-│  │   └── src/views/     # React view components                             │
-│  ├── _reference/        # Archived code                                     │
-│  └── canvas-monitor/    # Canvas monitoring tools                           │
-│                                                                             │
-│  7-apps/                # Layer 7: Applications and entrypoints             │
-│  ├── shell/             # Shell product family                              │
-│  │   ├── web/           # Browser shell (@allternit/shell-ui)              │
-│  │   ├── desktop/       # Electron wrapper (@allternit/shell)              │
-│  │   └── terminal/      # TUI (terminal interface)                          │
-│  ├── api/               # Rust API server (port 3000)                       │
-│  ├── chrome-extension/  # Browser extension                                 │
-│  └── launcher/          # App launcher                                      │
-│                                                                             │
-│  docs/                  # Documentation                                     │
-│  ├── archive/           # Archived documentation                            │
-│  └── SERVICES.md        # Service documentation                             │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Ownership rules (source of truth: [REPO_STRUCTURE.md](./REPO_STRUCTURE.md)):
 
----
+- **`cmd/`** — executables: CLI binaries, API servers, daemons (incl. `gizzi-code`)
+- **`services/`** — things that run: long-running services (memory, voice, registry, …)
+- **`platform/`** — contracts, protocols, types, plugins, internal `@allternit/*` TS libraries
+- **`sdk/`** — public SDK surface only (location frozen)
+- **`domains/`** — domain logic (agent, computer-use, governance, kernel)
+- **`infrastructure/`** — cloud providers, executors, bridges
+- **`surfaces/`** — web apps and desktop surfaces (desktop, mobile, extensions, console, docs)
 
-## New Services (TypeScript)
+Legacy consolidations in flight: `packages/@allternit/` → `platform/`; `api/` → `services/`.
 
-The following services have been ported from the original Rust implementation in `6-ui/shell-ui` to TypeScript in `6-ui/allternit-platform/src/services/`:
+Three SDKs: public TS SDK in `sdk/` (tag `sdk/v*`), Rust SDK in `platform/sdk/rust/`
+(rename to `platform/rust-sdk/` planned), gizzi SDK in `cmd/gizzi-code/packages/sdk/`
+(tag `gizzi-sdk/v*`).
 
-### browserEngine
-Browser automation service using Playwright via backend API.
+`agent-ledger/` is the signed session record — it stays at the repo root by design.
 
-**Location**: `6-ui/allternit-platform/src/services/browserEngine.ts`
+## Documentation
 
-```typescript
-import { createBrowserEngine } from '@/services/browserEngine';
+- [REPO_STRUCTURE.md](./REPO_STRUCTURE.md) — monorepo layout, ownership rules, satellite repos
+- [AGENTS.md](./AGENTS.md) — session process: worktrees, PR discipline, ledger attestations
+- [docs/](./docs/) — documentation hub (archive, gap-analysis, learnings, reports, specs)
+- [DESIGN.md](./DESIGN.md) — design system (tokens, typography, colors, animation)
+- [docs/MASTER_INDEX.md](./docs/MASTER_INDEX.md) — full documentation index
+- [docs/public/api/reference.md](./docs/public/api/reference.md) — public API reference
 
-const engine = createBrowserEngine({ 
-  apiBaseUrl: '/api/v1',
-  onStateChange: (state) => console.log(state.current_url)
-});
+## Service ports
 
-await engine.createSession({ viewport: { width: 1920, height: 1080 } });
-await engine.navigate('https://example.com');
-const screenshot = await engine.screenshot(true);
-```
-
-### budgetCalculator
-Budget metering and quota management.
-
-**Location**: `6-ui/allternit-platform/src/services/budgetCalculator.ts`
-
-```typescript
-import { createBudgetCalculator } from '@/services/budgetCalculator';
-
-const calculator = createBudgetCalculator({ quotas: [...] });
-const stats = calculator.getStats();
-const percentages = calculator.calculatePercentages('tenant-123');
-```
-
-### poolManager
-Prewarm pool lifecycle management.
-
-**Location**: `6-ui/allternit-platform/src/services/poolManager.ts`
-
-```typescript
-import { createPoolManager } from '@/services/poolManager';
-
-const manager = createPoolManager({ apiBaseUrl: '/api/v1' });
-const pool = await manager.createPool({ name: 'worker-pool', image: 'node:18', pool_size: 5 });
-const health = manager.calculateHealth(pool);
-```
-
-### workflowEngine
-Workflow validation, auto-layout, and compilation.
-
-**Location**: `6-ui/allternit-platform/src/services/workflowEngine.ts`
-
-```typescript
-import { createWorkflowEngine } from '@/services/workflowEngine';
-
-const engine = createWorkflowEngine();
-const validation = engine.validateWorkflow(nodes, edges);
-const layout = engine.autoLayout(nodes, edges);
-const executable = engine.compileToExecutable(draft);
-```
-
-### visualVerificationApi
-Visual verification for Allternit Autoland quality gates.
-
-**Location**: `6-ui/allternit-platform/src/services/visualVerificationApi.ts`
-
-```typescript
-import { visualVerificationApi, useVisualVerification } from '@/services';
-
-// API service
-const result = await visualVerificationApi.getStatus('wih_123');
-const trend = await visualVerificationApi.getTrendData('wih_123', { days: 7 });
-
-// React hook
-function VerificationPanel({ wihId }) {
-  const { result, isLoading, trendData, refresh } = useVisualVerification({ wihId });
-  return <VisualVerificationPanel status={result} trendData={trendData} />;
-}
-```
-
----
-
-## React Hooks
-
-### useBudget
-Hook for budget management and quota tracking.
-
-```typescript
-import { useBudget } from '@/hooks';
-
-function BudgetDashboard() {
-  const { 
-    quotas, usage, stats, 
-    calculatePercentages, 
-    checkQuotaExceeded,
-    getCriticalAlerts 
-  } = useBudget();
-  
-  return <div>{stats.total_cpu_hours} hours used</div>;
-}
-```
-
-### usePrewarm
-Hook for prewarm pool management.
-
-```typescript
-import { usePrewarm } from '@/hooks';
-
-function PoolManager() {
-  const { 
-    pools, stats, activities,
-    createPool, warmupPool,
-    getPoolsByHealth, calculateHealth 
-  } = usePrewarm();
-  
-  return <PoolList pools={pools} />;
-}
-```
-
-### useWorkflow
-Hook for workflow design and execution.
-
-```typescript
-import { useWorkflow } from '@/hooks';
-
-function WorkflowDesigner() {
-  const { 
-    workflows, executions,
-    validateDesign, autoLayout,
-    compileWorkflow, wouldCreateCycle 
-  } = useWorkflow();
-  
-  return <Designer onValidate={validateDesign} />;
-}
-```
-
-### useVisualVerification
-Hook for visual verification status and operations.
-
-```typescript
-import { useVisualVerification } from '@/hooks';
-
-function VerificationDashboard({ wihId }) {
-  const { 
-    result, isLoading, isPolling,
-    error, trendData,
-    refresh, startVerification, requestBypass 
-  } = useVisualVerification({ 
-    wihId, 
-    pollInterval: 3000,
-    onComplete: (result) => console.log('Done!', result)
-  });
-  
-  return (
-    <VisualVerificationPanel 
-      status={result}
-      trendData={trendData}
-      onRefresh={refresh}
-      onRequestBypass={() => requestBypass('Emergency hotfix')}
-    />
-  );
-}
-```
-
----
-
-## Build Instructions
-
-### Full platform stack (recommended for local development)
-```bash
-pnpm dev:platform-stack
-```
-Starts the Rust API (`:8013`), the Vite platform UI (`:3013`), and the Gizzi runtime (`:4096`) in one `concurrently` session.
-
-### Rust API only
-```bash
-# From the workspace root
-cargo run -p allternit-api
-
-# Or use the Makefile target
-make api
-```
-
-### Platform web only
-```bash
-pnpm dev:platform
-```
-
-### Gizzi CLI / runtime
-```bash
-cd cmd/gizzi-code
-
-# Packaged CLI
-gizzi serve --port 4096 --hostname 127.0.0.1
-
-# Development build
-./dist/gizzi-code serve --port 4096 --hostname 127.0.0.1 --print-logs
-```
-
----
-
-## Migration Notes
-
-The project has undergone significant restructuring. See [MIGRATION_PLAN.md](./MIGRATION_PLAN.md) for details on:
-- What moved and where
-- How to update imports
-- Path mapping changes
-- Using new hooks and services
-
----
-
-## Architecture Documentation
-
-- [REPO_STRUCTURE.md](./REPO_STRUCTURE.md) - Monorepo layout and satellite repo architecture
-- [DESIGN.md](./DESIGN.md) - Design system v2.0 (tokens, typography, colors, animation, accessibility)
-- [docs/IMPLEMENTATION_DAG.md](./docs/IMPLEMENTATION_DAG.md) - Implementation DAG and service documentation
-- [docs/MASTER_INDEX.md](./docs/MASTER_INDEX.md) - Documentation index
-- [docs/public/api/reference.md](./docs/public/api/reference.md) - Public API reference
-- [docs/public/providers/parity-matrix.md](./docs/public/providers/parity-matrix.md) - Provider parity matrix
-
----
-
-## Service Ports
-
-| Service | Port | Language / Runtime | Description |
-|---------|------|--------------------|-------------|
-| allternit-cloud-api | 8082 | Rust | Public control plane (`https://api.allternit.com`) — pairing, relay, billing, models |
-| allternit-api | 8013 | Rust | Private data-plane runtime (SQLite). Not a public hostname; Cloud API relays to it |
-| ai.allternit.com (platform UI) | 3013 | Vite / React | Web platform surface |
+| Service | Port | Runtime | Description |
+|---------|------|---------|-------------|
+| allternit-cloud-api | 8082 | Rust | Public control plane (`https://api.allternit.com`) — pairing, relay, billing |
+| allternit-api | 8013 / 18013 | Rust | Private data-plane runtime (SQLite); dev default 18013 so a stray `cargo run` can't kill the installed gateway |
 | gizzi-code runtime | 4096 | Bun / TypeScript | Local agent runtime and LLM session bus |
-| computer-use gateway | 8760 | (external) | Desktop control / screenshot gateway |
-| Ollama (local models) | 11434 | (external) | Default local OpenAI-compatible endpoint |
-
-Ports can be overridden via environment variables: `ALLTERNIT_API_PORT` for the API, `TERMINAL_SERVER_URL` for the Gizzi endpoint, and `VITE_ALLTERNIT_PLATFORM_URL` / `VITE_ALLTERNIT_GATEWAY_URL` for the web surface.
-
----
+| platform console | 3013 | Vite / React | `platform.allternit.com` cloud console surface |
 
 ## Contributing
 
-See [AGENTS.md](./AGENTS.md) for agent-specific instructions.
-
----
+See [AGENTS.md](./AGENTS.md). Work happens in your own linked git worktree, lands via PR
+(merge commit) on `main`, and ends with a ledger attestation in `agent-ledger/`.
 
 ## License
 
-[Add license information]
+See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).

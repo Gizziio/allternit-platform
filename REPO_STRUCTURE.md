@@ -16,27 +16,36 @@ The monorepo contains everything needed to build, test, and deploy the full Allt
 ```
 allternit/
 ├── cmd/                      # CLI binaries and API servers
-│   ├── allternit-api/        # Main API server
-│   ├── allternit-cloud-api/  # Cloud deployment API
+│   ├── allternit-api/        # Main API server (Rust)
+│   ├── allternit-cloud-api/  # Cloud deployment API (Rust)
 │   ├── allternit-cloud-wizard/
 │   ├── allternit-mux/
-│   ├── launcher/
-│   └── gizzi-code/           # Gizzi Code CLI source
-├── api/                      # Backend API services (gateway, cloud, workspace)
+│   ├── allternit-node/       # VPS edge agent
+│   ├── allternit-computer-cloud/
+│   ├── allternit-hosted-runtime/
+│   ├── agent-daemon/
+│   ├── gizzi-code/           # Gizzi Code CLI source
+│   ├── gizzi-core/
+│   └── launcher/
+├── api/                      # Backend API services (being dissolved into services/ — remaining: gateway/routing, services/workspace-service, core/cloud-backend, services/ssh-bridge, services/replies-runtime)
 ├── services/                 # Long-running services (memory, voice, registry, orchestration; vendored: open-connector, docmost*)
 ├── domains/                  # Domain logic (agent, computer-use, governance, kernel; agent-swarm archived → archive/agent-swarm, live agent tools at tools/agent-swarm/; cowork compose stack moved to tools/cowork-integration/stack/, cowork runtime crates remain in infrastructure/executor/cowork/)
 ├── infrastructure/           # Cloud providers, executors, bridges (alias: infra/ symlink)
-├── mcp/                      # Model Context Protocol crates
+├── mcp/                      # Model Context Protocol servers and crates (computers-server, core, mcp-client, servers)
 ├── drivers/                  # VM and hardware drivers (firecracker, apple-vf)
 ├── commrails/                # CommRails agent communication/coordination substrate (Rust; crate allternit-commrails)
-├── packages/@allternit/      # Internal SDK packages (being consolidated into platform/)
+├── packages/@allternit/      # Internal SDK packages (38; being consolidated into platform/)
 ├── platform/                 # Contracts, protocols, SDK, plugin runtime, shared packages
 ├── sdk/                      # Public SDK packages
 ├── surfaces/                 # Web apps and desktop surfaces
 │   ├── allternit-desktop/    # Desktop shell (Electron)
+│   ├── allternit-docs/       # Docs site content
 │   ├── allternit-extensions/ # Browser extensions
 │   ├── allternit-mobile/     # Mobile surface
+│   ├── office.allternit.com/ # Office surface
+│   ├── platform.allternit.com/ # Cloud console
 │   └── docs/                 # Docs surface
+├── vendor/                   # Vendored third-party code (harnessrouter-ce, session-migrate)
 ├── docs/                     # Documentation hub (archive/, gap-analysis/, learnings/, reports/, specs/)
 ├── research/                 # Active research & planning docs (+ adr/)
 ├── spec/                     # Contract schemas + specs (wired into commrails)
@@ -49,10 +58,15 @@ allternit/
 ├── resources/                # company.json (config:company:write output) + vm/
 ├── patches/                  # pnpm patchedDependencies
 ├── archive/                  # Retired material: card plugins, orphan crates, card-templates, alabs-curator
+├── agent-ledger/             # Signed session record (LEDGER.md + summaries/) — stays at root by design
 ├── alabs-generated-courses/  # A://Labs courseware source of truth (+ demos/)
 ├── alabs-module-template/    # Shared HTML shell for course modules
 └── worktree-manager/         # Git worktree management crate
 ```
+
+> The agent workspace surface (`ai.allternit.com`) is **not** in this repo — it moved to the private
+> satellite `Gizziio/allternit-ai` in the 2026-09-15 OSS split. The root `ui` symlink and the old
+> `rails/` directory were deleted the same week; the real communication substrate is `commrails/`.
 
 Inside `docs/`:
 
@@ -78,13 +92,37 @@ The following dot-directories are hardcoded into live code or required by `AGENT
 
 | Directory | Why it stays |
 |-----------|--------------|
-| `.allternit/` | Runtime state: peers, WIHs, artifacts, context-packs. Referenced by `cmd/allternit-api/`, `surfaces/ai.allternit.com/`, `sdk/allternit-sdk/`, `domains/computer-use/`, `dev/scripts/`, and `AGENTS.md`. |
+| `.allternit/` | Runtime state: peers, WIHs, artifacts, context-packs. Referenced by `cmd/allternit-api/`, `sdk/allternit-sdk/`, `domains/computer-use/`, `dev/scripts/`, and `AGENTS.md`. |
 | `.gizzi/` | gizzi-code runtime state and brand files. Referenced by `cmd/gizzi-code/src/runtime/context/config/config.ts` and tests. |
 | `.steering/` | Steering checkpoint + hook system. Required by `AGENTS.md`. |
 
 > Reorganized 2026-07-22: removed `plugins/` (empty; card plugins live in `archive/plugins/`, runtime in `platform/plugins/`), root `src/`, `data/`, `public/`, `proof/`, `output/`, `dispatch-screenshots/`, `Desktop/` (accidental commit), and merged `analysis/` → `docs/gap-analysis/`, `reports/` → `docs/reports/`, `alabs-demos/` → `alabs-generated-courses/demos/`, `remix-plans/` → `remix-content/plans/`, `agent/`/`templates/`/`alabs-curator/` → `archive/`.
 >
 > Reorganized 2026-08-27: removed improperly-linked nested worktrees (`allternit-session-grok-bot-0-18-integration`, `allternit-session-multica-runtime-align`) and scratch `.tmp-*` entries from the index; deleted `.beads/`; moved `marketing/`, `upstream/`, `remix-content/`, `.pipeline/`, `.parity-reports/`, `.parity-reports-archive/`, and `.shared/` into `docs/`; moved ad-hoc root scripts into `scripts/audit/`.
+
+## Ownership rules (source of truth)
+
+Where new code goes — adopted 2026-09-18 (S0 of the folder reorganization):
+
+- **`cmd/`** = executables (CLI binaries, API servers, daemons).
+- **`services/`** = things that run (long-running services).
+- **`platform/`** = contracts, protocols, types, plugins, and internal `@allternit/*` TypeScript libraries.
+- **`sdk/`** = public SDK surface only. **Location frozen** — do not move without an explicit decision.
+- **`domains/`, `infrastructure/`, `surfaces/`** = existing semantics (domain logic; cloud providers/executors/bridges; web + desktop apps).
+
+`packages/@allternit/` is legacy and is being consolidated into `platform/`. `api/` is being dissolved into `services/` (remaining live packages listed in the tree above).
+
+## Three SDKs
+
+The repo carries three distinct SDKs — keep them straight:
+
+| SDK | Location | Language | Release tag |
+|-----|----------|----------|-------------|
+| Public Allternit SDK | `sdk/` | TypeScript | `sdk/v*` |
+| Rust SDK | `platform/sdk/rust/` (crates `sdk-core`, `sdk-transport`, `sdk-policy`, `sdk-functions`, `sdk-apps`) | Rust | cargo workspace |
+| Gizzi SDK | `cmd/gizzi-code/packages/sdk/` | TypeScript | `gizzi-sdk/v*` |
+
+> NOTE: a rename of `platform/sdk/` → `platform/rust-sdk/` is planned. It is deliberately **not** done yet.
 
 ## Satellite Repos
 
