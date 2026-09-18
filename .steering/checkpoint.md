@@ -50,3 +50,8 @@ Next: Pass 2 with task-neutral framing (variant a): v1 shows the model anchors o
 ## 2026-09-18 kimi-fewshot — Pass 2 result + Pass 3 choice
 Just did: Pass 2 (task-neutral framing): agreement 0.303 (20/66) — BELOW 0.3182 baseline. Collapse fully intact (search-flow 22/22 click, 0/8 fill steps again). Latency 17.5s/step. 2 vocab misses.
 Next: Pass 3 = iterate on best (v1 random/default 0.3333) with variant (c) interleaved ordering, N=9 (3 exemplars per template exactly). Rationale: v1's random sample was 6/8 search exemplars — the exemplar window itself was click-anchored; interleaving is the one lever that changes exemplar COMPOSITION in the context window rather than rewording instructions (framing failed twice). Task-neutral framing stays off (scored worse than default).
+
+## 2026-09-18 kimi-fewshot — DONE (all 3 passes)
+Just did: Pass 3 (interleaved N=9): 0.2879 — the only pass that cracked the per-task constant policy (search-flow 3 fill choices, form-fill mixed 10 fill/12 click), but agreement DROPPED; still 0/8 on search-flow fill steps. Final: baseline 0.3182 / v1 random 0.3333 / v2 task-neutral 0.3030 / v3 interleaved 0.2879. Hypothesis rejected: few-shot in-context distillation does not break the task-identity collapse; exemplar relevance (same-task live traces), not count or wording, is the missing signal. docs/KIMI_FEWSHOT_NOTES.md written with full tables + live-trace requirements. Suite: 87 passed, 1 skipped.
+Next: none — final commit + push; NO PR (orchestrator lands it).
+Open questions: none.
