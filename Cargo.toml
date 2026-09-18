@@ -51,7 +51,7 @@ members = [
     "infrastructure/scheduler",
     "infrastructure/scheduler/cron-parser",
     "services/orchestration/control-plane/unified-registry/tool-registry",
-    "platform/sdk/adapters/rust/marketplace",
+    "platform/rust-sdk/adapters/rust/marketplace",
     "platform/types/a2ui-types",
     "domains/governance/evidence-management/receipts-schema",
     "services/local-engine",
@@ -75,12 +75,12 @@ members = [
     "domains/governance/security-network/security-hardening",
     "domains/governance/identity-access-control/purpose-binding",
     "domains/kernel/drivers/ontology-runtime",
-    "platform/sdk/adapters/rust/skills",
-    "platform/sdk/rust/sdk-core",
-    "platform/sdk/rust/sdk-apps",
-    "platform/sdk/rust/sdk-functions",
-    "platform/sdk/rust/sdk-policy",
-    "platform/sdk/rust/sdk-transport",
+    "platform/rust-sdk/adapters/rust/skills",
+    "platform/rust-sdk/rust/sdk-core",
+    "platform/rust-sdk/rust/sdk-apps",
+    "platform/rust-sdk/rust/sdk-functions",
+    "platform/rust-sdk/rust/sdk-policy",
+    "platform/rust-sdk/rust/sdk-transport",
     "api/gateway/routing",
     "platform/types/allternit-substrate",
     "domains/kernel/core/runtime-execution-core",
@@ -104,7 +104,7 @@ members = [
     "infrastructure/executor/bridge-systems/io-daemon",
     "infrastructure/providers/vendor-integration/wrappers",
     "platform/protocols/transport-sms",
-    "platform/sdk/allternit-skill-portability",
+    "platform/rust-sdk/allternit-skill-portability",
     "services/memory/data/allternit-memory-provider",
     "services/ml/pattern-service",
     "services/ml/prompt-pack-service",
@@ -166,12 +166,12 @@ allternit-purpose-binding = { path = "domains/governance/identity-access-control
 allternit-ontology-runtime = { path = "domains/kernel/drivers/ontology-runtime" }
 allternit-system-law = { path = "domains/kernel/drivers/system-law" }
 allternit-kernel-contracts = { path = "domains/kernel/core/kernel-contracts" }
-allternit-skills = { path = "platform/sdk/adapters/rust/skills" }
-allternit-sdk-core = { path = "platform/sdk/rust/sdk-core" }
-allternit-sdk-apps = { path = "platform/sdk/rust/sdk-apps" }
-allternit-sdk-functions = { path = "platform/sdk/rust/sdk-functions" }
-allternit-sdk-policy = { path = "platform/sdk/rust/sdk-policy" }
-allternit-sdk-transport = { path = "platform/sdk/rust/sdk-transport" }
+allternit-skills = { path = "platform/rust-sdk/adapters/rust/skills" }
+allternit-sdk-core = { path = "platform/rust-sdk/rust/sdk-core" }
+allternit-sdk-apps = { path = "platform/rust-sdk/rust/sdk-apps" }
+allternit-sdk-functions = { path = "platform/rust-sdk/rust/sdk-functions" }
+allternit-sdk-policy = { path = "platform/rust-sdk/rust/sdk-policy" }
+allternit-sdk-transport = { path = "platform/rust-sdk/rust/sdk-transport" }
 
 allternit-substrate = { path = "platform/types/allternit-substrate" }
 allternit-runtime-core = { path = "domains/kernel/core/runtime-execution-core" }
@@ -225,7 +225,7 @@ allternit-edge-runner = { path = "services/orchestration/byoc-edge-runner" }
 allternit-io-daemon = { path = "infrastructure/executor/bridge-systems/io-daemon" }
 allternit-vendor-wrappers = { path = "infrastructure/providers/vendor-integration/wrappers" }
 allternit-transport-sms = { path = "platform/protocols/transport-sms" }
-allternit-skill-portability = { path = "platform/sdk/allternit-skill-portability" }
+allternit-skill-portability = { path = "platform/rust-sdk/allternit-skill-portability" }
 allternit-memory-provider = { path = "services/memory/data/allternit-memory-provider" }
 pattern-service = { path = "services/ml/pattern-service" }
 prompt-pack-service = { path = "services/ml/prompt-pack-service" }
@@ -242,7 +242,7 @@ allternit-context-pack-builder = { path = "domains/kernel/drivers/context-pack-b
 allternit-dag-wih-integration = { path = "domains/kernel/drivers/dag-wih-integration" }
 executor = { path = "domains/kernel/service/allternit-local-compute/executor" }
 
-marketplace = { path = "platform/sdk/adapters/rust/marketplace" }
+marketplace = { path = "platform/rust-sdk/adapters/rust/marketplace" }
 a2ui-types = { path = "platform/types/a2ui-types" }
 
 

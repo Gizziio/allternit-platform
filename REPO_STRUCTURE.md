@@ -119,10 +119,10 @@ The repo carries three distinct SDKs — keep them straight:
 | SDK | Location | Language | Release tag |
 |-----|----------|----------|-------------|
 | Public Allternit SDK | `sdk/` | TypeScript | `sdk/v*` |
-| Rust SDK | `platform/sdk/rust/` (crates `sdk-core`, `sdk-transport`, `sdk-policy`, `sdk-functions`, `sdk-apps`) | Rust | cargo workspace |
+| Rust SDK | `platform/rust-sdk/rust/` (crates `sdk-core`, `sdk-transport`, `sdk-policy`, `sdk-functions`, `sdk-apps`) | Rust | cargo workspace |
 | Gizzi SDK | `cmd/gizzi-code/packages/sdk/` | TypeScript | `gizzi-sdk/v*` |
 
-> NOTE: a rename of `platform/sdk/` → `platform/rust-sdk/` is planned. It is deliberately **not** done yet.
+> NOTE: `platform/sdk/` → `platform/rust-sdk/` rename is **done** (2026-09-18) so `sdk/` (public TS SDK) is unambiguous.
 
 ## Satellite Repos
 
