@@ -1,5 +1,8 @@
-// @ts-nocheck
-import { type Options as ExecaOptions, execaSync } from 'execa'
+import { execaSync } from 'execa'
+// TODO(types): the ambient 'execa' shim in src/types/missing-modules.d.ts
+// predates execa v8's Options export and src/types is burn-inaccessible —
+// node:child_process StdioOptions is the same shape execa accepts.
+import type { StdioOptions } from 'node:child_process'
 import { getCwd } from '../utils/cwd.js'
 import { slowLogging } from './slowOperations.js'
 
@@ -10,7 +13,7 @@ type ExecSyncOptions = {
   abortSignal?: AbortSignal
   timeout?: number
   input?: string
-  stdio?: ExecaOptions['stdio']
+  stdio?: StdioOptions
 }
 
 /**

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Analytics service
  * Tracks events and metrics

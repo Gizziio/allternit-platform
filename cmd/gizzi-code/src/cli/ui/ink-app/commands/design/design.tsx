@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useEffect, useRef, useState } from 'react';
 import type { CommandResultDisplay } from '../../commands';
 import { Box, Text } from '@/ink.js';

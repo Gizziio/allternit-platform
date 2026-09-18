@@ -1,10 +1,19 @@
-// @ts-nocheck
 /**
  * SDK Control Protocol Types
  * Complete implementation for Gizzi SDK
  */
 
 import type { Message, SDKPartialAssistantMessage } from '@/types/message.js'
+// TODO(types): the generated ink-app coreTypes fork (coreTypes.generated.js)
+// is an 82-line stub that lacks these four message types — they only exist in
+// the canonical SDK tree for now (same shapes the fork's coreSchemas.ts
+// validates). Import from there until the fork's type generation catches up.
+import type {
+  SDKAssistantMessage,
+  SDKAssistantMessageError,
+  SDKCompactBoundaryMessage,
+  SDKUserMessageReplay,
+} from '../../../../../entrypoints/sdk/coreTypes.js'
 export type { SDKPartialAssistantMessage }
 
 // ============================================================================
@@ -59,13 +68,13 @@ export interface SDKControlResponse {
   subtype?: string
 }
 
-export type SDKMessage = 
-  | SDKControlRequest 
+export type SDKMessage =
+  | SDKControlRequest
   | SDKControlResponse
-  | import('./coreTypes.js').SDKCompactBoundaryMessage
-  | import('./coreTypes.js').SDKUserMessageReplay
-  | import('./coreTypes.js').SDKAssistantMessage
-  | import('./coreTypes.js').SDKAssistantMessageError
+  | SDKCompactBoundaryMessage
+  | SDKUserMessageReplay
+  | SDKAssistantMessage
+  | SDKAssistantMessageError
   | SDKServerMessage
   | SDKStreamEventMessage
   | SDKStopHookMessage

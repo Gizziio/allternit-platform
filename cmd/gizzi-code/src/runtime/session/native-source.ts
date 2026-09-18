@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Identifier } from "@/shared/id/id"
 import { Instance } from "@/runtime/context/project/instance"
 import { Database, eq } from "@/runtime/session/storage/db"
@@ -204,8 +203,11 @@ export const NativeSource = {
       const role = msg.info.role
       if (role !== "user" && role !== "assistant") continue
       const text = msg.parts
-        .filter((part) => part.type === "text" && part.text && !part.synthetic)
-        .map((part) => part.text)
+        .flatMap((part) =>
+          part.type === "text" && part.text && !part.synthetic
+            ? [part.text]
+            : [],
+        )
         .join("\n")
         .trim()
       if (!text) continue

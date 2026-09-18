@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Teammate utilities for agent swarm coordination
  *
@@ -24,6 +23,7 @@ export {
 } from './teammateContext.js'
 
 import type { AppState } from '../state/AppState.js'
+import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js'
 import { isEnvTruthy } from './envUtils.js'
 import { getTeammateContext } from './teammateContext.js'
 
@@ -206,7 +206,7 @@ export function isTeamLead(
 export function hasActiveInProcessTeammates(appState: AppState): boolean {
   // Check for running in-process teammate tasks
   for (const task of Object.values(appState.tasks)) {
-    if (task.type === 'in_process_teammate' && task.status === 'running') {
+    if (isInProcessTeammateTask(task) && task.status === 'running') {
       return true
     }
   }
@@ -221,7 +221,7 @@ export function hasActiveInProcessTeammates(appState: AppState): boolean {
 export function hasWorkingInProcessTeammates(appState: AppState): boolean {
   for (const task of Object.values(appState.tasks)) {
     if (
-      task.type === 'in_process_teammate' &&
+      isInProcessTeammateTask(task) &&
       task.status === 'running' &&
       !task.isIdle
     ) {
@@ -244,7 +244,7 @@ export function waitForTeammatesToBecomeIdle(
 
   for (const [taskId, task] of Object.entries(appState.tasks)) {
     if (
-      task.type === 'in_process_teammate' &&
+      isInProcessTeammateTask(task) &&
       task.status === 'running' &&
       !task.isIdle
     ) {
