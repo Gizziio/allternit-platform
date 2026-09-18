@@ -429,7 +429,13 @@ rebuilds `packages/sdk/dist` when it is missing (fresh clone/worktree — only
 `dist/gen` is tracked) or older than `packages/sdk/src` (stale build), and
 also builds the `sdk/computer-use` and `platform/packages/os-contracts`
 dists (same missing-or-stale contract — without this, a fresh worktree
-typechecks with 3x TS2307 on `@allternit/os-contracts`). Without this,
+typechecks with 3x TS2307 on `@allternit/os-contracts`). Freshness is not
+mtime-only: each build records its resolved runtime-dep versions in
+`dist/.build-deps.json` and a resolution change (e.g. a stale pnpm workspace
+link silently swapping os-contracts' nested zod v3 for a root-hoisted zod
+v4 — the 2026-09-18 poisoned-dist incident) forces a rebuild, and
+os-contracts builds with `noEmitOnError` so a type-erroring build fails the
+script instead of emitting a poisoned `.d.ts`. Without this,
 typecheck fails with TS2307 in `packages/sdk/scripts/verify-sdk.ts` and
 tests silently run against a stale SDK. Set `GIZZI_SKIP_SDK_DIST=1` to skip.
 

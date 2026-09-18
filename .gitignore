@@ -59,6 +59,8 @@ out/
 !sdk/allternit-sdk/dist/
 # Lima bundled binary (downloaded at build time)
 surfaces/allternit-desktop/resources/lima/
+# untracked scratch dir; the pnpm workspace glob ingests it on any install and dirties the lockfile
+surfaces/allternit-desktop/resources/office-engine/
 
 # Virtual environments
 .venv/
