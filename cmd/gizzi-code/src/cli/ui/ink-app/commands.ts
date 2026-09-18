@@ -129,9 +129,6 @@ const ultraplan = feature('ULTRAPLAN')
   ? safeRequire('./commands/ultraplan.js')?.default
   : null
 const torch = feature('TORCH') ? safeRequire('./commands/torch.js')?.default : null
-const peersCmd = feature('UDS_INBOX')
-  ? safeRequire('./commands/peers/index.js')?.default
-  : null
 const forkCmd = feature('FORK_SUBAGENT')
   ? safeRequire('./commands/fork/index.js')?.default
   : null
@@ -409,7 +406,6 @@ const COMMANDS = memoize((): Command[] => [
   sandboxToggle,
   ...(!isUsing3PServices() ? [logout, login()] : []),
   passes,
-  ...(peersCmd ? [peersCmd] : []),
   tasks,
   ...(torch ? [torch] : []),
   ...(process.env.USER_TYPE === 'ant' && !process.env.IS_DEMO

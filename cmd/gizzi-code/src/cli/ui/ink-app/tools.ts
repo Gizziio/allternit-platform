@@ -129,7 +129,7 @@ const SnipTool = feature('HISTORY_SNIP')
   ? safeRequire('./tools/SnipTool/SnipTool.js')?.SnipTool
   : null
 const ListPeersTool =
-  feature('UDS_INBOX') || !isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)
+  !isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)
     ? safeRequire('./tools/ListPeersTool/ListPeersTool.js')?.ListPeersTool
     : null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */

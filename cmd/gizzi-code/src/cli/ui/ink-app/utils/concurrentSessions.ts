@@ -85,9 +85,6 @@ export async function registerSession(): Promise<boolean> {
         startedAt: Date.now(),
         kind,
         entrypoint: readGizziEnv('ENTRYPOINT'),
-        ...(feature('UDS_INBOX')
-          ? { messagingSocketPath: process.env.GIZZI_CODE_MESSAGING_SOCKET }
-          : {}),
         ...(feature('BG_SESSIONS')
           ? {
               name: process.env.GIZZI_CODE_SESSION_NAME,

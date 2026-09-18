@@ -9,7 +9,6 @@
  * inject them into the command queue as task notifications.
  */
 
-import { feature } from 'bun:bundle'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { logForDiagnosticsNoPII } from 'src/shared/utils/diagLogs.js'
@@ -49,7 +48,7 @@ export async function registerRailsPeer(
 ): Promise<ApiPeerRegisterResponse | null> {
   // Gate is evaluated at runtime so the bundler cannot tree-shake the module.
   // Rails peer registration is default-on; set GIZZI_ENABLE_RAILS_PEER=0 to opt out.
-  if (!feature('UDS_INBOX') && isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)) {
+  if (isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)) {
     return null
   }
   try {
