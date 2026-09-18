@@ -78,6 +78,8 @@
     "@types/babel__core": "7.20.5",
     "@types/bun": "*",
     "@types/mime-types": "3.0.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
     "@types/turndown": "5.0.5",
     "@types/yargs": "17.0.33",
     "drizzle-kit": "1.0.0-beta.12-a5629fb",

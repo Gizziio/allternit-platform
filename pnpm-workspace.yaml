@@ -73,6 +73,10 @@ packages:
 
 # pnpm 10 reads overrides from this file, not from package.json.
 overrides:
+  # gizzi-code runs react@19 (its ink-app is the one place the real React 19
+  # types are load-bearing); the rest of the workspace stays on 18 types.
+  '@allternit/gizzi-code>@types/react': ^19.2.18
+  '@allternit/gizzi-code>@types/react-dom': ^19.2.7
   '@types/react': ^18.3.28
   '@types/react-dom': ^18.3.1
   '@types/express-serve-static-core': ^4.19.8
