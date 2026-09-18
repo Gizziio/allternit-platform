@@ -22,17 +22,6 @@ import { TODO_WRITE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TodoWriteToo
 import { TOOL_SEARCH_TOOL_NAME } from '../../tools/ToolSearchTool/prompt.js'
 import { YOLO_CLASSIFIER_TOOL_NAME } from './yoloClassifier.js'
 
-// Ant-only tool names: conditional require so Bun can DCE these in external builds.
-// Gates mirror tools.ts. Keeps the tool name strings out of cli.js.
-/* eslint-disable @typescript-eslint/no-require-imports */
-const VERIFY_PLAN_EXECUTION_TOOL_NAME =
-  process.env.GIZZI_CODE_VERIFY_PLAN === 'true'
-    ? (
-        require('../../tools/VerifyPlanExecutionTool/constants.js') as typeof import('../../tools/VerifyPlanExecutionTool/constants.js')
-      ).VERIFY_PLAN_EXECUTION_TOOL_NAME
-    : null
-/* eslint-enable @typescript-eslint/no-require-imports */
-
 /**
  * Tools that are safe and don't need any classifier checking.
  * Used by the auto mode classifier to skip unnecessary API calls.
@@ -69,8 +58,6 @@ const SAFE_YOLO_ALLOWLISTED_TOOLS = new Set([
   SEND_MESSAGE_TOOL_NAME,
   // Misc safe
   SLEEP_TOOL_NAME,
-  // Ant-only safe tools (gates mirror tools.ts)
-  ...(VERIFY_PLAN_EXECUTION_TOOL_NAME ? [VERIFY_PLAN_EXECUTION_TOOL_NAME] : []),
   // Internal classifier tool
   YOLO_CLASSIFIER_TOOL_NAME,
 ])
