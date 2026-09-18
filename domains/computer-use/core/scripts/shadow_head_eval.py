@@ -30,6 +30,7 @@ import importlib.util
 import logging
 import sys
 from pathlib import Path
+from typing import Optional
 
 DOMAIN_CORE_ROOT = Path(__file__).resolve().parents[1]
 for _extra in (str(DOMAIN_CORE_ROOT),):
@@ -44,7 +45,14 @@ DEFAULT_OUT_DIR = DOMAIN_CORE_ROOT / "evaluation" / "shadow-eval"
 _STEP_BUDGET_MS = {"mock": 15_000, "mlx": 15_000, "kimi": 60_000}
 
 
-def build_head(name: str, questioning: str = "batched") -> "tuple[object, str]":
+def build_head(
+    name: str,
+    questioning: str = "batched",
+    few_shot: int = 0,
+    few_shot_order: str = "random",
+    few_shot_framing: str = "default",
+    traces_path: Optional[Path] = None,
+) -> "tuple[object, str]":
     """Construct the decision head for ``--head``; (head, report-stem-suffix)."""
     if name == "mock":
         return None, ""
@@ -52,12 +60,45 @@ def build_head(name: str, questioning: str = "batched") -> "tuple[object, str]":
     if name == "kimi":
         from core.decision_head import KimiCliHead
 
-        head = KimiCliHead(questioning=questioning)
+        few_shot_block = None
+        suffix = "-kimi" + ("-sequential" if questioning == "sequential" else "")
+        if few_shot > 0:
+            from core.kimi_fewshot import (
+                render_few_shot_block,
+                select_few_shot_examples,
+            )
+            from core.tier_a_traces import load_traces
+
+            path = traces_path or (
+                DOMAIN_CORE_ROOT / "evaluation" / "tier-a" / "traces.jsonl"
+            )
+            traces = load_traces(path)
+            examples = select_few_shot_examples(
+                traces, n=few_shot, order=few_shot_order,
+            )
+            if len(examples) < few_shot:
+                raise SystemExit(
+                    f"--few-shot {few_shot} requested but only {len(examples)} "
+                    f"valid train-split exemplars in {path}"
+                )
+            few_shot_block = render_few_shot_block(
+                examples, framing=few_shot_framing,
+            )
+            variant = f"-{few_shot_order}-{few_shot_framing}" if (
+                few_shot_order != "random" or few_shot_framing != "default"
+            ) else ""
+            suffix += f"-fewshot{few_shot}{variant}"
+            print(
+                f"Few-shot: {len(examples)} exemplars from {path} "
+                f"(order={few_shot_order}, framing={few_shot_framing}); "
+                "train split only, held-out tasks excluded by construction."
+            )
+        head = KimiCliHead(questioning=questioning, few_shot_block=few_shot_block)
         print(
-            f"Using KimiCliHead ({head.binary}, questioning={questioning}); "
+            f"Using KimiCliHead ({head.binary}, questioning={questioning}"
+            f"{', few-shot' if few_shot_block else ''}); "
             "one `kimi -p` subprocess per decide step."
         )
-        suffix = "-kimi" + ("-sequential" if questioning == "sequential" else "")
         return head, suffix
 
     # mlx path — fail fast with an actionable error before the harness runs.
@@ -102,6 +143,37 @@ def main(argv: list[str] | None = None) -> int:
              "2 subprocess calls per step)",
     )
     parser.add_argument(
+        "--few-shot",
+        type=int,
+        default=0,
+        metavar="N",
+        help="kimi head only: inject N train-split Tier A trace exemplars into "
+             "the prompt (prompt-space distillation; held-out eval tasks are "
+             "excluded from selection by construction). 0 = zero-shot.",
+    )
+    parser.add_argument(
+        "--few-shot-order",
+        choices=("random", "interleaved"),
+        default="random",
+        help="exemplar ordering: random (default) or interleaved by site "
+             "template so consecutive examples come from different site types",
+    )
+    parser.add_argument(
+        "--few-shot-framing",
+        choices=("default", "task-neutral"),
+        default="default",
+        help="exemplar block intro framing: default, or task-neutral — an "
+             "explicit anti-collapse preamble (site/flow varies; decide from "
+             "the CURRENT state only)",
+    )
+    parser.add_argument(
+        "--traces",
+        type=Path,
+        default=None,
+        help="tier-a traces.jsonl path for --few-shot (default "
+             "evaluation/tier-a/traces.jsonl)",
+    )
+    parser.add_argument(
         "--out-dir",
         type=Path,
         default=DEFAULT_OUT_DIR,
@@ -118,7 +190,20 @@ def main(argv: list[str] | None = None) -> int:
         format="%(levelname)s %(name)s: %(message)s",
     )
 
-    head, stem_suffix = build_head(args.head, questioning=args.questioning)
+    if args.few_shot < 0:
+        parser.error("--few-shot must be >= 0")
+    if args.few_shot > 0 and args.head != "kimi":
+        print(f"note: --few-shot applies to the kimi head only; "
+              f"--head {args.head} ignores it.")
+
+    head, stem_suffix = build_head(
+        args.head,
+        questioning=args.questioning,
+        few_shot=args.few_shot if args.head == "kimi" else 0,
+        few_shot_order=args.few_shot_order,
+        few_shot_framing=args.few_shot_framing,
+        traces_path=args.traces,
+    )
     if args.questioning != "batched" and args.head != "kimi":
         print(f"note: --questioning {args.questioning} applies to the kimi head only; "
               f"--head {args.head} ignores it.")
