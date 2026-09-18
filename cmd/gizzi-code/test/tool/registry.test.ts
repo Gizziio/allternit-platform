@@ -76,7 +76,13 @@ describe("tool.registry", () => {
   })
 
   test("loads tools with external dependencies without crashing", async () => {
-    await using tmp = await tmpdir({
+    // Dependency auto-install is an explicit opt-in (see Config.directories);
+    // without it the .gizzi bun install never runs and the cowsay import below
+    // cannot resolve. Set it just for this test and restore afterwards.
+    const prev = process.env.GIZZI_AUTO_INSTALL_DEPS
+    process.env.GIZZI_AUTO_INSTALL_DEPS = "1"
+    try {
+      await using tmp = await tmpdir({
       init: async (dir) => {
         const gizziDir = path.join(dir, ".gizzi")
         await fs.mkdir(gizziDir, { recursive: true })
@@ -119,5 +125,9 @@ describe("tool.registry", () => {
         expect(ids).toContain("cowsay")
       },
     })
+    } finally {
+      if (prev === undefined) delete process.env.GIZZI_AUTO_INSTALL_DEPS
+      else process.env.GIZZI_AUTO_INSTALL_DEPS = prev
+    }
   })
 })
