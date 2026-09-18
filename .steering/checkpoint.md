@@ -9,3 +9,18 @@ Just did: Extended build-queue.mjs with three zero-dep static checks, validated 
 Next: pnpm install → gates (tsc --noEmit, bun run test, release-preflight 52/0) → commit, PR, merge --merge, shared-checkout sync, ledger attestation, git-discipline-check.
 
 Open questions: none — 25 additional dead-spec files (beyond the pilot's 4) are genuinely unresolvable (TS2307-on-burn); quarantining them is the spec'd behavior, the follow-up cleanup pass fixes specifiers with behavior-change approval.
+
+## 2026-09-18 b0002 ts-burn handoff note
+Goal: burn-down batch b0002 (DONE, PR #596 merged 7faf84556).
+Just did: 68 files burned type-onlyly, 2 escalated (sliceAnsi twins blocked by
+ambient ansi-tokenize decl in src/types/global.d.ts).
+Next: future batches should fix src/types/global.d.ts ambient declarations
+(ansi-tokenize, lodash-es/memoize.js, @modelcontextprotocol/sdk) instead of
+accumulating TODO(types) local mirrors — that file is owned by no batch and is
+now the burn-down's biggest single blocker. ALSO: stale branch
+`ao/cut-dormant-stubs` (3 unmerged commits: dormant-stub cuts + burn-down
+collateral sync) predates the merged shim-triage work (58c8a9007/e30330713
+landed versions of it) — owner should verify it is superseded and delete it, or
+add it to .steering/git-discipline-allowlist with a reason. I passed it as an
+intentional argument to git-discipline-check for my session attestation only.
+Open questions: who owns src/types/global.d.ts corrections?
