@@ -4,6 +4,12 @@
 - **Verified live:** after asar patch, `Clerk session token received from renderer` twice (`gizzi_io@proton.me`). `/health` 200. No `failed_to_load_clerk_js`.
 - **Next:** commit, PR, merge, attest, cleanup.
 
+# Steering checkpoint — ao/useeffect-fixes (2026-09-18)
+
+- **Goal:** Fix confirmed useEffect bugs in the Ink TUI: FuzzyPicker's `[query]`/`[focused]` effects called `onQueryChange`/`onFocus` from stale closures (callbacks deliberately omitted from deps).
+- **Just did:** Worktree `allternit-ao-useeffect` on `ao/useeffect-fixes` from origin/main. Found `design-system/FuzzyPicker.tsx` IS a React Compiler artifact (`@ts-nocheck` + `react/compiler-runtime`, one of ~360 in `src/cli/ui/ink-app`) but it is also the only/canonical copy — the whole ink-app tree is checked-in compiler output (last touch: "ci: build script is build-production.js"), no separate source exists. Applied the house ref-mirror pattern (`onQueryChangeRef`/`onFocusRef`, updated in a deps-less effect, called inside the existing `[query]`/`[focused]` effects); removed the now-unneeded exhaustive-deps disables.
+- **Next:** typecheck in cmd/gizzi-code, commit, PR, merge, attest, cleanup.
+
 # Steering checkpoint — 2026-09-18 shared-checkout discipline sweep (Eoj-directed, Kimi Code)
 
 - **Goal:** Fix the audit finding — shared checkout was on a detached HEAD, 93 behind `origin/main`, with 21 unmerged stale branches. Make "merge to main" mean it.
