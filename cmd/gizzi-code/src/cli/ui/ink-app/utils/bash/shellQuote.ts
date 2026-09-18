@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Safe wrappers for shell-quote library functions that handle errors gracefully
  * These are drop-in replacements for the original functions

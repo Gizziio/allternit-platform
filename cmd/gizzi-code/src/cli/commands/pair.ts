@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { cmd } from "@/cli/commands/cmd"
 import { Pairing } from "@/runtime/services/pairing/pairing"
 
@@ -84,7 +83,7 @@ export const PairCommand = cmd({
         describe: "device name shown on the platform (defaults to the stored name or hostname)",
       }),
   describe: "pair this machine as an Allternit runtime device",
-  handler: runPair,
+  handler: (args) => runPair({ ...args, login: false }),
 })
 
 export const LoginCommand = cmd({

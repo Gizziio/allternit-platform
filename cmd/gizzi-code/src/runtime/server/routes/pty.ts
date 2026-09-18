@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Hono } from "hono"
 import { upgradeWebSocket } from "hono/bun"
 import { describeRoute, validator, resolver } from "@/runtime/server/openapi"

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Lightweight helpers shared between keychainPrefetch.ts and
  * macOsKeychainStorage.ts.
@@ -19,7 +18,12 @@ import { createHash } from 'crypto'
 import { userInfo } from 'os'
 import { getOauthConfig } from './../../constants/oauth.ts'
 import { getGizziConfigHomeDir } from '../envUtils.js'
-import type { SecureStorageData } from './types.js'
+// TODO(types): './types.js' is a TEMPORARY SHIM exporting nothing. Local
+// mirror of src/shared/utils/secureStorage/types.ts — remove once the shim
+// grows the real exports (same pattern as fallbackStorage.ts).
+type SecureStorageData = {
+  [key: string]: unknown
+}
 
 // Suffix distinguishing the OAuth credentials keychain entry from the legacy
 // API key entry (which uses no suffix). Both share the service name base.
