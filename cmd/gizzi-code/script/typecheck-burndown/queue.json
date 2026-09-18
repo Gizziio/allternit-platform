@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 101,
   "stats": {
-    "totalNocheck": 1929,
+    "totalNocheck": 1909,
     "excludedCompilerArtifacts": 361,
     "excludedVendored": 93,
-    "totalQueueFiles": 1454,
-    "totalQueueLoc": 485387,
+    "totalQueueFiles": 1434,
+    "totalQueueLoc": 478939,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -101,36 +101,24 @@
     {
       "id": "b0003",
       "files": [
-        "src/runtime/brain/brain.service.ts",
-        "src/runtime/services/mcp/types.ts",
-        "src/cli/ui/ink-app/services/mcp/types.ts",
-        "src/runtime/server/routes/automations.ts",
-        "src/cli/commands/theme/index.ts",
-        "src/cli/ui/ink-app/utils/feature-flags.ts",
-        "src/cli/ui/ink-app/tools/MCPTool/classifyForCollapse.ts",
-        "src/runtime/server/routes/acp.ts",
-        "src/cli/ui/ink-app/components/CustomSelect/use-select-navigation.ts",
-        "src/cli/ui/ink-app/hooks/useVirtualScroll.ts",
-        "src/cli/ui/ink-app/utils/bash/heredoc.ts",
-        "src/runtime/automation/cron/service.ts",
-        "src/cli/ui/ink-app/utils/messagePredicates.ts",
-        "src/cli/ui/ink-app/commands/desktop/desktop.tsx",
-        "src/cli/ui/ink-app/commands/add-dir/index.ts",
-        "src/cli/ui/ink-app/commands/ide/index.ts",
-        "src/cli/ui/ink-app/commands/mobile/index.ts",
-        "src/cli/ui/ink-app/commands/plan/index.ts",
-        "src/cli/ui/ink-app/commands/theme/index.ts",
-        "src/cli/ui/ink-app/commands/resume/index.ts",
-        "src/cli/ui/ink-app/commands/tag/index.ts"
+        "src/cli/commands/theme/index.ts"
       ],
-      "loc": 7011,
+      "loc": 588,
       "twins": [
         {
           "runtime": "src/runtime/services/mcp/types.ts",
           "inkApp": "src/cli/ui/ink-app/services/mcp/types.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 20,
+      "burnedLoc": 6428,
+      "escalated": [
+        {
+          "path": "src/cli/commands/theme/index.ts",
+          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support \u2014 LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
+        }
+      ]
     },
     {
       "id": "b0004",

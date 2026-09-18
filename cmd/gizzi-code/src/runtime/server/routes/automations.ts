@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Hono } from "hono"
 import { lazy } from "@/shared/util/lazy"
 import { Database } from "@/runtime/session/storage/db"

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Brain Service
  *
@@ -69,10 +68,14 @@ export interface MemoryChunk {
   time_created: number
 }
 
+// TODO(types): mirrors the entity_type $type<> union on
+// MemoryEntityTable (memory.sql.ts) — Entity previously widened it to string.
+type EntityType = "person" | "concept" | "file" | "tool" | "task" | "project"
+
 export interface Entity {
   id: string
   tenant_id: string
-  entity_type: string
+  entity_type: EntityType
   name: string
   description?: string
   mention_count: number
@@ -292,7 +295,7 @@ export namespace BrainService {
         .where(eq(MemoryEntityTable.tenant_id, tenantId))
         .$dynamic()
       if (type) {
-        query = query.where(eq(MemoryEntityTable.entity_type, type)) as typeof query
+        query = query.where(eq(MemoryEntityTable.entity_type, type as EntityType)) as typeof query
       }
       return query.orderBy(desc(MemoryEntityTable.mention_count)).all() as Entity[]
     })
