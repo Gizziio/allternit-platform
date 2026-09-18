@@ -1,8 +1,9 @@
 /**
  * Compatibility surface for the experimental skill-search prefetcher.
  *
- * Skill search is disabled by featureCheck.ts. Keeping the complete API as a
- * no-op lets production bundles resolve their feature-gated imports without
+ * The experimental skill-search feature was never implemented; the feature
+ * gate always evaluates false. Keeping the complete API as a no-op lets
+ * production bundles resolve their feature-gated imports without
  * advertising or partially enabling an unfinished feature.
  */
 

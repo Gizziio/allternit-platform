@@ -290,13 +290,6 @@ export async function setup(
   // getCommands() kick — see comment there.
   if (!isBareMode()) {
     initSessionMemory() // Synchronous - registers hook, gate check happens lazily
-    if (feature('CONTEXT_COLLAPSE')) {
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      ;(
-        require('./services/contextCollapse/index.js') as typeof import('./services/contextCollapse/index.js')
-      ).initContextCollapse()
-      /* eslint-enable @typescript-eslint/no-require-imports */
-    }
   }
   void lockCurrentVersion() // Lock current version to prevent deletion by other processes
   logForDiagnosticsNoPII('info', 'setup_background_jobs_launched')
@@ -343,18 +336,6 @@ export async function setup(
           )
           clearSystemPromptSections()
         }
-      })
-    }
-    if (feature('COMMIT_ATTRIBUTION')) {
-      // Dynamic import to enable dead code elimination (module contains excluded strings).
-      // Defer to next tick so the git subprocess spawn runs after first render
-      // rather than during the setup() microtask window.
-      setImmediate(() => {
-        void import('src/shared/utils/attributionHooks.js').then(
-          ({ registerAttributionHooks }) => {
-            registerAttributionHooks() // Register attribution tracking hooks (ant-only feature)
-          },
-        )
       })
     }
     void import('src/shared/utils/sessionFileAccessHooks.js').then(m =>

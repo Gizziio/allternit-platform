@@ -2688,3 +2688,15 @@ src/runtime/tools/utils/permissions/autoModeState.ts
 src/runtime/tools/utils/permissions/permissionSetup.ts
 src/shared/tools/WorkflowTool/constants.ts
 packages/sdk/src/providers/allternit/resources/top-level.ts
+src/cli/ui/ink-app/tools/OverflowTestTool/OverflowTestTool.ts
+src/cli/ui/ink-app/tools/TerminalCaptureTool/prompt.ts
+src/cli/ui/ink-app/tools/VerifyPlanExecutionTool/constants.ts
+src/cli/ui/ink-app/services/skillSearch/featureCheck.ts
+src/cli/ui/ink-app/services/skillSearch/remoteSkillState.ts
+src/cli/ui/ink-app/services/skillSearch/telemetry.ts
+src/runtime/services/compact/cachedMicrocompact.ts
+src/cli/ui/ink-app/services/compact/cachedMicrocompact.ts
+src/runtime/services/contextCollapse/operations.ts
+src/cli/ui/ink-app/services/contextCollapse/operations.ts
+src/shared/utils/attributionHooks.ts
+src/cli/ui/ink-app/components/CommandPalette.tsx

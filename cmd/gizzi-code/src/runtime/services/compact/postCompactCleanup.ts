@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { feature } from 'bun:bundle'
 import type { QuerySource } from '@/constants/querySource.js'
 import { clearSystemPromptSections } from '@/constants/systemPromptSections.js'
 import { getUserContext } from '../../context.js'
@@ -32,7 +31,7 @@ import { resetMicrocompactState } from './microCompact.js'
 export function runPostCompactCleanup(querySource?: QuerySource): void {
   // Subagents (agent:*) run in the same process and share module-level
   // state with the main thread. Only reset main-thread module-level state
-  // (context-collapse, memory file cache) for main-thread compacts.
+  // (memory file cache) for main-thread compacts.
   // Same startsWith pattern as isMainThread (index.ts:188).
   const isMainThreadCompact =
     querySource === undefined ||
@@ -40,15 +39,6 @@ export function runPostCompactCleanup(querySource?: QuerySource): void {
     querySource === 'sdk'
 
   resetMicrocompactState()
-  if (feature('CONTEXT_COLLAPSE')) {
-    if (isMainThreadCompact) {
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      ;(
-        require('../contextCollapse/operations.js') as typeof import('../contextCollapse/operations.js')
-      ).resetContextCollapse()
-      /* eslint-enable @typescript-eslint/no-require-imports */
-    }
-  }
   if (isMainThreadCompact) {
     // getUserContext is a memoized outer layer wrapping getGizziMds() →
     // getMemoryFiles(). If only the inner getMemoryFiles cache is cleared,
@@ -69,10 +59,5 @@ export function runPostCompactCleanup(querySource?: QuerySource): void {
   // skills, and dynamic additions are handled by skillChangeDetector /
   // cacheUtils resets. See compactConversation() for full rationale.
   clearBetaTracingState()
-  if (feature('COMMIT_ATTRIBUTION')) {
-    void import('../../utils/attributionHooks.js').then(m =>
-      m.sweepFileContentCache(),
-    )
-  }
   clearSessionMessagesCache()
 }

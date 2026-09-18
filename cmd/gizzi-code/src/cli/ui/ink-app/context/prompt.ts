@@ -12,8 +12,6 @@ export {
   LEGACY_BRIEF_TOOL_NAME,
 } from "../tools/BriefTool/prompt.js"
 
-export { TERMINAL_CAPTURE_TOOL_NAME } from "../tools/TerminalCaptureTool/prompt.js"
-
 export { clearPromptCache } from "../tools/SkillTool/prompt.js"
 
 export { isKairosCronEnabled } from "../tools/ScheduleCronTool/prompt.js"

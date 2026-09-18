@@ -109,7 +109,6 @@ import {
 } from '@allternit/gizzi-sdk/providers/allternit/error'
 import {
   getAfkModeHeaderLatched,
-  getCacheEditingHeaderLatched,
   getFastModeHeaderLatched,
   getLastApiCompletionTimestamp,
   getPromptCache1hAllowlist,
@@ -117,7 +116,6 @@ import {
   getSessionId,
   getThinkingClearLatched,
   setAfkModeHeaderLatched,
-  setCacheEditingHeaderLatched,
   setFastModeHeaderLatched,
   setLastMainRequestId,
   setPromptCache1hAllowlist,
@@ -213,12 +211,6 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../analytics/index.js'
-import {
-  consumePendingCacheEdits,
-  getPinnedCacheEdits,
-  markToolsSentToAPIState,
-  pinCacheEdits,
-} from '../compact/microCompact.js'
 import { getInitializationStatus } from '../lsp/manager.js'
 import { isToolFromMcpServer } from '../mcp/utils.js'
 import { withStreamingVCR, withVCR } from '../vcr.js'
@@ -1172,29 +1164,6 @@ async function* queryModel(
     betas.push(toolSearchHeader)
   }
 
-  // Determine if cached microcompact is enabled for this model.
-  // Computed once here (in async context) and captured by paramsFromContext.
-  // The beta header is also captured here to avoid a top-level import of the
-  // ant-only CACHE_EDITING_BETA_HEADER constant.
-  let cachedMCEnabled = false
-  let cacheEditingBetaHeader = ''
-  if (feature('CACHED_MICROCOMPACT')) {
-    const {
-      isCachedMicrocompactEnabled,
-      isModelSupportedForCacheEditing,
-      getCachedMCConfig,
-    } = await import('../compact/cachedMicrocompact.js')
-    const betas = await import('src/constants/betas.js')
-    cacheEditingBetaHeader = betas.CACHE_EDITING_BETA_HEADER
-    const featureEnabled = isCachedMicrocompactEnabled()
-    const modelSupported = isModelSupportedForCacheEditing(options.model)
-    cachedMCEnabled = featureEnabled && modelSupported
-    const config = getCachedMCConfig()
-    logForDebugging(
-      `Cached MC gate: enabled=${featureEnabled} modelSupported=${modelSupported} model=${options.model} supportedModels=${jsonStringify((config as unknown as { supportedModels?: string[] }).supportedModels)}`,
-    )
-  }
-
   const useGlobalCacheFeature = shouldUseGlobalCacheScope()
   const willDefer = (t: Tool) =>
     useToolSearch && (deferredToolNames.has(t.name) || shouldDeferLspTool(t))
@@ -1419,18 +1388,6 @@ async function* queryModel(
     setFastModeHeaderLatched(true)
   }
 
-  let cacheEditingHeaderLatched = getCacheEditingHeaderLatched() === true
-  if (feature('CACHED_MICROCOMPACT')) {
-    if (
-      !cacheEditingHeaderLatched &&
-      cachedMCEnabled &&
-      getAPIProvider() === 'firstParty' &&
-      options.querySource === 'repl_main_thread'
-    ) {
-      cacheEditingHeaderLatched = true
-      setCacheEditingHeaderLatched(true)
-    }
-  }
 
   // Only latch from agentic queries so a classifier call doesn't flip the
   // main thread's context_management mid-turn.
@@ -1470,7 +1427,7 @@ async function* queryModel(
       betas,
       autoModeActive: afkHeaderLatched,
       isUsingOverage: currentLimits.isUsingOverage ?? false,
-      cachedMCEnabled: cacheEditingHeaderLatched,
+      cachedMCEnabled: false,
       effortValue: effort,
       extraBodyParams: getExtraBodyParams(),
     })
@@ -1519,8 +1476,8 @@ async function* queryModel(
   // Consume pending cache edits ONCE before paramsFromContext is defined.
   // paramsFromContext is called multiple times (logging, retries), so consuming
   // inside it would cause the first call to steal edits from subsequent calls.
-  const consumedCacheEdits = cachedMCEnabled ? consumePendingCacheEdits() : null
-  const consumedPinnedEdits = cachedMCEnabled ? getPinnedCacheEdits() : []
+  const consumedCacheEdits = null
+  const consumedPinnedEdits = []
 
   // Capture the betas sent in the last API request, including the ones that
   // were dynamically added, so we can log and send it to telemetry.
@@ -1652,24 +1609,7 @@ async function* queryModel(
       }
     }
 
-    // Cache editing beta: header is latched session-stable; useCachedMC
-    // (controls cache_edits body behavior) stays live so edits stop when
-    // the feature disables but the header doesn't flip.
-    const useCachedMC =
-      cachedMCEnabled &&
-      getAPIProvider() === 'firstParty' &&
-      options.querySource === 'repl_main_thread'
-    if (
-      cacheEditingHeaderLatched &&
-      getAPIProvider() === 'firstParty' &&
-      options.querySource === 'repl_main_thread' &&
-      !betasParams.includes(cacheEditingBetaHeader)
-    ) {
-      betasParams.push(cacheEditingBetaHeader)
-      logForDebugging(
-        'Cache editing beta header enabled for cached microcompact',
-      )
-    }
+    const useCachedMC = false
 
     // Only send temperature when thinking is disabled — the API requires
     // temperature: 1 when thinking is enabled, which is already the default.
@@ -2813,10 +2753,6 @@ async function* queryModel(
     }
   }
 
-  // Mark all registered tools as sent to API so they become eligible for deletion
-  if (feature('CACHED_MICROCOMPACT') && cachedMCEnabled) {
-    markToolsSentToAPIState()
-  }
 
   // Track the last requestId for the main conversation chain so shutdown
   // can send a cache eviction hint to inference. Exclude backgrounded
@@ -2950,19 +2886,6 @@ export function updateUsage(
     // so the string is eliminated from external builds by dead code elimination.
     // Uses the same > 0 guard as other token fields to prevent message_delta
     // from overwriting the real value with 0.
-    ...(feature('CACHED_MICROCOMPACT')
-      ? {
-          cache_deleted_input_tokens:
-            (partUsage as unknown as { cache_deleted_input_tokens?: number })
-              .cache_deleted_input_tokens != null &&
-            (partUsage as unknown as { cache_deleted_input_tokens: number })
-              .cache_deleted_input_tokens > 0
-              ? (partUsage as unknown as { cache_deleted_input_tokens: number })
-                  .cache_deleted_input_tokens
-              : ((usage as unknown as { cache_deleted_input_tokens?: number })
-                  .cache_deleted_input_tokens ?? 0),
-        }
-      : {}),
     inference_geo: usage.inference_geo,
     iterations: (partUsage as any).iterations ?? (usage as any).iterations,
     speed: (partUsage as BetaUsage).speed ?? usage.speed,
@@ -3004,16 +2927,6 @@ export function accumulateUsage(
     },
     // See comment in updateUsage — field is not on NonNullableUsage to keep
     // the string out of external builds.
-    ...(feature('CACHED_MICROCOMPACT')
-      ? {
-          cache_deleted_input_tokens:
-            ((totalUsage as unknown as { cache_deleted_input_tokens?: number })
-              .cache_deleted_input_tokens ?? 0) +
-            ((
-              messageUsage as unknown as { cache_deleted_input_tokens?: number }
-            ).cache_deleted_input_tokens ?? 0),
-        }
-      : {}),
     inference_geo: messageUsage.inference_geo, // Use the most recent
     iterations: messageUsage.iterations, // Use the most recent
     speed: messageUsage.speed, // Use the most recent
@@ -3132,8 +3045,6 @@ export function addCacheBreakpoints(
             msg.content = [{ type: 'text', text: msg.content as string }]
           }
           insertBlockAfterToolResults(msg.content, dedupedNewEdits)
-          // Pin so this block is re-sent at the same position in future calls
-          pinCacheEdits(i, newCacheEdits as any)
 
           logForDebugging(
             `Added cache_edits block with ${dedupedNewEdits.edits.length} deletion(s) to message[${i}]: ${dedupedNewEdits.edits.map(e => e.cache_reference).join(', ')}`,

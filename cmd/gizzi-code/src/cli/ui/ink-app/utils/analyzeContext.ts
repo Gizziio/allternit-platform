@@ -1051,15 +1051,6 @@ export async function analyzeContextUsage(
       skipReservedBuffer = true
     }
   }
-  if (feature('CONTEXT_COLLAPSE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { isContextCollapseEnabled } =
-      require('../services/contextCollapse/operations.js') as typeof import('../services/contextCollapse/operations.js')
-    /* eslint-enable @typescript-eslint/no-require-imports */
-    if (isContextCollapseEnabled()) {
-      skipReservedBuffer = true
-    }
-  }
   if (skipReservedBuffer) {
     // No buffer category pushed — reactive compaction is transparent and
     // doesn't need a visible reservation in the grid.

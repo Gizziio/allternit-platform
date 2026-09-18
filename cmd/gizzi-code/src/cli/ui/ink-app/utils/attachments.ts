@@ -91,14 +91,11 @@ import { getContextWindowForModel } from './context.js'
 import type { DiscoverySignal } from '../services/skillSearch/signals.js'
 // Conditional require for DCE. All skill-search string literals that would
 // otherwise leak into external builds live inside these modules. The only
-// surfaces in THIS file are: the maybe() call (gated via spread below) and
-// the skill_listing suppression check (uses the same skillSearchModules null
-// check). The type-only DiscoverySignal import above is erased at compile time.
+// surface in THIS file is the maybe() call (gated via spread below).
+// The type-only DiscoverySignal import above is erased at compile time.
 /* eslint-disable @typescript-eslint/no-require-imports */
 const skillSearchModules = feature('EXPERIMENTAL_SKILL_SEARCH')
   ? {
-      featureCheck:
-        require('../services/skillSearch/featureCheck.js') as typeof import('../services/skillSearch/featureCheck.js'),
       prefetch:
         require('../services/skillSearch/prefetch.js') as typeof import('../services/skillSearch/prefetch.js'),
     }
@@ -2686,24 +2683,10 @@ async function getSkillListingAttachments(
   const mcpSkills = getMcpSkillCommands(
     toolUseContext.getAppState().mcp.commands,
   )
-  let allCommands =
+  const allCommands =
     mcpSkills.length > 0
       ? uniqBy([...localCommands, ...mcpSkills], 'name')
       : localCommands
-
-  // When skill search is active, filter to bundled + MCP instead of full
-  // suppression. Resolves the turn-0 gap: main thread gets turn-0 discovery
-  // via getTurnZeroSkillDiscovery (blocking), but subagents use the async
-  // subagent_spawn signal (collected post-tools, visible turn 1). Bundled +
-  // MCP are small and intent-signaled; user/project/plugin skills go through
-  // discovery. feature() first for DCE — the property-access string leaks
-  // otherwise even with ?. on null.
-  if (
-    feature('EXPERIMENTAL_SKILL_SEARCH') &&
-    skillSearchModules?.featureCheck.isSkillSearchEnabled()
-  ) {
-    allCommands = filterToBundledAndMcp(allCommands)
-  }
 
   const agentKey = toolUseContext.agentId ?? ''
   let sent = sentSkillNames.get(agentKey)
