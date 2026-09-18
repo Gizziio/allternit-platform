@@ -60,13 +60,13 @@ const SURFACE_THEMES: Record<AgentModeSurface, AgentModeSurfaceTheme> = {
 // the light :root). Dark theme keeps the teal SURFACE_THEMES.bot values.
 const BOT_SURFACE_THEME_LIGHT: AgentModeSurfaceTheme = {
   accent: '#B08D6E',
-  glow: 'rgba(176,141,110,0.26)',
-  soft: 'rgba(176,141,110,0.14)',
-  wash: 'rgba(176,141,110,0.18)',
-  fog: 'rgba(122,89,61,0.2)',
-  edge: 'rgba(176,141,110,0.16)',
-  panelTint: 'rgba(176,141,110,0.08)',
-  shadow: 'rgba(83,51,24,0.12)',
+  glow: 'rgba(176,141,110,0.06)',
+  soft: 'rgba(176,141,110,0.04)',
+  wash: 'rgba(176,141,110,0.03)',
+  fog: 'rgba(176,141,110,0.04)',
+  edge: 'rgba(176,141,110,0.08)',
+  panelTint: 'rgba(176,141,110,0.02)',
+  shadow: 'rgba(83,51,24,0.04)',
 };
 
 const backdropAnimationStyles = `

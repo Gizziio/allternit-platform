@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, CircleNotch, Sparkle, Warning, X } from "@phosphor-icons/react";
 import type {
@@ -39,6 +40,7 @@ import { JobStep } from "./steps/JobStep";
 import { ComputerRuntimeStep } from "./steps/ComputerRuntimeStep";
 import { type AvatarEditorState } from "./steps/AvatarEditor";
 import { AVATAR_PACKS } from "./avatar-packs";
+import { buildAvatarConfigFromEditor } from "./avatar-config";
 
 const logger = createModuleLogger("CreateBotWizard");
 
@@ -152,79 +154,19 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
 
   const buildAvatarConfig = useCallback((): AvatarConfig => {
     const accent = formDataRef.current.botProfile?.accentColor || STUDIO_THEME.accent;
-
-    switch (avatarMode) {
-      case "initials":
-        return {
-          type: "color",
-          colors: {
-            primary: avatarPicker.bgColor,
-            secondary: avatarPicker.textColor,
-            glow: avatarPicker.bgColor,
-          },
-          style: { primaryColor: avatarPicker.bgColor, accentColor: avatarPicker.textColor },
-        } as AvatarConfig;
-      case "image":
-        return {
-          type: "image",
-          uri: imageDataUrl || undefined,
-          colors: { primary: accent, secondary: "#ffffff", glow: accent },
-        } as AvatarConfig;
-      case "packs": {
-        const pack = AVATAR_PACKS.find((p) => p.id === packSelection.packId);
-        const sprite = pack?.sprites.find((s) => s.id === packSelection.spriteId);
-        // Animated-capable sprites ride the pet renderer (Codex-carry sheet
-        // format); portrait-only sprites fall back to a static image avatar.
-        if (pack && sprite?.sheetUrl) {
-          return {
-            type: "mascot",
-            mascotTemplate: "pet",
-            colors: { primary: accent, secondary: "#ffffff", glow: accent },
-            pet: {
-              spriteUrl: sprite.sheetUrl,
-              frameWidth: 192,
-              frameHeight: 208,
-              columns: 8,
-              rows: 9,
-            },
-          } as AvatarConfig;
-        }
-        return {
-          type: "image",
-          uri: sprite?.portraitUrl,
-          colors: { primary: accent, secondary: "#ffffff", glow: accent },
-        } as AvatarConfig;
-      }
-      case "pet":
-        return {
-          type: "mascot",
-          mascotTemplate: "pet",
-          colors: { primary: accent, secondary: "#ffffff", glow: accent },
-          pet: petUrl
-            ? {
-                spriteUrl: petUrl,
-                frameWidth: 192,
-                frameHeight: 208,
-                columns: 8,
-                rows: 9,
-              }
-            : undefined,
-        } as AvatarConfig;
-      case "mascot":
-        return {
-          type: "mascot",
-          mascotTemplate,
-          colors: { primary: accent, secondary: "#ffffff", glow: accent },
-        } as AvatarConfig;
-      case "gizzi":
-      default:
-        return {
-          type: "mascot",
-          mascotTemplate: "gizzi",
-          colors: { primary: gizziColor, secondary: "#ffffff", glow: gizziColor },
-          currentEmotion: gizziEmotion,
-        } as AvatarConfig;
-    }
+    return buildAvatarConfigFromEditor(
+      {
+        avatarMode,
+        avatarPicker,
+        mascotTemplate,
+        gizziColor,
+        gizziEmotion,
+        imageDataUrl,
+        petUrl,
+        packSelection,
+      },
+      accent,
+    );
   }, [avatarMode, avatarPicker, gizziColor, gizziEmotion, imageDataUrl, mascotTemplate, packSelection, petUrl]);
 
   const buildAvatarConfigRef = useRef(buildAvatarConfig);
@@ -521,8 +463,8 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] overflow-auto bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+  const wizard = (
+    <div className="fixed inset-0 z-[400] overflow-auto bg-[var(--bg-elevated)] text-[var(--text-primary)]">
       {/* Approved page chrome — same checklist as ProjectView / LibraryView:
           full-width elevated root, inner max-w-6xl container with px-8
           pt-10 pb-12. On large screens the left padding clears the shell's
@@ -702,6 +644,7 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
       </div>
     </div>
   );
+  return createPortal(wizard, document.body);
 }
 
 /* -------------------------------------------------------------------------- */

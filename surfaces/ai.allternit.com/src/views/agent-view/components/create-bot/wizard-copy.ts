@@ -11,6 +11,13 @@ export const WIZARD_COPY = {
     subtitle: "Configure a bot to work autonomously.",
     closeLabel: "Close",
   },
+  edit: {
+    title: "Edit bot",
+    subtitle: "Name, look, job, and tools. Sprite packs live here too.",
+    saveCta: "Save bot",
+    savingCta: "Saving…",
+    saveFailed: "Failed to update bot.",
+  },
   steps: {
     start: {
       label: "Start",

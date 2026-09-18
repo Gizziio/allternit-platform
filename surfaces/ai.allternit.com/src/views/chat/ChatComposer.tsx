@@ -2475,7 +2475,7 @@ export function ChatComposer({
           with the same deck-rise/fall motion as the top deck. */}
       {agentModeSurface && agentModeEnabled && (agentModeSurface === 'bot' || selectedSurfaceAgent) && !voiceModeActive && (
         <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
-          <div className="relative z-0 w-full h-[60px] -mt-3 box-border bg-input-bg border-b border-r border-l border-input-border rounded-b-2xl px-4 pt-4 flex items-start gap-3 animate-deck-fall">
+          <div className="relative z-0 w-full min-h-[52px] -mt-2 box-border bg-input-bg border-b border-r border-l border-input-border rounded-b-2xl px-4 pt-3.5 pb-2 flex items-center animate-deck-fall">
             <ModeDock
               selectedMode={selectedModeId}
               onSelectMode={(modeId) => {

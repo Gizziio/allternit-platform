@@ -67,12 +67,7 @@ export function ModeDock({
   );
 
   return (
-    <div className="w-full flex flex-col items-start gap-3">
-      {agentModeSurface === 'bot' && !selectedSurfaceAgent && (
-        <div className="flex items-center gap-2 py-1 text-[11px] text-[var(--chat-composer-muted)]">
-          Select or create a bot to run these modes
-        </div>
-      )}
+    <div className="w-full flex flex-col items-start gap-0">
       {agentStatus && (
         <div className="flex items-center gap-2 py-1" aria-label="Agent status">
           <div
@@ -85,7 +80,7 @@ export function ModeDock({
       )}
 
       {/* Horizontal mode tabs separated by pipes */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex w-full items-center gap-x-2 gap-y-1.5 flex-wrap">
         {visibleTabs.map((mode, index) => {
           const isSelected = selectedMode === mode.id;
           const ModeIcon = mode.icon;

@@ -190,7 +190,7 @@ export function BotTranscript({
         ))}
 
         {turn && rung === "thinking" && (
-          <WorkingChamber thinking={turn.thinkingBuffer} rung={rung} />
+          <WorkingChamber thinking={turn.thinkingBuffer} rung={rung} startedAt={turn.startedAt} />
         )}
         {turn && rung === "typing" && <TypingDots />}
         {turn && turn.activity && <ActivityLine activity={turn.activity} />}
@@ -198,7 +198,7 @@ export function BotTranscript({
           <>
             <StreamingBubble text={turn.partialText} status="streaming" />
             {turn.thinkingBuffer.length > 0 && (
-              <WorkingChamber thinking={turn.thinkingBuffer} rung={rung} />
+              <WorkingChamber thinking={turn.thinkingBuffer} rung={rung} startedAt={turn.startedAt} />
             )}
           </>
         )}

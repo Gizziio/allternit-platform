@@ -54,7 +54,7 @@ import {
   type BotRoutine,
   type BotRoutineFrequency,
 } from "@/lib/bots/bot-routine.service";
-import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
+import { openBotChatImmediately, openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { getConnectorLogoUrl } from "@/lib/design/connector-logo";
 import { listWebhookTriggers, type WebhookTrigger } from "@/lib/webhook-api";
 import { cn } from "@/lib/utils";
@@ -64,7 +64,7 @@ import { BotRuntimeConfigModal } from "./BotRuntimeConfigModal";
 import { BotDesktopView } from "./BotDesktopView";
 import { AutomationTasksView } from "@/views/cowork/AutomationTasksView";
 import { BotWebhookTriggersPanel } from "./BotWebhookTriggersPanel";
-import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
+import { EditBotForm } from "@/views/agent-view/components/create-bot/EditBotForm";
 import { BotConfigTab } from "./BotConfigTab";
 import { BotAvatar } from "./BotAvatar";
 
@@ -215,6 +215,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
 
   const handleStartSession = useCallback(async () => {
     if (!bot) return;
+    openBotChatImmediately(bot.id, "bot-home");
     await startBotSession(bot);
   }, [bot, startBotSession]);
 
@@ -515,6 +516,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
               onEditBot={handleEditBot}
             />
           )}
+
         </div>
       </div>
 
@@ -528,22 +530,11 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
         }}
       />
 
-      {isEditModalOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsEditModalOpen(false);
-          }}
-        >
-          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
-            <EditAgentForm
-              agent={bot}
-              onCancel={() => setIsEditModalOpen(false)}
-              onSaved={() => setIsEditModalOpen(false)}
-            />
-          </div>
-        </div>
-      )}
+      <EditBotForm
+        bot={bot}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
 
       {isCloudModalOpen && (
         <div

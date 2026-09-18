@@ -1074,12 +1074,10 @@ async function initializeBundledMode(): Promise<void> {
       updateSplash('Starting operator backend…', 30);
     }
 
-    // Spawn the embedded driver from the GUI app itself so macOS attributes
-    // both privacy grants to Allternit, then give the backend only its socket.
-    const computerUseDriver = await computerUseDriverManager.start();
-    if (!computerUseDriver.running) {
-      log.warn('[Main] Embedded computer-use driver unavailable:', computerUseDriver.error);
-    }
+    // Do not start CuaDriver at boot. It prompts Screen Recording on launch
+    // (and will stack dialogs if a previous instance is still gated). The
+    // driver starts on first Open computer / status probe instead.
+    log.info('[Main] Computer-use driver deferred until Open computer');
     const acuUrl = await acuGatewayManager.start();
     if (acuUrl) {
       log.info(`[Main] ACU computer-use gateway ready at ${acuUrl}`);
@@ -1985,6 +1983,8 @@ app.whenReady().then(async () => {
   }
 
   console.log('[Main] Registering allternit-api protocol handler...');
+  let apiProxyCircuitOpenUntil = 0;
+  let apiProxyLastLogAt = 0;
   protocol.handle('allternit-api', async (request) => {
     const url = new URL(request.url);
     const pathAndQuery = `${url.pathname}${url.search}`;
@@ -2033,6 +2033,12 @@ app.whenReady().then(async () => {
     }
 
     try {
+      if (Date.now() < apiProxyCircuitOpenUntil) {
+        return new Response(JSON.stringify({ error: 'proxy_unavailable', message: 'local API is down' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
       // Electron exposes the custom-protocol request body as a ReadableStream.
       // Passing that stream directly to Node's fetch requires a non-standard
       // `duplex` option and caused all Design POST requests to fail. Buffer the
@@ -2046,6 +2052,7 @@ app.whenReady().then(async () => {
         body: requestBody,
       });
 
+      apiProxyCircuitOpenUntil = 0;
       const responseHeaders = new Headers(response.headers);
       responseHeaders.set('Access-Control-Allow-Origin', '*');
 
@@ -2055,7 +2062,11 @@ app.whenReady().then(async () => {
         headers: responseHeaders,
       });
     } catch (error) {
-      log.error('[Protocol] Proxy error:', error);
+      apiProxyCircuitOpenUntil = Date.now() + 15_000;
+      if (Date.now() - apiProxyLastLogAt > 15_000) {
+        apiProxyLastLogAt = Date.now();
+        log.error('[Protocol] Proxy error (silencing repeats for 15s):', error);
+      }
       return new Response(JSON.stringify({ error: 'proxy_error', message: String(error) }), {
         status: 502,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
@@ -2311,7 +2322,11 @@ handleGuarded('backend:restart', async () => {
   });
 });
 
-ipcMain.handle('computer-use-driver:get-status', () => computerUseDriverManager.getStatus());
+ipcMain.handle('computer-use-driver:get-status', async () => {
+  const current = computerUseDriverManager.getStatus();
+  if (current.running) return current;
+  return computerUseDriverManager.start();
+});
 
 // Bonsai local image companion (install / lifecycle / removal)
 ipcMain.handle('bonsai:get-status', () => bonsaiCompanion.getStatus());

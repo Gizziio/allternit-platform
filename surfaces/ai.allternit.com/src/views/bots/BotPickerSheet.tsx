@@ -11,7 +11,7 @@ import { getBots, getBotDisplayName, getBotTagline } from "@/lib/bots/bot-profil
 import { useBotRosterStore } from "@/lib/bots/bot-roster.store";
 import { useGroupChatStore } from "@/lib/bots/group-chat.store";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
-import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
+import { openBotChatImmediately, openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { startBotGroupChat } from "@/lib/bots/startBotGroupChat";
 import { BotAvatar } from "@/views/bots/BotAvatar";
 import { CreateBotForm } from "@/views/agent-view/components/CreateBotForm";
@@ -34,7 +34,9 @@ export function BotPickerSheet({ open, onClose }: BotPickerSheetProps) {
   const pinnedBotIds = useBotRosterStore((s) => s.pinnedBotIds);
   const togglePin = useBotRosterStore((s) => s.togglePin);
   const groups = useGroupChatStore((s) => s.groups);
-  const { startSession, isStarting } = useStartBotSession();
+  const { startSession, isStarting } = useStartBotSession((sessionId, botId) => {
+    openBotChatView(sessionId, botId, "bot-launchpad");
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [groupChatOpen, setGroupChatOpen] = useState(false);
@@ -67,15 +69,13 @@ export function BotPickerSheet({ open, onClose }: BotPickerSheetProps) {
 
   const groupList = useMemo(() => Object.values(groups), [groups]);
 
-  const handleSelectBot = async (bot: Agent) => {
+  const handleSelectBot = (bot: Agent) => {
     handleClose();
     // Target this bot from the bot-surface composer so the next send routes
-    // to it even if the user navigates back to the launchpad.
+    // to it even if the user navigates back to the hub.
     useAgentSurfaceModeStore.getState().setSelectedAgent("bot", bot.id);
-    const sessionId = await startSession(bot);
-    if (sessionId) {
-      openBotChatView(sessionId, bot.id, "bot-launchpad");
-    }
+    openBotChatImmediately(bot.id, "bot-launchpad");
+    void startSession(bot);
   };
 
   const handleOpenGroup = (groupId: string) => {

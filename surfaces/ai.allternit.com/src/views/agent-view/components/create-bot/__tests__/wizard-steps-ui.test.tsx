@@ -52,7 +52,7 @@ function renderIdentityStep(botProfileOverrides: Record<string, unknown> = {}) {
     setImageDataUrl: vi.fn(),
     petUrl: '',
     setPetUrl: vi.fn(),
-    packSelection: { packId: 'maus-classic', spriteId: 'atlas' },
+    packSelection: { packId: 'alloy-classic', spriteId: 'atlas' },
     setPackSelection: vi.fn(),
   };
   render(<IdentityStep {...props} />);

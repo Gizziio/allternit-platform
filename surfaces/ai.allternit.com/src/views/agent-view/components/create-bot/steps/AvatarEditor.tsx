@@ -12,6 +12,7 @@ import { MascotPreview } from "@/views/agent-view/components/AgentMascotPreview"
 import { MASCOT_TEMPLATES } from "@/views/agent-view/AgentView.constants";
 import {
   AVATAR_PACKS,
+  isShippedAvatarPack,
   packSpritePortraitUrl,
   packSpriteSheetUrl,
   type AvatarPack,
@@ -168,6 +169,7 @@ export function AvatarEditor({ botProfile, onError, ...state }: AvatarEditorProp
       case "packs":
         return selectedPack && selectedSprite ? (
           <PackSpritePortrait
+            key={`${selectedPack.id}-${selectedSprite.id}`}
             pack={selectedPack}
             spriteId={selectedSprite.id}
             size={96}
@@ -194,7 +196,19 @@ export function AvatarEditor({ botProfile, onError, ...state }: AvatarEditorProp
       default:
         return <GizziMascot size={96} emotion={gizziEmotion} />;
     }
-  }, [accentColor, avatarMode, avatarPicker, displayName, gizziEmotion, imageDataUrl, mascotTemplate, petUrl]);
+  }, [
+    accentColor,
+    avatarMode,
+    avatarPicker,
+    displayName,
+    gizziEmotion,
+    imageDataUrl,
+    mascotTemplate,
+    packSelection,
+    petUrl,
+    selectedPack,
+    selectedSprite,
+  ]);
 
   return (
     <div>
@@ -299,6 +313,11 @@ export function AvatarEditor({ botProfile, onError, ...state }: AvatarEditorProp
               <button
                 key={pack.id}
                 type="button"
+                title={
+                  isShippedAvatarPack(pack.id)
+                    ? `${pack.name} — art is live`
+                    : `${pack.name} — art pending`
+                }
                 onClick={() => {
                   const first = pack.sprites[0];
                   if (first) setPackSelection({ packId: pack.id, spriteId: first.id });
@@ -311,6 +330,11 @@ export function AvatarEditor({ botProfile, onError, ...state }: AvatarEditorProp
                 )}
               >
                 {pack.name}
+                {!isShippedAvatarPack(pack.id) && (
+                  <span className="ml-1 text-[10px] font-normal text-[var(--text-tertiary)]">
+                    soon
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -513,6 +537,10 @@ function PackSpritePortrait({
   const [broken, setBroken] = useState(false);
   const url = sprite ? packSpritePortraitUrl(pack, sprite) : null;
   const sheet = sprite?.sheetUrl ? packSpriteSheetUrl(pack, sprite) : null;
+
+  React.useEffect(() => {
+    setBroken(false);
+  }, [url]);
 
   if (!sprite || !url || broken) {
     // Asset not generated yet (see AVATAR_PACKS.md handoff) — placeholder tile.

@@ -100,6 +100,29 @@ describe('bot-brain', () => {
       mode: 'allternit_cloud',
       modelRef: { providerID: 'anthropic', modelID: 'sonnet' },
     });
+    expect(
+      normalizeBotBrain({
+        mode: 'native_harness',
+        harness: 'claude',
+        effort: 'high',
+      }),
+    ).toEqual({
+      mode: 'native_harness',
+      harness: 'claude',
+      effort: 'high',
+    });
+  });
+
+  it('parses optional effort on bot.brain', () => {
+    expect(
+      parseBotBrain({
+        mode: 'native_harness',
+        harness: 'claude',
+        modelRef: { providerID: 'claude-cli', modelID: 'claude-sonnet-4-6' },
+        effort: 'xhigh',
+      }),
+    ).toMatchObject({ effort: 'xhigh' });
+    expect(parseBotBrain({ mode: 'allternit_cloud', effort: 'ludicrous' })).toBeUndefined();
   });
 
   it('resumes native_harness:codex via pickup of the stored session', async () => {

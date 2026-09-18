@@ -19,26 +19,13 @@ describe('ModeDeck persistence', () => {
     }
   });
 
-  it('shows the unmounted-bot hint on the bot surface when no bot is selected', () => {
+  it('keeps mode tabs in the dock without the unmounted-bot hint', () => {
     render(
       <ModeDock
         selectedMode="swarms"
         onSelectMode={() => {}}
         agentModeSurface="bot"
         selectedSurfaceAgent={null}
-      />
-    );
-
-    expect(screen.getByText(/Select or create a bot/)).toBeInTheDocument();
-  });
-
-  it('hides the unmounted-bot hint once a bot is bound', () => {
-    render(
-      <ModeDock
-        selectedMode="swarms"
-        onSelectMode={() => {}}
-        agentModeSurface="bot"
-        selectedSurfaceAgent={{ name: 'Helper' }}
       />
     );
 

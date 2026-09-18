@@ -134,6 +134,30 @@ export async function openBotCanonicalChat(
   return sessionId;
 }
 
+/** Placeholder id while prepareBotSession / ao bind is still in flight. */
+export const PENDING_BOT_SESSION_PREFIX = 'temp-pending-';
+
+export function isPendingBotSessionId(sessionId: string | null | undefined): boolean {
+  return Boolean(sessionId?.startsWith(PENDING_BOT_SESSION_PREFIX));
+}
+
+/**
+ * Session id that is safe to pass into openBotChatView immediately.
+ * Prefers the pinned canonical chat, then any local bot session, else a
+ * placeholder so the canvas can mount before ao / brain bind finishes.
+ */
+export function pendingBotChatSessionId(botId: string): string {
+  const pinned = useBotRosterStore.getState().canonicalChatIds[botId];
+  if (pinned) return pinned;
+  const sessions = useChatSessionStore.getState().sessions ?? [];
+  const existing = sessions.find(
+    (s) =>
+      s.metadata?.isBot === true &&
+      (s.metadata?.botCanonicalFor === botId || s.metadata?.agentId === botId),
+  );
+  return existing?.id ?? `${PENDING_BOT_SESSION_PREFIX}${botId}`;
+}
+
 /** Open the canonical 1:1 bot chat view (not Cowork). */
 export function openBotChatView(sessionId: string, botId: string, originView = 'chat'): void {
   if (typeof window === 'undefined') return;
@@ -145,6 +169,15 @@ export function openBotChatView(sessionId: string, botId: string, originView = '
       },
     }),
   );
+}
+
+/**
+ * P0-A: switch to bot chat without waiting on prepareBotSession / ao / VM.
+ * Callers still fire startSession in the background; the real id upgrades
+ * the canvas when prepare (or the local fallback) returns.
+ */
+export function openBotChatImmediately(botId: string, originView = 'bot-launchpad'): void {
+  openBotChatView(pendingBotChatSessionId(botId), botId, originView);
 }
 
 /**

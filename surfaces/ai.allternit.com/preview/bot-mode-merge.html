@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bot Mode view merge — preview</title>
+  <style>
+    :root, [data-theme="dark"] {
+      --bg-primary: #1A1612;
+      --bg-secondary: #2A211A;
+      --bg-elevated: #2A211A;
+      --text-primary: #ECECEC;
+      --text-secondary: #9B9B9B;
+      --text-tertiary: #6E6E6E;
+      --border-subtle: rgba(212, 176, 140, 0.10);
+      --border-default: rgba(212, 176, 140, 0.16);
+      --accent-bot: #2DD4BF;
+      --accent-primary: #D4B08C;
+      --surface-panel: #2A211A;
+      --shell-item-hover: rgba(212, 191, 168, 0.06);
+      --shell-item-active-bg: color-mix(in srgb, #D4B08C 16%, #2A211A);
+      --shell-item-active-fg: #f0c8aa;
+      --shell-item-muted: #6E6E6E;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+    .shell { display: flex; flex-direction: column; height: 100%; }
+    .modes {
+      display: flex; gap: 6px; padding: 10px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+    }
+    .mode {
+      border: 0; background: transparent; color: var(--text-secondary);
+      padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    }
+    .mode.on { background: color-mix(in srgb, var(--accent-bot) 16%, var(--surface-panel)); color: var(--accent-bot); }
+    .body { display: flex; flex: 1; min-height: 0; }
+    .rail {
+      width: 248px; flex-shrink: 0; padding: 10px 8px;
+      border-right: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+    }
+    .sec {
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--shell-item-muted); padding: 8px 12px;
+    }
+    .row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 12px; border-radius: 12px; cursor: default;
+    }
+    .row.active {
+      background: var(--shell-item-active-bg);
+      color: var(--shell-item-active-fg);
+    }
+    .av {
+      width: 28px; height: 28px; border-radius: 9px; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 11px; font-weight: 700;
+      color: #1A1612; background: var(--accent-bot);
+    }
+    .av.g { background: #7a8f7a; }
+    .av.s { background: #8a7a9a; }
+    .name { font-size: 13px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .by { font-size: 11px; line-height: 1.15; color: var(--shell-item-muted); font-weight: 400; }
+    .by.need { color: var(--accent-primary); }
+    .dot { width: 6px; height: 6px; border-radius: 99px; background: var(--accent-primary); flex-shrink: 0; }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg-elevated); }
+    .head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: 1px solid var(--border-subtle);
+    }
+    .who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .who .av { width: 36px; height: 36px; font-size: 13px; }
+    h2 { margin: 0; font-size: 16px; font-weight: 600; }
+    .status { display: flex; align-items: center; gap: 8px; }
+    .live { width: 8px; height: 8px; border-radius: 99px; background: #5cba7a; }
+    .sub { margin: 2px 0 0; font-size: 12px; color: var(--text-secondary); }
+    .chip {
+      border: 1px solid var(--border-default); background: transparent;
+      color: var(--text-primary); border-radius: 8px; padding: 6px 10px;
+      font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .chip.on { background: color-mix(in srgb, var(--accent-bot) 18%, var(--surface-panel)); }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .transcript { flex: 1; overflow: auto; padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { display: flex; align-items: flex-end; gap: 4px; }
+    .msg.bot { justify-content: flex-start; }
+    .msg.user { justify-content: flex-end; }
+    .bubble {
+      max-width: 85%;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-panel);
+      padding: 10px 14px;
+      font-size: 13.5px; line-height: 1.55;
+    }
+    .bubble.bot { border-radius: 16px 16px 16px 4px; }
+    .bubble.user { border-radius: 16px 16px 4px 16px; }
+    .bubble.collapse { max-height: 160px; overflow: hidden; position: relative; }
+    .more {
+      position: absolute; inset: auto 0 0 0; border: 0; cursor: pointer;
+      padding: 40px 0 8px; text-align: center; font-size: 12px; font-weight: 600;
+      color: var(--text-secondary);
+      background: linear-gradient(to top, var(--surface-panel) 40%, transparent);
+    }
+    .actions { display: flex; align-items: center; opacity: 0; transition: opacity .15s; }
+    .msg:hover .actions, .msg.open .actions { opacity: 1; }
+    .iconbtn {
+      border: 0; background: transparent; color: var(--text-tertiary);
+      padding: 6px; border-radius: 6px; cursor: pointer;
+    }
+    .iconbtn:hover { background: var(--shell-item-hover); color: var(--text-primary); }
+    .tray { display: none; }
+    .msg.open .tray, .msg:hover .tray { display: flex; }
+    .caption { font-size: 11px; color: var(--text-tertiary); text-align: center; padding: 4px 0 8px; }
+    .composer {
+      margin: 0 16px 16px; border: 1px solid var(--border-default);
+      border-radius: 16px; padding: 10px 12px; color: var(--text-tertiary); font-size: 14px;
+      background: color-mix(in srgb, var(--bg-elevated) 80%, var(--surface-panel));
+    }
+    .label {
+      position: absolute; top: 12px; right: 16px; font-size: 11px; letter-spacing: .04em;
+      text-transform: uppercase; color: var(--text-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="modes" aria-label="Shell modes">
+      <button class="mode">Chat</button>
+      <button class="mode on">Bots</button>
+      <button class="mode">Code</button>
+      <button class="mode">ACI</button>
+    </div>
+    <div class="body">
+      <aside class="rail">
+        <div class="sec">Pinned</div>
+        <div class="row">
+          <div class="av">IP</div>
+          <span class="min" style="min-width:0;flex:1;display:flex;flex-direction:column">
+            <span class="name">Invoice Pilot</span>
+            <span class="by need">Needs you</span>
+          </span>
+          <span class="dot"></span>
+        </div>
+        <div class="sec">Bots</div>
+        <div class="row active">
+          <div class="av">EA</div>
+          <span style="min-width:0;flex:1;display:flex;flex-direction:column">
+            <span class="name">Echo Alpha</span>
+            <span class="by">Working</span>
+          </span>
+        </div>
+        <div class="row">
+          <div class="av s">SB</div>
+          <span style="min-width:0;flex:1;display:flex;flex-direction:column">
+            <span class="name">Scout</span>
+            <span class="by">Waiting</span>
+          </span>
+        </div>
+        <div class="row">
+          <div class="av g">GB</div>
+          <span style="min-width:0;flex:1;display:flex;flex-direction:column">
+            <span class="name">Garden Bot</span>
+          </span>
+        </div>
+      </aside>
+      <section class="main">
+        <div class="head">
+          <div class="who">
+            <div class="av">EA</div>
+            <div>
+              <div class="status"><h2>Echo Alpha</h2><span class="live"></span></div>
+              <p class="sub">Working · 42 tok/s</p>
+            </div>
+          </div>
+          <div class="status" id="chips">
+            <button class="chip" type="button">kimi-k2</button>
+            <button class="chip" type="button" id="computerBtn">🖥 Computer</button>
+          </div>
+        </div>
+        <div class="caption">Merged view — Allternit tokens, OpenMaus chat/roster grammar</div>
+        <div class="transcript">
+          <div class="msg user">
+            <div class="actions">
+              <button class="iconbtn" aria-label="Message actions">⋯</button>
+            </div>
+            <div class="bubble user">Pull the open invoices and draft a reminder for Brianni.</div>
+          </div>
+          <div class="msg bot open">
+            <div class="bubble bot">Three invoices are open. I’ll draft the reminder and wait for you before it sends.</div>
+            <div class="actions">
+              <button class="iconbtn" aria-label="Message actions">⋯</button>
+              <div class="tray"><button class="iconbtn" aria-label="Copy message">⧉</button></div>
+            </div>
+          </div>
+          <div class="msg user">
+            <div class="actions"><button class="iconbtn">⋯</button></div>
+            <div class="bubble user collapse" id="paste">
+              PASTE — vendor notes, SOW excerpt, and a wall of log lines that should not bury the thread.
+              <br>line 2<br>line 3<br>line 4<br>line 5<br>line 6<br>line 7<br>line 8<br>line 9<br>line 10<br>line 11<br>line 12
+              <button class="more" type="button">Show more</button>
+            </div>
+          </div>
+        </div>
+        <div class="composer">Message Echo Alpha…</div>
+      </section>
+    </div>
+  </div>
+  <script>
+    const btn = document.getElementById("computerBtn");
+    const chips = document.getElementById("chips");
+    let open = false;
+    btn.addEventListener("click", () => {
+      open = !open;
+      btn.classList.toggle("on", open);
+      btn.innerHTML = open ? "🖥 <span class='sr'>Computer</span>" : "🖥 Computer";
+      const model = chips.querySelector(".chip");
+      model.textContent = open ? "✦" : "kimi-k2";
+    });
+  </script>
+</body>
+</html>

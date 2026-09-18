@@ -328,6 +328,10 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       
       fetchAgents: () => {
         if (fetchAgentsInFlight) return fetchAgentsInFlight;
+        const current = get();
+        if (current.error === 'API_OFFLINE' && current.agents.some((agent) => agent.isBot === true)) {
+          return Promise.resolve();
+        }
 
         fetchAgentsInFlight = (async () => {
           set({ isLoadingAgents: true, error: null });
@@ -339,15 +343,15 @@ export const useAgentStore = create<AgentState & AgentActions>()(
             );
             set({ agents, isLoadingAgents: false });
           } catch (err) {
-            // Don't block UI on network errors - just show empty state with warning
             const errorMsg = err instanceof Error ? err.message : 'Failed to fetch agents';
+            const { listLocalAgents } = await import('@/lib/agents/local-agent-registry');
             set({
-              agents: [],
+              agents: listLocalAgents(),
               error:
                 errorMsg.includes('Network') ||
                 errorMsg.includes('fetch') ||
                 errorMsg.includes('AGENT_FETCH_TIMEOUT')
-                ? 'API_OFFLINE' // Special error code for offline state
+                ? 'API_OFFLINE'
                 : errorMsg,
               isLoadingAgents: false
             });

@@ -139,6 +139,8 @@ export function normalizeBotBrain(
     ? brain.mode
     : 'allternit_cloud';
 
+  const effort = brain?.effort;
+
   if (mode === 'native_harness') {
     const harness = brain?.harness?.trim() || 'codex';
     return {
@@ -148,6 +150,7 @@ export function normalizeBotBrain(
         ? { nativeSessionId: brain.nativeSessionId.trim() }
         : {}),
       ...(modelRef ? { modelRef } : brain?.modelRef ? { modelRef: brain.modelRef } : {}),
+      ...(effort ? { effort } : {}),
     };
   }
 
@@ -156,12 +159,14 @@ export function normalizeBotBrain(
       mode,
       ...(brain?.uhpHarnessId?.trim() ? { uhpHarnessId: brain.uhpHarnessId.trim() } : {}),
       ...(modelRef ? { modelRef } : brain?.modelRef ? { modelRef: brain.modelRef } : {}),
+      ...(effort ? { effort } : {}),
     };
   }
 
   return {
     mode: 'allternit_cloud',
     ...(modelRef ? { modelRef } : brain?.modelRef ? { modelRef: brain.modelRef } : {}),
+    ...(effort ? { effort } : {}),
   };
 }
 

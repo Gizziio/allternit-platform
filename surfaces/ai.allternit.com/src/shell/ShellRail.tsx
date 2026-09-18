@@ -82,13 +82,15 @@ import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
 import { useCommRailsMailStore } from '@/lib/bots/commrails-mail.store';
 import { useCommRailSections } from '@/lib/bots/use-commrail-sections';
 
-import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
+import { openBotCanonicalChat, openBotChatImmediately, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import type { GroupChat } from '@/lib/bots/group-chat.types';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { BotAvatar } from '@/views/bots/BotAvatar';
 
 import { BotGroupRailRow, BotRailRow } from '@/views/bots/BotRailRows';
+import { BotRailOverflow } from '@/views/bots/BotRailOverflow';
+
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
@@ -294,6 +296,7 @@ export function ShellRail({
   const coworkStore = useCoworkStore();
   
   const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
+  const selectedBotId = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.selectedAgentIdBySurface.bot);
 
   const browserAgentSessions = useBrowserAgentStore((state) => state.pageAgentSessions);
   const aciSessionId = useBrowserAgentStore((state) => state.aciSessionId);
@@ -423,6 +426,9 @@ export function ShellRail({
   const canonicalChatIds = useBotRosterStore((s) => s.canonicalChatIds);
   const pinBot = useBotRosterStore((s) => s.pinBot);
   const unpinBot = useBotRosterStore((s) => s.unpinBot);
+  const [groupsExpanded, setGroupsExpanded] = useState(true);
+  const [botsExpanded, setBotsExpanded] = useState(true);
+
   // Drag-to-pin state (raw HTML5 DnD, same pattern as BrowserPane shortcuts).
   const [draggingBotId, setDraggingBotId] = useState<string | null>(null);
   const [pinDropActive, setPinDropActive] = useState(false);
@@ -436,8 +442,7 @@ export function ShellRail({
   const browserSticky = useStickyTab(activeViewType, BROWSER_TAB_VIEWS);
   const botSticky = useStickyTab(activeViewType, BOT_TAB_VIEWS);
 
-  // Clicking a bot row starts (or reuses) the bot's canonical session and then
-  // opens the bot-chat-session view — never the bot detail view.
+  // P0-A: open chat immediately (same as FabricBotMode). Do not wait on ao.
   const { startSession: startBotSession, isStarting: isBotSessionStarting } = useStartBotSession(
     useCallback((startedSessionId: string, startedBotId: string) => {
       openBotChatView(startedSessionId, startedBotId, 'agent-hub');
@@ -445,6 +450,7 @@ export function ShellRail({
   );
 
   const handleOpenBot = useCallback((bot: Agent) => {
+    openBotChatImmediately(bot.id, 'agent-hub');
     void startBotSession(bot);
   }, [startBotSession]);
 
@@ -809,10 +815,8 @@ export function ShellRail({
       useCodeSessionStore.getState().setActiveSession(null);
       onOpen?.('code');
     } else if (mode === 'bot') {
-      // Bot mode: "New" opens the bot picker sheet (globally hosted by
-      // BotPickerHost). Picking a bot starts a session on the dedicated
-      // bot-chat-session view. Never navigates away from bot mode.
-      window.dispatchEvent(new CustomEvent('allternit:open-bot-picker'));
+      botSticky.selectTab('bot-launchpad');
+      onOpen?.('bot-launchpad');
     } else {
       // Canonical-chat guard (spec Phase 0): when the active session is a
       // bot's canonical chat, "New" must not spawn a blank non-bot session
@@ -1157,200 +1161,157 @@ export function ShellRail({
         </>
       ) : mode === 'bot' ? (
         <>
-          {/* BOT TABS */}
-          <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
-            <NewRailButton
-              label="New"
-              isActive={isNewActive}
-              onClick={handleNewSession}
-            />
-            <RailItem
-              icon={Robot}
-              label="Bot Hub"
-              isActive={botSticky.isTabActive('agent-hub')}
-              onClick={() => {
-                botSticky.selectTab('agent-hub');
-                window.dispatchEvent(
-                  new CustomEvent('allternit:open-view', {
-                    detail: { viewType: 'agent-hub' },
-                  }),
-                );
-              }}
-            />
-            <RailItem
-              id="groups-list"
-              icon={Users}
-              label="Groups"
-              isActive={botSticky.isTabActive('groups-list') || activeViewType === 'group-chat'}
-              onClick={() => {
-                botSticky.selectTab('groups-list');
-                onOpen?.('groups-list');
-              }}
-            />
-          </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between gap-1 px-2 pb-1 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  botSticky.selectTab('bot-launchpad');
+                  onOpen?.('bot-launchpad');
+                }}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
+              >
+                <Plus size={13} />
+                New
+              </button>
+              <BotRailOverflow
+                onCreateBot={() => {
+                  botSticky.selectTab('bot-launchpad');
+                  onOpen?.('bot-launchpad');
+                  window.setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('allternit:open-create-bot'));
+                  }, 0);
+                }}
+              />
+            </div>
 
-          {/* BOT PINNED — self-prunes when empty; drop zone appears while a bot
-              row is being dragged so users can discover pinning */}
-          {(pinnedBots.length > 0 || draggingBotId !== null) && (
-            <RecentsPanel shrink expanded onToggle={() => {}} title="Pinned Bots">
-              {draggingBotId !== null && (
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.dataTransfer.dropEffect = 'move';
-                    setPinDropActive(true);
-                  }}
-                  onDragLeave={() => setPinDropActive(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const droppedId = e.dataTransfer.getData('text/plain') || draggingBotId;
-                    if (droppedId) pinBot(droppedId);
-                    setPinDropActive(false);
-                    setDraggingBotId(null);
-                  }}
-                  className={cn(
-                    "mx-2 mb-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-2 text-[12px] transition-colors",
-                    pinDropActive
-                      ? "border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--shell-item-hover)]"
-                      : "border-[var(--border-subtle)] text-[var(--shell-item-muted)]"
-                  )}
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-3">
+              <div className="flex w-full items-center px-1 py-0.5">
+                <button
+                  type="button"
+                  aria-label={groupsExpanded ? 'Collapse group chats' : 'Expand group chats'}
+                  onClick={() => setGroupsExpanded((open) => !open)}
+                  className="flex size-6 shrink-0 items-center justify-center rounded text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)]"
                 >
-                  <PushPin size={13} />
-                  <span>{pinDropActive ? 'Drop to pin' : 'Drag a bot here to pin'}</span>
+                  <CaretRight
+                    size={11}
+                    className={cn('transition-transform', groupsExpanded && 'rotate-90')}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    botSticky.selectTab('groups-list');
+                    onOpen?.('groups-list');
+                  }}
+                  className="min-w-0 flex-1 truncate px-1 py-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
+                >
+                  Group chats
+                </button>
+              </div>
+              {groupsExpanded && (
+                <div className="pb-2">
+                  {sortedGroupChats.map((group) => (
+                    <BotGroupRailRow
+                      key={group.id}
+                      group={group}
+                      unread={getGroupUnreadCount(group.id)}
+                      isActive={activeViewType === 'group-chat' && activeGroupId === group.id}
+                      onOpen={() => {
+                        setActiveGroup(group.id);
+                        onOpen?.('group-chat', { groupId: group.id });
+                      }}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => onOpen?.('groups-list')}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-[12px] text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)]"
+                  >
+                    <Plus size={12} />
+                    New group chat
+                  </button>
                 </div>
               )}
-              {pinnedBots.length === 0 ? (
-                draggingBotId === null ? (
-                  <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
-                    Pin bots from the bot picker
+
+              {pinnedBots.length > 0 && (
+                <>
+                  <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--shell-item-muted)]">
+                    Pinned
                   </div>
-                ) : null
+                  {pinnedBots.map((bot) => (
+                    <BotRailRow
+                      key={`pin-${bot.id}`}
+                      bot={bot}
+                      isActive={
+                        activeViewType === 'bot-chat-session' &&
+                        (activeChatSessionId === canonicalChatIds[bot.id] ||
+                          chatSessions.find((s) => s.id === activeChatSessionId)?.metadata?.agentId === bot.id)
+                      }
+                      disabled={isBotSessionStarting}
+                      onOpen={() => handleOpenBot(bot)}
+                      onUnpin={() => unpinBot(bot.id)}
+                    />
+                  ))}
+                </>
+              )}
+
+              <div className="flex w-full items-center px-1 pb-0.5 pt-2">
+                <button
+                  type="button"
+                  aria-label={botsExpanded ? 'Collapse bots' : 'Expand bots'}
+                  onClick={() => setBotsExpanded((open) => !open)}
+                  className="flex size-6 shrink-0 items-center justify-center rounded text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)]"
+                >
+                  <CaretRight
+                    size={11}
+                    className={cn('transition-transform', botsExpanded && 'rotate-90')}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    botSticky.selectTab('agent-hub');
+                    onOpen?.('agent-hub');
+                  }}
+                  className="min-w-0 flex-1 truncate px-1 py-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
+                >
+                  Bots
+                </button>
+              </div>
+              {!botsExpanded ? null : sortedBots.length === 0 ? (
+                <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                  No bots yet. Create bot from ⋯
+                </div>
               ) : (
-                pinnedBots.map((bot) => (
+                sortedBots.map((bot) => (
                   <BotRailRow
                     key={bot.id}
                     bot={bot}
                     isActive={
                       activeViewType === 'bot-chat-session' &&
-                      activeChatSessionId === canonicalChatIds[bot.id]
+                      (activeChatSessionId === canonicalChatIds[bot.id] ||
+                        chatSessions.find((s) => s.id === activeChatSessionId)?.metadata?.agentId === bot.id)
                     }
                     disabled={isBotSessionStarting}
                     onOpen={() => handleOpenBot(bot)}
-                    onUnpin={() => unpinBot(bot.id)}
+                    onPin={() => pinBot(bot.id)}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', bot.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDraggingBotId(bot.id);
+                    }}
+                    onDragEnd={() => {
+                      setDraggingBotId(null);
+                      setPinDropActive(false);
+                    }}
                   />
                 ))
               )}
-            </RecentsPanel>
-          )}
-
-          {/* GROUP CHATS — unread badge convention matches GroupsListView.
-              Always rendered so the empty state and creation affordance stay discoverable */}
-          <RecentsPanel shrink expanded onToggle={() => {}} title="Group Chats">
-            {sortedGroupChats.length === 0 ? (
-              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
-                No group chats yet
-              </div>
-            ) : (
-              sortedGroupChats.map((group) => (
-                <BotGroupRailRow
-                  key={group.id}
-                  group={group}
-                  unread={getGroupUnreadCount(group.id)}
-                  isActive={activeViewType === 'group-chat' && activeGroupId === group.id}
-                  onOpen={() => {
-                    setActiveGroup(group.id);
-                    onOpen?.('group-chat', { groupId: group.id });
-                  }}
-                />
-              ))
-            )}
-            <button
-              type="button"
-              onClick={() => onOpen?.('groups-list')}
-              className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl bg-transparent border-none cursor-pointer text-left text-[12px] text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] transition-all"
-            >
-              <Plus size={13} />
-              <span>New group chat</span>
-            </button>
-          </RecentsPanel>
-
-          {/* BOT LIST — all bots, pinned first, then by canonical chat activity */}
-          <RecentsPanel expanded onToggle={() => {}} title="Bots">
-            {sortedBots.length === 0 && (
-              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
-                No bots yet — create one in Bot Hub
-              </div>
-            )}
-            {sortedBots.map((bot) => (
-              <BotRailRow
-                key={bot.id}
-                bot={bot}
-                isActive={
-                  activeViewType === 'bot-chat-session' &&
-                  activeChatSessionId === canonicalChatIds[bot.id]
-                }
-                disabled={isBotSessionStarting}
-                onOpen={() => handleOpenBot(bot)}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/plain', bot.id);
-                  e.dataTransfer.effectAllowed = 'move';
-                  setDraggingBotId(bot.id);
-                }}
-                onDragEnd={() => {
-                  setDraggingBotId(null);
-                  setPinDropActive(false);
-                }}
-              />
-            ))}
-          </RecentsPanel>
-
-          <RecentsPanel
-            shrink
-            expanded
-            onToggle={() => {}}
-            title="Sessions"
-          >
-            {(sessionsSection?.items.length ?? 0) === 0 ||
-            (sessionsSection?.items.length === 1 &&
-              sessionsSection.items[0]?.id === 'ao-down') ? (
-              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
-                {commRailVisibility.aoRunning
-                  ? 'No ao sessions'
-                  : 'ao is not running'}
-              </div>
-            ) : (
-              sessionsSection?.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="w-full flex flex-col gap-0.5 py-1.5 px-3 rounded-xl text-[12px] text-[var(--shell-item-fg)]"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                      {item.label}
-                    </span>
-                    {item.status ? (
-                      <span className="shrink-0 text-[11px] text-[var(--shell-item-muted)]">
-                        {item.status}
-                      </span>
-                    ) : null}
-                  </div>
-                  {item.lastMessage ? (
-                    <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
-                      <span className="truncate flex-1">{item.lastMessage}</span>
-                      {item.lastMessageAt ? (
-                        <span className="shrink-0 text-[10px] opacity-60">
-                          {formatRelativeTime(item.lastMessageAt)}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              ))
-            )}
-          </RecentsPanel>
+            </div>
+          </div>
 
           {(needsYouSection?.items.length ?? 0) > 0 && (
             <RecentsPanel shrink expanded onToggle={() => {}} title="Needs you">
@@ -1362,11 +1323,6 @@ export function ShellRail({
                   <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                     {item.label}
                   </span>
-                  {typeof item.metadata?.dagNodeTitle === 'string' && (
-                    <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-[var(--shell-item-muted)]">
-                      blocked on &ldquo;{item.metadata.dagNodeTitle}&rdquo;
-                    </span>
-                  )}
                 </div>
               ))}
             </RecentsPanel>

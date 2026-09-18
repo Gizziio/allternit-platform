@@ -38,6 +38,12 @@ import {
   type CapabilityRosterEntry,
 } from './bot-capability-epoch';
 import { createModuleLogger } from '@/lib/logger';
+import {
+  applyModeContractToPrompt,
+  getAgentModeContract,
+  modeMetadataPatch,
+  type CanonicalAgentModeId,
+} from '@/lib/agents/agent-mode-contracts';
 
 const logger = createModuleLogger('StartBotSession');
 
@@ -169,13 +175,24 @@ async function bindExecutionBrain(agent: Agent): Promise<Agent> {
 
 export async function prepareBotSession(
   agent: Agent,
-  options?: { modeId?: string; modelOverride?: string },
+  options?: { modeId?: string; templateTitle?: string; modelOverride?: string },
 ): Promise<BotSessionStartResult | null> {
   const displayName = agent.botProfile?.displayName ?? agent.name;
   const store = useChatSessionStore.getState();
   const runtimeModelId = resolveBotRuntimeModelId(agent, options?.modelOverride);
 
-  const boundAgent = await bindExecutionBrain(agent);
+  // P0-A: never gate chat open on ao / native brain bind. If bind throws
+  // (ao offline), continue with the unbound brain and a non-fatal notice.
+  let boundAgent: Agent = agent;
+  let brainOfflineNotice: string | undefined;
+  try {
+    boundAgent = await bindExecutionBrain(agent);
+  } catch (err) {
+    logger.warn({ err, botId: agent.id }, 'Bot brain bind failed — opening chat locally');
+    brainOfflineNotice =
+      'Brain offline — chat opens locally. Sync resumes when ao is back.';
+    boundAgent = { ...agent, brain: resolveAgentBrain(agent) };
+  }
   const brain = resolveAgentBrain(boundAgent);
   const nativeSessionId = brain.mode === 'native_harness' ? brain.nativeSessionId : undefined;
 
@@ -252,6 +269,23 @@ export async function prepareBotSession(
       }
     }
     useBotRosterStore.getState().setCanonicalChatId(agent.id, existingSession.id);
+    const modeContract = getAgentModeContract(options?.modeId as CanonicalAgentModeId | undefined);
+    if (modeContract) {
+      const latest = store.sessions.find((s) => s.id === existingSession.id) ?? existingSession;
+      const existingPrompt =
+        typeof latest.metadata.systemPrompt === 'string' ? latest.metadata.systemPrompt : undefined;
+      await store.updateSession(latest.id, {
+        metadata: {
+          ...latest.metadata,
+          systemPrompt: applyModeContractToPrompt(
+            existingPrompt,
+            modeContract,
+            options?.templateTitle,
+          ),
+          ...modeMetadataPatch(modeContract, options?.templateTitle),
+        },
+      });
+    }
     if (nativeSessionId && existingSession.metadata?.agent_session !== nativeSessionId) {
       await store.updateSession(existingSession.id, {
         metadata: {
@@ -261,7 +295,11 @@ export async function prepareBotSession(
         },
       });
     }
-    return { sessionId: existingSession.id, nativeSessionId };
+    return {
+      sessionId: existingSession.id,
+      nativeSessionId,
+      notice: brainOfflineNotice,
+    };
   }
 
   const [secretsResult, connectorsResult] = await Promise.all([
@@ -284,6 +322,9 @@ export async function prepareBotSession(
   if (isDesktopPaused) {
     notice =
       'Desktop is under human control. The bot will resume autonomous computer use after you hand the desktop back.';
+  }
+  if (brainOfflineNotice) {
+    notice = notice ? `${brainOfflineNotice} ${notice}` : brainOfflineNotice;
   }
 
   if (shouldResolveSandbox) {
@@ -311,9 +352,13 @@ export async function prepareBotSession(
     useBotAllternitBusStore.getState().connect(agent.id);
   }
 
+  const modeContract = getAgentModeContract(options?.modeId as CanonicalAgentModeId | undefined);
   const basePrompt = agent.systemPrompt ?? '';
   const identityPrompt = buildIdentityPrompt(displayName, capabilityEpoch);
-  const systemPrompt = [identityPrompt, basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
+  const composedPrompt = [identityPrompt, basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
+  const systemPrompt = modeContract
+    ? applyModeContractToPrompt(composedPrompt, modeContract, options?.templateTitle)
+    : composedPrompt;
 
   await ensureBotRegisteredWithApi(agent);
 
@@ -335,7 +380,7 @@ export async function prepareBotSession(
       tags: agent.tags,
       category: agent.category,
       trustTier: agent.trustTier,
-      agentModeId: options?.modeId,
+      ...(modeContract ? modeMetadataPatch(modeContract, options?.templateTitle) : {}),
       originSurface: 'chat',
       connectorBindings: agent.connectorBindings,
       secretRefs: agent.secretRefs,

@@ -40,6 +40,24 @@ export interface AvatarPack {
 
 export const AVATAR_PACK_ASSET_ROOT = '/avatar-packs';
 
+/**
+ * Packs whose portraits (and sheets, when declared animated) are on disk
+ * under public/avatar-packs/. Other packs stay in the wizard catalog as
+ * placeholders until their art lands.
+ */
+export const SHIPPED_AVATAR_PACK_IDS = [
+  'alloy-classic',
+  'alloy-pro',
+  'gizzi-brawl',
+  'grok-carry',
+  'codex-carry',
+  'gizzi-family',
+] as const;
+
+export function isShippedAvatarPack(packId: string): boolean {
+  return (SHIPPED_AVATAR_PACK_IDS as readonly string[]).includes(packId);
+}
+
 /** Path-convention lives here only — a change is one line. */
 export function packSpritePortraitUrl(
   pack: Pick<AvatarPack, 'id'>,
@@ -76,11 +94,11 @@ function withPackUrls(packId: string, sprites: AvatarPackSpriteDecl[]): AvatarPa
 
 export const AVATAR_PACKS: AvatarPack[] = [
   {
-    id: 'maus-classic',
-    name: 'Maus Classic',
-    description: 'OpenMaus-style real robot rigs — rounded metal bots with antennae and expressive screen faces.',
+    id: 'alloy-classic',
+    name: 'Alloy Classic',
+    description: 'Rounded metal bots with antennae and expressive screen faces.',
     themes: ['bot', 'robot', 'classic'],
-    sprites: withPackUrls('maus-classic', [
+    sprites: withPackUrls('alloy-classic', [
       sprite('atlas', 'Atlas', true),
       sprite('bolt', 'Bolt', true),
       sprite('clank', 'Clank', true),
@@ -92,19 +110,44 @@ export const AVATAR_PACKS: AvatarPack[] = [
     ]),
   },
   {
-    id: 'maus-pro',
-    name: 'Maus Pro',
+    id: 'alloy-pro',
+    name: 'Alloy Pro',
     description: 'Sleeker professional robot rigs — industrial design bots built for serious work.',
     themes: ['bot', 'robot', 'professional'],
-    sprites: withPackUrls('maus-pro', [
-      sprite('vantage', 'Vantage', true),
-      sprite('caliber', 'Caliber', true),
-      sprite('signal', 'Signal', true),
-      sprite('monolith', 'Monolith', true),
-      sprite('circuit', 'Circuit', true),
-      sprite('drift', 'Drift', true),
-      sprite('keystone', 'Keystone', true),
-      sprite('vector', 'Vector', true),
+    sprites: withPackUrls('alloy-pro', [
+      sprite('vantage', 'Vantage', false),
+      sprite('caliber', 'Caliber', false),
+      sprite('signal', 'Signal', false),
+      sprite('monolith', 'Monolith', false),
+      sprite('circuit', 'Circuit', false),
+      sprite('drift', 'Drift', false),
+      sprite('keystone', 'Keystone', false),
+      sprite('vector', 'Vector', false),
+    ]),
+  },
+  {
+    id: 'gizzi-brawl',
+    name: 'Gizzi Brawl',
+    description: 'Gizzi Kombat fighter roster — true-front portraits and 8×9 emotion sheets for each agent mascot.',
+    themes: ['mascot', 'fighter', 'gizzi'],
+    sprites: withPackUrls('gizzi-brawl', [
+      sprite('gizzi', 'Gizzi', true),
+      sprite('clawd', 'Clawd', true),
+      sprite('opencode', 'OpenCode', true),
+      sprite('kimi', 'Kimi', true),
+      sprite('qwen', 'Qwen', true),
+      sprite('deepseek', 'DeepSeek', true),
+      sprite('gemini', 'Gemini', true),
+      sprite('openclaw', 'OpenClaw', true),
+      sprite('hermes', 'Hermes', true),
+      sprite('husk', 'Husk', true),
+      sprite('nemotron', 'Nemotron', true),
+      sprite('muse', 'Muse', true),
+      sprite('glm', 'GLM', true),
+      sprite('ollama', 'Ollama', true),
+      sprite('omp', 'OMP', true),
+      sprite('codex', 'Codex', true),
+      sprite('grok', 'Grok', true),
     ]),
   },
   {
@@ -129,14 +172,14 @@ export const AVATAR_PACKS: AvatarPack[] = [
     description: 'Codex-carry-style pocket pets — small creature companions that live in your sidebar.',
     themes: ['pet', 'companion', 'cute'],
     sprites: withPackUrls('codex-carry', [
-      sprite('nib', 'Nib', true),
-      sprite('pico', 'Pico', true),
-      sprite('wisp', 'Wisp', true),
-      sprite('mochi', 'Mochi', true),
-      sprite('bean', 'Bean', true),
-      sprite('tumble', 'Tumble', true),
-      sprite('pip', 'Pip', true),
-      sprite('sprocket', 'Sprocket', true),
+      sprite('nib', 'Nib', false),
+      sprite('pico', 'Pico', false),
+      sprite('wisp', 'Wisp', false),
+      sprite('mochi', 'Mochi', false),
+      sprite('bean', 'Bean', false),
+      sprite('tumble', 'Tumble', false),
+      sprite('pip', 'Pip', false),
+      sprite('sprocket', 'Sprocket', false),
     ]),
   },
   {
@@ -145,14 +188,14 @@ export const AVATAR_PACKS: AvatarPack[] = [
     description: 'Gizzi mascot variants — different builds and moods of the house gizzi character.',
     themes: ['mascot', 'pet', 'gizzi'],
     sprites: withPackUrls('gizzi-family', [
-      sprite('gizzi', 'Gizzi', true),
-      sprite('gizzi-bright', 'Gizzi Bright', true),
-      sprite('gizzi-calm', 'Gizzi Calm', true),
-      sprite('gizzi-bold', 'Gizzi Bold', true),
-      sprite('gizzi-dreamy', 'Gizzi Dreamy', true),
-      sprite('gizzi-grit', 'Gizzi Grit', true),
-      sprite('gizzi-jolt', 'Gizzi Jolt', true),
-      sprite('gizzi-sage', 'Gizzi Sage', true),
+      sprite('gizzi', 'Gizzi', false),
+      sprite('gizzi-bright', 'Gizzi Bright', false),
+      sprite('gizzi-calm', 'Gizzi Calm', false),
+      sprite('gizzi-bold', 'Gizzi Bold', false),
+      sprite('gizzi-dreamy', 'Gizzi Dreamy', false),
+      sprite('gizzi-grit', 'Gizzi Grit', false),
+      sprite('gizzi-jolt', 'Gizzi Jolt', false),
+      sprite('gizzi-sage', 'Gizzi Sage', false),
     ]),
   },
   {

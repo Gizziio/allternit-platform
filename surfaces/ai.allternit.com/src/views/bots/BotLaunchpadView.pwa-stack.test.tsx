@@ -66,7 +66,7 @@ describe("BotLaunchpadView under the Fabric Session PWA provider stack", () => {
     const thrown = errors.find((e) => /must be used within|context/i.test(e));
     expect(thrown ?? "no context error").toBe("no context error");
     expect(
-      screen.queryByText(/No bots yet|Message a bot/i),
+      screen.queryByText(/No bots yet|Message a bot|Messages/i),
     ).not.toBeNull();
   }, 20000);
 });

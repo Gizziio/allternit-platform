@@ -2,6 +2,24 @@
 
 import React from 'react';
 import { lazy } from 'react';
+
+function lazyWithRetry<T extends { default: React.ComponentType<unknown> }>(
+  importer: () => Promise<T>,
+): React.LazyExoticComponent<T['default']> {
+  return lazy(() =>
+    importer().catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!/Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed/i.test(msg)) {
+        return Promise.reject(err);
+      }
+      return new Promise<T>((resolve, reject) => {
+        window.setTimeout(() => {
+          importer().then(resolve).catch(reject);
+        }, 800);
+      });
+    }),
+  );
+}
 import { ErrorBoundary } from '../components/error-boundary';
 import { 
   ChatViewWrapper 
@@ -33,10 +51,10 @@ const VaultViewerView      = lazy(() => import('../views/vault-viewer/VaultViewe
 const OhMyPiView           = lazy(() => import('../views/omp/OhMyPiView').then(m => ({ default: m.OhMyPiView })));
 const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeModeAgentSession').then(m => ({ default: m.CodeModeAgentSession })));
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
-const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
-const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
-const BotChatSessionView = lazy(() => import('../views/bots/BotChatSessionView').then(m => ({ default: m.BotChatSessionView })));
-const BotLaunchpadView = lazy(() => import('../views/bots/BotLaunchpadView').then(m => ({ default: m.BotLaunchpadView })));
+const BotInboxView = lazyWithRetry(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
+const BotHomeView = lazyWithRetry(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
+const BotChatSessionView = lazyWithRetry(() => import('../views/bots/BotChatSessionView').then(m => ({ default: m.BotChatSessionView })));
+const BotLaunchpadView = lazyWithRetry(() => import('../views/bots/BotLaunchpadView').then(m => ({ default: m.BotLaunchpadView })));
 import { GroupChatView } from '../views/bots/GroupChatView';
 import { GroupsListView } from '../views/bots/GroupsListView';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -51,7 +69,7 @@ const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').the
 const PluginRegistryView   = lazy(() => import('../views/cowork/PluginRegistryView').then(m => ({ default: m.PluginRegistryView })));
 const TerminalView         = lazy(() => import('../views/TerminalView').then(m => ({ default: m.TerminalView })));
 const CodeRoot             = lazy(() => import('../views/code/CodeRoot').then(m => ({ default: m.CodeRoot })));
-const AgentHub             = lazy(() => import('../views/AgentHub').then(m => ({ default: m.AgentHub })));
+const AgentHub             = lazyWithRetry(() => import('../views/AgentHub').then(m => ({ default: m.AgentHub })));
 const NativeAgentView      = lazy(() => import('../views/NativeAgentView').then(m => ({ default: m.NativeAgentView })));
 const BrowserCapsuleEnhanced = lazy(() => import('../capsules/browser/BrowserCapsuleEnhanced').then(m => ({ default: m.BrowserCapsuleEnhanced })));
 const AciMiniAppsView = lazy(() => import('../views/aci/AciMiniAppsView').then(m => ({ default: m.AciMiniAppsView })));

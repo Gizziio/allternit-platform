@@ -295,7 +295,21 @@ export function shouldUseLocalAgentRegistryFallback(error: unknown): boolean {
 }
 
 export function listLocalAgents(): Agent[] {
-  return readRegistry();
+  const all = readRegistry();
+  const next = all.filter((agent) => !agent.id.startsWith('demo-'));
+  if (next.length !== all.length) writeRegistry(next);
+  return next;
+}
+
+/** Merge agents into the local registry without clobbering existing ids. */
+export function importLocalAgents(agents: Agent[]): Agent[] {
+  const existing = readRegistry();
+  const ids = new Set(existing.map((agent) => agent.id));
+  const added = agents.filter((agent) => !ids.has(agent.id));
+  if (added.length === 0) return existing;
+  const next = [...added, ...existing];
+  writeRegistry(next);
+  return next;
 }
 
 export function getLocalAgent(agentId: string): Agent | null {

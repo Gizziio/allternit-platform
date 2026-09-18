@@ -74,12 +74,12 @@ export const useBotRosterStore = create<BotRosterState>()(
       showContextMenu: (contextMenuTarget) => set({ contextMenuTarget }),
       hideContextMenu: () => set({ contextMenuTarget: null }),
       setCanonicalChatId: (botId, sessionId) =>
-        set((state) => ({
-          canonicalChatIds: {
-            ...state.canonicalChatIds,
-            ...(sessionId ? { [botId]: sessionId } : {}),
-          },
-        })),
+        set((state) => {
+          const canonicalChatIds = { ...state.canonicalChatIds };
+          if (sessionId) canonicalChatIds[botId] = sessionId;
+          else delete canonicalChatIds[botId];
+          return { canonicalChatIds };
+        }),
       pinBot: (botId) =>
         set((state) => ({
           pinnedBotIds: state.pinnedBotIds.includes(botId)

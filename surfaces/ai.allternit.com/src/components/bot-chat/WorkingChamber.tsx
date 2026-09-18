@@ -10,9 +10,10 @@
  * @module bot-chat/WorkingChamber
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { workedForLabel } from "@/lib/bots/working-time";
 
 export interface WorkingChamberProps {
   /** Thinking buffer text (already capped by the fold). */
@@ -22,13 +23,23 @@ export interface WorkingChamberProps {
    * else (answer tokens flowing) collapses it unless the user pinned it.
    */
   rung: "thinking" | "typing" | "streaming" | null;
+  /** Epoch ms the turn started — drives OpenMaus “Worked for Ns”. */
+  startedAt?: number;
   className?: string;
 }
 
-export function WorkingChamber({ thinking, rung, className }: WorkingChamberProps) {
+export function WorkingChamber({ thinking, rung, startedAt, className }: WorkingChamberProps) {
   const [pinnedOpen, setPinnedOpen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const expanded = pinnedOpen || rung === "thinking";
   const isThinking = rung === "thinking";
+  useEffect(() => {
+    if (!isThinking || startedAt == null) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [isThinking, startedAt]);
+  const elapsed = startedAt != null ? Math.max(0, now - startedAt) : 0;
+  const label = isThinking ? "Working" : workedForLabel(elapsed);
 
   return (
     <div
@@ -48,7 +59,7 @@ export function WorkingChamber({ thinking, rung, className }: WorkingChamberProp
           aria-hidden="true"
         />
         <span className="text-xs font-medium text-[var(--text-tertiary)]">
-          {isThinking ? "Working" : "Worked"}
+          {label}
         </span>
         <span className="ml-auto font-mono text-[10px] text-[var(--text-tertiary)]/70">
           {thinking.length > 0 ? `${thinking.length} chars` : ""}

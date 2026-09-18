@@ -62,4 +62,21 @@ describe("SettledBubble user message styling", () => {
     render(<SettledBubble role="user" text="use [alpha] and **beta**" />);
     expect(screen.getByText(/use \[alpha\] and \*\*beta\*\*/)).toBeDefined();
   });
+
+  it("collapses a long user paste behind Show more", () => {
+    const wall = Array.from({ length: 12 }, (_, i) => `line ${i} of a pasted wall`).join("\n");
+    render(<SettledBubble role="user" text={wall} />);
+    expect(screen.getByRole("button", { name: "Show more" })).toBeDefined();
+  });
+
+  it("keeps short user messages expanded", () => {
+    render(<SettledBubble role="user" text="short" />);
+    expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  });
+
+  it("exposes a copy action on bot bubbles", () => {
+    render(<SettledBubble role="bot" text="Hello" />);
+    expect(screen.getByLabelText("Copy message")).toBeDefined();
+    expect(screen.getByLabelText("Message actions")).toBeDefined();
+  });
 });

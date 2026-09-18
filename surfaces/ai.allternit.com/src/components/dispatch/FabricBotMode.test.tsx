@@ -93,16 +93,28 @@ describe("FabricBotModeRail", () => {
     fireEvent.click(screen.getByText("Invoice Pilot"));
 
     expect(startSessionMock).toHaveBeenCalledTimes(1);
-    // The rail must wire the session-started callback (desktop ShellRail
-    // parity) so the canvas navigates from the hub to the bot chat.
+    // P0-A: the canvas must switch on click, before startSession resolves
+    // (ao / brain bind must not gate the open).
+    const immediate = openViewEvents.find(
+      (e) => e.detail?.viewType === "bot-chat-session",
+    );
+    expect(immediate).toBeDefined();
+    expect(immediate?.detail?.context).toMatchObject({
+      botId: "bot-1",
+    });
+    expect(String(immediate?.detail?.context?.sessionId ?? "")).toMatch(
+      /^(temp-pending-bot-1|ses-)/,
+    );
+
+    // The rail still wires the session-started callback so the real id
+    // upgrades the placeholder once prepare (or local fallback) returns.
     expect(sessionStartedCallback).toBeDefined();
     sessionStartedCallback!("ses-test-1", "bot-1");
 
-    const chatEvent = openViewEvents.find(
-      (e) => e.detail?.viewType === "bot-chat-session",
-    );
-    expect(chatEvent).toBeDefined();
-    expect(chatEvent?.detail?.context).toMatchObject({
+    const upgraded = openViewEvents
+      .filter((e) => e.detail?.viewType === "bot-chat-session")
+      .at(-1);
+    expect(upgraded?.detail?.context).toMatchObject({
       sessionId: "ses-test-1",
       botId: "bot-1",
     });

@@ -7,8 +7,8 @@
  * "Search or create Bots" (or the currently selected bot's name) that opens a
  * dropdown panel with Create new Bot / Create group chat actions and a
  * numbered list of all bots. Selecting a bot binds it to the 'bot' surface
- * (useAgentSurfaceModeStore) and opens its chat session via the same
- * useStartBotSession + openBotChatView services BotLaunchpadView uses.
+ * (useAgentSurfaceModeStore) and opens chat immediately (P0-A), then starts
+ * the session in the background.
  *
  * @module BotTopDeck
  */
@@ -21,7 +21,7 @@ import type { Bot } from "@/lib/agents/agent.types";
 import { useAgentSurfaceModeStore } from "@/stores/agent-surface-mode.store";
 import { getBots, getBotDisplayName } from "@/lib/bots/bot-profile";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
-import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
+import { openBotChatImmediately, openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { useGroupChatStore } from "@/lib/bots/group-chat.store";
 import { CreateBotForm } from "@/views/agent-view/components/CreateBotForm";
 import {
@@ -35,7 +35,9 @@ export function BotTopDeck(): React.ReactNode {
   const selectedBotId = useAgentSurfaceModeStore(
     (s) => s.selectedAgentIdBySurface.bot,
   );
-  const { startSession, isStarting } = useStartBotSession();
+  const { startSession, isStarting } = useStartBotSession((sessionId, botId) => {
+    openBotChatView(sessionId, botId, "bot-launchpad");
+  });
   const createGroup = useGroupChatStore((s) => s.createGroup);
   const setActiveGroup = useGroupChatStore((s) => s.setActiveGroup);
 
@@ -69,13 +71,11 @@ export function BotTopDeck(): React.ReactNode {
     };
   }, [panelOpen]);
 
-  const handleSelectBot = async (bot: Bot) => {
+  const handleSelectBot = (bot: Bot) => {
     useAgentSurfaceModeStore.getState().setSelectedAgent("bot", bot.id);
     setPanelOpen(false);
-    const sessionId = await startSession(bot);
-    if (sessionId) {
-      openBotChatView(sessionId, bot.id, "bot-launchpad");
-    }
+    openBotChatImmediately(bot.id, "bot-launchpad");
+    void startSession(bot);
   };
 
   const handleCreateGroup = (data: GroupChatChannelFormData) => {
@@ -159,7 +159,7 @@ export function BotTopDeck(): React.ReactNode {
                   key={bot.id}
                   type="button"
                   disabled={isStarting}
-                  onClick={() => void handleSelectBot(bot)}
+                  onClick={() => handleSelectBot(bot)}
                   className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-2.5 py-2 text-left transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                   style={{ color: "var(--text-primary)" }}
                 >

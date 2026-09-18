@@ -65,7 +65,7 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
 }) => {
   return (
     <div
-      className="flex flex-col items-center justify-start w-full max-w-[640px] px-6 pb-20 box-border flex-1 min-h-0"
+      className="mx-auto flex flex-col items-center justify-start w-full max-w-[640px] px-6 pb-20 box-border flex-1 min-h-0"
       style={{ paddingTop: LAUNCH_TOP_PADDING }}
     >
       {embeddedAgentStrip}

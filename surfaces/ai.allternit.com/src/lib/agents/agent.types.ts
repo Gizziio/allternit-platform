@@ -71,6 +71,9 @@ export interface BotBrainModelRef {
   modelID: string;
 }
 
+/** Reasoning effort. Omit = Default (engine decides). `none` is not used. */
+export type BotBrainEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
 export interface BotBrainBinding {
   mode: BotBrainMode;
   /** Native CLI harness when mode is `native_harness` (`codex` | `claude` | `kimi` | …). */
@@ -78,6 +81,8 @@ export interface BotBrainBinding {
   nativeSessionId?: string;
   uhpHarnessId?: string;
   modelRef?: BotBrainModelRef;
+  /** Bot-default effort. Thread-scoped effort lives on `threadModelPin`. */
+  effort?: BotBrainEffort;
 }
 
 export const botBrainSchema = z.object({
@@ -89,6 +94,7 @@ export const botBrainSchema = z.object({
     providerID: z.string().min(1),
     modelID: z.string().min(1),
   }).optional(),
+  effort: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
 });
 
 export const harnessConfigSchema = z.object({
@@ -238,6 +244,10 @@ export interface BotProfile {
   displayName: string;
   /** Short tagline shown on the welcome card */
   tagline?: string;
+  /** Job title on its own line above the name (OpenMaus `bot.title`). */
+  title?: string;
+  /** Crown “Chief of Staff” under the name (OpenMaus `bot.chiefOfStaff`). */
+  chiefOfStaff?: boolean;
   /** Welcome message when a new session starts */
   welcomeMessage?: string;
   /** Starter prompts the user can click to begin a task */
@@ -434,6 +444,10 @@ export interface BotProfile {
   version?: string;
   /** Short tagline shown on the welcome card */
   tagline?: string;
+  /** Job title on its own line above the name (OpenMaus `bot.title`). */
+  title?: string;
+  /** Crown “Chief of Staff” under the name (OpenMaus `bot.chiefOfStaff`). */
+  chiefOfStaff?: boolean;
   /** Welcome message when a new session starts */
   welcomeMessage?: string;
   /** Starter prompts the user can click to begin a task */

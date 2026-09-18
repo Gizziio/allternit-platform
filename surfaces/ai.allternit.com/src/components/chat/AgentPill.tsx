@@ -5,57 +5,29 @@ import { X } from "@phosphor-icons/react";
 import { AgentAvatar } from "@/components/Avatar";
 import type { Agent } from "@/lib/agents";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
+import { BotAvatar } from "@/views/bots/BotAvatar";
 
 interface AgentPillProps {
   agent: Agent;
   onRemove: () => void;
 }
 
-const THEME = {
-  bg: "var(--chat-composer-soft, rgba(212, 176, 140, 0.08))",
-  border: "var(--ui-border-muted, rgba(212, 176, 140, 0.12))",
-  textPrimary: "var(--ui-text-primary, #ECECEC)",
-  textSecondary: "var(--ui-text-secondary, #9B9B9B)",
-  accent: "var(--accent-primary, #D4B08C)",
-};
-
 export function AgentPill({ agent, onRemove }: AgentPillProps) {
   const avatarConfig =
     (agent.config?.avatar as Record<string, unknown>) || undefined;
   const isBot = agent.isBot === true;
+  const name = getBotDisplayName(agent);
 
   return (
     <div
-      title={isBot ? `Bot: ${getBotDisplayName(agent)}` : `Agent: ${agent.name}`}
-      aria-label={isBot ? `Bot: ${getBotDisplayName(agent)}` : `Agent: ${agent.name}`}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 8px 4px 4px",
-        borderRadius: 8,
-        background: THEME.bg,
-        border: `1px solid ${THEME.border}`,
-        fontSize: 13,
-        fontWeight: 600,
-        color: THEME.textPrimary,
-        userSelect: "none",
-        flexShrink: 0,
-      }}
+      title={isBot ? `Bot: ${name}` : `Agent: ${agent.name}`}
+      aria-label={isBot ? `Bot: ${name}` : `Agent: ${agent.name}`}
+      className="inline-flex shrink-0 select-none items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-transparent py-0.5 pl-0.5 pr-1.5 text-[12.5px] font-medium text-[var(--text-primary)]"
     >
-      <div
-        style={{
-          width: 20,
-          height: 20,
-          borderRadius: 6,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          flexShrink: 0,
-        }}
-      >
-        {avatarConfig ? (
+      <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full">
+        {isBot ? (
+          <BotAvatar bot={agent} size={20} />
+        ) : avatarConfig ? (
           <AgentAvatar
             config={avatarConfig as any}
             size={20}
@@ -64,33 +36,13 @@ export function AgentPill({ agent, onRemove }: AgentPillProps) {
             showGlow={false}
           />
         ) : (
-          <div
-            style={{
-              width: 20,
-              height: 20,
-              borderRadius: 6,
-              background: THEME.accent,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-              fontWeight: 700,
-              color: "#fff",
-            }}
-          >
-            {getBotDisplayName(agent).charAt(0).toUpperCase()}
-          </div>
+          <span className="flex size-5 items-center justify-center rounded-full bg-[var(--surface-hover)] text-[10px] font-semibold text-[var(--text-secondary)]">
+            {name.charAt(0).toUpperCase()}
+          </span>
         )}
-      </div>
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          maxWidth: 160,
-        }}
-      >
-        {agent.isBot ? '@' : ''}{getBotDisplayName(agent)}
+      </span>
+      <span className="max-w-[160px] truncate">
+        {isBot ? `@${name}` : name}
       </span>
       <button
         type="button"
@@ -98,30 +50,9 @@ export function AgentPill({ agent, onRemove }: AgentPillProps) {
           e.stopPropagation();
           onRemove();
         }}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 16,
-          height: 16,
-          borderRadius: 4,
-          border: "none",
-          background: "transparent",
-          color: THEME.textSecondary,
-          cursor: "pointer",
-          padding: 0,
-          marginLeft: 2,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "var(--ui-border-muted)";
-          e.currentTarget.style.color = THEME.textPrimary;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = THEME.textSecondary;
-        }}
+        className="flex size-4 items-center justify-center rounded-full border-none bg-transparent p-0 text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
       >
-        <X size={12} />
+        <X size={11} />
       </button>
     </div>
   );

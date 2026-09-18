@@ -150,7 +150,7 @@ function ShellAppInner(): React.ReactNode {
   const [nav, dispatch] = useReducer(navReducer, undefined, createInitialNavState);
   const active = selectActiveView(nav)!;
 
-  const { startSession: startBotSession } = useStartBotSession(
+  const { startSession: startBotSession, startTask: startBotTask } = useStartBotSession(
     useCallback((sessionId: string, botId: string) => {
       dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
     }, [active.viewType])
@@ -482,12 +482,13 @@ function ShellAppInner(): React.ReactNode {
     if (selectedAgent && isBot(selectedAgent)) {
       try {
         const modeId = execution?.modeId ?? surfaceModeState.selectedModeBySurface[surface];
-        const sessionId = await startBotSession(selectedAgent, { modeId: modeId ?? undefined });
+        const sessionId = await startBotTask(selectedAgent, text, {
+          modeId: modeId ?? undefined,
+          templateTitle: execution?.templateTitle,
+        });
         if (!sessionId) {
           logger.error({ surface }, 'Failed to start bot session');
-          return;
         }
-        void useChatSessionStore.getState().sendMessageStream(sessionId, { text });
         return;
       } catch (err) {
         logger.error({ err: err }, 'Failed to create bot session');
@@ -547,7 +548,7 @@ function ShellAppInner(): React.ReactNode {
     } catch (err) {
       logger.error({ err: err }, 'Failed to create session');
     }
-  }, [active.viewType, dispatch, startBotSession]);
+  }, [active.viewType, dispatch, startBotSession, startBotTask]);
 
   const registry = useMemo(() => getShellViewRegistry({ handleOpenAgentSession, handleStartBotSession, open }), [handleOpenAgentSession, handleStartBotSession, open]);
 
@@ -693,8 +694,10 @@ function ShellAppInner(): React.ReactNode {
       modeChangeSourceRef.current = 'sync';
       setActiveMode('chat');
     } else if (activeMode === 'bot') {
-      modeChangeSourceRef.current = 'sync';
-      setActiveMode('chat');
+      if (active.viewType !== 'chat' && active.viewType !== 'home') {
+        modeChangeSourceRef.current = 'sync';
+        setActiveMode('chat');
+      }
     }
   }, [active.viewType, activeMode, setActiveMode]);
 

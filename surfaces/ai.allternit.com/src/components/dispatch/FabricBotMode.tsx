@@ -10,7 +10,7 @@ import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
-import { openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
+import { openBotChatImmediately, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
 import { BotRailRow, BotGroupRailRow } from '@/views/bots/BotRailRows';
 import { BotLaunchpadView } from '@/views/bots/BotLaunchpadView';
 import { BotHomeView } from '@/views/bots/BotHomeView';
@@ -89,8 +89,12 @@ export function FabricBotModeRail({
 
   const handleOpenBot = useCallback(
     (bot: Agent) => {
-      void startSession(bot);
+      // P0-A: switch canvas to bot-chat immediately — never wait on
+      // prepareBotSession / ao / brain bind. startSession upgrades the
+      // sessionId when prepare finishes (or creates a local temp).
+      openBotChatImmediately(bot.id, 'bot-launchpad');
       onCloseDrawer?.();
+      void startSession(bot);
     },
     [startSession, onCloseDrawer],
   );
@@ -226,6 +230,7 @@ export function FabricBotModeRail({
               }
               disabled={isStarting}
               onOpen={() => handleOpenBot(bot)}
+              onPin={() => pinBot(bot.id)}
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData('text/plain', bot.id);

@@ -82,8 +82,8 @@ export class GizziManager {
         'but its configured daemon credential did not match.'
       );
     }
-    if (existingRuntime === 'unhealthy') {
-      throw new Error(`Another unhealthy Gizzi runtime is already using port ${GIZZI_PORT}`);
+    if (existingRuntime === 'unhealthy' || existingRuntime === 'unreachable') {
+      this.reclaimStalePort();
     }
 
     const binaryPath = this.resolveBinaryPath();
@@ -268,6 +268,27 @@ export class GizziManager {
       await new Promise(r => setTimeout(r, 200));
     }
     throw new Error(`gizzi-code did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
+  }
+
+  /** Kill a leftover listener on Gizzi's port so boot does not wait 30s. */
+  private reclaimStalePort(): void {
+    if (process.platform === 'win32') return;
+    const result = spawnSync('lsof', ['-nP', `-iTCP:${GIZZI_PORT}`, '-sTCP:LISTEN', '-t'], {
+      encoding: 'utf8',
+    });
+    const pids = (result.stdout || '')
+      .trim()
+      .split(/\s+/)
+      .map((s) => Number(s))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    for (const pid of pids) {
+      log.warn(`[GizziManager] Reclaiming stale pid=${pid} on port ${GIZZI_PORT}`);
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        // already gone
+      }
+    }
   }
 
   private async probe(password: string | null): Promise<GizziProbeResult> {

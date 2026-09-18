@@ -38,7 +38,11 @@ import { createModuleLogger } from '@/lib/logger';
 import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contracts';
-import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
+import {
+  applyModeContractToPrompt,
+  getAgentModeContract,
+  validateAgentModeExecution,
+} from './agent-mode-contracts';
 import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
 import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
@@ -684,10 +688,18 @@ async function streamMessageWithContext(
         messagingConfig: session.metadata.messagingConfig as Record<string, unknown> | undefined,
         identityChannels: session.metadata.identityChannels as Record<string, unknown> | undefined,
       };
-    } else if (session.metadata.systemPrompt) {
-      // Session has a custom system prompt but no agent workspace (e.g. Studio mode)
+    } else if (session.metadata.systemPrompt || session.metadata.agentModeId) {
+      // Session has a custom system prompt and/or a bound deck mode, but no
+      // agent workspace (bot launchpad sends, Studio mode).
       agentContext = {
-        systemPrompt: session.metadata.systemPrompt as string,
+        systemPrompt: typeof session.metadata.systemPrompt === 'string'
+          ? session.metadata.systemPrompt
+          : undefined,
+        agentModeId: session.metadata.agentModeId,
+        artifactKind: session.metadata.artifactKind,
+        templateTitle: session.metadata.templateTitle,
+        requiredCapabilities: session.metadata.requiredCapabilities,
+        requiredEvidence: session.metadata.requiredEvidence,
       };
     }
   }
@@ -786,6 +798,26 @@ async function streamMessageWithContext(
     }
   }
   
+  // Deck-tab mode (Deep Research, Docs, …) must reach Gizzi on every turn.
+  // Re-bind here so a reused bot session cannot drop the contract even if
+  // metadata.systemPrompt was written before the mode was selected.
+  const modeContract = getAgentModeContract(session.metadata.agentModeId);
+  if (modeContract) {
+    agentContext = {
+      ...(agentContext ?? {}),
+      agentModeId: modeContract.id,
+      artifactKind: session.metadata.artifactKind ?? modeContract.artifactKind,
+      templateTitle: session.metadata.templateTitle,
+      requiredCapabilities: session.metadata.requiredCapabilities ?? modeContract.requiredCapabilities,
+      requiredEvidence: session.metadata.requiredEvidence ?? modeContract.requiredEvidence,
+      systemPrompt: applyModeContractToPrompt(
+        agentContext?.systemPrompt,
+        modeContract,
+        session.metadata.templateTitle,
+      ),
+    };
+  }
+
   // Provider routing pin: a session override (metadata.providerRouting) wins;
   // otherwise the bot's pin (agent config.providerRouting) is inherited. The
   // stored `model` key is display-only and is stripped for the wire object.

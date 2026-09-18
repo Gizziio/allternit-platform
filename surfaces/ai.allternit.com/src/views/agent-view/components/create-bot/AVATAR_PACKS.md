@@ -1,6 +1,6 @@
 # Avatar Pack Asset Generation — Handoff Spec
 
-**Status:** ready for a delegated art-generation agent (grok bot / ChatGPT image / higgsfield).
+**Status:** four packs shipped 2026-09-15 (Alloy Classic, Alloy Pro portraits, Gizzi Brawl, Grok Carry). Remaining packs still need art.
 **Read this whole file first. It is self-contained — you will not be given any other context.**
 
 ---
@@ -20,49 +20,79 @@ The web surface serves that public dir at `/avatar-packs/...`, which is exactly 
 
 ## 2. File inventory
 
-Totals: **15 packs**, **120 sprites**, **120 portraits + 80 sheets = 200 files**.
+Totals: **16 packs**, **137 sprites**, **137 portraits + 89 sheets = 226 files**.
+Shipped on disk: Alloy Classic (16), Alloy Pro portraits only (8), Gizzi Brawl (34), Grok Carry (16). Alloy Pro sheets were cancelled — portraits only.
 
 Full list (paths are relative to `surfaces/ai.allternit.com/public/`):
 
 <!-- INVENTORY:BEGIN -->
 
-### `maus-classic` — Maus Classic
+### `alloy-classic` — Alloy Classic
 
-- `avatar-packs/maus-classic/atlas.webp`
-- `avatar-packs/maus-classic/atlas-sheet.webp`
-- `avatar-packs/maus-classic/bolt.webp`
-- `avatar-packs/maus-classic/bolt-sheet.webp`
-- `avatar-packs/maus-classic/clank.webp`
-- `avatar-packs/maus-classic/clank-sheet.webp`
-- `avatar-packs/maus-classic/dial.webp`
-- `avatar-packs/maus-classic/dial-sheet.webp`
-- `avatar-packs/maus-classic/echo-unit.webp`
-- `avatar-packs/maus-classic/echo-unit-sheet.webp`
-- `avatar-packs/maus-classic/fable.webp`
-- `avatar-packs/maus-classic/fable-sheet.webp`
-- `avatar-packs/maus-classic/gasket.webp`
-- `avatar-packs/maus-classic/gasket-sheet.webp`
-- `avatar-packs/maus-classic/hertz.webp`
-- `avatar-packs/maus-classic/hertz-sheet.webp`
+- `avatar-packs/alloy-classic/atlas.webp`
+- `avatar-packs/alloy-classic/atlas-sheet.webp`
+- `avatar-packs/alloy-classic/bolt.webp`
+- `avatar-packs/alloy-classic/bolt-sheet.webp`
+- `avatar-packs/alloy-classic/clank.webp`
+- `avatar-packs/alloy-classic/clank-sheet.webp`
+- `avatar-packs/alloy-classic/dial.webp`
+- `avatar-packs/alloy-classic/dial-sheet.webp`
+- `avatar-packs/alloy-classic/echo-unit.webp`
+- `avatar-packs/alloy-classic/echo-unit-sheet.webp`
+- `avatar-packs/alloy-classic/fable.webp`
+- `avatar-packs/alloy-classic/fable-sheet.webp`
+- `avatar-packs/alloy-classic/gasket.webp`
+- `avatar-packs/alloy-classic/gasket-sheet.webp`
+- `avatar-packs/alloy-classic/hertz.webp`
+- `avatar-packs/alloy-classic/hertz-sheet.webp`
 
-### `maus-pro` — Maus Pro
+### `alloy-pro` — Alloy Pro (portraits only; sheets cancelled)
 
-- `avatar-packs/maus-pro/vantage.webp`
-- `avatar-packs/maus-pro/vantage-sheet.webp`
-- `avatar-packs/maus-pro/caliber.webp`
-- `avatar-packs/maus-pro/caliber-sheet.webp`
-- `avatar-packs/maus-pro/signal.webp`
-- `avatar-packs/maus-pro/signal-sheet.webp`
-- `avatar-packs/maus-pro/monolith.webp`
-- `avatar-packs/maus-pro/monolith-sheet.webp`
-- `avatar-packs/maus-pro/circuit.webp`
-- `avatar-packs/maus-pro/circuit-sheet.webp`
-- `avatar-packs/maus-pro/drift.webp`
-- `avatar-packs/maus-pro/drift-sheet.webp`
-- `avatar-packs/maus-pro/keystone.webp`
-- `avatar-packs/maus-pro/keystone-sheet.webp`
-- `avatar-packs/maus-pro/vector.webp`
-- `avatar-packs/maus-pro/vector-sheet.webp`
+- `avatar-packs/alloy-pro/vantage.webp`
+- `avatar-packs/alloy-pro/caliber.webp`
+- `avatar-packs/alloy-pro/signal.webp`
+- `avatar-packs/alloy-pro/monolith.webp`
+- `avatar-packs/alloy-pro/circuit.webp`
+- `avatar-packs/alloy-pro/drift.webp`
+- `avatar-packs/alloy-pro/keystone.webp`
+- `avatar-packs/alloy-pro/vector.webp`
+
+### `gizzi-brawl` — Gizzi Brawl
+
+- `avatar-packs/gizzi-brawl/gizzi.webp`
+- `avatar-packs/gizzi-brawl/gizzi-sheet.webp`
+- `avatar-packs/gizzi-brawl/clawd.webp`
+- `avatar-packs/gizzi-brawl/clawd-sheet.webp`
+- `avatar-packs/gizzi-brawl/opencode.webp`
+- `avatar-packs/gizzi-brawl/opencode-sheet.webp`
+- `avatar-packs/gizzi-brawl/kimi.webp`
+- `avatar-packs/gizzi-brawl/kimi-sheet.webp`
+- `avatar-packs/gizzi-brawl/qwen.webp`
+- `avatar-packs/gizzi-brawl/qwen-sheet.webp`
+- `avatar-packs/gizzi-brawl/deepseek.webp`
+- `avatar-packs/gizzi-brawl/deepseek-sheet.webp`
+- `avatar-packs/gizzi-brawl/gemini.webp`
+- `avatar-packs/gizzi-brawl/gemini-sheet.webp`
+- `avatar-packs/gizzi-brawl/openclaw.webp`
+- `avatar-packs/gizzi-brawl/openclaw-sheet.webp`
+- `avatar-packs/gizzi-brawl/hermes.webp`
+- `avatar-packs/gizzi-brawl/hermes-sheet.webp`
+- `avatar-packs/gizzi-brawl/husk.webp`
+- `avatar-packs/gizzi-brawl/husk-sheet.webp`
+- `avatar-packs/gizzi-brawl/nemotron.webp`
+- `avatar-packs/gizzi-brawl/nemotron-sheet.webp`
+- `avatar-packs/gizzi-brawl/muse.webp`
+- `avatar-packs/gizzi-brawl/muse-sheet.webp`
+- `avatar-packs/gizzi-brawl/glm.webp`
+- `avatar-packs/gizzi-brawl/glm-sheet.webp`
+- `avatar-packs/gizzi-brawl/ollama.webp`
+- `avatar-packs/gizzi-brawl/ollama-sheet.webp`
+- `avatar-packs/gizzi-brawl/omp.webp`
+- `avatar-packs/gizzi-brawl/omp-sheet.webp`
+- `avatar-packs/gizzi-brawl/codex.webp`
+- `avatar-packs/gizzi-brawl/codex-sheet.webp`
+- `avatar-packs/gizzi-brawl/grok.webp`
+- `avatar-packs/gizzi-brawl/grok-sheet.webp`
 
 ### `grok-carry` — Grok Carry
 
@@ -284,7 +314,7 @@ Every `<sprite>.webp` is a **portrait**: 512×512 WebP, transparent background w
 5. **Light & dark UI:** the subject must have enough internal contrast (rim light, outline, or glow) to be legible on both `#ffffff` and `#0b0b0c` backgrounds. Transparent-background sprites need a subtle outer rim/stroke.
 6. **One art direction per pack.** Never mix rendering styles inside a pack. If you regenerate one sprite in a pack, match the others exactly (same palette, same lighting, same line weight).
 7. **No text anywhere** in the art — no letters, no numbers, no logos, no UI chrome. (Screen-faces on robots display abstract expressions only: eyes, mouth shapes, waveform bars — never glyphs.)
-8. **Original designs only.** These are original characters for Allternit; do not copy any existing copyrighted character. "Grok-style", "Codex-carry-style", "OpenMaus-style" describe an *art direction* (silhouette language, rendering style), not a character to reproduce.
+8. **Original designs only.** These are original characters for Allternit; do not copy any existing copyrighted character. "Grok-style" and "Codex-carry-style" describe an *art direction* (silhouette language, rendering style), not a character to reproduce.
 
 ## 4. Sheets — frame layout spec (all packs, exact)
 
@@ -318,8 +348,8 @@ Palette hex values are the pack's core palette — stay inside them. Each pack l
 
 ---
 
-### 5.1 `maus-classic` — Maus Classic (8 sprites + 8 sheets)
-OpenMaus-style real robot rigs: rounded metal bots with antennae and expressive screens-for-faces. Friendly, approachable, slightly retro.
+### 5.1 `alloy-classic` — Alloy Classic (8 sprites + 8 sheets)
+Rounded metal bots with antennae and expressive screens-for-faces. Friendly, approachable, slightly retro.
 
 - **Mood:** warm, curious, handmade.
 - **Palette:** `#c8ccd4` (brushed aluminum), `#8a93a3` (shadow metal), `#3fd0c9` (teal screen glow), `#ffb347` (amber accent), `#2b2f36` (dark joints).
@@ -330,8 +360,8 @@ OpenMaus-style real robot rigs: rounded metal bots with antennae and expressive 
   2. `Small friendly robot companion "{{NAME}}", {{PERSONALITY}}, pill-shaped metal body on two stubby legs, screen-for-face with happy expression, antennae, soft studio 3D render, clean silhouette, isolated on transparent background`
   3. `Adorable robot pet "{{NAME}}" in the style of a classic desktop robot toy, {{PERSONALITY}} mood, rounded corners everywhere, glowing cyan screen face, warm amber indicator lights, 3D character render, centered, transparent background`
 
-### 5.2 `maus-pro` — Maus Pro (8 sprites + 8 sheets)
-Sleeker professional robot rigs — industrial design bots. The grown-up sibling of maus-classic: same family, sharper suit.
+### 5.2 `alloy-pro` — Alloy Pro (8 portraits, no sheets)
+Sleeker professional robot rigs — industrial design bots. The grown-up sibling of Alloy Classic: same family, sharper suit.
 
 - **Mood:** competent, calm, premium.
 - **Palette:** `#e8eaee` (pearl white), `#9aa3b2` (cool gray), `#2563eb` (signal blue), `#0f172a` (graphite), `#22d3ee` (status cyan).

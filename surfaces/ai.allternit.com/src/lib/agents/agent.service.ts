@@ -80,7 +80,12 @@ const logger = createModuleLogger('AgentService');
 // Agent CRUD Operations (Registry via API)
 // ============================================================================
 
+let listAgentsCooldownUntil = 0;
+
 export async function listAgents(): Promise<Agent[]> {
+  if (Date.now() < listAgentsCooldownUntil) {
+    return listLocalAgents();
+  }
   try {
     const response = await api.listAgents();
 
@@ -99,6 +104,7 @@ export async function listAgents(): Promise<Agent[]> {
 
     return mergeAgentCatalog(apiAgents, listLocalAgents());
   } catch (error) {
+    listAgentsCooldownUntil = Date.now() + 15_000;
     if (shouldUseLocalAgentRegistryFallback(error)) {
       return listLocalAgents();
     }

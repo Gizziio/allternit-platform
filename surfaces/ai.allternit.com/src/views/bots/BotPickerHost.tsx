@@ -5,11 +5,8 @@ import { BotPickerSheet } from "@/views/bots/BotPickerSheet";
 
 /**
  * Shell-level host for the bot-picker bottom drawer. The bot-mode rail "New"
- * button (ShellRail handleNewSession), the bot-surface composer "+" button,
- * and the launchpad's send-with-no-bot fallback in BotLaunchpadView dispatch
- * 'allternit:open-bot-picker' on window; this host owns the open/close state
- * and renders the sheet above every view, so the drawer opens no matter which
- * surface asked for it.
+ * button dispatches 'allternit:open-bot-picker' on window; this host owns the
+ * open/close state and renders the sheet above every view.
  */
 export function BotPickerHost() {
   const [open, setOpen] = useState(false);

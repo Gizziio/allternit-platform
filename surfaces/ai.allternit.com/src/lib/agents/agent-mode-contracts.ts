@@ -115,8 +115,48 @@ export function getAgentModeContract(modeId: AgentModeId | string | null | undef
   return isCanonicalAgentMode(modeId) ? AGENT_MODE_CONTRACTS[modeId] : null;
 }
 
+export const MODE_CONTRACT_START = '<!--allternit-mode-contract-->';
+export const MODE_CONTRACT_END = '<!--/allternit-mode-contract-->';
+
+const MODE_CONTRACT_BLOCK =
+  /<!--allternit-mode-contract-->[\s\S]*?<!--\/allternit-mode-contract-->/g;
+const LEGACY_MODE_BLOCK =
+  /You are executing (?:Agent Swarm|Deep Research|Websites|Docs|Sheets|Slides|Image|Video|Code) mode\.[\s\S]*?REQUIRED CAPABILITIES: [^\n]+(?:\nTEMPLATE: [^\n]+)?/g;
+
 export function buildModeSystemPrompt(contract: AgentModeContract, templateTitle?: string): string {
-  return `${contract.systemPrompt}\n\nMODE: ${contract.id}\nREQUIRED ARTIFACT: ${contract.artifactKind}\nREQUIRED CAPABILITIES: ${contract.requiredCapabilities.join(', ')}${templateTitle ? `\nTEMPLATE: ${templateTitle}` : ''}`;
+  const body = `${contract.systemPrompt}\n\nMODE: ${contract.id}\nREQUIRED ARTIFACT: ${contract.artifactKind}\nREQUIRED CAPABILITIES: ${contract.requiredCapabilities.join(', ')}${templateTitle ? `\nTEMPLATE: ${templateTitle}` : ''}`;
+  return `${MODE_CONTRACT_START}\n${body}\n${MODE_CONTRACT_END}`;
+}
+
+export function stripModeContractPrompt(prompt: string | undefined): string {
+  if (!prompt) return '';
+  return prompt
+    .replace(MODE_CONTRACT_BLOCK, '')
+    .replace(LEGACY_MODE_BLOCK, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export function applyModeContractToPrompt(
+  prompt: string | undefined,
+  contract: AgentModeContract,
+  templateTitle?: string,
+): string {
+  const base = stripModeContractPrompt(prompt);
+  const modeBlock = buildModeSystemPrompt(contract, templateTitle);
+  return base ? `${base}\n\n${modeBlock}` : modeBlock;
+}
+
+export function modeMetadataPatch(contract: AgentModeContract, templateTitle?: string) {
+  return {
+    agentModeId: contract.id,
+    agentModeLabel: contract.label,
+    templateTitle,
+    artifactKind: contract.artifactKind,
+    requiredCapabilities: contract.requiredCapabilities,
+    requiredEvidence: contract.requiredEvidence,
+    executionStatus: 'pending' as const,
+  };
 }
 
 export function validateAgentModeExecution(
