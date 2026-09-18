@@ -1,20 +1,17 @@
-// TODO(types): the repo's permissive ambient react declarations
-// (src/types/react.d.ts) omit RefObject and useDeferredValue — mirror the
-// @types/react shapes here; useDeferredValue stays the runtime React hook.
+// Real React 19 types (@types/react) now back these imports — the previous
+// TODO(types) RefObject/useDeferredValue mirrors were removed with the
+// src/types/react.d.ts shadow burn-down.
 import {
   useCallback,
+  useDeferredValue,
   useLayoutEffect,
   useMemo,
   useRef,
   useSyncExternalStore,
 } from 'react'
+import type { RefObject } from 'react'
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js'
 import type { DOMElement } from '../ink/dom.js'
-import * as React from 'react'
-
-type RefObject<T> = { current: T }
-
-const useDeferredValue: <T>(value: T) => T = (React as any).useDeferredValue
 
 /**
  * Estimated height (rows) for items not yet measured. Intentionally LOW:
