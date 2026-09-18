@@ -25,16 +25,11 @@ export interface VerificationProfile {
   customChecks?: string[];
 }
 
-export type ParallelExecutionBackend = 'local' | 'selfhosted' | 'superconductor';
+export type ParallelExecutionBackend = 'local' | 'selfhosted';
 
 export interface ParallelRunConfig {
   backend: ParallelExecutionBackend;
   // Backend-specific configuration
-  superconductor?: {
-    apiKey?: string;
-    endpoint?: string;
-    pollingInterval?: number;
-  };
   selfhosted?: {
     clusterEndpoint?: string;
     resourceLimits?: ResourceLimits;

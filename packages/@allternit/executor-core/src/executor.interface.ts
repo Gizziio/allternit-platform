@@ -32,7 +32,7 @@ export interface VerificationProfile {
   customChecks?: string[];
 }
 
-export type ParallelExecutionBackend = 'local' | 'selfhosted' | 'superconductor';
+export type ParallelExecutionBackend = 'local' | 'selfhosted';
 
 export interface ExecutionResult {
   runId: string;

@@ -277,7 +277,7 @@ The TUI/CLI exposes a large command set under `cmd/gizzi-code/src/cli/commands/`
 ### Internal SDK packages (`packages/@allternit/`)
 - `plugin-sdk` — universal plugin runtime (`@allternit/plugin-sdk`)
 - `provider-adapters` — LLM provider adapters
-- `workflow-engine`, `orchestrator`, `cowork-engine`, `executor-core`, `executor-superconductor`
+- `workflow-engine`, `orchestrator`, `cowork-engine`, `executor-core`
 - `api-client` — TypeScript API client
 - `visual-state`, `ix`, `viz`, `form-surfaces`
 - Office suite: `office-docs-app`, `office-docx-engine`, `office-pptx-engine`, `office-xlsx-engine`, `office-file-parse`, `office-pdf-app`, `office-sheets-app`, `office-slides-app`, etc.
