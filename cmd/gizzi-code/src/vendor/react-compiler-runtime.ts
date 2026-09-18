@@ -1,3 +1,4 @@
+// See docs/programs/gizzi/INK_APP_COMPILER_ARTIFACTS.md — the artifacts this stub supports are being de-compiled to plain TSX; delete this file in the final codemod PR.
 // @ts-nocheck
 /**
  * react-compiler runtime compatible with the compiler output in this repo.
