@@ -1,4 +1,3 @@
-// @ts-nocheck
 import capitalize from 'lodash-es/capitalize.js'
 import type { SettingSource } from './../../utils/settings/constants.ts'
 import { getSettingSourceName } from './../../utils/settings/constants.ts'

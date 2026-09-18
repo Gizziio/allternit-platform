@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Command } from '../../commands'
 import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook'
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { CLAUDE_AI_INFERENCE_SCOPE } from '@/constants/oauth.js'
 
 export function shouldUseClaudeAIAuth(scopes: string[] | undefined): boolean {

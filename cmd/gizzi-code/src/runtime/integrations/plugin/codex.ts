@@ -1,10 +1,10 @@
-// @ts-nocheck
 import type { Hooks, PluginInput } from "@allternit/plugin"
 import { Log } from "@/shared/util/log"
 import { Installation } from "@/shared/installation"
 import { Auth, OAUTH_DUMMY_KEY } from "@/runtime/integrations/auth"
 import os from "os"
 import { ProviderTransform } from "@/runtime/providers/adapters/transform"
+import type { Provider } from "@/runtime/providers/provider"
 
 const log = Log.create({ service: "plugin.codex" })
 
@@ -345,9 +345,16 @@ function waitForOAuthCallback(pkce: PkceCodes, state: string): Promise<TokenResp
 
 export async function CodexAuthPlugin(input: PluginInput): Promise<Hooks> {
   return {
+    // The plugin SDK's declared AuthHook/AuthMethod shapes are narrower than
+    // what this plugin provides at runtime (2-arg loader, label/authorize
+    // methods); see src/runtime/providers/adapters/auth.ts for the same
+    // mismatch. The SDK Hooks type is not edited here.
     auth: {
       provider: "openai",
-      async loader(getAuth, provider) {
+      async loader(
+        getAuth: () => Promise<Auth.Info | undefined>,
+        provider: { models: Record<string, Provider.Model> },
+      ) {
         const auth = await getAuth()
         if (auth.type !== "oauth") return {}
 
@@ -608,9 +615,12 @@ export async function CodexAuthPlugin(input: PluginInput): Promise<Hooks> {
           type: "api",
         },
       ],
-    },
+    } as unknown as Hooks["auth"],
     "chat.headers": async (input, output) => {
-      if (input.model.providerID !== "openai") return
+      // The SDK hook input type is narrower than the runtime payload (the
+      // session LLM passes the full model object); see adapters/auth.ts.
+      const model = (input as unknown as { model: { providerID: string } }).model
+      if (model.providerID !== "openai") return
       output.headers.originator = "gizzi"
       output.headers["User-Agent"] = `gizzi/${Installation.VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`
       output.headers.session_id = input.sessionID

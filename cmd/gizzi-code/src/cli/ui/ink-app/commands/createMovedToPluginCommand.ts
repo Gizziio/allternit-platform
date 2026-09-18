@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages'
 import type { Command } from '../commands'
 import type { ToolUseContext } from '../Tool'

@@ -1,7 +1,6 @@
-// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.js'
 import type { Command } from '../commands.js'
-import { getDirectConnectServerUrl } from '../bootstrap/state.js'
+import { getDirectConnectServerUrl, getSessionId } from '../bootstrap/state.js'
 
 type GoalAction = 'pause' | 'resume' | 'complete' | 'block' | 'status'
 let activeGoalId: string | undefined
@@ -89,7 +88,7 @@ const goal: Command = {
     const normalized = args.trim().toLowerCase()
     if (['pause', 'resume', 'complete', 'block', 'status'].includes(normalized)) {
       try {
-        return [{ type: 'text', text: await handleGoalAction(normalized as GoalAction, context.sessionId) }]
+        return [{ type: 'text', text: await handleGoalAction(normalized as GoalAction, getSessionId()) }]
       } catch {
         return [{ type: 'text', text: `Unable to ${normalized} the persistent goal because the goal service is unavailable.` }]
       }
@@ -105,7 +104,7 @@ const goal: Command = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id,
-          agent_id: context.sessionId,
+          agent_id: getSessionId(),
           objective,
           enqueue: Boolean(queueMatch),
           replace: Boolean(replaceMatch),

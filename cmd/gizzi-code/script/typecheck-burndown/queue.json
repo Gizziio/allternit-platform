@@ -3,17 +3,17 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1804,
-    "excludedCompilerArtifacts": 361,
+    "totalNocheck": 1768,
+    "excludedCompilerArtifacts": 360,
     "excludedVendored": 93,
-    "totalQueueFiles": 1329,
-    "totalQueueLoc": 454126,
+    "totalQueueFiles": 1294,
+    "totalQueueLoc": 447122,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
       "suspect-malformed": 2
     },
-    "zeroImporter": 238,
+    "zeroImporter": 218,
     "totalAccounted": 1475
   },
   "batches": [
@@ -190,55 +190,13 @@
     },
     {
       "id": "b0010",
-      "files": [
-        "src/runtime/integrations/pty/index.ts",
-        "src/runtime/integrations/plugin/codex.ts",
-        "src/runtime/file/file.ts",
-        "src/cli/ui/ink-app/entrypoints/sdk/controlSchemas.ts",
-        "src/runtime/server/routes/ars-contexta.ts",
-        "src/runtime/services/compact/prompt.ts",
-        "src/cli/ui/ink-app/services/compact/prompt.ts",
-        "src/cli/ui/ink-app/utils/sessionStoragePortable.ts",
-        "src/cli/ui/ink-app/types/generated/events_mono/claude_code/v1/claude_code_internal_event.ts",
-        "src/cli/ui/ink-app/commands/chrome/index.ts",
-        "src/cli/ui/ink-app/commands/thinkback/index.ts",
-        "src/cli/ui/ink-app/commands/rewind/rewind.ts",
-        "src/cli/ui/ink-app/commands/session/index.ts",
-        "src/cli/ui/ink-app/commands/rate-limit-options/index.ts",
-        "src/cli/ui/ink-app/components/agents/utils.ts",
-        "src/cli/ui/ink-app/hooks/useExitOnCtrlCDWithKeybindings.ts",
-        "src/runtime/server/routes/lsp.ts",
-        "src/runtime/services/oauth/scopes.ts",
-        "src/cli/ui/ink-app/services/oauth/scopes.ts",
-        "src/cli/ui/ink-app/hooks/useElapsedTime.ts",
-        "src/cli/ui/ink-app/utils/task/sdkProgress.ts",
-        "src/cli/ui/ink-app/utils/model/providers.ts",
-        "src/cli/ui/ink-app/utils/agentSwarmsEnabled.ts",
-        "src/cli/ui/ink-app/utils/profilerBase.ts",
-        "src/cli/commands/debug/lsp.ts",
-        "src/cli/ui/ink-app/commands/createMovedToPluginCommand.ts",
-        "src/cli/ui/ink-app/tools/AgentTool/agentColorManager.ts",
-        "src/cli/ui/ink-app/utils/createUserMessage.ts",
-        "src/shared/utils/createUserMessage.ts",
-        "src/cli/ui/ink-app/tools/FileReadTool/limits.ts",
-        "src/runtime/server/routes/config.ts",
-        "src/cli/ui/ink-app/utils/dxt/helpers.ts",
-        "src/cli/ui/ink-app/utils/toolErrors.ts",
-        "src/cli/ui/ink-app/commands/goal.ts",
-        "src/runtime/server/routes/global.ts"
-      ],
-      "loc": 7029,
-      "twins": [
-        {
-          "runtime": "src/runtime/services/compact/prompt.ts",
-          "inkApp": "src/cli/ui/ink-app/services/compact/prompt.ts"
-        },
-        {
-          "runtime": "src/runtime/services/oauth/scopes.ts",
-          "inkApp": "src/cli/ui/ink-app/services/oauth/scopes.ts"
-        }
-      ],
-      "state": "NEW"
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 35,
+      "burnedLoc": 7029,
+      "escalated": []
     },
     {
       "id": "b0011",

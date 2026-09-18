@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import { randomUUID, type UUID } from 'crypto'
 import { NO_CONTENT_MESSAGE } from '@/constants/messages.js'
