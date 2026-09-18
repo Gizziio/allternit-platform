@@ -1,0 +1,12 @@
+# @ts-nocheck allowlist — escape hatch for the nocheck-count regression guard
+# (test/ts-nocheck-guard.test.ts).
+#
+# The guard fails if the number of handwritten `// @ts-nocheck` files in
+# src/ INCREASES vs the committed baseline in
+# script/typecheck-burndown/queue.json. The count must only ever go DOWN
+# (burn-down). If a new nocheck file is genuinely intentional (e.g. a
+# vendored file that does not match either documented exclusion fingerprint),
+# list its repo-relative path below and the guard will not count it. Keep
+# entries rare and justified — every line here is permanent type-safety debt.
+#
+# One repo-relative path per line, `#` lines are comments.
