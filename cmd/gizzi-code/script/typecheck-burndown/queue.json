@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1840,
+    "totalNocheck": 1839,
     "excludedCompilerArtifacts": 361,
     "excludedVendored": 93,
-    "totalQueueFiles": 1365,
-    "totalQueueLoc": 471644,
+    "totalQueueFiles": 1364,
+    "totalQueueLoc": 470113,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -140,12 +140,13 @@
     },
     {
       "id": "b0005",
-      "files": [
-        "src/cli/ui/ink-app/utils/Cursor.ts"
-      ],
+      "files": [],
       "loc": 1531,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1531,
+      "escalated": []
     },
     {
       "id": "b0006",
