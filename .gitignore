@@ -9,20 +9,13 @@ services/vault-viewer/server/public/
 dist/
 dist-bundle/
 target/
-rails/reference/beads/
 .DS_Store
 .beads/
 *.log
 *.png
-!surfaces/ai.allternit.com/public/fabric-session-*.png
-!surfaces/ai.allternit.com/public/favicon.png
-!surfaces/ai.allternit.com/public/brand/*.png
 !surfaces/platform.allternit.com/public/favicon.png
 !surfaces/office.allternit.com/public/favicon.png
 !services/remote-control-push/favicon.png
-!surfaces/ai.allternit.com/public/remote-control-*.png
-!surfaces/ai.allternit.com/public/fabric-session-icon-*.png
-!surfaces/ai.allternit.com/public/apple-touch-icon*.png
 !surfaces/platform.allternit.com/public/billing/*.png
 *.mov
 *.zip
@@ -103,20 +96,6 @@ services/docmost
 surfaces/allternit-desktop/resources/platform/
 surfaces/allternit-desktop/resources/bin/*
 !surfaces/allternit-desktop/resources/bin/*.cjs
-surfaces/ai.allternit.com/tmp/
-surfaces/ai.allternit.com/test-results/
-surfaces/ai.allternit.com/src/generated/prisma/
-
-# AI surface temporary analysis/cleanup artifacts
-surfaces/ai.allternit.com/*.txt
-surfaces/ai.allternit.com/*.py
-surfaces/ai.allternit.com/*.cjs
-surfaces/ai.allternit.com/*.sh
-surfaces/ai.allternit.com/*doctor*
-surfaces/ai.allternit.com/*report*
-surfaces/ai.allternit.com/*cleanup*
-surfaces/ai.allternit.com/*-report.json
-surfaces/ai.allternit.com/knip-exports.json
 
 # session debug artifacts
 .playwright-cli/
@@ -156,7 +135,6 @@ surfaces/allternit-mobile/ios/Frameworks/libgit2.xcframework/
 infrastructure/mesh/tsnet-ios/Harness/harness
 
 # Publication edition photos are pipeline artifacts and deploy with the site
-!surfaces/ai.allternit.com/public/images/editions/**/*.png
 .parity-reports-archive/
 
 # Desktop Cloud proof videos — keep markdown notes in git, store videos elsewhere
