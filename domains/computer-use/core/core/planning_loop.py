@@ -914,7 +914,8 @@ class PlanningLoop:
         fields and ``plan`` are never touched.
         """
         from .element_table import build_element_table
-        from .decision_head import Question, build_default_head
+        from .decision_head import build_default_head
+        from .shadow_eval import build_shadow_questions, build_shadow_state_text
 
         tree = step.ax_tree_snapshot
         if not tree:
@@ -927,50 +928,16 @@ class PlanningLoop:
         table = build_element_table(
             tree, max_elements=self.config.shadow_head_max_elements
         )
-        operation_options = table.supported_operations()
-        if not operation_options:
+        questions = build_shadow_questions(table)
+        if not questions[0].options:
             logger.debug(
                 "Shadow head skipped at step %s: no closed-set operations in table",
                 step_num,
             )
             return
 
-        questions = [Question(name="operation", options=operation_options)]
-        for operation in operation_options:
-            targets = table.target_options(operation)
-            if len(targets) >= 2:
-                questions.append(Question(name=f"{operation}_target", options=targets))
-        # Goal/stuck gates (reference pattern): boolean closed-set checks in
-        # the same single pass, with per-option probabilities like everything
-        # else. Proposed only — the loop's own done/stall detection stays
-        # authoritative.
-        questions.append(Question(name="goal_satisfied", options=["true", "false"]))
-        questions.append(Question(name="stuck", options=["true", "false"]))
-
         head = self.config.shadow_head or build_default_head()
-        # The closed-set options must be visible in the prompt: the head reads
-        # per-option first-token logits at the final position, which is only a
-        # decision (not a vocabulary prior) when the model can condition on
-        # the options. Target lists are truncated for display only — the
-        # Question still carries the full closed set.
-        options_text = "\n".join(
-            f"{q.name}: {', '.join(list(q.options[:64]) + (['…'] if len(q.options) > 64 else []))}"
-            for q in questions
-        )
-        state_text = (
-            f"[TASK]\n{task}\n\n"
-            f"[OBSERVED ELEMENTS]\n{table.to_prompt_text()}\n\n"
-            f"[OPTIONS]\n{options_text}\n\n"
-            "[INSTRUCTIONS]\n"
-            "Choose the next browser operation, then the target element index "
-            "for each operation you would consider, using only the given "
-            "options.\n\n"
-            # The readout happens at the final prompt position: the prompt
-            # must end where the answer begins, otherwise the per-option
-            # first-token logits measure a discourse prior instead of a
-            # decision (measured: constant answers across all states).
-            "The next browser operation is:"
-        )
+        state_text = build_shadow_state_text(task, table, questions)
         decision = head.decide(state_text, questions)
         decision.validate()
 

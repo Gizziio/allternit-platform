@@ -91,6 +91,12 @@ _GATE_ALIASES: Dict[str, str] = {
     "no": "false", "false": "false", "0": "false",
 }
 
+# Pseudo-option appended to every question menu by heads that support
+# abstention (core/tier_a_head.py). Chosen when the head's distribution puts
+# the mass on "no trustworthy answer" — e.g. a reference target the recorded
+# policy named but the element table cannot resolve.
+ABSTAIN_OPTION = "__abstain__"
+
 
 def canonical_operation(answer: str) -> str:
     """Fold a raw operation answer to the canonical whitelist name (identity

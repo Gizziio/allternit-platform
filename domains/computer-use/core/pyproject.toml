@@ -139,6 +139,17 @@ shadow-head = [
     "mlx-lm>=0.24.0; platform_machine=='arm64' and platform_system=='Darwin'",
 ]
 
+# Tier A trained classifier head (core/tier_a_head.py): ModernBERT-base
+# (151M, Apache-2.0, ungated) fine-tuned as a (state, option) cross-scorer
+# on labelled shadow traces. CPU-only torch — no CUDA pins; inference never
+# touches the network once weights are cached. Optional and lazily imported
+# — the package imports and the test suite pass without it (MockHead covers
+# tests/evals; the tier-a tests skip when torch/transformers are absent).
+tier-a = [
+    "torch>=2.2.0",
+    "transformers>=4.48.0,<5",
+]
+
 # All dependencies (browser + desktop + operator)
 all = [
     "playwright>=1.40.0",

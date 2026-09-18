@@ -39,7 +39,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from .decision_head import DecisionHead, MockHead, Question, TypedDecision
+from .decision_head import (
+    ABSTAIN_OPTION,
+    DecisionHead,
+    MockHead,
+    Question,
+    TypedDecision,
+)
 from .element_table import build_element_table
 from .planning_loop import PlanningLoop, PlanningLoopConfig
 from .vision_providers import ActionPlan, VisionAction
@@ -215,6 +221,12 @@ class SyntheticTask:
     tree: Any                                   # base AX observation
     turns: List[ScriptedTurn]                   # recorded LLM answers
     fail_targets: List[str] = field(default_factory=list)
+    # Optional explicit per-step AX observations (index = decide step - 1).
+    # When set, the observation mutates step to step (dynamic pages) instead
+    # of only reflecting recorded fill values. Tier A trace variants use this
+    # to make state -> action transitions learnable; canonical tasks leave it
+    # None (static observation, byte-identical behavior to earlier phases).
+    step_trees: Optional[List[Any]] = None
 
 
 def _search_task(steps: int) -> SyntheticTask:
@@ -292,6 +304,55 @@ def default_tasks(steps_per_task: int = DEFAULT_STEPS_PER_TASK) -> List[Syntheti
         _form_task(steps_per_task),
         _settings_task(steps_per_task),
     ]
+
+
+# ---------------------------------------------------------------------------
+# Shared question + state-text builders (planning loop and trace generation
+# must produce byte-identical prompts, so both go through these helpers)
+# ---------------------------------------------------------------------------
+
+def build_shadow_questions(table: Any) -> List[Question]:
+    """The closed-set question set for one decision step: one operation Choice
+    plus speculative per-operation target Choices (targets only for operations
+    with >= 2 candidate rows) plus the goal_satisfied/stuck boolean gates.
+    Mirrors PlanningLoop._run_shadow_head."""
+    questions = [Question(name="operation", options=table.supported_operations())]
+    for operation in table.supported_operations():
+        targets = table.target_options(operation)
+        if len(targets) >= 2:
+            questions.append(Question(name=f"{operation}_target", options=targets))
+    questions.append(Question(name="goal_satisfied", options=["true", "false"]))
+    questions.append(Question(name="stuck", options=["true", "false"]))
+    return questions
+
+
+def build_shadow_state_text(task_text: str, table: Any, questions: Sequence[Question]) -> str:
+    """The shadow-head state prompt in the exact shape PlanningLoop emits.
+
+    The closed-set options must be visible in the prompt: a head that reads
+    per-option scores at the final position only makes a decision (not a
+    vocabulary prior) when the model can condition on the options. Target
+    lists are truncated for display only — the Question still carries the
+    full closed set. The prompt must end where the answer begins.
+    """
+    options_text = "\n".join(
+        f"{q.name}: {', '.join(list(q.options[:64]) + (['…'] if len(q.options) > 64 else []))}"
+        for q in questions
+    )
+    return (
+        f"[TASK]\n{task_text}\n\n"
+        f"[OBSERVED ELEMENTS]\n{table.to_prompt_text()}\n\n"
+        f"[OPTIONS]\n{options_text}\n\n"
+        "[INSTRUCTIONS]\n"
+        "Choose the next browser operation, then the target element index "
+        "for each operation you would consider, using only the given "
+        "options.\n\n"
+        # The readout happens at the final prompt position: the prompt
+        # must end where the answer begins, otherwise per-option scores
+        # measure a discourse prior instead of a decision (measured:
+        # constant answers across all states).
+        "The next browser operation is:"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -391,7 +452,12 @@ def _patch_inspector(trees: Sequence[Any]) -> Tuple[Any, Callable[[], Any]]:
 
 
 def _step_trees(task: SyntheticTask) -> List[Any]:
-    """Initial tree + one variant per action turn (fill values appear)."""
+    """Per-decide-step AX observations.
+
+    Explicit ``task.step_trees`` (dynamic pages) win; otherwise the initial
+    tree plus one variant per action turn (fill values appear)."""
+    if task.step_trees is not None:
+        return [copy.deepcopy(t) for t in task.step_trees]
     trees = [copy.deepcopy(task.tree)]
     pending_value: Optional[Tuple[str, str]] = None
     for turn in task.turns:
@@ -521,6 +587,7 @@ async def run_task(
         op_choice = decision["choices"].get("operation", {})
         head_op = op_choice.get("chosen")
         op_agree = head_op == llm_op
+        head_abstained = head_op == ABSTAIN_OPTION
 
         target_agree: Optional[bool] = None
         if llm_op in _TARGET_OPS and head_op == llm_op:
@@ -550,6 +617,7 @@ async def run_task(
             "op_agree": op_agree,
             "target_agree": target_agree,
             "agreement": agreement,
+            "head_abstained": head_abstained,
             "llm_success": llm_success_by_step.get(step_num, True),
             "head_confidence": op_choice.get("confidence", 0.0),
             "head_latency_ms": event["latency_ms"],
@@ -641,6 +709,9 @@ def run_eval(
         "agreement_rate": _rate(all_steps),
         "agreement_given_llm_success": _rate(successes),
         "agreement_given_llm_failure": _rate(failures),
+        "abstain_rate": round(
+            sum(1 for s in all_steps if s.get("head_abstained")) / len(all_steps), 4
+        ) if all_steps else None,
         "stuck_true_rate": _gate_rate(all_steps, "stuck"),
         "stuck_true_rate_given_llm_success": _gate_rate(successes, "stuck"),
         "stuck_true_rate_given_llm_failure": _gate_rate(failures, "stuck"),
@@ -663,6 +734,13 @@ def run_eval(
             "with the remainder split uniformly (confidence-scalar, not a "
             "distribution — an mlx/local-tier property)."
             if head_label == "kimi" else
+            "TierAClassifierHead numbers — the trained ModernBERT-base "
+            "cross-scorer answers the same closed-set questions as the "
+            "scripted LLM transcript; agreement measures how often its "
+            "softmax choice (an explicit __abstain__ pseudo-option always in "
+            "the menu) matches the recorded LLM decisions on the three "
+            "canonical held-out tasks."
+            if head_label == "tierA" else
             "MlxDirectLogitHead real-weights numbers — the local mlx-lm head "
             "answers the same closed-set questions as the scripted LLM "
             "transcript; agreement measures how often its first-token choices "
@@ -718,6 +796,15 @@ def render_markdown(report: Dict[str, Any]) -> str:
             "> property). Non-canonical answers are folded to the whitelist vocabulary",
             "> and counted as vocab misses.",
         ]
+    elif report.get("head") == "tierA":
+        head_lines = [
+            "> **Head:** TierAClassifierHead (trained ModernBERT-base cross-scorer, "
+            "core/tier_a_head.py; local CPU inference, no network).",
+            "> The LLM side is still the recorded transcript; agreement measures how "
+            "often the trained softmax choice (an explicit __abstain__ pseudo-option "
+            "always in the menu) matches the recorded LLM decisions on the three "
+            "canonical held-out tasks.",
+        ]
     else:
         head_lines = [
             f"> **Head:** {report['head']} (real weights, local mlx-lm inference).",
@@ -741,6 +828,7 @@ def render_markdown(report: Dict[str, Any]) -> str:
         f"| Agreement rate | {_fmt(agg['agreement_rate'])} |",
         f"| Agreement given LLM success | {_fmt(agg['agreement_given_llm_success'])} |",
         f"| Agreement given LLM failure | {_fmt(agg['agreement_given_llm_failure'])} |",
+        f"| Abstain rate | {_fmt(agg.get('abstain_rate'))} |",
         f"| Stuck=true rate (all steps) | {_fmt(agg['stuck_true_rate'])} |",
         f"| Stuck=true given LLM success | {_fmt(agg['stuck_true_rate_given_llm_success'])} |",
         f"| Stuck=true given LLM failure | {_fmt(agg['stuck_true_rate_given_llm_failure'])} |",
