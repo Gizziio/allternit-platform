@@ -25,9 +25,7 @@ export const TestingPermissionTool: Tool<InputSchema, string> = buildTool({
     return 'TestingPermission';
   },
   isEnabled() {
-    // TODO(types): literal-vs-literal comparison is always false at runtime;
-    // preserved as-is (was `process.env.NODE_ENV`-style intent?) — type-only cast
-    return ("production" as string) === 'test';
+    return process.env.NODE_ENV === 'test';
   },
   isConcurrencySafe() {
     return true;
