@@ -68,7 +68,8 @@ Allternit Cloud launches **capital-light and multi-provider**: own the control p
 
 ### Layer 3 — Experience
 - [x] Initial platform integration points (legacy `/bots/:bot_id/desktop/*` + new `/api/v1/computers/*`).
-- [x] `allternit-cloud-api`, `allternit-cloud-wizard`, `cloud-backend` crates/surfaces exist and host runtime/billing scaffolding.
+- [x] `allternit-cloud-api`, `allternit-cloud-wizard` crates/surfaces exist and host runtime/billing scaffolding.
+  - NOTE (2026-09-18): `cloud-backend` was cut — the browser-extension↔agent WebSocket relay had zero live consumers and no deployment; extension↔agent connectivity is served by Desktop native messaging, remote-control-push, and Fabric device relay.
 
 ---
 
@@ -247,7 +248,6 @@ Allternit Cloud launches **capital-light and multi-provider**: own the control p
 | `cmd/allternit-cloud-api/src/main.rs` | Cloud API surface. |
 | `cmd/allternit-cloud-api/src/routes/*.rs` | Billing, auth, runtime routes. |
 | `cmd/allternit-cloud-wizard/` | Onboarding wizard. |
-| `cmd/cloud-backend/src/index.ts` | Cloud backend TS service. |
 | `surfaces/ai.allternit.com/` | Platform web surface. |
 | `surfaces/ai.allternit.com/src/lib/cloud-console-api.ts` | Typed Cloud Console API client. |
 | `surfaces/ai.allternit.com/src/views/cloud-console/CloudConsoleView.tsx` | Customer Cloud Console UI. |

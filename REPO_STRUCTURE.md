@@ -27,7 +27,7 @@ allternit/
 │   ├── gizzi-code/           # Gizzi Code CLI source
 │   ├── gizzi-core/
 │   └── launcher/
-├── api/                      # Backend API services (being dissolved into services/ — remaining: gateway/routing, services/workspace-service, core/cloud-backend, services/ssh-bridge, services/replies-runtime)
+├── api/                      # Backend API services (being dissolved into services/ — remaining: gateway/routing, services/workspace-service, services/ssh-bridge, services/replies-runtime)
 ├── services/                 # Long-running services (memory, voice, registry, orchestration; vendored: open-connector, docmost*)
 ├── domains/                  # Domain logic (agent, computer-use, governance, kernel; agent-swarm archived → archive/agent-swarm, live agent tools at tools/agent-swarm/; cowork compose stack moved to tools/cowork-integration/stack/, cowork runtime crates remain in infrastructure/executor/cowork/)
 ├── infrastructure/           # Cloud providers, executors, bridges (alias: infra/ symlink)
