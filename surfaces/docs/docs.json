@@ -111,7 +111,6 @@
               "tools/local-engine",
               "tools/voice",
               "tools/android-bridge",
-              "tools/cloud-backend",
               "tools/office-cli",
               "tools/office-engine",
               "tools/open-connector",
@@ -177,7 +176,6 @@
               "byoc/deploy-wizard",
               "byoc/launcher",
               "byoc/hosted-runtime",
-              "byoc/cloud-backend",
               "byoc/local-models",
               "byoc/vm-executor"
             ]
