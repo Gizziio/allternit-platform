@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Leaf module for synthetic-message constants.
  *

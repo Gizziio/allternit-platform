@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react'
 
 interface Props {
@@ -19,7 +18,7 @@ export class SentryErrorBoundary extends React.Component<Props, State> {
     return { hasError: true }
   }
 
-  render(): React.ReactNode {
+  override render(): React.ReactNode {
     if (this.state.hasError) {
       return null
     }

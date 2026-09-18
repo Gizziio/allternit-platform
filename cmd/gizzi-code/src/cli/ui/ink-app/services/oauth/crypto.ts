@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createHash, randomBytes } from 'crypto'
 
 function base64URLEncode(buffer: Buffer): string {

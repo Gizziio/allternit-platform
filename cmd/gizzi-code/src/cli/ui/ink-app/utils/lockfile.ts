@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Lazy accessor for proper-lockfile.
  *

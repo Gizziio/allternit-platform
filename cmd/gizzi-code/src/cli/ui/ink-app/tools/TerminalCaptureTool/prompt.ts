@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Terminal Capture Tool Prompt
  * TEMPORARY SHIM

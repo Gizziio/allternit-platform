@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Overflow Test Tool
  * TEMPORARY SHIM

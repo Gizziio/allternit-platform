@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function win32DisableProcessedInput(): void {}
 
 export function win32InstallCtrlCGuard(): (() => void) | undefined {

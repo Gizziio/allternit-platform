@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Verify Plan Execution Tool Constants
  * TEMPORARY SHIM

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Days elapsed since mtime.  Floor-rounded — 0 for today, 1 for
  * yesterday, 2+ for older.  Negative inputs (future mtime, clock skew)

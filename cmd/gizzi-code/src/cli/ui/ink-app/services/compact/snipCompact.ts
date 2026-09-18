@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function snipCompact_ts(): void {
   // Not yet implemented
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Wizard component types
  */

@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function index_ts(): void {
   // Not yet implemented
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Pure utility functions for MCP name normalization.
  * This file has no dependencies to avoid circular imports.

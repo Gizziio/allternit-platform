@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Shared constants and path builders for MDM settings modules.
  *

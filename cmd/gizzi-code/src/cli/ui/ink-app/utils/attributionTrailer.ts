@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Attribution trailer stub
  */

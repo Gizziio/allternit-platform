@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Pure row-formatting helpers for the /bots pane (Phase B5). Kept free of
  * ink/runtime imports so they are directly unit-testable; BotsRowList wraps

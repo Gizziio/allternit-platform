@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Plugin Types
  * TEMPORARY SHIM

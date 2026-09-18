@@ -1,4 +1,3 @@
-// @ts-nocheck
 // In its own file to avoid circular dependencies
 export const FILE_EDIT_TOOL_NAME = 'Edit'
 

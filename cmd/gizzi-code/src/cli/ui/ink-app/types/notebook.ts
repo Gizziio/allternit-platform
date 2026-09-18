@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function notebook_ts(): void {
   // Not yet implemented
 }

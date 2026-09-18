@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Skill Search - Remote Skill State
  * TEMPORARY SHIM

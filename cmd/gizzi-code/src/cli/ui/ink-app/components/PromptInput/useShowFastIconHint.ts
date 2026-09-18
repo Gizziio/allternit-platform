@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState } from 'react'
 
 const HINT_DISPLAY_DURATION_MS = 5000

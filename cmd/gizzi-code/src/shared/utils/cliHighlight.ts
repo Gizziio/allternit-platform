@@ -1,4 +1,3 @@
-// @ts-nocheck
 // highlight.js's type defs carry `/// <reference lib="dom" />`. SSETransport,
 // mcp/client, ssh, dumpPrompts use DOM types (TextDecodeOptions, RequestInfo)
 // that only typecheck because this file's `typeof import('highlight.js')` pulls
@@ -10,7 +9,6 @@ import { extname } from 'path'
 
 export type CliHighlight = {
   highlight: typeof import('cli-highlight').highlight
-  // @ts-ignore Namespace issue
   supportsLanguage: typeof import('cli-highlight').supportsLanguage
 }
 
@@ -20,7 +18,6 @@ export type CliHighlight = {
 // faulted in.
 let cliHighlightPromise: Promise<CliHighlight | null> | undefined
 
-// @ts-ignore Namespace issue
 let loadedGetLanguage: typeof import('highlight.js').getLanguage | undefined
 
 async function loadCliHighlight(): Promise<CliHighlight | null> {
@@ -28,11 +25,9 @@ async function loadCliHighlight(): Promise<CliHighlight | null> {
     const cliHighlight = await import('cli-highlight')
     // cache hit — cli-highlight already loaded highlight.js
     const highlightJs = await import('highlight.js')
-    // @ts-ignore Property may not exist
     loadedGetLanguage = highlightJs.getLanguage
     return {
       highlight: cliHighlight.highlight,
-      // @ts-ignore Property may not exist
       supportsLanguage: cliHighlight.supportsLanguage,
     }
   } catch {

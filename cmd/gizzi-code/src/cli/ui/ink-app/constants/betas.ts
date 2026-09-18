@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 
 export const GIZZI_BETA_HEADER_20250219 = 'gizzi-20250219'

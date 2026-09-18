@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Path conversion utilities for IDE communication
  * Handles conversions between Claude's environment and the IDE's environment
