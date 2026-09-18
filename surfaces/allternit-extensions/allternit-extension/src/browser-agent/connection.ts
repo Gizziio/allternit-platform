@@ -8,12 +8,11 @@
  *   browserAgentConnection.initialize()
  *   browserAgentConnection.handleContentMessage(message, sender, sendResponse)
  *
- * Modes (stored in chrome.storage.local key 'allternitConnection'):
+ * Mode:
  *   cowork  — Native messaging com.allternit.desktop (Desktop app controls extension via TCP 3011)
- *   cloud   — WS wss://api.allternit.com/v1/extension (cloud-hosted agent path)
  */
 
-import { WebSocketClient, WebSocketMessage } from './websocket-client';
+import { WebSocketMessage } from './websocket-client';
 import {
   connectNativeHost,
   disconnectNativeHost,
@@ -33,28 +32,15 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type ConnectionMode = 'cowork' | 'cloud';
+type ConnectionMode = 'cowork';
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
-
-interface StoredConfig {
-  mode: ConnectionMode;
-  cloudUrl: string;
-  authToken?: string;
-}
-
-const DEFAULT_CONFIG: StoredConfig = {
-  mode: 'cowork',
-  cloudUrl: 'wss://api.allternit.com/v1/extension',
-};
 
 // ─── BrowserAgentConnection class ────────────────────────────────────────────
 
 class BrowserAgentConnection {
-  private wsClient: WebSocketClient | null = null;
   private nativeUnsub: (() => void) | null = null;
   private mode: ConnectionMode = 'cowork';
   private state: ConnectionState = 'disconnected';
-  private config: StoredConfig = { ...DEFAULT_CONFIG };
   private readonly allowlist = new HostAllowlist();
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -63,11 +49,6 @@ class BrowserAgentConnection {
     console.log('[BrowserAgentConnection] Initializing');
 
     await this.allowlist.load();
-
-    const stored = await chrome.storage.local.get(['allternitConnection']);
-    if (stored.allternitConnection) {
-      this.config = { ...DEFAULT_CONFIG, ...stored.allternitConnection };
-    }
 
     // Wire result sender so executor can relay results back over the connection
     setResultSender((action, tabId, result) => {
@@ -79,7 +60,7 @@ class BrowserAgentConnection {
       });
     });
 
-    await this._connect(this.config.mode);
+    await this._connect();
   }
 
   /**
@@ -144,51 +125,32 @@ class BrowserAgentConnection {
 
   // ── Private ─────────────────────────────────────────────────────────────────
 
-  private async _connect(mode: ConnectionMode): Promise<void> {
+  private async _connect(): Promise<void> {
     await this._disconnect();
-    this.mode = mode;
+    this.mode = 'cowork';
 
-    console.log(`[BrowserAgentConnection] Connecting — mode=${mode}`);
+    console.log('[BrowserAgentConnection] Connecting — mode=cowork');
 
-    if (mode === 'cloud') {
-      const url = this.config.cloudUrl;
-      this.wsClient = new WebSocketClient({ url });
-
-      this.wsClient.onStateChange((s) => {
-        this.state = s as ConnectionState;
-        this._updateBadge();
+    const ok = await connectNativeHost();
+    if (ok) {
+      this.state = 'connected';
+      this._updateBadge();
+      this.nativeUnsub = subscribeToEvents((event: NativeMessage) => {
+        this._onBackendMessage(event as unknown as WebSocketMessage);
+        if (event.type === 'execute' && event.payload) {
+          this._handleCoworkExecute(event.payload).catch((err) =>
+            console.error('[BrowserAgentConnection] cowork execute error:', err)
+          );
+        }
       });
-
-      this.wsClient.onMessage((msg) => this._onBackendMessage(msg));
-
-      this.wsClient.connect();
-    } else if (mode === 'cowork') {
-      const ok = await connectNativeHost();
-      if (ok) {
-        this.state = 'connected';
-        this._updateBadge();
-        this.nativeUnsub = subscribeToEvents((event: NativeMessage) => {
-          this._onBackendMessage(event as unknown as WebSocketMessage);
-          if (event.type === 'execute' && event.payload) {
-            this._handleCoworkExecute(event.payload).catch((err) =>
-              console.error('[BrowserAgentConnection] cowork execute error:', err)
-            );
-          }
-        });
-      } else {
-        this.state = 'error';
-        this._updateBadge();
-      }
+    } else {
+      this.state = 'error';
+      this._updateBadge();
     }
   }
 
   private async _disconnect(): Promise<void> {
     this.state = 'disconnected';
-
-    if (this.wsClient) {
-      this.wsClient.disconnect();
-      this.wsClient = null;
-    }
 
     if (this.nativeUnsub) {
       this.nativeUnsub();
@@ -275,11 +237,9 @@ class BrowserAgentConnection {
     }
   }
 
-  private _sendToBackend(msg: object): void {
-    if (this.mode === 'cloud') {
-      this.wsClient?.send(msg as Omit<WebSocketMessage, 'timestamp'>);
-    }
-    // In cowork mode the Desktop receives results via native messaging response channel
+  private _sendToBackend(_msg: object): void {
+    // Results reach the Desktop via the native messaging response channel;
+    // there is nothing to send on this path.
   }
 
   private async _updateBadge(): Promise<void> {

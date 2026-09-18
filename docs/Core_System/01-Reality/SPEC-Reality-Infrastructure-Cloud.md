@@ -22,8 +22,9 @@ Remote execution occurs on specialized nodes that provide:
 - **WebSocket Gateway:** Bidirectional communication for real-time tool execution and PTY access.
 
 ## 4. Cloud Backend
-Implementation: `api/core/cloud-backend/`
-A centralized WebSocket server that coordinates:
+> **REMOVED 2026-09-18:** the centralized WebSocket relay (`api/core/cloud-backend/`) was cut — zero live consumers, no deployment mechanism, and no server implementing `wss://api.allternit.com/v1/extension`. Extension↔agent connectivity is served by the Desktop native-messaging bridge, the remote-control-push Worker, and the Fabric device relay.
+
+Previously: a centralized WebSocket server that coordinated:
 - **Browser Extensions:** Routes `BROWSER.*` tool calls to remote nodes.
 - **Thin Clients:** Manages real-time chat and session continuity.
 - **Authentication:** Validates tokens across JWT and opaque auth modes.
