@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1837,
+    "totalNocheck": 1836,
     "excludedCompilerArtifacts": 361,
     "excludedVendored": 93,
-    "totalQueueFiles": 1362,
-    "totalQueueLoc": 465644,
+    "totalQueueFiles": 1361,
+    "totalQueueLoc": 461207,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -170,12 +170,13 @@
     },
     {
       "id": "b0008",
-      "files": [
-        "src/cli/ui/ink-app/utils/bash/bashParser.ts"
-      ],
-      "loc": 4437,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 4437,
+      "escalated": []
     },
     {
       "id": "b0009",
