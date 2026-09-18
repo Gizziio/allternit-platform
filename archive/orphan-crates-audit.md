@@ -25,7 +25,7 @@ Passes completed:
   - platform/contracts/capsule/capsule-system/allternit-capsule-runtime
   - services/orchestration/control-plane/unified-registry/tool-registry
 - Un-archived and restored 2 crates needed by capsule-runtime:
-  - platform/sdk/adapters/rust/marketplace
+  - platform/rust-sdk/adapters/rust/marketplace
   - platform/types/a2ui-types
 - Integrated 10 additional orphans (workspace-referenced and orphan clusters):
   - services/process-driver (referenced by session-manager)
@@ -56,7 +56,7 @@ Remaining orphan crates: 1
   - infrastructure/executor/bridge-systems/io-daemon
   - infrastructure/providers/vendor-integration/wrappers
   - platform/protocols/transport-sms
-  - platform/sdk/allternit-skill-portability
+  - platform/rust-sdk/allternit-skill-portability
   - services/memory/data/allternit-memory-provider
   - services/ml/pattern-service
   - services/ml/prompt-pack-service

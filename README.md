@@ -46,9 +46,9 @@ Ownership rules (source of truth: [REPO_STRUCTURE.md](./REPO_STRUCTURE.md)):
 
 Legacy consolidations in flight: `packages/@allternit/` → `platform/`; `api/` → `services/`.
 
-Three SDKs: public TS SDK in `sdk/` (tag `sdk/v*`), Rust SDK in `platform/sdk/rust/`
-(rename to `platform/rust-sdk/` planned), gizzi SDK in `cmd/gizzi-code/packages/sdk/`
-(tag `gizzi-sdk/v*`).
+Three SDKs: public TS SDK in `sdk/` (tag `sdk/v*`), Rust SDK in `platform/rust-sdk/rust/`
+(was `platform/sdk/`; renamed 2026-09-18 so `sdk/` is unambiguous), gizzi SDK in
+`cmd/gizzi-code/packages/sdk/` (tag `gizzi-sdk/v*`).
 
 `agent-ledger/` is the signed session record — it stays at the repo root by design.
 

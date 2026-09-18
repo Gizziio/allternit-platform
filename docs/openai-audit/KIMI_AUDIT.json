@@ -444,7 +444,7 @@
           "evidence": [
             ".agents/skills/",
             "cmd/gizzi-code/src/runtime/tools/builtins/skill.ts:88",
-            "platform/sdk/allternit-skill-portability/src/lib.rs:1-10"
+            "platform/rust-sdk/allternit-skill-portability/src/lib.rs:1-10"
           ],
           "notes": "Skill portability engine syncs skills across Claude Code, Codex, Gizzi Code, Kimi."
         },
@@ -767,7 +767,7 @@
           "evidence": [
             "platform/configs/brain-presets/presets/default.json",
             "packages/@allternit/orchestrator/src/vendors.ts:19-38",
-            "platform/sdk/allternit-skill-portability/src/lib.rs:1-10"
+            "platform/rust-sdk/allternit-skill-portability/src/lib.rs:1-10"
           ],
           "notes": "Allternit orchestrates competing CLIs rather than importing from them; functionally a superset."
         }
