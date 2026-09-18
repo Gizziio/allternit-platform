@@ -98,7 +98,7 @@ def _load_eval_script():
 
 
 def test_head_flag_parsing():
-    """--head accepts only mock|mlx (default mock); mlx needs the extra."""
+    """--head accepts only mock|mlx|kimi (default mock); mlx needs the extra."""
     script = _load_eval_script()
 
     head, suffix = script.build_head("mock")
@@ -110,3 +110,26 @@ def test_head_flag_parsing():
         assert exc.code == 2  # argparse: invalid choice
     else:
         raise AssertionError("invalid --head value must exit 2")
+
+
+def test_kimi_head_flag_parsing(monkeypatch):
+    """--head kimi builds a KimiCliHead; --questioning shapes the report stem."""
+    script = _load_eval_script()
+    monkeypatch.setattr("shutil.which", lambda _bin: "/fake/bin/kimi")
+
+    from core.decision_head import KimiCliHead
+
+    head, suffix = script.build_head("kimi")
+    assert isinstance(head, KimiCliHead) and head.questioning == "batched"
+    assert suffix == "-kimi"
+
+    head, suffix = script.build_head("kimi", questioning="sequential")
+    assert head.questioning == "sequential"
+    assert suffix == "-kimi-sequential"
+
+    try:
+        script.main(["--questioning", "sideways"])
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:
+        raise AssertionError("invalid --questioning value must exit 2")

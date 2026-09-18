@@ -418,13 +418,18 @@ def run_task_sync(
     task: SyntheticTask,
     head: Optional[DecisionHead] = None,
     max_elements: int = 250,
+    step_budget_ms: int = 15_000,
+    progress: bool = False,
 ) -> Dict[str, Any]:
     """Sync wrapper around :func:`run_task` (fresh event loop)."""
     import asyncio
 
     loop = asyncio.new_event_loop()
     try:
-        return loop.run_until_complete(run_task(task, head=head, max_elements=max_elements))
+        return loop.run_until_complete(
+            run_task(task, head=head, max_elements=max_elements,
+                     step_budget_ms=step_budget_ms, progress=progress)
+        )
     finally:
         loop.close()
 
@@ -433,6 +438,8 @@ async def run_task(
     task: SyntheticTask,
     head: Optional[DecisionHead] = None,
     max_elements: int = 250,
+    step_budget_ms: int = 15_000,
+    progress: bool = False,
 ) -> Dict[str, Any]:
     """Run one synthetic task through the planning loop and score agreement.
 
@@ -457,16 +464,27 @@ async def run_task(
 
     _, restore = _patch_inspector(step_trees)
     events: List[Dict[str, Any]] = []
+
+    def _on_event(event: Dict[str, Any]) -> None:
+        events.append(event)
+        if progress and event.get("type") == "shadow.decision":
+            print(
+                f"[{task.task_id}] step {event.get('step')} "
+                f"head={event.get('head')} latency={event.get('latency_ms'):.0f}ms",
+                flush=True,
+            )
+
     try:
         loop = PlanningLoop(
             vision_provider=provider,
             adapter=adapter,
             config=PlanningLoopConfig(
                 max_steps=len(task.turns) + 2,
-                # The real mlx head takes ~1s per decide step; scale the
-                # wall-clock budget with the transcript so a slow head
-                # surfaces as a metric, not a silent mid-run timeout.
-                timeout_ms=max(120_000, (len(task.turns) + 2) * 15_000),
+                # Slow heads (mlx ~1s, kimi CLI subprocess ~25-60s per step)
+                # must surface as a metric, not a silent mid-run timeout —
+                # scale the wall-clock budget with the transcript and the
+                # per-step decide budget.
+                timeout_ms=max(120_000, (len(task.turns) + 2) * step_budget_ms),
                 approval_policy="never",
                 reflect_after_each_step=False,
                 batch_enabled=False,
@@ -474,7 +492,7 @@ async def run_task(
                 shadow_head_max_elements=max_elements,
                 shadow_head=shadow_head,
             ),
-            event_callback=events.append,
+            event_callback=_on_event,
         )
         result = await loop.run(task.task, session_id=f"shadow-{task.task_id}")
     finally:
@@ -556,8 +574,7 @@ async def run_task(
         "task_id": task.task_id,
         "decide_steps": len(steps_report),
         "llm_turns_recorded": len(provider.calls),
-        "agreement_rate": _rate(steps_report),
-        "op_agreement_rate": _rate(steps_report, "op_agree"),
+        "agreement_rate": _rate(steps_report),        "op_agreement_rate": _rate(steps_report, "op_agree"),
         "target_agreement_rate": _rate([r for r in steps_report if r["target_agree"] is not None]),
         "agreement_given_llm_success": _rate(successes),
         "agreement_given_llm_failure": _rate(failures),
@@ -574,6 +591,10 @@ async def run_task(
         "mean_llm_latency_ms": round(
             sum(r["llm_latency_ms"] for r in steps_report) / len(steps_report), 3
         ) if steps_report else None,
+        # Canonical-vocabulary misses recorded by heads that track them
+        # (KimiCliHead); absent (key missing) for heads without the counter.
+        **({"vocab_misses": [dict(m) for m in shadow_head_vocab_misses]}
+           if (shadow_head_vocab_misses := getattr(shadow_head, "vocab_misses", None)) is not None else {}),
         "executed_actions": adapter.executed,
         "steps": steps_report,
     }
@@ -584,15 +605,22 @@ def run_eval(
     steps_per_task: int = DEFAULT_STEPS_PER_TASK,
     head: Optional[DecisionHead] = None,
     head_label: str = "mock",
+    step_budget_ms: int = 15_000,
+    progress: bool = False,
 ) -> Dict[str, Any]:
     """Run the full shadow eval over the synthetic task set.
 
     ``head`` overrides the scripted MockHead (e.g. MlxDirectLogitHead for
-    real-weights agreement numbers); ``head_label`` identifies the head in
-    the report.
+    real-weights agreement numbers, KimiCliHead for the cloud-iteration tier);
+    ``head_label`` identifies the head in the report. ``step_budget_ms``
+    scales the per-task wall-clock budget for slow heads (kimi CLI
+    subprocesses); ``progress`` prints one line per decide step.
     """
     task_list = list(tasks) if tasks is not None else default_tasks(steps_per_task)
-    reports = [run_task_sync(t, head=head) for t in task_list]
+    reports = [
+        run_task_sync(t, head=head, step_budget_ms=step_budget_ms, progress=progress)
+        for t in task_list
+    ]
 
     all_steps = [s for r in reports for s in r["steps"]]
     successes = [s for s in all_steps if s["llm_success"]]
@@ -623,7 +651,18 @@ def run_eval(
         "mean_llm_latency_ms": round(
             sum(s["llm_latency_ms"] for s in all_steps) / len(all_steps), 3
         ) if all_steps else None,
+        # Canonical-vocab misses (KimiCliHead tracks these; mock/mlx don't).
+        **({"vocab_miss_count": sum(len(t.get("vocab_misses", [])) for t in reports)}
+           if any("vocab_misses" in t for t in reports) else {}),
         "note": (
+            "KimiCliHead numbers — the kimi CLI subprocess head answers the "
+            "same closed-set questions as the scripted LLM transcript under a "
+            "strict JSON contract; agreement measures how often its chosen "
+            "answers match the recorded LLM decisions. Per-option "
+            "probabilities are the chosen option at kimi's stated confidence "
+            "with the remainder split uniformly (confidence-scalar, not a "
+            "distribution — an mlx/local-tier property)."
+            if head_label == "kimi" else
             "MlxDirectLogitHead real-weights numbers — the local mlx-lm head "
             "answers the same closed-set questions as the scripted LLM "
             "transcript; agreement measures how often its first-token choices "
@@ -669,6 +708,16 @@ def render_markdown(report: Dict[str, Any]) -> str:
             "> Agreement numbers validate the eval plumbing offline; they are NOT",
             "> measurements of real head quality (weights are not downloaded in-session).",
         ]
+    elif report.get("head") == "kimi":
+        head_lines = [
+            f"> **Head:** KimiCliHead (kimi CLI subprocess, cloud-iteration tier; "
+            f"questioning={report.get('questioning', 'batched')}).",
+            "> kimi answers a strict JSON contract per pass; per-option probabilities",
+            "> are the chosen option at its stated confidence with the remainder split",
+            "> uniformly (confidence-scalar, not a distribution — an mlx/local-tier",
+            "> property). Non-canonical answers are folded to the whitelist vocabulary",
+            "> and counted as vocab misses.",
+        ]
     else:
         head_lines = [
             f"> **Head:** {report['head']} (real weights, local mlx-lm inference).",
@@ -698,6 +747,10 @@ def render_markdown(report: Dict[str, Any]) -> str:
         f"| Goal-satisfied=true rate | {_fmt(agg['goal_satisfied_true_rate'])} |",
         f"| Mean head latency (ms) | {_fmt(agg['mean_head_latency_ms'])} |",
         f"| Mean LLM latency (ms) | {_fmt(agg['mean_llm_latency_ms'])} |",
+    ]
+    if "vocab_miss_count" in agg:
+        lines.append(f"| Vocab misses | {agg['vocab_miss_count']} |")
+    lines += [
         "",
         "## Per task",
         "",

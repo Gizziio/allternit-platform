@@ -27,3 +27,13 @@
 - **Just did:** All verifications passed — rails/src has zero real consumers (`use rails::RailsState` in allternit-api lib.rs is the local `mod rails`, not this crate; other rails/src hits are comments/openai-audit JSONs); rails-api zero refs outside api/README.md; ui symlink target gone from repo, sole `ui/` import hit is page-agent's own packages dir; test_ui zero CI refs, apps/ absent; allternit-agent-system-rails zero real code uses. Executed all `git rm`s + Cargo.toml dep/member removals + REPO_STRUCTURE/api README/.gitignore fixes.
 - **Next:** cargo check --workspace (running, shared target), release-preflight (52/0 OK), 5 logical commits, push, PR, merge, discipline check.
 - **Open questions:** commrails/docs + cmd/gizzi-code docs still mention the old crate name as history — left as historical context. Historical comment in locked .github/workflows/release-desktop.yml:162 left untouched.
+
+- **Next:** Wire `git-discipline-check.sh` into the session Stop hook so a session cannot claim "done" while the check fails (tracked follow-up, not yet wired). Decide fate of ao/swarm-mirofish + ao/p8-d (PR or delete) and openmaus-botmode-0915.
+
+# Steering checkpoint — session/jev-kimi-head (2026-09-18, Kimi Code subagent)
+
+- **Goal:** Implement KimiCliHead (cloud-iteration tier) for the shadow-head eval harness behind the DecisionHead protocol; run the real eval batched + sequential; honest numbers in docs/JEV_KIMI_HEAD_NOTES.md. No PR — orchestrator handles merge.
+- **Just did:** KimiCliHead in core/decision_head.py (subprocess `kimi -p`, strict JSON contract + one repair retry, canonical 11-op vocabulary with alias folding + vocab-miss metric, confidence-scalar → chosen-gets-confidence/uniform-remainder probabilities, batched + sequential questioning). `--head kimi` + `--questioning {batched,sequential}` in scripts/shadow_head_eval.py. step_budget_ms + progress + vocab-miss plumbing in core/shadow_eval.py. 15 new unit tests (stubbed subprocess, no real CLI); targeted suite 66 passed, 1 skipped (mlx weights). `kimi -p` sanity check passed (auth works in this env).
+- **Next:** full eval batched (66 steps, ~30 min background) then sequential; write NOTES; commit + push; report numbers.
+- **Open questions:** none.
+- **Done (2026-09-18 later):** Full evals complete. Batched: agreement 0.3182 (21/66), op 0.7576, target 0.42, 1 vocab miss, 27.9s/step, ~31 min. Sequential: identical agreement, 0 misses, 58.2s/step, ~64 min. Confidence flat (0.94 agree vs 0.94 disagree) — no veto signal. Head collapses to per-task constant policy (task-conditioned, not step-conditioned). docs/JEV_KIMI_HEAD_NOTES.md written. Reports + note-fix committed and pushed. NO PR per orchestrator.

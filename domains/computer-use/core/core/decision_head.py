@@ -27,9 +27,12 @@ stand-in for tests and offline evals.
 from __future__ import annotations
 
 import importlib.util
+import json
 import logging
 import math
 import os
+import shutil
+import subprocess
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Tuple, runtime_checkable
@@ -49,6 +52,79 @@ DEFAULT_REVISION: Optional[str] = "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b"
 _REVISION_ENV_VAR = "SHADOW_HEAD_REVISION"
 
 _MAX_TARGET_OPTIONS = 64
+
+# The 11-action whitelist (mirrors WHITELIST_OPERATIONS in
+# core/element_table.py; Rust BATCH_ACTION_WHITELIST is authoritative). A
+# menu that mixes naming conventions across runtimes collapses the head to
+# prior-guessing — the canonical vocabulary IS the architecture.
+CANONICAL_OPERATIONS: Tuple[str, ...] = (
+    "click", "fill", "type", "press", "scrollTo", "nextChunk", "prevChunk",
+    "selectOptionFromDropdown", "hover", "doubleClick", "dragAndDrop",
+)
+
+# Legacy aliases from other runtimes' action vocabularies, folded to
+# canonical in BOTH the options block and the answer parsing. Anything not
+# canonical (and not foldable) is logged as a vocab miss.
+_OPERATION_ALIASES: Dict[str, str] = {
+    "input": "type",
+    "type_text": "type",
+    "enter": "press",
+    "key": "press",
+    "keypress": "press",
+    "keyboard": "press",
+    "scroll": "scrollTo",
+    "scroll_to": "scrollTo",
+    "select": "selectOptionFromDropdown",
+    "select_option": "selectOptionFromDropdown",
+    "dropdown": "selectOptionFromDropdown",
+    "double_click": "doubleClick",
+    "doubleclick": "doubleClick",
+    "dblclick": "doubleClick",
+    "drag": "dragAndDrop",
+    "drag_and_drop": "dragAndDrop",
+    "dragdrop": "dragAndDrop",
+}
+
+# Boolean gate aliases (goal_satisfied / stuck questions).
+_GATE_ALIASES: Dict[str, str] = {
+    "yes": "true", "true": "true", "1": "true",
+    "no": "false", "false": "false", "0": "false",
+}
+
+
+def canonical_operation(answer: str) -> str:
+    """Fold a raw operation answer to the canonical whitelist name (identity
+    when already canonical or unknown — unknowns are caught downstream as
+    out-of-vocab misses, not silently remapped)."""
+    text = str(answer).strip()
+    if text in CANONICAL_OPERATIONS:
+        return text
+    return _OPERATION_ALIASES.get(text.lower(), text)
+
+
+def _canonicalize_answer(question: Question, raw: Any) -> Tuple[str, Optional[str]]:
+    """Normalize one raw answer for a question.
+
+    Returns (answer, miss_kind): miss_kind is None when the answer is already
+    an exact option, "alias" when a legacy alias was folded to a canonical
+    option, or "out_of_vocab" when it matches nothing (caller falls back)."""
+    text = str(raw).strip()
+    if question.name == "operation":
+        if text in question.options:
+            return text, None
+        folded = canonical_operation(text)
+        if folded in question.options:
+            return folded, "alias"
+        return text, "out_of_vocab"
+    if question.name in ("goal_satisfied", "stuck"):
+        folded = _GATE_ALIASES.get(text.lower())
+        if folded is not None and folded in question.options:
+            return folded, None if folded == text else "alias"
+        return text, "out_of_vocab"
+    # <operation>_target: options are row-index strings; ints coerce to str.
+    if text in question.options:
+        return text, None
+    return text, "out_of_vocab"
 
 
 class ShadowHeadError(Exception):
@@ -395,3 +471,295 @@ class MlxDirectLogitHead:
 def build_default_head() -> DecisionHead:
     """The production shadow head (mlx-lm direct-logit, Qwen3.5-4B class)."""
     return MlxDirectLogitHead()
+
+
+# ---------------------------------------------------------------------------
+# Tier C: kimi CLI subprocess head (cloud-iteration tier)
+# ---------------------------------------------------------------------------
+
+_KIMI_BIN_ENV_VAR = "SHADOW_HEAD_KIMI_BIN"
+
+
+def _extract_json_object(text: str) -> Optional[Dict[str, Any]]:
+    """Pull the first JSON object out of CLI output that may carry banners,
+    bullet prefixes, thinking markers, and a resume-session footer."""
+    start = text.find("{")
+    while start != -1:
+        try:
+            obj, _ = json.JSONDecoder().raw_decode(text[start:])
+        except json.JSONDecodeError:
+            start = text.find("{", start + 1)
+            continue
+        if isinstance(obj, dict):
+            return obj
+        start = text.find("{", start + 1)
+    return None
+
+
+class KimiCliHead:
+    """Cloud-iteration decision head: one ``kimi -p "<prompt>"`` subprocess
+    per decision pass, exactly how gizzi's kimi-cli provider drives the CLI.
+
+    Auth/OAuth/token refresh stays entirely inside the CLI — this head never
+    touches credentials and adds no package dependency (``kimi`` is a CLI on
+    PATH, verified with ``shutil.which`` at construction).
+
+    kimi returns one confidence scalar, not a per-option distribution: the
+    chosen option gets ``confidence``, the rest split the remainder uniformly.
+    Per-option distributions are an mlx/local-tier property; this shape is
+    documented as a cloud-tier trade-off.
+
+    Two questioning modes, both behind the same DecisionHead protocol:
+
+    - ``batched``: all questions (operation + speculative per-operation
+      targets + goal_satisfied + stuck) in one subprocess call per step.
+    - ``sequential``: pass 1 asks the operation choice plus the boolean
+      gates (small menus), pass 2 asks only the chosen operation's target
+      menu — 2 subprocess calls per step, smaller menus per pass.
+
+    Answers follow a strict JSON contract (question-id -> {answer,
+    confidence}); parse failures retry once with a repair prompt, then the
+    question records a miss and falls back to a uniform choice — the eval
+    never crashes on a bad answer. Non-canonical operation answers (legacy
+    aliases like ``input``/``enter``/``key``/``scroll``/``select``) are
+    folded to the canonical whitelist name and logged in ``vocab_misses``.
+    """
+
+    def __init__(
+        self,
+        binary: Optional[str] = None,
+        questioning: str = "batched",
+        timeout_s: float = 240.0,
+        max_repair_retries: int = 1,
+        model_id: str = "kimi-cli",
+    ) -> None:
+        self.binary = binary or os.environ.get(_KIMI_BIN_ENV_VAR, "") or "kimi"
+        resolved = shutil.which(self.binary)
+        if resolved is None:
+            raise ShadowHeadDependencyError(
+                f"KimiCliHead needs the `kimi` CLI on PATH (or set "
+                f"{_KIMI_BIN_ENV_VAR}); looked for {self.binary!r}. Install "
+                "Kimi Code CLI and re-authenticate — the head drives "
+                "`kimi -p <prompt>` subprocesses and never handles credentials "
+                "itself."
+            )
+        self.binary = resolved
+        if questioning not in ("batched", "sequential"):
+            raise ValueError(f"questioning must be 'batched' or 'sequential', got {questioning!r}")
+        self.questioning = questioning
+        self.timeout_s = float(timeout_s)
+        self.max_repair_retries = int(max_repair_retries)
+        self.model_id = model_id + (f":{questioning}" if questioning != "batched" else "")
+        # Every non-canonical / out-of-vocab answer, for the vocab-miss metric.
+        self.vocab_misses: List[Dict[str, Any]] = []
+
+    # ── subprocess ───────────────────────────────────────────────────────
+
+    def _call_cli(self, prompt: str) -> Tuple[str, float]:
+        """One `kimi -p` call; returns (stdout, elapsed_ms)."""
+        started = time.time()
+        try:
+            result = subprocess.run(
+                [self.binary, "-p", prompt],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_s,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise ShadowHeadError(
+                f"kimi CLI timed out after {self.timeout_s:.0f}s"
+            ) from exc
+        elapsed_ms = (time.time() - started) * 1000.0
+        if result.returncode != 0:
+            raise ShadowHeadError(
+                f"kimi CLI exited {result.returncode}: "
+                f"{(result.stderr or result.stdout or '').strip()[:500]}"
+            )
+        return result.stdout or "", elapsed_ms
+
+    # ── prompt ───────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _questions_block(questions: Sequence[Question]) -> str:
+        lines = []
+        for q in questions:
+            options = ", ".join(str(o) for o in q.options[:64])
+            if len(q.options) > 64:
+                options += ", …"
+            lines.append(f"{q.name}: {options}")
+        return "\n".join(lines)
+
+    def _prompt(
+        self,
+        state_text: str,
+        questions: Sequence[Question],
+        repair_of: Optional[str] = None,
+    ) -> str:
+        block = self._questions_block(questions)
+        example_keys = ", ".join(
+            f'"{q.name}": {{"answer": "<one of: {q.options[0]}>", "confidence": 0.8}}'
+            for q in questions[:2]
+        )
+        repair = (
+            "\nYour previous answer failed to parse. This time return ONLY the "
+            "JSON object — no prose, no markdown fences, no explanation.\n"
+            if repair_of is not None else ""
+        )
+        return (
+            "You are the shadow decision head for a browser automation loop.\n"
+            f"{repair}"
+            "[STATE]\n"
+            f"{state_text}\n\n"
+            "Answer the closed-set questions below. Each answer must be the "
+            "EXACT option string from that question's list — never invent "
+            "names, synonyms, or new options.\n\n"
+            f"[QUESTIONS]\n{block}\n\n"
+            "Respond with a single JSON object only. It MUST contain exactly "
+            "one key for EVERY question id listed above — no omissions, no "
+            "extra keys — each mapping to an object with \"answer\" (one of "
+            "the exact option strings for that question) and \"confidence\" "
+            "(a number between 0 and 1). Shape:\n"
+            f"{{{example_keys}}}\n\n"
+            "The JSON object only — no prose, no markdown fences.\n"
+        )
+
+    # ── answer handling ──────────────────────────────────────────────────
+
+    def _choice_from_answer(
+        self,
+        question: Question,
+        raw_answer: Any,
+        raw_confidence: Any,
+    ) -> Choice:
+        answer, miss_kind = _canonicalize_answer(question, raw_answer)
+        if miss_kind is not None:
+            self.vocab_misses.append({
+                "question": question.name,
+                "raw": str(raw_answer).strip(),
+                "kind": miss_kind,
+            })
+            logger.warning(
+                "vocab miss (%s) on %r: %r",
+                miss_kind,
+                question.name,
+                str(raw_answer).strip(),
+            )
+        if answer not in question.options:
+            # Out-of-vocab (or unrepaired): uniform fallback — never crash.
+            n = len(question.options)
+            return Choice(
+                question=question.name,
+                chosen=question.options[0],
+                probabilities={option: 1.0 / n for option in question.options},
+                confidence=0.0,
+            )
+        try:
+            confidence = min(1.0, max(0.0, float(raw_confidence)))
+        except (TypeError, ValueError):
+            confidence = 0.5
+        remainder = 1.0 - confidence
+        others = [o for o in question.options if o != answer]
+        per_other = remainder / len(others) if others else 0.0
+        return Choice(
+            question=question.name,
+            chosen=answer,
+            probabilities={option: (confidence if option == answer else per_other)
+                           for option in question.options},
+            confidence=confidence,
+        )
+
+    def _ask(
+        self,
+        state_text: str,
+        questions: Sequence[Question],
+    ) -> Tuple[Dict[str, Choice], float]:
+        """One questioning pass: prompt the CLI, parse the JSON contract,
+        repair-retry once on failure, fall back to uniform on a dead answer."""
+        latency_ms = 0.0
+        prompt = self._prompt(state_text, questions)
+        parsed: Optional[Dict[str, Any]] = None
+        last_output = ""
+        for attempt in range(self.max_repair_retries + 1):
+            output, elapsed = self._call_cli(prompt if attempt == 0 else self._prompt(state_text, questions, repair_of=last_output))
+            latency_ms += elapsed
+            last_output = output
+            parsed = _extract_json_object(output)
+            if parsed is not None:
+                break
+            logger.warning(
+                "kimi answer failed to parse (attempt %d/%d)",
+                attempt + 1,
+                self.max_repair_retries + 1,
+            )
+        choices: Dict[str, Choice] = {}
+        for question in questions:
+            entry = parsed.get(question.name) if parsed else None
+            if not isinstance(entry, dict) or "answer" not in entry:
+                # Missing/unparseable question: uniform fallback, counted as a
+                # parse miss so the metric reflects dead answers.
+                self.vocab_misses.append({
+                    "question": question.name,
+                    "raw": None,
+                    "kind": "parse_miss",
+                })
+                n = len(question.options)
+                choices[question.name] = Choice(
+                    question=question.name,
+                    chosen=question.options[0],
+                    probabilities={option: 1.0 / n for option in question.options},
+                    confidence=0.0,
+                )
+                continue
+            choices[question.name] = self._choice_from_answer(
+                question, entry.get("answer"), entry.get("confidence"),
+            )
+        return choices, latency_ms
+
+    # ── DecisionHead protocol ────────────────────────────────────────────
+
+    def decide(
+        self,
+        state_text: str,
+        questions: Sequence[Question],
+    ) -> TypedDecision:
+        started = time.time()
+        questions = list(questions)
+        if self.questioning == "sequential":
+            choices = self._decide_sequential(state_text, questions)
+        else:
+            choices, _ = self._ask(state_text, questions)
+        latency_ms = (time.time() - started) * 1000.0
+        decision = TypedDecision(
+            choices=choices,
+            latency_ms=latency_ms,
+            model_id=self.model_id,
+        )
+        decision.validate()
+        return decision
+
+    def _decide_sequential(
+        self,
+        state_text: str,
+        questions: Sequence[Question],
+    ) -> Dict[str, Choice]:
+        """Category first: the operation choice + boolean gates in pass 1,
+        then only the chosen operation's target menu in pass 2 (2 calls/step).
+        Speculative target questions for the non-chosen operations are not
+        asked (and not fabricated) — the harness only consumes the chosen
+        operation's target anyway."""
+        by_name = {q.name: q for q in questions}
+        op_question = by_name.get("operation")
+        if op_question is None:
+            # No operation question — degrade to a single batched pass.
+            choices, _ = self._ask(state_text, questions)
+            return choices
+        pass1 = [op_question] + [
+            q for q in questions if q.name in ("goal_satisfied", "stuck")
+        ]
+        choices, _ = self._ask(state_text, pass1)
+        chosen_op = choices[op_question.name].chosen
+        target_question = by_name.get(f"{chosen_op}_target")
+        if target_question is not None:
+            target_choices, _ = self._ask(state_text, [target_question])
+            choices.update(target_choices)
+        return choices
