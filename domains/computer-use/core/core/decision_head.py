@@ -45,7 +45,7 @@ DEFAULT_MODEL_REPO = "mlx-community/Qwen3-4B-Instruct-2507-4bit"
 # download and recorded here (and overridable via SHADOW_HEAD_REVISION) — a
 # guessed hash is worse than none, so until then None tracks the repo's
 # default branch.
-DEFAULT_REVISION: Optional[str] = None
+DEFAULT_REVISION: Optional[str] = "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b"
 _REVISION_ENV_VAR = "SHADOW_HEAD_REVISION"
 
 _MAX_TARGET_OPTIONS = 64
@@ -296,7 +296,8 @@ class MlxDirectLogitHead:
     ) -> None:
         self.model_repo = model_repo
         env_revision = os.environ.get(_REVISION_ENV_VAR, "").strip()
-        self.revision = revision or DEFAULT_REVISION or env_revision or None
+        # Explicit args win, then the env override, then the verified pin.
+        self.revision = revision or env_revision or DEFAULT_REVISION
         self.max_target_options = max_target_options
         self._model: Any = None
         self._tokenizer: Any = None
