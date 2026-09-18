@@ -9,7 +9,7 @@ accounts, signing certificates, or secrets. Check items off as they land.
 
 - [ ] **Rotate leaked credentials in git history** (HEAD is clean since the
       9/3 scrub; history is not). Per
-      `reports/2026-09-04-secrets-rotation-hygiene-handoff.md`:
+      `docs/reports/2026-09-04-secrets-rotation-hygiene-handoff.md`:
   - [ ] Stripe live keys (12 findings) — Stripe dashboard → roll the restricted key set
   - [ ] Clerk secret key (`sk_test_…`) — Clerk dashboard → regenerate
   - [ ] ProtonMail password + OTP seed — change password, re-seed 2FA
@@ -24,7 +24,7 @@ accounts, signing certificates, or secrets. Check items off as they land.
   - `railway link` → select the `allternit-cloud-api` service →
     `railway delete` (or delete the whole project in the dashboard)
   - Delete the stale service token from wherever CI kept `RAILWAY_TOKEN`
-  - `reports/2026-09-04-secrets-rotation-runbook.md` references this service
+  - `docs/reports/2026-09-04-secrets-rotation-runbook.md` references this service
     as an env-var holder — update it once deleted
 
 ## P1 — Unblocks shipping

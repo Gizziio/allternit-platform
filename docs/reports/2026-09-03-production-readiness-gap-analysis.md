@@ -211,7 +211,7 @@ api.allternit.com = cloud-api on Contabo VPS "mail" (45.84.138.187), nginx + Let
 - **B7 deploy pipelines red** (Verified Blockers). Contabo workflow fails on the `../../AllternitOS` path dep; Pages workflow fails on lockfile mismatch.
 - Owner actions pending (`.steering/checkpoint.md:172-176`): Tailscale `tag:ci` auth key + `gh secret set TS_AUTHKEY` never done; no real $10 Stripe purchase executed end-to-end; DeepInfra/OpenRouter keys unfunded; Fireworks reasoning aliases return empty content.
 - Hosted workloads share one box with the Postgres primary (single `local` docker node, `contabo_runtime_service.rs:176`).
-- Donor handoff (`ALLTERNIT_CLOUD_DONOR_HANDOFF.md`) promised honest views/compile-ready stubs/status reporting — delivered exactly that. Its self-declared gaps remain open. Note: two divergent model gateway surfaces now exist (one real, one charging stub).
+- Donor handoff (`docs/projects/allternit-cloud/handoffs/ALLTERNIT_CLOUD_DONOR_HANDOFF.md`) promised honest views/compile-ready stubs/status reporting — delivered exactly that. Its self-declared gaps remain open. Note: two divergent model gateway surfaces now exist (one real, one charging stub).
 - Docs still call the platform Next.js; `PRODUCTION_READINESS_TRACKER.md` references legacy `7-apps/` paths.
 
 ---
@@ -256,7 +256,7 @@ api.allternit.com = cloud-api on Contabo VPS "mail" (45.84.138.187), nginx + Let
 - Headscale control plane on Fly.io with genuine per-customer isolation: `autogroup:self` default-deny ACLs, no exit nodes (`infra/mesh/headscale/config.yaml:59-61`).
 - Desktop-cloud VPS deploy script with timestamped backups, env merge preserving secrets, rollback (`infra/vps-desktop-cloud/deploy.sh:42-92`).
 - Secrets pattern sound: `.env*` gitignored, GitHub Secrets for CI, chmod 600 on server env, AES-GCM for BYOK keys.
-- Cloud-handoff docs (`ALLTERNIT_CLOUD_DONOR_HANDOFF.md` / `..._COMPLETE.md`) honest and accurate against code.
+- Cloud-handoff docs (`docs/projects/allternit-cloud/handoffs/ALLTERNIT_CLOUD_DONOR_HANDOFF.md` / `docs/projects/allternit-cloud/handoffs/ALLTERNIT_CLOUD_HANDOFF_COMPLETE.md`) honest and accurate against code.
 
 ### Gaps
 - **No automated off-host backup of production Postgres** (credits ledger + all user data). Only the hot-standby replica (replicates deletions) and a one-off pg_dump in a migration doc. Headscale sqlite is a single Fly volume with no backup job. No restore drill.

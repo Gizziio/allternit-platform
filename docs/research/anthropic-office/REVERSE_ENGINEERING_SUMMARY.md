@@ -10,7 +10,7 @@
 
 ### 1. analysis.md ✅
 
-**Location:** `research/anthropic-office/excel-ppt-plugin/notes/analysis.md`
+**Location:** `docs/research/anthropic-office/excel-ppt-plugin/notes/analysis.md`
 
 **Contents:**
 - Target definition (plugin type, user capabilities, inputs/outputs)
@@ -27,7 +27,7 @@
 
 ### 2. allternit-mapping.md ✅
 
-**Location:** `research/anthropic-office/excel-ppt-plugin/extracted/allternit-mapping.md`
+**Location:** `docs/research/anthropic-office/excel-ppt-plugin/extracted/allternit-mapping.md`
 
 **Contents:**
 - 17 capability mappings (Observed → Inferred → Allternit Tool → Backend)
@@ -50,7 +50,7 @@ Read workbook summary
 
 ### 3. implementation-priority.md ✅
 
-**Location:** `research/anthropic-office/excel-ppt-plugin/extracted/implementation-priority.md`
+**Location:** `docs/research/anthropic-office/excel-ppt-plugin/extracted/implementation-priority.md`
 
 **Contents:**
 - Phase 1 (NOW): office-local MVP - 8 tools
@@ -193,7 +193,7 @@ Output: pptx_path, slide_count, receipt
 ## Folder Structure Created
 
 ```
-research/anthropic-office/excel-ppt-plugin/
+docs/research/anthropic-office/excel-ppt-plugin/
 ├── raw/                      # (Empty - for raw artifacts if needed)
 ├── notes/
 │   └── analysis.md           # ✅ Complete

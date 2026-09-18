@@ -46,9 +46,8 @@ allternit/
 │   ├── platform.allternit.com/ # Cloud console
 │   └── docs/                 # Docs surface
 ├── vendor/                   # Vendored third-party code (harnessrouter-ce, session-migrate)
-├── docs/                     # Documentation hub (archive/, gap-analysis/, learnings/, reports/, specs/)
-├── research/                 # Active research & planning docs (+ adr/)
-├── spec/                     # Contract schemas + specs (wired into commrails)
+├── docs/                     # Documentation hub (archive/, gap-analysis/, learnings/, programs/, reports/, research/, specs/)
+├── spec/                     # Contract schemas ONLY (Contracts/ — read from disk by validate_law.py, context-pack-builder, and the gateway service; the rest of the old spec/ moved to docs/specs/ 2026-09-18)
 ├── scripts/                  # Repo automation (A://Labs Canvas pipeline, builds; adhoc/ for one-offs)
 ├── bin/                      # Executable helpers (dev-up, ci-gate, ...)
 ├── dev/                      # Dev-ops + migration scripts
@@ -74,16 +73,20 @@ Inside `docs/`:
 docs/
 ├── ...                       # Existing documentation hub
 ├── audit/                    # Platform audit reports
-├── design/
-│   └── ui-ux-pro-max/        # UI/UX reference data and scripts (was .shared/)
+├── design/                   # Design system + reference data (DESIGN.md at this level; ui-ux-pro-max/ was .shared/)
+├── learnings/                # One-off docs with no program prefix (S7)
 ├── marketing/                # Brand/marketing templates and README
 ├── parity-reports/           # Competitive parity reports (was .parity-reports/)
 ├── parity-reports-archive/   # Archived parity scraper scripts (was .parity-reports-archive/)
 ├── pipeline/                 # Pipeline program docs and helper scripts (was .pipeline/)
+├── programs/                 # Phase-organized program docs by filename prefix (S7: swarm/, rails/, gizzi/, ios/, cloud-agents/, ao/, acu/, media-plugins/)
+├── research/                 # Active research & planning docs (+ adr/) — moved from repo root 2026-09-18
+├── reports/                  # Dated reports — moved from repo root 2026-09-18
+├── specs/                    # Specs (incl. provider-routing/, design/, python-heavy-agents/ — moved from repo root spec/ 2026-09-18)
 ├── upstream/                 # Upstream fork provenance (sources.yaml)
 ├── learning/
 │   └── remix-content/        # Remix pipeline course content + plans/
-└── projects/                 # Ephemeral project trackers (e.g., remote-control-gap-fix)
+└── projects/                 # Ephemeral project trackers (allternit-cloud/ holds MASTER_TRACKING.md + handoffs/; remote-control-gap-fix)
 ```
 
 ### Runtime-state directories that must stay at root
@@ -99,6 +102,8 @@ The following dot-directories are hardcoded into live code or required by `AGENT
 > Reorganized 2026-07-22: removed `plugins/` (empty; card plugins live in `archive/plugins/`, runtime in `platform/plugins/`), root `src/`, `data/`, `public/`, `proof/`, `output/`, `dispatch-screenshots/`, `Desktop/` (accidental commit), and merged `analysis/` → `docs/gap-analysis/`, `reports/` → `docs/reports/`, `alabs-demos/` → `alabs-generated-courses/demos/`, `remix-plans/` → `remix-content/plans/`, `agent/`/`templates/`/`alabs-curator/` → `archive/`.
 >
 > Reorganized 2026-08-27: removed improperly-linked nested worktrees (`allternit-session-grok-bot-0-18-integration`, `allternit-session-multica-runtime-align`) and scratch `.tmp-*` entries from the index; deleted `.beads/`; moved `marketing/`, `upstream/`, `remix-content/`, `.pipeline/`, `.parity-reports/`, `.parity-reports-archive/`, and `.shared/` into `docs/`; moved ad-hoc root scripts into `scripts/audit/`.
+>
+> Reorganized 2026-09-18 (S6/S7): root `reports/`, `research/`, and most of `spec/` moved into `docs/reports/`, `docs/research/`, and `docs/specs/`; root `MASTER_TRACKING.md` and the `ALLTERNIT_CLOUD_*HANDOFF*.md` pair moved to `docs/projects/allternit-cloud/` (+ `handoffs/`); `DESIGN.md` → `docs/design/`, `AGENT_CREATION_CHECKLIST.md` → `docs/`, `ANTHROPIC_TO_ALABS_MAPPING.md` → `docs/learnings/`; loose `docs/` depth-1 program docs filed into `docs/programs/<program>/` (S7). Deliberate root exceptions, kept because live code reads them from repo root: `spec/Contracts/` (validate_law.py, context-pack-builder, gateway service), `GIZZI.md` (workspace-instruction file loaded by allternit-api/gizzi-code from cwd), `THIRD-PARTY-NOTICES.md` (electron-builder extraFiles in the desktop release).
 
 ## Ownership rules (source of truth)
 

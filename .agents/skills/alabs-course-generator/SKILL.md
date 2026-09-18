@@ -67,7 +67,7 @@ Use the Anthropic analysis as the parser target: `anthropic-academy-analysis.jso
 
 ### Phase 2: Deep mapping
 
-1. Create `{SOURCE}_TO_ALABS_MAPPING.md` modeled on `ANTHROPIC_TO_ALABS_MAPPING.md`.
+1. Create `{SOURCE}_TO_ALABS_MAPPING.md` modeled on `docs/learnings/ANTHROPIC_TO_ALABS_MAPPING.md`.
 2. For **every external section**, propose an Allternit module or submodule.
 3. Map external lesson titles to specific Allternit concepts, source files, and capstone tasks.
 4. Annotate which open-source media tool will replace videos for each section (see Media Stack below).
@@ -269,7 +269,7 @@ Target: **0** vendor mentions in learner-facing HTML. The mapping documents and 
 
 ## Templates to copy
 
-- Deep mapping: `ANTHROPIC_TO_ALABS_MAPPING.md`
+- Deep mapping: `docs/learnings/ANTHROPIC_TO_ALABS_MAPPING.md`
 - Outlines: `alabs-generated-courses/content/course-outlines.json`
 - Module content: `alabs-generated-courses/content/ALABS-AGENTS-API-module1.json`
 - RAG module: `alabs-generated-courses/content/ALABS-AGENTS-API-module4.json`

@@ -27,7 +27,7 @@
 
 | File | Status |
 |---|---|
-| `spec/design/typography.json` | **Added** — canonical spec |
+| `docs/specs/design/typography.json` | **Added** — canonical spec |
 | `src/styles/typography.css` | **Added** — CSS tokens |
 | `src/components/typography/Text.tsx` | **Added** — React component |
 | `.gizzi/src/runtime/brand/brand.ts` | **Modified** — updated fontFamily stacks |

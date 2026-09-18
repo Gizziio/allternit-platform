@@ -57,7 +57,7 @@ Three SDKs: public TS SDK in `sdk/` (tag `sdk/v*`), Rust SDK in `platform/rust-s
 - [REPO_STRUCTURE.md](./REPO_STRUCTURE.md) — monorepo layout, ownership rules, satellite repos
 - [AGENTS.md](./AGENTS.md) — session process: worktrees, PR discipline, ledger attestations
 - [docs/](./docs/) — documentation hub (archive, gap-analysis, learnings, reports, specs)
-- [DESIGN.md](./DESIGN.md) — design system (tokens, typography, colors, animation)
+- [DESIGN.md](./docs/design/DESIGN.md) — design system (tokens, typography, colors, animation)
 - [docs/MASTER_INDEX.md](./docs/MASTER_INDEX.md) — full documentation index
 - [docs/public/api/reference.md](./docs/public/api/reference.md) — public API reference
 

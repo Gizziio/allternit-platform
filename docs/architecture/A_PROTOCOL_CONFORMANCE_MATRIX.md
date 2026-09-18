@@ -85,7 +85,7 @@ in the lifecycle. Per §16 they must not be cited as A:// conformance:
 | A-T4 Gizzi claim loop | `cmd/gizzi-code/src/runtime/fabric-transport/worker.ts` — long-poll claim, `Sandbox.wrap` posture, heartbeat, checkpoints, typed Result; typechecked; live demo evidence |
 | A-T5 connector broker v0.1 | `test_connector_broker_sessions` (secret-free sessions, principal-bound, approval-gated critical capabilities, honest simulated invoke, attributed connector.invoked); live demo evidence |
 
-## 5c. Product-depth items (P-T1 closed; P-T2…P-T6 tracked in MASTER_TRACKING)
+## 5c. Product-depth items (P-T1 closed; P-T2…P-T6 tracked in [MASTER_TRACKING](../projects/allternit-cloud/MASTER_TRACKING.md))
 
 | Item | Proof |
 |---|---|

@@ -34,7 +34,7 @@ This matches the audit's own bottom line: *"web-only tomorrow after P0, desktop 
 - [ ] `gh secret set TS_AUTHKEY` (Tailscale reusable `tag:ci` key) — CI deploys fail at "Join Tailscale" without it
 - [ ] Push the 4 unpushed commits on main; `deploy-cloudflare-pages.yml` + `deploy-cloud-api-contabo.yml` green
 - [ ] First cloud-api deploy watched: 11 idempotent migrations converge on already-migrated prod DB
-- [ ] Secrets rotation executed (runbook: `reports/2026-09-04-secrets-rotation-runbook.md`) + agent cleanups after
+- [ ] Secrets rotation executed (runbook: `docs/reports/2026-09-04-secrets-rotation-runbook.md`) + agent cleanups after
 - [ ] Post-deploy smoke: backdoor 401, `/api/v1/health/ready` ready, authed happy-path 200, Clerk e2e verify, web `/sign-in` + benchmarks HTML >4202 bytes
 - [ ] iOS messaging decision (see above)
 - [ ] Launch-scope sign-off on this doc
