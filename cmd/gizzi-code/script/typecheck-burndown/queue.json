@@ -1,13 +1,13 @@
 {
   "version": 1,
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
-  "batchCount": 101,
+  "batchCount": 102,
   "stats": {
-    "totalNocheck": 1909,
+    "totalNocheck": 1907,
     "excludedCompilerArtifacts": 361,
     "excludedVendored": 93,
-    "totalQueueFiles": 1434,
-    "totalQueueLoc": 478939,
+    "totalQueueFiles": 1432,
+    "totalQueueLoc": 478750,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -17,6 +17,16 @@
     "totalAccounted": 1475
   },
   "batches": [
+    {
+      "id": "b0002",
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 2,
+      "burnedLoc": 189,
+      "note": "Historical record: the original b0002 (PR #596, 68 files burned) escalated the sliceAnsi twin pair, blocked by the bogus ambient '@alcalzone/ansi-tokenize' declaration. ao/global-dts-fix removed that declaration and burned both twins (PR #598). The regen at 1122 had already re-listed the twins under the new b0001, so the +2 burnedFiles is recorded here to keep the guard identity: live 1453 + recorded 22 (b0003 20 + this 2) = 1475 = totalAccounted."
+    },
     {
       "id": "b0001",
       "files": [
@@ -30,8 +40,6 @@
         "src/cli/ui/ink-app/services/skillSearch/localSearch.ts",
         "src/cli/ui/ink-app/utils/combinedAbortSignal.ts",
         "src/cli/ui/ink-app/entrypoints/sdk/coreTypes.ts",
-        "src/cli/ui/ink-app/utils/sliceAnsi.ts",
-        "src/shared/utils/sliceAnsi.ts",
         "src/runtime/integrations/question/question.ts",
         "src/cli/ui/ink-app/utils/settings/validationTips.ts",
         "src/runtime/session/message.ts",
@@ -66,7 +74,7 @@
         "src/cli/ui/ink-app/bridge/types.ts",
         "src/config/profiles.ts"
       ],
-      "loc": 7050,
+      "loc": 6861,
       "twins": [],
       "state": "NEW"
     },

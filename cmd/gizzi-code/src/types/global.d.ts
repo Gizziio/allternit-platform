@@ -155,12 +155,10 @@ declare module '*.md' {
   export default content
 }
 
-// External modules without type declarations
-declare module 'qrcode' {
-  export function toString(data: string, options?: unknown): Promise<string>
-  export function toDataURL(data: string, options?: unknown): Promise<string>
-}
-
+// External modules without type declarations (or whose installed packages
+// ship no types — the lodash-es subpath blocks below are the latter: the
+// installed lodash-es 4.18.1 bundles no .d.ts and there is no @types/lodash-es,
+// so these handwritten shapes are the only types those imports get).
 declare module 'tree-sitter' {
   export class Parser {
     setLanguage(language: unknown): void
@@ -169,15 +167,6 @@ declare module 'tree-sitter' {
   export interface Tree {
     rootNode: unknown
   }
-}
-
-declare module 'glob' {
-  export function glob(pattern: string, options?: unknown): Promise<string[]>
-  export function sync(pattern: string, options?: unknown): string[]
-}
-
-declare module 'asciichart' {
-  export function plot(data: number[], options?: unknown): string
 }
 
 declare module 'color-diff-napi' {
@@ -208,271 +197,6 @@ declare module 'color-diff-napi' {
   export class ColorFile {
     constructor(content: string, filePath: string);
     render(theme: string, width: number): string[] | null;
-  }
-}
-
-declare module 'supports-hyperlinks' {
-  export function supportsHyperlink(stream: unknown): boolean
-}
-
-declare module 'url-handler-napi' {
-  export function parse(url: string): unknown
-}
-
-// OpenTelemetry modules
-declare module '@opentelemetry/api-logs' {
-  export interface Logger {
-    emit(logRecord: { severityNumber?: number; severityText?: string; body?: string; attributes?: Record<string, unknown> }): void
-  }
-  export const logs: {
-    getLogger(name: string, version?: string): Logger
-  }
-  
-  export interface AnyValueMap {
-    [key: string]: unknown
-  }
-}
-
-declare module '@opentelemetry/sdk-logs' {
-  export interface LogRecord {
-    severityNumber?: number
-    severityText?: string
-    body?: string
-    attributes?: Record<string, unknown>
-  }
-  
-  export class LoggerProvider {
-    constructor(config?: { resource?: unknown; processors?: LogRecordProcessor[] })
-    forceFlush(): Promise<void>
-    shutdown(): Promise<void>
-    addLogRecordProcessor(processor: LogRecordProcessor): void
-  }
-  
-  export interface LogRecordProcessor {
-    onEmit(logRecord: LogRecord): void
-    shutdown(): Promise<void>
-    forceFlush(): Promise<void>
-  }
-  
-  export class BatchLogRecordProcessor implements LogRecordProcessor {
-    constructor(exporter: LogRecordExporter, options?: { scheduledDelayMillis?: number; maxExportBatchSize?: number; maxQueueSize?: number })
-    onEmit(logRecord: LogRecord): void
-    shutdown(): Promise<void>
-    forceFlush(): Promise<void>
-  }
-  
-  export interface LogRecordExporter {
-    export(records: LogRecord[], resultCallback: (result: { code: number }) => void): void
-    shutdown(): Promise<void>
-  }
-  
-  export class ConsoleLogRecordExporter implements LogRecordExporter {
-    export(records: LogRecord[], resultCallback: (result: { code: number }) => void): void
-    shutdown(): Promise<void>
-  }
-  
-  export interface ReadableLogRecord extends LogRecord {
-    timestamp: number
-    observedTimestamp: number
-    severityNumber?: number
-    severityText?: string
-    body?: string
-    attributes: Record<string, unknown>
-  }
-}
-
-declare module '@opentelemetry/sdk-metrics' {
-  export interface MetricData {
-    descriptor: {
-      name: string
-      description: string
-      unit: string
-      type: string
-    }
-    dataPoints: DataPoint[]
-  }
-  
-  export interface DataPoint {
-    attributes: Record<string, unknown>
-    value: number
-    startTime: number
-    endTime: number
-  }
-  
-  export interface ResourceMetrics {
-    resource: unknown
-    scopeMetrics: unknown[]
-  }
-  
-  export interface PushMetricExporter {
-    export(metrics: ResourceMetrics, resultCallback: (result: { code: ExportResultCode; error?: Error }) => void): void
-    shutdown(): Promise<void>
-    forceFlush(): Promise<void>
-    getPreferredAggregationTemporality(): AggregationTemporality
-  }
-  
-  export enum AggregationTemporality {
-    DELTA = 0,
-    CUMULATIVE = 1
-  }
-  
-  export enum ExportResultCode {
-    SUCCESS = 0,
-    FAILED = 1
-  }
-  
-  export class ConsoleMetricExporter implements PushMetricExporter {
-    export(metrics: ResourceMetrics, resultCallback: (result: { code: ExportResultCode; error?: Error }) => void): void
-    shutdown(): Promise<void>
-    forceFlush(): Promise<void>
-    getPreferredAggregationTemporality(): AggregationTemporality
-  }
-  
-  export class MeterProvider {
-    forceFlush(): Promise<void>
-    shutdown(): Promise<void>
-    addMetricReader(reader: MetricReader): void
-  }
-  
-  export interface MetricReader {
-    getPreferredAggregationTemporality(): AggregationTemporality
-  }
-  
-  export class PeriodicExportingMetricReader implements MetricReader {
-    constructor(options: { exporter: PushMetricExporter; exportIntervalMillis?: number })
-    getPreferredAggregationTemporality(): AggregationTemporality
-  }
-}
-
-declare module '@opentelemetry/sdk-trace-base' {
-  export class BasicTracerProvider {
-    forceFlush(): Promise<void>
-    shutdown(): Promise<void>
-    addSpanProcessor(processor: SpanProcessor): void
-  }
-  
-  export interface SpanProcessor {
-    onStart(span: unknown): void
-    onEnd(span: unknown): void
-    shutdown(): Promise<void>
-    forceFlush(): Promise<void>
-  }
-  
-  export class BatchSpanProcessor implements SpanProcessor {
-    constructor(exporter: SpanExporter)
-    onStart(span: unknown): void
-    onEnd(span: unknown): void
-    shutdown(): Promise<void>
-    forceFlush(): Promise<void>
-  }
-  
-  export interface SpanExporter {
-    export(spans: unknown[], resultCallback: (result: { code: number }) => void): void
-    shutdown(): Promise<void>
-  }
-  
-  export class ConsoleSpanExporter implements SpanExporter {
-    export(spans: unknown[], resultCallback: (result: { code: number }) => void): void
-    shutdown(): Promise<void>
-  }
-}
-
-declare module '@opentelemetry/exporter-trace-otlp-http' {
-  export class OTLPTraceExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-metrics-otlp-http' {
-  export class OTLPMetricExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-logs-otlp-http' {
-  export class OTLPLogExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-trace-otlp-grpc' {
-  export class OTLPTraceExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-trace-otlp-proto' {
-  export class OTLPTraceExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-metrics-otlp-grpc' {
-  export class OTLPMetricExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-metrics-otlp-proto' {
-  export class OTLPMetricExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-logs-otlp-grpc' {
-  export class OTLPLogExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-logs-otlp-proto' {
-  export class OTLPLogExporter {
-    constructor(options?: { url?: string; headers?: Record<string, string> })
-  }
-}
-
-declare module '@opentelemetry/exporter-prometheus' {
-  export class PrometheusExporter {
-    constructor(options?: { port?: number; endpoint?: string })
-  }
-}
-
-declare module '@opentelemetry/core' {
-  export enum ExportResultCode {
-    SUCCESS = 0,
-    FAILED = 1
-  }
-  
-  export interface ExportResult {
-    code: ExportResultCode
-    error?: Error
-  }
-  
-  export interface TraceId {
-    traceId: string
-    spanId: string
-  }
-}
-
-declare module '@opentelemetry/resources' {
-  export interface Resource {
-    attributes: Record<string, unknown>
-    merge(other: Resource): Resource
-  }
-  
-  export function resourceFromAttributes(attributes: Record<string, unknown>): Resource
-  export function envDetector(): { detect(): Promise<Resource> }
-  export function hostDetector(): { detect(): Promise<Resource> }
-  export function osDetector(): { detect(): Promise<Resource> }
-}
-
-// GrowthBook
-declare module '@growthbook/growthbook' {
-  export class GrowthBook {
-    constructor(options?: unknown)
-    loadFeatures(): Promise<void>
-    isOn(feature: string): boolean
-    getFeatureValue<T>(feature: string, defaultValue: T): T
   }
 }
 
@@ -558,86 +282,6 @@ declare module 'lodash-es/setWith.js' {
 }
 
 // Global MACRO constant - moved inside declare global below
-declare module 'figures' {
-  function figures(figure: string): string
-  export = figures
-  export const heart: string
-  export const cross: string
-  export const pointer: string
-  export const tick: string
-  export const warning: string
-  export const info: string
-  export const bullet: string
-  export const arrowRight: string
-  export const arrowLeft: string
-  export const arrowUp: string
-  export const arrowDown: string
-  export const arrowUpSmall: string
-  export const arrowDownSmall: string
-  export const arrowRightSmall: string
-  export const triangleUp: string
-  export const triangleDown: string
-  export const triangleRight: string
-  export const triangleLeft: string
-  export const triangleUpSmall: string
-  export const triangleDownSmall: string
-  export const triangleRightSmall: string
-  export const triangleLeftSmall: string
-  export const triangleUpOutline: string
-  export const pointerSmall: string
-  export const checkboxOn: string
-  export const checkboxOff: string
-  export const radioOn: string
-  export const radioOff: string
-  export const questionMarkPrefix: string
-  export const line: string
-  export const ellipsis: string
-  export const point: string
-  export const play: string
-  export const square: string
-  export const squareSmall: string
-  export const squareSmallFilled: string
-  export const circle: string
-  export const circleFilled: string
-  export const circleDotted: string
-  export const circleDouble: string
-  export const circleCircle: string
-  export const circleCross: string
-  export const circlePipe: string
-  export const circleQuestionMark: string
-  export const bulletWhite: string
-  export const dot: string
-  export const lineVertical: string
-  export const lineHorizontal: string
-  export const lineUpDownRight: string
-  export const lineUpRight: string
-  export const cornerTopLeft: string
-  export const cornerTopRight: string
-  export const cornerBottomLeft: string
-  export const cornerBottomRight: string
-  export const tickSmall: string
-  export const crossSmall: string
-  export const star: string
-  export const hash: string
-  export const infoSmall: string
-  export const warningSmall: string
-}
-declare module 'usehooks-ts' {
-  export function useLocalStorage<T>(key: string, initialValue: T): [T, (v: T) => void]
-  export function useInterval(callback: () => void, delay: number | null): void
-  
-  export interface DebouncedFunction<T extends (...args: unknown[]) => unknown> {
-    (...args: Parameters<T>): ReturnType<T>
-    cancel(): void
-    flush(): ReturnType<T>
-  }
-  
-  export function useDebounceCallback<T extends (...args: unknown[]) => unknown>(
-    callback: T,
-    delay: number
-  ): DebouncedFunction<T>
-}
-
 declare module '@ant/claude-for-chrome-mcp' {
   export function launchChrome(): Promise<unknown>
   export function createClaudeForChromeMcpServer(config: unknown): unknown
@@ -717,9 +361,27 @@ declare module '@anthropic-ai/mcpb' {
   }
 }
 
+// glob is ALSO declared in src/types/missing-modules.d.ts (GlobOptions,
+// globSync) — the two blocks and the real glob types merge; this block
+// additionally supplies the `glob`/`sync` named exports used by
+// src/shared/util/glob.ts.
+declare module 'glob' {
+  export function glob(pattern: string, options?: unknown): Promise<string[]>
+  export function sync(pattern: string, options?: unknown): string[]
+}
+
 // ============================================================================
 // Model Context Protocol SDK
 // ============================================================================
+//
+// These ambient declarations intentionally keep the pre-SDK-1.29 shapes (e.g.
+// Server ctor (info, capabilities)) that checked callers in
+// computerUse/engine/server.ts and vault/mcp-server.ts still construct with.
+// The installed SDK 1.29 changed the Server ctor to (info, options?) — a
+// behavior-migration batch owns aligning those call sites; until then the
+// ambient blocks shadow the real types (classic node10 resolution fails for
+// this exports-only package, so these declarations are what tsc checks
+// against).
 
 declare module '@modelcontextprotocol/sdk/client/auth.js' {
   export function discoverAuthorizationServerMetadata(url: string | URL, options?: { fetchFn?: FetchLike }): Promise<AuthorizationServerMetadata | undefined>
@@ -1340,63 +1002,7 @@ declare module '@modelcontextprotocol/sdk/server/stdio.js' {
   }
 }
 
-declare module '@alcalzone/ansi-tokenize' {
-  export type AnsiCode = {
-    code: number | string
-    type?: 'color' | 'style' | 'reset' | 'ansi'
-    rgb?: [number, number, number]
-    endCode?: string
-    name?: string
-  }
-  
-  export type Token = {
-    type: 'text' | 'ansi'
-    value: string
-    code?: number
-  }
-  
-  export type StyledChar = {
-    char: string
-    width: number
-    styles: AnsiCode[]
-  }
-  
-  export function tokenize(input: string): Token[]
-  export function ansiCodesToString(codes: AnsiCode[]): string
-  export function reduceAnsiCodes(current: AnsiCode[], additions: AnsiCode[]): AnsiCode[]
-  export function undoAnsiCodes(codes: AnsiCode[]): AnsiCode[]
-  export function diffAnsiCodes(oldCodes: AnsiCode[], newCodes: AnsiCode[]): AnsiCode[]
-  export function styledCharsFromTokens(tokens: unknown[]): StyledChar[]
-}
-
 // Additional external modules
-declare module 'react-reconciler/constants.js' {
-  export const SyncLane: number
-  export const InputContinuousHydrationLane: number
-  export const DefaultEventPriority: number
-  export const DiscreteEventPriority: number
-  export const ContinuousEventPriority: number
-  export const NoEventPriority: number
-}
-
-// React 18 PropsWithChildren for older imports
-declare module 'react' {
-  export type PropsWithChildren<P = unknown> = P & { children?: ReactNode }
-  export type Dispatch<A> = (value: A) => void
-  export type SetStateAction<S> = S | ((prevState: S) => S)
-}
-declare module 'react-reconciler' {
-  export interface ReconcilerInstance {
-    createContainer(containerInfo: unknown, tag: number, hydrationCallbacks: unknown | null, isStrictMode: boolean, concurrentUpdatesByDefaultOverride: boolean | null, identifierPrefix: string, onRecoverableError: (error: Error) => void, transitionCallbacks: unknown | null): unknown
-    updateContainer(element: unknown, container: unknown, parentComponent: unknown | null, callback: (() => void) | null): number
-    getPublicRootInstance(container: unknown): unknown
-    flushSync(fn: () => void): void
-    batchedUpdates(fn: () => void): void
-  }
-  export default function ReactReconciler(config: unknown): ReconcilerInstance
-  export const ConcurrentRoot: number
-  export const LegacyRoot: number
-}
 declare module 'image-processor-napi' {
   export function processImage(input: unknown): Promise<unknown>
 }
@@ -1404,49 +1010,6 @@ declare module 'cli-highlight' {
   export function highlight(code: string, options?: { language?: string }): string
 }
 
-declare module 'code-excerpt' {
-  export interface CodeExcerptOptions {
-    around?: number
-    maxLine?: number
-  }
-  
-  export interface CodeExcerptResult {
-    line: number
-    value: string
-  }
-  
-  export default function codeExcerpt(
-    source: string,
-    line: number,
-    options?: CodeExcerptOptions
-  ): CodeExcerptResult[]
-  
-  // Named export used by some imports
-  export { CodeExcerptResult }
-}
-
-declare module 'auto-bind' {
-  export default function autoBind<T extends object>(
-    self: T,
-    options?: { include?: (string | symbol)[]; exclude?: (string | symbol)[] }
-  ): T
-}
-declare module '@smithy/node-http-handler' {
-  export class NodeHttpHandler {}
-}
-declare module '@smithy/core' {
-  export interface SmithyConfiguration {}
-}
-declare module '@commander-js/extra-typings' {
-  export { Command, Option, Argument } from 'commander'
-  export class InvalidArgumentError extends Error {
-    constructor(message: string)
-  }
-}
-declare module 'xss' {
-  function filterXSS(input: string, options?: unknown): string
-  export = filterXSS
-}
 declare module 'proper-lockfile' {
   export interface LockOptions {
     stale?: number
@@ -1486,17 +1049,6 @@ declare module 'highlight.js' {
     [key: string]: unknown
   }
   export function getLanguage(name: string): HighlightLanguage | undefined
-}
-declare module 'fflate' {
-  export function gzip(data: Uint8Array, options?: unknown): Uint8Array
-  export function gunzip(data: Uint8Array, options?: unknown): Uint8Array
-}
-declare module 'audio-capture-napi' {
-  export function captureAudio(options?: unknown): Promise<unknown>
-  export function isNativeAudioAvailable(): boolean
-  export function isNativeRecordingActive(): boolean
-  export function stopNativeRecording(): Promise<void>
-  export function startNativeRecording(options?: unknown): Promise<void>
 }
 declare module '@anthropic-ai/sandbox-runtime' {
   export interface SandboxRuntimeConfigSchema {
@@ -1600,272 +1152,8 @@ declare module '@anthropic-ai/sandbox-runtime' {
 // ============================================================================
 // Internal Module Declarations
 // ============================================================================
-
-// Keybinding types
-declare module '*/keybindings/types.js' {
-  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select' | 'RailsDag'
-  export type KeybindingAction = 'command' | 'callback' | string
-  export interface ParsedBinding {
-    keys: string[]
-    command: string
-    context: KeybindingContextName
-  }
-  export interface ParsedKeystroke {
-    key: string
-    modifiers: string[]
-  }
-}
-declare module '../keybindings/types.js' {
-  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select' | 'RailsDag'
-  export type KeybindingAction = 'command' | 'callback' | string
-  export interface ParsedBinding {
-    keys: string[]
-    command: string
-    context: KeybindingContextName
-  }
-  export interface ParsedKeystroke {
-    key: string
-    modifiers: string[]
-  }
-}
-declare module 'src/components/keybindings/types.js' {
-  export type KeybindingContextName = 'global' | 'input' | 'chat' | 'sidebar' | 'modal' | 'Scroll' | 'MessageActions' | 'Plugin' | 'DiffDialog' | 'ModelPicker' | 'Select' | 'RailsDag'
-  export type KeybindingAction = 'command' | 'callback' | string
-  export interface ParsedBinding {
-    keys: string[]
-    command: string
-    context: KeybindingContextName
-  }
-  export interface ParsedKeystroke {
-    key: string
-    modifiers: string[]
-  }
-}
-
-// Wizard types
-declare module '*/wizard/types.js' {
-  export interface WizardStepComponent {
-    title: string
-    description?: string
-    validate?: () => boolean
-    onNext?: () => void
-  }
-}
-declare module '../wizard/types.js' {
-  export interface WizardStepComponent {
-    title: string
-    description?: string
-    validate?: () => boolean
-    onNext?: () => void
-  }
-}
-declare module 'src/components/wizard/types.js' {
-  export interface WizardStepComponent {
-    title: string
-    description?: string
-    validate?: () => boolean
-    onNext?: () => void
-  }
-}
-
-// Agent wizard types
-declare module '*/agents/new-agent-creation/types.js' {
-  export interface AgentWizardData {
-    name: string
-    description?: string
-    color?: string
-    avatar?: string
-    systemPrompt?: string
-    tools?: string[]
-    mcpServers?: string[]
-    [key: string]: unknown
-  }
-}
-declare module '../types.js' {
-  export interface AgentWizardData {
-    name: string
-    description?: string
-    color?: string
-    avatar?: string
-    systemPrompt?: string
-    tools?: string[]
-    mcpServers?: string[]
-    [key: string]: unknown
-  }
-}
-declare module './types.js' {
-  export interface AgentWizardData {
-    name: string
-    description?: string
-    color?: string
-    avatar?: string
-    systemPrompt?: string
-    tools?: string[]
-    mcpServers?: string[]
-    [key: string]: unknown
-  }
-}
-declare module 'src/components/agents/new-agent-creation/types.js' {
-  export interface AgentWizardData {
-    name: string
-    description?: string
-    color?: string
-    avatar?: string
-    systemPrompt?: string
-    tools?: string[]
-    mcpServers?: string[]
-    [key: string]: unknown
-  }
-}
-
-// MCP Server types
-declare module '*/mcp/types.js' {
-  export interface StdioServerInfo {
-    name: string
-    command: string
-    args: string[]
-    env?: Record<string, string>
-    status: 'connected' | 'disconnected'
-  }
-  export interface HTTPServerInfo {
-    name: string
-    url: string
-    status: 'connected' | 'disconnected'
-  }
-  export interface SSEServerInfo {
-    name: string
-    url: string
-    status: 'connected' | 'disconnected'
-  }
-  export interface ClaudeAIServerInfo {
-    name: string
-    type: 'claude-ai'
-    status: 'connected' | 'disconnected'
-  }
-  export type ServerInfo = StdioServerInfo | HTTPServerInfo | SSEServerInfo | ClaudeAIServerInfo
-  export interface McpServerStatus {
-    name: string
-    status: 'connected' | 'disconnected' | 'error'
-    error?: string
-    tools?: unknown[]
-  }
-}
-declare module '../mcp/types.js' {
-  export interface StdioServerInfo {
-    name: string
-    command: string
-    args: string[]
-    env?: Record<string, string>
-    status: 'connected' | 'disconnected'
-  }
-  export interface HTTPServerInfo {
-    name: string
-    url: string
-    status: 'connected' | 'disconnected'
-  }
-  export interface SSEServerInfo {
-    name: string
-    url: string
-    status: 'connected' | 'disconnected'
-  }
-  export interface ClaudeAIServerInfo {
-    name: string
-    type: 'claude-ai'
-    status: 'connected' | 'disconnected'
-  }
-  export type ServerInfo = StdioServerInfo | HTTPServerInfo | SSEServerInfo | ClaudeAIServerInfo
-}
-declare module '../../components/mcp/types.js' {
-  export interface StdioServerInfo {
-    name: string
-    command: string
-    args: string[]
-    env?: Record<string, string>
-    status: 'connected' | 'disconnected'
-  }
-  export interface HTTPServerInfo {
-    name: string
-    url: string
-    status: 'connected' | 'disconnected'
-  }
-  export interface SSEServerInfo {
-    name: string
-    url: string
-    status: 'connected' | 'disconnected'
-  }
-  export interface ClaudeAIServerInfo {
-    name: string
-    type: 'claude-ai'
-    status: 'connected' | 'disconnected'
-  }
-  export type ServerInfo = StdioServerInfo | HTTPServerInfo | SSEServerInfo | ClaudeAIServerInfo
-}
-
-// Query event types
-declare module '*/query.js' {
-  export interface StreamEvent {
-    type: 'content' | 'error' | 'done' | 'tool_use' | 'tool_result'
-    content?: string
-    delta?: string
-    toolUse?: unknown
-    error?: Error
-  }
-  export interface RequestStartEvent {
-    type: 'request_start'
-    requestId: string
-    timestamp: number
-  }
-}
-declare module '../query.js' {
-  export interface StreamEvent {
-    type: 'content' | 'error' | 'done' | 'tool_use' | 'tool_result'
-    content?: string
-    delta?: string
-    toolUse?: unknown
-    error?: Error
-  }
-}
-declare module './query.js' {
-  export interface StreamEvent {
-    type: 'content' | 'error' | 'done' | 'tool_use' | 'tool_result'
-    content?: string
-    delta?: string
-    toolUse?: unknown
-    error?: Error
-  }
-}
-
-// Agent types
-declare module '*/agent.js' {
-  export interface AgentMcpServerInfo {
-    name: string
-    description?: string
-    tools?: unknown[]
-    sourceAgents?: string[]
-  }
-}
-declare module '../agent.js' {
-  export interface AgentMcpServerInfo {
-    name: string
-    description?: string
-    tools?: unknown[]
-    sourceAgents?: string[]
-  }
-}
-declare module '../../services/agent.js' {
-  export interface AgentMcpServerInfo {
-    name: string
-    description?: string
-    tools?: unknown[]
-    sourceAgents?: string[]
-  }
-}
-
-// Permissions types
-declare module '*/permissions.js' {
-  export type PermissionMode = 'ask' | 'auto' | 'reject'
-  export type PermissionBehavior = 'allow' | 'deny' | 'ask'
-
-}
-
-// File is a script (not a module) so top-level declarations are global
+// (The previous wildcard/relative ambient stubs for keybindings/wizard/agent/
+// mcp/query/agent.js/permissions paths were removed: every live importer
+// resolves the real files, so the stubs were dead weight. A file that later
+// imports one of these paths without a resolvable target will surface as a
+// TS2307 in its own burn batch.)
