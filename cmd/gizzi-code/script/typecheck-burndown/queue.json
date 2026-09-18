@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1836,
+    "totalNocheck": 1804,
     "excludedCompilerArtifacts": 361,
     "excludedVendored": 93,
-    "totalQueueFiles": 1361,
-    "totalQueueLoc": 461207,
+    "totalQueueFiles": 1329,
+    "totalQueueLoc": 454126,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -180,52 +180,13 @@
     },
     {
       "id": "b0009",
-      "files": [
-        "src/cli/ui/ink-app/utils/terminal.ts",
-        "src/cli/ui/ink-app/utils/sdkEventQueue.ts",
-        "src/cli/ui/ink-app/commands/receipts/index.ts",
-        "src/runtime/providers/adapters/auth.ts",
-        "src/cli/ui/ink-app/commands/purpose/index.ts",
-        "src/cli/ui/ink-app/tools/AgentTool/built-in/statuslineSetup.ts",
-        "src/cli/ui/ink-app/buddy/types.ts",
-        "src/cli/ui/ink-app/components/CustomSelect/use-select-state.ts",
-        "src/cli/commands/profile/index.ts",
-        "src/cli/ui/ink-app/utils/textHighlighting.ts",
-        "src/cli/ui/ink-app/services/roughTokenEstimation.ts",
-        "src/cli/ui/ink-app/commands/security/index.ts",
-        "src/cli/ui/ink-app/commands/init-verifiers.ts",
-        "src/cli/commands/permission-profile/index.ts",
-        "src/cli/ui/ink-app/keybindings/useKeybinding.ts",
-        "src/shared/utils/mcpWebSocketTransport.ts",
-        "src/cli/ui/ink-app/utils/settings/constants.ts",
-        "src/cli/ui/ink-app/constants/oauth.ts",
-        "src/cli/ui/ink-app/types/generated/events_mono/growthbook/v1/growthbook_experiment_event.ts",
-        "src/cli/ui/ink-app/utils/readEditContext.ts",
-        "src/runtime/cowork/cowork.runtime.ts",
-        "src/runtime/services/rateLimitMocking.ts",
-        "src/cli/ui/ink-app/services/rateLimitMocking.ts",
-        "src/cli/ui/ink-app/utils/format.ts",
-        "src/cli/ui/ink-app/services/teamMemorySync/secretScanner.ts",
-        "src/cli/ui/ink-app/utils/ansiToPng.ts",
-        "src/runtime/server/routes/tui.ts",
-        "src/runtime/server/routes/cron.ts",
-        "src/runtime/services/SessionMemory/sessionMemoryUtils.ts",
-        "src/cli/ui/ink-app/services/SessionMemory/sessionMemoryUtils.ts",
-        "src/runtime/tools/builtins/bash.ts",
-        "src/runtime/integrations/lsp/index.ts"
-      ],
-      "loc": 7081,
-      "twins": [
-        {
-          "runtime": "src/runtime/services/SessionMemory/sessionMemoryUtils.ts",
-          "inkApp": "src/cli/ui/ink-app/services/SessionMemory/sessionMemoryUtils.ts"
-        },
-        {
-          "runtime": "src/runtime/services/rateLimitMocking.ts",
-          "inkApp": "src/cli/ui/ink-app/services/rateLimitMocking.ts"
-        }
-      ],
-      "state": "NEW"
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 32,
+      "burnedLoc": 7081,
+      "escalated": []
     },
     {
       "id": "b0010",

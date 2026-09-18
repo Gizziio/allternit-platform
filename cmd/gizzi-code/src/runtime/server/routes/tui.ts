@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Hono, type Context } from "hono"
 import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
@@ -270,7 +269,6 @@ export const TuiRoutes = lazy(() =>
       async (c) => {
         const command = (c.req.valid("json") as any).command
         await Bus.publish(TuiEvent.CommandExecute, {
-          // @ts-expect-error
           command: {
             session_new: "session.new",
             session_share: "session.share",

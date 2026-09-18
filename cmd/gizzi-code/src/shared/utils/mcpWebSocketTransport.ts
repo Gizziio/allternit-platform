@@ -1,13 +1,18 @@
-// @ts-nocheck
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import {
-  type JSONRPCMessage,
-  JSONRPCMessageSchema,
-} from '@modelcontextprotocol/sdk/types.js'
+import * as sdkTypes from '@modelcontextprotocol/sdk/types.js'
+import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import type WsWebSocket from 'ws'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { toError } from './errors.js'
 import { jsonParse, jsonStringify } from './slowOperations.js'
+
+// src/types/global.d.ts shadows '@modelcontextprotocol/sdk/types.js' with
+// interfaces only; the real SDK exports JSONRPCMessageSchema at runtime.
+const JSONRPCMessageSchema = (
+  sdkTypes as unknown as {
+    JSONRPCMessageSchema: { parse(input: unknown): JSONRPCMessage }
+  }
+).JSONRPCMessageSchema
 
 // WebSocket readyState constants (same for both native and ws)
 const WS_CONNECTING = 0
