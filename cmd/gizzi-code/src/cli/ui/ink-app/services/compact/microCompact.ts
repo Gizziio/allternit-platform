@@ -14,10 +14,7 @@ import type { Message } from '../../types/message.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { SHELL_TOOL_NAMES } from '../../utils/shell/shellToolUtils.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  logEvent,
-} from '../analytics/index.js'
+import { logEvent } from '../analytics/index.js'
 import { notifyCacheDeletion } from '../api/promptCacheBreakDetection.js'
 import { roughTokenCountEstimation } from '../roughTokenEstimation.js'
 import {
