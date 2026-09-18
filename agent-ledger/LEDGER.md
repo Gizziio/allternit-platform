@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-18 17:15 — kimi — Gizzi-code dormant stub owner-decision doc
+
+- **Session ID / Branch:** `ao/dormant-stub-decisions`
+- **Agent:** kimi
+- **Summary:** Merged PR #610 — one-page owner-decision document for the 17 live dormant stubs escalated by the 2026-09-18 off-queue shim sweep (1 IMPLEMENT · 9 CUT · 6 KEEP-DORMANT · 1 owner-weigh lean-CUT), with grep-verified UI column, CUT appendix (PR #594 pattern), and cross-links.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/610 · `59af37f40`
+- **How it works:** docs-only file `docs/programs/gizzi/DORMANT_STUB_DECISIONS.md`; every UI-visibility claim grep-verified on `f49e3c252`. Surprises documented: CommandPalette's parent screens mounted nowhere; FeedbackSurvey/utils.ts missing type exports its `@ts-nocheck` siblings import; terminal panel (real) ≠ terminal capture tool (stub); VerifyPlan gate mismatch between `tools.ts` and `classifierDecision.ts`.
+- **Verification:** docs-only (88-line file); stub paths re-confirmed; sweep-day gates remain baseline (smoke 1311/0, preflight 52/0); `git-discipline-check.sh` PASS.
+- **Outstanding work:** owner has not marked DECISIONs — all 17 fates remain open; drift noted in doc, not fixed (stale deleted-paths.txt paths for the three dev-tool stubs).
+- **Summary file:** [2026-09-18-1715-ao-dormant-stub-decisions-kimi-code-dormant-stub-decisions.md](./summaries/2026-09-18-1715-ao-dormant-stub-decisions-kimi-code-dormant-stub-decisions.md)
+
 ### 2026-09-15 12:52 — grok — Desktop auth renderer Clerk JS load
 
 - **Session ID / Branch:** grok `01a0a52b` / `session/clerk-js-load-0915` + `session/clerk-js-proxy-0915`
