@@ -1,3 +1,9 @@
+Goal: Harden cmd/gizzi-code/script/ensure-sdk-dist.sh against the 2026-09-18 poisoned-dist incident (PR #597 stale lockfile links → os-contracts built against root-hoisted zod v4, errored, still emitted v4-typed .d.ts; mtime freshness called it fresh) + one-line root .gitignore fix for surfaces/allternit-desktop/resources/office-engine/.
+Just did: (a) dep-snapshot staleness: every managed package (packages/sdk, sdk/computer-use, platform/packages/os-contracts) now records its resolved runtime-dep versions in dist/.build-deps.json at build time; missing sidecar or resolution drift → rebuild. (b) os-contracts tsconfig.build.json gains noEmitOnError + the script propagates its build exit code (fail-fast instead of poisoned emit). Root .gitignore gains the office-engine scratch line (note: nested surfaces/allternit-desktop/.gitignore already covers it — root line is the requested belt-and-suspenders). cmd/gizzi-code/AGENTS.md preflight paragraph updated.
+Verified by simulation: fresh build writes sidecar (zod 3.25.76); idempotent on match; fake sidecar version → rebuild; REAL repro (nested zod temporarily removed → resolution falls back to root v4) → mismatch detected, build fails with the exact incident TS2554s, script exits 1, no poisoned emit; missing sidecar → stale-once rebuild.
+Next: full gates (tsc --noEmit, bun run test, release-preflight 52/0) → commit, PR, merge --merge, shared-checkout pull --ff-only, ledger attestation, git-discipline-check PASS.
+Open questions: none.
+
 Goal: Harden the typecheck burn-down queue builder (ao/queue-hardening) from pilot b0001's 16 escalations — pre-flag/quarantine the three avoidable causes.
 
 Just did: Extended build-queue.mjs with three zero-dep static checks, validated against the full 1555-file corpus with zero false positives:
