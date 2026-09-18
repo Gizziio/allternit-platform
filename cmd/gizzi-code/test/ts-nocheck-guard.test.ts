@@ -6,7 +6,9 @@ import { dirname, join } from "path"
 //
 // The burn-down queue (script/typecheck-burndown/queue.json) is the committed
 // baseline: it lists every handwritten nocheck file, packed into burn-down
-// batches. This guard enforces two invariants:
+// batches, plus a quarantine of files the burn-down cannot fix type-onlyly
+// (malformed TEMPORARY SHIM stubs, dead re-export shims, symlink aliases).
+// This guard enforces invariants:
 //
 //   1. The nocheck population must NEVER GROW. The burn-down only moves one
 //      way: files leave the queue when their header is removed and their
@@ -22,13 +24,24 @@ import { dirname, join } from "path"
 //      batch / marking state). A listed file whose header is gone means the
 //      queue state was not updated; the batch plan would silently rot.
 //
+//   3. No untracked burns: the live handwritten-nocheck population plus all
+//      burns recorded in DONE batches' `burnedFiles` counts must equal the
+//      accounted baseline pinned in queue.json — a file whose header was
+//      removed without recording its burn breaks the identity.
+//
+//   4. The quarantine is stable-or-shrinking: every file the checks detect
+//      live must already be quarantined in the committed queue.json (a new
+//      quarantine requires regenerating queue.json, never silent growth),
+//      and no quarantined path may appear in any batch.
+//
 // The exclusion rules (compiler-artifact fingerprints, vendored ink/vim
-// subtrees) are shared with the queue builder via import, so this test can
-// never disagree with the generator about what counts.
+// subtrees) and the quarantine checks (malformed grammar, dead shims, alias
+// pairs) are shared with the queue builder via import, so this test can never
+// disagree with the generator about what counts.
 
 // plain Node .mjs, no types — the scan rules live here so the guard cannot
 // disagree with the generator about what counts.
-import { scanQueue } from "../script/typecheck-burndown/build-queue.mjs"
+import { scanQueue, scanQuarantined } from "../script/typecheck-burndown/build-queue.mjs"
 
 const ROOT = join(import.meta.dir, "..")
 const QUEUE_FILE = join(ROOT, "script", "typecheck-burndown", "queue.json")
@@ -45,6 +58,7 @@ const allowlist = new Set(
 )
 
 const current = scanQueue()
+const live = scanQuarantined()
 
 describe("ts-nocheck burn-down guard", () => {
   test("committed queue is internally consistent", () => {
@@ -72,12 +86,15 @@ describe("ts-nocheck burn-down guard", () => {
   test("nocheck count has not increased vs the committed baseline", () => {
     const allowed = current.queue.filter(f => allowlist.has(f.path))
     const eligible = current.queue.filter(f => !allowlist.has(f.path))
+    // baseline = files still queued + files quarantined (both are handwritten
+    // nocheck population the queue accounts for)
+    const baseline = queue.stats.totalQueueFiles + queue.stats.quarantined
     expect(
       eligible.length,
       `handwritten @ts-nocheck files grew: ${eligible.length} now vs baseline ` +
-        `${queue.stats.totalQueueFiles}. Burn down, do not add. If this file is an ` +
+        `${baseline}. Burn down, do not add. If this file is an ` +
         `intentional exception, list it in test/ts-nocheck-allowlist.txt.`,
-    ).toBeLessThanOrEqual(queue.stats.totalQueueFiles)
+    ).toBeLessThanOrEqual(baseline)
     // allowlist entries must actually be nocheck files, else the list is stale
     expect(allowed.length).toBe(allowlist.size)
     // the committed baseline must match the same exclusion rules
@@ -99,5 +116,53 @@ describe("ts-nocheck burn-down guard", () => {
       "files burned down without updating script/typecheck-burndown/queue.json: " +
         burned.join(", "),
     ).toEqual([])
+  })
+
+  test("no untracked burns: live population reconciles with recorded burns", () => {
+    // every header removed from a handwritten nocheck file must be recorded in
+    // a DONE batch's burnedFiles count: the live population plus all recorded
+    // burns must equal the accounted baseline pinned at generation time.
+    const burnedRecorded = queue.batches.reduce(
+      (n: number, b: { burnedFiles?: number }) =>
+        n + (typeof b.burnedFiles === "number" ? b.burnedFiles : 0),
+      0,
+    )
+    const accounted = current.queue.length + burnedRecorded
+    expect(
+      accounted,
+      `live handwritten @ts-nocheck files (${current.queue.length}) + recorded burns ` +
+        `(${burnedRecorded}) = ${accounted}, but the accounted baseline is ` +
+        `${queue.stats.totalAccounted}. A file lost its header without its burn ` +
+        `being recorded in a DONE batch's burnedFiles count.`,
+    ).toBe(queue.stats.totalAccounted)
+  })
+
+  test("quarantine is stable-or-shrinking and disjoint from batches", () => {
+    // live detections must already be committed — a new quarantine means
+    // queue.json was not regenerated, not silent growth
+    const committed = new Set(queue.quarantined.map((q: { path: string }) => q.path))
+    const fresh = live.quarantined.filter((q) => !committed.has(q.path))
+    expect(
+      fresh.map((q) => q.path),
+      "newly quarantined files not in the committed queue.json — regenerate " +
+        "script/typecheck-burndown/queue.json: " + fresh.map((q) => q.path).join(", "),
+    ).toEqual([])
+    // quarantined files are excluded from every batch
+    const inBatches = new Set(queue.batches.flatMap((b: { files: string[] }) => b.files))
+    const overlap = queue.quarantined.filter((q: { path: string }) => inBatches.has(q.path))
+    expect(
+      overlap.map((q: { path: string }) => q.path),
+      "quarantined files must not appear in any batch",
+    ).toEqual([])
+    // the committed counts are internally consistent
+    expect(queue.stats.quarantined).toBe(queue.quarantined.length)
+    // quarantined files still carry the header (quarantine is not a burn)
+    for (const q of queue.quarantined) {
+      const text = readFileSync(join(ROOT, q.path), "utf8")
+      expect(
+        text.startsWith(NOCHECK_HEADER),
+        `${q.path} is quarantined but lost its @ts-nocheck header`,
+      ).toBe(true)
+    }
   })
 })
