@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1838,
+    "totalNocheck": 1837,
     "excludedCompilerArtifacts": 361,
     "excludedVendored": 93,
-    "totalQueueFiles": 1363,
-    "totalQueueLoc": 468223,
+    "totalQueueFiles": 1362,
+    "totalQueueLoc": 465644,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -160,12 +160,13 @@
     },
     {
       "id": "b0007",
-      "files": [
-        "src/cli/ui/ink-app/native-ts/yoga-layout/index.ts"
-      ],
+      "files": [],
       "loc": 2579,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 2579,
+      "escalated": []
     },
     {
       "id": "b0008",
