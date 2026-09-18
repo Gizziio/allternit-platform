@@ -2684,3 +2684,7 @@ src/workspace/loader.ts
 src/workspace/types.d.ts
 src/workspace/types.ts
 test/components/WelcomeInfoBox.test.ts
+src/runtime/tools/utils/permissions/autoModeState.ts
+src/runtime/tools/utils/permissions/permissionSetup.ts
+src/shared/tools/WorkflowTool/constants.ts
+packages/sdk/src/providers/allternit/resources/top-level.ts
