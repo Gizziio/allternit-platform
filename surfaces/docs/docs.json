@@ -87,7 +87,6 @@
               "cli/plan",
               "cli/ci-mode",
               "cli/commrails-cli",
-              "cli/cli-typescript",
               "cli/agent-daemon",
               "cli/allternit-mux",
               "cli/allternit-wrapper"

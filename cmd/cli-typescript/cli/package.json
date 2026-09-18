@@ -1,10 +1,7 @@
 {
   "name": "@allternit/cli-typescript",
   "version": "1.0.0",
-  "description": "Allternit CLI with Superconductor integration",
-  "bin": {
-    "allternit": "./bin/allternit-parallel.js"
-  },
+  "description": "Allternit CLI (local parallel-execution scaffold)",
   "dependencies": {
     "commander": "^9.0.0",
     "@allternit/runtime": "workspace:*"
@@ -13,8 +10,7 @@
     "allternit",
     "ai",
     "agents",
-    "parallel-execution",
-    "superconductor"
+    "parallel-execution"
   ],
   "author": "Allternit",
   "license": "MIT"
