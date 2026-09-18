@@ -7,4 +7,5 @@ interface Props {
 }
 export function WorkflowPermissionRequest(_props: Props): React.ReactElement {
   return <></>
-export default WorkflowPermissionRequest}
+}
+export default WorkflowPermissionRequest

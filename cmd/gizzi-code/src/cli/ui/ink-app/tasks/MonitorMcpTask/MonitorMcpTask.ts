@@ -22,10 +22,17 @@ export class MonitorMcpTask {
   }
   async run(): Promise<void> {
     // TODO: implement
+  }
+}
 // Stub function referenced by BackgroundTasksDialog
 export function killMonitorMcp(_id: string, _setAppState?: unknown): void {
   // TODO: implement
+}
+export function killMonitorMcpTasksForAgent(
+  _agentId: string,
+  _getAppState?: unknown,
+  _setAppState?: unknown,
+): void {
+  // TODO: implement
+}
 export default MonitorMcpTask
-}
-}
-}

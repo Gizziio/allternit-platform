@@ -12,7 +12,7 @@ export async function runPostCommitAttribution(_options: {
   baseBranch?: string
 }): Promise<AttributionResult> {
   return { success: true }
+  // Stub implementation
+}
 export async function installPrepareCommitMsgHook(_worktreePath: string, _hooksDir?: string): Promise<void> {
 }
-}
-  // Stub implementation
