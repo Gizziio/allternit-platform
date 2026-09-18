@@ -109,6 +109,11 @@ export namespace Question {
         resolve,
         reject,
       }
+      // TODO(runtime): Bus.publish does not exist on the Bus class from
+      // "@/runtime/bus/bus" (it has instance handlers only). The correct import
+      // is the Bus namespace from "@/shared/bus" (Bus.publish(def, properties)).
+      // All three call sites (ask/reply/reject) need that swap — behavior change
+      // deferred to the owning batch.
       Bus.publish(Event.Asked, info)
     })
   }
