@@ -486,31 +486,11 @@ export async function loadConversationForResume(
     let sessionId: UUID | undefined
 
     if (source === undefined) {
-      // --continue: most recent session, skipping live --bg/daemon sessions
-      // that are actively writing their own transcript.
-      const logsPromise = loadMessageLogs()
-      let skip = new Set<string>()
-      if (feature('BG_SESSIONS')) {
-        try {
-          const { listAllLiveSessions } = await import('./udsClient.js')
-          const live = await listAllLiveSessions()
-          skip = new Set(
-            live.flatMap(s =>
-              s.kind && s.kind !== 'interactive' && s.sessionId
-                ? [s.sessionId]
-                : [],
-            ),
-          )
-        } catch {
-          // UDS unavailable — treat all sessions as continuable
-        }
-      }
-      const logs = await logsPromise
-      log =
-        logs.find(l => {
-          const id = getSessionIdFromLog(l)
-          return !id || !skip.has(id)
-        }) ?? null
+      // --continue: most recent session. (BG_SESSIONS live-session skipping
+      // went away with the dead UDS client module — it always fell through
+      // to this "most recent" behavior anyway.)
+      const logs = await loadMessageLogs()
+      log = logs[0] ?? null
     } else if (sourceJsonlFile) {
       // --resume with a .jsonl path (cli/print.ts routes on suffix).
       // Same chain walk as the sid branch below — only the starting

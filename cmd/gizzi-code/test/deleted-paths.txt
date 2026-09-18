@@ -2671,3 +2671,4 @@ test/components/WelcomeInfoBox.test.ts
 src/runtime/components/Markdown.ts
 src/cli/ui/utils/permissions/PermissionUpdateSchema.ts
 src/cli/ui/utils/settings/settings.ts
+src/cli/ui/ink-app/utils/udsClient.ts
