@@ -5,6 +5,6 @@
 - [x] Required Rust/TS checks, meaningful unit tests and best-effort live smoke evidence.
 - [ ] Review diff, write NOTES sentinel, consult steering, commit and push this branch only.
 
-Scope: docs/CLOUD_COMPUTER_PHASE_1_TASK.md. Phase 2+ excluded. Existing linked worktree ao/cloud-computer-orgo-p1 retained as explicitly directed.
+Scope: docs/learnings/CLOUD_COMPUTER_PHASE_1_TASK.md. Phase 2+ excluded. Existing linked worktree ao/cloud-computer-orgo-p1 retained as explicitly directed.
 
 Final gate: BLOCKED. Diff review, NOTES and two review attempts complete; both reviews failed OAuth. Commit/push deferred. Retain resumable worktree.

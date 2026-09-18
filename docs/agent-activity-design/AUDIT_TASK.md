@@ -58,7 +58,7 @@ Address your own audit findings. Requirements:
 
 - This is a design/mockup task, not a code-implementation task — do not touch anything under `surfaces/`, `cmd/`, or any file outside `docs/agent-activity-design/`.
 - Do not build a real feature yet — this is still the design phase. No backend/frontend production code.
-- Do NOT start any item from `docs/SURFACE_AUDIT_PROGRESS.md` — unrelated, separate work.
+- Do NOT start any item from `docs/learnings/SURFACE_AUDIT_PROGRESS.md` — unrelated, separate work.
 
 ## Deliverable
 

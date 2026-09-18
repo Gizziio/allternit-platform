@@ -12,7 +12,7 @@ shared allternit-hosted mail infrastructure.
 |-------|----------|------|
 | mailflare worker | `services/mailflare/` | Vendored fork of [hieunc229/mailflare](https://github.com/hieunc229/mailflare). Cloudflare Worker + D1 + R2 + Queues. Email Routing terminates inbound; outbound uses Cloudflare Email Sending (default) or Resend (`EMAIL_TRANSPORT=resend`). |
 | Installer | `services/mailflare/setup.sh` | Per-user setup: token/zone checks, D1/R2/queue provisioning, deploy, Email Routing DNS, admin bootstrap, integration key, smoke test. |
-| Unified connector installer | `scripts/install-connectors.sh` | One-command setup for Allternit Mail, Gmail, and Google Drive. See [`docs/CONNECTOR_SETUP.md`](./CONNECTOR_SETUP.md). |
+| Unified connector installer | `scripts/install-connectors.sh` | One-command setup for Allternit Mail, Gmail, and Google Drive. See [`docs/learnings/CONNECTOR_SETUP.md`](./learnings/CONNECTOR_SETUP.md). |
 | Backend integration | `cmd/allternit-api/src/agent_email_routes.rs`, `mailflare_client.rs` | Provisioning (`provision_email`), inbound webhook bridge, approval-gated outbound, status. |
 | Review gate | `rails/src/mail/` + `POST /api/rails/mail/decide` | The existing Rails Mail review flow releases or rejects pending outbound email. No separate approval UX. |
 | UI | `surfaces/ai.allternit.com` | Identity channels step, email-rail status line, `external email` badges in Mail Monitor / agent activity. |

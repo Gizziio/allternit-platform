@@ -1,6 +1,6 @@
 # Fabric Transport and Lease Protocol — Developer Guide
 
-**Normative contract:** `docs/A_COORDINATION_CONTRACT_V0_1.md`, §8  
+**Normative contract:** `docs/learnings/A_COORDINATION_CONTRACT_V0_1.md`, §8  
 **Implementation:** `allternit-cowork-runtime` + `allternit-api` worker routes  
 **Terminology:** This is the implementation layer previously referred to as the “A:// dispatcher.” Use **Fabric Transport** in new code and docs.
 
@@ -246,7 +246,7 @@ This is the semantic heart of the transport layer. A green happy-path claim test
 
 Any change to claim ownership, lease generation, expiry, approval binding, idempotency or completion semantics should update all of:
 
-1. `docs/A_COORDINATION_CONTRACT_V0_1.md` if the semantic contract changes;
+1. `docs/learnings/A_COORDINATION_CONTRACT_V0_1.md` if the semantic contract changes;
 2. runtime types/store logic;
 3. worker-facing HTTP routes if the wire contract changes;
 4. transport conformance tests;

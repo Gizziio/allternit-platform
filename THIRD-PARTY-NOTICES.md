@@ -209,7 +209,7 @@ This file contains notices for open-source software incorporated into this produ
 
 **Used in:** `vendor/harnessrouter-ce/`
 
-**Reference + test-oracle material ONLY for the UHP (Unified Harness Protocol) Rust server work: protocol spec markdown, JSON Schema + OpenAPI documents, the `uhp-conformance` check suite, and pytest layouts. No code from this tree is shipped, compiled, or executed by this repo; it is not part of the cargo workspace. Full `LICENSE` preserved at `vendor/harnessrouter-ce/LICENSE`. Inventory: `docs/UHP_VENDOR_INVENTORY.md`.**
+**Reference + test-oracle material ONLY for the UHP (Unified Harness Protocol) Rust server work: protocol spec markdown, JSON Schema + OpenAPI documents, the `uhp-conformance` check suite, and pytest layouts. No code from this tree is shipped, compiled, or executed by this repo; it is not part of the cargo workspace. Full `LICENSE` preserved at `vendor/harnessrouter-ce/LICENSE`. Inventory: `docs/programs/ao/UHP_VENDOR_INVENTORY.md`.**
 
 ---
 

@@ -139,7 +139,7 @@ Needs to be built or ported from OpenMausBot:
 
 Search of `main` (`rails/`, `cmd/allternit-api/`, `surfaces/`) found **no runtime code dependencies** on the old Ralph loop. References are limited to:
 - `.steering/checkpoint.md` (session notes)
-- `docs/IMPLEMENTATION_DAG.md` (architecture docs)
+- `docs/learnings/IMPLEMENTATION_DAG.md` (architecture docs)
 - The abandoned `allternit-session-grok-bot-0-18-integration` worktree
 
 Bot turns in `main` currently flow through `useStartBotSession` → `ChatSessionStore.sendMessageStream` → gizzi runtime. The new goal-loop runtime from the abandoned worktree is **not merged**; it does not need to be removed from `main`. Phase 0.5 of the integration plan can be reduced to a verification task rather than a removal/port task.

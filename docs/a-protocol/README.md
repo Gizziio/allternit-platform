@@ -9,7 +9,7 @@
 
 **A:// is not the intelligence. A:// is the coordination contract by which intelligence coordinates. Al is its default user-facing Coworker.**
 
-This directory exists to prevent the A:// architecture from drifting back into several incompatible systems with similar names. The normative protocol language remains in `docs/A_COORDINATION_CONTRACT_V0_1.md`; these documents explain how that contract maps onto the repository and how developers extend it without creating another execution island.
+This directory exists to prevent the A:// architecture from drifting back into several incompatible systems with similar names. The normative protocol language remains in `docs/learnings/A_COORDINATION_CONTRACT_V0_1.md`; these documents explain how that contract maps onto the repository and how developers extend it without creating another execution island.
 
 ## Naming is architectural
 

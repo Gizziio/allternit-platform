@@ -40,7 +40,7 @@ spike: go/no-go + minimal proof, not the product feature.
   frontmatter, commit it, and push — against the dev API (127.0.0.1:8013) or
   a configurable remote URL.
 - [ ] R3: WHEN the spike concludes, THE SYSTEM SHALL produce a go/no-go
-  report (docs/BRAIN_D3_SPIKE.md) with SEPARATE line items for: (a) the
+  report (docs/learnings/BRAIN_D3_SPIKE.md) with SEPARATE line items for: (a) the
   HTTPS+token path (Basic auth with an `allternit_git_` token — the
   product-relevant case; file:// success does NOT count as proof here),
   (b) the file:// offline path, (c) device-build signing status, and (d)
