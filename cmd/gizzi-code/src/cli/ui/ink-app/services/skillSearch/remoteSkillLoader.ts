@@ -9,5 +9,5 @@ export function loadRemoteSkill(_name: string): Promise<unknown> {
 }
 export function loadRemoteSkills(): Promise<unknown[]> {
   return Promise.resolve([])
-export default { loadRemoteSkill, loadRemoteSkills }
 }
+export default { loadRemoteSkill, loadRemoteSkills }
