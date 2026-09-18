@@ -279,7 +279,7 @@ the commands below from the project root
 ### Run the owned 512px harness
 
 ```bash
-cd research/bonsai-webgpu-runtime-spec
+cd docs/research/bonsai-webgpu-runtime-spec
 node owned-runtime-harness.mjs
 ```
 

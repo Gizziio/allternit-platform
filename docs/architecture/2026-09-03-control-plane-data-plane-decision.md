@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-03
 **Status:** Decided (owner)
-**Decides:** Execution Guide Step 6 of `reports/2026-09-03-production-readiness-gap-analysis.md` (blocker B3)
+**Decides:** Execution Guide Step 6 of `docs/reports/2026-09-03-production-readiness-gap-analysis.md` (blocker B3)
 **Supersedes:** The "deploy allternit-api publicly as a second gateway" framing; the local/BYO lanes remain, but nothing user-facing talks to 8013 directly.
 
 ## Context

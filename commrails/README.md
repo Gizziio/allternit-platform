@@ -34,7 +34,7 @@ tool at runtime.
 
 ### Advanced Capabilities (V2)
 The system has been enhanced with enterprise-grade features for swarm coordination, human-in-the-loop interaction, and deep observability.
-See [spec/agent-system-rails/Allternit_AGENT_SYSTEM_RAILS_CAPABILITIES.md](../../../spec/agent-system-rails/Allternit_AGENT_SYSTEM_RAILS_CAPABILITIES.md) for details on:
+See [spec/SPEC_OVERVIEW.md](./spec/SPEC_OVERVIEW.md) for details on:
 - **Elicitation Protocol** (Interactive forms/prompts)
 - **Swarm Handoffs** (Dynamic agent transitions)
 - **Execution Sampling** (Pass-through LLM generation)

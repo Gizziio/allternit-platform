@@ -10,7 +10,7 @@
 
 ### Canonical Design Law Files
 - `/DESIGN.md`
-- `/spec/design/typography.json`
+- `/docs/specs/design/typography.json`
 - `/src/styles/typography.css`
 - `/src/components/typography/Text.tsx`
 - `/agent/rules/typography.md`

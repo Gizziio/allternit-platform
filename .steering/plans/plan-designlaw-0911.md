@@ -1,7 +1,7 @@
 # Plan — session/designlaw-0911: design-law reconciliation (amber-only)
 
 Date: 2026-09-11. Locked decisions being executed (Eoj, 2026-09-11):
-1. **Spec wins**: `DESIGN.md` adopts the ivory/graphite/amber system from
+1. **Spec wins**: `docs/design/DESIGN.md` adopts the ivory/graphite/amber system from
    `~/allternit-redesign-spec.md`; the purple system is dead.
 2. **Amber-only accents**: the four per-mode palettes (chat terracotta #D4956A,
    cowork violet #A78BFA, code mint #79C47C, browser steel #69A8C8) are removed;
@@ -11,7 +11,7 @@ Governing doc: `~/allternit-design-gap-analysis.md` §4-§5.
 
 ## Tasks
 
-- [ ] D1 Amend `DESIGN.md` color system (§2, ~lines 145-283): replace gray
+- [ ] D1 Amend `docs/design/DESIGN.md` color system (§2, ~lines 145-283): replace gray
       surfaces (#fafafa/#0a0a0b) with ivory (#FAF8F4 family) / graphite
       (#0F0F0F family); replace purple accents (#7c3aed/#a78bfa) with amber
       scale (#B08D6E / #C4A684 hover / #9A7658 muted); document coral #D97757
@@ -45,7 +45,7 @@ Governing doc: `~/allternit-design-gap-analysis.md` §4-§5.
 - [ ] `grep -ri "D4956A\|A78BFA\|79C47C\|69A8C8" surfaces/ai.allternit.com/src
       surfaces/office.allternit.com/src ui/design` → zero hits (excluding
       design-systems-library.ts).
-- [ ] `grep -n "7c3aed\|a78bfa" DESIGN.md surfaces/*/src platform console src`
+- [ ] `grep -n "7c3aed\|a78bfa" docs/design/DESIGN.md surfaces/*/src platform console src`
       → zero hits outside third-party data.
 - [ ] `pnpm typecheck` in `surfaces/ai.allternit.com` — zero NEW errors.
 - [ ] `pnpm vitest run src/shell` — 20/20 (or current main count).

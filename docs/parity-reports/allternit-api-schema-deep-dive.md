@@ -68,7 +68,7 @@ The API uses a single SQLite database (`allternit.db`) migrated by Refinery. The
 - Trust / policy: `trust_tier`, `harness_config` (JSON), `enabled_modes` (JSON array of surfaces), `allowed_skills`, `allowed_tools`, `data_classification`, `write_scope`
 - Character: `character_json`, `category`, `tags`, `avatar`, `identity_key`
 - Mode hierarchy: `mode` (`primary|subagent|orchestrator|council`), `is_primary`, `delegates` (JSON array)
-- Create/update body is in `agent_routes.rs:305-348` and validates against `AGENT_CREATION_CHECKLIST.md`.
+- Create/update body is in `agent_routes.rs:305-348` and validates against `docs/AGENT_CREATION_CHECKLIST.md`.
 
 ### 1.3 Session / Thread Ecosystem (Three Overlapping Implementations)
 

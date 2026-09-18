@@ -131,7 +131,7 @@ agent discretion. Ratified per `commrails/spec/DAG_AS_DEFAULT_TASK_SYSTEM.md`.
 
 > **STATUS:** Canonical schema, registry contract, harness wiring, surface filtering, automation bridge, and workspace artifacts are implemented and passing verification as of 2026-07-02.
 >
-> See [`AGENT_CREATION_CHECKLIST.md`](./AGENT_CREATION_CHECKLIST.md) for the canonical schema, harness wiring, workspace artifacts, mode surfaces, and verification steps that every agent must satisfy.
+> See [`AGENT_CREATION_CHECKLIST.md`](./docs/AGENT_CREATION_CHECKLIST.md) for the canonical schema, harness wiring, workspace artifacts, mode surfaces, and verification steps that every agent must satisfy.
 
 ## What Is This?
 

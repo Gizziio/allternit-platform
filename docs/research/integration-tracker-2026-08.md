@@ -1,7 +1,7 @@
 # Allternit External Integration Tracker
 
 **Updated:** 2026-08-13 (session in progress)  
-**Source roadmap:** `research/external-integration-roadmap-2026-08.md`
+**Source roadmap:** `docs/research/external-integration-roadmap-2026-08.md`
 
 This tracker is the single source of truth for status, scope, and next actions for every item in the external-integration roadmap.
 
@@ -77,7 +77,7 @@ This tracker is the single source of truth for status, scope, and next actions f
 
 | Date | Item | Evidence |
 |------|------|----------|
-| 2026-08-12/13 | Research roadmap for all 29 items | `research/external-integration-roadmap-2026-08.md` |
+| 2026-08-12/13 | Research roadmap for all 29 items | `docs/research/external-integration-roadmap-2026-08.md` |
 | 2026-08-12 | OpenTag audit correction | Updated roadmap + steering checkpoint |
 | 2026-08-12 | Allternit Tagging Subsystem — full stack | Rust routes, migration, tests, TS API/store, surface UI (`surfaces/ai.allternit.com/src/lib/tags/`, `TagPicker.tsx`, `TagManagerView.tsx`, `AgentGalleryGrid.tsx`) |
 | 2026-08-12 | agent-desktop provider — Phase 1 | `crates/allternit-desktop-core/`, `crates/allternit-desktop-macos/`, `cmd/allternit-desktop-provider/`; `cargo check --workspace` clean; 10 tests passing |

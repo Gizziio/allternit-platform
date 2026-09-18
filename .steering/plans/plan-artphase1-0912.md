@@ -12,7 +12,7 @@ Goal: Land Artifacts API Phase 1 per docs/design/artifacts-api.md §7 — gatewa
 - [ ] Mount in main.rs following artifact_router() merge pattern, inside protected /api/v1 nest
 - [ ] cargo test -p allternit-api (new route tests incl. idempotency + retention cap)
 - [ ] cargo build --release -p allternit-api
-- [ ] Web surface: design save path writes through API (IndexedDB kept as offline fallback); gallery reads gateway-first with IndexedDB fallback. Touch ONLY design save/gallery plumbing — NOT ArtifactRenderer.tsx, NOT DESIGN.md §11
+- [ ] Web surface: design save path writes through API (IndexedDB kept as offline fallback); gallery reads gateway-first with IndexedDB fallback. Touch ONLY design save/gallery plumbing — NOT ArtifactRenderer.tsx, NOT docs/design/DESIGN.md §11
 - [ ] pnpm typecheck in surfaces/ai.allternit.com (0 errors)
 - [ ] pnpm vitest run src/lib/design green
 - [ ] Live smoke: start gateway from worktree, curl create→read→append→list→delete

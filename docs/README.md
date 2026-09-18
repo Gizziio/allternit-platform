@@ -14,4 +14,5 @@ How this directory is organized (ratified S0, enforced S6/S7 — 2026-09-18).
 - **New docs land in the right shelf on arrival**, not at depth 1. If you don't know the shelf, use `learnings/` and say why in the doc.
 - **Move with `git mv`** and fix inbound links in the same PR — a moved doc with stale inbound links is worse than no move.
 - **[agent-ledger/](../agent-ledger/LEDGER.md) is the signed session record and deliberately lives outside docs/; docs link to it, never copy from it.** Its historical summaries are dated records: never edit them to paper over link rot — count the stale references and note them instead.
+- **Root has its own keepers.** `GIZZI.md` (workspace-instruction file the runtimes load from cwd), `THIRD-PARTY-NOTICES.md` (electron-builder extraFiles in the desktop release), and `spec/Contracts/` (read from disk by validate_law.py, the context-pack-builder driver, and the gateway service) stay at repo root because live code reads them there. Root `.md` files otherwise live in `docs/`.
 - **`MASTER_INDEX.md` is refreshed whenever the structure changes.** Keep its format; bump the refresh date.

@@ -1,6 +1,6 @@
 # Allternit Documentation — Master Index
 
-**Last Updated:** September 18, 2026 (refreshed after the docs/ consolidation — loose depth-1 program docs filed into `programs/<program>/` and `learnings/`)
+**Last Updated:** September 18, 2026 (refreshed after the docs/ consolidation — loose depth-1 program docs filed into `programs/<program>/` and `learnings/` (S7); root `reports/`, `research/`, and `spec/` folded into `docs/` (S6))
 **Status:** Unified, Bridge-Mapped, and Surgically Sorted
 
 > **Taxonomy:** stable capitalized dir families (`Core_System/`, `Operations/`, `Future_Blueprints/`) and stable lower-case dirs (`architecture/`, `audit/`, `design/`, `marketing/`, `pipeline/`, `projects/`, `public/`, `research/`, `specs/`, `reports/`, `upstream/`, `archive/`, …) do not move. Loose program docs live under `programs/<program>/`; one-off orphans live under `learnings/`. See [README.md](./README.md) for the full rules.
@@ -100,12 +100,12 @@ Kept at depth 1 deliberately: [NATIVE_SESSIONS.md](./NATIVE_SESSIONS.md) and [AG
 ## 🗂️ 7. Stable Taxonomy Dirs
 *Do not reorganize without an explicit decision (see [README.md](./README.md)).*
 
-- **Specs & research:** [specs/](./specs/) (3) | [research/](./research/) (2) | [reports/](./reports/) (2) | [Audits_and_Research/](./Audits_and_Research/) (9) | [audit/](./audit/) (1) | [kimi-audit/](./kimi-audit/) (8) | [openai-audit/](./openai-audit/) (12) | [parity-reports/](./parity-reports/) (72) | [parity-reports-archive/](./parity-reports-archive/) (9) | [gap-analysis/](./gap-analysis/) (11)
+- **Specs & research:** [specs/](./specs/) (7) | [research/](./research/) (23) | [reports/](./reports/) (6) | [Audits_and_Research/](./Audits_and_Research/) (9) | [audit/](./audit/) (1) | [kimi-audit/](./kimi-audit/) (8) | [openai-audit/](./openai-audit/) (12) | [parity-reports/](./parity-reports/) (72) | [parity-reports-archive/](./parity-reports-archive/) (9) | [gap-analysis/](./gap-analysis/) (11)
 - **Design & product:** [design/](./design/) (30) | [architecture/](./architecture/) (18) | [marketing/](./marketing/) (8) | [demos/](./demos/) (2) | [assets/](./assets/) (1)
 - **Agent systems:** [a-protocol/](./a-protocol/) (2) | [agent-activity-design/](./agent-activity-design/) (5) | [agent-tasks/](./agent-tasks/) (46) | [bots/](./bots/) (2) | [desktop-cloud-mvp/](./desktop-cloud-mvp/) (48)
 - **Pipeline & planning:** [pipeline/](./pipeline/) (44) | [plans/](./plans/) (1) | [development/](./development/) (1) | [infra/](./infra/) (1) | [jobs/](./jobs/) (1) | [learning/](./learning/) (67)
 - **Upstream & public:** [upstream/](./upstream/) (10) | [public/](./public/) (119)
-- **Projects & archive:** [projects/](./projects/) (2) | [archive/](./archive/) (708)
+- **Projects & archive:** [projects/](./projects/) (allternit-cloud/ with MASTER_TRACKING.md + handoffs/, remote-control-gap-fix, porting-proven-patterns) | [archive/](./archive/) (708)
 
 ---
 
