@@ -6,6 +6,7 @@ over three synthetic task observations and writes the eval report:
 
     python domains/computer-use/core/scripts/shadow_head_eval.py [--steps N]
         [--head {mock,mlx,kimi}] [--questioning {batched,sequential}]
+        [--trajectory {off,on}] [--few-shot N]
         [--out-dir DIR] [--quiet]
 
 The LLM provider replays a recorded transcript and the AX observation is
@@ -16,11 +17,18 @@ real MlxDirectLogitHead (mlx-lm, Qwen3-4B-Instruct-2507-4bit) — the first
 run downloads ~2.5GB of weights from a public ungated HF repo, then runs
 fully local; ``--head kimi`` drives the KimiCliHead (cloud-iteration tier):
 one ``kimi -p`` subprocess per decide step, auth handled inside the CLI.
+
+The shadow state text is the canonical per-step format: [TASK], an
+unconditional [SINCE LAST STEP] element-delta block (first step / no-change
+/ ADDED+REMOVED+CHANGED rows), then [OBSERVED ELEMENTS] and [OPTIONS].
 ``--questioning`` applies to the kimi head only: ``batched`` (default) asks
 all questions in one subprocess call per step; ``sequential`` asks the
 operation + gates first, then the chosen operation's target menu (2 calls
-per step, smaller menus per pass). See core/shadow_eval.py for what the
-numbers do and do not mean.
+per step, smaller menus per pass). ``--trajectory`` (kimi head only) turns
+on live-trajectory retrieval: the head's own prior proposals for the run,
+each with its step's delta summary, are rendered into the prompt as
+[ACTIONS SO FAR THIS RUN] (explicitly labeled as never-executed shadow
+proposals). See core/shadow_eval.py for what the numbers do and do not mean.
 """
 
 from __future__ import annotations
@@ -52,6 +60,7 @@ def build_head(
     few_shot_order: str = "random",
     few_shot_framing: str = "default",
     traces_path: Optional[Path] = None,
+    trajectory: bool = False,
 ) -> "tuple[object, str]":
     """Construct the decision head for ``--head``; (head, report-stem-suffix)."""
     if name == "mock":
@@ -93,10 +102,20 @@ def build_head(
                 f"(order={few_shot_order}, framing={few_shot_framing}); "
                 "train split only, held-out tasks excluded by construction."
             )
-        head = KimiCliHead(questioning=questioning, few_shot_block=few_shot_block)
+        # The shadow state text now always carries the [SINCE LAST STEP]
+        # delta block, so every post-change kimi run is a distinct variant:
+        # stem the reports -deltas / -traj to never overwrite the pre-change
+        # baseline (shadow-eval-report-kimi.*).
+        suffix += "-traj" if trajectory else "-deltas"
+        head = KimiCliHead(
+            questioning=questioning,
+            few_shot_block=few_shot_block,
+            trajectory=trajectory,
+        )
         print(
             f"Using KimiCliHead ({head.binary}, questioning={questioning}"
-            f"{', few-shot' if few_shot_block else ''}); "
+            f"{', few-shot' if few_shot_block else ''}"
+            f"{', trajectory' if trajectory else ''}); "
             "one `kimi -p` subprocess per decide step."
         )
         return head, suffix
@@ -167,6 +186,16 @@ def main(argv: list[str] | None = None) -> int:
              "the CURRENT state only)",
     )
     parser.add_argument(
+        "--trajectory",
+        choices=("off", "on"),
+        default="off",
+        help="kimi head only: render the head's own prior proposals for the "
+             "current run into the prompt as [ACTIONS SO FAR THIS RUN], each "
+             "with its step's element-delta summary (live-trajectory "
+             "retrieval, inference-only). Default off — the state text still "
+             "always carries the [SINCE LAST STEP] delta block.",
+    )
+    parser.add_argument(
         "--traces",
         type=Path,
         default=None,
@@ -203,9 +232,13 @@ def main(argv: list[str] | None = None) -> int:
         few_shot_order=args.few_shot_order,
         few_shot_framing=args.few_shot_framing,
         traces_path=args.traces,
+        trajectory=args.trajectory == "on",
     )
     if args.questioning != "batched" and args.head != "kimi":
         print(f"note: --questioning {args.questioning} applies to the kimi head only; "
+              f"--head {args.head} ignores it.")
+    if args.trajectory != "off" and args.head != "kimi":
+        print(f"note: --trajectory {args.trajectory} applies to the kimi head only; "
               f"--head {args.head} ignores it.")
 
     from core.shadow_eval import default_tasks, run_eval, write_reports
@@ -223,6 +256,7 @@ def main(argv: list[str] | None = None) -> int:
         progress=not args.quiet,
     )
     report["questioning"] = args.questioning
+    report["trajectory"] = args.trajectory
     json_path, md_path = write_reports(report, args.out_dir, stem=f"shadow-eval-report{stem_suffix}")
 
     agg = report["aggregate"]

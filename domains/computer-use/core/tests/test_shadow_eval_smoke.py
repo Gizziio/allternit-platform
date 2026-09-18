@@ -113,7 +113,9 @@ def test_head_flag_parsing():
 
 
 def test_kimi_head_flag_parsing(monkeypatch):
-    """--head kimi builds a KimiCliHead; --questioning shapes the report stem."""
+    """--head kimi builds a KimiCliHead; --questioning/--trajectory shape the
+    report stem (-deltas is the post-state-delta default; -traj with
+    --trajectory on)."""
     script = _load_eval_script()
     monkeypatch.setattr("shutil.which", lambda _bin: "/fake/bin/kimi")
 
@@ -121,11 +123,16 @@ def test_kimi_head_flag_parsing(monkeypatch):
 
     head, suffix = script.build_head("kimi")
     assert isinstance(head, KimiCliHead) and head.questioning == "batched"
-    assert suffix == "-kimi"
+    assert not head.trajectory_enabled
+    assert suffix == "-kimi-deltas"
 
     head, suffix = script.build_head("kimi", questioning="sequential")
     assert head.questioning == "sequential"
-    assert suffix == "-kimi-sequential"
+    assert suffix == "-kimi-sequential-deltas"
+
+    head, suffix = script.build_head("kimi", trajectory=True)
+    assert head.trajectory_enabled
+    assert suffix == "-kimi-traj"
 
     try:
         script.main(["--questioning", "sideways"])
@@ -133,3 +140,10 @@ def test_kimi_head_flag_parsing(monkeypatch):
         assert exc.code == 2
     else:
         raise AssertionError("invalid --questioning value must exit 2")
+
+    try:
+        script.main(["--trajectory", "sideways"])
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:
+        raise AssertionError("invalid --trajectory value must exit 2")

@@ -523,6 +523,19 @@ class KimiCliHead:
       gates (small menus), pass 2 asks only the chosen operation's target
       menu — 2 subprocess calls per step, smaller menus per pass.
 
+    Live-trajectory retrieval (``trajectory=True``): the head additionally
+    implements two duck-typed run-lifecycle hooks the planning loop calls
+    when present — ``begin_run(task_id)`` at run start (per-task reset; the
+    head instance is shared across tasks in the eval) and
+    ``note_prior_step(step_num, summary)`` after each shadow decision. Its
+    own prior proposals for the current run are rendered as an [ACTIONS SO
+    FAR THIS RUN] block inside [STATE], explicitly labeled as shadow-mode
+    proposals that were NEVER EXECUTED, each with a one-line delta summary
+    ([SINCE LAST STEP] counts). History is capped at the last
+    ``_TRAJECTORY_HISTORY_CAP`` steps. Inference-only: no training, no
+    weights, still one ``kimi -p`` subprocess per pass. The reported
+    model_id gains a ``:traj`` suffix while the trajectory has content.
+
     ``few_shot_block`` optionally carries a pre-rendered exemplar block
     (selected from train-split Tier A traces, never the held-out eval tasks)
     injected before ``[STATE]`` — prompt-space distillation; the JSON answer
@@ -544,6 +557,7 @@ class KimiCliHead:
         max_repair_retries: int = 1,
         model_id: str = "kimi-cli",
         few_shot_block: Optional[str] = None,
+        trajectory: bool = False,
     ) -> None:
         self.binary = binary or os.environ.get(_KIMI_BIN_ENV_VAR, "") or "kimi"
         resolved = shutil.which(self.binary)
@@ -568,8 +582,40 @@ class KimiCliHead:
         self.few_shot_block = few_shot_block
         if few_shot_block:
             self.model_id += ":fewshot"
+        # Base id — the reported model_id is derived per decision pass so the
+        # :traj suffix reflects whether the trajectory block has content.
+        self._base_model_id = self.model_id
+        # Live-trajectory retrieval: accumulate this run's own prior
+        # proposals (via the duck-typed begin_run / note_prior_step hooks the
+        # planning loop calls when present) and render them into the prompt.
+        self.trajectory_enabled = bool(trajectory)
+        self._run_steps: List[Dict[str, Any]] = []
+        self._run_label: str = ""
         # Every non-canonical / out-of-vocab answer, for the vocab-miss metric.
         self.vocab_misses: List[Dict[str, Any]] = []
+
+    # ── run lifecycle (duck-typed hooks; the DecisionHead protocol is
+    # unchanged) ─────────────────────────────────────────────────────────
+
+    def begin_run(self, task_id: str) -> None:
+        """Planning-loop hook: a new run started. Per-task reset of the
+        trajectory history — the head instance is shared across tasks in the
+        eval, so proposals from a previous run must never leak into the
+        next task's prompt. ``task_id`` is the loop's session identifier
+        (carries the eval's task id, e.g. "shadow-search-flow")."""
+        self._run_steps = []
+        self._run_label = str(task_id)
+
+    def note_prior_step(self, step_num: int, summary: Dict[str, Any]) -> None:
+        """Planning-loop hook: one shadow decision was logged. ``summary``
+        carries the head's own proposal (operation, target, gate answers)
+        plus that step's element-delta summary. No-op unless trajectory mode
+        is enabled — with trajectory off the head behaves exactly as before."""
+        if not self.trajectory_enabled:
+            return
+        entry = dict(summary)
+        entry["step"] = int(step_num)
+        self._run_steps.append(entry)
 
     # ── subprocess ───────────────────────────────────────────────────────
 
@@ -597,6 +643,10 @@ class KimiCliHead:
 
     # ── prompt ───────────────────────────────────────────────────────────
 
+    # Cap on prior-step entries rendered into [ACTIONS SO FAR THIS RUN];
+    # bounds prompt growth on long runs.
+    _TRAJECTORY_HISTORY_CAP = 10
+
     @staticmethod
     def _questions_block(questions: Sequence[Question]) -> str:
         lines = []
@@ -606,6 +656,51 @@ class KimiCliHead:
                 options += ", …"
             lines.append(f"{q.name}: {options}")
         return "\n".join(lines)
+
+    def _trajectory_block(self) -> str:
+        """Render this run's own prior proposals for [ACTIONS SO FAR THIS
+        RUN], or "" when the trajectory is empty/ disabled.
+
+        Labeled explicitly as the head's OWN PRIOR PROPOSALS in shadow mode
+        — they were logged, never executed, so the model must not treat them
+        as things that happened on the page.
+        """
+        if not self.trajectory_enabled or not self._run_steps:
+            return ""
+        history = self._run_steps[-self._TRAJECTORY_HISTORY_CAP:]
+        lines = [
+            "[ACTIONS SO FAR THIS RUN]",
+            "These are THIS DECISION HEAD'S OWN PRIOR PROPOSALS for earlier "
+            "steps of this run. Shadow mode: they were LOGGED ONLY and NEVER "
+            "EXECUTED — the page did not necessarily change the way they "
+            "describe. Decide from the CURRENT observed elements and the "
+            "change since the last step, not from assuming these happened.",
+        ]
+        for entry in history:
+            operation = entry.get("operation") or "?"
+            target = entry.get("target")
+            target_text = f" target {target}" if target is not None else ""
+            delta = entry.get("delta") or {}
+            delta_text = delta.get("text") if isinstance(delta, dict) else None
+            lines.append(
+                f"step {entry['step']}: proposed {operation}{target_text}"
+                f" — {delta_text or 'delta unreported'}"
+            )
+        omitted = len(self._run_steps) - len(history)
+        if omitted > 0:
+            lines.append(f"(... {omitted} earlier proposed steps omitted)")
+        return "\n".join(lines)
+
+    def _inject_trajectory(self, state_text: str) -> str:
+        """Insert [ACTIONS SO FAR THIS RUN] between [TASK] and
+        [SINCE LAST STEP] (the canonical shadow state layout)."""
+        block = self._trajectory_block()
+        if not block:
+            return state_text
+        marker = "\n\n[SINCE LAST STEP]"
+        if marker in state_text:
+            return state_text.replace(marker, f"\n\n{block}{marker}", 1)
+        return state_text + f"\n\n{block}"
 
     def _prompt(
         self,
@@ -632,7 +727,7 @@ class KimiCliHead:
             f"{repair}"
             f"{few_shot}"
             "[STATE]\n"
-            f"{state_text}\n\n"
+            f"{self._inject_trajectory(state_text)}\n\n"
             "Answer the closed-set questions below. Each answer must be the "
             "EXACT option string from that question's list — never invent "
             "names, synonyms, or new options.\n\n"
@@ -752,10 +847,13 @@ class KimiCliHead:
         else:
             choices, _ = self._ask(state_text, questions)
         latency_ms = (time.time() - started) * 1000.0
+        # :traj suffix while the run's trajectory has content, so report
+        # stems and shadow.decision events distinguish trajectory runs.
+        model_id = self._base_model_id + (":traj" if self._run_steps else "")
         decision = TypedDecision(
             choices=choices,
             latency_ms=latency_ms,
-            model_id=self.model_id,
+            model_id=model_id,
         )
         decision.validate()
         return decision

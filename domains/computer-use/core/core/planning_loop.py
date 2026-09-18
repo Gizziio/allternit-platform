@@ -254,6 +254,11 @@ class PlanningLoop:
         self.code_client = code_client
         self._cancelled = False
         self._monitor_history: List[Dict[str, Any]] = []
+        # Shadow head per-run state: the previous step's element table, kept
+        # for the [SINCE LAST STEP] delta block. Reset at the start of every
+        # run() — consecutive runs on one loop instance must not leak deltas
+        # across the boundary.
+        self._shadow_prev_table: Optional[Any] = None
         # Auto page binding (deferral B): current URL observed from the
         # adapter after each step/batch; feeds the NEXT batch's descriptor.
         self._observed_url: Optional[str] = None
@@ -277,6 +282,24 @@ class PlanningLoop:
         error_msg: Optional[str] = None
         _consecutive_screenshots = 0
         model_turns = 0
+
+        # Shadow head per-run lifecycle: reset the element-table delta
+        # baseline and tell the head a new run began. Hooks are duck-typed
+        # (getattr) — heads without them (MockHead, MlxDirectLogitHead) are
+        # untouched. The identifier passed is the loop's session id, which
+        # carries the task identity for eval harnesses (e.g.
+        # "shadow-<task_id>" in core/shadow_eval.py).
+        self._shadow_prev_table = None
+        _shadow_head = self.config.shadow_head
+        if _shadow_head is not None:
+            _begin_run = getattr(_shadow_head, "begin_run", None)
+            if callable(_begin_run):
+                try:
+                    _begin_run(session_id)
+                except Exception as hook_err:
+                    logger.warning(
+                        "Shadow head begin_run failed: %s", hook_err
+                    )
 
         # Inject scratchpad context — strategy + skills + lessons from prior runs
         try:
@@ -907,13 +930,15 @@ class PlanningLoop:
         """Ask the shadow decision head for a typed closed-set proposal.
 
         Builds the element table from this step's AX skeleton observation,
-        asks the head one operation Choice plus speculative
+        computes the per-step element delta against the previous step's table
+        ([SINCE LAST STEP] block — the canonical shadow state format), asks
+        the head one operation Choice plus speculative
         ``<operation>_target`` Choices in a single pass, and attaches the
         answer to the loop log as a ``shadow.decision`` event with head
         latency and confidence. Purely observational: ``step``'s plan/action
         fields and ``plan`` are never touched.
         """
-        from .element_table import build_element_table
+        from .element_table import build_element_table, diff_tables, render_delta_block
         from .decision_head import Question, build_default_head
 
         tree = step.ax_tree_snapshot
@@ -934,6 +959,25 @@ class PlanningLoop:
                 step_num,
             )
             return
+
+        # [SINCE LAST STEP]: delta vs the previous step's table. Step 1 of a
+        # run has no baseline; an identical table renders an explicit no-op
+        # line. Either way the block is ALWAYS present — it is part of the
+        # canonical shadow state format, and consecutive steps must not look
+        # interchangeable to the head.
+        if self._shadow_prev_table is None:
+            since_block = (
+                "[SINCE LAST STEP]\n"
+                "This is the first observed state; no prior step to compare."
+            )
+            delta_summary = {"added": 0, "removed": 0, "changed": 0,
+                             "text": "first observed state (no prior step)"}
+        else:
+            delta = diff_tables(self._shadow_prev_table, table)
+            since_block = render_delta_block(delta)
+            delta_counts = delta.counts()
+            delta_summary = {**delta_counts, "text": delta.one_line()}
+        self._shadow_prev_table = table
 
         questions = [Question(name="operation", options=operation_options)]
         for operation in operation_options:
@@ -959,6 +1003,7 @@ class PlanningLoop:
         )
         state_text = (
             f"[TASK]\n{task}\n\n"
+            f"{since_block}\n\n"
             f"[OBSERVED ELEMENTS]\n{table.to_prompt_text()}\n\n"
             f"[OPTIONS]\n{options_text}\n\n"
             "[INSTRUCTIONS]\n"
@@ -984,6 +1029,42 @@ class PlanningLoop:
             "pruned_count": table.pruned_count,
             "decision": decision.to_dict(),
         })
+
+        # Duck-typed trajectory hook: heads that keep their own per-run step
+        # history (KimiCliHead) receive this step's proposal plus its delta
+        # summary. Failures degrade to a warning, like the head itself.
+        _note_prior_step = getattr(head, "note_prior_step", None)
+        if callable(_note_prior_step):
+            try:
+                operation_choice = decision.choices.get("operation")
+                target_choice = None
+                if operation_choice is not None:
+                    target_choice = decision.choices.get(
+                        f"{operation_choice.chosen}_target"
+                    )
+                _note_prior_step(step_num, {
+                    "operation": (
+                        operation_choice.chosen if operation_choice else None
+                    ),
+                    "target": (
+                        target_choice.chosen if target_choice is not None else None
+                    ),
+                    "goal_satisfied": (
+                        decision.choices["goal_satisfied"].chosen
+                        if "goal_satisfied" in decision.choices else None
+                    ),
+                    "stuck": (
+                        decision.choices["stuck"].chosen
+                        if "stuck" in decision.choices else None
+                    ),
+                    "delta": delta_summary,
+                })
+            except Exception as hook_err:
+                logger.warning(
+                    "Shadow head note_prior_step failed at step %s: %s",
+                    step_num,
+                    hook_err,
+                )
 
     async def _execute_action(self, action, session_id: str) -> Dict:
         """Execute a VisionAction through the adapter or executor."""
