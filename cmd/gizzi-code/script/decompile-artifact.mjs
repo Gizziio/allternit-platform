@@ -41,6 +41,11 @@
 //   - Removing `// @ts-nocheck` headers — decided per file AFTER `tsc` runs
 //     clean (spec rule 5). Use --strip-nocheck to remove them here instead.
 //
+//   Scanner note: the brace/statement scanners are string-aware but not
+//   JSX-aware; a quote preceded by a word char/`>` (JSX text apostrophes like
+//   `Gizzi's`) or with no same-line closer is treated as literal text so it
+//   cannot desync brace-depth tracking.
+//
 // Usage:
 //   node script/decompile-artifact.mjs [--strip-nocheck] <file.tsx> [...]
 // Exit 0 even when hand-fixes are needed (they are reported); exit 1 only on
@@ -68,6 +73,16 @@ function scan(text, from, stop) {
     const c = text[i]
     const next = text[i + 1]
     if (c === "'" || c === '"') {
+      // JSX text apostrophes (e.g. `Gizzi's`) are not string openers. A quote
+      // immediately preceded by a word char/`$`/`>` (JSX text or tag edge) or
+      // with no closing quote on the same line is literal text — skip just it.
+      const prev = i > 0 ? text[i - 1] : "\n"
+      const nl = text.indexOf("\n", i + 1)
+      const close = text.indexOf(c, i + 1)
+      if (/[\w$)>]/.test(prev) || close === -1 || (nl !== -1 && close > nl)) {
+        i++
+        continue
+      }
       i++
       while (i < n && text[i] !== c) {
         if (text[i] === "\\") i++
@@ -132,6 +147,15 @@ function splitStatements(body) {
     const c = body[i]
     const next = body[i + 1]
     if (c === "'" || c === '"') {
+      // Same JSX-text rule as scan(): word-char/`>`-preceded quotes or quotes
+      // with no same-line closer are literal text, not string openers.
+      const prev = i > 0 ? body[i - 1] : "\n"
+      const nl = body.indexOf("\n", i + 1)
+      const close = body.indexOf(c, i + 1)
+      if (/[\w$)>]/.test(prev) || close === -1 || (nl !== -1 && close > nl)) {
+        i++
+        continue
+      }
       i++
       while (i < n && body[i] !== c) {
         if (body[i] === "\\") i++
@@ -263,15 +287,31 @@ function tryParseMemoBlock(text, pos) {
   if (elseSeen.size !== names.length) return null
 
   const resultAssigns = new Map()
+  const destructureOnly = new Set() // assigned via `({...} = expr)`, needs `let` preserved
   for (const raw of ifStmts) {
     const trimmed = raw.trim()
     if (trimmed === "") continue
     const slotWrite = /^\$\[\d+\] = ([\s\S]*?);$/.exec(trimmed)
     if (slotWrite) continue // cache write — dropped
+    // paren-wrapped destructuring assignment `({ a, b } = expr);` — the
+    // compiler hoisted the declarations, so count the destructured names as
+    // result assignments (the statement itself is kept in order below)
+    const destructure = /^\(\s*\{([\s\S]*?)\}\s*=[\s\S]*\)\s*;?$/.exec(trimmed)
+    if (destructure) {
+      for (const part of destructure[1].split(",")) {
+        const nm = /^([A-Za-z_$][\w$]*)/.exec(part.trim())
+        if (nm && nameSet.has(nm[1])) {
+          if (resultAssigns.has(nm[1])) return null
+          resultAssigns.set(nm[1], true)
+          destructureOnly.add(nm[1])
+        }
+      }
+    }
     const assign = /^([A-Za-z_$][\w$]*) = ([\s\S]*?);?$/.exec(trimmed)
     if (assign && nameSet.has(assign[1])) {
       if (resultAssigns.has(assign[1])) return null
       resultAssigns.set(assign[1], true)
+      destructureOnly.delete(assign[1])
     }
     // any other statement (const/let/if/...) is kept, in order, by the
     // replacement builder below
@@ -280,8 +320,13 @@ function tryParseMemoBlock(text, pos) {
 
   // Build replacement in the if-branch's original statement order: result
   // assignments become `const NAME = expr;`, branch-local statements are kept,
-  // cache-slot writes are dropped.
+  // cache-slot writes are dropped. Names assigned only via the destructuring
+  // statement keep their original `let NAME;` declaration (they cannot be
+  // const — the destructure assigns them).
   const ordered = []
+  for (const name of destructureOnly) {
+    ordered.push(`${indent}let ${name};\n`)
+  }
   for (const raw of ifStmts) {
     const trimmed = raw.trim()
     if (trimmed === "") continue
@@ -340,6 +385,190 @@ function eliminateMemoBlocks(source) {
   return { text, count }
 }
 
+// ── Duplicate-const rename pass ──────────────────────────────────────────────
+
+function maskNonCode(text) {
+  // Return a same-length copy with string/comment/template contents blanked
+  // (replaced by spaces, newlines kept) so regexes see code tokens only.
+  const out = text.split("")
+  const n = text.length
+  let i = 0
+  while (i < n) {
+    const c = text[i]
+    const next = text[i + 1]
+    if (c === "'" || c === '"') {
+      // JSX-text rule (same as scan()): word-char/`>`-preceded quotes or
+      // quotes with no same-line closer are literal text, not strings.
+      const prev = i > 0 ? text[i - 1] : "\n"
+      const nl = text.indexOf("\n", i + 1)
+      const close = text.indexOf(c, i + 1)
+      if (/[\w$)>]/.test(prev) || close === -1 || (nl !== -1 && close > nl)) {
+        i++
+        continue
+      }
+      const start = i
+      i++
+      while (i < n && text[i] !== c) {
+        if (text[i] === "\\") i++
+        i++
+      }
+      i++
+      for (let k = start; k < Math.min(i, n); k++) if (out[k] !== "\n") out[k] = " "
+      continue
+    }
+    if (c === "`") {
+      const start = i
+      i++
+      while (i < n) {
+        if (text[i] === "\\") {
+          i += 2
+          continue
+        }
+        if (text[i] === "`") break
+        if (text[i] === "$" && text[i + 1] === "{") {
+          // ${...} holds code — recurse on the inner range
+          const innerOpen = i + 1
+          let td = 1
+          i += 2
+          while (i < n && td > 0) {
+            if (text[i] === "{") td++
+            else if (text[i] === "}") td--
+            i++
+          }
+          const inner = maskNonCode(text.slice(innerOpen + 1, i - 1))
+          for (let k = 0; k < inner.length; k++) {
+            if (inner[k] !== "\n") out[innerOpen + 1 + k] = " "
+          }
+          // keep the ${ and } visible for brace balance
+          for (let k = start; k < innerOpen + 1; k++) if (out[k] !== "\n") out[k] = " "
+          continue
+        }
+        i++
+      }
+      i++
+      for (let k = start; k < Math.min(i, n); k++) if (out[k] !== "\n") out[k] = " "
+      continue
+    }
+    if (c === "/" && next === "/") {
+      const start = i
+      i += 2
+      while (i < n && text[i] !== "\n") i++
+      for (let k = start; k < i; k++) out[k] = " "
+      continue
+    }
+    if (c === "/" && next === "*") {
+      const start = i
+      i += 2
+      while (i < n && !(text[i] === "*" && text[i + 1] === "/")) i++
+      i += 2
+      for (let k = start; k < Math.min(i, n); k++) if (out[k] !== "\n") out[k] = " "
+      continue
+    }
+    i++
+  }
+  return out.join("")
+}
+
+function dedupeConstDecls(source) {
+  // Memo-block inlining flattens compiler temps that reused a name across
+  // cache regions in sibling scopes — e.g. two `let t8;` where one lived
+  // inside an if-branch — producing duplicate `const t8` in one scope.
+  // The input files are valid JS, so ANY same-scope duplicate const in the
+  // output is script-created; rename the later binding and its reads.
+  let text = source
+  let total = 0
+  for (let round = 0; round < 20; round++) {
+    const mask = maskNonCode(text)
+    const n = mask.length
+    // brace matching per position
+    const matchBrace = new Int32Array(n).fill(-1)
+    const stack = []
+    for (let i = 0; i < n; i++) {
+      if (mask[i] === "{") stack.push(i)
+      else if (mask[i] === "}") {
+        const open = stack.pop()
+        matchBrace[open] = i
+        matchBrace[i] = open
+      }
+    }
+    const rootEnd = n
+    const scopeEnd = (scopeId) => (scopeId < 0 ? rootEnd : matchBrace[scopeId])
+    // collect const declarations: name, position, scope, statement end
+    const decls = []
+    const declRe = /\bconst ([A-Za-z_$][\w$]*) =/g
+    let dm
+    while ((dm = declRe.exec(mask)) !== null) {
+      const pos = dm.index
+      // scope enclosing the decl: innermost brace before pos
+      let scope = -1
+      for (let j = pos - 1; j >= 0; j--) {
+        if (mask[j] === "}") {
+          j = matchBrace[j]
+          continue
+        }
+        if (mask[j] === "{") {
+          scope = j
+          break
+        }
+      }
+      // statement end: next `;` at the declaration's brace depth
+      let depth = 0
+      let k = pos
+      let stmtEnd = -1
+      while (k < n) {
+        const ch = mask[k]
+        if (ch === "{") depth++
+        else if (ch === "}") {
+          if (depth === 0) break
+          depth--
+        } else if (ch === ";" && depth === 0) {
+          stmtEnd = k + 1
+          break
+        }
+        k++
+      }
+      if (stmtEnd < 0) stmtEnd = k
+      decls.push({ name: dm[1], pos, scope, stmtEnd })
+    }
+    // group by (scope, name), find duplicates
+    const seen = new Map()
+    let dup = null
+    for (const d of decls) {
+      const key = `${d.scope}:${d.name}`
+      if (seen.has(key)) {
+        dup = { first: seen.get(key), second: d }
+        break
+      }
+      seen.set(key, d)
+    }
+    if (!dup) break
+    // rename the later declaration and reads in (stmtEnd, scopeEnd),
+    // skipping nested scopes that bind the same name (legal shadowing)
+    const { name, stmtEnd, scope, pos: declPos } = dup.second
+    const end = scopeEnd(scope)
+    const shadowRanges = decls
+      .filter((d) => d.name === name && d.pos > dup.second.pos && d.pos < end && d.scope !== scope)
+      .map((d) => [d.pos, scopeEnd(d.scope)])
+    let newName = `${name}_2`
+    while (new RegExp(`\\b${newName}\\b`).test(text)) newName += "_"
+    const nameRe = new RegExp(`\\b${name}\\b`, "g")
+    let tail = text.slice(stmtEnd, end)
+    tail = tail.replace(nameRe, (m, off) => {
+      const abs = stmtEnd + off
+      for (const [s, e] of shadowRanges) if (abs >= s && abs < e) return m
+      return newName
+    })
+    let newText = text.slice(0, stmtEnd) + tail + text.slice(end)
+    // rename the declaration binding itself (first occurrence at/after declPos)
+    newText =
+      newText.slice(0, declPos) +
+      newText.slice(declPos).replace(new RegExp(`\\b${name}\\b`), newName)
+    text = newText
+    total++
+  }
+  return { text, renamed: total }
+}
+
 // ── t0 param rename (spec rule 3) ────────────────────────────────────────────
 
 function renameT0Params(source) {
@@ -378,7 +607,7 @@ function renameT0Params(source) {
 // ── Per-file driver ───────────────────────────────────────────────────────────
 
 function transform(source) {
-  const report = { memoBlocks: 0, renamedParams: 0, leftovers: [], fingerprint: false }
+  const report = { memoBlocks: 0, renamedParams: 0, renamedConsts: 0, leftovers: [], fingerprint: false }
   if (!source.includes(FINGERPRINT)) {
     return { ok: false, reason: "fingerprint missing (react/compiler-runtime import not found)", report }
   }
@@ -396,6 +625,12 @@ function transform(source) {
   const eliminated = eliminateMemoBlocks(text)
   text = eliminated.text
   report.memoBlocks = eliminated.count
+
+  // 4b. duplicate const declarations created by flattening sibling-scope
+  // compiler temps that reused a name
+  const dedup = dedupeConstDecls(text)
+  text = dedup.text
+  report.renamedConsts = dedup.renamed
 
   // 5. t0 rename
   const rn = renameT0Params(text)
@@ -436,9 +671,10 @@ for (const file of files) {
   const r = result.report
   const hand = r.leftovers > 0 ? ` HAND-FIX-NEEDED(leftover $[k] x${r.leftovers})` : ""
   if (r.leftovers > 0) needsHandFix++
+  const dups = r.renamedConsts > 0 ? ` dupConstRenames=${r.renamedConsts}` : ""
   try {
     writeFileSync(file, result.text)
-    console.log(`OK   ${file}: memoBlocks=${r.memoBlocks} t0renames=${r.renamedParams}${hand}`)
+    console.log(`OK   ${file}: memoBlocks=${r.memoBlocks} t0renames=${r.renamedParams}${dups}${hand}`)
   } catch (err) {
     console.log(`FAIL ${file}: unwritable (${err.message})`)
     failures++

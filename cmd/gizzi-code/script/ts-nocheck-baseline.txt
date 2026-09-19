@@ -1,12 +1,11 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=1471
+count=1418
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/commands/connect.ts
 cli/commands/skills.ts
-cli/commands/theme/index.ts
 cli/hooks/useChromeExtensionNotification.tsx
 cli/main.ts
 cli/ui/ink-app/Task.ts
@@ -483,52 +482,22 @@ cli/ui/ink-app/components/messages/UserForkBoilerplateMessage.tsx
 cli/ui/ink-app/components/messages/UserGitHubWebhookMessage.tsx
 cli/ui/ink-app/components/messages/UserMessage.tsx
 cli/ui/ink-app/components/messages/UserPromptMessage.tsx
-cli/ui/ink-app/components/messages/UserToolResultMessage/RejectedPlanMessage.tsx
-cli/ui/ink-app/components/messages/UserToolResultMessage/RejectedToolUseMessage.tsx
-cli/ui/ink-app/components/messages/UserToolResultMessage/UserToolCanceledMessage.tsx
-cli/ui/ink-app/components/messages/UserToolResultMessage/UserToolErrorMessage.tsx
-cli/ui/ink-app/components/messages/UserToolResultMessage/UserToolRejectMessage.tsx
-cli/ui/ink-app/components/messages/UserToolResultMessage/UserToolResultMessage.tsx
 cli/ui/ink-app/components/messages/UserToolResultMessage/UserToolSuccessMessage.tsx
-cli/ui/ink-app/components/messages/UserToolResultMessage/utils.tsx
-cli/ui/ink-app/components/permissions/AskUserQuestionPermissionRequest/AskUserQuestionPermissionRequest.tsx
-cli/ui/ink-app/components/permissions/AskUserQuestionPermissionRequest/PreviewBox.tsx
 cli/ui/ink-app/components/permissions/AskUserQuestionPermissionRequest/PreviewQuestionView.tsx
-cli/ui/ink-app/components/permissions/AskUserQuestionPermissionRequest/QuestionNavigationBar.tsx
-cli/ui/ink-app/components/permissions/AskUserQuestionPermissionRequest/QuestionView.tsx
-cli/ui/ink-app/components/permissions/AskUserQuestionPermissionRequest/SubmitQuestionsView.tsx
-cli/ui/ink-app/components/permissions/BashPermissionRequest/BashPermissionRequest.tsx
 cli/ui/ink-app/components/permissions/BashPermissionRequest/bashToolUseOptions.tsx
-cli/ui/ink-app/components/permissions/ComputerUseApproval/ComputerUseApproval.tsx
-cli/ui/ink-app/components/permissions/EnterPlanModePermissionRequest/EnterPlanModePermissionRequest.tsx
 cli/ui/ink-app/components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest.tsx
-cli/ui/ink-app/components/permissions/FallbackPermissionRequest.tsx
-cli/ui/ink-app/components/permissions/FileEditPermissionRequest/FileEditPermissionRequest.tsx
 cli/ui/ink-app/components/permissions/FilePermissionDialog/FilePermissionDialog.tsx
 cli/ui/ink-app/components/permissions/FilePermissionDialog/ideDiffConfig.ts
 cli/ui/ink-app/components/permissions/FilePermissionDialog/permissionOptions.tsx
 cli/ui/ink-app/components/permissions/FilePermissionDialog/useFilePermissionDialog.ts
 cli/ui/ink-app/components/permissions/FilePermissionDialog/usePermissionHandler.ts
-cli/ui/ink-app/components/permissions/FileWritePermissionRequest/FileWritePermissionRequest.tsx
-cli/ui/ink-app/components/permissions/FileWritePermissionRequest/FileWriteToolDiff.tsx
-cli/ui/ink-app/components/permissions/FilesystemPermissionRequest/FilesystemPermissionRequest.tsx
 cli/ui/ink-app/components/permissions/NotebookEditPermissionRequest/NotebookEditPermissionRequest.tsx
 cli/ui/ink-app/components/permissions/NotebookEditPermissionRequest/NotebookEditToolDiff.tsx
-cli/ui/ink-app/components/permissions/PermissionDecisionDebugInfo.tsx
-cli/ui/ink-app/components/permissions/PermissionDialog.tsx
-cli/ui/ink-app/components/permissions/PermissionExplanation.tsx
-cli/ui/ink-app/components/permissions/PermissionPrompt.tsx
-cli/ui/ink-app/components/permissions/PermissionRequest.tsx
-cli/ui/ink-app/components/permissions/PermissionRequestTitle.tsx
-cli/ui/ink-app/components/permissions/PermissionRuleExplanation.tsx
 cli/ui/ink-app/components/permissions/PowerShellPermissionRequest/PowerShellPermissionRequest.tsx
 cli/ui/ink-app/components/permissions/PowerShellPermissionRequest/powershellToolUseOptions.tsx
-cli/ui/ink-app/components/permissions/SandboxPermissionRequest.tsx
 cli/ui/ink-app/components/permissions/SedEditPermissionRequest/SedEditPermissionRequest.tsx
 cli/ui/ink-app/components/permissions/SkillPermissionRequest/SkillPermissionRequest.tsx
 cli/ui/ink-app/components/permissions/WebFetchPermissionRequest/WebFetchPermissionRequest.tsx
-cli/ui/ink-app/components/permissions/WorkerBadge.tsx
-cli/ui/ink-app/components/permissions/WorkerPendingPermission.tsx
 cli/ui/ink-app/components/permissions/hooks.ts
 cli/ui/ink-app/components/permissions/rules/AddPermissionRules.tsx
 cli/ui/ink-app/components/permissions/rules/AddWorkspaceDirectory.tsx
@@ -836,7 +805,6 @@ cli/ui/ink-app/services/api/promptCacheBreakDetection.ts
 cli/ui/ink-app/services/api/referral.ts
 cli/ui/ink-app/services/api/sessionIngress.ts
 cli/ui/ink-app/services/api/ultrareviewQuota.ts
-cli/ui/ink-app/services/api/usage.ts
 cli/ui/ink-app/services/api/withRetry.ts
 cli/ui/ink-app/services/autoDream/autoDream.ts
 cli/ui/ink-app/services/autoDream/config.ts
@@ -858,7 +826,6 @@ cli/ui/ink-app/services/extractMemories/extractMemories.ts
 cli/ui/ink-app/services/extractMemories/prompts.ts
 cli/ui/ink-app/services/internalLogging.ts
 cli/ui/ink-app/services/lsp/LSPDiagnosticRegistry.ts
-cli/ui/ink-app/services/lsp/LSPServerInstance.ts
 cli/ui/ink-app/services/lsp/LSPServerManager.ts
 cli/ui/ink-app/services/lsp/config.ts
 cli/ui/ink-app/services/lsp/manager.ts
@@ -877,7 +844,6 @@ cli/ui/ink-app/services/mcp/xaa.ts
 cli/ui/ink-app/services/mcp/xaaIdpLogin.ts
 cli/ui/ink-app/services/mockRateLimits.ts
 cli/ui/ink-app/services/notifier.ts
-cli/ui/ink-app/services/oauth/auth-code-listener.ts
 cli/ui/ink-app/services/oauth/index.ts
 cli/ui/ink-app/services/plugins/PluginInstallationManager.ts
 cli/ui/ink-app/services/plugins/pluginOperations.ts
@@ -886,7 +852,6 @@ cli/ui/ink-app/services/remoteManagedSettings/index.ts
 cli/ui/ink-app/services/remoteManagedSettings/securityCheck.tsx
 cli/ui/ink-app/services/remoteManagedSettings/syncCache.ts
 cli/ui/ink-app/services/remoteManagedSettings/syncCacheState.ts
-cli/ui/ink-app/services/remoteManagedSettings/types.ts
 cli/ui/ink-app/services/settingsSync/index.ts
 cli/ui/ink-app/services/teamMemorySync/index.ts
 cli/ui/ink-app/services/teamMemorySync/teamMemSecretGuard.ts
@@ -981,7 +946,6 @@ cli/ui/ink-app/tools/GrepTool/GrepTool.ts
 cli/ui/ink-app/tools/GrepTool/UI.tsx
 cli/ui/ink-app/tools/LSPTool/LSPTool.ts
 cli/ui/ink-app/tools/LSPTool/UI.tsx
-cli/ui/ink-app/tools/LSPTool/symbolContext.ts
 cli/ui/ink-app/tools/MCPTool/MCPTool.ts
 cli/ui/ink-app/tools/MCPTool/UI.tsx
 cli/ui/ink-app/tools/McpAuthTool/McpAuthTool.ts
@@ -996,10 +960,8 @@ cli/ui/ink-app/tools/PowerShellTool/readOnlyValidation.ts
 cli/ui/ink-app/tools/REPLTool/constants.ts
 cli/ui/ink-app/tools/REPLTool/primitiveTools.ts
 cli/ui/ink-app/tools/ReadMcpResourceTool/ReadMcpResourceTool.ts
-cli/ui/ink-app/tools/ScheduleCronTool/prompt.ts
 cli/ui/ink-app/tools/SkillTool/SkillTool.ts
 cli/ui/ink-app/tools/SkillTool/prompt.ts
-cli/ui/ink-app/tools/TaskCreateTool/TaskCreateTool.ts
 cli/ui/ink-app/tools/TaskOutputTool/TaskOutputTool.tsx
 cli/ui/ink-app/tools/TaskStopTool/TaskStopTool.ts
 cli/ui/ink-app/tools/TaskUpdateTool/TaskUpdateTool.ts
@@ -1060,7 +1022,6 @@ cli/ui/ink-app/utils/diff.ts
 cli/ui/ink-app/utils/directMemberMessage.ts
 cli/ui/ink-app/utils/doctorContextWarnings.ts
 cli/ui/ink-app/utils/doctorDiagnostic.ts
-cli/ui/ink-app/utils/dxt/zip.ts
 cli/ui/ink-app/utils/effort.ts
 cli/ui/ink-app/utils/env.ts
 cli/ui/ink-app/utils/exampleCommands.ts
@@ -1073,10 +1034,8 @@ cli/ui/ink-app/utils/fileHistory.ts
 cli/ui/ink-app/utils/filePersistence/outputsScanner.ts
 cli/ui/ink-app/utils/findExecutable.ts
 cli/ui/ink-app/utils/forkedAgent.ts
-cli/ui/ink-app/utils/frontmatterParser.ts
 cli/ui/ink-app/utils/getWorktreePaths.ts
 cli/ui/ink-app/utils/ghPrStatus.ts
-cli/ui/ink-app/utils/git.ts
 cli/ui/ink-app/utils/git/gitignore.ts
 cli/ui/ink-app/utils/gitDiff.ts
 cli/ui/ink-app/utils/gitSettings.ts
@@ -1103,7 +1062,6 @@ cli/ui/ink-app/utils/hooks/registerSkillHooks.ts
 cli/ui/ink-app/utils/hooks/sessionHooks.ts
 cli/ui/ink-app/utils/hooks/skillImprovement.ts
 cli/ui/ink-app/utils/ide.ts
-cli/ui/ink-app/utils/imagePaste.ts
 cli/ui/ink-app/utils/inProcessTeammateHelpers.ts
 cli/ui/ink-app/utils/ink.ts
 cli/ui/ink-app/utils/localInstaller.ts
@@ -1117,7 +1075,6 @@ cli/ui/ink-app/utils/mcp/elicitationValidation.ts
 cli/ui/ink-app/utils/mcpOutputStorage.ts
 cli/ui/ink-app/utils/mcpValidation.ts
 cli/ui/ink-app/utils/mcpWebSocketTransport.ts
-cli/ui/ink-app/utils/memory/versions.ts
 cli/ui/ink-app/utils/memoryFileDetection.ts
 cli/ui/ink-app/utils/messageQueueManager.ts
 cli/ui/ink-app/utils/messages.ts
@@ -1149,14 +1106,12 @@ cli/ui/ink-app/utils/permissions/bypassPermissionsKillswitch.ts
 cli/ui/ink-app/utils/permissions/classifierDecision.ts
 cli/ui/ink-app/utils/permissions/filesystem.ts
 cli/ui/ink-app/utils/permissions/getNextPermissionMode.ts
-cli/ui/ink-app/utils/permissions/pathInWorkingPath.ts
 cli/ui/ink-app/utils/permissions/pathValidation.ts
 cli/ui/ink-app/utils/permissions/permissionExplainer.ts
 cli/ui/ink-app/utils/permissions/permissionSetup.ts
 cli/ui/ink-app/utils/permissions/permissions.ts
 cli/ui/ink-app/utils/permissions/permissionsLoader.ts
 cli/ui/ink-app/utils/permissions/shadowedRuleDetection.ts
-cli/ui/ink-app/utils/permissions/tempDir.ts
 cli/ui/ink-app/utils/permissions/yoloClassifier.ts
 cli/ui/ink-app/utils/plans.ts
 cli/ui/ink-app/utils/plugins/addDirPluginSettings.ts
@@ -1201,15 +1156,11 @@ cli/ui/ink-app/utils/processUserInput/processUserInput.ts
 cli/ui/ink-app/utils/promptCategory.ts
 cli/ui/ink-app/utils/promptEditor.ts
 cli/ui/ink-app/utils/promptShellExecution.ts
-cli/ui/ink-app/utils/proxy.ts
 cli/ui/ink-app/utils/queryHelpers.ts
 cli/ui/ink-app/utils/queueProcessor.ts
 cli/ui/ink-app/utils/ripgrep.ts
 cli/ui/ink-app/utils/screenshotClipboard.ts
-cli/ui/ink-app/utils/secureStorage/index.ts
-cli/ui/ink-app/utils/secureStorage/macOsKeychainStorage.ts
 cli/ui/ink-app/utils/sessionFileAccessHooks.ts
-cli/ui/ink-app/utils/sessionIngressAuth.ts
 cli/ui/ink-app/utils/sessionRestore.ts
 cli/ui/ink-app/utils/sessionStart.ts
 cli/ui/ink-app/utils/sessionStorage.ts
@@ -1219,10 +1170,8 @@ cli/ui/ink-app/utils/settings/applySettingsChange.ts
 cli/ui/ink-app/utils/settings/changeDetector.ts
 cli/ui/ink-app/utils/settings/mdm/settings.ts
 cli/ui/ink-app/utils/settings/pluginOnlyPolicy.ts
-cli/ui/ink-app/utils/settings/schemaOutput.ts
 cli/ui/ink-app/utils/settings/settings.ts
 cli/ui/ink-app/utils/settings/settingsCache.ts
-cli/ui/ink-app/utils/settings/types.ts
 cli/ui/ink-app/utils/settings/validateEditTool.ts
 cli/ui/ink-app/utils/settings/validation.ts
 cli/ui/ink-app/utils/shell/bashProvider.ts
@@ -1247,10 +1196,8 @@ cli/ui/ink-app/utils/suggestions/directoryCompletion.ts
 cli/ui/ink-app/utils/suggestions/shellHistoryCompletion.ts
 cli/ui/ink-app/utils/suggestions/slackChannelSuggestions.ts
 cli/ui/ink-app/utils/swarm/It2SetupPrompt.tsx
-cli/ui/ink-app/utils/swarm/backends/ITermBackend.ts
 cli/ui/ink-app/utils/swarm/backends/InProcessBackend.ts
 cli/ui/ink-app/utils/swarm/backends/PaneBackendExecutor.ts
-cli/ui/ink-app/utils/swarm/backends/TmuxBackend.ts
 cli/ui/ink-app/utils/swarm/backends/registry.ts
 cli/ui/ink-app/utils/swarm/inProcessRunner.ts
 cli/ui/ink-app/utils/swarm/permissionSync.ts
