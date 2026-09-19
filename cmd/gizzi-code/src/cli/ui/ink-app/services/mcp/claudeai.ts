@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import memoize from 'lodash-es/memoize.js'
 import { getOauthConfig } from './../../constants/oauth.ts'
@@ -139,7 +138,9 @@ export const fetchClaudeAIMcpConfigsIfEligible = memoize(
  * Call this after login so the next fetch will use the new auth tokens.
  */
 export function clearClaudeAIMcpConfigsCache(): void {
-  fetchClaudeAIMcpConfigsIfEligible.cache.clear?.()
+  // TODO(types): the ambient 'lodash-es/memoize.js' shim (src/types/global.d.ts)
+  // returns T without lodash's runtime .cache property.
+  ;(fetchClaudeAIMcpConfigsIfEligible as any).cache.clear?.()
   // Also clear the auth cache so freshly-authorized servers get re-connected
   clearMcpAuthCache()
 }

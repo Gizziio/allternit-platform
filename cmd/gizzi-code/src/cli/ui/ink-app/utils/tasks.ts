@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { join } from 'path'

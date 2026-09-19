@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Command } from '../../commands'
 
 const installSlackApp = {
