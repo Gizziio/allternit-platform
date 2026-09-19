@@ -37,7 +37,7 @@ export function createUserMessage({
     structuredContent?: Record<string, unknown>
   }
   uuid?: UUID | string
-  timestamp?: string
+  timestamp?: string | number
   imagePasteIds?: number[]
   // For tool_result messages: the UUID of the assistant message containing the matching tool_use
   sourceToolAssistantUUID?: UUID

@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 651,
+    "totalNocheck": 650,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 537,
-    "totalQueueLoc": 223997,
+    "totalQueueFiles": 536,
+    "totalQueueLoc": 218518,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -888,12 +888,13 @@
     },
     {
       "id": "b0060",
-      "files": [
-        "src/cli/ui/ink-app/utils/messages.ts"
-      ],
+      "files": [],
       "loc": 5293,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 5479,
+      "note": "Burned 2026-09-19 (ao/ts-burn-mid3): messages.ts ~119 errors — root cause local types/message.ts shim index signature mutual incompatibility with SDK ContentBlockParam (dropped index sig, widened content/source/caller to unknown, asContentBlocks helper); additive shim corrections (stream_request_start/tool_use_summary types, event content_block fields, NormalizedAssistantMessage generic); snipCompact dormant DCE stub gained isSnipRuntimeEnabled/shouldNudgeForSnips/SNIP_NUDGE_TEXT/snipCompactIfNeeded no-op bodies; verify_plan_reminder attachment member + null-rendering entry. Escalations: none. Identity: live -1 + recorded +1."
     },
     {
       "id": "b0061",

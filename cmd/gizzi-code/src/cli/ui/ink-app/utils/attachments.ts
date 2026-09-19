@@ -658,6 +658,9 @@ export type Attachment =
       type: 'context_efficiency'
     }
   | {
+      type: 'verify_plan_reminder'
+    }
+  | {
       type: 'date_change'
       newDate: string
     }

@@ -44,6 +44,7 @@ const NULL_RENDERING_TYPES = [
   'pen_mode_exit',
   'current_session_memory',
   'compaction_reminder',
+  'verify_plan_reminder',
   'date_change',
   // TODO(types): utils/attachments.ts Attachment['type'] union omits
   // pen_mode_enter/pen_mode_exit (runtime carries them) — widen the satisfies
