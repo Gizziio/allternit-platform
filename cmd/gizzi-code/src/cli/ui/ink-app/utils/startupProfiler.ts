@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Startup profiling utility for measuring and reporting time spent in various
  * initialization phases.

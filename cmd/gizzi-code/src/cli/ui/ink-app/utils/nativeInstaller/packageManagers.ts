@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Package manager detection for Claude CLI
  */

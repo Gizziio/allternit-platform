@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Scheduled prompts, stored in <project>/.claude/scheduled_tasks.json.
 //
 // Tasks come in two flavors:

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { logForDebugging } from '../utils/debug'
 import { BridgeFatalError } from './bridgeApi'
 import type { BridgeApiClient } from './types'
