@@ -35,9 +35,18 @@
 //           with an `aliasOf` note.
 //      Quarantined files are excluded from batches and counted separately.
 //
-// Batches whose entire file list moved to quarantine are kept as retired
-// records (files: [], state/escalated/note preserved) so burn history is not
-// lost; new batches continue numbering after the highest retired id.
+// Batches whose entire file list left the live queue (burned, quarantined, or
+// deleted from disk) are kept as retired records (files: [], state and
+// burnedFiles/burnedLoc/escalated/note preserved) so burn history is not
+// lost. DONE batches retire even when a live remainder is still queued: the
+// recorded burn must not vanish on regen, and the leftover files return to
+// the pool and are repacked into active batches.
+//
+// Batch IDs are stable across regens: a repacked batch whose sorted file list
+// is byte-identical to a previous queue entry keeps that entry's ID; only
+// genuinely new batches take fresh IDs numbered after the highest ID ever
+// used. IDs appear only in queue.json, but burn agents and ledger summaries
+// cite them, so regen must not renumber unchanged work.
 //
 // Output: script/typecheck-burndown/queue.json — deterministic (stable sorts,
 // no timestamps) so re-runs diff cleanly. generatedFrom pins the git SHA.
@@ -609,7 +618,6 @@ function loadPreviousBatches() {
 export function buildQueue() {
   const { queue, excludedCompilerArtifacts, excludedVendored, totalNocheck } = scanQueue()
   const { kept, quarantined } = scanQuarantined()
-  const quarantinedPaths = new Set(quarantined.map(q => q.path))
 
   const edges = buildGraph(kept)
   const sizes = closureSizes(kept, edges)
@@ -698,18 +706,24 @@ export function buildQueue() {
     }
   }
 
-  // Retire fully-quarantined historical batches, carrying their record over.
-  // Already-retired records (files: []) carry forward verbatim so re-runs are
-  // idempotent.
+  // Retire historical batches, carrying their record over so burn history
+  // survives regeneration. Already-retired records (files: []) carry forward
+  // verbatim so re-runs are idempotent. A batch with history retires when no
+  // file in it is still live in the queue (burned headers, quarantine, and
+  // out-of-band deletions all count), and a DONE batch retires regardless —
+  // any live remainder is repacked below, and dropping its record would lose
+  // the burnedFiles count the burn-accounting identity is derived from.
+  const keptPaths = new Set(kept.map(f => f.path))
+  const previous = loadPreviousBatches()
   const retired = []
-  for (const old of loadPreviousBatches()) {
+  for (const old of previous) {
     const hasHistory = old.state !== "NEW" || old.escalated || old.note !== undefined
     if (!hasHistory) continue
     if (old.files.length === 0) {
       retired.push({ ...old })
       continue
     }
-    if (old.files.every(f => quarantinedPaths.has(f))) {
+    if (old.state === "DONE" || old.files.every(f => !keptPaths.has(f))) {
       retired.push({
         id: old.id,
         files: [],
@@ -724,8 +738,34 @@ export function buildQueue() {
     }
   }
   retired.sort((a, b) => (a.id < b.id ? -1 : 1))
-  const retiredCount = retired.length
-  batches.forEach((b, i) => (b.id = `b${String(i + 1 + retiredCount).padStart(4, "0")}`))
+  const usedIds = new Set(retired.map(b => b.id))
+
+  // Stable batch IDs: reuse the previous queue's ID when a repacked batch has
+  // the identical sorted file list (first previous batch with that key wins,
+  // by ascending id); fresh batches continue numbering after the highest id
+  // ever used, skipping ids held by retired records.
+  const prevIdByKey = new Map()
+  let maxIdNum = 0
+  for (const old of previous) {
+    const m = /^b(\d+)$/.exec(old.id ?? "")
+    if (m) maxIdNum = Math.max(maxIdNum, parseInt(m[1], 10))
+    if (old.files.length === 0) continue
+    const key = [...old.files].sort().join("\n")
+    if (!prevIdByKey.has(key)) prevIdByKey.set(key, old.id)
+  }
+  let nextIdNum = maxIdNum + 1
+  for (const batch of batches) {
+    const key = [...batch.files].sort().join("\n")
+    const reuse = prevIdByKey.get(key)
+    let id = reuse && !usedIds.has(reuse) ? reuse : null
+    if (id === null) {
+      do {
+        id = `b${String(nextIdNum++).padStart(4, "0")}`
+      } while (usedIds.has(id))
+    }
+    batch.id = id
+    usedIds.add(id)
+  }
 
   // Zero-importer files (informational only — many are entrypoints): counted
   // over the packed queue via the intra-queue dependency graph.
