@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { basename, dirname, isAbsolute, join, sep } from 'path'
 import type { ToolPermissionContext } from '../Tool.js'
 import { isEnvTruthy } from './envUtils.js'

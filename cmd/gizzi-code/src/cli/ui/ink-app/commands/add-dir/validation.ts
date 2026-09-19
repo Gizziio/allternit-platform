@@ -1,4 +1,3 @@
-// @ts-nocheck
 import chalk from '@/shared/util/chalk'
 import { stat } from 'fs/promises'
 import { dirname, resolve } from 'path'

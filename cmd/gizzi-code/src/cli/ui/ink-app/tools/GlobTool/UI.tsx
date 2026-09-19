@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import React from 'react';
 import { MessageResponse } from './../../components/MessageResponse.tsx';

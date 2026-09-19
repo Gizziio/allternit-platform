@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import memoize from 'lodash-es/memoize.js'
 import {
@@ -25,8 +24,10 @@ export function getSystemPromptInjection(): string | null {
 export function setSystemPromptInjection(value: string | null): void {
   systemPromptInjection = value
   // Clear context caches immediately when injection changes
-  getUserContext.cache.clear?.()
-  getSystemContext.cache.clear?.()
+  // (lodash memoize attaches a MapCache at runtime; the handwritten
+  // 'lodash-es/memoize.js' shim types the return as the bare function)
+  ;(getUserContext as { cache?: { clear?: () => void } }).cache?.clear?.()
+  ;(getSystemContext as { cache?: { clear?: () => void } }).cache?.clear?.()
 }
 
 export const getGitStatus = memoize(async (): Promise<string | null> => {
