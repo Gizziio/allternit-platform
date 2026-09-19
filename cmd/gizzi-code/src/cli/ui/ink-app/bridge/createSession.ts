@@ -1,5 +1,7 @@
-// @ts-nocheck
-import type { SDKMessage } from '../entrypoints/agentSdkTypes'
+// TODO(types): agentSdkTypes.ts keeps SDKMessage as a local `unknown` mirror
+// and does not export it; mirror it here (sibling pattern, cf.
+// assistant/sessionHistory.ts).
+type SDKMessage = unknown
 import { logForDebugging } from '../utils/debug'
 import { errorMessage } from '../utils/errors'
 import { extractErrorDetail } from './debugUtils'

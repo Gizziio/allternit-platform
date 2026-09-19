@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import memoize from 'lodash-es/memoize.js'
@@ -30,7 +29,7 @@ import { has1mContext } from './context.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from './envUtils.js'
 import { getCanonicalName } from './model/model.js'
 import { get3PModelCapabilityOverride } from './model/modelSupportOverrides.js'
-import { getAPIProvider } from './model/providers.js'
+import { type APIProvider, getAPIProvider } from './model/providers.js'
 import { getInitialSettings } from './settings/settings.js'
 
 /**
@@ -203,7 +202,11 @@ export function modelSupportsAutoMode(model: string): boolean {
  * - Vertex AI / Bedrock: tool-search-tool-2025-10-19
  */
 export function getToolSearchBetaHeader(): string {
-  const provider = getAPIProvider()
+  // 'bedrock' was cut from APIProvider; the comparison is preserved as
+  // provider-conditional dead code (DCE pattern, cf. USER_TYPE). Pin the
+  // wider type at the initializer (a union annotation on a const narrows to
+  // the initializer's type under CFA).
+  const provider = getAPIProvider() as APIProvider | 'bedrock'
   if (provider === 'vertex' || provider === 'bedrock') {
     return TOOL_SEARCH_BETA_HEADER_3P
   }
@@ -234,7 +237,19 @@ export function shouldUseGlobalCacheScope(): boolean {
   )
 }
 
-export const getAllModelBetas = registerBetasCache(memoize((model: string): string[] => {
+// TODO(types): lodash's memoize attaches a MapCache at `.cache` at runtime,
+// but the ambient declaration in src/types/global.d.ts returns plain T
+// without it, so registerBetasCache's all-optional MemoizedFunction parameter
+// rejects the memoized fn (TS2559). Intersect the cache shape locally
+// (sibling TODO(types) pattern, cf. b0219 modelCapabilities.ts).
+// NOTE: registerBetasCache returns void, so it must NOT wrap the assignment —
+// these exports were undefined at runtime (since e3c7fa284) because its result
+// was assigned to the const. Registration is a separate statement now.
+type MemoizedBetasFn = ((model: string) => string[]) & {
+  cache?: { clear?: () => void }
+}
+
+export const getAllModelBetas = memoize((model: string): string[] => {
   const betaHeaders = []
   const isHaiku = getCanonicalName(model).includes('haiku')
   const provider = getAPIProvider()
@@ -369,18 +384,21 @@ export const getAllModelBetas = registerBetasCache(memoize((model: string): stri
     )
   }
   return betaHeaders
-}))
+}) as MemoizedBetasFn
+registerBetasCache(getAllModelBetas)
 
-export const getModelBetas = registerBetasCache(memoize((model: string): string[] => {
+export const getModelBetas = memoize((model: string): string[] => {
   return getAllModelBetas(model)
-}))
+}) as MemoizedBetasFn
+registerBetasCache(getModelBetas)
 
-export const getBedrockExtraBodyParamsBetas = registerBetasCache(memoize(
+export const getBedrockExtraBodyParamsBetas = memoize(
   (model: string): string[] => {
     const modelBetas = getAllModelBetas(model)
     return modelBetas.filter(b => BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
   },
-))
+) as MemoizedBetasFn
+registerBetasCache(getBedrockExtraBodyParamsBetas)
 
 /**
  * Merge SDK-provided betas with auto-detected model betas.

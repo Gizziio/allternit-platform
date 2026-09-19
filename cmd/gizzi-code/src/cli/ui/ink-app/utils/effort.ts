@@ -1,4 +1,3 @@
-// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { isUltrathinkEnabled } from './thinking.js'
 import { getInitialSettings } from './settings/settings.js'
@@ -7,7 +6,11 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from './../services/analytics/gro
 import { getAPIProvider } from './model/providers.js'
 import { get3PModelCapabilityOverride } from './model/modelSupportOverrides.js'
 import { isEnvTruthy } from './envUtils.js'
-import type { EffortLevel } from './../entrypoints/sdk/runtimeTypes.ts'
+import { resolveAntModel, getAntModelOverrideConfig } from './model/antModels.js'
+// TODO(types): entrypoints/sdk/runtimeTypes.ts does not export EffortLevel;
+// the canonical definition lives in src/utils/effort.ts ('low' | 'medium' |
+// 'high' | 'max') — mirror it here (sibling pattern, cf. sessionHistory.ts).
+type EffortLevel = 'low' | 'medium' | 'high' | 'max'
 
 export type { EffortLevel }
 

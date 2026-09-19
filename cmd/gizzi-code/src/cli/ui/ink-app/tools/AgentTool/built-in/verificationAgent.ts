@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BASH_TOOL_NAME } from './../../BashTool/toolName.ts'
 import { EXIT_PLAN_MODE_TOOL_NAME } from './../../ExitPlanModeTool/constants.ts'
 import { FILE_EDIT_TOOL_NAME } from './../../FileEditTool/constants.ts'

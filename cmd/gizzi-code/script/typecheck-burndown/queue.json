@@ -1,13 +1,13 @@
 {
   "version": 1,
   "generatedFrom": "176d0504b58e19b0c1569c1692e7deb25c3c7086",
-  "batchCount": 102,
+  "batchCount": 103,
   "stats": {
-    "totalNocheck": 1208,
+    "totalNocheck": 1182,
     "excludedCompilerArtifacts": 210,
     "excludedVendored": 93,
-    "totalQueueFiles": 885,
-    "totalQueueLoc": 336666,
+    "totalQueueFiles": 859,
+    "totalQueueLoc": 331229,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -38,7 +38,7 @@
       "escalated": [
         {
           "path": "src/cli/commands/theme/index.ts",
-          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support — LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
+          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support \u2014 LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
         }
       ]
     },
@@ -256,7 +256,7 @@
       "burnedFiles": 41,
       "burnedLoc": 6481,
       "escalated": [],
-      "note": "Retired-id absorption: the original b0102 (43 files, 6544 loc) was burned by ao/ts-burn-next, but the queue regen at 5945839e0 (landed while the burn was in flight) renumbered its residue to b0141 and ao/cut-attribution-hooks-v2 deleted 2 of its files (postCommitAttribution.ts, attributionHooks.ts) before that. This record accounts the 41 surviving burned files (6481 loc, stripped) — they were removed from b0141, which keeps its 3 genuinely-unburned files (686 loc). The 2 cut files are accounted by the regen totalAccounted 1473, not here."
+      "note": "Retired-id absorption: the original b0102 (43 files, 6544 loc) was burned by ao/ts-burn-next, but the queue regen at 5945839e0 (landed while the burn was in flight) renumbered its residue to b0141 and ao/cut-attribution-hooks-v2 deleted 2 of its files (postCommitAttribution.ts, attributionHooks.ts) before that. This record accounts the 41 surviving burned files (6481 loc, stripped) \u2014 they were removed from b0141, which keeps its 3 genuinely-unburned files (686 loc). The 2 cut files are accounted by the regen totalAccounted 1473, not here."
     },
     {
       "id": "b0141",
@@ -279,11 +279,11 @@
       "escalated": [
         {
           "path": "src/runtime/util/filesystem.ts",
-          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import — stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
+          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import \u2014 stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
         },
         {
           "path": "src/runtime/cowork/cowork.service.ts",
-          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated — the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
+          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated \u2014 the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
         }
       ],
       "note": "Burned by ao/ts-burn-next3: 17 header-only 0-error burns + claude/loader.ts (3 `as string` casts on frontmatter values). TS2322 probe confirmed all 18 burned files in compilation. 2 files escalated (headers restored) and kept live in this record; they await non-type-only fixes. Identity: live 1045 + recorded 428 = 1473 = totalAccounted."
@@ -352,7 +352,7 @@
       "burnedFiles": 28,
       "burnedLoc": 6240,
       "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-next11). Retired-id absorption: the original b0256 (30 files, 7040 loc) was stripped (25 header-only 0-error burns + 5 type-only fixes: hooksSettings/registerFrontmatterHooks/sessionHooks derived HookEvent locally from HOOK_EVENTS since agentSdkTypes.ts exports only HOOK_EVENTS; session.ts/agent-compat.ts pinned void-returning fn() results with as-null casts; session.ts c.body(archive) cast to Uint8Array<ArrayBuffer>) — but the pilot-4 queue regen (61d6609d4) landed mid-flight, retired the b0256 id, and remixed the 30 files into b0299/b0300/b0301; then ao/ts-burn-next9 (b0220) burned the diagnosticTracking twin pair (800 loc) from b0301 before this PR merged. This record accounts the 28 surviving burned files (6240 loc), removed from b0299/b0300/b0301 here (b0301's diagnosticTracking twin pair is accounted in b0220, not here). TS2322 probe: exactly 30 errors, one per file, reverted byte-exact. No escalations."
+      "note": "Burned 2026-09-19 (ao/ts-burn-next11). Retired-id absorption: the original b0256 (30 files, 7040 loc) was stripped (25 header-only 0-error burns + 5 type-only fixes: hooksSettings/registerFrontmatterHooks/sessionHooks derived HookEvent locally from HOOK_EVENTS since agentSdkTypes.ts exports only HOOK_EVENTS; session.ts/agent-compat.ts pinned void-returning fn() results with as-null casts; session.ts c.body(archive) cast to Uint8Array<ArrayBuffer>) \u2014 but the pilot-4 queue regen (61d6609d4) landed mid-flight, retired the b0256 id, and remixed the 30 files into b0299/b0300/b0301; then ao/ts-burn-next9 (b0220) burned the diagnosticTracking twin pair (800 loc) from b0301 before this PR merged. This record accounts the 28 surviving burned files (6240 loc), removed from b0299/b0300/b0301 here (b0301's diagnosticTracking twin pair is accounted in b0220, not here). TS2322 probe: exactly 30 errors, one per file, reverted byte-exact. No escalations."
     },
     {
       "id": "b0333",
@@ -374,46 +374,20 @@
         "src/runtime/server/server.ts",
         "src/cli/ui/ink-app/utils/swarm/permissionSync.ts",
         "src/cli/ui/ink-app/worker.ts",
-        "src/cli/ui/ink-app/utils/model/model.ts",
-        "src/cli/ui/ink-app/utils/model/contextWindowUpgradeCheck.ts",
-        "src/cli/ui/ink-app/utils/pdfUtils.ts",
-        "src/cli/ui/ink-app/utils/model/configs.ts",
-        "src/cli/ui/ink-app/utils/model/agent.ts",
-        "src/cli/ui/ink-app/utils/swarm/teammateModel.ts",
-        "src/cli/ui/ink-app/commands/model/index.ts",
-        "src/cli/ui/ink-app/tools/FileReadTool/prompt.ts",
-        "src/runtime/integrations/plugin/index.ts",
-        "src/cli/ui/ink-app/bridge/createSession.ts",
-        "src/cli/ui/ink-app/tools/FileWriteTool/prompt.ts",
-        "src/cli/ui/ink-app/tools/FileEditTool/prompt.ts",
-        "src/cli/ui/ink-app/utils/model/modelStrings.ts",
-        "src/cli/ui/ink-app/utils/thinking.ts",
-        "src/runtime/tools/builtins/AgentTool/built-in/gizziGuideAgent.ts",
-        "src/cli/ui/ink-app/utils/teamMemoryOps.ts",
-        "src/shared/utils/teamMemoryOps.ts",
-        "src/runtime/tools/builtins/AgentTool/built-in/verificationAgent.ts",
-        "src/cli/ui/ink-app/utils/betas.ts",
-        "src/cli/ui/ink-app/tools/AgentTool/built-in/verificationAgent.ts",
-        "src/cli/ui/ink-app/coordinator/coordinatorMode.ts"
+        "src/runtime/integrations/plugin/index.ts"
       ],
-      "loc": 7058,
+      "loc": 3773,
       "twins": [],
       "state": "NEW"
     },
     {
       "id": "b0334",
       "files": [
-        "src/cli/ui/ink-app/utils/commitAttribution.ts",
         "src/runtime/providers/provider.ts",
         "src/cli/commands/skills.ts",
         "src/runtime/session/message-v2.ts",
         "src/ui/allternit/status-runtime.ts",
-        "src/cli/ui/ink-app/utils/undercover.ts",
         "src/cli/ui/ink-app/utils/advisor.ts",
-        "src/cli/ui/ink-app/tools/AgentTool/built-in/gizziGuideAgent.ts",
-        "src/cli/ui/ink-app/utils/effort.ts",
-        "src/cli/ui/ink-app/components/EffortIndicator.ts",
-        "src/cli/ui/ink-app/tools/WebSearchTool/WebSearchTool.ts",
         "src/cli/ui/ink-app/utils/model/antModels.ts",
         "src/cli/ui/ink-app/tools/REPLTool/constants.ts",
         "src/runtime/tools/builtins/AgentTool/built-in/exploreAgent.ts",
@@ -445,7 +419,7 @@
         "src/runtime/services/compact/microCompact.ts",
         "src/cli/ui/ink-app/services/compact/microCompact.ts"
       ],
-      "loc": 7423,
+      "loc": 5271,
       "twins": [
         {
           "runtime": "src/runtime/services/compact/apiMicrocompact.ts",
@@ -1936,6 +1910,17 @@
       "loc": 1701,
       "twins": [],
       "state": "NEW"
+    },
+    {
+      "id": "b0301",
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 26,
+      "burnedLoc": 5437,
+      "escalated": [],
+      "note": "Burned 2026-09-19 (ao/ts-burn-next13). Retired-id absorption: the original b0301 (26 files, 5349 loc) was stripped, but a queue regen landed mid-flight, retired the b0301 id, and remixed the 26 files into b0333 (20) and b0334 (6); removed from those batches and recorded here (26 burned files, 5437 loc with-header after in-batch type fixes). 17 header-only 0-error burns (TS2322 probe: exactly 17 probe errors, one per file, zero others) + 9 type-only fixes: model.ts, thinking.ts, effort.ts (restored missing resolveAntModel/getAntModelOverrideConfig imports from ./model/antModels.js, b0220 context.ts precedent; effort.ts also mirrors EffortLevel locally, cf. sessionHistory.ts), createSession.ts (local SDKMessage unknown mirror, b0219 sessionHistory.ts precedent), WebSearchTool.ts (local WebSearchProgress mirror matching the emitted payload shape \u2014 the canonical src/types/tools.ts shape does not match; local WebSearchStreamEvent pinned over queryModelWithStreaming's declared compact-StreamEvent union), gizziGuideAgent.ts + verificationAgent.ts (runtime BuiltInAgentDefinition is a dormant-shim mirror of the ink-app original; local contracts widened with the fields built-in records carry), betas.ts (MemoizedBetasFn cache-shape intersection, b0219 modelCapabilities.ts precedent; provider 'bedrock' comparison pinned via initializer cast as preserved provider-conditional DCE). Two latent runtime bugs fixed in-flight: betas.ts registerBetasCache returns void so the wrapped assignments made getAllModelBetas/getModelBetas/getBedrockExtraBodyParamsBetas undefined at runtime (throwing on every caller incl. the queryModel hot path) since e3c7fa284 2026-08-12 \u2014 registration is now a separate statement; coordinatorMode.ts `delete readGizziEnv(...)` deleted a temporary (TypeError in module strict mode) \u2014 now deletes process.env GIZZI_COORDINATOR_MODE. No escalations. Identity: live 879 + recorded 581 + quarantined 20 = 1480 = 1208 totalNocheck pre-burn identity reconciles; guard identity live 879 + recorded 581 = 1460 = totalAccounted."
     }
   ],
   "quarantined": [
