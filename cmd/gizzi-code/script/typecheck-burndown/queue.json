@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 104,
   "stats": {
-    "totalNocheck": 950,
+    "totalNocheck": 949,
     "excludedCompilerArtifacts": 118,
     "excludedVendored": 93,
-    "totalQueueFiles": 719,
-    "totalQueueLoc": 289937,
+    "totalQueueFiles": 718,
+    "totalQueueLoc": 287344,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -533,12 +533,13 @@
     },
     {
       "id": "b0034",
-      "files": [
-        "src/cli/ui/ink-app/tools/BashTool/bashSecurity.ts"
-      ],
+      "files": [],
       "loc": 2593,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 2593,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head2): single-file header-only 0-error burn. Probe rerun with header stripped + TS2322 canary (probe under an active header reports 0 and proves nothing — recorded for future lanes). Escalations: none. Identity: live -1 + recorded +1 = 1460 = totalAccounted."
     },
     {
       "id": "b0423",
