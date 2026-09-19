@@ -1,4 +1,3 @@
-// @ts-nocheck
 import figures from 'figures'
 import type { Command } from '../../commands.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'

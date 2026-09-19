@@ -1,4 +1,3 @@
-// @ts-nocheck
 //! Agent-sessions compatibility layer for the Allternit iOS app.
 //!
 //! The app speaks the platform protocol implemented by allternit-api
@@ -507,7 +506,7 @@ export const AgentCompatRoutes = () =>
       const anchor = messages.findLast((m: any) => m.info?.role === "user")
       if (!anchor) return c.json({ error: "Session has no messages to compact" }, 400)
       const result = await SessionSummary.summarize({ sessionID, messageID: anchor.info.id })
-      return c.json(result ?? null)
+      return c.json((result ?? null) as null)
     })
     .post("/agent-chat", async (c) => {
       // agent_chat_bridge (v1_routes.rs:395-890): subscribe to the bus BEFORE

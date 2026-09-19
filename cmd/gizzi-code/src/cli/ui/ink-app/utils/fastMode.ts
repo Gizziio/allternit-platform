@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import { getOauthConfig, OAUTH_BETA_HEADER } from './../constants/oauth.ts'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from './../services/analytics/growthbook.ts'

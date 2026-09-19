@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { HOOK_EVENTS } from './../../entrypoints/agentSdkTypes.ts'
 import type { AppState } from './../../state/AppState.tsx'
 import { logForDebugging } from '../debug.js'

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Hono } from "hono"
 import { stream } from "hono/streaming"
 import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
@@ -145,7 +144,7 @@ export const SessionRoutes = lazy(() =>
         const archive = await SessionSupportBundle.create(sessionID)
         c.header("Content-Type", "application/zip")
         c.header("Content-Disposition", `attachment; filename="gizzi-support-${sessionID}.zip"`)
-        return c.body(archive)
+        return c.body(archive as Uint8Array<ArrayBuffer>)
       },
     )
     .get(
@@ -303,7 +302,7 @@ export const SessionRoutes = lazy(() =>
         const { sessionID } = c.req.valid("param") as any
         const input = c.req.valid("json") as any
         const session = await Session.initialize({ ...input, sessionID })
-        return c.json(session)
+        return c.json(session as unknown as null)
       },
     )
     .get(
@@ -577,7 +576,7 @@ export const SessionRoutes = lazy(() =>
         const anchor = messages.findLast((m: any) => m.info?.role === "user")
         if (!anchor) return c.json({ error: "Session has no messages to summarize" }, 400)
         const result = await SessionSummary.summarize({ sessionID, messageID: anchor.info.id })
-        return c.json(result ?? null)
+        return c.json((result ?? null) as null)
       },
     )
     .post(

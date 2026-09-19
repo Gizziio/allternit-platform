@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { BetaUsage as Usage } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from './../services/analytics/index.ts'
 import { logEvent } from './../services/analytics/index.ts'
