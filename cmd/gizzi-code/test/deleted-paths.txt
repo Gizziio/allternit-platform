@@ -2702,3 +2702,6 @@ src/shared/utils/attributionHooks.ts
 src/cli/ui/ink-app/components/CommandPalette.tsx
 src/cli/ui/ink-app/services/compact/cachedMCConfig.ts
 src/cli/ui/ink-app/tools/DiscoverSkillsTool/prompt.ts
+src/cli/ui/ink-app/utils/attributionHooks.ts
+src/cli/ui/ink-app/utils/postCommitAttribution.ts
+src/shared/utils/postCommitAttribution.ts
