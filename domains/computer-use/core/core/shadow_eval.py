@@ -583,6 +583,7 @@ async def run_task(
             "agreement": agreement,
             "llm_success": llm_success_by_step.get(step_num, True),
             "head_confidence": op_choice.get("confidence", 0.0),
+            "vote_margin": op_choice.get("vote_margin", 0.0),
             "head_latency_ms": event["latency_ms"],
             "llm_latency_ms": turn_latency_by_step.get(step_num, 0.0),
             **gates,

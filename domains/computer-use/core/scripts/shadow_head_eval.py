@@ -8,6 +8,8 @@ over three synthetic task observations and writes the eval report:
         [--head {mock,mlx,kimi}] [--questioning {batched,sequential}]
         [--trajectory {off,on}] [--few-shot N]
         [--reserved-slots {off,on}] [--last-action {off,on}]
+        [--model HF-REPO] [--revision SHA]
+        [--self-consistency K] [--sc-temperature T]
         [--trace-out PATH] [--out-dir DIR] [--quiet]
 
 The LLM provider replays a recorded transcript and the AX observation is
@@ -76,6 +78,10 @@ def build_head(
     few_shot_framing: str = "default",
     traces_path: Optional[Path] = None,
     trajectory: bool = False,
+    model: Optional[str] = None,
+    revision: Optional[str] = None,
+    self_consistency: int = 1,
+    sc_temperature: float = 0.7,
 ) -> "tuple[object, str]":
     """Construct the decision head for ``--head``; (head, report-stem-suffix)."""
     if name == "mock":
@@ -164,14 +170,40 @@ def build_head(
             "    uv pip install -e '.[shadow-head]'\n"
             "(mlx is Apple-silicon only; no hosted fallback exists by design.)"
         )
-    from core.decision_head import MlxDirectLogitHead
+    from core.decision_head import DEFAULT_MODEL_REPO, MlxDirectLogitHead
 
-    head = MlxDirectLogitHead()
+    head: object = MlxDirectLogitHead(
+        model_repo=model or DEFAULT_MODEL_REPO,
+        revision=revision,
+        temperature=sc_temperature if self_consistency > 1 else 0.0,
+    )
+    if self_consistency > 1:
+        from core.self_consistency import SelfConsistencyHead
+
+        head = SelfConsistencyHead(head, samples=self_consistency)
+    inner = head.inner if self_consistency > 1 else head
+    model_tag = {
+        "mlx-community/Qwen3-4B-Instruct-2507-4bit": "qwen3",
+        "mlx-community/Qwen3.5-4B-4bit": "q35",
+        "Qwen/Qwen3.5-4B": "q35",
+        "mlx-community/gemma-3-4b-it-4bit": "gemma3",
+    }.get(inner.model_repo)
+    if self_consistency > 1 and model_tag in (None, "qwen3"):
+        suffix = f"-mlx-sc{self_consistency}"
+    elif model_tag:
+        suffix = f"-mlx-{model_tag}" + (
+            f"-sc{self_consistency}" if self_consistency > 1 else ""
+        )
+    else:
+        suffix = f"-mlx-sc{self_consistency}" if self_consistency > 1 else "-mlx"
     print(
         "Using MlxDirectLogitHead "
-        f"({head.model_repo}); first run downloads ~2.5GB of weights."
+        f"({inner.model_repo}"
+        f"{f' x{self_consistency} samples @ T={sc_temperature}' if self_consistency > 1 else ''}"
+        f", revision={inner.revision or 'default'}); "
+        "first run downloads the weights."
     )
-    return head, "-mlx"
+    return head, suffix
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -240,6 +272,39 @@ def main(argv: list[str] | None = None) -> int:
              "evaluation/tier-a/traces.jsonl)",
     )
     parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        metavar="HF-REPO",
+        help="mlx head only: HF repo id for the shadow-head weights (default "
+             "mlx-community/Qwen3-4B-Instruct-2507-4bit). Any mlx-community "
+             "4-bit build works; the commit pin applies only to the default repo.",
+    )
+    parser.add_argument(
+        "--revision",
+        type=str,
+        default=None,
+        metavar="SHA",
+        help="mlx head only: pinned commit for --model (default: the verified "
+             "pin for the default repo, else the repo's default branch)",
+    )
+    parser.add_argument(
+        "--self-consistency",
+        type=int,
+        default=1,
+        metavar="K",
+        help="mlx head only: sample K times per decide step (temperature "
+             "--sc-temperature) and majority-vote each question; confidence = "
+             "winner vote share, per-step vote_margin recorded in the report "
+             "rows for abstention curves. 1 (default) = single greedy pass, off.",
+    )
+    parser.add_argument(
+        "--sc-temperature",
+        type=float,
+        default=0.7,
+        help="sampling temperature for --self-consistency > 1 (default 0.7)",
+    )
+    parser.add_argument(
         "--out-dir",
         type=Path,
         default=DEFAULT_OUT_DIR,
@@ -292,6 +357,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.few_shot > 0 and args.head != "kimi":
         print(f"note: --few-shot applies to the kimi head only; "
               f"--head {args.head} ignores it.")
+    if args.self_consistency < 1:
+        parser.error("--self-consistency must be >= 1")
+    for _only_mlx in ("model", "revision", "self_consistency"):
+        if getattr(args, _only_mlx) not in (None, 1) and args.head != "mlx":
+            print(f"note: --{_only_mlx.replace('_', '-')} applies to the mlx head only; "
+                  f"--head {args.head} ignores it.")
 
     head, stem_suffix = build_head(
         args.head,
@@ -301,6 +372,10 @@ def main(argv: list[str] | None = None) -> int:
         few_shot_framing=args.few_shot_framing,
         traces_path=args.traces,
         trajectory=args.trajectory == "on",
+        model=args.model if args.head == "mlx" else None,
+        revision=args.revision if args.head == "mlx" else None,
+        self_consistency=args.self_consistency if args.head == "mlx" else 1,
+        sc_temperature=args.sc_temperature,
     )
     if args.questioning != "batched" and args.head != "kimi":
         print(f"note: --questioning {args.questioning} applies to the kimi head only; "
