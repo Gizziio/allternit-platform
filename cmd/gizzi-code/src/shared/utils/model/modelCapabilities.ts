@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { readFileSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import isEqual from 'lodash-es/isEqual.js'
@@ -68,7 +67,9 @@ const loadCache = memoize(
     }
   },
   path => path,
-)
+) as ((path: string) => ModelCapability[] | null) & {
+  cache: Map<unknown, unknown>
+}
 
 export function getModelCapability(model: string): ModelCapability | undefined {
   if (!isModelCapabilitiesEligible()) return undefined

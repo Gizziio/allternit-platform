@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tool Search utilities for dynamically discovering deferred tools.
  *
@@ -13,12 +12,12 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../../runtime/services/analytics/index.js'
-import type { Tool } from '../../runtime/tools/Tool.js'
+import type { Tool } from '../../cli/ui/ink-app/Tool.js'
 import {
   type ToolPermissionContext,
   type Tools,
   toolMatchesName,
-} from '../../runtime/tools/Tool.js'
+} from '../../cli/ui/ink-app/Tool.js'
 import type { AgentDefinition } from '../../runtime/tools/AgentTool/loadAgentsDir.js'
 import {
   formatDeferredToolLine,
@@ -152,6 +151,12 @@ const getDeferredToolTokenCount = memoize(
       .map(t => t.name)
       .join(','),
 )
+
+/**
+ * Default patterns for models that do NOT support tool_reference.
+ * New models are assumed to support tool_reference unless explicitly listed here.
+ */
+const DEFAULT_UNSUPPORTED_MODEL_PATTERNS = ['haiku']
 
 /**
  * Get the list of model patterns that do NOT support tool_reference.

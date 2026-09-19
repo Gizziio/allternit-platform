@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Token-counting helpers extracted from analyzeContext.ts so toolSearch.ts can
  * use them without pulling in the full analyzeContext graph (which depends on
@@ -9,7 +8,7 @@
  * true leaf so the bundler does not pull it into the heavy ESM cycles rooted in
  * api.ts / tokenEstimation.ts.
  */
-import type { ToolPermissionContext, Tools } from '../../runtime/tools/Tool.js'
+import type { ToolPermissionContext, Tools } from '../../cli/ui/ink-app/Tool.js'
 import type { AgentDefinitionsResult } from '../../runtime/tools/AgentTool/loadAgentsDir.js'
 import { errorMessage } from './errors.js'
 import { logForDebugging } from './debug.js'

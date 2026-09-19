@@ -1,6 +1,5 @@
-// @ts-nocheck
 import { randomUUID } from 'crypto'
-import type { Tool, ToolUseContext } from '../../runtime/tools/Tool.js'
+import type { Tool, ToolUseContext } from '../../cli/ui/ink-app/Tool.js'
 import { BashTool } from '../../cli/ui/ink-app/tools/BashTool/BashTool.js'
 import { logForDebugging } from './debug.js'
 import { errorMessage, MalformedCommandError, ShellError } from './errors.js'
@@ -38,7 +37,7 @@ const getPowerShellTool = (() => {
   return (): PromptShellTool => {
     if (!cached) {
       cached = (
-        require('../tools/PowerShellTool/PowerShellTool.js') as typeof import('../tools/PowerShellTool/PowerShellTool.js')
+        require('../../cli/ui/ink-app/tools/PowerShellTool/PowerShellTool.js') as typeof import('../../cli/ui/ink-app/tools/PowerShellTool/PowerShellTool.js')
       ).PowerShellTool
     }
     return cached

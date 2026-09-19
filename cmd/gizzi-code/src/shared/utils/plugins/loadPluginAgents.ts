@@ -1,4 +1,3 @@
-// @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
 import { basename } from 'path'
 import { isAutoMemoryEnabled } from '../../memdir/paths.js'
@@ -344,7 +343,7 @@ export const loadPluginAgents = memoize(
     logForDebugging(`Total plugin agents loaded: ${allAgents.length}`)
     return allAgents
   },
-)
+) as (() => Promise<AgentDefinition[]>) & { cache: Map<unknown, unknown> }
 
 export function clearPluginAgentCache(): void {
   loadPluginAgents.cache?.clear?.()

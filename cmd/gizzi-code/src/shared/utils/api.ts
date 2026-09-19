@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type {
   BetaTool,
   BetaToolUnion,
@@ -20,7 +19,7 @@ import type { ScopedMcpServerConfig } from '@/services/mcp/types.js'
 import { getTools } from '../../tools.js'
 import { CLI_SYSPROMPT_PREFIXES } from '@/constants/system.js'
 import { roughTokenCountEstimation } from '../../runtime/services/tokenEstimation.js'
-import type { Tool, ToolPermissionContext, Tools } from '../../runtime/tools/Tool.js'
+import type { Tool, ToolPermissionContext, Tools } from '../../cli/ui/ink-app/Tool.js'
 import { AGENT_TOOL_NAME } from '../../cli/ui/ink-app/tools/AgentTool/constants.js'
 import type { AgentDefinition } from '../../runtime/tools/AgentTool/loadAgentsDir.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'
@@ -31,6 +30,7 @@ import {
   shouldUseGlobalCacheScope,
 } from './betas.js'
 import { logForDebugging } from './debug.js'
+import { getCwd } from './cwd.js'
 import { isEnvTruthy } from './envUtils.js'
 import { createUserMessage } from './createUserMessage.js'
 import {
