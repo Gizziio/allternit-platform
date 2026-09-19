@@ -3,11 +3,11 @@
   "generatedFrom": "24dc73f2121338bd32dcee22035a8b5a0006d5fb",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1386,
+    "totalNocheck": 1364,
     "excludedCompilerArtifacts": 301,
     "excludedVendored": 93,
-    "totalQueueFiles": 972,
-    "totalQueueLoc": 366969,
+    "totalQueueFiles": 950,
+    "totalQueueLoc": 359668,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -294,38 +294,18 @@
     },
     {
       "id": "b0219",
-      "files": [
-        "src/cli/ui/ink-app/tools/PowerShellTool/powershellSecurity.ts",
-        "src/cli/ui/ink-app/utils/teammateMailbox.ts",
-        "src/runtime/services/api/promptCacheBreakDetection.ts",
-        "src/cli/ui/ink-app/services/api/promptCacheBreakDetection.ts",
-        "src/cli/ui/ink-app/history.ts",
-        "src/cli/ui/ink-app/utils/teleport/api.ts",
-        "src/cli/ui/ink-app/utils/swarm/teamHelpers.ts",
-        "src/cli/ui/ink-app/hooks/useClipboardImageHint.ts",
-        "src/cli/ui/ink-app/utils/teamDiscovery.ts",
-        "src/cli/ui/ink-app/assistant/sessionHistory.ts",
-        "src/cli/ui/ink-app/services/remoteManagedSettings/syncCacheState.ts",
-        "src/cli/ui/ink-app/services/api/adminRequests.ts",
-        "src/cli/ui/ink-app/utils/suggestions/shellHistoryCompletion.ts",
-        "src/cli/ui/ink-app/Task.ts",
-        "src/cli/ui/ink-app/services/api/ultrareviewQuota.ts",
-        "src/cli/ui/ink-app/utils/telemetry/events.ts",
-        "src/cli/ui/ink-app/assistant/index.ts",
-        "src/cli/ui/ink-app/utils/exportRenderer.tsx",
-        "src/cli/ui/ink-app/utils/model/modelCapabilities.ts",
-        "src/cli/ui/ink-app/tools/BriefTool/BriefTool.ts",
-        "src/cli/ui/ink-app/utils/telemetry/bigqueryExporter.ts",
-        "src/runtime/session/compaction.ts"
-      ],
-      "loc": 7301,
+      "files": [],
+      "loc": 0,
       "twins": [
         {
           "runtime": "src/runtime/services/api/promptCacheBreakDetection.ts",
           "inkApp": "src/cli/ui/ink-app/services/api/promptCacheBreakDetection.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 22,
+      "burnedLoc": 7301,
+      "note": "Burned by ao/ts-burn-next7: 17 header-only 0-error burns (TS2322 probe confirmed all 22 files in compilation, one probe error each) + 5 type-only fixes: lockfile.ts (ambient proper-lockfile declaration in src/types/global.d.ts omits lockfilePath, which the real package supports; widened the local wrapper LockOptions instead of casting 4 call sites in teammateMailbox.ts), teammateMailbox.ts (NestedMessage.content includes `unknown` in its union which is not iterable; pinned assistant blocks to ContentBlock[] in getLastPeerDmSummary), modelCapabilities.ts (lodash-es memoize does not declare `.cache`; intersected the MapCache delete shape onto loadCache), exportRenderer.tsx (dormant keybindings/types.ts stub; local KeybindingContextName = string mirror, sibling TODO(types) pattern as resolver.ts/validate.ts), sessionHistory.ts (agentSdkTypes.js keeps SDKMessage as a local `unknown` mirror and does not export it; mirrored locally), compaction.ts (hook name \"experimental.session.compacting\" is not declared in packages/plugin Hooks; triggered with an explicit local contract via generics). No escalations. Identity: live 950 + recorded 503 + quarantined 20 = 1473 = totalAccounted."
     },
     {
       "id": "b0022",

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { readFileSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import isEqual from 'lodash-es/isEqual.js'
@@ -56,6 +55,8 @@ function sortForMatching(models: ModelCapability[]): ModelCapability[] {
 }
 
 // Keyed on cache path so tests that set CLAUDE_CONFIG_DIR get a fresh read
+// lodash memoize exposes its MapCache at runtime; the lodash-es type surface
+// used here does not declare `.cache`, so intersect it on.
 const loadCache = memoize(
   (path: string): ModelCapability[] | null => {
     try {
@@ -68,7 +69,9 @@ const loadCache = memoize(
     }
   },
   path => path,
-)
+) as ((path: string) => ModelCapability[] | null) & {
+  cache: { delete: (key: string) => boolean }
+}
 
 export function getModelCapability(model: string): ModelCapability | undefined {
   if (!isModelCapabilitiesEligible()) return undefined

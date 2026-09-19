@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Attributes } from '@opentelemetry/api'
 import { getEventLogger, getPromptId } from './../../bootstrap/state.ts'
 import { logForDebugging } from '../debug.js'

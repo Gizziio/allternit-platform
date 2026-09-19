@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Teammate Mailbox - File-based messaging system for agent swarms
  *
@@ -14,7 +13,7 @@ import { z } from 'zod/v4'
 import { TEAMMATE_MESSAGE_TAG } from '../constants/xml.js'
 import { PermissionModeSchema } from '../entrypoints/sdk/coreSchemas.js'
 import { SEND_MESSAGE_TOOL_NAME } from '../tools/SendMessageTool/constants.js'
-import type { Message } from '../types/message.js'
+import type { ContentBlock, Message } from '../types/message.js'
 import { generateRequestId } from './agentId.js'
 import { count } from './array.js'
 import { logForDebugging } from './debug.js'
@@ -1158,7 +1157,11 @@ export function getLastPeerDmSummary(messages: Message[]): string | undefined {
     }
 
     if (msg.type !== 'assistant') continue
-    for (const block of msg.message.content) {
+    // NestedMessage.content includes `unknown` in its union (see
+    // types/message.ts), which is not iterable; assistant message content
+    // blocks are ContentBlocks.
+    const content = msg.message.content as ContentBlock[]
+    for (const block of content) {
       if (
         block.type === 'tool_use' &&
         block.name === SEND_MESSAGE_TOOL_NAME &&
