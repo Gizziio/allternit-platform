@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   getCwdState,
   getSessionId,
@@ -20,6 +19,7 @@ import {
   renderModelName,
 } from '../../utils/model/model.js'
 import type { LocalCommandCall } from '../../types/command.js'
+import type { Message } from '../../types/message.js'
 
 const PROGRESS_BAR_WIDTH = 24
 
@@ -37,7 +37,10 @@ function severityColor(ratio: number): string {
 }
 
 export const call: LocalCommandCall = async (_args, context) => {
-  const messages = context.getAppState().messages ?? []
+  // TODO(types): AppState has no `messages` field (upstream drift shared with
+  // status.tsx/session-info.tsx/statusModel.ts); runtime value is always
+  // undefined, so the `?? []` fallback was always in effect.
+  const messages = (context.getAppState() as { messages?: Message[] }).messages ?? []
   const model = getRuntimeMainLoopModel({
     permissionMode: context.getAppState().toolPermissionContext.mode,
     mainLoopModel: context.options.mainLoopModel,

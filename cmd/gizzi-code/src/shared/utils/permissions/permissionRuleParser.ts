@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { AGENT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/AgentTool/constants.js'
 import { TASK_OUTPUT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskOutputTool/constants.js'

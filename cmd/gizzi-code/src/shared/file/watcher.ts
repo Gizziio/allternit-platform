@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import z from "zod/v4"
@@ -59,7 +58,7 @@ export namespace FileWatcher {
         instance.on("add", (file) => callback(null, [{ path: file, type: "create" }]))
         instance.on("change", (file) => callback(null, [{ path: file, type: "update" }]))
         instance.on("unlink", (file) => callback(null, [{ path: file, type: "delete" }]))
-        instance.on("error", (error) => callback(error, []))
+        instance.on("error", (error) => callback(error as Error, []))
 
         return {
           unsubscribe: async () => {

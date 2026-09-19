@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Shared command prefix extraction using Haiku LLM
  *
@@ -250,8 +249,10 @@ async function getCommandPrefixImpl(
       typeof response.message.content === 'string'
         ? response.message.content
         : Array.isArray(response.message.content)
-          ? (response.message.content.find(_ => _.type === 'text')?.text ??
-            'none')
+          ? // TODO(types): NestedMessage.content includes `unknown` in its union;
+            // pin the array branch to a text-block shape (runtime unchanged).
+            (response.message.content as { type: string; text?: string }[])
+              .find(_ => _.type === 'text')?.text ?? 'none'
           : 'none'
 
     if (startsWithApiErrorPrefix(prefix)) {
