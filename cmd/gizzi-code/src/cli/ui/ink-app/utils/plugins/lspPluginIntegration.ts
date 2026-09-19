@@ -1,11 +1,6 @@
-// @ts-nocheck
 import { readFile } from 'fs/promises'
 import { join, relative, resolve } from 'path'
 import { z } from 'zod/v4'
-import type {
-  LspServerConfig,
-  ScopedLspServerConfig,
-} from '../../services/lsp/types.js'
 import { expandEnvVarsInString } from '../../services/mcp/envExpansion.js'
 import type { LoadedPlugin, PluginError } from '../../types/plugin.js'
 import { logForDebugging } from '../debug.js'
@@ -21,6 +16,30 @@ import {
   substituteUserConfigVariables,
 } from './pluginOptionsStorage.js'
 import { LspServerConfigSchema } from './schemas.js'
+
+// TODO(types): '../../services/lsp/types.js' is a TEMPORARY SHIM exporting
+// nothing. Local mirror of src/runtime/services/lsp/types.ts plus the ink-app
+// extension fields carried by LspServerConfigSchema in ./schemas.ts (sibling
+// pattern: services/lsp/LSPServerInstance.ts) — remove once the shim grows
+// the real exports.
+interface LspServerConfig {
+  command: string
+  args?: string[]
+  env?: Record<string, string>
+  rootUri?: string
+  extensionToLanguage?: Record<string, string>
+  workspaceFolder?: string
+  initializationOptions?: unknown
+  settings?: unknown
+  startupTimeout?: number
+  shutdownTimeout?: number
+  restartOnCrash?: boolean
+  maxRestarts?: number
+}
+interface ScopedLspServerConfig extends LspServerConfig {
+  scope: 'project' | 'global' | 'dynamic'
+  source?: string
+}
 
 /**
  * Validate that a resolved path stays within the plugin directory.

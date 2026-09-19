@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { join } from 'path';
 import React, { useCallback, useState } from 'react';
 import type { ExitState } from '../hooks/useExitOnCtrlCDWithKeybindings';

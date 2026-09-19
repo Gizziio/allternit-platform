@@ -10,13 +10,22 @@ import type { HooksSettings } from '../utils/settings/types.js'
 // TODO(types): '../services/lsp/types.js' is a TEMPORARY SHIM exporting
 // nothing. Local mirror of src/runtime/services/lsp/types.ts — remove once
 // the shim grows the real exports (sibling TODO(types) pattern, see
-// services/lsp/LSPServerInstance.ts).
+// services/lsp/LSPServerInstance.ts). Keep field-for-field identical to the
+// mirror in utils/plugins/lspPluginIntegration.ts (same shim target); the
+// two were unified 2026-09-19 after a dual-lane burn merged divergent copies.
 interface LspServerConfig {
   command: string
-  args: string[]
+  args?: string[]
   env?: Record<string, string>
   rootUri?: string
   extensionToLanguage?: Record<string, string>
+  workspaceFolder?: string
+  initializationOptions?: unknown
+  settings?: unknown
+  startupTimeout?: number
+  shutdownTimeout?: number
+  restartOnCrash?: boolean
+  maxRestarts?: number
 }
 
 export type { PluginAuthor, PluginManifest, CommandMetadata }

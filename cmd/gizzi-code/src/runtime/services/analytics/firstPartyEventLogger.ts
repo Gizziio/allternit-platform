@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { AnyValueMap, Logger, logs } from '@opentelemetry/api-logs'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
@@ -201,7 +200,8 @@ async function logEventTo1PAsync(
       throw e
     }
     if (process.env.USER_TYPE === 'ant') {
-      logError(e as Error)
+      // runtime logError takes a string message (ink-app twin takes unknown)
+      logError(String(e))
     }
     // swallow
   }
@@ -371,7 +371,10 @@ export function initialize1PEventLogging(): void {
   firstPartyEventLoggerProvider = new LoggerProvider({
     resource,
     processors: [
-      new BatchLogRecordProcessor(eventLoggingExporter, {
+      // @opentelemetry/sdk-logs ≥0.53 takes a single options object with the
+      // exporter embedded (BatchLogRecordProcessorOptions).
+      new BatchLogRecordProcessor({
+        exporter: eventLoggingExporter,
         scheduledDelayMillis,
         maxExportBatchSize,
         maxQueueSize,

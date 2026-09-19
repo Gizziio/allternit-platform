@@ -1,6 +1,13 @@
-// @ts-nocheck
 import type AllternitAI from '@allternit/gizzi-sdk/providers/allternit'
-import type { BetaToolUnion } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
+import type {
+  BetaJSONOutputFormat,
+  BetaMessageParam,
+  BetaTextBlockParam,
+  BetaThinkingConfigParam,
+  BetaTool,
+  BetaToolChoice,
+  BetaToolUnion,
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
 import {
   getLastApiCompletionTimestamp,
   setLastApiCompletionTimestamp,
@@ -19,13 +26,11 @@ import { getModelBetas, modelSupportsStructuredOutputs } from './betas.js'
 import { computeFingerprint } from './fingerprint.js'
 import { normalizeModelStringForAPI } from './model/model.js'
 
-type MessageParam = Allternit.MessageParam
-type TextBlockParam = Allternit.TextBlockParam
-type Tool = Allternit.Tool
-type ToolChoice = Allternit.ToolChoice
+type MessageParam = BetaMessageParam
+type TextBlockParam = BetaTextBlockParam
+type Tool = BetaTool
+type ToolChoice = BetaToolChoice
 type BetaMessage = Allternit.Beta.Messages.BetaMessage
-type BetaJSONOutputFormat = Allternit.Beta.Messages.BetaJSONOutputFormat
-type BetaThinkingConfigParam = Allternit.Beta.Messages.BetaThinkingConfigParam
 
 export type SideQueryOptions = {
   /** Model to use for the query */

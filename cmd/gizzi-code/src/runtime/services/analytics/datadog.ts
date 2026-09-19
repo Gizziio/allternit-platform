@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import { createHash } from 'crypto'
 import memoize from 'lodash-es/memoize.js'

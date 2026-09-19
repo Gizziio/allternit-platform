@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 105,
   "stats": {
-    "totalNocheck": 907,
+    "totalNocheck": 889,
     "excludedCompilerArtifacts": 118,
     "excludedVendored": 93,
-    "totalQueueFiles": 676,
-    "totalQueueLoc": 277869,
+    "totalQueueFiles": 658,
+    "totalQueueLoc": 271106,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -504,26 +504,7 @@
     },
     {
       "id": "b0423",
-      "files": [
-        "src/runtime/services/analytics/metadata.ts",
-        "src/cli/ui/ink-app/services/analytics/metadata.ts",
-        "src/cli/ui/ink-app/commands/cost/index.ts",
-        "src/cli/ui/ink-app/utils/plugins/lspPluginIntegration.ts",
-        "src/cli/ui/ink-app/plugins/builtinPlugins.ts",
-        "src/cli/ui/ink-app/services/policyLimits/index.ts",
-        "src/cli/ui/ink-app/components/ExportDialog.tsx",
-        "src/cli/ui/ink-app/utils/sideQuery.ts",
-        "src/cli/ui/ink-app/hooks/toolPermission/permissionLogging.ts",
-        "src/cli/ui/ink-app/tools/WebFetchTool/WebFetchTool.ts",
-        "src/runtime/services/analytics/datadog.ts",
-        "src/cli/ui/ink-app/services/analytics/datadog.ts",
-        "src/cli/ui/ink-app/utils/background/remote/remoteSession.ts",
-        "src/cli/ui/ink-app/utils/model/validateModel.ts",
-        "src/cli/ui/ink-app/commands/remote-env/index.ts",
-        "src/cli/ui/ink-app/services/api/logging.ts",
-        "src/runtime/services/analytics/firstPartyEventLogger.ts",
-        "src/cli/ui/ink-app/services/analytics/firstPartyEventLogger.ts"
-      ],
+      "files": [],
       "loc": 7344,
       "twins": [
         {
@@ -539,7 +520,10 @@
           "inkApp": "src/cli/ui/ink-app/services/analytics/metadata.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 18,
+      "burnedLoc": 6763,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head4): 18/18 remaining files burned (0 escalations, 25 type errors fixed across 8 files; root-cause fix in betasCache.ts — registerBetasCache returned void leaving getModelBetas/getAllModelBetas/getBedrockExtraBodyParamsBetas undefined at runtime since e3c7fa284, now returns the function). One original b0423 file (mcpPluginIntegration.ts) was burned earlier via the b0395 absorption record on main — NOT double-counted here. Escalations: none. Identity: live -18 + recorded +18 = 1460 = totalAccounted."
     },
     {
       "id": "b0424",
@@ -1113,8 +1097,7 @@
       "state": "DONE",
       "burnedFiles": 1,
       "burnedLoc": 1865,
-      "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-head5). 1 file (ink-app/utils/config.ts, 1865 LOC), 5 latent errors, no escalations: (1) dormant services/oauth/types.ts shim missing BillingType — added identical stub mirroring src/runtime/services/oauth/types.ts (allowed per shim-stub rule); ReferralEligibilityResponse NOT mirrored there — the passesEligibilityCache payload shape is owned by services/api/referral.ts, so config.ts now imports it from there (type-only, no runtime cycle); (2)+(3) saveConfig/saveConfigWithLock generic constraint widened object -> Record<string,unknown> so ambient lodash-es pickBy accepts the config (GlobalConfig is a type alias, callers unaffected); (4) proper-lockfile onCompromised callback takes optional err — ambient src/types/global.d.ts types it as () => void but the real package invokes it with the error; (5) header stripped. Identity verified: batch still NEW on origin/main at pickup after fetch."
+      "note": "Burned 2026-09-19 (ao/ts-burn-head5): dormant services/oauth/types.ts shim missing BillingType (identical stub added); ReferralEligibilityResponse imported from services/api/referral.ts (real consumer shape); saveConfig generic widened to Record<string,unknown>; proper-lockfile onCompromised (err?: unknown). Escalations: none."
     },
     {
       "id": "b0408",
