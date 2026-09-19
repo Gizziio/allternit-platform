@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 593,
+    "totalNocheck": 592,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 479,
-    "totalQueueLoc": 202641,
+    "totalQueueFiles": 478,
+    "totalQueueLoc": 200651,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -618,12 +618,13 @@
     },
     {
       "id": "b0046",
-      "files": [
-        "src/cli/ui/ink-app/tools/BashTool/readOnlyValidation.ts"
-      ],
+      "files": [],
       "loc": 1991,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1990,
+      "note": "front16: removed @ts-nocheck header; file was already type-clean (tsc exit 0, canary-verified in compilation). No escalations. Identity check: re-verified b0046 NEW after worktree creation; no sibling collision."
     },
     {
       "id": "b0427",
