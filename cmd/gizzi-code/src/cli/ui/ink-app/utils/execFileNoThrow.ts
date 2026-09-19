@@ -1,11 +1,15 @@
-// @ts-nocheck
 // This file represents useful wrappers over node:child_process
 // These wrappers ease error handling and cross-platform compatbility
 // By using execa, Windows automatically gets shell escaping + BAT / CMD handling
 
-import { type ExecaError, execa } from 'execa'
+import { execa } from 'execa'
 import { getCwd } from '../utils/cwd.js'
 import { logError } from './log.js'
+
+// TODO(types): execa@5 types use `export =` with ExecaError inside the
+// namespace, so the named type import TS2614s. Local mirror of the slice
+// used here (the caught error is only logged).
+type ExecaError = Error & { shortMessage?: string; stderr?: string }
 
 export { execSyncWithDefaults_DEPRECATED } from './execFileNoThrowPortable.js'
 

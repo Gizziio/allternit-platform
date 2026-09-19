@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Leaf module for creating assistant API-error messages.
  *
@@ -12,7 +11,10 @@ import type { BetaUsage as Usage } from '@allternit/gizzi-sdk/providers/allterni
 import { randomUUID } from 'crypto'
 import { NO_CONTENT_MESSAGE } from '../constants/messages.js'
 import type { AssistantMessage, ContentBlock } from '../types/message.js'
-import type { SDKAssistantMessageError } from '../entrypoints/agentSdkTypes.js'
+// TODO(types): SDKAssistantMessageError is not re-exported by the ink-app
+// agentSdkTypes fork; it only exists in the canonical SDK tree (same shape
+// controlTypes.ts imports). Import from there until the fork catches up.
+import type { SDKAssistantMessageError } from '../../../../entrypoints/sdk/coreTypes.js'
 import { SYNTHETIC_MODEL } from './syntheticMessages.js'
 
 export function baseCreateAssistantMessage({

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * OAuth redirect port helpers — extracted from auth.ts to break the
  * auth.ts ↔ xaaIdpLogin.ts circular dependency.

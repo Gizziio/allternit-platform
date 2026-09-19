@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { roughTokenCountEstimation } from '../../services/roughTokenEstimation.js'

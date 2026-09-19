@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { execa } from 'execa'
 import memoize from 'lodash-es/memoize.js'
 import { getSessionId } from '../bootstrap/state.js'
@@ -15,6 +14,12 @@ import { isEnvTruthy } from './envUtils.js'
 // Cache for email fetched asynchronously at startup
 let cachedEmail: string | undefined | null = null // null means not fetched yet
 let emailFetchPromise: Promise<string | undefined> | null = null
+
+// TODO(types): the ambient 'lodash-es/memoize.js' declaration returns T
+// without lodash's .cache property. Local mirror of the slice used here.
+type MemoizedWithCache = {
+  cache: { clear?: () => void }
+}
 
 /**
  * GitHub Actions metadata when running in CI
@@ -57,7 +62,7 @@ export async function initUser(): Promise<void> {
     cachedEmail = await emailFetchPromise
     emailFetchPromise = null
     // Clear memoization cache so next call picks up the email
-    getCoreUserData.cache.clear?.()
+    ;(getCoreUserData as unknown as MemoizedWithCache).cache.clear?.()
   }
 }
 
@@ -68,8 +73,8 @@ export async function initUser(): Promise<void> {
 export function resetUserCache(): void {
   cachedEmail = null
   emailFetchPromise = null
-  getCoreUserData.cache.clear?.()
-  getGitEmail.cache.clear?.()
+  ;(getCoreUserData as unknown as MemoizedWithCache).cache.clear?.()
+  ;(getGitEmail as unknown as MemoizedWithCache).cache.clear?.()
 }
 
 /**

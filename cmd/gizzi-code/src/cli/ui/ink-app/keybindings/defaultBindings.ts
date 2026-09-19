@@ -1,9 +1,14 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { satisfies } from './../utils/semver.ts'
 import { isRunningWithBun } from '../utils/bundledMode.js'
 import { getPlatform } from '../utils/platform.js'
-import type { KeybindingBlock } from './types.js'
+// TODO(types): './types.js' (keybindings/types.ts) is a dormant stub
+// (types_ts()) exporting nothing. Local mirror of the shape this file
+// needs — same pattern as resolver.ts.
+type KeybindingBlock = {
+  context: string
+  bindings: Record<string, string>
+}
 
 /**
  * Default keybindings that match current gizzi-code behavior.

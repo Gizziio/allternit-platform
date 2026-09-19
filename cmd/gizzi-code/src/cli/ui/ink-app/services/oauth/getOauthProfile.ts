@@ -1,7 +1,8 @@
-// @ts-nocheck
 import axios from 'axios'
 import { getOauthConfig, OAUTH_BETA_HEADER } from './../../constants/oauth.ts'
-import type { OAuthProfileResponse } from './types.ts'
+// TODO(types): the '@/*' path map resolves '@/services/oauth/types.js' to the
+// ink-app stub; this twin needs the real runtime types module (sibling).
+import type { OAuthProfileResponse } from '../../../../../runtime/services/oauth/types.js'
 import { getGlobalConfig } from './../../utils/config.ts'
 import { logError } from './../../utils/log.ts'
 export async function getOauthProfileFromApiKey(): Promise<

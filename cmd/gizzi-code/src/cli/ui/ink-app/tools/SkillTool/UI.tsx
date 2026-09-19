@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { SubAgentProvider } from './../../components/CtrlOToExpand.tsx';

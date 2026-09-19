@@ -1,7 +1,6 @@
-// @ts-nocheck
 import axios from 'axios'
 import { getOauthConfig, OAUTH_BETA_HEADER } from '@/constants/oauth.js'
-import type { OAuthProfileResponse } from '@/services/oauth/types.js'
+import type { OAuthProfileResponse } from './types.js'
 import { getGlobalConfig } from '../../../utils/config.js'
 import { logError } from '../../../shared/utils/log.js'
 export async function getOauthProfileFromApiKey(): Promise<

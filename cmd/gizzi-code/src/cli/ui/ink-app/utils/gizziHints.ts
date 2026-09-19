@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * gizzi-code hints protocol.
  *

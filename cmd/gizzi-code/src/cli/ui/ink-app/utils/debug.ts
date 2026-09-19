@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { appendFile, mkdir, symlink, unlink } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
 import { dirname, join } from 'path'
@@ -66,7 +65,9 @@ export const isDebugMode = memoize((): boolean => {
 export function enableDebugLogging(): boolean {
   const wasActive = isDebugMode() || process.env.USER_TYPE === 'ant'
   runtimeDebugEnabled = true
-  isDebugMode.cache.clear?.()
+  // TODO(types): ambient 'lodash-es/memoize.js' decl returns T without
+  // lodash's .cache; local mirror of the slice used here.
+  ;(isDebugMode as unknown as { cache: { clear?: () => void } }).cache.clear?.()
   return wasActive
 }
 
