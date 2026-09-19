@@ -1,6 +1,6 @@
 //! Kimi CLI driver (`kimi -p <prompt> --output-format stream-json [-S <id>] [-m <model>]`).
 //!
-//! No upstream oracle exists for kimi (see `docs/UHP_VENDOR_INVENTORY.md`); the
+//! No upstream oracle exists for kimi (see `docs/programs/ao/UHP_VENDOR_INVENTORY.md`); the
 //! parser handles the CLI's real wire shape (verified against 0.42.0): role-keyed
 //! lines `{"role":"assistant","content":"..."}`, meta lines carrying the resume
 //! ref (`session.resume_hint` → `session_id`), plus claude-stream-json-shaped

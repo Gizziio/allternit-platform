@@ -1,6 +1,6 @@
 //! CLI-agent drivers: argv construction and incremental NDJSON line parsing.
 //! Logic ported from `vendor/harnessrouter-ce/runner/server.py` (`_build_*`,
-//! `_norm_token_usage`) and `docs/UHP_VENDOR_INVENTORY.md` driver notes.
+//! `_norm_token_usage`) and `docs/programs/ao/UHP_VENDOR_INVENTORY.md` driver notes.
 
 use std::path::Path;
 

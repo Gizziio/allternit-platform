@@ -727,7 +727,7 @@ fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 }
 
 fn git_auth_failure() -> Response {
-    // libgit2 ≤1.3 interop (D3 iOS client, docs/BRAIN_D3_SPIKE.md): its
+    // libgit2 ≤1.3 interop (D3 iOS client, docs/learnings/BRAIN_D3_SPIKE.md): its
     // bundled http-parser does not drain a 401 body before retrying with
     // credentials on the same keep-alive connection — the leftover body
     // bytes get parsed as the next response's status line ("http parser

@@ -4090,7 +4090,7 @@ async fn run_agent_test(
 // ─── Agent marketplace (V35__agent_marketplace.sql) ────────────────────────
 //
 // Publish/browse/search/install/rate shared agents — the PalsHub-equivalent
-// gap flagged in docs/SURFACE_AUDIT_FINAL_REPORT.md ("Allternit's Agents are
+// gap flagged in docs/learnings/SURFACE_AUDIT_FINAL_REPORT.md ("Allternit's Agents are
 // local-only, backend-CRUD, with no browse/search/install/rate/creator-
 // profile layer"). A listing snapshots the source agent's config at publish
 // time (same shape CreateAgentBody accepts) rather than pointing at it

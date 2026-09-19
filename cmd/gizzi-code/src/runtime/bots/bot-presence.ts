@@ -1,5 +1,5 @@
 /**
- * Bot presence (Bot Mode, phase B5 — see docs/GIZZI_BOT_MODE_SPEC.md).
+ * Bot presence (Bot Mode, phase B5 — see docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * Heartbeat presence for the TUI bots pane: a bot is "active" while its
  * canonical chat is working. `SessionPrompt` records activity at every turn

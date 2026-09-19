@@ -1,6 +1,6 @@
 /**
  * Typed failure taxonomy (Bot Mode, phase B4 — D4, see
- * docs/GIZZI_BOT_MODE_SPEC.md).
+ * docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * Faithful port of the platform's closed vocabulary
  * (surfaces/ai.allternit.com/src/lib/bots/failure-reasons.ts, itself verified

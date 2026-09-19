@@ -1,7 +1,7 @@
 //! Dispatch mailbox — Bus-backed queue-not-drop messaging for `ao` sessions.
 //!
 //! When a dispatch targets a busy or unverifiable session, the message is
-//! enqueued on the Rails Bus (`allternit-agent-system-rails`, durable SQLite
+//! enqueued on the Rails Bus (`allternit-commrails`, durable SQLite
 //! at `<root>/.allternit/bus/queue.db`) with recipient `peer:ao-<slug>` and
 //! transport `mailbox`. The drainer (owned by ao-engine — exactly one per
 //! recipient; the Bus delivery status is global per recipient, so two

@@ -378,7 +378,7 @@ export async function deleteApiLoop(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Canvases (HTML artifact publish) — see docs/HTML_ARTIFACTS_PHASE_1_NOTES.md
+// Canvases (HTML artifact publish) — see docs/learnings/HTML_ARTIFACTS_PHASE_1_NOTES.md
 // for the authoritative route contract this wraps.
 //
 // Unlike /tasks and /automation above, these paths include the /api/v1

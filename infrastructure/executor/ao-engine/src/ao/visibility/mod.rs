@@ -4,7 +4,7 @@
 //! - **Feed 1 (engine agents):** `AgentInfo` rows from `agent.list` (the
 //!   panel polls; `events.subscribe pane.agent_status_changed` exists
 //!   server-side but has no client machinery — poll-diff transitions are used
-//!   instead, documented in `docs/AO_VISIBILITY_PEERS_NOTES.md`).
+//!   instead, documented in `docs/programs/ao/AO_VISIBILITY_PEERS_NOTES.md`).
 //! - **Feed 2 (native sessions):** [`crate::ao::native`] catalog rows.
 //! - **Feed 3 (Rails peers):** [`crate::ao::peers`] registry rows.
 //!

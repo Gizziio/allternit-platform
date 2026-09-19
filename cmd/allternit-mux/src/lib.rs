@@ -2,7 +2,7 @@
 //!
 //! A long-running daemon owns real PTY sessions; clients attach, detach, and
 //! control sessions/panes/agents over a newline-delimited JSON Unix socket API.
-//! See docs/ALLTERNIT_MUX_PLAN.md for the design.
+//! See docs/ALLTERNIT_MUX_PLAN.md for the design (doc removed in 2026-08 cleanup).
 
 pub mod api;
 pub mod client;

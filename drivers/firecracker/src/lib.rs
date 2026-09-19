@@ -1369,7 +1369,7 @@ impl FirecrackerDriver {
 
     /// Start a virtual display inside the guest and return the vsock port a
     /// VNC client should tunnel to. See
-    /// research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md.
+    /// docs/research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md.
     #[tracing::instrument(skip(self, vm), fields(vm_id = %vm.id))]
     pub async fn start_display_in_vm(
         &self,
@@ -1461,7 +1461,7 @@ enum GuestAgentRequest {
     #[serde(rename = "ping")]
     Ping { version: String },
     /// Start a virtual display (Xvnc) inside the guest, tunneled over a
-    /// second vsock port. See research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md.
+    /// second vsock port. See docs/research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md.
     #[serde(rename = "start_display")]
     StartDisplay { width: u32, height: u32 },
     /// Stop the virtual display and its vsock tunnel.

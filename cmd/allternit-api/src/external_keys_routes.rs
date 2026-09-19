@@ -3,7 +3,7 @@
 //! flips `validation_status` locally rather than calling out to the cloud
 //! provider to confirm the key is usable. Wiring a real validation call
 //! (assume-role + `DescribeKey`/`GetKey`/`GetCryptoKey` per provider) is
-//! follow-on work — see docs/SWARM_E_PHASE2_NOTES.md.
+//! follow-on work — see docs/SWARM_E_PHASE2_NOTES.md (doc removed in 2026-08 cleanup).
 
 use axum::{
     extract::{Extension, Path, State},

@@ -17,9 +17,9 @@
  *
  * The token values (surface/text/border/status/accent colors, spacing
  * scale, tab pattern, badge formula) are pulled directly from the repo's
- * own `DESIGN.md` v2.0 §§1–4 — not invented — so every artifact this
+ * own `docs/design/DESIGN.md` v2.0 §§1–4 — not invented — so every artifact this
  * generates reads as native Allternit UI rather than a generic template.
- * Typography uses DESIGN.md's Sans role (dashboards/status surfaces are
+ * Typography uses the Sans role in docs/design/DESIGN.md (dashboards/status surfaces are
  * an explicit Sans surface per §1.3) for headings/body/labels and its
  * Mono role for stat values and tabular numerics; the Serif role is
  * deliberately unused here — that's reserved for long-form research and

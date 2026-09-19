@@ -1,5 +1,5 @@
 /**
- * Bot routines (Bot Mode, phase B3 — D3/D4, see docs/GIZZI_BOT_MODE_SPEC.md).
+ * Bot routines (Bot Mode, phase B3 — D3/D4, see docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * A routine is a cron job of type `agent` whose config carries `bot: <name>`.
  * The cron agent executor delivers the prompt into the bot's canonical chat

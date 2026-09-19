@@ -1,9 +1,9 @@
 // Publish self-contained, deterministic HTML artifacts to allternit-api
-// canvases (docs/HTML_ARTIFACTS_PHASE_1_NOTES.md has the backend contract).
+// canvases (docs/learnings/HTML_ARTIFACTS_PHASE_1_NOTES.md has the backend contract).
 // Named `html-artifact` to avoid colliding with the unrelated `/artifact`
 // TUI markdown viewer (src/cli/ui/ink-app/commands/artifact/) and the
 // `Artifact` chat-tag type (src/runtime/util/artifacts.ts) — see
-// docs/HTML_ARTIFACTS_PHASE_2_NOTES.md for why.
+// docs/learnings/HTML_ARTIFACTS_PHASE_2_NOTES.md for why.
 import type { Argv } from "yargs"
 import { randomUUID } from "node:crypto"
 import { cmd } from "@/cli/commands/cmd"
