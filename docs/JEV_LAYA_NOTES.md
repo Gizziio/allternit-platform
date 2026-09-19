@@ -181,3 +181,67 @@ LLM reference, not ground truth; gates are still exported without gold; the
 search-phrase seeds ('torque wrench' etc.) intentionally appear in the
 `[TASK]` line — same convention as the canonical search-flow task — while
 every typed value is redacted.
+
+## Kaggle run v1 (2026-09-19, session/laya-finetune)
+
+Owner approval on file (free-cloud-GPU fine-tuning). Auth via
+`~/.kaggle/access_token` (chmod 600, kaggle CLI 2.2.4 picks it up).
+
+**Upstream recipe verified from the source, not the summary** (curl raw
+files, `NandhaKishorM/laya` @ `research`, 2026-09-19):
+`notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb` (19 cells) —
+typed-decisions row schema `{id, workflow, state, questions, gold}` as JSON
+strings with `gold = {label, probabilities}`; `build_training_item` with
+`max_len=1024` / `head_max_len=256`; `torchrun --nproc_per_node=2` DDP with
+`proper_reward` RLCD + GRPO group baseline + soft-CE guidance
+(EPOCHS 4, MICRO_BATCH 8, GRAD_ACCUM 4, GROUP_SIZE 4, LR 2.5e-5/1e-4,
+sigma 0.4→0.1); LBFGS per-qtype temperature calibration
+(`calib_items = all_items[::15][:400]`); eval via
+`ece_score(conf, correct)` from `laya.common`. The prep agent's summary was
+accurate on every point. Verified additionally: the base checkpoint's
+`rl_agent_config.json` ships a `temperature_by_options` bucket map that
+`Agent.system_one` consults BEFORE the scalar `temperature` list — so the
+upstream script's fitted scalar temperatures are silently overridden by the
+base map. v1 pops the map at save time so the fitted calibration applies.
+
+**Data** (`scripts/shadow_head_eval.py --head mock --tasks train` +
+`export_laya_finetune.py`, 8 seeds, all 252 cases/seed, zero drops):
+train = seeds 42,7,1,2,3,4,5 → **1,764 cases** (5.4 MB); val = seed 6 →
+**252 cases** (789 KB). Redaction spot check: two seeded secrets (seed-42
+checkout card number, seed-7 registration email) + one seeded name → 0 hits
+across all traces and case files. Search-phrase seeds ('torque wrench',
+'mushroom', 'annual adjustment', …) intentionally appear in `[TASK]` lines
+only, same convention as the canonical search-flow task.
+
+**Dataset**: `allternit/jev-shadow-train-v1` (private) —
+https://www.kaggle.com/datasets/allternit/jev-shadow-train-v1 — `kaggle
+datasets status` → `ready`. Files: `train.jsonl`, `val.jsonl`,
+`dataset-metadata.json`.
+
+**Kernel**: `allternit/jev-laya-shadow-head-fine-tune-v1` (private, GPU T4
+x1, internet on) — https://www.kaggle.com/code/allternit/jev-laya-shadow-head-fine-tune-v1.
+NOTE: the requested slug `jev-laya-finetune-v1` was overridden by Kaggle —
+the API derives the slug from the kernel TITLE, not the `id` field, and
+warned at push time. `kernel-metadata.json` in `notebooks/` carries the real
+slug so a re-push updates the same kernel. Input dataset attached via
+`dataset_sources`.
+
+**v1 deviations from the upstream recipe** (all deliberate):
+1. **Single GPU** — kernel metadata `enable_gpu` gives one T4; launched
+   `torchrun --standalone --nproc_per_node=1` (world_size=1 is a valid
+   degenerate DDP run, script otherwise byte-identical). Chosen because the
+   API kernel metadata has no dual-GPU toggle and v1 removes the
+   DDP-fragility variable; wall-clock stays in the minutes at this volume.
+2. **`temperature_by_options` dropped at save** (see verification note
+   above) + `calibration.json` written alongside the checkpoint.
+3. **Val-split eval + `result.json`** — after training, the notebook loads
+   `/kaggle/working/laya-finetuned` with plain `laya.Agent`, scores val
+   (seed 6) operation/target/combined accuracy + ECE, and writes
+   `/kaggle/working/result.json` =
+   `{val_accuracy, val_ece, val_operation_accuracy, val_target_accuracy,
+   cases_train, cases_val, notes}`.
+
+**Result**: see `result.json` in the kernel output (poll
+`kaggle kernels status allternit/jev-laya-shadow-head-fine-tune-v1`; fetch
+with `kaggle kernels output allternit/jev-laya-shadow-head-fine-tune-v1 -p
+/tmp/jev-kernel-output`). Filled in after the run completes.

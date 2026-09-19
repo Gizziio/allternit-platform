@@ -1,10 +1,31 @@
-"""Build notebooks/laya_finetune_kaggle.ipynb (draft, prep-only).
+"""Build notebooks/laya_finetune_kaggle.ipynb (executable v1 run).
 
 Cell bodies mirror the official Laya Kaggle notebook
-(github.com/NandhaKishorM/laya, notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb)
-where they are unchanged (install, DDP train script, calibration); the
-data path replaces LocalLLaMA/typed-decisions with our exported JEV trace
-cases (scripts/export_laya_finetune.py output, realigned gold).
+(github.com/NandhaKishorM/laya @ research,
+notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb — verified 2026-09-19
+via the raw repo files: same build_training_item preprocessing, same
+torchrun DDP train script with proper_reward RLCD + GRPO baseline + soft-CE
+guidance, same LBFGS per-qtype temperature calibration). v1 deviations from
+that upstream recipe, each deliberate:
+
+1. **Single GPU.** The kernel runs on one Kaggle T4 (kernel-metadata
+   enable_gpu), so torchrun launches with --nproc_per_node=1. The DDP script
+   is unchanged — world_size=1 is a degenerate-but-valid DDP run. Chosen over
+   2xT4 because the Kaggle API kernel metadata has no dual-GPU toggle and a
+   single-GPU v1 removes the DDP-fragility variable; wall-clock is still
+   minutes at this data volume.
+2. **temperature_by_options removed at save.** The base checkpoint ships a
+   per-option-bucket temperature map that laya's system_one consults BEFORE
+   the scalar temperature list (verified in laya/agent.py research branch),
+   so the upstream script's fitted cfg["temperature"] would be silently
+   ignored. v1 pops the map so the fitted calibration actually applies.
+3. **Val split + ECE + result.json.** Input is the Kaggle dataset
+   allternit/jev-shadow-train-v1 (train.jsonl 1764 cases, val.jsonl 252 —
+   seeds 42,7,1,2,3,4,5 / 6 of the TRAIN-split synthetic templates). After
+   training, the notebook evaluates the fine-tuned checkpoint on the val
+   split via plain laya.Agent (the exact call core/laya_head.LayaHead makes),
+   reports operation/target/combined accuracy and ECE (laya.common.ece_score),
+   and writes /kaggle/working/result.json.
 """
 
 import json
@@ -29,10 +50,10 @@ def code(source):
     })
 
 
-md("""# Fine-Tuning Laya on Allternit JEV Shadow-Head Traces (Kaggle 2×T4 DDP)
+md("""# Fine-Tuning Laya on Allternit JEV Shadow-Head Traces (Kaggle T4 v1, executed run)
 
-Draft — **prep only** (no Kaggle credentials on the authoring machine; run by
-uploading this notebook to Kaggle with the trace export as Input).
+**v1 — executed via the Kaggle API** (private kernel `allternit/jev-laya-finetune-v1`,
+GPU T4 x1, internet on; input dataset `allternit/jev-shadow-train-v1`, private).
 
 Fine-tunes **Laya** (`convaiinnovations/laya`, ModernBERT RLCD System 1
 decision model, Apache-2.0) on labeled shadow-head traces from the Allternit
@@ -41,30 +62,39 @@ computer-use harness (`core/trace_recorder.py` JSONL, exported by
 schema). The fine-tuned checkpoint is a drop-in for `core/laya_head.LayaHead`
 via `model=/path/to/checkpoint` (`laya.Agent` accepts local directories).
 
-### Kaggle Notebook Settings (right sidebar → Notebook options)
-* **Accelerator:** `GPU T4 x2` (both GPUs are used via DDP)
-* **Internet:** `On`
-* **Input:** upload the trace export (`laya-cases-*.jsonl`, produced by
-  `scripts/export_laya_finetune.py`) as a Dataset; it mounts under
-  `/kaggle/input/`
-* **Output:** `/kaggle/working/laya_finetuned_jev` — download the whole
-  directory (model.safetensors + rl_agent_config.json + tokenizer/ + encoder/)
+### Training recipe (verified against the upstream repo, 2026-09-19)
+Identical to `notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb` on
+the `research` branch of `NandhaKishorM/laya` (raw files inspected, not
+trusted from a summary): same `build_training_item` preprocessing
+(`max_len=1024`, `head_max_len=256`), same torchrun DDP train script
+(pure-policy-gradient RLCD with `proper_reward`, GRPO-style group baseline,
+soft cross-entropy guidance, gradient checkpointing, AMP), same LBFGS
+per-qtype temperature calibration. **v1 deviations:** single T4
+(`--nproc_per_node=1` — the API kernel metadata has no dual-GPU toggle and
+world_size=1 is a valid degenerate DDP run); the base checkpoint's
+`temperature_by_options` map is dropped at save time because `system_one`
+consults it before the scalar `temperature` list and would silently override
+the fitted calibration; val-split eval + ECE + `result.json` added.
 
-### Training-budget assumptions (free 2×T4 session, ~4–9 h cap)
-* Trace states are the canonical shadow state text (~0.5–2k tokens); the
-  preprocessor pads to `max_len=1024`, `head_max_len=256` (same bump the
-  upstream typed-decisions run uses).
-* Upstream reference: 6,000 decisions (typed-decisions) train in ~4–6 min.
-  JEV traces are far smaller — ~60 decisions per 66-step eval run, a few
-  hundred per real-harness sweep — so wall-clock training stays in the
-  **minutes** even with 4 epochs; the cap is only a concern beyond ~50k
-  decisions. Keep `EPOCHS=4` and the batch schedule below unless the input
-  grows past that.
-* Labels are one-hot from the recorded-LLM transcript; the recorder's
-  write-time redaction means no PII values are in the training text.
+### Input dataset (allternit/jev-shadow-train-v1, private)
+* `train.jsonl` — 1,764 cases: mock-head TRAIN-split synthetic suites, seeds
+  42, 7, 1, 2, 3, 4, 5 (12 templates x 21 realigned steps per seed).
+* `val.jsonl` — 252 cases: seed 6 (held out of training).
+* Gold labels are one-hot from the recorded-LLM transcript (temporal
+  realignment on); typed values are recorder-redacted (`[redacted]`).
+
+### Output
+* `/kaggle/working/laya-finetuned` — the loadable checkpoint
+  (`model.safetensors` fp16 + `encoder/` + `tokenizer/` +
+  `rl_agent_config.json` with fitted temperatures + `calibration.json`).
+* `/kaggle/working/result.json` — `{val_accuracy, val_ece, cases_train,
+  cases_val, notes}`.
 """)
 
-md("""## 1. Environment & Dual T4 GPU Check""")
+md("""## 1. Environment & GPU Check
+
+v1 runs single-GPU (kernel metadata `enable_gpu: true` → one T4). The DDP
+script is launched with `--nproc_per_node=1` — a valid world_size=1 run.""")
 code("""!nvidia-smi
 import os, torch
 
@@ -74,14 +104,14 @@ for i in range(n_gpu):
     p = torch.cuda.get_device_properties(i)
     print(f"  GPU {i}: {p.name} ({p.total_memory / 1e9:.1f} GB)")
 
-assert n_gpu >= 2, (
-    f"Expected 2 GPUs, but detected {n_gpu}!\\n"
+assert n_gpu >= 1, (
+    f"Expected at least 1 GPU, but detected {n_gpu}!\\n"
     "Please switch your Kaggle Accelerator: on the right sidebar, go to "
-    "Notebook options -> Accelerator -> select GPU T4 x2."
+    "Notebook options -> Accelerator -> select GPU T4."
 )
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-print("Both T4 GPUs verified and ready for DDP training!")
+print("GPU verified and ready for training!")
 """)
 
 md("""## 2. Install Dependencies""")
@@ -92,47 +122,38 @@ print("Transformers version:", transformers.__version__)
 print("PyTorch version     :", torch.__version__)
 """)
 
-md("""## 3. Upload & Convert the Trace Export (Input)
+md("""## 3. Load the Input Dataset (allternit/jev-shadow-train-v1)
 
-The Input is the JSONL produced by `scripts/export_laya_finetune.py`
-(typed-decisions-style rows: `id`, `workflow`, `state`, `questions`, `gold` —
-gold is one-hot over the transcript labels, already realigned so each state
-pairs with the action the reference policy took FROM that state).
+Typed-decisions-style rows: `id`, `workflow`, `split`, `state`, `questions`,
+`gold` (state/questions/gold are JSON strings; gold is one-hot over the
+transcript labels, realigned so each state pairs with the action the
+reference policy took FROM that state). `train.jsonl` = seeds 42,7,1,2,3,4,5;
+`val.jsonl` = seed 6 (never trained on).""")
+code("""import json, os
 
-If you only have raw `core/trace_recorder.py` traces, run the exporter first
-(in the repo): `python scripts/export_laya_finetune.py traces.jsonl -o laya-cases.jsonl`
+DATASET_DIR = "/kaggle/input/jev-shadow-train-v1"
+TRAIN_PATH = os.path.join(DATASET_DIR, "train.jsonl")
+VAL_PATH = os.path.join(DATASET_DIR, "val.jsonl")
+OUT_DIR = "/kaggle/working/laya-finetuned"
 
-**Split discipline:** the three synthetic eval tasks are labeled
-`split=heldout` by the recorder and become the evaluation set here; train on
-`split=train` only. Real-harness traces from non-held-out tasks are the
-training substrate — eval-only runs produce NO train rows by construction.""")
-code("""import glob, json, os
-
-INPUT_GLOB = "/kaggle/input/jev-shadow-traces/laya-cases-*.jsonl"
-OUT_DIR = "/kaggle/working/laya_finetuned_jev"
-
-paths = sorted(glob.glob(INPUT_GLOB))
-assert paths, f"No trace export found at {INPUT_GLOB!r} — upload it as a Kaggle Input."
-cases = []
-for path in paths:
+def load_jsonl(path):
+    rows = []
     with open(path) as fh:
         for line in fh:
             line = line.strip()
             if line:
-                cases.append(json.loads(line))
-print(f"Loaded {len(cases)} cases from {len(paths)} file(s).")
+                rows.append(json.loads(line))
+    return rows
 
-train_cases = [c for c in cases if c.get("split") == "train"]
-heldout_cases = [c for c in cases if c.get("split") == "heldout"]
-print(f"train: {len(train_cases)} | heldout: {len(heldout_cases)}")
-assert train_cases, (
-    "No train-split cases — these eval traces are all heldout by design. "
-    "Provide real-harness traces from non-held-out tasks for training, or "
-    "accept tiny-data smoke behavior if just validating the pipeline."
-)
+train_cases = load_jsonl(TRAIN_PATH)
+val_cases = load_jsonl(VAL_PATH)
+cases_train, cases_val = len(train_cases), len(val_cases)
+print(f"train: {cases_train} cases from {TRAIN_PATH}")
+print(f"val:   {cases_val} cases from {VAL_PATH}")
+assert cases_train > 0 and cases_val > 0, "Input dataset missing or empty."
 """)
 
-md("""## 4. Preprocess for DDP (tokenize once, both ranks read from disk)
+md("""## 4. Preprocess (tokenize once)
 
 Same `build_training_item` logic as the upstream typed-decisions notebook —
 gold probabilities over the criteria keys, normalized, with `label = argmax`.
@@ -206,7 +227,9 @@ RLCD with proper scoring rules (`proper_reward`), GRPO-style group baseline,
 soft cross-entropy guidance, gradient checkpointing, and post-training
 per-qtype temperature calibration. Saves a loadable checkpoint directory
 (`model.safetensors` fp16 + `encoder/` + `tokenizer/` + updated
-`rl_agent_config.json` with the fitted temperatures and `max_len=1024`).""")
+`rl_agent_config.json` with the fitted temperatures and `max_len=1024`).
+v1 only: pops `temperature_by_options` at save (it would otherwise override
+the fitted scalar temperatures in `system_one`) and writes `calibration.json`.""")
 code(r'''%%writefile /kaggle/working/train_ddp.py
 import os, sys, time, json, random, math
 import numpy as np
@@ -297,7 +320,7 @@ def main():
 
     EPOCHS = 4
     MICRO_BATCH = 8      # 8 sequences per forward pass per GPU
-    GRAD_ACCUM = 4       # Effective batch across 2 GPUs = 64 sequences
+    GRAD_ACCUM = 4       # Effective batch = 8 * 4 * world_size (32 on 1 GPU, 64 on 2)
     GROUP_SIZE = 4       # GRPO baseline samples
     LR_ENCODER = 2.5e-5
     LR_HEAD = 1.0e-4
@@ -317,7 +340,7 @@ def main():
     scaler = torch.amp.GradScaler("cuda", enabled=True)
 
     if rank == 0:
-        print(f"Starting 2xT4 DDP training: {len(all_items)} total items | {len(my_items)} per rank | {EPOCHS} epochs")
+        print(f"Starting DDP training (world_size={world_size}): {len(all_items)} total items | {len(my_items)} per rank | {EPOCHS} epochs")
     t0 = time.time()
 
     for epoch in range(EPOCHS):
@@ -431,9 +454,20 @@ def main():
 
         cfg["fine_tuned"] = True
         cfg["model_name"] = "laya-jev-shadow-head"
+        # v1: drop the per-option-bucket map — system_one consults it BEFORE
+        # the scalar list, which would silently discard the fitted calibration.
+        cfg.pop("temperature_by_options", None)
         cfg["temperature"] = fitted_temps
         with open(os.path.join(output_dir, "rl_agent_config.json"), "w") as f:
             json.dump(cfg, f, indent=2)
+        with open(os.path.join(output_dir, "calibration.json"), "w") as f:
+            json.dump({
+                "temperature_per_qtype": {
+                    "choice": fitted_temps[0], "score": fitted_temps[1], "noul": fitted_temps[2]
+                },
+                "fitted_on": "train_items[::15][:400] post-training logits, LBFGS NLL",
+                "temperature_by_options_removed": True,
+            }, f, indent=2)
         print(f"Model successfully saved to {output_dir}!")
 
     dist.destroy_process_group()
@@ -442,35 +476,40 @@ if __name__ == "__main__":
     main()
 ''')
 
-md("""## 6. Launch Multi-GPU Fine-Tuning with `torchrun`""")
-code("""OUTPUT_DIR = "/kaggle/working/laya_finetuned_jev"
+md("""## 6. Launch Fine-Tuning with `torchrun` (single T4, world_size=1)
+
+The upstream recipe is DDP; on one GPU `--nproc_per_node=1` is a valid
+degenerate DDP run and the script is byte-identical to upstream's.""")
+code("""OUTPUT_DIR = "/kaggle/working/laya-finetuned"
 MODEL_DIR = model_dir
 
-cmd = f"torchrun --standalone --nproc_per_node=2 /kaggle/working/train_ddp.py {MODEL_DIR} {OUTPUT_DIR}"
-print("Executing DDP training:", cmd)
+cmd = f"torchrun --standalone --nproc_per_node=1 /kaggle/working/train_ddp.py {MODEL_DIR} {OUTPUT_DIR}"
+print("Executing training:", cmd)
 !{cmd}
 """)
 
-md("""## 7. Evaluate on the Held-Out Split
+md("""## 7. Evaluate on the Val Split (seed 6, never trained on)
 
 Loads the fine-tuned checkpoint with plain `laya.Agent` (the exact call
-`core/laya_head.LayaHead(model=...)` makes) and scores argmax accuracy per
-question type on the held-out cases. Zero-shot reference from the local
-measurement: the base english checkpoint agrees with the recorded LLM policy
-only near chance on these menus (see docs/JEV_LAYA_NOTES.md) — the honest
-expectation for a tiny trace corpus is a solid jump over that baseline, not
-production-grade agreement (the structural cap is the reference itself).""")
+`core/laya_head.LayaHead(model=...)` makes) and scores argmax accuracy and
+ECE (`laya.common.ece_score`, the upstream metric) over the gold-labeled
+choice questions (operation + target). Honest expectation: the base
+checkpoint is near-chance on these menus zero-shot; the fine-tune teaches
+imitation of the recorded reference policy, so val accuracy measures
+agreement with that reference, not ground truth.""")
 code("""import time, json
 import numpy as np
 import laya
+from laya.common import ece_score
 
 agent_ft = laya.Agent(OUTPUT_DIR, device="cuda")
 
 correct = {"operation": 0, "target": 0}
 count = {"operation": 0, "target": 0}
+all_confs, all_corrects = [], []
 latencies = []
 
-for row in heldout_cases:
+for row in val_cases:
     state = json.loads(row["state"])
     questions = json.loads(row["questions"])
     gold = json.loads(row["gold"])
@@ -479,29 +518,56 @@ for row in heldout_cases:
     latencies.append((time.perf_counter() - t0) * 1000)
     for qid, g in gold.items():
         ans = res["answers"].get(qid)
-        if ans is None:
+        if ans is None or ans.get("type") != "choice":
             continue
+        keys = list(questions[qid].get("criteria", {}).keys())
+        probs = np.array([float(ans["probabilities"].get(str(k), 0.0)) for k in keys])
+        if probs.sum() > 0:
+            probs /= probs.sum()
+        is_corr = float(str(ans["choice"]) == str(g["label"]))
+        all_confs.append(float(probs.max()))
+        all_corrects.append(is_corr)
         kind = "operation" if qid == "operation" else "target"
-        if ans["type"] == "choice":
-            count[kind] += 1
-            correct[kind] += int(ans["choice"] == str(g["label"]))
+        count[kind] += 1
+        correct[kind] += int(is_corr)
 
-print(f"held-out cases: {len(heldout_cases)}")
-print(f"operation accuracy: {correct['operation']}/{count['operation']}"
-      + (f" = {correct['operation']/max(1,count['operation']):.3f}" if count['operation'] else " (none labeled)"))
-print(f"target accuracy:    {correct['target']}/{count['target']}"
-      + (f" = {correct['target']/max(1,count['target']):.3f}" if count['target'] else " (none labeled)"))
+val_operation_accuracy = correct["operation"] / max(1, count["operation"])
+val_target_accuracy = correct["target"] / max(1, count["target"])
+val_accuracy = float(np.mean(all_corrects)) if all_corrects else float("nan")
+val_ece = ece_score(np.array(all_confs), np.array(all_corrects))
+
+print(f"val cases: {len(val_cases)}")
+print(f"operation accuracy: {correct['operation']}/{count['operation']} = {val_operation_accuracy:.3f}")
+print(f"target accuracy:    {correct['target']}/{count['target']} = {val_target_accuracy:.3f}")
+print(f"combined choice accuracy: {val_accuracy:.3f} over {len(all_corrects)} labeled questions")
+print(f"ECE (15 bins, max-prob confidence): {val_ece:.4f}")
 print(f"latency p50: {np.percentile(latencies, 50):.1f} ms" if latencies else "no cases")
 """)
 
-md("""## 8. Package & Download
+md("""## 8. Write result.json + Package the Checkpoint""")
+code("""import json, shutil
 
-The whole output directory is the checkpoint — download it as a zip, then
-point `LayaHead(model=<local dir>)` at the extracted folder. No re-export or
-conversion step exists because `laya.Agent` loads this layout natively.""")
-code("""import shutil
+result = {
+    "val_accuracy": round(float(val_accuracy), 4),
+    "val_ece": round(float(val_ece), 4),
+    "val_operation_accuracy": round(float(val_operation_accuracy), 4),
+    "val_target_accuracy": round(float(val_target_accuracy), 4),
+    "cases_train": cases_train,
+    "cases_val": cases_val,
+    "notes": (
+        "v1 Kaggle run (allternit/jev-laya-finetune-v1): single T4, "
+        "torchrun --nproc_per_node=1 (upstream 2xT4 DDP recipe, world_size=1). "
+        "Data: TRAIN-split synthetic shadow-head cases, seeds 42,7,1,2,3,4,5 "
+        "train / seed 6 val; gold = realigned recorded-LLM transcript labels. "
+        "temperature_by_options dropped at save so the fitted scalar "
+        "temperatures apply (system_one prefers the bucket map otherwise)."
+    ),
+}
+with open("/kaggle/working/result.json", "w") as f:
+    json.dump(result, f, indent=2)
+print(json.dumps(result, indent=2))
 
-zip_path = shutil.make_archive("/kaggle/working/laya_finetuned_jev", "zip", OUTPUT_DIR)
+zip_path = shutil.make_archive("/kaggle/working/laya-finetuned", "zip", OUTPUT_DIR)
 print("Checkpoint archive:", zip_path)
 
 # Optional: push to a private HF repo instead of downloading (needs
@@ -510,8 +576,8 @@ print("Checkpoint archive:", zip_path)
 # from kaggle_secrets import UserSecretsClient
 # token = UserSecretsClient().get_secret("HF_TOKEN")
 # api = HfApi(token=token)
-# api.create_repo("convaiinnovations/laya-jev-shadow-head", exist_ok=True)
-# api.upload_folder(folder_path=OUTPUT_DIR, repo_id="convaiinnovations/laya-jev-shadow-head")
+# api.create_repo("allternit/laya-jev-shadow-head", exist_ok=True)
+# api.upload_folder(folder_path=OUTPUT_DIR, repo_id="allternit/laya-jev-shadow-head")
 """)
 
 nb = {

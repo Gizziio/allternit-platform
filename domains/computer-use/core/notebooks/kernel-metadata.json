@@ -1,0 +1,12 @@
+{
+  "id": "allternit/jev-laya-shadow-head-fine-tune-v1",
+  "title": "JEV Laya shadow-head fine-tune v1",
+  "code_file": "laya_finetune_kaggle.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["allternit/jev-shadow-train-v1"]
+}
