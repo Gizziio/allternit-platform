@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 693,
+    "totalNocheck": 692,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 579,
-    "totalQueueLoc": 243780,
+    "totalQueueFiles": 578,
+    "totalQueueLoc": 242262,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -558,12 +558,13 @@
     },
     {
       "id": "b0041",
-      "files": [
-        "src/cli/ui/ink-app/utils/gizzimd.ts"
-      ],
+      "files": [],
       "loc": 1507,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1518,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head10): TEAMMEM DCE require recast to local contract mirror (isTeamMemoryEnabled, getTeamMemEntrypoint) mirroring burned shared twin; clearMemoryFileCaches lodash memoize .cache structural cast (ambient shim omits runtime cache, off-limits global.d.ts). Escalations: none. Identity: live -1 + recorded +1."
     },
     {
       "id": "b0042",
