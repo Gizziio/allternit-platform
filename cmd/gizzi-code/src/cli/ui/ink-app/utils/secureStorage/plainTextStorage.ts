@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { chmodSync } from 'fs'
 import { join } from 'path'
 import { getGizziConfigHomeDir } from '../envUtils'
@@ -10,7 +9,23 @@ import {
   jsonStringify,
   writeFileSync_DEPRECATED,
 } from '../slowOperations'
-import type { SecureStorage, SecureStorageData } from './types'
+// TODO(types): './types' is a dormant shim exporting nothing (types_ts()).
+// Local mirror of the SecureStorage contract — same pattern as
+// fallbackStorage.ts and windowsDpapiStorage.ts.
+interface SecureStorageData {
+  [key: string]: unknown
+}
+interface SecureStorage {
+  name?: string
+  getItem?(key: string): Promise<string | null>
+  setItem?(key: string, value: string): Promise<void>
+  removeItem?(key: string): Promise<void>
+  clear?(): Promise<void>
+  read(key?: string): SecureStorageData | null
+  update(data: SecureStorageData): { success: boolean; warning?: string }
+  readAsync?(): Promise<SecureStorageData | null>
+  delete(): boolean
+}
 
 // Marker persisted in the on-disk JSON so a plaintext credential file is
 // unmistakable when found. Stripped before data is returned to consumers.

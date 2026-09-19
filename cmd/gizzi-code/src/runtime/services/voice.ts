@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Voice service: audio recording for push-to-talk voice input.
 //
 // Recording uses native audio capture (cpal) on macOS, Linux, and Windows
@@ -20,6 +19,12 @@ import { getPlatform } from '../../shared/utils/platform.js'
 // startup freeze is worse than a first-press delay.
 type AudioNapi = {
   isNativeAudioAvailable(): boolean
+  isNativeRecordingActive(): boolean
+  stopNativeRecording(): void
+  startNativeRecording(
+    onData: (data: Buffer) => void,
+    onEnd: () => void,
+  ): boolean
 }
 let audioNapi: AudioNapi | null = null
 let audioNapiPromise: Promise<AudioNapi> | null = null

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Perfetto Tracing for gizzi-code (Ant-only)
  *

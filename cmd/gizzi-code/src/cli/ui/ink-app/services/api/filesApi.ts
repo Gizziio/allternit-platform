@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Files API client for managing files
  *
@@ -108,7 +107,9 @@ async function retryWithBackoff<T>(
       return result.value
     }
 
-    lastError = result.error || `${operation} failed`
+    // strictNullChecks is off in this tsconfig, so the union does not narrow
+    // on the `result.done` check above — cast to the failure member instead.
+    lastError = (result as { done: false; error?: string }).error || `${operation} failed`
     logDebug(
       `${operation} attempt ${attempt}/${MAX_RETRIES} failed: ${lastError}`,
     )

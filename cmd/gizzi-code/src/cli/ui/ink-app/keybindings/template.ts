@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Keybindings template generator.
  * Generates a well-documented template file for ~/.claude/keybindings.json
@@ -10,7 +9,13 @@ import {
   NON_REBINDABLE,
   normalizeKeyForComparison,
 } from './reservedShortcuts.js'
-import type { KeybindingBlock } from './types.js'
+// TODO(types): './types.js' (keybindings/types.ts) is a dormant stub
+// (types_ts()) exporting nothing. Local mirror of the shape this file
+// needs — same pattern as defaultBindings.ts.
+type KeybindingBlock = {
+  context: string
+  bindings: Record<string, string>
+}
 
 /**
  * Filter out reserved shortcuts that cannot be rebound.

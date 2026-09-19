@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1613,
+    "totalNocheck": 1593,
     "excludedCompilerArtifacts": 360,
     "excludedVendored": 93,
-    "totalQueueFiles": 1139,
-    "totalQueueLoc": 412416,
+    "totalQueueFiles": 1119,
+    "totalQueueLoc": 405266,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -270,29 +270,8 @@
     },
     {
       "id": "b0018",
-      "files": [
-        "src/cli/ui/ink-app/bridge/bridgeApi.ts",
-        "src/cli/ui/ink-app/services/api/filesApi.ts",
-        "src/cli/ui/ink-app/utils/imageResizer.ts",
-        "src/cli/ui/ink-app/keybindings/template.ts",
-        "src/cli/ui/ink-app/utils/secureStorage/plainTextStorage.ts",
-        "src/cli/ui/ink-app/utils/imageStore.ts",
-        "src/cli/ui/ink-app/utils/authFileDescriptor.ts",
-        "src/cli/ui/ink-app/commands/install-slack-app/index.ts",
-        "src/cli/ui/ink-app/tools/BriefTool/upload.ts",
-        "src/cli/ui/ink-app/utils/headlessProfiler.ts",
-        "src/runtime/server/routes/experimental.ts",
-        "src/runtime/services/mcp/claudeai.ts",
-        "src/cli/ui/ink-app/services/mcp/claudeai.ts",
-        "src/runtime/services/voice.ts",
-        "src/cli/ui/ink-app/services/voice.ts",
-        "src/cli/ui/ink-app/utils/telemetry/perfettoTracing.ts",
-        "src/cli/ui/ink-app/utils/bash/specs/index.ts",
-        "src/cli/ui/ink-app/utils/sessionEnvironment.ts",
-        "src/cli/ui/ink-app/utils/tasks.ts",
-        "src/cli/ui/ink-app/utils/heapDumpService.ts"
-      ],
-      "loc": 7150,
+      "files": [],
+      "loc": 0,
       "twins": [
         {
           "runtime": "src/runtime/services/mcp/claudeai.ts",
@@ -303,7 +282,10 @@
           "inkApp": "src/cli/ui/ink-app/services/voice.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 20,
+      "burnedLoc": 7150,
+      "escalated": []
     },
     {
       "id": "b0019",
