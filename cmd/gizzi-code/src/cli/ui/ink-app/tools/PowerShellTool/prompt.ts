@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { getMaxOutputLength } from '../../utils/shell/outputLimits.js'
 import {

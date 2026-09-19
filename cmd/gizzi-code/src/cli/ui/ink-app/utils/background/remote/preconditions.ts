@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import { getOauthConfig } from './../../../constants/oauth.ts'
 import { getOrganizationUUID } from './../../../services/oauth/client.ts'

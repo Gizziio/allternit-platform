@@ -1,9 +1,8 @@
-// @ts-nocheck
+import type { HookEvent } from '../../../../../entrypoints/sdk/coreTypes.js'
 import type {
   AsyncHookJSONOutput,
-  HookEvent,
   SyncHookJSONOutput,
-} from './../../entrypoints/agentSdkTypes.ts'
+} from '../../../../../entrypoints/sdk/hookTypes.js'
 import { logForDebugging } from '../debug.js'
 import type { ShellCommand } from '../ShellCommand.js'
 import { invalidateSessionEnvCache } from '../sessionEnvironment.js'
@@ -189,7 +188,7 @@ export async function checkForAsyncHookResponses(): Promise<
       const execResult = await hook.shellCommand.result
       const exitCode = execResult.code
 
-      let response: SyncHookJSONOutput = {}
+      let response = {} as SyncHookJSONOutput
       for (const line of lines) {
         if (line.trim().startsWith('{')) {
           logForDebugging(

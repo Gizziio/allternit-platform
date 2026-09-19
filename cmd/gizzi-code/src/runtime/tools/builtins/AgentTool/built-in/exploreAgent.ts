@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BASH_TOOL_NAME } from '@/tools/BashTool/toolName.js'
 import { EXIT_PLAN_MODE_TOOL_NAME } from '@/tools/ExitPlanModeTool/constants.js'
 import { FILE_EDIT_TOOL_NAME } from '@/tools/FileEditTool/constants.js'
@@ -62,7 +61,16 @@ export const EXPLORE_AGENT_MIN_QUERIES = 3
 const EXPLORE_WHEN_TO_USE =
   'Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.'
 
-export const EXPLORE_AGENT: BuiltInAgentDefinition = {
+// TODO(types): the runtime loadAgentsDir.ts BuiltInAgentDefinition mirror
+// omits the disallowedTools/model/omitClaudeMd fields this record carries
+// (cf. verificationAgent.ts sibling pattern).
+type ExploreAgentDefinition = BuiltInAgentDefinition & {
+  disallowedTools?: string[]
+  model?: string
+  omitClaudeMd?: boolean
+}
+
+export const EXPLORE_AGENT: ExploreAgentDefinition = {
   agentType: 'Explore',
   whenToUse: EXPLORE_WHEN_TO_USE,
   disallowedTools: [

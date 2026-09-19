@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { FILE_EDIT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileEditTool/constants.js'
 import { FILE_READ_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
 import { FILE_WRITE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'

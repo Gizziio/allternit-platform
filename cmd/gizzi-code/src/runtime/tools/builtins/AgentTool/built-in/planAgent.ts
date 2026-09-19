@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BASH_TOOL_NAME } from '@/tools/BashTool/toolName.js'
 import { EXIT_PLAN_MODE_TOOL_NAME } from '@/tools/ExitPlanModeTool/constants.js'
 import { FILE_EDIT_TOOL_NAME } from '@/tools/FileEditTool/constants.js'
@@ -71,7 +70,16 @@ List 3-5 files most critical for implementing this plan:
 REMEMBER: You can ONLY explore and plan. You CANNOT and MUST NOT write, edit, or modify any files. You do NOT have access to file editing tools.`
 }
 
-export const PLAN_AGENT: BuiltInAgentDefinition = {
+// TODO(types): the runtime loadAgentsDir.ts BuiltInAgentDefinition mirror
+// omits the disallowedTools/model/omitClaudeMd fields this record carries
+// (cf. verificationAgent.ts sibling pattern).
+type PlanAgentDefinition = BuiltInAgentDefinition & {
+  disallowedTools?: string[]
+  model?: string
+  omitClaudeMd?: boolean
+}
+
+export const PLAN_AGENT: PlanAgentDefinition = {
   agentType: 'Plan',
   whenToUse:
     'Software architect agent for designing implementation plans. Use this when you need to plan the implementation strategy for a task. Returns step-by-step plans, identifies critical files, and considers architectural trade-offs.',

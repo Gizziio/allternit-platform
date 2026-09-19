@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { FILE_EDIT_TOOL_NAME } from './../../tools/FileEditTool/constants.ts'
 import { FILE_READ_TOOL_NAME } from './../../tools/FileReadTool/prompt.ts'
 import { FILE_WRITE_TOOL_NAME } from './../../tools/FileWriteTool/prompt.ts'
