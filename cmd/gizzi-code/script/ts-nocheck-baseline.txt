@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=1336
+count=1335
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/commands/connect.ts
@@ -906,7 +906,6 @@ cli/ui/ink-app/tools/PowerShellTool/modeValidation.ts
 cli/ui/ink-app/tools/PowerShellTool/pathValidation.ts
 cli/ui/ink-app/tools/PowerShellTool/powershellPermissions.ts
 cli/ui/ink-app/tools/PowerShellTool/prompt.ts
-cli/ui/ink-app/tools/PowerShellTool/readOnlyValidation.ts
 cli/ui/ink-app/tools/REPLTool/constants.ts
 cli/ui/ink-app/tools/REPLTool/primitiveTools.ts
 cli/ui/ink-app/tools/ReadMcpResourceTool/ReadMcpResourceTool.ts

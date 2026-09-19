@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedFrom": "a35dd3d0c530dafad8b79ae4514913472de95a2c",
+  "generatedFrom": "c9673c9ab916395407d3cb505a7090682ac03ee0",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1334,
+    "totalNocheck": 1333,
     "excludedCompilerArtifacts": 271,
     "excludedVendored": 93,
-    "totalQueueFiles": 950,
-    "totalQueueLoc": 359668,
+    "totalQueueFiles": 949,
+    "totalQueueLoc": 357844,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -227,6 +227,16 @@
       "note": "Burned by ao/ts-burn-next6 (PR pending at queue-edit time): src/cli/ui/ink-app/utils/powershell/parser.ts was a header-only 0-error burn (strip only; TS2322 probe confirmed it is genuinely type-checked). Identity: live 972 + recorded 481 + quarantined 20 = 1473 = totalAccounted."
     },
     {
+      "id": "b0022",
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1824,
+      "note": "Burned by ao/ts-burn-next8: header-only 0-error burn (TS2322 probe confirmed the file in compilation, exactly one probe error, zero others). No escalations. Identity: live 949 + recorded 504 + quarantined 20 = 1473 = totalAccounted."
+    },
+    {
       "id": "b0102",
       "files": [],
       "loc": 0,
@@ -313,11 +323,11 @@
         "src/cli/ui/ink-app/utils/ShellCommand.ts",
         "src/cli/ui/ink-app/tasks/LocalShellTask/guards.ts",
         "src/cli/ui/ink-app/services/remoteManagedSettings/syncCache.ts",
+        "src/cli/ui/ink-app/tools/PowerShellTool/modeValidation.ts",
         "src/cli/ui/ink-app/components/HistorySearchDialog.tsx",
         "src/cli/ui/ink-app/utils/teleport/environments.ts",
         "src/cli/ui/ink-app/utils/context.ts",
         "src/cli/ui/ink-app/utils/hooks/AsyncHookRegistry.ts",
-        "src/cli/ui/ink-app/tools/PowerShellTool/modeValidation.ts",
         "src/cli/ui/ink-app/utils/bash/ShellSnapshot.ts",
         "src/cli/ui/ink-app/utils/swarm/permissionSync.ts",
         "src/cli/ui/ink-app/utils/filePersistence/outputsScanner.ts",
@@ -346,15 +356,6 @@
           "inkApp": "src/cli/ui/ink-app/services/api/sessionIngress.ts"
         }
       ],
-      "state": "NEW"
-    },
-    {
-      "id": "b0022",
-      "files": [
-        "src/cli/ui/ink-app/tools/PowerShellTool/readOnlyValidation.ts"
-      ],
-      "loc": 1824,
-      "twins": [],
       "state": "NEW"
     },
     {
