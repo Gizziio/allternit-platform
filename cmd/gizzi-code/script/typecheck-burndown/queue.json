@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1651,
+    "totalNocheck": 1650,
     "excludedCompilerArtifacts": 360,
     "excludedVendored": 93,
-    "totalQueueFiles": 1177,
-    "totalQueueLoc": 423899,
+    "totalQueueFiles": 1176,
+    "totalQueueLoc": 422217,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -240,12 +240,13 @@
     },
     {
       "id": "b0015",
-      "files": [
-        "src/cli/ui/ink-app/utils/plugins/schemas.ts"
-      ],
-      "loc": 1682,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1682,
+      "escalated": []
     },
     {
       "id": "b0016",
