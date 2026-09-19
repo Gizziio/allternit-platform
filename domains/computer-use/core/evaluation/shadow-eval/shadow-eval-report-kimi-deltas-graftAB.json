@@ -1,0 +1,1637 @@
+{
+  "generated_at": "2026-09-18T22:12:44-0500",
+  "steps_per_task": 22,
+  "head": "kimi",
+  "reserved_slots": true,
+  "last_action": true,
+  "aggregate": {
+    "tasks": 3,
+    "total_decide_steps": 66,
+    "min_decide_steps_per_task": 22,
+    "agreement_rate": 0.4545,
+    "agreement_given_llm_success": 0.3556,
+    "agreement_given_llm_failure": 0.6667,
+    "stuck_true_rate": 0.0152,
+    "stuck_true_rate_given_llm_success": 0.0222,
+    "stuck_true_rate_given_llm_failure": 0.0,
+    "goal_satisfied_true_rate": 0.0606,
+    "mean_head_latency_ms": 17657.403,
+    "mean_llm_latency_ms": 850.0,
+    "vocab_miss_count": 16,
+    "reobserve_picks": 7,
+    "abstain_picks": 4,
+    "reserved_slot_rate": 0.1667,
+    "note": "KimiCliHead numbers \u2014 the kimi CLI subprocess head answers the same closed-set questions as the scripted LLM transcript under a strict JSON contract; agreement measures how often its chosen answers match the recorded LLM decisions. Per-option probabilities are the chosen option at kimi's stated confidence with the remainder split uniformly (confidence-scalar, not a distribution \u2014 an mlx/local-tier property)."
+  },
+  "tasks": [
+    {
+      "task_id": "search-flow",
+      "decide_steps": 22,
+      "llm_turns_recorded": 23,
+      "agreement_rate": 0.3182,
+      "op_agreement_rate": 0.6364,
+      "target_agreement_rate": 0.5,
+      "agreement_given_llm_success": 0.0,
+      "agreement_given_llm_failure": 1.0,
+      "llm_failure_steps": 7,
+      "stuck_true_rate": 0.0455,
+      "stuck_true_rate_given_llm_success": 0.0667,
+      "stuck_true_rate_given_llm_failure": 0.0,
+      "goal_satisfied_true_rate": 0.0,
+      "mean_head_latency_ms": 15726.826,
+      "mean_llm_latency_ms": 850.0,
+      "vocab_misses": [
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        }
+      ],
+      "reobserve_picks": 4,
+      "abstain_picks": 0,
+      "executed_actions": [
+        [
+          "fill",
+          "Search query"
+        ],
+        [
+          "click",
+          "Search"
+        ],
+        [
+          "click",
+          "First result"
+        ],
+        [
+          "fill",
+          "Search query"
+        ],
+        [
+          "click",
+          "Search"
+        ],
+        [
+          "click",
+          "First result"
+        ],
+        [
+          "fill",
+          "Search query"
+        ],
+        [
+          "click",
+          "Search"
+        ],
+        [
+          "click",
+          "First result"
+        ],
+        [
+          "fill",
+          "Search query"
+        ],
+        [
+          "click",
+          "Search"
+        ],
+        [
+          "click",
+          "First result"
+        ],
+        [
+          "fill",
+          "Search query"
+        ],
+        [
+          "click",
+          "Search"
+        ],
+        [
+          "click",
+          "First result"
+        ],
+        [
+          "fill",
+          "Search query"
+        ],
+        [
+          "click",
+          "Search"
+        ],
+        [
+          "click",
+          "First result"
+        ],
+        [
+          "fill",
+          "Search query"
+        ],
+        [
+          "click",
+          "Search"
+        ],
+        [
+          "click",
+          "First result"
+        ],
+        [
+          "fill",
+          "Search query"
+        ]
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "llm_op": "fill",
+          "head_op": "click",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.95,
+          "head_latency_ms": 27619.601726531982,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.020000000000000018,
+          "stuck_confidence": 0.98
+        },
+        {
+          "step": 2,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.9,
+          "head_latency_ms": 16212.641954421997,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.15000000000000002,
+          "goal_satisfied_confidence": 0.85,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 3,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.93,
+          "head_latency_ms": 14019.083738327026,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 4,
+          "llm_op": "fill",
+          "head_op": "doubleClick",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.62,
+          "head_latency_ms": 8696.133136749268,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.44999999999999996,
+          "stuck_confidence": 0.55
+        },
+        {
+          "step": 5,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.97,
+          "head_latency_ms": 9047.26505279541,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.020000000000000018,
+          "stuck_confidence": 0.98
+        },
+        {
+          "step": 6,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.93,
+          "head_latency_ms": 8731.125831604004,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 7,
+          "llm_op": "fill",
+          "head_op": "doubleClick",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.55,
+          "head_latency_ms": 27417.711973190308,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.30000000000000004,
+          "stuck_confidence": 0.7
+        },
+        {
+          "step": 8,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.95,
+          "head_latency_ms": 13840.42477607727,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 9,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 10540.513038635254,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 10,
+          "llm_op": "fill",
+          "head_op": "reobserve",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.65,
+          "head_latency_ms": 24240.010976791382,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.19999999999999996,
+          "stuck_confidence": 0.8
+        },
+        {
+          "step": 11,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.9,
+          "head_latency_ms": 13540.668249130249,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.15000000000000002,
+          "goal_satisfied_confidence": 0.85,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 12,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 24046.380043029785,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.030000000000000027,
+          "stuck_confidence": 0.97
+        },
+        {
+          "step": 13,
+          "llm_op": "fill",
+          "head_op": "reobserve",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.7,
+          "head_latency_ms": 18068.285942077637,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.15000000000000002,
+          "goal_satisfied_confidence": 0.85,
+          "stuck": "false",
+          "stuck_true_probability": 0.30000000000000004,
+          "stuck_confidence": 0.7
+        },
+        {
+          "step": 14,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.93,
+          "head_latency_ms": 20495.94807624817,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.030000000000000027,
+          "stuck_confidence": 0.97
+        },
+        {
+          "step": 15,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 27380.537748336792,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 16,
+          "llm_op": "fill",
+          "head_op": "doubleClick",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.6,
+          "head_latency_ms": 16618.27516555786,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.25,
+          "stuck_confidence": 0.75
+        },
+        {
+          "step": 17,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.95,
+          "head_latency_ms": 9878.192901611328,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 18,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 10272.787094116211,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 19,
+          "llm_op": "fill",
+          "head_op": "reobserve",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.7,
+          "head_latency_ms": 11648.732900619507,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.19999999999999996,
+          "goal_satisfied_confidence": 0.8,
+          "stuck": "true",
+          "stuck_true_probability": 0.6,
+          "stuck_confidence": 0.6
+        },
+        {
+          "step": 20,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.95,
+          "head_latency_ms": 10499.069213867188,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 21,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 11290.66276550293,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 22,
+          "llm_op": "fill",
+          "head_op": "reobserve",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.6,
+          "head_latency_ms": 11886.110067367554,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.25,
+          "stuck_confidence": 0.75
+        }
+      ]
+    },
+    {
+      "task_id": "form-fill",
+      "decide_steps": 22,
+      "llm_turns_recorded": 23,
+      "agreement_rate": 0.5909,
+      "op_agreement_rate": 0.5909,
+      "target_agreement_rate": 1.0,
+      "agreement_given_llm_success": 0.8667,
+      "agreement_given_llm_failure": 0.0,
+      "llm_failure_steps": 7,
+      "stuck_true_rate": 0.0,
+      "stuck_true_rate_given_llm_success": 0.0,
+      "stuck_true_rate_given_llm_failure": 0.0,
+      "goal_satisfied_true_rate": 0.0,
+      "mean_head_latency_ms": 19617.529,
+      "mean_llm_latency_ms": 850.0,
+      "vocab_misses": [
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        }
+      ],
+      "reobserve_picks": 1,
+      "abstain_picks": 0,
+      "executed_actions": [
+        [
+          "fill",
+          "Email"
+        ],
+        [
+          "fill",
+          "Password"
+        ],
+        [
+          "click",
+          "Submit"
+        ],
+        [
+          "fill",
+          "Email"
+        ],
+        [
+          "fill",
+          "Password"
+        ],
+        [
+          "click",
+          "Submit"
+        ],
+        [
+          "fill",
+          "Email"
+        ],
+        [
+          "fill",
+          "Password"
+        ],
+        [
+          "click",
+          "Submit"
+        ],
+        [
+          "fill",
+          "Email"
+        ],
+        [
+          "fill",
+          "Password"
+        ],
+        [
+          "click",
+          "Submit"
+        ],
+        [
+          "fill",
+          "Email"
+        ],
+        [
+          "fill",
+          "Password"
+        ],
+        [
+          "click",
+          "Submit"
+        ],
+        [
+          "fill",
+          "Email"
+        ],
+        [
+          "fill",
+          "Password"
+        ],
+        [
+          "click",
+          "Submit"
+        ],
+        [
+          "fill",
+          "Email"
+        ],
+        [
+          "fill",
+          "Password"
+        ],
+        [
+          "click",
+          "Submit"
+        ],
+        [
+          "fill",
+          "Email"
+        ]
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.9,
+          "head_latency_ms": 17503.56411933899,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.020000000000000018,
+          "goal_satisfied_confidence": 0.98,
+          "stuck": "false",
+          "stuck_true_probability": 0.030000000000000027,
+          "stuck_confidence": 0.97
+        },
+        {
+          "step": 2,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.95,
+          "head_latency_ms": 19210.10708808899,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.020000000000000018,
+          "goal_satisfied_confidence": 0.98,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 3,
+          "llm_op": "click",
+          "head_op": "fill",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": false,
+          "head_confidence": 0.78,
+          "head_latency_ms": 13039.929151535034,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 4,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.7,
+          "head_latency_ms": 17843.862056732178,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.30000000000000004,
+          "stuck_confidence": 0.7
+        },
+        {
+          "step": 5,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.75,
+          "head_latency_ms": 16325.628757476807,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 6,
+          "llm_op": "click",
+          "head_op": "fill",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": false,
+          "head_confidence": 0.93,
+          "head_latency_ms": 11977.498054504395,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 7,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.76,
+          "head_latency_ms": 54413.81335258484,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.28,
+          "stuck_confidence": 0.72
+        },
+        {
+          "step": 8,
+          "llm_op": "fill",
+          "head_op": "click",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.92,
+          "head_latency_ms": 14666.202068328857,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.030000000000000027,
+          "stuck_confidence": 0.97
+        },
+        {
+          "step": 9,
+          "llm_op": "click",
+          "head_op": "fill",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": false,
+          "head_confidence": 0.9,
+          "head_latency_ms": 17202.56209373474,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 10,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.72,
+          "head_latency_ms": 16752.403259277344,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.19999999999999996,
+          "stuck_confidence": 0.8
+        },
+        {
+          "step": 11,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.95,
+          "head_latency_ms": 11846.606969833374,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.020000000000000018,
+          "goal_satisfied_confidence": 0.98,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 12,
+          "llm_op": "click",
+          "head_op": "fill",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": false,
+          "head_confidence": 0.9,
+          "head_latency_ms": 30142.748832702637,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 13,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.82,
+          "head_latency_ms": 22260.154247283936,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.19999999999999996,
+          "stuck_confidence": 0.8
+        },
+        {
+          "step": 14,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.9,
+          "head_latency_ms": 17270.779848098755,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 15,
+          "llm_op": "click",
+          "head_op": "fill",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": false,
+          "head_confidence": 0.85,
+          "head_latency_ms": 25998.72589111328,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 16,
+          "llm_op": "fill",
+          "head_op": "reobserve",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.75,
+          "head_latency_ms": 17389.790296554565,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.4,
+          "stuck_confidence": 0.6
+        },
+        {
+          "step": 17,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.92,
+          "head_latency_ms": 14027.599334716797,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.030000000000000027,
+          "goal_satisfied_confidence": 0.97,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 18,
+          "llm_op": "click",
+          "head_op": "fill",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": false,
+          "head_confidence": 0.85,
+          "head_latency_ms": 15906.323194503784,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 19,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.8,
+          "head_latency_ms": 13954.670906066895,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.15000000000000002,
+          "stuck_confidence": 0.85
+        },
+        {
+          "step": 20,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.92,
+          "head_latency_ms": 29265.25616645813,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.030000000000000027,
+          "goal_satisfied_confidence": 0.97,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 21,
+          "llm_op": "click",
+          "head_op": "fill",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": false,
+          "head_confidence": 0.85,
+          "head_latency_ms": 20867.260932922363,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 22,
+          "llm_op": "fill",
+          "head_op": "fill",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.9,
+          "head_latency_ms": 13720.160007476807,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        }
+      ]
+    },
+    {
+      "task_id": "settings-toggle",
+      "decide_steps": 22,
+      "llm_turns_recorded": 23,
+      "agreement_rate": 0.4545,
+      "op_agreement_rate": 0.7273,
+      "target_agreement_rate": 0.625,
+      "agreement_given_llm_success": 0.2,
+      "agreement_given_llm_failure": 1.0,
+      "llm_failure_steps": 7,
+      "stuck_true_rate": 0.0,
+      "stuck_true_rate_given_llm_success": 0.0,
+      "stuck_true_rate_given_llm_failure": 0.0,
+      "goal_satisfied_true_rate": 0.1818,
+      "mean_head_latency_ms": 17627.855,
+      "mean_llm_latency_ms": 850.0,
+      "vocab_misses": [
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        },
+        {
+          "question": "hover_target",
+          "raw": null,
+          "kind": "parse_miss"
+        }
+      ],
+      "reobserve_picks": 2,
+      "abstain_picks": 4,
+      "executed_actions": [
+        [
+          "click",
+          "Theme"
+        ],
+        [
+          "click",
+          "Notifications"
+        ],
+        [
+          "click",
+          "Save"
+        ],
+        [
+          "click",
+          "Theme"
+        ],
+        [
+          "click",
+          "Notifications"
+        ],
+        [
+          "click",
+          "Save"
+        ],
+        [
+          "click",
+          "Theme"
+        ],
+        [
+          "click",
+          "Notifications"
+        ],
+        [
+          "click",
+          "Save"
+        ],
+        [
+          "click",
+          "Theme"
+        ],
+        [
+          "click",
+          "Notifications"
+        ],
+        [
+          "click",
+          "Save"
+        ],
+        [
+          "click",
+          "Theme"
+        ],
+        [
+          "click",
+          "Notifications"
+        ],
+        [
+          "click",
+          "Save"
+        ],
+        [
+          "click",
+          "Theme"
+        ],
+        [
+          "click",
+          "Notifications"
+        ],
+        [
+          "click",
+          "Save"
+        ],
+        [
+          "click",
+          "Theme"
+        ],
+        [
+          "click",
+          "Notifications"
+        ],
+        [
+          "click",
+          "Save"
+        ],
+        [
+          "click",
+          "Theme"
+        ]
+      ],
+      "steps": [
+        {
+          "step": 1,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.95,
+          "head_latency_ms": 12744.65799331665,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.020000000000000018,
+          "stuck_confidence": 0.98
+        },
+        {
+          "step": 2,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 12783.456087112427,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.030000000000000027,
+          "goal_satisfied_confidence": 0.97,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 3,
+          "llm_op": "click",
+          "head_op": "reobserve",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.75,
+          "head_latency_ms": 17820.19305229187,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.19999999999999996,
+          "stuck_confidence": 0.8
+        },
+        {
+          "step": 4,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.65,
+          "head_latency_ms": 20156.150102615356,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.4,
+          "goal_satisfied_confidence": 0.6,
+          "stuck": "false",
+          "stuck_true_probability": 0.30000000000000004,
+          "stuck_confidence": 0.7
+        },
+        {
+          "step": 5,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.97,
+          "head_latency_ms": 19704.85019683838,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.020000000000000018,
+          "goal_satisfied_confidence": 0.98,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 6,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.85,
+          "head_latency_ms": 9859.905004501343,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.19999999999999996,
+          "goal_satisfied_confidence": 0.8,
+          "stuck": "false",
+          "stuck_true_probability": 0.19999999999999996,
+          "stuck_confidence": 0.8
+        },
+        {
+          "step": 7,
+          "llm_op": "click",
+          "head_op": "abstain",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.85,
+          "head_latency_ms": 18555.596590042114,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "true",
+          "goal_satisfied_true_probability": 0.85,
+          "goal_satisfied_confidence": 0.85,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 8,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 13412.900924682617,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 9,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.55,
+          "head_latency_ms": 15784.172773361206,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.30000000000000004,
+          "goal_satisfied_confidence": 0.7,
+          "stuck": "false",
+          "stuck_true_probability": 0.4,
+          "stuck_confidence": 0.6
+        },
+        {
+          "step": 10,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.72,
+          "head_latency_ms": 22613.378047943115,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.30000000000000004,
+          "goal_satisfied_confidence": 0.7,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 11,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.9,
+          "head_latency_ms": 13660.841226577759,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 12,
+          "llm_op": "click",
+          "head_op": "reobserve",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.72,
+          "head_latency_ms": 14660.728931427002,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.15000000000000002,
+          "goal_satisfied_confidence": 0.85,
+          "stuck": "false",
+          "stuck_true_probability": 0.19999999999999996,
+          "stuck_confidence": 0.8
+        },
+        {
+          "step": 13,
+          "llm_op": "click",
+          "head_op": "abstain",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.75,
+          "head_latency_ms": 18455.063104629517,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "true",
+          "goal_satisfied_true_probability": 0.8,
+          "goal_satisfied_confidence": 0.8,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 14,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 9385.213136672974,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.050000000000000044,
+          "stuck_confidence": 0.95
+        },
+        {
+          "step": 15,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.55,
+          "head_latency_ms": 12656.944990158081,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.15000000000000002,
+          "goal_satisfied_confidence": 0.85,
+          "stuck": "false",
+          "stuck_true_probability": 0.4,
+          "stuck_confidence": 0.6
+        },
+        {
+          "step": 16,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.75,
+          "head_latency_ms": 17853.277921676636,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.19999999999999996,
+          "goal_satisfied_confidence": 0.8,
+          "stuck": "false",
+          "stuck_true_probability": 0.15000000000000002,
+          "stuck_confidence": 0.85
+        },
+        {
+          "step": 17,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.95,
+          "head_latency_ms": 15679.81481552124,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 18,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": false,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.72,
+          "head_latency_ms": 12019.15693283081,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.09999999999999998,
+          "goal_satisfied_confidence": 0.9,
+          "stuck": "false",
+          "stuck_true_probability": 0.19999999999999996,
+          "stuck_confidence": 0.8
+        },
+        {
+          "step": 19,
+          "llm_op": "click",
+          "head_op": "abstain",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.9,
+          "head_latency_ms": 16396.114110946655,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "true",
+          "goal_satisfied_true_probability": 0.85,
+          "goal_satisfied_confidence": 0.85,
+          "stuck": "false",
+          "stuck_true_probability": 0.19999999999999996,
+          "stuck_confidence": 0.8
+        },
+        {
+          "step": 20,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": false,
+          "head_confidence": 0.9,
+          "head_latency_ms": 28188.39192390442,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.050000000000000044,
+          "goal_satisfied_confidence": 0.95,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        },
+        {
+          "step": 21,
+          "llm_op": "click",
+          "head_op": "click",
+          "op_agree": true,
+          "target_agree": true,
+          "agreement": true,
+          "llm_success": true,
+          "head_confidence": 0.7,
+          "head_latency_ms": 27958.898067474365,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "false",
+          "goal_satisfied_true_probability": 0.19999999999999996,
+          "goal_satisfied_confidence": 0.8,
+          "stuck": "false",
+          "stuck_true_probability": 0.25,
+          "stuck_confidence": 0.75
+        },
+        {
+          "step": 22,
+          "llm_op": "click",
+          "head_op": "abstain",
+          "op_agree": false,
+          "target_agree": null,
+          "agreement": false,
+          "llm_success": true,
+          "head_confidence": 0.9,
+          "head_latency_ms": 37463.09399604797,
+          "llm_latency_ms": 850.0,
+          "goal_satisfied": "true",
+          "goal_satisfied_true_probability": 0.92,
+          "goal_satisfied_confidence": 0.92,
+          "stuck": "false",
+          "stuck_true_probability": 0.09999999999999998,
+          "stuck_confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "questioning": "batched",
+  "trajectory": "off"
+}
