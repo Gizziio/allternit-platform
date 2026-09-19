@@ -3,11 +3,11 @@
   "generatedFrom": "4346eab0b97beabecc8211eab116f447eb18f8ff",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 999,
+    "totalNocheck": 998,
     "excludedCompilerArtifacts": 148,
     "excludedVendored": 93,
-    "totalQueueFiles": 738,
-    "totalQueueLoc": 300694,
+    "totalQueueFiles": 737,
+    "totalQueueLoc": 298808,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -502,12 +502,13 @@
     },
     {
       "id": "b0031",
-      "files": [
-        "src/runtime/context/config/config.ts"
-      ],
-      "loc": 1886,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1886,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head4): 3-error burn converged in 1 iteration. src/runtime/context/config/config.ts: (1) merge() — remeda mergeDeep's MergeDeep<T,S> collapses to never on the large Info zod output type, so merged.plugin/merged.instructions assignments failed TS2339; pinned via `as Info` (runtime value unchanged, mergeDeep result shape is Info by construction); (2) lsp schema refine callback — `if (config.disabled) return true` does not narrow the `{disabled: true} | {command, extensions?, ...}` union under strict:false, so config.extensions failed TS2339 on the `{disabled: true}` member; pinned via cast to `{extensions?: string[]}` (the disabled:true member can never reach that line at runtime — disabled:true returns early). No escalations, no allowlist changes. Identity: live 757 + recorded 703 = 1460 = totalAccounted."
     },
     {
       "id": "b0034",
