@@ -145,9 +145,6 @@ export {
 // SDK
 export * from './sdk';
 
-// Collab / Visual Editor
-export * from './collab';
-
 // Utils
 export { evaluateExpression, UI_IR_VERSION, validateUIRoot, createEmptyRoot } from './types';
 

@@ -83,16 +83,6 @@ const vueComponent = compileToVue(uiDefinition);
 const { template, setup } = vueComponent;
 ```
 
-### Svelte Renderer
-
-```typescript
-import { compileToSvelte } from '@allternit/ix/svelte';
-
-// Generate Svelte component code
-const svelteCode = compileToSvelte(uiDefinition);
-// Use with Svelte compiler
-```
-
 ### Visual Editor
 
 ```typescript
@@ -110,28 +100,6 @@ const myUI = ui.create()
       )
   )
   .build();
-```
-
-### Real-time Collaboration
-
-```typescript
-import { createYjsAdapter } from '@allternit/ix/collab';
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
-
-const doc = new Y.Doc();
-const provider = new WebsocketProvider('ws://localhost:1234', 'room', doc);
-
-const adapter = createYjsAdapter({
-  doc,
-  provider,
-  userId: 'user-1',
-  userInfo: { name: 'Alice', color: '#ff0000' },
-});
-
-// Collaborative state store
-const store = adapter.getStore();
-store.set('shared.value', 42); // Syncs to all connected clients
 ```
 
 ### JSON-Render Compatibility
@@ -199,12 +167,14 @@ Allternit-IX
 ├── adapters/        # Format converters (json-render)
 ├── react/           # React renderer
 ├── vue/             # Vue renderer
-├── svelte/          # Svelte renderer
 ├── runtime/         # Capsule runtime + policy gates
 ├── sdk/             # API client + React hooks
-├── pipeline/        # LLM-to-IX conversion
-└── collab/          # Yjs/CRDT + Visual Editor
+└── pipeline/        # LLM-to-IX conversion
 ```
+
+> Note: the `collab/` (Yjs/CRDT + Visual Editor) and `svelte/` subtrees were removed
+> 2026-09-18 — they were never implemented against real dependencies (yjs, y-webrtc,
+> y-protocols, lib0, svelte were never declared) and could not build. See PR #TBD.
 
 ## Component Catalog
 
@@ -310,10 +280,9 @@ console.log(detected.confidence); // 0.0 - 1.0
 
 ### Option 4: Enhancements ✅
 - Vue Renderer (component generation)
-- Svelte Renderer (component compilation)
-- Yjs/CRDT Integration (real-time collaboration)
-- Visual Editor (fluent API for UI building)
-- Awareness API (cursor positions, selections)
+
+> Removed 2026-09-18 (never built — missing yjs/y-webrtc/y-protocols/lib0/svelte deps):
+> Svelte Renderer, Yjs/CRDT Integration, Visual Editor, Awareness API.
 
 ## License
 
