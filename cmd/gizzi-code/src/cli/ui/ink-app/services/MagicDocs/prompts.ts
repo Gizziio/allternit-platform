@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { join } from 'path'
 import { getGizziConfigHomeDir } from '../../utils/envUtils.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
