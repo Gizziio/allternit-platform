@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — see inline type errors (dead "external"/"ant" constant comparisons, unknown-typed tool result access, keybindings/types re-export drift).
 import { feature } from 'bun:bundle';
 import React, { useEffect } from 'react';
 import { useNotifications } from '../../../../context/notifications';
@@ -11,12 +9,12 @@ import { getRainbowColor } from '../utils/thinking';
 // buzz instead of a single UTC-midnight spike, gentler on soul-gen load.
 // Teaser window: April 1-7, 2026 only. Command stays live forever after.
 export function isBuddyTeaserWindow(): boolean {
-  if ("external" === 'ant') return true;
+  if (("external" as string) === 'ant') return true;
   const d = new Date();
   return d.getFullYear() === 2026 && d.getMonth() === 3 && d.getDate() <= 7;
 }
 export function isBuddyLive(): boolean {
-  if ("external" === 'ant') return true;
+  if (("external" as string) === 'ant') return true;
   const d = new Date();
   return d.getFullYear() > 2026 || d.getFullYear() === 2026 && d.getMonth() >= 3;
 }

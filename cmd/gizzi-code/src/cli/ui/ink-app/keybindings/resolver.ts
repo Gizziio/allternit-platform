@@ -2,15 +2,17 @@ import type { Key } from '../ink.js'
 import { getKeyName, matchesBinding } from './match.js'
 import { chordToString } from './parser.js'
 // TODO(types): ./types.js is a dormant stub (types_ts()); mirror the shapes
-// resolver.ts needs until the real keybindings types land.
+// resolver.ts needs until the real keybindings types land. Modifier fields are
+// optional to match the data-producing mirror in loadUserBindings.ts (parsed
+// from JSON where modifiers may be absent).
 type KeybindingContextName = string
 type ParsedKeystroke = {
   key: string
-  ctrl: boolean
-  alt: boolean
-  shift: boolean
-  meta: boolean
-  super: boolean
+  ctrl?: boolean
+  alt?: boolean
+  shift?: boolean
+  meta?: boolean
+  super?: boolean
 }
 type ParsedBinding = {
   context: KeybindingContextName

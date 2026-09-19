@@ -1,9 +1,23 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — see inline type errors (dead "external"/"ant" constant comparisons, unknown-typed tool result access, keybindings/types re-export drift).
-import React, { createContext, type RefObject, useContext, useLayoutEffect, useMemo } from 'react';
+import React, { createContext, type RefObject, useContext, useLayoutEffect } from 'react';
 import type { Key } from '../ink';
 import { type ChordResolveResult, getBindingDisplayText, resolveKeyWithChordState } from './resolver';
-import type { KeybindingContextName, ParsedBinding, ParsedKeystroke } from './types';
+// TODO(types): ./types.js is a dormant stub (types_ts()); mirror the shapes
+// keybindings needs until the real keybindings types land (same pattern as
+// resolver.ts / loadUserBindings.ts).
+type KeybindingContextName = string;
+type ParsedKeystroke = {
+  key: string;
+  ctrl?: boolean;
+  alt?: boolean;
+  shift?: boolean;
+  meta?: boolean;
+  super?: boolean;
+};
+type ParsedBinding = {
+  context: KeybindingContextName;
+  chord: ParsedKeystroke[];
+  action: string | null;
+};
 
 /** Handler registration for action callbacks */
 type HandlerRegistration = {

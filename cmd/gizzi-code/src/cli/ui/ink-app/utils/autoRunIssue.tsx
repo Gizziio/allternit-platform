@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — see inline type errors (dead "external"/"ant" constant comparisons, unknown-typed tool result access, keybindings/types re-export drift).
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
 import { KeyboardShortcutHint } from '../components/design-system/KeyboardShortcutHint';
@@ -50,7 +48,7 @@ export type AutoRunIssueReason = 'feedback_survey_bad' | 'feedback_survey_good';
  */
 export function shouldAutoRunIssue(reason: AutoRunIssueReason): boolean {
   // Only for Ant users
-  if ("external" !== 'ant') {
+  if (("external" as string) !== 'ant') {
     return false;
   }
   switch (reason) {
@@ -69,7 +67,7 @@ export function shouldAutoRunIssue(reason: AutoRunIssueReason): boolean {
  */
 export function getAutoRunCommand(reason: AutoRunIssueReason): string {
   // Only ant builds have the /good-claude command
-  if ("external" === 'ant' && reason === 'feedback_survey_good') {
+  if (("external" as string) === 'ant' && reason === 'feedback_survey_good') {
     return '/good-claude';
   }
   return '/issue';

@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — see inline type errors (dead "external"/"ant" constant comparisons, unknown-typed tool result access, keybindings/types re-export drift).
 import { feature } from 'bun:bundle';
 import { APIUserAbortError } from '@allternit/gizzi-sdk/providers/allternit';
 import * as React from 'react';
@@ -11,6 +9,7 @@ import { Text } from '../ink';
 import type { ToolPermissionContext, Tool as ToolType, ToolUseContext } from '../Tool';
 import { consumeSpeculativeClassifierCheck, peekSpeculativeClassifierCheck } from '../tools/BashTool/bashPermissions';
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName';
+import type { ClassifierResult } from '../utils/permissions/bashClassifier';
 import type { AssistantMessage } from '../types/message';
 import { recordAutoModeDenial } from '../utils/autoModeDenials';
 import { clearClassifierChecking, setClassifierApproval, setYoloClassifierApproval } from '../utils/classifierApprovals';
@@ -126,7 +125,9 @@ function useCanUseTool(setToolUseConfirmQueue, setToolPermissionContext) {
                   command: string;
                 }).command);
                 if (speculativePromise) {
-                  const raceResult = await Promise.race([speculativePromise.then(_temp), new Promise(_temp2)]);
+                  const raceResult = await Promise.race([speculativePromise.then(_temp), new Promise<{
+                    type: "timeout";
+                  }>(_temp2)]);
                   if (ctx.resolveIfAborted(resolve)) {
                     return;
                   }
@@ -182,12 +183,14 @@ function useCanUseTool(setToolUseConfirmQueue, setToolPermissionContext) {
 
   return t0;
 }
-function _temp2(res) {
+function _temp2(res: (value: {
+  type: "timeout";
+}) => void) {
   return setTimeout(res, 2000, {
     type: "timeout" as const
   });
 }
-function _temp(r) {
+function _temp(r: ClassifierResult) {
   return {
     type: "result" as const,
     result: r
