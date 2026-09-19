@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { randomBytes } from 'crypto'
 import { existsSync, unwatchFile, watchFile } from 'fs'
@@ -10,10 +9,8 @@ import { ROOT_INSTRUCTION_FILENAMES } from '../../../../shared/utils/agentFileRe
 import { getAutoMemEntrypoint } from '../memdir/paths.js'
 import { logEvent } from '../services/analytics/index.js'
 import type { McpServerConfig } from '../services/mcp/types.js'
-import type {
-  BillingType,
-  ReferralEligibilityResponse,
-} from '../services/oauth/types.js'
+import type { ReferralEligibilityResponse } from '../services/api/referral.js'
+import type { BillingType } from '../services/oauth/types.js'
 import { getCwd } from '../utils/cwd.js'
 import { registerCleanup } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'
@@ -1121,7 +1118,7 @@ export function getCustomApiKeyStatus(
   return 'new'
 }
 
-function saveConfig<A extends object>(
+function saveConfig<A extends Record<string, unknown>>(
   file: string,
   config: A,
   defaultConfig: A,
@@ -1158,7 +1155,7 @@ function saveConfig<A extends object>(
  * whether to invalidate the cache -- invalidating after a skipped write
  * destroys the good cached state the auth-loss guard depends on.
  */
-function saveConfigWithLock<A extends object>(
+function saveConfigWithLock<A extends Record<string, unknown>>(
   file: string,
   createDefault: () => A,
   mergeFn: (current: A) => A,
@@ -1176,7 +1173,9 @@ function saveConfigWithLock<A extends object>(
     const startTime = Date.now()
     release = lockfile.lockSync(file, {
       lockfilePath: lockFilePath,
-      onCompromised: err => {
+      // The ambient proper-lockfile declaration types onCompromised as
+      // () => void, but the real package invokes it with the error.
+      onCompromised: (err?: unknown) => {
         // Default onCompromised throws from a setTimeout callback, which
         // becomes an unhandled exception. Log instead -- the lock being
         // stolen (e.g. after a 10s event-loop stall) is recoverable.
