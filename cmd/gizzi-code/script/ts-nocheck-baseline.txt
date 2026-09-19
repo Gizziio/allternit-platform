@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=853
+count=852
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/hooks/useChromeExtensionNotification.tsx
@@ -739,7 +739,6 @@ coordinator/coordinatorMode.ts
 hooks/useCanUseTool.ts
 memdir/paths.ts
 runtime/gizzi-core/setup.ts
-runtime/integrations/bridgeEnabled.ts
 runtime/services/api/claude.ts
 runtime/services/api/logging.ts
 runtime/services/api/ollama.ts

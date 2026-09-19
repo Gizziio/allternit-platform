@@ -3,19 +3,18 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 107,
   "stats": {
-    "totalNocheck": 851,
+    "totalNocheck": 849,
     "excludedCompilerArtifacts": 66,
     "excludedVendored": 93,
-    "totalQueueFiles": 672,
-    "totalQueueLoc": 273619,
+    "totalQueueFiles": 670,
+    "totalQueueLoc": 270071,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
       "suspect-malformed": 2
     },
     "zeroImporter": 187,
-    "totalAccounted": 1474,
-    "batchCount": 107
+    "totalAccounted": 1474
   },
   "batches": [
     {
@@ -481,9 +480,7 @@
     },
     {
       "id": "b0422",
-      "files": [
-        "src/runtime/integrations/bridgeEnabled.ts"
-      ],
+      "files": [],
       "loc": 7036,
       "twins": [
         {
@@ -491,7 +488,10 @@
           "inkApp": "src/cli/ui/ink-app/services/api/withRetry.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 202,
+      "note": "burn lane head-6 (2026-09-19): removed @ts-nocheck from bridgeEnabled.ts; tsc clean on first pass, canary-verified coverage; no escalations. 1 file, 203 loc."
     },
     {
       "id": "b0034",
@@ -1732,12 +1732,13 @@
     },
     {
       "id": "b0090",
-      "files": [
-        "src/runtime/services/mcp/client.ts"
-      ],
+      "files": [],
       "loc": 3346,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 3346,
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail4): 26 type errors fixed — 11x TS2709 Tool-as-namespace (import declared ink-app Tool type), stale MCP-SDK casts removed (1.29 request shape), callTool options behind CallToolResultSchema (1.29 sig), connectToServer.cache typed MemoizedConnectToServer intersection (lodash runtime attach), elicitation respond annotated ElicitResult. 6 DCE-gated dormant shims got signature-identical stubs (mcpSkills, computerUse common/mcpServer/wrapper, allternitInChrome mcpServer/toolRendering). Escalations: none. Identity: live -1 + recorded +1 = 1466 = totalAccounted."
     },
     {
       "id": "b0439",
@@ -1787,7 +1788,7 @@
       "loc": 1578,
       "twins": [],
       "state": "NEW",
-      "note": "Added 2026-09-19 by artifact-codemod pilot 10: these 8 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — dormant-shim type drift: ShellProgress/KeybindingAction re-exports, qrToString overload, OrgValidationResult variant, AgentLineProps.task, dead ant constant comparisons, unknown-typed tool results/message content; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md §7. The other 21 conversions in the pilot dropped @ts-nocheck cleanly (excludedCompilerArtifacts 95→66, totalNocheck 872→851); DesktopHandoff.tsx was never nocheck-headed and needed no bookkeeping."
+      "note": "Added 2026-09-19 by artifact-codemod pilot 10: these 8 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — dormant-shim type drift: ShellProgress/KeybindingAction re-exports, qrToString overload, OrgValidationResult variant, AgentLineProps.task, dead ant constant comparisons, unknown-typed tool results/message content; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md §7. The other 21 conversions in the pilot dropped @ts-nocheck cleanly (excludedCompilerArtifacts 95→66); DesktopHandoff.tsx was never nocheck-headed and needed no bookkeeping."
     }
   ],
   "quarantined": [

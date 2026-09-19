@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type {
   Base64ImageSource,
@@ -47,8 +46,8 @@ import type { Command } from '@/commands.js'
 import { getOauthConfig } from '@/constants/oauth.js'
 import { PRODUCT_URL } from '@/constants/product.js'
 import type { AppState } from '@/state/AppState.js'
-import { type Tool, toolMatchesName } from '../../../runtime/tools/Tool.js';
-import { type ToolCallProgress } from '../../../cli/ui/ink-app/Tool.js';
+import { toolMatchesName } from '../../../runtime/tools/Tool.js';
+import { type Tool, type ToolCallProgress, type ToolUseContext } from '../../../cli/ui/ink-app/Tool.js';
 import { ListMcpResourcesTool } from '../../../cli/ui/ink-app/tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
 import { type MCPProgress, MCPTool } from '../../../cli/ui/ink-app/tools/MCPTool/MCPTool.js'
 import { createMcpAuthTool } from '../../../cli/ui/ink-app/tools/McpAuthTool/McpAuthTool.js'
@@ -591,6 +590,28 @@ export function getServerCacheKey(
  * @param serverRef Scoped server configuration
  * @returns A wrapped client (either connected or failed)
  */
+type ConnectToServerStats = {
+  totalServers: number
+  stdioCount: number
+  sseCount: number
+  httpCount: number
+  sseIdeCount: number
+  wsIdeCount: number
+}
+
+type MemoizedConnectToServer = ((
+  name: string,
+  serverRef: ScopedMcpServerConfig,
+  serverStats?: ConnectToServerStats,
+) => Promise<MCPServerConnection>) & {
+  // lodash `memoize` attaches the memoization cache at runtime; callers
+  // clear per-server entries via `connectToServer.cache.delete(key)`.
+  cache: {
+    delete: (key: string) => boolean
+    clear: () => void
+  }
+}
+
 export const connectToServer = memoize(
   async (
     name: string,
@@ -1637,7 +1658,7 @@ export const connectToServer = memoize(
     }
   },
   getServerCacheKey,
-)
+) as MemoizedConnectToServer
 
 /**
  * Clears the memoize cache for a specific server
@@ -1749,7 +1770,7 @@ export const fetchToolsForClient = memoizeWithLRU(
       }
 
       const result = (await client.client.request(
-        { method: 'tools/list' } as unknown as string,
+        { method: 'tools/list' },
         ListToolsResultSchema,
       )) as ListToolsResult
 
@@ -2006,7 +2027,7 @@ export const fetchResourcesForClient = memoizeWithLRU(
       }
 
       const result = (await client.client.request(
-        { method: 'resources/list' } as unknown as string,
+        { method: 'resources/list' },
         ListResourcesResultSchema,
       )) as { resources?: Array<Record<string, unknown>> }
 
@@ -2040,7 +2061,7 @@ export const fetchCommandsForClient = memoizeWithLRU(
 
       // Request prompts list from client
       const result = (await client.client.request(
-        { method: 'prompts/list' } as unknown as string,
+        { method: 'prompts/list' },
         ListPromptsResultSchema,
       )) as ListPromptsResult
 
@@ -2835,12 +2856,12 @@ export async function callMCPToolWithUrlElicitationRetry({
     onProgress?: (data: MCPProgress) => void
   }) => Promise<MCPToolCallResult>
   /** Handler for URL elicitations when no hook handles them.
-   * In print/SDK mode, delegates to structuredIO. In REPL, falls back to queue. */
-  handleElicitation?: (
-    serverName: string,
-    params: ElicitRequestURLParams,
-    signal: AbortSignal,
-  ) => Promise<ElicitResult>
+   * In print/SDK mode, delegates to structuredIO. In REPL, falls back to queue.
+   * Typed as ToolUseContext['handleElicitation'] so values taken from a tool
+   * context assign without a cast (the two MCP sdk type-import flavors used
+   * across the repo are distinct types to tsc even though identical at
+   * runtime). */
+  handleElicitation?: ToolUseContext['handleElicitation']
 }): Promise<MCPToolCallResult> {
   const MAX_URL_ELICITATION_RETRIES = 3
   for (let attempt = 0; ; attempt++) {
@@ -2939,7 +2960,24 @@ export async function callMCPToolWithUrlElicitationRetry({
         let userResult: ElicitResult
         if (handleElicitation) {
           // Print/SDK mode: delegate to structuredIO which sends a control request
-          userResult = await handleElicitation(serverName, elicitation, signal)
+          // The ToolUseContext-typed handler resolves ElicitResult loosely
+          // (its declaring file is @ts-nocheck), so narrow the fields the
+          // retry flow relies on before joining the strictly-typed flow.
+          const hookResult = await handleElicitation(
+            serverName,
+            elicitation,
+            signal,
+          )
+          const hookAction = hookResult.action
+          userResult = {
+            action:
+              hookAction === 'accept' ||
+              hookAction === 'decline' ||
+              hookAction === 'cancel'
+                ? hookAction
+                : 'cancel',
+            content: hookResult.content as ElicitResult['content'],
+          }
         } else {
           // REPL mode: queue for ElicitationDialog with two-phase consent/waiting flow
           const waitingState: ElicitationWaitingState = {
@@ -2967,7 +3005,7 @@ export async function callMCPToolWithUrlElicitationRetry({
                     params: elicitation,
                     signal,
                     waitingState,
-                    respond: result => {
+                    respond: (result: ElicitResult) => {
                       // Phase 1 consent: accept is a no-op (doesn't resolve retry Promise)
                       if (result.action === 'accept') {
                         return
@@ -3090,6 +3128,7 @@ async function callMCPTool({
           arguments: args,
           _meta: meta,
         } as Parameters<Client['callTool']>[0],
+        CallToolResultSchema,
         {
           signal,
           timeout: timeoutMs,
