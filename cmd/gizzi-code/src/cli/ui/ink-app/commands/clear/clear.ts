@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isCanonicalBotSession } from '@/runtime/bots/canonical-chat'
 import { getSessionId } from '../../bootstrap/state'
 import type { LocalCommandCall } from '../../types/command'

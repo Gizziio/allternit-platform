@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react';
 import { Passes } from '../../components/Passes/Passes';
 import { logEvent } from '../../services/analytics/index';

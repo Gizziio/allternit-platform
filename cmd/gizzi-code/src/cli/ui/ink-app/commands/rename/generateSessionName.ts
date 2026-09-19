@@ -1,6 +1,9 @@
-// @ts-nocheck
 import { queryHaiku } from '../../services/api/claude.js'
-import type { Message } from '../../types/message.js'
+import {
+  type Message,
+  isContentBlockArray,
+  isMessageContentArray,
+} from '../../types/message.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
 import { safeParseJSON } from '../../utils/json.js'
@@ -44,7 +47,12 @@ export async function generateSessionName(
       },
     })
 
-    const content = extractTextContent(result.message.content)
+    const rawContent = result.message.content
+    const content = extractTextContent(
+      isContentBlockArray(rawContent) || isMessageContentArray(rawContent)
+        ? rawContent
+        : [],
+    )
 
     const response = safeParseJSON(content)
     if (

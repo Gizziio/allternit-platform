@@ -1,5 +1,5 @@
-// @ts-nocheck
 import type { ToolUseBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
+import type { UUID } from 'crypto'
 import {
   createUserMessage,
   REJECT_MESSAGE,
@@ -95,7 +95,7 @@ export class StreamingToolExecutor {
               },
             ],
             toolUseResult: `Error: No such tool available: ${block.name}`,
-            sourceToolAssistantUUID: assistantMessage.uuid,
+            sourceToolAssistantUUID: assistantMessage.uuid as UUID,
           }),
         ],
       })
@@ -169,7 +169,7 @@ export class StreamingToolExecutor {
           },
         ],
         toolUseResult: 'User rejected tool use',
-        sourceToolAssistantUUID: assistantMessage.uuid,
+        sourceToolAssistantUUID: assistantMessage.uuid as UUID,
       })
     }
     if (reason === 'streaming_fallback') {
@@ -184,7 +184,7 @@ export class StreamingToolExecutor {
           },
         ],
         toolUseResult: 'Streaming fallback - tool execution discarded',
-        sourceToolAssistantUUID: assistantMessage.uuid,
+        sourceToolAssistantUUID: assistantMessage.uuid as UUID,
       })
     }
     const desc = this.erroredToolDescription
@@ -201,7 +201,7 @@ export class StreamingToolExecutor {
         },
       ],
       toolUseResult: msg,
-      sourceToolAssistantUUID: assistantMessage.uuid,
+      sourceToolAssistantUUID: assistantMessage.uuid as UUID,
     })
   }
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import addDir from './commands/add-dir/index.js'
 import autofixPr from './commands/autofix-pr/index.js'
@@ -72,6 +71,7 @@ import security from './commands/security/index.js'
 
 function safeRequire(path: string) {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require(path)
   } catch (e) {
     return null
@@ -575,9 +575,11 @@ export async function getCommands(cwd: string): Promise<Command[]> {
  * Use this when dynamic skills are added to invalidate cached command lists.
  */
 export function clearCommandMemoizationCaches(): void {
-  loadAllCommands.cache?.clear?.()
-  getSkillToolCommands.cache?.clear?.()
-  getSlashCommandToolSkills.cache?.clear?.()
+  // (lodash memoize attaches a MapCache at runtime; the handwritten
+  // 'lodash-es/memoize.js' shim types the return as the bare function)
+  ;(loadAllCommands as { cache?: { clear?: () => void } }).cache?.clear?.()
+  ;(getSkillToolCommands as { cache?: { clear?: () => void } }).cache?.clear?.()
+  ;(getSlashCommandToolSkills as { cache?: { clear?: () => void } }).cache?.clear?.()
   // getSkillIndex in skillSearch/localSearch.ts is a separate memoization layer
   // built ON TOP of getSkillToolCommands/getCommands. Clearing only the inner
   // caches is a no-op for the outer — lodash memoize returns the cached result

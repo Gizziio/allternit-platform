@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tool Type Definitions
  * 
@@ -6,10 +5,12 @@
  */
 
 import type { z } from 'zod/v4'
-import type { Tool } from './builtins/tool.js'
-
-// Re-export tool types
-export type { Tool }
+// Tool-namespace TS2709: './builtins/tool.js' exports a `Tool` namespace
+// (opencode-style), which cannot be used as a type. This module's consumers
+// and the ink-app helpers merged in below operate on the ink-app Tool
+// interface, so that is what gets re-exported here.
+export type { Tool } from '../../cli/ui/ink-app/Tool.js'
+import type { Tool } from '../../cli/ui/ink-app/Tool.js'
 
 // Tool context for execution.
 // Kept permissive so command/UI code can attach runtime fields without
@@ -35,7 +36,6 @@ export interface ToolUseContext {
   setStreamMode?: any
   setResponseLength?: any
   messages?: any
-  messageId?: string
   [key: string]: any
 }
 
