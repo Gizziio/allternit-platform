@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 694,
+    "totalNocheck": 693,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 580,
-    "totalQueueLoc": 245313,
+    "totalQueueFiles": 579,
+    "totalQueueLoc": 243795,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -558,12 +558,13 @@
     },
     {
       "id": "b0041",
-      "files": [
-        "src/cli/ui/ink-app/utils/gizzimd.ts"
-      ],
+      "files": [],
       "loc": 1507,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1518,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head10). 1 file, 1518 loc, @ts-nocheck header removed; tsc --noEmit exit 0 with 0 errors (file was type-clean apart from 2 latent errors). Fixes: (1) TEAMMEM DCE-flag require() recast from typeof import() of the real module to a local contract mirror ({ isTeamMemoryEnabled: () => boolean; getTeamMemEntrypoint: () => string }) matching the pattern in burned twin src/shared/utils/gizzimd.ts — module stays lazily required so the flag DCE is preserved; (2) clearMemoryFileCaches: lodash-es ambient memoize shim (src/types/global.d.ts, off-limits) returns T without the runtime .cache property (TS2339) — pinned via typeof getMemoryFiles & { cache?: { clear?: () => void } } structural cast instead of as any. No escalations; no headers restored. Identity check: b0041 re-verified NEW on origin/main after worktree creation."
     },
     {
       "id": "b0042",
