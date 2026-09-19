@@ -1,8 +1,15 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
-import type { UUID } from 'crypto'
+import type { UUID as CryptoUUID } from 'crypto'
 import type { Dirent } from 'fs'
+
+// UUID type alias for compatibility (same convention as src/types/logs.ts):
+// Message.uuid is typed `UUID | string` (== string), and transcript map keys
+// mix raw strings with ids throughout. TranscriptMessage/LogOption from
+// ../types/logs.ts still brand ids as crypto UUID (that file is batch b0407,
+// not yet burned), so values crossing into those types are cast at the
+// boundary; once b0407 lands the string alias, the casts become no-ops.
+type UUID = string
 // Sync fs primitives for readFileTailSync — separate from fs/promises
 // imports above. Named (not wildcard) per CLAUDE.md style; no collisions
 // with the async-suffixed names.
@@ -60,7 +67,6 @@ import type {
   AssistantMessage,
   AttachmentMessage,
   Message,
-  SystemCompactBoundaryMessage,
   SystemMessage,
   UserMessage,
 } from '../types/message.js'
@@ -200,7 +206,7 @@ export function isEphemeralToolProgress(dataType: unknown): boolean {
 
 // Local binding for the call sites below — the re-export alone does not
 // bring getProjectDir into module scope (ReferenceError when hit).
-import { getProjectDir } from './projectDir.js'
+import { getProjectDir, getProjectsDir } from './projectDir.js'
 
 export { getProjectDir, getProjectsDir } from './projectDir.js'
 
@@ -1038,8 +1044,12 @@ class Project {
         }
 
         const transcriptMessage: TranscriptMessage = {
-          parentUuid: isCompactBoundary ? null : effectiveParentUuid,
-          logicalParentUuid: isCompactBoundary ? parentUuid : undefined,
+          parentUuid: (isCompactBoundary
+            ? null
+            : effectiveParentUuid) as CryptoUUID | null,
+          logicalParentUuid: (isCompactBoundary
+            ? parentUuid
+            : undefined) as CryptoUUID | null | undefined,
           isSidechain,
           teamName: teamInfo?.teamName,
           agentName: teamInfo?.agentName,
@@ -1059,6 +1069,9 @@ class Project {
           entrypoint: getEntrypoint(),
           cwd: getCwd(),
           sessionId,
+          // All message factories stamp ISO strings (createUserMessage etc.);
+          // SerializedMessage narrows Message's `string | number` to string.
+          timestamp: message.timestamp as string,
           version: VERSION,
           gitBranch,
           slug,
@@ -1084,7 +1097,7 @@ class Project {
   }
 
   async insertFileHistorySnapshot(
-    messageId: UUID,
+    messageId: CryptoUUID,
     snapshot: FileHistorySnapshot,
     isSnapshotUpdate: boolean,
   ) {
@@ -1118,7 +1131,7 @@ class Project {
     return this.trackWrite(async () => {
       const entry: ContentReplacementEntry = {
         type: 'content-replacement',
-        sessionId: getSessionId() as UUID,
+        sessionId: getSessionId() as string as CryptoUUID,
         agentId,
         replacements,
       }
@@ -1480,7 +1493,7 @@ export async function recordFileHistorySnapshot(
   isSnapshotUpdate: boolean,
 ) {
   await getProject().insertFileHistorySnapshot(
-    messageId,
+    messageId as CryptoUUID,
     snapshot,
     isSnapshotUpdate,
   )
@@ -1547,7 +1560,7 @@ export async function recordContextCollapseCommit(commit: {
   firstArchivedUuid: string
   lastArchivedUuid: string
 }): Promise<void> {
-  const sessionId = getSessionId() as UUID
+  const sessionId = getSessionId() as string as CryptoUUID
   if (!sessionId) return
   await getProject().appendEntry({
     type: 'marble-origami-commit',
@@ -1572,7 +1585,7 @@ export async function recordContextCollapseSnapshot(snapshot: {
   armed: boolean
   lastSpawnTokens: number
 }): Promise<void> {
-  const sessionId = getSessionId() as UUID
+  const sessionId = getSessionId() as string as CryptoUUID
   if (!sessionId) return
   await getProject().appendEntry({
     type: 'marble-origami-snapshot',
@@ -1840,9 +1853,15 @@ export function removeExtraFields(
 function applyPreservedSegmentRelinks(
   messages: Map<UUID, TranscriptMessage>,
 ): void {
-  type Seg = NonNullable<
-    SystemCompactBoundaryMessage['compactMetadata']['preservedSegment']
-  >
+  // CompactMetadata's index signature types preservedSegment as unknown;
+  // the boundary writer (services/compact/compact.ts) always populates
+  // head/anchor/tail UUIDs — mirror that contract locally. Fields are
+  // CryptoUUID to match TranscriptMessage's branded parent links.
+  type Seg = {
+    headUuid: CryptoUUID
+    anchorUuid: CryptoUUID
+    tailUuid: CryptoUUID
+  }
 
   // Find the absolute-last boundary and the last seg-boundary (can differ:
   // manual /compact after reactive compact → seg is stale).
@@ -1855,7 +1874,7 @@ function applyPreservedSegmentRelinks(
     entryIndex.set(entry.uuid, i)
     if (isCompactBoundaryMessage(entry)) {
       absoluteLastBoundaryIdx = i
-      const seg = entry.compactMetadata?.preservedSegment
+      const seg = entry.compactMetadata?.preservedSegment as Seg | undefined
       if (seg) {
         lastSeg = seg
         lastSegBoundaryIdx = i
@@ -1928,13 +1947,15 @@ function applyPreservedSegmentRelinks(
         ...msg,
         message: {
           ...msg.message,
+          // MessageUsage declares only input/output tokens, but the persisted
+          // shape also carries cache_* fields (zero them at runtime as before).
           usage: {
             ...msg.message.usage,
             input_tokens: 0,
             output_tokens: 0,
             cache_creation_input_tokens: 0,
             cache_read_input_tokens: 0,
-          },
+          } as NonNullable<typeof msg.message.usage>,
         },
       })
     }
@@ -2029,7 +2050,10 @@ function applySnipRemovals(messages: Map<UUID, TranscriptMessage>): void {
   let relinkedCount = 0
   for (const [uuid, msg] of messages) {
     if (!msg.parentUuid || !toDelete.has(msg.parentUuid)) continue
-    messages.set(uuid, { ...msg, parentUuid: resolve(msg.parentUuid) })
+    messages.set(uuid, {
+      ...msg,
+      parentUuid: resolve(msg.parentUuid) as CryptoUUID | null,
+    })
     relinkedCount++
   }
 
@@ -2121,7 +2145,9 @@ function recoverOrphanedParallelToolResults(
   chain: TranscriptMessage[],
   seen: Set<UUID>,
 ): TranscriptMessage[] {
-  type ChainAssistant = Extract<TranscriptMessage, { type: 'assistant' }>
+  // Intersection (not Extract — TranscriptMessage is an intersection type,
+  // so Extract<..., { type: 'assistant' }> collapses to never).
+  type ChainAssistant = TranscriptMessage & { type: 'assistant' }
   const chainAssistants = chain.filter(
     (m): m is ChainAssistant => m.type === 'assistant',
   )
@@ -2363,7 +2389,7 @@ export async function loadTranscriptFromFile(
   try {
     parsed = jsonParse(content)
   } catch (error) {
-    throw new Error(`Invalid JSON in transcript file: ${error}`)
+    throw new Error(`Invalid JSON in transcript file: ${error}`, { cause: error })
   }
 
   let messages: TranscriptMessage[]
@@ -2512,7 +2538,7 @@ function convertToLogOption(
     teamName: firstMessage.teamName,
     agentName: firstMessage.agentName,
     agentSetting,
-    leafUuid: lastMessage.uuid,
+    leafUuid: lastMessage.uuid as CryptoUUID,
     summary,
     customTitle,
     tag,
@@ -3027,7 +3053,9 @@ export async function loadFullLog(log: LogOption): Promise<LogOption> {
       gitBranch: mostRecentLeaf?.gitBranch ?? log.gitBranch,
       isSidechain: transcript[0]?.isSidechain ?? log.isSidechain,
       teamName: transcript[0]?.teamName ?? log.teamName,
-      leafUuid: mostRecentLeaf?.uuid ?? log.leafUuid,
+      leafUuid: (mostRecentLeaf?.uuid ?? log.leafUuid) as
+        | CryptoUUID
+        | undefined,
       fileHistorySnapshots: buildFileHistorySnapshotChain(
         fileHistorySnapshots,
         transcript,
@@ -3642,7 +3670,8 @@ export async function loadTranscriptFile(
       }
       if (isTranscriptMessage(entry)) {
         if (entry.parentUuid && progressBridge.has(entry.parentUuid)) {
-          entry.parentUuid = progressBridge.get(entry.parentUuid) ?? null
+          entry.parentUuid = (progressBridge.get(entry.parentUuid) ??
+            null) as CryptoUUID | null
         }
         messages.set(entry.uuid, entry)
         // Compact boundary: prior marble-origami-commit entries reference
@@ -3720,11 +3749,13 @@ export async function loadTranscriptFile(
   const parentUuids = new Set(
     allMessages
       .map(msg => msg.parentUuid)
-      .filter((uuid): uuid is UUID => uuid !== null),
+      .filter((uuid): uuid is CryptoUUID => uuid !== null),
   )
 
   // Find all terminal messages (messages with no children)
-  const terminalMessages = allMessages.filter(msg => !parentUuids.has(msg.uuid))
+  const terminalMessages = allMessages.filter(
+    msg => !parentUuids.has(msg.uuid as CryptoUUID),
+  )
 
   const leafUuids = new Set<UUID>()
   let hasCycle = false
@@ -3839,14 +3870,29 @@ async function loadSessionFile(sessionId: UUID): Promise<{
 /**
  * Gets message UUIDs for a specific session without loading all sessions.
  * Memoized to avoid re-reading the same session file multiple times.
+ *
+ * The lodash-es/memoize.js shim in global.d.ts types the return as plain T,
+ * dropping lodash's .cache — declare the memoized shape locally (lodash
+ * memoize exposes a MapCache with get/set/has/clear).
  */
+type MemoizedGetSessionMessages = ((
+  sessionId: UUID,
+) => Promise<Set<UUID>>) & {
+  cache: {
+    has(key: UUID): boolean
+    get(key: UUID): Promise<Set<UUID>> | undefined
+    set(key: UUID, value: Promise<Set<UUID>>): unknown
+    clear(): void
+  }
+}
+
 const getSessionMessages = memoize(
   async (sessionId: UUID): Promise<Set<UUID>> => {
     const { messages } = await loadSessionFile(sessionId)
     return new Set(messages.keys())
   },
   (sessionId: UUID) => sessionId,
-)
+) as MemoizedGetSessionMessages
 
 /**
  * Clear the memoized session messages cache.
@@ -4211,7 +4257,7 @@ export async function getAgentTranscript(agentId: AgentId): Promise<{
     const parentUuids = new Set(agentMessages.map(msg => msg.parentUuid))
     const leafMessage = findLatestMessage(
       agentMessages,
-      msg => !parentUuids.has(msg.uuid),
+      msg => !parentUuids.has(msg.uuid as CryptoUUID),
     )
 
     if (!leafMessage) {
@@ -4666,7 +4712,7 @@ export async function loadAllLogsFromSessionFile(
       messageCount: countVisibleMessages(chain),
       isSidechain: firstMessage.isSidechain ?? false,
       sessionId,
-      leafUuid: leafMessage.uuid,
+      leafUuid: leafMessage.uuid as CryptoUUID,
       summary: summaries.get(leafMessage.uuid),
       customTitle: customTitles.get(sessionId),
       tag: tags.get(sessionId),
