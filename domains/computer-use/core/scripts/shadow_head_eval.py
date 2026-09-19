@@ -8,7 +8,7 @@ over three synthetic task observations and writes the eval report:
         [--head {mock,mlx,kimi}] [--questioning {batched,sequential}]
         [--trajectory {off,on}] [--few-shot N]
         [--reserved-slots {off,on}] [--last-action {off,on}]
-        [--out-dir DIR] [--quiet]
+        [--trace-out PATH] [--out-dir DIR] [--quiet]
 
 The LLM provider replays a recorded transcript and the AX observation is
 scripted, so the run is deterministic except for the head itself:
@@ -236,6 +236,18 @@ def main(argv: list[str] | None = None) -> int:
              "(effect: confirmed / suspected_noop; escalation hint when it "
              "failed). Default off.",
     )
+    parser.add_argument(
+        "--trace-out",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="live trace accumulation (core/trace_recorder.py): append one "
+             "redacted JSONL record per shadow decision to PATH (default "
+             "evaluation/tier-a/live-traces.jsonl is the operator default; "
+             "use a temp path for eval runs — held-out task ids are labeled "
+             "split=heldout by the recorder and never become train exemplars). "
+             "Default None = recording off.",
+    )
     parser.add_argument("--quiet", action="store_true", help="suppress progress output")
     args = parser.parse_args(argv)
 
@@ -294,6 +306,7 @@ def main(argv: list[str] | None = None) -> int:
         progress=not args.quiet,
         reserved_slots=args.reserved_slots == "on",
         last_action=args.last_action == "on",
+        trace_path=str(args.trace_out) if args.trace_out else None,
     )
     report["questioning"] = args.questioning
     report["trajectory"] = args.trajectory
@@ -318,6 +331,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  reobserve picks:               {agg['reobserve_picks']} / {agg['total_decide_steps']}")
         print(f"  abstain picks:                 {agg['abstain_picks']} / {agg['total_decide_steps']}")
         print(f"  reserved-slot pick rate:       {agg['reserved_slot_rate']}")
+    if args.trace_out:
+        print(f"  live traces appended:          {report['trace_records']} -> {args.trace_out}")
     print(f"\nNote: {agg['note']}")
     return 0
 

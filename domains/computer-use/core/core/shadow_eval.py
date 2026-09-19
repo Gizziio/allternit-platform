@@ -433,6 +433,7 @@ def run_task_sync(
     progress: bool = False,
     reserved_slots: bool = False,
     last_action: bool = False,
+    trace_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Sync wrapper around :func:`run_task` (fresh event loop)."""
     import asyncio
@@ -442,7 +443,8 @@ def run_task_sync(
         return loop.run_until_complete(
             run_task(task, head=head, max_elements=max_elements,
                      step_budget_ms=step_budget_ms, progress=progress,
-                     reserved_slots=reserved_slots, last_action=last_action)
+                     reserved_slots=reserved_slots, last_action=last_action,
+                     trace_path=trace_path)
         )
     finally:
         loop.close()
@@ -456,6 +458,7 @@ async def run_task(
     progress: bool = False,
     reserved_slots: bool = False,
     last_action: bool = False,
+    trace_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run one synthetic task through the planning loop and score agreement.
 
@@ -464,6 +467,12 @@ async def run_task(
     ``reserved_slots`` / ``last_action`` enable the System One grafts
     (reserved reobserve/abstain operation slots / [LAST ACTION]
     effect-escalation block) in the shadow state text.
+    ``trace_path`` enables live trace accumulation (core/trace_recorder.py,
+    docs/JEV_TRACE_POLICY.md): every shadow decision is appended as one
+    JSONL record labeled from the previously executed LLM step. The
+    held-out task ids (search-flow / form-fill / settings-toggle) are
+    labeled split="heldout" by the recorder — eval-harness runs never
+    become train-split exemplars.
     """
     from .element_refs import get_refmap
 
@@ -512,6 +521,7 @@ async def run_task(
                 shadow_head=shadow_head,
                 shadow_reserved_slots=reserved_slots,
                 shadow_last_action=last_action,
+                shadow_trace_path=(str(trace_path) if trace_path else None),
             ),
             event_callback=_on_event,
         )
@@ -640,6 +650,7 @@ def run_eval(
     progress: bool = False,
     reserved_slots: bool = False,
     last_action: bool = False,
+    trace_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run the full shadow eval over the synthetic task set.
 
@@ -649,12 +660,15 @@ def run_eval(
     scales the per-task wall-clock budget for slow heads (kimi CLI
     subprocesses); ``progress`` prints one line per decide step.
     ``reserved_slots`` / ``last_action`` enable the System One grafts in the
-    shadow state text (see :func:`run_task`).
+    shadow state text (see :func:`run_task`). ``trace_path`` enables live
+    trace accumulation — the report records the path and the number of
+    trace records written (core/trace_recorder.py).
     """
     task_list = list(tasks) if tasks is not None else default_tasks(steps_per_task)
     reports = [
         run_task_sync(t, head=head, step_budget_ms=step_budget_ms, progress=progress,
-                      reserved_slots=reserved_slots, last_action=last_action)
+                      reserved_slots=reserved_slots, last_action=last_action,
+                      trace_path=trace_path)
         for t in task_list
     ]
 
@@ -724,9 +738,20 @@ def run_eval(
         "head": head_label,
         "reserved_slots": bool(reserved_slots),
         "last_action": bool(last_action),
+        "trace_path": str(trace_path) if trace_path else None,
+        "trace_records": _count_trace_records(trace_path) if trace_path else 0,
         "aggregate": aggregate,
         "tasks": reports,
     }
+
+
+def _count_trace_records(trace_path: Any) -> int:
+    """Line count of a live-traces JSONL file (0 when unreadable)."""
+    try:
+        with Path(trace_path).open("r", encoding="utf-8") as handle:
+            return sum(1 for line in handle if line.strip())
+    except OSError:
+        return 0
 
 
 def write_reports(
