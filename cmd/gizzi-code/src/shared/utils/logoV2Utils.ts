@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getDirectConnectServerUrl, getSessionId } from '@/bootstrap/state.js'
 import { stringWidth } from '../../cli/ui/ink-app/ink/stringWidth.js'
 import type { LogOption } from '@/types/logs.js'
@@ -313,7 +312,7 @@ export function formatModelAndBilling(
 export function getRecentReleaseNotesSync(maxItems: number): string[] {
   // For ants, use bundled changelog
   if (process.env.USER_TYPE === 'ant') {
-    const changelog = MACRO.VERSION_CHANGELOG
+    const changelog = MACRO.VERSION_CHANGELOG as string | undefined
     if (changelog) {
       const commits = changelog.trim().split('\n').filter(Boolean)
       return commits.slice(0, maxItems)

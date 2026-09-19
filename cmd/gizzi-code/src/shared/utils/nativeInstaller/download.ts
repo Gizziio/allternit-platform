@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Download functionality for native installer
  *
@@ -205,7 +204,7 @@ export async function downloadVersionFromArtifactory(
     name: 'claude-native-installer',
     version: '0.0.1',
     dependencies: {
-      [MACRO.NATIVE_PACKAGE_URL!]: version,
+      [(MACRO.NATIVE_PACKAGE_URL as string)]: version,
     },
   }
 
@@ -220,7 +219,7 @@ export async function downloadVersionFromArtifactory(
         name: 'claude-native-installer',
         version: '0.0.1',
         dependencies: {
-          [MACRO.NATIVE_PACKAGE_URL!]: version,
+          [(MACRO.NATIVE_PACKAGE_URL as string)]: version,
         },
       },
       [`node_modules/${MACRO.NATIVE_PACKAGE_URL}`]: {

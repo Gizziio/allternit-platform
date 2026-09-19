@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ToolUseContext } from '@/Tool.js'
 import {
   findTeammateTaskByAgentId,
@@ -15,6 +14,7 @@ import { startInProcessTeammate } from '../inProcessRunner.js'
 import {
   killInProcessTeammate,
   spawnInProcessTeammate,
+  type SpawnContext,
 } from '../spawnInProcess.js'
 import type {
   TeammateExecutor,
@@ -93,7 +93,9 @@ export class InProcessBackend implements TeammateExecutor {
         color: config.color,
         planModeRequired: config.planModeRequired ?? false,
       },
-      this.context,
+      // ToolUseContext.setAppState is optional on paper but always present in
+      // the ToolUseContext TeammateTool installs via setContext().
+      this.context as SpawnContext,
     )
 
     // If spawn succeeded, start the agent execution loop
