@@ -85,9 +85,7 @@ export function renderToolResultMessage({
           Updated cell <Text bold>{cell_id}</Text>:
         </Text>
         <Box marginLeft={2}>
-          {/* TODO(types): HighlightedCode is a compiler-runtime component whose
-              props type is `object`; spread-cast keeps runtime props identical */}
-          <HighlightedCode {...({ code: new_source, filePath: 'notebook.py' } as Record<string, unknown>)} />
+          <HighlightedCode code={new_source} filePath="notebook.py" />
         </Box>
       </Box>
     </MessageResponse>;
