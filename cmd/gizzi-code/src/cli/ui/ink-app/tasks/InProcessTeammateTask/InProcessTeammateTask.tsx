@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * InProcessTeammateTask - Manages in-process teammate lifecycle
  *

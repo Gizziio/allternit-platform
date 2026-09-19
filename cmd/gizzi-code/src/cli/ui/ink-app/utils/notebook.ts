@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type {
   ImageBlockParam,
   TextBlockParam,
@@ -6,17 +5,54 @@ import type {
 } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
 import { formatOutput } from '../tools/BashTool/utils.js'
-import type {
-  NotebookCell,
-  NotebookCellOutput,
-  NotebookCellSource,
-  NotebookCellSourceOutput,
-  NotebookContent,
-  NotebookOutputImage,
-} from '../types/notebook.js'
 import { getFsImplementation } from './fsOperations.js'
 import { expandPath } from './path.js'
 import { jsonParse } from './slowOperations.js'
+
+// types/notebook is a stub ("not yet implemented"); restore the minimal
+// notebook shapes this module needs (cell shape mirrors
+// src/runtime/tools/builtins/notebook.ts, plus the fields read here).
+type NotebookCell = {
+  id?: string
+  cell_type: string
+  source: string[] | string
+  metadata?: Record<string, unknown>
+  outputs?: NotebookCellOutput[]
+  execution_count?: number | null
+}
+type NotebookCellOutput = {
+  output_type: string
+  text?: string | string[]
+  data?: Record<string, string>
+  ename?: string
+  evalue?: string
+  traceback?: string[]
+}
+type NotebookOutputImage = {
+  image_data: string
+  media_type: 'image/png' | 'image/jpeg'
+}
+type NotebookCellSourceOutput = {
+  output_type: string
+  text?: string
+  image?: NotebookOutputImage
+}
+type NotebookCellSource = {
+  cellType: string
+  source: string
+  execution_count?: number
+  cell_id: string
+  language?: string
+  outputs?: NotebookCellSourceOutput[]
+}
+type NotebookContent = {
+  cells: NotebookCell[]
+  metadata: {
+    language_info?: {
+      name?: string
+    }
+  }
+}
 
 const LARGE_OUTPUT_THRESHOLD = 10000
 

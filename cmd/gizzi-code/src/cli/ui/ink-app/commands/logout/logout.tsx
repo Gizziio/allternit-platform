@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react';
 import { clearTrustedDeviceTokenCache } from '../../bridge/trustedDevice';
 import { Text } from '../../ink';
@@ -51,7 +50,9 @@ export async function performLogout({
 // clearing anything memoized that must be invalidated when user/session/auth changes
 export async function clearAuthRelatedCaches(): Promise<void> {
   // Clear the OAuth token cache
-  getClaudeAIOAuthTokens.cache?.clear?.();
+  // (lodash memoize attaches a MapCache at runtime; the handwritten
+  // 'lodash-es/memoize.js' shim types the return as the bare function)
+  ;(getClaudeAIOAuthTokens as { cache?: { clear?: () => void } }).cache?.clear?.();
   clearTrustedDeviceTokenCache();
   clearBetasCaches();
   clearToolSchemaCache();
@@ -61,8 +62,8 @@ export async function clearAuthRelatedCaches(): Promise<void> {
   refreshGrowthBookAfterAuthChange();
 
   // Clear Grove config cache
-  getGroveNoticeConfig.cache?.clear?.();
-  getGroveSettings.cache?.clear?.();
+  ;(getGroveNoticeConfig as { cache?: { clear?: () => void } }).cache?.clear?.();
+  ;(getGroveSettings as { cache?: { clear?: () => void } }).cache?.clear?.();
 
   // Clear remotely managed settings cache
   await clearRemoteManagedSettingsCache();

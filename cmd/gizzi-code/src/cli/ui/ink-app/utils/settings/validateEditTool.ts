@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ValidationResult } from './../../Tool.ts'
 import { isClaudeSettingsPath } from '../permissions/filesystem.js'
 import { validateSettingsFileContent } from './validation.js'
@@ -35,9 +34,15 @@ export function validateInputForSettingsFileEdit(
   const afterValidation = validateSettingsFileContent(updatedContent)
 
   if (!afterValidation.isValid) {
+    // strict:false tsconfig: discriminant narrowing does not filter union
+    // members, so pin the failing member explicitly (house Extract pattern).
+    const invalid = afterValidation as Extract<
+      typeof afterValidation,
+      { isValid: false }
+    >
     return {
       result: false,
-      message: `Gizzi Code settings.json validation failed after edit:\n${afterValidation.error}\n\nFull schema:\n${afterValidation.fullSchema}\nIMPORTANT: Do not update the env unless explicitly instructed to do so.`,
+      message: `Gizzi Code settings.json validation failed after edit:\n${invalid.error}\n\nFull schema:\n${invalid.fullSchema}\nIMPORTANT: Do not update the env unless explicitly instructed to do so.`,
       errorCode: 10,
     }
   }

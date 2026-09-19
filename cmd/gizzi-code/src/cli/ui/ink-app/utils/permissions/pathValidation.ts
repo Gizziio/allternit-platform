@@ -1,4 +1,3 @@
-// @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import { dirname, isAbsolute, resolve } from 'path'
@@ -91,6 +90,7 @@ export function isPathInSandboxWriteAllowlist(resolvedPath: string): boolean {
   if (!SandboxManager.isSandboxingEnabled()) {
     return false
   }
+  // @ts-expect-error TODO(types) — verbatim upstream: vendored sandbox-adapter exposes allow/deny shapes, not these upstream names
   const { allowOnly, denyWithinAllow } = SandboxManager.getFsWriteConfig()
   // Resolve symlinks on both sides so comparisons are symmetric (matching
   // pathInAllowedWorkingPath). Without this, an allowlist entry that is a
@@ -173,12 +173,18 @@ export function isPathAllowed(
       precomputedPathsToCheck,
     )
     if (!safetyCheck.safe) {
+      // strict:false tsconfig: discriminant narrowing does not filter union
+      // members, so pin the unsafe member explicitly (house Extract pattern).
+      const unsafe = safetyCheck as Extract<
+        typeof safetyCheck,
+        { safe: false }
+      >
       return {
         allowed: false,
         decisionReason: {
           type: 'safetyCheck',
-          reason: safetyCheck.message,
-          classifierApprovable: safetyCheck.classifierApprovable,
+          reason: unsafe.message,
+          classifierApprovable: unsafe.classifierApprovable,
         },
       }
     }

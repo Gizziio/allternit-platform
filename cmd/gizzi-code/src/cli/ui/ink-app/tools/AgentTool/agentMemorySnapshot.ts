@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { z } from 'zod/v4'

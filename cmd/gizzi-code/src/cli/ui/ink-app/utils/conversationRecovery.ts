@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { UUID } from 'crypto'
 import { relative } from 'path'
@@ -12,9 +11,12 @@ import type {
   LogOption,
   PersistedWorktreeSession,
   SerializedMessage,
+  TranscriptMessage,
 } from '../types/logs.js'
 import type {
+  AssistantMessage,
   Message,
+  MessageContent,
   NormalizedMessage,
   NormalizedUserMessage,
 } from '../types/message.js'
@@ -67,7 +69,11 @@ const LEGACY_BRIEF_TOOL_NAME: string | null =
     : null
 const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS')
   ? (
-      require('../tools/SendUserFileTool/prompt.js') as typeof import('../tools/SendUserFileTool/prompt.js')
+      // KAIROS DCE: the SendUserFileTool prompt module is a dormant shim, so
+      // the cast declares the contract this file relies on.
+      require('../tools/SendUserFileTool/prompt.js') as {
+        SEND_USER_FILE_TOOL_NAME: string
+      }
     ).SEND_USER_FILE_TOOL_NAME
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -94,7 +100,7 @@ function migrateLegacyAttachmentTypes(message: Message): Message {
         type: 'file',
         displayPath: relative(getCwd(), attachment.filename as string),
       },
-    } as SerializedMessage // Cast entire message since we know the structure is correct
+    } as Message // Cast entire message since we know the structure is correct
   }
 
   if (attachment.type === 'new_directory') {
@@ -105,7 +111,7 @@ function migrateLegacyAttachmentTypes(message: Message): Message {
         type: 'directory',
         displayPath: relative(getCwd(), attachment.path as string),
       },
-    } as SerializedMessage // Cast entire message since we know the structure is correct
+    } as Message // Cast entire message since we know the structure is correct
   }
 
   // Backfill displayPath for attachments from old sessions
@@ -230,7 +236,9 @@ export function deserializeMessagesWithInterruptDetection(
     // message so removeInterruptedMessage's splice(idx, 2) removes the
     // correct pair.
     const lastRelevantIdx = filteredMessages.findLastIndex(
-      m => m.type !== 'system' && m.type !== 'progress',
+      // 'progress' is not in NormalizedMessage's literal union but appears in
+      // legacy transcripts; compare as string to keep the runtime guard.
+      m => m.type !== 'system' && (m.type as string) !== 'progress',
     )
     if (
       lastRelevantIdx !== -1 &&
@@ -285,7 +293,9 @@ function detectTurnInterruption(
   const lastMessageIdx = messages.findLastIndex(
     m =>
       m.type !== 'system' &&
-      m.type !== 'progress' &&
+      // 'progress' is not in NormalizedMessage's literal union but appears in
+      // legacy transcripts; compare as string to keep the runtime guard.
+      (m.type as string) !== 'progress' &&
       !(m.type === 'assistant' && m.isApiErrorMessage),
   )
   const lastMessage =
@@ -305,26 +315,31 @@ function detectTurnInterruption(
   }
 
   if (lastMessage.type === 'user') {
-    if (lastMessage.isMeta || lastMessage.isCompactSummary) {
+    // strict:false tsconfig: the type checks above do not narrow the union,
+    // so pin the user member explicitly (house Extract pattern).
+    const userMessage = lastMessage as NormalizedUserMessage
+    if (userMessage.isMeta || userMessage.isCompactSummary) {
       return { kind: 'none' }
     }
-    if (isToolUseResultMessage(lastMessage)) {
+    if (isToolUseResultMessage(userMessage)) {
       // Brief mode (#20467) drops the trailing assistant text block, so a
       // completed brief-mode turn legitimately ends on SendUserMessage's
       // tool_result. Without this check, resume misclassifies every
       // brief-mode session as interrupted mid-turn and injects a phantom
       // "Continue from where you left off." before the user's real next
       // prompt. Look back one step for the originating tool_use.
-      if (isTerminalToolResult(lastMessage, messages, lastMessageIdx)) {
+      if (isTerminalToolResult(userMessage, messages, lastMessageIdx)) {
         return { kind: 'none' }
       }
       return { kind: 'interrupted_turn' }
     }
     // Plain text user prompt — CC hadn't started responding
-    return { kind: 'interrupted_prompt', message: lastMessage }
+    return { kind: 'interrupted_prompt', message: userMessage }
   }
 
-  if (lastMessage.type === 'attachment') {
+  // 'attachment' is not in NormalizedMessage's literal union but appears in
+  // legacy transcripts; compare as string to keep the runtime guard.
+  if ((lastMessage.type as string) === 'attachment') {
     // Attachments are part of the user turn — the user provided context but
     // the assistant never responded.
     return { kind: 'interrupted_turn' }
@@ -360,7 +375,12 @@ function isTerminalToolResult(
   for (let i = resultIdx - 1; i >= 0; i--) {
     const msg = messages[i]!
     if (msg.type !== 'assistant') continue
-    for (const b of msg.message.content) {
+    // strict:false tsconfig: the type check does not narrow the union, so
+    // pin the assistant member (house Extract pattern); its content is typed
+    // string | MessageContent[] | ContentBlock[], normalize to the array form.
+    const assistantContent = (msg as AssistantMessage).message.content
+    if (!Array.isArray(assistantContent)) continue
+    for (const b of assistantContent as MessageContent[]) {
       if (b.type === 'tool_use' && b.id === toolUseId) {
         return (
           b.name === BRIEF_TOOL_NAME ||
@@ -386,7 +406,12 @@ export function restoreSkillStateFromMessages(messages: Message[]): void {
       continue
     }
     if (message.attachment.type === 'invoked_skills') {
-      for (const skill of message.attachment.skills) {
+      // MessageAttachment has no invoked_skills payload typing; declare the
+      // contract this loop relies on.
+      const invoked = message.attachment as {
+        skills: Array<{ name?: string; path?: string; content?: string }>
+      }
+      for (const skill of invoked.skills) {
         if (skill.name && skill.path && skill.content) {
           // Resume only happens for the main session, so agentId is null
           addInvokedSkill(skill.name, skill.path, skill.content, null)
@@ -419,7 +444,7 @@ export async function loadMessagesFromJsonlPath(path: string): Promise<{
   sessionId: UUID | undefined
 }> {
   const { messages: byUuid, leafUuids } = await loadTranscriptFile(path)
-  let tip: (typeof byUuid extends Map<UUID, infer T> ? T : never) | null = null
+  let tip: TranscriptMessage | null = null
   let tipTs = 0
   for (const m of byUuid.values()) {
     if (m.isSidechain || !leafUuids.has(m.uuid)) continue

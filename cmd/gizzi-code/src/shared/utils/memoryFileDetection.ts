@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { normalize, posix, win32 } from 'path'
 import {
@@ -15,8 +14,14 @@ import {
 } from './windowsPaths.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
+// TEAMMEM is a deliberate DCE feature flag; the runtime module currently
+// exports nothing, so the cast declares the contract this file relies on.
 const teamMemPaths = feature('TEAMMEM')
-  ? (require('../memdir/teamMemPaths.js') as typeof import('../memdir/teamMemPaths.js'))
+  ? (require('../memdir/teamMemPaths.js') as {
+      isTeamMemFile: (filePath: string) => boolean
+      isTeamMemoryEnabled: () => boolean
+      isTeamMemPath: (filePath: string) => boolean
+    })
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 
