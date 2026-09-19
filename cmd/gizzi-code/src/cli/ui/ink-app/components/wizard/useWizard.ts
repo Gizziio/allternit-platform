@@ -3,7 +3,8 @@ import type { WizardContextValue } from './types'
 import { WizardContext } from './WizardProvider'
 
 export function useWizard<
-  T extends Record<string, unknown> = Record<string, unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends Record<string, any> = Record<string, any>,
 >(): WizardContextValue & { wizardData: T } {
   const context = useContext(WizardContext) as (WizardContextValue & { wizardData: T }) | null
   if (!context) {
