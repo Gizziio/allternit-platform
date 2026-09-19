@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Cowork Runtime Service
  *
@@ -144,22 +143,22 @@ type CheckpointRow = Record<string, any>
 
 function mapRun(row: RunRow): Run {
   const { time_created, time_updated, ...rest } = row
-  return { ...rest, created_at: time_created, updated_at: time_updated }
+  return { ...rest, created_at: time_created, updated_at: time_updated } as Run
 }
 
 function mapRunEvent(row: RunEventRow): RunEvent {
   const { time_created, ...rest } = row
-  return { ...rest, created_at: time_created }
+  return { ...rest, created_at: time_created } as RunEvent
 }
 
 function mapSchedule(row: ScheduleRow): Schedule {
   const { time_created, time_updated, enabled, ...rest } = row
-  return { ...rest, enabled: !!enabled, created_at: time_created, updated_at: time_updated }
+  return { ...rest, enabled: !!enabled, created_at: time_created, updated_at: time_updated } as Schedule
 }
 
 function mapApproval(row: ApprovalRow): Approval {
   const { time_created, time_updated, time_responded, ...rest } = row
-  return { ...rest, created_at: time_created, updated_at: time_updated, responded_at: time_responded }
+  return { ...rest, created_at: time_created, updated_at: time_updated, responded_at: time_responded } as Approval
 }
 
 function mapCheckpoint(row: CheckpointRow): Checkpoint {
@@ -170,7 +169,7 @@ function mapCheckpoint(row: CheckpointRow): Checkpoint {
     created_at: time_created,
     updated_at: time_updated,
     restored_at: time_restored,
-  }
+  } as Checkpoint
 }
 
 // ============================================================================
@@ -246,7 +245,7 @@ export namespace RunService {
         mode: input.mode,
         status,
         completed_steps: 0,
-        config: input.config ?? {},
+        config: (input.config ?? {}) as Record<string, unknown>,
         time_created: now,
         time_updated: now,
       }).run()

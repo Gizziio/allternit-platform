@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ConfigScope } from './../../services/mcp/types.ts'
 import type { ZodError, ZodIssue } from 'zod/v4'
 import { jsonParse } from '../slowOperations.js'

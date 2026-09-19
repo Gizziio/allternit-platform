@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Git bundle creation + upload for CCR seed-bundle seeding.
  *
@@ -232,16 +231,19 @@ export async function createAndUploadGitBundle(
     )
 
     if (!bundle.ok) {
-      logForDebugging(`[gitBundle] ${bundle.error}`)
+      // strict:false — truthiness check does not narrow the discriminated
+      // union; pin the failure member explicitly (type-only).
+      const failed = bundle as Extract<BundleCreateResult, { ok: false }>
+      logForDebugging(`[gitBundle] ${failed.error}`)
       logEvent('tengu_ccr_bundle_upload', {
         outcome:
-          bundle.failReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          failed.failReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         max_bytes: maxBytes,
       })
       return {
         success: false,
-        error: bundle.error,
-        failReason: bundle.failReason,
+        error: failed.error,
+        failReason: failed.failReason,
       }
     }
 
@@ -251,11 +253,14 @@ export async function createAndUploadGitBundle(
     })
 
     if (!upload.success) {
+      // strict:false — truthiness check does not narrow the discriminated
+      // union; pin the failure member explicitly (type-only).
+      const failedUpload = upload as Extract<BundleUploadResult, { success: false }>
       logEvent('tengu_ccr_bundle_upload', {
         outcome:
           'failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
-      return { success: false, error: upload.error }
+      return { success: false, error: failedUpload.error }
     }
 
     logForDebugging(

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Filesystem utilities for runtime
  * Production-quality implementation with consistent API

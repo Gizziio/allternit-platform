@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { constants as fsConstants } from 'fs'
 import {
   type FileHandle,

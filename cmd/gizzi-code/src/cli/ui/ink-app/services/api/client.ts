@@ -1,4 +1,3 @@
-// @ts-nocheck
 import AllternitAI, { type ClientOptions } from '@allternit/gizzi-sdk/providers/allternit'
 import { randomUUID } from 'crypto'
 import {

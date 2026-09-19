@@ -1,11 +1,14 @@
-// @ts-nocheck
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../services/analytics/index'
 import { loadKeybindingsSync } from './loadUserBindings'
 import { getBindingDisplayText } from './resolver'
-import type { KeybindingContextName } from './types'
+
+// TODO(types): './types' (keybindings/types.ts) is a dormant stub
+// (types_ts()) exporting nothing. Local mirror — same pattern as
+// resolver.ts / useKeybinding.ts (KeybindingContextName = string).
+type KeybindingContextName = string
 
 // TODO(keybindings-migration): Remove fallback parameter after migration is
 // complete and we've confirmed no 'keybinding_fallback_used' events are being
@@ -38,7 +41,14 @@ export function getShortcutDisplay(
   fallback: string,
 ): string {
   const bindings = loadKeybindingsSync()
-  const resolved = getBindingDisplayText(action, context, bindings)
+  // TODO(types): local ParsedBinding mirrors differ (optional vs required
+  // keystroke modifiers) while keybindings/types.ts is a dormant shim;
+  // cast until the real types land (type-only).
+  const resolved = getBindingDisplayText(
+    action,
+    context,
+    bindings as Parameters<typeof getBindingDisplayText>[2],
+  )
   if (resolved === undefined) {
     const key = `${action}:${context}`
     if (!LOGGED_FALLBACKS.has(key)) {

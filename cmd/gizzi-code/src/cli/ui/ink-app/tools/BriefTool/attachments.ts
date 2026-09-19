@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Shared attachment validation + resolution for SendUserMessage and
  * SendUserFile. Lives in BriefTool/ so the dynamic `./upload.js` import

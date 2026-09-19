@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import memoize from 'lodash-es/memoize'
 import { hostname } from 'os'
@@ -49,7 +48,7 @@ const readStoredToken = memoize((): string | undefined => {
   if (envToken) {
     return envToken
   }
-  return getSecureStorage().read()?.trustedDeviceToken
+  return getSecureStorage().read()?.trustedDeviceToken as string | undefined
 })
 
 export function getTrustedDeviceToken(): string | undefined {

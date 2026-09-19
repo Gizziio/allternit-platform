@@ -1,16 +1,17 @@
-// @ts-nocheck
 import { logEvent } from './../analytics/index.ts'
 import { openBrowser } from '../../utils/browser.js'
 import { AuthCodeListener } from './auth-code-listener.js'
 import * as client from './client.js'
 import * as crypto from './crypto.js'
+// TODO(types): the '@/*' path map resolves '@/services/oauth/types.js' to the
+// ink-app stub; this twin needs the real runtime types module (sibling).
 import type {
   OAuthProfileResponse,
   OAuthTokenExchangeResponse,
   OAuthTokens,
   RateLimitTier,
   SubscriptionType,
-} from './types.js'
+} from '../../../../../runtime/services/oauth/types.js'
 
 /**
  * OAuth service that handles the OAuth 2.0 authorization code flow with PKCE.

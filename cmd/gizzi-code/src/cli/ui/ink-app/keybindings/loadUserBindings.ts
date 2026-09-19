@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * User keybinding configuration loader with hot-reload support.
  *
@@ -26,12 +25,32 @@ import { createSignal } from '../utils/signal.js'
 import { jsonParse } from '../utils/slowOperations.js'
 import { DEFAULT_BINDINGS } from './defaultBindings.js'
 import { parseBindings } from './parser.js'
-import type { KeybindingBlock, ParsedBinding } from './types.js'
 import {
   checkDuplicateKeysInJson,
   type KeybindingWarning,
   validateBindings,
 } from './validate.js'
+
+// TODO(types): './types.js' (keybindings/types.ts) is a dormant stub
+// (types_ts()) exporting nothing. Local mirror of the shapes this file
+// needs — same pattern as parser.ts / validate.ts.
+type ParsedKeystroke = {
+  key: string
+  ctrl?: boolean
+  alt?: boolean
+  shift?: boolean
+  meta?: boolean
+  super?: boolean
+}
+type KeybindingBlock = {
+  context: string
+  bindings: Record<string, string>
+}
+type ParsedBinding = {
+  context: string
+  chord: ParsedKeystroke[]
+  action: string | null
+}
 
 /**
  * Check if keybinding customization is enabled.
