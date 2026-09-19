@@ -26,11 +26,16 @@ export default defineConfig({
       // Imports @allternit/shell, which has never been a package in this repo
       // — the file cannot load (orphaned scaffold from the 2026-03 reorg).
       'e2e/workflow.test.ts',
-      // Import @allternit/runtime, whose package main points at
-      // ./dist/index.js but its tsc build emits a
-      // dist/services/runtime/adapter/allternit-runtime/src/... layout
-      // (pre-existing packaging bug; dist is gitignored), so the entry never
-      // resolves on a fresh checkout.
+      // Import @allternit/runtime. The packaging bug is fixed (2026-09-18):
+      // the tsconfig paths map pulled @allternit/governor source into the
+      // program, inflating tsc's computed rootDir so the build emitted
+      // dist/services/runtime/adapter/... instead of dist/index.js; dist now
+      // matches the package.json entry points and the package resolves. The
+      // suites stay excluded anyway: allternit-e2e asserts an API that never
+      // existed on RuntimeBridge (option-taking constructor + executeTool),
+      // and the two compatibility suites additionally need @allternit/lawlayer
+      // (never built/importable) plus gateway mocks — orphaned scaffolds, not
+      // loadability problems.
       'integration/allternit-e2e.test.ts',
       'integration/allternit-runtime-compatibility.test.ts',
       'integration/runtime-bridge-compatibility.test.ts',

@@ -18,22 +18,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    "paths": {
-      "@allternit/runtime": [
-        "./src/index.ts"
-      ],
-      "@allternit/runtime/*": [
-        "./src/*/index.ts"
-      ],
-      "@allternit/governor": [
-        "../../../../domains/governance/governor/src/index.ts"
-      ],
-      "@allternit/browser": [
-        "../../../../infrastructure/chrome-stream/agent-systems/allternit-browser/src/index.ts"
-      ]
-    }
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "src/**/*"
