@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useRef } from 'react'
 import { logError } from './../utils/log.ts'
 import { z } from 'zod/v4'

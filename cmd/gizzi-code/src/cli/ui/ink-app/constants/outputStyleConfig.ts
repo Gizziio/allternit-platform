@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { logForDebugging } from '../utils/debug.js'
 import { getSettings_DEPRECATED } from '../utils/settings/settings.js'
 import {

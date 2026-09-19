@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Reads plugin-related settings (enabledPlugins, extraKnownMarketplaces)
  * from --add-dir directories.
