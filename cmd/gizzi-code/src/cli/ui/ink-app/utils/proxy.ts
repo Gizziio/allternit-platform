@@ -1,4 +1,3 @@
-// @ts-nocheck
 // undici is lazy-required inside getProxyAgent/configureGlobalAgents to defer
 // ~1.5MB when no HTTPS_PROXY/mTLS env vars are set (the common case).
 import axios, { type AxiosInstance } from 'axios'
@@ -390,6 +389,6 @@ export function configureGlobalAgents(): void {
  * Clear proxy agent cache.
  */
 export function clearProxyCache(): void {
-  getProxyAgent.cache.clear?.()
+  ;(getProxyAgent as unknown as { cache: { clear?: () => void } }).cache.clear?.()
   logForDebugging('Cleared proxy agent cache')
 }

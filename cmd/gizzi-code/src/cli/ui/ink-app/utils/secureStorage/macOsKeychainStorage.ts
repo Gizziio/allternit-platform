@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { execaSync } from 'execa'
 import { logForDebugging } from '../debug.js'
 import { execFileNoThrow } from '../execFileNoThrow.js'
@@ -12,7 +11,23 @@ import {
   KEYCHAIN_CACHE_TTL_MS,
   keychainCacheState,
 } from './macOsKeychainHelpers.js'
-import type { SecureStorage, SecureStorageData } from './types.js'
+// TODO(types): './types.js' is a TEMPORARY SHIM exporting nothing. Local
+// mirror of src/shared/utils/secureStorage/types.ts — same pattern as
+// fallbackStorage.ts; remove once the shim grows the real exports.
+interface SecureStorageData {
+  [key: string]: unknown
+}
+interface SecureStorage {
+  name?: string
+  getItem?(key: string): Promise<string | null>
+  setItem?(key: string, value: string): Promise<void>
+  removeItem?(key: string): Promise<void>
+  clear?(): Promise<void>
+  read(key?: string): SecureStorageData | null
+  update(data: SecureStorageData): { success: boolean; warning?: string }
+  readAsync?(): Promise<SecureStorageData | null>
+  delete(): boolean | Promise<void>
+}
 
 // `security -i` reads stdin with a 4096-byte fgets() buffer (BUFSIZ on darwin).
 // A command line longer than this is truncated mid-argument: the first 4096

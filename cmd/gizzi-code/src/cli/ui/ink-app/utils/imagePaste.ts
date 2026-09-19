@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { randomBytes } from 'crypto'
 import { execa } from 'execa'
@@ -106,7 +105,25 @@ export async function hasImageInClipboard(): Promise<boolean> {
     // when the module/export is missing. Catch a throw too: it would surface
     // as an unhandled rejection in useClipboardImageHint's setTimeout.
     try {
-      const { getNativeModule } = await import('image-processor-napi')
+      // TODO(types): ambient decl for image-processor-napi lacks the
+      // `getNativeModule` export the native clipboard paths probe at runtime.
+      const { getNativeModule } = (await import(
+        'image-processor-napi'
+      )) as unknown as {
+        getNativeModule?: () => {
+          hasClipboardImage?: () => boolean
+          readClipboardImage?: (
+            maxWidth: number,
+            maxHeight: number,
+          ) => {
+            png: Buffer
+            originalWidth: number
+            originalHeight: number
+            width: number
+            height: number
+          } | null
+        } | null
+      }
       const hasImage = getNativeModule()?.hasClipboardImage
       if (hasImage) {
         return hasImage()
@@ -135,7 +152,25 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
     getFeatureValue_CACHED_MAY_BE_STALE('tengu_collage_kaleidoscope', true)
   ) {
     try {
-      const { getNativeModule } = await import('image-processor-napi')
+      // TODO(types): ambient decl for image-processor-napi lacks the
+      // `getNativeModule` export the native clipboard paths probe at runtime.
+      const { getNativeModule } = (await import(
+        'image-processor-napi'
+      )) as unknown as {
+        getNativeModule?: () => {
+          hasClipboardImage?: () => boolean
+          readClipboardImage?: (
+            maxWidth: number,
+            maxHeight: number,
+          ) => {
+            png: Buffer
+            originalWidth: number
+            originalHeight: number
+            width: number
+            height: number
+          } | null
+        } | null
+      }
       const readClipboard = getNativeModule()?.readClipboardImage
       if (!readClipboard) {
         throw new Error('native clipboard reader unavailable')
