@@ -1,7 +1,7 @@
 /**
  * Multi-Region Deployment Implementation
  *
- * Based on: spec/deployment/multi-region.md
+ * Based on: docs/Core_System/02-Target/multi-region.md
  */
 
 // ============================================================================

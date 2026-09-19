@@ -4,7 +4,7 @@
  * These are the minimal `Workload`/`Artifact`/`Capability`/`Lease`/`Receipt`/
  * `Approval`/`Event` contracts the Documents and Office program package is
  * built against. They are PROVISIONAL: the platform's contract-spine ADRs
- * (ADR-002..012) are not ratified (see docs/GENOFFICE_PHASE5_DECISION.md and
+ * (ADR-002..012) are not ratified (see docs/learnings/GENOFFICE_PHASE5_DECISION.md and
  * docs/Core_System/00-Strategy/ALLTERNIT_OS_LIVING_ROADMAP.md), so shapes
  * here may change when the ratified schemas land. Everything in this package
  * is versioned `0.1.0-draft` and must not be treated as a stable platform

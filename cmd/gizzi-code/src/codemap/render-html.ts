@@ -14,7 +14,7 @@
  * The layered auto-layout (topological sort by layer, cycle remainder
  * dumped into one layer) and hand-rolled SVG rendering are a from-scratch
  * port of the same technique used by
- * packages/@allternit/workflow-engine/src/visualizer/index.ts's
+ * platform/packages/workflow-engine/src/visualizer/index.ts's
  * `autoLayoutNodes`/`toSVG` — reimplemented here in vanilla JS since this
  * needs to run in the browser with zero bundling, not imported as a
  * TS module.

@@ -5,7 +5,7 @@
 //! (same arguments, exit codes, stdout formats, semantics). The engine runs
 //! as named session `ao`; the tmux script path remains the fallback.
 //!
-//! Design notes (P1 spike, docs/ALLTERNIT_RUNTIME_P1_NOTES.md):
+//! Design notes (P1 spike, docs/learnings/ALLTERNIT_RUNTIME_P1_NOTES.md):
 //! - Dead panes/workspaces are removed engine-side, so liveness is a presence
 //!   probe (workspace listed + pane present). A small registry at
 //!   `~/.agent-orchestrator/state.json` is the tmux remain-on-exit analog that

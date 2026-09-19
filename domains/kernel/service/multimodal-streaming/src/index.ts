@@ -1,7 +1,7 @@
 /**
  * Multimodal Streaming Implementation
  *
- * Based on: spec/streaming/multimodal.md
+ * Based on: spec/streaming/multimodal.md (doc removed; no successor in tree)
  */
 
 // ============================================================================

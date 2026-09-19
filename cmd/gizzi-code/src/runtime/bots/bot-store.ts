@@ -1,5 +1,5 @@
 /**
- * Bot profile store (Bot Mode, phase B1 — see docs/GIZZI_BOT_MODE_SPEC.md).
+ * Bot profile store (Bot Mode, phase B1 — see docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * A Bot is a profile, not a new runtime primitive (D1): identity metadata in
  * `bot.json`, persona/standing instructions in `SOUL.md`, and bot-scoped

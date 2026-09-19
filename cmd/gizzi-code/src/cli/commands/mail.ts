@@ -5,7 +5,7 @@
  * `runtime/server/rails-bridge.ts` already writes to
  * (`cmd/allternit-api/src/rails/mod.rs`). This is a genuinely different
  * system from `gizzi ac` (`AgentWorkspaceCommunication`, a separate local
- * channel-based agent-messaging system) — see `docs/AGENT_ACTIVITY_CLI_MAP.md`.
+ * channel-based agent-messaging system) — see `docs/learnings/AGENT_ACTIVITY_CLI_MAP.md`.
  */
 
 import { cmd } from "@/cli/commands/cmd"

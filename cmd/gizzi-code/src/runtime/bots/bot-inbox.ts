@@ -1,5 +1,5 @@
 /**
- * Bot inbox (Bot Mode, phase B4 — D5, see docs/GIZZI_BOT_MODE_SPEC.md).
+ * Bot inbox (Bot Mode, phase B4 — D5, see docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * Fire-and-forget DM transport between bots. `message_agent` appends a durable
  * envelope to the TARGET bot's `inbox.jsonl`; when the target's canonical chat

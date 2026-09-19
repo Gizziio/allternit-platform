@@ -1,5 +1,5 @@
 /**
- * Capability epoch (Bot Mode, D5 — see docs/GIZZI_BOT_MODE_SPEC.md).
+ * Capability epoch (Bot Mode, D5 — see docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * The epoch is a cheap content hash over everything that shapes what a bot
  * can do and who it works with: identity metadata, SOUL.md, the memory note

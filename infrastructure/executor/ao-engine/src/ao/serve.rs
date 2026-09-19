@@ -1,5 +1,5 @@
 //! `ao serve` — run the UHP (Unified Harness Protocol) HTTP surface in-process
-//! under the ao binary (P6a core + P6b full; plan §2.6). Operator doc: `docs/UHP.md`.
+//! under the ao binary (P6a core + P6b full; plan §2.6). Operator doc: `docs/programs/ao/UHP.md`.
 //!
 //! Not a sidecar: the gateway lives in the `uhp-gateway` workspace crate and
 //! is mounted here so the `ao serve` process IS the UHP server. The gateway

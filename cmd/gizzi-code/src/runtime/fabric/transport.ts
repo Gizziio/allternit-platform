@@ -7,7 +7,7 @@
  * direct zod-version dependency inside the contracts package.
  *
  * Invariant: **do not invent local semantic variants.** If a shape needs to
- * change, change it in `packages/@allternit/os-contracts/src/spine.ts` first,
+ * change, change it in `platform/packages/os-contracts/src/spine.ts` first,
  * then mirror it here.
  */
 import z from "zod/v4"

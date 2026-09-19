@@ -20,7 +20,7 @@ APPROVED_FILES = {"DESIGN.md", "typography.css", "typography.json", "validate-ty
 #     tokens (see surfaces/ai.allternit.com/src/styles/allternit-design/tokens.css)
 #   - generated/example/documentation static content that isn't rendered
 #     product UI (newsletter editions, demo pages, plugin examples, docs)
-# See docs/CI_ISSUE_6_NOTES.md for the evidence behind each entry.
+# See docs/learnings/CI_ISSUE_6_NOTES.md for the evidence behind each entry.
 EXEMPT_PATH_PREFIXES = [
     "platform/packages/ix",
     "platform/packages/plugin-sdk/docs-site",

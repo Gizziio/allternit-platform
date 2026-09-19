@@ -1,6 +1,6 @@
 /**
  * `gizzi bot` — Bot Mode command group (phases B1+B2+B3 — see
- * docs/GIZZI_BOT_MODE_SPEC.md).
+ * docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * A Bot is a profile (D1): `~/.gizzi/bots/<name>/` holds `bot.json`
  * (identity), `SOUL.md` (persona), and `memory/` (bot-scoped notes). This

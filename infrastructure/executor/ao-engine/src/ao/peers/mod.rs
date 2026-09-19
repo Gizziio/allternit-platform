@@ -6,7 +6,7 @@
 //! **read-only** through the rails crate's own `Peer`/`PeerStatus` types so
 //! the ao side can never drift from the registry schema.
 //!
-//! Root resolution (documented in `docs/AO_VISIBILITY_PEERS_NOTES.md`):
+//! Root resolution (documented in `docs/programs/ao/AO_VISIBILITY_PEERS_NOTES.md`):
 //! **`--root <dir>` > `AO_PEERS_ROOT` env > the ao process's current working
 //! directory.** The registry is local-only — sessions under different roots
 //! are invisible to each other (`peer/mod.rs` doc comment) — so a wrong root

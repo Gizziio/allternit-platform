@@ -1,7 +1,7 @@
 //! P5 visibility feed watcher: background thread that samples the three
 //! panel feeds and posts them to the client loop.
 //!
-//! Cadence (fixed numbers, documented in `docs/AO_VISIBILITY_PEERS_NOTES.md`):
+//! Cadence (fixed numbers, documented in `docs/programs/ao/AO_VISIBILITY_PEERS_NOTES.md`):
 //! - engine agents (`agent.list` over the same socket contract the CLI uses):
 //!   every 2s — this is also what derives waiting-on-you transitions;
 //! - native catalog scan + Rails peers: re-walked every 15s and cached

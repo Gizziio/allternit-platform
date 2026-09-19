@@ -1,6 +1,6 @@
 /**
  * Canonical bot chat (Bot Mode, phase B2 — D2/D5/D6, see
- * docs/GIZZI_BOT_MODE_SPEC.md).
+ * docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * One pinned session per bot ("Bot Chat is born the moment the Bot is
  * born", lazily): the first `gizzi bot chat <name>` creates the session and

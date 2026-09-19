@@ -1,6 +1,6 @@
 /**
  * Bot roster + unread store (Bot Mode, phase B5 — TUI bots pane, see
- * docs/GIZZI_BOT_MODE_SPEC.md).
+ * docs/programs/gizzi/GIZZI_BOT_MODE_SPEC.md).
  *
  * `getBotRosterRows` merges the bot profile store (B1) with presence (B5
  * presence agent's bot-presence) and unread counts into one row per bot for

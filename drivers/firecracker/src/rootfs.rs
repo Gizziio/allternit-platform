@@ -941,7 +941,7 @@ impl RootfsBuilder {
         }
 
         // Install the guest agent (+ Xvnc/fluxbox for display sessions) --
-        // see research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md. Best-effort: a
+        // see docs/research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md. Best-effort: a
         // rootfs without these still boots and runs (just without a real
         // exec/display channel), matching this function's existing pattern
         // of degrading gracefully rather than failing the whole build.
@@ -1180,7 +1180,7 @@ impl RootfsBuilder {
     /// Install the guest agent binary (+ best-effort Xvnc/fluxbox for
     /// display sessions) into an already-mounted rootfs.
     ///
-    /// See research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md. This is what makes
+    /// See docs/research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md. This is what makes
     /// `FirecrackerSandbox.run()` (Python) and `exec_in_vm`/
     /// `start_display_in_vm` (this crate) have a real guest to talk to --
     /// without it, both fail closed (by design) rather than silently running
