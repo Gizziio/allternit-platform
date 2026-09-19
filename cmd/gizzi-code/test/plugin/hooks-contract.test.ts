@@ -44,10 +44,14 @@ const hooks: Hooks = {
 
 // Mirror of Plugin.trigger's dispatch loop (src/runtime/integrations/plugin)
 // — string-name dispatch over loaded hook objects, mutating the output bag.
-async function trigger<Name extends keyof Required<Hooks>>(
+type HookName = {
+  [K in keyof Required<Hooks>]: Required<Hooks>[K] extends (input: any, output: any) => any ? K : never
+}[keyof Required<Hooks>]
+
+async function trigger<Name extends HookName>(
   name: Name,
-  input: Parameters<Required<Hooks>[Name]>[0],
-  output: Parameters<Required<Hooks>[Name]>[1],
+  input: Parameters<Extract<Required<Hooks>[Name], (input: any, output: any) => any>>[0],
+  output: Parameters<Extract<Required<Hooks>[Name], (input: any, output: any) => any>>[1],
 ): Promise<typeof output> {
   for (const hook of [hooks]) {
     const fn = hook[name]
