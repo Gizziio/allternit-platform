@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 104,
   "stats": {
-    "totalNocheck": 951,
+    "totalNocheck": 950,
     "excludedCompilerArtifacts": 118,
     "excludedVendored": 93,
-    "totalQueueFiles": 720,
-    "totalQueueLoc": 291805,
+    "totalQueueFiles": 719,
+    "totalQueueLoc": 289937,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1698,12 +1698,14 @@
     },
     {
       "id": "b0097",
-      "files": [
-        "src/shared/utils/config.ts"
-      ],
-      "loc": 1868,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1868,
+      "escalated": [],
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail1). 1 file, 2 type-only fixes converging 2 errors: config.ts (GlobalConfig.companion referenced StoredCompanion via import() of ../../runtime/integrations/types.js, which never exported it — the canonical type lives in src/cli/ui/ink-app/buddy/types.ts; inlined the structural shape {name, personality, hatchedAt} with a keep-in-sync comment, matching the file's existing SDK-build-surface inline precedent; teamMemPaths DCE-flag require cast used typeof import() of a shim module that exports nothing — recast to a local contract mirror {getTeamMemEntrypoint: () => string}, same pattern as gizzimd.ts). No escalations; no allowlist entries."
     },
     {
       "id": "b0089",
