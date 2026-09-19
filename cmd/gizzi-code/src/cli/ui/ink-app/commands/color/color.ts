@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { UUID } from 'crypto'
 import { getSessionId } from '../../bootstrap/state'
 import type { ToolUseContext } from '../../Tool'

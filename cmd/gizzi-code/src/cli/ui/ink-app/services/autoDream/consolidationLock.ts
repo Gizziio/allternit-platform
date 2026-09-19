@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Lock file whose mtime IS lastConsolidatedAt. Body is the holder's PID.
 //
 // Lives inside the memory dir (getAutoMemPath) so it keys on git-root

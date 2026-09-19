@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { LocalCommandCall } from '../../types/command.js'
 import { runInPager } from '../../utils/editor.js'
 import { getTranscriptPath } from '../../utils/sessionStorage.js'
