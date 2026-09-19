@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Gizzi Code Config Profiles
  *
@@ -265,3 +264,4 @@ export namespace ConfigProfiles {
     return result
   }
 }
+

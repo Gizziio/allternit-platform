@@ -3,11 +3,11 @@
   "generatedFrom": "56085d0db7bd97909117c4166ae25cb9527b2190",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1519,
+    "totalNocheck": 1516,
     "excludedCompilerArtifacts": 360,
     "excludedVendored": 93,
-    "totalQueueFiles": 1046,
-    "totalQueueLoc": 390144,
+    "totalQueueFiles": 1043,
+    "totalQueueLoc": 389458,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -229,14 +229,13 @@
     },
     {
       "id": "b0141",
-      "files": [
-        "src/cli/ui/ink-app/utils/path.ts",
-        "src/cli/ui/ink-app/bridge/types.ts",
-        "src/config/profiles.ts"
-      ],
-      "loc": 686,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 3,
+      "burnedLoc": 686,
+      "note": "Burned by ao/ts-burn-next2: header-only 0-error burn (TS2322 probe confirmed all 3 files in compilation). Final residue of the original b0102 slice after the 5945839e0 regen renumber and the ao/cut-attribution-hooks-v2 file cuts."
     },
     {
       "id": "b0142",
