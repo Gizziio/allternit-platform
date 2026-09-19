@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 105,
   "stats": {
-    "totalNocheck": 908,
+    "totalNocheck": 907,
     "excludedCompilerArtifacts": 118,
     "excludedVendored": 93,
-    "totalQueueFiles": 677,
-    "totalQueueLoc": 279734,
+    "totalQueueFiles": 676,
+    "totalQueueLoc": 277869,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1107,12 +1107,14 @@
     },
     {
       "id": "b0066",
-      "files": [
-        "src/cli/ui/ink-app/utils/config.ts"
-      ],
+      "files": [],
       "loc": 1865,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1865,
+      "escalated": [],
+      "note": "Burned 2026-09-19 (ao/ts-burn-head5). 1 file (ink-app/utils/config.ts, 1865 LOC), 5 latent errors, no escalations: (1) dormant services/oauth/types.ts shim missing BillingType — added identical stub mirroring src/runtime/services/oauth/types.ts (allowed per shim-stub rule); ReferralEligibilityResponse NOT mirrored there — the passesEligibilityCache payload shape is owned by services/api/referral.ts, so config.ts now imports it from there (type-only, no runtime cycle); (2)+(3) saveConfig/saveConfigWithLock generic constraint widened object -> Record<string,unknown> so ambient lodash-es pickBy accepts the config (GlobalConfig is a type alias, callers unaffected); (4) proper-lockfile onCompromised callback takes optional err — ambient src/types/global.d.ts types it as () => void but the real package invokes it with the error; (5) header stripped. Identity verified: batch still NEW on origin/main at pickup after fetch."
     },
     {
       "id": "b0408",
