@@ -45,6 +45,7 @@ test/provider/transform.test.ts
 test/question/question.test.ts
 test/runtime/attachments.test.ts
 test/runtime/cowork-runtime-vm.test.ts
+test/runtime/cowork-service-mapping.test.ts
 test/runtime/local-cli-driver.test.ts
 test/runtime/util-filesystem.test.ts
 test/runtime/runtime-routes.test.ts

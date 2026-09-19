@@ -127,6 +127,53 @@ export interface Checkpoint {
 }
 
 // ============================================================================
+// Row mapping
+// ============================================================================
+
+// The drizzle schema stores time_created/time_updated (Timestamps),
+// time_responded/time_restored, and integer (0/1) boolean columns; the
+// service interfaces expose created_at/updated_at, responded_at/restored_at,
+// and real booleans. Map at the boundary so consumers (API routes, CLI) see
+// the declared shape instead of undefined timestamps.
+
+type RunRow = Record<string, any>
+type RunEventRow = Record<string, any>
+type ScheduleRow = Record<string, any>
+type ApprovalRow = Record<string, any>
+type CheckpointRow = Record<string, any>
+
+function mapRun(row: RunRow): Run {
+  const { time_created, time_updated, ...rest } = row
+  return { ...rest, created_at: time_created, updated_at: time_updated }
+}
+
+function mapRunEvent(row: RunEventRow): RunEvent {
+  const { time_created, ...rest } = row
+  return { ...rest, created_at: time_created }
+}
+
+function mapSchedule(row: ScheduleRow): Schedule {
+  const { time_created, time_updated, enabled, ...rest } = row
+  return { ...rest, enabled: !!enabled, created_at: time_created, updated_at: time_updated }
+}
+
+function mapApproval(row: ApprovalRow): Approval {
+  const { time_created, time_updated, time_responded, ...rest } = row
+  return { ...rest, created_at: time_created, updated_at: time_updated, responded_at: time_responded }
+}
+
+function mapCheckpoint(row: CheckpointRow): Checkpoint {
+  const { time_created, time_updated, time_restored, resumable, ...rest } = row
+  return {
+    ...rest,
+    resumable: !!resumable,
+    created_at: time_created,
+    updated_at: time_updated,
+    restored_at: time_restored,
+  }
+}
+
+// ============================================================================
 // Event Streaming
 // ============================================================================
 
@@ -175,14 +222,14 @@ export namespace RunService {
       if (options?.mode) conditions.push(eq(RunTable.mode, options.mode as RunMode))
       if (conditions.length > 0) query = query.where(and(...conditions)) as typeof query
       query = query.orderBy(desc(RunTable.time_created)).limit(options?.limit ?? 20) as typeof query
-      return query.all() as Run[]
+      return (query.all() as RunRow[]).map(mapRun)
     })
   }
 
   export function get(id: string): Run | undefined {
     return Database.use((db) => {
       const rows = db.select().from(RunTable).where(eq(RunTable.id, id)).all()
-      return rows[0] as Run | undefined
+      return rows[0] ? mapRun(rows[0] as RunRow) : undefined
     })
   }
 
@@ -270,7 +317,7 @@ export namespace RunService {
         query = query.where(gte(RunEventTable.sequence, options.cursor)) as typeof query
       }
       query = query.orderBy(desc(RunEventTable.sequence)).limit(options?.limit ?? 100) as typeof query
-      return query.all() as RunEvent[]
+      return (query.all() as RunEventRow[]).map(mapRunEvent)
     })
   }
 }
@@ -286,14 +333,14 @@ export namespace ScheduleService {
       if (options?.enabled !== undefined) {
         query = query.where(eq(ScheduleTable.enabled, options.enabled ? 1 : 0)) as typeof query
       }
-      return query.all() as Schedule[]
+      return (query.all() as ScheduleRow[]).map(mapSchedule)
     })
   }
 
   export function get(id: string): Schedule | undefined {
     return Database.use((db) => {
       const rows = db.select().from(ScheduleTable).where(eq(ScheduleTable.id, id)).all()
-      return rows[0] as Schedule | undefined
+      return rows[0] ? mapSchedule(rows[0] as ScheduleRow) : undefined
     })
   }
 
@@ -362,14 +409,14 @@ export namespace ApprovalService {
       if (options?.run_id) conditions.push(eq(ApprovalTable.run_id, options.run_id))
       if (options?.status) conditions.push(eq(ApprovalTable.status, options.status as Approval["status"]))
       if (conditions.length > 0) query = query.where(and(...conditions)) as typeof query
-      return query.all() as Approval[]
+      return (query.all() as ApprovalRow[]).map(mapApproval)
     })
   }
 
   export function get(id: string): Approval | undefined {
     return Database.use((db) => {
       const rows = db.select().from(ApprovalTable).where(eq(ApprovalTable.id, id)).all()
-      return rows[0] as Approval | undefined
+      return rows[0] ? mapApproval(rows[0] as ApprovalRow) : undefined
     })
   }
 
@@ -434,14 +481,19 @@ export namespace ApprovalService {
 export namespace CheckpointService {
   export function listForRun(runId: string): Checkpoint[] {
     return Database.use((db) => {
-      return db.select().from(CheckpointTable).where(eq(CheckpointTable.run_id, runId)).all() as Checkpoint[]
+      return db
+        .select()
+        .from(CheckpointTable)
+        .where(eq(CheckpointTable.run_id, runId))
+        .all()
+        .map(mapCheckpoint)
     })
   }
 
   export function get(id: string): Checkpoint | undefined {
     return Database.use((db) => {
       const rows = db.select().from(CheckpointTable).where(eq(CheckpointTable.id, id)).all()
-      return rows[0] as Checkpoint | undefined
+      return rows[0] ? mapCheckpoint(rows[0] as CheckpointRow) : undefined
     })
   }
 
