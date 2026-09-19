@@ -63,3 +63,12 @@ Next: Pass 3 = iterate on best (v1 random/default 0.3333) with variant (c) inter
 Just did: Pass 3 (interleaved N=9): 0.2879 — the only pass that cracked the per-task constant policy (search-flow 3 fill choices, form-fill mixed 10 fill/12 click), but agreement DROPPED; still 0/8 on search-flow fill steps. Final: baseline 0.3182 / v1 random 0.3333 / v2 task-neutral 0.3030 / v3 interleaved 0.2879. Hypothesis rejected: few-shot in-context distillation does not break the task-identity collapse; exemplar relevance (same-task live traces), not count or wording, is the missing signal. docs/KIMI_FEWSHOT_NOTES.md written with full tables + live-trace requirements. Suite: 87 passed, 1 skipped.
 Next: none — final commit + push; NO PR (orchestrator lands it).
 Open questions: none.
+
+## 2026-09-18 session/state-deltas (landed, PR #626)
+Goal: step-conditioned state for the shadow decision head — per-step `[SINCE LAST STEP]` element-table deltas in the canonical shadow state text + KimiCliHead live-trajectory mode, measured against the 0.318 kimi baseline on the same 66 held-out decide steps.
+
+Just did: merged with deterministic changed-row ordering fix (set-intersection order was arbitrary; caught by test_one_line_lists_few_changed_rows before landing). Eval: +state deltas = 0.4848 agreement (+0.167, ~3× noise band) on identical steps/tasks; entire gain in form-fill (0.318 → 0.773), matching the hypothesis. Self-reported confidence still flat (0.92 right / 0.94 wrong). Tests 73 passed / 1 skipped. Full write-up: docs/JEV_STATE_DELTAS_NOTES.md.
+
+Next: ledger attestation, worktree teardown, git-discipline-check. Deferred (owner directive — CPU/time): trajectory-variant measurement (code landed flag-gated off), live trace accumulation for calibration thresholds.
+
+Open questions: none.

@@ -348,3 +348,122 @@ class TestKimiCliHead:
         assert self._head(monkeypatch).model_id == "kimi-cli"
         assert self._head(monkeypatch, questioning="sequential").model_id == \
             "kimi-cli:sequential"
+
+
+class TestKimiCliHeadTrajectory:
+    """Live-trajectory retrieval: run-lifecycle hooks + [ACTIONS SO FAR THIS
+    RUN] prompt block. The subprocess is always stubbed."""
+
+    _ANSWERS = (
+        '{"operation": {"answer": "fill", "confidence": 0.9},'
+        ' "fill_target": {"answer": "0", "confidence": 0.8},'
+        ' "goal_satisfied": {"answer": "false", "confidence": 0.9},'
+        ' "stuck": {"answer": "false", "confidence": 0.9}}'
+    )
+
+    _STATE = (
+        "[TASK]\nLog in with the saved operator credentials\n\n"
+        "[SINCE LAST STEP]\nNo change in observed elements since the last step.\n\n"
+        "[OBSERVED ELEMENTS]\n[0] AXTextField: Email\n\n"
+        "[OPTIONS]\noperation: fill, click"
+    )
+
+    def _head(self, monkeypatch, **kwargs) -> KimiCliHead:
+        monkeypatch.setattr("shutil.which", lambda _bin: "/fake/bin/kimi")
+        return KimiCliHead(**kwargs)
+
+    def _stub(self, head: KimiCliHead):
+        calls: list[str] = []
+
+        def fake_call(prompt: str):
+            calls.append(prompt)
+            return self._ANSWERS, 25_000.0
+
+        head._call_cli = fake_call  # type: ignore[method-assign]
+        return calls
+
+    def _note(self, head: KimiCliHead, step: int, operation: str, delta_text: str,
+              target=None) -> None:
+        head.note_prior_step(step, {
+            "operation": operation,
+            "target": target,
+            "goal_satisfied": "false",
+            "stuck": "false",
+            "delta": {"added": 0, "removed": 0, "changed": 1, "text": delta_text},
+        })
+
+    def test_trajectory_off_by_default(self, monkeypatch):
+        head = self._head(monkeypatch)
+        calls = self._stub(head)
+        self._note(head, 1, "click", "no change in observed elements", target="1")
+        decision = head.decide(self._STATE, [Question("operation", ["fill", "click"])])
+        assert "[ACTIONS SO FAR THIS RUN]" not in calls[0]
+        assert decision.model_id == "kimi-cli"
+
+    def test_disabled_head_ignores_notes(self, monkeypatch):
+        head = self._head(monkeypatch, trajectory=False)
+        self._stub(head)
+        self._note(head, 1, "click", "no change in observed elements")
+        assert head._run_steps == []
+
+    def test_block_injected_between_task_and_since_last_step(self, monkeypatch):
+        head = self._head(monkeypatch, trajectory=True)
+        calls = self._stub(head)
+        self._note(head, 1, "fill", 'changed: Email = "operator@eval.local"',
+                   target="0")
+        self._note(head, 2, "click", "no change in observed elements", target="1")
+        decision = head.decide(self._STATE, [Question("operation", ["fill", "click"])])
+        prompt = calls[0]
+        assert "[ACTIONS SO FAR THIS RUN]" in prompt
+        # Explicit shadow labeling: prior proposals were NEVER EXECUTED.
+        assert "NEVER" in prompt and "EXECUTED" in prompt
+        # Layout: [TASK] < trajectory < [SINCE LAST STEP] < [OBSERVED ELEMENTS].
+        assert prompt.index("[TASK]") < prompt.index("[ACTIONS SO FAR THIS RUN]")
+        assert prompt.index("[ACTIONS SO FAR THIS RUN]") < prompt.index("[SINCE LAST STEP]")
+        assert prompt.index("[SINCE LAST STEP]") < prompt.index("[OBSERVED ELEMENTS]")
+        # Per-step entries: operation, target, one-line delta.
+        assert "step 1: proposed fill target 0" in prompt
+        assert 'changed: Email = "operator@eval.local"' in prompt
+        assert "step 2: proposed click target 1" in prompt
+        # model_id carries the :traj suffix while the trajectory has content.
+        assert decision.model_id == "kimi-cli:traj"
+
+    def test_no_suffix_before_first_note(self, monkeypatch):
+        head = self._head(monkeypatch, trajectory=True)
+        self._stub(head)
+        decision = head.decide(self._STATE, [Question("operation", ["fill", "click"])])
+        assert decision.model_id == "kimi-cli"
+
+    def test_begin_run_resets_history(self, monkeypatch):
+        head = self._head(monkeypatch, trajectory=True)
+        self._stub(head)
+        self._note(head, 1, "click", "no change in observed elements")
+        assert len(head._run_steps) == 1
+        head.begin_run("shadow-form-fill")
+        assert head._run_steps == []
+        assert head._run_label == "shadow-form-fill"
+
+    def test_history_rendering_capped_at_last_ten_steps(self, monkeypatch):
+        head = self._head(monkeypatch, trajectory=True)
+        calls = self._stub(head)
+        for step in range(1, 13):
+            self._note(head, step, "click", "no change in observed elements")
+        head.decide(self._STATE, [Question("operation", ["fill", "click"])])
+        block_start = calls[0].index("[ACTIONS SO FAR THIS RUN]")
+        block_end = calls[0].index("[SINCE LAST STEP]")
+        block = calls[0][block_start:block_end]
+        assert "step 1: proposed click" not in block
+        assert "step 2: proposed click" not in block
+        assert "step 3: proposed click" in block
+        assert "step 12: proposed click" in block
+        assert "2 earlier proposed steps omitted" in block
+
+    def test_state_without_delta_marker_gets_block_appended(self, monkeypatch):
+        # Defensive: a legacy state text without [SINCE LAST STEP] still
+        # receives the trajectory block rather than losing it.
+        head = self._head(monkeypatch, trajectory=True)
+        calls = self._stub(head)
+        self._note(head, 1, "click", "no change in observed elements")
+        head.decide("[TASK]\nT\n\n[OBSERVED ELEMENTS]\n[0] AXButton: Go",
+                    [Question("operation", ["fill", "click"])])
+        assert "[ACTIONS SO FAR THIS RUN]" in calls[0]

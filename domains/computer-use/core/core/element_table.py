@@ -62,6 +62,10 @@ ROLE_OPERATIONS: Dict[str, Tuple[str, ...]] = {
 
 DEFAULT_MAX_ELEMENTS = 250
 
+# Cap on each delta list rendered into the [SINCE LAST STEP] block; the
+# overflow count is reported as a "+N more" line instead.
+DELTA_DISPLAY_CAP = 30
+
 _NORMALIZE_RE = re.compile(r"[^a-z0-9]+")
 
 
@@ -171,6 +175,150 @@ class ElementTable:
 
 def _normalize(text: str) -> str:
     return _NORMALIZE_RE.sub("", (text or "").lower())
+
+
+# ---------------------------------------------------------------------------
+# Per-step state deltas ([SINCE LAST STEP] block)
+# ---------------------------------------------------------------------------
+
+def _row_identity(row: ElementRow) -> Tuple[str, str, str]:
+    """Identity key for delta classification: WHO the element is, ignoring
+    its mutable value (a value change is a CHANGED row, not REMOVED+ADDED)."""
+    return (row.role, row.name, row.ref_id)
+
+
+@dataclass
+class TableDelta:
+    """Element-table difference between two consecutive decision steps.
+
+    ``changed`` pairs (previous_row, current_row) share an identity but
+    differ in value. The ``*_overflow`` counters hold list sizes beyond
+    ``DELTA_DISPLAY_CAP`` (the full lists stay available to consumers; only
+    the rendering is capped).
+    """
+    added: List[ElementRow] = field(default_factory=list)
+    removed: List[ElementRow] = field(default_factory=list)
+    changed: List[Tuple[ElementRow, ElementRow]] = field(default_factory=list)
+    added_overflow: int = 0
+    removed_overflow: int = 0
+    changed_overflow: int = 0
+
+    @property
+    def has_changes(self) -> bool:
+        return bool(self.added or self.removed or self.changed)
+
+    def counts(self) -> Dict[str, int]:
+        """Full per-class totals including uncapped overflow."""
+        return {
+            "added": len(self.added) + self.added_overflow,
+            "removed": len(self.removed) + self.removed_overflow,
+            "changed": len(self.changed) + self.changed_overflow,
+        }
+
+    def one_line(self) -> str:
+        """Compact trajectory summary: counts, or the actual changed rows
+        when the delta is a few value changes and nothing else."""
+        counts = self.counts()
+        if not any(counts.values()):
+            return "no change in observed elements"
+        if (
+            counts["added"] == 0
+            and counts["removed"] == 0
+            and 0 < counts["changed"] <= 3
+        ):
+            parts = [
+                f'{_current.name or _current.role} = "{_current.value}"'
+                for _previous, _current in self.changed[:3]
+            ]
+            return "changed: " + "; ".join(parts)
+        return (
+            f"+{counts['added']} added, "
+            f"{counts['removed']} removed, "
+            f"{counts['changed']} changed"
+        )
+
+
+def diff_tables(
+    previous: ElementTable,
+    current: ElementTable,
+    cap: int = DELTA_DISPLAY_CAP,
+) -> TableDelta:
+    """Classify row-level changes between two consecutive element tables.
+
+    Row identity is the (role, name, ref_id) tuple; a same-identity row with
+    a different value is CHANGED, not REMOVED+ADDED. Each class list is
+    capped at ``cap`` rows with the overflow counted on the delta.
+    """
+    previous_by_identity = {_row_identity(row): row for row in previous.rows}
+    current_by_identity = {_row_identity(row): row for row in current.rows}
+
+    added = [row for identity, row in current_by_identity.items()
+             if identity not in previous_by_identity]
+    removed = [row for identity, row in previous_by_identity.items()
+               if identity not in current_by_identity]
+    # Intersection via dict membership, ordered by the CURRENT table's row
+    # order (depth-first observation order) — a bare set intersection has
+    # arbitrary order, which would make the rendered delta non-deterministic.
+    changed = [
+        (previous_by_identity[_row_identity(row)], row)
+        for row in current.rows
+        if _row_identity(row) in previous_by_identity
+        and previous_by_identity[_row_identity(row)].value != row.value
+    ]
+
+    def _cap(rows: List[Any]) -> Tuple[List[Any], int]:
+        return rows[:cap], max(0, len(rows) - cap)
+
+    added, added_overflow = _cap(added)
+    removed, removed_overflow = _cap(removed)
+    changed, changed_overflow = _cap(changed)
+    return TableDelta(
+        added=added,
+        removed=removed,
+        changed=changed,
+        added_overflow=added_overflow,
+        removed_overflow=removed_overflow,
+        changed_overflow=changed_overflow,
+    )
+
+
+def _delta_row_line(prefix: str, row: ElementRow) -> str:
+    ident = row.ref_id or str(row.index)
+    label = row.name or row.value or "(unnamed)"
+    return f"{prefix} [{ident}] {row.role or 'AXUnknown'}: {label}"
+
+
+def render_delta_block(delta: TableDelta) -> str:
+    """Render the [SINCE LAST STEP] block for the shadow state text.
+
+    Lines are prefixed with +/- / ~ so they can never be mistaken for the
+    ``[<id>] <role>: <name>`` element-table lines by consumers that parse
+    the state text (e.g. core/shadow_eval.py ``_parse_table_rows``).
+    """
+    if not delta.has_changes:
+        return "[SINCE LAST STEP]\nNo change in observed elements since the last step."
+    lines = ["[SINCE LAST STEP]"]
+    counts = delta.counts()
+    if counts["added"]:
+        lines.append(f"ADDED ({counts['added']}):")
+        lines.extend(_delta_row_line("+", row) for row in delta.added)
+        if delta.added_overflow:
+            lines.append(f"+ {delta.added_overflow} more")
+    if counts["removed"]:
+        lines.append(f"REMOVED ({counts['removed']}):")
+        lines.extend(_delta_row_line("-", row) for row in delta.removed)
+        if delta.removed_overflow:
+            lines.append(f"+ {delta.removed_overflow} more")
+    if counts["changed"]:
+        lines.append(f"CHANGED ({counts['changed']}):")
+        for previous, current in delta.changed:
+            lines.append(
+                _delta_row_line("~", current)
+                + f' = "{current.value}" (was "{previous.value}")'
+            )
+        if delta.changed_overflow:
+            lines.append(f"+ {delta.changed_overflow} more")
+    return "\n".join(lines)
 
 
 def coverage_gaps(table: "ElementTable", expected_names: Sequence[str]) -> List[str]:

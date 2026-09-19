@@ -8,7 +8,9 @@ from core.element_table import (
     WHITELIST_OPERATIONS,
     build_element_table,
     coverage_gaps,
+    diff_tables,
     operations_for_role,
+    render_delta_block,
 )
 
 
@@ -219,3 +221,96 @@ class TestInputCoverage:
         ])
         table = build_element_table(tree.to_dict(compact=True))
         assert coverage_gaps(table, self.DOM_EXPECTED_CONTROLS) == []
+
+
+class TestTableDelta:
+    """Unit tests for diff_tables / TableDelta / render_delta_block — the
+    [SINCE LAST STEP] state-delta machinery."""
+
+    def _table(self, *specs) -> "object":
+        """Build a table from (role, name, value) row specs via a tree."""
+        tree = _node("AXWindow", "Browser", [
+            _node(role, name, interactive=True, value=value)
+            for role, name, value in specs
+        ])
+        return build_element_table(tree.to_dict(compact=True))
+
+    def test_identical_tables_no_changes(self):
+        table = self._table(("AXTextField", "Email", ""))
+        delta = diff_tables(table, table)
+        assert not delta.has_changes
+        assert delta.counts() == {"added": 0, "removed": 0, "changed": 0}
+        assert delta.one_line() == "no change in observed elements"
+        block = render_delta_block(delta)
+        assert block.startswith("[SINCE LAST STEP]")
+        assert "No change in observed elements since the last step." in block
+
+    def test_added_and_removed_rows(self):
+        previous = self._table(
+            ("AXTextField", "Email", ""),
+            ("AXButton", "Old dialog", ""),
+        )
+        current = self._table(
+            ("AXTextField", "Email", ""),
+            ("AXLink", "New link", ""),
+        )
+        delta = diff_tables(previous, current)
+        assert [row.name for row in delta.added] == ["New link"]
+        assert [row.name for row in delta.removed] == ["Old dialog"]
+        assert delta.changed == []
+        block = render_delta_block(delta)
+        assert "ADDED (1):" in block and "+ " in block
+        assert "REMOVED (1):" in block and "- " in block
+
+    def test_same_identity_different_value_is_changed_not_removed(self):
+        previous = self._table(("AXTextField", "Email", ""))
+        current = self._table(("AXTextField", "Email", "operator@eval.local"))
+        delta = diff_tables(previous, current)
+        assert len(delta.changed) == 1
+        prev_row, curr_row = delta.changed[0]
+        assert prev_row.value == "" and curr_row.value == "operator@eval.local"
+        assert not delta.added and not delta.removed
+        block = render_delta_block(delta)
+        assert "CHANGED (1):" in block
+        assert 'Email = "operator@eval.local" (was "")' in block
+
+    def test_one_line_lists_few_changed_rows(self):
+        previous = self._table(
+            ("AXTextField", "Email", ""),
+            ("AXTextField", "Password", ""),
+        )
+        current = self._table(
+            ("AXTextField", "Email", "a@b.c"),
+            ("AXTextField", "Password", "hunter2"),
+        )
+        delta = diff_tables(previous, current)
+        assert delta.one_line() == 'changed: Email = "a@b.c"; Password = "hunter2"'
+
+    def test_one_line_counts_for_larger_deltas(self):
+        previous = self._table(*[("AXButton", f"Old {i}", "") for i in range(4)])
+        current = self._table(*[("AXButton", f"New {i}", "") for i in range(4)])
+        delta = diff_tables(previous, current)
+        assert delta.one_line() == "+4 added, 4 removed, 0 changed"
+
+    def test_display_cap_with_overflow_count(self):
+        previous = self._table(*[("AXButton", f"Old {i}", "") for i in range(35)])
+        current = self._table(*[("AXButton", f"New {i}", "") for i in range(35)])
+        delta = diff_tables(previous, current, cap=30)
+        assert len(delta.added) == 30 and delta.added_overflow == 5
+        assert len(delta.removed) == 30 and delta.removed_overflow == 5
+        # counts() still reports the FULL totals, capped lists render only.
+        assert delta.counts() == {"added": 35, "removed": 35, "changed": 0}
+        block = render_delta_block(delta)
+        assert "+ 5 more" in block
+
+    def test_delta_lines_not_parseable_as_table_rows(self):
+        # shadow_eval._parse_table_rows must never pick up delta lines.
+        previous = self._table(("AXTextField", "Email", ""))
+        current = self._table(
+            ("AXTextField", "Email", "a@b.c"),
+            ("AXLink", "New link", ""),
+        )
+        block = render_delta_block(diff_tables(previous, current))
+        from core.shadow_eval import _parse_table_rows
+
+        assert _parse_table_rows(block) == []
