@@ -36,7 +36,8 @@ export function RailsInboxBridge(): null {
         id: cmd.uuid,
         source: 'system',
         content: String(cmd.value ?? ''),
-        from: cmd.origin?.peerName,
+        // railsPeer stamps peerName on origin, which MessageOrigin does not declare
+        from: (cmd.origin as { peerName?: string } | undefined)?.peerName,
         timestamp: new Date().toISOString(),
       })
     })

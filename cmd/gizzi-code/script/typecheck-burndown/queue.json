@@ -3,11 +3,11 @@
   "generatedFrom": "4346eab0b97beabecc8211eab116f447eb18f8ff",
   "batchCount": 103,
   "stats": {
-    "totalNocheck": 988,
+    "totalNocheck": 981,
     "excludedCompilerArtifacts": 148,
     "excludedVendored": 93,
-    "totalQueueFiles": 727,
-    "totalQueueLoc": 316748,
+    "totalQueueFiles": 720,
+    "totalQueueLoc": 314154,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1772,18 +1772,13 @@
     },
     {
       "id": "b0421",
-      "files": [
-        "src/cli/ui/ink-app/thread.ts",
-        "src/shared/utils/releaseNotes.ts",
-        "src/shared/utils/localInstaller.ts",
-        "src/shared/utils/allternitInChrome/setup.ts",
-        "src/shared/utils/autoUpdater.ts",
-        "src/shared/utils/messageQueueManager.ts",
-        "src/runtime/gizzi-core/services/railsPeer.ts"
-      ],
-      "loc": 2594,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 7,
+      "burnedLoc": 2594,
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail5): sibling ao/ts-burn-tail4 (record b0394) burned 10 of the original b0421's 17 files after the pilot7 regen remix; this record accounts the remaining 7 (2594 loc with-header). 4 header-only 0-error burns (releaseNotes.ts, localInstaller.ts, allternitInChrome/setup.ts, autoUpdater.ts — TS2322 probe: exactly one probe error per file, zero others, all 4 confirmed in compilation) + 3 type-only fixes across 9 errors in 2 iterations: thread.ts (local EventSource contract — the old context/sdk module no longer exists and tui() takes options as any; worker.ts exports `rpc` as a type alias so Rpc.client<rpc> instead of typeof rpc, 2 sites), messageQueueManager.ts (removed unused Permutations import — the type no longer exists anywhere; '@/types/messageQueueTypes.js' resolves to the ink-app default-only stub so switched to the real module relatively at ../../types/messageQueueTypes.js), railsPeer.ts (QueuedCommand import 'src/shared/types/textInputTypes.js' does not resolve — '@/types/textInputTypes.js' maps to the real ink-app type module; uuid pinned as QueuedCommand['uuid'] since generateRequestId returns a non-UUID-shaped opaque id; origin peerName pinned as QueuedCommand['origin'] since MessageOrigin has no peerName field — RailsInboxBridge reads it back structurally, sibling-cast preserved). No escalations, no allowlist changes. Stats re-derived from live tree: totalNocheck 981, totalQueueFiles 720, totalQueueLoc 314154. Identity: live 741 + recorded 719 = 1460 = totalAccounted."
     },
     {
       "id": "b0394",

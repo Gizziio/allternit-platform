@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BROWSER_TOOLS } from './extension.js'
 import { chmod, mkdir, readFile, writeFile } from 'fs/promises'
 import { homedir } from 'os'

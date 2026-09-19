@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { cmd } from "@/cli/commands/cmd"
 import { tui } from "@/cli/ui/ink-app/app"
 import { Rpc } from "@/shared/util/rpc"
@@ -9,7 +8,6 @@ import { iife } from "@/shared/util/iife"
 import { Log } from "@/shared/util/log"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Filesystem } from "@/shared/util/filesystem"
-import type { EventSource } from "@/cli/ui/ink-app/context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "@/cli/ui/ink-app/win32"
 import { getSessionId, setOriginalCwd, setProjectRoot } from "@/cli/ui/ink-app/bootstrap/state"
 import { getCwd } from "@/cli/ui/ink-app/utils/cwd"
@@ -29,12 +27,18 @@ import { resolveSessionWorktreeEnabled } from "@/cli/ui/ink-app/threadWorktree"
 // Local Event type since SDK Event is now unknown
 type Event = any
 
+// Local EventSource contract — the old context/sdk module no longer exists;
+// tui() takes options as any, so this structural shape is all that is needed.
+interface EventSource {
+  on: (handler: (event: Event) => void) => void
+}
+
 declare global {
   const GIZZI_WORKER_PATH: string
   const GIZZI_WORKER_CODE: string
 }
 
-type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
+type RpcClient = ReturnType<typeof Rpc.client<rpc>>
 
 function createWorkerFetch(client: RpcClient): typeof fetch {
   const fn = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -256,7 +260,7 @@ export const TuiThreadCommand = cmd({
         })
         console.error("Worker Error:", e?.message, e?.error || e)
       }
-      const client = Rpc.client<typeof rpc>(worker)
+      const client = Rpc.client<rpc>(worker)
       Log.Default.info("tui: rpc client created")
       process.on("uncaughtException", (e) => {
         Log.Default.error(e)
