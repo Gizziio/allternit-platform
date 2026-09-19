@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — see inline type errors (dead "external"/"ant" constant comparisons, unknown-typed tool result access, keybindings/types re-export drift).
 /**
  * Setup utilities for integrating KeybindingProvider into the app.
  *
@@ -21,8 +19,25 @@ import { plural } from '../utils/stringUtils';
 import { KeybindingProvider } from './KeybindingContext';
 import { initializeKeybindingWatcher, type KeybindingsLoadResult, loadKeybindingsSyncWithWarnings, subscribeToKeybindingChanges } from './loadUserBindings';
 import { resolveKeyWithChordState } from './resolver';
-import type { KeybindingContextName, ParsedBinding, ParsedKeystroke } from './types';
 import type { KeybindingWarning } from './validate';
+
+// TODO(types): ./types.js is a dormant stub (types_ts()); mirror the shapes
+// keybindings needs until the real keybindings types land (same pattern as
+// resolver.ts / loadUserBindings.ts).
+type KeybindingContextName = string;
+type ParsedKeystroke = {
+  key: string;
+  ctrl?: boolean;
+  alt?: boolean;
+  shift?: boolean;
+  meta?: boolean;
+  super?: boolean;
+};
+type ParsedBinding = {
+  context: KeybindingContextName;
+  chord: ParsedKeystroke[];
+  action: string | null;
+};
 
 /**
  * Timeout for chord sequences in milliseconds.
@@ -53,11 +68,12 @@ type Props = {
  * - User bindings override defaults (later entries win)
  * - Chord support with automatic timeout
  */
+
 /**
  * Display keybinding warnings to the user via notifications.
  * Shows a brief message pointing to /doctor for details.
  */
-function useKeybindingWarnings(warnings, isReload) {
+function useKeybindingWarnings(warnings: KeybindingWarning[], isReload: boolean) {
   const {
     addNotification,
     removeNotification

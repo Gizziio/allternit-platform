@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — see inline type errors (dead "external"/"ant" constant comparisons, unknown-typed tool result access, keybindings/types re-export drift).
 /**
  * Surfaces plugin-install prompts driven by `<gizzi-hint />` tags
  * that CLIs/SDKs emit to stderr. See docs/gizzi-hints.md.
@@ -77,7 +75,7 @@ export function useGizziHintRecommendation() {
                 scope: "user",
                 trigger: "hint"
               });
-              if (!result.success) {
+              if (result.success === false) {
                 throw new Error(result.error);
               }
             });
