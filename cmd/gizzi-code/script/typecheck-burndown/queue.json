@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 694,
+    "totalNocheck": 693,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 580,
-    "totalQueueLoc": 245313,
+    "totalQueueFiles": 579,
+    "totalQueueLoc": 243780,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -888,12 +888,13 @@
     },
     {
       "id": "b0059",
-      "files": [
-        "src/cli/ui/ink-app/utils/permissions/permissionSetup.ts"
-      ],
+      "files": [],
       "loc": 1534,
       "twins": [],
-      "state": "NEW"
+      "state": "NEW",
+      "burnedFiles": 1,
+      "burnedLoc": 1533,
+      "note": "burn lane mid-2 (ao/ts-burn-mid2): removed @ts-nocheck header from permissionSetup.ts; file type-checks clean under cmd/gizzi-code tsconfig (strict:false) with zero errors and no casts added — no honest fix needed. No escalations."
     },
     {
       "id": "b0060",
