@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Filesystem permissions - re-export from shared
  */
