@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react'
 import { useAppState, useSetAppState } from '../../state/AppState'
 import type { LocalJSXCommandOnDone } from '../../types/command'

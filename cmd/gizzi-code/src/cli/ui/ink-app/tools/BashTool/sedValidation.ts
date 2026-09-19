@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ToolPermissionContext } from '../../Tool.js'
 import { splitCommand_DEPRECATED } from '../../utils/bash/commands.js'
 import { tryParseShellCommand } from '../../utils/bash/shellQuote.js'
@@ -402,7 +401,9 @@ export function extractSedExpressions(command: string): string[] {
 
   // Use shell-quote to parse the arguments properly
   const parseResult = tryParseShellCommand(withoutSed)
-  if (!parseResult.success) {
+  // NOTE: explicit `=== false` because discriminated-union narrowing via
+  // negation (!x.success) does not apply under this package's strict:false.
+  if (parseResult.success === false) {
     // Malformed shell syntax - throw error to be caught by caller
     throw new Error(`Malformed shell syntax: ${parseResult.error}`)
   }
