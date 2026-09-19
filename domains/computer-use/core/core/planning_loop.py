@@ -19,6 +19,7 @@ import sys
 import time
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, AsyncIterator
 from datetime import datetime, timezone
 from enum import Enum
@@ -155,6 +156,11 @@ class PlanningLoopConfig:
     # the real outcome of the previously executed LLM step) into the shadow
     # state text. Default off.
     shadow_last_action: bool = False
+    # Live trace accumulation (JEV trace policy, docs/JEV_TRACE_POLICY.md):
+    # when set, every shadow decision is appended as one JSONL record to this
+    # path (core/trace_recorder.py), labeled from the previously EXECUTED LLM
+    # step. None = recording off, byte-identical to a loop without a recorder.
+    shadow_trace_path: Optional[str] = None
 
 
 @dataclass
@@ -269,6 +275,12 @@ class PlanningLoop:
         # run() — consecutive runs on one loop instance must not leak deltas
         # across the boundary.
         self._shadow_prev_table: Optional[Any] = None
+        # Live trace recorder state (core/trace_recorder.py): constructed
+        # lazily on the first shadow decision of a run, closed at run end.
+        # Reset per run; recording failures disable it for the rest of the
+        # run with a warning, never a step failure.
+        self._shadow_trace_recorder: Optional[Any] = None
+        self._shadow_trace_disabled: bool = False
         # Auto page binding (deferral B): current URL observed from the
         # adapter after each step/batch; feeds the NEXT batch's descriptor.
         self._observed_url: Optional[str] = None
@@ -300,6 +312,8 @@ class PlanningLoop:
         # carries the task identity for eval harnesses (e.g.
         # "shadow-<task_id>" in core/shadow_eval.py).
         self._shadow_prev_table = None
+        self._shadow_trace_recorder = None
+        self._shadow_trace_disabled = False
         _shadow_head = self.config.shadow_head
         if _shadow_head is not None:
             _begin_run = getattr(_shadow_head, "begin_run", None)
@@ -760,6 +774,7 @@ class PlanningLoop:
             stop_reason = StopReason.ERROR
 
         duration_ms = int(time.time() * 1000 - start_ms)
+        self._close_shadow_trace_recorder()
         status_map = {
             StopReason.DONE: "completed",
             StopReason.MAX_STEPS: "completed",
@@ -1104,6 +1119,22 @@ class PlanningLoop:
             "decision": decision.to_dict(),
         })
 
+        # Live trace accumulation (JEV trace policy): append one labeled
+        # record — the head's proposal plus the previously EXECUTED LLM step
+        # as the reference label. Off (None path) is byte-identical; failures
+        # degrade to a warning and disable recording, never a step failure.
+        if self.config.shadow_trace_path:
+            self._record_shadow_trace(
+                session_id=step.session_id,
+                run_id=run_id,
+                step_num=step_num,
+                state_text=state_text,
+                questions=questions,
+                decision=decision,
+                table=table,
+                prior_step=prior_step,
+            )
+
         # Duck-typed trajectory hook: heads that keep their own per-run step
         # history (KimiCliHead) receive this step's proposal plus its delta
         # summary. Failures degrade to a warning, like the head itself.
@@ -1139,6 +1170,83 @@ class PlanningLoop:
                     step_num,
                     hook_err,
                 )
+
+    def _record_shadow_trace(
+        self,
+        *,
+        session_id: str,
+        run_id: str,
+        step_num: int,
+        state_text: str,
+        questions: List[Any],
+        decision: Any,
+        table: Any,
+        prior_step: Optional["LoopStep"],
+    ) -> None:
+        """Append one live trace record via core/trace_recorder.py.
+
+        The record's reference label is ``prior_step`` — the previously
+        EXECUTED LLM step (same source as graft B's [LAST ACTION] block):
+        its operation folded to the head-menu vocabulary, its target
+        resolved against the current decision step's element table. Step 1
+        of a run has no prior executed step and records an empty gold.
+        """
+        if self._shadow_trace_disabled:
+            return
+        try:
+            if self._shadow_trace_recorder is None:
+                from .trace_recorder import TraceRecorder
+                self._shadow_trace_recorder = TraceRecorder(
+                    Path(self.config.shadow_trace_path)
+                )
+            # Eval harnesses prefix the session id with "shadow-" (the
+            # convention KimiCliHead's begin_run documents); the task
+            # identity for split labeling lives behind that prefix.
+            task_id = str(session_id or "")
+            if task_id.startswith("shadow-"):
+                task_id = task_id[len("shadow-"):]
+            self._shadow_trace_recorder.record({
+                "task_id": task_id,
+                "run_id": run_id,
+                "step": step_num,
+                "state_text": state_text,
+                "questions": [
+                    {"name": q.name, "options": [str(o) for o in q.options]}
+                    for q in questions
+                ],
+                "decision": decision.to_dict(),
+                "latency_ms": decision.latency_ms,
+                "table": table,
+                # The executed step's target is an element name/ref (the
+                # recorder resolves it via table.match_target) — never a
+                # typed value; only the typed text (action_params["text"])
+                # is free text and gets redacted at write time.
+                "prior_step": None if prior_step is None else {
+                    "action_type": prior_step.action_type,
+                    "action_target": prior_step.action_target,
+                    "text": (prior_step.action_params or {}).get("text"),
+                    "action_succeeded": prior_step.action_succeeded,
+                },
+                "ts": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as trace_err:
+            # Degrade to a warning and stop retrying for this run — the
+            # same discipline as the shadow head itself.
+            self._shadow_trace_disabled = True
+            logger.warning(
+                "Shadow trace recording disabled after failure at step %s: %s",
+                step_num,
+                trace_err,
+            )
+
+    def _close_shadow_trace_recorder(self) -> None:
+        recorder = self._shadow_trace_recorder
+        self._shadow_trace_recorder = None
+        if recorder is not None:
+            try:
+                recorder.close()
+            except Exception as close_err:
+                logger.warning("Shadow trace recorder close failed: %s", close_err)
 
     async def _execute_action(self, action, session_id: str) -> Dict:
         """Execute a VisionAction through the adapter or executor."""
