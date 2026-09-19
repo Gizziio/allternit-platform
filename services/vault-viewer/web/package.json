@@ -18,6 +18,7 @@
     "@codemirror/state": "^6.4.1",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.34.2",
+    "@lezer/highlight": "^1.2.3",
     "d3-force": "^3.0.0",
     "katex": "^0.17.0",
     "mermaid": "^11.15.0",

@@ -54,6 +54,9 @@
     "ws": "^8.18.3",
     "zod": "^3.22.4"
   },
+  "optionalDependencies": {
+    "get-windows": "^9.3.0"
+  },
   "devDependencies": {
     "@electron/notarize": "^3.1.1",
     "@playwright/test": "^1.58.2",
