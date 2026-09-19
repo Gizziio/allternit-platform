@@ -33,9 +33,13 @@ export default defineConfig({
       // matches the package.json entry points and the package resolves. The
       // suites stay excluded anyway: allternit-e2e asserts an API that never
       // existed on RuntimeBridge (option-taking constructor + executeTool),
-      // and the two compatibility suites additionally need @allternit/lawlayer
-      // (never built/importable) plus gateway mocks — orphaned scaffolds, not
-      // loadability problems.
+      // and the two compatibility suites assert a runtime<->lawlayer
+      // delegation contract that was never wired (they import the never-
+      // existing runtime export _clearActiveSessions and expect
+      // delegateTo: 'law-layer' decisions). @allternit/lawlayer's own
+      // packaging bug is now fixed too (same paths-poisoned-rootDir class +
+      // never-built dist): it builds and resolves; the suites stay excluded
+      // as orphaned scaffolds, not loadability problems.
       'integration/allternit-e2e.test.ts',
       'integration/allternit-runtime-compatibility.test.ts',
       'integration/runtime-bridge-compatibility.test.ts',

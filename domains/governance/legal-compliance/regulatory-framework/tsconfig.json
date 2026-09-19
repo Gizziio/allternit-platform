@@ -16,12 +16,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    "paths": {
-      "@allternit/governor": ["../../governor/src/index.ts"],
-      "@allternit/runtime": ["../../3-adapters/allternit-runtime/src/index.ts"]
-    }
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "src/**/*"
