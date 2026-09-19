@@ -46,6 +46,7 @@ test/question/question.test.ts
 test/runtime/attachments.test.ts
 test/runtime/cowork-runtime-vm.test.ts
 test/runtime/local-cli-driver.test.ts
+test/runtime/util-filesystem.test.ts
 test/runtime/runtime-routes.test.ts
 test/runtime/uds-driver.test.ts
 test/sdk.test.ts
