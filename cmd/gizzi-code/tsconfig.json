@@ -135,9 +135,6 @@
       ],
       "@allternit/sdk/*": [
         "./packages/sdk/src/*"
-      ],
-      "react/compiler-runtime": [
-        "./src/vendor/react-compiler-runtime.ts"
       ]
     }
   },

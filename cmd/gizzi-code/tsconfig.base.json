@@ -41,9 +41,6 @@
       "src/*": [
         "./src/*",
         "./src/cli/ui/ink-app/*"
-      ],
-      "react/compiler-runtime": [
-        "./src/vendor/react-compiler-runtime.ts"
       ]
     }
   }

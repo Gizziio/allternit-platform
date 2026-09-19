@@ -102,29 +102,6 @@ try {
 catch (e) {
     console.log("   ℹ No migrations found");
 }
-// Some source files were pre-processed with React Compiler and contain imports from
-// "react/compiler-runtime". The build pipeline does not run React Compiler, so we stub
-// the runtime to keep those files bundlable. This disables compiler memoization but
-// preserves behaviour.
-const REACT_COMPILER_RUNTIME_NS = "react-compiler-runtime-stub";
-const REACT_COMPILER_RUNTIME_STUB = `
-import * as React from "react";
-// The compiled components in src/ guard on the older
-// Symbol.for("react.memo_cache_sentinel"); fill the cache with exactly that,
-// matching src/vendor/react-compiler-runtime.ts.
-var MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel");
-function makeCache(size) {
-  var cache = new Array(size);
-  for (var i = 0; i < size; i++) cache[i] = MEMO_CACHE_SENTINEL;
-  return cache;
-}
-export function c(size) {
-  return React.useState(function() { return makeCache(size); })[0];
-}
-export function useMemoCache(size) {
-  return React.useState(function() { return makeCache(size); })[0];
-}
-`;
 // Embed WASM files as Uint8Array constants at bundle time so they work
 // in compiled bun binaries (where /$bunfs/ paths are not fs-readable).
 const wasmEmbedPlugin = {
@@ -339,15 +316,6 @@ const bundlePlugin = {
             }
             return { path: resolve(pkgDir, "dist/index.js") };
         });
-        // Redirect react/compiler-runtime to a no-op stub.
-        build.onResolve({ filter: /^react\/compiler-runtime$/ }, () => ({
-            path: REACT_COMPILER_RUNTIME_NS,
-            namespace: REACT_COMPILER_RUNTIME_NS,
-        }));
-        build.onLoad({ filter: /.*/, namespace: REACT_COMPILER_RUNTIME_NS }, () => ({
-            contents: REACT_COMPILER_RUNTIME_STUB,
-            loader: "js",
-        }));
         // Let Bun handle .tsx natively with React JSX
         /* build.onLoad({ filter: /\.tsx$/ }, async (args) => { ... }); */
     },

@@ -8,10 +8,3 @@
 //
 // What belongs here: shapes the real types genuinely lack.
 export {}
-
-declare module 'react/compiler-runtime' {
-  // The react package ships compiler-runtime.js without bundled types and
-  // @types/react does not declare this subpath. The real signature returns a
-  // cache-slot reader; kept intentionally loose, same as the previous stub.
-  export function c(cacheSize: number): (slot: number) => any
-}
