@@ -23,26 +23,6 @@ export default defineConfig({
       // Workspace UI tests live in Gizziio/allternit-ai now.
       'integration/cowork-team.test.ts',
       'integration/intelli-schedule.test.ts',
-      // Imports @allternit/shell, which has never been a package in this repo
-      // — the file cannot load (orphaned scaffold from the 2026-03 reorg).
-      'e2e/workflow.test.ts',
-      // Import @allternit/runtime. The packaging bug is fixed (2026-09-18):
-      // the tsconfig paths map pulled @allternit/governor source into the
-      // program, inflating tsc's computed rootDir so the build emitted
-      // dist/services/runtime/adapter/... instead of dist/index.js; dist now
-      // matches the package.json entry points and the package resolves. The
-      // suites stay excluded anyway: allternit-e2e asserts an API that never
-      // existed on RuntimeBridge (option-taking constructor + executeTool),
-      // and the two compatibility suites assert a runtime<->lawlayer
-      // delegation contract that was never wired (they import the never-
-      // existing runtime export _clearActiveSessions and expect
-      // delegateTo: 'law-layer' decisions). @allternit/lawlayer's own
-      // packaging bug is now fixed too (same paths-poisoned-rootDir class +
-      // never-built dist): it builds and resolves; the suites stay excluded
-      // as orphaned scaffolds, not loadability problems.
-      'integration/allternit-e2e.test.ts',
-      'integration/allternit-runtime-compatibility.test.ts',
-      'integration/runtime-bridge-compatibility.test.ts',
     ],
     testTimeout: 30000,
     hookTimeout: 10000,
