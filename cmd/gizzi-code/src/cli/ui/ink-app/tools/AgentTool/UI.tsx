@@ -1,6 +1,5 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — latent ant-drift type issues (TS2367 external-vs-ant comparisons / TS2614 progress-type import drift / TS2339 untyped props), not a conversion regression.
 import type { ToolResultBlockParam, ToolUseBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
+import type { BetaUsage } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs';
 import * as React from 'react';
 import { ConfigurableShortcutHint } from './../../components/ConfigurableShortcutHint.tsx';
 import { CtrlOToExpand, SubAgentProvider } from './../../components/CtrlOToExpand.tsx';
@@ -17,8 +16,13 @@ import { ToolUseLoader } from '../../components/ToolUseLoader';
 import { Box, Text } from '../../ink';
 import { getDumpPromptsPath } from '../../services/api/dumpPrompts';
 import { findToolByName, type Tools } from '../../Tool';
-import type { Message, ProgressMessage } from '../../types/message';
-import type { AgentToolProgress } from '../../types/tools';
+import type { Message, ProgressMessage, AssistantMessage, NormalizedUserMessage, MessageContent, ContentBlock } from '../../types/message';
+import { isContentBlockArray, isMessageContentArray, isToolResultBlock, isToolUseBlock } from '../../types/message';
+// TODO(types): ink-app/types/tools.ts is a dead stub, and the canonical
+// src/types/tools.ts AgentToolProgress (type: 'agent', agentName/task) does
+// not match the payload shape consumed here (message/agentId/prompt emitted by
+// the agent runtime). Mirror the consumed shape locally (sibling TODO(types)
+// pattern, cf. WebSearchTool).
 import { count } from '../../utils/array';
 import { getSearchOrReadFromContent, getSearchReadSummaryText } from '../../utils/collapseReadSearch';
 import { getDisplayPath } from '../../utils/file';
@@ -32,6 +36,20 @@ import { inputSchema } from './AgentTool';
 import { getAgentColor } from './agentColorManager';
 import { GENERAL_PURPOSE_AGENT } from './built-in/generalPurposeAgent';
 const MAX_PROGRESS_MESSAGES_TO_SHOW = 3;
+
+interface AgentToolProgress {
+  type?: string;
+  toolUseId: string;
+  agentId?: string;
+  prompt?: string;
+  message: AssistantMessage | NormalizedUserMessage;
+}
+
+// NestedMessage content can be a plain string or a block array; normalize to
+// blocks (empty when it's a string) before iterating.
+function getContentBlocks(content: string | MessageContent[] | ContentBlock[]): Array<MessageContent | ContentBlock> {
+  return isContentBlockArray(content) || isMessageContentArray(content) ? content : [];
+}
 
 /**
  * Guard: checks if progress data has a `message` field (agent_progress or
@@ -65,16 +83,20 @@ function getSearchOrReadInfo(progressMessage: ProgressMessage<Progress>, tools: 
 
   // Check tool_use (assistant message)
   if (message.type === 'assistant') {
-    return getSearchOrReadFromContent(message.message.content[0], tools);
+    const content = message.message.content;
+    return isContentBlockArray(content) || isMessageContentArray(content) ? getSearchOrReadFromContent(content[0], tools) : null;
   }
 
   // Check tool_result (user message) - find corresponding tool use from the map
   if (message.type === 'user') {
-    const content = message.message.content[0];
-    if (content?.type === 'tool_result') {
-      const toolUse = toolUseByID.get(content.tool_use_id);
-      if (toolUse) {
-        return getSearchOrReadFromContent(toolUse, tools);
+    const content = message.message.content;
+    if (isContentBlockArray(content) || isMessageContentArray(content)) {
+      const first = content[0];
+      if (isToolResultBlock(first)) {
+        const toolUse = toolUseByID.get(first.tool_use_id);
+        if (toolUse) {
+          return getSearchOrReadFromContent(toolUse, tools);
+        }
       }
     }
   }
@@ -100,7 +122,7 @@ type ProcessedMessage = {
  */
 function processProgressMessages(messages: ProgressMessage<Progress>[], tools: Tools, isAgentRunning: boolean): ProcessedMessage[] {
   // Only process for ants
-  if ("external" !== 'ant') {
+  if (("external" as string) !== 'ant') {
     return messages.filter((m): m is ProgressMessage<AgentToolProgress> => hasProgressMessage(m.data) && m.data.message.type !== 'user').map(m => ({
       type: 'original',
       message: m
@@ -133,9 +155,12 @@ function processProgressMessages(messages: ProgressMessage<Progress>[], tools: T
   for (const msg of agentMessages) {
     // Track tool_use blocks as we see them
     if (msg.data.message.type === 'assistant') {
-      for (const c of msg.data.message.message.content) {
-        if (c.type === 'tool_use') {
-          toolUseByID.set(c.id, c as ToolUseBlockParam);
+      const content = msg.data.message.message.content;
+      if (isContentBlockArray(content) || isMessageContentArray(content)) {
+        for (const c of content) {
+          if (isToolUseBlock(c)) {
+            toolUseByID.set(c.id, c as ToolUseBlockParam);
+          }
         }
       }
     }
@@ -317,13 +342,18 @@ export function renderToolResultMessage(data: Output, progressMessagesForMessage
     content: completionMessage,
     usage: {
       ...usage,
+      cache_creation: usage.cache_creation ?? null,
+      cache_creation_input_tokens: usage.cache_creation_input_tokens ?? null,
+      cache_read_input_tokens: usage.cache_read_input_tokens ?? null,
       inference_geo: null,
       iterations: null,
+      server_tool_use: usage.server_tool_use ?? null,
+      service_tier: usage.service_tier ?? null,
       speed: null
     }
   });
   return <Box flexDirection="column">
-      {"external" === 'ant' && <MessageResponse>
+      {("external" as string) === 'ant' && <MessageResponse>
           <Text color="warning">
             [ANT-ONLY] API calls: {getDisplayPath(getDumpPromptsPath(agentId))}
           </Text>
@@ -412,12 +442,14 @@ export function renderToolUseProgressMessage(progressMessages: ProgressMessage<P
         return false;
       }
       const message = msg.data.message;
-      return message.message.content.some(content => content.type === 'tool_use');
+      return getContentBlocks(message.message.content).some(isToolUseBlock);
     });
     const latestAssistant = progressMessages.findLast((msg): msg is ProgressMessage<AgentToolProgress> => hasProgressMessage(msg.data) && msg.data.message.type === 'assistant');
     let tokens = null;
     if (latestAssistant?.data.message.type === 'assistant') {
-      const usage = latestAssistant.data.message.message.usage;
+      // The runtime forwards the full SDK usage; NestedMessage types it as
+      // the minimal local MessageUsage. Pin the SDK shape at read time.
+      const usage = latestAssistant.data.message.message.usage as BetaUsage;
       tokens = (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + usage.input_tokens + usage.output_tokens;
     }
     return {
@@ -460,7 +492,7 @@ export function renderToolUseProgressMessage(progressMessages: ProgressMessage<P
     if (!hasProgressMessage(data)) {
       return false;
     }
-    return data.message.message.content.some(content => content.type === 'tool_use');
+    return getContentBlocks(data.message.message.content).some(isToolUseBlock);
   });
   const firstData = progressMessages[0]?.data;
   const prompt = firstData && hasProgressMessage(firstData) ? firstData.prompt : undefined;
@@ -529,7 +561,7 @@ export function renderToolUseRejectedMessage(_input: {
   const firstData = progressMessagesForMessage[0]?.data;
   const agentId = firstData && hasProgressMessage(firstData) ? firstData.agentId : undefined;
   return <>
-      {"external" === 'ant' && agentId && <MessageResponse>
+      {("external" as string) === 'ant' && agentId && <MessageResponse>
           <Text color="warning">
             [ANT-ONLY] API calls: {getDisplayPath(getDumpPromptsPath(agentId))}
           </Text>
@@ -571,12 +603,13 @@ function calculateAgentStats(progressMessages: ProgressMessage<Progress>[]): {
       return false;
     }
     const message = msg.data.message;
-    return message.type === 'user' && message.message.content.some(content => content.type === 'tool_result');
+    return message.type === 'user' && getContentBlocks(message.message.content).some(isToolResultBlock);
   });
   const latestAssistant = progressMessages.findLast((msg): msg is ProgressMessage<AgentToolProgress> => hasProgressMessage(msg.data) && msg.data.message.type === 'assistant');
   let tokens = null;
   if (latestAssistant?.data.message.type === 'assistant') {
-    const usage = latestAssistant.data.message.message.usage;
+    // Full SDK usage rides on NestedMessage; see getProgressStats.
+    const usage = latestAssistant.data.message.message.usage as BetaUsage;
     tokens = (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + usage.input_tokens + usage.output_tokens;
   }
   return {
@@ -731,9 +764,12 @@ export function extractLastToolInfo(progressMessages: ProgressMessage<Progress>[
       continue;
     }
     if (pm.data.message.type === 'assistant') {
-      for (const c of pm.data.message.message.content) {
-        if (c.type === 'tool_use') {
-          toolUseByID.set(c.id, c as ToolUseBlockParam);
+      const content = pm.data.message.message.content;
+      if (isContentBlockArray(content) || isMessageContentArray(content)) {
+        for (const c of content) {
+          if (isToolUseBlock(c)) {
+            toolUseByID.set(c.id, c as ToolUseBlockParam);
+          }
         }
       }
     }
@@ -771,11 +807,11 @@ export function extractLastToolInfo(progressMessages: ProgressMessage<Progress>[
       return false;
     }
     const message = msg.data.message;
-    return message.type === 'user' && message.message.content.some(c => c.type === 'tool_result');
+    return message.type === 'user' && getContentBlocks(message.message.content).some(isToolResultBlock);
   });
   if (lastToolResult?.data.message.type === 'user') {
-    const toolResultBlock = lastToolResult.data.message.message.content.find(c => c.type === 'tool_result');
-    if (toolResultBlock?.type === 'tool_result') {
+    const toolResultBlock = getContentBlocks(lastToolResult.data.message.message.content).find(isToolResultBlock);
+    if (toolResultBlock) {
       // Look up the corresponding tool_use — already indexed above
       const toolUseBlock = toolUseByID.get(toolResultBlock.tool_use_id);
       if (toolUseBlock) {

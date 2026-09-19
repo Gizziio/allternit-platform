@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — latent ant-drift type issues (TS2367 external-vs-ant comparisons / TS2614 progress-type import drift / TS2339 untyped props), not a conversion regression.
 import { feature } from 'bun:bundle';
 import figures from 'figures';
 import * as React from 'react';
@@ -11,7 +9,11 @@ import { stringWidth } from '../../ink/stringWidth';
 import { Ansi, Box, Text } from '../../ink';
 import type { ToolProgressData } from '../../Tool';
 import type { ProgressMessage } from '../../types/message';
-import type { MCPProgress } from '../../types/tools';
+// TODO(types): ink-app/types/tools.ts is a dead stub, and the canonical
+// src/types/tools.ts MCPProgress (type: 'mcp', serverName/operation) does not
+// match the payload shape consumed here (progress/total/progressMessage).
+// Mirror the consumed shape locally (sibling TODO(types) pattern, cf.
+// WebSearchTool).
 import { formatNumber } from '../../utils/format';
 import { createHyperlink } from '../../utils/hyperlink';
 import { getContentSizeEstimate, type MCPToolResult } from '../../utils/mcpValidation';
@@ -35,6 +37,13 @@ const MAX_FLAT_JSON_CHARS = 5_000;
 
 // Don't attempt to parse JSON blobs larger than this (perf safety).
 const MAX_JSON_PARSE_CHARS = 200_000;
+
+interface MCPProgress {
+  type?: string;
+  progress?: number;
+  total?: number;
+  progressMessage?: string;
+}
 
 // A string value is "dominant text payload" if it has newlines or is
 // long enough that inline display would be worse than unwrapping.

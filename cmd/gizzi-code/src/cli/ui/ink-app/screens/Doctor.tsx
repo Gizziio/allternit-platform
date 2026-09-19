@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — latent ant-drift type issues (TS2367 external-vs-ant comparisons / TS2614 progress-type import drift / TS2339 untyped props), not a conversion regression.
 import figures from 'figures';
 import { join } from 'path';
 import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 'react';
@@ -56,7 +54,9 @@ type VersionLockInfo = {
   locksDir: string;
   staleLocksCleaned: number;
 };
-function DistTagsDisplay(t0) {
+function DistTagsDisplay(t0: {
+  promise: Promise<NpmDistTags>;
+}) {
   const {
     promise
   } = t0;

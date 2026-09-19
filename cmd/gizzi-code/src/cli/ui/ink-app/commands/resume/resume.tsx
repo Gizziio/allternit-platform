@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — latent ant-drift type issues (TS2367 external-vs-ant comparisons / TS2614 progress-type import drift / TS2339 untyped props), not a conversion regression.
 import chalk from '@/shared/util/chalk'
 import type { UUID } from 'crypto';
 import figures from 'figures';
@@ -126,11 +124,15 @@ function ResumeCommand({
       }
 
       // Different project - show command instead of resuming
-      const raw = await setClipboard(crossProjectCheck.command);
+      // strictNullChecks is off project-wide, so the union is not narrowed by
+      // the isSameRepoWorktree check above; `command` is present on every
+      // isCrossProject && !isSameRepoWorktree result.
+      const command = 'command' in crossProjectCheck ? crossProjectCheck.command : '';
+      const raw = await setClipboard(command);
       if (raw) process.stdout.write(raw);
 
       // Format the output message
-      const message = ['', 'This conversation is from a different directory.', '', 'To resume, run:', `  ${crossProjectCheck.command}`, '', '(Command copied to clipboard)', ''].join('\n');
+      const message = ['', 'This conversation is from a different directory.', '', 'To resume, run:', `  ${command}`, '', '(Command copied to clipboard)', ''].join('\n');
       onDone(message, {
         display: 'user'
       });
@@ -221,7 +223,9 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
       const sessionId = getSessionIdFromLog(log);
       if (sessionId) {
         const fullLog = isLiteLog(log) ? await loadFullLog(log) : log;
-        void onResume(sessionId, fullLog, 'slash_command_title');
+        // getSessionIdFromLog brands as the local string UUID; onResume takes
+        // the crypto UUID template-literal brand (same runtime value).
+        void onResume(sessionId as UUID, fullLog, 'slash_command_title');
         return null;
       }
     }
