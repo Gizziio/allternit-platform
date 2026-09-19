@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Log } from "@/shared/util/log"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -58,7 +57,7 @@ export namespace Config {
 
   // Custom merge function that concatenates array fields instead of replacing them
   function merge(target: Info, source: Info): Info {
-    const merged = mergeDeep(target, source)
+    const merged = mergeDeep(target, source) as Info
     if (target.plugin && source.plugin) {
       merged.plugin = Array.from(new Set([...target.plugin, ...source.plugin]))
     }
@@ -1452,7 +1451,7 @@ export namespace Config {
             return Object.entries(data).every(([id, config]) => {
               if (config.disabled) return true
               if (serverIds.has(id)) return true
-              return Boolean(config.extensions)
+              return Boolean((config as { extensions?: string[] }).extensions)
             })
           },
           {
