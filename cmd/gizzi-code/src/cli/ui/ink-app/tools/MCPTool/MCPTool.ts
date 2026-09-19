@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -22,8 +21,9 @@ type OutputSchema = ReturnType<typeof outputSchema>
 
 export type Output = z.infer<OutputSchema>
 
-// Re-export MCPProgress from centralized types to break import cycles
-export type { MCPProgress } from '../../types/tools.js'
+// Re-export MCPProgress from the Tool contract mirror (../../types/tools.js
+// is a dormant stub in this fork)
+export type { MCPProgress } from '../../Tool.js'
 
 export const MCPTool = buildTool({
   isMcp: true,

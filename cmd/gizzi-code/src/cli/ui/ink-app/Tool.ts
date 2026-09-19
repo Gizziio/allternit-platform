@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type {
   ToolResultBlockParam,
   ToolUseBlockParam,
@@ -47,16 +46,76 @@ import type {
   PermissionResult,
 } from './types/permissions'
 // Import tool progress types from centralized location to break import cycles
-import type {
-  AgentToolProgress,
-  BashProgress,
-  MCPProgress,
-  REPLToolProgress,
-  SkillToolProgress,
-  TaskOutputProgress,
-  ToolProgressData,
-  WebSearchProgress,
-} from './types/tools'
+// TODO(types): ./types/tools is a dormant stub in this fork (it exports
+// nothing), and the canonical src/types/tools.ts progress shapes do not
+// match the runtime payloads the tools emit and consumers check. Mirror the
+// consumed contracts locally (sibling TODO(types) pattern, cf. WebSearchTool,
+// PowerShellTool, TaskOutputTool, BashModeProgress).
+//
+// NOTE: deliberately NO string index signature — these interfaces are used
+// as `P extends ToolProgressData` constraints by sibling local mirrors
+// (interfaces without index signatures fail that constraint otherwise).
+interface ToolProgressData {
+  type?: string
+  toolUseId?: string
+  output?: string
+  fullOutput?: string
+  elapsedTimeSeconds?: number
+  totalLines?: number
+  totalBytes?: number
+  timeoutMs?: number
+  taskId?: string
+  command?: string
+  exitCode?: number
+  progress?: number
+  total?: number
+  progressMessage?: string
+  message?: unknown
+  prompt?: string
+  agentId?: string
+}
+
+interface BashProgress extends ToolProgressData {
+  type: 'bash_progress'
+}
+
+interface MCPProgress extends ToolProgressData {
+  type: 'mcp_progress'
+  serverName?: string
+  operation?: string
+}
+
+// No live emitter found for REPL progress; kept as a named contract slot.
+interface REPLToolProgress extends ToolProgressData {
+  type: 'repl_progress'
+}
+
+interface AgentToolProgress extends ToolProgressData {
+  type: 'agent_progress'
+  toolUseId: string
+  agentId?: string
+  prompt?: string
+  message?: AssistantMessage | UserMessage
+}
+
+interface SkillToolProgress extends ToolProgressData {
+  type: 'skill_progress'
+  agentId?: string
+  prompt?: string
+  message?: AssistantMessage | UserMessage
+}
+
+interface TaskOutputProgress extends ToolProgressData {
+  type: 'waiting_for_task'
+  taskDescription: string
+  taskType: string
+}
+
+interface WebSearchProgress extends ToolProgressData {
+  type?: 'query_update' | 'search_results_received' | string
+  query?: string
+  resultCount?: number
+}
 import type { FileStateCache } from './utils/fileStateCache'
 import type { DenialTrackingState } from './utils/permissions/denialTracking'
 import type { SystemPrompt } from './utils/systemPromptType'
@@ -302,7 +361,7 @@ export type ToolUseContext = {
   renderedSystemPrompt?: SystemPrompt
 }
 
-// Re-export ToolProgressData from centralized location
+// Re-export ToolProgressData for backwards compatibility
 export type { ToolProgressData }
 
 export type Progress = ToolProgressData | HookProgress

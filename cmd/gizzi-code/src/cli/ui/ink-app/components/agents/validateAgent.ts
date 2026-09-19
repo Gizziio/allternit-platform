@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Tools } from '../../Tool.js'
 import { resolveAgentTools } from '../../tools/AgentTool/agentToolUtils.js'
 import type {

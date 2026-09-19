@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react';
 import type { LocalJSXCommandContext } from '../../commands';
 import { BackgroundTasksDialog } from '../../components/tasks/BackgroundTasksDialog';

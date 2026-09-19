@@ -251,11 +251,14 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool
     if (onProgress) {
       onProgress({
         toolUseID: `task-output-waiting-${Date.now()}`,
+        // The payload is a TaskOutputProgress; the surrounding call
+        // signature still carries the default ToolProgressData generic
+        // (TODO(types): wire the tool's P generic to Progress).
         data: {
           type: 'waiting_for_task',
           taskDescription: task.description,
           taskType: task.type
-        }
+        } as TaskOutputProgress
       });
     }
     const completedTask = await waitForTaskCompletion(task_id, toolUseContext.getAppState, timeout, toolUseContext.abortController);

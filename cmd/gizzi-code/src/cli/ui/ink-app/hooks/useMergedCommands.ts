@@ -1,4 +1,3 @@
-// @ts-nocheck
 import uniqBy from 'lodash-es/uniqBy'
 import { useMemo } from 'react'
 import type { Command } from '../commands'

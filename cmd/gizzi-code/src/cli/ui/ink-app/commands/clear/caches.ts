@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Session cache clearing utilities.
  * This module is imported at startup by main.tsx, so keep imports minimal.
@@ -49,10 +48,12 @@ export function clearSessionCaches(
 ): void {
   const hasPreserved = preservedAgentIds.size > 0
   // Clear context caches
-  getUserContext.cache.clear?.()
-  getSystemContext.cache.clear?.()
-  getGitStatus.cache.clear?.()
-  getSessionStartDate.cache.clear?.()
+  // (lodash memoize attaches a MapCache at runtime; the handwritten
+  // 'lodash-es/memoize.js' shim types the return as the bare function)
+  ;(getUserContext as { cache?: { clear?: () => void } }).cache?.clear?.()
+  ;(getSystemContext as { cache?: { clear?: () => void } }).cache?.clear?.()
+  ;(getGitStatus as { cache?: { clear?: () => void } }).cache?.clear?.()
+  ;(getSessionStartDate as { cache?: { clear?: () => void } }).cache?.clear?.()
   // Clear file suggestion caches (for @ mentions)
   clearFileSuggestionCaches()
 

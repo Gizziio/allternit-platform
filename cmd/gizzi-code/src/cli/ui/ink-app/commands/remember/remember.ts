@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { dirname } from 'path'
 import type { LocalCommandCall } from '../../types/command.js'

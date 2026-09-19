@@ -1,10 +1,9 @@
-// @ts-nocheck
 /**
  * Conversation clearing utility.
  * This module has heavier dependencies and should be lazy-loaded when possible.
  */
 import { feature } from 'bun:bundle'
-import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
+import { readGizziEnv, setGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { randomUUID, type UUID } from 'crypto'
 import {
   getLastMainRequestId,

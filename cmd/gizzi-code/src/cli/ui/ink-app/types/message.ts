@@ -3,7 +3,7 @@
  * Complete implementation based on Claude's canonical architecture
  */
 
-import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaContentBlock, BetaToolUseBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 
 type UUID = string
 
@@ -677,13 +677,19 @@ export interface ToolUseSummaryMessage extends Message {
 
 /**
  * GroupedToolUseMessage - Grouped tool use results
+ *
+ * Contract shared by the producer (utils/groupToolUses.ts applyGrouping) and
+ * the renderer (components/messages/GroupedToolUseContent.tsx): the grouped
+ * assistant tool_use carriers, their result user messages, and the API
+ * message id the group was keyed on.
  */
 export interface GroupedToolUseMessage extends Message {
   type: 'grouped_tool_use'
-  toolUses: ToolUseResult[]
-  messages: Message[]
   toolName: string
-  displayMessage: Message
+  messages: NormalizedAssistantMessage<BetaToolUseBlock>[]
+  results: UserMessage[]
+  displayMessage: NormalizedAssistantMessage<BetaToolUseBlock>
+  messageId: string
 }
 
 /**

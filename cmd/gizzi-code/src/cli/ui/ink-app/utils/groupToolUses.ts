@@ -1,14 +1,17 @@
-// @ts-nocheck
 import type { BetaToolUseBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
-import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages/messages.mjs'
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import type { Tools } from '../Tool.js'
-import type {
-  GroupedToolUseMessage,
-  NormalizedAssistantMessage,
-  NormalizedMessage,
-  NormalizedUserMessage,
-  ProgressMessage,
-  RenderableMessage,
+import {
+  type ContentBlock,
+  type GroupedToolUseMessage,
+  type MessageContent,
+  type NormalizedAssistantMessage,
+  type NormalizedMessage,
+  type ProgressMessage,
+  type RenderableMessage,
+  type UserMessage,
+  isContentBlockArray,
+  isMessageContentArray,
 } from '../types/message.js'
 
 export type MessageWithoutProgress = Exclude<NormalizedMessage, ProgressMessage>
@@ -16,6 +19,21 @@ export type MessageWithoutProgress = Exclude<NormalizedMessage, ProgressMessage>
 export type GroupingResult = {
   messages: RenderableMessage[]
 }
+
+// NestedMessage.content can be a plain string; grouping only operates on
+// block arrays (both content element types carry the discriminant `type`).
+function asContentBlocks(
+  content: string | MessageContent[] | ContentBlock[],
+): Array<MessageContent | ContentBlock> {
+  return isContentBlockArray(content) || isMessageContentArray(content)
+    ? content
+    : []
+}
+
+// The render pipeline downstream (Messages.tsx and the collapse* utils)
+// declares RenderableMessage[] throughout while actually carrying normalized
+// API messages; Messages.tsx bridges the same gap with `as unknown as` at
+// its own boundary. The pushes below cast into that declared pipeline type.
 
 // Cache the set of tool names that support grouped rendering, keyed by the
 // tools array reference. The tools array is stable across renders (only
@@ -35,12 +53,15 @@ function getToolsWithGrouping(tools: Tools): Set<string> {
 function getToolUseInfo(
   msg: MessageWithoutProgress,
 ): { messageId: string; toolUseId: string; toolName: string } | null {
-  if (msg.type === 'assistant' && msg.message.content[0]?.type === 'tool_use') {
-    const content = msg.message.content[0]
+  if (msg.type !== 'assistant') return null
+  const first = asContentBlocks(msg.message.content)[0]
+  // A well-formed tool_use block always carries id + name; skip malformed
+  // blocks rather than grouping on undefined ids.
+  if (first?.type === 'tool_use' && first.id && first.name) {
     return {
-      messageId: msg.message.id,
-      toolUseId: content.id,
-      toolName: content.name,
+      messageId: msg.message.id ?? '',
+      toolUseId: first.id,
+      toolName: first.name,
     }
   }
   return null
@@ -60,7 +81,7 @@ export function applyGrouping(
   // In verbose mode, don't group - each message renders at its original position
   if (verbose) {
     return {
-      messages: messages,
+      messages: messages as RenderableMessage[],
     }
   }
   const toolsWithGrouping = getToolsWithGrouping(tools)
@@ -102,13 +123,14 @@ export function applyGrouping(
 
   // Collect result messages for grouped tool_uses
   // Map from tool_use_id to the user message containing that result
-  const resultsByToolUseId = new Map<string, NormalizedUserMessage>()
+  const resultsByToolUseId = new Map<string, UserMessage>()
 
   for (const msg of messages) {
     if (msg.type === 'user') {
-      for (const content of msg.message.content) {
+      for (const content of asContentBlocks(msg.message.content)) {
         if (
           content.type === 'tool_result' &&
+          typeof content.tool_use_id === 'string' &&
           groupedToolUseIds.has(content.tool_use_id)
         ) {
           resultsByToolUseId.set(content.tool_use_id, msg)
@@ -134,7 +156,7 @@ export function applyGrouping(
           const firstMsg = group[0]!
 
           // Collect results for this group
-          const results: NormalizedUserMessage[] = []
+          const results: UserMessage[] = []
           for (const assistantMsg of group) {
             const toolUseId = (
               assistantMsg.message.content[0] as { id: string }
@@ -155,7 +177,7 @@ export function applyGrouping(
             timestamp: firstMsg.timestamp,
             messageId: info.messageId,
           }
-          result.push(groupedMessage)
+          result.push(groupedMessage as unknown as RenderableMessage)
         }
         continue
       }
@@ -163,7 +185,7 @@ export function applyGrouping(
 
     // Skip user messages whose tool_results are all grouped
     if (msg.type === 'user') {
-      const toolResults = msg.message.content.filter(
+      const toolResults = asContentBlocks(msg.message.content).filter(
         (c): c is ToolResultBlockParam => c.type === 'tool_result',
       )
       if (toolResults.length > 0) {
@@ -176,7 +198,7 @@ export function applyGrouping(
       }
     }
 
-    result.push(msg)
+    result.push(msg as RenderableMessage)
   }
 
   return { messages: result }

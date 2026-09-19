@@ -1,9 +1,8 @@
-// @ts-nocheck
 /**
  * useCanUseTool Hook
  */
 
-import type { Tool } from '../runtime/tools/Tool.js'
+import type { Tool } from '../cli/ui/ink-app/Tool.js'
 
 export type CanUseToolFn = (tool: Tool) => boolean
 

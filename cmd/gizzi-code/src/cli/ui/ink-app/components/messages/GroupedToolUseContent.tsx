@@ -1,8 +1,8 @@
-// @ts-nocheck
-import type { ToolResultBlockParam, ToolUseBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages/messages.mjs';
+import type { ToolResultBlockParam, ToolUseBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { filterToolProgressMessages, findToolByName, type Tools } from '../../Tool';
 import type { GroupedToolUseMessage } from '../../types/message';
+import { isContentBlockArray, isMessageContentArray } from '../../types/message';
 import type { buildMessageLookups } from '../../utils/messages';
 type Props = {
   message: GroupedToolUseMessage;
@@ -29,10 +29,14 @@ export function GroupedToolUseContent({
     output: unknown;
   }>();
   for (const resultMsg of message.results) {
-    for (const content of resultMsg.message.content) {
-      if (content.type === 'tool_result') {
-        resultsByToolUseId.set(content.tool_use_id, {
-          param: content,
+    const content = resultMsg.message.content;
+    if (!isContentBlockArray(content) && !isMessageContentArray(content)) {
+      continue;
+    }
+    for (const block of content) {
+      if (block.type === 'tool_result' && typeof block.tool_use_id === 'string') {
+        resultsByToolUseId.set(block.tool_use_id, {
+          param: block as ToolResultBlockParam,
           output: resultMsg.toolUseResult
         });
       }

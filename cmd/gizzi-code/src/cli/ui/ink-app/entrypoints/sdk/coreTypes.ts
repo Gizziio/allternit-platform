@@ -63,4 +63,7 @@ export const EXIT_REASONS = [
 
 export type ExitReason = (typeof EXIT_REASONS)[number]
 
+// Mirror of SDKStatusSchema in ./coreSchemas.ts (z.union(['compacting', null])).
+export type SDKStatus = 'compacting' | null
+
 export type HookEvent = (typeof HOOK_EVENTS)[number]

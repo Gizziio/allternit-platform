@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import type { AllternitAI } from '@allternit/gizzi-sdk/providers/allternit'
@@ -38,10 +37,16 @@ import {
 import type {
   AssistantMessage,
   AttachmentMessage,
+  ContentBlock,
   Message,
+  MessageContent,
   NormalizedAssistantMessage,
   NormalizedUserMessage,
   UserMessage,
+} from '../types/message.js'
+import {
+  isContentBlockArray,
+  isMessageContentArray,
 } from '../types/message.js'
 import { toolToAPISchema } from './api.js'
 import {
@@ -65,6 +70,17 @@ import { getCurrentUsage } from './tokens.js'
 
 const RESERVED_CATEGORY_NAME = 'Autocompact buffer'
 const MANUAL_COMPACT_BUFFER_NAME = 'Compact buffer'
+
+// NestedMessage.content can be a plain string or `unknown` (see NestedMessage
+// in types/message); these scans only operate on block arrays.
+function messageContentBlocks(
+  msg: Message,
+): Array<MessageContent | ContentBlock> {
+  const content = msg.message?.content
+  return isContentBlockArray(content) || isMessageContentArray(content)
+    ? content
+    : []
+}
 
 interface ContextCategory {
   name: string
@@ -380,7 +396,7 @@ async function countBuiltInToolTokens(
       const deferredToolNameSet = new Set(deferredBuiltinTools.map(t => t.name))
       for (const msg of messages) {
         if (msg.type === 'assistant') {
-          for (const block of msg.message.content) {
+          for (const block of messageContentBlocks(msg)) {
             if (
               'type' in block &&
               block.type === 'tool_use' &&
@@ -617,7 +633,7 @@ export async function countMcpToolTokens(
     const mcpToolNameSet = new Set(mcpTools.map(t => t.name))
     for (const msg of messages) {
       if (msg.type === 'assistant') {
-        for (const block of msg.message.content) {
+        for (const block of messageContentBlocks(msg)) {
           if (
             'type' in block &&
             block.type === 'tool_use' &&
@@ -718,7 +734,7 @@ function processAssistantMessage(
   breakdown: MessageBreakdown,
 ): void {
   // Process each content block individually
-  for (const block of msg.message.content) {
+  for (const block of messageContentBlocks(msg)) {
     const blockStr = jsonStringify(block)
     const blockTokens = roughTokenCountEstimation(blockStr)
 
@@ -750,7 +766,7 @@ function processUserMessage(
   }
 
   // Process each content block individually
-  for (const block of msg.message.content) {
+  for (const block of messageContentBlocks(msg)) {
     const blockStr = jsonStringify(block)
     const blockTokens = roughTokenCountEstimation(blockStr)
 
@@ -806,7 +822,7 @@ async function approximateMessageTokens(
   const toolUseIdToName = new Map<string, string>()
   for (const msg of microcompactResult.messages) {
     if (msg.type === 'assistant') {
-      for (const block of msg.message.content) {
+      for (const block of messageContentBlocks(msg)) {
         if ('type' in block && block.type === 'tool_use') {
           const toolUseId = 'id' in block ? block.id : undefined
           const toolName =
@@ -819,14 +835,16 @@ async function approximateMessageTokens(
     }
   }
 
-  // Process each message for detailed breakdown
+  // Process each message for detailed breakdown. microcompactMessages
+  // returns the base Message interface, so narrow each branch to the
+  // concrete message shape the processors expect.
   for (const msg of microcompactResult.messages) {
     if (msg.type === 'assistant') {
-      processAssistantMessage(msg, breakdown)
+      processAssistantMessage(msg as AssistantMessage, breakdown)
     } else if (msg.type === 'user') {
-      processUserMessage(msg, breakdown, toolUseIdToName)
+      processUserMessage(msg as UserMessage, breakdown, toolUseIdToName)
     } else if (msg.type === 'attachment') {
-      processAttachment(msg, breakdown)
+      processAttachment(msg as AttachmentMessage, breakdown)
     }
   }
 

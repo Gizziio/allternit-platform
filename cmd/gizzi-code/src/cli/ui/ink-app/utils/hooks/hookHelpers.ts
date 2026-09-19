@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z } from 'zod/v4'
 import type { Tool } from '../../Tool.js'
 import {
