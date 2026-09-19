@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Session Tracing for gizzi-code using OpenTelemetry (BETA)
  *

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type StructuredPatchHunk, structuredPatch } from 'diff'
 import { logError } from './../../utils/log.ts'
 import { expandPath } from './../../utils/path.ts'

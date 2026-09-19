@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react'
 import { Box, Text, useInput } from '../../ink'
 import type {
@@ -18,6 +17,7 @@ import {
 } from '../../utils/context.js'
 import { getCurrentUsage } from '../../utils/tokens.js'
 import { formatTokens } from '../../utils/format.js'
+import type { Message } from '../../types/message.js'
 
 const PROGRESS_BAR_WIDTH = 24
 
@@ -41,7 +41,10 @@ export async function call(
   onDone: LocalJSXCommandOnDone,
   context: LocalJSXCommandContext,
 ): Promise<React.ReactNode> {
-  const messages = context.getAppState().messages ?? []
+  // TODO(types): AppState has no `messages` field (upstream drift shared with
+  // status.tsx/dash.ts/live.ts/usage.ts); runtime value is always undefined,
+  // so the `?? []` fallback was always in effect.
+  const messages = (context.getAppState() as { messages?: Message[] }).messages ?? []
   const model = getRuntimeMainLoopModel({
     permissionMode: context.getAppState().toolPermissionContext.mode,
     mainLoopModel: context.options.mainLoopModel,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   getCwdState,
   getOriginalCwd,
@@ -27,6 +26,7 @@ import {
 import { getAPIProvider } from './model/providers.js'
 import { detectWorkspace } from '../../../../runtime/kernel/bridge.js'
 import type { LocalJSXCommandContext } from '../types/command.js'
+import type { Message } from '../types/message.js'
 
 export const STATUS_SCHEMA_VERSION = 1
 
@@ -100,7 +100,10 @@ export type SessionStatus = {
 export async function buildSessionStatus(
   context: Pick<LocalJSXCommandContext, 'getAppState' | 'options'>,
 ): Promise<SessionStatus> {
-  const messages = context.getAppState().messages ?? []
+  // TODO(types): AppState has no `messages` field (upstream drift shared with
+  // status.tsx/dash.ts/live.ts/usage.ts); runtime value is always undefined,
+  // so the `?? []` fallback was always in effect.
+  const messages = (context.getAppState() as { messages?: Message[] }).messages ?? []
   const model = getRuntimeMainLoopModel({
     permissionMode: context.getAppState().toolPermissionContext.mode,
     mainLoopModel: context.options.mainLoopModel,

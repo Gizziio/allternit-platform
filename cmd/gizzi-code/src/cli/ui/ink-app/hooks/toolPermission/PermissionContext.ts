@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs'
 import {

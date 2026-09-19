@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { HrTime } from '@opentelemetry/api'
 import { type ExportResult, ExportResultCode } from '@opentelemetry/core'
 import type {
@@ -441,7 +440,9 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       ? ` (${this.lastExportErrorContext})`
       : ''
     const message = `1P event logging: ${events.length} events failed to export${context}`
-    logError(new Error(message))
+    // TODO(types): this logger takes `string`; String() preserves the exact
+    // previous output (template coercion of the Error wrapper).
+    logError(String(new Error(message)))
   }
 
   private scheduleBackoffRetry(): void {
@@ -675,7 +676,11 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         (attributes.event_name as string) || (log.body as string) || 'unknown'
 
       // Extract metadata objects directly (no JSON parsing needed)
-      const coreMetadata = attributes.core_metadata as EventMetadata | undefined
+      // TODO(types): OTel attribute values do not structurally overlap
+      // EventMetadata; runtime shape is validated downstream.
+      const coreMetadata = attributes.core_metadata as unknown as
+        | EventMetadata
+        | undefined
       const userMetadata = attributes.user_metadata as CoreUserData
       const eventMetadata = (attributes.event_metadata || {}) as Record<
         string,

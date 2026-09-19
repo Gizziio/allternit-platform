@@ -1,6 +1,9 @@
-// @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
-import type { HookEvent } from './../../entrypoints/agentSdkTypes.ts'
+import { HOOK_EVENTS } from './../../entrypoints/agentSdkTypes.ts'
+
+// Plugin hook names — derived from the canonical HOOK_EVENTS list (the
+// upstream `HookEvent` type export does not exist in this tree).
+type HookEvent = (typeof HOOK_EVENTS)[number]
 import {
   clearRegisteredPluginHooks,
   getRegisteredHooks,
@@ -164,7 +167,10 @@ export function clearPluginHookCache(): void {
   // (gh-29767). The clear now lives inside loadPluginHooks() as an atomic
   // clear-then-register, so old hooks stay valid until the fresh load swaps
   // them out.
-  loadPluginHooks.cache?.clear?.()
+  // TODO(types): lodash memoize attaches `.cache` at runtime; the type-only
+  // shape is the precedent from utils/betasCache.ts.
+  const memoized = loadPluginHooks as { cache?: { clear?: () => void } }
+  memoized.cache?.clear?.()
 }
 
 /**
