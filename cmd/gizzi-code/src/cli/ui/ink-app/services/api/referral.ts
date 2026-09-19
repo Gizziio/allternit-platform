@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import { getOauthConfig } from '../../constants/oauth.js'
 import {
@@ -11,12 +10,38 @@ import { logForDebugging } from '../../utils/debug.js'
 import { logError } from '../../utils/log.js'
 import { isEssentialTrafficOnly } from '../../utils/privacyLevel.js'
 import { getOAuthHeaders, prepareApiRequest } from '../../utils/teleport/api.js'
-import type {
-  ReferralCampaign,
-  ReferralEligibilityResponse,
-  ReferralRedemptionsResponse,
-  ReferrerRewardInfo,
-} from '../oauth/types.js'
+// Local referral types: ../oauth/types.js is a dead shim (types_ts stub), so
+// the response shapes this module reads are declared here. Field names follow
+// this file's decompiled call sites (amount_minor_units), not the runtime
+// twin's oauth/types.ts (rewardAmount) — the two surfaces disagree and this
+// module is the ink-app authority for what it consumes. Passes.tsx holds
+// referrer rewards via the runtime twin's type (ao/ts-burn-next10 rerouted
+// its import there), so amount_minor_units is optional and formatCreditAmount
+// degrades gracefully when only the runtime-shaped reward is available.
+export type ReferralCampaign = string
+
+export interface ReferrerRewardInfo {
+  currency: string
+  amount_minor_units?: number
+}
+
+export interface ReferralCodeDetails {
+  referral_link?: string
+  campaign?: string
+}
+
+export interface ReferralEligibilityResponse {
+  eligible: boolean
+  referrer_reward?: ReferrerRewardInfo | null
+  remaining_passes?: number | null
+  referral_code_details?: ReferralCodeDetails | null
+}
+
+export interface ReferralRedemptionsResponse {
+  redemptions: number
+  remaining: number
+  total: number
+}
 
 // Cache expiration time: 24 hours (eligibility changes only on subscription/experiment changes)
 const CACHE_EXPIRATION_MS = 24 * 60 * 60 * 1000
@@ -139,7 +164,9 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 
 export function formatCreditAmount(reward: ReferrerRewardInfo): string {
   const symbol = CURRENCY_SYMBOLS[reward.currency] ?? `${reward.currency} `
-  const amount = reward.amount_minor_units / 100
+  const minor = reward.amount_minor_units
+  if (minor == null) return symbol.trim()
+  const amount = minor / 100
   const formatted = amount % 1 === 0 ? amount.toString() : amount.toFixed(2)
   return `${symbol}${formatted}`
 }

@@ -1,20 +1,20 @@
 {
   "version": 1,
   "generatedFrom": "ed30f525ec073eb6feca00e3c12462fc6857b34b",
-  "batchCount": 103,
+  "batchCount": 104,
   "stats": {
-    "totalNocheck": 1258,
+    "totalNocheck": 1240,
     "excludedCompilerArtifacts": 241,
     "excludedVendored": 93,
-    "totalQueueFiles": 904,
-    "totalQueueLoc": 345436,
+    "totalQueueFiles": 886,
+    "totalQueueLoc": 339144,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
       "suspect-malformed": 2
     },
     "zeroImporter": 184,
-    "totalAccounted": 1458
+    "totalAccounted": 1460
   },
   "batches": [
     {
@@ -329,45 +329,23 @@
         "src/cli/ui/ink-app/utils/ShellCommand.ts",
         "src/cli/ui/ink-app/components/Spinner/useShimmerAnimation.ts",
         "src/cli/ui/ink-app/tasks/LocalShellTask/guards.ts",
-        "src/cli/ui/ink-app/services/remoteManagedSettings/syncCache.ts",
         "src/cli/ui/ink-app/utils/activityManager.ts",
         "src/cli/ui/ink-app/hooks/useTasksV2.ts",
-        "src/cli/ui/ink-app/tools/PowerShellTool/modeValidation.ts",
         "src/cli/ui/ink-app/components/Spinner/index.ts",
-        "src/cli/ui/ink-app/components/HistorySearchDialog.tsx",
-        "src/cli/ui/ink-app/utils/teleport/environments.ts",
-        "src/cli/ui/ink-app/utils/context.ts",
         "src/cli/ui/ink-app/utils/hooks/AsyncHookRegistry.ts",
-        "src/cli/ui/ink-app/utils/bash/ShellSnapshot.ts",
-        "src/cli/ui/ink-app/utils/swarm/permissionSync.ts",
-        "src/cli/ui/ink-app/utils/filePersistence/outputsScanner.ts",
-        "src/cli/ui/ink-app/hooks/useArrowKeyHistory.tsx",
-        "src/cli/ui/ink-app/utils/shell/bashProvider.ts",
-        "src/cli/ui/ink-app/services/api/referral.ts",
-        "src/cli/ui/ink-app/hooks/useSwarmPermissionPoller.ts",
-        "src/cli/ui/ink-app/utils/swarm/backends/PaneBackendExecutor.ts"
+        "src/cli/ui/ink-app/utils/swarm/permissionSync.ts"
       ],
-      "loc": 5743,
+      "loc": 2552,
       "twins": [],
       "state": "NEW"
     },
     {
       "id": "b0300",
       "files": [
-        "src/cli/ui/ink-app/tools/TaskUpdateTool/TaskUpdateTool.ts",
-        "src/runtime/services/api/sessionIngress.ts",
-        "src/cli/ui/ink-app/services/api/sessionIngress.ts",
-        "src/cli/ui/ink-app/components/PromptInput/inputModes.ts",
-        "src/cli/ui/ink-app/utils/background/remote/preconditions.ts",
-        "src/cli/ui/ink-app/utils/ide.ts"
+        "src/cli/ui/ink-app/utils/background/remote/preconditions.ts"
       ],
-      "loc": 3199,
-      "twins": [
-        {
-          "runtime": "src/runtime/services/api/sessionIngress.ts",
-          "inkApp": "src/cli/ui/ink-app/services/api/sessionIngress.ts"
-        }
-      ],
+      "loc": 236,
+      "twins": [],
       "state": "NEW"
     },
     {
@@ -1285,7 +1263,6 @@
         "src/cli/ui/ink-app/utils/hooks/apiQueryHookHelper.ts",
         "src/cli/ui/ink-app/dashboard/topLevelSession.ts",
         "src/cli/ui/ink-app/commands/ultraplan.tsx",
-        "src/cli/ui/ink-app/services/api/overageCreditGrant.ts",
         "src/cli/ui/ink-app/utils/plugins/officialMarketplaceStartupCheck.ts",
         "src/cli/ui/ink-app/utils/settings/changeDetector.ts",
         "src/cli/ui/ink-app/hooks/useSettingsChange.ts",
@@ -1323,7 +1300,7 @@
         "src/cli/ui/ink-app/utils/suggestions/slackChannelSuggestions.ts",
         "src/cli/ui/ink-app/bridge/bridgePointer.ts"
       ],
-      "loc": 7104,
+      "loc": 6966,
       "twins": [],
       "state": "NEW"
     },
@@ -1947,6 +1924,16 @@
       "state": "NEW"
     },
     {
+      "id": "b0220",
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 22,
+      "burnedLoc": 7285,
+      "note": "Burned by ao/ts-burn-next9: 13-error burn across 6 files, converged in 1 iteration; 16 files header-only 0-error (useIdeLogging.ts + useIdeSelection.ts were already de-headered by ao/artifact-codemod-pilot4's regen and are counted here). TS2322 probe confirmed all 22 files in compilation (exactly 22 probe errors, zero others). Fixes: HistorySearchDialog useRegisterOverlay 2nd arg (true = prior default); ink-app sessionIngress local UUID=string wrapper (was branded crypto UUID, runtime twin pattern, type-only); context.ts restored missing resolveAntModel import from ./model/antModels.js; ide.ts awaited lazy IdeOnboardingDialog dynamic import at 2 call sites (latent runtime bug also escalated by ao/ts-burn-next10, fixed here instead of allowlisted); outputsScanner Dirent annotation pinned to fs.Dirent[]; referral.ts local referral types replacing dead-shim import (../oauth/types.js is a types_ts stub; same dead shim ao/ts-burn-next10 hit in Passes.tsx). ide.ts removed from test/ts-nocheck-allowlist.txt (burned, not allowlisted)."
+    },
+    {
       "id": "b0256",
       "files": [],
       "loc": 0,
@@ -1957,10 +1944,10 @@
         }
       ],
       "state": "DONE",
-      "burnedFiles": 30,
-      "burnedLoc": 7040,
+      "burnedFiles": 28,
+      "burnedLoc": 6240,
       "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-next11). Retired-id absorption: the original b0256 (30 files, 7040 loc) was burned (25 header-only 0-error burns + 5 type-only fixes: hooksSettings/registerFrontmatterHooks/sessionHooks derived HookEvent locally from HOOK_EVENTS since agentSdkTypes.ts exports only HOOK_EVENTS; session.ts/agent-compat.ts pinned void-returning fn() results with as-null casts; session.ts c.body(archive) cast to Uint8Array<ArrayBuffer>) \u2014 but the pilot-4 queue regen (61d6609d4) landed mid-flight, retired the b0256 id, and remixed the 30 files into b0299 (9), b0300 (15), b0301 (6); they are removed from those batches here (b0301's diagnosticTracking twin pair came along, recorded in this entry). TS2322 probe: exactly 30 errors, one per file, reverted byte-exact. No escalations."
+      "note": "Burned 2026-09-19 (ao/ts-burn-next11). Retired-id absorption: the original b0256 (30 files, 7040 loc) was stripped (25 header-only 0-error burns + 5 type-only fixes: hooksSettings/registerFrontmatterHooks/sessionHooks derived HookEvent locally from HOOK_EVENTS since agentSdkTypes.ts exports only HOOK_EVENTS; session.ts/agent-compat.ts pinned void-returning fn() results with as-null casts; session.ts c.body(archive) cast to Uint8Array<ArrayBuffer>) \u2014 but the pilot-4 queue regen (61d6609d4) landed mid-flight, retired the b0256 id, and remixed the 30 files into b0299/b0300/b0301; then ao/ts-burn-next9 (b0220) burned the diagnosticTracking twin pair (800 loc) from b0301 before this PR merged. This record accounts the 28 surviving burned files (6240 loc), removed from b0299/b0300/b0301 here (b0301's diagnosticTracking twin pair is accounted in b0220, not here). TS2322 probe: exactly 30 errors, one per file, reverted byte-exact. No escalations."
     }
   ],
   "quarantined": [
