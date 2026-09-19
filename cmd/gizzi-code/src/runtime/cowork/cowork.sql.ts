@@ -7,7 +7,7 @@ export const RunTable = sqliteTable(
     id: text().primaryKey(),
     name: text().notNull(),
     description: text(),
-    mode: text().notNull().$type<"local" | "remote" | "cloud">(),
+    mode: text().notNull().$type<"local" | "vm" | "remote" | "cloud">(),
     status: text().notNull().$type<
       | "pending"
       | "planning"
@@ -62,7 +62,7 @@ export const ScheduleTable = sqliteTable(
     natural_lang: text(),
     next_run_at: integer(),
     run_count: integer().notNull().default(0),
-    mode: text().notNull().$type<"local" | "remote" | "cloud">().default("local"),
+    mode: text().notNull().$type<"local" | "vm" | "remote" | "cloud">().default("local"),
     job_template: text({ mode: "json" }).$type<{
       command: string
       working_dir?: string

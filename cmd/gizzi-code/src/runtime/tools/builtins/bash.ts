@@ -169,9 +169,7 @@ export const BashTool = Tool.define("bash", async () => {
       }
 
       const shellEnv = await Plugin.trigger(
-        // "shell.env" is not declared in the plugin SDK Hooks type yet
-        // (pty/index.ts and session/prompt.ts call it the same way)
-        "shell.env" as any,
+        "shell.env",
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )

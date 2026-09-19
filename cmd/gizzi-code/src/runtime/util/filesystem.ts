@@ -11,7 +11,7 @@ import {
   mkdir as fsMkdir,
   readFile as fsReadFile,
   readdir,
-  stat,
+  stat as fsStat,
   writeFile as fsWriteFile,
   appendFile as fsAppendFile,
   rm,
@@ -54,7 +54,7 @@ export async function listDir(path: string): Promise<string[]> {
 }
 
 export async function getFileInfo(path: string) {
-  const s = await stat(path)
+  const s = await fsStat(path)
   return {
     size: s.size,
     isFile: s.isFile(),
@@ -68,7 +68,7 @@ export async function getFileInfo(path: string) {
 
 export async function isDirectory(path: string): Promise<boolean> {
   try {
-    const s = await stat(path)
+    const s = await fsStat(path)
     return s.isDirectory()
   } catch {
     return false
@@ -77,7 +77,7 @@ export async function isDirectory(path: string): Promise<boolean> {
 
 export async function isFile(path: string): Promise<boolean> {
   try {
-    const s = await stat(path)
+    const s = await fsStat(path)
     return s.isFile()
   } catch {
     return false
@@ -100,7 +100,7 @@ export async function glob(pattern: string, options?: { cwd?: string; absolute?:
 }
 
 export async function copy(src: string, dest: string): Promise<void> {
-  const s = await stat(src)
+  const s = await fsStat(src)
   if (s.isDirectory()) {
     await fsMkdir(dest, { recursive: true })
     const entries = await readdir(src, { withFileTypes: true })
@@ -232,7 +232,7 @@ export namespace Filesystem {
     mtime: Date
     ctime: Date
   }> {
-    const s = await stat(path)
+    const s = await fsStat(path)
     return {
       size: s.size,
       isFile: s.isFile(),
@@ -246,7 +246,7 @@ export namespace Filesystem {
   /** Check if path is a directory */
   export async function isDir(path: string): Promise<boolean> {
     try {
-      const s = await stat(path)
+      const s = await fsStat(path)
       return s.isDirectory()
     } catch {
       return false
@@ -256,7 +256,7 @@ export namespace Filesystem {
   /** Check if path is a file */
   export async function isFile(path: string): Promise<boolean> {
     try {
-      const s = await stat(path)
+      const s = await fsStat(path)
       return s.isFile()
     } catch {
       return false
@@ -279,7 +279,7 @@ export namespace Filesystem {
 
   /** Copy file or directory */
   export async function copy(src: string, dest: string): Promise<void> {
-    const s = await stat(src)
+    const s = await fsStat(src)
     if (s.isDirectory()) {
       await fsMkdir(dest, { recursive: true })
       const entries = await readdir(src, { withFileTypes: true })
@@ -339,7 +339,7 @@ export namespace Filesystem {
   }
 
   /** Glob pattern search */
-  export async function glob(pattern: string, options?: { cwd?: string }): Promise<string[]> {
+  export async function glob(pattern: string, options?: { cwd?: string; absolute?: boolean }): Promise<string[]> {
     const { glob: fastGlob } = await import('glob')
     return fastGlob(pattern, options)
   }

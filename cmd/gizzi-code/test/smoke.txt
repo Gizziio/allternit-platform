@@ -36,6 +36,7 @@ test/permission/arity.test.ts
 test/permission/next.test.ts
 test/plugin/claude-plugin.test.ts
 test/plugin/codex.test.ts
+test/plugin/hooks-contract.test.ts
 test/project/project.test.ts
 test/protocol/transport-conformance.test.ts
 test/provider/models-catalog.test.ts
@@ -43,7 +44,10 @@ test/provider/protocol-goldens.test.ts
 test/provider/transform.test.ts
 test/question/question.test.ts
 test/runtime/attachments.test.ts
+test/runtime/cowork-runtime-vm.test.ts
+test/runtime/cowork-service-mapping.test.ts
 test/runtime/local-cli-driver.test.ts
+test/runtime/util-filesystem.test.ts
 test/runtime/runtime-routes.test.ts
 test/runtime/uds-driver.test.ts
 test/sdk.test.ts

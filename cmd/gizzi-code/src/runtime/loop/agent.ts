@@ -400,8 +400,7 @@ export namespace Agent {
     const language = await Provider.getLanguage(model)
 
     const system = [PROMPT_GENERATE]
-    // "experimental.chat.system.transform" is not declared in the plugin SDK Hooks type yet
-    await Plugin.trigger("experimental.chat.system.transform" as any, { model }, { system })
+    await Plugin.trigger("experimental.chat.system.transform", { model }, { system })
     const existing = await list()
 
     const params = {

@@ -156,9 +156,7 @@ async function createIdentityAgent(
 
   return {
     name,
-    // TODO(types): WorkspaceIdentity carries no `creature` field — this is
-    // always undefined at runtime; keep the fallback behavior verbatim.
-    description: (workspace.identity as { creature?: string }).creature || `${workspace.type} workspace identity agent`,
+    description: `${workspace.type} workspace identity agent`,
     prompt: systemPrompt,
     mode: "all",
     permission: PermissionNext.fromConfig({

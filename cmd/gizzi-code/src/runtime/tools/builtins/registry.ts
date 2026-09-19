@@ -222,8 +222,7 @@ export namespace ToolRegistry {
             description: tool.description,
             parameters: tool.parameters,
           }
-          // "tool.definition" is not declared in the plugin SDK Hooks type yet
-          await Plugin.trigger("tool.definition" as any, { toolID: t.id }, output)
+          await Plugin.trigger("tool.definition", { toolID: t.id }, output)
           return {
             id: t.id,
             ...tool,

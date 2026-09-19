@@ -88,9 +88,8 @@ export namespace LLM {
     )
 
     const header = system[0]
-    // "experimental.chat.system.transform" is not declared in the plugin SDK Hooks type yet
     await Plugin.trigger(
-      "experimental.chat.system.transform" as any,
+      "experimental.chat.system.transform",
       { sessionID: input.sessionID, model: input.model },
       { system },
     )
@@ -166,9 +165,8 @@ export namespace LLM {
       }
     }
 
-    // "chat.params" is not declared in the plugin SDK Hooks type yet
     const params = await Plugin.trigger(
-      "chat.params" as any,
+      "chat.params",
       {
         sessionID: input.sessionID,
         agent: input.agent,
