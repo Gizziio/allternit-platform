@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Centralized plugin directory configuration.
  *

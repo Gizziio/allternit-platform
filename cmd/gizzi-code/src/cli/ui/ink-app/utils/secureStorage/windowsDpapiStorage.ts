@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { chmodSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -6,7 +5,23 @@ import { execaSync } from 'execa'
 import { getErrnoCode } from '../errors'
 import { logForDebugging } from '../debug'
 import { jsonParse, jsonStringify } from '../slowOperations'
-import type { SecureStorage, SecureStorageData } from './types'
+// TODO(types): './types' is a TEMPORARY SHIM exporting nothing. Local
+// mirror of src/shared/utils/secureStorage/types.ts — same pattern as
+// fallbackStorage.ts; remove once the shim grows the real exports.
+interface SecureStorageData {
+  [key: string]: unknown
+}
+interface SecureStorage {
+  name?: string
+  getItem?(key: string): Promise<string | null>
+  setItem?(key: string, value: string): Promise<void>
+  removeItem?(key: string): Promise<void>
+  clear?(): Promise<void>
+  read(key?: string): SecureStorageData | null
+  update(data: SecureStorageData): { success: boolean; warning?: string }
+  readAsync?(): Promise<SecureStorageData | null>
+  delete(): boolean
+}
 
 const BLOB_NAME = 'credentials.dpapi'
 

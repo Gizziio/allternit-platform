@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { logEvent } from '../../services/analytics/index.js'
 import { logForDebugging } from '../debug.js'

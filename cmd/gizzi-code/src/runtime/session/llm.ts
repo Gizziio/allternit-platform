@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Installation } from "@/shared/installation"
 import { Provider } from "@/runtime/providers/provider"
 import { Log } from "@/shared/util/log"
@@ -89,8 +88,9 @@ export namespace LLM {
     )
 
     const header = system[0]
+    // "experimental.chat.system.transform" is not declared in the plugin SDK Hooks type yet
     await Plugin.trigger(
-      "experimental.chat.system.transform",
+      "experimental.chat.system.transform" as any,
       { sessionID: input.sessionID, model: input.model },
       { system },
     )
@@ -166,8 +166,9 @@ export namespace LLM {
       }
     }
 
+    // "chat.params" is not declared in the plugin SDK Hooks type yet
     const params = await Plugin.trigger(
-      "chat.params",
+      "chat.params" as any,
       {
         sessionID: input.sessionID,
         agent: input.agent,
