@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
 import { describeRoute, validator, resolver } from "@/runtime/server/openapi"

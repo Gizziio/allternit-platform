@@ -1,6 +1,7 @@
-// @ts-nocheck
 import { resolve } from 'path'
-import type { HookEvent } from './../../entrypoints/agentSdkTypes.ts'
+import { HOOK_EVENTS } from './../../entrypoints/agentSdkTypes.ts'
+
+type HookEvent = (typeof HOOK_EVENTS)[number]
 import { getSessionId } from '../../bootstrap/state.js'
 import type { AppState } from '../../state/AppState.js'
 import type { EditableSettingSource } from '../settings/constants.js'

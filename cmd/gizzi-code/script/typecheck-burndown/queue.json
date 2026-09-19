@@ -1,13 +1,13 @@
 {
   "version": 1,
   "generatedFrom": "ed30f525ec073eb6feca00e3c12462fc6857b34b",
-  "batchCount": 102,
+  "batchCount": 103,
   "stats": {
-    "totalNocheck": 1288,
+    "totalNocheck": 1258,
     "excludedCompilerArtifacts": 241,
     "excludedVendored": 93,
-    "totalQueueFiles": 934,
-    "totalQueueLoc": 352476,
+    "totalQueueFiles": 904,
+    "totalQueueLoc": 345436,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -38,7 +38,7 @@
       "escalated": [
         {
           "path": "src/cli/commands/theme/index.ts",
-          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support — LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
+          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support \u2014 LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
         }
       ]
     },
@@ -245,7 +245,7 @@
       "burnedFiles": 41,
       "burnedLoc": 6481,
       "escalated": [],
-      "note": "Retired-id absorption: the original b0102 (43 files, 6544 loc) was burned by ao/ts-burn-next, but the queue regen at 5945839e0 (landed while the burn was in flight) renumbered its residue to b0141 and ao/cut-attribution-hooks-v2 deleted 2 of its files (postCommitAttribution.ts, attributionHooks.ts) before that. This record accounts the 41 surviving burned files (6481 loc, stripped) — they were removed from b0141, which keeps its 3 genuinely-unburned files (686 loc). The 2 cut files are accounted by the regen totalAccounted 1473, not here."
+      "note": "Retired-id absorption: the original b0102 (43 files, 6544 loc) was burned by ao/ts-burn-next, but the queue regen at 5945839e0 (landed while the burn was in flight) renumbered its residue to b0141 and ao/cut-attribution-hooks-v2 deleted 2 of its files (postCommitAttribution.ts, attributionHooks.ts) before that. This record accounts the 41 surviving burned files (6481 loc, stripped) \u2014 they were removed from b0141, which keeps its 3 genuinely-unburned files (686 loc). The 2 cut files are accounted by the regen totalAccounted 1473, not here."
     },
     {
       "id": "b0141",
@@ -268,11 +268,11 @@
       "escalated": [
         {
           "path": "src/runtime/util/filesystem.ts",
-          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import — stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
+          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import \u2014 stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
         },
         {
           "path": "src/runtime/cowork/cowork.service.ts",
-          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated — the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
+          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated \u2014 the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
         }
       ],
       "note": "Burned by ao/ts-burn-next3: 17 header-only 0-error burns + claude/loader.ts (3 `as string` casts on frontmatter values). TS2322 probe confirmed all 18 burned files in compilation. 2 files escalated (headers restored) and kept live in this record; they await non-type-only fixes. Identity: live 1045 + recorded 428 = 1473 = totalAccounted."
@@ -321,7 +321,6 @@
       "id": "b0299",
       "files": [
         "src/cli/ui/ink-app/utils/shell/resolveDefaultShell.ts",
-        "src/cli/ui/ink-app/commands/extra-usage/extra-usage-noninteractive.ts",
         "src/cli/ui/ink-app/utils/gitSettings.ts",
         "src/cli/ui/ink-app/utils/plugins/pluginPolicy.ts",
         "src/cli/ui/ink-app/utils/plugins/managedPlugins.ts",
@@ -333,30 +332,22 @@
         "src/cli/ui/ink-app/services/remoteManagedSettings/syncCache.ts",
         "src/cli/ui/ink-app/utils/activityManager.ts",
         "src/cli/ui/ink-app/hooks/useTasksV2.ts",
-        "src/cli/ui/ink-app/memdir/teamMemPaths.ts",
         "src/cli/ui/ink-app/tools/PowerShellTool/modeValidation.ts",
         "src/cli/ui/ink-app/components/Spinner/index.ts",
-        "src/cli/ui/ink-app/services/teamMemorySync/teamMemSecretGuard.ts",
         "src/cli/ui/ink-app/components/HistorySearchDialog.tsx",
         "src/cli/ui/ink-app/utils/teleport/environments.ts",
-        "src/cli/ui/ink-app/utils/hooks/hooksConfigSnapshot.ts",
         "src/cli/ui/ink-app/utils/context.ts",
         "src/cli/ui/ink-app/utils/hooks/AsyncHookRegistry.ts",
-        "src/cli/ui/ink-app/utils/permissions/PermissionUpdate.ts",
         "src/cli/ui/ink-app/utils/bash/ShellSnapshot.ts",
         "src/cli/ui/ink-app/utils/swarm/permissionSync.ts",
-        "src/cli/ui/ink-app/utils/teleport/environmentSelection.ts",
-        "src/cli/ui/ink-app/commands/sandbox-toggle/sandbox-toggle.tsx",
-        "src/cli/ui/ink-app/memdir/teamMemPrompts.ts",
         "src/cli/ui/ink-app/utils/filePersistence/outputsScanner.ts",
         "src/cli/ui/ink-app/hooks/useArrowKeyHistory.tsx",
         "src/cli/ui/ink-app/utils/shell/bashProvider.ts",
-        "src/cli/ui/ink-app/utils/hooks/hooksSettings.ts",
         "src/cli/ui/ink-app/services/api/referral.ts",
         "src/cli/ui/ink-app/hooks/useSwarmPermissionPoller.ts",
         "src/cli/ui/ink-app/utils/swarm/backends/PaneBackendExecutor.ts"
       ],
-      "loc": 7157,
+      "loc": 5743,
       "twins": [],
       "state": "NEW"
     },
@@ -367,25 +358,10 @@
         "src/runtime/services/api/sessionIngress.ts",
         "src/cli/ui/ink-app/services/api/sessionIngress.ts",
         "src/cli/ui/ink-app/components/PromptInput/inputModes.ts",
-        "src/cli/ui/ink-app/utils/permissions/PermissionPromptToolResultSchema.ts",
-        "src/cli/ui/ink-app/utils/hooks/fileChangedWatcher.ts",
-        "src/cli/ui/ink-app/commands/sandbox-toggle/index.ts",
-        "src/cli/ui/ink-app/utils/plugins/hintRecommendation.ts",
         "src/cli/ui/ink-app/utils/background/remote/preconditions.ts",
-        "src/cli/ui/ink-app/utils/fastMode.ts",
-        "src/cli/ui/ink-app/utils/ide.ts",
-        "src/cli/ui/ink-app/tools/EnterPlanModeTool/EnterPlanModeTool.ts",
-        "src/cli/ui/ink-app/utils/hooks/sessionHooks.ts",
-        "src/cli/ui/ink-app/commands/fast/index.ts",
-        "src/cli/ui/ink-app/utils/hooks/registerSkillHooks.ts",
-        "src/cli/ui/ink-app/utils/hooks/registerFrontmatterHooks.ts",
-        "src/runtime/server/routes/remote_control.ts",
-        "src/runtime/server/routes/session.ts",
-        "src/runtime/server/routes/agent-compat.ts",
-        "src/cli/ui/ink-app/utils/promptEditor.ts",
-        "src/cli/ui/ink-app/utils/modelCost.ts"
+        "src/cli/ui/ink-app/utils/ide.ts"
       ],
-      "loc": 7095,
+      "loc": 3199,
       "twins": [
         {
           "runtime": "src/runtime/services/api/sessionIngress.ts",
@@ -406,12 +382,6 @@
     {
       "id": "b0301",
       "files": [
-        "src/runtime/services/diagnosticTracking.ts",
-        "src/cli/ui/ink-app/services/diagnosticTracking.ts",
-        "src/cli/ui/ink-app/commands/keybindings/keybindings.ts",
-        "src/cli/ui/ink-app/commands/keybindings/index.ts",
-        "src/cli/ui/ink-app/services/lsp/LSPDiagnosticRegistry.ts",
-        "src/cli/ui/ink-app/utils/Shell.ts",
         "src/cli/ui/ink-app/utils/model/model.ts",
         "src/cli/ui/ink-app/utils/model/contextWindowUpgradeCheck.ts",
         "src/cli/ui/ink-app/utils/pdfUtils.ts",
@@ -439,13 +409,8 @@
         "src/cli/ui/ink-app/utils/betas.ts",
         "src/cli/ui/ink-app/tools/WebSearchTool/WebSearchTool.ts"
       ],
-      "loc": 7079,
-      "twins": [
-        {
-          "runtime": "src/runtime/services/diagnosticTracking.ts",
-          "inkApp": "src/cli/ui/ink-app/services/diagnosticTracking.ts"
-        }
-      ],
+      "loc": 5349,
+      "twins": [],
       "state": "NEW"
     },
     {
@@ -1980,6 +1945,22 @@
       "loc": 1701,
       "twins": [],
       "state": "NEW"
+    },
+    {
+      "id": "b0256",
+      "files": [],
+      "loc": 0,
+      "twins": [
+        {
+          "runtime": "src/runtime/services/diagnosticTracking.ts",
+          "inkApp": "src/cli/ui/ink-app/services/diagnosticTracking.ts"
+        }
+      ],
+      "state": "DONE",
+      "burnedFiles": 30,
+      "burnedLoc": 7040,
+      "escalated": [],
+      "note": "Burned 2026-09-19 (ao/ts-burn-next11). Retired-id absorption: the original b0256 (30 files, 7040 loc) was burned (25 header-only 0-error burns + 5 type-only fixes: hooksSettings/registerFrontmatterHooks/sessionHooks derived HookEvent locally from HOOK_EVENTS since agentSdkTypes.ts exports only HOOK_EVENTS; session.ts/agent-compat.ts pinned void-returning fn() results with as-null casts; session.ts c.body(archive) cast to Uint8Array<ArrayBuffer>) \u2014 but the pilot-4 queue regen (61d6609d4) landed mid-flight, retired the b0256 id, and remixed the 30 files into b0299 (9), b0300 (15), b0301 (6); they are removed from those batches here (b0301's diagnosticTracking twin pair came along, recorded in this entry). TS2322 probe: exactly 30 errors, one per file, reverted byte-exact. No escalations."
     }
   ],
   "quarantined": [

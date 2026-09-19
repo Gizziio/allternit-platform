@@ -1,4 +1,3 @@
-// @ts-nocheck
 import figures from 'figures'
 import { logError } from '@/utils/log.js'
 import type { MCPServerConnection } from '@/services/mcp/types.js'

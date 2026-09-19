@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   buildSearchingPastContextSection,
   DIRS_EXIST_GUIDANCE,

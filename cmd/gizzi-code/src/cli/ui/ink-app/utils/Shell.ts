@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { execFileSync, spawn } from 'child_process'
 import { constants as fsConstants, readFileSync, unlinkSync } from 'fs'
 import { type FileHandle, mkdir, open, realpath } from 'fs/promises'

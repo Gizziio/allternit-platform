@@ -1,5 +1,6 @@
-// @ts-nocheck
-import { HOOK_EVENTS, type HookEvent } from './../../entrypoints/agentSdkTypes.ts'
+import { HOOK_EVENTS } from './../../entrypoints/agentSdkTypes.ts'
+
+type HookEvent = (typeof HOOK_EVENTS)[number]
 import type { AppState } from './../../state/AppState.tsx'
 import type { Message } from './../../types/message.ts'
 import { logForDebugging } from '../debug.js'
