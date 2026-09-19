@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * PowerShell read-only command validation.
  *
