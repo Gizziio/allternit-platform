@@ -7,7 +7,7 @@
     "excludedCompilerArtifacts": 181,
     "excludedVendored": 93,
     "totalQueueFiles": 767,
-    "totalQueueLoc": 308378,
+    "totalQueueLoc": 306825,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
