@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — dead "external"/"ant" constant comparisons; latent, not a conversion regression.
 import * as React from 'react';
 import { useState } from 'react';
 import { getSlowOperations } from '../bootstrap/state';
@@ -7,7 +5,7 @@ import { Text, useInterval } from '../ink';
 
 // Show DevBar for dev builds or all ants
 function shouldShowDevBar(): boolean {
-  return "production" === 'development' || "external" === 'ant';
+  return ("production" as string) === 'development' || ("external" as string) === 'ant';
 }
 export function DevBar() {
   const [slowOps, setSlowOps] = useState(getSlowOperations);

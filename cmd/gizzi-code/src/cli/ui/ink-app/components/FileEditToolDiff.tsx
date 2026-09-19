@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — unknown-typed tool-result destructuring (patch/firstLine/fileContent); latent, not a conversion regression.
 import type { StructuredPatchHunk } from 'diff';
 import * as React from 'react';
 import { Suspense, use, useState } from 'react';
@@ -21,7 +19,7 @@ type DiffData = {
   firstLine: string | null;
   fileContent: string | undefined;
 };
-export function FileEditToolDiff(props) {
+export function FileEditToolDiff(props: Props) {
   const t0 = () => loadDiffData(props.file_path, props.edits);
 
   const [dataPromise] = useState(t0);
@@ -31,11 +29,13 @@ export function FileEditToolDiff(props) {
 
   return t2;
 }
-function DiffBody(t0) {
-  const {
+function DiffBody({
     promise,
     file_path
-  } = t0;
+  }: {
+    promise: Promise<DiffData>;
+    file_path: string;
+  }) {
   const {
     patch,
     firstLine,
@@ -48,11 +48,13 @@ function DiffBody(t0) {
 
   return t1;
 }
-function DiffFrame(t0) {
-  const {
+function DiffFrame({
     children,
     placeholder
-  } = t0;
+  }: {
+    children?: React.ReactNode;
+    placeholder?: boolean;
+  }) {
   const t1 = placeholder ? <Text dimColor={true}>…</Text> : children;
 
   const t2 = <Box flexDirection="column"><Box borderColor="subtle" borderStyle="dashed" flexDirection="column" borderLeft={false} borderRight={false}>{t1}</Box></Box>;

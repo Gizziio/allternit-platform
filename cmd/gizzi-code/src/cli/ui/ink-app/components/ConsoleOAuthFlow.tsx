@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — OrgValidationResult variant drift on orgResult.message access; latent, not a conversion regression.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';
 import { installOAuthTokens } from '../cli/handlers/auth';
@@ -239,7 +237,11 @@ export function ConsoleOAuthFlow({
         await installOAuthTokens(result);
         const orgResult = await validateForceLoginOrg();
         if (!orgResult.valid) {
-          throw new Error(orgResult.message);
+          // strict:false tsconfig: discriminant narrowing does not filter
+          // union members, so pin the failing member explicitly (house
+          // Extract pattern).
+          const invalid = orgResult as Extract<typeof orgResult, { valid: false }>;
+          throw new Error(invalid.message);
         }
         setOAuthStatus({
           state: 'success'

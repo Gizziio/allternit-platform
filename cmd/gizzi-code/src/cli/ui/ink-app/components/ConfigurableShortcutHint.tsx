@@ -1,8 +1,9 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — KeybindingAction/KeybindingContextName not exported by ../keybindings/types (re-export drift); latent, not a conversion regression.
 import * as React from 'react';
-import type { KeybindingAction, KeybindingContextName } from '../keybindings/types';
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay';
+// ../keybindings/types is a stub in this fork (never exported these);
+// local mirrors per the house pattern (see permissions/PermissionPrompt.tsx).
+type KeybindingAction = string;
+type KeybindingContextName = string;
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint';
 type Props = {
   /** The keybinding action (e.g., 'app:toggleTranscript') */
