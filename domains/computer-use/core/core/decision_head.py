@@ -179,6 +179,10 @@ class Choice:
     chosen: str
     probabilities: Dict[str, float]
     confidence: float  # 1 - H/log(n), bounded [0, 1]
+    # Self-consistency voting only: winner vote share minus runner-up vote
+    # share (0.0 for single-pass heads). Carried through to_dict so eval
+    # report rows can compute agreement@commitment abstention curves.
+    vote_margin: float = 0.0
 
     def validate(self) -> None:
         if self.chosen not in self.probabilities:
@@ -206,6 +210,7 @@ class Choice:
             "chosen": self.chosen,
             "probabilities": dict(self.probabilities),
             "confidence": self.confidence,
+            "vote_margin": self.vote_margin,
         }
 
 
@@ -381,12 +386,27 @@ class MlxDirectLogitHead:
         model_repo: str = DEFAULT_MODEL_REPO,
         revision: Optional[str] = None,
         max_target_options: int = _MAX_TARGET_OPTIONS,
+        temperature: float = 0.0,
+        seed: Optional[int] = None,
     ) -> None:
         self.model_repo = model_repo
         env_revision = os.environ.get(_REVISION_ENV_VAR, "").strip()
         # Explicit args win, then the env override, then the verified pin.
-        self.revision = revision or env_revision or DEFAULT_REVISION
+        # The pin only applies to the default repo — a pinned commit of
+        # another model would 404, so custom repos default to the repo's
+        # default branch unless the caller pins explicitly.
+        if revision is not None:
+            self.revision = revision
+        elif env_revision:
+            self.revision = env_revision
+        elif model_repo == DEFAULT_MODEL_REPO:
+            self.revision = DEFAULT_REVISION
+        else:
+            self.revision = None
         self.max_target_options = max_target_options
+        self.temperature = float(temperature)
+        self._seed = seed
+        self._rng = None
         self._model: Any = None
         self._tokenizer: Any = None
 
@@ -441,6 +461,21 @@ class MlxDirectLogitHead:
             ids.append(token_id)
         return ids
 
+    def _sample_index(self, scores: List[float]) -> int:
+        """Categorical sample over softmax(scores/temperature).
+
+        Only used when ``temperature > 0`` (self-consistency passes); greedy
+        argmax is the default path. Ties and -inf entries collapse to zero
+        probability naturally through the softmax.
+        """
+        import random
+
+        if self._rng is None:
+            self._rng = random.Random(self._seed)
+        scaled = [s / self.temperature for s in scores]
+        probs = softmax(scaled)
+        return self._rng.choices(range(len(probs)), weights=probs, k=1)[0]
+
     def decide(
         self,
         state_text: str,
@@ -468,7 +503,10 @@ class MlxDirectLogitHead:
                     scores.append(float("-inf"))
                 else:
                     scores.append(float(logits[token_id]))
-            choices[question.name] = choice_from_scores(question.name, options, scores)
+            choice = choice_from_scores(question.name, options, scores)
+            if self.temperature > 0:
+                choice.chosen = options[self._sample_index(scores)]
+            choices[question.name] = choice
 
         latency_ms = (time.time() - started) * 1000.0
         decision = TypedDecision(

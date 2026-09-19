@@ -583,6 +583,7 @@ async def run_task(
             "agreement": agreement,
             "llm_success": llm_success_by_step.get(step_num, True),
             "head_confidence": op_choice.get("confidence", 0.0),
+            "vote_margin": op_choice.get("vote_margin", 0.0),
             "head_latency_ms": event["latency_ms"],
             "llm_latency_ms": turn_latency_by_step.get(step_num, 0.0),
             **gates,
@@ -676,8 +677,8 @@ def run_eval(
     successes = [s for s in all_steps if s["llm_success"]]
     failures = [s for s in all_steps if not s["llm_success"]]
 
-    def _rate(rows: List[Dict[str, Any]]) -> Optional[float]:
-        return round(sum(1 for r in rows if r["agreement"]) / len(rows), 4) if rows else None
+    def _rate(rows: List[Dict[str, Any]], key: str = "agreement") -> Optional[float]:
+        return round(sum(1 for r in rows if r[key]) / len(rows), 4) if rows else None
 
     def _gate_rate(rows: List[Dict[str, Any]], gate: str) -> Optional[float]:
         if not rows:
@@ -689,6 +690,10 @@ def run_eval(
         "total_decide_steps": len(all_steps),
         "min_decide_steps_per_task": min((r["decide_steps"] for r in reports), default=0),
         "agreement_rate": _rate(all_steps),
+        "op_agreement_rate": _rate(all_steps, "op_agree"),
+        "target_agreement_rate": _rate(
+            [s for s in all_steps if s["target_agree"] is not None]
+        ),
         "agreement_given_llm_success": _rate(successes),
         "agreement_given_llm_failure": _rate(failures),
         "stuck_true_rate": _gate_rate(all_steps, "stuck"),
@@ -830,6 +835,8 @@ def render_markdown(report: Dict[str, Any]) -> str:
         f"| Total decide steps | {agg['total_decide_steps']} |",
         f"| Min decide steps per task | {agg['min_decide_steps_per_task']} |",
         f"| Agreement rate | {_fmt(agg['agreement_rate'])} |",
+        f"| Op-type agreement rate | {_fmt(agg['op_agreement_rate'])} |",
+        f"| Target agreement rate (targeted ops) | {_fmt(agg['target_agreement_rate'])} |",
         f"| Agreement given LLM success | {_fmt(agg['agreement_given_llm_success'])} |",
         f"| Agreement given LLM failure | {_fmt(agg['agreement_given_llm_failure'])} |",
         f"| Stuck=true rate (all steps) | {_fmt(agg['stuck_true_rate'])} |",
