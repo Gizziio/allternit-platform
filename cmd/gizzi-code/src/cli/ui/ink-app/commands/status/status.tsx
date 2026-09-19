@@ -1,8 +1,8 @@
-// @ts-nocheck
 import * as React from 'react';
 import type { LocalJSXCommandContext } from '../../commands';
 import { Settings } from '../../components/Settings/Settings';
 import type { LocalJSXCommandOnDone } from '../../types/command';
+import type { Message } from '../../types/message.js';
 import {
   getCwdState,
   getOriginalCwd,
@@ -40,7 +40,10 @@ function renderProgressBar(ratio: number, width: number): string {
 }
 
 function renderInlineStatus(context: LocalJSXCommandContext): string {
-  const messages = context.getAppState().messages ?? [];
+  // TODO(types): AppState has no `messages` field (upstream drift shared with
+  // dash.ts/session-info.tsx/statusModel.ts); runtime value is always
+  // undefined, so the `?? []` fallback was always in effect.
+  const messages = (context.getAppState() as { messages?: Message[] }).messages ?? [];
   const model = getRuntimeMainLoopModel({
     permissionMode: context.getAppState().toolPermissionContext.mode,
     mainLoopModel: context.options.mainLoopModel,
@@ -117,7 +120,9 @@ function renderInlineStatus(context: LocalJSXCommandContext): string {
     lines.push(`MCP servers: ${mcpClients.length} connected`);
     for (const client of mcpClients.slice(0, 5)) {
       const name = client.name ?? 'unknown';
-      const status = client.status ?? 'unknown';
+      // TODO(types): MCPServerConnection has no `status` field (discriminator
+      // is `type`); runtime value is always undefined → 'unknown'.
+      const status = (client as { status?: string }).status ?? 'unknown';
       lines.push(`  • ${name} (${status})`);
     }
     if (mcpClients.length > 5) {

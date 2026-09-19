@@ -1,5 +1,3 @@
-// @ts-nocheck
-import type { LspServerConfig } from '../services/lsp/types.js'
 import type { McpServerConfig } from '../services/mcp/types.js'
 import type { BundledSkillDefinition } from '../skills/bundledSkills.js'
 import type {
@@ -8,6 +6,18 @@ import type {
   PluginManifest,
 } from '../utils/plugins/schemas.js'
 import type { HooksSettings } from '../utils/settings/types.js'
+
+// TODO(types): '../services/lsp/types.js' is a TEMPORARY SHIM exporting
+// nothing. Local mirror of src/runtime/services/lsp/types.ts — remove once
+// the shim grows the real exports (sibling TODO(types) pattern, see
+// services/lsp/LSPServerInstance.ts).
+interface LspServerConfig {
+  command: string
+  args: string[]
+  env?: Record<string, string>
+  rootUri?: string
+  extensionToLanguage?: Record<string, string>
+}
 
 export type { PluginAuthor, PluginManifest, CommandMetadata }
 

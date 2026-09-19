@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Command } from '../../commands'
 import { env } from '../../utils/env'
 

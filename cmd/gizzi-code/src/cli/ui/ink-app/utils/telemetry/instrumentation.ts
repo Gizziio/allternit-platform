@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { DiagLogLevel, diag, trace } from '@opentelemetry/api'
 import { logs } from '@opentelemetry/api-logs'
 // OTLP/Prometheus exporters are dynamically imported inside the protocol
@@ -391,7 +390,11 @@ async function initializeBetaTracing(
   const loggerProvider = new LoggerProvider({
     resource,
     processors: [
-      new BatchLogRecordProcessor(logExporter, {
+      // sdk-logs 0.222 takes the exporter inside the options object; the
+      // legacy (exporter, options) 2-arg form silently left the processor
+      // without an exporter at runtime.
+      new BatchLogRecordProcessor({
+        exporter: logExporter,
         scheduledDelayMillis: DEFAULT_LOGS_EXPORT_INTERVAL_MS,
       }),
     ],
@@ -586,7 +589,8 @@ export async function initializeTelemetry() {
         // Add batch processors for each exporter
         processors: logExporters.map(
           exporter =>
-            new BatchLogRecordProcessor(exporter, {
+            new BatchLogRecordProcessor({
+              exporter,
               scheduledDelayMillis: parseInt(
                 process.env.OTEL_LOGS_EXPORT_INTERVAL ||
                   DEFAULT_LOGS_EXPORT_INTERVAL_MS.toString(),

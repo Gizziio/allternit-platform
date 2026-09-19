@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isInputModeCharacter } from './../components/PromptInput/inputModes.ts'
 import { useNotifications } from '../../../../context/notifications'
 import stripAnsi from 'strip-ansi'

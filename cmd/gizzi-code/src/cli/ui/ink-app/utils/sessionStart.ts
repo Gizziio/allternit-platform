@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getMainThreadAgentType } from '../bootstrap/state.js'
 import type { HookResultMessage } from '../types/message.js'
 import { createAttachmentMessage } from './attachments.js'
@@ -169,7 +168,7 @@ export async function processSessionStartHooks(
       toolUseID: 'SessionStart',
       hookEvent: 'SessionStart',
     })
-    hookMessages.push(contextMessage)
+    hookMessages.push(contextMessage as unknown as HookResultMessage)
   }
 
   return hookMessages
@@ -226,7 +225,7 @@ export async function processSetupHooks(
       toolUseID: 'Setup',
       hookEvent: 'Setup',
     })
-    hookMessages.push(contextMessage)
+    hookMessages.push(contextMessage as unknown as HookResultMessage)
   }
 
   return hookMessages

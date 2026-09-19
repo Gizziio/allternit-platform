@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type AllternitAI from '@allternit/gizzi-sdk/providers/allternit'
 import {

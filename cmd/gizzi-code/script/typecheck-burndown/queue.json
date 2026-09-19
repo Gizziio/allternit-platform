@@ -1,13 +1,13 @@
 {
   "version": 1,
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
-  "batchCount": 104,
+  "batchCount": 105,
   "stats": {
-    "totalNocheck": 948,
+    "totalNocheck": 908,
     "excludedCompilerArtifacts": 118,
     "excludedVendored": 93,
-    "totalQueueFiles": 717,
-    "totalQueueLoc": 287202,
+    "totalQueueFiles": 677,
+    "totalQueueLoc": 279734,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -481,46 +481,7 @@
     {
       "id": "b0422",
       "files": [
-        "src/runtime/integrations/plugin/index.ts",
-        "src/cli/ui/ink-app/commands/h5i/h5i.ts",
-        "src/cli/main.ts",
-        "src/cli/ui/ink-app/commands/diff/index.ts",
-        "src/cli/ui/ink-app/commands/find/index.ts",
-        "src/cli/ui/ink-app/commands/grep/index.ts",
-        "src/cli/ui/ink-app/commands/stats/index.ts",
-        "src/cli/ui/ink-app/commands/config/index.ts",
-        "src/cli/ui/ink-app/commands/help/index.ts",
-        "src/cli/ui/ink-app/commands/output-style/index.ts",
-        "src/cli/ui/ink-app/commands/stickers/index.ts",
-        "src/cli/ui/ink-app/commands/bots/index.ts",
-        "src/cli/ui/ink-app/commands/dashboard/index.ts",
-        "src/cli/ui/ink-app/commands/history/index.ts",
-        "src/cli/ui/ink-app/commands/release-notes/index.ts",
-        "src/cli/ui/ink-app/commands/think/index.ts",
-        "src/cli/ui/ink-app/commands/doctor/index.ts",
-        "src/cli/ui/ink-app/commands/edit-prompt/index.ts",
-        "src/cli/ui/ink-app/commands/plugin/index.tsx",
-        "src/cli/ui/ink-app/utils/mcpOutputStorage.ts",
-        "src/cli/ui/ink-app/commands/bridge-kick.ts",
-        "src/runtime/integrations/bridgeEnabled.ts",
-        "src/cli/ui/ink-app/skills/bundledSkills.ts",
-        "src/cli/commands/connect.ts",
-        "src/cli/ui/ink-app/commands/h5i/index.ts",
-        "src/cli/ui/ink-app/commands/terminalSetup/index.ts",
-        "src/cli/ui/ink-app/commands/cost/cost.ts",
-        "src/cli/ui/ink-app/commands/status/status.tsx",
-        "src/cli/ui/ink-app/tools/SkillTool/prompt.ts",
-        "src/cli/ui/ink-app/types/plugin.ts",
-        "src/cli/ui/ink-app/hooks/useTextInput.ts",
-        "src/cli/ui/ink-app/tools/AgentTool/builtInAgents.ts",
-        "src/cli/ui/ink-app/utils/sessionStart.ts",
-        "src/cli/ui/ink-app/utils/telemetry/instrumentation.ts",
-        "src/runtime/services/api/withRetry.ts",
-        "src/cli/ui/ink-app/services/api/withRetry.ts",
-        "src/cli/ui/ink-app/commands/status/index.ts",
-        "src/cli/ui/ink-app/components/TextInput.tsx",
-        "src/cli/ui/ink-app/tools/ReadMcpResourceTool/ReadMcpResourceTool.ts",
-        "src/cli/ui/ink-app/tools/WebFetchTool/utils.ts"
+        "src/runtime/integrations/bridgeEnabled.ts"
       ],
       "loc": 7036,
       "twins": [
@@ -544,7 +505,6 @@
     {
       "id": "b0423",
       "files": [
-        "src/cli/ui/ink-app/utils/plugins/mcpPluginIntegration.ts",
         "src/runtime/services/analytics/metadata.ts",
         "src/cli/ui/ink-app/services/analytics/metadata.ts",
         "src/cli/ui/ink-app/commands/cost/index.ts",
@@ -1801,7 +1761,15 @@
       "state": "DONE",
       "burnedFiles": 1,
       "burnedLoc": 142,
-      "note": "Burned 2026-09-19 (ao/ts-burn-tail2): DCE-flagged require of memoryShapeTelemetry referenced logMemoryRecallShape the runtime shim did not export — added identical stub (also a latent crash if MEMORY_SHAPE_TELEMETRY were enabled). Replaced pre-existing as any clusters: json_schema output_format typed per vendored SDK BetaJSONOutputFormat (bridged past ambient global.d.ts mirror in no-touch set), result.content via typed text-block predicate. Escalations: none. Identity: live -1 + recorded +1 = 1460 = totalAccounted."
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail2): DCE-flagged require of memoryShapeTelemetry referenced logMemoryRecallShape the runtime shim did not export — added identical stub (also a latent crash if MEMORY_SHAPE_TELEMETRY were enabled). json_schema output_format typed per vendored SDK, result.content via typed predicate. Escalations: none."
+    },
+    {
+      "id": "b0395",
+      "state": "DONE",
+      "files": [],
+      "burnedFiles": 40,
+      "burnedLoc": 7468,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head1). Retired-id absorption: the queue regen (edcf804, ao/artifact-codemod pilot landing) retired the b0395 id mid-flight and remixed its 40 files into b0422 (39) and b0423 (mcpPluginIntegration.ts); removed from those batches (b0422 keeps bridgeEnabled.ts, 1 file; b0423 keeps 18) and recorded here. 29 header-only 0-error burns (tsc include compiles every queued file: baseline EXIT=0 with headers, post-strip inventory attributed 31 errors to 11 files, converged in 2 iterations). Type-only fixes: connect.ts (local RuntimeAuthMethod discriminated union mirroring the runtime auth-plugin shape — label/prompts/authorize oauth descriptor vs api direct-result; TODO(types) sibling pattern of codex.ts and provider.ts RuntimeAuthLoader), main.ts (RegisteredCommand as-unknown-as CommandModule per the registry doc contract), status.tsx + TextInput.tsx (AppState.messages / MCPServerConnection.status / useVoiceState {}-return pins, sibling dash.ts pattern), builtInAgents.ts (structural lazy-require contract; LATENT BUG flagged not fixed: getCoordinatorAgents is not exported by coordinator/workerAgent.js), WebFetchTool/utils.ts (axios content-type normalized via String(); text-block typeof-guard vs index-signature union), types/plugin.ts (dormant-shim local mirror of runtime lsp/types.ts, sibling TODO(types) pattern), sessionStart.ts (as-unknown-as HookResultMessage, mirroring the shared twin's existing casts), runtime withRetry.ts (getAPIProviderForStatsig import switched to the shared twin returning the verified-metadata brand). Two latent runtime bugs fixed where the old code could not type-check honestly: instrumentation.ts BatchLogRecordProcessor migrated from the legacy 2-arg call to the 1-arg options shape (sdk-logs 0.222 pinned; the old form silently left the processor without an exporter), and runtime withRetry.ts sleep import switched to the abort-aware shared/utils/sleep.js (the old 1-arg src/utils/sleep.js silently dropped the abort signal and abortError at all 3 call sites). No escalations; allowlist untouched."
     }
   ],
   "quarantined": [

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Hooks, PluginInput, Plugin as PluginInstance } from "@allternit/plugin"
 import { Config } from "@/runtime/context/config/config"
 import { Bus } from "@/shared/bus"
@@ -33,14 +32,19 @@ export namespace Plugin {
     })
     const config = await Config.get()
     const hooks: HooksWithName[] = []
-    const input: PluginInput = {
+    // TODO(types): PluginInput declares project: string and serverUrl: string,
+    // but the runtime has always passed the full Project record and a URL
+    // object (Instance.project / Server.url()) — what plugins observe at
+    // runtime. Widen locally instead of editing the public SDK contract
+    // (the ink-app twin and third-party plugins type against it).
+    const input = {
       client: client as any,
       project: Instance.project,
       worktree: Instance.worktree,
       directory: Instance.directory,
       serverUrl: Server.url(),
       $: Bun.$,
-    }
+    } as unknown as PluginInput
 
     // Load built-in Codex auth plugin
     try {
