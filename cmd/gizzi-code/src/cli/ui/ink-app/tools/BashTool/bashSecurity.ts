@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { logEvent } from './../../services/analytics/index.ts'
 import { extractHeredocs } from '../../utils/bash/heredoc.js'
 import { ParsedCommand } from '../../utils/bash/ParsedCommand.js'

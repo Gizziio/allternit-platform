@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 104,
   "stats": {
-    "totalNocheck": 951,
+    "totalNocheck": 950,
     "excludedCompilerArtifacts": 118,
     "excludedVendored": 93,
-    "totalQueueFiles": 720,
-    "totalQueueLoc": 291805,
+    "totalQueueFiles": 719,
+    "totalQueueLoc": 289212,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -533,12 +533,13 @@
     },
     {
       "id": "b0034",
-      "files": [
-        "src/cli/ui/ink-app/tools/BashTool/bashSecurity.ts"
-      ],
-      "loc": 2593,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 2593,
+      "note": "Burned by ao/ts-burn-head3 (PR pending): removed // @ts-nocheck from src/cli/ui/ink-app/tools/BashTool/bashSecurity.ts (2593 loc). Zero type errors under tsc --noEmit after header removal (canary-verified the file is in the checked set); no escalations, no code changes beyond header removal."
     },
     {
       "id": "b0423",
