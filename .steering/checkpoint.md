@@ -18,11 +18,14 @@ pushed and RUNNING as `allternit/jev-laya-shadow-head-fine-tune-v1` (Kaggle
 re-derived the slug from the title; metadata in worktree carries the real
 slug). Background poller running (60s interval).
 
-**Next:** Wait for kernel terminal state; on COMPLETE fetch output, inspect
-result.json + logs, fill in the docs section; on ERROR do one retry cycle
-(-v2 slug); commit + push session/laya-finetune.
+**Next:** Blocked on owner decision — Kaggle GPU quota exhausted on the
+account (probe kernel with enable_gpu ran CPU-only and COMPLETED; see docs
+section 'Kaggle run v1'). v1 + v2 kernels both error on the GPU assert, not
+a notebook bug. Resume: re-push /tmp/jev-kernel-v2 once quota is back, poll,
+fetch result.json, fill in docs.
 
-**Open questions:** whether single-T4 wall-clock stays well under the
-session cap (expected: minutes — upstream 2×T4 trains 6k decisions in 4–6
-min; we have ~3.5k sequences on 1 GPU); whether `dataset_sources` in
-kernel-metadata attached the input (cell 3 asserts it — the run will tell).
+**Open questions:** who/what is consuming the account's GPU quota
+(`allternit/laya-osone-finetune` ran 17 s before the first push); whether
+single-T4 wall-clock stays well under the session cap once a GPU is
+actually attached (expected: minutes — upstream 2×T4 trains 6k decisions in
+4–6 min; we have ~3.5k sequences on 1 GPU).

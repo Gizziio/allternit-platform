@@ -218,8 +218,13 @@ https://www.kaggle.com/datasets/allternit/jev-shadow-train-v1 — `kaggle
 datasets status` → `ready`. Files: `train.jsonl`, `val.jsonl`,
 `dataset-metadata.json`.
 
-**Kernel**: `allternit/jev-laya-shadow-head-fine-tune-v1` (private, GPU T4
-x1, internet on) — https://www.kaggle.com/code/allternit/jev-laya-shadow-head-fine-tune-v1.
+**Kernel v1**: `allternit/jev-laya-shadow-head-fine-tune-v1` (private, GPU T4
+x1 requested, internet on) —
+https://www.kaggle.com/code/allternit/jev-laya-shadow-head-fine-tune-v1 —
+errored on a CPU-only worker (GPU quota, see Result below).
+**Kernel v2 (retry, same notebook)**: `allternit/jev-laya-finetune-v2` —
+https://www.kaggle.com/code/allternit/jev-laya-finetune-v2 — same
+CPU-only failure.
 NOTE: the requested slug `jev-laya-finetune-v1` was overridden by Kaggle —
 the API derives the slug from the kernel TITLE, not the `id` field, and
 warned at push time. `kernel-metadata.json` in `notebooks/` carries the real
@@ -241,7 +246,28 @@ slug so a re-push updates the same kernel. Input dataset attached via
    `{val_accuracy, val_ece, val_operation_accuracy, val_target_accuracy,
    cases_train, cases_val, notes}`.
 
-**Result**: see `result.json` in the kernel output (poll
-`kaggle kernels status allternit/jev-laya-shadow-head-fine-tune-v1`; fetch
-with `kaggle kernels output allternit/jev-laya-shadow-head-fine-tune-v1 -p
-/tmp/jev-kernel-output`). Filled in after the run completes.
+**Result**: NOT OBTAINED in this session — Kaggle GPU quota exhausted
+(account-level). Both v1 (`allternit/jev-laya-shadow-head-fine-tune-v1`) and
+the -v2 retry (`allternit/jev-laya-finetune-v2`) were pushed successfully
+with `enable_gpu: true` but came up on **CPU-only workers**
+(`nvidia-smi: command not found`, `CUDA Available: False`) and failed the
+notebook's GPU assert in cell 1 — an infrastructure failure, not a notebook
+bug. A minimal probe kernel (single cell printing
+`torch.cuda.is_available()`, `enable_gpu: true`) **also ran CPU-only and
+COMPLETED**, which isolates the cause to the account (Kaggle silently
+downgrades GPU requests instead of erroring at push). Notably
+`allternit/laya-osone-finetune` ran on this account 17 s before the first
+push — concurrent GPU use on the shared account is the likely quota drain.
+
+**Resume (owner decision — quota reset/verification, then):**
+
+```bash
+# kernel v2 already carries the final notebook; re-run it (new version):
+kaggle kernels push -p /tmp/jev-kernel-v2   # or push a -v3 slug per playbook
+# poll + fetch:
+kaggle kernels status allternit/jev-laya-finetune-v2
+kaggle kernels output allternit/jev-laya-finetune-v2 -p /tmp/jev-kernel-output
+```
+
+The dataset, notebook, and kernel metadata are all in place and verified;
+only the GPU worker is missing.
