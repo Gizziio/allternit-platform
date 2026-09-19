@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Command semantics configuration for interpreting exit codes in different contexts.
  *

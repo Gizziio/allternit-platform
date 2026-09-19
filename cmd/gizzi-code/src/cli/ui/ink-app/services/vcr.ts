@@ -1,5 +1,7 @@
-// @ts-nocheck
-import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type {
+  BetaContentBlock,
+  BetaUsage,
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { createHash, randomUUID, type UUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import isPlainObject from 'lodash-es/isPlainObject.js'
@@ -164,11 +166,15 @@ export async function withVCR(
 function addCachedCostToTotalSessionCost(
   message: AssistantMessage | StreamEvent,
 ): void {
-  if (message.type === 'stream_event') {
+  // TODO(types): 'stream_event' is not a member of StreamEvent['type'] — this
+  // branch is dead at runtime (deliberate DCE); comparison preserved as-is.
+  if ((message as { type: string }).type === 'stream_event') {
     return
   }
-  const model = message.message.model
-  const usage = message.message.usage
+  // TODO(types): the runtime twin suppresses these with @ts-ignore; pinned
+  // honestly instead — MessageUsage/BetaUsage shape mismatch is upstream drift.
+  const model = (message as AssistantMessage).message.model as string
+  const usage = (message as AssistantMessage).message.usage as unknown as BetaUsage
   const costUSD = calculateUSDCost(model, usage)
   addToTotalSessionCost(costUSD, usage, model)
 }
@@ -252,7 +258,7 @@ function mapAssistantMessage(
     timestamp: message.timestamp,
     message: {
       ...message.message,
-      content: message.message.content
+      content: (message.message.content as BetaContentBlock[])
         .map(_ => {
           switch (_.type) {
             case 'text':
@@ -270,7 +276,9 @@ function mapAssistantMessage(
               return _ // Handle other block types unchanged
           }
         })
-        .filter(Boolean) as BetaContentBlock[],
+        // TODO(types): BetaContentBlock is structurally wider than the local
+        // MessageContent/ContentBlock unions; runtime shape preserved.
+        .filter(Boolean) as unknown as AssistantMessage['message']['content'],
     },
     type: 'assistant',
   }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   getCwdState,
   getOriginalCwd,
@@ -22,6 +21,7 @@ import {
   renderModelName,
 } from '../../utils/model/model.js'
 import type { LocalCommandCall } from '../../types/command.js'
+import type { Message } from '../../types/message.js'
 
 const PROGRESS_BAR_WIDTH = 20
 
@@ -39,7 +39,10 @@ function severityColor(ratio: number): string {
 }
 
 export const call: LocalCommandCall = async (_args, context) => {
-  const messages = context.getAppState().messages ?? []
+  // TODO(types): AppState has no `messages` field (upstream drift shared with
+  // status.tsx/session-info.tsx/statusModel.ts); runtime value is always
+  // undefined, so the `?? []` fallback was always in effect.
+  const messages = (context.getAppState() as { messages?: Message[] }).messages ?? []
   const model = getRuntimeMainLoopModel({
     permissionMode: context.getAppState().toolPermissionContext.mode,
     mainLoopModel: context.options.mainLoopModel,
@@ -115,7 +118,9 @@ export const call: LocalCommandCall = async (_args, context) => {
     lines.push(`MCP servers: ${mcpClients.length} connected`)
     for (const client of mcpClients.slice(0, 5)) {
       const name = client.name ?? 'unknown'
-      const status = client.status ?? 'unknown'
+      // TODO(types): MCPServerConnection has no `status` field (discriminator
+      // is `type`); runtime value is always undefined → 'unknown'.
+      const status = (client as { status?: string }).status ?? 'unknown'
       lines.push(`  • ${name} (${status})`)
     }
     if (mcpClients.length > 5) {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Slug } from "@allternit/gizzi-util/slug.js"
 import path from "path"
 import { BusEvent } from "@/shared/bus/bus-event"
@@ -488,8 +487,19 @@ export namespace Session {
     if (cfg.share === "disabled") {
       throw new Error("Sharing is disabled in configuration")
     }
-    // @ts-expect-error - Module may not exist in all builds
-    const { ShareNext } = await import("@/share/share-next")
+    // TODO(types): '@/share/share-next' is a local stub (ShareNext = () => {});
+    // the real namespace lives at '@/runtime/session/share/share-next'. The
+    // dynamic import is build-dependent ("Module may not exist in all
+    // builds"), so the result is pinned to the real create/remove surface
+    // without changing which module is loaded.
+    const { ShareNext } = (await import("@/share/share-next")) as unknown as {
+      ShareNext: {
+        create: (
+          sessionID: string,
+        ) => Promise<{ id: string; url: string; secret: string }>
+        remove: (sessionID: string) => Promise<void>
+      }
+    }
     const share = await ShareNext.create(id)
     Database.use((db) => {
       const row = db.update(SessionTable).set({ share_url: share.url }).where(eq(SessionTable.id, id)).returning().get()
@@ -502,8 +512,19 @@ export namespace Session {
 
   export const unshare = fn(Identifier.schema("session"), async (id) => {
     // Use ShareNext to remove the share (same as share function uses ShareNext to create)
-    // @ts-expect-error - Module may not exist in all builds
-    const { ShareNext } = await import("@/share/share-next")
+    // TODO(types): '@/share/share-next' is a local stub (ShareNext = () => {});
+    // the real namespace lives at '@/runtime/session/share/share-next'. The
+    // dynamic import is build-dependent ("Module may not exist in all
+    // builds"), so the result is pinned to the real create/remove surface
+    // without changing which module is loaded.
+    const { ShareNext } = (await import("@/share/share-next")) as unknown as {
+      ShareNext: {
+        create: (
+          sessionID: string,
+        ) => Promise<{ id: string; url: string; secret: string }>
+        remove: (sessionID: string) => Promise<void>
+      }
+    }
     await ShareNext.remove(id)
     Database.use((db) => {
       const row = db.update(SessionTable).set({ share_url: null }).where(eq(SessionTable.id, id)).returning().get()
@@ -989,9 +1010,7 @@ export namespace Session {
       const cacheReadInputTokens = safe(input.usage.cachedInputTokens ?? 0)
       const cacheWriteInputTokens = safe(
         (input.metadata?.["anthropic"]?.["cacheCreationInputTokens"] ??
-          // @ts-expect-error
           input.metadata?.["bedrock"]?.["usage"]?.["cacheWriteInputTokens"] ??
-          // @ts-expect-error
           input.metadata?.["venice"]?.["usage"]?.["cacheCreationInputTokens"] ??
           0) as number,
       )

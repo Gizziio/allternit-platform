@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Plugin telemetry helpers — shared field builders for plugin lifecycle events.
  *

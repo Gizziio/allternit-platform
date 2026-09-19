@@ -1,9 +1,10 @@
-// @ts-nocheck
 import { randomBytes } from 'crypto'
 import type { ControlOperator, ParseEntry } from 'shell-quote'
 import type {
   CommandPrefixResult,
   CommandSubcommandPrefixResult,
+  createCommandPrefixExtractor,
+  createSubcommandPrefixExtractor,
 } from '../shell/prefix.js'
 import { extractHeredocs, restoreHeredocs } from './heredoc.js'
 import { quote, tryParseShellCommand } from './shellQuote.js'

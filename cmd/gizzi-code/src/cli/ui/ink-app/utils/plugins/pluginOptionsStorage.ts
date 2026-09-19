@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Plugin option storage and substitution.
  *
@@ -78,7 +77,9 @@ export const loadPluginOptions = memoize(
 )
 
 export function clearPluginOptionsCache(): void {
-  loadPluginOptions.cache?.clear?.()
+  // TODO(types): lodash-es memoize does not declare `.cache` (b0219
+  // modelCapabilities.ts precedent); intersect the MapCache clear shape.
+  ;(loadPluginOptions as { cache?: { clear?: () => void } }).cache?.clear?.()
 }
 
 /**

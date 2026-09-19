@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type StructuredPatchHunk, structuredPatch } from 'diff'
 import { recordAcceptedEdit } from '@/runtime/services/telemetry/gizziUsageTelemetry.js'
 import { logEvent } from './../services/analytics/index.ts'

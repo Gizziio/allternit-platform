@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Beta Session Tracing for gizzi-code
  *

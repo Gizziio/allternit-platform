@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Prompt-related constants and helpers used across the CLI.
  *
