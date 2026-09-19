@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 104,
   "stats": {
-    "totalNocheck": 949,
+    "totalNocheck": 948,
     "excludedCompilerArtifacts": 118,
     "excludedVendored": 93,
-    "totalQueueFiles": 718,
-    "totalQueueLoc": 287344,
+    "totalQueueFiles": 717,
+    "totalQueueLoc": 287202,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1795,12 +1795,13 @@
     },
     {
       "id": "b0439",
-      "files": [
-        "src/memdir/findRelevantMemories.ts"
-      ],
+      "files": [],
       "loc": 142,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 142,
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail2): DCE-flagged require of memoryShapeTelemetry referenced logMemoryRecallShape the runtime shim did not export — added identical stub (also a latent crash if MEMORY_SHAPE_TELEMETRY were enabled). Replaced pre-existing as any clusters: json_schema output_format typed per vendored SDK BetaJSONOutputFormat (bridged past ambient global.d.ts mirror in no-touch set), result.content via typed text-block predicate. Escalations: none. Identity: live -1 + recorded +1 = 1460 = totalAccounted."
     }
   ],
   "quarantined": [

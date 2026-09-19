@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
+import type { BetaJSONOutputFormat as SdkBetaJSONOutputFormat } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
 import { logForDebugging } from '../shared/utils/debug.js'
 import { errorMessage } from '../shared/utils/errors.js'
 import { getDefaultSonnetModel } from '../utils/model/model.js'
@@ -107,8 +107,12 @@ async function selectRelevantMemories(
         },
       ],
       max_tokens: 256,
+      // The vendored SDK types output_format as type: 'json_schema', and the
+      // runtime prompt pipeline handles it; the ambient Allternit.Beta.Messages
+      // mirror in src/types/global.d.ts still says 'json'. Keep the SDK shape
+      // and bridge the stale mirror with a cast.
       output_format: {
-        type: 'json_schema' as any,
+        type: 'json_schema',
         schema: {
           type: 'object',
           properties: {
@@ -117,17 +121,22 @@ async function selectRelevantMemories(
           required: ['selected_memories'],
           additionalProperties: false,
         },
-      },
+      } as SdkBetaJSONOutputFormat as unknown as Allternit.Beta.Messages.BetaJSONOutputFormat,
       signal,
       querySource: 'memdir_relevance',
     })
 
-    const textBlock = (result.content as any[]).find((block: any) => block.type === 'text')
-    if (!textBlock || textBlock.type !== 'text') {
+    const textBlock = (
+      result.content as Array<{ type: string; text?: unknown }>
+    ).find(
+      (block): block is { type: 'text'; text: string } =>
+        block.type === 'text' && typeof block.text === 'string',
+    )
+    if (!textBlock) {
       return []
     }
 
-    const parsed: { selected_memories: string[] } = jsonParse((textBlock as any).text)
+    const parsed: { selected_memories: string[] } = jsonParse(textBlock.text)
     return parsed.selected_memories.filter(f => validFilenames.has(f))
   } catch (e) {
     if (signal.aborted) {

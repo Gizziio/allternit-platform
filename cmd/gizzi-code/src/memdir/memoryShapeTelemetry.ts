@@ -10,6 +10,13 @@ export function flushMemoryShapeTelemetry(): void {
   // Stub implementation
 }
 
+export function logMemoryRecallShape(
+  _memories: unknown,
+  _selected: unknown,
+): void {
+  // Stub implementation
+}
+
 export function logMemoryWriteShape(
   _toolName: string,
   _toolInput: unknown,
