@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Shell-agnostic git operation tracking for usage metrics.
  *

@@ -1012,6 +1012,6 @@ export interface CollapsibleMessage extends Message {
 
 export interface SystemFileSnapshotMessage extends SystemMessage {
   subtype: 'file_snapshot'
-  files: string[]
+  snapshotFiles: Array<{ key: string; path: string; content: string }>
   timestamp: number
 }

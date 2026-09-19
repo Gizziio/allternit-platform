@@ -1,7 +1,9 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type AllternitAI from '@allternit/gizzi-sdk/providers/allternit'
-import type { BetaToolUnion } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
+import type {
+  BetaContentBlock,
+  BetaToolUnion,
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import { z } from 'zod/v4'
@@ -294,6 +296,24 @@ export type TranscriptEntry = {
   content: TranscriptBlock[]
 }
 
+// sideQuery's return type resolves through the ambient Allternit namespace
+// shim (src/types/global.d.ts), which types `content` as unknown[]. Pin the
+// helpers below to exactly what sideQuery returns and narrow content
+// defensively at the call sites — the SDK always returns content blocks.
+type SideQueryResult = Awaited<ReturnType<typeof sideQuery>>
+
+function asContentBlocks(content: unknown): BetaContentBlock[] {
+  if (!Array.isArray(content)) return []
+  return content.filter(
+    (block): block is BetaContentBlock =>
+      typeof block === 'object' && block !== null && 'type' in block,
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 /**
  * Build transcript entries from messages.
  * Includes user text messages and assistant tool_use blocks (excluding assistant text).
@@ -341,15 +361,18 @@ export function buildTranscriptEntries(messages: Message[]): TranscriptEntry[] {
       }
     } else if (msg.type === 'assistant') {
       const blocks: TranscriptBlock[] = []
-      for (const block of msg.message.content) {
-        // Only include tool_use blocks — assistant text is model-authored
-        // and could be crafted to influence the classifier's decision.
-        if (block.type === 'tool_use') {
-          blocks.push({
-            type: 'tool_use',
-            name: block.name,
-            input: block.input,
-          })
+      const content = msg.message.content
+      if (Array.isArray(content)) {
+        for (const block of content) {
+          // Only include tool_use blocks — assistant text is model-authored
+          // and could be crafted to influence the classifier's decision.
+          if (isRecord(block) && block.type === 'tool_use') {
+            blocks.push({
+              type: 'tool_use',
+              name: typeof block.name === 'string' ? block.name : '',
+              input: block.input,
+            })
+          }
         }
       }
       if (blocks.length > 0) {
@@ -607,9 +630,7 @@ function parseXmlThinking(text: string): string | null {
 /**
  * Extract usage stats from an API response.
  */
-function extractUsage(
-  result: AllternitAI.Beta.Messages.BetaMessage,
-): ClassifierUsage {
+function extractUsage(result: SideQueryResult): ClassifierUsage {
   return {
     inputTokens: result.usage.input_tokens,
     outputTokens: result.usage.output_tokens,
@@ -622,9 +643,7 @@ function extractUsage(
  * Extract the API request_id (req_xxx) that the SDK attaches as a
  * non-enumerable `_request_id` property on response objects.
  */
-function extractRequestId(
-  result: AllternitAI.Beta.Messages.BetaMessage,
-): string | undefined {
+function extractRequestId(result: SideQueryResult): string | undefined {
   return (result as { _request_id?: string | null })._request_id ?? undefined
 }
 
@@ -798,7 +817,7 @@ async function classifyYoloActionXml(
       stage1Usage = extractUsage(stage1Raw)
       stage1RequestId = extractRequestId(stage1Raw)
       stage1MsgId = stage1Raw.id
-      const stage1Text = extractTextContent(stage1Raw.content)
+      const stage1Text = extractTextContent(asContentBlocks(stage1Raw.content))
       const stage1Block = parseXmlBlock(stage1Text)
 
       void maybeDumpAutoMode(stage1Opts, stage1Raw, stage1Start, 'stage1')
@@ -884,7 +903,7 @@ async function classifyYoloActionXml(
     const stage2Usage = extractUsage(stage2Raw)
     const stage2RequestId = extractRequestId(stage2Raw)
     const stage2MsgId = stage2Raw.id
-    const stage2Text = extractTextContent(stage2Raw.content)
+    const stage2Text = extractTextContent(asContentBlocks(stage2Raw.content))
     const stage2Block = parseXmlBlock(stage2Text)
     const totalDurationMs = (stage1DurationMs ?? 0) + stage2DurationMs
     const totalUsage = stage1Usage
@@ -1192,7 +1211,7 @@ export async function classifyYoloAction(
 
     // Extract the tool use result using shared utility
     const toolUseBlock = extractToolUseBlock(
-      result.content,
+      asContentBlocks(result.content),
       YOLO_CLASSIFIER_TOOL_NAME,
     )
 

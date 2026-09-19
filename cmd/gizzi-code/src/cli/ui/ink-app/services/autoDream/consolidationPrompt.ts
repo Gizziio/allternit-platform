@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Extracted from dream.ts so auto-dream ships independently of KAIROS
 // feature flags (dream.ts is behind a feature()-gated require).
 

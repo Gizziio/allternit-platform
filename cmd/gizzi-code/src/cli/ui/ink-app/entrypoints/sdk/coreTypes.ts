@@ -61,4 +61,6 @@ export const EXIT_REASONS = [
   'bypass_permissions_disabled',
 ] as const
 
+export type ExitReason = (typeof EXIT_REASONS)[number]
+
 export type HookEvent = (typeof HOOK_EVENTS)[number]

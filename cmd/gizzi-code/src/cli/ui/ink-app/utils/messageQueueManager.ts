@@ -1,7 +1,5 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs'
-import type { Permutations } from './../types/utils.ts'
 import { getSessionId } from '../bootstrap/state.js'
 import type { AppState } from '../state/AppState.js'
 import type {
@@ -22,6 +20,15 @@ import { createSignal } from './signal.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 
 export type SetAppState = (f: (prev: AppState) => AppState) => void
+
+// Local mirror of the upstream Permutations<T> utility — the ink-app
+// types/utils.ts shim only carries DeepImmutable, and this is the sole
+// consumer. Every ordering of every subset of the mode literals.
+type Permutations<T extends string, U extends string = T> = [U] extends [never]
+  ? []
+  : U extends infer V extends string
+    ? [V, ...Permutations<Exclude<T, V>, Exclude<T, V>>]
+    : never
 
 // ============================================================================
 // Logging helper

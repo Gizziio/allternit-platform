@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import memoize from 'lodash-es/memoize.js'
 import {
@@ -83,7 +82,11 @@ export const getGroveSettings = memoize(
       return { success: false }
     }
   },
-)
+) as (() => Promise<ApiResult<AccountSettings>>) & {
+  // lodash memoize attaches a MapCache at runtime; the handwritten
+  // 'lodash-es/memoize.js' shim types the return as the bare function.
+  cache: { clear: () => void }
+}
 
 /**
  * Mark that the Grove notice has been viewed by the user

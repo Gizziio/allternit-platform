@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { randomUUID, type UUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { getOriginalCwd, getSessionId } from '../../bootstrap/state'
@@ -37,17 +36,22 @@ type TranscriptEntry = TranscriptMessage & {
  * otherwise flow into the saved title and break the resume hint.
  */
 export function deriveFirstPrompt(
-  firstUserMessage: Extract<SerializedMessage, { type: 'user' }> | undefined,
+  firstUserMessage: SerializedMessage | undefined,
 ): string {
   const content = firstUserMessage?.message?.content
   if (!content) return 'Branched conversation'
   const raw =
     typeof content === 'string'
       ? content
-      : content.find(
-          (block): block is { type: 'text'; text: string } =>
-            block.type === 'text',
-        )?.text
+      : Array.isArray(content)
+        ? content.find(
+            (block): block is { type: 'text'; text: string } =>
+              typeof block === 'object' &&
+              block !== null &&
+              'type' in block &&
+              block.type === 'text',
+          )?.text
+        : undefined
   if (!raw) return 'Branched conversation'
   return (
     raw.replace(/\s+/g, ' ').trim().slice(0, 100) || 'Branched conversation'
@@ -129,7 +133,7 @@ async function createFork(customTitle?: string): Promise<{
       isSidechain: false,
       forkedFrom: {
         sessionId: originalSessionId,
-        messageUuid: entry.uuid,
+        messageUuid: entry.uuid as UUID,
       },
     }
 
@@ -142,7 +146,7 @@ async function createFork(customTitle?: string): Promise<{
     serializedMessages.push(serialized)
     lines.push(jsonStringify(forkedEntry))
     if (entry.type !== 'progress') {
-      parentUuid = entry.uuid
+      parentUuid = entry.uuid as UUID
     }
   }
 
