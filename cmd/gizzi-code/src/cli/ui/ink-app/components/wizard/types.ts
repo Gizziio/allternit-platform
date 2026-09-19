@@ -13,7 +13,7 @@ export interface WizardContextValue {
   goNext: () => void
   goBack: () => void
   setStepData: (key: string, value: unknown) => void
-  updateWizardData: (key: string, value: unknown) => void
+  updateWizardData: (updates: Record<string, unknown>) => void
   cancel: () => void
   isFirstStep: boolean
   isLastStep: boolean
