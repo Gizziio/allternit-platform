@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { IncomingMessage, ServerResponse } from 'http'
 import { createServer, type Server } from 'http'
 import type { AddressInfo } from 'net'

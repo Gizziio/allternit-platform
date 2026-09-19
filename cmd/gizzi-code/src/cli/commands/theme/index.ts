@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Theme Command
  * Production-quality theme management with custom palette editing.

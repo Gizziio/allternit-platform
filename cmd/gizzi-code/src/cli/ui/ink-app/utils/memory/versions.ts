@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { findGitRoot } from '../git'
 
 // Note: This is used to check git repo status synchronously

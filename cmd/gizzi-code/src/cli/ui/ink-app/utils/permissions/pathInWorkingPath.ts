@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Path-in-working-path check and helpers.
  *

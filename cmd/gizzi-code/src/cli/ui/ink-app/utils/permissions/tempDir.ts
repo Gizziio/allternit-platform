@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { randomBytes } from 'crypto'
 import memoize from 'lodash-es/memoize.js'
 import { tmpdir } from 'os'

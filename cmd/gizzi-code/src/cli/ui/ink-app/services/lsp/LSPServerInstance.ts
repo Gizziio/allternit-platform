@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as path from 'path'
 import { pathToFileURL } from 'url'
 import type { InitializeParams } from 'vscode-languageserver-protocol'
@@ -8,7 +7,29 @@ import { errorMessage } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
 import { sleep } from '../../utils/sleep.js'
 import type { createLSPClient as createLSPClientType } from './LSPClient.js'
-import type { LspServerState, ScopedLspServerConfig } from './types.js'
+// TODO(types): './types.js' is a TEMPORARY SHIM exporting nothing. Local
+// mirror of src/runtime/services/lsp/types.ts — remove once the shim grows
+// the real exports.
+interface LspServerConfig {
+  command: string
+  args: string[]
+  env?: Record<string, string>
+  rootUri?: string
+  extensionToLanguage?: Record<string, string>
+}
+interface ScopedLspServerConfig extends LspServerConfig {
+  scope: 'project' | 'global'
+  // Ink-app extension fields (see LspServerConfigSchema in
+  // utils/plugins/schemas.ts) — absent from the runtime mirror.
+  initializationOptions?: unknown
+  settings?: unknown
+  workspaceFolder?: string
+  startupTimeout?: number
+  shutdownTimeout?: number
+  restartOnCrash?: boolean
+  maxRestarts?: number
+}
+type LspServerState = 'starting' | 'running' | 'stopped' | 'error' | string
 
 /**
  * LSP error code for "content modified" - indicates the server's state changed

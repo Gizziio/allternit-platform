@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isAbsolute, normalize } from 'path'
 import { logForDebugging } from '../debug.js'
 import { isENOENT } from '../errors.js'
