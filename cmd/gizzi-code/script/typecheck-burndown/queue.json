@@ -1,20 +1,21 @@
 {
   "version": 1,
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
-  "batchCount": 106,
+  "batchCount": 107,
   "stats": {
-    "totalNocheck": 872,
-    "excludedCompilerArtifacts": 95,
+    "totalNocheck": 851,
+    "excludedCompilerArtifacts": 66,
     "excludedVendored": 93,
-    "totalQueueFiles": 664,
-    "totalQueueLoc": 272041,
+    "totalQueueFiles": 672,
+    "totalQueueLoc": 273619,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
       "suspect-malformed": 2
     },
     "zeroImporter": 187,
-    "totalAccounted": 1466
+    "totalAccounted": 1474,
+    "batchCount": 107
   },
   "batches": [
     {
@@ -1770,6 +1771,23 @@
       "twins": [],
       "state": "NEW",
       "note": "Added 2026-09-19 by artifact-codemod pilot 9 union (orchestrator): these 6 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — dead ant comparisons, unknown-typed tool results, keybindings re-export drift; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md §7."
+    },
+    {
+      "id": "b441",
+      "files": [
+        "src/cli/ui/ink-app/components/BashModeProgress.tsx",
+        "src/cli/ui/ink-app/components/BridgeDialog.tsx",
+        "src/cli/ui/ink-app/components/ConfigurableShortcutHint.tsx",
+        "src/cli/ui/ink-app/components/ConsoleOAuthFlow.tsx",
+        "src/cli/ui/ink-app/components/CoordinatorAgentStatus.tsx",
+        "src/cli/ui/ink-app/components/DevBar.tsx",
+        "src/cli/ui/ink-app/components/FileEditToolDiff.tsx",
+        "src/cli/ui/ink-app/components/FullscreenLayout.tsx"
+      ],
+      "loc": 1578,
+      "twins": [],
+      "state": "NEW",
+      "note": "Added 2026-09-19 by artifact-codemod pilot 10: these 8 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — dormant-shim type drift: ShellProgress/KeybindingAction re-exports, qrToString overload, OrgValidationResult variant, AgentLineProps.task, dead ant constant comparisons, unknown-typed tool results/message content; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md §7. The other 21 conversions in the pilot dropped @ts-nocheck cleanly (excludedCompilerArtifacts 95→66, totalNocheck 872→851); DesktopHandoff.tsx was never nocheck-headed and needed no bookkeeping."
     }
   ],
   "quarantined": [

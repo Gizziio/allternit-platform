@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=874
+count=853
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/hooks/useChromeExtensionNotification.tsx
@@ -133,45 +133,24 @@ cli/ui/ink-app/commands/ultraplan.tsx
 cli/ui/ink-app/commands/view-plan/index.ts
 cli/ui/ink-app/commands/view-plan/view-plan.ts
 cli/ui/ink-app/commands/vim/vim.ts
-cli/ui/ink-app/components/AgentProgressLine.tsx
-cli/ui/ink-app/components/AutoModeOptInDialog.tsx
 cli/ui/ink-app/components/AutoUpdater.tsx
-cli/ui/ink-app/components/AutoUpdaterWrapper.tsx
-cli/ui/ink-app/components/AwsAuthStatusBox.tsx
 cli/ui/ink-app/components/BashModeProgress.tsx
 cli/ui/ink-app/components/BridgeDialog.tsx
-cli/ui/ink-app/components/ChannelDowngradeDialog.tsx
-cli/ui/ink-app/components/ClickableImageRef.tsx
-cli/ui/ink-app/components/CompactSummary.tsx
 cli/ui/ink-app/components/ConfigurableShortcutHint.tsx
 cli/ui/ink-app/components/ConsoleOAuthFlow.tsx
-cli/ui/ink-app/components/ContextSuggestions.tsx
-cli/ui/ink-app/components/ContextVisualization.tsx
 cli/ui/ink-app/components/CoordinatorAgentStatus.tsx
-cli/ui/ink-app/components/CtrlOToExpand.tsx
 cli/ui/ink-app/components/CustomSelect/use-multi-select-state.ts
 cli/ui/ink-app/components/CustomSelect/use-select-input.ts
 cli/ui/ink-app/components/DesktopUpsell/DesktopUpsellStartup.tsx
 cli/ui/ink-app/components/DevBar.tsx
-cli/ui/ink-app/components/DiagnosticsDisplay.tsx
-cli/ui/ink-app/components/EffortCallout.tsx
-cli/ui/ink-app/components/ExitFlow.tsx
-cli/ui/ink-app/components/FastIcon.tsx
 cli/ui/ink-app/components/Feedback.tsx
 cli/ui/ink-app/components/FeedbackSurvey/submitTranscriptShare.ts
 cli/ui/ink-app/components/FeedbackSurvey/useFeedbackSurvey.tsx
 cli/ui/ink-app/components/FeedbackSurvey/useMemorySurvey.tsx
 cli/ui/ink-app/components/FileEditToolDiff.tsx
-cli/ui/ink-app/components/FilePathLink.tsx
 cli/ui/ink-app/components/FullscreenLayout.tsx
 cli/ui/ink-app/components/GizziHint/PluginHintMenu.tsx
-cli/ui/ink-app/components/GizziMdExternalIncludesDialog.tsx
-cli/ui/ink-app/components/HighlightedCode.tsx
 cli/ui/ink-app/components/HighlightedCode/Fallback.tsx
-cli/ui/ink-app/components/IdeAutoConnectDialog.tsx
-cli/ui/ink-app/components/IdeOnboardingDialog.tsx
-cli/ui/ink-app/components/IdeStatusIndicator.tsx
-cli/ui/ink-app/components/IdleReturnDialog.tsx
 cli/ui/ink-app/components/InterruptedByUser.tsx
 cli/ui/ink-app/components/KeybindingWarnings.tsx
 cli/ui/ink-app/components/LanguagePicker.tsx

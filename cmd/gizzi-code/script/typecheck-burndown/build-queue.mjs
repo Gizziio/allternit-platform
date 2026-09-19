@@ -251,6 +251,36 @@ const LITERAL_KEYWORDS = new Set([
 // `from 'mod'`, `T satisfies 'x'`) — apostrophe decision only, never regex.
 const STRING_KEYWORDS = new Set([...LITERAL_KEYWORDS, "as", "from", "satisfies"])
 
+// Words that may follow `export`/`import` in a real declaration. JSX text can
+// contain the bare words "export"/"import" at brace depth > 0 (e.g. shell
+// instructions rendered in a <Text>); those are not module keywords. A genuine
+// `export`/`import` inside a block (the malformed-shim signature) is always
+// followed by one of these or by `{` / `*` / `=`.
+const DECL_CONTINUATION_WORDS = new Set([
+  "default", "type", "interface", "class", "function", "const", "let", "var",
+  "enum", "namespace", "abstract", "async", "declare", "as",
+])
+
+// From index `from`, skip whitespace and comments and report the next token:
+// { kind: "word", word } or { kind: "punct", ch } or null at end of input.
+function nextToken(text, from) {
+  let i = from
+  const n = text.length
+  while (i < n) {
+    const c = text[i]
+    if (c === " " || c === "\t" || c === "\n" || c === "\r") { i++; continue }
+    if (c === "/" && text[i + 1] === "/") { while (i < n && text[i] !== "\n") i++; continue }
+    if (c === "/" && text[i + 1] === "*") { i += 2; while (i < n && !(text[i] === "*" && text[i + 1] === "/")) i++; i += 2; continue }
+    if (/[A-Za-z0-9_$]/.test(c)) {
+      let w = ""
+      while (i < n && /[A-Za-z0-9_$]/.test(text[i])) { w += text[i]; i++ }
+      return { kind: "word", word: w }
+    }
+    return { kind: "punct", ch: c }
+  }
+  return null
+}
+
 // Structural grammar check, string/comment/regex/template-aware. Not a parser:
 // it tokenizes enough of the language to pair (), {}, [] and to locate module
 // keywords, which is exactly what the malformed TEMPORARY SHIM stubs violate
@@ -302,7 +332,19 @@ export function malformedReason(text, isTsx = false) {
     if (c === " " || c === "\t" || c === "\n" || c === "\r") {
       if (word) {
         if ((word === "export" || word === "import") && wordStartPrev !== ".") {
-          pendingKw = { kw: word, depth: stack.filter(e => e.ch === "{").length }
+          const depth = stack.filter(e => e.ch === "{").length
+          // At depth > 0 the export/import keyword check exists only to catch
+          // declarations nested in unclosed shim bodies; JSX text may use the
+          // bare words at any depth, so require a declaration continuation.
+          let isDecl = true
+          if (depth > 0) {
+            const nx = nextToken(text, i)
+            isDecl = nx !== null && (
+              (nx.kind === "word" && DECL_CONTINUATION_WORDS.has(nx.word)) ||
+              (nx.kind === "punct" && (nx.ch === "{" || nx.ch === "*" || nx.ch === "="))
+            )
+          }
+          if (isDecl) pendingKw = { kw: word, depth }
         }
         if (word === "namespace") pendingBraceKind = "ns"
         else if ((word === "module" || word === "global") && lastWord === "declare") {
@@ -376,7 +418,19 @@ export function malformedReason(text, isTsx = false) {
     } else {
       if (word) {
         if ((word === "export" || word === "import") && wordStartPrev !== ".") {
-          pendingKw = { kw: word, depth: stack.filter(e => e.ch === "{").length }
+          const depth = stack.filter(e => e.ch === "{").length
+          // At depth > 0 the export/import keyword check exists only to catch
+          // declarations nested in unclosed shim bodies; JSX text may use the
+          // bare words at any depth, so require a declaration continuation.
+          let isDecl = true
+          if (depth > 0) {
+            const nx = nextToken(text, i)
+            isDecl = nx !== null && (
+              (nx.kind === "word" && DECL_CONTINUATION_WORDS.has(nx.word)) ||
+              (nx.kind === "punct" && (nx.ch === "{" || nx.ch === "*" || nx.ch === "="))
+            )
+          }
+          if (isDecl) pendingKw = { kw: word, depth }
         }
         if (word === "namespace") pendingBraceKind = "ns"
         else if ((word === "module" || word === "global") && lastWord === "declare") {
