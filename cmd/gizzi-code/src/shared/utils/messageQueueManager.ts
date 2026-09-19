@@ -1,13 +1,12 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs'
-import type { Permutations } from '@/types/utils.js'
 import { getSessionId } from '@/bootstrap/state.js'
 import type { AppState } from '@/state/AppState.js'
+// '@/types/*' resolves to the ink-app stub first; the real shapes live in src/types
 import type {
   QueueOperation,
   QueueOperationMessage,
-} from '@/types/messageQueueTypes.js'
+} from '../../types/messageQueueTypes.js'
 import type {
   EditablePromptInputMode,
   PromptInputMode,

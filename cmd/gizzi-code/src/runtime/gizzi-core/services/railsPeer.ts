@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Rails peer registration + inbox poller for gizzi-code.
  *
@@ -17,7 +16,7 @@ import { errorMessage } from 'src/shared/utils/errors.js'
 import { generateRequestId } from 'src/shared/utils/agentId.js'
 import { enqueuePendingNotification } from 'src/shared/utils/messageQueueManager.js'
 import { isEnvDefinedFalsy } from 'src/shared/utils/envUtils.js'
-import type { QueuedCommand } from 'src/shared/types/textInputTypes.js'
+import type { QueuedCommand } from '@/types/textInputTypes.js'
 import { Log } from 'src/shared/util/log.js'
 import {
   getAllternitApiConfig,
@@ -110,10 +109,13 @@ export function startRailsInboxListener(
       value: formatIncomingMessage(envelope),
       mode: 'task-notification',
       priority: 'later',
-      uuid: generateRequestId('rails-inbox', String(envelope.message_id ?? 'unknown')),
+      // generateRequestId returns "<type>-<ts>@<agent>" (not UUID-shaped); the
+      // runtime only uses uuid as an opaque id string.
+      uuid: generateRequestId('rails-inbox', String(envelope.message_id ?? 'unknown')) as QueuedCommand['uuid'],
       skipSlashCommands: true,
       isMeta: false,
-      origin: { kind: 'rails_peer', peerName: String(envelope.from ?? 'unknown') },
+      // MessageOrigin has no peerName field; the bridge reads it back structurally
+      origin: { kind: 'rails_peer', peerName: String(envelope.from ?? 'unknown') } as QueuedCommand['origin'],
     }
     if (onMessage) {
       onMessage(command)
