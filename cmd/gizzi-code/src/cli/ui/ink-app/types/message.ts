@@ -3,6 +3,8 @@
  * Complete implementation based on Claude's canonical architecture
  */
 
+import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
+
 type UUID = string
 
 // ============================================================================
@@ -128,7 +130,7 @@ export interface MessageAttachment {
     | string
   name?: string
   fileName?: string
-  content?: string
+  content?: string | string[]
   mimeType?: string
   prompt?: string | Array<{type: string; text?: string}>
   identity?: {
@@ -164,28 +166,23 @@ export interface MessageContent {
   id?: string
   name?: string
   input?: unknown
-  content?: string | unknown[] | Array<{type: string; text?: string; source?: unknown}>
+  content?: unknown
   thinking?: string
   signature?: string
   toolUseId?: string
   tool_use_id?: string  // Snake case alias
   is_error?: boolean
-  source?: {
-    type: 'base64' | 'url'
-    media_type: string
-    data: string
-  }
+  source?: unknown
   // Additional properties for extended content types
   data?: string
   partial_json?: string
   index?: number
-  caller?: string | null
+  caller?: unknown
   // Tool result content items
   toolUse?: {
     name: string
     input: Record<string, unknown>
   }
-  [key: string]: unknown
 }
 
 // Specific content block types for discriminated unions
@@ -250,7 +247,7 @@ export interface ImageContentBlock {
 export type ContentBlock = TextContentBlock | ToolUseContentBlock | ToolResultContentBlock | ThinkingContentBlock | RedactedThinkingContentBlock | ImageContentBlock
 
 export interface CompactMetadata {
-  messageCount: number
+  messageCount?: number
   direction?: 'up' | 'down'
   /** Tool names discovered before compaction, preserved across compact boundaries */
   preCompactDiscoveredTools?: string[]
@@ -277,7 +274,7 @@ export interface ToolUseSummary {
 
 export interface Message {
   // Core properties
-  type: MessageRole | 'progress' | 'system' | 'tombstone' | 'attachment' | 'grouped_tool_use' | 'collapsed_read_search' | 'stream_event'
+  type: MessageRole | 'progress' | 'system' | 'tombstone' | 'attachment' | 'grouped_tool_use' | 'collapsed_read_search' | 'stream_event' | 'stream_request_start' | 'tool_use_summary'
   role?: MessageRole
   uuid: UUID | string
   id?: string  // Alternative ID property
@@ -290,8 +287,14 @@ export interface Message {
       usage?: MessageUsage
     }
     delta?: {
+      type?: string
+      text?: string
+      partial_json?: string
+      thinking?: string
       stop_reason?: string | null
     }
+    content_block?: BetaContentBlock | ContentBlock | MessageContent
+    index?: number
     usage?: MessageUsage
   }
   
@@ -514,7 +517,7 @@ export interface AttachmentMessage<T = MessageAttachment> extends Message {
 export interface SystemCompactBoundaryMessage extends SystemMessage {
   subtype: 'compact_boundary'
   compactMetadata: CompactMetadata
-  messageCount: number
+  messageCount?: number
   direction?: 'up' | 'down'
 }
 
@@ -665,8 +668,11 @@ export interface SystemScheduledTaskFireMessage extends SystemMessage {
  * ToolUseSummaryMessage - Summary of tool execution
  */
 export interface ToolUseSummaryMessage extends Message {
-  subtype: 'tool_summary'
-  toolUseSummary: ToolUseSummary
+  type: 'tool_use_summary'
+  subtype?: 'tool_summary'
+  toolUseSummary?: ToolUseSummary
+  summary: string
+  precedingToolUseIds: string[]
 }
 
 /**
@@ -704,6 +710,7 @@ export interface ProgressMessage<T = unknown> {
   timestamp?: string
   data?: {
     type?: string
+    hookEvent?: string
   } & T
   [key: string]: unknown
   // Progress messages may contain nested message data for streaming
@@ -832,10 +839,16 @@ export interface NormalizedUserMessage extends UserMessage {
 }
 
 // Normalized assistant message for SDK processing
-export interface NormalizedAssistantMessage extends AssistantMessage {
+export interface NormalizedAssistantMessage<
+  T extends MessageContent | ContentBlock = MessageContent | ContentBlock,
+> extends AssistantMessage {
   normalized: true
   content: string | MessageContent[]
   role: 'assistant'
+  message: NestedMessage & {
+    role: 'assistant'
+    content: [T]
+  }
 }
 
 // ============================================================================
