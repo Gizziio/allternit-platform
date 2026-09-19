@@ -112,7 +112,6 @@ export interface MessageAttachment {
     | 'output_token_usage'
     | 'structured_output'
     | 'invoked_skills'
-    | 'verify_plan_reminder'
     | 'max_turns_reached'
     | 'current_session_memory'
     | 'teammate_shutdown_batch'
