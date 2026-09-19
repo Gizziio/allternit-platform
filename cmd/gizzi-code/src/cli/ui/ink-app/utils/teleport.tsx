@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios';
 import chalk from '@/shared/util/chalk'
 import { randomUUID } from 'crypto';
@@ -9,15 +8,15 @@ import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEve
 import { isPolicyAllowed } from './../services/policyLimits/index.ts';
 import { z } from 'zod/v4';
 import { getTeleportErrors, TeleportError, type TeleportLocalErrorType } from '../components/TeleportError';
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources';
 import { getOauthConfig } from '../constants/oauth';
-import type { SDKMessage } from '../entrypoints/agentSdkTypes';
 import type { Root } from '../ink';
 import { KeybindingSetup } from '../keybindings/KeybindingProviderSetup';
 import { queryHaiku } from '../services/api/claude';
 import { getSessionLogsViaOAuth, getTeleportEvents } from '../services/api/sessionIngress';
 import { getOrganizationUUID } from '../services/oauth/client';
 import { AppStateProvider } from '../state/AppState';
-import type { Message, SystemMessage } from '../types/message';
+import { isContentBlockArray, type Message, type SystemMessage } from '../types/message';
 import type { PermissionMode } from '../types/permissions';
 import { checkAndRefreshOAuthTokenIfNeeded, getClaudeAIOAuthTokens } from './auth';
 import { checkGithubAppInstalled } from './background/remote/preconditions';
@@ -47,6 +46,37 @@ export type TeleportResult = {
 };
 export type TeleportProgressStep = 'validating' | 'fetching_logs' | 'fetching_branch' | 'checking_out' | 'done';
 export type TeleportProgressCallback = (step: TeleportProgressStep) => void;
+
+// Local mirror of the SDK wire-event shape delivered by
+// GET /v1/sessions/:id/events. entrypoints/agentSdkTypes.ts declares
+// SDKMessage only as a local `unknown` (its legacy importers are ts-nocheck),
+// so the slice CCR polling actually consumes is mirrored here: assistant/user
+// message envelopes plus result terminations.
+type SDKMessageContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'thinking'; thinking: string }
+  | { type: 'tool_use'; id: string; name: string; input?: unknown }
+  | {
+      type: 'tool_result'
+      tool_use_id: string
+      content: ToolResultBlockParam['content']
+      is_error?: boolean
+    }
+
+export type SDKMessage =
+  | {
+      type: 'assistant'
+      session_id: string
+      message: { content: SDKMessageContentBlock[] }
+      uuid?: string
+    }
+  | {
+      type: 'user'
+      session_id: string
+      message: { content: string | SDKMessageContentBlock[] }
+      uuid?: string
+    }
+  | { type: 'result'; session_id: string; subtype: string; uuid?: string }
 
 /**
  * Creates a system message to inform about teleport session resume
@@ -134,8 +164,12 @@ async function generateTitleAndBranch(description: string, signal: AbortSignal):
       }
     });
 
-    // Extract text from the response
-    const firstBlock = response.message.content[0];
+    // Extract text from the response. Content may be a plain string, an
+    // array of content blocks, or an untyped unknown — isContentBlockArray
+    // narrows to the discriminated ContentBlock union safely.
+    const firstBlock = isContentBlockArray(response.message.content)
+      ? response.message.content[0]
+      : undefined;
     if (firstBlock?.type !== 'text') {
       return {
         title: fallbackTitle,
@@ -844,7 +878,10 @@ export async function teleportToRemote(options: {
         }, {
           signal
         });
-        if (!bundle.success) {
+        // strict:false — truthiness does not narrow the discriminated union;
+        // use the discriminant equality form (load-bearing pattern, same as
+        // utils/teleport/gitBundle.ts).
+        if (bundle.success === false) {
           logError(new Error(`Bundle upload failed: ${bundle.error}`));
           return null;
         }
@@ -1008,7 +1045,8 @@ export async function teleportToRemote(options: {
       }, {
         signal
       });
-      if (!bundle.success) {
+      // strict:false — discriminant equality form (see gitBundle.ts).
+      if (bundle.success === false) {
         logError(new Error(`Bundle upload failed: ${bundle.error}`));
         // Only steer users to GitHub setup when there's a remote to clone from.
         const setup = repoInfo ? '. Please setup GitHub on https://ai.allternit.com' : '';

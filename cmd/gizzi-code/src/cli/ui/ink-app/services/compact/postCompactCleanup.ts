@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { QuerySource } from '../../constants/querySource.js'
 import { clearSystemPromptSections } from '../../constants/systemPromptSections.js'
 import { getUserContext } from '../../context.js'
@@ -47,7 +46,7 @@ export function runPostCompactCleanup(querySource?: QuerySource): void {
     // Manual /compact already clears this explicitly at its call sites;
     // auto-compact and reactive-compact did not — this centralizes the
     // clear so all compaction paths behave consistently.
-    getUserContext.cache.clear?.()
+    ;(getUserContext as { cache?: { clear?: () => void } }).cache?.clear?.()
     resetGetMemoryFilesCache('compact')
   }
   clearSystemPromptSections()

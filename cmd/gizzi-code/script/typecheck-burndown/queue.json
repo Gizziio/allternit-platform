@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 667,
+    "totalNocheck": 653,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 553,
-    "totalQueueLoc": 234807,
+    "totalQueueFiles": 539,
+    "totalQueueLoc": 227674,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -583,22 +583,7 @@
     },
     {
       "id": "b0426",
-      "files": [
-        "src/cli/ui/ink-app/tools/EnterWorktreeTool/EnterWorktreeTool.ts",
-        "src/cli/ui/ink-app/tools/ExitWorktreeTool/ExitWorktreeTool.ts",
-        "src/runtime/services/compact/postCompactCleanup.ts",
-        "src/cli/ui/ink-app/services/compact/postCompactCleanup.ts",
-        "src/cli/ui/ink-app/utils/teleport.tsx",
-        "src/cli/ui/ink-app/utils/ultraplan/ccrSession.ts",
-        "src/cli/ui/ink-app/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts",
-        "src/cli/ui/ink-app/tools/BashTool/pathValidation.ts",
-        "src/cli/ui/ink-app/tools/NotebookEditTool/NotebookEditTool.ts",
-        "src/cli/ui/ink-app/tools/GlobTool/GlobTool.ts",
-        "src/cli/ui/ink-app/tools/PowerShellTool/PowerShellTool.tsx",
-        "src/cli/ui/ink-app/utils/processUserInput/processBashCommand.tsx",
-        "src/cli/ui/ink-app/utils/promptShellExecution.ts",
-        "src/cli/ui/ink-app/skills/loadSkillsDir.ts"
-      ],
+      "files": [],
       "loc": 7063,
       "twins": [
         {
@@ -606,7 +591,10 @@
           "inkApp": "src/cli/ui/ink-app/services/compact/postCompactCleanup.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 14,
+      "burnedLoc": 7133,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head12): 14/14 files 0 escalations — worktree tools + twins, teleport SDKMessage wire mirror, PowerShell/ShellProgress contract mirrors (aligned with sibling BashModeProgress contract), memoize cache.clear intersection, strict:false discriminant equality, isContentBlockArray narrowing; dormant ink-app/types/notebook shim gained NotebookCell/NotebookContent exports. Escalations: none. Identity: live -14 + recorded +14."
     },
     {
       "id": "b0044",

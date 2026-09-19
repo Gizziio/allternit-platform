@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources';
 import { randomUUID } from 'crypto';
 import * as React from 'react';
@@ -6,7 +5,24 @@ import { BashModeProgress } from './../../components/BashModeProgress.tsx';
 import type { SetToolJSXFn } from './../../Tool.ts';
 import { BashTool } from './../../tools/BashTool/BashTool.tsx';
 import type { AttachmentMessage, SystemMessage, UserMessage } from './../../types/message.ts';
-import type { ShellProgress } from './../../types/tools.ts';
+// TODO(types): ink-app/types/tools.ts is a dead stub, and the canonical
+// src/types/tools.ts ShellProgress (type: 'shell', required command) does
+// not match the payload either backend emits (BashTool sends
+// 'bash_progress', PowerShellTool 'powershell_progress' — the runtime
+// contract in shared/utils/sessionStorage.ts). Mirror the emitted payload
+// union locally (sibling TODO(types) pattern, cf. WebSearchTool).
+type ShellProgress = {
+  type: 'bash_progress' | 'powershell_progress'
+  output: string
+  fullOutput: string
+  elapsedTimeSeconds?: number
+  totalLines?: number
+  totalBytes?: number
+  timeoutMs?: number
+  taskId?: string
+  command?: string
+  exitCode?: number
+}
 import { logEvent } from '../../services/analytics/index';
 import { errorMessage, ShellError } from '../errors';
 import { createSyntheticUserCaveatMessage, createUserInterruptionMessage, createUserMessage, prepareUserContent } from '../messages';

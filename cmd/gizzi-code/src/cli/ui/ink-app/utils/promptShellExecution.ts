@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { randomUUID } from 'crypto'
 import type { Tool, ToolUseContext } from '../Tool.js'
 import { logForDebugging } from './debug.js'

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // CCR session polling for /ultraplan. Waits for an approved ExitPlanMode
 // tool_result, then extracts the plan text. Uses pollRemoteSessionEvents
 // (shared with RemoteAgentTask) for pagination + typed SDKMessage[].
@@ -9,7 +8,7 @@ import type {
   ToolResultBlockParam,
   ToolUseBlock,
 } from '@allternit/gizzi-sdk/providers/allternit/resources'
-import type { SDKMessage } from '../../entrypoints/agentSdkTypes.js'
+import type { SDKMessage } from '../teleport.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../tools/ExitPlanModeTool/constants.js'
 import { logForDebugging } from '../debug.js'
 import { sleep } from '../sleep.js'

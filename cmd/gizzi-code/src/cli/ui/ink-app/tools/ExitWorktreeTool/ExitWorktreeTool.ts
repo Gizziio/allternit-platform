@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z } from 'zod/v4'
 import {
   getOriginalCwd,
@@ -143,7 +142,7 @@ function restoreSessionToOriginalCwd(
   saveWorktreeState(null)
   clearSystemPromptSections()
   clearMemoryFileCaches()
-  getPlansDirectory.cache.clear?.()
+  ;(getPlansDirectory as { cache?: { clear?: () => void } }).cache?.clear?.()
 }
 
 export const ExitWorktreeTool: Tool<InputSchema, Output> = buildTool({
