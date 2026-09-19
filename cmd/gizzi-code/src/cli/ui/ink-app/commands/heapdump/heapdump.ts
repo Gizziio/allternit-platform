@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { performHeapDump } from '../../utils/heapDumpService'
 
 export async function call(): Promise<{ type: 'text'; value: string }> {

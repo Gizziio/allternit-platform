@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { MessageV2 } from "@/runtime/session/message-v2"
 import { Log } from "@/shared/util/log"
 import { Identifier } from "@/shared/id/id"
@@ -73,7 +72,8 @@ export namespace SessionProcessor {
         const nonRetryableFallbackReason = (error: ReturnType<typeof MessageV2.fromError>): string | undefined => {
           if (MessageV2.AuthError.isInstance(error)) return "auth"
           if (!MessageV2.APIError.isInstance(error)) return undefined
-          const info = describeProviderError({ raw: error.data?.message || "" })
+          const data = (error as { data?: { message?: string } }).data
+          const info = describeProviderError({ raw: data?.message || "" })
           if (["auth", "insufficient_balance", "unsupported_model", "context_overflow"].includes(info.code)) {
             return info.code
           }
@@ -608,8 +608,9 @@ export namespace SessionProcessor {
                 case "text-end":
                   if (currentText) {
                     currentText.text = currentText.text.trimEnd()
+                    // "experimental.text.complete" is not declared in the plugin SDK Hooks type yet
                     const textOutput = await Plugin.trigger(
-                      "experimental.text.complete",
+                      "experimental.text.complete" as any,
                       {
                         sessionID: input.sessionID,
                         messageID: input.assistantMessage.id,
@@ -748,7 +749,10 @@ export namespace SessionProcessor {
               })
               continue
             }
-            const error = MessageV2.fromError(e, { providerID: input.model.providerID })
+            // fromError always serializes via toObject(): {name, message, data}
+            const error = MessageV2.fromError(e, {
+              providerID: input.model.providerID,
+            }) as { name: string; message: string; data?: any }
             if (MessageV2.ContextOverflowError.isInstance(error)) {
               log.warn("context overflow detected, triggering compaction", {
                 sessionID: input.sessionID,

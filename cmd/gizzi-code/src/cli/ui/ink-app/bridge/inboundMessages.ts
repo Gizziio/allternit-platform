@@ -1,12 +1,18 @@
-// @ts-nocheck
 import type {
   Base64ImageSource,
   ContentBlockParam,
   ImageBlockParam,
 } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs'
 import type { UUID } from 'crypto'
-import type { SDKMessage } from '../entrypoints/agentSdkTypes'
 import { detectImageFormatFromBase64 } from '../utils/imageResizer'
+
+// TODO(types): '../entrypoints/agentSdkTypes' declares SDKMessage locally (not
+// exported) as `unknown`; mirror the minimal inbound-message shape read here.
+type InboundSDKMessage = {
+  type: string
+  message?: { content?: string | Array<ContentBlockParam> }
+  uuid?: string
+}
 
 /**
  * Process an inbound user message from the bridge, extracting content
@@ -20,7 +26,7 @@ import { detectImageFormatFromBase64 } from '../utils/imageResizer'
  * skipped (non-user type, missing/empty content).
  */
 export function extractInboundMessageFields(
-  msg: SDKMessage,
+  msg: InboundSDKMessage,
 ):
   | { content: string | Array<ContentBlockParam>; uuid: UUID | undefined }
   | undefined {

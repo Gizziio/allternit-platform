@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type * as https from 'https'
 import { Agent as HttpsAgent } from 'https'
 import memoize from 'lodash-es/memoize.js'
@@ -152,12 +151,14 @@ export function getTLSFetchOptions(): {
   return { dispatcher: agent }
 }
 
+type MemoizedWithCache = { cache: { clear?: () => void } }
+
 /**
  * Clear the mTLS configuration cache.
  */
 export function clearMTLSCache(): void {
-  getMTLSConfig.cache.clear?.()
-  getMTLSAgent.cache.clear?.()
+  ;(getMTLSConfig as unknown as MemoizedWithCache).cache.clear?.()
+  ;(getMTLSAgent as unknown as MemoizedWithCache).cache.clear?.()
   logForDebugging('Cleared mTLS configuration cache')
 }
 

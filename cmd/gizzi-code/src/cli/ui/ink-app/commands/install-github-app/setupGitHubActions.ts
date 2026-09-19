@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -13,7 +12,11 @@ import {
 import { openBrowser } from '../../utils/browser.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { logError } from '../../utils/log.js'
-import type { Workflow } from './types.js'
+
+// TODO(types): './types.js' is a TEMPORARY SHIM whose Workflow interface does
+// not match usage — callers pass 'claude' | 'claude-review' string literals;
+// mirror the union locally.
+type Workflow = 'claude' | 'claude-review'
 
 async function createWorkflowFile(
   repoName: string,

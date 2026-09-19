@@ -1,4 +1,3 @@
-// @ts-nocheck
 // OAuth client for handling authentication flows with Claude services
 export { isOAuthTokenExpired, shouldUseClaudeAIAuth } from './scopes.js'
 import axios from 'axios'

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // OAuth client for handling authentication flows with Claude services
 export { isOAuthTokenExpired, shouldUseClaudeAIAuth } from './scopes.js'
 import axios from 'axios'
@@ -23,6 +22,8 @@ import type { AccountInfo } from '../../utils/config.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { getOauthProfileFromOauthToken } from './getOauthProfile.js'
+// TODO(types): the '@/*' path map resolves '@/services/oauth/types.js' to the
+// ink-app stub; this twin needs the real runtime types module (sibling).
 import type {
   BillingType,
   OAuthProfileResponse,
@@ -31,7 +32,7 @@ import type {
   RateLimitTier,
   SubscriptionType,
   UserRolesResponse,
-} from './types.js'
+} from '../../../../../runtime/services/oauth/types.js'
 
 export function parseScopes(scopeString?: string): string[] {
   return scopeString?.split(' ').filter(Boolean) ?? []
