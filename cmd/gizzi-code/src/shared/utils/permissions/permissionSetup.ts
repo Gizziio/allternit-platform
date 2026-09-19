@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { relative } from 'path'
 import {
@@ -8,10 +7,9 @@ import {
   setHasExitedPlanMode,
   setNeedsAutoModeExitAttachment,
 } from '@/bootstrap/state.js'
-import type {
-  ToolPermissionContext,
-  ToolPermissionRulesBySource,
-} from '@/Tool.js'
+import type { ToolPermissionContext } from '@/Tool.js'
+import type { ToolPermissionRulesBySource } from '@/types/permissions.js'
+import type { ToolPermissionContext as InkAppToolPermissionContext } from '../../../cli/ui/ink-app/Tool.js'
 import { getCwd } from '../cwd.js'
 import { isEnvTruthy } from '../envUtils.js'
 import type { SettingSource } from '../settings/constants.js'
@@ -514,7 +512,7 @@ export function stripDangerousPermissionsForAutoMode(
   const rules: PermissionRule[] = []
   for (const [source, ruleStrings] of Object.entries(
     context.alwaysAllowRules,
-  )) {
+  ) as [string, string[] | undefined][]) {
     if (!ruleStrings) {
       continue
     }
@@ -567,7 +565,10 @@ export function restoreDangerousPermissions(
     return context
   }
   let result = context
-  for (const [source, ruleStrings] of Object.entries(stash)) {
+  for (const [source, ruleStrings] of Object.entries(stash) as [
+    string,
+    string[] | undefined,
+  ][]) {
     if (!ruleStrings || ruleStrings.length === 0) continue
     result = applyPermissionUpdate(result, {
       type: 'addRules',
@@ -1003,7 +1004,10 @@ export async function initializeToolPermissionContext({
   // alreadyInWorkingDirectory, which was silently skipped anyway).
   const validationResults = await Promise.all(
     allAdditionalDirectories.map(dir =>
-      validateDirectoryForWorkspace(dir, toolPermissionContext),
+      validateDirectoryForWorkspace(
+        dir,
+        toolPermissionContext as InkAppToolPermissionContext,
+      ),
     ),
   )
   for (const result of validationResults) {

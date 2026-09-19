@@ -150,7 +150,7 @@ export interface SetupHookInput extends HookInput {
 }
 
 // Exit reasons for StopHookInput
-export type ExitReason = 'user' | 'system' | 'error' | 'timeout' | 'completed' | 'other' | 'resume' | 'clear' | 'logout' | 'prompt_input_exit'
+export type ExitReason = 'user' | 'system' | 'error' | 'timeout' | 'completed' | 'other' | 'resume' | 'clear' | 'logout' | 'prompt_input_exit' | 'bypass_permissions_disabled'
 
 // Hook progress info
 export interface HookProgressInfo {
