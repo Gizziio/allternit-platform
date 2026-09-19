@@ -4,34 +4,38 @@
 
 import type { FC, ComponentType, ReactNode } from 'react'
 // Wizard context value
-export interface WizardContextValue {
-  currentStep: number
+export interface WizardContextValue<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
+  currentStepIndex: number
   totalSteps: number
-  stepData: Record<string, unknown>
-  wizardData: any
+  wizardData: T
+  setWizardData: (data: T) => void
   goToStep: (step: number) => void
   goNext: () => void
   goBack: () => void
-  setStepData: (key: string, value: unknown) => void
-  updateWizardData: (updates: Record<string, unknown>) => void
+  updateWizardData: (updates: Partial<T>) => void
   cancel: () => void
-  isFirstStep: boolean
-  isLastStep: boolean
+  title?: ReactNode
+  showStepCounter?: boolean
 }
 
 // Wizard provider props
-export interface WizardProviderProps {
-  children: ReactNode
+export interface WizardProviderProps<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
+  children?: ReactNode
   steps: WizardStep[]
-  onComplete?: (data: Record<string, unknown>) => void
+  initialData?: T
+  title?: ReactNode
+  showStepCounter?: boolean
+  onComplete?: (data: T) => void
   onCancel?: () => void
 }
 
-export interface WizardStep {
-  id: string
-  title: string
-  component: React.ComponentType<unknown>
-}
+// A step is a zero-prop component rendered directly by WizardProvider
+// (`<CurrentStepComponent />`); callers pass plain component references.
+export type WizardStep = ComponentType<Record<string, never>>
 
 export interface WizardState {
   completed: string[]
@@ -50,4 +54,4 @@ export type WizardStepComponent = ComponentType<WizardStepComponentProps>
 // Wizard configuration
 export interface WizardConfig {
   onComplete: (data: Record<string, unknown>) => void
-  }
+}
