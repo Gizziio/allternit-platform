@@ -3,11 +3,11 @@
   "generatedFrom": "cef80b754a1bffa8f6f8287aae4036f8b0b3d7dc",
   "batchCount": 103,
   "stats": {
-    "totalNocheck": 1094,
+    "totalNocheck": 1062,
     "excludedCompilerArtifacts": 181,
     "excludedVendored": 93,
-    "totalQueueFiles": 800,
-    "totalQueueLoc": 315413,
+    "totalQueueFiles": 768,
+    "totalQueueLoc": 308378,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -445,48 +445,18 @@
     },
     {
       "id": "b0366",
-      "files": [
-        "src/runtime/providers/provider.ts",
-        "src/cli/commands/skills.ts",
-        "src/runtime/session/message-v2.ts",
-        "src/runtime/services/api/errors.ts",
-        "src/cli/ui/ink-app/services/api/errors.ts",
-        "src/shared/error/format.ts",
-        "src/ui/allternit/status-runtime.ts",
-        "src/cli/ui/ink-app/utils/processUserInput/processTextPrompt.ts",
-        "src/cli/ui/ink-app/types/command.ts",
-        "src/cli/ui/ink-app/cost-tracker.ts",
-        "src/runtime/server/server.ts",
-        "src/cli/ui/ink-app/components/cost-tracker.ts",
-        "src/cli/ui/ink-app/commands/config/config.tsx",
-        "src/cli/ui/ink-app/commands/doctor/doctor.tsx",
-        "src/cli/ui/ink-app/commands/find/find.tsx",
-        "src/cli/ui/ink-app/commands/grep/grep.tsx",
-        "src/cli/ui/ink-app/commands/output-style/output-style.tsx",
-        "src/cli/ui/ink-app/commands/plugin/plugin.tsx",
-        "src/cli/ui/ink-app/commands/remote-env/remote-env.tsx",
-        "src/cli/ui/ink-app/commands/stats/stats.tsx",
-        "src/cli/ui/ink-app/commands/diff/diff.tsx",
-        "src/cli/ui/ink-app/commands/help/help.tsx",
-        "src/cli/ui/ink-app/commands/stickers/stickers.ts",
-        "src/cli/ui/ink-app/commands/version.ts",
-        "src/cli/ui/ink-app/costHook.ts",
-        "src/cli/ui/ink-app/commands/bots/bots.tsx",
-        "src/cli/ui/ink-app/commands/dashboard/dashboard.tsx",
-        "src/cli/ui/ink-app/commands/history/history.tsx",
-        "src/cli/ui/ink-app/commands/edit-prompt/edit-prompt.ts",
-        "src/cli/ui/ink-app/commands/release-notes/release-notes.ts",
-        "src/cli/ui/ink-app/worker.ts",
-        "src/cli/ui/ink-app/utils/suggestions/commandSource.ts"
-      ],
-      "loc": 7035,
+      "files": [],
+      "loc": 0,
       "twins": [
         {
           "runtime": "src/runtime/services/api/errors.ts",
           "inkApp": "src/cli/ui/ink-app/services/api/errors.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 32,
+      "burnedLoc": 7035,
+      "note": "Burned by ao/ts-burn-next17 (PR b0366): all 32 files stripped, type errors fixed (local casts for untyped @allternit/gizzi-util NamedError narrowing, RuntimeAuthLoader widening for the plugin SDK auth.loader mismatch, server.listen onListen forwarding fix for the worker server rpc hang, cost-tracker local ModelUsage, errors.ts twins categorizeRetryableAPIError return type corrected to string). No escalations; allowlist untouched."
     },
     {
       "id": "b0367",

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import "@/cli/devMacro"
 import "drizzle-orm/sqlite-core/db.js"
 import "drizzle-orm/sqlite-core/session.js"
@@ -55,7 +54,7 @@ const rpcHandlers = {
         port: opts.port ?? 0,
         hostname: opts.hostname ?? "127.0.0.1",
         cors: opts.cors ?? [],
-        onListen: resolve,
+        onListen: () => resolve(),
       });
     });
     const serverUrl = Server.url().toString();

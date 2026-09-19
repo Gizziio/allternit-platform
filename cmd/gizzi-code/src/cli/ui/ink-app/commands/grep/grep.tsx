@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react';
 import type { LocalJSXCommandCall } from '../../types/command';
 

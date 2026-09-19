@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { BetaUsage as Usage } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import chalk from '@/shared/util/chalk'
 import {
@@ -28,7 +27,20 @@ import {
   setCostStateForRestore,
   setHasUnknownModelCost,
 } from './bootstrap/state.js'
-import type { ModelUsage } from './entrypoints/agentSdkTypes.js'
+// TODO(types): the agentSdkTypes stub entrypoint never exported a ModelUsage
+// (the old import resolved to an error type). Define the camelCase usage
+// shape this module works with locally — it is unrelated to the canonical
+// SDK ModelUsage (snake_case).
+interface ModelUsage {
+  inputTokens: number
+  outputTokens: number
+  cacheReadInputTokens: number
+  cacheCreationInputTokens: number
+  webSearchRequests: number
+  costUSD: number
+  contextWindow?: number
+  maxOutputTokens?: number
+}
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,

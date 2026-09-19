@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import { Log } from "@/shared/util/log"
@@ -129,7 +128,7 @@ export namespace Server {
             let status: ContentfulStatusCode
             if (err instanceof NotFoundError) status = 404
             else if (Provider.ModelNotFoundError.isInstance(err)) status = 400
-            else if ((err as NamedError).name.startsWith("Worktree")) status = 400
+            else if (err.name.startsWith("Worktree")) status = 400
             else status = 500
             return c.json(err.toObject(), { status })
           }
@@ -638,6 +637,7 @@ export namespace Server {
     mesh?: boolean
     meshAuthKey?: string
     meshControlUrl?: string
+    onListen?: (server: Bun.Server<unknown>) => void
   }) {
     _corsWhitelist = opts.cors ?? []
     _hostname = opts.hostname
@@ -660,6 +660,10 @@ export namespace Server {
       idleTimeout: 0,
       fetch: App().fetch,
       websocket: websocket,
+      // Forward onListen: worker.ts's `server` rpc handler awaits a promise
+      // resolved by this callback — previously the option was typed away and
+      // the await hung forever.
+      ...(opts.onListen ? { onListen: opts.onListen } : {}),
     } as const
     const tryServe = (port: number) => {
       try {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -9,7 +8,6 @@ import type {
   BetaStopReason,
 } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { AFK_MODE_BETA_HEADER } from '@/constants/betas.js'
-import type { SDKAssistantMessageError } from '../../../entrypoints/agentSdkTypes.js'
 import type {
   AssistantMessage,
   Message,
@@ -1036,7 +1034,7 @@ export function classifyAPIError(error: unknown): string {
 
 export function categorizeRetryableAPIError(
   error: APIError,
-): SDKAssistantMessageError {
+): string {
   if (
     error.status === 529 ||
     error.message?.includes('"type":"overloaded_error"')

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { LocalCommandResult } from '../../types/command.js'
 import {
   CHANGELOG_URL,

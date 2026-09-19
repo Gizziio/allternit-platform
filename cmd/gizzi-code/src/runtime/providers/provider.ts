@@ -1,4 +1,3 @@
-// @ts-nocheck
 import z from "zod/v4"
 import fuzzysort from "fuzzysort"
 import { Config } from "@/runtime/context/config/config"
@@ -30,6 +29,15 @@ import { SubprocessLanguageModel } from "@/runtime/providers/adapters/loaders/su
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
+
+  // TODO(types): the plugin SDK's declared AuthHook.loader is narrower than
+  // what auth plugins provide at runtime (2-arg loader returning
+  // apiKey/authType); see src/runtime/integrations/plugin/codex.ts and
+  // src/runtime/providers/adapters/auth.ts for the same mismatch.
+  type RuntimeAuthLoader = (
+    getAuth: () => Promise<unknown>,
+    provider: unknown,
+  ) => Promise<{ apiKey?: string; token?: string; authType?: string } | undefined>
 
   // Per-provider HTTP concurrency cap. Configured via provider.options.concurrency
   // (max simultaneous requests). Unset or <= 0 means uncapped (default behavior).
@@ -377,7 +385,7 @@ export namespace Provider {
           release_date: model.release_date ?? existingModel?.release_date ?? "",
           variants: {},
         }
-        const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
+        const merged: Record<string, Record<string, any>> = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
         parsedModel.variants = mapValues(
           pickBy(merged, (v) => !v.disabled),
           (v) => omit(v, ["disabled"]),
@@ -419,7 +427,10 @@ export namespace Provider {
       if (!auth) continue
       if (!plugin.auth.loader) continue
 
-      const options = await plugin.auth.loader(() => Auth.get(providerID) as any, database[plugin.auth.provider])
+      const options = await (plugin.auth.loader as unknown as RuntimeAuthLoader)(
+        () => Auth.get(providerID) as any,
+        database[plugin.auth.provider],
+      )
       const opts = options ?? {}
       const patch: Partial<Info> = providers[providerID] ? { options: opts } : { source: "custom", options: opts }
       mergeProvider(providerID, patch)
@@ -580,7 +591,7 @@ export namespace Provider {
         // Filter out disabled variants from config
         const configVariants = configProvider?.models?.[modelID]?.variants
         if (configVariants && model.variants) {
-          const merged = mergeDeep(model.variants, configVariants)
+          const merged: Record<string, Record<string, any>> = mergeDeep(model.variants, configVariants)
           model.variants = mapValues(
             pickBy(merged, (v) => !v.disabled),
             (v) => omit(v, ["disabled"]),
@@ -891,7 +902,10 @@ export namespace Provider {
         if (!plugin.auth.loader) continue
         const auth = await Auth.get(ref.providerID)
         if (!auth) continue
-        const loaded = await plugin.auth.loader(() => Auth.get(ref.providerID) as any, provider)
+        const loaded = await (plugin.auth.loader as unknown as RuntimeAuthLoader)(
+          () => Auth.get(ref.providerID) as any,
+          provider,
+        )
         if (loaded?.apiKey || loaded?.token) {
           plan.source = "plugin"
           if (loaded.apiKey) plan.apiKey = loaded.apiKey
@@ -899,7 +913,7 @@ export namespace Provider {
             plan.token = loaded.token
             plan.authType = "bearer"
           }
-          if (loaded.authType) plan.authType = loaded.authType
+          if (loaded.authType) plan.authType = loaded.authType as typeof plan.authType
           break
         }
       }

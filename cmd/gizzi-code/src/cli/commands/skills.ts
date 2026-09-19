@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { cmd } from "@/cli/commands/cmd"
 import * as prompts from "@clack/prompts"
 import { UI } from "@/cli/ui"
@@ -318,7 +317,9 @@ const CreateSkillCommand = cmd({
           const spinner = prompts.spinner()
           spinner.start("Thinking of clarifying questions...")
           
-          const questions = await generateInterviewQuestions(description).catch(() => [])
+          // TODO(types): skill-generator is a stub whose declared signature
+          // takes no args; the runtime generator accepts the description.
+          const questions = await (generateInterviewQuestions as unknown as (desc: string) => Promise<string[]>)(description).catch(() => [])
           spinner.stop()
 
           // Ask up to 3 follow-up questions
@@ -341,7 +342,7 @@ const CreateSkillCommand = cmd({
         try {
           const model = args.model ? Provider.parseModel(args.model) : undefined
           
-          const { skillPath, generated } = await createSkillWithAI({
+          const { skillPath, generated: generatedRaw } = await createSkillWithAI({
             description,
             interviewAnswers: interviewAnswers.length > 0 ? interviewAnswers : undefined,
             targetPath,
@@ -350,6 +351,12 @@ const CreateSkillCommand = cmd({
               spinner.message(msg)
             },
           })
+          // TODO(types): the skill-generator stub's GeneratedSkill lacks the
+          // scripts/references fields the runtime generator returns.
+          const generated = generatedRaw as typeof generatedRaw & {
+            scripts?: Record<string, string>
+            references?: Record<string, string>
+          }
 
           spinner.stop(`Skill "${generated.name}" created!`)
 
