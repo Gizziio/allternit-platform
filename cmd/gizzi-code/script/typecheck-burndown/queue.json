@@ -3,11 +3,11 @@
   "generatedFrom": "cef80b754a1bffa8f6f8287aae4036f8b0b3d7dc",
   "batchCount": 103,
   "stats": {
-    "totalNocheck": 1033,
+    "totalNocheck": 1032,
     "excludedCompilerArtifacts": 181,
     "excludedVendored": 93,
-    "totalQueueFiles": 739,
-    "totalQueueLoc": 302203,
+    "totalQueueFiles": 738,
+    "totalQueueLoc": 300667,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1769,12 +1769,13 @@
     },
     {
       "id": "b0099",
-      "files": [
-        "src/shared/utils/gizzimd.ts"
-      ],
-      "loc": 1507,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1513,
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail3): single-file 3-error burn converged in 1 iteration. src/shared/utils/gizzimd.ts: (1) TEAMMEM feature-flag branch calls isTeamMemoryEnabled()/getTeamMemEntrypoint() on ../memdir/teamMemPaths.js, a live empty module (export {}) — the typeof import cast had no such members; widened the local require cast to a structural contract (DCE flag preserved, no behavior change); (2) getMemoryFiles.cache access — the ambient lodash-es/memoize.js shim (src/types/global.d.ts) returns T without lodash's runtime .cache; pinned via (fn as any).cache?.clear?.(), claudeai.ts clearClaudeAIMcpConfigsCache precedent. No escalations, no allowlist changes. Stats re-derived from live tree."
     },
     {
       "id": "b0100",
