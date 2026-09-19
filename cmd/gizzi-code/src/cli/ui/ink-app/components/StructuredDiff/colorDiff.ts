@@ -2,7 +2,7 @@ import {
   ColorDiff,
   ColorFile,
   getSyntaxTheme as nativeGetSyntaxTheme,
-  type SyntaxTheme,
+  type SyntaxThemeWithMeta,
 } from '../../../../../vendor/color-diff-napi'
 import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
 
@@ -30,7 +30,7 @@ export function expectColorFile(): typeof ColorFile | null {
   return getColorModuleUnavailableReason() === null ? ColorFile : null
 }
 
-export function getSyntaxTheme(themeName: string): SyntaxTheme | null {
+export function getSyntaxTheme(themeName: string): SyntaxThemeWithMeta | null {
   return getColorModuleUnavailableReason() === null
     ? nativeGetSyntaxTheme(themeName)
     : null

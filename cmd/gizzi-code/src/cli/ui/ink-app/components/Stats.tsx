@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — StatsDateRange/tab union drift and untyped token tuples (TS2345/TS2367/TS2739), latent, not a conversion regression.
 import { feature } from 'bun:bundle';
 import { plot as asciichart } from 'asciichart';
 import chalk from '@/shared/util/chalk'
@@ -106,12 +104,12 @@ function StatsContent({
     onClose
 }: StatsContentProps) {
   const allTimeResult = use(allTimePromise);
-  const [dateRange, setDateRange] = useState("all");
+  const [dateRange, setDateRange] = useState<StatsDateRange>("all");
   const t1 = {};
 
   const [statsCache, setStatsCache] = useState(t1);
   const [isLoadingFiltered, setIsLoadingFiltered] = useState(false);
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [activeTab, setActiveTab] = useState<"Overview" | "Models">("Overview");
   const [copyStatus, setCopyStatus] = useState(null);
   const t2 = () => {
       if (dateRange === "all") {
@@ -205,7 +203,10 @@ function StatsContent({
 function _temp(prev_0) {
   return prev_0 === "Overview" ? "Models" : "Overview";
 }
-function DateRangeSelector(t0) {
+function DateRangeSelector(t0: {
+  dateRange: StatsDateRange;
+  isLoading: boolean;
+}) {
   const {
     dateRange,
     isLoading
@@ -379,7 +380,7 @@ function OverviewTab({
       </Box>
 
       {/* Speculation time saved (ant-only) */}
-      {"external" === 'ant' && stats.totalSpeculationTimeSavedMs > 0 && <Box flexDirection="row" gap={4}>
+      {("external" as string) === 'ant' && stats.totalSpeculationTimeSavedMs > 0 && <Box flexDirection="row" gap={4}>
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
                 Speculation saved:{' '}
@@ -580,7 +581,11 @@ function generateFunFactoid(stats: ClaudeCodeStats, totalTokens: number): string
   const randomIndex = Math.floor(Math.random() * factoids.length);
   return factoids[randomIndex]!;
 }
-function ModelsTab(t0) {
+function ModelsTab(t0: {
+  stats: ClaudeCodeStats;
+  dateRange: StatsDateRange;
+  isLoading: boolean;
+}) {
   const {
     stats,
     dateRange,
@@ -923,7 +928,7 @@ function renderOverviewToAnsi(stats: ClaudeCodeStats): string[] {
   lines.push(row('Active days', activeDaysVal, 'Peak hour', peakHourVal));
 
   // Speculation time saved (ant-only)
-  if ("external" === 'ant' && stats.totalSpeculationTimeSavedMs > 0) {
+  if (("external" as string) === 'ant' && stats.totalSpeculationTimeSavedMs > 0) {
     const label = 'Speculation saved:'.padEnd(COL1_LABEL_WIDTH);
     lines.push(label + h(formatDuration(stats.totalSpeculationTimeSavedMs)));
   }

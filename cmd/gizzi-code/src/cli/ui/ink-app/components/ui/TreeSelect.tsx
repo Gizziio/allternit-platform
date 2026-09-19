@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — traverse() arity mismatch after decompile (TS2554), latent, not a conversion regression.
 import React from 'react';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event';
 import { Box } from '../../ink';
@@ -108,7 +106,7 @@ export type TreeSelectProps<T> = {
  * It handles expand/collapse state, keyboard navigation, and renders the tree as a flat list
  * using the Select component.
  */
-export function TreeSelect(t0) {
+export function TreeSelect<T>(t0: TreeSelectProps<T>) {
   const {
     nodes,
     onSelect,
@@ -129,12 +127,12 @@ export function TreeSelect(t0) {
   const layout = t1 === undefined ? "expanded" : t1;
   const isDisabled = t2 === undefined ? false : t2;
   const hideIndexes = t3 === undefined ? false : t3;
-  const t4 = new Set();
+  const t4 = new Set<string | number>();
 
   const [internalExpandedIds, setInternalExpandedIds] = React.useState(t4);
   const isProgrammaticFocusRef = React.useRef(false);
-  const lastFocusedIdRef = React.useRef(null);
-  const t5 = nodeId => {
+  const lastFocusedIdRef = React.useRef<string | number | null>(null);
+  const t5 = (nodeId: string | number) => {
       if (isNodeExpanded) {
         return isNodeExpanded(nodeId);
       }
@@ -142,8 +140,8 @@ export function TreeSelect(t0) {
     };
 
   const isExpanded = t5;
-  const result = [];
-  function traverse(node, depth, parentId) {
+  const result: FlattenedNode<T>[] = [];
+  function traverse(node: TreeNode<T>, depth: number, parentId?: string | number) {
       const hasChildren = !!node.children && node.children.length > 0;
       const nodeIsExpanded = isExpanded(node.id);
       result.push({
@@ -168,7 +166,7 @@ export function TreeSelect(t0) {
   const defaultGetChildPrefix = _temp2;
   const parentPrefixFn = getParentPrefix ?? defaultGetParentPrefix;
   const childPrefixFn = getChildPrefix ?? defaultGetChildPrefix;
-  const t6 = flatNode => {
+  const t6 = (flatNode: FlattenedNode<T>) => {
       let prefix = "";
       if (flatNode.hasChildren) {
         prefix = parentPrefixFn(flatNode.isExpanded);
@@ -189,14 +187,14 @@ export function TreeSelect(t0) {
     }));
 
   const options = t7;
-  const map = new Map();
+  const map = new Map<string | number, TreeNode<T>>();
   flattenedNodes.forEach(fn => map.set(fn.node.id, fn.node));
 
   const nodeMap = map;
-  const t8 = nodeId_0 => flattenedNodes.find(fn_0 => fn_0.node.id === nodeId_0);
+  const t8 = (nodeId_0: string | number) => flattenedNodes.find(fn_0 => fn_0.node.id === nodeId_0);
 
   const findFlattenedNode = t8;
-  const t9 = (nodeId_1, shouldExpand) => {
+  const t9 = (nodeId_1: string | number, shouldExpand: boolean) => {
       const flatNode_1 = findFlattenedNode(nodeId_1);
       if (!flatNode_1 || !flatNode_1.hasChildren) {
         return;
@@ -221,7 +219,7 @@ export function TreeSelect(t0) {
     };
 
   const toggleExpand = t9;
-  const t10 = e => {
+  const t10 = (e: KeyboardEvent) => {
       if (!focusNodeId || isDisabled) {
         return;
       }
@@ -255,7 +253,7 @@ export function TreeSelect(t0) {
     };
 
   const handleKeyDown = t10;
-  const t11 = nodeId_2 => {
+  const t11 = (nodeId_2: string | number) => {
       const node_1 = nodeMap.get(nodeId_2);
       if (!node_1) {
         return;
@@ -264,7 +262,7 @@ export function TreeSelect(t0) {
     };
 
   const handleChange = t11;
-  const t12 = nodeId_3 => {
+  const t12 = (nodeId_3: string | number) => {
       if (isProgrammaticFocusRef.current) {
         isProgrammaticFocusRef.current = false;
         return;

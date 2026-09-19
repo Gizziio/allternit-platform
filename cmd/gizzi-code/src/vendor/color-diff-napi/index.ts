@@ -61,6 +61,13 @@ export interface SyntaxTheme {
   }>;
 }
 
+// Extra fields surfaced by the theme picker footer (`syntaxTheme.theme`
+// / `syntaxTheme.source`); attached by withMeta at load time.
+export type SyntaxThemeWithMeta = SyntaxTheme & {
+  theme?: string;
+  source?: string;
+};
+
 export interface DiffResult {
   distance: number;
   similar: boolean;
@@ -674,7 +681,7 @@ const BUILT_IN_THEMES: Record<string, SyntaxTheme> = {
  * them to the nearest TextMate-style built-in, as well as the built-in
  * names themselves ('dark-plus', 'light-plus', ...).
  */
-export function getSyntaxTheme(themeName: string): SyntaxTheme | null {
+export function getSyntaxTheme(themeName: string): SyntaxThemeWithMeta | null {
   const direct = BUILT_IN_THEMES[themeName];
   if (direct) return withMeta(direct, themeName, 'built-in');
   // Only recognizable TUI theme names map onto the built-in palettes;
@@ -688,14 +695,13 @@ export function getSyntaxTheme(themeName: string): SyntaxTheme | null {
   return withMeta(mapped, syntaxThemeName, 'built-in');
 }
 
-function withMeta(theme: SyntaxTheme, name: string, source: string): SyntaxTheme {
+function withMeta(theme: SyntaxTheme, name: string, source: string): SyntaxThemeWithMeta {
   return {
     ...theme,
     name: theme.name || name,
-    // Extra fields surfaced by the theme picker footer (`syntaxTheme.theme`
-    // / `syntaxTheme.source`); not part of the strict SyntaxTheme type.
-    ...( { theme: theme.name || name, source } as object ),
-  } as SyntaxTheme;
+    theme: theme.name || name,
+    source,
+  };
 }
 
 /**

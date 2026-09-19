@@ -1,12 +1,10 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — Message vs NormalizedUserMessage content union (TS2345/TS2322/TS2339), latent, not a conversion regression.
 import figures from 'figures';
 import type { RefObject } from 'react';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { Box, Text } from '../ink';
 import { useKeybindings } from '../keybindings/useKeybinding';
 import { logEvent } from '../services/analytics/index';
-import type { NormalizedUserMessage, RenderableMessage } from '../types/message';
+import type { Message, NormalizedUserMessage, RenderableMessage } from '../types/message';
 import { isEmptyMessageText, SYNTHETIC_MESSAGES } from '../utils/syntheticMessages.js';
 const NAVIGABLE_TYPES = ['user', 'assistant', 'grouped_tool_use', 'collapsed_read_search', 'system', 'attachment'] as const;
 export type NavigableType = (typeof NAVIGABLE_TYPES)[number];
@@ -272,7 +270,10 @@ export function useMessageActions(cursor: MessageActionsState | null, setCursor:
 }
 
 // Must mount inside <KeybindingSetup>.
-export function MessageActionsKeybindings(t0) {
+export function MessageActionsKeybindings(t0: {
+  handlers: Record<string, () => void>;
+  isActive?: boolean;
+}) {
   const {
     handlers,
     isActive
@@ -287,7 +288,9 @@ export function MessageActionsKeybindings(t0) {
 }
 
 // borderTop-only Box matches PromptInput's ─── line for stable footer height.
-export function MessageActionsBar(t0) {
+export function MessageActionsBar(t0: {
+  cursor: MessageActionsState;
+}) {
   const {
     cursor
   } = t0;
@@ -358,9 +361,9 @@ export function copyTextOf(msg: NavigableMessage): string {
     case 'collapsed_read_search':
       return msg.messages.flatMap(m => m.type === 'user' ? [toolResultText(m)] : m.type === 'grouped_tool_use' ? m.results.map(toolResultText) : []).filter(Boolean).join('\n\n');
     case 'system':
-      if ('content' in msg) return msg.content;
-      if ('error' in msg) return String(msg.error);
-      return msg.subtype;
+      if (typeof msg.content === 'string') return msg.content;
+      if (msg.error !== undefined) return String(msg.error);
+      return msg.subtype ?? '';
     case 'attachment':
       {
         const a = msg.attachment;
@@ -372,11 +375,13 @@ export function copyTextOf(msg: NavigableMessage): string {
       }
   }
 }
-function toolResultText(r: NormalizedUserMessage): string {
-  const b = r.message.content[0];
-  if (b?.type !== 'tool_result') return '';
+function toolResultText(m: Message): string {
+  const content = m.message?.content;
+  if (typeof content !== 'object' || content === null) return '';
+  const b = (content as Array<{ type?: string; content?: unknown }>)[0];
+  if (!b || b.type !== 'tool_result') return '';
   const c = b.content;
   if (typeof c === 'string') return c;
-  if (!c) return '';
-  return c.flatMap(x => x.type === 'text' ? [x.text] : []).join('\n');
+  if (!Array.isArray(c)) return '';
+  return c.flatMap(x => x?.type === 'text' && typeof x?.text === 'string' ? [x.text] : []).join('\n');
 }

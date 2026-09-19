@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 770,
+    "totalNocheck": 760,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 656,
-    "totalQueueLoc": 262905,
+    "totalQueueFiles": 646,
+    "totalQueueLoc": 259469,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -1765,22 +1765,13 @@
     },
     {
       "id": "b442",
-      "files": [
-        "src/cli/commands/chrome/chrome.tsx",
-        "src/cli/ui/ink-app/components/LogSelector.tsx",
-        "src/cli/ui/ink-app/components/SessionPreview.tsx",
-        "src/cli/ui/ink-app/components/ShowInIDEPrompt.tsx",
-        "src/cli/ui/ink-app/components/Stats.tsx",
-        "src/cli/ui/ink-app/components/ThemePicker.tsx",
-        "src/cli/ui/ink-app/components/WorkflowMultiselectDialog.tsx",
-        "src/cli/ui/ink-app/components/messageActions.tsx",
-        "src/cli/ui/ink-app/components/skills/SkillsMenu.tsx",
-        "src/cli/ui/ink-app/components/ui/TreeSelect.tsx"
-      ],
+      "files": [],
       "loc": 3433,
       "twins": [],
-      "state": "NEW",
-      "note": "Added 2026-09-19 by artifact-codemod pilot 11: these 10 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — latent ant-drift type issues in LogSelector/Stats/messageActions/ThemePicker/WorkflowMultiselectDialog/TreeSelect/SkillsMenu/ShowInIDEPrompt/SessionPreview + chrome.tsx Promise<boolean> prop); the other 26 pilot-11 conversions dropped @ts-nocheck cleanly."
+      "state": "DONE",
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail7). 10 compiler-artifact conversion files, 3436 loc, @ts-nocheck headers removed with all 31 latent type errors fixed honestly (tsc exit 0, 0 errors). Fixes: chrome.tsx awaited isClaudeAISubscriber() Promise<boolean>; SessionPreview Set<string>; ShowInIDEPrompt Props<A = unknown> + Select callback params; SkillsMenu filter narrowed via `cmd is SkillCommand` predicate (Command union has no top-level source); messageActions toolResultText retyped to Message with runtime narrowing + system-case content/error guard, MessageActionsKeybindings/MessageActionsBar props typed; Stats dateRange/activeTab pinned to StatsDateRange and Overview|Models unions, two deliberate USER_TYPE DCE comparisons recast ((\"external\" as string) === 'ant', TaskStopTool/UI.tsx pattern), DateRangeSelector/ModelsTab props typed; ThemePicker useRegisterKeybindingContext given explicit isActive=true (2-param decompiled signature owned by sibling batch b440 — NOT modified), Select callbacks typed; WorkflowMultiselectDialog dropped the wrong Workflow import (install-state interface) for a local WorkflowId = 'claude'|'claude-review' matching the nocheck'd caller's state; TreeSelect made generic over TreeSelectProps<T>, traverse() parentId optional (TS2554), Sets/Maps/callbacks typed; LogSelector agenticSearchState pinned to its AgenticSearchState union (8 TS2339/TS2353), searchableTextByLog Map tuple return, deep-search state/maps/callbacks typed. 3 non-batch support files touched: agentSdkTypes.ts gained the missing ModelUsage export (stub mirror of ModelUsageSchema; contextWindow/maxOutputTokens optional to match persisted StoredCostState + cost-tracker.ts local interface, else 2 latent TS2345 surfaced there), vendor/color-diff-napi getSyntaxTheme now returns SyntaxThemeWithMeta (withMeta attached theme/source at runtime; removed `as SyntaxTheme` lie), StructuredDiff/colorDiff.ts re-export widened to match. No escalations; no headers restored. Identity check: tail batch re-verified NEW on origin/main after worktree creation; b442 still NEW in the pilot-12 regenerated queue at retirement time; no sibling claimed it.",
+      "burnedFiles": 10,
+      "burnedLoc": 3436
     },
     {
       "id": "b443",

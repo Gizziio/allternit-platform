@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — untyped Maps/Sets and agenticSearchState union narrowing (TS2769/TS2339/TS2353), latent, not a conversion regression.
 import chalk from '@/shared/util/chalk'
 import figures from 'figures';
 import Fuse from 'fuse.js';
@@ -42,6 +40,15 @@ type AgenticSearchState = {
 } | {
   status: 'error';
   message: string;
+};
+type DeepSearchResult = {
+  log: LogOption;
+  score?: number;
+  searchableText: string;
+};
+type DeepSearchResults = {
+  results: DeepSearchResult[];
+  query: string;
 };
 export type LogSelectorProps = {
   logs: LogOption[];
@@ -168,11 +175,11 @@ export function LogSelector({
   const t4 = getTheme(themeName);
 
   const theme = t4;
-  const t5 = text => applyColor(text, theme.warning as Color);
+  const t5 = (text: string) => applyColor(text, theme.warning as Color);
 
   const highlightColor = t5;
   const isAgenticSearchEnabled = false;
-  const [currentBranch, setCurrentBranch] = React.useState(null);
+  const [currentBranch, setCurrentBranch] = React.useState<string | null>(null);
   const [branchFilterEnabled, setBranchFilterEnabled] = React.useState(false);
   const [showAllWorktrees, setShowAllWorktrees] = React.useState(false);
   const [hasMultipleWorktrees, setHasMultipleWorktrees] = React.useState(false);
@@ -181,22 +188,20 @@ export function LogSelector({
   const currentCwd = t6;
   const [renameValue, setRenameValue] = React.useState("");
   const [renameCursorOffset, setRenameCursorOffset] = React.useState(0);
-  const t7 = new Set();
+  const t7 = new Set<string>();
 
   const [expandedGroupSessionIds, setExpandedGroupSessionIds] = React.useState(t7);
-  const [focusedNode, setFocusedNode] = React.useState(null);
+  const [focusedNode, setFocusedNode] = React.useState<LogTreeNode | null>(null);
   const [focusedIndex, setFocusedIndex] = React.useState(1);
   const [viewMode, setViewMode] = React.useState("list");
-  const [previewLog, setPreviewLog] = React.useState(null);
-  const prevFocusedIdRef = React.useRef(null);
+  const [previewLog, setPreviewLog] = React.useState<LogOption | null>(null);
+  const prevFocusedIdRef = React.useRef<string | null>(null);
   const [selectedTagIndex, setSelectedTagIndex] = React.useState(0);
-  const t8 = {
+  const [agenticSearchState, setAgenticSearchState] = React.useState<AgenticSearchState>({
       status: "idle"
-    };
-
-  const [agenticSearchState, setAgenticSearchState] = React.useState(t8);
+    });
   const [isAgenticSearchOptionFocused, setIsAgenticSearchOptionFocused] = React.useState(false);
-  const agenticSearchAbortRef = React.useRef(null);
+  const agenticSearchAbortRef = React.useRef<AbortController | null>(null);
   const t9 = viewMode === "search" && agenticSearchState.status !== "searching";
   const t10 = () => {
       setViewMode("list");
@@ -239,7 +244,7 @@ export function LogSelector({
   const t16 = [deferredSearchQuery];
 
   React.useEffect(t15, t16);
-  const [deepSearchResults, setDeepSearchResults] = React.useState(null);
+  const [deepSearchResults, setDeepSearchResults] = React.useState<DeepSearchResults | null>(null);
   const [isSearching, setIsSearching] = React.useState(false);
   const t17 = () => {
       getBranch().then(branch => setCurrentBranch(branch));
@@ -332,7 +337,7 @@ export function LogSelector({
   const t26 = [debouncedDeepSearchQuery, null, false];
 
   React.useEffect(t25, t26);
-  const snippetMap = new Map();
+  const snippetMap = new Map<LogOption, Snippet>();
   let filtered_0 = titleFilteredLogs;
   if (deepSearchResults && debouncedDeepSearchQuery && deepSearchResults.query === debouncedDeepSearchQuery) {
       for (const result of deepSearchResults.results) {
@@ -346,7 +351,7 @@ export function LogSelector({
       const t27 = new Set(filtered_0.map(_temp6));
 
       const titleMatchIds = t27;
-      const t29 = log_7 => !titleMatchIds.has(log_7.messages[0]?.uuid);
+      const t29 = (log_7: LogOption) => !titleMatchIds.has(log_7.messages[0]?.uuid);
 
       const transcriptOnlyMatches = deepSearchResults.results.map(_temp7).filter(t29);
       const t28 = [...filtered_0, ...transcriptOnlyMatches];
@@ -622,7 +627,7 @@ export function LogSelector({
   const t41 = [agenticSearchState.status, isResumeWithRenameEnabled, treeNodes, displayedLogs];
 
   React.useEffect(t40, t41);
-  const t42 = value => {
+  const t42 = (value: string) => {
       const index_1 = parseInt(value, 10);
       const log_11 = displayedLogs[index_1];
       if (!log_11 || prevFocusedIdRef.current === index_1.toString()) {
@@ -641,7 +646,7 @@ export function LogSelector({
     };
 
   const handleFlatOptionsSelectFocus = t42;
-  const t43 = node => {
+  const t43 = (node: LogTreeNode) => {
       setFocusedNode(node);
       const index_2 = displayedLogs.findIndex(log_12 => getSessionIdFromLog(log_12) === getSessionIdFromLog(node.value.log));
       if (index_2 >= 0) {
@@ -905,13 +910,13 @@ export function LogSelector({
  * Extracts searchable text content from a message.
  * Handles both string content and structured content blocks.
  */
-function _temp7(r_0) {
+function _temp7(r_0: DeepSearchResult) {
   return r_0.log;
 }
-function _temp6(log_6) {
+function _temp6(log_6: LogOption) {
   return log_6.messages[0]?.uuid;
 }
-function _temp5(fuseIndex_0, debouncedDeepSearchQuery_0, setDeepSearchResults_0, setIsSearching_0) {
+function _temp5(fuseIndex_0, debouncedDeepSearchQuery_0: string, setDeepSearchResults_0: (r: DeepSearchResults) => void, setIsSearching_0: (v: boolean) => void) {
   const results = fuseIndex_0.search(debouncedDeepSearchQuery_0);
   results.sort(_temp3);
   setDeepSearchResults_0({
@@ -920,14 +925,14 @@ function _temp5(fuseIndex_0, debouncedDeepSearchQuery_0, setDeepSearchResults_0,
   });
   setIsSearching_0(false);
 }
-function _temp4(r) {
+function _temp4(r): DeepSearchResult {
   return {
     log: r.item.log,
     score: r.score,
     searchableText: r.item.searchableText
   };
 }
-function _temp3(a, b) {
+function _temp3(a: { item: DeepSearchResult; score?: number }, b: { item: DeepSearchResult; score?: number }) {
   const aTime = new Date(a.item.log.modified).getTime();
   const bTime = new Date(b.item.log.modified).getTime();
   const timeDiff = bTime - aTime;
@@ -936,7 +941,7 @@ function _temp3(a, b) {
   }
   return (a.score ?? 1) - (b.score ?? 1);
 }
-function _temp2(log_1) {
+function _temp2(log_1: LogOption) {
   const currentSessionId = getSessionId();
   const logSessionId = getSessionIdFromLog(log_1);
   const isCurrentSession = currentSessionId && logSessionId === currentSessionId;
@@ -955,7 +960,7 @@ function _temp2(log_1) {
   }
   return false;
 }
-function _temp(log) {
+function _temp(log: LogOption): [LogOption, string] {
   return [log, buildSearchableText(log)];
 }
 function extractSearchableText(message: SerializedMessage): string {

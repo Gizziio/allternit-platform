@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — untyped Set<unknown> vs Set<string> (TS2322), latent, not a conversion regression.
 import type { UUID } from 'crypto';
 import React, { useCallback } from 'react';
 import { Box, Text } from '../ink';
@@ -66,7 +64,7 @@ export function SessionPreview({
   const t8 = [];
 
   const t9 = [];
-  const t10 = new Set();
+  const t10 = new Set<string>();
 
   const t11 = [];
 

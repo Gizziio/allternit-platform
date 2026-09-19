@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — generic Props requires type argument (TS2314), latent, not a conversion regression.
 import { basename, relative } from 'path';
 import React from 'react';
 import { Box, Text } from '../ink';
@@ -8,7 +6,7 @@ import { isSupportedVSCodeTerminal } from '../utils/ide';
 import { Select } from './CustomSelect/index';
 import { Pane } from './design-system/Pane';
 import type { PermissionOption, PermissionOptionWithLabel } from './permissions/FilePermissionDialog/permissionOptions';
-type Props<A> = {
+type Props<A = unknown> = {
   filePath: string;
   input: A;
   onChange: (option: PermissionOption, args: A, feedback?: string) => void;
@@ -48,7 +46,7 @@ export function ShowInIDEPrompt({
 
   const t5 = <Text>Do you want to make this edit to{" "}<Text bold={true}>{t4}</Text>?</Text>;
 
-  const t6 = value => {
+  const t6 = (value: string) => {
       const selected = options.find(opt => opt.value === value);
       if (selected) {
         if (selected.option.type === "reject") {
@@ -69,7 +67,7 @@ export function ShowInIDEPrompt({
       type: "reject"
     }, input);
 
-  const t8 = value_0 => setFocusedOption(value_0);
+  const t8 = (value_0: string) => setFocusedOption(value_0);
 
   const t9 = <Select options={options} inlineDescriptions={true} onChange={t6} onCancel={t7} onFocus={t8} onInputModeToggle={onInputModeToggle} />;
 

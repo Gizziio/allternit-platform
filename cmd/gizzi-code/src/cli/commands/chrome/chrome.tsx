@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — straight-lined bb-block needed a dup-rename hand-fix (t8->t8_2); remaining: isClaudeAISubscriber Promise<boolean> prop mismatch etc (TS2322), latent ant-drift, not a conversion regression.
 import React, { useState } from 'react';
 import { type OptionWithDescription, Select } from '../../ui/ink-app/components/CustomSelect/select.js';
 import { Dialog } from '../../ui/ink-app/components/design-system/Dialog.js';
@@ -91,7 +89,7 @@ function AllternitInChromeMenu({
     };
 
   const handleAction = t4;
-  const options = [];
+  const options: OptionWithDescription[] = [];
   const requiresExtensionSuffix = isExtensionInstalled ? "" : " (requires extension)";
   if (!isExtensionInstalled && !isHomespace) {
       const t5 = {
@@ -159,7 +157,7 @@ function _temp(s) {
 export const call = async function (onDone: (result?: string) => void): Promise<React.ReactNode> {
   const isExtensionInstalled = await isChromeExtensionInstalled();
   const config = getGlobalConfig();
-  const isSubscriber = isClaudeAISubscriber();
+  const isSubscriber = await isClaudeAISubscriber();
   const isWSL = env.isWslEnvironment();
   return <AllternitInChromeMenu onDone={onDone} isExtensionInstalled={isExtensionInstalled} configEnabled={config.allternitInChromeDefaultEnabled} isClaudeAISubscriber={isSubscriber} isWSL={isWSL} />;
 };
