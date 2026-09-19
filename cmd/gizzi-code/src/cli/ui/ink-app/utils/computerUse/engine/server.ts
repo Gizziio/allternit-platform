@@ -26,7 +26,7 @@ export function createComputerUseMcpServer(
 ): Server {
   const server = new Server(
     { name: adapter.serverName, version: '0.1.0' },
-    { tools: {} },
+    { capabilities: { tools: {} } },
   )
 
   server.setRequestHandler(CallToolRequestSchema, async () => ({
