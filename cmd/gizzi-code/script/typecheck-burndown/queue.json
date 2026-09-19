@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 106,
   "stats": {
-    "totalNocheck": 871,
+    "totalNocheck": 870,
     "excludedCompilerArtifacts": 95,
     "excludedVendored": 93,
-    "totalQueueFiles": 663,
-    "totalQueueLoc": 271839,
+    "totalQueueFiles": 662,
+    "totalQueueLoc": 268493,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1732,12 +1732,13 @@
     },
     {
       "id": "b0090",
-      "files": [
-        "src/runtime/services/mcp/client.ts"
-      ],
+      "files": [],
       "loc": 3346,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 3346,
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail4): 26 type errors fixed — 11x TS2709 Tool-as-namespace (import declared ink-app Tool type), stale MCP-SDK casts removed (1.29 request shape), callTool options behind CallToolResultSchema (1.29 sig), connectToServer.cache typed MemoizedConnectToServer intersection (lodash runtime attach), elicitation respond annotated ElicitResult. 6 DCE-gated dormant shims got signature-identical stubs (mcpSkills, computerUse common/mcpServer/wrapper, allternitInChrome mcpServer/toolRendering). Escalations: none. Identity: live -1 + recorded +1 = 1466 = totalAccounted."
     },
     {
       "id": "b0439",
