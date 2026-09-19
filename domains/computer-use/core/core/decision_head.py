@@ -39,6 +39,12 @@ from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Tupl
 
 logger = logging.getLogger(__name__)
 
+# Reserved operation slots (System One graft A, cua jev-use recipe) — names
+# and explanation text live with the element table (the closed-set source of
+# truth); the head only renders them into the prompt when they are present
+# in the question options.
+from .element_table import RESERVED_SLOT_OPERATIONS, RESERVED_SLOTS_INSTRUCTION  # noqa: E402
+
 # Public, ungated, Apache-2.0 HF repo (Qwen3.5-4B class per the MAP). The
 # mlx-community conversion is a 4-bit MLX build of Qwen/Qwen3-4B-Instruct-2507.
 # No gated weights, no signup wall — plain anonymous HF download.
@@ -718,6 +724,19 @@ class KimiCliHead:
             "JSON object — no prose, no markdown fences, no explanation.\n"
             if repair_of is not None else ""
         )
+        # System One graft A: when the operation question carries the
+        # reserved reobserve/abstain slots, the JSON contract needs one
+        # instruction line explaining them (the [OPTIONS] block lists the
+        # names; this line says what they MEAN).
+        reserved_line = (
+            "Reserved slots in the operation list: "
+            + RESERVED_SLOTS_INSTRUCTION + "\n\n"
+            if any(
+                option in RESERVED_SLOT_OPERATIONS
+                for question in questions
+                for option in question.options
+            ) else ""
+        )
         few_shot = (
             f"{self.few_shot_block}\n\n"
             if self.few_shot_block else ""
@@ -731,6 +750,7 @@ class KimiCliHead:
             "Answer the closed-set questions below. Each answer must be the "
             "EXACT option string from that question's list — never invent "
             "names, synonyms, or new options.\n\n"
+            f"{reserved_line}"
             f"[QUESTIONS]\n{block}\n\n"
             "Respond with a single JSON object only. It MUST contain exactly "
             "one key for EVERY question id listed above — no omissions, no "

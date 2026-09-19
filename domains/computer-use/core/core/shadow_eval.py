@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from .decision_head import DecisionHead, MockHead, Question, TypedDecision
-from .element_table import build_element_table
+from .element_table import RESERVED_SLOT_OPERATIONS, build_element_table
 from .planning_loop import PlanningLoop, PlanningLoopConfig
 from .vision_providers import ActionPlan, VisionAction
 
@@ -431,6 +431,8 @@ def run_task_sync(
     max_elements: int = 250,
     step_budget_ms: int = 15_000,
     progress: bool = False,
+    reserved_slots: bool = False,
+    last_action: bool = False,
 ) -> Dict[str, Any]:
     """Sync wrapper around :func:`run_task` (fresh event loop)."""
     import asyncio
@@ -439,7 +441,8 @@ def run_task_sync(
     try:
         return loop.run_until_complete(
             run_task(task, head=head, max_elements=max_elements,
-                     step_budget_ms=step_budget_ms, progress=progress)
+                     step_budget_ms=step_budget_ms, progress=progress,
+                     reserved_slots=reserved_slots, last_action=last_action)
         )
     finally:
         loop.close()
@@ -451,11 +454,16 @@ async def run_task(
     max_elements: int = 250,
     step_budget_ms: int = 15_000,
     progress: bool = False,
+    reserved_slots: bool = False,
+    last_action: bool = False,
 ) -> Dict[str, Any]:
     """Run one synthetic task through the planning loop and score agreement.
 
     Returns the per-task report slice: decide-step count, agreement rates
     (overall / given LLM success / given LLM failure) and mean latencies.
+    ``reserved_slots`` / ``last_action`` enable the System One grafts
+    (reserved reobserve/abstain operation slots / [LAST ACTION]
+    effect-escalation block) in the shadow state text.
     """
     from .element_refs import get_refmap
 
@@ -502,6 +510,8 @@ async def run_task(
                 shadow_head_enabled=True,
                 shadow_head_max_elements=max_elements,
                 shadow_head=shadow_head,
+                shadow_reserved_slots=reserved_slots,
+                shadow_last_action=last_action,
             ),
             event_callback=_on_event,
         )
@@ -606,6 +616,16 @@ async def run_task(
         # (KimiCliHead); absent (key missing) for heads without the counter.
         **({"vocab_misses": [dict(m) for m in shadow_head_vocab_misses]}
            if (shadow_head_vocab_misses := getattr(shadow_head, "vocab_misses", None)) is not None else {}),
+        # Graft A usage: how often the head actually chose a reserved slot.
+        # The recorded-LLM reference policy never abstains, so these picks
+        # count as disagreements in agreement_rate — honest metric, no
+        # special-casing.
+        "reobserve_picks": sum(
+            1 for r in steps_report if r["head_op"] == "reobserve"
+        ),
+        "abstain_picks": sum(
+            1 for r in steps_report if r["head_op"] == "abstain"
+        ),
         "executed_actions": adapter.executed,
         "steps": steps_report,
     }
@@ -618,6 +638,8 @@ def run_eval(
     head_label: str = "mock",
     step_budget_ms: int = 15_000,
     progress: bool = False,
+    reserved_slots: bool = False,
+    last_action: bool = False,
 ) -> Dict[str, Any]:
     """Run the full shadow eval over the synthetic task set.
 
@@ -626,10 +648,13 @@ def run_eval(
     ``head_label`` identifies the head in the report. ``step_budget_ms``
     scales the per-task wall-clock budget for slow heads (kimi CLI
     subprocesses); ``progress`` prints one line per decide step.
+    ``reserved_slots`` / ``last_action`` enable the System One grafts in the
+    shadow state text (see :func:`run_task`).
     """
     task_list = list(tasks) if tasks is not None else default_tasks(steps_per_task)
     reports = [
-        run_task_sync(t, head=head, step_budget_ms=step_budget_ms, progress=progress)
+        run_task_sync(t, head=head, step_budget_ms=step_budget_ms, progress=progress,
+                      reserved_slots=reserved_slots, last_action=last_action)
         for t in task_list
     ]
 
@@ -665,6 +690,14 @@ def run_eval(
         # Canonical-vocab misses (KimiCliHead tracks these; mock/mlx don't).
         **({"vocab_miss_count": sum(len(t.get("vocab_misses", [])) for t in reports)}
            if any("vocab_misses" in t for t in reports) else {}),
+        # Graft A usage across the whole run: reserved-slot picks and their
+        # share of decide steps (0 when the flag is off).
+        "reobserve_picks": sum(t["reobserve_picks"] for t in reports),
+        "abstain_picks": sum(t["abstain_picks"] for t in reports),
+        "reserved_slot_rate": round(
+            sum(t["reobserve_picks"] + t["abstain_picks"] for t in reports)
+            / len(all_steps), 4
+        ) if all_steps else None,
         "note": (
             "KimiCliHead numbers — the kimi CLI subprocess head answers the "
             "same closed-set questions as the scripted LLM transcript under a "
@@ -689,6 +722,8 @@ def run_eval(
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "steps_per_task": steps_per_task,
         "head": head_label,
+        "reserved_slots": bool(reserved_slots),
+        "last_action": bool(last_action),
         "aggregate": aggregate,
         "tasks": reports,
     }
@@ -761,6 +796,14 @@ def render_markdown(report: Dict[str, Any]) -> str:
     ]
     if "vocab_miss_count" in agg:
         lines.append(f"| Vocab misses | {agg['vocab_miss_count']} |")
+    if report.get("reserved_slots"):
+        lines.append("| reobserve picks | "
+                     f"{agg['reobserve_picks']} of {agg['total_decide_steps']} steps |")
+        lines.append("| abstain picks | "
+                     f"{agg['abstain_picks']} of {agg['total_decide_steps']} steps |")
+        lines.append(f"| Reserved-slot pick rate | {_fmt(agg['reserved_slot_rate'])} |")
+    if report.get("last_action"):
+        lines.append("| [LAST ACTION] block | on (effect: confirmed / suspected_noop) |")
     lines += [
         "",
         "## Per task",
@@ -775,6 +818,25 @@ def render_markdown(report: Dict[str, Any]) -> str:
             f"| {_fmt(task['agreement_given_llm_failure'])} "
             f"| {_fmt(task['stuck_true_rate_given_llm_failure'])} "
             f"| {_fmt(task['mean_head_latency_ms'])} | {_fmt(task['mean_llm_latency_ms'])} |"
+        )
+    if report.get("reserved_slots"):
+        lines += [
+            "",
+            "## Reserved-slot usage (graft A)",
+            "",
+            "| Task | reobserve picks | abstain picks |",
+            "|---|---|---|",
+        ]
+        for task in report["tasks"]:
+            lines.append(
+                f"| {task['task_id']} | {task['reobserve_picks']} "
+                f"| {task['abstain_picks']} |"
+            )
+        lines.append("")
+        lines.append(
+            "The recorded-LLM reference policy never abstains, so every "
+            "reserved-slot pick is scored as a disagreement (op_agree=False) "
+            "— no special-casing."
         )
     lines += ["", "## Method", "", agg["note"], ""]
     return "\n".join(lines)
