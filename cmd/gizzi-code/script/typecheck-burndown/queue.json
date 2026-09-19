@@ -1,20 +1,20 @@
 {
   "version": 1,
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
-  "batchCount": 105,
+  "batchCount": 106,
   "stats": {
-    "totalNocheck": 889,
-    "excludedCompilerArtifacts": 118,
+    "totalNocheck": 872,
+    "excludedCompilerArtifacts": 95,
     "excludedVendored": 93,
-    "totalQueueFiles": 658,
-    "totalQueueLoc": 271106,
+    "totalQueueFiles": 664,
+    "totalQueueLoc": 272041,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
       "suspect-malformed": 2
     },
     "zeroImporter": 187,
-    "totalAccounted": 1460
+    "totalAccounted": 1466
   },
   "batches": [
     {
@@ -1755,6 +1755,21 @@
       "burnedFiles": 40,
       "burnedLoc": 7468,
       "note": "Burned 2026-09-19 (ao/ts-burn-head1). Retired-id absorption: the queue regen (edcf804, ao/artifact-codemod pilot landing) retired the b0395 id mid-flight and remixed its 40 files into b0422 (39) and b0423 (mcpPluginIntegration.ts); removed from those batches (b0422 keeps bridgeEnabled.ts, 1 file; b0423 keeps 18) and recorded here. 29 header-only 0-error burns (tsc include compiles every queued file: baseline EXIT=0 with headers, post-strip inventory attributed 31 errors to 11 files, converged in 2 iterations). Type-only fixes: connect.ts (local RuntimeAuthMethod discriminated union mirroring the runtime auth-plugin shape — label/prompts/authorize oauth descriptor vs api direct-result; TODO(types) sibling pattern of codex.ts and provider.ts RuntimeAuthLoader), main.ts (RegisteredCommand as-unknown-as CommandModule per the registry doc contract), status.tsx + TextInput.tsx (AppState.messages / MCPServerConnection.status / useVoiceState {}-return pins, sibling dash.ts pattern), builtInAgents.ts (structural lazy-require contract; LATENT BUG flagged not fixed: getCoordinatorAgents is not exported by coordinator/workerAgent.js), WebFetchTool/utils.ts (axios content-type normalized via String(); text-block typeof-guard vs index-signature union), types/plugin.ts (dormant-shim local mirror of runtime lsp/types.ts, sibling TODO(types) pattern), sessionStart.ts (as-unknown-as HookResultMessage, mirroring the shared twin's existing casts), runtime withRetry.ts (getAPIProviderForStatsig import switched to the shared twin returning the verified-metadata brand). Two latent runtime bugs fixed where the old code could not type-check honestly: instrumentation.ts BatchLogRecordProcessor migrated from the legacy 2-arg call to the 1-arg options shape (sdk-logs 0.222 pinned; the old form silently left the processor without an exporter), and runtime withRetry.ts sleep import switched to the abort-aware shared/utils/sleep.js (the old 1-arg src/utils/sleep.js silently dropped the abort signal and abortError at all 3 call sites). No escalations; allowlist untouched."
+    },
+    {
+      "id": "b440",
+      "files": [
+        "src/cli/ui/ink-app/buddy/useBuddyNotification.tsx",
+        "src/cli/ui/ink-app/hooks/useCanUseTool.tsx",
+        "src/cli/ui/ink-app/hooks/useGizziHintRecommendation.tsx",
+        "src/cli/ui/ink-app/keybindings/KeybindingContext.tsx",
+        "src/cli/ui/ink-app/keybindings/KeybindingProviderSetup.tsx",
+        "src/cli/ui/ink-app/utils/autoRunIssue.tsx"
+      ],
+      "loc": 935,
+      "twins": [],
+      "state": "NEW",
+      "note": "Added 2026-09-19 by artifact-codemod pilot 9 union (orchestrator): these 6 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — dead ant comparisons, unknown-typed tool results, keybindings re-export drift; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md §7."
     }
   ],
   "quarantined": [
