@@ -1,8 +1,6 @@
-// @ts-nocheck
 import {
   type ClaudeForChromeContext,
   createClaudeForChromeMcpServer,
-  type Logger,
   type PermissionMode,
 } from './extension.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -277,7 +275,7 @@ export async function runAllternitInChromeMcpServer(): Promise<void> {
   logForDebugging('[Allternit in Chrome] MCP server started')
 }
 
-class DebugLogger implements Logger {
+class DebugLogger {
   silly(message: string, ...args: unknown[]): void {
     logForDebugging(format(message, ...args), { level: 'debug' })
   }

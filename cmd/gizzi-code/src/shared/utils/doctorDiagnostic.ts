@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { execa } from 'execa'
 import { readFile, realpath } from 'fs/promises'
 import { homedir } from 'os'
@@ -217,7 +216,9 @@ async function detectMultipleInstallations(): Promise<
 
   // Check for global npm installation — the true upstream package name, plus
   // this fork's own package (MACRO.PACKAGE_URL) when it differs.
-  const packagesToCheck = MACRO.PACKAGE_URL ? [MACRO.PACKAGE_URL] : ['@allternit/gizzi-code']
+  const packagesToCheck: string[] = MACRO.PACKAGE_URL
+    ? [MACRO.PACKAGE_URL as string]
+    : ['@allternit/gizzi-code']
   const npmResult = await execFileNoThrow('npm', [
     '-g',
     'config',

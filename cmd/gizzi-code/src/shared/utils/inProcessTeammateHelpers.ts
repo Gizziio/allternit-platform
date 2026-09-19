@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * In-Process Teammate Helpers
  *

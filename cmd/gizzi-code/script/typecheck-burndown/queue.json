@@ -1,13 +1,13 @@
 {
   "version": 1,
   "generatedFrom": "4346eab0b97beabecc8211eab116f447eb18f8ff",
-  "batchCount": 102,
+  "batchCount": 103,
   "stats": {
-    "totalNocheck": 998,
+    "totalNocheck": 988,
     "excludedCompilerArtifacts": 148,
     "excludedVendored": 93,
-    "totalQueueFiles": 737,
-    "totalQueueLoc": 298808,
+    "totalQueueFiles": 727,
+    "totalQueueLoc": 316748,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1777,23 +1777,24 @@
         "src/shared/utils/releaseNotes.ts",
         "src/shared/utils/localInstaller.ts",
         "src/shared/utils/allternitInChrome/setup.ts",
-        "src/shared/utils/nativeInstaller/download.ts",
         "src/shared/utils/autoUpdater.ts",
         "src/shared/utils/messageQueueManager.ts",
-        "src/runtime/gizzi-core/services/railsPeer.ts",
-        "src/cli/ui/ink-app/components/RailsInboxBridge.tsx",
-        "src/shared/utils/task/framework.ts",
-        "src/shared/utils/inProcessTeammateHelpers.ts",
-        "src/shared/utils/swarm/spawnInProcess.ts",
-        "src/shared/utils/swarm/backends/InProcessBackend.ts",
-        "src/shared/utils/ide.ts",
-        "src/shared/utils/logoV2Utils.ts",
-        "src/shared/utils/allternitInChrome/mcpServer.ts",
-        "src/shared/utils/doctorDiagnostic.ts"
+        "src/runtime/gizzi-core/services/railsPeer.ts"
       ],
-      "loc": 7003,
+      "loc": 2594,
       "twins": [],
       "state": "NEW"
+    },
+    {
+      "id": "b0394",
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 10,
+      "burnedLoc": 4409,
+      "escalated": [],
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail4). Retired-id absorption: the ao/artifact-codemod-pilot7 queue regen landed mid-flight, retired the b0394 id, and remixed its 10 files into b0421 (17); removed from b0421 and recorded here. 4 header-only 0-error burns (RailsInboxBridge.tsx, task/framework.ts, inProcessTeammateHelpers.ts, swarm/spawnInProcess.ts) + 6 type-only fixes converging 9 errors in 3 iterations: mcpServer.ts (vendored extension.ts stub types Logger as a bare function type; dropped the unsatisfiable `implements Logger` + its now-unused type import), doctorDiagnostic.ts (MACRO index signature makes PACKAGE_URL unknown; local string[] annotation + as string), ide.ts (latent runtime bug: both ideOnboardingDialog() call sites called .hasIdeOnboardingDialogBeenShown() on the lazy-import Promise without awaiting — TypeError at runtime when the check fires; now awaited, enclosing .then made async), logoV2Utils.ts (MACRO.VERSION_CHANGELOG unknown; local `as string | undefined` wrapper), download.ts (MACRO.NATIVE_PACKAGE_URL unknown; computed property names need `(x as string)` in parens — `!` does not narrow unknown), InProcessBackend.ts (ToolUseContext.setAppState optional vs SpawnContext required; type-only `this.context as SpawnContext` — TeammateTool always installs setAppState). No escalations; no allowlist entries."
     }
   ],
   "quarantined": [

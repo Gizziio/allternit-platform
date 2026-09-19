@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Rails Inbox Bridge
  *
