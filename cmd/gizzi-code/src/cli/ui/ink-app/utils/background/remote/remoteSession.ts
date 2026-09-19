@@ -1,5 +1,7 @@
-// @ts-nocheck
-import type { SDKMessage } from './../../../entrypoints/agentSdkTypes.ts'
+// agentSdkTypes.ts keeps SDKMessage as a local `unknown` mirror and does not
+// export it (TODO(types) stub entrypoint) — mirror locally, same pattern as
+// utils/sessionHistory.ts.
+type SDKMessage = unknown
 import { checkGate_CACHED_OR_BLOCKING } from '../../../services/analytics/growthbook.js'
 import { isPolicyAllowed } from '../../../services/policyLimits/index.js'
 import { detectCurrentRepositoryWithHost } from '../../detectRepository.js'

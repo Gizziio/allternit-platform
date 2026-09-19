@@ -1,4 +1,3 @@
-// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 /**
  * Shared event metadata enrichment for analytics systems
@@ -126,17 +125,13 @@ export function isAnalyticsToolDetailsLoggingEnabled(
  * reservation (main.tsx, config.ts addMcpServer) is itself feature-gated, so
  * a user-configured 'computer-use' is possible in builds without the feature.
  */
-/* eslint-disable @typescript-eslint/no-require-imports */
+// src/runtime/utils/computerUse/common.ts is a dormant auto-generated shim
+// (`export {}`) in this tree; mirror the constant contract from the ink-app
+// implementation (src/cli/ui/ink-app/utils/computerUse/common.ts).
+const COMPUTER_USE_MCP_SERVER_NAME = 'computer-use'
 const BUILTIN_MCP_SERVER_NAMES: ReadonlySet<string> = new Set(
-  feature('CHICAGO_MCP')
-    ? [
-        (
-          require('../../utils/computerUse/common.js') as typeof import('../../utils/computerUse/common.js')
-        ).COMPUTER_USE_MCP_SERVER_NAME,
-      ]
-    : [],
+  feature('CHICAGO_MCP') ? [COMPUTER_USE_MCP_SERVER_NAME] : [],
 )
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
  * Spreadable helper for logEvent payloads — returns {mcpServerName, mcpToolName}
@@ -620,7 +615,10 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
     isClaudeAiAuth: isClaudeAISubscriber(),
     version: MACRO.VERSION,
     versionBase: getVersionBase(),
-    buildTime: MACRO.BUILD_TIME,
+    // MACRO's global declaration types undeclared keys as unknown; BUILD_TIME
+    // is a real injected string macro (devMacro.ts / build-production.js).
+    buildTime:
+      typeof MACRO.BUILD_TIME === 'string' ? MACRO.BUILD_TIME : 'unknown',
     deploymentEnvironment: env.detectDeploymentEnvironment(),
     ...(isEnvTruthy(process.env.GITHUB_ACTIONS) && {
       githubEventName: process.env.GITHUB_EVENT_NAME,

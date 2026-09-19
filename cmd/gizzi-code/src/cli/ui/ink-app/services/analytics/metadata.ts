@@ -1,4 +1,3 @@
-// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 /**
  * Shared event metadata enrichment for analytics systems
@@ -621,7 +620,10 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
     isClaudeAiAuth: isClaudeAISubscriber(),
     version: MACRO.VERSION,
     versionBase: getVersionBase(),
-    buildTime: MACRO.BUILD_TIME,
+    // MACRO's global declaration types undeclared keys as unknown; BUILD_TIME
+    // is a real injected string macro (devMacro.ts / build-production.js).
+    buildTime:
+      typeof MACRO.BUILD_TIME === 'string' ? MACRO.BUILD_TIME : 'unknown',
     deploymentEnvironment: env.detectDeploymentEnvironment(),
     ...(isEnvTruthy(process.env.GITHUB_ACTIONS) && {
       githubEventName: process.env.GITHUB_EVENT_NAME,

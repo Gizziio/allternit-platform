@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { AnyValueMap, Logger, logs } from '@opentelemetry/api-logs'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import {
@@ -371,7 +370,10 @@ export function initialize1PEventLogging(): void {
   firstPartyEventLoggerProvider = new LoggerProvider({
     resource,
     processors: [
-      new BatchLogRecordProcessor(eventLoggingExporter, {
+      // @opentelemetry/sdk-logs ≥0.53 takes a single options object with the
+      // exporter embedded (BatchLogRecordProcessorOptions).
+      new BatchLogRecordProcessor({
+        exporter: eventLoggingExporter,
         scheduledDelayMillis,
         maxExportBatchSize,
         maxQueueSize,

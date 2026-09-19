@@ -1,9 +1,7 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { APIError } from '@allternit/gizzi-sdk/providers/allternit'
 import type {
   BetaStopReason,
-  BetaUsage as Usage,
 } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import {
   addToTotalDurationState,
@@ -16,7 +14,11 @@ import {
 } from './../../bootstrap/state.ts'
 import type { QueryChainTracking } from './../../Tool.ts'
 import { isConnectorTextBlock } from './../../types/connectorText.ts'
-import type { AssistantMessage } from './../../types/message.ts'
+import type {
+  AssistantMessage,
+  ContentBlock,
+  MessageContent,
+} from './../../types/message.ts'
 import { logForDebugging } from './../../utils/debug.ts'
 import type { EffortLevel } from './../../utils/effort.ts'
 import { logError } from './../../utils/log.ts'
@@ -42,6 +44,15 @@ import { extractConnectionErrorDetails } from './errorUtils.js'
 
 export type { NonNullableUsage }
 export { EMPTY_USAGE }
+
+// AssistantMessage['message']['content'] may be a plain string; every
+// consumer in this file operates on content blocks, so normalize string
+// content to an empty block list.
+function getContentBlocks(
+  message: AssistantMessage['message'],
+): Array<MessageContent | ContentBlock> {
+  return typeof message.content === 'string' ? [] : message.content
+}
 
 // Strategy used for global prompt caching
 export type GlobalCacheStrategy = 'tool_based' | 'system_prompt' | 'none'
@@ -163,7 +174,10 @@ function getAllternitEnvMetadata() {
 }
 
 function getBuildAgeMinutes(): number | undefined {
-  if (!MACRO.BUILD_TIME) return undefined
+  // MACRO's global declaration types undeclared keys as unknown; BUILD_TIME
+  // is a real injected string macro (devMacro.ts / build-production.js).
+  if (typeof MACRO.BUILD_TIME !== 'string' || !MACRO.BUILD_TIME)
+    return undefined
   const buildTime = new Date(MACRO.BUILD_TIME).getTime()
   if (isNaN(buildTime)) return undefined
   return Math.floor((Date.now() - buildTime) / 60000)
@@ -427,7 +441,7 @@ function logAPISuccess({
   preNormalizedModel: string
   messageCount: number
   messageTokens: number
-  usage: Usage
+  usage: NonNullableUsage
   durationMs: number
   durationMsIncludingRetries: number
   attempt: number
@@ -645,7 +659,7 @@ export function logAPISuccessAndDuration({
     let connectorCount = 0
 
     for (const msg of newMessages) {
-      for (const block of msg.message.content) {
+      for (const block of getContentBlocks(msg.message)) {
         if (block.type === 'text') {
           textLen += block.text.length
         } else if (feature('CONNECTOR_TEXT') && isConnectorTextBlock(block)) {
@@ -725,7 +739,7 @@ export function logAPISuccessAndDuration({
     modelOutput =
       newMessages
         .flatMap(m =>
-          m.message.content
+          getContentBlocks(m.message)
             .filter(c => c.type === 'text')
             .map(c => (c as { type: 'text'; text: string }).text),
         )
@@ -736,16 +750,18 @@ export function logAPISuccessAndDuration({
       thinkingOutput =
         newMessages
           .flatMap(m =>
-            m.message.content
+            getContentBlocks(m.message)
               .filter(c => c.type === 'thinking')
-              .map(c => (c as { type: 'thinking'; thinking: string }).thinking),
+              .map(
+                c => (c as { type: 'thinking'; thinking: string }).thinking,
+              ),
           )
           .join('\n') || undefined
     }
 
     // Check if any tool_use blocks were in the output
     hasToolCall = newMessages.some(m =>
-      m.message.content.some(c => c.type === 'tool_use'),
+      getContentBlocks(m.message).some(c => c.type === 'tool_use'),
     )
   }
 
