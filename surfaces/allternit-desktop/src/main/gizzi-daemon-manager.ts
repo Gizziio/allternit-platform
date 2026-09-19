@@ -59,7 +59,9 @@ function isUrlReachable(url: string, timeoutMs: number): Promise<boolean> {
     const parsed = new URL(url);
     const client = parsed.protocol === 'https:' ? https : http;
     const req = client.get(url, { timeout: timeoutMs }, (res: any) => {
-      resolve(res.statusCode >= 200 && res.statusCode < 500);
+      // Only 2xx/3xx count as reachable; a 404/401 health endpoint means the
+      // daemon is not actually serving.
+      resolve(res.statusCode >= 200 && res.statusCode < 400);
       res.destroy();
     });
     req.on('error', () => resolve(false));

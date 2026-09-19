@@ -10,7 +10,6 @@
     "desktop",
     "electron"
   ],
-  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "dev": "npm run build:auth-renderer && NODE_ENV=development electron .",
     "dev:auth-renderer": "vite --config vite.auth-renderer.config.ts --port 5174",
@@ -81,7 +80,7 @@
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "https://github.com/allternit/desktop"
+    "url": "https://github.com/Gizziio/desktop"
   },
   "build": {
     "appId": "com.allternit.desktop",

@@ -117,7 +117,10 @@ function isUrlReachable(url: string, timeoutMs: number): Promise<boolean> {
     const parsed = new URL(url);
     const client = parsed.protocol === 'https:' ? https : http;
     const req = client.get(url, { timeout: timeoutMs }, (res: any) => {
-      resolve(res.statusCode >= 200 && res.statusCode < 500);
+      // 2xx/3xx mean something answered at this URL. 4xx (404/401) means the
+      // server is up but the target is wrong — treat as unreachable so callers
+      // fall back instead of reporting a dead backend as healthy.
+      resolve(res.statusCode >= 200 && res.statusCode < 400);
       res.destroy();
     });
     req.on('error', () => resolve(false));
@@ -1430,8 +1433,7 @@ async function initializeBundledMode(): Promise<void> {
 
     // ── First-launch: optional always-on cloud scheduler daemon ────────────
     // Gizzi Code can run as a background daemon so scheduled tasks and cron
-    // jobs survive app restarts. On first launch we ask once; the user can
-    // change this later from Settings.
+    // jobs survive app restarts. On first launch we ask once.
     if (isFirstLaunch) {
       mainWindow.webContents.once('did-finish-load', async () => {
         try {
@@ -1451,7 +1453,6 @@ async function initializeBundledMode(): Promise<void> {
 
           if (response === 0) {
             await installAlwaysOnGizziRuntime();
-            mainWindow?.webContents.send('gizzi-daemon:status', await gizziDaemonManager.getStatus());
           }
         } catch (err) {
           log.error('[Main] Daemon onboarding failed:', err);
@@ -2552,7 +2553,6 @@ ipcMain.on('app:get-platform-url', (event) => {
     gatewayUrl: URLS.CLOUD_API,
   };
 });
-ipcMain.handle('app:get-platform-url', () => activePlatformUrl);
 
   // Shell
 handleGuarded('shell:open-external', (_event, url: string) => {
@@ -3449,52 +3449,6 @@ handleGuarded('sidecar:restart', async () => {
     return true;
   } catch {
     return false;
-  }
-});
-
-// ============================================================================
-// IPC: Gizzi Code Always-On Daemon (cloud scheduling)
-// ============================================================================
-
-ipcMain.handle('gizzi-daemon:status', async () => gizziDaemonManager.getStatus());
-
-handleGuarded('gizzi-daemon:install', async () => {
-  try {
-    await installAlwaysOnGizziRuntime();
-    return { success: true, status: await gizziDaemonManager.getStatus() };
-  } catch (err) {
-    log.error('[IPC] gizzi-daemon:install failed:', err);
-    return { success: false, error: (err as Error).message };
-  }
-});
-
-handleGuarded('gizzi-daemon:start', async () => {
-  try {
-    await gizziDaemonManager.start();
-    return { success: true, status: await gizziDaemonManager.getStatus() };
-  } catch (err) {
-    log.error('[IPC] gizzi-daemon:start failed:', err);
-    return { success: false, error: (err as Error).message };
-  }
-});
-
-handleGuarded('gizzi-daemon:stop', async () => {
-  try {
-    await gizziDaemonManager.stop();
-    return { success: true, status: await gizziDaemonManager.getStatus() };
-  } catch (err) {
-    log.error('[IPC] gizzi-daemon:stop failed:', err);
-    return { success: false, error: (err as Error).message };
-  }
-});
-
-handleGuarded('gizzi-daemon:uninstall', async () => {
-  try {
-    await gizziDaemonManager.uninstall();
-    return { success: true, status: await gizziDaemonManager.getStatus() };
-  } catch (err) {
-    log.error('[IPC] gizzi-daemon:uninstall failed:', err);
-    return { success: false, error: (err as Error).message };
   }
 });
 

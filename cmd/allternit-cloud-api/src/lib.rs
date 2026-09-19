@@ -423,7 +423,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .with_state(state.clone());
 
     let public_health_routes = Router::new()
-        // Health endpoints (public)
+        // Health endpoints (public). `/health` (no /api/v1 prefix) is the
+        // conventional load-balancer/UptimeRobot probe path — serve the same
+        // public health handler there so monitors don't get 401.
+        .route("/health", get(routes::health::health_check))
         .route("/api/v1/health", get(routes::health::health_check))
         .route("/api/v1/health/ready", get(routes::health::readiness_check))
         .route("/api/v1/health/live", get(routes::health::liveness_check))

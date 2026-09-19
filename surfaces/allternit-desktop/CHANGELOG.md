@@ -3,6 +3,10 @@
 All notable changes to Allternit Desktop are documented here.
 Releases are tagged `desktop-v<version>`.
 
+## [Unreleased]
+
+(nothing yet)
+
 ## [1.1.1] — 2026-09-08
 
 ### Fixed
@@ -14,13 +18,13 @@ Releases are tagged `desktop-v<version>`.
   This release bundles current builds of both binaries — verified end-to-end:
   catalog, pickup, and origin banner all work in the packaged app.
 
-## [Unreleased]
+## [1.1.0] — 2026-09-03
 
 ### Hardening (production-readiness audit, desktop track)
 
 - CI honesty: desktop typecheck (`npm run typecheck` over main + preload) is a
   hard gate in `ci-desktop.yml` — failures fail the job.
-- Notarization: `scripts/notarize.cjs` now fails loudly (non-zero exit) when
+- Notarization: `scripts/notarize.cjs` fails loudly (non-zero exit) when
   `APPLE_ID` / `APPLE_ID_PASSWORD` / `APPLE_TEAM_ID` are missing on CI builds,
   instead of silently shipping an unnotarized app. Local unsigned builds still
   skip with a warning.

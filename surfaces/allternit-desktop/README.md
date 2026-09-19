@@ -45,17 +45,22 @@ also point it at your own Allternit instance running on a VPS.
 
 ### Download
 
-There is no public release feed yet — the GitHub release repo
-(`github.com/allternit/desktop`), Homebrew tap, and winget package referenced
-by older docs do not exist. Release builds are produced with
-`./scripts/build-desktop.sh` (see **Development** below) and distributed via
-`install.gizziio.com` per `BUILD.md`; auto-updates will start working once a
-real release repo is published.
+Releases live on the public repo `github.com/Gizziio/desktop` — the same
+feed the in-app auto-updater polls (hourly). The current release is **v1.1.1**
+(`desktop-v1.1.1` in this repo's history; the publish checklist for mirroring
+it to `Gizziio/desktop` is in `docs/DISTRIBUTION-CHECKLIST.md`). Install:
 
-CI can emit unsigned smoke artifacts (macOS dmg when certs are present,
-Windows `.exe`, Linux AppImage/deb) — those are **not** production releases:
-no EV cert on Windows (SmartScreen will warn), no Linux distribution channel.
-Do not announce them as shipping.
+```bash
+curl -fsSL https://install.allternit.com/install | bash
+```
+
+or download the DMG from `https://github.com/Gizziio/desktop/releases/latest`.
+
+Release builds are produced by `.github/workflows/release-desktop.yml`
+(tag `desktop-v*`) — see **Development** below. CI artifacts are currently
+**unsigned/unnotarized** (no Apple Developer ID cert, no Windows cert — see
+`docs/SIGNING.md`), so macOS Gatekeeper requires right-click → Open on first
+launch, and the Windows `.exe` will show SmartScreen warnings.
 
 ## Setup
 
@@ -106,9 +111,11 @@ Then in Allternit Desktop, select **VPS** mode and enter your URL.
 
 ### Desktop App (UI)
 Auto-updates use `update-electron-app` (Squirrel) against the GitHub Releases
-feed configured in `src/main/unified-main.ts` / `build.publish`
-(`allternit/desktop`). The feed is not live yet — updates will work once the
-first real release is published to that repo.
+feed of `Gizziio/desktop` — explicit in `src/main/unified-main.ts`
+(`updateElectronApp({ repo: 'Gizziio/desktop', updateInterval: '1 hour' })`)
+and in `build.publish` in `package.json`. The app checks the latest release
+on that repo about once an hour and prompts via the renderer when a new
+version is available.
 
 ### Backend (Your Server)
 You control when to update your backend:

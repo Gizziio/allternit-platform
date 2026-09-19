@@ -23,7 +23,7 @@ Scope: `surfaces/allternit-desktop` — Electron shell for the Allternit platfor
 
 ## Architecture Summary
 
-- **Main process**: `src/main/unified-main.ts` (~2440 LOC) + managers in `src/main/`.
+- **Main process**: `src/main/unified-main.ts` (~4115 LOC) + managers in `src/main/`.
 - **Preload**: `src/preload/index.ts` (~513 LOC) exposes `window.allternit` and `window.allternitSidecar`.
 - **Renderer**: Loaded from remote `https://ai.allternit.com` in production, or `http://localhost:3013` in dev. Local static fallback to `http://localhost:8013` if remote is unreachable.
 - **Modes**: bundled (local backend auto-managed), remote (user VPS), development (localhost:4096).
@@ -78,8 +78,8 @@ Scope: `surfaces/allternit-desktop` — Electron shell for the Allternit platfor
 2. **Hard-coded ports**: 8013 (API), 4096 (gizzi), 3013 (dev UI) are scattered across source. Should be centralized in config.
 3. **macOS-only permissions**: Accessibility/Screen Recording guide is macOS-centric. Windows/Linux paths are not covered.
 4. **Lima bundling**: `download:lima` script and `resources/lima/` are macOS/Linux VM tooling; Windows story is unclear.
-5. **No unit tests**: No test suite for main/preload logic.
-6. **Large main process file**: `unified-main.ts` is 2440 LOC and mixes window management, IPC wiring, backend orchestration, and inline HTML. Consider splitting further.
+5. **Unit tests**: 163 tests across 24 files now cover main-process logic (`vitest run`).
+6. **Large main process file**: `unified-main.ts` is ~4115 LOC and mixes window management, IPC wiring, backend orchestration, and inline HTML. Consider splitting further.
 7. **Chrome embed stub**: Advertised in preload but not implemented.
 8. **Build artifacts**: `dist/` is checked in (generated files), which can cause drift. Should be gitignored and produced by CI.
 

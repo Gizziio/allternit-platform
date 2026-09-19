@@ -9,7 +9,6 @@ declare global {
     allternitAuth?: {
       onClerkToken: (payload: ClerkTokenPayload) => Promise<void>;
       onClerkError: (message: string) => Promise<void>;
-      startOAuth?: (startUrl: string) => Promise<string>;
       onStatus?: (handler: (message: string) => void) => (() => void);
     };
   }
