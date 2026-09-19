@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Ars Contexta TUI Runtime Integration
  *

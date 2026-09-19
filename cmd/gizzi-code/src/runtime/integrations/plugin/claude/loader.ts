@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Loader for the native .claude-plugin/ format.
  *
@@ -177,10 +176,10 @@ async function loadCommands(root: string, pluginName: string): Promise<ClaudePlu
     }
     commands.push({
       name: file.replace(/\.md$/, ""),
-      description: data.description,
+      description: data.description as string,
       allowedTools,
-      argumentHint: data["argument-hint"],
-      model: data.model,
+      argumentHint: data["argument-hint"] as string,
+      model: data.model as string,
       template: parsed.content,
       pluginName,
       source,

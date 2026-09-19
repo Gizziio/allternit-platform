@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Gizzi Code Permission Profiles
  *
