@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * PowerShell-specific path validation for command arguments.
  *
@@ -903,7 +902,9 @@ function isPathAllowed(
       resolvedPath,
       precomputedPathsToCheck,
     )
-    if (!safetyCheck.safe) {
+    // `=== false` discriminant form: with strict:false, narrowing on
+    // `!safetyCheck.safe` does not propagate to the union member.
+    if (safetyCheck.safe === false) {
       return {
         allowed: false,
         decisionReason: {

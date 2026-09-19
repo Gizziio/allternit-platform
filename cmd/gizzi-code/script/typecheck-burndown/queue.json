@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 652,
+    "totalNocheck": 651,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 538,
-    "totalQueueLoc": 226048,
+    "totalQueueFiles": 537,
+    "totalQueueLoc": 223997,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -598,12 +598,13 @@
     },
     {
       "id": "b0044",
-      "files": [
-        "src/cli/ui/ink-app/tools/PowerShellTool/pathValidation.ts"
-      ],
+      "files": [],
       "loc": 2050,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 2051,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head13): PowerShellTool/pathValidation.ts — strict:false discriminant-equality form (safetyCheck.safe === false, documented load-bearing pattern). Escalations: none. Identity: live -1 + recorded +1."
     },
     {
       "id": "b0045",
