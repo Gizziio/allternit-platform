@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Files are loaded in the following order:
  *
@@ -81,8 +80,14 @@ import { isSettingSourceEnabled } from './settings/constants.js'
 import { getInitialSettings } from './settings/settings.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
+// TEAMMEM is a deliberate DCE feature flag: the module is require()'d lazily
+// so it stays out of the bundle when the flag is off, and the cast declares
+// the contract this file relies on.
 const teamMemPaths = feature('TEAMMEM')
-  ? (require('../memdir/teamMemPaths.js') as typeof import('../memdir/teamMemPaths.js'))
+  ? (require('../memdir/teamMemPaths.js') as {
+      isTeamMemoryEnabled: () => boolean
+      getTeamMemEntrypoint: () => string
+    })
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -1136,7 +1141,13 @@ function consumeNextEagerLoadReason(): InstructionsLoadReason | undefined {
  */
 export function clearMemoryFileCaches(): void {
   // ?.cache because tests spyOn this, which replaces the memoize wrapper.
-  getMemoryFiles.cache?.clear?.()
+  // The ambient 'lodash-es/memoize.js' shim (src/types/global.d.ts) returns T
+  // without lodash's runtime .cache property, so pin the structural contract.
+  ;(
+    getMemoryFiles as typeof getMemoryFiles & {
+      cache?: { clear?: () => void }
+    }
+  ).cache?.clear?.()
 }
 
 export function resetGetMemoryFilesCache(
