@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type {
   Base64ImageSource,
@@ -27,10 +26,13 @@ import {
   type ElicitResult,
   ErrorCode,
   type JSONRPCMessage,
+  type ListPromptsRequest,
   type ListPromptsResult,
   ListPromptsResultSchema,
+  type ListResourcesRequest,
   ListResourcesResultSchema,
   ListRootsRequestSchema,
+  type ListToolsRequest,
   type ListToolsResult,
   ListToolsResultSchema,
   McpError,
@@ -47,8 +49,8 @@ import type { Command } from '@/commands.js'
 import { getOauthConfig } from '@/constants/oauth.js'
 import { PRODUCT_URL } from '@/constants/product.js'
 import type { AppState } from '@/state/AppState.js'
-import { type Tool, toolMatchesName } from '../../../runtime/tools/Tool.js';
-import { type ToolCallProgress } from '../../../cli/ui/ink-app/Tool.js';
+import { toolMatchesName } from '../../../runtime/tools/Tool.js';
+import { type Tool, type ToolCallProgress } from '../../../cli/ui/ink-app/Tool.js';
 import { ListMcpResourcesTool } from '../../../cli/ui/ink-app/tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
 import { type MCPProgress, MCPTool } from '../../../cli/ui/ink-app/tools/MCPTool/MCPTool.js'
 import { createMcpAuthTool } from '../../../cli/ui/ink-app/tools/McpAuthTool/McpAuthTool.js'
@@ -232,8 +234,8 @@ import { isAllternitInChromeMCPServer } from '../../../utils/allternitInChrome/c
 // Lazy: toolRendering.tsx pulls React/ink; only needed when Allternit-in-Chrome MCP server is connected
 /* eslint-disable @typescript-eslint/no-require-imports */
 const allternitInChromeToolRendering =
-  (): typeof import('../../utils/allternitInChrome/toolRendering.js') =>
-    require('../../utils/allternitInChrome/toolRendering.js')
+  (): typeof import('../../../shared/utils/allternitInChrome/toolRendering.js') =>
+    require('../../../shared/utils/allternitInChrome/toolRendering.js')
 // Lazy: wrapper.tsx → hostAdapter.ts → executor.ts pulls both native modules
 // (@ant/computer-use-input + @ant/computer-use-swift). Runtime-gated by
 // GrowthBook tengu_malort_pedway (see gates.ts).
@@ -907,7 +909,7 @@ export const connectToServer = memoize(
       ) {
         // Run the Chrome MCP server in-process to avoid spawning a ~325 MB subprocess
         const { createChromeContext } = await import(
-          '../../utils/allternitInChrome/mcpServer.js'
+          '../../../shared/utils/allternitInChrome/mcpServer.js'
         )
         const { createClaudeForChromeMcpServer } = await import(
           '../../../shared/utils/allternitInChrome/extension.js'
@@ -1392,7 +1394,7 @@ export const connectToServer = memoize(
           fetchMcpSkillsForClient!.cache.delete(name)
         }
 
-        connectToServer.cache.delete(key)
+        memoizedConnectToServer.cache.delete(key)
         logMCPDebug(name, `Cleared connection cache for reconnection`)
 
         if (originalOnclose) {
@@ -1639,6 +1641,12 @@ export const connectToServer = memoize(
   getServerCacheKey,
 )
 
+// The lodash-es ambient decl types memoize() as returning T only, so the
+// memoized cache handle is surfaced through this local intersection.
+const memoizedConnectToServer = connectToServer as typeof connectToServer & {
+  cache: { delete: (key: string) => void }
+}
+
 /**
  * Clears the memoize cache for a specific server
  * @param name Server name
@@ -1662,7 +1670,7 @@ export async function clearServerCache(
 
   // Clear from cache (both connection and fetch caches so reconnect
   // fetches fresh tools/resources/commands instead of stale ones)
-  connectToServer.cache.delete(key)
+  memoizedConnectToServer.cache.delete(key)
   fetchToolsForClient.cache.delete(name)
   fetchResourcesForClient.cache.delete(name)
   fetchCommandsForClient.cache.delete(name)
@@ -1749,7 +1757,7 @@ export const fetchToolsForClient = memoizeWithLRU(
       }
 
       const result = (await client.client.request(
-        { method: 'tools/list' } as unknown as string,
+        { method: 'tools/list' } as ListToolsRequest,
         ListToolsResultSchema,
       )) as ListToolsResult
 
@@ -1876,7 +1884,17 @@ export const fetchToolsForClient = memoizeWithLRU(
                             })
                           }
                         : undefined,
-                    handleElicitation: context.handleElicitation,
+                    // ToolUseContext.handleElicitation is typed against the
+                    // ambient '@modelcontextprotocol/sdk/types' decl (stale
+                    // elicitation surface, action not modeled); at runtime it
+                    // resolves the real ElicitResult shape this field expects.
+                    handleElicitation: context.handleElicitation as
+                      | ((
+                          serverName: string,
+                          params: ElicitRequestURLParams,
+                          signal: AbortSignal,
+                        ) => Promise<ElicitResult>)
+                      | undefined,
                   })
 
                   // Emit progress when tool completes successfully
@@ -2006,7 +2024,7 @@ export const fetchResourcesForClient = memoizeWithLRU(
       }
 
       const result = (await client.client.request(
-        { method: 'resources/list' } as unknown as string,
+        { method: 'resources/list' } as ListResourcesRequest,
         ListResourcesResultSchema,
       )) as { resources?: Array<Record<string, unknown>> }
 
@@ -2040,7 +2058,7 @@ export const fetchCommandsForClient = memoizeWithLRU(
 
       // Request prompts list from client
       const result = (await client.client.request(
-        { method: 'prompts/list' } as unknown as string,
+        { method: 'prompts/list' } as ListPromptsRequest,
         ListPromptsResultSchema,
       )) as ListPromptsResult
 
@@ -2171,7 +2189,7 @@ export async function reconnectMcpServerImpl(
       fetchToolsForClient(client),
       fetchCommandsForClient(client),
       feature('MCP_SKILLS') && supportsResources
-        ? (fetchMcpSkillsForClient as any)!(client)
+        ? fetchMcpSkillsForClient!(client)
         : Promise.resolve([]),
       supportsResources ? fetchResourcesForClient(client) : Promise.resolve([]),
     ])
@@ -2345,7 +2363,7 @@ export async function getMcpToolsCommandsAndResources(
         fetchCommandsForClient(client),
         // Discover skills from skill:// resources
         feature('MCP_SKILLS') && supportsResources
-          ? (fetchMcpSkillsForClient as any)!(client)
+          ? fetchMcpSkillsForClient!(client)
           : Promise.resolve([]),
         // Fetch resources if supported
         supportsResources
@@ -2972,9 +2990,13 @@ export async function callMCPToolWithUrlElicitationRetry({
                       if (result.action === 'accept') {
                         return
                       }
-                      // Decline or cancel: resolve the retry Promise
+                      // Decline or cancel: resolve the retry Promise.
+                      // Cast: the queue's respond type uses the ink-app local
+                      // ElicitResult mirror (action: string); this Promise is
+                      // typed with the SDK ambient ElicitResult. Same
+                      // ambient-decl gap as the casts above.
                       signal.removeEventListener('abort', onAbort)
-                      void resolve(result)
+                      void resolve(result as ElicitResult)
                     },
                     onWaitingDismiss: action => {
                       signal.removeEventListener('abort', onAbort)
@@ -3090,6 +3112,7 @@ async function callMCPTool({
           arguments: args,
           _meta: meta,
         } as Parameters<Client['callTool']>[0],
+        CallToolResultSchema,
         {
           signal,
           timeout: timeoutMs,

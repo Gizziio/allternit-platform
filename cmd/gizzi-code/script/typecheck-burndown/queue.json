@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 106,
   "stats": {
-    "totalNocheck": 872,
+    "totalNocheck": 871,
     "excludedCompilerArtifacts": 95,
     "excludedVendored": 93,
-    "totalQueueFiles": 664,
-    "totalQueueLoc": 272041,
+    "totalQueueFiles": 663,
+    "totalQueueLoc": 268672,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1731,12 +1731,13 @@
     },
     {
       "id": "b0090",
-      "files": [
-        "src/runtime/services/mcp/client.ts"
-      ],
+      "files": [],
       "loc": 3346,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 3369,
+      "note": "Burned by ao/ts-burn-tail5 (2026-09-19): removed @ts-nocheck from src/runtime/services/mcp/client.ts (3346->3369 loc) and fixed all 26 type errors. Fixes: Tool type imported from canonical cli/ui/ink-app/Tool.js (runtime/tools/Tool.ts barrel re-exports a namespace; that barrel is owned by batch b0406, not touched); MCP list requests recast from bogus \"as unknown as string\" to ListToolsRequest/ListResourcesRequest/ListPromptsRequest; client.callTool now passes CallToolResultSchema as resultSchema before RequestOptions (was landing options in the schema position); connectToServer memoized cache surfaced via local intersection (lodash-es ambient memoize decl drops MemoizedFunction); respond/handleElicitation bridged across the stale ambient @modelcontextprotocol/sdk/types decl (documented casts, same idiom as twin); (fetchMcpSkillsForClient as any) recast to typed stub. Repointed two live-path dynamic imports from dormant runtime shims to the real shared modules matching the ink-app twin (createChromeContext -> shared/utils/allternitInChrome/mcpServer.js, toolRendering -> shared/utils/allternitInChrome/toolRendering.js) - one-line latent bug fixes. Added typed dormant-shim exports to src/runtime/skills/mcpSkills.ts (fetchMcpSkillsForClient, no real impl exists anywhere) and src/runtime/utils/computerUse/{common,mcpServer,wrapper}.ts (CHICAGO_MCP DCE stubs; runtime tree has no Computer Use server). No escalations; header fully removed. Gates: tsc 0 errors, full smoke 1374 tests green, eslint 0 new, preflight 52/0."
     },
     {
       "id": "b0439",
