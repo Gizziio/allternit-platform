@@ -231,8 +231,8 @@ import { isAllternitInChromeMCPServer } from '../../../utils/allternitInChrome/c
 // Lazy: toolRendering.tsx pulls React/ink; only needed when Allternit-in-Chrome MCP server is connected
 /* eslint-disable @typescript-eslint/no-require-imports */
 const allternitInChromeToolRendering =
-  (): typeof import('../../utils/allternitInChrome/toolRendering.js') =>
-    require('../../utils/allternitInChrome/toolRendering.js')
+  (): typeof import('../../../shared/utils/allternitInChrome/toolRendering.js') =>
+    require('../../../shared/utils/allternitInChrome/toolRendering.js')
 // Lazy: wrapper.tsx → hostAdapter.ts → executor.ts pulls both native modules
 // (@ant/computer-use-input + @ant/computer-use-swift). Runtime-gated by
 // GrowthBook tengu_malort_pedway (see gates.ts).
@@ -928,7 +928,7 @@ export const connectToServer = memoize(
       ) {
         // Run the Chrome MCP server in-process to avoid spawning a ~325 MB subprocess
         const { createChromeContext } = await import(
-          '../../utils/allternitInChrome/mcpServer.js'
+          '../../../shared/utils/allternitInChrome/mcpServer.js'
         )
         const { createClaudeForChromeMcpServer } = await import(
           '../../../shared/utils/allternitInChrome/extension.js'
