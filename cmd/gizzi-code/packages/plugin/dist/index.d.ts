@@ -113,6 +113,32 @@ export interface Hooks {
     }, output: {
         text: string;
     }) => void | Promise<void>;
+    /** Called before a chat request — plugins may transform the assembled message list */
+    "experimental.chat.messages.transform"?: (input: Record<string, never>, output: {
+        messages: unknown[];
+    }) => void | Promise<void>;
+    /** Called when a user message is assembled — plugins may observe or transform it */
+    "chat.message"?: (input: {
+        sessionID: string;
+        agent?: string;
+        model?: {
+            providerID: string;
+            modelID: string;
+        };
+        messageID?: string;
+        variant?: string;
+    }, output: {
+        message: unknown;
+        parts: unknown[];
+    }) => void | Promise<void>;
+    /** Called before a command executes — plugins may transform the submitted parts */
+    "command.execute.before"?: (input: {
+        command: string;
+        sessionID: string;
+        arguments: string;
+    }, output: {
+        parts: unknown[];
+    }) => void | Promise<void>;
 }
 export interface AuthHook {
     provider: string;

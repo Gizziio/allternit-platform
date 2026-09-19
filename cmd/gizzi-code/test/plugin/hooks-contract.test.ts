@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import type { Hooks } from "../../packages/plugin/src/index"
 
 // Contract test for the plugin SDK Hooks type: the runtime triggers these
-// five hooks by name (Plugin.trigger in src/runtime/integrations/plugin) and
+// eight hooks by name (Plugin.trigger in src/runtime/integrations/plugin) and
 // the SDK type must declare them so plugin authors get typing. If the SDK
 // Hooks type drifts from the runtime contract, this file stops compiling
 // (tsc --noEmit) even though the runtime dispatch is string-based.
@@ -39,6 +39,22 @@ const hooks: Hooks = {
     const _messageID: string = input.messageID
     const _partID: string = input.partID
     output.text = output.text.trim()
+  },
+  "experimental.chat.messages.transform": async (input, output) => {
+    const _noInput: Record<string, never> = input
+    output.messages.push({ role: "user" })
+  },
+  "chat.message": async (input, output) => {
+    const _sessionID: string = input.sessionID
+    const _agent: string | undefined = input.agent
+    const _messageID: string | undefined = input.messageID
+    output.parts.push({ type: "text", text: "observed" })
+  },
+  "command.execute.before": async (input, output) => {
+    const _command: string = input.command
+    const _sessionID: string = input.sessionID
+    const _arguments: string = input.arguments
+    output.parts.push({ type: "text", text: "injected" })
   },
 }
 
@@ -108,5 +124,28 @@ describe("plugin SDK Hooks contract", () => {
       { text: "  hello  " },
     )
     expect(out.text).toBe("hello")
+  })
+
+  test("experimental.chat.messages.transform mutates the assembled message list", async () => {
+    const out = await trigger("experimental.chat.messages.transform", {}, { messages: [] as unknown[] })
+    expect(out.messages).toEqual([{ role: "user" }])
+  })
+
+  test("chat.message observes the assembled user message and parts", async () => {
+    const out = await trigger(
+      "chat.message",
+      { sessionID: "ses_1", agent: "build", messageID: "msg_1" },
+      { message: { id: "msg_1" }, parts: [] as unknown[] },
+    )
+    expect(out.parts).toEqual([{ type: "text", text: "observed" }])
+  })
+
+  test("command.execute.before can inject parts before execution", async () => {
+    const out = await trigger(
+      "command.execute.before",
+      { command: "gizzi status", sessionID: "ses_1", arguments: "status" },
+      { parts: [] as unknown[] },
+    )
+    expect(out.parts).toEqual([{ type: "text", text: "injected" }])
   })
 })

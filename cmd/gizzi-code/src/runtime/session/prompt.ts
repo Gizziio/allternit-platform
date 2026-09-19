@@ -1,4 +1,3 @@
-// @ts-nocheck
 import path from "path"
 import os from "os"
 import fs from "fs/promises"
@@ -29,6 +28,7 @@ import MAX_STEPS from "@/runtime/session/prompt/max-steps.txt"
 import { defer } from "@/shared/util/defer"
 import { ToolRegistry } from "@/runtime/tools/builtins/registry"
 import { MCP } from "@/runtime/tools/mcp"
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import { LSP } from "@/runtime/integrations/lsp"
 import { ReadTool } from "@/runtime/tools/builtins/read"
 import { FileTime } from "@/shared/file/time"
@@ -197,8 +197,8 @@ export namespace SessionPrompt {
     await SessionRevert.cleanup(session)
 
     const submittedText = input.parts
-      .filter((part) => part.type === "text" && !part.synthetic)
-      .map((part) => part.text)
+      .filter((part) => part.type === "text" && !(part as MessageV2.TextPart).synthetic)
+      .map((part) => (part as MessageV2.TextPart).text)
       .join("\n")
     const submitted = submittedText
       ? await HookDispatcher.emit({
@@ -495,8 +495,8 @@ const message = await createUserMessage(input)
               msgs.map((m) => ({
                 role: m.info.role,
                 content: m.parts
-                  .filter((p): p is { type: "text"; text: string } & object => p.type === "text")
-                  .map((p) => p.text)
+                  .filter((p) => p.type === "text")
+                  .map((p) => (p as MessageV2.TextPart).text)
                   .join(" "),
               })),
               sessionID,
@@ -582,6 +582,7 @@ const message = await createUserMessage(input)
           prompt: task.prompt,
           description: task.description,
           subagent_type: task.agent,
+          run_in_background: false,
           command: task.command,
         }
         await Plugin.trigger(
@@ -1243,7 +1244,7 @@ const message = await createUserMessage(input)
           always: ["*"],
         })
 
-        const result = await ToolDedupe.execute({
+        const result = await ToolDedupe.execute<CallToolResult & { metadata?: Record<string, unknown> }>({
           sessionID: ctx.sessionID,
           messageID: ctx.messageID,
           tool: key,
@@ -1276,15 +1277,16 @@ const message = await createUserMessage(input)
             })
           } else if (contentItem.type === "resource") {
             const { resource } = contentItem
-            if (resource.text) {
-              textParts.push(resource.text)
+            const res = resource as { uri: string; text?: string; blob?: string; mimeType?: string }
+            if (res.text) {
+              textParts.push(res.text)
             }
-            if (resource.blob) {
+            if (res.blob) {
               attachments.push({
                 type: "file",
-                mime: resource.mimeType ?? "application/octet-stream",
-                url: `data:${resource.mimeType ?? "application/octet-stream"};base64,${resource.blob}`,
-                filename: resource.uri,
+                mime: res.mimeType ?? "application/octet-stream",
+                url: `data:${res.mimeType ?? "application/octet-stream"};base64,${res.blob}`,
+                filename: res.uri,
               })
             }
           }
@@ -1314,7 +1316,7 @@ const message = await createUserMessage(input)
           // result spills, expose one bounded text part and preserve only
           // non-text media/resource parts; the complete text remains at
           // metadata.outputPath.
-          content: Truncate.modelContent(result.content, truncated),
+          content: Truncate.modelContent(result.content as Truncate.ModelContentItem[], truncated),
         }
       }
       tools[key] = item
@@ -2438,7 +2440,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     // Title gen calls LLM.stream directly instead of going through loop(), so it
     // doesn't get loop()'s folding of lastUser.system into the system array — fold
     // the first message's system override in here to preserve that parity.
-    const firstUserSystem = firstRealUser.info.system
+    const firstUserSystem = (firstRealUser.info as MessageV2.User).system
     const titleSystem = firstUserSystem
       ? [firstUserSystem.startsWith("+") ? firstUserSystem.slice(1) : firstUserSystem]
       : []

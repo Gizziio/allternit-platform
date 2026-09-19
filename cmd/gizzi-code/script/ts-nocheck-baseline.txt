@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=1211
+count=1210
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/commands/connect.ts
@@ -1088,7 +1088,6 @@ runtime/services/tokenEstimation.ts
 runtime/services/vcr.ts
 runtime/session/index.ts
 runtime/session/message-v2.ts
-runtime/session/prompt.ts
 runtime/tools/Tool.ts
 runtime/tools/builtins/AgentTool/built-in/exploreAgent.ts
 runtime/tools/builtins/AgentTool/built-in/gizziGuideAgent.ts

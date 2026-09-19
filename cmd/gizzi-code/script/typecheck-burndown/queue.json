@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedFrom": "6c22861cc2cba32a82a948f29bf02dc6c9b1c6d9",
+  "generatedFrom": "176d0504b58e19b0c1569c1692e7deb25c3c7086",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1209,
+    "totalNocheck": 1208,
     "excludedCompilerArtifacts": 210,
     "excludedVendored": 93,
-    "totalQueueFiles": 886,
-    "totalQueueLoc": 339144,
+    "totalQueueFiles": 885,
+    "totalQueueLoc": 336666,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -235,6 +235,17 @@
       "burnedFiles": 1,
       "burnedLoc": 1824,
       "note": "Burned by ao/ts-burn-next8: header-only 0-error burn (TS2322 probe confirmed the file in compilation, exactly one probe error, zero others). No escalations. Identity: live 949 + recorded 504 + quarantined 20 = 1473 = totalAccounted."
+    },
+    {
+      "id": "b0026",
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 2478,
+      "escalated": [],
+      "note": "Burned 2026-09-19 (ao/ts-burn-next12): multi-error burn converged in 2 fix iterations (11 initial errors). Fixes: TextPart casts for strict:false filter narrowing; run_in_background:false added to the synchronous subtask args (TaskTool schema default, behavior unchanged); MCP tool result annotated as real CallToolResult plus the metadata field the runtime reads; resource content block cast to its text/blob union shape; modelContent call cast to Truncate.ModelContentItem[]; firstUserSystem read via MessageV2.User cast. Three plugin hooks the runtime triggers by name but the SDK Hooks type did not declare (experimental.chat.messages.transform, chat.message, command.execute.before) were declared in packages/plugin (P2 precedent, dist rebuilt, contract test extended) -- type-only, no runtime change. No TS2322 probe needed: 11 genuine strip errors prove prompt.ts is in compilation. Identity: live 905 + recorded 555 = 1460 = totalAccounted."
     },
     {
       "id": "b0102",
@@ -533,6 +544,7 @@
         "src/cli/ui/ink-app/utils/telemetry/pluginTelemetry.ts",
         "src/cli/ui/ink-app/utils/plugins/dependencyResolver.ts",
         "src/cli/ui/ink-app/utils/shell/prefix.ts",
+        "src/runtime/session/index.ts",
         "src/cli/ui/ink-app/commands/artifact/index.ts",
         "src/cli/ui/ink-app/utils/diff.ts",
         "src/shared/utils/permissions/permissionRuleParser.ts",
@@ -544,21 +556,14 @@
         "src/cli/ui/ink-app/commands/usage/usage.ts",
         "src/cli/ui/ink-app/commands/dash/dash.ts",
         "src/cli/ui/ink-app/tools/BashTool/commandSemantics.ts",
+        "src/shared/file/watcher.ts",
         "src/cli/ui/ink-app/utils/bash/prefix.ts",
         "src/cli/ui/ink-app/utils/bash/ParsedCommand.ts",
         "src/cli/ui/ink-app/utils/telemetry/betaSessionTracing.ts",
         "src/runtime/services/vcr.ts",
-        "src/cli/ui/ink-app/services/vcr.ts",
-        "src/cli/ui/ink-app/commands/upgrade/index.ts",
-        "src/cli/ui/ink-app/commands/session-info/session-info.tsx",
-        "src/cli/ui/ink-app/utils/statusModel.ts",
-        "src/cli/ui/ink-app/tools/BashTool/sedValidation.ts",
-        "src/cli/ui/ink-app/commands/live/index.ts",
-        "src/cli/ui/ink-app/commands/usage/index.ts",
-        "src/cli/ui/ink-app/commands/dash/index.ts",
-        "src/cli/ui/ink-app/utils/plugins/loadPluginHooks.ts"
+        "src/cli/ui/ink-app/services/vcr.ts"
       ],
-      "loc": 7228,
+      "loc": 7139,
       "twins": [
         {
           "runtime": "src/runtime/services/vcr.ts",
@@ -568,9 +573,26 @@
       "state": "NEW"
     },
     {
+      "id": "b0031",
+      "files": [
+        "src/runtime/context/config/config.ts"
+      ],
+      "loc": 1886,
+      "twins": [],
+      "state": "NEW"
+    },
+    {
       "id": "b0337",
       "files": [
+        "src/cli/ui/ink-app/commands/upgrade/index.ts",
+        "src/cli/ui/ink-app/commands/session-info/session-info.tsx",
+        "src/cli/ui/ink-app/utils/statusModel.ts",
+        "src/cli/ui/ink-app/tools/BashTool/sedValidation.ts",
         "src/cli/ui/ink-app/utils/toolResultStorage.ts",
+        "src/cli/ui/ink-app/commands/live/index.ts",
+        "src/cli/ui/ink-app/commands/usage/index.ts",
+        "src/cli/ui/ink-app/commands/dash/index.ts",
+        "src/cli/ui/ink-app/utils/plugins/loadPluginHooks.ts",
         "src/cli/ui/ink-app/utils/pdf.ts",
         "src/cli/ui/ink-app/hooks/toolPermission/PermissionContext.ts",
         "src/cli/ui/ink-app/commands/terminalSetup/terminalSetup.tsx",
@@ -579,21 +601,10 @@
         "src/runtime/services/analytics/firstPartyEventLoggingExporter.ts",
         "src/cli/ui/ink-app/services/analytics/firstPartyEventLoggingExporter.ts",
         "src/cli/ui/ink-app/commands/session-info/index.ts",
-        "src/cli/ui/ink-app/commands/think/think.tsx",
-        "src/cli/ui/ink-app/utils/mcpOutputStorage.ts",
-        "src/runtime/services/analytics/datadog.ts",
-        "src/cli/ui/ink-app/services/analytics/datadog.ts",
-        "src/cli/ui/ink-app/commands/think/index.ts",
-        "src/cli/ui/ink-app/commands/terminalSetup/index.ts",
-        "src/cli/ui/ink-app/utils/processUserInput/processTextPrompt.ts",
-        "src/cli/ui/ink-app/hooks/useTextInput.ts"
+        "src/cli/ui/ink-app/commands/think/think.tsx"
       ],
-      "loc": 7242,
+      "loc": 7064,
       "twins": [
-        {
-          "runtime": "src/runtime/services/analytics/datadog.ts",
-          "inkApp": "src/cli/ui/ink-app/services/analytics/datadog.ts"
-        },
         {
           "runtime": "src/runtime/services/analytics/firstPartyEventLoggingExporter.ts",
           "inkApp": "src/cli/ui/ink-app/services/analytics/firstPartyEventLoggingExporter.ts"
@@ -611,24 +622,25 @@
       "state": "NEW"
     },
     {
-      "id": "b0026",
-      "files": [
-        "src/runtime/session/prompt.ts"
-      ],
-      "loc": 2478,
-      "twins": [],
-      "state": "NEW"
-    },
-    {
       "id": "b0338",
       "files": [
+        "src/cli/ui/ink-app/utils/mcpOutputStorage.ts",
+        "src/runtime/services/analytics/datadog.ts",
+        "src/cli/ui/ink-app/services/analytics/datadog.ts",
+        "src/cli/ui/ink-app/commands/think/index.ts",
+        "src/cli/ui/ink-app/commands/terminalSetup/index.ts",
+        "src/cli/ui/ink-app/utils/processUserInput/processTextPrompt.ts",
+        "src/cli/ui/ink-app/hooks/useTextInput.ts",
         "src/cli/ui/ink-app/tools/ReadMcpResourceTool/ReadMcpResourceTool.ts",
         "src/cli/ui/ink-app/utils/sessionStart.ts",
+        "src/cli/commands/connect.ts",
         "src/cli/ui/ink-app/tools/WebFetchTool/utils.ts",
         "src/runtime/tools/builtins/AgentTool/built-in/planAgent.ts",
         "src/cli/ui/ink-app/components/TextInput.tsx",
+        "src/shared/error/format.ts",
         "src/cli/ui/ink-app/tools/AgentTool/built-in/planAgent.ts",
         "src/cli/ui/ink-app/tools/WebFetchTool/WebFetchTool.ts",
+        "src/cli/main.ts",
         "src/runtime/services/api/withRetry.ts",
         "src/cli/ui/ink-app/services/api/withRetry.ts",
         "src/cli/ui/ink-app/components/ExportDialog.tsx",
@@ -639,20 +651,13 @@
         "src/cli/ui/ink-app/commands/cost/index.ts",
         "src/cli/ui/ink-app/utils/background/remote/remoteSession.ts",
         "src/cli/ui/ink-app/utils/model/validateModel.ts",
-        "src/cli/ui/ink-app/utils/plugins/mcpPluginIntegration.ts",
-        "src/cli/ui/ink-app/utils/plugins/lspPluginIntegration.ts",
-        "src/cli/ui/ink-app/tools/ConfigTool/supportedSettings.ts",
-        "src/cli/ui/ink-app/hooks/toolPermission/permissionLogging.ts",
-        "src/cli/ui/ink-app/tools/ConfigTool/prompt.ts",
-        "src/cli/ui/ink-app/commands/status/status.tsx",
-        "src/runtime/services/analytics/firstPartyEventLogger.ts",
-        "src/cli/ui/ink-app/services/analytics/firstPartyEventLogger.ts"
+        "src/cli/ui/ink-app/utils/plugins/lspPluginIntegration.ts"
       ],
-      "loc": 7117,
+      "loc": 7264,
       "twins": [
         {
-          "runtime": "src/runtime/services/analytics/firstPartyEventLogger.ts",
-          "inkApp": "src/cli/ui/ink-app/services/analytics/firstPartyEventLogger.ts"
+          "runtime": "src/runtime/services/analytics/datadog.ts",
+          "inkApp": "src/cli/ui/ink-app/services/analytics/datadog.ts"
         },
         {
           "runtime": "src/runtime/services/api/withRetry.ts",
@@ -664,16 +669,18 @@
     {
       "id": "b0339",
       "files": [
-        "src/runtime/session/index.ts",
+        "src/cli/ui/ink-app/utils/plugins/mcpPluginIntegration.ts",
+        "src/cli/ui/ink-app/tools/ConfigTool/supportedSettings.ts",
+        "src/cli/ui/ink-app/hooks/toolPermission/permissionLogging.ts",
+        "src/cli/ui/ink-app/tools/ConfigTool/prompt.ts",
+        "src/cli/ui/ink-app/commands/status/status.tsx",
+        "src/runtime/services/analytics/firstPartyEventLogger.ts",
+        "src/cli/ui/ink-app/services/analytics/firstPartyEventLogger.ts",
         "src/cli/ui/ink-app/commands/status/index.ts",
-        "src/shared/file/watcher.ts",
         "src/cli/ui/ink-app/utils/telemetry/instrumentation.ts",
         "src/cli/ui/ink-app/commands/export/export.tsx",
         "src/cli/ui/ink-app/commands/export/index.ts",
         "src/cli/ui/ink-app/commands/remote-env/index.ts",
-        "src/cli/commands/connect.ts",
-        "src/shared/error/format.ts",
-        "src/cli/main.ts",
         "src/cli/ui/ink-app/tools/AgentTool/builtInAgents.ts",
         "src/cli/ui/ink-app/services/api/logging.ts",
         "src/cli/ui/ink-app/commands/advisor.ts",
@@ -690,17 +697,13 @@
         "src/cli/ui/ink-app/tools/shared/gitOperationTracking.ts",
         "src/cli/ui/ink-app/utils/plans.ts"
       ],
-      "loc": 7009,
-      "twins": [],
-      "state": "NEW"
-    },
-    {
-      "id": "b0031",
-      "files": [
-        "src/runtime/context/config/config.ts"
+      "loc": 7129,
+      "twins": [
+        {
+          "runtime": "src/runtime/services/analytics/firstPartyEventLogger.ts",
+          "inkApp": "src/cli/ui/ink-app/services/analytics/firstPartyEventLogger.ts"
+        }
       ],
-      "loc": 1886,
-      "twins": [],
       "state": "NEW"
     },
     {
