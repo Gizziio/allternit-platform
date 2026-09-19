@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { realpath } from 'fs/promises'
 import ignore from 'ignore'
 import memoize from 'lodash-es/memoize.js'
@@ -805,8 +804,8 @@ export const getSkillDirCommands = memoize(
 )
 
 export function clearSkillCaches() {
-  getSkillDirCommands.cache?.clear?.()
-  loadMarkdownFilesForSubdir.cache?.clear?.()
+  ;(getSkillDirCommands as { cache?: { clear?: () => void } }).cache?.clear?.()
+  ;(loadMarkdownFilesForSubdir as { cache?: { clear?: () => void } }).cache?.clear?.()
   conditionalSkills.clear()
   activatedConditionalSkillNames.clear()
 }

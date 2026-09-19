@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { extname, isAbsolute, resolve } from 'path'
+import { type UUID } from 'crypto'
 import {
   fileHistoryEnabled,
   fileHistoryTrackEdit,
@@ -313,7 +313,7 @@ export const NotebookEditTool = buildTool({
       await fileHistoryTrackEdit(
         updateFileHistoryState,
         fullPath,
-        parentMessage.uuid,
+        parentMessage.uuid as UUID,
       )
     }
 

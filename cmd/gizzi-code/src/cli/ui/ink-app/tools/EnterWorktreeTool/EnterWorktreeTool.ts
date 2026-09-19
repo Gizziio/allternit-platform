@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z } from 'zod/v4'
 import { getSessionId, setOriginalCwd } from '../../bootstrap/state.js'
 import { clearSystemPromptSections } from '../../constants/systemPromptSections.js'
@@ -112,7 +111,7 @@ export const EnterWorktreeTool: Tool<InputSchema, Output> = buildTool({
     clearSystemPromptSections()
     // Clear memoized caches that depend on CWD
     clearMemoryFileCaches()
-    getPlansDirectory.cache.clear?.()
+    ;(getPlansDirectory as { cache?: { clear?: () => void } }).cache?.clear?.()
 
     logEvent('tengu_worktree_created', {
       mid_session: true,

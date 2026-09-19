@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle';
 import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'fs/promises';
@@ -257,8 +256,24 @@ const outputSchema = lazySchema(() => z.object({
 }));
 type OutputSchema = ReturnType<typeof outputSchema>;
 export type Out = z.infer<OutputSchema>;
-import type { PowerShellProgress } from '../../types/tools';
-export type { PowerShellProgress } from '../../types/tools';
+// TODO(types): ink-app/types/tools.ts is a dead stub, and the canonical
+// src/types/tools.ts PowerShellProgress (type: 'powershell', required
+// command) does not match the payload this tool emits (type:
+// 'powershell_progress', no command — the runtime contract every consumer
+// checks, cf. shared/utils/sessionStorage.ts). Mirror the emitted shape
+// locally (sibling TODO(types) pattern, cf. WebSearchTool).
+export interface PowerShellProgress {
+  type: 'powershell_progress'
+  output: string
+  fullOutput: string
+  elapsedTimeSeconds?: number
+  totalLines?: number
+  totalBytes?: number
+  timeoutMs?: number
+  taskId?: string
+  command?: string
+  exitCode?: number
+}
 const COMMON_BACKGROUND_COMMANDS = ['npm', 'yarn', 'pnpm', 'node', 'python', 'python3', 'go', 'cargo', 'make', 'docker', 'terraform', 'webpack', 'vite', 'jest', 'pytest', 'curl', 'Invoke-WebRequest', 'build', 'test', 'serve', 'watch', 'dev'] as const;
 function getCommandTypeForLogging(command: string): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {
   const trimmed = command.trim();

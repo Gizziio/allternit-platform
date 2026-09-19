@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { homedir } from 'os'
 import { isAbsolute, resolve } from 'path'
 import type { z } from 'zod/v4'
