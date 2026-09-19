@@ -16,10 +16,10 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc"
+    "build": "tsc -b"
   },
   "dependencies": {
     "@allternit/replies-contract": "workspace:*"
