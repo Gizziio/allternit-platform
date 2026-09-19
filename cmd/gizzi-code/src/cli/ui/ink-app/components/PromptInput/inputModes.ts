@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { HistoryMode } from './../../hooks/useArrowKeyHistory.tsx'
 import type { PromptInputMode } from './../../types/textInputTypes.ts'
 

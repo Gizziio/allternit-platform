@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * PowerShell permission mode validation.
  *

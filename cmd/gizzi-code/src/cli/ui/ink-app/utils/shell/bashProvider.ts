@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { access } from 'fs/promises'
 import { tmpdir as osTmpdir } from 'os'
