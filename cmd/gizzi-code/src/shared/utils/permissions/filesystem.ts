@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import ignore from 'ignore'
 import memoize from 'lodash-es/memoize.js'
@@ -13,7 +12,8 @@ import {
 } from '../../../cli/ui/ink-app/tools/FileEditTool/constants.js'
 import type { z } from 'zod/v4'
 import { getOriginalCwd, getSessionId } from '@/bootstrap/state.js'
-import type { AnyObject, Tool, ToolPermissionContext } from '@/Tool.js'
+import type { ToolPermissionContext } from '@/Tool.js'
+import type { AnyObject, Tool } from '../../../cli/ui/ink-app/Tool.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
 import { getCwd } from '../cwd.js'
 import { getLegacyClaudeHomeDir } from '../envUtils.js'
@@ -54,6 +54,7 @@ import { getRuleByContentsForToolName } from './permissions.js'
 import {
   ensureScratchpadDir,
   getBundledSkillsRoot,
+  getProjectTempDir,
   getScratchpadDir,
   isScratchpadEnabled,
 } from './tempDir.js'

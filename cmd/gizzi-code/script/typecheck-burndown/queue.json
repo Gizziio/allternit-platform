@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 653,
+    "totalNocheck": 652,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 539,
-    "totalQueueLoc": 227674,
+    "totalQueueFiles": 538,
+    "totalQueueLoc": 226048,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -1614,12 +1614,13 @@
     },
     {
       "id": "b0095",
-      "files": [
-        "src/shared/utils/permissions/filesystem.ts"
-      ],
+      "files": [],
       "loc": 1625,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1626,
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail11): runtime filesystem.ts twin — Tool/Tool<Input> repointed from @/Tool.js namespace re-export to the real ink-app interface (matching burned twins); getProjectTempDir missing-import binding added (latent bug the header hid). Escalations: none. Identity: live -1 + recorded +1."
     },
     {
       "id": "b0096",
