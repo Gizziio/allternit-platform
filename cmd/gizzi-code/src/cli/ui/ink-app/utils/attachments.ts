@@ -278,10 +278,6 @@ export const RELEVANT_MEMORIES_CONFIG = {
   MAX_SESSION_BYTES: 60 * 1024,
 } as const
 
-export const VERIFY_PLAN_REMINDER_CONFIG = {
-  TURNS_BETWEEN_REMINDERS: 10,
-} as const
-
 export type FileAttachment = {
   type: 'file'
   filename: string
@@ -641,9 +637,6 @@ export type Attachment =
       }>
     }
   | {
-      type: 'verify_plan_reminder'
-    }
-  | {
       type: 'max_turns_reached'
       maxTurns: number
       turnCount: number
@@ -939,9 +932,6 @@ export async function getAttachments(
         ),
         maybe('output_token_usage', async () =>
           Promise.resolve(getOutputTokenUsageAttachment()),
-        ),
-        maybe('verify_plan_reminder', async () =>
-          getVerifyPlanReminderAttachment(messages, toolUseContext),
         ),
       ]
     : []
@@ -3807,73 +3797,6 @@ function getMaxBudgetUsdAttachment(maxBudgetUsd?: number): Attachment[] {
       remaining: remainingBudget,
     },
   ]
-}
-
-/**
- * Count human turns since plan mode exit (plan_mode_exit attachment).
- * Returns 0 if no plan_mode_exit attachment found.
- *
- * tool_result messages are type:'user' without isMeta, so filter by
- * toolUseResult to avoid counting them — otherwise the 10-turn reminder
- * interval fires every ~10 tool calls instead of ~10 human turns.
- */
-export function getVerifyPlanReminderTurnCount(messages: Message[]): number {
-  let turnCount = 0
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i]
-    if (message && isHumanTurn(message)) {
-      turnCount++
-    }
-    // Stop counting at plan_mode_exit attachment (marks when implementation started)
-    if (
-      message?.type === 'attachment' &&
-      message.attachment.type === 'plan_mode_exit'
-    ) {
-      return turnCount
-    }
-  }
-  // No plan_mode_exit found
-  return 0
-}
-
-/**
- * Get verify plan reminder attachment if the model hasn't called VerifyPlanExecution yet.
- */
-async function getVerifyPlanReminderAttachment(
-  messages: Message[] | undefined,
-  toolUseContext: ToolUseContext,
-): Promise<Attachment[]> {
-  if (
-    process.env.USER_TYPE !== 'ant' ||
-    !isEnvTruthy(process.env.GIZZI_CODE_VERIFY_PLAN)
-  ) {
-    return []
-  }
-
-  const appState = toolUseContext.getAppState()
-  const pending = appState.pendingPlanVerification
-
-  // Only remind if plan exists and verification not started or completed
-  if (
-    !pending ||
-    pending.verificationStarted ||
-    pending.verificationCompleted
-  ) {
-    return []
-  }
-
-  // Only remind every N turns
-  if (messages && messages.length > 0) {
-    const turnCount = getVerifyPlanReminderTurnCount(messages)
-    if (
-      turnCount === 0 ||
-      turnCount % VERIFY_PLAN_REMINDER_CONFIG.TURNS_BETWEEN_REMINDERS !== 0
-    ) {
-      return []
-    }
-  }
-
-  return [{ type: 'verify_plan_reminder' }]
 }
 
 export function getCompactionReminderAttachment(
