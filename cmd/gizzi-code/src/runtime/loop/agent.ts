@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Config } from "@/runtime/context/config/config"
 import z from "zod/v4"
 import { Provider } from "@/runtime/providers/provider"
@@ -401,7 +400,8 @@ export namespace Agent {
     const language = await Provider.getLanguage(model)
 
     const system = [PROMPT_GENERATE]
-    await Plugin.trigger("experimental.chat.system.transform", { model }, { system })
+    // "experimental.chat.system.transform" is not declared in the plugin SDK Hooks type yet
+    await Plugin.trigger("experimental.chat.system.transform" as any, { model }, { system })
     const existing = await list()
 
     const params = {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Tunnel self-registration for `gizzi serve --tunnel`. Once cloudflared hands
 // us a public URL, we PUT it to the platform's instance registry so signed-in
 // clients (iOS app) can discover this machine. Strictly best-effort: any

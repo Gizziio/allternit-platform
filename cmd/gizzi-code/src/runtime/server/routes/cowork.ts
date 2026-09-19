@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Cowork Runtime API Routes
  *
@@ -176,7 +175,9 @@ export function CoworkRoutes() {
           const { id } = c.req.valid("param")
           const run = RunService.get(id)
           if (!run) return c.json({ error: "Run not found" }, 404)
-          RunService.updateStatus(id, "cancelled", { completed_at: Date.now() as any })
+          // updateStatus sets completed_at itself for terminal statuses; the
+          // third argument's shape doesn't admit it (and never read it).
+          RunService.updateStatus(id, "cancelled")
           RunService.appendEvent(id, "run_cancelled", { run_id: id })
           return c.json({ success: true })
         },

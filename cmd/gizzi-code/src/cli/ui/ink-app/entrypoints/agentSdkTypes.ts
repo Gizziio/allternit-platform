@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Main entrypoint for gizzi-code Agent SDK types.
  *
@@ -12,8 +11,17 @@
 
 import type {
   CallToolResult,
-  ToolAnnotations,
 } from '@modelcontextprotocol/sdk/types.js'
+
+// TODO(types): the ambient '@modelcontextprotocol/sdk/types.js' decl in
+// src/types/global.d.ts has no ToolAnnotations; mirror its Tool.annotations
+// shape.
+type ToolAnnotations = {
+  readOnly?: boolean
+  destructive?: boolean
+  openWorld?: boolean
+  [key: string]: unknown
+}
 
 // Control protocol types for SDK builders (bridge subpath consumers)
 /** @alpha */
@@ -36,32 +44,35 @@ export type { ToolDefinition, ToolInputSchema, ToolProgressData, ToolUseRequest,
 // Functions
 // ============================================================================
 
-import type {
-  SDKMessage,
-  SDKResultMessage,
-  SDKSessionInfo,
-  SDKUserMessage,
-} from './sdk/coreTypes.js'
-// Import types needed for function signatures
-import type {
-  AnyZodRawShape,
-  ForkSessionOptions,
-  ForkSessionResult,
-  GetSessionInfoOptions,
-  GetSessionMessagesOptions,
-  InferShape,
-  InternalOptions,
-  InternalQuery,
-  ListSessionsOptions,
-  McpSdkServerConfigWithInstance,
-  Options,
-  Query,
-  SDKSession,
-  SDKSessionOptions,
-  SdkMcpToolDefinition,
-  SessionMessage,
-  SessionMutationOptions,
-} from './sdk/runtimeTypes.js'
+// TODO(types): the local sdk/coreTypes.js and sdk/runtimeTypes.js stubs never
+// carried the generated SDK type surface these signatures were written
+// against; mirror the minimal shapes this stub entrypoint needs.
+type SDKMessage = unknown
+type SDKUserMessage = unknown
+type SDKResultMessage = unknown
+type SDKSessionInfo = unknown
+type SessionMessage = unknown
+type AnyZodRawShape = Record<string, unknown>
+type InferShape<_Schema extends AnyZodRawShape> = Record<string, unknown>
+type InternalOptions = Record<string, unknown>
+type Options = Record<string, unknown>
+type InternalQuery = unknown
+type Query = unknown
+type SDKSessionOptions = Record<string, unknown>
+type SDKSession = unknown
+type SdkMcpToolDefinition<_Schema extends AnyZodRawShape = AnyZodRawShape> = unknown
+type McpSdkServerConfigWithInstance = unknown
+type ListSessionsOptions = { dir?: string; limit?: number; offset?: number }
+type GetSessionInfoOptions = { dir?: string }
+type GetSessionMessagesOptions = {
+  dir?: string
+  limit?: number
+  offset?: number
+  includeSystemMessages?: boolean
+}
+type SessionMutationOptions = { dir?: string }
+type ForkSessionOptions = { dir?: string; upToMessageId?: string; title?: string }
+type ForkSessionResult = { sessionId: string }
 
 export type {
   ListSessionsOptions,

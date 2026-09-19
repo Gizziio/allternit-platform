@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { dynamicTool, type Tool, jsonSchema, type JSONSchema7 } from "ai"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
@@ -8,8 +7,16 @@ import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
 import {
   CallToolResultSchema,
   type Tool as MCPToolDef,
-  ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js"
+
+// TODO(types): the ambient '@modelcontextprotocol/sdk/types.js' decl in
+// src/types/global.d.ts has no ToolListChangedNotificationSchema value. The
+// namespace import still resolves to the real SDK schema at runtime; the cast
+// only gives it a local type.
+import * as MCPTypes from "@modelcontextprotocol/sdk/types.js"
+const ToolListChangedNotificationSchema = (
+  MCPTypes as unknown as { ToolListChangedNotificationSchema: string }
+).ToolListChangedNotificationSchema
 import { Config } from "@/runtime/context/config/config"
 import { Log } from "@/shared/util/log"
 import { NamedError } from "@allternit/gizzi-util/error.js"
@@ -68,6 +75,23 @@ export namespace MCP {
 
   type MCPClient = Client
 
+  // TODO(types): the ambient Client decl in src/types/global.d.ts predates
+  // the real SDK's (params, resultSchema, options) callTool overload.
+  type MCPClientCallTool = (
+    params: { name: string; arguments?: Record<string, unknown> },
+    resultSchema: unknown,
+    options: { resetTimeoutOnProgress?: boolean; timeout?: number },
+  ) => Promise<unknown>
+
+  // TODO(types): Config's mcp record admits a bare `{ enabled: boolean }`
+  // entry that withBundledMcpServers' parameter type doesn't list; runtime
+  // passes entries through unchanged.
+  function withBundled(config: Config.Info["mcp"]): ReturnType<typeof withBundledMcpServers> {
+    return withBundledMcpServers(
+      config as Parameters<typeof withBundledMcpServers>[0],
+    )
+  }
+
   export const Status = z
     .discriminatedUnion("status", [
       z
@@ -120,7 +144,7 @@ export namespace MCP {
       description: mcpTool.description ?? "",
       inputSchema: jsonSchema(schema),
       execute: async (args: unknown) => {
-        return client.callTool(
+        return (client.callTool as MCPClientCallTool)(
           {
             name: mcpTool.name,
             arguments: (args || {}) as Record<string, unknown>,
@@ -162,7 +186,7 @@ export namespace MCP {
   const state = Instance.state(
     async () => {
       const cfg = await Config.get()
-      const config = withBundledMcpServers(cfg.mcp ?? {})
+      const config = withBundled(cfg.mcp)
       const clients: Record<string, MCPClient> = {}
       const status: Record<string, Status> = {}
 
@@ -435,6 +459,8 @@ export namespace MCP {
     if (mcp.type === "local") {
       const [cmd, ...args] = mcp.command
       const cwd = Instance.directory
+      // TODO(types): the ambient StdioClientTransport decl omits stderr/cwd;
+      // the real SDK transport accepts both.
       const transport = new StdioClientTransport({
         stderr: "pipe",
         command: cmd,
@@ -445,7 +471,7 @@ export namespace MCP {
           ...(cmd === "gizzi" ? { BUN_BE_BUN: "1" } : {}),
           ...mcp.environment,
         },
-      })
+      } as unknown as ConstructorParameters<typeof StdioClientTransport>[0])
       transport.stderr?.on("data", (chunk: Buffer) => {
         log.info(`mcp stderr: ${chunk.toString()}`, { key })
       })
@@ -523,7 +549,7 @@ export namespace MCP {
   export async function status() {
     const s = await state()
     const cfg = await Config.get()
-    const config = withBundledMcpServers(cfg.mcp ?? {})
+    const config = withBundled(cfg.mcp)
     const result: Record<string, Status> = {}
 
     // Include all configured MCPs from config, not just connected ones
@@ -541,7 +567,7 @@ export namespace MCP {
 
   export async function connect(name: string) {
     const cfg = await Config.get()
-    const config = withBundledMcpServers(cfg.mcp ?? {})
+    const config = withBundled(cfg.mcp)
     const mcp = config[name]
     if (!mcp) {
       log.error("MCP config not found", { name })
@@ -604,7 +630,7 @@ export namespace MCP {
     const collisions: Array<{ qualifiedName: string; existing: ToolDescriptor; incoming: Omit<ToolDescriptor, "qualifiedName" | "collision"> }> = []
     const s = await state()
     const cfg = await Config.get()
-    const config = withBundledMcpServers(cfg.mcp ?? {})
+    const config = withBundled(cfg.mcp)
     const clientsSnapshot = await clients()
     const defaultTimeout = cfg.experimental?.mcp_timeout
 
@@ -932,15 +958,21 @@ export namespace MCP {
     }
 
     try {
-      // Call finishAuth on the transport
-      await transport.finishAuth(authorizationCode)
+      // TODO(types): the ambient transport decls in src/types/global.d.ts lack
+      // finishAuth; the real streamableHttp/SSE transports implement it for
+      // OAuth completion.
+      await (
+        transport as unknown as {
+          finishAuth: (authorizationCode: string) => Promise<void>
+        }
+      ).finishAuth(authorizationCode)
 
       // Clear the code verifier after successful auth
       await McpAuth.clearCodeVerifier(mcpName)
 
       // Now try to reconnect
       const cfg = await Config.get()
-      const mcpConfig = withBundledMcpServers(cfg.mcp ?? {})[mcpName]
+      const mcpConfig = withBundled(cfg.mcp)[mcpName]
 
       if (!mcpConfig) {
         throw new Error(`MCP server not found: ${mcpName}`)

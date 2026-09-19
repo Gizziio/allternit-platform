@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Ajv } from 'ajv'
 import { z } from 'zod/v4'
 import type { Tool, ToolInputJSONSchema } from '../../Tool.js'
