@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import z from "zod/v4"
 import { NamedError } from "@allternit/gizzi-util/error.js"

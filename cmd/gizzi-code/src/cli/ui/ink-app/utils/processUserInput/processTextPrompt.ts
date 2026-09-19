@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources'
 import { randomUUID } from 'crypto'
 import { setPromptId } from './../../bootstrap/state.ts'

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Command } from '../../types/command.js'
 import { getCommandName } from '../../types/command.js'
 

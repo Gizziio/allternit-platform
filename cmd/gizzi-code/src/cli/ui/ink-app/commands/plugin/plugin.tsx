@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react';
 import type { LocalJSXCommandOnDone } from '../../types/command';
 import { PluginSettings } from './PluginSettings';

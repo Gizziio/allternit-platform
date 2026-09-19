@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { MessageV2 } from "@/runtime/session/message-v2"
 import type { SessionStatus } from "@/runtime/session/status"
 import { isWebToolName } from "./runtime-mode"

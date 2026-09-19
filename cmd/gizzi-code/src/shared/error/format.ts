@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ConfigMarkdown } from "@/runtime/context/config/markdown"
 import { Config } from "@/runtime/context/config/config"
 import { MCP } from "@/runtime/tools/mcp"
@@ -6,10 +5,15 @@ import { Provider } from "@/runtime/providers/provider"
 import { UI } from "@/cli/ui"
 
 export function FormatError(input: unknown) {
-  if (MCP.Failed.isInstance(input))
-    return `MCP server "${input.data?.name ?? "unknown"}" failed. Note, gizzi does not support MCP authentication yet.`
+  // TODO(types): @allternit/gizzi-util ships no type declarations, so
+  // isInstance() cannot narrow — cast input to the shape each branch reads
+  // (same pattern as src/runtime/providers/adapters/auth.ts).
+  if (MCP.Failed.isInstance(input)) {
+    const data = (input as { data?: { name?: string } }).data
+    return `MCP server "${data?.name ?? "unknown"}" failed. Note, gizzi does not support MCP authentication yet.`
+  }
   if (Provider.ModelNotFoundError.isInstance(input)) {
-    const data = input.data as { providerID?: string; modelID?: string; suggestions?: string[] } | undefined
+    const data = (input as { data?: unknown }).data as { providerID?: string; modelID?: string; suggestions?: string[] } | undefined
     const { providerID, modelID, suggestions } = data ?? {}
     return [
       `Model not found: ${providerID ?? "unknown"}/${modelID ?? "unknown"}`,
@@ -19,24 +23,24 @@ export function FormatError(input: unknown) {
     ].join("\n")
   }
   if (Provider.InitError.isInstance(input)) {
-    const data = input.data as { providerID?: string } | undefined
+    const data = (input as { data?: unknown }).data as { providerID?: string } | undefined
     return `Failed to initialize provider "${data?.providerID ?? "unknown"}". Check credentials and configuration.`
   }
   if (Config.JsonError.isInstance(input)) {
-    const data = input.data as { path?: string; message?: string } | undefined
+    const data = (input as { data?: unknown }).data as { path?: string; message?: string } | undefined
     return (
       `Config file at ${data?.path ?? "unknown"} is not valid JSON(C)` + (data?.message ? `: ${data.message}` : "")
     )
   }
   if (Config.ConfigDirectoryTypoError.isInstance(input)) {
-    const data = input.data as { dir?: string; path?: string; suggestion?: string } | undefined
+    const data = (input as { data?: unknown }).data as { dir?: string; path?: string; suggestion?: string } | undefined
     return `Directory "${data?.dir ?? "unknown"}" in ${data?.path ?? "unknown"} is not valid. Rename the directory to "${data?.suggestion ?? "unknown"}" or remove it. This is a common typo.`
   }
   if (ConfigMarkdown.FrontmatterError.isInstance(input)) {
-    return (input.data as { message?: string } | undefined)?.message ?? "Frontmatter error"
+    return ((input as { data?: unknown }).data as { message?: string } | undefined)?.message ?? "Frontmatter error"
   }
   if (Config.InvalidError.isInstance(input)) {
-    const data = input.data as { path?: string; message?: string; issues?: Array<{ message: string; path: string[] }> } | undefined
+    const data = (input as { data?: unknown }).data as { path?: string; message?: string; issues?: Array<{ message: string; path: string[] }> } | undefined
     return [
       `Configuration is invalid${data?.path && data.path !== "config" ? ` at ${data.path}` : ""}` +
         (data?.message ? `: ${data.message}` : ""),
