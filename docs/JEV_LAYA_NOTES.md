@@ -107,3 +107,77 @@ Note: eval-task traces are all labeled `split=heldout` by the recorder — they 
 - `domains/computer-use/core/notebooks/laya_finetune_kaggle.ipynb` (+ `build_laya_notebook.py`)
 - `domains/computer-use/core/evaluation/shadow-eval/shadow-eval-report-laya{,-mock}.{json,md}`
 - `domains/computer-use/core/evaluation/tier-a/live-traces-{mock,laya}.jsonl`, `laya-cases-{mock,laya}.jsonl`
+
+## Training volume (TRAIN-split templates, session/task-variants 2026-09-19)
+
+The three canonical eval tasks are split=heldout by construction, so they can
+never produce training rows. `domains/computer-use/core/core/train_tasks.py`
+adds **12 TRAIN-split synthetic task templates** whose task_ids are outside
+`HELD_OUT_TASK_IDS` — `core/trace_recorder.py` labels their traces
+`split="train"` automatically and `scripts/export_laya_finetune.py` converts
+them into Laya fine-tune cases with zero cloud cost (mock head; gold labels
+come from the recorded transcript, never the head).
+
+Templates (each exercises >= 3 distinct whitelist ops, one adapter-failed
+target per task for the `suspected_noop`/`stuck` variety):
+
+| Template | Interaction shape | Ops (seed 42, 22 steps) |
+|---|---|---|
+| train-checkout | cart → shipping → payment → confirm | fill 15 · select 4 · click 3 |
+| train-pagination | search → page next/prev → open result | click 13 · fill 5 · scroll 4 |
+| train-modal-dialog | open dialog → select format → type note → confirm | click 11 · select 6 · fill 5 |
+| train-combobox-booking | combobox fill/select + date + search | fill 11 · select 6 · click 5 |
+| train-checkbox-radio | email + language + checkbox + radio + send | click 12 · fill 5 · select 5 |
+| train-slider-adjust | keyboard slider nudges + preset name + save | press 12 · fill 5 · click 5 |
+| train-filter-chips | keyword + filter chips + scroll + result | click 13 · fill 5 · scroll 4 |
+| train-registration-form | names + email + bio textarea + level + create | fill 16 · select 3 · click 3 |
+| train-settings-tabs | display name + tabs + density + checkbox + save | click 14 · fill 4 · select 4 |
+| train-file-upload | browse → scroll list → double-click → caption → attach | click 9 · scroll 5 · doubleClick 4 · fill 4 |
+| train-accordion-faq | search phrase + accordion expand + scroll + topic | click 11 · fill 6 · scroll 5 |
+| train-toast-dismiss | title + theme + toast dismiss + checkbox + publish | click 12 · fill 5 · select 5 |
+
+Suite op mix (seed 42, 264 steps): click 111 (42%), fill 86 (33%),
+selectOptionFromDropdown 33 (12%), scrollTo 18 (7%), press 12 (5%),
+doubleClick 4 (2%) — click plurality with substantial fill/select/scroll.
+(`type` turns fold into `fill` via `_LLM_OP_MAP`; every mapped op family is
+covered — asserted in `tests/test_train_tasks.py`.)
+
+**Seeds**: every factory derives names/values/orders from
+`random.Random(f"{seed}:{task_id}")` — per-seed deterministic, order
+independent, no global state. New seeds multiply diversity without new code.
+
+**Volume dial**: `cases ≈ seeds × 12 templates × (steps − 1)`. At steps=22 one
+seed yields 264 trace records → **252 training cases** (temporal realignment
+drops each run's tail; 0 menu-mismatch drops observed). Mock-head generation
+is pure CPU (scripted latencies are recorded, not slept): one full seed suite
+runs in **~0.25 s** (≈60k cases/minute theoretical; export included). Two
+suites generated and exported 2026-09-19: seeds 42 and 7 → 252 + 252 =
+**504 training cases**, all gold ops in the canonical whitelist vocab, all
+typed fill values redacted (`[redacted]` in every record; grep for seeded
+names/emails/card numbers → 0 hits).
+
+Regenerate:
+
+```bash
+cd domains/computer-use/core
+PY=.venv/bin/python  # uv venv + uv pip install -e . pytest pytest-asyncio
+for S in 42 7; do
+  $PY scripts/shadow_head_eval.py --head mock --tasks train --task-seed $S \
+      --steps 22 --trace-out /tmp/train-traces-seed$S.jsonl --quiet
+  $PY scripts/export_laya_finetune.py /tmp/train-traces-seed$S.jsonl \
+      --split train -o /tmp/laya-cases-seed$S.jsonl --report
+done
+```
+
+CLI: `scripts/shadow_head_eval.py` and `scripts/run_head_eval.py` gained
+`--tasks {heldout,train,all}` (default `heldout` = byte-identical prior
+behavior; held-out smoke still prints agreement 0.7576) and `--task-seed`
+(default 42); report stems gain `-train` / `-all` so train runs never
+overwrite the held-out baseline. The canonical `default_tasks` definitions
+are pinned literally in `tests/test_train_tasks.py` (benchmark stability).
+
+Caveats (same honesty list as above applies): labels imitate the recorded
+LLM reference, not ground truth; gates are still exported without gold; the
+search-phrase seeds ('torque wrench' etc.) intentionally appear in the
+`[TASK]` line — same convention as the canonical search-flow task — while
+every typed value is redacted.

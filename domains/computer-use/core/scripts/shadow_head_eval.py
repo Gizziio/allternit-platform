@@ -6,11 +6,22 @@ over three synthetic task observations and writes the eval report:
 
     python domains/computer-use/core/scripts/shadow_head_eval.py [--steps N]
         [--head {mock,mlx,kimi}] [--questioning {batched,sequential}]
+        [--tasks {heldout,train,all}] [--task-seed S]
         [--trajectory {off,on}] [--few-shot N]
         [--reserved-slots {off,on}] [--last-action {off,on}]
         [--model HF-REPO] [--revision SHA]
         [--self-consistency K] [--sc-temperature T]
         [--trace-out PATH] [--out-dir DIR] [--quiet]
+
+``--tasks`` selects the synthetic task set: ``heldout`` (default) runs only
+the three canonical held-out tasks — byte-identical to the pre-existing
+behavior; ``train`` runs only the TRAIN-split templates from
+core/train_tasks.py (task ids outside HELD_OUT_TASK_IDS, so their traces are
+labeled split=train and become Laya fine-tune cases); ``all`` runs both.
+``--task-seed`` (default 42) reseeds the train templates' derived
+names/values/orders — new seeds multiply training volume without new code.
+Report stems carry a ``-train`` / ``-all`` suffix when those sets run, so
+train reports never overwrite the held-out baseline.
 
 The LLM provider replays a recorded transcript and the AX observation is
 scripted, so the run is deterministic except for the head itself:
@@ -223,6 +234,25 @@ def main(argv: list[str] | None = None) -> int:
              "SemIf community System One reproduction, mlx shared-state pass)",
     )
     parser.add_argument(
+        "--tasks",
+        choices=("heldout", "train", "all"),
+        default="heldout",
+        help="synthetic task set: heldout (default) = the three canonical "
+             "held-out tasks only, byte-identical to prior behavior; train = "
+             "the TRAIN-split templates from core/train_tasks.py only (traces "
+             "labeled split=train — Laya fine-tune volume); all = both. "
+             "Report stem gains -train / -all accordingly.",
+    )
+    parser.add_argument(
+        "--task-seed",
+        type=int,
+        default=42,
+        metavar="S",
+        help="seed for the train task templates' derived names/values/orders "
+             "(default 42; applies to --tasks train/all — new seeds multiply "
+             "training diversity without new code)",
+    )
+    parser.add_argument(
         "--questioning",
         choices=("batched", "sequential"),
         default="batched",
@@ -396,12 +426,26 @@ def main(argv: list[str] | None = None) -> int:
 
     from core.shadow_eval import default_tasks, run_eval, write_reports
 
+    if args.tasks == "heldout":
+        task_list = default_tasks(args.steps)
+        tasks_suffix = ""
+    elif args.tasks == "train":
+        from core.train_tasks import train_tasks
+
+        task_list = train_tasks(args.task_seed, args.steps)
+        tasks_suffix = "-train"
+    else:
+        from core.train_tasks import train_tasks
+
+        task_list = default_tasks(args.steps) + train_tasks(args.task_seed, args.steps)
+        tasks_suffix = "-all"
+
     step_budget = _STEP_BUDGET_MS[args.head]
     if args.head == "kimi" and args.questioning == "sequential":
         step_budget *= 2  # two subprocess calls per decide step
 
     report = run_eval(
-        tasks=default_tasks(args.steps),
+        tasks=task_list,
         steps_per_task=args.steps,
         head=head,
         head_label=args.head,
@@ -413,7 +457,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     report["questioning"] = args.questioning
     report["trajectory"] = args.trajectory
-    json_path, md_path = write_reports(report, args.out_dir, stem=f"shadow-eval-report{stem_suffix}{graft_suffix}")
+    json_path, md_path = write_reports(report, args.out_dir, stem=f"shadow-eval-report{stem_suffix}{tasks_suffix}{graft_suffix}")
 
     agg = report["aggregate"]
     print(f"\nShadow eval complete — reports written:")
