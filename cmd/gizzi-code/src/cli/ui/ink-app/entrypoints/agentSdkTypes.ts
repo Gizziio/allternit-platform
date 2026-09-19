@@ -11,17 +11,8 @@
 
 import type {
   CallToolResult,
+  ToolAnnotations,
 } from '@modelcontextprotocol/sdk/types.js'
-
-// TODO(types): the ambient '@modelcontextprotocol/sdk/types.js' decl in
-// src/types/global.d.ts has no ToolAnnotations; mirror its Tool.annotations
-// shape.
-type ToolAnnotations = {
-  readOnly?: boolean
-  destructive?: boolean
-  openWorld?: boolean
-  [key: string]: unknown
-}
 
 // Control protocol types for SDK builders (bridge subpath consumers)
 /** @alpha */
