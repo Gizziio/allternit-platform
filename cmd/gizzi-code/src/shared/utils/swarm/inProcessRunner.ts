@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * In-process teammate runner
  *
@@ -32,7 +31,11 @@ import {
 } from '@/services/compact/compact.js'
 import { resetMicrocompactState } from '@/services/compact/microCompact.js'
 import type { AppState } from '@/state/AppState.js'
-import type { Tool, ToolUseContext } from '@/Tool.js'
+import type { ToolUseContext } from '@/Tool.js'
+import type {
+  Tool,
+  ToolUseContext as InkToolUseContext,
+} from '../../../cli/ui/ink-app/Tool.js'
 import { appendTeammateMessage } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
 import type {
   InProcessTeammateTaskState,
@@ -1090,12 +1093,12 @@ export async function runInProcessTeammate(
         }
         const compactedSummary = await compactConversation(
           allMessages,
-          isolatedContext,
+          isolatedContext as unknown as InkToolUseContext,
           {
             systemPrompt: asSystemPrompt([]),
             userContext: {},
             systemContext: {},
-            toolUseContext: isolatedContext,
+            toolUseContext: isolatedContext as unknown as InkToolUseContext,
             forkContextMessages: [],
           },
           true, // suppressFollowUpQuestions
