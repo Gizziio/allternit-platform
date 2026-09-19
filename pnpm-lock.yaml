@@ -226,6 +226,9 @@ importers:
       '@ai-sdk/provider-utils':
         specifier: 3.0.21
         version: 3.0.21(zod@4.3.6)
+      '@alcalzone/ansi-tokenize':
+        specifier: 0.2.5
+        version: 0.2.5
       '@allternit/computer-use':
         specifier: workspace:*
         version: link:../../sdk/computer-use
@@ -295,12 +298,48 @@ importers:
       '@opentelemetry/core':
         specifier: 2.11.0
         version: 2.11.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-logs-otlp-grpc':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-logs-otlp-http':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-logs-otlp-proto':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-metrics-otlp-grpc':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-metrics-otlp-http':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-metrics-otlp-proto':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-prometheus':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-trace-otlp-grpc':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-trace-otlp-http':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-trace-otlp-proto':
+        specifier: 0.208.0
+        version: 0.208.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/resources':
         specifier: 2.11.0
         version: 2.11.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-logs':
         specifier: 0.222.0
         version: 0.222.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-metrics':
+        specifier: 2.6.1
+        version: 2.6.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-base':
+        specifier: 2.6.1
+        version: 2.6.1(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions':
         specifier: 1.40.0
         version: 1.40.0
@@ -325,30 +364,51 @@ importers:
       ai:
         specifier: 5.0.124
         version: 5.0.124(zod@4.3.6)
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       asciichart:
         specifier: ^1.5.25
         version: 1.5.25
+      auto-bind:
+        specifier: 5.0.1
+        version: 5.0.1
       axios:
         specifier: 1.20.0
         version: 1.20.0(debug@4.4.3)
+      bidi-js:
+        specifier: 1.0.3
+        version: 1.0.3
       bonjour-service:
         specifier: 1.3.0
         version: 1.3.0
       bun-pty:
         specifier: 0.4.8
         version: 0.4.8
+      cacache:
+        specifier: 15.3.0
+        version: 15.3.0
       chalk:
         specifier: 4.1.2
         version: 4.1.2
       chokidar:
         specifier: 4.0.3
         version: 4.0.3
+      cli-boxes:
+        specifier: 3.0.0
+        version: 3.0.0
       cli-highlight:
         specifier: 2.1.11
         version: 2.1.11
       clipboardy:
         specifier: 4.0.0
         version: 4.0.0
+      code-excerpt:
+        specifier: 4.0.0
+        version: 4.0.0
+      cors:
+        specifier: 2.8.6
+        version: 2.8.6
       decimal.js:
         specifier: 10.5.0
         version: 10.5.0
@@ -358,6 +418,15 @@ importers:
       drizzle-orm:
         specifier: 1.0.0-beta.12-a5629fb
         version: 1.0.0-beta.12-a5629fb(@cloudflare/workers-types@4.20260120.0)(@opentelemetry/api@1.9.0)(@prisma/client@6.19.3(prisma@6.19.3(magicast@0.5.2)(typescript@5.9.3))(typescript@5.9.3))(@types/better-sqlite3@7.6.13)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(@types/pg@8.18.0)(@upstash/redis@1.37.0)(better-sqlite3@13.0.3)(bun-types@1.3.14)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8)(prisma@6.19.3(magicast@0.5.2)(typescript@5.9.3))(sqlite3@5.1.7)
+      emoji-regex:
+        specifier: 10.6.0
+        version: 10.6.0
+      env-paths:
+        specifier: 3.0.0
+        version: 3.0.0
+      express:
+        specifier: 5.2.1
+        version: 5.2.1
       figures:
         specifier: 3.2.0
         version: 3.2.0
@@ -367,6 +436,9 @@ importers:
       fuzzysort:
         specifier: 3.1.0
         version: 3.1.0
+      get-east-asian-width:
+        specifier: 1.6.0
+        version: 1.6.0
       glob:
         specifier: 13.0.5
         version: 13.0.5
@@ -382,9 +454,15 @@ importers:
       hono-openapi:
         specifier: '*'
         version: 1.3.0(@hono/standard-validator@0.1.5(@standard-schema/spec@1.0.0)(hono@4.11.4))(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.0.0)(@types/json-schema@7.0.15)(arktype@2.1.27)(effect@3.21.0)(quansync@0.2.11)(zod-to-json-schema@3.24.5(zod@4.3.6))(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.0.0)(@types/json-schema@7.0.15)(arktype@2.1.27)(effect@3.21.0)(quansync@0.2.11)(zod-to-json-schema@3.24.5(zod@4.3.6))(zod@4.3.6))(@standard-schema/spec@1.0.0)(arktype@2.1.27)(effect@3.21.0)(openapi-types@12.1.3)(zod@4.3.6))(@types/json-schema@7.0.15)(hono@4.11.4)(openapi-types@12.1.3)
+      https-proxy-agent:
+        specifier: 7.0.6
+        version: 7.0.6
       ignore:
         specifier: 7.0.5
         version: 7.0.5
+      indent-string:
+        specifier: 4.0.0
+        version: 4.0.0
       ink:
         specifier: 6.8.0
         version: 6.8.0(@types/react@19.3.0)(react-devtools-core@7.0.1)(react@19.2.4)
@@ -394,6 +472,9 @@ importers:
       jsonc-parser:
         specifier: 3.3.1
         version: 3.3.1
+      jsonwebtoken:
+        specifier: 9.0.3
+        version: 9.0.3
       lodash-es:
         specifier: ^4.18.1
         version: 4.18.1
@@ -418,9 +499,24 @@ importers:
       open:
         specifier: 10.1.2
         version: 10.1.2
+      p-map:
+        specifier: 4.0.0
+        version: 4.0.0
       partial-json:
         specifier: 0.1.7
         version: 0.1.7
+      picocolors:
+        specifier: 1.1.1
+        version: 1.1.1
+      picomatch:
+        specifier: 4.0.4
+        version: 4.0.4
+      plist:
+        specifier: 3.1.1
+        version: 3.1.1
+      proper-lockfile:
+        specifier: 4.1.2
+        version: 4.1.2
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -439,15 +535,27 @@ importers:
       remeda:
         specifier: '*'
         version: 2.33.7
+      semver:
+        specifier: 7.8.5
+        version: 7.8.5
       sharp:
         specifier: 0.35.4
         version: 0.35.4(@types/node@20.19.30)
+      shell-quote:
+        specifier: 1.8.3
+        version: 1.8.3
       signal-exit:
         specifier: ^4.1.0
         version: 4.1.0
+      stack-utils:
+        specifier: 2.0.6
+        version: 2.0.6
       strip-ansi:
         specifier: 7.1.2
         version: 7.1.2
+      tree-kill:
+        specifier: 1.2.2
+        version: 1.2.2
       tree-sitter-bash:
         specifier: 0.25.0
         version: 0.25.0
@@ -457,9 +565,15 @@ importers:
       ulid:
         specifier: '*'
         version: 3.0.2
+      undici:
+        specifier: 7.28.0
+        version: 7.28.0
       usehooks-ts:
         specifier: ^3.1.1
         version: 3.1.1(react@19.2.4)
+      uuid:
+        specifier: 10.0.0
+        version: 10.0.0
       vscode-jsonrpc:
         specifier: ^8.2.1
         version: 8.2.1
@@ -469,6 +583,12 @@ importers:
       web-tree-sitter:
         specifier: 0.25.10
         version: 0.25.10(@types/emscripten@1.41.5)
+      wrap-ansi:
+        specifier: 10.0.0
+        version: 10.0.0
+      ws:
+        specifier: 8.19.0
+        version: 8.19.0
       xdg-basedir:
         specifier: 5.1.0
         version: 5.1.0
