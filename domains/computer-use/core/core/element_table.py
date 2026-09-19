@@ -256,10 +256,14 @@ def diff_tables(
              if identity not in previous_by_identity]
     removed = [row for identity, row in previous_by_identity.items()
                if identity not in current_by_identity]
+    # Intersection via dict membership, ordered by the CURRENT table's row
+    # order (depth-first observation order) — a bare set intersection has
+    # arbitrary order, which would make the rendered delta non-deterministic.
     changed = [
-        (previous_by_identity[identity], current_by_identity[identity])
-        for identity in previous_by_identity.keys() & current_by_identity.keys()
-        if previous_by_identity[identity].value != current_by_identity[identity].value
+        (previous_by_identity[_row_identity(row)], row)
+        for row in current.rows
+        if _row_identity(row) in previous_by_identity
+        and previous_by_identity[_row_identity(row)].value != row.value
     ]
 
     def _cap(rows: List[Any]) -> Tuple[List[Any], int]:
