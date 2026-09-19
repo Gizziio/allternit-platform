@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect } from 'react'
 import { logEvent } from './../services/analytics/index.ts'
 import { z } from 'zod/v4'

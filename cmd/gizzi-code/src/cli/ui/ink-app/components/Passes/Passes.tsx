@@ -1,4 +1,3 @@
-// @ts-nocheck
 import * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import type { CommandResultDisplay } from '../../commands';
@@ -10,7 +9,7 @@ import { Box, Link, Text, useInput } from '../../ink';
 import { useKeybinding } from '../../keybindings/useKeybinding';
 import { logEvent } from '../../services/analytics/index';
 import { fetchReferralRedemptions, formatCreditAmount, getCachedOrFetchPassesEligibility } from '../../services/api/referral';
-import type { ReferralRedemptionsResponse, ReferrerRewardInfo } from '../../services/oauth/types';
+import type { ReferralRedemptionsResponse, ReferrerRewardInfo } from '../../../../../runtime/services/oauth/types.js';
 import { count } from '../../utils/array';
 import { logError } from '../../utils/log';
 import { Pane } from '../design-system/Pane';
@@ -86,8 +85,10 @@ export function Passes({
         }
 
         // Build pass statuses array
-        const redemptions = redemptionsData.redemptions || [];
-        const maxRedemptions = redemptionsData.limit || 3;
+        const redemptions =
+          (redemptionsData as unknown as { redemptions?: unknown[] | null })
+            .redemptions || [];
+        const maxRedemptions = (redemptionsData as { limit?: number }).limit || 3;
         const statuses: PassStatus[] = [];
         for (let i = 0; i < maxRedemptions; i++) {
           const redemption = redemptions[i];

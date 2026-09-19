@@ -1,4 +1,3 @@
-// @ts-nocheck
 import chalk from '@/shared/util/chalk'
 import { spawnSync } from 'child_process'
 import {
@@ -1254,7 +1253,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
         worktreeName,
         prNumber !== null ? { prNumber } : undefined,
       )
-      if (!result.existed) {
+      if (result.existed === false) {
         // biome-ignore lint/suspicious/noConsole: intentional console output
         console.log(
           `Created worktree: ${worktreeDir} (based on ${result.baseBranch})`,

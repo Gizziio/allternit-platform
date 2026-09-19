@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Leaf module for shouldEnablePromptSuggestion, extracted from
  * promptSuggestion.ts so AppStateStore.ts (which calls this synchronously

@@ -1,6 +1,7 @@
-// @ts-nocheck
 import axios from 'axios'
-import type { HookEvent } from './../../entrypoints/agentSdkTypes.ts'
+import { HOOK_EVENTS } from './../../entrypoints/agentSdkTypes.ts'
+
+type HookEvent = (typeof HOOK_EVENTS)[number]
 import { createCombinedAbortSignal } from '../combinedAbortSignal.js'
 import { logForDebugging } from '../debug.js'
 import { errorMessage } from '../errors.js'

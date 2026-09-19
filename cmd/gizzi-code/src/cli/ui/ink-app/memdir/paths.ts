@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { existsSync } from 'fs'
 import memoize from 'lodash-es/memoize.js'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';

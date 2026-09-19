@@ -10,3 +10,10 @@
 # entries rare and justified — every line here is permanent type-safety debt.
 #
 # One repo-relative path per line, `#` lines are comments.
+# 2026-09-19 (ao/ts-burn-next10, batch b0255): header retained deliberately --
+# src/cli/ui/ink-app/utils/ide.ts lines 1326/1337 call
+# ideOnboardingDialog().hasIdeOnboardingDialogBeenShown() on the Promise returned
+# by the async lazy loader (latent runtime TypeError, needs a behavior fix).
+# Type-only scope forbids the fix; tracked as b0255's escalated entry. Remove
+# this line once the bug is fixed and the header is stripped.
+src/cli/ui/ink-app/utils/ide.ts

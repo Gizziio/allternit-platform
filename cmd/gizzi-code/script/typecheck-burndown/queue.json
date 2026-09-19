@@ -3,11 +3,11 @@
   "generatedFrom": "c9673c9ab916395407d3cb505a7090682ac03ee0",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1333,
+    "totalNocheck": 1316,
     "excludedCompilerArtifacts": 271,
     "excludedVendored": 93,
-    "totalQueueFiles": 949,
-    "totalQueueLoc": 357844,
+    "totalQueueFiles": 931,
+    "totalQueueLoc": 350397,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -360,29 +360,20 @@
     },
     {
       "id": "b0255",
-      "files": [
-        "src/cli/ui/ink-app/utils/settings/settings.ts",
-        "src/cli/ui/ink-app/utils/hooks/execHttpHook.ts",
-        "src/cli/ui/ink-app/utils/ide.ts",
-        "src/cli/ui/ink-app/hooks/useIdeLogging.ts",
-        "src/cli/ui/ink-app/utils/promptCategory.ts",
-        "src/cli/ui/ink-app/utils/plugins/addDirPluginSettings.ts",
-        "src/cli/ui/ink-app/utils/model/check1mAccess.ts",
-        "src/cli/ui/ink-app/utils/permissions/permissionsLoader.ts",
-        "src/cli/ui/ink-app/constants/outputStyleConfig.ts",
-        "src/cli/ui/ink-app/services/PromptSuggestion/promptSuggestionGate.ts",
-        "src/cli/ui/ink-app/commands/extra-usage/extra-usage-core.ts",
-        "src/cli/ui/ink-app/hooks/useIdeSelection.ts",
-        "src/cli/ui/ink-app/utils/model/modelAllowlist.ts",
-        "src/cli/ui/ink-app/components/Passes/Passes.tsx",
-        "src/cli/ui/ink-app/memdir/paths.ts",
-        "src/cli/ui/ink-app/utils/plugins/marketplaceHelpers.ts",
-        "src/cli/ui/ink-app/utils/plugins/mcpbHandler.ts",
-        "src/cli/ui/ink-app/utils/worktree.ts"
-      ],
-      "loc": 7447,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 17,
+      "burnedLoc": 5941,
+      "escalated": [
+        {
+          "path": "src/cli/ui/ink-app/utils/ide.ts",
+          "reason": "latent-runtime-bug",
+          "detail": "ideOnboardingDialog is `async () => import('../components/IdeOnboardingDialog.js')`, but both call sites (lines 1326, 1337) invoke ideOnboardingDialog().hasIdeOnboardingDialogBeenShown() on the returned Promise without awaiting -- at runtime this throws TypeError (undefined is not a function) inside a .then callback. Header restored byte-exact; needs a behavior fix (await the dynamic import before the check), outside type-only scope."
+        }
+      ],
+      "note": "Burned 2026-09-19 (ao/ts-burn-next10): 18-file batch; 17 files stripped header-only after 6 tsc iterations (6 initial errors: TS2614 dead-shim oauth/types imports in Passes.tsx rerouted to runtime twin, HookEvent derived locally from HOOK_EVENTS, worktree.ts strict:false truthiness narrowing replaced with === false discriminant check). ide.ts (1492 LOC) header restored byte-exact -- latent runtime bug, see escalated; accounted via test/ts-nocheck-allowlist.txt. burnedFiles 17 / burnedLoc 5941 = the actually stripped files. TS2322 probe: exactly 17 errors (one per stripped file), reverted byte-exact. Guard identity: live scan 952 + recorded 521 = 1473 = totalAccounted."
     },
     {
       "id": "b0026",
