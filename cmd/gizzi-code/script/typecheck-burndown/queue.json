@@ -1676,7 +1676,7 @@
       "files": [],
       "loc": 935,
       "twins": [],
-      "state": "NEW",
+      "state": "DONE",
       "note": "Burned 2026-09-19 by tail-10 lane (worktree allternit-ao-burn-tail10, branch ao/ts-burn-tail10). Removed @ts-nocheck from all 6 files; zero escalations. Fixes: (1) dead USER_TYPE ant comparisons recast to (\"external\" as string) === / !== 'ant' (DCE preserved, sibling-lane idiom); (2) useCanUseTool speculative-classifier Promise.race typed via ClassifierResult import + typed _temp/_temp2 wrappers; (3) useGizziHintRecommendation InstallPluginResult narrowing rewritten to result.success === false (strict:false discriminant-equality form, load-bearing); (4) keybindings/types.ts dormant-shim imports replaced with local mirrors in KeybindingContext.tsx + KeybindingProviderSetup.tsx (resolver.ts/loadUserBindings.ts precedent) and resolver.ts keystroke mirror aligned to optional modifiers to match loadUserBindings data shape. No new deps, no as-any, no behavior change. Identity: tail-10 lane, batch b440.",
       "burnedFiles": 6,
       "burnedLoc": 956
