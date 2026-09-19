@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=1335
+count=1290
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/commands/connect.ts
@@ -94,7 +94,6 @@ cli/ui/ink-app/commands/exit/exit.tsx
 cli/ui/ink-app/commands/exit/index.ts
 cli/ui/ink-app/commands/export/export.tsx
 cli/ui/ink-app/commands/export/index.ts
-cli/ui/ink-app/commands/extra-usage/extra-usage-core.ts
 cli/ui/ink-app/commands/extra-usage/extra-usage-noninteractive.ts
 cli/ui/ink-app/commands/extra-usage/extra-usage.tsx
 cli/ui/ink-app/commands/extra-usage/index.ts
@@ -239,7 +238,6 @@ cli/ui/ink-app/commands/view-plan/view-plan.ts
 cli/ui/ink-app/commands/vim/index.ts
 cli/ui/ink-app/commands/vim/vim.ts
 cli/ui/ink-app/components/AgentProgressLine.tsx
-cli/ui/ink-app/components/App.tsx
 cli/ui/ink-app/components/AutoModeOptInDialog.tsx
 cli/ui/ink-app/components/AutoUpdater.tsx
 cli/ui/ink-app/components/AutoUpdaterWrapper.tsx
@@ -300,7 +298,6 @@ cli/ui/ink-app/components/LogoV2/Feed.tsx
 cli/ui/ink-app/components/LogoV2/OverageCreditUpsell.tsx
 cli/ui/ink-app/components/LspRecommendation/LspRecommendationMenu.tsx
 cli/ui/ink-app/components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.tsx
-cli/ui/ink-app/components/Markdown.tsx
 cli/ui/ink-app/components/MarkdownTable.tsx
 cli/ui/ink-app/components/MemoryUsageIndicator.tsx
 cli/ui/ink-app/components/ModelPicker.tsx
@@ -308,7 +305,6 @@ cli/ui/ink-app/components/NativeAutoUpdater.tsx
 cli/ui/ink-app/components/OffscreenFreeze.tsx
 cli/ui/ink-app/components/OutputStylePicker.tsx
 cli/ui/ink-app/components/PackageManagerAutoUpdater.tsx
-cli/ui/ink-app/components/Passes/Passes.tsx
 cli/ui/ink-app/components/PrBadge.tsx
 cli/ui/ink-app/components/PressEnterToContinue.tsx
 cli/ui/ink-app/components/PromptInput/FooterStatusBadges.tsx
@@ -364,7 +360,6 @@ cli/ui/ink-app/components/StructuredDiff.tsx
 cli/ui/ink-app/components/StructuredDiff/Fallback.tsx
 cli/ui/ink-app/components/StructuredDiffList.tsx
 cli/ui/ink-app/components/TagTabs.tsx
-cli/ui/ink-app/components/TaskListV2.tsx
 cli/ui/ink-app/components/TeammateViewHeader.tsx
 cli/ui/ink-app/components/TeleportError.tsx
 cli/ui/ink-app/components/TeleportStash.tsx
@@ -374,7 +369,6 @@ cli/ui/ink-app/components/ThinkingToggle.tsx
 cli/ui/ink-app/components/TokenWarning.tsx
 cli/ui/ink-app/components/ToolUseLoader.tsx
 cli/ui/ink-app/components/ValidationErrorsList.tsx
-cli/ui/ink-app/components/VirtualMessageList.tsx
 cli/ui/ink-app/components/WelcomeBox.tsx
 cli/ui/ink-app/components/WorkflowMultiselectDialog.tsx
 cli/ui/ink-app/components/WorktreeExitDialog.tsx
@@ -404,21 +398,6 @@ cli/ui/ink-app/components/agents/new-agent-creation/wizard-steps/TypeStep.tsx
 cli/ui/ink-app/components/agents/types.ts
 cli/ui/ink-app/components/agents/validateAgent.ts
 cli/ui/ink-app/components/cost-tracker.ts
-cli/ui/ink-app/components/design-system/Byline.tsx
-cli/ui/ink-app/components/design-system/Dialog.tsx
-cli/ui/ink-app/components/design-system/Divider.tsx
-cli/ui/ink-app/components/design-system/FuzzyPicker.tsx
-cli/ui/ink-app/components/design-system/KeyboardShortcutHint.tsx
-cli/ui/ink-app/components/design-system/ListItem.tsx
-cli/ui/ink-app/components/design-system/LoadingState.tsx
-cli/ui/ink-app/components/design-system/Pane.tsx
-cli/ui/ink-app/components/design-system/ProgressBar.tsx
-cli/ui/ink-app/components/design-system/Ratchet.tsx
-cli/ui/ink-app/components/design-system/StatusIcon.tsx
-cli/ui/ink-app/components/design-system/Tabs.tsx
-cli/ui/ink-app/components/design-system/ThemeProvider.tsx
-cli/ui/ink-app/components/design-system/ThemedBox.tsx
-cli/ui/ink-app/components/design-system/ThemedText.tsx
 cli/ui/ink-app/components/design-system/color.ts
 cli/ui/ink-app/components/diff/DiffDetailView.tsx
 cli/ui/ink-app/components/diff/DiffDialog.tsx
@@ -491,16 +470,7 @@ cli/ui/ink-app/components/shell/OutputLine.tsx
 cli/ui/ink-app/components/shell/ShellProgressMessage.tsx
 cli/ui/ink-app/components/shell/ShellTimeDisplay.tsx
 cli/ui/ink-app/components/skills/SkillsMenu.tsx
-cli/ui/ink-app/components/tasks/AsyncAgentDetailDialog.tsx
 cli/ui/ink-app/components/tasks/BackgroundTask.tsx
-cli/ui/ink-app/components/tasks/BackgroundTaskStatus.tsx
-cli/ui/ink-app/components/tasks/BackgroundTasksDialog.tsx
-cli/ui/ink-app/components/tasks/DreamDetailDialog.tsx
-cli/ui/ink-app/components/tasks/InProcessTeammateDetailDialog.tsx
-cli/ui/ink-app/components/tasks/RemoteSessionDetailDialog.tsx
-cli/ui/ink-app/components/tasks/RemoteSessionProgress.tsx
-cli/ui/ink-app/components/tasks/ShellDetailDialog.tsx
-cli/ui/ink-app/components/tasks/ShellProgress.tsx
 cli/ui/ink-app/components/tasks/renderToolActivity.tsx
 cli/ui/ink-app/components/tasks/taskStatusUtils.tsx
 cli/ui/ink-app/components/teams/TeamStatus.tsx
@@ -511,7 +481,6 @@ cli/ui/ink-app/components/wizard/WizardDialogLayout.tsx
 cli/ui/ink-app/components/wizard/WizardNavigationFooter.tsx
 cli/ui/ink-app/components/wizard/WizardProvider.tsx
 cli/ui/ink-app/components/wizard/index.ts
-cli/ui/ink-app/constants/outputStyleConfig.ts
 cli/ui/ink-app/constants/outputStyleConstants.ts
 cli/ui/ink-app/constants/outputStyles.ts
 cli/ui/ink-app/constants/prompts.ts
@@ -575,8 +544,6 @@ cli/ui/ink-app/hooks/useGlobalKeybindings.tsx
 cli/ui/ink-app/hooks/useHistorySearch.ts
 cli/ui/ink-app/hooks/useIDEIntegration.tsx
 cli/ui/ink-app/hooks/useIdeAtMentioned.ts
-cli/ui/ink-app/hooks/useIdeLogging.ts
-cli/ui/ink-app/hooks/useIdeSelection.ts
 cli/ui/ink-app/hooks/useInboxPoller.ts
 cli/ui/ink-app/hooks/useInputBuffer.ts
 cli/ui/ink-app/hooks/useIssueFlagBanner.ts
@@ -719,7 +686,6 @@ cli/ui/ink-app/keybindings/KeybindingContext.tsx
 cli/ui/ink-app/keybindings/KeybindingProviderSetup.tsx
 cli/ui/ink-app/memdir/findRelevantMemories.ts
 cli/ui/ink-app/memdir/memdir.ts
-cli/ui/ink-app/memdir/paths.ts
 cli/ui/ink-app/memdir/teamMemPaths.ts
 cli/ui/ink-app/memdir/teamMemPrompts.ts
 cli/ui/ink-app/outputStyles/loadOutputStylesDir.ts
@@ -742,7 +708,6 @@ cli/ui/ink-app/server/directConnectManager.ts
 cli/ui/ink-app/services/AgentSummary/agentSummary.ts
 cli/ui/ink-app/services/MagicDocs/magicDocs.ts
 cli/ui/ink-app/services/PromptSuggestion/promptSuggestion.ts
-cli/ui/ink-app/services/PromptSuggestion/promptSuggestionGate.ts
 cli/ui/ink-app/services/PromptSuggestion/speculation.ts
 cli/ui/ink-app/services/SessionMemory/sessionMemory.ts
 cli/ui/ink-app/services/analytics/datadog.ts
@@ -994,7 +959,6 @@ cli/ui/ink-app/utils/hooks.ts
 cli/ui/ink-app/utils/hooks/AsyncHookRegistry.ts
 cli/ui/ink-app/utils/hooks/apiQueryHookHelper.ts
 cli/ui/ink-app/utils/hooks/execAgentHook.ts
-cli/ui/ink-app/utils/hooks/execHttpHook.ts
 cli/ui/ink-app/utils/hooks/execPromptHook.ts
 cli/ui/ink-app/utils/hooks/fileChangedWatcher.ts
 cli/ui/ink-app/utils/hooks/hookHelpers.ts
@@ -1026,11 +990,9 @@ cli/ui/ink-app/utils/messages/mappers.ts
 cli/ui/ink-app/utils/messages/systemInit.ts
 cli/ui/ink-app/utils/model/agent.ts
 cli/ui/ink-app/utils/model/antModels.ts
-cli/ui/ink-app/utils/model/check1mAccess.ts
 cli/ui/ink-app/utils/model/configs.ts
 cli/ui/ink-app/utils/model/contextWindowUpgradeCheck.ts
 cli/ui/ink-app/utils/model/model.ts
-cli/ui/ink-app/utils/model/modelAllowlist.ts
 cli/ui/ink-app/utils/model/modelOptions.ts
 cli/ui/ink-app/utils/model/modelStrings.ts
 cli/ui/ink-app/utils/model/validateModel.ts
@@ -1053,11 +1015,9 @@ cli/ui/ink-app/utils/permissions/pathValidation.ts
 cli/ui/ink-app/utils/permissions/permissionExplainer.ts
 cli/ui/ink-app/utils/permissions/permissionSetup.ts
 cli/ui/ink-app/utils/permissions/permissions.ts
-cli/ui/ink-app/utils/permissions/permissionsLoader.ts
 cli/ui/ink-app/utils/permissions/shadowedRuleDetection.ts
 cli/ui/ink-app/utils/permissions/yoloClassifier.ts
 cli/ui/ink-app/utils/plans.ts
-cli/ui/ink-app/utils/plugins/addDirPluginSettings.ts
 cli/ui/ink-app/utils/plugins/cacheUtils.ts
 cli/ui/ink-app/utils/plugins/dependencyResolver.ts
 cli/ui/ink-app/utils/plugins/hintRecommendation.ts
@@ -1070,10 +1030,8 @@ cli/ui/ink-app/utils/plugins/loadPluginOutputStyles.ts
 cli/ui/ink-app/utils/plugins/lspPluginIntegration.ts
 cli/ui/ink-app/utils/plugins/lspRecommendation.ts
 cli/ui/ink-app/utils/plugins/managedPlugins.ts
-cli/ui/ink-app/utils/plugins/marketplaceHelpers.ts
 cli/ui/ink-app/utils/plugins/marketplaceManager.ts
 cli/ui/ink-app/utils/plugins/mcpPluginIntegration.ts
-cli/ui/ink-app/utils/plugins/mcpbHandler.ts
 cli/ui/ink-app/utils/plugins/officialMarketplaceStartupCheck.ts
 cli/ui/ink-app/utils/plugins/performStartupChecks.tsx
 cli/ui/ink-app/utils/plugins/pluginAutoupdate.ts
@@ -1091,7 +1049,6 @@ cli/ui/ink-app/utils/processUserInput/processBashCommand.tsx
 cli/ui/ink-app/utils/processUserInput/processSlashCommand.tsx
 cli/ui/ink-app/utils/processUserInput/processTextPrompt.ts
 cli/ui/ink-app/utils/processUserInput/processUserInput.ts
-cli/ui/ink-app/utils/promptCategory.ts
 cli/ui/ink-app/utils/promptEditor.ts
 cli/ui/ink-app/utils/promptShellExecution.ts
 cli/ui/ink-app/utils/queryHelpers.ts
@@ -1106,7 +1063,6 @@ cli/ui/ink-app/utils/settings/allErrors.ts
 cli/ui/ink-app/utils/settings/applySettingsChange.ts
 cli/ui/ink-app/utils/settings/changeDetector.ts
 cli/ui/ink-app/utils/settings/pluginOnlyPolicy.ts
-cli/ui/ink-app/utils/settings/settings.ts
 cli/ui/ink-app/utils/settings/validateEditTool.ts
 cli/ui/ink-app/utils/shell/bashProvider.ts
 cli/ui/ink-app/utils/shell/prefix.ts
@@ -1160,7 +1116,6 @@ cli/ui/ink-app/utils/treeify.ts
 cli/ui/ink-app/utils/ultraplan/ccrSession.ts
 cli/ui/ink-app/utils/undercover.ts
 cli/ui/ink-app/utils/which.ts
-cli/ui/ink-app/utils/worktree.ts
 cli/ui/ink-app/vim/motions.ts
 cli/ui/ink-app/vim/operators.ts
 cli/ui/ink-app/vim/textObjects.ts
