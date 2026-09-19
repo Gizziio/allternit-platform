@@ -721,6 +721,16 @@ def run_eval(
             "with the remainder split uniformly (confidence-scalar, not a "
             "distribution — an mlx/local-tier property)."
             if head_label == "kimi" else
+            "SemIfHead numbers — SemIf (community System One reproduction, "
+            "Qwen/Qwen3.5-4B pinned, mlx backend) scores ALL questions for a "
+            "step in ONE shared-state pass (one state prefill + one batched "
+            "suffix forward); agreement measures how often its declared-"
+            "option argmax choices match the recorded LLM decisions. "
+            "Per-option probabilities are SemIf's conditional option scores "
+            "(uncalibrated per its own docs); confidence is the same "
+            "entropy-based convention as the mlx direct-logit head. Target "
+            "menus truncate at 16 options (SemIf's hard A–P letter cap)."
+            if head_label == "semif" else
             "MlxDirectLogitHead real-weights numbers — the local mlx-lm head "
             "answers the same closed-set questions as the scripted LLM "
             "transcript; agreement measures how often its first-token choices "
@@ -788,6 +798,16 @@ def render_markdown(report: Dict[str, Any]) -> str:
             "> uniformly (confidence-scalar, not a distribution — an mlx/local-tier",
             "> property). Non-canonical answers are folded to the whitelist vocabulary",
             "> and counted as vocab misses.",
+        ]
+    elif report.get("head") == "semif":
+        head_lines = [
+            "> **Head:** SemIfHead (SemIf community System One reproduction, MIT — "
+            "Qwen/Qwen3.5-4B pinned, mlx backend, shared-state parallel pass).",
+            "> ALL questions for a step score in ONE pass (one state prefill + one",
+            "> batched suffix forward). Per-option probabilities are SemIf's declared",
+            "> option scores (uncalibrated per its own docs); confidence is the",
+            "> entropy-based convention, same as the mlx direct-logit head. Target",
+            "> menus truncate at 16 options (SemIf's hard A–P letter cap).",
         ]
     else:
         head_lines = [

@@ -139,6 +139,18 @@ shadow-head = [
     "mlx-lm>=0.24.0; platform_machine=='arm64' and platform_system=='Darwin'",
 ]
 
+# SemIf shadow head (core/semif_head.py): the community open-weights System
+# One reproduction (github.com/TheoLeeCJ/SemIf, MIT) measured as a local-tier
+# DecisionHead candidate. Installed from the SemIf git repo because it is not
+# published to PyPI; its [mlx] extra pins mlx/mlx-lm (the mlx-lm pin carries
+# SemIf's required upstream Qwen3.5 normalization fix, and supersedes the
+# >=0.24.0 floor of [shadow-head] when both extras are installed). Optional
+# and lazily imported, same contract as [shadow-head].
+semif = [
+    "allternit-computer-use[shadow-head]",
+    "semif-phase1[mlx] @ git+https://github.com/TheoLeeCJ/SemIf",
+]
+
 # All dependencies (browser + desktop + operator)
 all = [
     "playwright>=1.40.0",

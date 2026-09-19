@@ -21,3 +21,12 @@ Drain the ts-nocheck burn queue (~61 NEW batches left), finish compiler-artifact
 - Reminder rendering cases b0091/b0060-area.
 - getCoordinatorAgents not exported by coordinator/workerAgent.js (b0395 find).
 - S5/SDK-dist CI item — externally gated, not started.
+
+## 2026-09-19 session/semif-eval (landed, PR #692)
+Goal: measure SemIf (community open-weights System One reproduction, MLX backend) behind our DecisionHead protocol on the identical 66 held-out steps.
+
+Just did: SemIfHead landed (--head semif, [semif] extra). Measured 0.2273 — identical zero-shot ceiling to the old mlx head (form-fill collapses 0.00); do-not-promote verdict, stated plainly. Real findings: entropy confidence separates right/wrong (0.712/0.510, first calibration-shaped signal in the program); SemIf's one-shared-pass architecture is the right substrate; README overstated model support (mlx backend rejects non-qwen3_5; options cap 2-16; no confidence returned). 128 passed/2 skipped, main-agent re-verified.
+
+Next: ledger attestation, teardown, git-discipline. Deferred per standing plan: local-tier revisit only with trace training data (recorder shipped PR #650, owner-gated enablement); quantization unmeasured.
+
+Open questions: none.
