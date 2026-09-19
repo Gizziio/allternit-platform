@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import type { Message, ProgressMessage } from './../../types/message.ts';
@@ -86,7 +85,9 @@ export function renderToolResultMessage({
           Updated cell <Text bold>{cell_id}</Text>:
         </Text>
         <Box marginLeft={2}>
-          <HighlightedCode code={new_source} filePath="notebook.py" />
+          {/* TODO(types): HighlightedCode is a compiler-runtime component whose
+              props type is `object`; spread-cast keeps runtime props identical */}
+          <HighlightedCode {...({ code: new_source, filePath: 'notebook.py' } as Record<string, unknown>)} />
         </Box>
       </Box>
     </MessageResponse>;

@@ -1,11 +1,45 @@
-// @ts-nocheck
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import {
   ElicitationCompleteNotificationSchema,
-  type ElicitRequestParams,
   ElicitRequestSchema,
-  type ElicitResult,
 } from '@modelcontextprotocol/sdk/types.js'
+
+// TODO(types): the ambient '@modelcontextprotocol/sdk/types.js' declaration
+// predates the real SDK elicitation surface (ElicitResult.values wrongly
+// required, URL/form params split differently). Local mirrors keep the
+// runtime values identical until the ambient decls catch up.
+type ElicitRequestParams = {
+  url?: string
+  title?: string
+  message?: string
+  mode?: string
+  elicitationId?: string
+  requestedSchema?: Record<string, unknown>
+  fields?: unknown[]
+}
+type ElicitResult = {
+  action: string
+  content?: unknown
+  values?: Record<string, unknown>
+  [key: string]: unknown
+}
+
+// TODO(types): the ambient Client decl has no typed elicitation-handler
+// overloads — its generic setRequestHandler/setNotificationHandler infer the
+// request/extra types as unknown. Local interface cast at registration.
+type ElicitationClient = {
+  setRequestHandler(
+    schema: typeof ElicitRequestSchema,
+    handler: (
+      request: { params: ElicitRequestParams },
+      extra: { signal: AbortSignal; requestId: string | number },
+    ) => Promise<ElicitResult>,
+  ): void
+  setNotificationHandler(
+    schema: typeof ElicitationCompleteNotificationSchema,
+    handler: (notification: { params: { elicitationId: string } }) => void,
+  ): void
+}
 import type { AppState } from '../../state/AppState.js'
 import { logMCPDebug, logMCPError } from '../../utils/log.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
@@ -70,7 +104,8 @@ export function registerElicitationHandler(
   // Wrapped in try/catch because setRequestHandler throws if the client wasn't
   // created with elicitation capability declared.
   try {
-    client.setRequestHandler(ElicitRequestSchema, async (request, extra) => {
+    const elicitationClient = client as unknown as ElicitationClient
+    elicitationClient.setRequestHandler(ElicitRequestSchema, async (request, extra) => {
       logMCPDebug(
         serverName,
         `Received elicitation request: ${jsonStringify(request)}`,
@@ -168,7 +203,7 @@ export function registerElicitationHandler(
 
     // Register handler for elicitation completion notifications (URL mode).
     // Sets `completed: true` on the matching queue event; the dialog reacts to this flag.
-    client.setNotificationHandler(
+    elicitationClient.setNotificationHandler(
       ElicitationCompleteNotificationSchema,
       notification => {
         const { elicitationId } = notification.params
@@ -273,7 +308,7 @@ export async function runElicitationResultHooks(
     const { elicitationResultResponse, blockingError } =
       await executeElicitationResultHooks({
         serverName,
-        action: result.action,
+        action: result.action as 'accept' | 'decline' | 'cancel',
         content: result.content as Record<string, unknown> | undefined,
         signal,
         mode,

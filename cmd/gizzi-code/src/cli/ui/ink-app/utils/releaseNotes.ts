@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
@@ -291,7 +290,8 @@ export async function checkForReleaseNotes(
 ): Promise<{ hasReleaseNotes: boolean; releaseNotes: string[] }> {
   // For Ant builds, use VERSION_CHANGELOG bundled at build time
   if (process.env.USER_TYPE === 'ant') {
-    const changelog = MACRO.VERSION_CHANGELOG
+    // TODO(types): MACRO's index signature types VERSION_CHANGELOG as unknown
+    const changelog = MACRO.VERSION_CHANGELOG as string | undefined
     if (changelog) {
       const commits = changelog.trim().split('\n').filter(Boolean)
       return {
@@ -339,7 +339,8 @@ export function checkForReleaseNotesSync(
 ): { hasReleaseNotes: boolean; releaseNotes: string[] } {
   // For Ant builds, use VERSION_CHANGELOG bundled at build time
   if (process.env.USER_TYPE === 'ant') {
-    const changelog = MACRO.VERSION_CHANGELOG
+    // TODO(types): MACRO's index signature types VERSION_CHANGELOG as unknown
+    const changelog = MACRO.VERSION_CHANGELOG as string | undefined
     if (changelog) {
       const commits = changelog.trim().split('\n').filter(Boolean)
       return {

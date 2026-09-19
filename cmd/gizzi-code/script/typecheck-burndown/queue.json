@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1698,
+    "totalNocheck": 1652,
     "excludedCompilerArtifacts": 360,
     "excludedVendored": 93,
-    "totalQueueFiles": 1224,
-    "totalQueueLoc": 432855,
+    "totalQueueFiles": 1178,
+    "totalQueueLoc": 425793,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -124,7 +124,7 @@
       "escalated": [
         {
           "path": "src/cli/commands/theme/index.ts",
-          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support \u2014 LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
+          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support — LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
         }
       ]
     },
@@ -220,62 +220,13 @@
     },
     {
       "id": "b0013",
-      "files": [
-        "src/cli/ui/ink-app/tools/EnterWorktreeTool/UI.tsx",
-        "src/cli/ui/ink-app/commands/design/index.ts",
-        "src/cli/ui/ink-app/tools/ExitWorktreeTool/UI.tsx",
-        "src/cli/ui/ink-app/tools/ListMcpResourcesTool/UI.tsx",
-        "src/cli/ui/ink-app/utils/settings/managedPath.ts",
-        "src/cli/ui/ink-app/tools/ReadMcpResourceTool/UI.tsx",
-        "src/cli/ui/ink-app/services/mcp/oauthPort.ts",
-        "src/cli/ui/ink-app/tools/WebSearchTool/UI.tsx",
-        "src/runtime/services/oauth/getOauthProfile.ts",
-        "src/cli/ui/ink-app/services/oauth/getOauthProfile.ts",
-        "src/cli/ui/ink-app/utils/secureStorage/keychainPrefetch.ts",
-        "src/cli/ui/ink-app/keybindings/reservedShortcuts.ts",
-        "src/cli/ui/ink-app/utils/mcpInstructionsDelta.ts",
-        "src/cli/ui/ink-app/tools/PowerShellTool/UI.tsx",
-        "src/cli/ui/ink-app/schemas/hooks.ts",
-        "src/cli/ui/ink-app/utils/json.ts",
-        "src/cli/ui/ink-app/services/mcp/elicitationHandler.ts",
-        "src/cli/ui/ink-app/services/SessionMemory/prompts.ts",
-        "src/cli/ui/ink-app/utils/releaseNotes.ts",
-        "src/cli/ui/ink-app/keybindings/defaultBindings.ts",
-        "src/cli/ui/ink-app/utils/git/gitFilesystem.ts",
-        "src/cli/ui/ink-app/utils/shell/shellToolUtils.ts",
-        "src/cli/ui/ink-app/buddy/prompt.ts",
-        "src/cli/ui/ink-app/tools/WebFetchTool/UI.tsx",
-        "src/cli/ui/ink-app/utils/apiErrorMessage.ts",
-        "src/cli/ui/ink-app/utils/shell/powershellDetection.ts",
-        "src/cli/ui/ink-app/utils/sessionActivity.ts",
-        "src/cli/ui/ink-app/utils/debug.ts",
-        "src/cli/ui/ink-app/utils/envValidation.ts",
-        "src/cli/ui/ink-app/utils/aws.ts",
-        "src/cli/ui/ink-app/utils/permissions/PermissionUpdateSchema.ts",
-        "src/cli/ui/ink-app/projectOnboardingState.ts",
-        "src/cli/ui/ink-app/tools/SkillTool/UI.tsx",
-        "src/cli/ui/ink-app/utils/execFileNoThrow.ts",
-        "src/cli/ui/ink-app/utils/sessionState.ts",
-        "src/cli/ui/ink-app/services/preventSleep.ts",
-        "src/cli/ui/ink-app/utils/gizziHints.ts",
-        "src/cli/ui/ink-app/utils/user.ts",
-        "src/shared/utils/settings/types.ts",
-        "src/cli/ui/ink-app/utils/shell/outputLimits.ts",
-        "src/cli/ui/ink-app/utils/plugins/officialMarketplace.ts",
-        "src/cli/ui/ink-app/utils/telemetry/logger.ts",
-        "src/cli/ui/ink-app/bridge/bridgePermissionCallbacks.ts",
-        "src/cli/ui/ink-app/utils/browser.ts",
-        "src/cli/ui/ink-app/services/mcp/officialRegistry.ts",
-        "src/cli/ui/ink-app/tools/NotebookEditTool/UI.tsx"
-      ],
-      "loc": 7062,
-      "twins": [
-        {
-          "runtime": "src/runtime/services/oauth/getOauthProfile.ts",
-          "inkApp": "src/cli/ui/ink-app/services/oauth/getOauthProfile.ts"
-        }
-      ],
-      "state": "NEW"
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 46,
+      "burnedLoc": 7062,
+      "escalated": []
     },
     {
       "id": "b0014",

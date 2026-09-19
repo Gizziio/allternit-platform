@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Zod schemas for permission updates.
  *

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getPlatform } from '../utils/platform.js'
 
 /**

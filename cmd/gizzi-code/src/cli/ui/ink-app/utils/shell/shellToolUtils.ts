@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName'
 import { POWERSHELL_TOOL_NAME } from '../../tools/PowerShellTool/toolName'
 import { isEnvDefinedFalsy, isEnvTruthy } from '../envUtils'

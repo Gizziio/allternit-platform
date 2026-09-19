@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Constants for the upstream Anthropic plugins marketplace.
  *

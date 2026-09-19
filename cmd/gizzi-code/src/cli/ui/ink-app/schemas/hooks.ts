@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Hook Zod schemas extracted to break import cycles.
  *
@@ -9,7 +8,10 @@
  * Both files now import from this shared location instead of each other.
  */
 
-import { HOOK_EVENTS, type HookEvent } from './../entrypoints/agentSdkTypes.ts'
+import { HOOK_EVENTS } from './../entrypoints/agentSdkTypes.ts'
+// TODO(types): agentSdkTypes re-exports HOOK_EVENTS (value) but not the
+// HookEvent type; mirror it as the element type of the local event list.
+type HookEvent = (typeof HOOK_EVENTS)[number]
 import { z } from 'zod/v4'
 import { lazySchema } from '../utils/lazySchema.js'
 import { SHELL_TYPES } from '../utils/shell/shellProvider.js'

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
 import { SandboxSettingsSchema } from '../../../cli/ui/ink-app/entrypoints/sandboxTypes.js'

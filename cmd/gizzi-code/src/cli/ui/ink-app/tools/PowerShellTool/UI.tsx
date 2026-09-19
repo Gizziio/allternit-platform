@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint';
@@ -10,7 +9,7 @@ import { ShellTimeDisplay } from '../../components/shell/ShellTimeDisplay';
 import { Box, Text } from '../../ink';
 import type { Tool } from '../../Tool';
 import type { ProgressMessage } from '../../types/message';
-import type { PowerShellProgress } from '../../types/tools';
+import type { PowerShellProgress } from '../../../../../types/tools.js';
 import type { ThemeName } from '../../utils/theme';
 import type { Out, PowerShellToolInput } from './PowerShellTool';
 
