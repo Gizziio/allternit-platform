@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type {
   BetaContentBlock,
   BetaWebSearchTool20250305,
@@ -69,10 +68,44 @@ type OutputSchema = ReturnType<typeof outputSchema>
 
 export type Output = z.infer<OutputSchema>
 
-// Re-export WebSearchProgress from centralized types to break import cycles
-export type { WebSearchProgress } from '../../types/tools.js'
+// Re-export WebSearchProgress from centralized types to break import cycles.
+// TODO(types): ink-app/types/tools.ts is a dead stub, and the canonical
+// src/types/tools.ts WebSearchProgress (type: 'web_search') does not match the
+// payload shape this tool emits ('query_update' | 'search_results_received'
+// with resultCount). Mirror the consumed shape locally (sibling TODO(types)
+// pattern).
+export interface WebSearchProgress {
+  type?: string
+  query?: string
+  resultCount?: number
+}
 
-import type { WebSearchProgress } from '../../types/tools.js'
+// TODO(types): queryModelWithStreaming's declared yield union uses the app's
+// compact StreamEvent shape (types/message.ts), but this tool consumes raw
+// SDK stream events ('stream_event' with content_block_* / input_json_delta
+// payloads, plus 'assistant' messages) that the runtime actually yields. Pin
+// the consumed shape locally.
+type WebSearchStreamEvent =
+  | {
+      type: 'stream_event'
+      event?: {
+        type: string
+        content_block?: {
+          type: string
+          id?: string
+          tool_use_id?: string
+          content?: unknown
+        }
+        delta?: {
+          type: string
+          partial_json?: string
+        }
+      }
+    }
+  | {
+      type: 'assistant'
+      message: { content: BetaContentBlock[] }
+    }
 
 function makeToolSchema(input: Input): BetaWebSearchTool20250305 {
   return {
@@ -266,7 +299,7 @@ export const WebSearchTool = buildTool({
         agentId: context.agentId,
         effortValue: appState.effortValue,
       },
-    })
+    }) as AsyncGenerator<WebSearchStreamEvent, void>
 
     const allContentBlocks: BetaContentBlock[] = []
     let currentToolUseId = null

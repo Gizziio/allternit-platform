@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BASH_TOOL_NAME } from './../../BashTool/toolName.ts'
 import { FILE_READ_TOOL_NAME } from './../../FileReadTool/prompt.ts'
 import { GLOB_TOOL_NAME } from './../../GlobTool/prompt.ts'

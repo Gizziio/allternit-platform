@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isPDFSupported } from '../../utils/pdfUtils'
 import { BASH_TOOL_NAME } from '../BashTool/toolName'
 

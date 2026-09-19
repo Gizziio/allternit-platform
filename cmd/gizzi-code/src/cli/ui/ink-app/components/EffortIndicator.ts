@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   EFFORT_HIGH,
   EFFORT_LOW,

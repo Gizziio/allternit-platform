@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createHash, randomUUID, type UUID } from 'crypto'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { stat } from 'fs/promises'

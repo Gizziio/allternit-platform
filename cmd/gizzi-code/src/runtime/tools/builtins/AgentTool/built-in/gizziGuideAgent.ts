@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BASH_TOOL_NAME } from '../../../../../cli/ui/ink-app/tools/BashTool/toolName.js'
 import { FILE_READ_TOOL_NAME } from '../../../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
 import { GLOB_TOOL_NAME } from '../../../../../cli/ui/ink-app/tools/GlobTool/prompt.js'
@@ -10,10 +9,19 @@ import { isUsing3PServices } from 'src/utils/auth.js'
 import { hasEmbeddedSearchTools } from 'src/utils/embeddedTools.js'
 import { getSettings_DEPRECATED } from 'src/utils/settings/settings.js'
 import { jsonStringify } from '../../../../../shared/utils/slowOperations.js'
-import type {
-  AgentDefinition,
-  BuiltInAgentDefinition,
-} from '../loadAgentsDir.js'
+import type { BuiltInAgentDefinition } from '../loadAgentsDir.js'
+
+// TODO(types): the runtime loadAgentsDir.ts BuiltInAgentDefinition is a
+// dormant-shim local mirror of the ink-app original; its getSystemPrompt is
+// typed as () => string but built-in agents receive
+// { toolUseContext } (cf. ink-app loadAgentsDir.ts), and it omits the
+// model/permissionMode fields built-in records carry. Widen the contract
+// locally (sibling TODO(types) pattern).
+type BuiltInAgentContract = Omit<BuiltInAgentDefinition, 'getSystemPrompt'> & {
+  getSystemPrompt: (params: { toolUseContext: any }) => string
+  model?: string
+  permissionMode?: string
+}
 
 const GIZZI_DOCS_MAP_URL =
   'https://docs.gizziio.com'
@@ -96,7 +104,7 @@ function getFeedbackGuideline(): string {
   return "- When you cannot find an answer or the feature doesn't exist, direct the user to use /feedback to report a feature request or bug"
 }
 
-export const GIZZI_GUIDE_AGENT: BuiltInAgentDefinition = {
+export const GIZZI_GUIDE_AGENT: BuiltInAgentContract = {
   agentType: GIZZI_GUIDE_AGENT_TYPE,
   whenToUse: `Use this agent when the user asks questions ("Can Gizzi...", "Does Gizzi...", "How do I...") about: (1) Gizzi Code (the CLI tool) - features, hooks, slash commands, MCP servers, settings, IDE integrations, keyboard shortcuts; (2) Gizzi Agent SDK - building custom agents; (3) model API - API usage, tool use, model provider SDK usage. **IMPORTANT:** Before spawning a new agent, check if there is already a running or recently completed gizzi-guide agent that you can continue via ${SEND_MESSAGE_TOOL_NAME}.`,
   // Ant-native builds: Glob/Grep tools are removed; use Bash (with embedded
@@ -139,11 +147,13 @@ export const GIZZI_GUIDE_AGENT: BuiltInAgentDefinition = {
     // 2. Custom agents from .claude/agents/
     const customAgents =
       toolUseContext.options.agentDefinitions.activeAgents.filter(
-        (a: AgentDefinition) => a.source !== 'built-in',
+        // BuiltInAgentDefinition carries source/agentType/whenToUse; the base
+        // AgentDefinition does not (runtime mirror type, TODO(types)).
+        (a: BuiltInAgentDefinition) => a.source !== 'built-in',
       )
     if (customAgents.length > 0) {
       const agentList = customAgents
-        .map((a: AgentDefinition) => `- ${a.agentType}: ${a.whenToUse}`)
+        .map((a: BuiltInAgentDefinition) => `- ${a.agentType}: ${a.whenToUse}`)
         .join('\n')
       contextSections.push(
         `**Available custom agents configured:**\n${agentList}`,

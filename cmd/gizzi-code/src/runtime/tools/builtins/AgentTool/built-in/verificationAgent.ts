@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BASH_TOOL_NAME } from '../../../../../cli/ui/ink-app/tools/BashTool/toolName.js'
 import { EXIT_PLAN_MODE_TOOL_NAME } from '../../../../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'
 import { FILE_EDIT_TOOL_NAME } from '../../../../../cli/ui/ink-app/tools/FileEditTool/constants.js'
@@ -132,7 +131,19 @@ Use the literal string \`VERDICT: \` followed by exactly one of \`PASS\`, \`FAIL
 const VERIFICATION_WHEN_TO_USE =
   'Use this agent to verify that implementation work is correct before reporting completion. Invoke after non-trivial tasks (3+ file edits, backend/API changes, infrastructure changes). Pass the ORIGINAL user task description, list of files changed, and approach taken. The agent runs builds, tests, linters, and checks to produce a PASS/FAIL/PARTIAL verdict with evidence.'
 
-export const VERIFICATION_AGENT: BuiltInAgentDefinition = {
+// TODO(types): the runtime loadAgentsDir.ts BuiltInAgentDefinition mirror
+// omits the color/background/disallowedTools/model/criticalSystemReminder
+// fields that built-in records carry (cf. the ink-app original). Extend the
+// contract locally (sibling TODO(types) pattern).
+type VerificationAgentDefinition = BuiltInAgentDefinition & {
+  color?: string
+  background?: boolean
+  disallowedTools?: string[]
+  model?: string
+  criticalSystemReminder_EXPERIMENTAL?: string
+}
+
+export const VERIFICATION_AGENT: VerificationAgentDefinition = {
   agentType: 'verification',
   whenToUse: VERIFICATION_WHEN_TO_USE,
   color: 'red',

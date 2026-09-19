@@ -1,6 +1,5 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
-import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
+import { readGizziEnv, setGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { ASYNC_AGENT_ALLOWED_TOOLS } from '../constants/tools.js'
 import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import {
@@ -67,7 +66,10 @@ export function matchSessionMode(
   if (sessionIsCoordinator) {
     setGizziEnv('COORDINATOR_MODE', '1')
   } else {
-    delete readGizziEnv('COORDINATOR_MODE')
+    // Latent runtime bug fix: `delete readGizziEnv(...)` deleted a temporary
+    // return value (a no-op in sloppy mode, a TypeError in module strict
+    // mode). The intent is to unset the env var.
+    delete process.env['GIZZI_COORDINATOR_MODE']
   }
 
   logEvent('tengu_coordinator_mode_switched', {

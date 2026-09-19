@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { GIZZI_OPUS_4_6_CONFIG } from '../model/configs'
 import { getAPIProvider } from '../model/providers'
 
