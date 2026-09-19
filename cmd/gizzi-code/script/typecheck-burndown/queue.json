@@ -1,20 +1,20 @@
 {
   "version": 1,
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
-  "batchCount": 108,
+  "batchCount": 109,
   "stats": {
-    "totalNocheck": 791,
-    "excludedCompilerArtifacts": 30,
+    "totalNocheck": 771,
+    "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 648,
-    "totalQueueLoc": 264832,
-    "quarantined": 20,
+    "totalQueueFiles": 657,
+    "totalQueueLoc": 268057,
+    "quarantined": 21,
     "quarantinedByReason": {
-      "suspect-dead-shim": 18,
+      "suspect-dead-shim": 19,
       "suspect-malformed": 2
     },
     "zeroImporter": 187,
-    "totalAccounted": 1484
+    "totalAccounted": 1494
   },
   "batches": [
     {
@@ -1780,6 +1780,24 @@
       "twins": [],
       "state": "NEW",
       "note": "Added 2026-09-19 by artifact-codemod pilot 11: these 10 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — latent ant-drift type issues in LogSelector/Stats/messageActions/ThemePicker/WorkflowMultiselectDialog/TreeSelect/SkillsMenu/ShowInIDEPrompt/SessionPreview + chrome.tsx Promise<boolean> prop); the other 26 pilot-11 conversions dropped @ts-nocheck cleanly."
+    },
+    {
+      "id": "b443",
+      "files": [
+        "src/cli/ui/ink-app/commands/mcp/mcp.tsx",
+        "src/cli/ui/ink-app/commands/resume/resume.tsx",
+        "src/cli/ui/ink-app/commands/thinkback/thinkback.tsx",
+        "src/cli/ui/ink-app/screens/Doctor.tsx",
+        "src/cli/ui/ink-app/tools/AgentTool/UI.tsx",
+        "src/cli/ui/ink-app/tools/FileEditTool/UI.tsx",
+        "src/cli/ui/ink-app/tools/FileWriteTool/UI.tsx",
+        "src/cli/ui/ink-app/tools/MCPTool/UI.tsx",
+        "src/cli/ui/ink-app/tools/TaskOutputTool/TaskOutputTool.tsx"
+      ],
+      "loc": 3225,
+      "twins": [],
+      "state": "NEW",
+      "note": "Added 2026-09-19 by artifact-codemod pilot 12 (FINAL conversion): these 9 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — latent ant-drift type issues: TS2367 external-vs-ant comparisons in mcp/thinkback/AgentTool, TS2614 progress-type import drift in AgentTool/MCPTool/TaskOutputTool, TS2339 untyped props in FileEditTool/FileWriteTool/resume, TS2322 BetaUsage in AgentTool, TS2786 JSX component in MCPTool, Doctor.tsx legacy issues); REPL.tsx (kept @ts-nocheck, 62 legacy errors) went to quarantine as suspect-dead-shim (dead external-ant require branches); the other 20 pilot-12 conversions dropped @ts-nocheck cleanly. After this batch, excludedCompilerArtifacts=0 — all 360 artifacts converted; the §6.2 final PR deletes the stub machinery."
     }
   ],
   "quarantined": [
@@ -1882,6 +1900,11 @@
       "path": "src/shared/utils/forkedAgent.ts",
       "reason": "suspect-dead-shim",
       "detail": "unresolved: ../../cli/commands.js"
+    },
+    {
+      "path": "src/cli/ui/ink-app/screens/REPL.tsx",
+      "reason": "suspect-dead-shim",
+      "detail": "unresolved: ../components/AntModelSwitchCallout.js, ../components/FeedbackSurvey/useFrustrationDetection.js, ../components/UndercoverAutoCallout.js, ../hooks/notifs/useAntOrgWarningNotification.js, ../proactive/useProactive.js, ../tools/WebBrowserTool/WebBrowserPanel.js"
     }
   ]
 }
