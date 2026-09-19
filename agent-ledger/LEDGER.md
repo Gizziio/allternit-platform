@@ -21,6 +21,8 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+- 2026-09-18 — **ao/artifact-codemod-pilot2** (kimi-code) — PR #652, merged `0d187e0ab`. De-compiled 30 React Compiler artifacts: `messages/UserToolResultMessage/` (7 deferred from pilot 1) + `permissions/` (11 root + 12 subdir). Hardened `decompile-artifact.mjs` (JSX-text quotes, destructure-assign handling with preserved `let` decls, duplicate-const rename pass). ~470 memo blocks inlined, 7 sentinel/bb0/accumulator blocks hand-fixed, 16 type-drift errors fixed type-onlyly, `@ts-nocheck` stripped on all 30. tsc exit 0, smoke 1311/0, preflight 52/0, ratchet 1418=1418, exclusion 331→301, 22/22 DONE batches preserved. Summary: `agent-ledger/summaries/2026-09-18-2350-ao-artifact-codemod-pilot2-kimi-code-compiler-artifacts.md`.
+
 ### 2026-09-18 20:46 — kimi — @allternit/lawlayer packaging fix (build output vs package entry points)
 
 - **Session ID / Branch:** `ao/lawlayer-packaging`
