@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 106,
   "stats": {
-    "totalNocheck": 872,
+    "totalNocheck": 871,
     "excludedCompilerArtifacts": 95,
     "excludedVendored": 93,
-    "totalQueueFiles": 664,
-    "totalQueueLoc": 272041,
+    "totalQueueFiles": 663,
+    "totalQueueLoc": 271839,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -480,9 +480,7 @@
     },
     {
       "id": "b0422",
-      "files": [
-        "src/runtime/integrations/bridgeEnabled.ts"
-      ],
+      "files": [],
       "loc": 7036,
       "twins": [
         {
@@ -490,7 +488,10 @@
           "inkApp": "src/cli/ui/ink-app/services/api/withRetry.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 202,
+      "note": "burn lane head-6 (2026-09-19): removed @ts-nocheck from bridgeEnabled.ts; tsc clean on first pass, canary-verified coverage; no escalations. 1 file, 203 loc."
     },
     {
       "id": "b0034",
