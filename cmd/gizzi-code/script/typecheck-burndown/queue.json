@@ -3,11 +3,11 @@
   "generatedFrom": "24dc73f2121338bd32dcee22035a8b5a0006d5fb",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1416,
+    "totalNocheck": 1387,
     "excludedCompilerArtifacts": 301,
     "excludedVendored": 93,
-    "totalQueueFiles": 1002,
-    "totalQueueLoc": 376094,
+    "totalQueueFiles": 973,
+    "totalQueueLoc": 368774,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -38,7 +38,7 @@
       "escalated": [
         {
           "path": "src/cli/commands/theme/index.ts",
-          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support — LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
+          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support \u2014 LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
         }
       ]
     },
@@ -225,7 +225,7 @@
       "burnedFiles": 41,
       "burnedLoc": 6481,
       "escalated": [],
-      "note": "Retired-id absorption: the original b0102 (43 files, 6544 loc) was burned by ao/ts-burn-next, but the queue regen at 5945839e0 (landed while the burn was in flight) renumbered its residue to b0141 and ao/cut-attribution-hooks-v2 deleted 2 of its files (postCommitAttribution.ts, attributionHooks.ts) before that. This record accounts the 41 surviving burned files (6481 loc, stripped) — they were removed from b0141, which keeps its 3 genuinely-unburned files (686 loc). The 2 cut files are accounted by the regen totalAccounted 1473, not here."
+      "note": "Retired-id absorption: the original b0102 (43 files, 6544 loc) was burned by ao/ts-burn-next, but the queue regen at 5945839e0 (landed while the burn was in flight) renumbered its residue to b0141 and ao/cut-attribution-hooks-v2 deleted 2 of its files (postCommitAttribution.ts, attributionHooks.ts) before that. This record accounts the 41 surviving burned files (6481 loc, stripped) \u2014 they were removed from b0141, which keeps its 3 genuinely-unburned files (686 loc). The 2 cut files are accounted by the regen totalAccounted 1473, not here."
     },
     {
       "id": "b0141",
@@ -248,11 +248,11 @@
       "escalated": [
         {
           "path": "src/runtime/util/filesystem.ts",
-          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import — stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
+          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import \u2014 stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
         },
         {
           "path": "src/runtime/cowork/cowork.service.ts",
-          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated — the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
+          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated \u2014 the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
         }
       ],
       "note": "Burned by ao/ts-burn-next3: 17 header-only 0-error burns + claude/loader.ts (3 `as string` casts on frontmatter values). TS2322 probe confirmed all 18 burned files in compilation. 2 files escalated (headers restored) and kept live in this record; they await non-type-only fixes. Identity: live 1045 + recorded 428 = 1473 = totalAccounted."
@@ -269,45 +269,18 @@
     },
     {
       "id": "b0218",
-      "files": [
-        "src/cli/ui/ink-app/utils/getWorktreePaths.ts",
-        "src/cli/ui/ink-app/memdir/memoryScan.ts",
-        "src/cli/ui/ink-app/services/oauth/index.ts",
-        "src/runtime/util/filesystem.ts",
-        "src/cli/ui/ink-app/utils/plugins/zipCache.ts",
-        "src/runtime/cowork/cowork.service.ts",
-        "src/cli/ui/ink-app/utils/git/gitignore.ts",
-        "src/cli/ui/ink-app/tools/BriefTool/attachments.ts",
-        "src/cli/ui/ink-app/components/ManagedSettingsSecurityDialog/utils.ts",
-        "src/cli/ui/ink-app/utils/plugins/officialMarketplaceGcs.ts",
-        "src/cli/ui/ink-app/utils/settings/validation.ts",
-        "src/cli/ui/ink-app/utils/teleport/gitBundle.ts",
-        "src/cli/ui/ink-app/utils/gitDiff.ts",
-        "src/cli/ui/ink-app/utils/settings/settingsCache.ts",
-        "src/cli/ui/ink-app/hooks/useDiffData.ts",
-        "src/cli/ui/ink-app/utils/concurrentSessions.ts",
-        "src/cli/ui/ink-app/utils/powershell/staticPrefix.ts",
-        "src/cli/ui/ink-app/utils/settings/mdm/settings.ts",
-        "src/cli/ui/ink-app/utils/task/diskOutput.ts",
-        "src/runtime/services/api/client.ts",
-        "src/cli/ui/ink-app/services/api/client.ts",
-        "src/cli/ui/ink-app/keybindings/loadUserBindings.ts",
-        "src/cli/ui/ink-app/utils/ripgrep.ts",
-        "src/cli/ui/ink-app/utils/task/outputFormatting.ts",
-        "src/cli/ui/ink-app/keybindings/shortcutFormat.ts",
-        "src/cli/ui/ink-app/utils/telemetryAttributes.ts",
-        "src/cli/ui/ink-app/utils/plugins/orphanedPluginFilter.ts",
-        "src/cli/ui/ink-app/bridge/trustedDevice.ts",
-        "src/cli/ui/ink-app/utils/task/TaskOutput.ts"
-      ],
-      "loc": 7320,
+      "files": [],
+      "loc": 0,
       "twins": [
         {
           "runtime": "src/runtime/services/api/client.ts",
           "inkApp": "src/cli/ui/ink-app/services/api/client.ts"
         }
       ],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 29,
+      "burnedLoc": 7320,
+      "note": "Burned by ao/ts-burn-next5: 23 header-only 0-error burns (TS2322 probe confirmed all 23 in compilation) + 6 type-only fixes: loadUserBindings.ts + shortcutFormat.ts (dormant-shim local mirrors of keybindings/types.ts, sibling TODO(types) pattern), oauth/index.ts (imports the real runtime types module src/runtime/services/oauth/types.js, sibling TODO(types) pattern used by client.ts/getOauthProfile.ts twins), gitBundle.ts (strict:false discriminated-union narrowing pinned via Extract at the two failure branches), trustedDevice.ts (unknown-to-string cast on secureStorage read), cowork.service.ts (row-mapper return casts + RunConfig cast to Record<string, unknown> for the drizzle insert overload). No escalations. Identity: live 973 + recorded 480 + quarantined 20 = 1473 = totalAccounted."
     },
     {
       "id": "b0020",

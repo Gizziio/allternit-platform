@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { chmod, mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'

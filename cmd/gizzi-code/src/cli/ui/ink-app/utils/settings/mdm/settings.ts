@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * MDM (Mobile Device Management) profile enforcement for gizzi-code managed settings.
  *
