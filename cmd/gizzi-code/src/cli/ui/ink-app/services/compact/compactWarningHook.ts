@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useSyncExternalStore } from 'react'
 import { compactWarningStore } from './compactWarningState'
 

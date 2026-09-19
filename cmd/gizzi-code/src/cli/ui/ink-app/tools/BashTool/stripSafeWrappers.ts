@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Whitelist of environment variables that are safe to strip from commands.
  * These variables CANNOT execute code or load libraries.

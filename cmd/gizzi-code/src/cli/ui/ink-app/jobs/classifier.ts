@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Jobs Classifier
  * TEMPORARY SHIM

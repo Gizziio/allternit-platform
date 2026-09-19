@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { APIUserAbortError } from '@allternit/gizzi-sdk/providers/allternit'
 
 export class ClaudeError extends Error {

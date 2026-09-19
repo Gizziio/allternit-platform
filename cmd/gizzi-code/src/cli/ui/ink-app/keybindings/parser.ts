@@ -1,10 +1,25 @@
-// @ts-nocheck
-import type {
-  Chord,
-  KeybindingBlock,
-  ParsedBinding,
-  ParsedKeystroke,
-} from './types.js'
+// TODO(types): './types.js' (keybindings/types.ts) is a dormant stub
+// (types_ts()) exporting nothing. Local mirror of the shapes this file
+// needs — same pattern as match.ts / validate.ts (optional modifiers so
+// the mirrors stay structurally interchangeable).
+type ParsedKeystroke = {
+  key: string
+  ctrl?: boolean
+  alt?: boolean
+  shift?: boolean
+  meta?: boolean
+  super?: boolean
+}
+type Chord = ParsedKeystroke[]
+type KeybindingBlock = {
+  context: string
+  bindings: Record<string, string>
+}
+type ParsedBinding = {
+  context: string
+  chord: Chord
+  action: string | null
+}
 
 /**
  * Parse a keystroke string like "ctrl+shift+k" into a ParsedKeystroke.

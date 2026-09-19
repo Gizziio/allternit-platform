@@ -1,4 +1,3 @@
-// @ts-nocheck
 // For legal and security concerns, we typically only allow Web Fetch to access
 // domains that the user has provided in some form. However, we make an
 // exception for a list of preapproved domains that are code-related.

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Bus } from "@/shared/bus"
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Identifier } from "@/shared/id/id"

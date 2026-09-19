@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Skill Creator Tool - AskUserQuestion Pattern
  * 
@@ -82,7 +81,9 @@ export class SkillCreatorTool {
       let interviewAnswers: { question: string; answer: string }[] = []
 
       if (!input.skipInterview) {
-        const questions = await generateInterviewQuestions(input.description)
+        // TODO(types): skill-generator's generateInterviewQuestions is a stub
+        // taking no arguments (returns []) — the description arg is unused.
+        const questions = await generateInterviewQuestions()
         
         // Ask up to 3 follow-up questions
         for (const question of questions.slice(0, 3)) {

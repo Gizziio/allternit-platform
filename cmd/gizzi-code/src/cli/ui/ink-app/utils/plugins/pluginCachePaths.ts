@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Plugin cache path helpers, extracted from pluginLoader.ts so callers that
  * only need path computation (no marketplace/network logic) don't pull in
