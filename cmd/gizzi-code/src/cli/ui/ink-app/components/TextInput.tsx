@@ -1,8 +1,7 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle';
 import chalk from '@/shared/util/chalk'
 import React, { useMemo, useRef } from 'react';
-import { useVoiceState } from '../context/voice';
+import { useVoiceState, type VoiceState } from '../context/voice';
 import { useClipboardImageHint } from '../hooks/useClipboardImageHint';
 import { useSettings } from '../hooks/useSettings';
 import { useTextInput } from '../hooks/useTextInput';
@@ -38,9 +37,12 @@ export default function TextInput(props: Props): React.ReactElement | null {
   const accessibilityEnabled = useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_ACCESSIBILITY), []);
   const settings = useSettings();
   const reducedMotion = settings.prefersReducedMotion ?? false;
-  const voiceState = useVoiceState(s => s.voiceState);
+  const voiceState = useVoiceState((s: VoiceState) => s.voiceState);
   const isVoiceRecording = voiceState === 'recording';
-  const audioLevels = useVoiceState(s_0 => s_0.voiceAudioLevels);
+  // TODO(types): useVoiceState is declared in the still-nocheck'd
+  // context/voice.tsx and its return infers as `{}`; pin the selector to the
+  // declared VoiceState slice and assert the array type.
+  const audioLevels = useVoiceState((s_0: VoiceState) => s_0.voiceAudioLevels) as number[];
   const smoothedRef = useRef<number[]>(new Array(CURSOR_WAVEFORM_WIDTH).fill(0));
   const needsAnimation = isVoiceRecording && !reducedMotion;
   const [animRef, animTime] = useAnimationFrame(needsAnimation ? 50 : null);

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { join } from 'path'
 import { expandEnvVarsInString } from '../../services/mcp/envExpansion.js'
 import {

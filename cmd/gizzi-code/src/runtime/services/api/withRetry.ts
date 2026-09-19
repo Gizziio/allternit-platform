@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type AllternitAI from '@allternit/gizzi-sdk/providers/allternit'
 import {
@@ -11,7 +10,7 @@ import type { SystemAPIErrorMessage } from '@/types/message.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'
 import { logError } from '../../../shared/utils/log.js'
 import { createSystemAPIErrorMessage } from '../../../shared/utils/systemAPIErrorMessage.js'
-import { getAPIProviderForStatsig } from '../../../utils/model/providers.js'
+import { getAPIProviderForStatsig } from '../../../shared/utils/model/providers.js'
 import {
   clearApiKeyHelperCache,
   getClaudeAIOAuthTokens,
@@ -31,7 +30,10 @@ import {
 } from '../../../shared/utils/fastMode.js'
 import { isNonCustomOpusModel } from '../../../utils/model/model.js'
 import { disableKeepAlive } from '../../../shared/utils/proxy.js'
-import { sleep } from '../../../utils/sleep.js'
+// The 3-arg abort-aware call sites below require the shared sleep; the
+// src/utils/sleep.js default export this twin previously imported takes
+// only `ms` and silently dropped the abort signal + abortError.
+import { sleep } from '../../../shared/utils/sleep.js'
 import type { ThinkingConfig } from '../../../utils/thinking.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import {

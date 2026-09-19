@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios, { type AxiosResponse } from 'axios'
 import { LRUCache } from 'lru-cache'
 import {
@@ -431,7 +430,10 @@ export async function getURLMarkdownContent(
   // This lets GC reclaim up to MAX_HTTP_CONTENT_LENGTH (10MB) before Turndown
   // builds its DOM tree (which can be 3-5x the HTML size).
   ;(response as { data: unknown }).data = null
-  const contentType = response.headers['content-type'] ?? ''
+  // TODO(types): axios types header values as AxiosHeaderValue
+  // (string | string[] | number | boolean | null); this path only ever sees
+  // the raw string form at runtime, so normalize once at the read.
+  const contentType = String(response.headers['content-type'] ?? '')
 
   // Binary content: save raw bytes to disk with a proper extension so Claude
   // can inspect the file later. We still fall through to the utf-8 decode +
@@ -521,9 +523,12 @@ export async function applyPromptToMarkdown(
   }
 
   const { content } = assistantMessage.message
-  if (content.length > 0) {
+  if (Array.isArray(content) && content.length > 0) {
     const contentBlock = content[0]
-    if ('text' in contentBlock!) {
+    // TODO(types): MessageContent/ContentBlock members all carry
+    // `[key: string]: unknown` index signatures, so `in`-narrowing cannot
+    // discriminate the text block; typeof-guard the text field instead.
+    if (contentBlock && typeof contentBlock.text === 'string') {
       return contentBlock.text
     }
   }

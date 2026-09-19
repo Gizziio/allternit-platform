@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { formatTotalCost } from '../../cost-tracker'
 import { currentLimits } from '../../services/claudeAiLimits'
 import type { LocalCommandCall } from '../../types/command'

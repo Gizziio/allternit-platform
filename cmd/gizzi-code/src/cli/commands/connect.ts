@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Auth } from "@/runtime/integrations/auth"
 import { cmd } from "@/cli/commands/cmd"
 import * as prompts from "@clack/prompts"
@@ -15,11 +14,60 @@ import type { Hooks } from "@allternit/plugin"
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
+// TODO(types): the plugin SDK's declared AuthMethod is {id, name, type} only,
+// but auth plugins provide label/prompts/authorize at runtime — see
+// src/runtime/integrations/plugin/codex.ts (`as unknown as Hooks["auth"]`) and
+// src/runtime/providers/provider.ts RuntimeAuthLoader for the same mismatch.
+type AuthPrompt = {
+  key: string
+  message: string
+  type?: "text" | "select"
+  options?: Array<{ label: string; value: string }>
+  placeholder?: string
+  condition?: (inputs: Record<string, string>) => boolean
+  validate?: (value: string) => string | undefined
+}
+
+type AuthCallbackResult =
+  | {
+      type: "success"
+      provider?: string
+      refresh?: string
+      access?: string
+      expires?: number
+      key?: string
+      [extra: string]: unknown
+    }
+  | { type: "failed" }
+
+type RuntimeAuthMethodBase = {
+  label: string
+  prompts?: AuthPrompt[]
+}
+
+type RuntimeAuthMethod =
+  | (RuntimeAuthMethodBase & {
+      type: "oauth"
+      authorize?: (inputs: Record<string, string>) => Promise<{
+        url?: string
+        instructions?: string
+        method: "auto" | "code"
+        callback: (code?: string) => Promise<AuthCallbackResult>
+      }>
+    })
+  | (RuntimeAuthMethodBase & {
+      type: "api" | "api_key"
+      // api: authorize completes the login and returns the result directly
+      authorize?: (inputs: Record<string, string>) => Promise<AuthCallbackResult>
+    })
+
+type RuntimePluginAuth = Omit<PluginAuth, "methods"> & { methods?: RuntimeAuthMethod[] }
+
 /**
  * Handle plugin-based authentication flow.
  * Returns true if auth was handled, false if it should fall through to default handling.
  */
-async function handlePluginAuth(plugin: { auth: PluginAuth }, provider: string): Promise<boolean> {
+async function handlePluginAuth(plugin: { auth: RuntimePluginAuth }, provider: string): Promise<boolean> {
   let index = 0
   if (plugin.auth.methods.length > 1) {
     const method = await prompts.select({
@@ -358,7 +406,7 @@ export const AuthLoginCommand = cmd({
 
         const plugin = await Plugin.list().then((x) => x.findLast((x) => x.auth?.provider === provider))
         if (plugin && plugin.auth) {
-          const handled = await handlePluginAuth({ auth: plugin.auth }, provider)
+          const handled = await handlePluginAuth({ auth: plugin.auth as unknown as RuntimePluginAuth }, provider)
           if (handled) return
         }
 
@@ -374,7 +422,7 @@ export const AuthLoginCommand = cmd({
           // Check if a plugin provides auth for this custom provider
           const customPlugin = await Plugin.list().then((x) => x.findLast((x) => x.auth?.provider === provider))
           if (customPlugin && customPlugin.auth) {
-            const handled = await handlePluginAuth({ auth: customPlugin.auth }, provider)
+            const handled = await handlePluginAuth({ auth: customPlugin.auth as unknown as RuntimePluginAuth }, provider)
             if (handled) return
           }
 

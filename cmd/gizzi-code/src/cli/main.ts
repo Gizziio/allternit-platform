@@ -1,4 +1,3 @@
-// @ts-nocheck
 import "./devMacro"
 import "drizzle-orm/sqlite-core/db.js"
 import "drizzle-orm/sqlite-core/session.js"
@@ -208,7 +207,10 @@ const cli = yargs(hideBin(process.argv))
   // Shell completions come from the single registry-derived generator in
   // src/cli/commands/completions (the yargs `.completion()` built-in was
   // removed as a redundant second system).
-  .command(COMMANDS)
+  // TODO(types): RegisteredCommand is deliberately narrower than yargs
+  // CommandModule (see the doc comment in src/cli/commands/registry.ts);
+  // main.ts is the only consumer that hands the registry to yargs.
+  .command(COMMANDS as unknown as import("yargs").CommandModule[])
   .command(CompletionsCommand)
   .command(OnboardingCommand)
   .fail((msg, err) => {

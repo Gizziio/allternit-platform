@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
@@ -37,10 +36,16 @@ export function getBuiltInAgents(): AgentDefinition[] {
   if (feature('COORDINATOR_MODE')) {
     if (isEnvTruthy(readGizziEnv('COORDINATOR_MODE'))) {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const { getCoordinatorAgents } =
-        require('../../coordinator/workerAgent.js') as typeof import('../../coordinator/workerAgent.js')
+      // TODO(types): structural contract for the lazy require — workerAgent.js
+      // does not currently export getCoordinatorAgents (latent runtime gap in
+      // this double-flag-gated branch; calling it would throw if the branch
+      // ever ran). Same structural-require pattern as
+      // src/shared/utils/gizzimd.ts (b0099).
+      const mod = require('../../coordinator/workerAgent.js') as {
+        getCoordinatorAgents: () => AgentDefinition[]
+      }
       /* eslint-enable @typescript-eslint/no-require-imports */
-      return getCoordinatorAgents()
+      return mod.getCoordinatorAgents()
     }
   }
 
