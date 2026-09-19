@@ -9,14 +9,6 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./policies": {
-      "import": "./dist/policies/index.js",
-      "types": "./dist/policies/index.d.ts"
-    },
-    "./engine": {
-      "import": "./dist/engine/index.js",
-      "types": "./dist/engine/index.d.ts"
     }
   },
   "files": [
@@ -24,6 +16,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "dev": "tsc --watch",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
