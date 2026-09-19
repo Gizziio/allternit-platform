@@ -1,23 +1,22 @@
-# Steering checkpoint — session/trace-policy
+# Steering checkpoint — ao/artifact-codemod-pilot3 (2026-09-19)
 
-**Goal:** Live trace accumulation — the policy + recorder so real/replay runs
-with `shadow_head_enabled=true` persist labeled `shadow.decision` traces
-(state text, head decisions, executed-LLM reference decision + effect) for
-calibration thresholds. Instrumentation only: no cloud eval, no local training.
+## Goal
+Pilot 3 of the React Compiler artifact de-compilation codemod (spec:
+docs/programs/gizzi/INK_APP_COMPILER_ARTIFACTS.md). Convert 30 artifacts:
+permissions/rules (8) + deferred permissions (5) + components-root
+message/input/dialog cluster (17).
 
-**Just did:** Full lane landed on `session/trace-policy`:
-`core/trace_recorder.py` (JSONL recorder, write-time value redaction, Tier A
-schema superset, held-out split labeling), wiring in
-`core/planning_loop.py` (`shadow_trace_path` config flag, record at the
-`shadow.decision` emission point with graft-B prior_step as reference label,
-close at run end, warn-and-disable on failure), `--trace-out` plumbing in
-`core/shadow_eval.py` + `scripts/shadow_head_eval.py`, policy doc
-`docs/JEV_TRACE_POLICY.md`, tests `tests/test_trace_recorder.py` (19 tests).
-Verified: required test list 115 passed + 1 skipped; mock-head eval with
-`--trace-out` produced 66 redacted records, gold labels verified against the
-transcript, `operator@eval.local`/`hunter2` absent from the file.
+## Just did
+- Script hardening (3 patterns: straight-line fallback for bb0/sentinel/nested
+  guards; rest-element destructure; destructured-binding dup renames), 30 files
+  converted, ~85 type-drift errors fixed type-onlyly, tsc clean, bookkeeping
+  regen (excluded 301->271, DONE 25 preserved, baseline 1336). 3 commits on
+  ao/artifact-codemod-pilot3, rebased onto origin/main @ 5f7eda7f8.
 
-**Next:** commit + push `session/trace-policy` (no merge, no PR per owner
-directive). Owner reviews.
+## Next
+PR + merge + ledger attestation + teardown; final report with GO/NO-GO for
+pilot 4 (~271 artifacts remain; next cluster per spec ordering).
 
-**Open questions:** none — scope frozen.
+## Open questions
+- None. Pilot 4 scope: next hot cluster (Spinner/?/CustomSelect/HighlightedCode
+  subtree likely — decide by traffic).

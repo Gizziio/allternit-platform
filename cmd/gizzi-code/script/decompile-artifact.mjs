@@ -29,6 +29,17 @@
 //      Branch-local statements (e.g. `const formatted = ...`) are kept in
 //      order; cache-slot writes are dropped; multi-name blocks become one
 //      const per name, in original order.
+//      Regions whose outputs are assigned inside nested control flow (bbN
+//      labeled blocks, early-return sentinels, inner cache guards) cannot be
+//      flattened into ordered consts; those fall back to STRAIGHT-LINING
+//      (reported as straightLined=N): the compute (cache-miss) path is kept
+//      unconditionally, the pure slot-replay else branch is dropped, and the
+//      declaration preludes stay. `bbN:` labels and their `break`s are kept
+//      verbatim. Safety gates: the else branch must be exactly one
+//      `NAME = $[k];` per declared name, every replayed slot must be written
+//      in the compute branch, and the compute branch must contain no hook
+//      calls (hooks never appear in compiled cache regions; if one does —
+//      e.g. a hand patch — the block is left for hand-fix instead).
 //   5. Renames compiler-flattened `function C(t0) { const {...} = t0; }` back
 //      to `function C({ ... }: Props)` where a Props type exists in-file
 //      (spec rule 3).
@@ -228,10 +239,11 @@ function splitStatements(body) {
 const LET_LINE = /^([ \t]*)let ([A-Za-z_$][\w$]*);[ \t]*(\n|$)/
 const IF_LINE = /^[ \t]*if \(/
 
-function tryParseMemoBlock(text, pos) {
-  // pos is at the start of a `let NAME;` line. Returns null unless this begins
-  // a compiler memo-cache block (one or more `let NAME;` lines followed by
-  // `if ($[...] ...) { ... } else { ... }`).
+function parseMemoSkeleton(text, pos) {
+  // pos is at the start of a `let NAME;` line. Parses the shared shape of a
+  // compiler memo-cache region: one or more `let NAME;` lines followed by
+  // `if ($[...] ...) { ... } else { ... }`. Returns null unless the shape
+  // matches; callers validate the branch contents for their strategy.
   let m = LET_LINE.exec(text.slice(pos))
   if (!m) return null
   const indent = m[1]
@@ -272,6 +284,158 @@ function tryParseMemoBlock(text, pos) {
   const elseClose = scan(text, elseOpen + 1)
   if (elseClose < 0) return null
   const elseBody = text.slice(elseOpen + 1, elseClose)
+  return { indent, names, ifBody, elseBody, start: pos, end: elseClose + 1 }
+}
+
+// ── Straight-line fallback ───────────────────────────────────────────────────
+//
+// Some cache regions assign their outputs inside nested control flow the
+// strict inliner cannot flatten into ordered consts:
+//
+//   let t2;                                     // output declared up front
+//   if ($[0] !== cell_id || ...) {              // whole-region guard
+//     bb0: {                                    // labeled block / nested
+//       if (!notebookData) { t2 = ""; break bb0; }  // assignments inside flow
+//       ...
+//     }
+//     $[0] = cell_id; ... $[2] = t2;            // cache writes
+//   } else {
+//     t2 = $[2];                                // pure slot replays
+//   }
+//
+// The else branch is ALWAYS exactly one `NAME = $[k];` replay per declared
+// name — that is the fingerprint of a compiler cache region (hand-written
+// code never indexes `$`). When the strict validation fails but this skeleton
+// holds, the honest decompilation is to keep the cache-MISS path (the
+// if-branch) unconditionally and drop the replay branch: the cache is only a
+// referential-transparency optimization, so evaluating the compute path on
+// every render preserves semantics. The `bbN:` labels and their `break`s are
+// kept verbatim — they still compile and still short-circuit exactly as the
+// compiled miss path did.
+//
+// Safety gates before straight-lining (all must hold):
+//   1. else branch: strictly `NAME = $[k];` for each declared name, once each.
+//   2. every replayed slot `$[k]` is written (`$[k] =`) in the if-branch —
+//      pins the construct to compiler output.
+//   3. no hook call (`use(`, `useX(`) in the if-branch — straight-lining must
+//      never move a hook across what was a conditional boundary.
+// Nested `if ($[...]) { ... } else { NAME = $[k]; }` guards inside the
+// if-branch (inner cache regions without their own `let` prelude) are
+// recursively straight-lined the same way.
+
+function bodyHasHookCall(body) {
+  const mask = maskNonCode(body)
+  return /\buse\s*\(/.test(mask) || /\buse[A-Z$][\w$]*\s*\(/.test(mask)
+}
+
+function straightenGuardBody(body) {
+  // Replace nested cache guards in `body` with their if-branch (recursively),
+  // then drop top-level cache-write statements. Returns the processed body.
+  let text = body
+  let guard = 0
+  while (guard++ < 1000) {
+    // find a candidate `if (` whose condition references $[
+    const re = /^[ \t]*if \(/gm
+    let mm
+    let found = null
+    while ((mm = re.exec(text)) !== null) {
+      // a candidate immediately preceded by a `let NAME;` line at the same
+      // indent is a genuine nested memo block — leave it for the main
+      // elimination loop, which const-ifies it (strict inlining) instead of
+      // straight-lining it to `let` + assignment.
+      const lineStart = text.lastIndexOf("\n", mm.index - 1) + 1
+      const prevEnd = lineStart - 1
+      if (prevEnd > 0) {
+        const prevStart = text.lastIndexOf("\n", prevEnd - 1) + 1
+        const prevLine = text.slice(prevStart, prevEnd)
+        const candIndent = /^[ \t]*/.exec(mm[0])[0]
+        const plm = /^([ \t]*)let [A-Za-z_$][\w$]*;[ \t]*$/.exec(prevLine)
+        if (plm && plm[1] === candIndent) continue
+      }
+      const condOpen = text.indexOf("(", mm.index)
+      const condClose = scan(text, condOpen + 1)
+      if (condClose < 0) continue
+      const cond = text.slice(condOpen + 1, condClose)
+      if (!cond.includes("$[")) continue
+      const stripped = cond.replace(/!==|===|==|!=/g, "")
+      if (/[=;]/.test(stripped)) continue
+      let q = condClose + 1
+      while (q < text.length && /[ \t]/.test(text[q])) q++
+      if (text[q] !== "{") continue
+      const ifClose = scan(text, q + 1)
+      if (ifClose < 0) continue
+      const innerIf = text.slice(q + 1, ifClose)
+      let r = ifClose + 1
+      while (r < text.length && /[ \t\n]/.test(text[r])) r++
+      const em = /^else[ \t]*\{/.exec(text.slice(r))
+      if (!em) continue
+      const elseOpen = r + text.slice(r).indexOf("{")
+      const elseClose = scan(text, elseOpen + 1)
+      if (elseClose < 0) continue
+      const innerElse = text.slice(elseOpen + 1, elseClose)
+      const elseStmts = splitStatements(innerElse).map((s) => s.trim()).filter(Boolean)
+      if (elseStmts.length === 0) continue
+      let valid = true
+      for (const s of elseStmts) {
+        const sm = /^([A-Za-z_$][\w$]*) = \$\[(\d+)\];$/.exec(s)
+        // replayed slot must be written in the compute branch
+        if (!sm || !new RegExp(`\\$\\[${sm[2]}\\] =`).test(innerIf)) {
+          valid = false
+          break
+        }
+      }
+      if (!valid) continue
+      if (bodyHasHookCall(innerIf)) continue
+      found = { start: mm.index, end: elseClose + 1, innerIf }
+      break
+    }
+    if (!found) break
+    text = text.slice(0, found.start) + straightenGuardBody(found.innerIf) + text.slice(found.end)
+  }
+  // drop top-level cache writes
+  const spans = splitStatements(text)
+  return spans.filter((s) => !/^\s*\$\[\d+\] = [\s\S]*;[ \t]*\n?$/.test(s)).join("")
+}
+
+function tryStraightLine(sk) {
+  const { indent, names, ifBody, elseBody } = sk
+  const nameSet = new Set(names)
+  const elseStmts = splitStatements(elseBody).map((s) => s.trim()).filter(Boolean)
+  // gate 1: else branch is exactly one pure slot replay per declared name
+  const elseSeen = new Map()
+  for (const s of elseStmts) {
+    const sm = /^([A-Za-z_$][\w$]*) = \$\[(\d+)\];$/.exec(s)
+    if (!sm || !nameSet.has(sm[1]) || elseSeen.has(sm[1])) return null
+    elseSeen.set(sm[1], sm[2])
+  }
+  if (elseSeen.size !== names.length) return null
+  // gate 2: every replayed slot is written in the compute branch
+  for (const k of elseSeen.values()) {
+    if (!new RegExp(`\\$\\[${k}\\] =`).test(ifBody)) return null
+  }
+  // gate 3: no hooks in the compute branch
+  if (bodyHasHookCall(ifBody)) return null
+  // process: straighten nested guards, drop cache writes, dedent one level
+  let body = straightenGuardBody(ifBody)
+  const lines = body.replace(/^\n/, "").split("\n")
+  const firstContent = lines.find((l) => l.trim() !== "")
+  if (firstContent) {
+    const lead = /^[ \t]*/.exec(firstContent)[0]
+    if (lead.length > indent.length) {
+      const cut = lead.length - indent.length
+      body = lines.map((l) => (l.startsWith(lead) ? l.slice(cut) : l)).join("\n")
+    }
+  }
+  let replacement = ""
+  for (const name of names) replacement += `${indent}let ${name};\n`
+  replacement += body.endsWith("\n") || body === "" ? body : body + "\n"
+  return { ...sk, replacement, names }
+}
+
+function tryParseMemoBlock(text, pos) {
+  const sk = parseMemoSkeleton(text, pos)
+  if (!sk) return null
+  const { indent, names, ifBody, elseBody } = sk
 
   // Classify statements.
   const ifStmts = splitStatements(ifBody)
@@ -299,7 +463,8 @@ function tryParseMemoBlock(text, pos) {
     const destructure = /^\(\s*\{([\s\S]*?)\}\s*=[\s\S]*\)\s*;?$/.exec(trimmed)
     if (destructure) {
       for (const part of destructure[1].split(",")) {
-        const nm = /^([A-Za-z_$][\w$]*)/.exec(part.trim())
+        // count plain and rest (`...name`) destructured targets
+        const nm = /^(?:\.\.\.)?([A-Za-z_$][\w$]*)/.exec(part.trim())
         if (nm && nameSet.has(nm[1])) {
           if (resultAssigns.has(nm[1])) return null
           resultAssigns.set(nm[1], true)
@@ -316,7 +481,14 @@ function tryParseMemoBlock(text, pos) {
     // any other statement (const/let/if/...) is kept, in order, by the
     // replacement builder below
   }
-  if (resultAssigns.size !== names.length) return null
+  if (resultAssigns.size !== names.length) {
+    // Strict const-inlining cannot flatten this region (outputs are assigned
+    // inside nested control flow — bbN labels, sentinels, inner cache
+    // guards). Fall back to keeping the compute path unconditionally.
+    const sl = tryStraightLine(sk)
+    if (sl) sl.straightLined = true
+    return sl
+  }
 
   // Build replacement in the if-branch's original statement order: result
   // assignments become `const NAME = expr;`, branch-local statements are kept,
@@ -338,7 +510,7 @@ function tryParseMemoBlock(text, pos) {
     }
   }
   const replacement = ordered.join("")
-  return { start: pos, end: elseClose + 1, replacement, names }
+  return { start: sk.start, end: sk.end, replacement, names }
 }
 
 function dedentStmt(raw, baseIndent, asConst = false) {
@@ -365,6 +537,7 @@ function dedentStmt(raw, baseIndent, asConst = false) {
 function eliminateMemoBlocks(source) {
   let text = source
   let count = 0
+  let straightLined = 0
   let guard = 0
   while (guard++ < 10000) {
     let replaced = false
@@ -376,13 +549,14 @@ function eliminateMemoBlocks(source) {
       if (parsed) {
         text = text.slice(0, parsed.start) + parsed.replacement + text.slice(parsed.end)
         count++
+        if (parsed.straightLined) straightLined++
         replaced = true
         break
       }
     }
     if (!replaced) break
   }
-  return { text, count }
+  return { text, count, straightLined }
 }
 
 // ── Duplicate-const rename pass ──────────────────────────────────────────────
@@ -493,25 +667,19 @@ function dedupeConstDecls(source) {
     }
     const rootEnd = n
     const scopeEnd = (scopeId) => (scopeId < 0 ? rootEnd : matchBrace[scopeId])
-    // collect const declarations: name, position, scope, statement end
-    const decls = []
-    const declRe = /\bconst ([A-Za-z_$][\w$]*) =/g
-    let dm
-    while ((dm = declRe.exec(mask)) !== null) {
-      const pos = dm.index
-      // scope enclosing the decl: innermost brace before pos
-      let scope = -1
+    const enclosingScope = (pos) => {
+      // scope enclosing a position: innermost brace before pos
       for (let j = pos - 1; j >= 0; j--) {
         if (mask[j] === "}") {
           j = matchBrace[j]
           continue
         }
-        if (mask[j] === "{") {
-          scope = j
-          break
-        }
+        if (mask[j] === "{") return j
       }
-      // statement end: next `;` at the declaration's brace depth
+      return -1
+    }
+    const stmtEndFrom = (pos) => {
+      // statement end: next `;` at the position's brace depth
       let depth = 0
       let k = pos
       let stmtEnd = -1
@@ -528,9 +696,74 @@ function dedupeConstDecls(source) {
         k++
       }
       if (stmtEnd < 0) stmtEnd = k
-      decls.push({ name: dm[1], pos, scope, stmtEnd })
+      return stmtEnd
     }
-    // group by (scope, name), find duplicates
+    // collect const declarations: name, position, scope, statement end
+    const decls = []
+    const declRe = /\bconst ([A-Za-z_$][\w$]*) =/g
+    let dm
+    while ((dm = declRe.exec(mask)) !== null) {
+      const pos = dm.index
+      decls.push({ name: dm[1], pos, scope: enclosingScope(pos), stmtEnd: stmtEndFrom(pos) })
+    }
+    // destructured const bindings (`const { a, b: c, ...d } = …`) bind names
+    // too — memo-block flattening can collide them with sibling temps (e.g. a
+    // compiler-renamed prop `tab: t5` vs a later `const t5`). Register each
+    // flat binding so duplicates get renamed like plain consts.
+    const destrRe = /\bconst\s*\{/g
+    while ((dm = destrRe.exec(mask)) !== null) {
+      const open = mask.indexOf("{", dm.index)
+      const close = matchBrace[open]
+      if (close < 0) continue
+      const inner = mask.slice(open + 1, close)
+      let depth = 0
+      let cur = ""
+      let off = 0
+      const parts = []
+      for (const ch of inner) {
+        if (ch === "," && depth === 0) {
+          parts.push([cur, off - cur.length])
+          cur = ""
+        } else {
+          if (ch === "{" || ch === "[") depth++
+          else if (ch === "}" || ch === "]") depth--
+          cur += ch
+        }
+        off++
+      }
+      parts.push([cur, off - cur.length])
+      const stmtEnd = stmtEndFrom(close)
+      for (const [part, partOff] of parts) {
+        const t = part.trim()
+        if (t === "") continue
+        const m = /^(\.\.\.)?([A-Za-z_$][\w$]*)(?:\s*:\s*([A-Za-z_$][\w$]*))?/.exec(t)
+        if (!m) continue
+        if (m[3] === undefined) {
+          if (/^\.\.\./.test(t)) {
+            // rest binding `...name`
+            if (/[^\w$\s]/.test(t.slice(3).trim())) continue
+          } else if (t.slice(m[2].length).trim() !== "" && !/^=\s*[\s\S]*/.test(t.slice(m[2].length).trim())) {
+            // nested pattern or computed key — binding name differs from prop
+            continue
+          }
+        }
+        const binding = m[3] ?? m[2]
+        // binding name position in the original text (untrimmed part offset);
+        // for `prop: alias` search past the colon so a prop-name substring
+        // cannot win
+        const searchFrom = m[3] !== undefined ? part.indexOf(":") + 1 : 0
+        const bindingPos = open + 1 + partOff + part.indexOf(binding, searchFrom)
+        // the binding lives INSIDE the destructure braces — its collision
+        // scope is the scope enclosing the whole `const {…}` statement
+        const scope = enclosingScope(open - 1)
+        decls.push({ name: binding, pos: bindingPos, scope, stmtEnd })
+      }
+    }
+    // group by (scope, name), find duplicates — position order, so the LATER
+    // binding is always the rename victim (a const is never read before its
+    // declaration, so renaming it + its following reads is sound; renaming an
+    // earlier binding would clobber the later one's territory)
+    decls.sort((a, b) => a.pos - b.pos)
     const seen = new Map()
     let dup = null
     for (const d of decls) {
@@ -607,7 +840,7 @@ function renameT0Params(source) {
 // ── Per-file driver ───────────────────────────────────────────────────────────
 
 function transform(source) {
-  const report = { memoBlocks: 0, renamedParams: 0, renamedConsts: 0, leftovers: [], fingerprint: false }
+  const report = { memoBlocks: 0, straightLined: 0, renamedParams: 0, renamedConsts: 0, leftovers: [], fingerprint: false }
   if (!source.includes(FINGERPRINT)) {
     return { ok: false, reason: "fingerprint missing (react/compiler-runtime import not found)", report }
   }
@@ -625,6 +858,7 @@ function transform(source) {
   const eliminated = eliminateMemoBlocks(text)
   text = eliminated.text
   report.memoBlocks = eliminated.count
+  report.straightLined = eliminated.straightLined
 
   // 4b. duplicate const declarations created by flattening sibling-scope
   // compiler temps that reused a name
@@ -672,9 +906,10 @@ for (const file of files) {
   const hand = r.leftovers > 0 ? ` HAND-FIX-NEEDED(leftover $[k] x${r.leftovers})` : ""
   if (r.leftovers > 0) needsHandFix++
   const dups = r.renamedConsts > 0 ? ` dupConstRenames=${r.renamedConsts}` : ""
+  const sl = r.straightLined > 0 ? ` straightLined=${r.straightLined}` : ""
   try {
     writeFileSync(file, result.text)
-    console.log(`OK   ${file}: memoBlocks=${r.memoBlocks} t0renames=${r.renamedParams}${dups}${hand}`)
+    console.log(`OK   ${file}: memoBlocks=${r.memoBlocks} t0renames=${r.renamedParams}${dups}${sl}${hand}`)
   } catch (err) {
     console.log(`FAIL ${file}: unwritable (${err.message})`)
     failures++

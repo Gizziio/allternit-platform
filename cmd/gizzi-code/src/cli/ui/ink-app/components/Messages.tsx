@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import chalk from '@/shared/util/chalk'
 import type { UUID } from 'crypto';
@@ -19,7 +17,7 @@ import type { Screen } from '../screens/REPL';
 import type { Tools } from '../Tool';
 import { findToolByName } from '../Tool';
 import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir';
-import type { Message as MessageType, NormalizedMessage, ProgressMessage as ProgressMessageType, RenderableMessage } from '../types/message';
+import type { AssistantMessage, ContentBlock, Message as MessageType, MessageContent, NormalizedAssistantMessage, NormalizedMessage, NormalizedUserMessage, ProgressMessage as ProgressMessageType, RenderableMessage, SystemMessage } from '../types/message';
 import { type AdvisorBlock, isAdvisorBlock } from '../utils/advisor';
 import { collapseBackgroundBashNotifications } from '../utils/collapseBackgroundBashNotifications';
 import { collapseHookSummaries } from '../utils/collapseHookSummaries';
@@ -53,26 +51,15 @@ import type { JumpHandle } from './VirtualMessageList';
 // and pegs CPU at 100%. Memo on agentDefinitions so a new messages array
 // doesn't invalidate the logo subtree. LogoV2/StatusNotices internally
 // subscribe to useAppState/useSettings for their own updates.
-const LogoHeader = React.memo(function LogoHeader(t0) {
-  const $ = _c(3);
-  const {
+const LogoHeader = React.memo(function LogoHeader({
     agentDefinitions
-  } = t0;
-  let t1;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-    t1 = <WelcomeBox />;
-    $[0] = t1;
-  } else {
-    t1 = $[0];
-  }
-  let t2;
-  if ($[1] !== agentDefinitions) {
-    t2 = <OffscreenFreeze><Box flexDirection="column" gap={1} marginBottom={10}>{t1}<React.Suspense fallback={null}><StatusNotices agentDefinitions={agentDefinitions} /></React.Suspense></Box></OffscreenFreeze>;
-    $[1] = agentDefinitions;
-    $[2] = t2;
-  } else {
-    t2 = $[2];
-  }
+}: {
+    agentDefinitions: Props['agentDefinitions'];
+}) {
+  const t1 = <WelcomeBox />;
+
+  const t2 = <OffscreenFreeze><Box flexDirection="column" gap={1} marginBottom={10}>{t1}<React.Suspense fallback={null}><StatusNotices agentDefinitions={agentDefinitions} /></React.Suspense></Box></OffscreenFreeze>;
+
   return t2;
 });
 
@@ -80,10 +67,25 @@ const LogoHeader = React.memo(function LogoHeader(t0) {
 /* eslint-disable @typescript-eslint/no-require-imports */
 const proactiveModule = feature('PROACTIVE') || feature('KAIROS') ? require('../proactive/index.js') : null;
 const BRIEF_TOOL_NAME: string | null = feature('KAIROS') || feature('KAIROS_BRIEF') ? (require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')).BRIEF_TOOL_NAME : null;
-const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS') ? (require('../tools/SendUserFileTool/prompt.js') as typeof import('../tools/SendUserFileTool/prompt.js')).SEND_USER_FILE_TOOL_NAME : null;
+// SendUserFileTool/prompt is a stub without the compiled-era export; the
+// require shape is what the runtime consumes.
+const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS') ? (require('../tools/SendUserFileTool/prompt.js') as { SEND_USER_FILE_TOOL_NAME: string }).SEND_USER_FILE_TOOL_NAME : null;
 
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { VirtualMessageList } from './VirtualMessageList';
+
+// The message type worlds drifted since these artifacts were compiled:
+// types/message's NormalizedMessage (UserMessage | AssistantMessage |
+// SystemMessage) no longer matches the utils/messages pipeline helpers'
+// normalized union, and NestedMessage.content gained `| unknown`. These
+// aliases restore the original-era shapes at the pipeline boundaries only —
+// runtime values are unchanged.
+type PipelineNormalizedMessage =
+  | SystemMessage
+  | NormalizedUserMessage
+  | NormalizedAssistantMessage
+  | Extract<MessageType, { type: 'attachment' }>;
+type ContentBlocks = Array<MessageContent | ContentBlock>;
 
 /**
  * In brief-only mode, filter messages to show ONLY Brief tool_use blocks,
@@ -401,7 +403,7 @@ const MessagesImpl = ({
     for (let i = normalizedMessages.length - 1; i >= 0; i--) {
       const msg = normalizedMessages[i];
       if (msg?.type === 'assistant') {
-        const content = msg.message.content;
+        const content = msg.message.content as ContentBlocks;
         // Find the last thinking block in this message
         for (let j = content.length - 1; j >= 0; j--) {
           if (content[j]?.type === 'thinking') {
@@ -409,7 +411,7 @@ const MessagesImpl = ({
           }
         }
       } else if (msg?.type === 'user') {
-        const hasToolResult = msg.message.content.some(block => block.type === 'tool_result');
+        const hasToolResult = (msg.message.content as ContentBlocks).some(block => block.type === 'tool_result');
         if (!hasToolResult) {
           // Reached a previous user turn so don't show stale thinking from before
           return 'no-thinking';
@@ -426,7 +428,7 @@ const MessagesImpl = ({
     for (let i_0 = normalizedMessages.length - 1; i_0 >= 0; i_0--) {
       const msg_0 = normalizedMessages[i_0];
       if (msg_0?.type === 'user') {
-        const content_0 = msg_0.message.content;
+        const content_0 = msg_0.message.content as ContentBlocks;
         // Check if any text content is bash output
         for (const block_0 of content_0) {
           if (block_0.type === 'text') {
@@ -494,10 +496,10 @@ const MessagesImpl = ({
     // (this PR's core goal — full history in UI, filter only for the model).
     // Also avoids a UUID mismatch: normalizeMessages derives new UUIDs, so
     // projectSnippedView's check against original removedUuids would fail.
-    const compactAwareMessages = verbose || isFullscreenEnvEnabled() ? normalizedMessages : getMessagesAfterCompactBoundary(normalizedMessages, {
+    const compactAwareMessages = verbose || isFullscreenEnvEnabled() ? normalizedMessages : getMessagesAfterCompactBoundary(normalizedMessages as unknown as PipelineNormalizedMessage[], {
       includeSnipped: true
     });
-    const messagesToShowNotTruncated = reorderMessagesInUI(compactAwareMessages.filter((msg_2): msg_2 is Exclude<NormalizedMessage, ProgressMessageType> => msg_2.type !== 'progress')
+    const messagesToShowNotTruncated = reorderMessagesInUI(compactAwareMessages.filter((msg_2): msg_2 is Exclude<PipelineNormalizedMessage, ProgressMessageType> => (msg_2.type as string) !== 'progress')
     // CC-724: drop attachment messages that AttachmentMessage renders as
     // null (hook_success, hook_additional_context, hook_cancelled, etc.)
     // BEFORE counting/slicing so they don't inflate the "N messages"
@@ -512,8 +514,17 @@ const MessagesImpl = ({
     // SendUserFile delivers a file without replacement text, so dropping
     // assistant text for file-only turns would leave the user with no context.
     const dropTextToolNames = [BRIEF_TOOL_NAME].filter((n_0): n_0 is string => n_0 !== null);
-    const briefFiltered = briefToolNames.length > 0 && !isTranscriptMode ? isBriefOnly ? filterForBriefTool(messagesToShowNotTruncated, briefToolNames) : dropTextToolNames.length > 0 ? dropTextInBriefTurns(messagesToShowNotTruncated, dropTextToolNames) : messagesToShowNotTruncated : messagesToShowNotTruncated;
-    const messagesToShow = shouldTruncate ? briefFiltered.slice(-MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE) : briefFiltered;
+    const briefPipelineInput = messagesToShowNotTruncated as unknown as Array<{
+    type: string;
+    subtype?: string;
+    isMeta?: boolean;
+    isApiErrorMessage?: boolean;
+    message?: { content: Array<{ type: string; name?: string; tool_use_id?: string }> };
+    attachment?: { type: string; isMeta?: boolean; origin?: unknown; commandMode?: string };
+  }>;
+    const briefFiltered = briefToolNames.length > 0 && !isTranscriptMode ? isBriefOnly ? filterForBriefTool(briefPipelineInput, briefToolNames) : dropTextToolNames.length > 0 ? dropTextInBriefTurns(briefPipelineInput, dropTextToolNames) : messagesToShowNotTruncated : messagesToShowNotTruncated;
+    const briefFilteredPipeline = briefFiltered as unknown as PipelineNormalizedMessage[];
+    const messagesToShow = shouldTruncate ? briefFilteredPipeline.slice(-MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE) : briefFilteredPipeline;
     const hasTruncatedMessages = shouldTruncate && briefFiltered.length > MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE;
     const {
       messages: groupedMessages
@@ -724,7 +735,7 @@ const MessagesImpl = ({
 /** Key for click-to-expand: tool_use_id where available (so tool_use + its
  *  tool_result expand together), else uuid for groups/thinking. */
 function expandKey(msg: RenderableMessage): string {
-  return (msg.type === 'assistant' || msg.type === 'user' ? getToolUseID(msg) : null) ?? msg.uuid;
+  return (msg.type === 'assistant' || msg.type === 'user' ? getToolUseID(msg as unknown as Parameters<typeof getToolUseID>[0]) : null) ?? msg.uuid;
 }
 
 // Custom comparator to prevent unnecessary re-renders during streaming.
@@ -792,7 +803,7 @@ export function shouldRenderStatically(message: RenderableMessage, streamingTool
             return lookups.resolvedToolUseIDs.has(block.id);
           }
         }
-        const toolUseID = getToolUseID(message);
+        const toolUseID = getToolUseID(message as unknown as Parameters<typeof getToolUseID>[0]);
         if (!toolUseID) {
           return true;
         }
