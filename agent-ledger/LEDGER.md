@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-18 20:46 — kimi — @allternit/lawlayer packaging fix (build output vs package entry points)
+
+- **Session ID / Branch:** `ao/lawlayer-packaging`
+- **Agent:** kimi
+- **Summary:** Merged PR #637 — fixed `@allternit/lawlayer` (`domains/governance/legal-compliance/regulatory-framework`) failing `ERR_MODULE_NOT_FOUND`: no built dist (dist gitignored, never built), surfaced by the runtime-packaging agent as the blocker for two integration compatibility suites.
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/637 · `62587834a` (merge `5eb02d25f`)
+- **How it works:** same root-cause class as the runtime fix (#635): the tsconfig `paths` map sent `@allternit/governor` to its source `.ts` outside the package (inflating tsc's computed rootDir; the `@allternit/runtime` map entry was dangling — never existed), and there was no `prepare` script. Removed `baseUrl`/`paths`; added `"prepare": "npm run build"` (governor/runtime convention); removed dead `./policies` + `./engine` subpath exports (no src counterparts, no importers). Build now emits `dist/index.js` + `index.d.ts` matching `main`/`types`/`exports`.
+- **Verification:** fresh-state build clean (dist root layout correct); ESM resolve+import yields 11 exports from `dist/index.js`; `pnpm install --frozen-lockfile` exit 0; tests/ vitest 24/24; release-preflight 52/0; gizzi-code `ensure-sdk-dist.sh` + `tsc --noEmit` exit 0.
+- **Outstanding work:** the two compatibility suites stay excluded — they import the never-existing runtime export `_clearActiveSessions` and assert a runtime↔lawlayer `delegateTo: 'law-layer'` delegation contract never wired (4/13 semantic failures with the helper stubbed; orphaned scaffolds, not loadability). Repo-wide audit of other never-built-dist workspace packages not done.
+- **Summary file:** [2026-09-18-2046-ao-lawlayer-packaging-kimi-code-lawlayer-packaging.md](./summaries/2026-09-18-2046-ao-lawlayer-packaging-kimi-code-lawlayer-packaging.md)
+
 ### 2026-09-18 20:37 — kimi — @allternit/runtime packaging fix (dist layout vs package entry points)
 
 - **Session ID / Branch:** `ao/runtime-packaging-fix`
