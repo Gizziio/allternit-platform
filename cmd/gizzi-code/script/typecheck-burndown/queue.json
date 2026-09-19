@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 594,
+    "totalNocheck": 593,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 480,
-    "totalQueueLoc": 204289,
+    "totalQueueFiles": 479,
+    "totalQueueLoc": 202641,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -608,12 +608,13 @@
     },
     {
       "id": "b0045",
-      "files": [
-        "src/cli/ui/ink-app/tools/PowerShellTool/powershellPermissions.ts"
-      ],
+      "files": [],
       "loc": 1649,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1648,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head14): powershellPermissions.ts header-only burn (tsc 0 post-strip, canary-verified). Escalations: none. Identity: live -1 + recorded +1."
     },
     {
       "id": "b0046",

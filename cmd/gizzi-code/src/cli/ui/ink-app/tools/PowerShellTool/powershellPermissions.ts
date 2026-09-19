@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * PowerShell-specific permission checking, adapted from bashPermissions.ts
  * for case-insensitive cmdlet matching.
