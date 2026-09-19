@@ -1,4 +1,3 @@
-// @ts-nocheck
 // cloudflared tunnel integration for `gizzi serve --tunnel`. Two modes share
 // one spawn path:
 //   quick — `cloudflared tunnel --url http://127.0.0.1:<port>`; the generated

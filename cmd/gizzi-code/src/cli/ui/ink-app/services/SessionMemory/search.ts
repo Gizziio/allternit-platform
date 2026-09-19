@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Session memory search.
  *

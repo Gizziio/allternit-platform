@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Memory shape telemetry stub
  */
