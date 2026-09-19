@@ -59,9 +59,6 @@
       ],
       "@/runtime/*": [
         "../../../../src/runtime/*"
-      ],
-      "react/compiler-runtime": [
-        "../../../../src/vendor/react-compiler-runtime.ts"
       ]
     }
   },

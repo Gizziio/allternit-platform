@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=774
+count=773
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/hooks/useChromeExtensionNotification.tsx
@@ -776,4 +776,3 @@ shared/utils/tokens.ts
 shared/utils/toolSearch.ts
 shared/utils/toolSearchMode.ts
 shared/utils/user.ts
-vendor/react-compiler-runtime.ts

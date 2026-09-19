@@ -63,14 +63,10 @@ const OUT_FILE = join(OUT_DIR, "queue.json")
 
 // ── Exclusion rules ────────────────────────────────────────────────────────────
 
-// (a) React Compiler build artifacts. These are machine-generated (react-compiler
-// output piped through a build step), not handwritten code — burning them down
-// is meaningless because the next compiler run regenerates the header.
-const COMPILER_ARTIFACT_FINGERPRINTS = [
-  "react/compiler-runtime", // compiler-injected runtime import
-  "c as _c", // compiler-generated hook cache binding
-  "$[0]", // compiler-generated hook cache slot access
-]
+// (a) React Compiler build artifacts: DELETED with the §6.2 final stub-machinery
+// PR (INK_APP_COMPILER_ARTIFACTS.md). All 360 artifacts are converted to ordinary
+// TSX, so no fingerprint exclusion remains; the queue stat stays in the schema
+// (pinned at 0) so queue.json and the guard test keep a stable shape.
 
 // (b) Vendored internals under ink-app. Third-party-derived code (ink rendering
 // core, vim emulation) that tracks upstream; not part of the handwritten queue.
@@ -96,7 +92,7 @@ const INDEX_FILES = ["index.ts", "index.tsx", "index.js"]
 
 // tsconfig paths (tsconfig.json "paths", highest priority = longest prefix).
 // Only mappings that can resolve into src/ are listed; workspace-package
-// mappings (@allternit/*, react/compiler-runtime) never point at queue files.
+// mappings (@allternit/*) never point at queue files.
 // The specialized `@/<stratum>/*` prefixes resolve ink-app FIRST — ink-app
 // shadows runtime and src, so the queue must not assume runtime is canonical.
 const PATH_PREFIX_MAPPINGS = [
@@ -203,20 +199,17 @@ export function resolveImport(spec, importerRel) {
 
 // ── Queue scan (shared with the guard test) ────────────────────────────────────
 
-export function isCompilerArtifact(text) {
-  for (const f of COMPILER_ARTIFACT_FINGERPRINTS) if (text.includes(f)) return true
-  return false
-}
-
 export function isVendoredSubtree(rel) {
   for (const v of VENDORED_SUBTREES) if (rel.startsWith(v)) return true
   return false
 }
 
 // Returns { queue: [{path, loc}], excludedCompilerArtifacts, excludedVendored, totalNocheck }
+// excludedCompilerArtifacts is pinned at 0: the artifact fingerprints and their
+// exclusion were deleted with the §6.2 stub machinery (see header note above).
 export function scanQueue() {
   const queue = []
-  let excludedCompilerArtifacts = 0
+  const excludedCompilerArtifacts = 0
   let excludedVendored = 0
   let totalNocheck = 0
   for (const abs of walk(SRC)) {
@@ -224,10 +217,6 @@ export function scanQueue() {
     const text = readFileSync(abs, "utf8")
     if (!text.startsWith(NOCHECK_HEADER)) continue
     totalNocheck++
-    if (isCompilerArtifact(text)) {
-      excludedCompilerArtifacts++
-      continue
-    }
     if (isVendoredSubtree(rel)) {
       excludedVendored++
       continue
