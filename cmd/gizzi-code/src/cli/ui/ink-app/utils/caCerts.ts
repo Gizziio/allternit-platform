@@ -1,4 +1,3 @@
-// @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
 import { logForDebugging } from './debug.js'
 import { hasNodeOption } from './envUtils.js'
@@ -111,6 +110,6 @@ export const getCACertificates = memoize((): string[] | undefined => {
  * (e.g., NODE_EXTRA_CA_CERTS, NODE_OPTIONS).
  */
 export function clearCACertsCache(): void {
-  getCACertificates.cache.clear?.()
+  ;(getCACertificates as unknown as { cache: { clear?: () => void } }).cache.clear?.()
   logForDebugging('Cleared CA certificates cache')
 }

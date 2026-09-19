@@ -1,15 +1,33 @@
-// @ts-nocheck
 import { plural } from '../utils/stringUtils.js'
 import { chordToString, parseChord, parseKeystroke } from './parser.js'
 import {
   getReservedShortcuts,
   normalizeKeyForComparison,
 } from './reservedShortcuts.js'
-import type {
-  KeybindingBlock,
-  KeybindingContextName,
-  ParsedBinding,
-} from './types.js'
+// TODO(types): './types.js' (keybindings/types.ts) is a dormant stub
+// (types_ts()) exporting nothing. Local mirrors of the shapes this file
+// needs — same pattern as match.ts / defaultBindings.ts.
+interface ParsedKeystroke {
+  key: string
+  ctrl?: boolean
+  shift?: boolean
+  alt?: boolean
+  meta?: boolean
+  super?: boolean
+}
+
+type KeybindingBlock = {
+  context: string
+  bindings: Record<string, string>
+}
+
+type KeybindingContextName = string
+
+interface ParsedBinding {
+  chord: ParsedKeystroke[]
+  context?: string
+  action?: string
+}
 
 /**
  * Types of validation issues that can occur with keybindings.

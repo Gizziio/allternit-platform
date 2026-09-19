@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Telemetry for plugin/marketplace fetches that hit the network.
  *

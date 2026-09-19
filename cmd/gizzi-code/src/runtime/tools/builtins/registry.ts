@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { QuestionTool } from "@/runtime/tools/builtins/question"
 import { VerifyTool } from "@/runtime/tools/builtins/verify"
 import { BashTool } from "@/runtime/tools/builtins/bash"
@@ -21,7 +20,7 @@ import { Tool } from "@/runtime/tools/builtins/tool"
 import { Instance } from "@/runtime/context/project/instance"
 import { Config } from "@/runtime/context/config/config"
 import path from "path"
-import { type ToolContext as PluginToolContext, type ToolDefinition } from "@allternit/plugin"
+import { type ToolContext as PluginToolContext, type ToolDefinition } from "@allternit/plugin/tool"
 import z from "zod/v4"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { WebSearchTool } from "@/runtime/tools/builtins/websearch"
@@ -108,10 +107,10 @@ export namespace ToolRegistry {
             worktree: Instance.worktree,
           } as unknown as PluginToolContext
           const result = await def.execute(args as any, pluginCtx)
-          const out = await Truncate.output(result, {}, initCtx?.agent)
+          const out = await Truncate.output(result as string, {}, initCtx?.agent)
           return {
             title: "",
-            output: out.truncated ? out.content : result,
+            output: out.truncated ? out.content : (result as string),
             metadata: { truncated: out.truncated, outputPath: out.truncated ? out.outputPath : undefined },
           }
         },
@@ -223,7 +222,8 @@ export namespace ToolRegistry {
             description: tool.description,
             parameters: tool.parameters,
           }
-          await Plugin.trigger("tool.definition", { toolID: t.id }, output)
+          // "tool.definition" is not declared in the plugin SDK Hooks type yet
+          await Plugin.trigger("tool.definition" as any, { toolID: t.id }, output)
           return {
             id: t.id,
             ...tool,
