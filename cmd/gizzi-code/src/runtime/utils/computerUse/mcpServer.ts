@@ -1,2 +1,7 @@
 // Auto-generated shim to satisfy TypeScript imports
-export {}
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
+
+export async function createComputerUseMcpServerForCli(): Promise<Server> {
+  // Stub implementation
+  throw new Error('Computer Use MCP server is not available in this build')
+}
