@@ -17,7 +17,10 @@ opinion transcript (fully offline, no downloads); ``--head mlx`` uses the
 real MlxDirectLogitHead (mlx-lm, Qwen3-4B-Instruct-2507-4bit) — the first
 run downloads ~2.5GB of weights from a public ungated HF repo, then runs
 fully local; ``--head kimi`` drives the KimiCliHead (cloud-iteration tier):
-one ``kimi -p`` subprocess per decide step, auth handled inside the CLI.
+one ``kimi -p`` subprocess per decide step, auth handled inside the CLI;
+``--head semif`` drives the SemIfHead (SemIf, the community System One
+reproduction, behind the same protocol — mlx backend, Qwen3.5-4B pinned,
+all questions scored in one shared-state pass).
 
 The shadow state text is the canonical per-step format: [TASK], an
 unconditional [SINCE LAST STEP] element-delta block (first step / no-change
@@ -59,7 +62,10 @@ DEFAULT_OUT_DIR = DOMAIN_CORE_ROOT / "evaluation" / "shadow-eval"
 # Per-decide-step wall-clock budget passed down to the planning loop, by head.
 # kimi CLI subprocesses run ~25s per call (batched: 1 call/step; sequential:
 # 2 calls/step), so the default 15s/step budget would kill the run mid-task.
-_STEP_BUDGET_MS = {"mock": 15_000, "mlx": 15_000, "kimi": 60_000}
+# semif (SemIf mlx shared-state pass) is mlx-class: one prefill + one batched
+# forward per step, same budget as the mlx head — actual latencies land in
+# the report.
+_STEP_BUDGET_MS = {"mock": 15_000, "mlx": 15_000, "kimi": 60_000, "semif": 15_000}
 
 
 def build_head(
@@ -129,6 +135,27 @@ def build_head(
         )
         return head, suffix
 
+    # SemIf path — fail fast with an actionable error before the harness runs.
+    if name == "semif":
+        if importlib.util.find_spec("semif_phase1") is None:
+            raise SystemExit(
+                "--head semif needs the optional 'semif' extra, which is not "
+                "installed in this environment. Install it with:\n"
+                "    uv pip install -e '.[semif]'\n"
+                "(pulls SemIf from git+https://github.com/TheoLeeCJ/SemIf with "
+                "its pinned mlx runtime; Apple-silicon only.)"
+            )
+        from core.semif_head import SemIfHead
+
+        head = SemIfHead()
+        print(
+            "Using SemIfHead "
+            f"({head.model_source}@{head.revision}); first run downloads "
+            "~9GB of weights; all questions per step score in ONE "
+            "shared-state mlx pass (SemIf parallel mode)."
+        )
+        return head, "-semif"
+
     # mlx path — fail fast with an actionable error before the harness runs.
     if importlib.util.find_spec("mlx_lm") is None:
         raise SystemExit(
@@ -157,10 +184,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--head",
-        choices=("mock", "mlx", "kimi"),
+        choices=("mock", "mlx", "kimi", "semif"),
         default="mock",
         help="decision head to score (default mock; mlx = real local mlx-lm "
-             "weights; kimi = KimiCliHead subprocess cloud tier)",
+             "weights; kimi = KimiCliHead subprocess cloud tier; semif = "
+             "SemIf community System One reproduction, mlx shared-state pass)",
     )
     parser.add_argument(
         "--questioning",

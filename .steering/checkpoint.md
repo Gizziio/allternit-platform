@@ -1,9 +1,31 @@
-# Checkpoint — ao/artifact-codemod-pilot5
+# Steering checkpoint — session/semif-eval
 
-Goal: pilot 5 of the ink-app React Compiler artifact de-compilation codemod (spec: docs/programs/gizzi/INK_APP_COMPILER_ARTIFACTS.md).
+**Goal:** Evaluate SemIf (formerly OpenJev, `TheoLeeCJ/SemIf`, MIT, 1,781★) —
+the community open-weights System One reproduction with a new Apple Silicon
+MLX backend (direct typed-option scoring, prefix reuse, parallel shared-state
+decisions) — as a head behind our `DecisionHead` protocol, measured on the
+identical 66 held-out decide steps.
 
-Just did: converted 31 artifacts (components/agents 18, components/Spinner 6, components/CustomSelect 4, components/diff 3) with decompile-artifact.mjs — script unchanged, 1 hand-fix (GlimmerMessage leftover $[k] block). Type-only drift fixes: restored AgentWizardData + SpinnerMode shim types (sourcemap-recovered), wizard updateWizardData signature, useState generics, boundary casts. tsc clean, tests 1371/0, preflight 52/0, baseline 1290->1259, queue excluded 241->210.
+**Just did:** `core/semif_head.py` implemented (SemIf `mlx_backend.score_shared`
+— one state prefill + one batched suffix forward for ALL per-step questions;
+entropy confidence same as mlx head); `--head semif` wired into
+`scripts/shadow_head_eval.py` (suffix `-semif`, budget 15s/step); `semif` note
+branch in `core/shadow_eval.py`; `[semif]` extra in pyproject (git install,
+not PyPI); `tests/test_semif_head.py` — 13 passed + 1 correct skip, live
+shared-pass tests green against the pinned Qwen/Qwen3.5-4B weights.
 
-Next: rebase onto origin/main (burn batch b0256 landed mid-flight), regen queue seeded from main's queue, PR + merge + ledger attestation.
+**Key API facts (README vs code):** package is `semif-phase1`, not `semif`;
+mlx backend supports ONLY `qwen3_5` checkpoints (MiniCPM5-2B is web-demo
+ladder only — README overstates); options hard-capped at 16 (letters A–P);
+remote models require pinned 40-hex revisions; returns per-option probs, NO
+confidence (uncalibrated by its own docs).
 
-Open questions: none.
+**Next:** full targeted pytest suite, mock smoke regression, ONE eval pass
+`--head semif --steps 22 --quiet` in background, notes doc
+`docs/JEV_SEMIF_NOTES.md`, commit + push.
+
+**Open questions:** none — scope frozen.
+
+**Constraints:** no training, one eval pass, kill all background processes,
+subagent does not merge. Fair-comparison note: old mlx 0.227 was pre-deltas
+state format; SemIf gets the current canonical format.
