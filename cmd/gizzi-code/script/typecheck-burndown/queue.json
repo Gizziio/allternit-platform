@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 771,
+    "totalNocheck": 770,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 657,
-    "totalQueueLoc": 268057,
+    "totalQueueFiles": 656,
+    "totalQueueLoc": 262905,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -538,12 +538,13 @@
     },
     {
       "id": "b0039",
-      "files": [
-        "src/cli/ui/ink-app/utils/sessionStorage.ts"
-      ],
+      "files": [],
       "loc": 5106,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 5152,
+      "note": "Burned 2026-09-19 (ao/ts-burn-head8): 59 errors fixed — branded UUID vs Message.uuid string root cause (type UUID=string alias convention from types/logs.ts; as CryptoUUID boundary casts at TranscriptMessage/LogOption/Entry crossings become no-ops once b0407 burns); compactMetadata.preservedSegment local Seg mirror; ChainAssistant Extract-never replaced with intersection; lodash memoize cache local type; getProjectsDir added to import binding (ReferenceError hazard); preserve-caught-error cause attached. Escalations: none. Identity: live -1 + recorded +1."
     },
     {
       "id": "b0425",
