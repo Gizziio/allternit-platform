@@ -3,11 +3,11 @@
   "generatedFrom": "cef80b754a1bffa8f6f8287aae4036f8b0b3d7dc",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1113,
+    "totalNocheck": 1112,
     "excludedCompilerArtifacts": 181,
     "excludedVendored": 93,
-    "totalQueueFiles": 819,
-    "totalQueueLoc": 324178,
+    "totalQueueFiles": 818,
+    "totalQueueLoc": 322477,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -1869,12 +1869,13 @@
     },
     {
       "id": "b0101",
-      "files": [
-        "src/shared/utils/nativeInstaller/installer.ts"
-      ],
-      "loc": 1701,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1701,
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail1): header-only 0-error burn. TS2322 probe confirmed the file is in compilation (exactly one probe error, zero others); probe reverted byte-exact via git show HEAD: and header re-stripped. No escalations, no allowlist changes. Identity: live 818 + recorded 642 = 1460 = totalAccounted."
     }
   ],
   "quarantined": [
