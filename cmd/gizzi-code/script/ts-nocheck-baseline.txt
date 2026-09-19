@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=852
+count=826
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/hooks/useChromeExtensionNotification.tsx
@@ -141,7 +141,6 @@ cli/ui/ink-app/components/ConsoleOAuthFlow.tsx
 cli/ui/ink-app/components/CoordinatorAgentStatus.tsx
 cli/ui/ink-app/components/CustomSelect/use-multi-select-state.ts
 cli/ui/ink-app/components/CustomSelect/use-select-input.ts
-cli/ui/ink-app/components/DesktopUpsell/DesktopUpsellStartup.tsx
 cli/ui/ink-app/components/DevBar.tsx
 cli/ui/ink-app/components/Feedback.tsx
 cli/ui/ink-app/components/FeedbackSurvey/submitTranscriptShare.ts
@@ -150,22 +149,12 @@ cli/ui/ink-app/components/FeedbackSurvey/useMemorySurvey.tsx
 cli/ui/ink-app/components/FileEditToolDiff.tsx
 cli/ui/ink-app/components/FullscreenLayout.tsx
 cli/ui/ink-app/components/GizziHint/PluginHintMenu.tsx
-cli/ui/ink-app/components/HighlightedCode/Fallback.tsx
-cli/ui/ink-app/components/InterruptedByUser.tsx
-cli/ui/ink-app/components/KeybindingWarnings.tsx
-cli/ui/ink-app/components/LanguagePicker.tsx
 cli/ui/ink-app/components/LogSelector.tsx
 cli/ui/ink-app/components/LspRecommendation/LspRecommendationMenu.tsx
-cli/ui/ink-app/components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.tsx
 cli/ui/ink-app/components/MarkdownTable.tsx
 cli/ui/ink-app/components/MemoryUsageIndicator.tsx
-cli/ui/ink-app/components/ModelPicker.tsx
 cli/ui/ink-app/components/NativeAutoUpdater.tsx
 cli/ui/ink-app/components/OffscreenFreeze.tsx
-cli/ui/ink-app/components/OutputStylePicker.tsx
-cli/ui/ink-app/components/PackageManagerAutoUpdater.tsx
-cli/ui/ink-app/components/PrBadge.tsx
-cli/ui/ink-app/components/PressEnterToContinue.tsx
 cli/ui/ink-app/components/PromptInput/FooterStatusBadges.tsx
 cli/ui/ink-app/components/PromptInput/IssueFlagBanner.tsx
 cli/ui/ink-app/components/PromptInput/PromptInput.tsx
@@ -178,31 +167,17 @@ cli/ui/ink-app/components/PromptInput/usePromptInputPlaceholder.ts
 cli/ui/ink-app/components/PromptInput/useSwarmBanner.ts
 cli/ui/ink-app/components/PromptInput/utils.ts
 cli/ui/ink-app/components/RemoteCallout.tsx
-cli/ui/ink-app/components/RemoteEnvironmentDialog.tsx
-cli/ui/ink-app/components/SandboxViolationExpandedView.tsx
 cli/ui/ink-app/components/ScrollKeybindingHandler.tsx
-cli/ui/ink-app/components/SearchBox.tsx
-cli/ui/ink-app/components/SessionBackgroundHint.tsx
 cli/ui/ink-app/components/SessionPreview.tsx
 cli/ui/ink-app/components/ShowInIDEPrompt.tsx
-cli/ui/ink-app/components/SkillImprovementSurvey.tsx
 cli/ui/ink-app/components/Spinner.tsx
 cli/ui/ink-app/components/Spinner/TeammateSpinnerLine.tsx
 cli/ui/ink-app/components/Stats.tsx
 cli/ui/ink-app/components/StatusLine.tsx
-cli/ui/ink-app/components/StatusNotices.tsx
-cli/ui/ink-app/components/StructuredDiff.tsx
-cli/ui/ink-app/components/StructuredDiff/Fallback.tsx
 cli/ui/ink-app/components/StructuredDiffList.tsx
 cli/ui/ink-app/components/TagTabs.tsx
-cli/ui/ink-app/components/TeammateViewHeader.tsx
-cli/ui/ink-app/components/TeleportError.tsx
 cli/ui/ink-app/components/TeleportStash.tsx
 cli/ui/ink-app/components/ThemePicker.tsx
-cli/ui/ink-app/components/ThinkingToggle.tsx
-cli/ui/ink-app/components/TokenWarning.tsx
-cli/ui/ink-app/components/ToolUseLoader.tsx
-cli/ui/ink-app/components/ValidationErrorsList.tsx
 cli/ui/ink-app/components/WelcomeBox.tsx
 cli/ui/ink-app/components/WorkflowMultiselectDialog.tsx
 cli/ui/ink-app/components/WorktreeExitDialog.tsx
@@ -214,7 +189,6 @@ cli/ui/ink-app/components/agents/new-agent-creation/wizard-steps/GenerateStep.ts
 cli/ui/ink-app/components/agents/types.ts
 cli/ui/ink-app/components/agents/validateAgent.ts
 cli/ui/ink-app/components/design-system/color.ts
-cli/ui/ink-app/components/grove/Grove.tsx
 cli/ui/ink-app/components/index.ts
 cli/ui/ink-app/components/mcp/MCPAgentServerMenu.tsx
 cli/ui/ink-app/components/mcp/MCPRemoteServerMenu.tsx
