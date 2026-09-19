@@ -3,11 +3,11 @@
   "generatedFrom": "e201ceea63ff6b9ed41bc23711e5994917a9309b",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1652,
+    "totalNocheck": 1651,
     "excludedCompilerArtifacts": 360,
     "excludedVendored": 93,
-    "totalQueueFiles": 1178,
-    "totalQueueLoc": 425793,
+    "totalQueueFiles": 1177,
+    "totalQueueLoc": 423899,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -230,12 +230,13 @@
     },
     {
       "id": "b0014",
-      "files": [
-        "src/cli/ui/ink-app/utils/shell/readOnlyCommandValidation.ts"
-      ],
-      "loc": 1894,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1894,
+      "escalated": []
     },
     {
       "id": "b0015",
