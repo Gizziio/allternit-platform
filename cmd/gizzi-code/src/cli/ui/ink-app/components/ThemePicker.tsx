@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — SyntaxTheme partial fields + arity mismatch (TS2554/TS2339), latent, not a conversion regression.
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings';
@@ -60,7 +58,7 @@ export function ThemePicker({
   } = usePreviewTheme();
   const syntaxHighlightingDisabled = useAppState(_temp) ?? false;
   const setAppState = useSetAppState();
-  useRegisterKeybindingContext("ThemePicker");
+  useRegisterKeybindingContext("ThemePicker", true);
   const syntaxToggleShortcut = useShortcutDisplay("theme:toggleSyntaxHighlighting", "ThemePicker", "ctrl+t");
   const t8 = () => {
       if (colorModuleUnavailableReason === null) {
@@ -116,11 +114,11 @@ export function ThemePicker({
 
   const t14 = <Box flexDirection="column">{t12}{t13}</Box>;
 
-  const t15 = setting => {
+  const t15 = (setting: string) => {
       setPreviewTheme(setting as ThemeSetting);
     };
 
-  const t16 = setting_0 => {
+  const t16 = (setting_0: string) => {
       savePreview();
       onThemeSelect(setting_0 as ThemeSetting);
     };

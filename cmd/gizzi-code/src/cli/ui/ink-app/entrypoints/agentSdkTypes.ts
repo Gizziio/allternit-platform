@@ -26,6 +26,22 @@ export type { ApiKeySource, ConfigChangeHookInput, CwdChangedHookInput, Elicitat
 // Re-export runtime types (callbacks, interfaces with methods)
 export type { RuntimeConfig, RuntimeEvent, RuntimeState } from "./sdk/runtimeTypes.js";
 
+// Aggregated per-model token usage. Structural mirror of ModelUsageSchema in
+// ./sdk/coreSchemas.js (zod), which does not export an inferred type.
+// contextWindow/maxOutputTokens are optional here because persisted
+// StoredCostState (bootstrap/state.js) and cost-tracker.ts predate those
+// fields and may not carry them.
+export type ModelUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+  webSearchRequests: number;
+  costUSD: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+};
+
 // Re-export settings types (generated from settings JSON schema)
 export type { Settings } from './sdk/settingsTypes.generated.js'
 // Re-export tool types (all marked @internal until SDK API stabilizes)

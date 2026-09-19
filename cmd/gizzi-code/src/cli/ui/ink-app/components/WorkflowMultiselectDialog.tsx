@@ -1,7 +1,4 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — WORKFLOWS string-vs-Workflow id drift (TS2322), latent, not a conversion regression.
 import React, { useCallback, useState } from 'react';
-import type { Workflow } from '../commands/install-github-app/types';
 import type { ExitState } from '../hooks/useExitOnCtrlCDWithKeybindings';
 import { Box, Link, Text } from '../ink';
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint';
@@ -9,13 +6,16 @@ import { SelectMulti } from './CustomSelect/SelectMulti';
 import { Byline } from './design-system/Byline';
 import { Dialog } from './design-system/Dialog';
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint';
+// Workflow ids selectable at install time (matches the caller's
+// `selectedWorkflows: ['claude', 'claude-review']` state).
+type WorkflowId = 'claude' | 'claude-review';
 type WorkflowOption = {
-  value: Workflow;
+  value: WorkflowId;
   label: string;
 };
 type Props = {
-  onSubmit: (selectedWorkflows: Workflow[]) => void;
-  defaultSelections: Workflow[];
+  onSubmit: (selectedWorkflows: WorkflowId[]) => void;
+  defaultSelections: WorkflowId[];
 };
 const WORKFLOWS: WorkflowOption[] = [{
   value: 'claude' as const,
@@ -40,7 +40,7 @@ export function WorkflowMultiselectDialog({
     defaultSelections
 }: Props) {
   const [showError, setShowError] = useState(false);
-  const t1 = selectedValues => {
+  const t1 = (selectedValues: WorkflowId[]) => {
       if (selectedValues.length === 0) {
         setShowError(true);
         return;
@@ -72,7 +72,7 @@ export function WorkflowMultiselectDialog({
 
   return t8;
 }
-function _temp(workflow) {
+function _temp(workflow: WorkflowOption) {
   return {
     label: workflow.label,
     value: workflow.value
