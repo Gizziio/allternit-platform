@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { logForDebugging } from './debug.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from './envUtils.js'
 import { getAPIProvider, isFirstPartyAllternitBaseUrl } from './model/providers.js'

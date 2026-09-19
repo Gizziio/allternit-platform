@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { WriteFileOptions } from 'fs'
 import {

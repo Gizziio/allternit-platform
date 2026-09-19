@@ -1,18 +1,11 @@
-// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { z } from 'zod/v4'
 import { lazySchema } from '../utils/lazySchema.js'
-import {
-  type HookEvent,
-  HOOK_EVENTS,
-  type HookInput,
-  type PermissionUpdate,
-} from './../entrypoints/agentSdkTypes.ts'
-import type {
-  HookJSONOutput,
-  AsyncHookJSONOutput,
-  SyncHookJSONOutput,
-} from './../entrypoints/agentSdkTypes.ts'
+import { type HookEvent, HOOK_EVENTS } from './../entrypoints/agentSdkTypes.ts'
+// HookInput only exists in the canonical SDK tree (the ink-app
+// entrypoints/sdk fork has no hookTypes module).
+import type { HookInput } from '../../../../entrypoints/sdk/hookTypes.js'
+import type { PermissionUpdate } from './permissions.ts'
 import type { Message } from './message.ts'
 import type { PermissionResult } from './../utils/permissions/PermissionResult.ts'
 import { permissionBehaviorSchema } from './../utils/permissions/PermissionRule.ts'
@@ -179,6 +172,14 @@ export const hookJSONOutputSchema = lazySchema(() => {
 // Infer the TypeScript type from the schema
 type SchemaHookJSONOutput = z.infer<ReturnType<typeof hookJSONOutputSchema>>
 
+// The hook JSON output types are derived from the zod schema above — it is
+// the runtime authority for hook responses. agentSdkTypes.ts does not export
+// these names (and the canonical SDK HookJSONOutput shape requires fields the
+// schema never produces, so it cannot be used here).
+export type HookJSONOutput = SchemaHookJSONOutput
+export type SyncHookJSONOutput = Exclude<HookJSONOutput, { async: true }>
+export type AsyncHookJSONOutput = Extract<HookJSONOutput, { async: true }>
+
 // Type guard function to check if response is sync
 export function isSyncHookJSONOutput(
   json: HookJSONOutput,
@@ -194,7 +195,14 @@ export function isAsyncHookJSONOutput(
 }
 
 // Compile-time assertion that SDK and Zod types match
-import type { IsEqual } from 'type-fest'
+// Local mirror of type-fest's IsEqual — the hoisted type-fest@2.19.0 that
+// resolves here predates the IsEqual export (added in v4), and adding a
+// dependency is not an option.
+type IsEqual<T, U> = (<G>() => G extends T ? 1 : 2) extends <G>() => G extends U
+  ? 1
+  : 2
+  ? true
+  : false
 type Assert<T extends true> = T
 type _assertSDKTypesMatch = Assert<
   IsEqual<SchemaHookJSONOutput, HookJSONOutput>

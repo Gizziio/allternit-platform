@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Hook event system for broadcasting hook execution events.
  *

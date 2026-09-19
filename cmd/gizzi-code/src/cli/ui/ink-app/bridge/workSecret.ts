@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import { jsonParse, jsonStringify } from '../utils/slowOperations'
 import type { WorkSecret } from './types'

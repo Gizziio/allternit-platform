@@ -1,7 +1,17 @@
-// @ts-nocheck
-import { type Options as ExecaOptions, execaSync } from 'execa'
+import { execaSync } from 'execa'
 import { getCwd } from '../utils/cwd.js'
 import { slowLogging } from './slowOperations.js'
+
+// Local mirror of execa's StdioOption — the 'execa' module resolves to the
+// ambient shim in src/types/missing-modules.d.ts (src/types/*.d.ts is
+// off-limits for edits), which declares no option types.
+type ExecaStdio =
+  | 'pipe'
+  | 'overlapped'
+  | 'inherit'
+  | 'ignore'
+  | 'ipc'
+  | ReadonlyArray<'pipe' | 'overlapped' | 'inherit' | 'ignore' | 'ipc'>
 
 const MS_IN_SECOND = 1000
 const SECONDS_IN_MINUTE = 60
@@ -10,7 +20,7 @@ type ExecSyncOptions = {
   abortSignal?: AbortSignal
   timeout?: number
   input?: string
-  stdio?: ExecaOptions['stdio']
+  stdio?: ExecaStdio
 }
 
 /**
