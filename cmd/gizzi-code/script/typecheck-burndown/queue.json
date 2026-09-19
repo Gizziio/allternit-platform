@@ -223,8 +223,6 @@
         "src/cli/ui/ink-app/jobs/classifier.ts",
         "src/cli/ui/ink-app/services/compact/compactWarningHook.ts",
         "src/cli/ui/ink-app/utils/classifierApprovalsHook.ts",
-        "src/cli/ui/ink-app/utils/postCommitAttribution.ts",
-        "src/cli/ui/ink-app/utils/attributionHooks.ts",
         "src/cli/ui/ink-app/memdir/memoryShapeTelemetry.ts",
         "src/cli/ui/ink-app/services/skillSearch/localSearch.ts",
         "src/cli/ui/ink-app/utils/combinedAbortSignal.ts",
@@ -263,7 +261,7 @@
         "src/shared/utils/errors.ts",
         "src/cli/ui/ink-app/services/api/errorUtils.ts"
       ],
-      "loc": 6544,
+      "loc": 6504,
       "twins": [],
       "state": "NEW"
     },
