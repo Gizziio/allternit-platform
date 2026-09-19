@@ -62,6 +62,21 @@ ROLE_OPERATIONS: Dict[str, Tuple[str, ...]] = {
 
 DEFAULT_MAX_ELEMENTS = 250
 
+# Reserved shadow-head operation slots (System One graft from cua's jev-use
+# recipe, trycua/cua PR #3916 — stack-agnostic contract). Appended AFTER the
+# whitelist operations in the operation question's option list. They are not
+# whitelist methods, carry no target menus, and are never executed — the head
+# proposes them as shadow.decision answers only.
+RESERVED_SLOT_OPERATIONS: Tuple[str, ...] = ("reobserve", "abstain")
+
+# One-line explanation of the reserved slots, rendered into [INSTRUCTIONS]
+# (planning loop state text) and the KimiCliHead prompt when the slots are on.
+RESERVED_SLOTS_INSTRUCTION = (
+    "reobserve: the page changed in a way not reflected above; take a fresh "
+    "observation instead of acting. abstain: none of the listed "
+    "operations/targets is the right next action."
+)
+
 # Cap on each delta list rendered into the [SINCE LAST STEP] block; the
 # overflow count is reported as a "+N more" line instead.
 DELTA_DISPLAY_CAP = 30

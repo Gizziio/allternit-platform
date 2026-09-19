@@ -145,6 +145,16 @@ class PlanningLoopConfig:
     # shadow_head_enabled is True, the default mlx-lm direct-logit head is
     # built lazily (requires the optional `shadow-head` extra).
     shadow_head: Optional[Any] = None
+    # Graft A (System One graft, cua jev-use recipe): append the reserved
+    # "reobserve"/"abstain" slots to the shadow operation question's option
+    # list, after the whitelist operations. They carry no target menus and
+    # are never executed. Default off — off is byte-identical to the
+    # pre-graft prompt.
+    shadow_reserved_slots: bool = False
+    # Graft B: render a [LAST ACTION] effect/escalation block (derived from
+    # the real outcome of the previously executed LLM step) into the shadow
+    # state text. Default off.
+    shadow_last_action: bool = False
 
 
 @dataclass
@@ -495,6 +505,7 @@ class PlanningLoop:
                             task=augmented_task,
                             run_id=run_id,
                             step_num=step_num,
+                            prior_step=steps[-1] if steps else None,
                         )
                     except Exception as shadow_err:
                         logger.warning(
@@ -926,6 +937,7 @@ class PlanningLoop:
         task: str,
         run_id: str,
         step_num: int,
+        prior_step: Optional["LoopStep"] = None,
     ) -> None:
         """Ask the shadow decision head for a typed closed-set proposal.
 
@@ -937,8 +949,25 @@ class PlanningLoop:
         answer to the loop log as a ``shadow.decision`` event with head
         latency and confidence. Purely observational: ``step``'s plan/action
         fields and ``plan`` are never touched.
+
+        Optional grafts (both off by default, both eval-flag-gated in
+        ``PlanningLoopConfig``):
+
+        - ``shadow_reserved_slots``: the operation question's option list
+          gains the reserved ``reobserve``/``abstain`` slots after the
+          whitelist operations (System One graft A, cua jev-use recipe).
+          They get no target menus.
+        - ``shadow_last_action``: ``prior_step`` (the previously EXECUTED
+          LLM step, if any) renders as a [LAST ACTION] effect/escalation
+          block between [SINCE LAST STEP] and [OBSERVED ELEMENTS] (graft B).
         """
-        from .element_table import build_element_table, diff_tables, render_delta_block
+        from .element_table import (
+            RESERVED_SLOT_OPERATIONS,
+            RESERVED_SLOTS_INSTRUCTION,
+            build_element_table,
+            diff_tables,
+            render_delta_block,
+        )
         from .decision_head import Question, build_default_head
 
         tree = step.ax_tree_snapshot
@@ -959,6 +988,16 @@ class PlanningLoop:
                 step_num,
             )
             return
+
+        # Graft A: reserved reobserve/abstain slots, after the whitelist
+        # operations. They are proposal-only vocabulary — never whitelist
+        # methods, never executed, no target menus.
+        reserved_slots = bool(self.config.shadow_reserved_slots)
+        if reserved_slots:
+            operation_options = operation_options + [
+                slot for slot in RESERVED_SLOT_OPERATIONS
+                if slot not in operation_options
+            ]
 
         # [SINCE LAST STEP]: delta vs the previous step's table. Step 1 of a
         # run has no baseline; an identical table renders an explicit no-op
@@ -981,6 +1020,10 @@ class PlanningLoop:
 
         questions = [Question(name="operation", options=operation_options)]
         for operation in operation_options:
+            # Reserved slots have no target menus — they mean "act later"
+            # (reobserve) or "don't act" (abstain), not "act on an element".
+            if operation in RESERVED_SLOT_OPERATIONS:
+                continue
             targets = table.target_options(operation)
             if len(targets) >= 2:
                 questions.append(Question(name=f"{operation}_target", options=targets))
@@ -990,6 +1033,30 @@ class PlanningLoop:
         # authoritative.
         questions.append(Question(name="goal_satisfied", options=["true", "false"]))
         questions.append(Question(name="stuck", options=["true", "false"]))
+
+        # Graft B: [LAST ACTION] effect/escalation block from the REAL outcome
+        # of the previously executed LLM step. This is a 2-way mapping of
+        # cua's 3-way effect contract (confirmed / suspected_noop /
+        # unverifiable) — the synthetic harness always knows whether the
+        # action succeeded, so there is no unverifiable case here. Step 1 of
+        # a run renders no block: nothing has executed yet.
+        last_action_block = ""
+        if self.config.shadow_last_action and prior_step is not None:
+            effect = "confirmed" if prior_step.action_succeeded else "suspected_noop"
+            last_lines = [
+                "[LAST ACTION]",
+                "operation: "
+                + (prior_step.action_type or "?")
+                + " target: "
+                + (prior_step.action_target or "(none)"),
+                f"effect: {effect}",
+            ]
+            if not prior_step.action_succeeded:
+                last_lines.append(
+                    "escalation: the previous action had no observed effect — "
+                    "consider reobserve or a different target."
+                )
+            last_action_block = "\n".join(last_lines)
 
         head = self.config.shadow_head or build_default_head()
         # The closed-set options must be visible in the prompt: the head reads
@@ -1001,15 +1068,22 @@ class PlanningLoop:
             f"{q.name}: {', '.join(list(q.options[:64]) + (['…'] if len(q.options) > 64 else []))}"
             for q in questions
         )
+        reserved_instruction = (
+            f"Reserved slots: {RESERVED_SLOTS_INSTRUCTION}\n\n"
+            if reserved_slots else ""
+        )
         state_text = (
             f"[TASK]\n{task}\n\n"
             f"{since_block}\n\n"
-            f"[OBSERVED ELEMENTS]\n{table.to_prompt_text()}\n\n"
+            + (f"{last_action_block}\n\n" if last_action_block else "")
+            + f"[OBSERVED ELEMENTS]\n{table.to_prompt_text()}\n\n"
             f"[OPTIONS]\n{options_text}\n\n"
             "[INSTRUCTIONS]\n"
             "Choose the next browser operation, then the target element index "
             "for each operation you would consider, using only the given "
             "options.\n\n"
+            + reserved_instruction
+            +
             # The readout happens at the final prompt position: the prompt
             # must end where the answer begins, otherwise the per-option
             # first-token logits measure a discourse prior instead of a

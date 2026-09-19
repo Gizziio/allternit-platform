@@ -7,6 +7,7 @@ over three synthetic task observations and writes the eval report:
     python domains/computer-use/core/scripts/shadow_head_eval.py [--steps N]
         [--head {mock,mlx,kimi}] [--questioning {batched,sequential}]
         [--trajectory {off,on}] [--few-shot N]
+        [--reserved-slots {off,on}] [--last-action {off,on}]
         [--out-dir DIR] [--quiet]
 
 The LLM provider replays a recorded transcript and the AX observation is
@@ -28,7 +29,15 @@ per step, smaller menus per pass). ``--trajectory`` (kimi head only) turns
 on live-trajectory retrieval: the head's own prior proposals for the run,
 each with its step's delta summary, are rendered into the prompt as
 [ACTIONS SO FAR THIS RUN] (explicitly labeled as never-executed shadow
-proposals). See core/shadow_eval.py for what the numbers do and do not mean.
+proposals). ``--reserved-slots`` / ``--last-action`` turn on the System One
+grafts (both default off): reserved ``reobserve``/``abstain`` slots appended
+to the operation question's option list (no target menus; reserved-slot
+picks count as disagreements — the recorded LLM policy never abstains), and
+a [LAST ACTION] effect/escalation block derived from the real outcome of
+the previously executed LLM step. Report stems carry a composed graft
+suffix (``-graftA`` / ``-graftB`` / ``-graftAB``) when either is on, so
+post-graft runs never overwrite pre-graft reports. See core/shadow_eval.py
+for what the numbers do and do not mean.
 """
 
 from __future__ import annotations
@@ -208,6 +217,25 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_OUT_DIR,
         help=f"report output directory (default {DEFAULT_OUT_DIR})",
     )
+    parser.add_argument(
+        "--reserved-slots",
+        choices=("off", "on"),
+        default="off",
+        help="graft A: append the reserved reobserve/abstain slots to the "
+             "operation question's option list (after the whitelist "
+             "operations; no target menus). Reserved-slot picks count as "
+             "disagreements — the recorded LLM policy never abstains. "
+             "Default off.",
+    )
+    parser.add_argument(
+        "--last-action",
+        choices=("off", "on"),
+        default="off",
+        help="graft B: render a [LAST ACTION] effect/escalation block from "
+             "the real outcome of the previously executed LLM step "
+             "(effect: confirmed / suspected_noop; escalation hint when it "
+             "failed). Default off.",
+    )
     parser.add_argument("--quiet", action="store_true", help="suppress progress output")
     args = parser.parse_args(argv)
 
@@ -241,6 +269,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"note: --trajectory {args.trajectory} applies to the kimi head only; "
               f"--head {args.head} ignores it.")
 
+    # Composed graft suffix — explicit and ordered (A before B) so every
+    # flag combination gets its own non-overwriting report stem.
+    graft_suffix = ""
+    if args.reserved_slots == "on":
+        graft_suffix += "A"
+    if args.last_action == "on":
+        graft_suffix += "B"
+    if graft_suffix:
+        graft_suffix = f"-graft{graft_suffix}"
+
     from core.shadow_eval import default_tasks, run_eval, write_reports
 
     step_budget = _STEP_BUDGET_MS[args.head]
@@ -254,10 +292,12 @@ def main(argv: list[str] | None = None) -> int:
         head_label=args.head,
         step_budget_ms=step_budget,
         progress=not args.quiet,
+        reserved_slots=args.reserved_slots == "on",
+        last_action=args.last_action == "on",
     )
     report["questioning"] = args.questioning
     report["trajectory"] = args.trajectory
-    json_path, md_path = write_reports(report, args.out_dir, stem=f"shadow-eval-report{stem_suffix}")
+    json_path, md_path = write_reports(report, args.out_dir, stem=f"shadow-eval-report{stem_suffix}{graft_suffix}")
 
     agg = report["aggregate"]
     print(f"\nShadow eval complete — reports written:")
@@ -274,6 +314,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  mean LLM latency:              {agg['mean_llm_latency_ms']} ms")
     if "vocab_miss_count" in agg:
         print(f"  vocab misses:                  {agg['vocab_miss_count']}")
+    if args.reserved_slots == "on":
+        print(f"  reobserve picks:               {agg['reobserve_picks']} / {agg['total_decide_steps']}")
+        print(f"  abstain picks:                 {agg['abstain_picks']} / {agg['total_decide_steps']}")
+        print(f"  reserved-slot pick rate:       {agg['reserved_slot_rate']}")
     print(f"\nNote: {agg['note']}")
     return 0
 
