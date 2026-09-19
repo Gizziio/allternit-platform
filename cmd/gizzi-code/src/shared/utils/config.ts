@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { randomBytes } from 'crypto'
 import { existsSync, unwatchFile, watchFile } from 'fs'
@@ -35,8 +34,12 @@ import { getManagedFilePath } from './settings/managedPath.js'
 import type { ThemeSetting } from './theme.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
+// TEAMMEM is a deliberate DCE feature flag; the runtime module currently
+// exports nothing, so the cast declares the contract this file relies on.
 const teamMemPaths = feature('TEAMMEM')
-  ? (require('../memdir/teamMemPaths.js') as typeof import('../memdir/teamMemPaths.js'))
+  ? (require('../memdir/teamMemPaths.js') as {
+      getTeamMemEntrypoint: () => string
+    })
   : null
 const ccrAutoConnect = feature('CCR_AUTO_CONNECT')
   ? (require('../../runtime/integrations/bridgeEnabled.js') as typeof import('../../runtime/integrations/bridgeEnabled.js'))
@@ -271,7 +274,14 @@ export type GlobalConfig = {
   }
 
   // /buddy companion soul — bones regenerated from userId on read. See src/buddy/.
-  companion?: import('../../runtime/integrations/types.js').StoredCompanion
+  // Inlined shape (not import()) because config.ts is in the SDK build surface
+  // and the SDK bundler can't resolve CLI modules. Keep in sync with
+  // src/cli/ui/ink-app/buddy/types.ts StoredCompanion.
+  companion?: {
+    name: string
+    personality: string
+    hatchedAt: number
+  }
   companionMuted?: boolean
 
   // Feedback survey tracking
