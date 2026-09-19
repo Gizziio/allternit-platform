@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { randomBytes } from 'crypto'
 import type { AppState } from './state/AppState'
 import type { AgentId } from './types/ids'

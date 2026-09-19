@@ -9,7 +9,18 @@
  * package is only loaded the first time a lock function is actually called.
  */
 
-import type { CheckOptions, LockOptions, UnlockOptions } from 'proper-lockfile'
+import type {
+  CheckOptions,
+  LockOptions as ProperLockOptions,
+  UnlockOptions,
+} from 'proper-lockfile'
+
+// The ambient 'proper-lockfile' declaration in src/types/global.d.ts omits
+// lockfilePath, which the real package supports (custom mtime lockfile
+// location). Widen here; the wrapper passes options through unchanged.
+export interface LockOptions extends ProperLockOptions {
+  lockfilePath?: string
+}
 
 type Lockfile = typeof import('proper-lockfile')
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import { Session } from "@/runtime/session"
@@ -163,8 +162,14 @@ export namespace SessionCompaction {
       model,
       abort: input.abort,
     })
-    // Allow plugins to inject context or replace compaction prompt
-    const compacting = await Plugin.trigger(
+    // Allow plugins to inject context or replace compaction prompt.
+    // "experimental.session.compacting" is not declared in the packages/plugin
+    // Hooks interface, so trigger with an explicit local contract.
+    const compacting = await Plugin.trigger<
+      any,
+      { sessionID: string },
+      { context: string[]; prompt: string | undefined }
+    >(
       "experimental.session.compacting",
       { sessionID: input.sessionID },
       { context: [], prompt: undefined },

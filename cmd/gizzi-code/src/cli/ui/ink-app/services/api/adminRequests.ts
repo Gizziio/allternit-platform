@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios from 'axios'
 import { getOauthConfig } from '../../constants/oauth.js'
 import { getOAuthHeaders, prepareApiRequest } from '../../utils/teleport/api.js'

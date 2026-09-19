@@ -1,7 +1,8 @@
-// @ts-nocheck
 import axios from 'axios'
 import { getOauthConfig } from '../constants/oauth.js'
-import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
+// TODO(types): agentSdkTypes.js keeps SDKMessage as a local `unknown` mirror
+// (its own TODO(types) block) and does not export it; mirror it here.
+type SDKMessage = unknown
 import { logForDebugging } from '../utils/debug.js'
 import { getOAuthHeaders, prepareApiRequest } from '../utils/teleport/api.js'
 

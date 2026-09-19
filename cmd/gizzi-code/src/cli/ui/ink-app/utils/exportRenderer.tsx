@@ -1,10 +1,12 @@
-// @ts-nocheck
 import React, { useRef } from 'react';
 import stripAnsi from 'strip-ansi';
 import { Messages } from '../components/Messages';
 import { KeybindingProvider } from '../keybindings/KeybindingContext';
 import { loadKeybindingsSyncWithWarnings } from '../keybindings/loadUserBindings';
-import type { KeybindingContextName } from '../keybindings/types';
+// TODO(types): ../keybindings/types is a dormant stub (types_ts()); mirror
+// the shape needed here until the real keybindings types land (same pattern
+// as resolver.ts / validate.ts in ../keybindings).
+type KeybindingContextName = string;
 import { AppStateProvider } from '../state/AppState';
 import type { Tools } from '../Tool';
 import type { Message } from '../types/message';
