@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { createHash, randomUUID, type UUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'

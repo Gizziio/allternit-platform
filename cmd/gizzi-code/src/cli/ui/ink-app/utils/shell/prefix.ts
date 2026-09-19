@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Shared command prefix extraction using Haiku LLM
  *
@@ -246,12 +245,18 @@ async function getCommandPrefixImpl(
     clearTimeout(preflightCheckTimeoutId)
     const durationMs = Date.now() - startTime
 
+    // NestedMessage.content includes `unknown` in its union, so
+    // response.message.content narrows to unknown here — pin the text-block
+    // shape the extractor below actually handles.
+    const messageContent = response.message.content as
+      | string
+      | Array<{ type: string; text?: string }>
+      | undefined
     const prefix =
-      typeof response.message.content === 'string'
-        ? response.message.content
-        : Array.isArray(response.message.content)
-          ? (response.message.content.find(_ => _.type === 'text')?.text ??
-            'none')
+      typeof messageContent === 'string'
+        ? messageContent
+        : Array.isArray(messageContent)
+          ? (messageContent.find(_ => _.type === 'text')?.text ?? 'none')
           : 'none'
 
     if (startsWithApiErrorPrefix(prefix)) {

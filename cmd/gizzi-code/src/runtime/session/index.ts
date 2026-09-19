@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Slug } from "@allternit/gizzi-util/slug.js"
 import path from "path"
 import { BusEvent } from "@/shared/bus/bus-event"
@@ -30,6 +29,15 @@ import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { Global } from "@/runtime/context/global"
 import type { LanguageModelV2Usage } from "@ai-sdk/provider"
 import { iife } from "@/shared/util/iife"
+
+// src/share/share-next is build-variable: production builds swap the in-tree
+// dead shim (`export const ShareNext = () => {}`) for a real implementation.
+// Pin the contract this module relies on; the in-tree shim does not satisfy
+// it, hence the casts at the two call sites below.
+type ShareNextLike = {
+  create: (id: string) => Promise<{ url: string }>
+  remove: (id: string) => Promise<void>
+}
 
 export namespace Session {
   const log = Log.create({ service: "session" })
@@ -488,9 +496,9 @@ export namespace Session {
     if (cfg.share === "disabled") {
       throw new Error("Sharing is disabled in configuration")
     }
-    // @ts-expect-error - Module may not exist in all builds
+    // The module is build-variable (see ShareNextLike above).
     const { ShareNext } = await import("@/share/share-next")
-    const share = await ShareNext.create(id)
+    const share = await (ShareNext as unknown as ShareNextLike).create(id)
     Database.use((db) => {
       const row = db.update(SessionTable).set({ share_url: share.url }).where(eq(SessionTable.id, id)).returning().get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
@@ -502,9 +510,9 @@ export namespace Session {
 
   export const unshare = fn(Identifier.schema("session"), async (id) => {
     // Use ShareNext to remove the share (same as share function uses ShareNext to create)
-    // @ts-expect-error - Module may not exist in all builds
+    // The module is build-variable (see ShareNextLike above).
     const { ShareNext } = await import("@/share/share-next")
-    await ShareNext.remove(id)
+    await (ShareNext as unknown as ShareNextLike).remove(id)
     Database.use((db) => {
       const row = db.update(SessionTable).set({ share_url: null }).where(eq(SessionTable.id, id)).returning().get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
@@ -989,9 +997,7 @@ export namespace Session {
       const cacheReadInputTokens = safe(input.usage.cachedInputTokens ?? 0)
       const cacheWriteInputTokens = safe(
         (input.metadata?.["anthropic"]?.["cacheCreationInputTokens"] ??
-          // @ts-expect-error
           input.metadata?.["bedrock"]?.["usage"]?.["cacheWriteInputTokens"] ??
-          // @ts-expect-error
           input.metadata?.["venice"]?.["usage"]?.["cacheCreationInputTokens"] ??
           0) as number,
       )

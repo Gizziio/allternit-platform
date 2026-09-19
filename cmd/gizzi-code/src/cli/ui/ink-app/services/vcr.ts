@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { createHash, randomUUID, type UUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
@@ -164,11 +163,14 @@ export async function withVCR(
 function addCachedCostToTotalSessionCost(
   message: AssistantMessage | StreamEvent,
 ): void {
+  // @ts-ignore Type comparison issue
   if (message.type === 'stream_event') {
     return
   }
-  const model = message.message.model
-  const usage = message.message.usage
+  // @ts-ignore Properties may not exist
+  const model = (message as any).message.model
+  // @ts-ignore
+  const usage = (message as any).message.usage
   const costUSD = calculateUSDCost(model, usage)
   addToTotalSessionCost(costUSD, usage, model)
 }
@@ -252,7 +254,8 @@ function mapAssistantMessage(
     timestamp: message.timestamp,
     message: {
       ...message.message,
-      content: message.message.content
+      // @ts-ignore Type mismatch
+      content: (message.message.content as any[])
         .map(_ => {
           switch (_.type) {
             case 'text':

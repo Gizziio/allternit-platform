@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   getCwdState,
   getSessionId,
@@ -37,7 +36,10 @@ function severityColor(ratio: number): string {
 }
 
 export const call: LocalCommandCall = async (_args, context) => {
-  const messages = context.getAppState().messages ?? []
+  // AppState has no `messages` — the transcript lives on the context itself
+  // (getAppState().messages has been undefined since messages moved out of the
+  // store, so this command always showed "No context usage data available").
+  const messages = context.messages
   const model = getRuntimeMainLoopModel({
     permissionMode: context.getAppState().toolPermissionContext.mode,
     mainLoopModel: context.options.mainLoopModel,

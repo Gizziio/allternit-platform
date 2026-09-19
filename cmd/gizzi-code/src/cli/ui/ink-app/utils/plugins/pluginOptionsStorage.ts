@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Plugin option storage and substitution.
  *
@@ -54,7 +53,9 @@ export function getPluginStorageId(plugin: LoadedPlugin): string {
  * would otherwise do a settings read + keychain spawn. Cache cleared via
  * `clearPluginOptionsCache` when settings change or plugins reload.
  */
-export const loadPluginOptions = memoize(
+export const loadPluginOptions: ((pluginId: string) => PluginOptionValues) & {
+  cache?: { clear?: () => void }
+} = memoize(
   (pluginId: string): PluginOptionValues => {
     const settings = getSettings_DEPRECATED()
     const nonSensitive =
