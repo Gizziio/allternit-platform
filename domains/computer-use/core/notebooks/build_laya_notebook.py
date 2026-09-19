@@ -1,24 +1,28 @@
-"""Build notebooks/laya_finetune_kaggle.ipynb (executable v1 run).
+"""Build notebooks/laya_finetune_kaggle.ipynb (executable v3-cpu run).
 
 Cell bodies mirror the official Laya Kaggle notebook
 (github.com/NandhaKishorM/laya @ research,
 notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb — verified 2026-09-19
 via the raw repo files: same build_training_item preprocessing, same
 torchrun DDP train script with proper_reward RLCD + GRPO baseline + soft-CE
-guidance, same LBFGS per-qtype temperature calibration). v1 deviations from
+guidance, same LBFGS per-qtype temperature calibration). Deviations from
 that upstream recipe, each deliberate:
 
-1. **Single GPU.** The kernel runs on one Kaggle T4 (kernel-metadata
-   enable_gpu), so torchrun launches with --nproc_per_node=1. The DDP script
-   is unchanged — world_size=1 is a degenerate-but-valid DDP run. Chosen over
-   2xT4 because the Kaggle API kernel metadata has no dual-GPU toggle and a
-   single-GPU v1 removes the DDP-fragility variable; wall-clock is still
-   minutes at this data volume.
+1. **CPU run (v3-cpu).** The Kaggle GPU path is quota-blocked on the
+   account (probe-verified 2026-09-19: kernels pushed with enable_gpu:true
+   silently come up CPU-only). v3-cpu therefore pushes with enable_gpu
+   FALSE (explicit CPU run, no downgrade ambiguity) and the train script
+   auto-detects: CUDA -> the unchanged upstream DDP path; CPU -> single
+   process, fp32 (no AMP/GradScaler), threads pinned to the worker's core
+   count. Epochs 2 instead of 4 and micro-batch 8 — a CPU-budget choice,
+   stated in the cell comment; everything else (proper_reward RLCD + GRPO
+   baseline + soft-CE, gradient checkpointing, LBFGS calibration,
+   temperature_by_options pop, val eval + ECE, result.json) is unchanged.
 2. **temperature_by_options removed at save.** The base checkpoint ships a
    per-option-bucket temperature map that laya's system_one consults BEFORE
    the scalar temperature list (verified in laya/agent.py research branch),
    so the upstream script's fitted cfg["temperature"] would be silently
-   ignored. v1 pops the map so the fitted calibration actually applies.
+   ignored. v3 pops the map so the fitted calibration actually applies.
 3. **Val split + ECE + result.json.** Input is the Kaggle dataset
    allternit/jev-shadow-train-v1 (train.jsonl 1764 cases, val.jsonl 252 —
    seeds 42,7,1,2,3,4,5 / 6 of the TRAIN-split synthetic templates). After
@@ -50,10 +54,20 @@ def code(source):
     })
 
 
-md("""# Fine-Tuning Laya on Allternit JEV Shadow-Head Traces (Kaggle T4 v1, executed run)
+md("""# Fine-Tuning Laya on Allternit JEV Shadow-Head Traces (Kaggle CPU v3-cpu)
 
-**v1 — executed via the Kaggle API** (private kernel `allternit/jev-laya-finetune-v1`,
-GPU T4 x1, internet on; input dataset `allternit/jev-shadow-train-v1`, private).
+**v3-cpu — executed via the Kaggle API** (private kernel
+`allternit/jev-laya-finetune-v3-cpu`, **CPU worker, GPU explicitly off**,
+internet on; input dataset `allternit/jev-shadow-train-v1`, private).
+
+The Kaggle **GPU path is quota-blocked on this account** (probe-verified
+2026-09-19: kernels pushed with `enable_gpu: true` silently came up on
+CPU-only workers). v3-cpu embraces it: the kernel metadata sets
+`enable_gpu: false`, so there is no downgrade ambiguity, and the training
+script auto-detects the device — on CPU it runs single-process fp32 with
+threads pinned to the worker's cores. **CPU budget choices (stated, not
+silent): epochs 2 instead of the upstream 4, micro-batch 8**; the optimizer
+schedule, RLCD objective, calibration, eval, and outputs are unchanged.
 
 Fine-tunes **Laya** (`convaiinnovations/laya`, ModernBERT RLCD System 1
 decision model, Apache-2.0) on labeled shadow-head traces from the Allternit
@@ -66,15 +80,15 @@ via `model=/path/to/checkpoint` (`laya.Agent` accepts local directories).
 Identical to `notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb` on
 the `research` branch of `NandhaKishorM/laya` (raw files inspected, not
 trusted from a summary): same `build_training_item` preprocessing
-(`max_len=1024`, `head_max_len=256`), same torchrun DDP train script
-(pure-policy-gradient RLCD with `proper_reward`, GRPO-style group baseline,
-soft cross-entropy guidance, gradient checkpointing, AMP), same LBFGS
-per-qtype temperature calibration. **v1 deviations:** single T4
-(`--nproc_per_node=1` — the API kernel metadata has no dual-GPU toggle and
-world_size=1 is a valid degenerate DDP run); the base checkpoint's
-`temperature_by_options` map is dropped at save time because `system_one`
-consults it before the scalar `temperature` list and would silently override
-the fitted calibration; val-split eval + ECE + `result.json` added.
+(`max_len=1024`, `head_max_len=256`), same train loop (pure-policy-gradient
+RLCD with `proper_reward`, GRPO-style group baseline, soft cross-entropy
+guidance, gradient checkpointing), same LBFGS per-qtype temperature
+calibration. **v3-cpu deviations:** CPU auto-detect path (fp32, no AMP, no
+DDP wrapper, threads = core count), epochs 2 + micro-batch 8 for the CPU
+wall-clock budget; the base checkpoint's `temperature_by_options` map is
+dropped at save time because `system_one` consults it before the scalar
+`temperature` list and would silently override the fitted calibration;
+val-split eval + ECE + `result.json` added.
 
 ### Input dataset (allternit/jev-shadow-train-v1, private)
 * `train.jsonl` — 1,764 cases: mock-head TRAIN-split synthetic suites, seeds
@@ -85,33 +99,27 @@ the fitted calibration; val-split eval + ECE + `result.json` added.
 
 ### Output
 * `/kaggle/working/laya-finetuned` — the loadable checkpoint
-  (`model.safetensors` fp16 + `encoder/` + `tokenizer/` +
-  `rl_agent_config.json` with fitted temperatures + `calibration.json`).
+  (`model.safetensors` + `encoder/` + `tokenizer/` + `rl_agent_config.json`
+  with fitted temperatures + `calibration.json`). fp32 weights on the CPU
+  path (the save-half step is skipped when no CUDA).
 * `/kaggle/working/result.json` — `{val_accuracy, val_ece, cases_train,
   cases_val, notes}`.
 """)
 
-md("""## 1. Environment & GPU Check
+md("""## 1. Environment Check (CPU run v3-cpu)
 
-v1 runs single-GPU (kernel metadata `enable_gpu: true` → one T4). The DDP
-script is launched with `--nproc_per_node=1` — a valid world_size=1 run.""")
-code("""!nvidia-smi
-import os, torch
+No GPU assert: this kernel is pushed with `enable_gpu: false` on purpose
+(account GPU quota blocked — see the header). The train script auto-detects
+CPU and pins threads to the worker's core count.""")
+code("""import os, torch, multiprocessing
 
-n_gpu = torch.cuda.device_count()
-print(f"CUDA Available: {torch.cuda.is_available()} | Visible GPUs: {n_gpu}")
-for i in range(n_gpu):
-    p = torch.cuda.get_device_properties(i)
-    print(f"  GPU {i}: {p.name} ({p.total_memory / 1e9:.1f} GB)")
-
-assert n_gpu >= 1, (
-    f"Expected at least 1 GPU, but detected {n_gpu}!\\n"
-    "Please switch your Kaggle Accelerator: on the right sidebar, go to "
-    "Notebook options -> Accelerator -> select GPU T4."
-)
-
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-print("GPU verified and ready for training!")
+n_cpu = os.cpu_count() or multiprocessing.cpu_count()
+print(f"CPUs: {n_cpu}")
+print(f"CUDA available: {torch.cuda.is_available()} "
+      "(expected False — v3-cpu is an explicit CPU run: account GPU quota "
+      "is blocked, see docs/JEV_LAYA_NOTES.md)")
+torch.set_num_threads(max(1, n_cpu))
+print(f"PyTorch threads pinned to {torch.get_num_threads()}")
 """)
 
 md("""## 2. Install Dependencies""")
@@ -220,18 +228,27 @@ torch.save(items, "/kaggle/working/train_items.pt")
 print("Saved preprocessed items to /kaggle/working/train_items.pt")
 """)
 
-md("""## 5. DDP Training Script (`train_ddp.py`)
+md("""## 5. Training Script (`train_ddp.py` — upstream recipe, CPU auto-detect)
 
-Identical to the upstream Laya typed-decisions training: pure-policy-gradient
-RLCD with proper scoring rules (`proper_reward`), GRPO-style group baseline,
-soft cross-entropy guidance, gradient checkpointing, and post-training
-per-qtype temperature calibration. Saves a loadable checkpoint directory
-(`model.safetensors` fp16 + `encoder/` + `tokenizer/` + updated
-`rl_agent_config.json` with the fitted temperatures and `max_len=1024`).
-v1 only: pops `temperature_by_options` at save (it would otherwise override
-the fitted scalar temperatures in `system_one`) and writes `calibration.json`.""")
+Identical objective to the upstream Laya typed-decisions training:
+pure-policy-gradient RLCD with proper scoring rules (`proper_reward`),
+GRPO-style group baseline, soft cross-entropy guidance, gradient
+checkpointing, and post-training per-qtype LBFGS temperature calibration.
+Device auto-detect: CUDA keeps the upstream DDP wrapper + fp16 AMP; CPU runs
+single-process **fp32** (no AMP/GradScaler) with threads already pinned in
+cell 1. Saves a loadable checkpoint directory (`model.safetensors` +
+`encoder/` + `tokenizer/` + updated `rl_agent_config.json` with the fitted
+temperatures and `max_len=1024`).
+
+**CPU budget choices (deliberate):** `EPOCHS = 2` (upstream uses 4 on
+2×T4; halving epochs is the honest way to keep the free CPU session inside
+its cap — the LR schedule and per-epoch machinery are unchanged) and
+`MICRO_BATCH = 8` (drop to 4 only if the worker OOMs). v3-only: pops
+`temperature_by_options` at save (it would otherwise override the fitted
+scalar temperatures in `system_one`) and writes `calibration.json`.""")
 code(r'''%%writefile /kaggle/working/train_ddp.py
 import os, sys, time, json, random, math
+from contextlib import nullcontext
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -285,12 +302,23 @@ def fit_one_temp(sel):
     return float(torch.clamp(log_t.exp(), 0.1, 10.0).item())
 
 def main():
-    dist.init_process_group("nccl")
-    rank = dist.get_rank()
-    world_size = dist.get_world_size()
-    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-    torch.cuda.set_device(local_rank)
-    device = torch.device("cuda", local_rank)
+    # Device auto-detect: CUDA -> upstream DDP path; CPU -> single-process
+    # fp32 (v3-cpu: account GPU quota blocked, explicit CPU run).
+    USE_CUDA = torch.cuda.is_available()
+    if USE_CUDA:
+        dist.init_process_group("nccl")
+        rank = dist.get_rank()
+        world_size = dist.get_world_size()
+        local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+        torch.cuda.set_device(local_rank)
+        device = torch.device("cuda", local_rank)
+        amp_ctx = torch.autocast("cuda", dtype=torch.float16)
+    else:
+        rank, world_size, local_rank = 0, 1, 0
+        device = torch.device("cpu")
+        torch.set_num_threads(max(1, os.cpu_count() or 1))
+        amp_ctx = nullcontext()
+        print(f"CPU path: single process, fp32, {torch.get_num_threads()} threads")
 
     model_dir = sys.argv[1]
     output_dir = sys.argv[2]
@@ -313,14 +341,16 @@ def main():
     model.to(device)
     model.train()
 
-    ddp_model = DDP(model, device_ids=[local_rank], find_unused_parameters=True)
+    ddp_model = DDP(model, device_ids=[local_rank], find_unused_parameters=True) if USE_CUDA else model
 
     all_items = torch.load("/kaggle/working/train_items.pt", weights_only=False)
     my_items = all_items[rank::world_size]
 
-    EPOCHS = 4
-    MICRO_BATCH = 8      # 8 sequences per forward pass per GPU
-    GRAD_ACCUM = 4       # Effective batch = 8 * 4 * world_size (32 on 1 GPU, 64 on 2)
+    # CPU budget: 2 epochs (upstream 4 on 2xT4) and micro-batch 8; the
+    # objective, LR schedule, and calibration are unchanged from upstream.
+    EPOCHS = 2
+    MICRO_BATCH = 8      # 8 sequences per forward pass; drop to 4 only on OOM
+    GRAD_ACCUM = 4       # Effective batch = 8 * 4 * world_size
     GROUP_SIZE = 4       # GRPO baseline samples
     LR_ENCODER = 2.5e-5
     LR_HEAD = 1.0e-4
@@ -337,10 +367,11 @@ def main():
 
     total_updates = (len(my_items) // (MICRO_BATCH * GRAD_ACCUM)) * EPOCHS
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, total_updates), eta_min=1e-6)
-    scaler = torch.amp.GradScaler("cuda", enabled=True)
+    scaler = torch.amp.GradScaler("cuda", enabled=USE_CUDA)
 
     if rank == 0:
-        print(f"Starting DDP training (world_size={world_size}): {len(all_items)} total items | {len(my_items)} per rank | {EPOCHS} epochs")
+        print(f"Starting training (device={device.type}, world_size={world_size}): "
+              f"{len(all_items)} total items | {len(my_items)} per rank | {EPOCHS} epochs")
     t0 = time.time()
 
     for epoch in range(EPOCHS):
@@ -360,7 +391,7 @@ def main():
 
             batch = collate_train_batch(chunk, tok.pad_token_id)
 
-            with torch.autocast("cuda", dtype=torch.float16):
+            with amp_ctx:
                 logits, act = ddp_model(
                     batch["input_ids"].to(device),
                     batch["attention_mask"].to(device),
@@ -403,20 +434,24 @@ def main():
             epoch_loss += loss.item() * GRAD_ACCUM
             n_batches += 1
 
-            if rank == 0 and (n_batches % 50) == 0:
+            if rank == 0 and (n_batches % 20) == 0:
                 cur_lr = scheduler.get_last_lr()[0]
-                print(f"  Epoch {epoch+1}/{EPOCHS} | Step {n_batches} | Loss: {loss.item()*GRAD_ACCUM:.4f} | Reward: {r.mean().item():.3f} | LR: {cur_lr:.2e}")
+                el = time.time() - t0
+                print(f"  Epoch {epoch+1}/{EPOCHS} | Step {n_batches} | Loss: {loss.item()*GRAD_ACCUM:.4f} | "
+                      f"Reward: {r.mean().item():.3f} | LR: {cur_lr:.2e} | {el:.0f}s elapsed", flush=True)
 
         if rank == 0:
-            print(f"=== Epoch {epoch+1}/{EPOCHS} Completed in {time.time()-t0:.1f}s | Avg Loss: {epoch_loss/max(1, n_batches):.4f} ===")
+            print(f"=== Epoch {epoch+1}/{EPOCHS} Completed in {time.time()-t0:.1f}s | Avg Loss: {epoch_loss/max(1, n_batches):.4f} ===", flush=True)
 
-    dist.barrier()
+    if USE_CUDA:
+        dist.barrier()
 
     # Post-training per-qtype temperature calibration (rank 0).
     if rank == 0:
         print("\nFitting post-training calibration temperatures...")
         del optimizer, scaler, scheduler
-        torch.cuda.empty_cache()
+        if USE_CUDA:
+            torch.cuda.empty_cache()
         model.eval()
         calib_items = all_items[::15][:400]
         calib_preds = []
@@ -424,7 +459,7 @@ def main():
             for c_idx in range(0, len(calib_items), 16):
                 c_chunk = calib_items[c_idx:c_idx + 16]
                 cb = collate_train_batch(c_chunk, tok.pad_token_id)
-                with torch.autocast("cuda", dtype=torch.float16):
+                with amp_ctx:
                     l_sub, _ = model(
                         cb["input_ids"].to(device),
                         cb["attention_mask"].to(device),
@@ -447,14 +482,18 @@ def main():
         except Exception as e:
             print("Temperature fitting fallback:", e)
         os.makedirs(output_dir, exist_ok=True)
-        sd = {k: v.half().contiguous().cpu() for k, v in model.state_dict().items()}
+        if USE_CUDA:
+            sd = {k: v.half().contiguous().cpu() for k, v in model.state_dict().items()}
+        else:
+            # CPU path is already fp32; keep fp32 weights (Agent casts per device).
+            sd = {k: v.contiguous().cpu() for k, v in model.state_dict().items()}
         save_file(sd, os.path.join(output_dir, "model.safetensors"))
         model.encoder.config.save_pretrained(os.path.join(output_dir, "encoder"))
         tok.save_pretrained(os.path.join(output_dir, "tokenizer"))
 
         cfg["fine_tuned"] = True
         cfg["model_name"] = "laya-jev-shadow-head"
-        # v1: drop the per-option-bucket map — system_one consults it BEFORE
+        # v3: drop the per-option-bucket map — system_one consults it BEFORE
         # the scalar list, which would silently discard the fitted calibration.
         cfg.pop("temperature_by_options", None)
         cfg["temperature"] = fitted_temps
@@ -470,20 +509,21 @@ def main():
             }, f, indent=2)
         print(f"Model successfully saved to {output_dir}!")
 
-    dist.destroy_process_group()
+    if USE_CUDA:
+        dist.destroy_process_group()
 
 if __name__ == "__main__":
     main()
 ''')
 
-md("""## 6. Launch Fine-Tuning with `torchrun` (single T4, world_size=1)
+md("""## 6. Launch Training (CPU: plain python; CUDA would use torchrun)
 
-The upstream recipe is DDP; on one GPU `--nproc_per_node=1` is a valid
-degenerate DDP run and the script is byte-identical to upstream's.""")
+The script auto-detects the device, so a plain `python` launch is correct on
+the CPU worker — no DDP/process-group setup needed.""")
 code("""OUTPUT_DIR = "/kaggle/working/laya-finetuned"
 MODEL_DIR = model_dir
 
-cmd = f"torchrun --standalone --nproc_per_node=1 /kaggle/working/train_ddp.py {MODEL_DIR} {OUTPUT_DIR}"
+cmd = f"python /kaggle/working/train_ddp.py {MODEL_DIR} {OUTPUT_DIR}"
 print("Executing training:", cmd)
 !{cmd}
 """)
@@ -502,7 +542,7 @@ import numpy as np
 import laya
 from laya.common import ece_score
 
-agent_ft = laya.Agent(OUTPUT_DIR, device="cuda")
+agent_ft = laya.Agent(OUTPUT_DIR, device="cpu")  # v3-cpu: CPU worker
 
 correct = {"operation": 0, "target": 0}
 count = {"operation": 0, "target": 0}
@@ -555,12 +595,15 @@ result = {
     "cases_train": cases_train,
     "cases_val": cases_val,
     "notes": (
-        "v1 Kaggle run (allternit/jev-laya-finetune-v1): single T4, "
-        "torchrun --nproc_per_node=1 (upstream 2xT4 DDP recipe, world_size=1). "
-        "Data: TRAIN-split synthetic shadow-head cases, seeds 42,7,1,2,3,4,5 "
-        "train / seed 6 val; gold = realigned recorded-LLM transcript labels. "
-        "temperature_by_options dropped at save so the fitted scalar "
-        "temperatures apply (system_one prefers the bucket map otherwise)."
+        "v3-cpu Kaggle run (allternit/jev-laya-finetune-v3-cpu): explicit CPU worker "
+        "(account GPU quota blocked, probe-verified). Upstream 2xT4 DDP recipe with "
+        "device auto-detect: single-process fp32, threads = core count, EPOCHS=2 and "
+        "micro-batch 8 as the stated CPU-budget choices; RLCD + GRPO baseline + soft-CE "
+        "+ LBFGS calibration unchanged. Data: TRAIN-split synthetic shadow-head cases, "
+        "seeds 42,7,1,2,3,4,5 train / seed 6 val; gold = realigned recorded-LLM "
+        "transcript labels. temperature_by_options dropped at save so the fitted "
+        "scalar temperatures apply (system_one prefers the bucket map otherwise). "
+        "Weights saved fp32 (CPU path)."
     ),
 }
 with open("/kaggle/working/result.json", "w") as f:
