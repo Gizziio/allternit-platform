@@ -2,14 +2,15 @@
  * Cowork Runtime Execution Engine
  *
  * Executes runs in local, remote, or cloud modes.
- * Integrates with the VM session system for VM-backed execution.
+ * VM-mode runs are not executed in-process: the vfkit manager was removed in
+ * the 2026-09 dead-code cleanup (Lima replaced it). The cron CoworkExecutor
+ * remains the supported VM-backed execution path.
  */
 
 import { Log } from "@/shared/util/log"
 import { RunService } from "@/runtime/cowork/cowork.service"
 import type { Run, RunConfig, RunStatus } from "@/runtime/cowork/cowork.service"
 import { spawn } from "child_process"
-import { VmSession } from "@/runtime/context/vm/vm-session"
 
 const log = Log.create({ service: "cowork-runtime" })
 
@@ -18,25 +19,6 @@ const log = Log.create({ service: "cowork-runtime" })
 type RuntimeRunConfig = Omit<RunConfig, "runtime"> & {
   timeout_ms?: number
   runtime?: string
-}
-
-// Lazy-loaded vfkit manager (only created when VM mode is used)
-// NOTE: the vfkit manager was removed in the 2026-09 dead-code cleanup
-// (Lima replaced it); this dynamic import has no matching export at runtime.
-let vfkitManager: any = null
-
-async function getVfkitManager() {
-  if (!vfkitManager) {
-    const { createVFKitManager } = (await import("@/runtime/vm")) as any
-    vfkitManager = createVFKitManager()
-    if (!(await vfkitManager.checkImages())) {
-      throw new Error(
-        `VM images not found. Run: bun run vm:download`,
-      )
-    }
-    await vfkitManager.start()
-  }
-  return vfkitManager
 }
 
 export namespace CoworkRuntime {
@@ -60,8 +42,9 @@ export namespace CoworkRuntime {
           await executeLocal(run, config)
           break
         case "vm":
-          await executeVM(run, config)
-          break
+          throw new Error(
+            'mode "vm" is not supported by the in-process cowork runtime (the vfkit manager was removed in the 2026-09 cleanup); use the cron CoworkExecutor for VM-backed runs',
+          )
         case "remote":
           await executeRemote(run, config)
           break
@@ -129,43 +112,6 @@ export namespace CoworkRuntime {
       content: `[cloud] Would deploy to ${config.provider || "hetzner"} / ${config.region || "nbg1"}\n`,
     })
     await sleep(500)
-    finishRun(run.id, "completed")
-  }
-
-  async function executeVM(run: Run, config: RuntimeRunConfig): Promise<void> {
-    const vm = await getVfkitManager()
-    const steps = ["prepare", "execute", "finalize"]
-    RunService.updateStatus(run.id, "running", { total_steps: steps.length })
-
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i]
-      RunService.updateStatus(run.id, "running", { step_cursor: step, completed_steps: i })
-      RunService.appendEvent(run.id, "step_started", { step_name: step, step_index: i })
-
-      if (step === "execute" && config.command) {
-        const result = await vm.execute(config.command, [], {
-          workingDir: config.working_dir ?? "/workspace",
-          env: config.env,
-          timeout: config.timeout_ms ?? 300000,
-        })
-
-        if (result.stdout) {
-          RunService.appendEvent(run.id, "stdout", { content: result.stdout, step })
-        }
-        if (result.stderr) {
-          RunService.appendEvent(run.id, "stderr", { content: result.stderr, step })
-        }
-        if (result.exit_code !== 0) {
-          throw new Error(`VM command exited with code ${result.exit_code}: ${result.stderr}`)
-        }
-      } else {
-        await sleep(200)
-      }
-
-      RunService.updateStatus(run.id, "running", { completed_steps: i + 1 })
-      RunService.appendEvent(run.id, "step_completed", { step_name: step, step_index: i })
-    }
-
     finishRun(run.id, "completed")
   }
 
