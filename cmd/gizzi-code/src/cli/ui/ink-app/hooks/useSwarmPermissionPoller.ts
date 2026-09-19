@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Swarm Permission Poller Hook
  *

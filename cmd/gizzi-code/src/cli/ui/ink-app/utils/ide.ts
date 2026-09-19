@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import axios from 'axios'
 import { execa } from 'execa'
@@ -1313,7 +1312,7 @@ export async function initializeIdeIntegration(
               }
               return ideInstallationStatus
             })
-            .then(status => {
+            .then(async status => {
               onInstallationComplete(status)
 
               if (status?.installed) {
@@ -1324,7 +1323,7 @@ export async function initializeIdeIntegration(
               if (
                 !isAlreadyInstalled &&
                 status?.installed === true &&
-                !ideOnboardingDialog().hasIdeOnboardingDialogBeenShown()
+                !(await ideOnboardingDialog()).hasIdeOnboardingDialogBeenShown()
               ) {
                 onShowIdeOnboarding()
               }
@@ -1335,7 +1334,7 @@ export async function initializeIdeIntegration(
         void isIDEExtensionInstalled(ideType).then(async installed => {
           if (
             installed &&
-            !ideOnboardingDialog().hasIdeOnboardingDialogBeenShown()
+            !(await ideOnboardingDialog()).hasIdeOnboardingDialogBeenShown()
           ) {
             onShowIdeOnboarding()
           }
