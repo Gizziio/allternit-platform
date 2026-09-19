@@ -608,9 +608,8 @@ export namespace SessionProcessor {
                 case "text-end":
                   if (currentText) {
                     currentText.text = currentText.text.trimEnd()
-                    // "experimental.text.complete" is not declared in the plugin SDK Hooks type yet
                     const textOutput = await Plugin.trigger(
-                      "experimental.text.complete" as any,
+                      "experimental.text.complete",
                       {
                         sessionID: input.sessionID,
                         messageID: input.assistantMessage.id,

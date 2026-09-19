@@ -36,6 +36,7 @@ test/permission/arity.test.ts
 test/permission/next.test.ts
 test/plugin/claude-plugin.test.ts
 test/plugin/codex.test.ts
+test/plugin/hooks-contract.test.ts
 test/project/project.test.ts
 test/protocol/transport-conformance.test.ts
 test/provider/models-catalog.test.ts

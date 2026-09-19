@@ -331,9 +331,7 @@ export namespace Pty {
 
     const cwd = input.cwd || Instance.directory
     const shellEnv = await Plugin.trigger(
-      // "shell.env" is not declared in the plugin SDK Hooks type yet
-      // (runtime/tools/builtins/bash.ts calls it the same way)
-      "shell.env" as any,
+      "shell.env",
       { cwd },
       { env: {} },
     )
