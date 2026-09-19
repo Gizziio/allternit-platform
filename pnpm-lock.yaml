@@ -328,6 +328,9 @@ importers:
       ai:
         specifier: 5.0.124
         version: 5.0.124(zod@4.3.6)
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       asciichart:
         specifier: ^1.5.25
         version: 1.5.25
@@ -346,6 +349,9 @@ importers:
       bun-pty:
         specifier: 0.4.8
         version: 0.4.8
+      cacache:
+        specifier: 15.3.0
+        version: 15.3.0
       chalk:
         specifier: 4.1.2
         version: 4.1.2
@@ -364,6 +370,9 @@ importers:
       code-excerpt:
         specifier: 4.0.0
         version: 4.0.0
+      cors:
+        specifier: 2.8.6
+        version: 2.8.6
       decimal.js:
         specifier: 10.5.0
         version: 10.5.0
@@ -376,6 +385,12 @@ importers:
       emoji-regex:
         specifier: 10.6.0
         version: 10.6.0
+      env-paths:
+        specifier: 3.0.0
+        version: 3.0.0
+      express:
+        specifier: 5.2.1
+        version: 5.2.1
       figures:
         specifier: 3.2.0
         version: 3.2.0
@@ -403,6 +418,9 @@ importers:
       hono-openapi:
         specifier: '*'
         version: 1.3.0(@hono/standard-validator@0.1.5(@standard-schema/spec@1.0.0)(hono@4.11.4))(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.0.0)(@types/json-schema@7.0.15)(arktype@2.1.27)(effect@3.21.0)(quansync@0.2.11)(zod-to-json-schema@3.24.5(zod@4.3.6))(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.0.0)(@types/json-schema@7.0.15)(arktype@2.1.27)(effect@3.21.0)(quansync@0.2.11)(zod-to-json-schema@3.24.5(zod@4.3.6))(zod@4.3.6))(@standard-schema/spec@1.0.0)(arktype@2.1.27)(effect@3.21.0)(openapi-types@12.1.3)(zod@4.3.6))(@types/json-schema@7.0.15)(hono@4.11.4)(openapi-types@12.1.3)
+      https-proxy-agent:
+        specifier: 7.0.6
+        version: 7.0.6
       ignore:
         specifier: 7.0.5
         version: 7.0.5
@@ -418,6 +436,9 @@ importers:
       jsonc-parser:
         specifier: 3.3.1
         version: 3.3.1
+      jsonwebtoken:
+        specifier: 9.0.3
+        version: 9.0.3
       lodash-es:
         specifier: ^4.18.1
         version: 4.18.1
@@ -442,9 +463,24 @@ importers:
       open:
         specifier: 10.1.2
         version: 10.1.2
+      p-map:
+        specifier: 4.0.0
+        version: 4.0.0
       partial-json:
         specifier: 0.1.7
         version: 0.1.7
+      picocolors:
+        specifier: 1.1.1
+        version: 1.1.1
+      picomatch:
+        specifier: 4.0.4
+        version: 4.0.4
+      plist:
+        specifier: 3.1.1
+        version: 3.1.1
+      proper-lockfile:
+        specifier: 4.1.2
+        version: 4.1.2
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -463,9 +499,15 @@ importers:
       remeda:
         specifier: '*'
         version: 2.33.7
+      semver:
+        specifier: 7.8.5
+        version: 7.8.5
       sharp:
         specifier: 0.35.4
         version: 0.35.4(@types/node@20.19.30)
+      shell-quote:
+        specifier: 1.8.3
+        version: 1.8.3
       signal-exit:
         specifier: ^4.1.0
         version: 4.1.0
@@ -475,6 +517,9 @@ importers:
       strip-ansi:
         specifier: 7.1.2
         version: 7.1.2
+      tree-kill:
+        specifier: 1.2.2
+        version: 1.2.2
       tree-sitter-bash:
         specifier: 0.25.0
         version: 0.25.0
@@ -484,9 +529,15 @@ importers:
       ulid:
         specifier: '*'
         version: 3.0.2
+      undici:
+        specifier: 7.28.0
+        version: 7.28.0
       usehooks-ts:
         specifier: ^3.1.1
         version: 3.1.1(react@19.2.4)
+      uuid:
+        specifier: 10.0.0
+        version: 10.0.0
       vscode-jsonrpc:
         specifier: ^8.2.1
         version: 8.2.1
@@ -499,6 +550,9 @@ importers:
       wrap-ansi:
         specifier: 10.0.0
         version: 10.0.0
+      ws:
+        specifier: 8.19.0
+        version: 8.19.0
       xdg-basedir:
         specifier: 5.1.0
         version: 5.1.0
