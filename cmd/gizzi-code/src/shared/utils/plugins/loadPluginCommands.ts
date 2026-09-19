@@ -1,4 +1,3 @@
-// @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
 import { basename, dirname, join } from 'path'
 import { getInlinePlugins, getSessionId } from '@/bootstrap/state.js'
@@ -689,7 +688,7 @@ export const getPluginCommands = memoize(async (): Promise<Command[]> => {
   const allCommands = perPluginCommands.flat()
   logForDebugging(`Total plugin commands loaded: ${allCommands.length}`)
   return allCommands
-})
+}) as (() => Promise<Command[]>) & { cache: Map<unknown, unknown> }
 
 export function clearPluginCommandCache(): void {
   getPluginCommands.cache?.clear?.()
@@ -955,7 +954,7 @@ export const getPluginSkills = memoize(async (): Promise<Command[]> => {
   const allSkills = perPluginSkills.flat()
   logForDebugging(`Total plugin skills loaded: ${allSkills.length}`)
   return allSkills
-})
+}) as (() => Promise<Command[]>) & { cache: Map<unknown, unknown> }
 
 export function clearPluginSkillsCache(): void {
   getPluginSkills.cache?.clear?.()

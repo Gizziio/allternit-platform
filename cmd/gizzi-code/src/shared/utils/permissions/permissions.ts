@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { APIUserAbortError } from '@allternit/gizzi-sdk/providers/allternit'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
@@ -6,7 +5,11 @@ import {
   getToolNameForPermissionCheck,
   mcpInfoFromString,
 } from '@/services/mcp/mcpStringUtils.js'
-import type { Tool, ToolPermissionContext, ToolUseContext } from '@/Tool.js'
+import type { ToolPermissionContext, ToolUseContext } from '@/Tool.js'
+import type {
+  Tool,
+  ToolUseContext as InkAppToolUseContext,
+} from '../../../cli/ui/ink-app/Tool.js'
 import { AGENT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/AgentTool/constants.js'
 import { shouldUseSandbox } from '../../../cli/ui/ink-app/tools/BashTool/shouldUseSandbox.js'
 import { BASH_TOOL_NAME } from '../../../cli/ui/ink-app/tools/BashTool/toolName.js'
@@ -696,7 +699,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         classifierResult = await classifyYoloAction(
           context.messages,
           action,
-          context.options.tools,
+          [...context.options.tools],
           appState.toolPermissionContext,
           context.abortController.signal,
         )
@@ -1120,7 +1123,10 @@ export async function checkRuleBasedPermissions(
   }
   try {
     const parsedInput = tool.inputSchema.parse(input)
-    toolPermissionResult = await tool.checkPermissions(parsedInput, context)
+    toolPermissionResult = await tool.checkPermissions(
+      parsedInput,
+      context as unknown as InkAppToolUseContext,
+    )
   } catch (e) {
     if (e instanceof AbortError || e instanceof APIUserAbortError) {
       throw e
@@ -1216,7 +1222,10 @@ async function hasPermissionsToUseToolInner(
   }
   try {
     const parsedInput = tool.inputSchema.parse(input)
-    toolPermissionResult = await tool.checkPermissions(parsedInput, context)
+    toolPermissionResult = await tool.checkPermissions(
+      parsedInput,
+      context as unknown as InkAppToolUseContext,
+    )
   } catch (e) {
     // Rethrow abort errors so they propagate properly
     if (e instanceof AbortError || e instanceof APIUserAbortError) {

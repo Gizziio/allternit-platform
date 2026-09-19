@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'
 import { getSubscriptionType } from '../../../../shared/utils/auth.js'
 import { hasEmbeddedSearchTools } from '../../../../shared/utils/embeddedTools.js'
@@ -13,7 +12,18 @@ import { AGENT_TOOL_NAME } from './constants.js'
 import { isForkSubagentEnabled } from './forkSubagent.js'
 import type { AgentDefinition } from './loadAgentsDir.js'
 
-function getToolsDescription(agent: AgentDefinition): string {
+// Narrow view of the agent shape this prompt module formats. The runtime
+// AgentDefinition shim only guarantees id/name/description/systemPrompt;
+// the built-in/plugin definitions it receives at runtime optionally carry
+// the richer fields below (mirrors BuiltInAgentDefinition in loadAgentsDir.js).
+type PromptAgentDefinition = AgentDefinition & {
+  agentType?: string
+  whenToUse?: string
+  tools?: string[]
+  disallowedTools?: string[]
+}
+
+function getToolsDescription(agent: PromptAgentDefinition): string {
   const { tools, disallowedTools } = agent
   const hasAllowlist = tools && tools.length > 0
   const hasDenylist = disallowedTools && disallowedTools.length > 0
@@ -41,7 +51,7 @@ function getToolsDescription(agent: AgentDefinition): string {
  * Format one agent line for the agent_listing_delta attachment message:
  * `- type: whenToUse (Tools: ...)`.
  */
-export function formatAgentLine(agent: AgentDefinition): string {
+export function formatAgentLine(agent: PromptAgentDefinition): string {
   const toolsDescription = getToolsDescription(agent)
   return `- ${agent.agentType}: ${agent.whenToUse} (Tools: ${toolsDescription})`
 }
@@ -65,7 +75,7 @@ export function shouldInjectAgentListInMessages(): boolean {
 }
 
 export async function getPrompt(
-  agentDefinitions: AgentDefinition[],
+  agentDefinitions: PromptAgentDefinition[],
   isCoordinator?: boolean,
   allowedAgentTypes?: string[],
 ): Promise<string> {

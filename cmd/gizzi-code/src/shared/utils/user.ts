@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { execa } from 'execa'
 import memoize from 'lodash-es/memoize.js'
 import { getSessionId } from '@/bootstrap/state.js'
@@ -126,7 +125,9 @@ export const getCoreUserData = memoize(
       }),
     }
   },
-)
+) as ((includeAnalyticsMetadata?: boolean) => CoreUserData) & {
+  cache: Map<unknown, unknown>
+}
 
 /**
  * Get user data for GrowthBook (same as core data with analytics metadata).
@@ -192,4 +193,4 @@ export const getGitEmail = memoize(async (): Promise<string | undefined> => {
   return result.exitCode === 0 && result.stdout
     ? result.stdout.trim()
     : undefined
-})
+}) as (() => Promise<string | undefined>) & { cache: Map<unknown, unknown> }

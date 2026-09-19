@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import memoize from 'lodash-es/memoize.js'
 import {
@@ -102,7 +101,7 @@ export function modelSupportsISP(model: string): boolean {
   const canonical = getCanonicalName(model)
   const provider = getAPIProvider()
   // Foundry supports interleaved thinking for all models
-  if (provider === 'foundry') {
+  if ((provider as string) === 'foundry') {
     return true
   }
   if (provider === 'firstParty') {
@@ -127,7 +126,7 @@ function vertexModelSupportsWebSearch(model: string): boolean {
 export function modelSupportsContextManagement(model: string): boolean {
   const canonical = getCanonicalName(model)
   const provider = getAPIProvider()
-  if (provider === 'foundry') {
+  if ((provider as string) === 'foundry') {
     return true
   }
   if (provider === 'firstParty') {
@@ -203,7 +202,7 @@ export function modelSupportsAutoMode(model: string): boolean {
  */
 export function getToolSearchBetaHeader(): string {
   const provider = getAPIProvider()
-  if (provider === 'vertex' || provider === 'bedrock') {
+  if ((provider as string) === 'vertex' || (provider as string) === 'bedrock') {
     return TOOL_SEARCH_BETA_HEADER_3P
   }
   return TOOL_SEARCH_BETA_HEADER_1P
@@ -216,7 +215,7 @@ export function getToolSearchBetaHeader(): string {
  */
 export function shouldIncludeFirstPartyOnlyBetas(): boolean {
   return (
-    (getAPIProvider() === 'firstParty' || getAPIProvider() === 'foundry') &&
+    (getAPIProvider() === 'firstParty' || (getAPIProvider() as string) === 'foundry') &&
     !isEnvTruthy(process.env.GIZZI_DISABLE_EXPERIMENTAL_BETAS)
   )
 }
@@ -345,11 +344,11 @@ export const getAllModelBetas = registerBetasCache(memoize((model: string): stri
   }
 
   // Add web search beta for Vertex Claude 4.0+ models only
-  if (provider === 'vertex' && vertexModelSupportsWebSearch(model)) {
+  if ((provider as string) === 'vertex' && vertexModelSupportsWebSearch(model)) {
     betaHeaders.push(WEB_SEARCH_BETA_HEADER)
   }
   // Foundry only ships models that already support Web Search
-  if (provider === 'foundry') {
+  if ((provider as string) === 'foundry') {
     betaHeaders.push(WEB_SEARCH_BETA_HEADER)
   }
 

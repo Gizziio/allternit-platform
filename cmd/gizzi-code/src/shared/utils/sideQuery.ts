@@ -1,5 +1,10 @@
-// @ts-nocheck
-import type { BetaToolUnion } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
+import type {
+  BetaJSONOutputFormat as SDKBetaJSONOutputFormat,
+  BetaMessageParam,
+  BetaTextBlockParam,
+  BetaToolChoice as SDKBetaToolChoice,
+  BetaToolUnion,
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
 import {
   getLastApiCompletionTimestamp,
   setLastApiCompletionTimestamp,
@@ -183,11 +188,19 @@ export async function sideQuery(opts: SideQueryOptions): Promise<BetaMessage> {
     {
       model: normalizedModel,
       max_tokens,
-      system: systemBlocks,
-      messages,
+      // Boundary cast: callers supply standard (non-beta) block shapes; the
+      // beta endpoint accepts the same wire format.
+      system: systemBlocks as BetaTextBlockParam[],
+      messages: messages as BetaMessageParam[],
       ...(tools && { tools }),
-      ...(tool_choice && { tool_choice }),
-      ...(output_format && { output_config: { format: output_format } }),
+      ...(tool_choice && {
+        tool_choice: tool_choice as unknown as SDKBetaToolChoice,
+      }),
+      ...(output_format && {
+        output_config: {
+          format: output_format as unknown as SDKBetaJSONOutputFormat,
+        },
+      }),
       ...(temperature !== undefined && { temperature }),
       ...(stop_sequences && { stop_sequences }),
       ...(thinkingConfig && { thinking: thinkingConfig }),
