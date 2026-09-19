@@ -6,23 +6,23 @@ MLX backend (direct typed-option scoring, prefix reuse, parallel shared-state
 decisions) — as a head behind our `DecisionHead` protocol, measured on the
 identical 66 held-out decide steps.
 
-**Just did:** `core/semif_head.py` implemented (SemIf `mlx_backend.score_shared`
-— one state prefill + one batched suffix forward for ALL per-step questions;
-entropy confidence same as mlx head); `--head semif` wired into
-`scripts/shadow_head_eval.py` (suffix `-semif`, budget 15s/step); `semif` note
-branch in `core/shadow_eval.py`; `[semif]` extra in pyproject (git install,
-not PyPI); `tests/test_semif_head.py` — 13 passed + 1 correct skip, live
-shared-pass tests green against the pinned Qwen/Qwen3.5-4B weights.
+**Just did:** lane COMPLETE and pushed (2 commits on `session/semif-eval`,
+33c2f95d2 + ccc5174ef). SemIfHead implemented (`core/semif_head.py`, one
+`score_shared` pass per step), `--head semif` wired, `[semif]` extra, tests
+green (128 passed / 2 skipped), mock smoke green. ONE eval pass done:
+**agreement 0.2273** (search 0.318 / form-fill 0.000 / settings 0.364),
+2.34 s/step — vs kimi-deltas 0.4848 same format. Notes:
+`docs/JEV_SEMIF_NOTES.md`; reports: `shadow-eval-report-semif.{json,md}`.
+Upstream clone removed, no leftover processes.
 
 **Key API facts (README vs code):** package is `semif-phase1`, not `semif`;
 mlx backend supports ONLY `qwen3_5` checkpoints (MiniCPM5-2B is web-demo
 ladder only — README overstates); options hard-capped at 16 (letters A–P);
 remote models require pinned 40-hex revisions; returns per-option probs, NO
-confidence (uncalibrated by its own docs).
+confidence (uncalibrated by its own docs). mlx-lm moved to SemIf's git pin
+(0.32.0) in the worktree venv.
 
-**Next:** full targeted pytest suite, mock smoke regression, ONE eval pass
-`--head semif --steps 22 --quiet` in background, notes doc
-`docs/JEV_SEMIF_NOTES.md`, commit + push.
+**Next:** owner review; lane intentionally NOT merged (no PR per directive).
 
 **Open questions:** none — scope frozen.
 
