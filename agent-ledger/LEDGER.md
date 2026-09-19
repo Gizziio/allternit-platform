@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-18 20:37 — kimi — @allternit/runtime packaging fix (dist layout vs package entry points)
+
+- **Session ID / Branch:** `ao/runtime-packaging-fix`
+- **Agent:** kimi
+- **Summary:** Merged PR #635 — fixed the packaging bug diagnosed by PR #631: `@allternit/runtime`'s tsc build emitted `dist/services/runtime/adapter/...` while `main` points at `./dist/index.js`, making the package unloadable (3 integration suites orphaned).
+- **Commit:** https://github.com/Gizziio/allternit-platform/pull/635 · `77cf1d9ef` (merge `5f3fda740`)
+- **How it works:** root cause was the tsconfig `paths` map sending `@allternit/governor` to source `.ts` outside the package — those files entered the program, inflating tsc's computed rootDir to the workspace root. Removed `baseUrl`/`paths`; added `"prepare": "npm run build"` (governor precedent) so fresh installs build dist. Build now emits `dist/index.js` + `adapters`/`hooks`/`wrappers` entries matching `main`/`types`/`exports`.
+- **Verification:** runtime unit tests 11/11; tests/ vitest 24/24; ESM resolve+import yields 35 exports from `dist/index.js`; `pnpm install --frozen-lockfile` exit 0 with lockfile untouched; release-preflight 52/0; gizzi-code `ensure-sdk-dist.sh` + `tsc --noEmit` exit 0.
+- **Outstanding work:** the 3 runtime integration suites stay excluded — verified they need more than loadability (`allternit-e2e` asserts a never-implemented `executeTool` API; the compatibility suites also need unbuilt `@allternit/lawlayer`). Repo-wide audit of other workspace packages with unbuilt dist not done.
+- **Summary file:** [2026-09-18-2037-ao-runtime-packaging-fix-kimi-code-runtime-packaging.md](./summaries/2026-09-18-2037-ao-runtime-packaging-fix-kimi-code-runtime-packaging.md)
+
 ### 2026-09-18 17:15 — kimi — Gizzi-code dormant stub owner-decision doc
 
 - **Session ID / Branch:** `ao/dormant-stub-decisions`
