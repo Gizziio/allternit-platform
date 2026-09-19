@@ -2,6 +2,8 @@
  * MCP component types
  */
 
+import type { ConfigScope, MCPServerConnection } from '../../services/mcp/types'
+
 export interface McpServer {
   name: string
   config: unknown
@@ -13,34 +15,43 @@ export interface McpTool {
   inputSchema: unknown
 }
 
-// Server info types
-export interface StdioServerInfo {
-  command: string
-  args: string[]
-  env?: Record<string, string>
-  type?: 'stdio'
-  config?: Record<string, unknown>
-  scope?: 'user' | 'local' | 'project' | 'dynamic' | 'enterprise' | 'claudeai' | 'managed'
-  client?: {
-    type: string
-    [key: string]: unknown
-  }
-  transport?: string
+// Server info types — shape recovered from the decompiled consumers and the
+// runtime producer (services/mcp/utils.ts extractAgentMcpServers / the
+// prepareServers mapping in MCPSettings); the previous shim predated the
+// codemod and did not match either side.
+interface ServerInfoBase {
+  name: string
+  client: MCPServerConnection
+  scope: ConfigScope
 }
 
-export interface HTTPServerInfo {
-  url: string
-  type?: 'http'
+export interface StdioServerInfo extends ServerInfoBase {
+  transport: 'stdio'
   isAuthenticated?: boolean
-  client?: { type: string; [key: string]: unknown }
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  config?: unknown
 }
 
-export interface SSEServerInfo {
-  type?: 'sse'
+export interface HTTPServerInfo extends ServerInfoBase {
+  transport: 'http'
+  isAuthenticated?: boolean
+  url?: string
+  config?: unknown
 }
 
-export interface ClaudeAIServerInfo {
-  type: 'claude-ai'
+export interface SSEServerInfo extends ServerInfoBase {
+  transport: 'sse'
+  isAuthenticated?: boolean
+  url?: string
+  config?: unknown
+}
+
+export interface ClaudeAIServerInfo extends ServerInfoBase {
+  transport: 'claudeai-proxy'
+  isAuthenticated?: boolean
+  config?: unknown
 }
 
 export type ServerInfo = StdioServerInfo | HTTPServerInfo | SSEServerInfo | ClaudeAIServerInfo
@@ -59,14 +70,25 @@ export interface McpServerStatus {
   config?: unknown
 }
 
-// Agent MCP server info
+// Agent MCP server info — fields recovered from the runtime producer
+// (services/mcp/utils.ts extractAgentMcpServers).
 export interface AgentMcpServerInfo {
+  name: string
+  sourceAgents: string[]
+  transport: string
+  command?: string
+  url?: string
+  needsAuth: boolean
+  isAuthenticated?: boolean
   description?: string
   tools?: unknown[]
 }
 
-// MCP View state
-export interface MCPViewState {
-  selectedServer: string | null
-  viewMode: 'list' | 'detail' | 'settings'
-}
+// MCP view state — discriminated union recovered from the decompiled
+// consumers (MCPSettings switch and its setViewState call sites).
+export type MCPViewState =
+  | { type: 'list'; defaultTab?: string }
+  | { type: 'server-menu'; server: ServerInfo }
+  | { type: 'agent-server-menu'; agentServer: AgentMcpServerInfo }
+  | { type: 'server-tools'; server: ServerInfo }
+  | { type: 'server-tool-detail'; server: ServerInfo; toolIndex: number }

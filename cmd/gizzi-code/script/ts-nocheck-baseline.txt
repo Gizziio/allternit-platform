@@ -1,7 +1,7 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=1035
+count=1001
 --- files ---
 cli/commands/chrome/chrome.tsx
 cli/commands/connect.ts
@@ -117,17 +117,9 @@ cli/ui/ink-app/commands/permissions/permissions.tsx
 cli/ui/ink-app/commands/plan/plan.tsx
 cli/ui/ink-app/commands/plugin/AddMarketplace.tsx
 cli/ui/ink-app/commands/plugin/BrowseMarketplace.tsx
-cli/ui/ink-app/commands/plugin/DiscoverPlugins.tsx
-cli/ui/ink-app/commands/plugin/ManageMarketplaces.tsx
 cli/ui/ink-app/commands/plugin/ManagePlugins.tsx
-cli/ui/ink-app/commands/plugin/PluginOptionsDialog.tsx
 cli/ui/ink-app/commands/plugin/PluginOptionsFlow.tsx
-cli/ui/ink-app/commands/plugin/PluginSettings.tsx
-cli/ui/ink-app/commands/plugin/PluginTrustWarning.tsx
-cli/ui/ink-app/commands/plugin/UnifiedInstalledCell.tsx
-cli/ui/ink-app/commands/plugin/ValidatePlugin.tsx
 cli/ui/ink-app/commands/plugin/index.tsx
-cli/ui/ink-app/commands/plugin/pluginDetailsHelpers.tsx
 cli/ui/ink-app/commands/privacy-settings/index.ts
 cli/ui/ink-app/commands/privacy-settings/privacy-settings.tsx
 cli/ui/ink-app/commands/queue/index.ts
@@ -288,24 +280,10 @@ cli/ui/ink-app/components/agents/types.ts
 cli/ui/ink-app/components/agents/validateAgent.ts
 cli/ui/ink-app/components/design-system/color.ts
 cli/ui/ink-app/components/grove/Grove.tsx
-cli/ui/ink-app/components/hooks/HooksConfigMenu.tsx
-cli/ui/ink-app/components/hooks/PromptDialog.tsx
-cli/ui/ink-app/components/hooks/SelectEventMode.tsx
-cli/ui/ink-app/components/hooks/SelectHookMode.tsx
-cli/ui/ink-app/components/hooks/SelectMatcherMode.tsx
-cli/ui/ink-app/components/hooks/ViewHookMode.tsx
 cli/ui/ink-app/components/index.ts
-cli/ui/ink-app/components/mcp/CapabilitiesSection.tsx
-cli/ui/ink-app/components/mcp/ElicitationDialog.tsx
 cli/ui/ink-app/components/mcp/MCPAgentServerMenu.tsx
-cli/ui/ink-app/components/mcp/MCPListPanel.tsx
-cli/ui/ink-app/components/mcp/MCPReconnect.tsx
 cli/ui/ink-app/components/mcp/MCPRemoteServerMenu.tsx
-cli/ui/ink-app/components/mcp/MCPSettings.tsx
 cli/ui/ink-app/components/mcp/MCPStdioServerMenu.tsx
-cli/ui/ink-app/components/mcp/MCPToolDetailView.tsx
-cli/ui/ink-app/components/mcp/MCPToolListView.tsx
-cli/ui/ink-app/components/mcp/McpParsingWarnings.tsx
 cli/ui/ink-app/components/mcp/index.ts
 cli/ui/ink-app/components/mcp/utils/reconnectHelpers.tsx
 cli/ui/ink-app/components/memory/MemoryFileSelector.tsx
@@ -453,24 +431,13 @@ cli/ui/ink-app/ink/Ansi.tsx
 cli/ui/ink-app/ink/bidi.ts
 cli/ui/ink-app/ink/clearTerminal.ts
 cli/ui/ink-app/ink/colorize.ts
-cli/ui/ink-app/ink/components/AlternateScreen.tsx
 cli/ui/ink-app/ink/components/App.tsx
 cli/ui/ink-app/ink/components/AppContext.ts
-cli/ui/ink-app/ink/components/Box.tsx
-cli/ui/ink-app/ink/components/Button.tsx
-cli/ui/ink-app/ink/components/ClockContext.tsx
 cli/ui/ink-app/ink/components/CursorDeclarationContext.ts
 cli/ui/ink-app/ink/components/ErrorOverview.tsx
-cli/ui/ink-app/ink/components/Link.tsx
-cli/ui/ink-app/ink/components/Newline.tsx
-cli/ui/ink-app/ink/components/NoSelect.tsx
-cli/ui/ink-app/ink/components/RawAnsi.tsx
 cli/ui/ink-app/ink/components/ScrollBox.tsx
-cli/ui/ink-app/ink/components/Spacer.tsx
 cli/ui/ink-app/ink/components/StdinContext.ts
-cli/ui/ink-app/ink/components/TerminalFocusContext.tsx
 cli/ui/ink-app/ink/components/TerminalSizeContext.tsx
-cli/ui/ink-app/ink/components/Text.tsx
 cli/ui/ink-app/ink/constants.ts
 cli/ui/ink-app/ink/cursor.ts
 cli/ui/ink-app/ink/devtools.ts
@@ -960,7 +927,6 @@ shared/utils/file.ts
 shared/utils/filePersistence/outputsScanner.ts
 shared/utils/forkedAgent.ts
 shared/utils/frontmatterParser.ts
-shared/utils/gizzimd.ts
 shared/utils/hooks.ts
 shared/utils/hooks/AsyncHookRegistry.ts
 shared/utils/hooks/execAgentHook.ts
