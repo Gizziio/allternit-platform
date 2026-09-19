@@ -147,17 +147,25 @@ Typed-decisions-style rows: `id`, `workflow`, `split`, `state`, `questions`,
 `gold` (state/questions/gold are JSON strings; gold is one-hot over the
 transcript labels, realigned so each state pairs with the action the
 reference policy took FROM that state). `train.jsonl` = seeds 42,7,1,2,3,4,5;
-`val.jsonl` = seed 6 (never trained on).""")
-code("""import json, os
+`val.jsonl` = seed 6 (never trained on).
+
+v4-cpu lesson: Kaggle mounts attached datasets under
+`/kaggle/input/datasets/<owner>/<slug>/` now, so the path is discovered by
+globbing rather than hardcoded.""")
+code("""import glob, json, os
 import laya, transformers, torch
 print("Laya version        :", laya.__version__)
 print("Transformers version:", transformers.__version__)
 print("PyTorch version     :", torch.__version__)
 
-DATASET_DIR = "/kaggle/input/jev-shadow-train-v1"
+hits = [p for p in glob.glob("/kaggle/input/**/train.jsonl", recursive=True)
+        if "jev-shadow-train-v1" in p]
+assert hits, "train.jsonl not found under /kaggle/input — is the dataset attached?"
+DATASET_DIR = os.path.dirname(hits[0])
 TRAIN_PATH = os.path.join(DATASET_DIR, "train.jsonl")
 VAL_PATH = os.path.join(DATASET_DIR, "val.jsonl")
 OUT_DIR = "/kaggle/working/laya-finetuned"
+print("Dataset mounted at:", DATASET_DIR)
 
 def load_jsonl(path):
     rows = []
