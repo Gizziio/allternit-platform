@@ -1,5 +1,3 @@
-// Server.setRequestHandler's runtime signature; same friction and same fix
-// as entrypoints/mcp.ts (see that file's identical @ts-ignore comments).
 /**
  * Lens Context MCP Server
  *
@@ -28,7 +26,6 @@ import {
   ListToolsRequestSchema,
   type CallToolResult,
   type ListToolsResult,
-  type ServerCapabilities,
 } from "@modelcontextprotocol/sdk/types.js"
 import { Log } from "@/shared/util/log"
 import { VaultManager } from "./index"
@@ -54,12 +51,9 @@ export async function startLensMcpServer(vaultPath?: string): Promise<void> {
   const vault = new VaultManager(vaultPath ? { vaultPath } : undefined)
   await vault.initialize()
 
-  // TODO(types): the ambient '@modelcontextprotocol/sdk/server/index.js' decl
-  // types the 2nd ctor param as ServerCapabilities; the real SDK takes
-  // ServerOptions ({ capabilities }). Cast until the ambient decl is fixed.
   const server = new Server(
     { name: "allternit-lens", version: "0.1.0" },
-    { capabilities: { tools: {} } } as unknown as ServerCapabilities,
+    { capabilities: { tools: {} } },
   )
 
   server.setRequestHandler(ListToolsRequestSchema, async (): Promise<ListToolsResult> => ({

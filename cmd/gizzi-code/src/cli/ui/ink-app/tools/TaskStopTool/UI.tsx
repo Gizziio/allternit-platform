@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import { MessageResponse } from '../../components/MessageResponse';
 import { stringWidth } from '../../ink/stringWidth';
@@ -26,7 +25,9 @@ export function renderToolResultMessage(output: Output, _progressMessagesForMess
 }: {
   verbose: boolean;
 }): React.ReactNode {
-  if ("external" === 'ant') {
+  // TODO(types): constant comparison — the guard is dead at runtime; keep the
+  // runtime behavior (never null) while letting tsc accept it.
+  if (("external" as string) === 'ant') {
     return null;
   }
   const rawCommand = output.command ?? '';

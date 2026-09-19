@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Runtime-device pairing client for the Allternit platform (device-code flow).
 // Implements the wire contract of allternit-cloud-api src/routes/runtime_pairing.rs:
 // this machine generates an Ed25519 identity, POSTs a pairing request, the user

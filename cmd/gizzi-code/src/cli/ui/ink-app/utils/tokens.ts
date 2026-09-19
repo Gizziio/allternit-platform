@@ -1,9 +1,18 @@
-// @ts-nocheck
-import type { BetaUsage as Usage } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { ContentBlock } from '../types/message.js'
 import { roughTokenCountEstimationForMessages } from '../services/roughTokenEstimation.js'
 import type { AssistantMessage, Message } from '../types/message.js'
 import { SYNTHETIC_MESSAGES, SYNTHETIC_MODEL } from './syntheticMessages.js'
 import { jsonStringify } from './slowOperations.js'
+
+// TODO(types): usage on Message records is the local two-field MessageUsage
+// (not exported from ../types/message.js), not the SDK BetaUsage; mirror the
+// fields this file reads.
+type Usage = {
+  input_tokens: number
+  output_tokens: number
+  cache_creation_input_tokens?: number
+  cache_read_input_tokens?: number
+}
 
 export function getTokenUsage(message: Message): Usage | undefined {
   if (
@@ -188,7 +197,9 @@ export function getAssistantMessageContentLength(
   message: AssistantMessage,
 ): number {
   let contentLength = 0
-  for (const block of message.message.content) {
+  // TODO(types): assistant record content is typed loosely upstream; at
+  // runtime it is always an array of content blocks here.
+  for (const block of message.message.content as ContentBlock[]) {
     if (block.type === 'text') {
       contentLength += block.text.length
     } else if (block.type === 'thinking') {
@@ -263,3 +274,4 @@ export function tokenCountWithEstimation(messages: readonly Message[]): number {
   }
   return roughTokenCountEstimationForMessages(messages)
 }
+

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { z } from 'zod/v4'
 import { mcpInfoFromString } from '../../services/mcp/mcpStringUtils.js'
 import { lazySchema } from '../lazySchema.js'

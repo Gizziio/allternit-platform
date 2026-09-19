@@ -1,12 +1,22 @@
-// @ts-nocheck
 import type { Key } from '../ink.js'
 import { getKeyName, matchesBinding } from './match.js'
 import { chordToString } from './parser.js'
-import type {
-  KeybindingContextName,
-  ParsedBinding,
-  ParsedKeystroke,
-} from './types.js'
+// TODO(types): ./types.js is a dormant stub (types_ts()); mirror the shapes
+// resolver.ts needs until the real keybindings types land.
+type KeybindingContextName = string
+type ParsedKeystroke = {
+  key: string
+  ctrl: boolean
+  alt: boolean
+  shift: boolean
+  meta: boolean
+  super: boolean
+}
+type ParsedBinding = {
+  context: KeybindingContextName
+  chord: ParsedKeystroke[]
+  action: string | null
+}
 
 export type ResolveResult =
   | { type: 'match'; action: string }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ClientOptions } from '@allternit/gizzi-sdk/providers/allternit'
 import { createHash } from 'crypto'
 import { promises as fs } from 'fs'

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { dynamicTool, type Tool, jsonSchema, type JSONSchema7 } from "ai"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
@@ -7,8 +6,8 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
 import {
   CallToolResultSchema,
-  type Tool as MCPToolDef,
   ToolListChangedNotificationSchema,
+  type Tool as MCPToolDef,
 } from "@modelcontextprotocol/sdk/types.js"
 import { Config } from "@/runtime/context/config/config"
 import { Log } from "@/shared/util/log"
@@ -67,6 +66,15 @@ export namespace MCP {
   )
 
   type MCPClient = Client
+
+  // TODO(types): Config's mcp record admits a bare `{ enabled: boolean }`
+  // entry that withBundledMcpServers' parameter type doesn't list; runtime
+  // passes entries through unchanged.
+  function withBundled(config: Config.Info["mcp"]): ReturnType<typeof withBundledMcpServers> {
+    return withBundledMcpServers(
+      config as Parameters<typeof withBundledMcpServers>[0],
+    )
+  }
 
   export const Status = z
     .discriminatedUnion("status", [
@@ -162,7 +170,7 @@ export namespace MCP {
   const state = Instance.state(
     async () => {
       const cfg = await Config.get()
-      const config = withBundledMcpServers(cfg.mcp ?? {})
+      const config = withBundled(cfg.mcp)
       const clients: Record<string, MCPClient> = {}
       const status: Record<string, Status> = {}
 
@@ -523,7 +531,7 @@ export namespace MCP {
   export async function status() {
     const s = await state()
     const cfg = await Config.get()
-    const config = withBundledMcpServers(cfg.mcp ?? {})
+    const config = withBundled(cfg.mcp)
     const result: Record<string, Status> = {}
 
     // Include all configured MCPs from config, not just connected ones
@@ -541,7 +549,7 @@ export namespace MCP {
 
   export async function connect(name: string) {
     const cfg = await Config.get()
-    const config = withBundledMcpServers(cfg.mcp ?? {})
+    const config = withBundled(cfg.mcp)
     const mcp = config[name]
     if (!mcp) {
       log.error("MCP config not found", { name })
@@ -604,7 +612,7 @@ export namespace MCP {
     const collisions: Array<{ qualifiedName: string; existing: ToolDescriptor; incoming: Omit<ToolDescriptor, "qualifiedName" | "collision"> }> = []
     const s = await state()
     const cfg = await Config.get()
-    const config = withBundledMcpServers(cfg.mcp ?? {})
+    const config = withBundled(cfg.mcp)
     const clientsSnapshot = await clients()
     const defaultTimeout = cfg.experimental?.mcp_timeout
 
@@ -932,7 +940,6 @@ export namespace MCP {
     }
 
     try {
-      // Call finishAuth on the transport
       await transport.finishAuth(authorizationCode)
 
       // Clear the code verifier after successful auth
@@ -940,7 +947,7 @@ export namespace MCP {
 
       // Now try to reconnect
       const cfg = await Config.get()
-      const mcpConfig = withBundledMcpServers(cfg.mcp ?? {})[mcpName]
+      const mcpConfig = withBundled(cfg.mcp)[mcpName]
 
       if (!mcpConfig) {
         throw new Error(`MCP server not found: ${mcpName}`)

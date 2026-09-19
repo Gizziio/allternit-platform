@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Command } from '../../commands'
 import { hasAllternitApiKeyAuth } from '../../utils/auth'
 import { isEnvTruthy } from '../../utils/envUtils'

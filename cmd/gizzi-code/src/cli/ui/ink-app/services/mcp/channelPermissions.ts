@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Permission prompts over channels (Telegram, iMessage, Discord).
  *

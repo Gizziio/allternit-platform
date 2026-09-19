@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createMovedToPluginCommand } from '../createMovedToPluginCommand'
 
 export default createMovedToPluginCommand({
