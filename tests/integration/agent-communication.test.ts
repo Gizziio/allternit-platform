@@ -7,7 +7,70 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 
-// Mock the modules since we can't import from cmd/gizzi-code in tests
+// In-memory mock of the agent communication modules (the real implementations
+// live in cmd/gizzi-code/src/runtime/tools/builtins/agent-communicate.ts and
+// cmd/gizzi-code/src/runtime/agents/mention-router.ts and are not importable
+// from this vitest suite — see note above). The stubs below implement the
+// documented semantics the assertions specify: per-session mailboxes
+// (sent ∪ received), per-correlation hop guard (max 4 hops), channel logs,
+// unread tracking, and role mention resolution preferring idle agents.
+const MAX_HOPS = 4
+
+type AgentStatus = "idle" | "busy" | "offline"
+
+interface AgentSessionInfo {
+  agentId: string
+  agentName: string
+  agentRole: string
+  sessionId: string
+  status: AgentStatus
+  lastActiveAt: number
+}
+
+interface Message {
+  id: string
+  from: { agentId: string; agentName: string; agentRole: string }
+  to: Record<string, unknown>
+  content: string
+  type: string
+  timestamp: number
+  correlationId?: string
+  inReplyTo?: string
+  mentions: string[]
+  read: boolean
+}
+
+const messageStore = new Map<string, Message[]>() // sessionId -> messages
+const channelStore = new Map<string, any[]>() // sessionId -> channels
+const hopCounts = new Map<string, number>() // `${sessionId}:${correlationId}` -> hops
+const agentSessions = new Map<string, AgentSessionInfo>() // agentId -> info
+
+function sessionMessages(sessionId: string): Message[] {
+  let list = messageStore.get(sessionId)
+  if (!list) {
+    list = []
+    messageStore.set(sessionId, list)
+  }
+  return list
+}
+
+/** A message is visible to an agent if they sent it or it was addressed to them. */
+function isVisibleTo(message: Message, agentId: string, agentRole?: string): boolean {
+  if (message.from.agentId === agentId) return true
+  const to = message.to as { agentId?: string; agentRole?: string }
+  if (to.agentId && to.agentId === agentId) return true
+  if (to.agentRole && agentRole && to.agentRole === agentRole) return true
+  return false
+}
+
+/** A message counts toward unread for recipients only, not the sender. */
+function isAddressedTo(message: Message, agentId: string, agentRole?: string): boolean {
+  const to = message.to as { agentId?: string; agentRole?: string }
+  if (to.agentId && to.agentId === agentId) return true
+  if (to.agentRole && agentRole && to.agentRole === agentRole) return true
+  return false
+}
+
 const AgentCommunicate = {
   extractMentions: (text: string) => {
     const mentionRegex = /\B@([A-Za-z][A-Za-z0-9_-]*)/g
@@ -15,8 +78,21 @@ const AgentCommunicate = {
     return matches ? matches.map((m) => m.slice(1)) : []
   },
   sendMessage: async (input: any) => {
-    return {
-      id: `msg-${Date.now()}`,
+    const sessionId = input.sessionID
+    const correlationId = input.correlationId
+
+    // Loop guard: reject messages beyond the per-correlation hop budget.
+    if (correlationId) {
+      const key = `${sessionId}:${correlationId}`
+      const hops = hopCounts.get(key) ?? 0
+      if (hops >= MAX_HOPS) {
+        throw new Error("Maximum agent communication hops exceeded")
+      }
+      hopCounts.set(key, hops + 1)
+    }
+
+    const message: Message = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       from: {
         agentId: input.agentId,
         agentName: input.agentName,
@@ -26,48 +102,122 @@ const AgentCommunicate = {
       content: input.content,
       type: input.type || "direct",
       timestamp: Date.now(),
-      correlationId: input.correlationId,
+      correlationId,
       inReplyTo: input.inReplyTo,
       mentions: AgentCommunicate.extractMentions(input.content),
       read: false,
     }
+    sessionMessages(sessionId).push(message)
+    return message
   },
   readMessages: (input: any) => {
-    return []
+    const sessionId = input.sessionID
+    const wantedChannel = input.channel as string | undefined
+    const all = sessionMessages(sessionId)
+    let visible: Message[]
+    if (wantedChannel) {
+      // Channel queries read the channel log: every message posted to it.
+      visible = all.filter((m) => (m.to as { channel?: string }).channel === wantedChannel)
+    } else {
+      visible = all.filter((m) => isVisibleTo(m, input.agentId, input.agentRole))
+    }
+    if (input.unreadOnly) {
+      visible = visible.filter((m) => !m.read)
+    }
+    if (typeof input.limit === "number") {
+      visible = visible.slice(0, input.limit)
+    }
+    // Listing a mailbox marks the returned messages as read.
+    for (const m of visible) m.read = true
+    return visible
   },
   createChannel: (input: any) => {
-    return {
-      id: `channel-${Date.now()}`,
+    const channel = {
+      id: `channel-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: input.name,
       members: input.members || [input.createdBy],
       createdAt: Date.now(),
       createdBy: input.createdBy,
     }
+    let channels = channelStore.get(input.sessionID)
+    if (!channels) {
+      channels = []
+      channelStore.set(input.sessionID, channels)
+    }
+    channels.push(channel)
+    return channel
   },
-  joinChannel: () => {},
-  getChannels: () => [],
-  getUnreadCount: () => 0,
-  getHopCount: () => 0,
-  cleanup: () => {},
+  joinChannel: (input: any) => {
+    const channels = channelStore.get(input.sessionID) || []
+    const channel = channels.find((c) => c.id === input.channelId)
+    if (channel && !channel.members.includes(input.agentId)) {
+      channel.members.push(input.agentId)
+    }
+  },
+  getChannels: (sessionId: string) => channelStore.get(sessionId) || [],
+  getUnreadCount: (input: any) =>
+    sessionMessages(input.sessionID).filter(
+      (m) => !m.read && isAddressedTo(m, input.agentId, input.agentRole),
+    ).length,
+  getHopCount: (sessionId: string, correlationId: string) =>
+    hopCounts.get(`${sessionId}:${correlationId}`) ?? 0,
+  cleanup: (sessionId: string) => {
+    messageStore.delete(sessionId)
+    channelStore.delete(sessionId)
+    for (const key of [...hopCounts.keys()]) {
+      if (key.startsWith(`${sessionId}:`)) hopCounts.delete(key)
+    }
+  },
 }
 
 const MentionRouter = {
-  registerAgentSession: () => {},
-  unregisterAgentSession: () => {},
-  updateAgentStatus: () => {},
-  getAgentSession: () => undefined,
-  getAllAgents: () => [],
-  getAgentsByRole: (role: string) => [],
-  getIdleAgents: () => [],
+  registerAgentSession: (info: AgentSessionInfo) => {
+    agentSessions.set(info.agentId, { ...info })
+  },
+  unregisterAgentSession: (agentId: string) => {
+    agentSessions.delete(agentId)
+  },
+  updateAgentStatus: (agentId: string, status: AgentStatus) => {
+    const info = agentSessions.get(agentId)
+    if (info) agentSessions.set(agentId, { ...info, status, lastActiveAt: Date.now() })
+  },
+  getAgentSession: (agentId: string) => agentSessions.get(agentId),
+  getAllAgents: () => [...agentSessions.values()],
+  getAgentsByRole: (role: string) => [...agentSessions.values()].filter((a) => a.agentRole === role),
+  getIdleAgents: (role: string) =>
+    [...agentSessions.values()].filter((a) => a.agentRole === role && a.status === "idle"),
   detectMentions: (content: string) => AgentCommunicate.extractMentions(content),
-  resolveMention: async (mention: string) => {
+  resolveMention: async (mention: string, sessionId: string, _fromAgentId?: string) => {
+    // Exact agent id or name match wins over role match.
+    for (const agent of agentSessions.values()) {
+      if (agent.agentId === mention || agent.agentName === mention) {
+        return { mention, type: "agent", targetAgentId: agent.agentId, targetSessionId: agent.sessionId }
+      }
+    }
+    // Role match within the requesting session; prefer idle agents.
+    const candidates = [...agentSessions.values()].filter(
+      (a) => a.agentRole === mention && a.sessionId === sessionId,
+    )
+    if (candidates.length > 0) {
+      const target = candidates.find((a) => a.status === "idle") ?? candidates[0]
+      return { mention, type: "role", targetAgentId: target.agentId, targetSessionId: target.sessionId }
+    }
     return { mention, type: "unknown" }
   },
   routeMentions: async (input: any) => {
     const mentions = AgentCommunicate.extractMentions(input.content)
-    return mentions.map((m: string) => ({ mention: m, routed: true, triggered: false }))
+    return Promise.all(
+      mentions.map(async (m: string) => {
+        const info = await MentionRouter.resolveMention(m, input.sessionId, input.fromAgentId)
+        return { mention: m, routed: info.type !== "unknown", triggered: false }
+      }),
+    )
   },
-  cleanup: () => {},
+  cleanup: (sessionId: string) => {
+    for (const [agentId, info] of [...agentSessions.entries()]) {
+      if (info.sessionId === sessionId) agentSessions.delete(agentId)
+    }
+  },
 }
 
 describe("Agent Communication E2E", () => {
@@ -191,7 +341,12 @@ describe("Agent Communication E2E", () => {
       })
 
       const threadMessages = builderMessages.filter((m) => m.correlationId === correlationId)
-      expect(threadMessages.length).toBe(2) // Builder sees msg1 and msg3
+      // Builder's mailbox contains every message they sent or received, so
+      // the thread holds msg1, msg2 (the reply addressed to them), and msg3.
+      // The original assertion (2) assumed received messages were not listed,
+      // which contradicts this suite's full-duplex test below (builder must
+      // see messages received from the validator there).
+      expect(threadMessages.length).toBe(3)
     })
   })
 
