@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 108,
   "stats": {
-    "totalNocheck": 823,
+    "totalNocheck": 822,
     "excludedCompilerArtifacts": 30,
     "excludedVendored": 93,
-    "totalQueueFiles": 680,
-    "totalQueueLoc": 273504,
+    "totalQueueFiles": 679,
+    "totalQueueLoc": 271967,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -38,7 +38,7 @@
       "escalated": [
         {
           "path": "src/cli/commands/theme/index.ts",
-          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support \u2014 LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
+          "reason": "latent-runtime-bug: 8 log('success', ...) calls pass a LogLevel the runtime logger does not support — LOG_LEVELS['success'] is undefined, so shouldLog() silently swallows every success message; fixing needs a behavior change (add a 'success' level or re-target the calls), outside type-only scope"
         }
       ]
     },
@@ -255,7 +255,7 @@
       "state": "DONE",
       "burnedFiles": 1,
       "burnedLoc": 1886,
-      "note": "Burned 2026-09-19 (ao/ts-burn-head4): 3-error burn converged in 1 iteration. src/runtime/context/config/config.ts: (1) merge() \u2014 remeda mergeDeep's MergeDeep<T,S> collapses to never on the large Info zod output type, so merged.plugin/merged.instructions assignments failed TS2339; pinned via `as Info` (runtime value unchanged, mergeDeep result shape is Info by construction); (2) lsp schema refine callback \u2014 `if (config.disabled) return true` does not narrow the `{disabled: true} | {command, extensions?, ...}` union under strict:false, so config.extensions failed TS2339 on the `{disabled: true}` member; pinned via cast to `{extensions?: string[]}` (the disabled:true member can never reach that line at runtime \u2014 disabled:true returns early). No escalations, no allowlist changes. Identity: live 757 + recorded 703 = 1460 = totalAccounted."
+      "note": "Burned 2026-09-19 (ao/ts-burn-head4): 3-error burn converged in 1 iteration. src/runtime/context/config/config.ts: (1) merge() — remeda mergeDeep's MergeDeep<T,S> collapses to never on the large Info zod output type, so merged.plugin/merged.instructions assignments failed TS2339; pinned via `as Info` (runtime value unchanged, mergeDeep result shape is Info by construction); (2) lsp schema refine callback — `if (config.disabled) return true` does not narrow the `{disabled: true} | {command, extensions?, ...}` union under strict:false, so config.extensions failed TS2339 on the `{disabled: true}` member; pinned via cast to `{extensions?: string[]}` (the disabled:true member can never reach that line at runtime — disabled:true returns early). No escalations, no allowlist changes. Identity: live 757 + recorded 703 = 1460 = totalAccounted."
     },
     {
       "id": "b0099",
@@ -265,7 +265,7 @@
       "state": "DONE",
       "burnedFiles": 1,
       "burnedLoc": 1513,
-      "note": "Burned 2026-09-19 (ao/ts-burn-tail3): single-file 3-error burn converged in 1 iteration. src/shared/utils/gizzimd.ts: (1) TEAMMEM feature-flag branch calls isTeamMemoryEnabled()/getTeamMemEntrypoint() on ../memdir/teamMemPaths.js, a live empty module (export {}) \u2014 the typeof import cast had no such members; widened the local require cast to a structural contract (DCE flag preserved, no behavior change); (2) getMemoryFiles.cache access \u2014 the ambient lodash-es/memoize.js shim (src/types/global.d.ts) returns T without lodash's runtime .cache; pinned via (fn as any).cache?.clear?.(), claudeai.ts clearClaudeAIMcpConfigsCache precedent. No escalations, no allowlist changes. Stats re-derived from live tree."
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail3): single-file 3-error burn converged in 1 iteration. src/shared/utils/gizzimd.ts: (1) TEAMMEM feature-flag branch calls isTeamMemoryEnabled()/getTeamMemEntrypoint() on ../memdir/teamMemPaths.js, a live empty module (export {}) — the typeof import cast had no such members; widened the local require cast to a structural contract (DCE flag preserved, no behavior change); (2) getMemoryFiles.cache access — the ambient lodash-es/memoize.js shim (src/types/global.d.ts) returns T without lodash's runtime .cache; pinned via (fn as any).cache?.clear?.(), claudeai.ts clearClaudeAIMcpConfigsCache precedent. No escalations, no allowlist changes. Stats re-derived from live tree."
     },
     {
       "id": "b0100",
@@ -296,7 +296,7 @@
       "burnedFiles": 41,
       "burnedLoc": 6481,
       "escalated": [],
-      "note": "Retired-id absorption: the original b0102 (43 files, 6544 loc) was burned by ao/ts-burn-next, but the queue regen at 5945839e0 (landed while the burn was in flight) renumbered its residue to b0141 and ao/cut-attribution-hooks-v2 deleted 2 of its files (postCommitAttribution.ts, attributionHooks.ts) before that. This record accounts the 41 surviving burned files (6481 loc, stripped) \u2014 they were removed from b0141, which keeps its 3 genuinely-unburned files (686 loc). The 2 cut files are accounted by the regen totalAccounted 1473, not here."
+      "note": "Retired-id absorption: the original b0102 (43 files, 6544 loc) was burned by ao/ts-burn-next, but the queue regen at 5945839e0 (landed while the burn was in flight) renumbered its residue to b0141 and ao/cut-attribution-hooks-v2 deleted 2 of its files (postCommitAttribution.ts, attributionHooks.ts) before that. This record accounts the 41 surviving burned files (6481 loc, stripped) — they were removed from b0141, which keeps its 3 genuinely-unburned files (686 loc). The 2 cut files are accounted by the regen totalAccounted 1473, not here."
     },
     {
       "id": "b0141",
@@ -319,11 +319,11 @@
       "escalated": [
         {
           "path": "src/runtime/util/filesystem.ts",
-          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import \u2014 stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
+          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import — stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
         },
         {
           "path": "src/runtime/cowork/cowork.service.ts",
-          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated \u2014 the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
+          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated — the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
         }
       ],
       "note": "Burned by ao/ts-burn-next3: 17 header-only 0-error burns + claude/loader.ts (3 `as string` casts on frontmatter values). TS2322 probe confirmed all 18 burned files in compilation. 2 files escalated (headers restored) and kept live in this record; they await non-type-only fixes. Identity: live 1045 + recorded 428 = 1473 = totalAccounted."
@@ -392,7 +392,7 @@
       "burnedFiles": 28,
       "burnedLoc": 6240,
       "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-next11). Retired-id absorption: the original b0256 (30 files, 7040 loc) was stripped (25 header-only 0-error burns + 5 type-only fixes: hooksSettings/registerFrontmatterHooks/sessionHooks derived HookEvent locally from HOOK_EVENTS since agentSdkTypes.ts exports only HOOK_EVENTS; session.ts/agent-compat.ts pinned void-returning fn() results with as-null casts; session.ts c.body(archive) cast to Uint8Array<ArrayBuffer>) \u2014 but the pilot-4 queue regen (61d6609d4) landed mid-flight, retired the b0256 id, and remixed the 30 files into b0299/b0300/b0301; then ao/ts-burn-next9 (b0220) burned the diagnosticTracking twin pair (800 loc) from b0301 before this PR merged. This record accounts the 28 surviving burned files (6240 loc), removed from b0299/b0300/b0301 here (b0301's diagnosticTracking twin pair is accounted in b0220, not here). TS2322 probe: exactly 30 errors, one per file, reverted byte-exact. No escalations."
+      "note": "Burned 2026-09-19 (ao/ts-burn-next11). Retired-id absorption: the original b0256 (30 files, 7040 loc) was stripped (25 header-only 0-error burns + 5 type-only fixes: hooksSettings/registerFrontmatterHooks/sessionHooks derived HookEvent locally from HOOK_EVENTS since agentSdkTypes.ts exports only HOOK_EVENTS; session.ts/agent-compat.ts pinned void-returning fn() results with as-null casts; session.ts c.body(archive) cast to Uint8Array<ArrayBuffer>) — but the pilot-4 queue regen (61d6609d4) landed mid-flight, retired the b0256 id, and remixed the 30 files into b0299/b0300/b0301; then ao/ts-burn-next9 (b0220) burned the diagnosticTracking twin pair (800 loc) from b0301 before this PR merged. This record accounts the 28 surviving burned files (6240 loc), removed from b0299/b0300/b0301 here (b0301's diagnosticTracking twin pair is accounted in b0220, not here). TS2322 probe: exactly 30 errors, one per file, reverted byte-exact. No escalations."
     },
     {
       "id": "b0301",
@@ -403,7 +403,7 @@
       "burnedFiles": 26,
       "burnedLoc": 5437,
       "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-next13). Retired-id absorption: the original b0301 (26 files, 5349 loc) was stripped, but a queue regen landed mid-flight, retired the b0301 id, and remixed the 26 files into b0333 (20) and b0334 (6); removed from those batches and recorded here (26 burned files, 5437 loc with-header after in-batch type fixes). 17 header-only 0-error burns (TS2322 probe: exactly 17 probe errors, one per file, zero others) + 9 type-only fixes: model.ts, thinking.ts, effort.ts (restored missing resolveAntModel/getAntModelOverrideConfig imports from ./model/antModels.js, b0220 context.ts precedent; effort.ts also mirrors EffortLevel locally, cf. sessionHistory.ts), createSession.ts (local SDKMessage unknown mirror, b0219 sessionHistory.ts precedent), WebSearchTool.ts (local WebSearchProgress mirror matching the emitted payload shape \u2014 the canonical src/types/tools.ts shape does not match; local WebSearchStreamEvent pinned over queryModelWithStreaming's declared compact-StreamEvent union), gizziGuideAgent.ts + verificationAgent.ts (runtime BuiltInAgentDefinition is a dormant-shim mirror of the ink-app original; local contracts widened with the fields built-in records carry), betas.ts (MemoizedBetasFn cache-shape intersection, b0219 modelCapabilities.ts precedent; provider 'bedrock' comparison pinned via initializer cast as preserved provider-conditional DCE). Two latent runtime bugs fixed in-flight: betas.ts registerBetasCache returns void so the wrapped assignments made getAllModelBetas/getModelBetas/getBedrockExtraBodyParamsBetas undefined at runtime (throwing on every caller incl. the queryModel hot path) since e3c7fa284 2026-08-12 \u2014 registration is now a separate statement; coordinatorMode.ts `delete readGizziEnv(...)` deleted a temporary (TypeError in module strict mode) \u2014 now deletes process.env GIZZI_COORDINATOR_MODE. No escalations. Identity: live 879 + recorded 581 + quarantined 20 = 1480 = 1208 totalNocheck pre-burn identity reconciles; guard identity live 879 + recorded 581 = 1460 = totalAccounted."
+      "note": "Burned 2026-09-19 (ao/ts-burn-next13). Retired-id absorption: the original b0301 (26 files, 5349 loc) was stripped, but a queue regen landed mid-flight, retired the b0301 id, and remixed the 26 files into b0333 (20) and b0334 (6); removed from those batches and recorded here (26 burned files, 5437 loc with-header after in-batch type fixes). 17 header-only 0-error burns (TS2322 probe: exactly 17 probe errors, one per file, zero others) + 9 type-only fixes: model.ts, thinking.ts, effort.ts (restored missing resolveAntModel/getAntModelOverrideConfig imports from ./model/antModels.js, b0220 context.ts precedent; effort.ts also mirrors EffortLevel locally, cf. sessionHistory.ts), createSession.ts (local SDKMessage unknown mirror, b0219 sessionHistory.ts precedent), WebSearchTool.ts (local WebSearchProgress mirror matching the emitted payload shape — the canonical src/types/tools.ts shape does not match; local WebSearchStreamEvent pinned over queryModelWithStreaming's declared compact-StreamEvent union), gizziGuideAgent.ts + verificationAgent.ts (runtime BuiltInAgentDefinition is a dormant-shim mirror of the ink-app original; local contracts widened with the fields built-in records carry), betas.ts (MemoizedBetasFn cache-shape intersection, b0219 modelCapabilities.ts precedent; provider 'bedrock' comparison pinned via initializer cast as preserved provider-conditional DCE). Two latent runtime bugs fixed in-flight: betas.ts registerBetasCache returns void so the wrapped assignments made getAllModelBetas/getModelBetas/getBedrockExtraBodyParamsBetas undefined at runtime (throwing on every caller incl. the queryModel hot path) since e3c7fa284 2026-08-12 — registration is now a separate statement; coordinatorMode.ts `delete readGizziEnv(...)` deleted a temporary (TypeError in module strict mode) — now deletes process.env GIZZI_COORDINATOR_MODE. No escalations. Identity: live 879 + recorded 581 + quarantined 20 = 1480 = 1208 totalNocheck pre-burn identity reconciles; guard identity live 879 + recorded 581 = 1460 = totalAccounted."
     },
     {
       "id": "b0336",
@@ -418,7 +418,7 @@
       "state": "DONE",
       "burnedFiles": 40,
       "burnedLoc": 7146,
-      "note": "Burned 2026-09-19 (ao/ts-burn-next15): 33 header-only 0-error burns (TS2322 probe confirmed all 33 in compilation, exactly one probe error each, zero others) + 7 type-only fixes across 9 files, converged in 1 iteration (25 initial errors): dash.ts/live.ts/usage.ts (AppState has no `messages` field \u2014 upstream drift shared with still-nocheck'd status.tsx/session-info.tsx/statusModel.ts; runtime value always undefined so `?? []` was always in effect; pinned via local cast) and dash.ts client.status (MCPServerConnection discriminator is `type`, not `status`; always printed 'unknown' at runtime; cast preserved), ink-app services/vcr.ts ('stream_event' is not a StreamEvent member \u2014 dead comparison preserved as deliberate DCE; model/usage pinned via AssistantMessage/BetaUsage casts since the runtime twin used @ts-ignore+any; content map pinned to BetaContentBlock[] then cast to the local content union), bash/commands.ts (type-only import of createCommandPrefixExtractor/createSubcommandPrefixExtractor from ../shell/prefix.js \u2014 erased at compile time, dynamic-import anti-circularity preserved), plugins/pluginOptionsStorage.ts (lodash-es memoize lacks .cache declaration; intersected MapCache clear shape, b0219 precedent), shell/prefix.ts (NestedMessage.content includes `unknown`; pinned array branch to a text-block shape, b0219 precedent), runtime/session/index.ts (removed 2 stale @ts-expect-error that no longer suppress anything; share/unshare: '@/share/share-next' resolves to a local stub `ShareNext = () => {}` while the real namespace lives at '@/runtime/session/share/share-next' \u2014 LATENT RUNTIME BUG: session share/unshare likely throws TypeError at runtime in builds without an alias; left as cast to the real create/remove surface without changing which module loads, per type-only scope), shared/file/watcher.ts (chokidar on-error param is unknown; cast to Error). No escalations; no allowlist changes. Identity: live 839 + recorded 621 = 1460 = totalAccounted."
+      "note": "Burned 2026-09-19 (ao/ts-burn-next15): 33 header-only 0-error burns (TS2322 probe confirmed all 33 in compilation, exactly one probe error each, zero others) + 7 type-only fixes across 9 files, converged in 1 iteration (25 initial errors): dash.ts/live.ts/usage.ts (AppState has no `messages` field — upstream drift shared with still-nocheck'd status.tsx/session-info.tsx/statusModel.ts; runtime value always undefined so `?? []` was always in effect; pinned via local cast) and dash.ts client.status (MCPServerConnection discriminator is `type`, not `status`; always printed 'unknown' at runtime; cast preserved), ink-app services/vcr.ts ('stream_event' is not a StreamEvent member — dead comparison preserved as deliberate DCE; model/usage pinned via AssistantMessage/BetaUsage casts since the runtime twin used @ts-ignore+any; content map pinned to BetaContentBlock[] then cast to the local content union), bash/commands.ts (type-only import of createCommandPrefixExtractor/createSubcommandPrefixExtractor from ../shell/prefix.js — erased at compile time, dynamic-import anti-circularity preserved), plugins/pluginOptionsStorage.ts (lodash-es memoize lacks .cache declaration; intersected MapCache clear shape, b0219 precedent), shell/prefix.ts (NestedMessage.content includes `unknown`; pinned array branch to a text-block shape, b0219 precedent), runtime/session/index.ts (removed 2 stale @ts-expect-error that no longer suppress anything; share/unshare: '@/share/share-next' resolves to a local stub `ShareNext = () => {}` while the real namespace lives at '@/runtime/session/share/share-next' — LATENT RUNTIME BUG: session share/unshare likely throws TypeError at runtime in builds without an alias; left as cast to the real create/remove surface without changing which module loads, per type-only scope), shared/file/watcher.ts (chokidar on-error param is unknown; cast to Error). No escalations; no allowlist changes. Identity: live 839 + recorded 621 = 1460 = totalAccounted."
     },
     {
       "id": "b0337",
@@ -429,7 +429,7 @@
       "burnedFiles": 18,
       "burnedLoc": 7064,
       "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-next16). Retired-id absorption: a queue regen (ao/artifact-codemod-pilot6) landed mid-flight, retired the b0337 id, and remixed its 18 files into b0365 (7), b0367 (4), b0368 (7); removed from those batches and recorded here. 11 header-only 0-error burns (TS2322 probe: headers restored byte-exact, 0 probe errors, zero TS2322 \u2014 whole-project tsc 0 with all headers stripped) + 7 type-only fixes in 10 errors, converged in 1 iteration: session-info.tsx/statusModel.ts (AppState has no messages field \u2014 upstream drift, runtime value always undefined, cast + ?? [] preserved, dash.ts/live.ts/usage.ts sibling idiom from ao/ts-burn-next15), terminalSetup.tsx ((\"external\" as string) === 'ant' deliberate DCE preserved; chalk.dim stray 2nd arg `theme` dropped \u2014 typo-class, chalk ignored it at runtime), sedValidation.ts (explicit `=== false` discriminant check \u2014 strict:false has no negated narrowing), loadPluginHooks.ts (HookEvent derived as (typeof HOOK_EVENTS)[number]; lodash memoize .cache via local MemoizedFunction shape, betasCache.ts precedent), firstPartyEventLoggingExporter twins (core_metadata as unknown as EventMetadata; runtime twin logError(String(new Error(message))) preserves exact output). No escalations; no allowlist entries."
+      "note": "Burned 2026-09-19 (ao/ts-burn-next16). Retired-id absorption: a queue regen (ao/artifact-codemod-pilot6) landed mid-flight, retired the b0337 id, and remixed its 18 files into b0365 (7), b0367 (4), b0368 (7); removed from those batches and recorded here. 11 header-only 0-error burns (TS2322 probe: headers restored byte-exact, 0 probe errors, zero TS2322 — whole-project tsc 0 with all headers stripped) + 7 type-only fixes in 10 errors, converged in 1 iteration: session-info.tsx/statusModel.ts (AppState has no messages field — upstream drift, runtime value always undefined, cast + ?? [] preserved, dash.ts/live.ts/usage.ts sibling idiom from ao/ts-burn-next15), terminalSetup.tsx ((\"external\" as string) === 'ant' deliberate DCE preserved; chalk.dim stray 2nd arg `theme` dropped — typo-class, chalk ignored it at runtime), sedValidation.ts (explicit `=== false` discriminant check — strict:false has no negated narrowing), loadPluginHooks.ts (HookEvent derived as (typeof HOOK_EVENTS)[number]; lodash memoize .cache via local MemoizedFunction shape, betasCache.ts precedent), firstPartyEventLoggingExporter twins (core_metadata as unknown as EventMetadata; runtime twin logError(String(new Error(message))) preserves exact output). No escalations; no allowlist entries."
     },
     {
       "id": "b0365",
@@ -440,7 +440,7 @@
       "burnedFiles": 28,
       "burnedLoc": 4622,
       "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-head2). 28 files stripped, 4622 loc. 25 header-only 0-error burns; 3 files needed type-only fixes: AsyncHookRegistry.ts now imports HookEvent/SyncHookJSONOutput/AsyncHookJSONOutput from the canonical entrypoints/sdk types (the ink-app agentSdkTypes stub does not re-export them; {} initializer pinned with as-cast since HookJSONOutput.success is required), and runtime built-in exploreAgent.ts/planAgent.ts got local BuiltInAgentDefinition extensions carrying disallowedTools/model/omitClaudeMd (verificationAgent.ts sibling pattern \u2014 the runtime loadAgentsDir.ts mirror omits them). All 28 verified in the tsc compilation program (--listFilesOnly). No escalations; no headers restored."
+      "note": "Burned 2026-09-19 (ao/ts-burn-head2). 28 files stripped, 4622 loc. 25 header-only 0-error burns; 3 files needed type-only fixes: AsyncHookRegistry.ts now imports HookEvent/SyncHookJSONOutput/AsyncHookJSONOutput from the canonical entrypoints/sdk types (the ink-app agentSdkTypes stub does not re-export them; {} initializer pinned with as-cast since HookJSONOutput.success is required), and runtime built-in exploreAgent.ts/planAgent.ts got local BuiltInAgentDefinition extensions carrying disallowedTools/model/omitClaudeMd (verificationAgent.ts sibling pattern — the runtime loadAgentsDir.ts mirror omits them). All 28 verified in the tsc compilation program (--listFilesOnly). No escalations; no headers restored."
     },
     {
       "id": "b0366",
@@ -466,7 +466,7 @@
       "burnedFiles": 10,
       "burnedLoc": 4409,
       "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-tail4). Retired-id absorption: the ao/artifact-codemod-pilot7 queue regen landed mid-flight, retired the b0394 id, and remixed its 10 files into b0421 (17); removed from b0421 and recorded here. 4 header-only 0-error burns (RailsInboxBridge.tsx, task/framework.ts, inProcessTeammateHelpers.ts, swarm/spawnInProcess.ts) + 6 type-only fixes converging 9 errors in 3 iterations: mcpServer.ts (vendored extension.ts stub types Logger as a bare function type; dropped the unsatisfiable `implements Logger` + its now-unused type import), doctorDiagnostic.ts (MACRO index signature makes PACKAGE_URL unknown; local string[] annotation + as string), ide.ts (latent runtime bug: both ideOnboardingDialog() call sites called .hasIdeOnboardingDialogBeenShown() on the lazy-import Promise without awaiting \u2014 TypeError at runtime when the check fires; now awaited, enclosing .then made async), logoV2Utils.ts (MACRO.VERSION_CHANGELOG unknown; local `as string | undefined` wrapper), download.ts (MACRO.NATIVE_PACKAGE_URL unknown; computed property names need `(x as string)` in parens \u2014 `!` does not narrow unknown), InProcessBackend.ts (ToolUseContext.setAppState optional vs SpawnContext required; type-only `this.context as SpawnContext` \u2014 TeammateTool always installs setAppState). No escalations; no allowlist entries."
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail4). Retired-id absorption: the ao/artifact-codemod-pilot7 queue regen landed mid-flight, retired the b0394 id, and remixed its 10 files into b0421 (17); removed from b0421 and recorded here. 4 header-only 0-error burns (RailsInboxBridge.tsx, task/framework.ts, inProcessTeammateHelpers.ts, swarm/spawnInProcess.ts) + 6 type-only fixes converging 9 errors in 3 iterations: mcpServer.ts (vendored extension.ts stub types Logger as a bare function type; dropped the unsatisfiable `implements Logger` + its now-unused type import), doctorDiagnostic.ts (MACRO index signature makes PACKAGE_URL unknown; local string[] annotation + as string), ide.ts (latent runtime bug: both ideOnboardingDialog() call sites called .hasIdeOnboardingDialogBeenShown() on the lazy-import Promise without awaiting — TypeError at runtime when the check fires; now awaited, enclosing .then made async), logoV2Utils.ts (MACRO.VERSION_CHANGELOG unknown; local `as string | undefined` wrapper), download.ts (MACRO.NATIVE_PACKAGE_URL unknown; computed property names need `(x as string)` in parens — `!` does not narrow unknown), InProcessBackend.ts (ToolUseContext.setAppState optional vs SpawnContext required; type-only `this.context as SpawnContext` — TeammateTool always installs setAppState). No escalations; no allowlist entries."
     },
     {
       "id": "b0421",
@@ -476,7 +476,7 @@
       "state": "DONE",
       "burnedFiles": 7,
       "burnedLoc": 2594,
-      "note": "Burned 2026-09-19 (ao/ts-burn-tail5): sibling ao/ts-burn-tail4 (record b0394) burned 10 of the original b0421's 17 files after the pilot7 regen remix; this record accounts the remaining 7 (2594 loc with-header). 4 header-only 0-error burns (releaseNotes.ts, localInstaller.ts, allternitInChrome/setup.ts, autoUpdater.ts \u2014 TS2322 probe: exactly one probe error per file, zero others, all 4 confirmed in compilation) + 3 type-only fixes across 9 errors in 2 iterations: thread.ts (local EventSource contract \u2014 the old context/sdk module no longer exists and tui() takes options as any; worker.ts exports `rpc` as a type alias so Rpc.client<rpc> instead of typeof rpc, 2 sites), messageQueueManager.ts (removed unused Permutations import \u2014 the type no longer exists anywhere; '@/types/messageQueueTypes.js' resolves to the ink-app default-only stub so switched to the real module relatively at ../../types/messageQueueTypes.js), railsPeer.ts (QueuedCommand import 'src/shared/types/textInputTypes.js' does not resolve \u2014 '@/types/textInputTypes.js' maps to the real ink-app type module; uuid pinned as QueuedCommand['uuid'] since generateRequestId returns a non-UUID-shaped opaque id; origin peerName pinned as QueuedCommand['origin'] since MessageOrigin has no peerName field \u2014 RailsInboxBridge reads it back structurally, sibling-cast preserved). No escalations, no allowlist changes. Stats re-derived from live tree: totalNocheck 981, totalQueueFiles 720, totalQueueLoc 314154. Identity: live 741 + recorded 719 = 1460 = totalAccounted."
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail5): sibling ao/ts-burn-tail4 (record b0394) burned 10 of the original b0421's 17 files after the pilot7 regen remix; this record accounts the remaining 7 (2594 loc with-header). 4 header-only 0-error burns (releaseNotes.ts, localInstaller.ts, allternitInChrome/setup.ts, autoUpdater.ts — TS2322 probe: exactly one probe error per file, zero others, all 4 confirmed in compilation) + 3 type-only fixes across 9 errors in 2 iterations: thread.ts (local EventSource contract — the old context/sdk module no longer exists and tui() takes options as any; worker.ts exports `rpc` as a type alias so Rpc.client<rpc> instead of typeof rpc, 2 sites), messageQueueManager.ts (removed unused Permutations import — the type no longer exists anywhere; '@/types/messageQueueTypes.js' resolves to the ink-app default-only stub so switched to the real module relatively at ../../types/messageQueueTypes.js), railsPeer.ts (QueuedCommand import 'src/shared/types/textInputTypes.js' does not resolve — '@/types/textInputTypes.js' maps to the real ink-app type module; uuid pinned as QueuedCommand['uuid'] since generateRequestId returns a non-UUID-shaped opaque id; origin peerName pinned as QueuedCommand['origin'] since MessageOrigin has no peerName field — RailsInboxBridge reads it back structurally, sibling-cast preserved). No escalations, no allowlist changes. Stats re-derived from live tree: totalNocheck 981, totalQueueFiles 720, totalQueueLoc 314154. Identity: live 741 + recorded 719 = 1460 = totalAccounted."
     },
     {
       "id": "b0422",
@@ -501,7 +501,7 @@
       "state": "DONE",
       "burnedFiles": 1,
       "burnedLoc": 2593,
-      "note": "Burned 2026-09-19 (ao/ts-burn-head2): single-file header-only 0-error burn. Probe rerun with header stripped + TS2322 canary (probe under an active header reports 0 and proves nothing \u2014 recorded for future lanes). Escalations: none. Identity: live -1 + recorded +1 = 1460 = totalAccounted."
+      "note": "Burned 2026-09-19 (ao/ts-burn-head2): single-file header-only 0-error burn. Probe rerun with header stripped + TS2322 canary (probe under an active header reports 0 and proves nothing — recorded for future lanes). Escalations: none. Identity: live -1 + recorded +1 = 1460 = totalAccounted."
     },
     {
       "id": "b0423",
@@ -524,7 +524,7 @@
       "state": "DONE",
       "burnedFiles": 18,
       "burnedLoc": 6763,
-      "note": "Burned 2026-09-19 (ao/ts-burn-head4): 18/18 remaining files burned (0 escalations, 25 type errors fixed across 8 files; root-cause fix in betasCache.ts \u2014 registerBetasCache returned void leaving getModelBetas/getAllModelBetas/getBedrockExtraBodyParamsBetas undefined at runtime since e3c7fa284, now returns the function). One original b0423 file (mcpPluginIntegration.ts) was burned earlier via the b0395 absorption record on main \u2014 NOT double-counted here. Escalations: none. Identity: live -18 + recorded +18 = 1460 = totalAccounted."
+      "note": "Burned 2026-09-19 (ao/ts-burn-head4): 18/18 remaining files burned (0 escalations, 25 type errors fixed across 8 files; root-cause fix in betasCache.ts — registerBetasCache returned void leaving getModelBetas/getAllModelBetas/getBedrockExtraBodyParamsBetas undefined at runtime since e3c7fa284, now returns the function). One original b0423 file (mcpPluginIntegration.ts) was burned earlier via the b0395 absorption record on main — NOT double-counted here. Escalations: none. Identity: live -18 + recorded +18 = 1460 = totalAccounted."
     },
     {
       "id": "b0424",
@@ -1652,7 +1652,7 @@
       "burnedFiles": 1,
       "burnedLoc": 1868,
       "escalated": [],
-      "note": "Burned 2026-09-19 (ao/ts-burn-tail1). 1 file, 2 type-only fixes converging 2 errors: config.ts (GlobalConfig.companion referenced StoredCompanion via import() of ../../runtime/integrations/types.js, which never exported it \u2014 the canonical type lives in src/cli/ui/ink-app/buddy/types.ts; inlined the structural shape {name, personality, hatchedAt} with a keep-in-sync comment, matching the file's existing SDK-build-surface inline precedent; teamMemPaths DCE-flag require cast used typeof import() of a shim module that exports nothing \u2014 recast to a local contract mirror {getTeamMemEntrypoint: () => string}, same pattern as gizzimd.ts). No escalations; no allowlist entries."
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail1). 1 file, 2 type-only fixes converging 2 errors: config.ts (GlobalConfig.companion referenced StoredCompanion via import() of ../../runtime/integrations/types.js, which never exported it — the canonical type lives in src/cli/ui/ink-app/buddy/types.ts; inlined the structural shape {name, personality, hatchedAt} with a keep-in-sync comment, matching the file's existing SDK-build-surface inline precedent; teamMemPaths DCE-flag require cast used typeof import() of a shim module that exports nothing — recast to a local contract mirror {getTeamMemEntrypoint: () => string}, same pattern as gizzimd.ts). No escalations; no allowlist entries."
     },
     {
       "id": "b0089",
@@ -1723,12 +1723,13 @@
     },
     {
       "id": "b0096",
-      "files": [
-        "src/shared/utils/permissions/permissionSetup.ts"
-      ],
+      "files": [],
       "loc": 1533,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1537,
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail6): ToolPermissionRulesBySource imported from canonical types/permissions.js; Object.entries destructures annotated; boundary cast to strict ToolPermissionContext; bypass_permissions_disabled added to ExitReason union in hookTypes.ts (already in runtime EXIT_REASONS vocabulary). USER_TYPE ant DCE preserved. Escalations: none. Identity: live -1 + recorded +1."
     },
     {
       "id": "b0090",
@@ -1738,7 +1739,7 @@
       "state": "DONE",
       "burnedFiles": 1,
       "burnedLoc": 3346,
-      "note": "Burned 2026-09-19 (ao/ts-burn-tail4): 26 type errors fixed \u2014 11x TS2709 Tool-as-namespace (import declared ink-app Tool type), stale MCP-SDK casts removed (1.29 request shape), callTool options behind CallToolResultSchema (1.29 sig), connectToServer.cache typed MemoizedConnectToServer intersection (lodash runtime attach), elicitation respond annotated ElicitResult. 6 DCE-gated dormant shims got signature-identical stubs (mcpSkills, computerUse common/mcpServer/wrapper, allternitInChrome mcpServer/toolRendering). Escalations: none. Identity: live -1 + recorded +1 = 1466 = totalAccounted."
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail4): 26 type errors fixed — 11x TS2709 Tool-as-namespace (import declared ink-app Tool type), stale MCP-SDK casts removed (1.29 request shape), callTool options behind CallToolResultSchema (1.29 sig), connectToServer.cache typed MemoizedConnectToServer intersection (lodash runtime attach), elicitation respond annotated ElicitResult. 6 DCE-gated dormant shims got signature-identical stubs (mcpSkills, computerUse common/mcpServer/wrapper, allternitInChrome mcpServer/toolRendering). Escalations: none. Identity: live -1 + recorded +1 = 1466 = totalAccounted."
     },
     {
       "id": "b0439",
@@ -1748,7 +1749,7 @@
       "state": "DONE",
       "burnedFiles": 1,
       "burnedLoc": 142,
-      "note": "Burned 2026-09-19 (ao/ts-burn-tail2): DCE-flagged require of memoryShapeTelemetry referenced logMemoryRecallShape the runtime shim did not export \u2014 added identical stub (also a latent crash if MEMORY_SHAPE_TELEMETRY were enabled). json_schema output_format typed per vendored SDK, result.content via typed predicate. Escalations: none."
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail2): DCE-flagged require of memoryShapeTelemetry referenced logMemoryRecallShape the runtime shim did not export — added identical stub (also a latent crash if MEMORY_SHAPE_TELEMETRY were enabled). json_schema output_format typed per vendored SDK, result.content via typed predicate. Escalations: none."
     },
     {
       "id": "b0395",
@@ -1756,7 +1757,7 @@
       "files": [],
       "burnedFiles": 40,
       "burnedLoc": 7468,
-      "note": "Burned 2026-09-19 (ao/ts-burn-head1). Retired-id absorption: the queue regen (edcf804, ao/artifact-codemod pilot landing) retired the b0395 id mid-flight and remixed its 40 files into b0422 (39) and b0423 (mcpPluginIntegration.ts); removed from those batches (b0422 keeps bridgeEnabled.ts, 1 file; b0423 keeps 18) and recorded here. 29 header-only 0-error burns (tsc include compiles every queued file: baseline EXIT=0 with headers, post-strip inventory attributed 31 errors to 11 files, converged in 2 iterations). Type-only fixes: connect.ts (local RuntimeAuthMethod discriminated union mirroring the runtime auth-plugin shape \u2014 label/prompts/authorize oauth descriptor vs api direct-result; TODO(types) sibling pattern of codex.ts and provider.ts RuntimeAuthLoader), main.ts (RegisteredCommand as-unknown-as CommandModule per the registry doc contract), status.tsx + TextInput.tsx (AppState.messages / MCPServerConnection.status / useVoiceState {}-return pins, sibling dash.ts pattern), builtInAgents.ts (structural lazy-require contract; LATENT BUG flagged not fixed: getCoordinatorAgents is not exported by coordinator/workerAgent.js), WebFetchTool/utils.ts (axios content-type normalized via String(); text-block typeof-guard vs index-signature union), types/plugin.ts (dormant-shim local mirror of runtime lsp/types.ts, sibling TODO(types) pattern), sessionStart.ts (as-unknown-as HookResultMessage, mirroring the shared twin's existing casts), runtime withRetry.ts (getAPIProviderForStatsig import switched to the shared twin returning the verified-metadata brand). Two latent runtime bugs fixed where the old code could not type-check honestly: instrumentation.ts BatchLogRecordProcessor migrated from the legacy 2-arg call to the 1-arg options shape (sdk-logs 0.222 pinned; the old form silently left the processor without an exporter), and runtime withRetry.ts sleep import switched to the abort-aware shared/utils/sleep.js (the old 1-arg src/utils/sleep.js silently dropped the abort signal and abortError at all 3 call sites). No escalations; allowlist untouched."
+      "note": "Burned 2026-09-19 (ao/ts-burn-head1). Retired-id absorption: the queue regen (edcf804, ao/artifact-codemod pilot landing) retired the b0395 id mid-flight and remixed its 40 files into b0422 (39) and b0423 (mcpPluginIntegration.ts); removed from those batches (b0422 keeps bridgeEnabled.ts, 1 file; b0423 keeps 18) and recorded here. 29 header-only 0-error burns (tsc include compiles every queued file: baseline EXIT=0 with headers, post-strip inventory attributed 31 errors to 11 files, converged in 2 iterations). Type-only fixes: connect.ts (local RuntimeAuthMethod discriminated union mirroring the runtime auth-plugin shape — label/prompts/authorize oauth descriptor vs api direct-result; TODO(types) sibling pattern of codex.ts and provider.ts RuntimeAuthLoader), main.ts (RegisteredCommand as-unknown-as CommandModule per the registry doc contract), status.tsx + TextInput.tsx (AppState.messages / MCPServerConnection.status / useVoiceState {}-return pins, sibling dash.ts pattern), builtInAgents.ts (structural lazy-require contract; LATENT BUG flagged not fixed: getCoordinatorAgents is not exported by coordinator/workerAgent.js), WebFetchTool/utils.ts (axios content-type normalized via String(); text-block typeof-guard vs index-signature union), types/plugin.ts (dormant-shim local mirror of runtime lsp/types.ts, sibling TODO(types) pattern), sessionStart.ts (as-unknown-as HookResultMessage, mirroring the shared twin's existing casts), runtime withRetry.ts (getAPIProviderForStatsig import switched to the shared twin returning the verified-metadata brand). Two latent runtime bugs fixed where the old code could not type-check honestly: instrumentation.ts BatchLogRecordProcessor migrated from the legacy 2-arg call to the 1-arg options shape (sdk-logs 0.222 pinned; the old form silently left the processor without an exporter), and runtime withRetry.ts sleep import switched to the abort-aware shared/utils/sleep.js (the old 1-arg src/utils/sleep.js silently dropped the abort signal and abortError at all 3 call sites). No escalations; allowlist untouched."
     },
     {
       "id": "b440",
@@ -1771,7 +1772,7 @@
       "loc": 935,
       "twins": [],
       "state": "NEW",
-      "note": "Added 2026-09-19 by artifact-codemod pilot 9 union (orchestrator): these 6 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers \u2014 dead ant comparisons, unknown-typed tool results, keybindings re-export drift; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md \u00a77."
+      "note": "Added 2026-09-19 by artifact-codemod pilot 9 union (orchestrator): these 6 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — dead ant comparisons, unknown-typed tool results, keybindings re-export drift; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md §7."
     },
     {
       "id": "b441",
@@ -1788,7 +1789,7 @@
       "loc": 1578,
       "twins": [],
       "state": "NEW",
-      "note": "Added 2026-09-19 by artifact-codemod pilot 10: these 8 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers \u2014 dormant-shim type drift: ShellProgress/KeybindingAction re-exports, qrToString overload, OrgValidationResult variant, AgentLineProps.task, dead ant constant comparisons, unknown-typed tool results/message content; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md \u00a77. The other 21 conversions in the pilot dropped @ts-nocheck cleanly (excludedCompilerArtifacts 95\u219266); DesktopHandoff.tsx was never nocheck-headed and needed no bookkeeping."
+      "note": "Added 2026-09-19 by artifact-codemod pilot 10: these 8 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — dormant-shim type drift: ShellProgress/KeybindingAction re-exports, qrToString overload, OrgValidationResult variant, AgentLineProps.task, dead ant constant comparisons, unknown-typed tool results/message content; latent, not conversion regressions). They no longer fingerprint-match, so they join the burn queue as ordinary entries per INK_APP_COMPILER_ARTIFACTS.md §7. The other 21 conversions in the pilot dropped @ts-nocheck cleanly (excludedCompilerArtifacts 95→66); DesktopHandoff.tsx was never nocheck-headed and needed no bookkeeping."
     },
     {
       "id": "b442",
@@ -1807,7 +1808,7 @@
       "loc": 3433,
       "twins": [],
       "state": "NEW",
-      "note": "Added 2026-09-19 by artifact-codemod pilot 11: these 10 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers \u2014 latent ant-drift type issues in LogSelector/Stats/messageActions/ThemePicker/WorkflowMultiselectDialog/TreeSelect/SkillsMenu/ShowInIDEPrompt/SessionPreview + chrome.tsx Promise<boolean> prop); the other 26 pilot-11 conversions dropped @ts-nocheck cleanly."
+      "note": "Added 2026-09-19 by artifact-codemod pilot 11: these 10 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — latent ant-drift type issues in LogSelector/Stats/messageActions/ThemePicker/WorkflowMultiselectDialog/TreeSelect/SkillsMenu/ShowInIDEPrompt/SessionPreview + chrome.tsx Promise<boolean> prop); the other 26 pilot-11 conversions dropped @ts-nocheck cleanly."
     }
   ],
   "quarantined": [
