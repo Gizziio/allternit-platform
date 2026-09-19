@@ -122,12 +122,23 @@ torch.set_num_threads(max(1, n_cpu))
 print(f"PyTorch threads pinned to {torch.get_num_threads()}")
 """)
 
-md("""## 2. Install Dependencies""")
-code("""!pip install -q -U "laya>=0.3.3" "transformers>=4.48.0" "datasets>=3.0.0" safetensors huggingface_hub pyarrow pandas scipy accelerate tabulate
-import laya, transformers, torch
-print("Laya version        :", laya.__version__)
-print("Transformers version:", transformers.__version__)
-print("PyTorch version     :", torch.__version__)
+md("""## 2. Install Dependencies
+
+v3-cpu died here once on a transient worker DNS failure (`Temporary failure
+in name resolution` against pypi) — the install therefore retries with
+backoff and hard-fails only after 5 attempts.""")
+code("""%%bash
+for attempt in 1 2 3 4 5; do
+  echo "pip install attempt $attempt"
+  if pip install -q --timeout 60 --retries 5 -U "laya>=0.3.3" "transformers>=4.48.0" "datasets>=3.0.0" safetensors huggingface_hub pyarrow pandas scipy accelerate tabulate; then
+    echo "pip install succeeded on attempt $attempt"
+    exit 0
+  fi
+  echo "pip attempt $attempt failed; sleeping 30s"
+  sleep 30
+done
+echo "pip install failed after 5 attempts"
+exit 1
 """)
 
 md("""## 3. Load the Input Dataset (allternit/jev-shadow-train-v1)
@@ -138,6 +149,10 @@ transcript labels, realigned so each state pairs with the action the
 reference policy took FROM that state). `train.jsonl` = seeds 42,7,1,2,3,4,5;
 `val.jsonl` = seed 6 (never trained on).""")
 code("""import json, os
+import laya, transformers, torch
+print("Laya version        :", laya.__version__)
+print("Transformers version:", transformers.__version__)
+print("PyTorch version     :", torch.__version__)
 
 DATASET_DIR = "/kaggle/input/jev-shadow-train-v1"
 TRAIN_PATH = os.path.join(DATASET_DIR, "train.jsonl")

@@ -1,6 +1,6 @@
 {
-  "id": "allternit/jev-laya-finetune-v3-cpu",
-  "title": "jev-laya-finetune-v3-cpu",
+  "id": "allternit/jev-laya-finetune-v4-cpu",
+  "title": "jev-laya-finetune-v4-cpu",
   "code_file": "laya_finetune_kaggle.ipynb",
   "language": "python",
   "kernel_type": "notebook",
