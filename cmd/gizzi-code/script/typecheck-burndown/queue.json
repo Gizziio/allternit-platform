@@ -880,7 +880,7 @@
       "files": [],
       "loc": 1534,
       "twins": [],
-      "state": "NEW",
+      "state": "DONE",
       "burnedFiles": 1,
       "burnedLoc": 1533,
       "note": "burn lane mid-2 (ao/ts-burn-mid2): removed @ts-nocheck header from permissionSetup.ts; file type-checks clean under cmd/gizzi-code tsconfig (strict:false) with zero errors and no casts added — no honest fix needed. No escalations."
