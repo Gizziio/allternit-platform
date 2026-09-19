@@ -3,11 +3,11 @@
   "generatedFrom": "cef80b754a1bffa8f6f8287aae4036f8b0b3d7dc",
   "batchCount": 103,
   "stats": {
-    "totalNocheck": 1061,
+    "totalNocheck": 1033,
     "excludedCompilerArtifacts": 181,
     "excludedVendored": 93,
-    "totalQueueFiles": 767,
-    "totalQueueLoc": 306825,
+    "totalQueueFiles": 739,
+    "totalQueueLoc": 302203,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -382,48 +382,14 @@
     },
     {
       "id": "b0365",
-      "files": [
-        "src/cli/ui/ink-app/utils/shell/resolveDefaultShell.ts",
-        "src/cli/ui/ink-app/utils/gitSettings.ts",
-        "src/cli/ui/ink-app/utils/plugins/pluginPolicy.ts",
-        "src/cli/ui/ink-app/utils/plugins/managedPlugins.ts",
-        "src/cli/ui/ink-app/tools/REPLTool/constants.ts",
-        "src/cli/ui/ink-app/utils/settings/pluginOnlyPolicy.ts",
-        "src/runtime/tools/builtins/AgentTool/built-in/exploreAgent.ts",
-        "src/cli/ui/ink-app/tools/PowerShellTool/prompt.ts",
-        "src/cli/ui/ink-app/services/extractMemories/prompts.ts",
-        "src/cli/ui/ink-app/constants/spinnerVerbs.ts",
-        "src/runtime/services/compact/apiMicrocompact.ts",
-        "src/cli/ui/ink-app/services/compact/apiMicrocompact.ts",
-        "src/cli/ui/ink-app/utils/ShellCommand.ts",
-        "src/cli/ui/ink-app/components/Spinner/useShimmerAnimation.ts",
-        "src/cli/ui/ink-app/tasks/LocalShellTask/guards.ts",
-        "src/cli/ui/ink-app/utils/model/antModels.ts",
-        "src/cli/ui/ink-app/tools/AgentTool/built-in/exploreAgent.ts",
-        "src/runtime/tools/builtins/AgentTool/built-in/planAgent.ts",
-        "src/cli/ui/ink-app/utils/advisor.ts",
-        "src/cli/ui/ink-app/utils/activityManager.ts",
-        "src/cli/ui/ink-app/hooks/useTasksV2.ts",
-        "src/cli/ui/ink-app/components/Spinner/index.ts",
-        "src/cli/ui/ink-app/utils/background/remote/preconditions.ts",
-        "src/cli/ui/ink-app/utils/hooks/AsyncHookRegistry.ts",
-        "src/runtime/services/compact/microCompact.ts",
-        "src/cli/ui/ink-app/services/compact/microCompact.ts",
-        "src/cli/ui/ink-app/utils/swarm/permissionSync.ts",
-        "src/cli/ui/ink-app/tools/AgentTool/built-in/planAgent.ts"
-      ],
-      "loc": 4622,
-      "twins": [
-        {
-          "runtime": "src/runtime/services/compact/apiMicrocompact.ts",
-          "inkApp": "src/cli/ui/ink-app/services/compact/apiMicrocompact.ts"
-        },
-        {
-          "runtime": "src/runtime/services/compact/microCompact.ts",
-          "inkApp": "src/cli/ui/ink-app/services/compact/microCompact.ts"
-        }
-      ],
-      "state": "NEW"
+      "files": [],
+      "loc": 0,
+      "twins": [],
+      "state": "DONE",
+      "burnedFiles": 28,
+      "burnedLoc": 4622,
+      "escalated": [],
+      "note": "Burned 2026-09-19 (ao/ts-burn-head2). 28 files stripped, 4622 loc. 25 header-only 0-error burns; 3 files needed type-only fixes: AsyncHookRegistry.ts now imports HookEvent/SyncHookJSONOutput/AsyncHookJSONOutput from the canonical entrypoints/sdk types (the ink-app agentSdkTypes stub does not re-export them; {} initializer pinned with as-cast since HookJSONOutput.success is required), and runtime built-in exploreAgent.ts/planAgent.ts got local BuiltInAgentDefinition extensions carrying disallowedTools/model/omitClaudeMd (verificationAgent.ts sibling pattern — the runtime loadAgentsDir.ts mirror omits them). All 28 verified in the tsc compilation program (--listFilesOnly). No escalations; no headers restored."
     },
     {
       "id": "b0031",

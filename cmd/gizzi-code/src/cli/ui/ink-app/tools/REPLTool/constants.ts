@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'

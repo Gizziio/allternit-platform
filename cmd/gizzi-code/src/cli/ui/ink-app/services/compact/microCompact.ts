@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import type { QuerySource } from '../../constants/querySource.js'
