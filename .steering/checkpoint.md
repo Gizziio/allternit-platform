@@ -1,31 +1,32 @@
-# Steering checkpoint — session/semif-eval
+# Steering checkpoint — TS burn-down marathon (orchestrator session, 2026-09-19)
 
-**Goal:** Evaluate SemIf (formerly OpenJev, `TheoLeeCJ/SemIf`, MIT, 1,781★) —
-the community open-weights System One reproduction with a new Apple Silicon
-MLX backend (direct typed-option scoring, prefix reuse, parallel shared-state
-decisions) — as a head behind our `DecisionHead` protocol, measured on the
-identical 66 held-out decide steps.
+## Goal
+Drain the ts-nocheck burn queue (~61 NEW batches left), finish compiler-artifact codemod (pilot 9 in flight, 121 artifacts remain), then strict-flip phases 1–4 per STRICT_FLIP_PLAN.md, then final wrap-up.
 
-**Just did:** lane COMPLETE and pushed (2 commits on `session/semif-eval`,
-33c2f95d2 + ccc5174ef). SemIfHead implemented (`core/semif_head.py`, one
-`score_shared` pass per step), `--head semif` wired, `[semif]` extra, tests
-green (128 passed / 2 skipped), mock smoke green. ONE eval pass done:
-**agreement 0.2273** (search 0.318 / form-fill 0.000 / settings 0.364),
-2.34 s/step — vs kimi-deltas 0.4848 same format. Notes:
-`docs/JEV_SEMIF_NOTES.md`; reports: `shadow-eval-report-semif.{json,md}`.
-Upstream clone removed, no leftover processes.
+## Just did
+- Merged + attested: pilot 8 (PR #681, artifacts 148→118), b0034 (PR #682), b0097 (PR #683), b0439 (PR #685), b0395 40-file burn (PR #686). Queue 44/105 DONE, 677 files / 279,734 LOC left, nocheck 908. Main @ f8eb5d43f, discipline PASS.
+- Rotated lanes: head-4 (front, ≠b0422), head-5 (middle NEW), tail-4 (back) + codemod pilot 9. All in flight, no open PRs yet.
+- **Strict-flip re-measure on current main (2026-09-19, main @ f8eb5d43f, TS with 8GB heap, after ensure-sdk-dist): noImplicitAny = 1,166 errors / 1,165 files (TS7006 ×633 dominant); strictNullChecks = 610.** Plan doc measured 293/212 on 2026-09-18 when ~750 files still had suppressing @ts-nocheck headers; every burned file newly exposes these errors. Phase 1 will be ~4x the plan's estimate — re-scope lane budget at phase start per the doc's own re-measure contract.
 
-**Key API facts (README vs code):** package is `semif-phase1`, not `semif`;
-mlx backend supports ONLY `qwen3_5` checkpoints (MiniCPM5-2B is web-demo
-ladder only — README overstates); options hard-capped at 16 (letters A–P);
-remote models require pinned 40-hex revisions; returns per-option probs, NO
-confidence (uncalibrated by its own docs). mlx-lm moved to SemIf's git pin
-(0.32.0) in the worktree venv.
+## Next
+- Merge lane PRs as they land (queue.json union-rebase pattern: take the lane's queue for absorption structure, add main-side batch retirements; guard must be 5/5).
+- After queue empties: codemod final PR (stub deletion) per INK_APP_COMPILER_ARTIFACTS.md §6.2, then strict-flip phases with fresh measurements.
 
-**Next:** owner review; lane intentionally NOT merged (no PR per directive).
+## Open questions
+- Strict-flip phase 1 at ~1,166 errors: do it as one mega-phase or split TS7006 (mechanically annotatable) from the rest? Decide at phase start.
+- getCoordinatorAgents export gap (flagged by head-1, dormant double-flag-gated) — deferred-cut/scoping track, not a burn blocker.
 
-**Open questions:** none — scope frozen.
+## Deferred-cut tail (for wrap-up)
+- attributionTrailer at src/shared/utils/attribution.ts (b0251-area) + ink-app twin — re-attempt after those batches burn.
+- Reminder rendering cases b0091/b0060-area.
+- getCoordinatorAgents not exported by coordinator/workerAgent.js (b0395 find).
+- S5/SDK-dist CI item — externally gated, not started.
 
-**Constraints:** no training, one eval pass, kill all background processes,
-subagent does not merge. Fair-comparison note: old mlx 0.227 was pre-deltas
-state format; SemIf gets the current canonical format.
+## 2026-09-19 session/semif-eval (landed, PR #692)
+Goal: measure SemIf (community open-weights System One reproduction, MLX backend) behind our DecisionHead protocol on the identical 66 held-out steps.
+
+Just did: SemIfHead landed (--head semif, [semif] extra). Measured 0.2273 — identical zero-shot ceiling to the old mlx head (form-fill collapses 0.00); do-not-promote verdict, stated plainly. Real findings: entropy confidence separates right/wrong (0.712/0.510, first calibration-shaped signal in the program); SemIf's one-shared-pass architecture is the right substrate; README overstated model support (mlx backend rejects non-qwen3_5; options cap 2-16; no confidence returned). 128 passed/2 skipped, main-agent re-verified.
+
+Next: ledger attestation, teardown, git-discipline. Deferred per standing plan: local-tier revisit only with trace training data (recorder shipped PR #650, owner-gated enablement); quantization unmeasured.
+
+Open questions: none.
