@@ -3,11 +3,11 @@
   "generatedFrom": "24dc73f2121338bd32dcee22035a8b5a0006d5fb",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1387,
+    "totalNocheck": 1386,
     "excludedCompilerArtifacts": 301,
     "excludedVendored": 93,
-    "totalQueueFiles": 973,
-    "totalQueueLoc": 368774,
+    "totalQueueFiles": 972,
+    "totalQueueLoc": 366969,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -284,12 +284,13 @@
     },
     {
       "id": "b0020",
-      "files": [
-        "src/cli/ui/ink-app/utils/powershell/parser.ts"
-      ],
-      "loc": 1805,
+      "files": [],
+      "loc": 0,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 1,
+      "burnedLoc": 1805,
+      "note": "Burned by ao/ts-burn-next6 (PR pending at queue-edit time): src/cli/ui/ink-app/utils/powershell/parser.ts was a header-only 0-error burn (strip only; TS2322 probe confirmed it is genuinely type-checked). Identity: live 972 + recorded 481 + quarantined 20 = 1473 = totalAccounted."
     },
     {
       "id": "b0219",
