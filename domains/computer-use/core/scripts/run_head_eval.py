@@ -12,7 +12,8 @@ the shared entrypoint does, then writes JSON + markdown reports via
 
     python scripts/run_head_eval.py --module core.laya_head --class LayaHead \
         [--kwargs model=convaiinnovations/laya,max_direct_options=16] \
-        [--steps 22] [--out-dir evaluation/shadow-eval] \
+        [--steps 22] [--tasks {heldout,train,all}] [--task-seed S] \
+        [--out-dir evaluation/shadow-eval] \
         [--stem shadow-eval-report-laya] [--trace-out PATH.jsonl] \
         [--step-budget-ms 15000] [--quiet]
 
@@ -77,6 +78,15 @@ def main(argv: Optional[list[str]] = None) -> int:
                              "values coerce to int/float/bool/null")
     parser.add_argument("--steps", type=int, default=22,
                         help="decide steps per task (default 22, >= 20 required)")
+    parser.add_argument("--tasks", choices=("heldout", "train", "all"),
+                        default="heldout",
+                        help="synthetic task set: heldout (default) = the three "
+                             "canonical held-out tasks; train = TRAIN-split "
+                             "templates from core/train_tasks.py (traces "
+                             "split=train); all = both")
+    parser.add_argument("--task-seed", type=int, default=42, metavar="S",
+                        help="seed for the train templates' derived "
+                             "names/values/orders (default 42)")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR,
                         help=f"report output directory (default {DEFAULT_OUT_DIR})")
     parser.add_argument("--stem", default=None,
@@ -113,8 +123,19 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     from core.shadow_eval import default_tasks, run_eval, write_reports
 
+    if args.tasks == "heldout":
+        task_list = default_tasks(args.steps)
+    elif args.tasks == "train":
+        from core.train_tasks import train_tasks
+
+        task_list = train_tasks(args.task_seed, args.steps)
+    else:
+        from core.train_tasks import train_tasks
+
+        task_list = default_tasks(args.steps) + train_tasks(args.task_seed, args.steps)
+
     report = run_eval(
-        tasks=default_tasks(args.steps),
+        tasks=task_list,
         steps_per_task=args.steps,
         head=head,
         head_label=args.class_name,
