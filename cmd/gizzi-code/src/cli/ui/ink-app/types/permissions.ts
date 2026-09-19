@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Pure permission type definitions extracted to break import cycles.
  *

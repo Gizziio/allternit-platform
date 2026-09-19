@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Remote Mode Command
  *

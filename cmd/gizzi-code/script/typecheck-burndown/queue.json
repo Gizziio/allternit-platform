@@ -3,11 +3,11 @@
   "generatedFrom": "56085d0db7bd97909117c4166ae25cb9527b2190",
   "batchCount": 102,
   "stats": {
-    "totalNocheck": 1516,
+    "totalNocheck": 1498,
     "excludedCompilerArtifacts": 360,
     "excludedVendored": 93,
-    "totalQueueFiles": 1043,
-    "totalQueueLoc": 389458,
+    "totalQueueFiles": 1025,
+    "totalQueueLoc": 383168,
     "quarantined": 20,
     "quarantinedByReason": {
       "suspect-dead-shim": 18,
@@ -240,30 +240,25 @@
     {
       "id": "b0142",
       "files": [
-        "src/cli/ui/ink-app/memdir/memoryTypes.ts",
-        "src/cli/ui/ink-app/utils/ansiToSvg.ts",
-        "src/cli/ui/ink-app/utils/git/gitConfigParser.ts",
-        "src/shared/installation/index.ts",
-        "src/runtime/integrations/plugin/claude/loader.ts",
-        "src/cli/ui/ink-app/utils/hooks/ssrfGuard.ts",
-        "src/ui/allternit/ars-contexta-runtime.ts",
-        "src/cli/ui/ink-app/utils/cron.ts",
-        "src/shared/utils/swarm/backends/types.ts",
-        "src/shared/utils/bash/ParsedCommand.ts",
-        "src/config/permissionProfiles.ts",
-        "src/cli/commands/remote/index.ts",
-        "src/cli/ui/ink-app/native-ts/file-index/index.ts",
         "src/runtime/util/filesystem.ts",
-        "src/runtime/server/routes/workspace.ts",
-        "src/runtime/server/mesh.ts",
-        "src/cli/ui/ink-app/types/permissions.ts",
-        "src/cli/ui/ink-app/utils/migration.ts",
-        "src/runtime/cowork/cowork.service.ts",
-        "src/cli/ui/ink-app/utils/bash/treeSitterAnalysis.ts"
+        "src/runtime/cowork/cowork.service.ts"
       ],
-      "loc": 7184,
+      "loc": 894,
       "twins": [],
-      "state": "NEW"
+      "state": "DONE",
+      "burnedFiles": 18,
+      "burnedLoc": 6290,
+      "escalated": [
+        {
+          "path": "src/runtime/util/filesystem.ts",
+          "reason": "latent-runtime-bug: the `Filesystem` namespace's exported stat/isDir/isFile/copy methods reference the namespace's own hoisted `stat` (line 226), shadowing the fs/promises import — stat() is infinitely self-recursive and the siblings build on it; fixing needs a runtime change (alias the import, e.g. stat as fsStat), outside type-only scope. Also surfaced: glob() options type `{ cwd?: string }` is narrower than the `{ cwd, absolute: true }` call in globUp. No live importers call the broken methods today (verified), so the recursion is dormant."
+        },
+        {
+          "path": "src/runtime/cowork/cowork.service.ts",
+          "reason": "schema drift hidden by casts: the hand-written Run/RunEvent/Schedule/Approval/Checkpoint interfaces use created_at/updated_at, but the drizzle schema (cowork.sql.ts via Timestamps) stores time_created/time_updated — the `as Run[]` etc. casts return rows whose created_at is undefined at runtime, which the API routes (routes/cowork.ts zod created_at: z.number()) and CLI (new Date(run.created_at)) would choke on; also the schema's mode $type (\"local\"|\"remote\"|\"cloud\") omits \"vm\" that RunService accepts and RunMode declares. Fixing needs a runtime mapping/behavior change, outside type-only scope."
+        }
+      ],
+      "note": "Burned by ao/ts-burn-next3: 17 header-only 0-error burns + claude/loader.ts (3 `as string` casts on frontmatter values). TS2322 probe confirmed all 18 burned files in compilation. 2 files escalated (headers restored) and kept live in this record; they await non-type-only fixes. Identity: live 1045 + recorded 428 = 1473 = totalAccounted."
     },
     {
       "id": "b0143",
