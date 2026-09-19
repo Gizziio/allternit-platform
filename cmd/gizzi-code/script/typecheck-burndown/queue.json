@@ -3,11 +3,11 @@
   "generatedFrom": "edcf804f88519fc628fe2e524ff13b26e3636326",
   "batchCount": 109,
   "stats": {
-    "totalNocheck": 692,
+    "totalNocheck": 683,
     "excludedCompilerArtifacts": 0,
     "excludedVendored": 93,
-    "totalQueueFiles": 578,
-    "totalQueueLoc": 242262,
+    "totalQueueFiles": 569,
+    "totalQueueLoc": 238986,
     "quarantined": 21,
     "quarantinedByReason": {
       "suspect-dead-shim": 19,
@@ -1715,21 +1715,13 @@
     },
     {
       "id": "b443",
-      "files": [
-        "src/cli/ui/ink-app/commands/mcp/mcp.tsx",
-        "src/cli/ui/ink-app/commands/resume/resume.tsx",
-        "src/cli/ui/ink-app/commands/thinkback/thinkback.tsx",
-        "src/cli/ui/ink-app/screens/Doctor.tsx",
-        "src/cli/ui/ink-app/tools/AgentTool/UI.tsx",
-        "src/cli/ui/ink-app/tools/FileEditTool/UI.tsx",
-        "src/cli/ui/ink-app/tools/FileWriteTool/UI.tsx",
-        "src/cli/ui/ink-app/tools/MCPTool/UI.tsx",
-        "src/cli/ui/ink-app/tools/TaskOutputTool/TaskOutputTool.tsx"
-      ],
+      "files": [],
       "loc": 3225,
       "twins": [],
-      "state": "NEW",
-      "note": "Added 2026-09-19 by artifact-codemod pilot 12 (FINAL conversion): these 9 compiler-artifact conversions KEPT @ts-nocheck (new TODO(types) headers — latent ant-drift type issues: TS2367 external-vs-ant comparisons in mcp/thinkback/AgentTool, TS2614 progress-type import drift in AgentTool/MCPTool/TaskOutputTool, TS2339 untyped props in FileEditTool/FileWriteTool/resume, TS2322 BetaUsage in AgentTool, TS2786 JSX component in MCPTool, Doctor.tsx legacy issues); REPL.tsx (kept @ts-nocheck, 62 legacy errors) went to quarantine as suspect-dead-shim (dead external-ant require branches); the other 20 pilot-12 conversions dropped @ts-nocheck cleanly. After this batch, excludedCompilerArtifacts=0 — all 360 artifacts converted; the §6.2 final PR deletes the stub machinery."
+      "state": "DONE",
+      "note": "Burned 2026-09-19 (ao/ts-burn-tail8): FINAL pilot-12 kept-header batch — 9/9 files, 0 escalations. 7 ant-DCE recasts (external-as-string); TS2614 progress drift mirrored locally (AgentToolProgress/MCPProgress/TaskOutputProgress per WebSearchTool TODO(types) pattern — ink-app/types/tools.ts is a dead stub); NestedMessage content unions via existing isContentBlockArray/isToolUseBlock guards; BetaUsage explicit ?? null defaults; resume.tsx in-guard + UUID brand cast (loose brand flagged for sweep). Escalations: none. Identity: live -9 + recorded +9.",
+      "burnedFiles": 9,
+      "burnedLoc": 3276
     }
   ],
   "quarantined": [

@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — latent ant-drift type issues (TS2367 external-vs-ant comparisons / TS2614 progress-type import drift / TS2339 untyped props), not a conversion regression.
 import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import type { StructuredPatchHunk } from 'diff';
 import * as React from 'react';
@@ -178,7 +176,12 @@ function EditRejectionDiff(t0) {
 
   return t4;
 }
-function EditRejectionBody(t0) {
+function EditRejectionBody(t0: {
+  promise: Promise<RejectionDiffData>;
+  filePath: string;
+  style?: 'condensed';
+  verbose: boolean;
+}) {
   const {
     promise,
     filePath,

@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — latent ant-drift type issues (TS2367 external-vs-ant comparisons / TS2614 progress-type import drift / TS2339 untyped props), not a conversion regression.
 import React from 'react';
 import { z } from 'zod/v4';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';
@@ -54,8 +52,17 @@ type TaskOutputToolOutput = {
   task: TaskOutput | null;
 };
 
-// Re-export Progress from centralized types to break import cycles
-export type { TaskOutputProgress as Progress } from '../../types/tools';
+// Re-export Progress. TODO(types): ink-app/types/tools.ts is a dead stub, and
+// the canonical src/types/tools.ts TaskOutputProgress (type: 'task_output',
+// taskId/content) does not match the payload this tool emits
+// ('waiting_for_task' with taskDescription/taskType). Mirror the emitted shape
+// locally (sibling TODO(types) pattern, cf. WebSearchTool).
+export interface TaskOutputProgress {
+  type: 'waiting_for_task';
+  taskDescription: string;
+  taskType: string;
+}
+export type { TaskOutputProgress as Progress };
 
 // Get output for any task type
 async function getTaskOutputData(task: TaskState): Promise<TaskOutput> {
@@ -162,7 +169,7 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool
     return this.isReadOnly?.(_input) ?? false;
   },
   isEnabled() {
-    return "external" !== 'ant';
+    return ("external" as string) !== 'ant';
   },
   isReadOnly(_input) {
     return true;

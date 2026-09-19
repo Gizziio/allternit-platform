@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — latent ant-drift type issues (TS2367 external-vs-ant comparisons / TS2614 progress-type import drift / TS2339 untyped props), not a conversion regression.
 import React, { useEffect, useRef } from 'react';
 import { MCPSettings } from '../../components/mcp/index';
 import { MCPReconnect } from '../../components/mcp/MCPReconnect';
@@ -64,7 +62,7 @@ export async function call(onDone: LocalJSXCommandOnDone, _context: unknown, arg
   }
 
   // Redirect base /mcp command to /plugins installed tab for ant users
-  if ("external" === 'ant') {
+  if (("external" as string) === 'ant') {
     return <PluginSettings onComplete={onDone} args="manage" showMcpRedirectMessage />;
   }
   return <MCPSettings onComplete={onDone} />;
