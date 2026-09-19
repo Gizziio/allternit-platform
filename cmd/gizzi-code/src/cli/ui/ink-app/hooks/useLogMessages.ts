@@ -1,5 +1,7 @@
-// @ts-nocheck
-type UUID = string
+// crypto's UUID (`${string}-${string}-${string}-${string}-${string}`) — the
+// same alias recordTranscript in ../utils/sessionStorage types its parent
+// uuid hint with.
+import type { UUID } from 'crypto'
 import { useEffect, useRef } from 'react'
 import { useAppState } from '../state/AppState'
 import type { Message } from '../types/message'
@@ -75,7 +77,7 @@ export function useLogMessages(messages: Message[], ignore: boolean = false) {
       // fresher sync update from the subsequent incremental render).
       if (seq !== callSeqRef.current) return
       if (lastRecordedUuid && !isIncremental) {
-        lastParentUuidRef.current = lastRecordedUuid
+        lastParentUuidRef.current = lastRecordedUuid as UUID
       }
     })
     // Sync-walk safe for: incremental (pure new-tail slice), first-render

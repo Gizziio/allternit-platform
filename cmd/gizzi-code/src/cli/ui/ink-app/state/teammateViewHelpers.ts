@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { logEvent } from '../services/analytics/index.js'
 import { isTerminalTaskStatus } from '../Task.js'
 import type { LocalAgentTaskState } from '../tasks/LocalAgentTask/LocalAgentTask.js'

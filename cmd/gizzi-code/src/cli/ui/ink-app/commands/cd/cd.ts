@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { stat } from 'fs/promises'
 import { isAbsolute, resolve } from 'path'
 import type { LocalCommandCall } from '../../types/command.js'

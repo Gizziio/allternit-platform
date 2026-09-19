@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Resolve file_uuid attachments on inbound bridge user messages.
  *

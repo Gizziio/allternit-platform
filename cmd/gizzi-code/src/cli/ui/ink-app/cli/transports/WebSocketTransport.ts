@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { StdoutMessage } from './../../entrypoints/sdk/controlTypes.ts'
 import type WsWebSocket from 'ws'
 import { logEvent } from '../../services/analytics/index'
@@ -16,7 +15,6 @@ import {
   unregisterSessionActivityCallback,
 } from '../../utils/sessionActivity'
 import { jsonStringify } from '../../utils/slowOperations'
-import type { Transport } from './Transport'
 
 const KEEP_ALIVE_FRAME = '{"type":"keep_alive"}\n'
 
@@ -72,7 +70,7 @@ type WebSocketLike = {
   ping?(): void // Bun & ws both support this
 }
 
-export class WebSocketTransport implements Transport {
+export class WebSocketTransport {
   private ws: WebSocketLike | null = null
   private lastSentId: string | null = null
   protected url: URL
@@ -689,8 +687,14 @@ export class WebSocketTransport implements Transport {
       return ` subtype=${request.subtype} request_id=${request_id}${toolName ? ` tool=${toolName}` : ''}`
     }
     if (message.type === 'control_response') {
-      const { subtype, request_id } = message.response
-      return ` subtype=${subtype} request_id=${request_id}`
+      // SDKControlResponse types `response` as unknown; the runtime wire shape
+      // carries { subtype, request_id } directly on it.
+      const response = message.response as
+        | { subtype?: unknown; request_id?: unknown }
+        | undefined
+      const subtype = response?.subtype ?? ''
+      const requestId = response?.request_id ?? ''
+      return ` subtype=${subtype} request_id=${requestId}`
     }
     return ''
   }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import axios, { type AxiosError } from 'axios'
 import type { StdoutMessage } from './../../entrypoints/sdk/controlTypes.ts'
 import { logForDebugging } from '../../utils/debug'
@@ -8,7 +7,6 @@ import { getSessionIngressAuthHeaders } from '../../utils/sessionIngressAuth'
 import { sleep } from '../../utils/sleep'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations'
 import { getClaudeCodeUserAgent } from '../../utils/userAgent'
-import type { Transport } from './Transport'
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -160,7 +158,7 @@ export type StreamClientEvent = {
  * Supports automatic reconnection with exponential backoff and Last-Event-ID
  * for resumption after disconnection.
  */
-export class SSETransport implements Transport {
+export class SSETransport {
   private state: SSETransportState = 'idle'
   private onData?: (data: string) => void
   private onCloseCallback?: (closeCode?: number) => void

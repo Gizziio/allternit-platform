@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { jsonStringify } from '../utils/slowOperations'
 
 // JSON.stringify emits U+2028/U+2029 raw (valid per ECMA-404). When the

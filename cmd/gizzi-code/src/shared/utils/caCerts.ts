@@ -1,8 +1,10 @@
-// @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
 import { logForDebugging } from './debug.js'
 import { hasNodeOption } from './envUtils.js'
 import { getFsImplementation } from './fsOperations.js'
+
+// lodash memoize attaches a MapCache at runtime; the submodule's typings omit it.
+type MemoizedWithCache = { cache: { clear?: () => void } }
 
 /**
  * Load CA certificates for TLS connections.
@@ -111,6 +113,6 @@ export const getCACertificates = memoize((): string[] | undefined => {
  * (e.g., NODE_EXTRA_CA_CERTS, NODE_OPTIONS).
  */
 export function clearCACertsCache(): void {
-  getCACertificates.cache.clear?.()
+  ;(getCACertificates as unknown as MemoizedWithCache).cache.clear?.()
   logForDebugging('Cleared CA certificates cache')
 }

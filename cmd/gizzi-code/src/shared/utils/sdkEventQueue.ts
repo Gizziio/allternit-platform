@@ -1,8 +1,7 @@
-// @ts-nocheck
 type UUID = string
 import { randomUUID } from 'crypto'
 import { getIsNonInteractiveSession, getSessionId } from '@/bootstrap/state.js'
-import type { SdkWorkflowProgress } from '@/types/tools.js'
+import type { SdkWorkflowProgress } from '../../types/tools.js'
 
 type TaskStartedEvent = {
   type: 'system'

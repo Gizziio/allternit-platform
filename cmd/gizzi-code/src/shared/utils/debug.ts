@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { appendFile, mkdir, symlink, unlink } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
 import { dirname, join } from 'path'
@@ -58,6 +57,9 @@ export const isDebugMode = memoize((): boolean => {
   )
 })
 
+// lodash memoize attaches a MapCache at runtime; the submodule's typings omit it.
+type MemoizedWithCache = { cache: { clear?: () => void } }
+
 /**
  * Enables debug logging mid-session (e.g. via /debug). Non-ants don't write
  * debug logs by default, so this lets them start capturing without restarting
@@ -66,7 +68,7 @@ export const isDebugMode = memoize((): boolean => {
 export function enableDebugLogging(): boolean {
   const wasActive = isDebugMode() || process.env.USER_TYPE === 'ant'
   runtimeDebugEnabled = true
-  isDebugMode.cache.clear?.()
+  ;(isDebugMode as unknown as MemoizedWithCache).cache.clear?.()
   return wasActive
 }
 

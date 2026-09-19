@@ -1,8 +1,19 @@
-// @ts-nocheck
 import type { LocalCommandCall } from '../../types/command'
-import { listHarnesses, listNativeSessions } from '@allternit/native-sessions'
+import {
+  listHarnesses,
+  listNativeSessions,
+  type HarnessId,
+} from '@allternit/native-sessions'
 import { NativeSource } from '@/runtime/session/native-source'
 import { getSessionId } from '../../bootstrap/state'
+
+/** Parse a user-typed harness name against the known adapter ids. */
+function toHarnessId(value: string | undefined): HarnessId | undefined {
+  if (!value) return undefined
+  return listHarnesses().some(h => h.id === value)
+    ? (value as HarnessId)
+    : undefined
+}
 
 export const call: LocalCommandCall = async (args) => {
   const parts = String(args ?? '').trim().split(/\s+/).filter(Boolean)
@@ -16,10 +27,14 @@ export const call: LocalCommandCall = async (args) => {
   }
 
   if (cmd === 'pickup') {
-    const harness = parts[1]
+    const harness = toHarnessId(parts[1])
     const sessionId = parts[2]
     if (!harness || !sessionId) {
-      return { type: 'text', value: 'Usage: /native pickup <harness> <session-id>' }
+      return {
+        type: 'text',
+        value:
+          'Usage: /native pickup <harness> <session-id> (see /native harnesses for adapter ids)',
+      }
     }
     try {
       const result = await NativeSource.pickup({ harness, sessionId })
@@ -34,8 +49,14 @@ export const call: LocalCommandCall = async (args) => {
 
   if (cmd === 'export') {
     const sessionID = parts[1]?.startsWith('ses') ? parts[1] : getSessionId()
-    const harness = parts[1]?.startsWith('ses') ? parts[2] : parts[1]
+    const harness = toHarnessId(parts[1]?.startsWith('ses') ? parts[2] : parts[1])
     if (!sessionID) return { type: 'text', value: 'Usage: /native export [ses_id] [harness]' }
+    if (!harness && (parts[1]?.startsWith('ses') ? parts[2] : parts[1])) {
+      return {
+        type: 'text',
+        value: `Unknown harness: ${parts[1]?.startsWith('ses') ? parts[2] : parts[1]}. /native harnesses to see adapters.`,
+      }
+    }
     try {
       const result = await NativeSource.export(sessionID, harness)
       return {
@@ -61,7 +82,14 @@ export const call: LocalCommandCall = async (args) => {
     }
   }
 
-  const harness = cmd !== 'list' ? cmd : undefined
+  const requestedHarness = cmd !== 'list' ? cmd : undefined
+  const harness = toHarnessId(requestedHarness)
+  if (requestedHarness && !harness) {
+    return {
+      type: 'text',
+      value: `Unknown harness: ${requestedHarness}. /native harnesses to see adapters.`,
+    }
+  }
   const sessions = listNativeSessions({ harnesses: harness ? [harness] : undefined }).slice(0, 30)
   if (sessions.length === 0) {
     return { type: 'text', value: 'No native CLI sessions found. /native harnesses to see adapters.' }
