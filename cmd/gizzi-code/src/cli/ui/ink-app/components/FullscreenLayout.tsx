@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — unknown-typed message content iterated without narrowing; latent, not a conversion regression.
 import figures from 'figures';
 import React, { createContext, type ReactNode, type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { fileURLToPath } from 'url';
@@ -217,8 +215,10 @@ export function countUnseenAssistantTurns(messages: readonly Message[], dividerI
 }
 function assistantHasVisibleText(m: Message): boolean {
   if (m.type !== 'assistant') return false;
-  for (const b of m.message.content) {
-    if (b.type === 'text' && b.text.trim() !== '') return true;
+  const content = m.message.content;
+  if (!Array.isArray(content)) return false;
+  for (const b of content) {
+    if (b?.type === 'text' && typeof b.text === 'string' && b.text.trim() !== '') return true;
   }
   return false;
 }
@@ -289,7 +289,7 @@ export function FullscreenLayout({
     rows: terminalRows,
     columns
   } = useTerminalSize();
-  const [stickyPrompt, setStickyPrompt] = useState(null);
+  const [stickyPrompt, setStickyPrompt] = useState<StickyPrompt | null>(null);
   const t4 = {
       setStickyPrompt
     };
@@ -380,11 +380,13 @@ function _temp2(url) {
   }
 }
 function _temp() {}
-function NewMessagesPill(t0) {
-  const {
+function NewMessagesPill({
     count,
     onClick
-  } = t0;
+  }: {
+    count: number;
+    onClick?: () => void;
+  }) {
   const [hover, setHover] = useState(false);
   const t1 = () => setHover(true);
   const t2 = () => setHover(false);
@@ -411,11 +413,13 @@ function NewMessagesPill(t0) {
 // even with scrollTop unchanged (the DECSTBM region top shifts with the
 // ScrollBox, and the diff engine sees "everything moved"). Fixed height
 // keeps the ScrollBox anchored; only the header TEXT changes, not its box.
-function StickyPromptHeader(t0) {
-  const {
+function StickyPromptHeader({
     text,
     onClick
-  } = t0;
+  }: {
+    text: string;
+    onClick: () => void;
+  }) {
   const [hover, setHover] = useState(false);
   const t1 = hover ? "userMessageBackgroundHover" : "userMessageBackground";
   const t2 = () => setHover(true);

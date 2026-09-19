@@ -1,7 +1,5 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — qrToString overload mismatch (TS2554/TS2769); latent, not a conversion regression.
 import { basename } from 'path';
-import { toString as qrToString } from 'qrcode';
+import { toString as qrToString, type QRCodeToStringOptionsOther } from 'qrcode';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { getOriginalCwd } from '../bootstrap/state';
@@ -21,7 +19,7 @@ type Props = {
 export function BridgeDialog({
     onDone
 }: Props) {
-  useRegisterOverlay("bridge-dialog");
+  useRegisterOverlay("bridge-dialog", undefined);
   const connected = useAppState(_temp);
   const sessionActive = useAppState(_temp2);
   const reconnecting = useAppState(_temp3);
@@ -51,11 +49,15 @@ export function BridgeDialog({
         setQrText("");
         return;
       }
-      qrToString(displayUrl, {
+      // `small` is only declared on the Terminal variant in @types/qrcode,
+      // but the runtime utf8 renderer honors it (upstream parity) — type
+      // the options as the utf8 variant widened with `small`.
+      const qrOptions: QRCodeToStringOptionsOther & { small: boolean } = {
         type: "utf8",
         errorCorrectionLevel: "L",
         small: true
-      }).then(setQrText).catch(() => setQrText(""));
+      };
+      qrToString(displayUrl, qrOptions).then(setQrText).catch(() => setQrText(""));
     };
   const t5 = [showQR, displayUrl];
 

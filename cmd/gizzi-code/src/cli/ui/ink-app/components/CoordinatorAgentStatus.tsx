@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — MainLine omits required AgentLineProps.task; latent, not a conversion regression.
 /**
  * CoordinatorTaskPanel — Steerable list of background agents.
  *
@@ -94,7 +92,7 @@ function MainLine({
     isSelected,
     isViewed,
     onClick
-}: AgentLineProps) {
+}: Omit<AgentLineProps, 'task'>) {
   const [hover, setHover] = React.useState(false);
   const prefix = isSelected || hover ? figures.pointer + " " : "  ";
   const bullet = isViewed ? BLACK_CIRCLE : figures.circle;

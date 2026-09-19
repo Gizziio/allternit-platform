@@ -1,9 +1,14 @@
-// @ts-nocheck
-// TODO(types): compiler-artifact decompile kept nocheck — ShellProgress not exported by ../types/tools (dormant-shim drift); latent, not a conversion regression.
 import React from 'react';
 import { Box } from '../ink';
 import { BashTool } from '../tools/BashTool/BashTool';
-import type { ShellProgress } from '../types/tools';
+// ../types/tools is a dormant stub in this fork (never exported
+// ShellProgress); local contract mirror of the ShellProgressMessage props.
+type ShellProgress = {
+  output: string;
+  fullOutput: string;
+  elapsedTimeSeconds?: number;
+  totalLines?: number;
+};
 import { UserBashInputMessage } from './messages/UserBashInputMessage';
 import { ShellProgressMessage } from './shell/ShellProgressMessage';
 type Props = {
