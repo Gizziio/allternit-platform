@@ -10,6 +10,7 @@ import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import { LocalModelServer } from '@/runtime/local-model-server'
+import { normalizeRoleAlternation } from '../../utils/localChatRoles.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { asSystemPrompt, type SystemPrompt } from '../../utils/systemPromptType.js'
 import { zodToJsonSchema } from '../../utils/zodToJsonSchema.js'
@@ -317,10 +318,12 @@ export async function* queryLocalModelWithStreaming({
     // keep configured modelId as fallback
   }
 
-  const openaiMessages = [
+  // Normalize to strict user/assistant alternation: local templates like
+  // Gemma3 reject system/tool roles ("Conversation roles must alternate...").
+  const openaiMessages = normalizeRoleAlternation([
     { role: 'system', content: asSystemPrompt(systemPrompt).join('\n\n') },
     ...internalMessagesToOpenAI(messages),
-  ]
+  ])
 
   const body: Record<string, unknown> = {
     model: resolvedModelId,
