@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Role-alternation normalizer for local chat completions.
  *
