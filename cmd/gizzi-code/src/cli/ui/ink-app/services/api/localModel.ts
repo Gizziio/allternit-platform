@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto'
 import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { LocalModelServer } from '@/runtime/local-model-server'
 import { logForDebugging } from '../../utils/debug.js'
 import { asSystemPrompt, type SystemPrompt } from '../../utils/systemPromptType.js'
 import { zodToJsonSchema } from '../../utils/zodToJsonSchema.js'
@@ -261,6 +262,24 @@ export async function* queryLocalModelWithStreaming({
 
   const { provider, modelId, config } = resolved
   const baseURL = config.baseURL
+
+  // Spawn/adopt/kill the per-model local server when this model opts in via
+  // options.modelPath (e.g. local-mlx MLX models). Unmanaged models pass
+  // through to the existing bring-your-own-server behavior.
+  try {
+    const fullCfg = readGizziConfig()
+    const providerBlock = (fullCfg?.provider as Record<string, unknown> | undefined)?.[provider] as
+      | { options?: Record<string, unknown>; models?: Record<string, { options?: Record<string, unknown> }> }
+      | undefined
+    await LocalModelServer.ensure({ providerID: provider, modelID: modelId }, providerBlock)
+  } catch (ensureErr) {
+    yield createAssistantAPIErrorMessage({
+      content: `Local model server error: ${ensureErr instanceof Error ? ensureErr.message : String(ensureErr)}`,
+      apiError: 'local_model_server_error',
+      error: 'local_model_server_error',
+    })
+    return
+  }
 
   logForDebugging(
     `[LocalModel] streaming ${provider}/${modelId} via ${baseURL}/chat/completions`,
