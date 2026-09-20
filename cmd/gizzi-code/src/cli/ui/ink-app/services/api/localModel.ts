@@ -297,9 +297,20 @@ export async function* queryLocalModelWithStreaming({
     })
     if (modelsRes.ok) {
       const modelsJson = (await modelsRes.json()) as { data?: { id: string }[] }
-      const first = modelsJson.data?.[0]?.id
-      if (first) {
-        resolvedModelId = first
+      // mlx_lm.server lists every mlx-compatible model in the whole HF
+      // cache, not just the loaded one — the actually-running --model only
+      // appears as an absolute-path entry. Sending data[0] makes the server
+      // try to download a random cached model from HuggingFace, which fails
+      // offline with "Unable to connect. Is the computer able to access the
+      // url?" (503). Prefer the absolute-path entry; then an exact/basename
+      // match for the configured id; data[0] only as last resort.
+      const list = modelsJson.data ?? []
+      const served =
+        list.find((m) => m.id?.startsWith('/'))?.id ??
+        list.find((m) => m.id === modelId || m.id?.endsWith('/' + modelId))?.id ??
+        list[0]?.id
+      if (served) {
+        resolvedModelId = served
       }
     }
   } catch {
