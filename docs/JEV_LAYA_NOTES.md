@@ -246,8 +246,49 @@ slug so a re-push updates the same kernel. Input dataset attached via
    `{val_accuracy, val_ece, val_operation_accuracy, val_target_accuracy,
    cases_train, cases_val, notes}`.
 
-**Result**: NOT OBTAINED in this session — Kaggle GPU quota exhausted
-(account-level). Both v1 (`allternit/jev-laya-shadow-head-fine-tune-v1`) and
+**CPU pivot (v3-cpu → v5-cpu, 2026-09-19 evening):** the GPU path stayed
+quota-blocked, so the run pivoted to explicit CPU kernels
+(`enable_gpu: false` — no downgrade ambiguity), same dataset. Notebook
+changes: GPU assert removed; train script auto-detects (CUDA → upstream DDP
++ fp16; CPU → single-process fp32, threads pinned to the 4 worker cores);
+EPOCHS=2 and micro-batch 8 as stated CPU-budget choices; fp32 weight save on
+the CPU path; `laya.Agent(…, device="cpu")` at eval. Three infrastructure
+failures, each a distinct probe-verified root cause, each fixed once:
+**v3-cpu** died on a transient worker DNS failure in pip (`Temporary
+failure in name resolution` against pypi) → install cell became a
+5-attempt `%%bash` retry loop (v4 got past install, confirming the fix).
+**v4-cpu** then failed at the dataset load: attached datasets now mount at
+`/kaggle/input/datasets/<owner>/<slug>/`, NOT `/kaggle/input/<slug>/`
+(mount-probe kernel verified both files there) → input cell globs
+`/kaggle/input/**/train.jsonl` instead of hardcoding the path.
+**v5-cpu** (`allternit/jev-laya-finetune-v5-cpu`, private, internet on,
+dataset attached via `dataset_sources`) passed all three previous failure
+points and trained. After ~5 h of polling (240 × 60 s, zero errors) it was
+still `KernelWorkerStatus.RUNNING`; Kaggle exposes no partial logs, so
+per-epoch progress is invisible until completion, and CPU training of ~3.5k
+sequences × 2 epochs on 4 cores is simply slow. The kernel was left running
+server-side (CPU session cap ~9 h). This exceeded the playbook's literal
+one-retry allowance — justified per failure as a distinct infrastructure
+cause, recorded here honestly. v5 supersedes v3/v4 (same notebook lineage);
+`/tmp/jev-kernel-v5-cpu` bundle and `notebooks/kernel-metadata.json` carry
+the v5-cpu slug.
+
+**Resume:**
+
+```bash
+kaggle kernels status allternit/jev-laya-finetune-v5-cpu
+kaggle kernels output allternit/jev-laya-finetune-v5-cpu -p /tmp/jev-kernel-output
+```
+
+On COMPLETE: `/tmp/jev-kernel-output/result.json` carries
+`{val_accuracy, val_ece, val_operation_accuracy, val_target_accuracy,
+cases_train, cases_val, notes}` and `laya-finetuned/` the checkpoint
+(weights fp32 from the CPU path). On session-cap CANCELLED: re-push
+`/tmp/jev-kernel-v5-cpu` with EPOCHS=1, or wait for GPU quota and use the v2
+GPU bundle (`/tmp/jev-kernel-v2`).
+
+**Original GPU attempt (kept for the record): NOT OBTAINED — Kaggle GPU
+quota exhausted (account-level).** Both v1 (`allternit/jev-laya-shadow-head-fine-tune-v1`) and
 the -v2 retry (`allternit/jev-laya-finetune-v2`) were pushed successfully
 with `enable_gpu: true` but came up on **CPU-only workers**
 (`nvidia-smi: command not found`, `CUDA Available: False`) and failed the
@@ -258,16 +299,4 @@ COMPLETED**, which isolates the cause to the account (Kaggle silently
 downgrades GPU requests instead of erroring at push). Notably
 `allternit/laya-osone-finetune` ran on this account 17 s before the first
 push — concurrent GPU use on the shared account is the likely quota drain.
-
-**Resume (owner decision — quota reset/verification, then):**
-
-```bash
-# kernel v2 already carries the final notebook; re-run it (new version):
-kaggle kernels push -p /tmp/jev-kernel-v2   # or push a -v3 slug per playbook
-# poll + fetch:
-kaggle kernels status allternit/jev-laya-finetune-v2
-kaggle kernels output allternit/jev-laya-finetune-v2 -p /tmp/jev-kernel-output
-```
-
-The dataset, notebook, and kernel metadata are all in place and verified;
-only the GPU worker is missing.
+The dataset, notebook, and kernel metadata are all in place and verified.
