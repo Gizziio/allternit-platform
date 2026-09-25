@@ -19,6 +19,13 @@
 //! test process before `APP_CONFIG` is first touched.
 //!
 //! Everything is localhost (`127.0.0.1:0`); no external network is used.
+//!
+//! Beyond the gizzi-protocol cases, the harness covers the gateway's DB-backed
+//! wire behaviors: BYOK route credentials (`user_route_credentials`) attached
+//! as `provider_credentials` on the upstream payload and stripped on failover
+//! to a provider without one, and G13 data-residency enforcement
+//! (`data_residency_policies` + `providers.region`) failing a non-compliant
+//! candidate set with HTTP 451 `data_residency_violation`.
 
 use std::collections::HashSet;
 use std::convert::Infallible;
@@ -794,6 +801,140 @@ fn session_create_failure_is_502_and_records_no_usage() {
             usage_count_for_key(&gw.state.db, &gw.key_id).await,
             0,
             "session-create failures must not leave a usage row"
+        );
+    });
+}
+
+/// g. BYOK attach/strip (route_credentials): a tenant credential registered
+/// for the primary provider rides the first attempt as
+/// `provider_credentials.apiKey`; when failover promotes a provider the
+/// caller has no credential for, the credential is stripped from the retry
+/// payload — a user key never travels to a provider they did not supply it
+/// for. The key must also never appear in the client-facing response.
+#[test]
+fn byok_attached_on_primary_and_stripped_on_failover() {
+    runtime().block_on(async {
+        let fx = fixture().await;
+        let gw = gateway("wire").await;
+        let tenant_key = format!("sk-tenant-byok-{}", gw.unique);
+        llm_gateway::route_credentials::upsert_credential(
+            &gw.state.db,
+            &format!("user-{}", gw.unique),
+            None,
+            "mock-a",
+            &tenant_key,
+            None,
+            Some("wire conformance byok"),
+            true,
+        )
+        .expect("seed tenant credential");
+
+        let marker = format!("{FLAKY_MARKER}-byok-{}", gw.unique);
+        let response = gw
+            .app
+            .clone()
+            .oneshot(chat_request(
+                &gw,
+                chat_body("mock-a/model-a", &format!("flaky please {marker}"), false),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body_raw = {
+            let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("read body");
+            String::from_utf8(bytes.to_vec()).expect("body is UTF-8")
+        };
+        assert!(
+            !body_raw.contains(&tenant_key),
+            "the tenant credential must never leak into the response: {body_raw}"
+        );
+
+        let posts = fx.posts_with(&marker);
+        assert_eq!(
+            posts.len(),
+            2,
+            "mock must see the primary 500 and the retry POST: {posts:?}"
+        );
+        assert_eq!(posts[0].provider_id, "mock-a");
+        assert!(
+            posts[0].body.contains("\"provider_credentials\""),
+            "primary attempt must carry provider_credentials: {}",
+            posts[0].body
+        );
+        assert!(
+            posts[0].body.contains(&format!("\"apiKey\":\"{tenant_key}\"")),
+            "the attached credential must be the tenant key: {}",
+            posts[0].body
+        );
+        assert_eq!(posts[1].provider_id, "mock-b");
+        assert!(
+            !posts[1].body.contains("provider_credentials"),
+            "failover to a provider without a caller credential must strip it: {}",
+            posts[1].body
+        );
+        assert!(
+            !posts[1].body.contains(&tenant_key),
+            "the tenant key must never ride along to mock-b: {}",
+            posts[1].body
+        );
+    });
+}
+
+/// h. Residency → 451 (G13): the org pins inference to `eu`; neither mock
+/// provider has a `providers.region` row (so both resolve to `global`, which
+/// never satisfies a pin). The request must fail with HTTP 451 and the
+/// documented `data_residency_violation` error shape — never routed around.
+#[test]
+fn residency_violation_returns_451() {
+    runtime().block_on(async {
+        let _fx = fixture().await;
+        let gw = gateway("wire").await;
+        let org_id = format!("org-{}", gw.unique);
+        {
+            let conn = gw.state.db.connect().expect("connect");
+            conn.execute(
+                "INSERT INTO organizations (id, name) VALUES (?1, 'Wire Org')",
+                rusqlite::params![org_id],
+            )
+            .expect("seed org");
+            conn.execute(
+                "UPDATE llm_virtual_keys SET tenant_id = ?1 WHERE id = ?2",
+                rusqlite::params![org_id, gw.key_id],
+            )
+            .expect("pin key to org");
+            conn.execute(
+                "INSERT INTO data_residency_policies
+                     (org_id, pinned_regions, default_region, enforce_region_pinning)
+                 VALUES (?1, '[\"eu\"]', NULL, 1)",
+                rusqlite::params![org_id],
+            )
+            .expect("seed residency policy");
+        }
+
+        let response = gw
+            .app
+            .clone()
+            .oneshot(chat_request(
+                &gw,
+                chat_body("mock-a/model-a", "hello, wire conformance residency", false),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status(),
+            StatusCode::UNAVAILABLE_FOR_LEGAL_REASONS,
+            "a fully non-compliant candidate set must fail with 451"
+        );
+        let body = body_json(response).await;
+        assert_eq!(body["error"]["type"], "data_residency_violation");
+        assert_eq!(body["error"]["code"], "data_residency_violation");
+        assert!(
+            body["error"]["message"]
+                .as_str()
+                .is_some_and(|m| m.contains("eu")),
+            "the message must name the pinned regions: {body}"
         );
     });
 }
