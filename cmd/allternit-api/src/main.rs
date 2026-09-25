@@ -137,29 +137,42 @@ use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
-    // Initialize tracing with filter to suppress noisy cron-scheduler errors.
-    //
-    // This is structured logging + local spans (`#[tracing::instrument]` now
-    // on the LLM gateway, DLP, MCP-server, Slack-webhook, and eval-run
-    // handlers), not exported distributed tracing. The workspace Cargo.toml
-    // already pins `opentelemetry`/`opentelemetry_sdk`/`tracing-opentelemetry`/
-    // `opentelemetry-http` (used by no crate in the repo today, confirmed by
-    // grep), so the dependency choice is made — wiring a real
-    // `tracing-opentelemetry` layer + OTLP exporter here is genuine follow-on
-    // work, deliberately not attempted blind: this machine has no Rust
-    // toolchain to compile-check it, there's no existing in-repo usage of
-    // these pre-1.0 OTel crates to model the exact builder API from, and
-    // guessing at that API surface risks landing code that looks right but
-    // doesn't build against the pinned versions.
+    // Structured logging + local spans (`#[tracing::instrument]` on the LLM
+    // gateway, DLP, MCP-server, Slack-webhook, and eval-run handlers), plus —
+    // only when OTEL_EXPORTER_OTLP_ENDPOINT is set — distributed trace export:
+    // the workspace-pinned opentelemetry/opentelemetry_sdk/tracing-opentelemetry/
+    // opentelemetry-http crates are wired in `allternit_api::otel`, bridging
+    // tracing spans into an OTLP/HTTP batch exporter (GenAI conventions on the
+    // chat-completions path). Unset endpoint → no exporter, no overhead, logs
+    // identical to before.
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,tokio_cron_scheduler=off"));
-    if std::env::var("ALLTERNIT_LOG_FORMAT").as_deref() == Ok("json") {
-        tracing_subscriber::fmt()
-            .json()
-            .with_env_filter(filter)
-            .init();
-    } else {
-        tracing_subscriber::fmt().with_env_filter(filter).init();
+    let json_logs = std::env::var("ALLTERNIT_LOG_FORMAT").as_deref() == Ok("json");
+    use tracing_subscriber::prelude::*;
+    match allternit_api::otel::layer_from_env() {
+        Some(otel_layer) => {
+            let registry = tracing_subscriber::registry()
+                .with(filter)
+                .with(otel_layer);
+            if json_logs {
+                registry
+                    .with(tracing_subscriber::fmt::layer().json())
+                    .init();
+            } else {
+                registry.with(tracing_subscriber::fmt::layer()).init();
+            }
+            info!("OTel trace export enabled (OTLP/HTTP, batch)");
+        }
+        None => {
+            if json_logs {
+                tracing_subscriber::fmt()
+                    .json()
+                    .with_env_filter(filter)
+                    .init();
+            } else {
+                tracing_subscriber::fmt().with_env_filter(filter).init();
+            }
+        }
     }
 
     info!("Allternit API Server starting...");
@@ -501,6 +514,49 @@ async fn main() {
         ),
     });
     allternit_api::computer_idle::spawn_idle_sweeper(state.clone(), shutdown_tx.subscribe());
+
+    // BYOK credential revalidation sweep (P1.7): re-probe every active
+    // user/org route credential against its provider on an interval and mark
+    // 401/403-rejected keys `revoked`. Never runs on the request hot path.
+    // ROUTE_CREDENTIAL_SWEEP_INTERVAL_SECS: default 6h, 0 disables.
+    {
+        let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
+        let period_secs: u64 = std::env::var("ROUTE_CREDENTIAL_SWEEP_INTERVAL_SECS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(6 * 60 * 60);
+        if period_secs > 0 {
+            tokio::spawn(async move {
+                let mut interval =
+                    tokio::time::interval(std::time::Duration::from_secs(period_secs));
+                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                loop {
+                    tokio::select! {
+                        _ = shutdown_rx.recv() => break,
+                        _ = interval.tick() => {
+                            let db = state.db.clone();
+                            match allternit_api::llm_gateway::route_credentials::sweep_once(&db)
+                                .await
+                            {
+                                Ok((checked, revoked)) if revoked > 0 => tracing::warn!(
+                                    checked,
+                                    revoked,
+                                    "route credential sweep revoked credentials"
+                                ),
+                                Ok((checked, _)) => {
+                                    tracing::debug!(checked, "route credential sweep complete")
+                                }
+                                Err(e) => {
+                                    tracing::warn!(error = %e, "route credential sweep failed")
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
 
     // Refresh the Private Fabric node provider pool from the DB registry.
     {

@@ -21,6 +21,12 @@ serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+# OpenTelemetry: workspace-pinned, off by default — activated only when
+# OTEL_EXPORTER_OTLP_ENDPOINT is set (see src/otel.rs).
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-http = { workspace = true, features = ["reqwest"] }
+tracing-opentelemetry = { workspace = true }
 tower = { workspace = true }
 reqwest = { workspace = true, features = ['json', 'stream'] }
 async-stream = { workspace = true }

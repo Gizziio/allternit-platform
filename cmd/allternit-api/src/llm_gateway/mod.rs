@@ -43,6 +43,7 @@ pub mod dlp_patterns;
 pub mod embeddings;
 pub mod estimation;
 pub mod failover;
+pub mod genai_spans;
 pub mod files;
 pub mod gizzi_bus;
 pub mod images;

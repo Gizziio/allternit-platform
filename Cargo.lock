@@ -242,12 +242,15 @@ dependencies = [
  "md5",
  "once_cell",
  "openssl",
+ "opentelemetry 0.22.0",
+ "opentelemetry-http",
+ "opentelemetry_sdk",
  "printpdf",
  "prometheus",
  "rand 0.8.6",
  "refinery",
  "regex",
- "reqwest",
+ "reqwest 0.12.28",
  "resvg",
  "rusqlite",
  "russh",
@@ -267,6 +270,7 @@ dependencies = [
  "tower 0.5.3",
  "tower-http",
  "tracing",
+ "tracing-opentelemetry",
  "tracing-subscriber",
  "url",
  "urlencoding",
@@ -290,7 +294,7 @@ dependencies = [
  "mockall 0.12.1",
  "nix 0.29.0",
  "objc",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tempfile",
@@ -437,7 +441,7 @@ dependencies = [
  "protoc-bin-vendored",
  "rand 0.8.6",
  "regex",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "serial_test",
@@ -502,7 +506,7 @@ dependencies = [
  "allternit-cloud-core",
  "allternit-cloud-ssh",
  "anyhow",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -536,7 +540,7 @@ dependencies = [
  "chrono",
  "hex",
  "hmac 0.12.1",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -563,7 +567,7 @@ dependencies = [
  "prost",
  "prost-types",
  "rand 0.8.6",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_bytes",
  "serde_json",
@@ -594,7 +598,7 @@ dependencies = [
  "http 1.4.2",
  "http-body-util",
  "mockito",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -712,7 +716,7 @@ dependencies = [
  "chrono",
  "futures 0.3.32",
  "hex",
- "reqwest",
+ "reqwest 0.12.28",
  "rusqlite",
  "serde",
  "serde_json",
@@ -737,7 +741,7 @@ dependencies = [
  "chrono",
  "clap",
  "cron-parser",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
@@ -807,7 +811,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -924,7 +928,7 @@ dependencies = [
  "chrono",
  "hdrhistogram",
  "num_cpus",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "statistical",
@@ -989,7 +993,7 @@ dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
  "nix 0.27.1",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tempfile",
@@ -1083,7 +1087,7 @@ dependencies = [
  "async-trait",
  "axum",
  "blake3",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
@@ -1123,7 +1127,7 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tokio",
@@ -1212,7 +1216,7 @@ dependencies = [
  "chrono",
  "dirs 5.0.1",
  "regex",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sysinfo",
@@ -1333,7 +1337,7 @@ dependencies = [
  "futures 0.3.32",
  "hex",
  "rand 0.8.6",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -1401,7 +1405,7 @@ dependencies = [
  "mime_guess",
  "portable-pty 0.8.1",
  "rand 0.8.6",
- "reqwest",
+ "reqwest 0.12.28",
  "semver 1.0.28",
  "serde",
  "serde_json",
@@ -1430,7 +1434,7 @@ dependencies = [
  "clap",
  "futures-util",
  "portable-pty 0.8.1",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tempfile",
@@ -1467,7 +1471,7 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
@@ -1514,7 +1518,7 @@ dependencies = [
  "rand 0.8.6",
  "ratatui 0.26.3",
  "regex",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1550,7 +1554,7 @@ dependencies = [
  "flate2",
  "futures 0.3.32",
  "hex",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -1608,7 +1612,7 @@ dependencies = [
  "include_dir",
  "indicatif",
  "objc",
- "reqwest",
+ "reqwest 0.12.28",
  "tempfile",
  "tokio",
  "tower-http",
@@ -1699,7 +1703,7 @@ dependencies = [
  "futures 0.3.32",
  "hex",
  "lru 0.12.5",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -1805,7 +1809,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "hex",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -1895,7 +1899,7 @@ dependencies = [
  "clap",
  "config",
  "futures 0.3.32",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
@@ -1993,7 +1997,7 @@ dependencies = [
  "headers",
  "http 1.4.2",
  "regex",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -2051,7 +2055,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tokio",
@@ -2208,7 +2212,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
- "reqwest",
+ "reqwest 0.12.28",
  "scraper",
  "serde",
  "serde_json",
@@ -2230,7 +2234,7 @@ dependencies = [
  "chrono",
  "futures 0.3.32",
  "mcp-client",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2254,7 +2258,7 @@ dependencies = [
  "allternit-sdk-transport",
  "anyhow",
  "async-trait",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -2298,7 +2302,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "reqwest",
+ "reqwest 0.12.28",
  "semver 1.0.28",
  "serde",
  "serde_json",
@@ -3182,7 +3186,7 @@ dependencies = [
  "serde_path_to_error",
  "serde_urlencoded",
  "sha1 0.10.6",
- "sync_wrapper",
+ "sync_wrapper 1.0.2",
  "tokio",
  "tokio-tungstenite 0.24.0",
  "tower 0.5.3",
@@ -3206,7 +3210,7 @@ dependencies = [
  "mime",
  "pin-project-lite",
  "rustversion",
- "sync_wrapper",
+ "sync_wrapper 1.0.2",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -5695,7 +5699,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
@@ -6540,7 +6544,7 @@ dependencies = [
  "ratatui 0.30.0",
  "ratatui-core",
  "regex",
- "reqwest",
+ "reqwest 0.12.28",
  "schemars 1.2.1",
  "serde",
  "serde_ignored",
@@ -6904,7 +6908,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "socket2 0.6.4",
- "system-configuration",
+ "system-configuration 0.7.0",
  "tokio",
  "tower-service",
  "tracing",
@@ -7828,7 +7832,7 @@ dependencies = [
  "chrono",
  "crossterm 0.27.0",
  "ratatui 0.26.3",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
@@ -7891,7 +7895,7 @@ dependencies = [
  "futures 0.3.32",
  "futures-util",
  "rand 0.8.6",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -7915,7 +7919,7 @@ dependencies = [
  "futures 0.3.32",
  "futures-util",
  "rand 0.8.6",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -8821,6 +8825,70 @@ dependencies = [
 ]
 
 [[package]]
+name = "opentelemetry"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "900d57987be3f2aeb70d385fff9b27fb74c5723cc9a52d904d4f9c807a0667bf"
+dependencies = [
+ "futures-core",
+ "futures-sink",
+ "js-sys",
+ "once_cell",
+ "pin-project-lite",
+ "thiserror 1.0.69",
+ "urlencoding",
+]
+
+[[package]]
+name = "opentelemetry"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b69a91d4893e713e06f724597ad630f1fa76057a5e1026c0ca67054a9032a76"
+dependencies = [
+ "futures-core",
+ "futures-sink",
+ "js-sys",
+ "once_cell",
+ "pin-project-lite",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "opentelemetry-http"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0ba633e55c5ea6f431875ba55e71664f2fa5d3a90bd34ec9302eecc41c865dd"
+dependencies = [
+ "async-trait",
+ "bytes 1.12.0",
+ "http 0.2.12",
+ "opentelemetry 0.23.0",
+ "reqwest 0.11.27",
+]
+
+[[package]]
+name = "opentelemetry_sdk"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e90c7113be649e31e9a0f8b5ee24ed7a16923b322c3c5ab6367469c049d6b7e"
+dependencies = [
+ "async-trait",
+ "crossbeam-channel",
+ "futures-channel",
+ "futures-executor",
+ "futures-util",
+ "glob",
+ "once_cell",
+ "opentelemetry 0.22.0",
+ "ordered-float",
+ "percent-encoding",
+ "rand 0.8.6",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "option-ext"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9462,7 +9530,7 @@ dependencies = [
  "anyhow",
  "axum",
  "chrono",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -9542,7 +9610,7 @@ dependencies = [
  "shared_library",
  "shell-words",
  "winapi 0.3.9",
- "winreg",
+ "winreg 0.10.1",
 ]
 
 [[package]]
@@ -9561,7 +9629,7 @@ dependencies = [
  "sha2 0.10.9",
  "shell-words",
  "winapi 0.3.9",
- "winreg",
+ "winreg 0.10.1",
 ]
 
 [[package]]
@@ -9821,7 +9889,7 @@ dependencies = [
  "hex",
  "mockito",
  "moka",
- "reqwest",
+ "reqwest 0.12.28",
  "semver 1.0.28",
  "serde",
  "serde_json",
@@ -9986,7 +10054,7 @@ dependencies = [
  "parking_lot 0.12.5",
  "prost",
  "prost-types",
- "reqwest",
+ "reqwest 0.12.28",
  "semver 1.0.28",
  "serde",
  "serde_json",
@@ -10527,6 +10595,42 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "reqwest"
+version = "0.11.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd67538700a17451e7cba03ac727fb961abb7607553461627b97de0b89cf4a62"
+dependencies = [
+ "base64 0.21.7",
+ "bytes 1.12.0",
+ "encoding_rs",
+ "futures-core",
+ "futures-util",
+ "h2 0.3.27",
+ "http 0.2.12",
+ "http-body 0.4.6",
+ "hyper 0.14.32",
+ "ipnet",
+ "js-sys",
+ "log",
+ "mime",
+ "once_cell",
+ "percent-encoding",
+ "pin-project-lite",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "sync_wrapper 0.1.2",
+ "system-configuration 0.5.1",
+ "tokio",
+ "tower-service",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "winreg 0.50.0",
+]
+
+[[package]]
+name = "reqwest"
 version = "0.12.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
@@ -10558,7 +10662,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "sync_wrapper",
+ "sync_wrapper 1.0.2",
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.26.4",
@@ -12415,6 +12519,12 @@ dependencies = [
 
 [[package]]
 name = "sync_wrapper"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2047c6ded9c721764247e62cd3b03c09ffc529b2ba5b10ec482ae507a4a70160"
+
+[[package]]
+name = "sync_wrapper"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263"
@@ -12450,13 +12560,34 @@ dependencies = [
 
 [[package]]
 name = "system-configuration"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba3a3adc5c275d719af8cb4272ea1c4a6d668a777f37e115f6d11ddbc1c8e0e7"
+dependencies = [
+ "bitflags 1.3.2",
+ "core-foundation 0.9.4",
+ "system-configuration-sys 0.5.0",
+]
+
+[[package]]
+name = "system-configuration"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a13f3d0daba03132c0aa9767f98351b3488edc2c100cda2d2ec2b04f3d8d3c8b"
 dependencies = [
  "bitflags 2.13.0",
  "core-foundation 0.9.4",
- "system-configuration-sys",
+ "system-configuration-sys 0.6.0",
+]
+
+[[package]]
+name = "system-configuration-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a75fb188eb626b924683e3b95e3a48e63551fcfb51949de2f06a9d91dbee93c9"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
 ]
 
 [[package]]
@@ -13215,7 +13346,7 @@ dependencies = [
  "indexmap 2.14.0",
  "pin-project-lite",
  "slab",
- "sync_wrapper",
+ "sync_wrapper 1.0.2",
  "tokio",
  "tokio-util",
  "tower-layer",
@@ -13306,6 +13437,24 @@ dependencies = [
  "log",
  "once_cell",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-opentelemetry"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9be14ba1bbe4ab79e9229f7f89fab8d120b865859f10527f31c033e599d2284"
+dependencies = [
+ "js-sys",
+ "once_cell",
+ "opentelemetry 0.22.0",
+ "opentelemetry_sdk",
+ "smallvec 1.15.2",
+ "tracing",
+ "tracing-core",
+ "tracing-log",
+ "tracing-subscriber",
+ "web-time",
 ]
 
 [[package]]
@@ -13472,7 +13621,7 @@ dependencies = [
  "axum",
  "futures-util",
  "interprocess",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
@@ -13811,7 +13960,7 @@ dependencies = [
  "anyhow",
  "axum",
  "chrono",
- "reqwest",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tempfile",
@@ -15143,6 +15292,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "winreg"
+version = "0.50.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
+dependencies = [
+ "cfg-if 1.0.4",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]

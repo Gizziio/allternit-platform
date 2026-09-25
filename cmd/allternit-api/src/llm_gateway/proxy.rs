@@ -41,7 +41,7 @@ use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::{info, warn, Instrument};
 
 use crate::db::DbHandle;
 use crate::AppState;
@@ -1001,7 +1001,14 @@ pub(crate) fn record_usage_event(
         .usage
         .provider_id
         .as_deref()
-        .is_some_and(|provider_id| super::route_credentials::has_credential(db, &key.user_id, provider_id));
+        .is_some_and(|provider_id| {
+            super::route_credentials::has_any_credential(
+                db,
+                &key.user_id,
+                key.tenant_id.as_deref(),
+                provider_id,
+            )
+        });
 
     // B4: recompute cost from the models.dev cache (skipped → NULL when the
     // file or model is unavailable; the Gizzi-reported cost stands alone).
@@ -1643,7 +1650,23 @@ pub async fn best_of_completions(
 }
 
 /// `POST /chat/completions` — OpenAI-compatible completion via Gizzi.
-#[tracing::instrument(skip_all, name = "llm_gateway.chat_completions")]
+///
+/// OTel GenAI semantic-convention fields are declared here and recorded by
+/// [`super::genai_spans`] once routing resolves the provider/model and the
+/// outcome settles (recorded only when OTel export is enabled).
+#[tracing::instrument(
+    skip_all,
+    name = "llm_gateway.chat_completions",
+    fields(
+        gen_ai.operation.name = "chat",
+        gen_ai.system = tracing::field::Empty,
+        gen_ai.request.model = tracing::field::Empty,
+        gen_ai.response.model = tracing::field::Empty,
+        gen_ai.usage.input_tokens = tracing::field::Empty,
+        gen_ai.usage.output_tokens = tracing::field::Empty,
+        error.type = tracing::field::Empty,
+    )
+)]
 pub async fn chat_completions(
     State(state): State<Arc<AppState>>,
     Extension(key): Extension<LlmKeyContext>,
@@ -1861,12 +1884,18 @@ pub async fn chat_completions(
     // BYO subscription keys (route_credentials): when the resolved provider
     // matches one of the caller's own credentials, attach it to the Gizzi
     // payload so the upstream call bills the customer's own cloud console
-    // instead of Allternit credits. Always a separate payload key — never
-    // inside `provider`, which is forwarded to the aggregator.
-    let byo_primary =
-        super::route_credentials::get_credential(&state.db, &key.user_id, &resolved.provider_id)
-            .ok()
-            .flatten();
+    // instead of Allternit credits. Resolution is user → org pool → platform
+    // (P1.7): the org pool is consulted under the key's tenant/org scope and
+    // rotates across healthy pool entries. Always a separate payload key —
+    // never inside `provider`, which is forwarded to the aggregator.
+    let byo_primary = super::route_credentials::resolve_credential(
+        &state.db,
+        &key.user_id,
+        key.tenant_id.as_deref(),
+        &resolved.provider_id,
+    )
+    .ok()
+    .flatten();
     let attach_byo = |payload: &mut Value, credential: &super::route_credentials::RouteCredential| {
         let mut object = serde_json::Map::new();
         object.insert("apiKey".into(), json!(credential.api_key));
@@ -2064,6 +2093,9 @@ pub async fn chat_completions(
         Some(credential) => attach_byo(&mut payload, credential),
         None => clear_byo(&mut payload),
     }
+    // The credential serving the in-flight attempt; the retry loop marks its
+    // health (fail streak / reset) and re-resolves it per failover model.
+    let mut current_byo = byo_primary;
     let message_url = format!(
         "{base}/v1/session/{}/message",
         urlencoding::encode(&session_id)
@@ -2078,6 +2110,11 @@ pub async fn chat_completions(
         stream,
         key_prefix = %key.key_prefix,
         "LLM gateway request dispatched to Gizzi"
+    );
+    super::genai_spans::record_request(
+        &tracing::Span::current(),
+        &resolved.provider_id,
+        &request.model,
     );
 
     // Retry policy + fallback chain, shared by both response paths: the
@@ -2135,6 +2172,13 @@ pub async fn chat_completions(
         let (mut response, mut outcome): (Response, RequestOutcome);
 
         loop {
+            // P1.5: one OTel span per retry/failover attempt (no-op when OTel
+            // export is disabled — `genai_spans` returns Span::none()).
+            let attempt_span = super::genai_spans::retry_attempt_span(
+                attempt,
+                &current_provider_id,
+                &current_model_id,
+            );
             (response, outcome) = nonstream_completion(
                 key.clone(),
                 send_task,
@@ -2150,7 +2194,13 @@ pub async fn chat_completions(
                 batch_id.clone(),
                 context_cache_id.clone(),
             )
+            .instrument(attempt_span.clone())
             .await;
+            super::genai_spans::record_attempt_outcome(
+                &attempt_span,
+                outcome.status,
+                outcome.error_type.as_deref(),
+            );
 
             // Health-based failover (P0.1): feed every attempt outcome into
             // the cooldown tracker, keyed by the provider/model that actually
@@ -2162,6 +2212,32 @@ pub async fn chat_completions(
                 super::failover::classify_outcome(outcome.status, outcome.error_type.as_deref()),
                 &policy,
             );
+
+            // BYO key health (P1.7): the credential that served this attempt
+            // gets its failure streak bumped (skipped after
+            // MAX_CONSECUTIVE_FAILURES) or reset on success, so pool rotation
+            // steers away from a sick key.
+            if let Some(credential) = &current_byo {
+                if let Some(credential_id) = credential.credential_id.clone() {
+                    let db = state.db.clone();
+                    let scope = credential.scope;
+                    let ok = outcome.status == "ok";
+                    tokio::task::spawn_blocking(move || {
+                        let result = if ok {
+                            super::route_credentials::mark_credential_ok(&db, scope, &credential_id)
+                        } else {
+                            super::route_credentials::mark_credential_failed(
+                                &db,
+                                scope,
+                                &credential_id,
+                            )
+                        };
+                        if let Err(err) = result {
+                            warn!(error = %err, "BYO credential health marking failed");
+                        }
+                    });
+                }
+            }
 
             if outcome.status == "ok" {
                 break;
@@ -2261,17 +2337,18 @@ pub async fn chat_completions(
             }
             // The BYO credential must follow the failover model too — and be
             // removed when the next provider is not the caller's own, so a
-            // user key never rides along to a provider they did not supply
-            // credentials for.
-            match super::route_credentials::get_credential(
+            // user/org key never rides along to a provider they did not
+            // supply credentials for. Re-resolved user → org pool → platform.
+            current_byo = super::route_credentials::resolve_credential(
                 &state.db,
                 &key.user_id,
+                key.tenant_id.as_deref(),
                 &next_model.provider_id,
             )
             .ok()
-            .flatten()
-            {
-                Some(credential) => attach_byo(&mut payload, &credential),
+            .flatten();
+            match &current_byo {
+                Some(credential) => attach_byo(&mut payload, credential),
                 None => clear_byo(&mut payload),
             }
 
@@ -2291,6 +2368,16 @@ pub async fn chat_completions(
                 "LLM gateway retry dispatched to Gizzi"
             );
         }
+
+        // GenAI response fields: final model that served the request plus
+        // token usage, recorded once on the handler span after the loop.
+        super::genai_spans::record_response(
+            &tracing::Span::current(),
+            outcome.usage.model_id.as_deref(),
+            outcome.usage.prompt_tokens,
+            outcome.usage.completion_tokens,
+            outcome.error_type.as_deref(),
+        );
 
         // Persist the final outcome once. For idempotent requests this
         // finalizes the pre-inserted in_progress row; for non-idempotent

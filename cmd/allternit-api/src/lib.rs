@@ -185,6 +185,7 @@ pub mod office_engine_routes;
 pub mod office_routes;
 pub mod onboarding_routes;
 pub mod open_connector_proxy;
+pub mod otel;
 pub mod orchestrator_routes;
 pub mod permission_policy;
 pub mod policy_audit;

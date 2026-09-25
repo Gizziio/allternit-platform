@@ -341,9 +341,11 @@ tokio-cron-scheduler = "0.10"
 cron = "0.15"
 
 # OpenTelemetry
-opentelemetry = { version = "0.20", features = ["trace"] }
-opentelemetry_sdk = { version = "0.20", features = ["trace", "rt-tokio"] }
-opentelemetry-http = "0.9"
+# Consistent pre-1.0 set: tracing-opentelemetry 0.23 requires opentelemetry
+# 0.22; opentelemetry_sdk and opentelemetry-http are pinned to match.
+opentelemetry = { version = "0.22", features = ["trace"] }
+opentelemetry_sdk = { version = "0.22", features = ["trace", "rt-tokio"] }
+opentelemetry-http = "0.12"
 tracing-opentelemetry = "0.23"
 
 # API Documentation
