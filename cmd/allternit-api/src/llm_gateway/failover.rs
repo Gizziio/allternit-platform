@@ -178,7 +178,7 @@ pub fn next_backoff_ms(attempt: u32, base_delay_ms: i64, max_delay_ms: i64) -> u
 }
 
 /// A candidate model reference.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ModelRef {
     pub provider_id: String,
     pub model_id: String,
@@ -446,6 +446,70 @@ pub fn select_fallback_healthy_at(
     );
     crate::metrics::record_llm_failover_cooldown(&picked.provider_id, &picked.model_id);
     Some(picked.clone())
+}
+
+// ─── Streaming failover: retry-hint events (P0.2) ───────────────────────────
+//
+// Owning-layer decision: the streaming path gets exactly one upstream attempt
+// (transparent gateway-owned resume is deferred), so the *policy* question —
+// is this failure worth re-driving, and against which model — lives here in
+// `failover.rs` next to `should_retry`/`select_fallback_healthy`, while
+// `proxy.rs::stream_completion` owns the SSE wire and simply serializes the
+// hint. Gizzi (which owns session state) re-drives with full context.
+
+/// The `allternit.retry_hint` SSE event payload, emitted on the stream when an
+/// upstream streaming attempt fails. `retryable: false` marks a terminal
+/// failure (policy would not retry it); `next_fallback` is the health-aware
+/// pick for the next attempt (`null` when the chain is exhausted).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct RetryHint {
+    pub retryable: bool,
+    pub reason: String,
+    pub next_fallback: Option<ModelRef>,
+}
+
+/// Build the retry hint for a failed streaming attempt using the process-wide
+/// cooldown tracker.
+pub fn stream_retry_hint(
+    status: &str,
+    error_type: Option<&str>,
+    primary: &ModelRef,
+    fallbacks: &[ModelRef],
+    policy: &RetryPolicy,
+) -> RetryHint {
+    stream_retry_hint_at(
+        status,
+        error_type,
+        primary,
+        fallbacks,
+        policy,
+        Instant::now(),
+        cooldowns(),
+    )
+}
+
+/// Clock- and tracker-injected variant of [`stream_retry_hint`] for tests.
+pub fn stream_retry_hint_at(
+    status: &str,
+    error_type: Option<&str>,
+    primary: &ModelRef,
+    fallbacks: &[ModelRef],
+    policy: &RetryPolicy,
+    now: Instant,
+    tracker: &CooldownTracker,
+) -> RetryHint {
+    // The failed attempt was attempt 1; a re-drive would be attempt 2.
+    let retryable = should_retry(status, error_type, 2, policy);
+    let next_fallback = if retryable {
+        select_fallback_healthy_at(2, primary, fallbacks, policy, now, tracker)
+    } else {
+        None
+    };
+    RetryHint {
+        retryable,
+        reason: error_type.unwrap_or(status).to_string(),
+        next_fallback,
+    }
 }
 
 #[cfg(test)]
@@ -843,5 +907,94 @@ mod tests {
         let policy = RetryPolicy::default();
         assert_eq!(policy.cooldown_rate_limited_ms, 5_000);
         assert_eq!(policy.cooldown_failure_ms, 30_000);
+    }
+
+    // ── Retry hints (P0.2 streaming failover) ───────────────────────────────
+
+    #[test]
+    fn retry_hint_points_at_first_healthy_fallback() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude"), model("kimi", "k3")];
+
+        let hint =
+            stream_retry_hint_at("error", Some("upstream_error"), &primary, &fallbacks, &policy, t0, &tracker);
+        assert!(hint.retryable);
+        assert_eq!(hint.reason, "upstream_error");
+        assert_eq!(hint.next_fallback, Some(model("anthropic", "claude")));
+    }
+
+    #[test]
+    fn retry_hint_skips_cooling_fallback() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude"), model("kimi", "k3")];
+
+        tracker.record_outcome_at("anthropic", "claude", AttemptOutcome::RateLimited, &policy, t0);
+        let hint =
+            stream_retry_hint_at("error", Some("upstream_error"), &primary, &fallbacks, &policy, t0, &tracker);
+        assert!(hint.retryable);
+        assert_eq!(hint.next_fallback, Some(model("kimi", "k3")));
+    }
+
+    #[test]
+    fn retry_hint_marks_terminal_failure_not_retryable() {
+        let tracker = CooldownTracker::new();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude")];
+
+        // Policy disabled: nothing is retryable.
+        let disabled = RetryPolicy {
+            enabled: false,
+            ..RetryPolicy::default()
+        };
+        let hint =
+            stream_retry_hint_at("error", Some("upstream_error"), &primary, &fallbacks, &disabled, t0, &tracker);
+        assert!(!hint.retryable);
+        assert_eq!(hint.next_fallback, None);
+
+        // Status outside the retryable set: terminal.
+        let policy = RetryPolicy::default();
+        let hint =
+            stream_retry_hint_at("client_disconnected", None, &primary, &fallbacks, &policy, t0, &tracker);
+        assert!(!hint.retryable);
+        assert_eq!(hint.reason, "client_disconnected");
+        assert_eq!(hint.next_fallback, None);
+    }
+
+    #[test]
+    fn retry_hint_null_fallback_when_chain_exhausted() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+
+        // Retryable error but no fallbacks configured.
+        let hint = stream_retry_hint_at("error", Some("upstream_error"), &primary, &[], &policy, t0, &tracker);
+        assert!(hint.retryable);
+        assert_eq!(hint.next_fallback, None);
+    }
+
+    #[test]
+    fn retry_hint_serializes_wire_shape() {
+        let hint = RetryHint {
+            retryable: true,
+            reason: "rate_limit_error".to_string(),
+            next_fallback: Some(model("anthropic", "claude")),
+        };
+        let json = serde_json::to_value(&hint).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "retryable": true,
+                "reason": "rate_limit_error",
+                "next_fallback": {"provider_id": "anthropic", "model_id": "claude"}
+            })
+        );
     }
 }
