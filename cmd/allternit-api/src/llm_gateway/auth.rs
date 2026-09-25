@@ -4,9 +4,11 @@
 //! Middleware order on the gateway router (outermost first):
 //!   1. [`llm_key_middleware`] — Bearer `ak-…` → SHA-256 lookup, attaches
 //!      [`LlmKeyContext`] to request extensions.
-//!   2. [`rate_limit_middleware`] — per-key in-memory sliding window.
+//!   2. [`rate_limit_middleware`] — per-key sliding window (in-memory, or
+//!      the shared SQLite limiter when `GATEWAY_SHARED_STATE=sqlite`).
 //!   3. [`org_rate_limit_middleware`] — per-organization sliding window
-//!      (`organizations.gateway_rate_limit_rpm`, G14).
+//!      (`organizations.gateway_rate_limit_rpm`, G14; same shared-state
+//!      switch as the per-key limiter).
 //!   4. `dlp::dlp_middleware` — B6 secret scanning + injection screening.
 //!   5. [`budget_middleware`] — monthly key cap + tenant hard cap pre-check.
 //!
@@ -219,7 +221,7 @@ fn check_rate_limit(key_id: &str, limit: usize) -> bool {
 }
 
 pub async fn rate_limit_middleware(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     request: Request,
     next: Next,
 ) -> Response {
@@ -228,7 +230,16 @@ pub async fn rate_limit_middleware(
         return server_error("Internal error: missing key context".to_string()).into_response();
     };
     let limit = ctx.rate_limit_rpm.unwrap_or(DEFAULT_RATE_LIMIT_RPM).max(1) as usize;
-    if !check_rate_limit(&ctx.key_id, limit) {
+    // Shared-state mode (GATEWAY_SHARED_STATE=sqlite, installed by `main`):
+    // counters live in SQLite so replicas share the window. Otherwise the
+    // in-memory sliding window — unchanged single-process behavior.
+    let allowed = match crate::llm_gateway::shared_state::get() {
+        Some(shared) => shared
+            .rate_limiter
+            .check_and_record(&format!("gwkey:{}", ctx.key_id), limit),
+        None => check_rate_limit(&ctx.key_id, limit),
+    };
+    if !allowed {
         let retry_after = RATE_WINDOW.as_secs().max(1);
         let body = json!({
             "error": {
@@ -415,7 +426,13 @@ pub async fn org_rate_limit_middleware(
         return next.run(request).await;
     };
 
-    if !org_check_rate_limit(&org_id, limit) {
+    let org_allowed = match crate::llm_gateway::shared_state::get() {
+        Some(shared) => shared
+            .rate_limiter
+            .check_and_record(&format!("gworg:{org_id}"), limit),
+        None => org_check_rate_limit(&org_id, limit),
+    };
+    if !org_allowed {
         let retry_after = RATE_WINDOW.as_secs().max(1);
         let body = json!({
             "error": {

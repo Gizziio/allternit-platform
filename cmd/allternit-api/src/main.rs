@@ -230,6 +230,17 @@ async fn main() {
     let db = DbHandle::new(db_path.clone()).expect("Failed to initialize SQLite database");
     info!("Database ready at {}", db_path.display());
 
+    // Shared gateway state (P2.9): with GATEWAY_SHARED_STATE=sqlite, failover
+    // cooldowns and gateway rate-limit counters live in SQLite so multiple
+    // replicas steer/throttle identically. Default off: in-memory behavior.
+    if allternit_api::llm_gateway::shared_state::init(db.clone()) {
+        if let Some(shared) = allternit_api::llm_gateway::shared_state::get() {
+            allternit_api::llm_gateway::failover::cooldowns()
+                .install_shared_store(shared.cooldowns.clone());
+        }
+        info!("GATEWAY_SHARED_STATE=sqlite: shared cooldown + rate-limit state enabled");
+    }
+
     // Initialize passkey / WebAuthn state when configured.
     let passkey_state = match initialize_passkey_state(db.clone()) {
         Ok(Some(state)) => {
