@@ -1,6 +1,6 @@
 // capture.mjs — screen capture sources producing JPEG frames.
 // Default: ScreenCaptureKit helper (sc_capture binary, length-prefixed JPEGs
-// on stdout). Fallback: `screencapture -x` in a loop (+ sips downscale).
+// on stdout). Fallback: `screencapture -x` in a loop (+ resize_jpeg downscale).
 // Emits 'frame' (Buffer) and 'info' ({width, height} = capture image pixels).
 // This module boundary maps to the future Rust `capture` module — same
 // contract: start() → frames + info, stop().
@@ -18,6 +18,8 @@ const execFileP = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SWIFT_SRC = join(HERE, '..', 'capture', 'sc_capture.swift');
 const SWIFT_BIN = join(HERE, '..', 'capture', 'sc_capture');
+const RESIZE_SRC = join(HERE, '..', 'capture', 'resize_jpeg.swift');
+const RESIZE_BIN = join(HERE, '..', 'capture', 'resize_jpeg');
 
 export async function checkScreenRecordingPermission() {
   if (!existsSync(SWIFT_BIN)) await buildSwiftHelper();
@@ -31,6 +33,12 @@ export async function checkScreenRecordingPermission() {
 
 export async function buildSwiftHelper() {
   await execFileP('swiftc', ['-O', '-o', SWIFT_BIN, SWIFT_SRC], { timeout: 180000 });
+}
+
+async function ensureResizer() {
+  if (!existsSync(RESIZE_BIN)) {
+    await execFileP('swiftc', ['-O', '-o', RESIZE_BIN, RESIZE_SRC], { timeout: 180000 });
+  }
 }
 
 export class Capture extends EventEmitter {
@@ -227,17 +235,24 @@ export class Capture extends EventEmitter {
     tick();
   }
 
-  #startScreencaptureLoop() {
+  async #startScreencaptureLoop() {
     this.actualMode = 'screencapture';
     const dir = mkdtempSync(join(tmpdir(), `phone-remote-${process.pid}-`));
     const tmp = join(dir, 'capture.jpg');
     const small = join(dir, 'small.jpg');
-    // sips orphans a UUID-named JPEG intermediate (~one frame each) per
-    // invocation in the *root of the per-user temp dir* (confstr
-    // _CS_DARWIN_USER_TEMP_DIR — env TMPDIR does not redirect it). Unswept
-    // that is ~2.4 MB/s at 8fps and filled a 512 GB disk in days. Sweep the
-    // temp root; the JPEG magic check and age floor keep other apps' files
-    // and in-flight writes out of the blast radius.
+    // Downscale with our own helper, not sips: sips orphans one UUID-named
+    // JPEG intermediate per invocation in the per-user temp root (confstr
+    // _CS_DARWIN_USER_TEMP_DIR — a private TMPDIR does not redirect it),
+    // which at ~8fps is ~2.4 MB/s and filled a 512 GB disk in days.
+    try {
+      await ensureResizer();
+    } catch (err) {
+      this.log(`[capture] resize_jpeg build failed: ${err.message} — sending full-res frames`);
+    }
+    const canResize = existsSync(RESIZE_BIN);
+    // Belt-and-braces: if any sips (an old build, another tool) still drops
+    // UUID orphans in the temp root, sweep them. JPEG magic + age floor keep
+    // other apps' files and in-flight writes out of the blast radius.
     const tempRoot = tmpdir();
     const isOrphan = (name) => /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(name);
     const sweepOrphans = () => {
@@ -263,9 +278,13 @@ export class Capture extends EventEmitter {
       const t0 = performance.now();
       try {
         await execFileP('screencapture', ['-x', '-t', 'jpg', tmp], { timeout: 5000 });
-        // Downscale to the same ballpark as the sckit path (sips is a system tool).
-        await execFileP('sips', ['-Z', '1280', '-s', 'formatOptions', String(Math.round(this.quality * 100)), tmp, '--out', small], { timeout: 5000 });
-        const frame = readFileSync(small);
+        let frame;
+        if (canResize) {
+          await execFileP(RESIZE_BIN, [tmp, small, '1280', String(Math.round(this.quality * 100))], { timeout: 5000 });
+          frame = readFileSync(small);
+        } else {
+          frame = readFileSync(tmp);
+        }
         this.lastFrame = frame;
         this.emit('frame', frame);
         if (++frames % 50 === 0) sweepOrphans();
