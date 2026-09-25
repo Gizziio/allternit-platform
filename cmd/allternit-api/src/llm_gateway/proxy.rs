@@ -17,6 +17,10 @@
 //!   field. Tool-use happens inside Gizzi; the final text is what returns.
 //! - `Idempotency-Key` is honored for non-streaming requests only (a stream
 //!   cannot be replayed from a stored body).
+//! - P1.6: an opt-in in-memory response cache (`response_cache`) short-
+//!   circuits identical non-streaming, tool-free requests before any Gizzi
+//!   session/upstream call; hits return `x-allternit-cache: hit` and record
+//!   zero-cost usage (same treatment as BYOK-served requests).
 //! - B4 (pricing recompute + Prometheus counters) is wired into
 //!   [`record_usage_event`]; B5 (routing policies) is wired into
 //!   [`resolve_model`] — policy aliases resolve through `router::resolve`,
@@ -1930,6 +1934,83 @@ pub async fn chat_completions(
         .into_response();
     }
 
+    // P1.6 response cache: short-circuit identical non-streaming, tool-free
+    // requests before any Gizzi session/upstream work. The key is hashed here
+    // — after file-reference resolution and context-cache prepends, so the
+    // hash covers the final messages. The hit check runs after auth, safety,
+    // DLP, resolution, and the allowlist, so a cached body is never served to
+    // a caller who could not run the underlying request. Checked before the
+    // idempotency gate: a cache hit never opens an in_progress row.
+    let response_cache = super::response_cache::ResponseCache::global();
+    let response_cache_key =
+        if response_cache.enabled() && !stream && super::response_cache::is_cacheable(&request) {
+            Some(super::response_cache::cache_key(&request))
+        } else {
+            None
+        };
+    if let Some(cache_key) = &response_cache_key {
+        if let Some(cached_body) = response_cache.get(cache_key) {
+            crate::metrics::inc_llm_response_cache_hit(&request.model);
+            // Zero-cost usage, same treatment as BYOK: the cached body's
+            // token counts are metered, but provider_id is None and cost is
+            // 0, so record_usage_event stores/recomputes no spend.
+            let cached_usage = cached_body.get("usage");
+            let token = |name: &str| {
+                cached_usage
+                    .and_then(|u| u.get(name))
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0)
+            };
+            let detail = |group: &str, name: &str| {
+                cached_usage
+                    .and_then(|u| u.get(group))
+                    .and_then(|g| g.get(name))
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0)
+            };
+            let outcome = RequestOutcome {
+                status: "ok",
+                error_type: None,
+                usage: GizziUsage {
+                    prompt_tokens: token("prompt_tokens"),
+                    completion_tokens: token("completion_tokens"),
+                    reasoning_tokens: detail("completion_tokens_details", "reasoning_tokens"),
+                    cached_tokens: detail("prompt_tokens_details", "cached_tokens"),
+                    cache_write_tokens: 0,
+                    cost_microdollars: 0,
+                    provider_id: None,
+                    model_id: Some(request.model.clone()),
+                    finish: None,
+                },
+                policy: resolved.policy.clone(),
+                fallback_from: None,
+                gizzi_session_id: None,
+                latency_ms: started.elapsed().as_millis() as i64,
+                ttft_ms: None,
+                response_body: Some(cached_body.clone()),
+                routing_decision: resolved.routing_decision.clone(),
+                tags: outcome_tags.clone(),
+                batch_id: batch_id.clone(),
+                context_cache_id: context_cache_id.clone(),
+            };
+            let db = state.db.clone();
+            let key_for_record = key.clone();
+            tokio::task::spawn_blocking(move || {
+                record_usage_event(&db, &key_for_record, &outcome, None)
+            });
+            return (
+                StatusCode::OK,
+                [
+                    (header::CONTENT_TYPE, HeaderValue::from_static("application/json")),
+                    (HeaderName::from_static("x-allternit-cache"), HeaderValue::from_static("hit")),
+                ],
+                Json(cached_body),
+            )
+                .into_response();
+        }
+        crate::metrics::inc_llm_response_cache_miss(&request.model);
+    }
+
     // Prompt: system messages → Gizzi `system` field; history → Gizzi parts.
     // Image content is preserved as `file` parts for vision-capable models.
     let (system, all_parts) = messages_to_gizzi_parts(&request.messages);
@@ -2378,6 +2459,17 @@ pub async fn chat_completions(
             outcome.usage.completion_tokens,
             outcome.error_type.as_deref(),
         );
+
+        // P1.6: store successful responses for future short-circuits. Only
+        // `ok` outcomes with a 2xx body are cached; refusals and errors are
+        // not. Done before the (spawned) usage persist so the borrow is clean.
+        if let (Some(cache_key), "ok") = (&response_cache_key, outcome.status) {
+            if response.status() == StatusCode::OK {
+                if let Some(body) = outcome.response_body.clone() {
+                    response_cache.put(cache_key.clone(), body);
+                }
+            }
+        }
 
         // Persist the final outcome once. For idempotent requests this
         // finalizes the pre-inserted in_progress row; for non-idempotent
