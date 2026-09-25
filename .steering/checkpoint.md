@@ -35,3 +35,9 @@ Close P0 gaps from the gateway gap analysis (brain: Products/GatewayGapAnalysis.
 - Tests green: `cargo test -p allternit-api llm_gateway` 215/0; `--test wire_conformance` 8/0. Disk-full flake resolved.
 - wire_conformance.rs = substantial partial P0.3 (missing BYOK attach/strip + residency 451 cases).
 - Next: commit logical chunks (console pages, P0.1/P0.4, harness, spec), then finish P0.3 cases + P0.2 retry_hint, CommRails DAG, landing lifecycle.
+
+## Resume progress 2 (2026-09-24, late)
+- P0.3 COMPLETE: BYOK attach/strip + residency 451 cases; wire_conformance 10/10 (commit 82b8b2d).
+- P0.2 COMPLETE: allternit.retry_hint SSE event on stream failure (failover.rs owns policy, proxy.rs owns wire); llm_gateway tests 222/0 (commit 6a330adba).
+- DAG dag_821592: n_2713 DONE, n_3879 DONE, n_2309 (landing) READY.
+- Next: PR → merge → sync main → ledger attestation → desktop rebuild (allternit-api sidecar affected) → worktree cleanup → git-discipline-check.
