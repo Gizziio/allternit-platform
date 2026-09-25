@@ -7,7 +7,7 @@
 
 import { spawn, execFile } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
+import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -232,17 +232,27 @@ export class Capture extends EventEmitter {
     const dir = mkdtempSync(join(tmpdir(), `phone-remote-${process.pid}-`));
     const tmp = join(dir, 'capture.jpg');
     const small = join(dir, 'small.jpg');
-    // sips orphans a UUID-named intermediate (~one frame each) per invocation
-    // when the output lives under TMPDIR — unswept, that is ~2.4 MB/s at 8fps
-    // and filled a 512 GB disk in days. Sweep them from our working dir.
+    // sips orphans a UUID-named JPEG intermediate (~one frame each) per
+    // invocation in the *root of the per-user temp dir* (confstr
+    // _CS_DARWIN_USER_TEMP_DIR — env TMPDIR does not redirect it). Unswept
+    // that is ~2.4 MB/s at 8fps and filled a 512 GB disk in days. Sweep the
+    // temp root; the JPEG magic check and age floor keep other apps' files
+    // and in-flight writes out of the blast radius.
+    const tempRoot = tmpdir();
     const isOrphan = (name) => /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(name);
     const sweepOrphans = () => {
       const now = Date.now();
-      for (const name of readdirSync(dir)) {
+      for (const name of readdirSync(tempRoot)) {
         if (!isOrphan(name)) continue;
+        const p = join(tempRoot, name);
         try {
-          if (now - statSync(join(dir, name)).mtimeMs > 2000) unlinkSync(join(dir, name));
-        } catch { /* raced with an in-flight sips write */ }
+          if (now - statSync(p).mtimeMs <= 10000) continue;
+          const fd = openSync(p, 'r');
+          const head = Buffer.alloc(3);
+          readSync(fd, head, 0, 3, 0);
+          closeSync(fd);
+          if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) unlinkSync(p);
+        } catch { /* raced with an in-flight write or not a file */ }
       }
     };
     this.log(`[capture] screencapture loop started (target ~${this.fps}fps)`);
