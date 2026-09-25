@@ -7,7 +7,7 @@
 
 import { spawn, execFile } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -229,10 +229,25 @@ export class Capture extends EventEmitter {
 
   #startScreencaptureLoop() {
     this.actualMode = 'screencapture';
-    const tmp = join(tmpdir(), `phone-remote-${process.pid}.jpg`);
-    const small = join(tmpdir(), `phone-remote-${process.pid}-small.jpg`);
+    const dir = mkdtempSync(join(tmpdir(), `phone-remote-${process.pid}-`));
+    const tmp = join(dir, 'capture.jpg');
+    const small = join(dir, 'small.jpg');
+    // sips orphans a UUID-named intermediate (~one frame each) per invocation
+    // when the output lives under TMPDIR — unswept, that is ~2.4 MB/s at 8fps
+    // and filled a 512 GB disk in days. Sweep them from our working dir.
+    const isOrphan = (name) => /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(name);
+    const sweepOrphans = () => {
+      const now = Date.now();
+      for (const name of readdirSync(dir)) {
+        if (!isOrphan(name)) continue;
+        try {
+          if (now - statSync(join(dir, name)).mtimeMs > 2000) unlinkSync(join(dir, name));
+        } catch { /* raced with an in-flight sips write */ }
+      }
+    };
     this.log(`[capture] screencapture loop started (target ~${this.fps}fps)`);
     this.emit('info', { width: 0, height: 0 }); // unknown until first frame; client learns from JPEG itself
+    let frames = 0;
     const tick = async () => {
       if (!this.running) return;
       const t0 = performance.now();
@@ -243,6 +258,7 @@ export class Capture extends EventEmitter {
         const frame = readFileSync(small);
         this.lastFrame = frame;
         this.emit('frame', frame);
+        if (++frames % 50 === 0) sweepOrphans();
       } catch (err) {
         this.emit('captureError', { type: 'error', error: `screencapture: ${err.message}` });
       }
@@ -251,7 +267,7 @@ export class Capture extends EventEmitter {
       this.timer = setTimeout(tick, wait);
     };
     tick();
-    this.on('stop', () => { rmSync(tmp, { force: true }); rmSync(small, { force: true }); });
+    this.on('stop', () => { rmSync(dir, { recursive: true, force: true }); });
   }
 
   stop() {
