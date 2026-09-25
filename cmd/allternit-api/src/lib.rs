@@ -258,7 +258,9 @@ use terminal_routes::TerminalSessionStore;
 use tokio::sync::RwLock;
 use vm_session_routes::VmSessionStore;
 
-#[cfg(test)]
+// Unit tests (`cfg(test)`) and integration tests in `tests/` (which build the
+// crate without `cfg(test)` but with debug assertions) both use this factory.
+#[cfg(any(test, debug_assertions))]
 pub mod test_helpers {
     //! Minimal `AppState` factory for unit tests that need the full struct.
     use super::*;
@@ -306,6 +308,7 @@ pub mod test_helpers {
     /// (policy-seat and policy-audit tests already serialize on it); tests
     /// holding that lock must NOT take this guard again — std `Mutex` is not
     /// reentrant and the same-thread second lock deadlocks.
+    #[cfg(test)]
     pub fn computer_use_dir_test_lock() -> std::sync::MutexGuard<'static, ()> {
         crate::policy_config::POLICY_TEST_LOCK
             .lock()

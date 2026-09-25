@@ -6,6 +6,12 @@
 //! When a configured embeddings provider is available, requests are proxied
 //! to it. Otherwise, a deterministic hash-based embedding is generated
 //! locally for development and testing.
+//!
+//! Dev escape hatch: the local fake embedding is only returned when
+//! `ALLTERNIT_GATEWAY_ALLOW_FAKE_PROVIDERS=1` is set (dev machines, tests).
+//! Without it — the default — the endpoint returns HTTP 501 with code
+//! `allternit.not_configured`, because silently billing for hash-based fake
+//! embeddings on a production surface is never acceptable.
 
 use axum::{
     extract::{Extension, State},
@@ -24,8 +30,28 @@ use crate::AppState;
 
 use super::{
     auth::LlmKeyContext,
-    translate::OpenAiErrorResponse,
+    translate::{error_code, OpenAiErrorResponse},
 };
+
+/// Env var that re-enables fake provider output (dev only). See module header.
+const ALLOW_FAKE_PROVIDERS_ENV: &str = "ALLTERNIT_GATEWAY_ALLOW_FAKE_PROVIDERS";
+
+/// Gatekeeper for the no-provider fallback: returns `Some(501
+/// allternit.not_configured)` unless the fake-provider escape hatch is set.
+/// `env_value` is injected so tests stay deterministic without touching
+/// process-wide environment.
+fn fake_provider_gate(env_value: Option<&str>, provider_kind: &str) -> Option<OpenAiErrorResponse> {
+    if env_value == Some("1") {
+        return None;
+    }
+    Some(OpenAiErrorResponse::new(
+        StatusCode::NOT_IMPLEMENTED,
+        format!("no {provider_kind} provider configured"),
+        "not_configured",
+        None,
+        Some(error_code::NOT_CONFIGURED),
+    ))
+}
 
 // ─── Request types ──────────────────────────────────────────────────────────
 
@@ -144,6 +170,12 @@ pub async fn create_embeddings(
     Json(body): Json<CreateEmbeddingsRequest>,
 ) -> Response {
     let inputs = body.input.as_strings();
+
+    if let Some(err) =
+        fake_provider_gate(std::env::var(ALLOW_FAKE_PROVIDERS_ENV).ok().as_deref(), "embeddings")
+    {
+        return err.into_response();
+    }
 
     if inputs.is_empty() {
         return OpenAiErrorResponse::invalid_request(
@@ -270,5 +302,29 @@ mod tests {
         assert_eq!(estimate_tokens("hello world"), 3);
         assert_eq!(estimate_tokens(""), 0);
         assert_eq!(estimate_tokens("abcd"), 1);
+    }
+
+    #[test]
+    fn fake_provider_gate_blocks_without_escape_hatch() {
+        let err = fake_provider_gate(None, "embeddings").expect("must block when env is unset");
+        assert_eq!(err.status, StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(err.error.code.as_deref(), Some(error_code::NOT_CONFIGURED));
+        assert!(
+            err.error.message.contains("no embeddings provider configured"),
+            "detail must name the provider kind: {}",
+            err.error.message
+        );
+    }
+
+    #[test]
+    fn fake_provider_gate_allows_with_escape_hatch() {
+        assert!(fake_provider_gate(Some("1"), "embeddings").is_none());
+    }
+
+    #[test]
+    fn fake_provider_gate_ignores_other_values() {
+        // Only the exact value "1" opts in; anything else stays fenced.
+        assert!(fake_provider_gate(Some("true"), "embeddings").is_some());
+        assert!(fake_provider_gate(Some(""), "embeddings").is_some());
     }
 }

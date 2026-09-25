@@ -917,8 +917,15 @@ async fn collect(
                     Ok(Ok(resp)) => {
                         let status = resp.status();
                         let body = resp.text().await.unwrap_or_default();
+                        // Preserve the 429 signal: failover::classify_outcome
+                        // maps "rate_limit*" error types to the short cooldown.
+                        let error_type = if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                            "rate_limit_error"
+                        } else {
+                            "upstream_error"
+                        };
                         failure = Some((
-                            "upstream_error".to_string(),
+                            error_type.to_string(),
                             format!("Gizzi message endpoint returned {status}: {body}"),
                         ));
                     }
@@ -2063,6 +2070,7 @@ pub async fn chat_completions(
     );
     let mut send_task = tokio::spawn(client.post(message_url).json(&payload).send());
     let mut current_provider_id = resolved.provider_id.clone();
+    let mut current_model_id = resolved.model_id.clone();
 
     info!(
         session_id = %session_id,
@@ -2138,6 +2146,17 @@ pub async fn chat_completions(
             )
             .await;
 
+            // Health-based failover (P0.1): feed every attempt outcome into
+            // the cooldown tracker, keyed by the provider/model that actually
+            // served the attempt. Success clears the record; 429s and
+            // failure streaks put the candidate into cooldown.
+            super::failover::record_attempt_outcome(
+                &current_provider_id,
+                &current_model_id,
+                super::failover::classify_outcome(outcome.status, outcome.error_type.as_deref()),
+                &policy,
+            );
+
             if outcome.status == "ok" {
                 break;
             }
@@ -2147,8 +2166,10 @@ pub async fn chat_completions(
             if !super::failover::should_retry(outcome.status, error_type, attempt, &policy) {
                 break;
             }
+            // Cooldown-aware selection: skips cooling-down candidates and
+            // fail-opens to the soonest-expiring one rather than erroring.
             let Some(next_model) =
-                super::failover::select_fallback(attempt, &primary, &fallback_refs, &policy)
+                super::failover::select_fallback_healthy(attempt, &primary, &fallback_refs, &policy)
             else {
                 break;
             };
@@ -2254,6 +2275,7 @@ pub async fn chat_completions(
             );
             send_task = tokio::spawn(client.post(message_url).json(&payload).send());
             current_provider_id = next_model.provider_id.clone();
+            current_model_id = next_model.model_id.clone();
 
             info!(
                 session_id = %session_id,

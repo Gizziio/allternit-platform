@@ -12,6 +12,13 @@
 //!
 //! The WebSocket endpoint accepts binary audio frames (PCM16) and sends back
 //! audio responses. In production, this proxies to a configured audio provider.
+//!
+//! Dev escape hatch: session creation (and its mocked echo-loop WebSocket) is
+//! only available when `ALLTERNIT_GATEWAY_ALLOW_FAKE_PROVIDERS=1` is set (dev
+//! machines, tests). Without it — the default — `POST /v1/realtime/sessions`
+//! returns HTTP 501 with code `allternit.not_configured`, because silently
+//! billing for a mocked audio session on a production surface is never
+//! acceptable.
 
 use axum::{
     extract::{
@@ -35,6 +42,26 @@ use super::{
     auth::LlmKeyContext,
     translate::{error_code, OpenAiErrorResponse},
 };
+
+/// Env var that re-enables fake provider output (dev only). See module header.
+const ALLOW_FAKE_PROVIDERS_ENV: &str = "ALLTERNIT_GATEWAY_ALLOW_FAKE_PROVIDERS";
+
+/// Gatekeeper for the no-provider fallback: returns `Some(501
+/// allternit.not_configured)` unless the fake-provider escape hatch is set.
+/// `env_value` is injected so tests stay deterministic without touching
+/// process-wide environment.
+fn fake_provider_gate(env_value: Option<&str>, provider_kind: &str) -> Option<OpenAiErrorResponse> {
+    if env_value == Some("1") {
+        return None;
+    }
+    Some(OpenAiErrorResponse::new(
+        StatusCode::NOT_IMPLEMENTED,
+        format!("no {provider_kind} provider configured"),
+        "not_configured",
+        None,
+        Some(error_code::NOT_CONFIGURED),
+    ))
+}
 
 // ─── Session store ──────────────────────────────────────────────────────────
 
@@ -150,6 +177,13 @@ pub async fn create_session(
     Extension(_key): Extension<LlmKeyContext>,
     Json(body): Json<CreateSessionRequest>,
 ) -> Response {
+    if let Some(err) = fake_provider_gate(
+        std::env::var(ALLOW_FAKE_PROVIDERS_ENV).ok().as_deref(),
+        "realtime audio",
+    ) {
+        return err.into_response();
+    }
+
     // Validate model.
     let valid_models = ["allternit-realtime-1", "allternit-realtime-1-mini"];
     if !valid_models.contains(&body.model.as_str()) {
@@ -469,4 +503,32 @@ fn get_session_store(_state: &AppState) -> Option<RealtimeSessionStore> {
     // The session store would be added to AppState in a future phase.
     // For now, return None — the handlers work without it but won't persist.
     None
+}
+
+// ─── Tests ──────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fake_provider_gate_blocks_without_escape_hatch() {
+        let err =
+            fake_provider_gate(None, "realtime audio").expect("must block when env is unset");
+        assert_eq!(err.status, StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(err.error.code.as_deref(), Some(error_code::NOT_CONFIGURED));
+        assert!(
+            err.error
+                .message
+                .contains("no realtime audio provider configured"),
+            "detail must name the provider kind: {}",
+            err.error.message
+        );
+    }
+
+    #[test]
+    fn fake_provider_gate_allows_with_escape_hatch() {
+        assert!(fake_provider_gate(Some("1"), "realtime audio").is_none());
+        assert!(fake_provider_gate(Some("yes"), "realtime audio").is_some());
+    }
 }
