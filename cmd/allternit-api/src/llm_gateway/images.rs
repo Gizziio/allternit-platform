@@ -7,6 +7,12 @@
 //! Generation proxies to the configured provider (or stores a placeholder when
 //! no provider is available). Edits accept a base64-encoded source image plus a
 //! prompt and return a modified image.
+//!
+//! Dev escape hatch: the placeholder SVG output is only returned when
+//! `ALLTERNIT_GATEWAY_ALLOW_FAKE_PROVIDERS=1` is set (dev machines, tests).
+//! Without it — the default — every images endpoint returns HTTP 501 with
+//! code `allternit.not_configured`, because silently billing for placeholder
+//! images on a production surface is never acceptable.
 
 use axum::{
     extract::{Extension, State},
@@ -24,8 +30,28 @@ use crate::AppState;
 
 use super::{
     auth::LlmKeyContext,
-    translate::OpenAiErrorResponse,
+    translate::{error_code, OpenAiErrorResponse},
 };
+
+/// Env var that re-enables fake provider output (dev only). See module header.
+const ALLOW_FAKE_PROVIDERS_ENV: &str = "ALLTERNIT_GATEWAY_ALLOW_FAKE_PROVIDERS";
+
+/// Gatekeeper for the no-provider fallback: returns `Some(501
+/// allternit.not_configured)` unless the fake-provider escape hatch is set.
+/// `env_value` is injected so tests stay deterministic without touching
+/// process-wide environment.
+fn fake_provider_gate(env_value: Option<&str>, provider_kind: &str) -> Option<OpenAiErrorResponse> {
+    if env_value == Some("1") {
+        return None;
+    }
+    Some(OpenAiErrorResponse::new(
+        StatusCode::NOT_IMPLEMENTED,
+        format!("no {provider_kind} provider configured"),
+        "not_configured",
+        None,
+        Some(error_code::NOT_CONFIGURED),
+    ))
+}
 
 // ─── Request types ──────────────────────────────────────────────────────────
 
@@ -168,6 +194,11 @@ pub async fn create_images(
     Extension(_key): Extension<LlmKeyContext>,
     Json(body): Json<CreateImageRequest>,
 ) -> Response {
+    if let Some(err) =
+        fake_provider_gate(std::env::var(ALLOW_FAKE_PROVIDERS_ENV).ok().as_deref(), "images")
+    {
+        return err.into_response();
+    }
     if let Err(e) = validate_n(body.n) {
         return e.into_response();
     }
@@ -280,6 +311,11 @@ pub async fn edit_images(
     Extension(_key): Extension<LlmKeyContext>,
     Json(body): Json<EditImageRequest>,
 ) -> Response {
+    if let Some(err) =
+        fake_provider_gate(std::env::var(ALLOW_FAKE_PROVIDERS_ENV).ok().as_deref(), "images")
+    {
+        return err.into_response();
+    }
     if let Err(e) = validate_n(body.n) {
         return e.into_response();
     }
@@ -416,6 +452,11 @@ pub async fn create_image_variations(
     Extension(_key): Extension<LlmKeyContext>,
     Json(body): Json<ImageVariationsRequest>,
 ) -> Response {
+    if let Some(err) =
+        fake_provider_gate(std::env::var(ALLOW_FAKE_PROVIDERS_ENV).ok().as_deref(), "images")
+    {
+        return err.into_response();
+    }
     if let Err(e) = validate_n(body.n) {
         return e.into_response();
     }
@@ -498,5 +539,23 @@ mod tests {
         assert!(validate_response_format("url").is_ok());
         assert!(validate_response_format("b64_json").is_ok());
         assert!(validate_response_format("raw").is_err());
+    }
+
+    #[test]
+    fn fake_provider_gate_blocks_without_escape_hatch() {
+        let err = fake_provider_gate(None, "images").expect("must block when env is unset");
+        assert_eq!(err.status, StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(err.error.code.as_deref(), Some(error_code::NOT_CONFIGURED));
+        assert!(
+            err.error.message.contains("no images provider configured"),
+            "detail must name the provider kind: {}",
+            err.error.message
+        );
+    }
+
+    #[test]
+    fn fake_provider_gate_allows_with_escape_hatch() {
+        assert!(fake_provider_gate(Some("1"), "images").is_none());
+        assert!(fake_provider_gate(Some("true"), "images").is_some());
     }
 }

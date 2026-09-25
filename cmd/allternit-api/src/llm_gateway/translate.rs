@@ -28,6 +28,9 @@ pub mod error_code {
     pub const UPSTREAM_ERROR: &str = "allternit.upstream_error";
     pub const INTERNAL_ERROR: &str = "allternit.internal_error";
     pub const CONTENT_POLICY_VIOLATION: &str = "allternit.content_policy_violation";
+    /// A billed surface has no real provider configured (embeddings, images,
+    /// realtime audio). HTTP 501 — the gateway refuses to emit fake output.
+    pub const NOT_CONFIGURED: &str = "allternit.not_configured";
     /// G13: request blocked because no candidate provider satisfies the org's
     /// data-residency pin (HTTP 451).
     pub const DATA_RESIDENCY_VIOLATION: &str = "data_residency_violation";

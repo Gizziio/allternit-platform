@@ -4,7 +4,8 @@
 //! (`http_requests_total`) labelled by method, status, and matched path,
 //! plus the LLM gateway series (`llm_requests_total`, `llm_tokens_total`,
 //! `llm_cost_microdollars_total`, `llm_request_duration_seconds`,
-//! `llm_fallback_total`) emitted from the single
+//! `llm_fallback_total`, `llm_failover_cooldown_total`,
+//! `llm_failover_skipped_total`) emitted from the single
 //! `llm_gateway::proxy::record_usage_event` choke point.
 
 use axum::{
@@ -28,6 +29,8 @@ struct Metrics {
     llm_cost_microdollars_total: CounterVec,
     llm_request_duration_seconds: HistogramVec,
     llm_fallback_total: CounterVec,
+    llm_failover_cooldown_total: CounterVec,
+    llm_failover_skipped_total: CounterVec,
 }
 
 impl Metrics {
@@ -95,6 +98,24 @@ impl Metrics {
         )
         .expect("invalid llm_fallback_total metric");
 
+        let llm_failover_cooldown_total = CounterVec::new(
+            Opts::new(
+                "llm_failover_cooldown_total",
+                "Times a provider/model entered failover cooldown (incl. fail-open bypasses)",
+            ),
+            &["provider", "model"],
+        )
+        .expect("invalid llm_failover_cooldown_total metric");
+
+        let llm_failover_skipped_total = CounterVec::new(
+            Opts::new(
+                "llm_failover_skipped_total",
+                "Times a cooling-down provider/model was skipped during fallback selection",
+            ),
+            &["provider", "model"],
+        )
+        .expect("invalid llm_failover_skipped_total metric");
+
         registry
             .register(Box::new(http_request_duration_seconds.clone()))
             .expect("failed to register http_request_duration_seconds");
@@ -116,6 +137,12 @@ impl Metrics {
         registry
             .register(Box::new(llm_fallback_total.clone()))
             .expect("failed to register llm_fallback_total");
+        registry
+            .register(Box::new(llm_failover_cooldown_total.clone()))
+            .expect("failed to register llm_failover_cooldown_total");
+        registry
+            .register(Box::new(llm_failover_skipped_total.clone()))
+            .expect("failed to register llm_failover_skipped_total");
 
         Self {
             registry,
@@ -126,6 +153,8 @@ impl Metrics {
             llm_cost_microdollars_total,
             llm_request_duration_seconds,
             llm_fallback_total,
+            llm_failover_cooldown_total,
+            llm_failover_skipped_total,
         }
     }
 }
@@ -241,6 +270,23 @@ pub fn inc_llm_fallback(from: &str, to: &str) {
     METRICS
         .llm_fallback_total
         .with_label_values(&[from, to])
+        .inc();
+}
+
+/// One provider/model entering failover cooldown (429 or failure-rate trip;
+/// also incremented on fail-open bypasses, where the cooldown was overridden).
+pub fn record_llm_failover_cooldown(provider: &str, model: &str) {
+    METRICS
+        .llm_failover_cooldown_total
+        .with_label_values(&[provider, model])
+        .inc();
+}
+
+/// One cooling-down provider/model skipped during fallback selection.
+pub fn record_llm_failover_skipped(provider: &str, model: &str) {
+    METRICS
+        .llm_failover_skipped_total
+        .with_label_values(&[provider, model])
         .inc();
 }
 

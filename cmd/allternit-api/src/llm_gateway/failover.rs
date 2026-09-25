@@ -8,14 +8,40 @@
 //!
 //! Retry policy is read from `fallback_retry_policies` (managed via
 //! `/api/v1/admin/fallback-retry-policy`).
+//!
+//! Health-based failover (LiteLLM-aligned): a process-local
+//! [`CooldownTracker`] records the outcome of every gateway attempt keyed by
+//! `(provider_id, model)`. HTTP 429 responses put a provider/model into an
+//! immediate cooldown (default 5s); a sustained failure streak (>50% failure
+//! rate over a rolling 60s window with at least 4 attempts — a success clears
+//! the record, so any residual streak is effectively 100% failures) triggers a
+//! longer cooldown (default 30s). Fallback selection skips cooling-down
+//! candidates and fail-opens to the soonest-expiring one when the whole
+//! remaining chain is cooling down, so a request is never hard-errored just
+//! because every provider is briefly hot. The tracker is deliberately
+//! in-memory; moving it into shared state is a later phase.
 
+use once_cell::sync::Lazy;
 use rusqlite::OptionalExtension;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::sync::RwLock;
+use std::time::{Duration, Instant};
+use tracing::warn;
 
 use crate::db::DbHandle;
 
+/// Cooldown applied after an HTTP 429 (rate limited) attempt outcome.
+const DEFAULT_COOLDOWN_RATE_LIMITED_MS: i64 = 5_000;
+/// Cooldown applied when the failure-rate threshold trips.
+const DEFAULT_COOLDOWN_FAILURE_MS: i64 = 30_000;
+/// Rolling window for the failure-rate evaluation.
+const FAILURE_RATE_WINDOW: Duration = Duration::from_secs(60);
+/// Minimum attempts inside the window before the failure rate can trip a
+/// cooldown.
+const FAILURE_RATE_MIN_ATTEMPTS: usize = 4;
+
 /// Retry policy loaded from `fallback_retry_policies`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RetryPolicy {
     pub enabled: bool,
     pub max_retries: i64,
@@ -24,6 +50,23 @@ pub struct RetryPolicy {
     pub base_delay_ms: i64,
     pub max_delay_ms: i64,
     pub fallback_chain_enabled: bool,
+    /// Cooldown after an HTTP 429 attempt outcome (milliseconds, default 5s).
+    /// `serde(default)` keeps rows serialized before this field existed
+    /// deserializable.
+    #[serde(default = "default_cooldown_rate_limited_ms")]
+    pub cooldown_rate_limited_ms: i64,
+    /// Cooldown after the failure-rate threshold trips (milliseconds, default
+    /// 30s).
+    #[serde(default = "default_cooldown_failure_ms")]
+    pub cooldown_failure_ms: i64,
+}
+
+fn default_cooldown_rate_limited_ms() -> i64 {
+    DEFAULT_COOLDOWN_RATE_LIMITED_MS
+}
+
+fn default_cooldown_failure_ms() -> i64 {
+    DEFAULT_COOLDOWN_FAILURE_MS
 }
 
 impl Default for RetryPolicy {
@@ -39,6 +82,8 @@ impl Default for RetryPolicy {
             base_delay_ms: 500,
             max_delay_ms: 8000,
             fallback_chain_enabled: true,
+            cooldown_rate_limited_ms: DEFAULT_COOLDOWN_RATE_LIMITED_MS,
+            cooldown_failure_ms: DEFAULT_COOLDOWN_FAILURE_MS,
         }
     }
 }
@@ -92,6 +137,7 @@ pub fn load_policy(db: &DbHandle, org_id: &str) -> Result<RetryPolicy, LoadError
                 base_delay_ms: base_delay,
                 max_delay_ms: max_delay,
                 fallback_chain_enabled: fallback == 1,
+                ..RetryPolicy::default()
             })
         }
         None => Ok(RetryPolicy::default()),
@@ -132,7 +178,7 @@ pub fn next_backoff_ms(attempt: u32, base_delay_ms: i64, max_delay_ms: i64) -> u
 }
 
 /// A candidate model reference.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ModelRef {
     pub provider_id: String,
     pub model_id: String,
@@ -162,9 +208,320 @@ pub fn select_fallback(
     fallbacks.get(idx).cloned()
 }
 
+// ─── Health-based failover (cooldown tracker) ───────────────────────────────
+
+/// The classified outcome of one gateway attempt, fed to the
+/// [`CooldownTracker`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttemptOutcome {
+    /// The attempt completed successfully.
+    Success,
+    /// The upstream answered HTTP 429 (rate limited).
+    RateLimited,
+    /// Any other failure (transport error, 5xx, refusal, ...).
+    Failure,
+}
+
+/// Classify a gateway request outcome into an [`AttemptOutcome`].
+pub fn classify_outcome(status: &str, error_type: Option<&str>) -> AttemptOutcome {
+    if status == "ok" {
+        return AttemptOutcome::Success;
+    }
+    if status == "rate_limited"
+        || error_type
+            .map(|e| e.contains("rate_limit"))
+            .unwrap_or(false)
+    {
+        return AttemptOutcome::RateLimited;
+    }
+    AttemptOutcome::Failure
+}
+
+/// Per-provider/model health record kept by the [`CooldownTracker`].
+#[derive(Debug, Default)]
+struct ProviderHealthRecord {
+    /// Timestamps of failed attempts (429s and other failures) inside the
+    /// rolling [`FAILURE_RATE_WINDOW`]. Success removes the whole record, so
+    /// every timestamp here is a failure — a residual streak's failure rate
+    /// is effectively 100%, which is what makes the `>50%` rate test reduce
+    /// to the streak-length threshold below.
+    fail_timestamps: Vec<Instant>,
+    /// While set and in the future, this provider/model is skipped during
+    /// fallback selection.
+    cooldown_until: Option<Instant>,
+}
+
+/// In-memory (provider_id, model) → health record map. Deliberately not
+/// persisted: cooldowns are best-effort request steering, and losing them on
+/// restart is safe. Moving this into shared state is a later phase.
+#[derive(Debug, Default)]
+pub struct CooldownTracker {
+    records: RwLock<HashMap<(String, String), ProviderHealthRecord>>,
+}
+
+static COOLDOWNS: Lazy<CooldownTracker> = Lazy::new(CooldownTracker::new);
+
+/// The process-wide cooldown tracker consulted by the gateway retry loop.
+pub fn cooldowns() -> &'static CooldownTracker {
+    &COOLDOWNS
+}
+
+impl CooldownTracker {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Record one attempt outcome using the wall clock.
+    pub fn record_outcome(
+        &self,
+        provider_id: &str,
+        model_id: &str,
+        outcome: AttemptOutcome,
+        policy: &RetryPolicy,
+    ) {
+        self.record_outcome_at(provider_id, model_id, outcome, policy, Instant::now());
+    }
+
+    /// Record one attempt outcome at an explicit timestamp. Success clears the
+    /// record; a 429 starts the short cooldown immediately; other failures
+    /// feed the rolling failure-rate window, which trips the long cooldown
+    /// after [`FAILURE_RATE_MIN_ATTEMPTS`] failures inside
+    /// [`FAILURE_RATE_WINDOW`].
+    pub fn record_outcome_at(
+        &self,
+        provider_id: &str,
+        model_id: &str,
+        outcome: AttemptOutcome,
+        policy: &RetryPolicy,
+        now: Instant,
+    ) {
+        let key = (provider_id.to_string(), model_id.to_string());
+        let mut records = self.records.write().expect("cooldown tracker poisoned");
+
+        if outcome == AttemptOutcome::Success {
+            records.remove(&key);
+            return;
+        }
+
+        let record = records.entry(key).or_default();
+        record.fail_timestamps.push(now);
+
+        let cooldown = match outcome {
+            AttemptOutcome::RateLimited => {
+                let ms = policy.cooldown_rate_limited_ms.max(0) as u64;
+                Some(Duration::from_millis(ms))
+            }
+            AttemptOutcome::Failure => {
+                record
+                    .fail_timestamps
+                    .retain(|ts| now.duration_since(*ts) <= FAILURE_RATE_WINDOW);
+                // Success clears the record, so every retained timestamp is a
+                // failure: the streak's failure rate is effectively 100%
+                // (>50%), and the rate test reduces to the attempt threshold.
+                if record.fail_timestamps.len() >= FAILURE_RATE_MIN_ATTEMPTS {
+                    let ms = policy.cooldown_failure_ms.max(0) as u64;
+                    Some(Duration::from_millis(ms))
+                } else {
+                    None
+                }
+            }
+            AttemptOutcome::Success => unreachable!("handled above"),
+        };
+
+        if let Some(duration) = cooldown {
+            record.cooldown_until = Some(now + duration);
+            crate::metrics::record_llm_failover_cooldown(provider_id, model_id);
+        }
+    }
+
+    fn cooldown_expiry_at(&self, provider_id: &str, model_id: &str, now: Instant) -> Option<Instant> {
+        let records = self.records.read().expect("cooldown tracker poisoned");
+        let expiry = records
+            .get(&(provider_id.to_string(), model_id.to_string()))?
+            .cooldown_until?;
+        (expiry > now).then_some(expiry)
+    }
+
+    /// True when the provider/model is currently inside a cooldown.
+    pub fn is_cooling_down(&self, provider_id: &str, model_id: &str) -> bool {
+        self.is_cooling_down_at(provider_id, model_id, Instant::now())
+    }
+
+    /// Clock-injected variant of [`Self::is_cooling_down`] for tests.
+    pub fn is_cooling_down_at(&self, provider_id: &str, model_id: &str, now: Instant) -> bool {
+        self.cooldown_expiry_at(provider_id, model_id, now).is_some()
+    }
+
+    /// Remaining cooldown, if any.
+    pub fn cooldown_remaining(&self, provider_id: &str, model_id: &str) -> Option<Duration> {
+        let now = Instant::now();
+        let expiry = self.cooldown_expiry_at(provider_id, model_id, now)?;
+        Some(expiry.duration_since(now))
+    }
+
+    #[cfg(test)]
+    fn fail_count(&self, provider_id: &str, model_id: &str) -> usize {
+        let records = self.records.read().expect("cooldown tracker poisoned");
+        records
+            .get(&(provider_id.to_string(), model_id.to_string()))
+            .map(|r| r.fail_timestamps.len())
+            .unwrap_or(0)
+    }
+}
+
+/// Record one attempt outcome against the process-wide tracker.
+pub fn record_attempt_outcome(
+    provider_id: &str,
+    model_id: &str,
+    outcome: AttemptOutcome,
+    policy: &RetryPolicy,
+) {
+    cooldowns().record_outcome(provider_id, model_id, outcome, policy);
+}
+
+/// Select the model for a retry, skipping providers/models that are currently
+/// cooling down. Falls back to [`select_fallback`] semantics for the
+/// chain-disabled and first-attempt cases; when every remaining candidate is
+/// cooling down, fail-open: pick the one whose cooldown expires soonest and
+/// mark the attempt (log + metric) rather than erroring the request.
+pub fn select_fallback_healthy(
+    attempt: u32,
+    primary: &ModelRef,
+    fallbacks: &[ModelRef],
+    policy: &RetryPolicy,
+) -> Option<ModelRef> {
+    select_fallback_healthy_at(attempt, primary, fallbacks, policy, Instant::now(), cooldowns())
+}
+
+/// Clock- and tracker-injected variant of [`select_fallback_healthy`] so tests
+/// never sleep.
+pub fn select_fallback_healthy_at(
+    attempt: u32,
+    primary: &ModelRef,
+    fallbacks: &[ModelRef],
+    policy: &RetryPolicy,
+    now: Instant,
+    tracker: &CooldownTracker,
+) -> Option<ModelRef> {
+    if !policy.fallback_chain_enabled {
+        return Some(primary.clone());
+    }
+    if attempt == 1 {
+        return Some(primary.clone());
+    }
+    let idx = attempt.saturating_sub(2) as usize;
+    let candidates = fallbacks.get(idx..).unwrap_or(&[]);
+    if candidates.is_empty() {
+        return None;
+    }
+
+    let mut soonest: Option<(&ModelRef, Instant)> = None;
+    for candidate in candidates {
+        match tracker.cooldown_expiry_at(&candidate.provider_id, &candidate.model_id, now) {
+            None => {
+                // Healthy candidate — first one wins, exactly like the static
+                // chain order.
+                return Some(candidate.clone());
+            }
+            Some(expiry) => {
+                crate::metrics::record_llm_failover_skipped(
+                    &candidate.provider_id,
+                    &candidate.model_id,
+                );
+                if soonest.map_or(true, |(_, best)| expiry < best) {
+                    soonest = Some((candidate, expiry));
+                }
+            }
+        }
+    }
+
+    // Fail-open: the whole remaining chain is cooling down. Attempt the
+    // soonest-expiring candidate instead of erroring the request.
+    let (picked, expiry) = soonest.expect("candidates non-empty");
+    warn!(
+        provider = %picked.provider_id,
+        model = %picked.model_id,
+        cooldown_remaining_ms = ?expiry.saturating_duration_since(now).as_millis(),
+        "Failover fail-open: all fallback candidates cooling down; attempting soonest-expiring"
+    );
+    crate::metrics::record_llm_failover_cooldown(&picked.provider_id, &picked.model_id);
+    Some(picked.clone())
+}
+
+// ─── Streaming failover: retry-hint events (P0.2) ───────────────────────────
+//
+// Owning-layer decision: the streaming path gets exactly one upstream attempt
+// (transparent gateway-owned resume is deferred), so the *policy* question —
+// is this failure worth re-driving, and against which model — lives here in
+// `failover.rs` next to `should_retry`/`select_fallback_healthy`, while
+// `proxy.rs::stream_completion` owns the SSE wire and simply serializes the
+// hint. Gizzi (which owns session state) re-drives with full context.
+
+/// The `allternit.retry_hint` SSE event payload, emitted on the stream when an
+/// upstream streaming attempt fails. `retryable: false` marks a terminal
+/// failure (policy would not retry it); `next_fallback` is the health-aware
+/// pick for the next attempt (`null` when the chain is exhausted).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct RetryHint {
+    pub retryable: bool,
+    pub reason: String,
+    pub next_fallback: Option<ModelRef>,
+}
+
+/// Build the retry hint for a failed streaming attempt using the process-wide
+/// cooldown tracker.
+pub fn stream_retry_hint(
+    status: &str,
+    error_type: Option<&str>,
+    primary: &ModelRef,
+    fallbacks: &[ModelRef],
+    policy: &RetryPolicy,
+) -> RetryHint {
+    stream_retry_hint_at(
+        status,
+        error_type,
+        primary,
+        fallbacks,
+        policy,
+        Instant::now(),
+        cooldowns(),
+    )
+}
+
+/// Clock- and tracker-injected variant of [`stream_retry_hint`] for tests.
+pub fn stream_retry_hint_at(
+    status: &str,
+    error_type: Option<&str>,
+    primary: &ModelRef,
+    fallbacks: &[ModelRef],
+    policy: &RetryPolicy,
+    now: Instant,
+    tracker: &CooldownTracker,
+) -> RetryHint {
+    // The failed attempt was attempt 1; a re-drive would be attempt 2.
+    let retryable = should_retry(status, error_type, 2, policy);
+    let next_fallback = if retryable {
+        select_fallback_healthy_at(2, primary, fallbacks, policy, now, tracker)
+    } else {
+        None
+    };
+    RetryHint {
+        retryable,
+        reason: error_type.unwrap_or(status).to_string(),
+        next_fallback,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn model(provider: &str, id: &str) -> ModelRef {
+        ModelRef {
+            provider_id: provider.to_string(),
+            model_id: id.to_string(),
+        }
+    }
 
     fn policy_with_statuses(statuses: &[&str]) -> RetryPolicy {
         RetryPolicy {
@@ -239,20 +596,8 @@ mod tests {
 
     #[test]
     fn select_fallback_uses_primary_then_chain() {
-        let primary = ModelRef {
-            provider_id: "openai".to_string(),
-            model_id: "gpt-4o".to_string(),
-        };
-        let fallbacks = vec![
-            ModelRef {
-                provider_id: "anthropic".to_string(),
-                model_id: "claude-3-5-sonnet".to_string(),
-            },
-            ModelRef {
-                provider_id: "kimi".to_string(),
-                model_id: "k3".to_string(),
-            },
-        ];
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude-3-5-sonnet"), model("kimi", "k3")];
         let policy = RetryPolicy::default();
         assert_eq!(select_fallback(1, &primary, &fallbacks, &policy), Some(primary.clone()));
         assert_eq!(select_fallback(2, &primary, &fallbacks, &policy), Some(fallbacks[0].clone()));
@@ -262,14 +607,394 @@ mod tests {
 
     #[test]
     fn select_fallback_disabled_chain_reuses_primary() {
-        let primary = ModelRef {
-            provider_id: "openai".to_string(),
-            model_id: "gpt-4o".to_string(),
-        };
+        let primary = model("openai", "gpt-4o");
         let policy = RetryPolicy {
             fallback_chain_enabled: false,
             ..RetryPolicy::default()
         };
         assert_eq!(select_fallback(3, &primary, &[], &policy), Some(primary));
+    }
+
+    // ── CooldownTracker ─────────────────────────────────────────────────────
+
+    #[test]
+    fn rate_limited_attempt_enters_short_cooldown() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+
+        tracker.record_outcome_at("openai", "gpt-4o", AttemptOutcome::RateLimited, &policy, t0);
+        assert!(tracker.is_cooling_down_at("openai", "gpt-4o", t0));
+
+        // Default 429 cooldown is 5s: still cooling at +4s, healthy at +6s.
+        assert!(tracker.is_cooling_down_at("openai", "gpt-4o", t0 + Duration::from_secs(4)));
+        assert!(!tracker.is_cooling_down_at("openai", "gpt-4o", t0 + Duration::from_secs(6)));
+
+        // Cooldown duration is policy-configurable.
+        let custom = RetryPolicy {
+            cooldown_rate_limited_ms: 500,
+            ..RetryPolicy::default()
+        };
+        let tracker = CooldownTracker::new();
+        tracker.record_outcome_at("openai", "gpt-4o", AttemptOutcome::RateLimited, &custom, t0);
+        assert!(tracker.is_cooling_down_at("openai", "gpt-4o", t0 + Duration::from_millis(400)));
+        assert!(!tracker.is_cooling_down_at("openai", "gpt-4o", t0 + Duration::from_millis(600)));
+    }
+
+    #[test]
+    fn failure_rate_trips_long_cooldown_after_four_failures() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+
+        // Three failures: not yet cooling.
+        for i in 0..3 {
+            tracker.record_outcome_at(
+                "anthropic",
+                "claude",
+                AttemptOutcome::Failure,
+                &policy,
+                t0 + Duration::from_secs(i),
+            );
+        }
+        assert!(!tracker.is_cooling_down_at("anthropic", "claude", t0 + Duration::from_secs(3)));
+
+        // Fourth failure inside the window trips the 30s cooldown.
+        tracker.record_outcome_at(
+            "anthropic",
+            "claude",
+            AttemptOutcome::Failure,
+            &policy,
+            t0 + Duration::from_secs(3),
+        );
+        assert!(tracker.is_cooling_down_at("anthropic", "claude", t0 + Duration::from_secs(3)));
+        // Cooldown runs 30s from the fourth failure (t0+33s).
+        assert!(tracker.is_cooling_down_at("anthropic", "claude", t0 + Duration::from_secs(32)));
+        assert!(!tracker.is_cooling_down_at("anthropic", "claude", t0 + Duration::from_secs(34)));
+    }
+
+    #[test]
+    fn failures_outside_window_do_not_accumulate() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+
+        // Four failures spread 61s apart: only the last one is inside the
+        // rolling 60s window, so the rate threshold never trips.
+        for i in 0..4 {
+            tracker.record_outcome_at(
+                "anthropic",
+                "claude",
+                AttemptOutcome::Failure,
+                &policy,
+                t0 + Duration::from_secs(i * 61),
+            );
+        }
+        assert_eq!(tracker.fail_count("anthropic", "claude"), 1);
+        assert!(!tracker.is_cooling_down_at("anthropic", "claude", t0 + Duration::from_secs(183)));
+    }
+
+    #[test]
+    fn success_clears_the_record() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+
+        for i in 0..3 {
+            tracker.record_outcome_at(
+                "kimi",
+                "k3",
+                AttemptOutcome::Failure,
+                &policy,
+                t0 + Duration::from_secs(i),
+            );
+        }
+        assert_eq!(tracker.fail_count("kimi", "k3"), 3);
+
+        tracker.record_outcome_at("kimi", "k3", AttemptOutcome::Success, &policy, t0 + Duration::from_secs(4));
+        assert_eq!(tracker.fail_count("kimi", "k3"), 0);
+        assert!(!tracker.is_cooling_down_at("kimi", "k3", t0 + Duration::from_secs(5)));
+
+        // The streak starts over from scratch.
+        for i in 5..8 {
+            tracker.record_outcome_at(
+                "kimi",
+                "k3",
+                AttemptOutcome::Failure,
+                &policy,
+                t0 + Duration::from_secs(i),
+            );
+        }
+        assert!(!tracker.is_cooling_down_at("kimi", "k3", t0 + Duration::from_secs(7)));
+        tracker.record_outcome_at(
+            "kimi",
+            "k3",
+            AttemptOutcome::Failure,
+            &policy,
+            t0 + Duration::from_secs(7),
+        );
+        assert!(tracker.is_cooling_down_at("kimi", "k3", t0 + Duration::from_secs(7)));
+    }
+
+    #[test]
+    fn success_clears_an_active_cooldown() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+
+        tracker.record_outcome_at("openai", "gpt-4o", AttemptOutcome::RateLimited, &policy, t0);
+        assert!(tracker.is_cooling_down_at("openai", "gpt-4o", t0 + Duration::from_secs(1)));
+
+        tracker.record_outcome_at(
+            "openai",
+            "gpt-4o",
+            AttemptOutcome::Success,
+            &policy,
+            t0 + Duration::from_secs(2),
+        );
+        assert!(!tracker.is_cooling_down_at("openai", "gpt-4o", t0 + Duration::from_secs(3)));
+    }
+
+    #[test]
+    fn healthy_selection_skips_cooling_candidates() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude"), model("kimi", "k3")];
+
+        tracker.record_outcome_at("anthropic", "claude", AttemptOutcome::RateLimited, &policy, t0);
+        let picked = select_fallback_healthy_at(2, &primary, &fallbacks, &policy, t0, &tracker);
+        assert_eq!(picked, Some(model("kimi", "k3")));
+    }
+
+    #[test]
+    fn healthy_selection_fail_opens_when_all_cooling() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude"), model("kimi", "k3")];
+
+        // anthropic cools for the 30s failure cooldown, kimi for the 5s 429
+        // cooldown — both relative to t0.
+        for i in 0..4 {
+            tracker.record_outcome_at(
+                "anthropic",
+                "claude",
+                AttemptOutcome::Failure,
+                &policy,
+                t0 + Duration::from_secs(i),
+            );
+        }
+        tracker.record_outcome_at("kimi", "k3", AttemptOutcome::RateLimited, &policy, t0);
+
+        let picked = select_fallback_healthy_at(2, &primary, &fallbacks, &policy, t0, &tracker);
+        assert_eq!(
+            picked,
+            Some(model("kimi", "k3")),
+            "fail-open must pick the soonest-expiring cooldown (kimi 5s < anthropic 30s)"
+        );
+    }
+
+    #[test]
+    fn healthy_selection_respects_static_chain_semantics() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude"), model("kimi", "k3")];
+
+        // Nobody cooling: identical to select_fallback.
+        assert_eq!(
+            select_fallback_healthy_at(1, &primary, &fallbacks, &policy, t0, &tracker),
+            Some(primary.clone())
+        );
+        assert_eq!(
+            select_fallback_healthy_at(2, &primary, &fallbacks, &policy, t0, &tracker),
+            Some(fallbacks[0].clone())
+        );
+        assert_eq!(
+            select_fallback_healthy_at(3, &primary, &fallbacks, &policy, t0, &tracker),
+            Some(fallbacks[1].clone())
+        );
+        assert_eq!(
+            select_fallback_healthy_at(4, &primary, &fallbacks, &policy, t0, &tracker),
+            None
+        );
+
+        // Chain disabled reuses the primary.
+        let disabled = RetryPolicy {
+            fallback_chain_enabled: false,
+            ..RetryPolicy::default()
+        };
+        assert_eq!(
+            select_fallback_healthy_at(3, &primary, &fallbacks, &disabled, t0, &tracker),
+            Some(primary)
+        );
+    }
+
+    #[test]
+    fn healthy_selection_ignores_expired_cooldowns() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude"), model("kimi", "k3")];
+
+        tracker.record_outcome_at("anthropic", "claude", AttemptOutcome::RateLimited, &policy, t0);
+        // After the 5s 429 cooldown expires, the chain is back to static order.
+        let later = t0 + Duration::from_secs(6);
+        let picked = select_fallback_healthy_at(2, &primary, &fallbacks, &policy, later, &tracker);
+        assert_eq!(picked, Some(model("anthropic", "claude")));
+    }
+
+    #[test]
+    fn classify_outcome_maps_statuses() {
+        assert_eq!(classify_outcome("ok", None), AttemptOutcome::Success);
+        assert_eq!(classify_outcome("ok", Some("refusal")), AttemptOutcome::Success);
+        assert_eq!(
+            classify_outcome("rate_limited", None),
+            AttemptOutcome::RateLimited
+        );
+        assert_eq!(
+            classify_outcome("error", Some("upstream rate_limited")),
+            AttemptOutcome::RateLimited
+        );
+        assert_eq!(
+            classify_outcome("error", Some("connection reset")),
+            AttemptOutcome::Failure
+        );
+        assert_eq!(classify_outcome("refused", None), AttemptOutcome::Failure);
+    }
+
+    // ── RetryPolicy serde backwards compatibility ───────────────────────────
+
+    #[test]
+    fn policy_json_without_cooldown_fields_deserializes_with_defaults() {
+        // A row serialized before the cooldown fields existed.
+        let old = serde_json::json!({
+            "enabled": true,
+            "max_retries": 3,
+            "retryable_statuses": ["error"],
+            "retryable_errors": ["*"],
+            "base_delay_ms": 250,
+            "max_delay_ms": 4000,
+            "fallback_chain_enabled": true
+        });
+        let policy: RetryPolicy = serde_json::from_value(old).expect("old row must deserialize");
+        assert_eq!(policy.cooldown_rate_limited_ms, DEFAULT_COOLDOWN_RATE_LIMITED_MS);
+        assert_eq!(policy.cooldown_failure_ms, DEFAULT_COOLDOWN_FAILURE_MS);
+        assert_eq!(policy.max_retries, 3);
+    }
+
+    #[test]
+    fn policy_json_with_cooldown_fields_round_trips() {
+        let policy = RetryPolicy {
+            cooldown_rate_limited_ms: 1_000,
+            cooldown_failure_ms: 60_000,
+            ..RetryPolicy::default()
+        };
+        let json = serde_json::to_value(&policy).unwrap();
+        let decoded: RetryPolicy = serde_json::from_value(json).unwrap();
+        assert_eq!(decoded.cooldown_rate_limited_ms, 1_000);
+        assert_eq!(decoded.cooldown_failure_ms, 60_000);
+        assert_eq!(policy, decoded);
+    }
+
+    #[test]
+    fn default_policy_carries_default_cooldowns() {
+        let policy = RetryPolicy::default();
+        assert_eq!(policy.cooldown_rate_limited_ms, 5_000);
+        assert_eq!(policy.cooldown_failure_ms, 30_000);
+    }
+
+    // ── Retry hints (P0.2 streaming failover) ───────────────────────────────
+
+    #[test]
+    fn retry_hint_points_at_first_healthy_fallback() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude"), model("kimi", "k3")];
+
+        let hint =
+            stream_retry_hint_at("error", Some("upstream_error"), &primary, &fallbacks, &policy, t0, &tracker);
+        assert!(hint.retryable);
+        assert_eq!(hint.reason, "upstream_error");
+        assert_eq!(hint.next_fallback, Some(model("anthropic", "claude")));
+    }
+
+    #[test]
+    fn retry_hint_skips_cooling_fallback() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude"), model("kimi", "k3")];
+
+        tracker.record_outcome_at("anthropic", "claude", AttemptOutcome::RateLimited, &policy, t0);
+        let hint =
+            stream_retry_hint_at("error", Some("upstream_error"), &primary, &fallbacks, &policy, t0, &tracker);
+        assert!(hint.retryable);
+        assert_eq!(hint.next_fallback, Some(model("kimi", "k3")));
+    }
+
+    #[test]
+    fn retry_hint_marks_terminal_failure_not_retryable() {
+        let tracker = CooldownTracker::new();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("anthropic", "claude")];
+
+        // Policy disabled: nothing is retryable.
+        let disabled = RetryPolicy {
+            enabled: false,
+            ..RetryPolicy::default()
+        };
+        let hint =
+            stream_retry_hint_at("error", Some("upstream_error"), &primary, &fallbacks, &disabled, t0, &tracker);
+        assert!(!hint.retryable);
+        assert_eq!(hint.next_fallback, None);
+
+        // Status outside the retryable set: terminal.
+        let policy = RetryPolicy::default();
+        let hint =
+            stream_retry_hint_at("client_disconnected", None, &primary, &fallbacks, &policy, t0, &tracker);
+        assert!(!hint.retryable);
+        assert_eq!(hint.reason, "client_disconnected");
+        assert_eq!(hint.next_fallback, None);
+    }
+
+    #[test]
+    fn retry_hint_null_fallback_when_chain_exhausted() {
+        let tracker = CooldownTracker::new();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        let primary = model("openai", "gpt-4o");
+
+        // Retryable error but no fallbacks configured.
+        let hint = stream_retry_hint_at("error", Some("upstream_error"), &primary, &[], &policy, t0, &tracker);
+        assert!(hint.retryable);
+        assert_eq!(hint.next_fallback, None);
+    }
+
+    #[test]
+    fn retry_hint_serializes_wire_shape() {
+        let hint = RetryHint {
+            retryable: true,
+            reason: "rate_limit_error".to_string(),
+            next_fallback: Some(model("anthropic", "claude")),
+        };
+        let json = serde_json::to_value(&hint).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "retryable": true,
+                "reason": "rate_limit_error",
+                "next_fallback": {"provider_id": "anthropic", "model_id": "claude"}
+            })
+        );
     }
 }

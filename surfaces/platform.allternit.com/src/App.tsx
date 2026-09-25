@@ -41,6 +41,8 @@ import { CachingPage } from "@/pages/console/analytics/CachingPage";
 import { RateLimitsPage } from "@/pages/console/analytics/RateLimitsPage";
 import { CostPage } from "@/pages/console/analytics/CostPage";
 import { GizziUsagePage } from "@/pages/console/gizzi/GizziUsagePage";
+import { RoutingPolicyPage } from "@/pages/console/gateway/RoutingPolicyPage";
+import { RouteCredentialsPage } from "@/pages/console/gateway/RouteCredentialsPage";
 import { MembersPage } from "@/pages/console/manage/MembersPage";
 import { ServiceAccountsPage } from "@/pages/console/manage/ServiceAccountsPage";
 import { SpendLimitsPage } from "@/pages/console/manage/SpendLimitsPage";
@@ -468,6 +470,23 @@ export default function App() {
         element={
           <ConsoleRoute>
             <GizziUsagePage />
+          </ConsoleRoute>
+        }
+      />
+      {/* Gateway control plane — provider routing policy + BYO route credentials. */}
+      <Route
+        path="/gateway/routing-policy/*"
+        element={
+          <ConsoleRoute>
+            <RoutingPolicyPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/gateway/credentials/*"
+        element={
+          <ConsoleRoute>
+            <RouteCredentialsPage />
           </ConsoleRoute>
         }
       />

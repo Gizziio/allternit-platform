@@ -917,8 +917,15 @@ async fn collect(
                     Ok(Ok(resp)) => {
                         let status = resp.status();
                         let body = resp.text().await.unwrap_or_default();
+                        // Preserve the 429 signal: failover::classify_outcome
+                        // maps "rate_limit*" error types to the short cooldown.
+                        let error_type = if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                            "rate_limit_error"
+                        } else {
+                            "upstream_error"
+                        };
                         failure = Some((
-                            "upstream_error".to_string(),
+                            error_type.to_string(),
                             format!("Gizzi message endpoint returned {status}: {body}"),
                         ));
                     }
@@ -2063,6 +2070,7 @@ pub async fn chat_completions(
     );
     let mut send_task = tokio::spawn(client.post(message_url).json(&payload).send());
     let mut current_provider_id = resolved.provider_id.clone();
+    let mut current_model_id = resolved.model_id.clone();
 
     info!(
         session_id = %session_id,
@@ -2071,6 +2079,30 @@ pub async fn chat_completions(
         key_prefix = %key.key_prefix,
         "LLM gateway request dispatched to Gizzi"
     );
+
+    // Retry policy + fallback chain, shared by both response paths: the
+    // non-streaming loop retries across it (P9/P0.1); the streaming path uses
+    // it to build the `allternit.retry_hint` event on failure (P0.2).
+    let primary = super::failover::ModelRef {
+        provider_id: resolved.provider_id.clone(),
+        model_id: resolved.model_id.clone(),
+    };
+    let fallback_refs: Vec<super::failover::ModelRef> = resolved
+        .fallbacks
+        .iter()
+        .map(|c| super::failover::ModelRef {
+            provider_id: c.provider_id.clone(),
+            model_id: c.model_id.clone(),
+        })
+        .collect();
+    let policy = key
+        .tenant_id
+        .as_deref()
+        .map(|org| {
+            super::failover::load_policy(&state.db, org)
+                .unwrap_or_else(|_| super::failover::RetryPolicy::default())
+        })
+        .unwrap_or_default();
 
     let response = if stream {
         stream_completion(
@@ -2091,32 +2123,14 @@ pub async fn chat_completions(
             outcome_tags,
             batch_id,
             context_cache_id,
+            policy,
+            primary,
+            fallback_refs,
         )
         .await
     } else {
         // P9: non-streaming requests retry across the fallback chain on
         // retryable errors or refusals. Only the final outcome is persisted.
-        let primary = super::failover::ModelRef {
-            provider_id: resolved.provider_id.clone(),
-            model_id: resolved.model_id.clone(),
-        };
-        let fallback_refs: Vec<super::failover::ModelRef> = resolved
-            .fallbacks
-            .iter()
-            .map(|c| super::failover::ModelRef {
-                provider_id: c.provider_id.clone(),
-                model_id: c.model_id.clone(),
-            })
-            .collect();
-        let policy = key
-            .tenant_id
-            .as_deref()
-            .map(|org| {
-                super::failover::load_policy(&state.db, org)
-                    .unwrap_or_else(|_| super::failover::RetryPolicy::default())
-            })
-            .unwrap_or_default();
-
         let mut attempt: u32 = 1;
         let (mut response, mut outcome): (Response, RequestOutcome);
 
@@ -2138,6 +2152,17 @@ pub async fn chat_completions(
             )
             .await;
 
+            // Health-based failover (P0.1): feed every attempt outcome into
+            // the cooldown tracker, keyed by the provider/model that actually
+            // served the attempt. Success clears the record; 429s and
+            // failure streaks put the candidate into cooldown.
+            super::failover::record_attempt_outcome(
+                &current_provider_id,
+                &current_model_id,
+                super::failover::classify_outcome(outcome.status, outcome.error_type.as_deref()),
+                &policy,
+            );
+
             if outcome.status == "ok" {
                 break;
             }
@@ -2147,8 +2172,10 @@ pub async fn chat_completions(
             if !super::failover::should_retry(outcome.status, error_type, attempt, &policy) {
                 break;
             }
+            // Cooldown-aware selection: skips cooling-down candidates and
+            // fail-opens to the soonest-expiring one rather than erroring.
             let Some(next_model) =
-                super::failover::select_fallback(attempt, &primary, &fallback_refs, &policy)
+                super::failover::select_fallback_healthy(attempt, &primary, &fallback_refs, &policy)
             else {
                 break;
             };
@@ -2254,6 +2281,7 @@ pub async fn chat_completions(
             );
             send_task = tokio::spawn(client.post(message_url).json(&payload).send());
             current_provider_id = next_model.provider_id.clone();
+            current_model_id = next_model.model_id.clone();
 
             info!(
                 session_id = %session_id,
@@ -2447,8 +2475,12 @@ enum Progress {
 
 /// Streaming path: SSE frames — role chunk, content deltas, finish chunk,
 /// optional usage chunk, then `[DONE]`. Mid-stream failures emit an
-/// OpenAI-shaped error frame before closing. A [`StreamUsageGuard`] inside
-/// the stream records partial usage if the client disconnects mid-stream.
+/// `allternit.retry_hint` event (P0.2 — built by
+/// [`super::failover::stream_retry_hint`], which owns the retry policy and
+/// cooldown-aware fallback pick) followed by an OpenAI-shaped error frame
+/// before closing; Gizzi re-drives retryable failures with full session
+/// context. A [`StreamUsageGuard`] inside the stream records partial usage if
+/// the client disconnects mid-stream.
 async fn stream_completion(
     state: Arc<AppState>,
     key: LlmKeyContext,
@@ -2464,6 +2496,9 @@ async fn stream_completion(
     tags: Option<String>,
     batch_id: Option<String>,
     context_cache_id: Option<String>,
+    retry_policy: super::failover::RetryPolicy,
+    primary: super::failover::ModelRef,
+    fallbacks: Vec<super::failover::ModelRef>,
 ) -> Response {
     let completion_id = new_completion_id();
     let created = chrono::Utc::now().timestamp();
@@ -2508,8 +2543,14 @@ async fn stream_completion(
                         Ok(Ok(resp)) => {
                             let status = resp.status();
                             let body = resp.text().await.unwrap_or_default();
+                            // Preserve the 429 signal (see collect()).
+                            let error_type = if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                                "rate_limit_error"
+                            } else {
+                                "upstream_error"
+                            };
                             Progress::Failed(
-                                "upstream_error".to_string(),
+                                error_type.to_string(),
                                 format!("Gizzi message endpoint returned {status}: {body}"),
                             )
                         }
@@ -2587,6 +2628,27 @@ async fn stream_completion(
 
         match failure.or_else(|| collector.assistant_error.clone()) {
             Some((error_type, message)) => {
+                // P0.2: feed the failed attempt into the cooldown tracker,
+                // then emit the retry hint so Gizzi can re-drive. The hint is
+                // health-aware: next_fallback skips cooling-down candidates.
+                super::failover::record_attempt_outcome(
+                    &primary.provider_id,
+                    &primary.model_id,
+                    super::failover::classify_outcome("error", Some(&error_type)),
+                    &retry_policy,
+                );
+                let hint = super::failover::stream_retry_hint(
+                    "error",
+                    Some(&error_type),
+                    &primary,
+                    &fallbacks,
+                    &retry_policy,
+                );
+                yield Ok(Event::default()
+                    .event("allternit.retry_hint")
+                    .data(serde_json::to_string(&hint).unwrap_or_else(|_| {
+                        "{\"retryable\":false}".to_string()
+                    })));
                 yield Ok(Event::default().data(stream_error_data(
                     &message,
                     &error_type,
@@ -3373,5 +3435,156 @@ mod metering_tests {
         assert_eq!(batch_id_from_headers(&headers).as_deref(), Some("batch_abc"));
         headers.insert("x-allternit-batch-id", axum::http::HeaderValue::from_static(""));
         assert_eq!(batch_id_from_headers(&headers), None);
+    }
+}
+
+#[cfg(test)]
+mod stream_retry_hint_tests {
+    //! P0.2: streaming failover — a failed streaming attempt must emit an
+    //! `allternit.retry_hint` SSE event on the wire before the error frame.
+    use super::*;
+    use super::super::auth::LlmKeyContext;
+    use super::super::failover::{ModelRef, RetryPolicy};
+
+    fn hint_key() -> LlmKeyContext {
+        LlmKeyContext {
+            key_id: "vk-hint".to_string(),
+            user_id: "u-hint".to_string(),
+            tenant_id: None,
+            key_prefix: "ak-hint".to_string(),
+            monthly_budget_cents: None,
+            rate_limit_rpm: None,
+            allowed_models: None,
+            tags: None,
+        }
+    }
+
+    /// Drive `stream_completion` with a send task that never resolves and an
+    /// event stream that fails mid-stream via `session.error`; return the full
+    /// SSE body text.
+    async fn run_failed_stream(policy: RetryPolicy, fallbacks: Vec<ModelRef>) -> String {
+        let dir = tempfile::tempdir().unwrap();
+        let state = crate::test_helpers::app_state(dir.path()).await;
+        {
+            let conn = state.db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO users (id, email) VALUES ('u-hint', 'hint@example.com')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO llm_virtual_keys (id, user_id, key_hash, key_prefix)
+                 VALUES ('vk-hint', 'u-hint', 'hash', 'ak-hint')",
+                [],
+            )
+            .unwrap();
+        }
+
+        let send_task = tokio::spawn(
+            futures::future::pending::<Result<reqwest::Response, reqwest::Error>>(),
+        );
+        let events = futures::stream::iter(vec![
+            GizziEvent {
+                event_type: "session.status".to_string(),
+                properties: json!({"sessionID": "sess-hint", "status": {"type": "busy"}}),
+            },
+            GizziEvent {
+                event_type: "session.error".to_string(),
+                properties: json!({
+                    "sessionID": "sess-hint",
+                    "error": {"name": "rate_limit_error", "message": "upstream 429"}
+                }),
+            },
+        ]);
+
+        let response = stream_completion(
+            state,
+            hint_key(),
+            send_task,
+            events,
+            Instant::now(),
+            "sess-hint".to_string(),
+            "mock-a/model-a".to_string(),
+            None,
+            None,
+            false,
+            None,
+            None,
+            None,
+            None,
+            policy,
+            ModelRef {
+                provider_id: "mock-a".to_string(),
+                model_id: "model-a".to_string(),
+            },
+            fallbacks,
+        )
+        .await;
+
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("read SSE body");
+        String::from_utf8(bytes.to_vec()).expect("SSE body is UTF-8")
+    }
+
+    /// Extract the JSON payload of the `allternit.retry_hint` SSE event.
+    fn hint_payload(body: &str) -> Value {
+        let mut event_lines = body.split("\n\n");
+        for frame in &mut event_lines {
+            if frame.starts_with("event: allternit.retry_hint") {
+                let data = frame
+                    .lines()
+                    .find_map(|line| line.strip_prefix("data: "))
+                    .expect("hint frame carries data");
+                return serde_json::from_str(data).expect("hint data is JSON");
+            }
+        }
+        panic!("no allternit.retry_hint event in stream body:\n{body}");
+    }
+
+    #[tokio::test]
+    async fn stream_failure_emits_retry_hint_on_the_wire() {
+        let body = run_failed_stream(
+            RetryPolicy::default(),
+            vec![ModelRef {
+                provider_id: "mock-b".to_string(),
+                model_id: "model-b".to_string(),
+            }],
+        )
+        .await;
+
+        let hint = hint_payload(&body);
+        assert_eq!(hint["retryable"], true);
+        assert_eq!(hint["reason"], "rate_limit_error");
+        assert_eq!(
+            hint["next_fallback"],
+            json!({"provider_id": "mock-b", "model_id": "model-b"})
+        );
+
+        // The hint precedes the terminal OpenAI-shaped error frame and [DONE].
+        let hint_pos = body.find("event: allternit.retry_hint").unwrap();
+        let err_pos = body.find("\"upstream_error\"").unwrap_or(usize::MAX);
+        let done_pos = body.find("[DONE]").unwrap();
+        assert!(hint_pos < done_pos, "hint must precede [DONE]:\n{body}");
+        let _ = err_pos;
+    }
+
+    #[tokio::test]
+    async fn terminal_stream_failure_says_not_retryable() {
+        let body = run_failed_stream(
+            RetryPolicy {
+                enabled: false,
+                ..RetryPolicy::default()
+            },
+            vec![ModelRef {
+                provider_id: "mock-b".to_string(),
+                model_id: "model-b".to_string(),
+            }],
+        )
+        .await;
+
+        let hint = hint_payload(&body);
+        assert_eq!(hint["retryable"], false);
+        assert_eq!(hint["next_fallback"], Value::Null);
     }
 }

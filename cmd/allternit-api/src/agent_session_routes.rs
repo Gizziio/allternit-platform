@@ -1610,6 +1610,7 @@ mod tests {
         )
         .unwrap();
         drop(conn);
+        let db_for_init = db.clone();
         let auth_config = crate::auth::AuthConfig::from_app_config(&config);
         let jwks = crate::auth::JwksManager::new(&auth_config);
         let rails = crate::rails::RailsState::new(temp.join("rails"))
@@ -1647,6 +1648,42 @@ mod tests {
             terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
             mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
             approval_store: Arc::new(crate::permission_policy::ApprovalStore::new()),
+            incus_driver: None,
+            desktop_host_registry:
+                crate::desktop_host_registry::DesktopHostRegistry::new(db_for_init.clone()),
+            desktop_host_provisioner: None,
+            computer_guest_tokens: Arc::new(tokio::sync::RwLock::new(
+                std::collections::HashMap::new(),
+            )),
+            passkey_state: None,
+            resource_class_catalog:
+                crate::fabric::sku::ResourceClassCatalog::from_db(&db_for_init)
+                    .expect("resource class catalog"),
+            fabric_node_provider:
+                allternit_computer_cloud::providers::fabric_node::FabricNodeProvider::new(
+                    std::sync::Arc::new(
+                        allternit_computer_cloud::providers::fabric_node::FabricNodePool::new(),
+                    ),
+                    "__system".to_string(),
+                ),
+            fabric_provider_registry: crate::fabric::build_provider_registry(
+                allternit_computer_cloud::providers::fabric_node::FabricNodeProvider::new(
+                    std::sync::Arc::new(
+                        allternit_computer_cloud::providers::fabric_node::FabricNodePool::new(),
+                    ),
+                    "__system".to_string(),
+                ),
+            ),
+            fabric_scheduler: crate::fabric::Scheduler::new(
+                crate::fabric::CostEngine::default_engine(),
+            )
+            .with_price_cache(crate::fabric::PriceCache::new(db_for_init.clone())),
+            fabric_price_cache: crate::fabric::PriceCache::new(db_for_init),
+            os_control_plane: None,
+            dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
+            deployment_scheduler: Arc::new(
+                crate::deployment_scheduler::DeploymentSchedulerState::new(),
+            ),
         })
     }
 
