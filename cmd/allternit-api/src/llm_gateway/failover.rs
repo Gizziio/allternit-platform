@@ -18,8 +18,17 @@
 //! longer cooldown (default 30s). Fallback selection skips cooling-down
 //! candidates and fail-opens to the soonest-expiring one when the whole
 //! remaining chain is cooling down, so a request is never hard-errored just
-//! because every provider is briefly hot. The tracker is deliberately
-//! in-memory; moving it into shared state is a later phase.
+//! because every provider is briefly hot.
+//!
+//! Shared state (P2.9): the tracker stays the L1, and when
+//! `GATEWAY_SHARED_STATE=sqlite` is set `main` installs a
+//! [`super::shared_state::SqliteCooldownStore`] on the process-wide tracker
+//! (see [`CooldownTracker::install_shared_store`]) so cooldowns are shared
+//! across replicas via the node's SQLite database. Writes go through to the
+//! store; reads consult it when the local record has no active cooldown. All
+//! store errors fail open (log + absorbed) — a request is never steered or
+//! errored because the cooldown database hiccuped. Unset env = pure
+//! in-memory behavior, unchanged from before.
 
 use once_cell::sync::Lazy;
 use rusqlite::OptionalExtension;
@@ -251,12 +260,16 @@ struct ProviderHealthRecord {
     cooldown_until: Option<Instant>,
 }
 
-/// In-memory (provider_id, model) → health record map. Deliberately not
-/// persisted: cooldowns are best-effort request steering, and losing them on
-/// restart is safe. Moving this into shared state is a later phase.
+/// In-memory (provider_id, model) → health record map, optionally backed by a
+/// shared SQLite cooldown store ([`super::shared_state::SqliteCooldownStore`])
+/// so multiple replicas steer off the same cooldowns. The in-memory map is the
+/// L1: records this process set are answered locally; the store is consulted
+/// only on a local miss, and its own L1 keeps that read hot. Store errors
+/// fail open (see `shared_state`).
 #[derive(Debug, Default)]
 pub struct CooldownTracker {
     records: RwLock<HashMap<(String, String), ProviderHealthRecord>>,
+    shared: RwLock<Option<super::shared_state::SqliteCooldownStore>>,
 }
 
 static COOLDOWNS: Lazy<CooldownTracker> = Lazy::new(CooldownTracker::new);
@@ -269,6 +282,18 @@ pub fn cooldowns() -> &'static CooldownTracker {
 impl CooldownTracker {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Install a shared cooldown store (called on the process-wide tracker
+    /// from `main` when `GATEWAY_SHARED_STATE=sqlite`). After this, recorded
+    /// cooldowns are written through to SQLite and local misses read through,
+    /// so replicas steer off the same state.
+    pub fn install_shared_store(&self, store: super::shared_state::SqliteCooldownStore) {
+        *self.shared.write().expect("cooldown tracker poisoned") = Some(store);
+    }
+
+    fn shared_store(&self) -> Option<super::shared_state::SqliteCooldownStore> {
+        self.shared.read().expect("cooldown tracker poisoned").clone()
     }
 
     /// Record one attempt outcome using the wall clock.
@@ -296,20 +321,25 @@ impl CooldownTracker {
         now: Instant,
     ) {
         let key = (provider_id.to_string(), model_id.to_string());
+        let shared = self.shared_store();
         let mut records = self.records.write().expect("cooldown tracker poisoned");
 
         if outcome == AttemptOutcome::Success {
             records.remove(&key);
+            drop(records);
+            if let Some(store) = shared {
+                store.clear(provider_id, model_id);
+            }
             return;
         }
 
         let record = records.entry(key).or_default();
         record.fail_timestamps.push(now);
 
-        let cooldown = match outcome {
+        let (cooldown, reason) = match outcome {
             AttemptOutcome::RateLimited => {
                 let ms = policy.cooldown_rate_limited_ms.max(0) as u64;
-                Some(Duration::from_millis(ms))
+                (Some(Duration::from_millis(ms)), "rate_limited")
             }
             AttemptOutcome::Failure => {
                 record
@@ -320,9 +350,9 @@ impl CooldownTracker {
                 // (>50%), and the rate test reduces to the attempt threshold.
                 if record.fail_timestamps.len() >= FAILURE_RATE_MIN_ATTEMPTS {
                     let ms = policy.cooldown_failure_ms.max(0) as u64;
-                    Some(Duration::from_millis(ms))
+                    (Some(Duration::from_millis(ms)), "failure_streak")
                 } else {
-                    None
+                    (None, "")
                 }
             }
             AttemptOutcome::Success => unreachable!("handled above"),
@@ -332,14 +362,36 @@ impl CooldownTracker {
             record.cooldown_until = Some(now + duration);
             crate::metrics::record_llm_failover_cooldown(provider_id, model_id);
         }
+        drop(records);
+
+        // Write-through to the shared store so other replicas see the
+        // cooldown. Uses the store's wall clock: DB timestamps are epoch ms.
+        if let (Some(store), Some(duration)) = (shared, cooldown) {
+            let until_ms = store.now_ms().saturating_add(duration.as_millis() as i64);
+            store.record_cooldown(provider_id, model_id, until_ms, reason);
+        }
     }
 
     fn cooldown_expiry_at(&self, provider_id: &str, model_id: &str, now: Instant) -> Option<Instant> {
-        let records = self.records.read().expect("cooldown tracker poisoned");
-        let expiry = records
-            .get(&(provider_id.to_string(), model_id.to_string()))?
-            .cooldown_until?;
-        (expiry > now).then_some(expiry)
+        {
+            let records = self.records.read().expect("cooldown tracker poisoned");
+            let expiry = records
+                .get(&(provider_id.to_string(), model_id.to_string()))
+                .and_then(|record| record.cooldown_until);
+            if let Some(expiry) = expiry {
+                if expiry > now {
+                    return Some(expiry);
+                }
+            }
+        }
+
+        // Local miss: read through to the shared store so cooldowns recorded
+        // by other replicas are honored. Fail-open inside the store maps DB
+        // errors to None (healthy).
+        let store = self.shared_store()?;
+        let expiry_ms = store.cooling_until(provider_id, model_id)?;
+        let remaining_ms = expiry_ms.saturating_sub(store.now_ms()).max(0) as u64;
+        Some(now + Duration::from_millis(remaining_ms))
     }
 
     /// True when the provider/model is currently inside a cooldown.
@@ -996,5 +1048,93 @@ mod tests {
                 "next_fallback": {"provider_id": "anthropic", "model_id": "claude"}
             })
         );
+    }
+
+    // ── Shared cooldown store integration (P2.9) ────────────────────────────
+
+    use super::super::shared_state::SqliteCooldownStore;
+    use crate::db::DbHandle;
+    use std::sync::Arc;
+
+    fn shared_store(db: &DbHandle, epoch_ms: i64) -> SqliteCooldownStore {
+        SqliteCooldownStore::with_clock(db.clone(), Arc::new(move || epoch_ms))
+    }
+
+    #[test]
+    fn cooldown_written_by_one_tracker_visible_to_another() {
+        // Two trackers sharing one database simulate two replicas.
+        let db = DbHandle::new_memory().unwrap();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+
+        let replica_a = CooldownTracker::new();
+        replica_a.install_shared_store(shared_store(&db, 100_000));
+        let replica_b = CooldownTracker::new();
+        replica_b.install_shared_store(shared_store(&db, 101_000));
+
+        replica_a.record_outcome_at("openai", "gpt-4o", AttemptOutcome::RateLimited, &policy, t0);
+        assert!(
+            replica_b.is_cooling_down_at("openai", "gpt-4o", t0),
+            "replica B must see the cooldown replica A recorded"
+        );
+
+        // Fallback selection on B skips the provider A cooled down.
+        let primary = model("openai", "gpt-4o");
+        let fallbacks = vec![model("openai", "gpt-4o"), model("kimi", "k3")];
+        let picked = select_fallback_healthy_at(2, &primary, &fallbacks, &policy, t0, &replica_b);
+        assert_eq!(picked, Some(model("kimi", "k3")));
+    }
+
+    #[test]
+    fn success_on_one_replica_clears_cooldown_for_another() {
+        let db = DbHandle::new_memory().unwrap();
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+
+        let replica_a = CooldownTracker::new();
+        replica_a.install_shared_store(shared_store(&db, 200_000));
+        let replica_b = CooldownTracker::new();
+        replica_b.install_shared_store(shared_store(&db, 200_000));
+
+        replica_a.record_outcome_at("openai", "gpt-4o", AttemptOutcome::RateLimited, &policy, t0);
+        assert!(replica_b.is_cooling_down_at("openai", "gpt-4o", t0));
+
+        replica_a.record_outcome_at("openai", "gpt-4o", AttemptOutcome::Success, &policy, t0);
+        let replica_c = CooldownTracker::new();
+        replica_c.install_shared_store(shared_store(&db, 200_000));
+        assert!(!replica_c.is_cooling_down_at("openai", "gpt-4o", t0));
+    }
+
+    #[test]
+    fn tracker_fail_opens_when_shared_store_db_is_broken() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = DbHandle::new(dir.path().join("state.db")).unwrap();
+        let store = shared_store(&db, 0);
+        drop(dir); // every subsequent connect() fails
+
+        let tracker = CooldownTracker::new();
+        tracker.install_shared_store(store);
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+
+        // Reads fail open to "healthy"; writes are absorbed without panic.
+        assert!(!tracker.is_cooling_down_at("openai", "gpt-4o", t0));
+        tracker.record_outcome_at("openai", "gpt-4o", AttemptOutcome::RateLimited, &policy, t0);
+        // The local L1 still recorded the cooldown — the process keeps its
+        // own steering even while the shared store is down.
+        assert!(tracker.is_cooling_down_at("openai", "gpt-4o", t0));
+        assert!(crate::llm_gateway::shared_state::db_error_count() >= 1);
+    }
+
+    #[test]
+    fn tracker_without_shared_store_is_unchanged() {
+        // Default-off behavior: no store installed, pure in-memory steering.
+        let tracker = CooldownTracker::new();
+        assert!(tracker.shared_store().is_none());
+        let policy = RetryPolicy::default();
+        let t0 = Instant::now();
+        tracker.record_outcome_at("openai", "gpt-4o", AttemptOutcome::RateLimited, &policy, t0);
+        assert!(tracker.is_cooling_down_at("openai", "gpt-4o", t0 + Duration::from_secs(4)));
+        assert!(!tracker.is_cooling_down_at("openai", "gpt-4o", t0 + Duration::from_secs(6)));
     }
 }

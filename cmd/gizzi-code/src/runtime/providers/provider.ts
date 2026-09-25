@@ -26,6 +26,7 @@ import { CUSTOM_LOADERS } from "@/runtime/providers/adapters/loaders"
 import type { CustomModelLoader } from "@/runtime/providers/types"
 import { Discovery } from "@/runtime/providers/discovery"
 import { SubprocessLanguageModel } from "@/runtime/providers/adapters/loaders/subprocess"
+import { tapRetryHint } from "@/runtime/providers/retry-hint"
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
@@ -697,19 +698,39 @@ export namespace Provider {
           timeout: false,
         }
 
+        // Gateway streaming failover (allternit.retry_hint, gateway PR #728):
+        // tap SSE chat-completions responses so the hint frame is stripped
+        // before the AI SDK sees it and recorded for the session processor.
+        const retryHintSession = iife(() => {
+          try {
+            return new Headers(opts.headers as HeadersInit | undefined).get("x-gizzi-session")
+          } catch {
+            return null
+          }
+        })
+        const retryHintUrl = typeof input === "string" ? input : ((input as { url?: string })?.url ?? "")
+        const wrapRetryHint = (res: Response) =>
+          tapRetryHint({
+            response: res,
+            method: opts.method,
+            url: retryHintUrl,
+            sessionID: retryHintSession,
+            npm: model.api.npm,
+          })
+
         // Optional per-provider concurrency cap (provider.options.concurrency).
         const cap = Number(options["concurrency"])
         if (Number.isFinite(cap) && cap > 0) {
           const sem = providerSemaphore(model.providerID, Math.floor(cap))
           await sem.acquire()
           try {
-            return await fetchFn(input, reqInit)
+            return wrapRetryHint(await fetchFn(input, reqInit))
           } finally {
             sem.release()
           }
         }
 
-        return fetchFn(input, reqInit)
+        return wrapRetryHint(await fetchFn(input, reqInit))
       }
 
       const bundledFn = BUNDLED_PROVIDERS[model.api.npm]

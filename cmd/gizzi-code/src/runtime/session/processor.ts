@@ -19,6 +19,7 @@ import { SessionUsage } from "@/runtime/session/usage"
 import { describeProviderError } from "@/shared/util/provider-error"
 import { SessionTrace } from "@/runtime/session/trace"
 import { ContextProjector } from "@/runtime/session/context-projector"
+import { consumeRetryHint } from "@/runtime/providers/retry-hint"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -55,6 +56,12 @@ export namespace SessionProcessor {
       async process(streamInput: LLM.StreamInput) {
         log.info("process")
         needsCompaction = false
+        // Gateway retry hints are single-shot: at most one hint-driven
+        // re-drive per process() call, so a gateway that keeps emitting
+        // retryable hints cannot loop the session.
+        let retryHintConsumed = false
+        // Drop any hint recorded by an earlier request in this session.
+        consumeRetryHint(input.sessionID)
         const cfg = await Config.get()
         const shouldBreak = cfg.experimental?.continue_loop_on_deny !== true
         const retryMaxAttempts = cfg.experimental?.retry_max_attempts ?? DEFAULT_RETRY_MAX_ATTEMPTS
@@ -724,6 +731,43 @@ export namespace SessionProcessor {
               stack: JSON.stringify(e.stack),
             })
             const rawError = e instanceof Error ? e.message : String(e)
+            // Allternit gateway streaming failover: a retryable
+            // `allternit.retry_hint` SSE event preceded this stream error.
+            // Re-drive the request once (full context is already in
+            // streamInput.messages), routed at the hint's next_fallback via
+            // the gateway's `provider/model` body id when present.
+            const retryHint = consumeRetryHint(input.sessionID)
+            if (retryHint?.retryable && !retryHintConsumed && !input.abort.aborted) {
+              retryHintConsumed = true
+              if (retryHint.next_fallback) {
+                streamInput.model = {
+                  ...input.model,
+                  id: `${input.model.id}#retry-hint`,
+                  api: {
+                    ...input.model.api,
+                    id: `${retryHint.next_fallback.provider_id}/${retryHint.next_fallback.model_id}`,
+                  },
+                }
+              }
+              log.info("gateway retry hint: re-driving request", {
+                sessionID: input.sessionID,
+                reason: retryHint.reason,
+                next_fallback: retryHint.next_fallback,
+              })
+              SessionTrace.append({
+                sessionID: input.sessionID,
+                kind: "request.retry_hint",
+                messageID: input.assistantMessage.id,
+                data: {
+                  requestID: streamInput.user.id,
+                  reason: retryHint.reason,
+                  next_fallback: retryHint.next_fallback ?? undefined,
+                  error: rawError,
+                },
+              })
+              SessionStatus.set(input.sessionID, { type: "busy" })
+              continue
+            }
             if (isPayloadTooLarge(e) && mediaRecovery !== "stripped") {
               streamInput.messages = mediaRecovery === "none"
                 ? ContextProjector.degradeOlderMedia(streamInput.messages)

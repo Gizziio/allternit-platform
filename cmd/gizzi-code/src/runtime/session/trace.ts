@@ -14,6 +14,7 @@ export namespace SessionTrace {
     "request.started",
     "request.completed",
     "request.failed",
+    "request.retry_hint",
     "compaction.started",
     "compaction.pruned",
     "compaction.completed",

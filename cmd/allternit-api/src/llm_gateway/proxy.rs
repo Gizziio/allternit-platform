@@ -17,6 +17,10 @@
 //!   field. Tool-use happens inside Gizzi; the final text is what returns.
 //! - `Idempotency-Key` is honored for non-streaming requests only (a stream
 //!   cannot be replayed from a stored body).
+//! - P1.6: an opt-in in-memory response cache (`response_cache`) short-
+//!   circuits identical non-streaming, tool-free requests before any Gizzi
+//!   session/upstream call; hits return `x-allternit-cache: hit` and record
+//!   zero-cost usage (same treatment as BYOK-served requests).
 //! - B4 (pricing recompute + Prometheus counters) is wired into
 //!   [`record_usage_event`]; B5 (routing policies) is wired into
 //!   [`resolve_model`] — policy aliases resolve through `router::resolve`,
@@ -41,7 +45,7 @@ use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::{info, warn, Instrument};
 
 use crate::db::DbHandle;
 use crate::AppState;
@@ -1001,7 +1005,14 @@ pub(crate) fn record_usage_event(
         .usage
         .provider_id
         .as_deref()
-        .is_some_and(|provider_id| super::route_credentials::has_credential(db, &key.user_id, provider_id));
+        .is_some_and(|provider_id| {
+            super::route_credentials::has_any_credential(
+                db,
+                &key.user_id,
+                key.tenant_id.as_deref(),
+                provider_id,
+            )
+        });
 
     // B4: recompute cost from the models.dev cache (skipped → NULL when the
     // file or model is unavailable; the Gizzi-reported cost stands alone).
@@ -1643,7 +1654,23 @@ pub async fn best_of_completions(
 }
 
 /// `POST /chat/completions` — OpenAI-compatible completion via Gizzi.
-#[tracing::instrument(skip_all, name = "llm_gateway.chat_completions")]
+///
+/// OTel GenAI semantic-convention fields are declared here and recorded by
+/// [`super::genai_spans`] once routing resolves the provider/model and the
+/// outcome settles (recorded only when OTel export is enabled).
+#[tracing::instrument(
+    skip_all,
+    name = "llm_gateway.chat_completions",
+    fields(
+        gen_ai.operation.name = "chat",
+        gen_ai.system = tracing::field::Empty,
+        gen_ai.request.model = tracing::field::Empty,
+        gen_ai.response.model = tracing::field::Empty,
+        gen_ai.usage.input_tokens = tracing::field::Empty,
+        gen_ai.usage.output_tokens = tracing::field::Empty,
+        error.type = tracing::field::Empty,
+    )
+)]
 pub async fn chat_completions(
     State(state): State<Arc<AppState>>,
     Extension(key): Extension<LlmKeyContext>,
@@ -1861,12 +1888,18 @@ pub async fn chat_completions(
     // BYO subscription keys (route_credentials): when the resolved provider
     // matches one of the caller's own credentials, attach it to the Gizzi
     // payload so the upstream call bills the customer's own cloud console
-    // instead of Allternit credits. Always a separate payload key — never
-    // inside `provider`, which is forwarded to the aggregator.
-    let byo_primary =
-        super::route_credentials::get_credential(&state.db, &key.user_id, &resolved.provider_id)
-            .ok()
-            .flatten();
+    // instead of Allternit credits. Resolution is user → org pool → platform
+    // (P1.7): the org pool is consulted under the key's tenant/org scope and
+    // rotates across healthy pool entries. Always a separate payload key —
+    // never inside `provider`, which is forwarded to the aggregator.
+    let byo_primary = super::route_credentials::resolve_credential(
+        &state.db,
+        &key.user_id,
+        key.tenant_id.as_deref(),
+        &resolved.provider_id,
+    )
+    .ok()
+    .flatten();
     let attach_byo = |payload: &mut Value, credential: &super::route_credentials::RouteCredential| {
         let mut object = serde_json::Map::new();
         object.insert("apiKey".into(), json!(credential.api_key));
@@ -1899,6 +1932,83 @@ pub async fn chat_completions(
             Some(crate::llm_gateway::translate::error_code::PERMISSION_DENIED),
         )
         .into_response();
+    }
+
+    // P1.6 response cache: short-circuit identical non-streaming, tool-free
+    // requests before any Gizzi session/upstream work. The key is hashed here
+    // — after file-reference resolution and context-cache prepends, so the
+    // hash covers the final messages. The hit check runs after auth, safety,
+    // DLP, resolution, and the allowlist, so a cached body is never served to
+    // a caller who could not run the underlying request. Checked before the
+    // idempotency gate: a cache hit never opens an in_progress row.
+    let response_cache = super::response_cache::ResponseCache::global();
+    let response_cache_key =
+        if response_cache.enabled() && !stream && super::response_cache::is_cacheable(&request) {
+            Some(super::response_cache::cache_key(&request))
+        } else {
+            None
+        };
+    if let Some(cache_key) = &response_cache_key {
+        if let Some(cached_body) = response_cache.get(cache_key) {
+            crate::metrics::inc_llm_response_cache_hit(&request.model);
+            // Zero-cost usage, same treatment as BYOK: the cached body's
+            // token counts are metered, but provider_id is None and cost is
+            // 0, so record_usage_event stores/recomputes no spend.
+            let cached_usage = cached_body.get("usage");
+            let token = |name: &str| {
+                cached_usage
+                    .and_then(|u| u.get(name))
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0)
+            };
+            let detail = |group: &str, name: &str| {
+                cached_usage
+                    .and_then(|u| u.get(group))
+                    .and_then(|g| g.get(name))
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0)
+            };
+            let outcome = RequestOutcome {
+                status: "ok",
+                error_type: None,
+                usage: GizziUsage {
+                    prompt_tokens: token("prompt_tokens"),
+                    completion_tokens: token("completion_tokens"),
+                    reasoning_tokens: detail("completion_tokens_details", "reasoning_tokens"),
+                    cached_tokens: detail("prompt_tokens_details", "cached_tokens"),
+                    cache_write_tokens: 0,
+                    cost_microdollars: 0,
+                    provider_id: None,
+                    model_id: Some(request.model.clone()),
+                    finish: None,
+                },
+                policy: resolved.policy.clone(),
+                fallback_from: None,
+                gizzi_session_id: None,
+                latency_ms: started.elapsed().as_millis() as i64,
+                ttft_ms: None,
+                response_body: Some(cached_body.clone()),
+                routing_decision: resolved.routing_decision.clone(),
+                tags: outcome_tags.clone(),
+                batch_id: batch_id.clone(),
+                context_cache_id: context_cache_id.clone(),
+            };
+            let db = state.db.clone();
+            let key_for_record = key.clone();
+            tokio::task::spawn_blocking(move || {
+                record_usage_event(&db, &key_for_record, &outcome, None)
+            });
+            return (
+                StatusCode::OK,
+                [
+                    (header::CONTENT_TYPE, HeaderValue::from_static("application/json")),
+                    (HeaderName::from_static("x-allternit-cache"), HeaderValue::from_static("hit")),
+                ],
+                Json(cached_body),
+            )
+                .into_response();
+        }
+        crate::metrics::inc_llm_response_cache_miss(&request.model);
     }
 
     // Prompt: system messages → Gizzi `system` field; history → Gizzi parts.
@@ -2064,6 +2174,9 @@ pub async fn chat_completions(
         Some(credential) => attach_byo(&mut payload, credential),
         None => clear_byo(&mut payload),
     }
+    // The credential serving the in-flight attempt; the retry loop marks its
+    // health (fail streak / reset) and re-resolves it per failover model.
+    let mut current_byo = byo_primary;
     let message_url = format!(
         "{base}/v1/session/{}/message",
         urlencoding::encode(&session_id)
@@ -2078,6 +2191,11 @@ pub async fn chat_completions(
         stream,
         key_prefix = %key.key_prefix,
         "LLM gateway request dispatched to Gizzi"
+    );
+    super::genai_spans::record_request(
+        &tracing::Span::current(),
+        &resolved.provider_id,
+        &request.model,
     );
 
     // Retry policy + fallback chain, shared by both response paths: the
@@ -2135,6 +2253,13 @@ pub async fn chat_completions(
         let (mut response, mut outcome): (Response, RequestOutcome);
 
         loop {
+            // P1.5: one OTel span per retry/failover attempt (no-op when OTel
+            // export is disabled — `genai_spans` returns Span::none()).
+            let attempt_span = super::genai_spans::retry_attempt_span(
+                attempt,
+                &current_provider_id,
+                &current_model_id,
+            );
             (response, outcome) = nonstream_completion(
                 key.clone(),
                 send_task,
@@ -2150,7 +2275,13 @@ pub async fn chat_completions(
                 batch_id.clone(),
                 context_cache_id.clone(),
             )
+            .instrument(attempt_span.clone())
             .await;
+            super::genai_spans::record_attempt_outcome(
+                &attempt_span,
+                outcome.status,
+                outcome.error_type.as_deref(),
+            );
 
             // Health-based failover (P0.1): feed every attempt outcome into
             // the cooldown tracker, keyed by the provider/model that actually
@@ -2162,6 +2293,32 @@ pub async fn chat_completions(
                 super::failover::classify_outcome(outcome.status, outcome.error_type.as_deref()),
                 &policy,
             );
+
+            // BYO key health (P1.7): the credential that served this attempt
+            // gets its failure streak bumped (skipped after
+            // MAX_CONSECUTIVE_FAILURES) or reset on success, so pool rotation
+            // steers away from a sick key.
+            if let Some(credential) = &current_byo {
+                if let Some(credential_id) = credential.credential_id.clone() {
+                    let db = state.db.clone();
+                    let scope = credential.scope;
+                    let ok = outcome.status == "ok";
+                    tokio::task::spawn_blocking(move || {
+                        let result = if ok {
+                            super::route_credentials::mark_credential_ok(&db, scope, &credential_id)
+                        } else {
+                            super::route_credentials::mark_credential_failed(
+                                &db,
+                                scope,
+                                &credential_id,
+                            )
+                        };
+                        if let Err(err) = result {
+                            warn!(error = %err, "BYO credential health marking failed");
+                        }
+                    });
+                }
+            }
 
             if outcome.status == "ok" {
                 break;
@@ -2261,17 +2418,18 @@ pub async fn chat_completions(
             }
             // The BYO credential must follow the failover model too — and be
             // removed when the next provider is not the caller's own, so a
-            // user key never rides along to a provider they did not supply
-            // credentials for.
-            match super::route_credentials::get_credential(
+            // user/org key never rides along to a provider they did not
+            // supply credentials for. Re-resolved user → org pool → platform.
+            current_byo = super::route_credentials::resolve_credential(
                 &state.db,
                 &key.user_id,
+                key.tenant_id.as_deref(),
                 &next_model.provider_id,
             )
             .ok()
-            .flatten()
-            {
-                Some(credential) => attach_byo(&mut payload, &credential),
+            .flatten();
+            match &current_byo {
+                Some(credential) => attach_byo(&mut payload, credential),
                 None => clear_byo(&mut payload),
             }
 
@@ -2290,6 +2448,27 @@ pub async fn chat_completions(
                 fallback_provider = %current_provider_id,
                 "LLM gateway retry dispatched to Gizzi"
             );
+        }
+
+        // GenAI response fields: final model that served the request plus
+        // token usage, recorded once on the handler span after the loop.
+        super::genai_spans::record_response(
+            &tracing::Span::current(),
+            outcome.usage.model_id.as_deref(),
+            outcome.usage.prompt_tokens,
+            outcome.usage.completion_tokens,
+            outcome.error_type.as_deref(),
+        );
+
+        // P1.6: store successful responses for future short-circuits. Only
+        // `ok` outcomes with a 2xx body are cached; refusals and errors are
+        // not. Done before the (spawned) usage persist so the borrow is clean.
+        if let (Some(cache_key), "ok") = (&response_cache_key, outcome.status) {
+            if response.status() == StatusCode::OK {
+                if let Some(body) = outcome.response_body.clone() {
+                    response_cache.put(cache_key.clone(), body);
+                }
+            }
         }
 
         // Persist the final outcome once. For idempotent requests this

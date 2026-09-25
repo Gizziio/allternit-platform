@@ -6,7 +6,9 @@
 //! `llm_cost_microdollars_total`, `llm_request_duration_seconds`,
 //! `llm_fallback_total`, `llm_failover_cooldown_total`,
 //! `llm_failover_skipped_total`) emitted from the single
-//! `llm_gateway::proxy::record_usage_event` choke point.
+//! `llm_gateway::proxy::record_usage_event` choke point, plus the
+//! `llm_response_cache_hits_total` / `llm_response_cache_misses_total`
+//! counters for the P1.6 response-cache short-circuit.
 
 use axum::{
     extract::Request,
@@ -31,6 +33,8 @@ struct Metrics {
     llm_fallback_total: CounterVec,
     llm_failover_cooldown_total: CounterVec,
     llm_failover_skipped_total: CounterVec,
+    llm_response_cache_hits_total: CounterVec,
+    llm_response_cache_misses_total: CounterVec,
 }
 
 impl Metrics {
@@ -116,6 +120,25 @@ impl Metrics {
         )
         .expect("invalid llm_failover_skipped_total metric");
 
+        // P1.6: response-cache short-circuit on the chat-completions hot path.
+        let llm_response_cache_hits_total = CounterVec::new(
+            Opts::new(
+                "llm_response_cache_hits_total",
+                "Non-streaming requests served from the response cache (no upstream call)",
+            ),
+            &["model"],
+        )
+        .expect("invalid llm_response_cache_hits_total metric");
+
+        let llm_response_cache_misses_total = CounterVec::new(
+            Opts::new(
+                "llm_response_cache_misses_total",
+                "Cacheable non-streaming requests not found in the response cache",
+            ),
+            &["model"],
+        )
+        .expect("invalid llm_response_cache_misses_total metric");
+
         registry
             .register(Box::new(http_request_duration_seconds.clone()))
             .expect("failed to register http_request_duration_seconds");
@@ -143,6 +166,12 @@ impl Metrics {
         registry
             .register(Box::new(llm_failover_skipped_total.clone()))
             .expect("failed to register llm_failover_skipped_total");
+        registry
+            .register(Box::new(llm_response_cache_hits_total.clone()))
+            .expect("failed to register llm_response_cache_hits_total");
+        registry
+            .register(Box::new(llm_response_cache_misses_total.clone()))
+            .expect("failed to register llm_response_cache_misses_total");
 
         Self {
             registry,
@@ -155,6 +184,8 @@ impl Metrics {
             llm_fallback_total,
             llm_failover_cooldown_total,
             llm_failover_skipped_total,
+            llm_response_cache_hits_total,
+            llm_response_cache_misses_total,
         }
     }
 }
@@ -287,6 +318,22 @@ pub fn record_llm_failover_skipped(provider: &str, model: &str) {
     METRICS
         .llm_failover_skipped_total
         .with_label_values(&[provider, model])
+        .inc();
+}
+
+/// One chat-completions request served from the response cache (P1.6).
+pub fn inc_llm_response_cache_hit(model: &str) {
+    METRICS
+        .llm_response_cache_hits_total
+        .with_label_values(&[model])
+        .inc();
+}
+
+/// One cacheable chat-completions request that missed the response cache (P1.6).
+pub fn inc_llm_response_cache_miss(model: &str) {
+    METRICS
+        .llm_response_cache_misses_total
+        .with_label_values(&[model])
         .inc();
 }
 
