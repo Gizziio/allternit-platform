@@ -58,6 +58,14 @@ pub fn gateway_admin_router() -> Router<Arc<AppState>> {
             "/gateway/route-credentials/:provider_id",
             delete(delete_route_credential),
         )
+        .route(
+            "/gateway/orgs/:org_id/route-credentials",
+            get(list_org_route_credentials).put(put_org_route_credential),
+        )
+        .route(
+            "/gateway/orgs/:org_id/route-credentials/:cred_id",
+            delete(delete_org_route_credential),
+        )
         .route("/gateway/budgets", get(list_budgets).put(put_budget))
         .route(
             "/gateway/inference-hooks",
@@ -1287,6 +1295,156 @@ async fn delete_route_credential(
                 .into_response());
         }
         Ok::<_, ApiError>((StatusCode::OK, Json(json!({"deleted": provider_id}))).into_response())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(response)) => response,
+        Ok(Err(err)) => err.into_response(),
+        Err(err) => internal_error(err).into_response(),
+    }
+}
+
+// ─── GET/PUT/DELETE /gateway/orgs/:org_id/route-credentials ─────────────────
+//
+// Org-scoped BYOK pool (P1.7, V181): multiple keys per (org, provider) with
+// rotation + health tracking. Unlike the user routes above these ARE
+// org-admin gated — pool keys are shared org resources.
+
+/// Gate: caller must be an owner/admin of the path's org.
+fn require_org_admin(
+    conn: &Connection,
+    user: &AuthUser,
+    org_id: &str,
+) -> Result<(), ApiError> {
+    let is_admin = crate::rbac::is_org_admin(conn, org_id, &user.user_id).map_err(internal_error)?;
+    if !is_admin {
+        return Err(forbidden(
+            "insufficient_role",
+            "Only organization owners/admins can manage org route credentials.",
+        ));
+    }
+    Ok(())
+}
+
+async fn list_org_route_credentials(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(org_id): Path<String>,
+) -> Response {
+    let db = state.db.clone();
+    let org_id = org_id.trim().to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        {
+            let conn = db.connect().map_err(internal_error)?;
+            require_org_admin(&conn, &user, &org_id)?;
+        }
+        let credentials = super::route_credentials::list_org_credentials(&db, &org_id)
+            .map_err(internal_error)?;
+        Ok::<_, ApiError>(json!({ "credentials": credentials }))
+    })
+    .await;
+
+    respond(result)
+}
+
+async fn put_org_route_credential(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(org_id): Path<String>,
+    Json(payload): Json<Value>,
+) -> Response {
+    let org_id = org_id.trim().to_string();
+    let Some(provider_id) = payload
+        .get("provider_id")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|provider_id| !provider_id.is_empty())
+    else {
+        return bad_request("`provider_id` is required.").into_response();
+    };
+    let Some(api_key) = payload
+        .get("api_key")
+        .and_then(Value::as_str)
+        .filter(|api_key| !api_key.is_empty())
+    else {
+        return bad_request("`api_key` is required.").into_response();
+    };
+    let base_url = payload
+        .get("base_url")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|base_url| !base_url.is_empty());
+    let label = payload
+        .get("label")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|label| !label.is_empty());
+
+    // Same validate-then-store contract as the user route: probe when a
+    // base_url is supplied, store `unvalidated` otherwise.
+    let mut validated = false;
+    if let Some(base_url) = base_url {
+        if let Err(message) = super::route_credentials::validate_api_key(base_url, api_key).await {
+            return bad_request(format!("api_key validation failed: {message}")).into_response();
+        }
+        validated = true;
+    }
+
+    let db = state.db.clone();
+    let provider_id = provider_id.to_string();
+    let api_key = api_key.to_string();
+    let base_url = base_url.map(str::to_string);
+    let label = label.map(str::to_string);
+    let result = tokio::task::spawn_blocking(move || {
+        {
+            let conn = db.connect().map_err(internal_error)?;
+            require_org_admin(&conn, &user, &org_id)?;
+        }
+        let id = super::route_credentials::add_org_credential(
+            &db,
+            &org_id,
+            &provider_id,
+            &api_key,
+            base_url.as_deref(),
+            label.as_deref(),
+            validated,
+        )
+        .map_err(|message| (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid_request", "message": message}))))?;
+
+        let credentials = super::route_credentials::list_org_credentials(&db, &org_id)
+            .map_err(internal_error)?;
+        Ok::<_, ApiError>(json!({ "id": id, "credentials": credentials }))
+    })
+    .await;
+
+    respond(result)
+}
+
+async fn delete_org_route_credential(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path((org_id, cred_id)): Path<(String, String)>,
+) -> Response {
+    let db = state.db.clone();
+    let org_id = org_id.trim().to_string();
+    let cred_id = cred_id.trim().to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        {
+            let conn = db.connect().map_err(internal_error)?;
+            require_org_admin(&conn, &user, &org_id)?;
+        }
+        let deleted =
+            super::route_credentials::delete_org_credential(&db, &org_id, &cred_id)
+                .map_err(internal_error)?;
+        if !deleted {
+            return Ok::<_, ApiError>((
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "not_found", "message": format!("no org credential `{cred_id}`")})),
+            )
+                .into_response());
+        }
+        Ok::<_, ApiError>((StatusCode::OK, Json(json!({"deleted": cred_id}))).into_response())
     })
     .await;
 
