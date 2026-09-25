@@ -43,6 +43,9 @@ import {
   Wallet01Icon,
   BookOpen02Icon,
   MagicWandIcon,
+  ApiGatewayIcon,
+  Route01Icon,
+  Key02Icon,
 } from "@hugeicons/core-free-icons";
 
 export type ConsoleNavIcon = typeof LayoutDashboardIcon;
@@ -114,6 +117,14 @@ export const consoleNav: ConsoleNavConfig = {
       icon: AiBrain01Icon,
       badge: "soon",
       items: [{ to: "/gizzi/usage", label: "Usage", icon: CoinsDollarIcon }],
+    },
+    {
+      label: "Gateway",
+      icon: ApiGatewayIcon,
+      items: [
+        { to: "/gateway/routing-policy", label: "Routing policy", icon: Route01Icon },
+        { to: "/gateway/credentials", label: "Route credentials", icon: Key02Icon },
+      ],
     },
     {
       label: "Manage",
