@@ -733,6 +733,12 @@ export const SettingsSchema = lazySchema(() =>
         .optional()
         .catch(undefined)
         .describe('Persisted effort level for supported models.'),
+      modelFavorites: z
+        .array(z.string())
+        .optional()
+        .describe(
+          'Model option values starred as favorites in the /model picker.',
+        ),
       advisorModel: z
         .string()
         .optional()
