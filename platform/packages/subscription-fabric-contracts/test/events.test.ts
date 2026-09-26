@@ -32,6 +32,8 @@ function classify(event: AdapterEvent): string {
       return `reply:${event.event.type}`;
     case "progress":
       return `progress:${event.label}`;
+    case "progress.heartbeat":
+      return `progress.heartbeat:${event.elapsed_s}`;
     case "artifact.partial":
       return `artifact.partial:${event.ref.provider_artifact_id}`;
     case "artifact.ready":
@@ -77,9 +79,9 @@ describe("AdapterEvent union", () => {
     }
   });
 
-  it("all 11 tags are covered exactly once", () => {
+  it("all 12 tags are covered exactly once", () => {
     const tags = adapterEvents.map((e) => e.t);
-    expect(new Set(tags).size).toBe(11);
+    expect(new Set(tags).size).toBe(12);
   });
 });
 

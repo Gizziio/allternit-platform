@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>fixture-web — research mid-run</title></head>
+  <body data-state="research-mid-run">
+    <header>
+      <div data-testid="fw-user-menu" class="fw-user-menu">fixture-user</div>
+    </header>
+    <main>
+      <section data-testid="fw-research-panel">
+        <ol class="fw-steps">
+          <li data-testid="fw-step" data-state="done">Plan research questions</li>
+          <li data-testid="fw-step" data-state="done">Gather candidate sources</li>
+          <li data-testid="fw-step" data-state="done">Read the strongest sources</li>
+          <li data-testid="fw-step" data-state="active">Cross-check claims</li>
+          <li data-testid="fw-step" data-state="pending">Synthesize findings</li>
+        </ol>
+        <div data-testid="fw-counter" class="fw-counter">12 sources</div>
+      </section>
+      <div data-testid="fw-response" class="fw-response">
+        <p>Draft findings so far…</p>
+      </div>
+    </main>
+  </body>
+</html>

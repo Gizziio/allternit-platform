@@ -1,0 +1,131 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Browser } from "playwright";
+import {
+  CompletionTimeout,
+  SelectorPack,
+  awaitCompletion,
+  createCompletionTracker,
+  createResolver,
+} from "../src/index";
+import { fixturePage, launchBrowser, makeResolver } from "./helpers";
+
+let browser: Browser;
+beforeAll(async () => {
+  browser = await launchBrowser();
+});
+afterAll(async () => {
+  await browser.close();
+});
+
+describe("awaitCompletion (§A1 multi-signal detector)", () => {
+  it("completes on the complete fixture", async () => {
+    const page = await fixturePage(browser, "complete.html");
+    const resolver = makeResolver(page);
+    const result = await awaitCompletion(page, resolver, {
+      stabilityMs: 300,
+      pollIntervalMs: 25,
+      timeoutMs: 5000,
+    });
+    expect(result.completed).toBe(true);
+    expect(new Date(result.last_change_at).getTime()).toBeGreaterThan(0);
+    await page.close();
+  });
+
+  it("does not complete while streaming: stop visible, send disabled, streaming node", async () => {
+    const page = await fixturePage(browser, "streaming.html");
+    const resolver = makeResolver(page);
+    await expect(
+      awaitCompletion(page, resolver, {
+        stabilityMs: 150,
+        pollIntervalMs: 25,
+        timeoutMs: 400,
+      })
+    ).rejects.toThrow(CompletionTimeout);
+    await page.close();
+  });
+
+  it("reports each signal on streaming vs complete fixtures", async () => {
+    const streaming = await fixturePage(browser, "streaming.html");
+    const t1 = createCompletionTracker(streaming, makeResolver(streaming), { stabilityMs: 100 });
+    const s1 = (await t1.pollOnce()).signals;
+    expect(s1).toEqual({
+      stop_absent: false,
+      send_enabled: false,
+      stable: false,
+      streaming_absent: false,
+    });
+    await streaming.close();
+
+    const complete = await fixturePage(browser, "complete.html");
+    const t2 = createCompletionTracker(complete, makeResolver(complete), { stabilityMs: 100 });
+    await t2.pollOnce();
+    await new Promise((r) => setTimeout(r, 150));
+    const s2 = (await t2.pollOnce()).signals;
+    expect(s2).toEqual({
+      stop_absent: true,
+      send_enabled: true,
+      stable: true,
+      streaming_absent: true,
+    });
+    await complete.close();
+  });
+
+  it("treats an absent streaming key in the pack as no streaming node", async () => {
+    const page = await fixturePage(browser, "complete.html");
+    const packText = [
+      "response:",
+      "  critical: true",
+      "  strategies:",
+      "    - { testid: fw-response }",
+      "send_button:",
+      "  critical: true",
+      "  strategies:",
+      "    - { testid: fw-send }",
+      "stop_button:",
+      "  critical: false",
+      "  strategies:",
+      "    - { testid: fw-stop }",
+    ].join("\n");
+    const resolver = createResolver(page, SelectorPack.fromYaml(packText));
+    const result = await awaitCompletion(page, resolver, {
+      stabilityMs: 100,
+      pollIntervalMs: 25,
+      timeoutMs: 3000,
+    });
+    expect(result.completed).toBe(true);
+    await page.close();
+  });
+});
+
+describe("stall watchdog input (D11)", () => {
+  it("stalled() trips after stallTimeoutS with no DOM change on a static fixture", async () => {
+    const page = await fixturePage(browser, "static.html");
+    const resolver = makeResolver(page);
+    let t = 1_700_000_000_000;
+    const tracker = createCompletionTracker(page, resolver, { now: () => t });
+    await tracker.pollOnce();
+    expect(tracker.lastChangeAt()).toBe(t);
+    expect(tracker.stalled(90)).toBe(false);
+    t += 91_000;
+    expect(tracker.stalled(90)).toBe(true);
+    expect(tracker.stalled(200)).toBe(false);
+    await page.close();
+  });
+
+  it("a fresh DOM change resets the stall window", async () => {
+    const page = await fixturePage(browser, "static.html");
+    const resolver = makeResolver(page);
+    let t = 1_700_000_000_000;
+    const tracker = createCompletionTracker(page, resolver, { now: () => t });
+    await tracker.pollOnce();
+    t += 60_000;
+    await page.evaluate(() => {
+      const el = document.querySelector("[data-testid='fw-response'] p");
+      if (el) el.textContent = "Static response body, updated.";
+    });
+    await tracker.pollOnce();
+    expect(tracker.lastChangeAt()).toBe(t);
+    expect(tracker.stalled(90)).toBe(false);
+    await page.close();
+  });
+});

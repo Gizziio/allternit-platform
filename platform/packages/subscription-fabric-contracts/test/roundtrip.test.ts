@@ -116,7 +116,7 @@ describe("zod schema round-trips", () => {
     );
   });
 
-  it("AdapterEvent covers all 11 variants", () => {
-    expect(adapterEvents).toHaveLength(11);
+  it("AdapterEvent covers all 12 variants", () => {
+    expect(adapterEvents).toHaveLength(12);
   });
 });

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>fixture-web — limit banners</title></head>
+  <body data-state="limited">
+    <header>
+      <div data-testid="fw-user-menu" class="fw-user-menu">fixture-user</div>
+    </header>
+    <main>
+      <div data-testid="fw-banner-soft" class="fw-banner fw-banner-soft" role="alert">
+        You are approaching your usage limit for this period.
+      </div>
+      <div data-testid="fw-banner-hard" class="fw-banner fw-banner-hard" role="alert">
+        Limit reached. Your usage limit resets at midnight.
+      </div>
+      <div
+        id="fw-composer"
+        data-testid="fw-composer"
+        role="textbox"
+        aria-label="Message fixture-web"
+        contenteditable="true"
+      ></div>
+      <button id="fw-send" data-testid="fw-send" type="button">Send</button>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "name": "@allternit/subscription-adapter-sdk",
+  "version": "0.1.0",
+  "description": "Shared DOM primitives for Subscription Fabric adapters — selector registry, completion detector, progress extractors, composer, extraction, banners, auth, pacing",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@allternit/browser-tools": "workspace:*",
+    "@allternit/subscription-fabric-contracts": "workspace:*",
+    "js-yaml": "^4.1.0",
+    "playwright": "^1.58.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

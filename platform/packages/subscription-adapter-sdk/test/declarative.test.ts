@@ -1,0 +1,300 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Browser, Page } from "playwright";
+import type {
+  AdapterEvent,
+  CapabilityId,
+  Task,
+  TaskAttempt,
+} from "@allternit/subscription-fabric-contracts";
+import {
+  DeclarativeChatAdapter,
+  createExecutionContext,
+  createPageLease,
+  createPacer,
+  createResolver,
+  type DeclarativeChatConfig,
+} from "../src/index";
+import { fixturePage, launchBrowser } from "./helpers";
+import { fixtureWebConfig } from "./fixture-web";
+
+let browser: Browser;
+beforeAll(async () => {
+  browser = await launchBrowser();
+});
+afterAll(async () => {
+  await browser.close();
+});
+
+function makeTask(): Task {
+  const now = new Date().toISOString();
+  return {
+    task_id: "task-fw-1",
+    idempotency_key: null,
+    capability: "chat.create" as CapabilityId,
+    capability_version: 1,
+    requester: { kind: "user", id: "fixture-user" },
+    thread_id: null,
+    project_id: null,
+    parent_task_id: null,
+    prompt: "hello fixture",
+    inputs: [],
+    options: {},
+    routing: {
+      mode: "auto",
+      allow_fallback: true,
+      allow_metered: false,
+      allow_thread_migration: false,
+    },
+    constraints: {
+      sensitivity: "internal",
+      deadline_at: null,
+      max_metered_usd: null,
+      required_export_format: null,
+    },
+    approval_id: null,
+    priority: "interactive",
+    status: "queued",
+    status_detail: null,
+    route_decision: null,
+    attempts: [],
+    result: null,
+    error: null,
+    created_at: now,
+    updated_at: now,
+    completed_at: null,
+  };
+}
+
+function makeAttempt(): TaskAttempt {
+  return {
+    attempt_no: 1,
+    adapter_id: "fixture-web",
+    adapter_version: "0.1.0",
+    account_id: "acct-fw-1",
+    pool_key: "fixture-free-pool",
+    submission_state: "not_sent",
+    prompt_fingerprint: "fixture-fingerprint",
+    provider_thread_id: null,
+    requested_model_class: null,
+    observed_model: null,
+    started_at: new Date().toISOString(),
+    ended_at: null,
+    outcome: "failed",
+    error: null,
+  };
+}
+
+interface RunResult {
+  events: AdapterEvent[];
+  marks: Array<{ threadId: string | null; state: string; submittedDomFlag: string | undefined }>;
+  attempt: TaskAttempt;
+  page: Page;
+}
+
+async function runAdapter(
+  fixture: string,
+  overrides: Partial<DeclarativeChatConfig> = {}
+): Promise<RunResult> {
+  const config = fixtureWebConfig(overrides);
+  const adapter = new DeclarativeChatAdapter(config);
+  const page = await fixturePage(browser, fixture);
+  const marks: RunResult["marks"] = [];
+  const attempt = makeAttempt();
+  const ctx = createExecutionContext({
+    page: createPageLease(page),
+    sink: {
+      begin: async () => "artifact-fw-1",
+      write: async () => {},
+      commit: async () => {},
+      fail: async () => {},
+    },
+    pacer: createPacer(config.manifest.pacing, { rng: () => 0 }),
+    resolver: createResolver(page, adapter.pack),
+    logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} },
+    attempt,
+    onMarkSubmitted: async (threadId, state) => {
+      const submittedDomFlag = await page.evaluate(() => document.body.dataset.fwSubmitted);
+      marks.push({ threadId, state, submittedDomFlag });
+    },
+  });
+  const events: AdapterEvent[] = [];
+  for await (const event of adapter.execute(makeTask(), ctx)) events.push(event);
+  return { events, marks, attempt, page };
+}
+
+function types(events: AdapterEvent[]): string[] {
+  return events.map((e) => (e as { t: string }).t);
+}
+
+describe("DeclarativeChatAdapter end-to-end (§A3.3, P2 verify)", () => {
+  it("idle: submitted → done, markSubmitted(sent_unconfirmed) before Send click", async () => {
+    const { events, marks, attempt, page } = await runAdapter("idle.html");
+    expect(types(events)[0]).toBe("submitted");
+    expect(types(events)[types(events).length - 1]).toBe("done");
+    // §A1 two-write ordering: first durable write precedes the Send click.
+    expect(marks.map((m) => m.state)).toEqual(["sent_unconfirmed", "acknowledged"]);
+    expect(marks[0].submittedDomFlag).toBeUndefined();
+    expect(marks[1].submittedDomFlag).toBe("click");
+    expect(attempt.submission_state).toBe("acknowledged");
+    await page.close();
+  });
+
+  it("complete: full event sequence with reply events and markdown text", async () => {
+    const { events, page } = await runAdapter("complete.html");
+    const ts = types(events);
+    expect(ts[0]).toBe("submitted");
+    expect(ts).toContain("reply");
+    expect(ts[ts.length - 1]).toBe("done");
+    const done = events[events.length - 1] as Extract<AdapterEvent, { t: "done" }>;
+    expect(done.outcome).toBe("success");
+    expect(done.text).toContain("```ts");
+    expect(done.text).toContain("[[1] example reference](https://example.com/ref-1)");
+    await page.close();
+  });
+
+  it("streaming: heartbeats with growing elapsed_s, then stalled error (§A8 not retryable once acknowledged)", async () => {
+    let t = 1_700_000_000_000;
+    const { events, page } = await runAdapter("streaming.html", {
+      stallTimeoutS: 1,
+      heartbeatIntervalMs: 200,
+      completion: {
+        now: () => t,
+        sleep: async (ms) => {
+          t += ms;
+        },
+        stabilityMs: 150,
+        pollIntervalMs: 25,
+        timeoutMs: 60_000,
+      },
+    });
+    const ts = types(events);
+    expect(ts[0]).toBe("submitted");
+    const heartbeats = events.filter(
+      (e) => (e as { t: string }).t === "progress.heartbeat"
+    ) as unknown as Array<{ elapsed_s: number }>;
+    expect(heartbeats.length).toBeGreaterThanOrEqual(2);
+    expect(heartbeats[heartbeats.length - 1].elapsed_s).toBeGreaterThan(heartbeats[0].elapsed_s);
+    const last = events[events.length - 1] as Extract<AdapterEvent, { t: "error" }>;
+    expect(last.t).toBe("error");
+    expect(last.error.class).toBe("stalled");
+    expect(last.error.retryable).toBe(false); // submission_state = acknowledged
+    await page.close();
+  });
+
+  it("stall watchdog gate: a heartbeating, growing fixture does NOT trip stalled", async () => {
+    let t = 1_700_000_000_000;
+    const page = await fixturePage(browser, "streaming.html");
+    const config = fixtureWebConfig({
+      stallTimeoutS: 1,
+      heartbeatIntervalMs: 100,
+      completion: {
+        now: () => t,
+        // DOM grows on every poll tick → last_change_at stays fresh.
+        sleep: async (ms) => {
+          t += ms;
+          await page.evaluate(() => {
+            const el = document.querySelector("[data-testid='fw-response'] p");
+            if (el) el.textContent = `${el.textContent}•`;
+          });
+        },
+        stabilityMs: 150,
+        pollIntervalMs: 25,
+        timeoutMs: 600_000,
+      },
+    });
+    const adapter = new DeclarativeChatAdapter(config);
+    const attempt = makeAttempt();
+    const ctx = createExecutionContext({
+      page: createPageLease(page),
+      sink: { begin: async () => "a", write: async () => {}, commit: async () => {}, fail: async () => {} },
+      pacer: createPacer(config.manifest.pacing, { rng: () => 0 }),
+      resolver: createResolver(page, adapter.pack),
+      logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} },
+      attempt,
+      onMarkSubmitted: async () => {},
+    });
+    const events: AdapterEvent[] = [];
+    for await (const event of adapter.execute(makeTask(), ctx)) {
+      events.push(event);
+      if (events.length >= 12) break;
+    }
+    expect(events.some((e) => (e as { t: string }).t === "error")).toBe(false);
+    expect(events.some((e) => (e as { t: string }).t === "progress.heartbeat")).toBe(true);
+    expect(events.some((e) => (e as { t: string }).t === "progress")).toBe(true);
+    await page.close();
+  });
+
+  it("limit-banner: quota.signal emitted for the limit banners", async () => {
+    const { events, page } = await runAdapter("limit-banner.html");
+    const signals = events.filter(
+      (e): e is Extract<AdapterEvent, { t: "quota.signal" }> =>
+        (e as { t: string }).t === "quota.signal"
+    );
+    expect(signals.length).toBeGreaterThanOrEqual(1);
+    expect(signals[0].signal.kind).toBe("limit_banner");
+    expect(signals[0].pool_id).toBe("fixture-free-pool");
+    expect(signals[0].signal.task_id).toBe("task-fw-1");
+    expect(types(events)).toContain("submitted");
+    await page.close();
+  });
+
+  it("challenge: needs_user(challenge), never submits, never marks", async () => {
+    const { events, marks, page } = await runAdapter("challenge.html");
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ t: "needs_user", reason: "challenge" });
+    expect(marks).toHaveLength(0);
+    await page.close();
+  });
+
+  it("logged-out: needs_user(auth), never submits", async () => {
+    const { events, marks, page } = await runAdapter("logged-out.html");
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ t: "needs_user", reason: "auth" });
+    expect(marks).toHaveLength(0);
+    await page.close();
+  });
+
+  it("readThread returns a snapshot with a content fingerprint", async () => {
+    const config = fixtureWebConfig();
+    const adapter = new DeclarativeChatAdapter(config);
+    const page = await fixturePage(browser, "complete.html");
+    const ctx = createExecutionContext({
+      page: createPageLease(page),
+      sink: { begin: async () => "a", write: async () => {}, commit: async () => {}, fail: async () => {} },
+      pacer: createPacer(config.manifest.pacing),
+      resolver: createResolver(page, adapter.pack),
+      logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} },
+      attempt: makeAttempt(),
+      onMarkSubmitted: async () => {},
+    });
+    const snapshot = await adapter.readThread("fw-thread-1", ctx);
+    expect(snapshot.provider_thread_id).toBe("fw-thread-1");
+    expect(snapshot.turn_count).toBe(1);
+    expect(snapshot.last_turn_fingerprint).toMatch(/^[0-9a-f]{64}$/);
+    await page.close();
+  });
+
+  it("reconcile: not_found with no response, ambiguous with unconfirmed thread", async () => {
+    const config = fixtureWebConfig();
+    const adapter = new DeclarativeChatAdapter(config);
+    const mkCtx = (page: Page) =>
+      createExecutionContext({
+        page: createPageLease(page),
+        sink: { begin: async () => "a", write: async () => {}, commit: async () => {}, fail: async () => {} },
+        pacer: createPacer(config.manifest.pacing),
+        resolver: createResolver(page, adapter.pack),
+        logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} },
+        attempt: makeAttempt(),
+        onMarkSubmitted: async () => {},
+      });
+    const idlePage = await fixturePage(browser, "idle.html");
+    const notFound = await adapter.reconcile(makeAttempt(), mkCtx(idlePage));
+    expect(notFound.outcome).toBe("not_found");
+    await idlePage.close();
+
+    const completePage = await fixturePage(browser, "complete.html");
+    const ambiguous = await adapter.reconcile(makeAttempt(), mkCtx(completePage));
+    expect(ambiguous.outcome).toBe("ambiguous");
+    await completePage.close();
+  });
+});

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>fixture-web — complete</title></head>
+  <body data-state="complete">
+    <header>
+      <div data-testid="fw-user-menu" class="fw-user-menu">fixture-user</div>
+    </header>
+    <main>
+      <div id="fw-transcript">
+        <div data-testid="fw-response" class="fw-response">
+          <h3>Summary</h3>
+          <p>Here is the full result for your request.</p>
+          <pre><code class="language-ts">const answer: number = 42;</code></pre>
+          <p>It holds in every case we checked.</p>
+          <ul>
+            <li>first supporting point</li>
+            <li>second supporting point</li>
+          </ul>
+          <p>Source: <a href="https://example.com/ref-1">[1] example reference</a></p>
+        </div>
+      </div>
+      <div
+        id="fw-composer"
+        data-testid="fw-composer"
+        role="textbox"
+        aria-label="Message fixture-web"
+        contenteditable="true"
+      ></div>
+      <button id="fw-send" data-testid="fw-send" type="button">Send</button>
+    </main>
+  </body>
+</html>

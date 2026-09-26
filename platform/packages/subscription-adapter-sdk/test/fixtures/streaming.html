@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>fixture-web — streaming</title></head>
+  <body data-state="streaming">
+    <header>
+      <div data-testid="fw-user-menu" class="fw-user-menu">fixture-user</div>
+    </header>
+    <main>
+      <div id="fw-transcript">
+        <div data-testid="fw-response" class="fw-response">
+          <p>The answer so far is</p>
+        </div>
+        <span data-testid="fw-streaming" class="fw-streaming" aria-live="polite">Generating…</span>
+      </div>
+      <div
+        id="fw-composer"
+        data-testid="fw-composer"
+        role="textbox"
+        aria-label="Message fixture-web"
+        contenteditable="true"
+      ></div>
+      <button data-testid="fw-stop" type="button">Stop</button>
+      <button id="fw-send" data-testid="fw-send" type="button" disabled>Send</button>
+    </main>
+    <script>
+      document.getElementById("fw-composer").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") document.body.dataset.fwSubmitted = "enter";
+      });
+    </script>
+  </body>
+</html>

@@ -90,6 +90,12 @@ export const adapterEventSchema = z.discriminatedUnion("t", [
     label: z.string(),
     fraction: z.number().optional(),
   }),
+  // D11 — gateway/worker heartbeat: the UI must never render silence.
+  z.object({
+    t: z.literal("progress.heartbeat"),
+    elapsed_s: z.number(),
+    last_change_at: z.string(),
+  }),
   z.object({
     t: z.literal("artifact.partial"),
     ref: providerArtifactRefSchema,
