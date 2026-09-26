@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- fixture: streaming — assistant turn in flight, stop button present, send disabled -->
+<html lang="en">
+  <head><meta charset="utf-8"><title>chatgpt-web fixture — streaming</title></head>
+  <body data-state="streaming">
+    <nav>
+      <button data-testid="profile-button" aria-label="Profile">Eoj</button>
+    </nav>
+    <main>
+      <div id="thread">
+        <div data-message-author-role="user">Summarize the migration plan.</div>
+        <div data-message-author-role="assistant" class="result-streaming">
+          <p>The migration happens in three stages…</p>
+        </div>
+      </div>
+      <div
+        id="prompt-textarea"
+        data-testid="prompt-textarea"
+        role="textbox"
+        aria-label="Ask anything"
+        contenteditable="true"
+      ></div>
+      <button data-testid="send-button" aria-label="Send prompt" type="button" disabled>Send</button>
+      <button data-testid="stop-button" aria-label="Stop streaming" type="button">Stop</button>
+    </main>
+  </body>
+</html>

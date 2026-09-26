@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { defaultAdaptersDir } from "./adapters/registry.js";
 
 export interface TcpConfig {
   enabled: boolean;
@@ -14,6 +15,9 @@ export interface Config {
   dbPath: string;
   artifactsDir: string;
   udsPath: string;
+  // Adapter package dir (manifest.yaml per adapter); default resolved from the
+  // package layout, overridable for tests.
+  adaptersDir: string;
   tcp: TcpConfig;
   policyPath: string;
   policy: Record<string, string>;
@@ -92,6 +96,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dbPath: join(stateDir, "state.db"),
     artifactsDir: join(stateDir, "artifacts"),
     udsPath: join(stateDir, "gateway.sock"),
+    adaptersDir: env[`${ENV_PREFIX}ADAPTERS_DIR`] ?? defaultAdaptersDir(),
     tcp: {
       enabled: env[`${ENV_PREFIX}TCP`] === "1",
       host: env[`${ENV_PREFIX}TCP_HOST`] ?? "127.0.0.1",

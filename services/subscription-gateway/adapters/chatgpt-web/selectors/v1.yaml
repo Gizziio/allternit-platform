@@ -1,0 +1,96 @@
+# chatgpt-web selectors v1 — §A3.2 named keys, ordered fallbacks
+# (semantic role/accessible-name and data-testid first, CSS last).
+# *** v1-unverified: written from public knowledge of the ChatGPT web UI,
+# *** NOT yet validated against a logged-in session (Phase 3 manual gate).
+# *** The conformance fixtures are shaped to THESE selectors, so selector drift
+# *** against the real UI will show up first as fixture/UI mismatch at the gate.
+
+composer:
+  critical: true
+  strategies:
+    - { testid: prompt-textarea }
+    - { role: textbox, name: /ask anything|message/i }
+    - { css: "div#prompt-textarea[contenteditable=true]" }
+send_button:
+  critical: true
+  strategies:
+    - { testid: send-button }
+    - { role: button, name: /send prompt|^send$/i }
+    - { css: "button[data-testid='send-button']" }
+stop_button:
+  critical: false
+  strategies:
+    - { testid: stop-button }
+    - { role: button, name: /stop streaming|^stop$/i }
+response:
+  critical: true # extraction target; idle pages legitimately lack it (probe criticalKeys excludes it)
+  strategies:
+    - { css: "[data-message-author-role='assistant']" }
+    - { css: "article[data-testid^='conversation-turn'] .markdown" }
+user_turn:
+  critical: false
+  strategies:
+    - { css: "[data-message-author-role='user']" }
+streaming:
+  critical: false
+  strategies:
+    - { css: ".result-streaming" }
+    - { css: "[data-message-author-role='assistant'][data-streaming='true']" }
+logged_in_probe:
+  critical: true
+  strategies:
+    - { testid: profile-button }
+    - { role: button, name: /profile|account menu/i }
+    - { css: "nav button[aria-label*='rofile']" }
+temp_chat_toggle:
+  critical: false
+  strategies:
+    - { testid: temporary-chat-toggle }
+    - { role: button, name: /temporary chat/i }
+model_picker:
+  critical: false
+  strategies:
+    - { testid: model-switcher-dropdown-button }
+    - { role: button, name: /model/i }
+image_result:
+  critical: false
+  strategies:
+    - { testid: image-result }
+    - { css: "[data-message-author-role='assistant'] [data-image-result]" }
+banner:
+  critical: false
+  strategies:
+    - { testid: limit-banner }
+    - { role: alert }
+challenge:
+  critical: false
+  strategies:
+    - { css: "iframe[src*='challenges.cloudflare.com']" }
+    - { text: /verify you are human/i }
+
+# D11 — native progress surfaces (step lists, counter badges, partial tiles)
+progress:steps:
+  critical: false
+  strategies:
+    - { testid: progress-step }
+    - { css: "[data-progress-step]" }
+progress:counter:
+  critical: false
+  strategies:
+    - { testid: progress-counter }
+    - { css: "[data-progress-counter]" }
+progress:partial_artifacts:
+  critical: false
+  strategies:
+    - { css: "[data-testid='image-result'] img" }
+
+# §A3.4 — capability entry points (non-critical probe checks)
+capability:chat:
+  critical: false
+  strategies:
+    - { testid: prompt-textarea }
+capability:image_tool_toggle:
+  critical: false
+  strategies:
+    - { testid: image-tool-toggle }
+    - { role: button, name: /create image|image/i }

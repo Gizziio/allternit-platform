@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- fixture: limit-banner — idle UI plus a usage-limit banner (quota signal) -->
+<html lang="en">
+  <head><meta charset="utf-8"><title>chatgpt-web fixture — limit banner</title></head>
+  <body data-state="limit-banner">
+    <nav>
+      <button data-testid="profile-button" aria-label="Profile">Eoj</button>
+    </nav>
+    <main>
+      <div data-testid="limit-banner" role="alert">
+        You've reached your usage limit. Your quota resets at 14:00.
+      </div>
+      <div id="thread"></div>
+      <div
+        id="prompt-textarea"
+        data-testid="prompt-textarea"
+        role="textbox"
+        aria-label="Ask anything"
+        contenteditable="true"
+      ></div>
+      <button data-testid="send-button" aria-label="Send prompt" type="button">Send</button>
+    </main>
+  </body>
+</html>
