@@ -4,6 +4,7 @@ import {
   capabilityBadges,
   formatContext,
   inferVendor,
+  quotaMarker,
   quotaSummary,
   selectableValues,
   toggleFavorite,
@@ -224,6 +225,34 @@ describe("quotaSummary", () => {
     expect(quotaSummary({ status: "signed-out" })).toBeNull()
     expect(quotaSummary({ status: "error" })).toBeNull()
     expect(quotaSummary({ status: "ok", quota: { windows: [] } })).toBeNull()
+  })
+})
+
+describe("quotaMarker", () => {
+  const ok = {
+    status: "ok" as const,
+    quota: { windows: [{ id: "5h", label: "5-hour", usedRatio: 0.38 }] },
+  }
+
+  test("real summaries win over markers", () => {
+    expect(quotaMarker(ok, true)).toBe("5h: 62% left")
+    expect(quotaMarker(ok, false)).toBe("5h: 62% left")
+  })
+
+  test("providers with no quota API get the explicit n/a marker", () => {
+    expect(quotaMarker(undefined, false)).toBe("quota n/a")
+    expect(quotaMarker({ status: "unsupported" }, false)).toBe("quota n/a")
+  })
+
+  test("known fetch outcomes get short honest statuses", () => {
+    expect(quotaMarker({ status: "signed-out", message: "Sign in." }, true)).toBe("quota: signed out")
+    expect(quotaMarker({ status: "expired", message: "Expired." }, true)).toBe("quota: sign-in expired")
+    expect(quotaMarker({ status: "error", message: "Down." }, true)).toBe("quota unavailable")
+  })
+
+  test("an in-flight fetch says nothing yet, and never fabricates", () => {
+    expect(quotaMarker(undefined, true)).toBeNull()
+    expect(quotaMarker({ status: "ok", quota: { windows: [] } }, true)).toBeNull()
   })
 })
 

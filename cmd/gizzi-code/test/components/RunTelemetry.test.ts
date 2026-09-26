@@ -7,9 +7,15 @@ import {
   formatTelemetryCost,
   formatTelemetrySeconds,
   pickTightestQuotaWindow,
+  QUOTA_NA_CHIP,
   quotaChipFromResult,
   quotaWindowChip,
 } from "../../src/cli/ui/ink-app/utils/telemetry/runTelemetryModel"
+import {
+  quotaChipForProvider,
+  quotaProviderSupported,
+  resolveQuotaProviderId,
+} from "../../src/cli/ui/ink-app/utils/telemetry/providerQuota"
 import { createRunTelemetryMessage } from "../../src/cli/ui/ink-app/utils/messages"
 import {
   contextRatioFromMessages,
@@ -89,6 +95,10 @@ describe("quota window selection", () => {
     expect(quotaChipFromResult({ status: "unsupported" })).toBeNull()
     expect(quotaChipFromResult({ status: "signed-out", message: "x" })).toBeNull()
     expect(quotaChipFromResult(undefined)).toBeNull()
+  })
+  test("QUOTA_NA_CHIP is the explicit no-quota-API marker", () => {
+    expect(QUOTA_NA_CHIP).toBe("quota n/a")
+    expect(buildRunTelemetryLine({ quotaChip: QUOTA_NA_CHIP })).toBe("quota n/a")
   })
 })
 
@@ -197,5 +207,28 @@ describe("turnSignals", () => {
     expect(reasoningTokensFromMessages([assistantWithUsage({ reasoning_output_tokens: 300 })])).toBe(300)
     expect(reasoningTokensFromMessages([assistantWithUsage({})])).toBe(0)
     expect(reasoningTokensFromMessages([])).toBe(0)
+  })
+})
+
+
+describe("providerQuota bridge", () => {
+  test("quotaProviderSupported mirrors the runtime fetcher registry", () => {
+    expect(quotaProviderSupported("kimi-cli")).toBe(true)
+    expect(quotaProviderSupported("openrouter")).toBe(true)
+    expect(quotaProviderSupported("anthropic")).toBe(false)
+    expect(quotaProviderSupported("claude-cli")).toBe(false)
+  })
+
+  test("quotaChipForProvider returns the n/a marker for providers with no quota API, with no network", async () => {
+    // "anthropic" has no fetcher — the marker must come back without any fetch.
+    expect(await quotaChipForProvider("anthropic")).toBe(QUOTA_NA_CHIP)
+  })
+
+  test("resolveQuotaProviderId claims only providers with a fetcher for model-prefixed strings", () => {
+    // models.dev providers never pass through Discovery, so only the
+    // supported-prefix path may claim them.
+    expect(resolveQuotaProviderId("openrouter/anthropic/claude-opus-4")).toBe("openrouter")
+    expect(resolveQuotaProviderId("anthropic/claude-opus-4")).toBeUndefined()
+    expect(resolveQuotaProviderId(undefined)).toBeUndefined()
   })
 })

@@ -1,8 +1,11 @@
 /**
  * Provider plan quotas — how much of a subscription's rolling windows (e.g.
- * 5-hour, weekly) a provider has used. Read-only: uses the provider CLI's own
- * stored sign-in, never prompts or refreshes it. Providers without a quota
- * source return undefined (the client shows nothing, not a guess).
+ * 5-hour, weekly) a provider has used. Read-only: uses credentials the user
+ * already configured (a provider CLI's stored sign-in, or the env API key
+ * models.dev declares for the provider), never prompts or refreshes them.
+ * Fetchers only exist for providers with a real, documented quota/credits
+ * endpoint; everything else returns { status: "unsupported" } so the client
+ * can render an explicit "quota n/a" — never a fabricated window.
  */
 
 import { readFile } from "node:fs/promises"
@@ -114,8 +117,96 @@ const kimi: Fetcher = async () => {
   }
 }
 
+// ── OpenRouter ──────────────────────────────────────────────────────────────
+// Official endpoints, grounded in the OpenRouter API reference
+// (openrouter.ai/docs/api-reference/get-credits and /get-api-key-info):
+//   GET /api/v1/credits  → { data: { total_credits, total_usage } }
+//   GET /api/v1/auth/key → { data: { usage, limit, is_free_tier, … } }
+// Auth is the OPENROUTER_API_KEY the user already set for the provider
+// (models.dev declares that env var for "openrouter"). Read-only; never
+// prompts or provisions a key.
+function openrouterBaseUrl(): string {
+  return (process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1").replace(/\/+$/, "")
+}
+
+function dollars(value: unknown): number | undefined {
+  const n = typeof value === "string" ? Number(value) : value
+  return typeof n === "number" && Number.isFinite(n) ? n : undefined
+}
+
+export function parseOpenRouterCredits(payload: any): QuotaWindow[] {
+  const total = dollars(payload?.data?.total_credits)
+  const used = dollars(payload?.data?.total_usage)
+  if (total === undefined || total <= 0 || used === undefined) return []
+  return [
+    {
+      id: "credits",
+      label: "Credits",
+      usedRatio: Math.min(1, Math.max(0, used / total)),
+    },
+  ]
+}
+
+export function parseOpenRouterKeyLimit(payload: any): QuotaWindow[] {
+  const limit = dollars(payload?.data?.limit)
+  const used = dollars(payload?.data?.usage)
+  if (limit === undefined || limit <= 0 || used === undefined) return []
+  return [
+    {
+      id: "key-limit",
+      label: "Key credit limit",
+      usedRatio: Math.min(1, Math.max(0, used / limit)),
+    },
+  ]
+}
+
+const openrouter: Fetcher = async () => {
+  const key = process.env.OPENROUTER_API_KEY?.trim()
+  if (!key) {
+    return { status: "signed-out", message: "Set OPENROUTER_API_KEY to see OpenRouter credits." }
+  }
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 8000)
+  try {
+    const headers = { Authorization: `Bearer ${key}`, Accept: "application/json" }
+    const res = await fetch(`${openrouterBaseUrl()}/credits`, {
+      headers,
+      signal: controller.signal,
+    })
+    if (res.status === 401 || res.status === 403) {
+      return { status: "signed-out", message: "OpenRouter rejected the configured OPENROUTER_API_KEY." }
+    }
+    if (!res.ok) return { status: "error", message: `OpenRouter credits request failed (${res.status}).` }
+    let windows = parseOpenRouterCredits(await res.json())
+    if (windows.length === 0) {
+      // Free-tier / no-credits keys: the key-info endpoint still carries the
+      // optional per-key spend cap (limit null when none is set).
+      const keyRes = await fetch(`${openrouterBaseUrl()}/auth/key`, {
+        headers,
+        signal: controller.signal,
+      })
+      if (keyRes.ok) windows = parseOpenRouterKeyLimit(await keyRes.json())
+    }
+    return {
+      status: "ok",
+      quota: {
+        providerID: "openrouter",
+        source: "OpenRouter",
+        windows,
+        fetchedAt: Date.now(),
+      },
+    }
+  } catch (err) {
+    log.warn("openrouter quota fetch failed", { error: err instanceof Error ? err.message : String(err) })
+    return { status: "error", message: "Couldn't reach OpenRouter to read credits." }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 const FETCHERS: Record<string, Fetcher> = {
   "kimi-cli": kimi,
+  openrouter,
 }
 
 export namespace ProviderQuotas {
@@ -131,5 +222,10 @@ export namespace ProviderQuotas {
 
   export function supported(): string[] {
     return Object.keys(FETCHERS)
+  }
+
+  /** Test/maintenance hook: drop every cached read. */
+  export function clearCache(): void {
+    cache.clear()
   }
 }

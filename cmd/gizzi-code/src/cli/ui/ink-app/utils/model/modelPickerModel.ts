@@ -123,6 +123,7 @@ export interface PickerQuotaResult {
   quota?: {
     windows: Array<{ id: string; label: string; usedRatio: number }>
   }
+  message?: string
 }
 
 /**
@@ -140,6 +141,32 @@ export function quotaSummary(
   )
   const left = Math.round((1 - tightest.usedRatio) * 100)
   return `${tightest.id}: ${left}% left`
+}
+
+/**
+ * Marker for a picker section/detail: the real summary when the provider
+ * reported one, an explicit "quota n/a" when the provider has no quota API
+ * (hasFetcher false), a short honest status for known fetch outcomes, and
+ * null only while a fetch is still in flight — never a fabricated number.
+ */
+export function quotaMarker(
+  result: PickerQuotaResult | undefined,
+  hasFetcher: boolean,
+): string | null {
+  const summary = quotaSummary(result)
+  if (summary) return summary
+  if (!hasFetcher) return 'quota n/a'
+  if (!result) return null // fetch in flight — say nothing yet
+  switch (result.status) {
+    case 'signed-out':
+      return 'quota: signed out'
+    case 'expired':
+      return 'quota: sign-in expired'
+    case 'error':
+      return 'quota unavailable'
+    default:
+      return null
+  }
 }
 
 function modelIdOf(value: string): string {
