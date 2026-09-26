@@ -21,6 +21,8 @@ import { eventsRouter } from "./routes_events.js";
 import { artifactsRouter } from "./routes_artifacts.js";
 import { accountsRouter } from "./routes_accounts.js";
 import { capabilitiesRouter } from "./routes_capabilities.js";
+import { catalogRouter } from "./routes_catalog.js";
+import { statsRouter } from "./routes_stats.js";
 
 export interface GatewayDeps {
   db: Db;
@@ -120,6 +122,8 @@ export function createServer(deps: GatewayDeps): Express {
   app.use(artifactsRouter(deps));
   app.use(accountsRouter(deps));
   app.use(capabilitiesRouter(deps));
+  app.use(catalogRouter(deps));
+  app.use(statsRouter(deps));
 
   app.use((_req, res) => res.status(404).json({ error: "not_found" }));
   return app;

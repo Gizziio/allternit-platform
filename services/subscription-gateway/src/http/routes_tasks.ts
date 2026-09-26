@@ -12,10 +12,12 @@ import {
   taskRoutingSchema,
   type Task,
 } from "@allternit/subscription-fabric-contracts";
+import { needsResolution, resolveForNewTask } from "../router/dispatch.js";
 import {
   getTask,
   getTaskByIdempotency,
   insertTask,
+  recordRouteRejections,
   updateTaskStatus,
 } from "../store/queries.js";
 import { callerOf, requireScope, type GatewayDeps } from "./server.js";
@@ -94,23 +96,36 @@ export function tasksRouter(deps: GatewayDeps): Router {
       updated_at: now,
       completed_at: null,
     };
-    insertTask(deps.db, task);
+    // P4 — pick-time routing (§A2): an unrouted auto task is resolved against
+    // a fresh snapshot before enqueue; the decision persists on the task and a
+    // primary pins (provider, account_id), keying the worker's scheduler lane.
+    // With no registry/router wired (unit tests) behavior is unchanged.
+    let routedTask = task;
+    if (deps.router && deps.adapterRegistry && needsResolution(task)) {
+      routedTask = resolveForNewTask(
+        { db: deps.db, registry: deps.adapterRegistry, router: deps.router },
+        task
+      ).task;
+    }
+    insertTask(deps.db, routedTask);
+    if (routedTask.route_decision) {
+      recordRouteRejections(deps.db, routedTask.task_id, routedTask.route_decision);
+    }
     deps.log.append({
-      task_id: task.task_id,
+      task_id: routedTask.task_id,
       kind: "task.created",
       payload: {
-        task_id: task.task_id,
-        status: task.status,
-        capability: task.capability,
-        thread_id: task.thread_id,
+        task_id: routedTask.task_id,
+        status: routedTask.status,
+        capability: routedTask.capability,
+        thread_id: routedTask.thread_id,
       },
       callers: [caller.caller_id],
     });
-    // P3 — enqueue for the worker layer. With zero registered adapters the
-    // task stays queued and the static router still returns no-route (full
-    // route→router→worker activation lands in Phase 2).
-    deps.scheduler?.enqueue(task);
-    res.status(201).json(task);
+    // P3 — enqueue for the worker layer. With zero eligible routes the task
+    // stays queued in the unrouted lane; route_decision records why.
+    deps.scheduler?.enqueue(routedTask);
+    res.status(201).json(routedTask);
   });
 
   router.get("/v1/tasks/:id", requireScope("tasks:read"), (req: Request, res: Response) => {

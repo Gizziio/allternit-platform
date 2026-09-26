@@ -5,12 +5,13 @@ import type {
   Account,
   Artifact,
   QuotaPool,
-  QuotaSignal,
+  RouteDecision,
   SubmissionState,
   Task,
   TaskAttempt,
   TaskError,
   TaskResult,
+  TaskRouting,
   TaskStatus,
 } from "@allternit/subscription-fabric-contracts";
 import type { Db } from "./db.js";
@@ -747,31 +748,64 @@ export function getQuotaPool(db: Db, poolKey: string): QuotaPool | null {
   return row ? quotaPoolFromRow(row) : null;
 }
 
-// §A4 minimal worker-side write: record the signal and move state; the full
-// cooldown ladder + circuit breaker are the P4 router's job.
-export function recordQuotaSignal(
+// P4 — the router's snapshot reads every pool row.
+export function listQuotaPools(db: Db): QuotaPool[] {
+  const rows = db
+    .prepare("SELECT * FROM quota_pools ORDER BY pool_key ASC")
+    .all() as QuotaPoolRow[];
+  return rows.map(quotaPoolFromRow);
+}
+
+// ---------------------------------------------------------------------------
+// P4 router wiring — route_decision + resolved routing fields
+// ---------------------------------------------------------------------------
+
+export function updateTaskRoutingDecision(
   db: Db,
-  poolKey: string,
-  poolId: string,
-  signal: QuotaSignal,
-  state: QuotaPool["state"]
+  taskId: string,
+  routing: TaskRouting,
+  decision: RouteDecision
 ): void {
-  const existing = getQuotaPool(db, poolKey);
-  const now = new Date().toISOString();
-  const pool: QuotaPool = existing ?? {
-    pool_key: poolKey,
-    pool_id: poolId,
-    state: "unknown",
-    remaining: null,
-    remaining_confidence: "none",
-    window: { kind: "unknown", seconds: null },
-    reset_at: null,
-    reset_at_source: null,
-    local_used_in_window: 0,
-    local_budget: null,
-    cooldown_until: null,
-    last_signal: null,
-    updated_at: now,
-  };
-  upsertQuotaPool(db, { ...pool, state, last_signal: signal, updated_at: now });
+  db.prepare(
+    `UPDATE tasks SET routing = ?, route_decision = ?, updated_at = ? WHERE task_id = ?`
+  ).run(JSON.stringify(routing), JSON.stringify(decision), new Date().toISOString(), taskId);
+}
+
+// ---------------------------------------------------------------------------
+// P4 Phase 2 — route_rejections: every rejected pair of every decision,
+// appended at the same call sites where decisions are persisted.
+// ---------------------------------------------------------------------------
+
+export interface RouteRejectionRow {
+  task_id: string;
+  decision_id: string;
+  adapter_id: string;
+  account_id: string | null;
+  reason: string;
+  created_at: string;
+}
+
+export function recordRouteRejections(
+  db: Db,
+  taskId: string,
+  decision: RouteDecision,
+  now: Date = new Date()
+): void {
+  const stmt = db.prepare(
+    `INSERT INTO route_rejections (task_id, decision_id, adapter_id, account_id, reason, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  );
+  const createdAt = now.toISOString();
+  for (const r of decision.rejected) {
+    stmt.run(taskId, decision.decision_id, r.adapter_id, r.account_id ?? null, r.reason, createdAt);
+  }
+}
+
+export function listRouteRejections(db: Db, limit: number): RouteRejectionRow[] {
+  return db
+    .prepare(
+      `SELECT task_id, decision_id, adapter_id, account_id, reason, created_at
+       FROM route_rejections ORDER BY id DESC LIMIT ?`
+    )
+    .all(limit) as RouteRejectionRow[];
 }
