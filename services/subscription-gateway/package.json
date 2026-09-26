@@ -8,7 +8,7 @@
     "dev": "tsx watch src/main.ts",
     "build": "tsc -b && node scripts/copy-migrations.mjs",
     "typecheck": "tsc -b",
-    "test": "vitest run",
+    "test": "vitest run && bash ../../scripts/check-fabric-sources-clean.sh",
     "start": "node dist/main.js"
   },
   "dependencies": {
