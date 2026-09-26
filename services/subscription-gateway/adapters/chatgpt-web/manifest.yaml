@@ -1,0 +1,50 @@
+# chatgpt-web — ChatGPT web UI adapter (ui_bridge_web), §S2 shape.
+# v1-unverified: origins/selectors written from public knowledge of the ChatGPT
+# web UI; not yet validated against a logged-in session (Phase 3 manual gate).
+adapter_id: chatgpt-web
+adapter_version: 0.1.0
+provider: chatgpt
+interface: ui_bridge_web
+origins:
+  - https://chatgpt.com # app surface (chat, composer, threads under /c/<id>)
+  - https://auth.openai.com # login/session flow
+  - https://cdn.oaistatic.com # static asset CDN
+  - https://files.oaiusercontent.com # generated content (images/files) download host
+auth:
+  login_url: https://chatgpt.com/auth/login
+  logged_in_probe: logged_in_probe
+plans:
+  - plan_id: free
+    label: Free
+  - plan_id: plus
+    label: Plus
+  - plan_id: pro
+    label: Pro
+capabilities:
+  - id: chat.create
+    min_capability_version: 1
+    plans: [free, plus, pro]
+    pool_id: chat-msgs
+    detachable: false
+    export_formats: []
+    status: stable
+  - id: chat.continue
+    min_capability_version: 1
+    plans: [free, plus, pro]
+    pool_id: chat-msgs
+    detachable: false
+    export_formats: []
+    status: stable
+  - id: image.generate
+    min_capability_version: 1
+    plans: [free, plus, pro]
+    pool_id: image-gen
+    detachable: true # provider renders server-side
+    export_formats: []
+    status: stable
+pacing: # §A5 — conservative until real signals are observed (D10: 150/day)
+  min_action_gap_ms: [1200, 3500]
+  min_task_gap_s: 8
+  max_tasks_per_hour: 30
+  max_tasks_per_day: 150
+selectors_version: v1

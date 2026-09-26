@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Express } from "express";
 import { loadConfig, type Config } from "./config.js";
+import { loadAdapterRegistry, type AdapterRegistry } from "./adapters/registry.js";
 import { openDatabase, type Db } from "./store/db.js";
 import { EventLog } from "./events/log.js";
 import { SseHub } from "./events/sse.js";
@@ -17,6 +18,7 @@ import {
   requireKeychain,
   type KeychainBackend,
 } from "./security/keychain.js";
+import { ensureCliToken } from "./security/tokens.js";
 import { closeServer, createServer, listenTcp, listenUds } from "./http/server.js";
 import { createScheduler } from "./queue/scheduler.js";
 import { StaticRouter } from "./router/resolve.js";
@@ -38,6 +40,7 @@ export interface RunningGateway {
   outbox: CallerOutbox;
   hub: SseHub;
   notifier: Notifier;
+  adapterRegistry: AdapterRegistry;
   close(): Promise<void>;
 }
 
@@ -63,6 +66,16 @@ export async function boot(deps: BootDeps = {}): Promise<RunningGateway> {
   }
 
   const db = openDatabase(config.dbPath);
+
+  // CLI auth bootstrap (§A6.2): issue + keychain-store the cli-token once;
+  // the CLI reads it via `security find-generic-password`.
+  const cliToken = ensureCliToken(db, keychain);
+  if (cliToken.issued) logger("subscription-gateway: issued cli-token (stored in keychain)");
+
+  // §A7 — adapter registry: manifests validated at boot; invalid = loud fail.
+  const adapterRegistry = loadAdapterRegistry(config.adaptersDir);
+  logger(`subscription-gateway: ${adapterRegistry.adapters.length} adapter(s) registered`);
+
   const hub = new SseHub();
   const outbox = new CallerOutbox(db);
   const log = new EventLog(db, hub);
@@ -84,6 +97,7 @@ export async function boot(deps: BootDeps = {}): Promise<RunningGateway> {
     notifier,
     router: new StaticRouter(),
     scheduler: createScheduler(),
+    adapterRegistry,
     version: packageVersion(),
   });
 
@@ -106,6 +120,7 @@ export async function boot(deps: BootDeps = {}): Promise<RunningGateway> {
     outbox,
     hub,
     notifier,
+    adapterRegistry,
     async close() {
       await notifier.drain();
       await Promise.all(servers.map((s) => closeServer(s)));

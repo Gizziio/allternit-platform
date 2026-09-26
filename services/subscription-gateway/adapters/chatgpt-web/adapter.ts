@@ -1,0 +1,414 @@
+// chatgpt-web adapter — §A3.3: DeclarativeChatAdapter base + code hooks for
+// image.generate, D5 temp-chat default, chat.continue divergence check
+// (Critical #7), fingerprint reconcile (Critical #2), SingletonLock →
+// profile_locked (fix #6). Selectors are v1-unverified (see selectors/v1.yaml).
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { load as yamlLoad } from "js-yaml";
+import type { Page } from "playwright";
+import {
+  adapterManifestSchema,
+  type AdapterEvent,
+  type AdapterManifest,
+  type ExecutionContext,
+  type ReconcileResult,
+  type Task,
+  type TaskAttempt,
+  type TaskError,
+} from "@allternit/subscription-fabric-contracts";
+import {
+  DeclarativeChatAdapter,
+  captureImages,
+  createCompletionTracker,
+  createHeartbeat,
+  createResolver,
+  detectAuthState,
+  fillComposer,
+  stalledError,
+  submit,
+  threadIdFromUrl,
+  timeoutError,
+  type DeclarativeChatConfig,
+  type SdkPageLease,
+  type SdkSelectorResolver,
+} from "@allternit/subscription-adapter-sdk";
+
+export const THREAD_URL_PATTERN = /^https:\/\/chatgpt\.com\/c\/([\w-]+)/;
+
+export function loadManifest(): AdapterManifest {
+  const raw = yamlLoad(
+    readFileSync(new URL("./manifest.yaml", import.meta.url), "utf8")
+  );
+  return adapterManifestSchema.parse(raw);
+}
+
+export function selectorsYaml(): string {
+  return readFileSync(new URL("./selectors/v1.yaml", import.meta.url), "utf8");
+}
+
+export function chatGPTWebConfig(
+  overrides: Partial<DeclarativeChatConfig> = {}
+): DeclarativeChatConfig {
+  return {
+    manifest: loadManifest(),
+    selectorsYaml: selectorsYaml(),
+    threadUrlPattern: THREAD_URL_PATTERN,
+    banners: [
+      { kind: "limit_banner", pattern: /you'?ve reached (your )?(usage )?limit/i },
+      { kind: "limit_banner", pattern: /approaching (your )?(usage )?limit/i },
+      { kind: "slow_mode", pattern: /slower (responses|mode)|slow mode/i },
+      { kind: "reset_notice", pattern: /(quota|limit|usage) resets? (at|in)/i },
+    ],
+    criticalKeys: ["composer", "send_button", "logged_in_probe"],
+    sampleThreadUrl: "https://chatgpt.com/c/68f7c000-aaaa-bbbb-cccc-dddddddddddd",
+    sampleThreadId: "68f7c000-aaaa-bbbb-cccc-dddddddddddd",
+    submitFallbackEnter: true,
+    ...overrides,
+  };
+}
+
+// §A2/Critical #2 — fingerprint of a provider-side user turn; mirrors the
+// gateway worker's promptFingerprint for a prompt-only task (no inputs).
+export function userTurnFingerprint(text: string): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  return createHash("sha256").update(normalized + "\n").digest("hex");
+}
+
+export type DivergencePolicy = "adopt" | "fork" | "fail";
+export type DivergenceAction = "proceed" | "fork" | "fail";
+
+// Critical #7 — on a last-turn-fingerprint mismatch, the mapping's
+// on_divergence policy decides: adopt continues, fork/fail stop the submit.
+export function resolveDivergence(
+  expected: string | null,
+  observed: string,
+  policy: DivergencePolicy
+): DivergenceAction {
+  if (expected === null || expected === observed) return "proceed";
+  return policy === "adopt" ? "proceed" : policy;
+}
+
+// fix #6 — a profile held by another process is profile_locked, not a crash.
+export function isProfileLockError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /SingletonLock|user data directory is already in use|profile (is )?locked/i.test(msg);
+}
+
+export function profileLockedError(detail: string): TaskError {
+  return {
+    class: "profile_locked",
+    scope: "account",
+    retryable: true, // after the lock is released
+    fallback_eligible: true,
+    cooldown_s: null,
+    user_action: "Close the provider window holding the profile, then retry",
+    detail,
+    evidence_ref: null,
+  };
+}
+
+function sdkPage(lease: ExecutionContext["page"]): Page {
+  return (lease as SdkPageLease).page;
+}
+
+export interface ChatGPTWebOptions {
+  // D5 — temp-chat ON by default for stateless chat.create tasks.
+  tempChat?: boolean;
+}
+
+export type ChatGPTWebConfigOverrides = Partial<DeclarativeChatConfig>;
+
+export class ChatGPTWebAdapter extends DeclarativeChatAdapter {
+  private readonly cfg: DeclarativeChatConfig;
+
+  constructor(
+    private readonly opts: ChatGPTWebOptions = {},
+    configOverrides: ChatGPTWebConfigOverrides = {}
+  ) {
+    const config = chatGPTWebConfig(configOverrides);
+    super(config);
+    this.cfg = config;
+  }
+
+  override async *execute(task: Task, ctx: ExecutionContext): AsyncIterable<AdapterEvent> {
+    try {
+      if (task.capability === "image.generate") {
+        yield* this.executeImage(task, ctx);
+        return;
+      }
+      if (task.capability === "chat.continue") {
+        const gate = await this.prepareContinue(task, ctx);
+        if (gate) {
+          yield gate;
+          return;
+        }
+      } else if (this.opts.tempChat !== false) {
+        await this.enableTempChat(ctx);
+      }
+      yield* super.execute(task, ctx);
+    } catch (err) {
+      if (isProfileLockError(err)) {
+        yield {
+          t: "error",
+          error: profileLockedError(err instanceof Error ? err.message : String(err)),
+        };
+        return;
+      }
+      throw err;
+    }
+  }
+
+  // D5 — click the temp-chat toggle unless already on; plans without the
+  // toggle just run in normal history (documented in README).
+  private async enableTempChat(ctx: ExecutionContext): Promise<void> {
+    const resolver = ctx.selectors as SdkSelectorResolver;
+    const toggle = await resolver.tryResolveLocator("temp_chat_toggle");
+    if (!toggle) return;
+    const pressed = await toggle.first().getAttribute("aria-pressed");
+    if (pressed === "true") return;
+    await ctx.pacing.beforeAction();
+    await toggle.first().click();
+  }
+
+  // chat.continue — navigate the provider thread, divergence-check against the
+  // mapping fingerprint, apply on_divergence before any submit. Returns an
+  // AdapterEvent to emit when the task must not proceed, else null.
+  private async prepareContinue(task: Task, ctx: ExecutionContext): Promise<AdapterEvent | null> {
+    const providerThreadId =
+      typeof task.options.provider_thread_id === "string"
+        ? task.options.provider_thread_id
+        : null;
+    if (!providerThreadId) {
+      return {
+        t: "error",
+        error: {
+          class: "user_intervention_required",
+          scope: "task",
+          retryable: false,
+          fallback_eligible: false,
+          cooldown_s: null,
+          user_action: "Pass options.provider_thread_id (from the thread mapping)",
+          detail: "chat.continue requires a provider thread",
+          evidence_ref: null,
+        },
+      };
+    }
+    const page = sdkPage(ctx.page);
+    // §A6.5 — navigation stays inside manifest.origins (worker navlock).
+    if (threadIdFromUrl(page.url(), THREAD_URL_PATTERN) !== providerThreadId) {
+      await page.goto(`https://chatgpt.com/c/${providerThreadId}`);
+    }
+    const snapshot = await this.readThread(providerThreadId, ctx);
+    const expected =
+      typeof task.options.last_turn_fingerprint === "string"
+        ? task.options.last_turn_fingerprint
+        : null;
+    const rawPolicy = task.options.on_divergence;
+    const policy: DivergencePolicy =
+      rawPolicy === "adopt" || rawPolicy === "fork" ? rawPolicy : "fail";
+    const action = resolveDivergence(expected, snapshot.last_turn_fingerprint, policy);
+    if (action === "fork") {
+      return {
+        t: "needs_user",
+        reason: "confirm_dialog",
+        message: "thread diverged from the mapping — fork into a new thread?",
+      };
+    }
+    if (action === "fail") {
+      return {
+        t: "error",
+        error: {
+          class: "user_intervention_required",
+          scope: "task",
+          retryable: false,
+          fallback_eligible: false,
+          cooldown_s: null,
+          user_action: "Review the provider thread; it diverged from the mapping",
+          detail: "last_turn_fingerprint mismatch (on_divergence=fail)",
+          evidence_ref: null,
+        },
+      };
+    }
+    return null;
+  }
+
+  // image.generate — same composer, image entry point, captureImages → sink.
+  private async *executeImage(task: Task, ctx: ExecutionContext): AsyncIterable<AdapterEvent> {
+    const page = sdkPage(ctx.page);
+    const resolver = ctx.selectors as SdkSelectorResolver;
+    const cfg = this.cfg;
+    const now = cfg.completion?.now ?? (() => Date.now());
+    const sleep =
+      cfg.completion?.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+    const pollIntervalMs = cfg.completion?.pollIntervalMs ?? 100;
+    const timeoutMs = cfg.completion?.timeoutMs ?? 120000;
+    const stallTimeoutS = cfg.stallTimeoutS ?? 90;
+    const heartbeatIntervalMs = cfg.heartbeatIntervalMs ?? 15000;
+
+    // Critical #5 — challenges halt, never retried.
+    if (await resolver.tryResolveLocator("challenge")) {
+      yield {
+        t: "needs_user",
+        reason: "challenge",
+        message: "provider presented a verification interstitial",
+      };
+      return;
+    }
+    if (
+      (await detectAuthState(page, resolver, {
+        probeKey: this.manifest.auth.logged_in_probe,
+      })) !== "ready"
+    ) {
+      yield { t: "needs_user", reason: "auth", message: "not logged in" };
+      return;
+    }
+
+    // §A3.4 — a vanished entry point is UI drift (§A9 fold: provider_ui_changed).
+    const toggle = await resolver.tryResolveLocator("capability:image_tool_toggle");
+    if (!toggle) {
+      yield {
+        t: "error",
+        error: {
+          class: "provider_ui_changed",
+          scope: "adapter",
+          retryable: false,
+          fallback_eligible: true,
+          cooldown_s: null,
+          user_action: null,
+          detail: "locator_key=capability:image_tool_toggle matched nothing",
+          evidence_ref: null,
+        },
+      };
+      return;
+    }
+    if ((await toggle.first().getAttribute("aria-pressed")) !== "true") {
+      await ctx.pacing.beforeAction();
+      await toggle.first().click();
+    }
+
+    await ctx.pacing.beforeTask();
+    await fillComposer(page, resolver, task.prompt);
+    await ctx.pacing.beforeAction();
+    await ctx.markSubmitted(null); // §A1: sent_unconfirmed BEFORE Send
+    await submit(page, resolver, { fallback: cfg.submitFallbackEnter ? "enter" : undefined });
+    const threadId = threadIdFromUrl(page.url(), THREAD_URL_PATTERN);
+    await ctx.markSubmitted(threadId); // §A1: acknowledged after provider ack
+    const url = page.url();
+    yield {
+      t: "submitted",
+      provider_thread_id: threadId,
+      provider_url: url.startsWith("about:") ? null : url,
+    };
+
+    // D11 — heartbeat + partial image tiles while the provider renders.
+    const tracker = createCompletionTracker(page, resolver, { ...cfg.completion, now, sleep });
+    const pending: AdapterEvent[] = [];
+    const hb = createHeartbeat(
+      (e) => pending.push(e),
+      heartbeatIntervalMs,
+      { now, lastChangeAt: () => tracker.lastChangeAt() }
+    );
+    const startedAt = now();
+    let lastHb = now();
+    let seenTiles = 0;
+    for (;;) {
+      while (pending.length > 0) yield pending.shift() as AdapterEvent;
+      const { complete } = await tracker.pollOnce();
+      if (complete) break;
+      if (tracker.stalled(stallTimeoutS)) {
+        yield {
+          t: "error",
+          error: stalledError(ctx.attempt.submission_state, `no DOM change for ${stallTimeoutS}s`),
+        };
+        return;
+      }
+      if (now() - startedAt >= timeoutMs) {
+        yield {
+          t: "error",
+          error: timeoutError(ctx.attempt.submission_state, `no completion within ${timeoutMs}ms`),
+        };
+        return;
+      }
+      const container = await resolver.tryResolveLocator("image_result");
+      const tiles = container ? await container.locator("img").count() : 0;
+      if (tiles > seenTiles) {
+        seenTiles = tiles;
+        yield {
+          t: "artifact.partial",
+          ref: {
+            provider: this.manifest.provider,
+            provider_artifact_id: `partial-${tiles}`,
+            provider_url: url.startsWith("about:") ? "about:blank" : url,
+            provider_url_expires_at: null,
+          },
+        };
+      }
+      if (now() - lastHb >= heartbeatIntervalMs) {
+        lastHb = now();
+        hb.tick();
+      }
+      await sleep(pollIntervalMs);
+    }
+    while (pending.length > 0) yield pending.shift() as AdapterEvent;
+
+    const result = await captureImages(page, resolver, ctx.artifacts, {
+      provider: this.manifest.provider,
+      allowedOrigins: this.manifest.origins,
+      key: "image_result",
+    });
+    const container = await resolver.tryResolveLocator("image_result");
+    const ids: Array<string | null> = container
+      ? await container
+          .locator("img")
+          .evaluateAll((els) => els.map((el) => el.getAttribute("data-artifact-id")))
+      : [];
+    for (const [i, f] of result.files.entries()) {
+      yield {
+        t: "artifact.ready",
+        ref: {
+          provider: this.manifest.provider,
+          provider_artifact_id: ids[i] ?? f.sha256.slice(0, 16),
+          provider_url: url.startsWith("about:") ? "about:blank" : url,
+          provider_url_expires_at: null,
+        },
+        meta: { type: "image", mime_type: f.mime_type, format: f.format, title: task.prompt.slice(0, 120) },
+      };
+    }
+    yield { t: "done", outcome: result.files.length > 0 ? "success" : "partial" };
+  }
+
+  // §A1/Critical #2 — reconcile: locate the thread, compare the last user
+  // turn against prompt_fingerprint. Match → adopt; thread without match →
+  // ambiguous; thread gone → not_found. Never resubmits.
+  override async reconcile(
+    attempt: TaskAttempt,
+    ctx: ExecutionContext
+  ): Promise<ReconcileResult> {
+    const page = sdkPage(ctx.page);
+    const resolver = createResolver(page, this.pack);
+    if (
+      attempt.provider_thread_id &&
+      threadIdFromUrl(page.url(), THREAD_URL_PATTERN) !== attempt.provider_thread_id
+    ) {
+      await page.goto(`https://chatgpt.com/c/${attempt.provider_thread_id}`);
+    }
+    const userTurns = await resolver.tryResolveLocator("user_turn");
+    const hasResponse = (await resolver.tryResolveLocator("response")) !== null;
+    const count = userTurns ? await userTurns.count() : 0;
+    if (count === 0 && !hasResponse) return { outcome: "not_found" };
+    if (count === 0) {
+      return { outcome: "ambiguous", detail: "response present but no user turn to fingerprint" };
+    }
+    const lastUserText = await userTurns!.nth(count - 1).innerText();
+    if (userTurnFingerprint(lastUserText) === attempt.prompt_fingerprint) {
+      return {
+        outcome: "acknowledged",
+        provider_thread_id: threadIdFromUrl(page.url(), THREAD_URL_PATTERN) ?? attempt.provider_thread_id,
+      };
+    }
+    return {
+      outcome: "ambiguous",
+      detail: "thread exists but last user turn does not match prompt_fingerprint",
+    };
+  }
+}

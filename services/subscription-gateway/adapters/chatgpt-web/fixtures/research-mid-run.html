@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- fixture: research-mid-run — deep-research style progress: step list + counter badge (D11) -->
+<html lang="en">
+  <head><meta charset="utf-8"><title>chatgpt-web fixture — research mid-run</title></head>
+  <body data-state="research-mid-run">
+    <nav>
+      <button data-testid="profile-button" aria-label="Profile">Eoj</button>
+    </nav>
+    <main>
+      <div id="thread">
+        <div data-message-author-role="user">Research solid-state battery commercialization.</div>
+        <div data-message-author-role="assistant" class="result-streaming">
+          <div data-testid="progress-counter">Researching 12 sources</div>
+          <ol>
+            <li data-testid="progress-step">Planning queries</li>
+            <li data-testid="progress-step">Reading 12 sources</li>
+            <li data-testid="progress-step">Synthesizing findings</li>
+          </ol>
+        </div>
+      </div>
+      <div
+        id="prompt-textarea"
+        data-testid="prompt-textarea"
+        role="textbox"
+        aria-label="Ask anything"
+        contenteditable="true"
+      ></div>
+      <button data-testid="send-button" aria-label="Send prompt" type="button" disabled>Send</button>
+      <button data-testid="stop-button" aria-label="Stop streaming" type="button">Stop</button>
+    </main>
+  </body>
+</html>

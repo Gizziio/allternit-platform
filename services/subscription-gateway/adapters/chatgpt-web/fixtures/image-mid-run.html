@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- fixture: image-mid-run — image.generate in flight; partial tiles visible (D11) -->
+<html lang="en">
+  <head><meta charset="utf-8"><title>chatgpt-web fixture — image mid-run</title></head>
+  <body data-state="image-mid-run">
+    <nav>
+      <button data-testid="profile-button" aria-label="Profile">Eoj</button>
+    </nav>
+    <main>
+      <div id="thread">
+        <div data-message-author-role="user">A small robot tending a garden, watercolor.</div>
+        <div data-message-author-role="assistant" class="result-streaming">
+          <div data-testid="image-result" data-image-result>
+            <img
+              data-artifact-id="img-tile-1"
+              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+              alt="partial render tile 1"
+            />
+            <img
+              data-artifact-id="img-tile-2"
+              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+              alt="partial render tile 2"
+            />
+          </div>
+        </div>
+      </div>
+      <div
+        id="prompt-textarea"
+        data-testid="prompt-textarea"
+        role="textbox"
+        aria-label="Ask anything"
+        contenteditable="true"
+      ></div>
+      <button data-testid="send-button" aria-label="Send prompt" type="button" disabled>Send</button>
+      <button data-testid="stop-button" aria-label="Stop streaming" type="button">Stop</button>
+      <button data-testid="image-tool-toggle" aria-pressed="true">Create image</button>
+    </main>
+  </body>
+</html>

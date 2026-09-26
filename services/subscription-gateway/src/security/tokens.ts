@@ -75,3 +75,26 @@ export function revokeToken(db: Db, tokenId: string): void {
     "UPDATE tokens SET revoked_at = ? WHERE token_id = ? AND revoked_at IS NULL"
   ).run(new Date().toISOString(), tokenId);
 }
+
+// CLI bootstrap (§A6.2): the `allternit` CLI authenticates with a `cli` caller
+// token the gateway issues at first boot and stores in the keychain under
+// account `cli-token`; the CLI reads it back with `security
+// find-generic-password`. Re-issued when the keychain entry is missing or no
+// longer verifies (fresh DB).
+export const CLI_TOKEN_ACCOUNT = "cli-token";
+
+export function ensureCliToken(
+  db: Db,
+  keychain: { get(account: string): string | null; set(account: string, value: string): void }
+): { issued: boolean } {
+  const existing = keychain.get(CLI_TOKEN_ACCOUNT);
+  if (existing !== null && verifyToken(db, existing)) return { issued: false };
+  const { token } = issueToken(db, "cli", CLI_TOKEN_ACCOUNT, [
+    "tasks:submit",
+    "tasks:read",
+    "artifacts:read",
+    "accounts:manage",
+  ]);
+  keychain.set(CLI_TOKEN_ACCOUNT, token);
+  return { issued: true };
+}

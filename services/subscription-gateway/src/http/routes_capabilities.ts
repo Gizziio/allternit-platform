@@ -1,13 +1,13 @@
-// GET /v1/capabilities — live registry view. No adapters are loaded in P1,
-// so the registry is empty and this returns [] (P1 smoke verify pins this).
+// GET /v1/capabilities — live registry view (loaded adapter manifests). Empty
+// when no registry is wired (unit tests) or no adapters are installed.
 import { Router, type Request, type Response } from "express";
 import type { GatewayDeps } from "./server.js";
 
-export function capabilitiesRouter(_deps: GatewayDeps): Router {
+export function capabilitiesRouter(deps: GatewayDeps): Router {
   const router = Router();
 
   router.get("/v1/capabilities", (_req: Request, res: Response) => {
-    res.json([]);
+    res.json(deps.adapterRegistry?.capabilities() ?? []);
   });
 
   return router;

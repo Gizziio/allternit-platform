@@ -613,6 +613,13 @@ export function listArtifactsForTask(db: Db, taskId: string): Artifact[] {
   return rows.map(artifactFromRow);
 }
 
+export function listArtifacts(db: Db, limit = 200): Artifact[] {
+  const rows = db
+    .prepare("SELECT * FROM artifacts ORDER BY created_at DESC LIMIT ?")
+    .all(limit) as ArtifactRow[];
+  return rows.map(artifactFromRow);
+}
+
 // ---------------------------------------------------------------------------
 // attempt mutation + recovery sweep (§A1 two-write, §A2 reconcile)
 // ---------------------------------------------------------------------------

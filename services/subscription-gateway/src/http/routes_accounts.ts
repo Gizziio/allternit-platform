@@ -74,5 +74,19 @@ export function accountsRouter(deps: GatewayDeps): Router {
     res.status(201).json(account);
   });
 
+  router.post(
+    "/v1/accounts/:id/disconnect",
+    requireScope("accounts:manage"),
+    (req: Request, res: Response) => {
+      const account = getAccount(deps.db, req.params.id);
+      if (!account) {
+        res.status(404).json({ error: "account_not_found", account_id: req.params.id });
+        return;
+      }
+      upsertAccount(deps.db, { ...account, enabled: false });
+      res.json(getAccount(deps.db, req.params.id));
+    }
+  );
+
   return router;
 }

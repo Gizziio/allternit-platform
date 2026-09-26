@@ -22,6 +22,10 @@ import { adminCommand } from './commands/admin.js';
 import { cloudCommand } from './commands/cloud.js';
 import { fabricCommand } from './commands/fabric.js';
 import { computersCommand } from './commands/computers.js';
+import { subsCommand } from './commands/subs.js';
+import { capsCommand } from './commands/caps.js';
+import { taskCommand } from './commands/task.js';
+import { artifactsCommand } from './commands/artifacts.js';
 import { version } from '../package.json' assert { type: 'json' };
 
 const program = new Command();
@@ -53,6 +57,10 @@ program.addCommand(adminCommand);
 program.addCommand(cloudCommand);
 program.addCommand(fabricCommand);
 program.addCommand(computersCommand);
+program.addCommand(subsCommand);
+program.addCommand(capsCommand);
+program.addCommand(taskCommand);
+program.addCommand(artifactsCommand);
 
 // Parse and execute
 program.parse();
