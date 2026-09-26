@@ -34,7 +34,7 @@ import { getAllInProcessTeammateTasks } from '../tasks/InProcessTeammateTask/InP
 import { getEffortSuffix } from '../utils/effort';
 import { getMainLoopModel } from '../utils/model/model';
 import { getViewedTeammateTask } from '../state/selectors';
-import { TEARDROP_ASTERISK } from '../constants/figures';
+import { ORB_MARK_TEXT } from './Spinner/OrbMark';
 import figures from 'figures';
 import { getCurrentTurnTokenBudget, getTurnOutputTokens } from '../bootstrap/state';
 import { TeammateSpinnerTree } from './Spinner/TeammateSpinnerTree';
@@ -237,7 +237,7 @@ function SpinnerWithVerbInner({
     return <Box flexDirection="column" width="100%" alignItems="flex-start">
         <Box flexDirection="row" flexWrap="wrap" marginTop={1} width="100%">
           <Text dimColor>
-            {TEARDROP_ASTERISK} Idle
+            {ORB_MARK_TEXT} Idle
             {!allIdle && ' · teammates running'}
           </Text>
         </Box>
@@ -247,7 +247,7 @@ function SpinnerWithVerbInner({
 
   // When viewing an idle teammate, show static idle display instead of animated spinner
   if (foregroundedTeammate?.isIdle) {
-    const idleText = allIdle ? `${TEARDROP_ASTERISK} Worked for ${formatDuration(Date.now() - foregroundedTeammate.startTime)}` : `${TEARDROP_ASTERISK} Idle`;
+    const idleText = allIdle ? `${ORB_MARK_TEXT} Worked for ${formatDuration(Date.now() - foregroundedTeammate.startTime)}` : `${ORB_MARK_TEXT} Idle`;
     return <Box flexDirection="column" width="100%" alignItems="flex-start">
         <Box flexDirection="row" flexWrap="wrap" marginTop={1} width="100%">
           <Text dimColor>{idleText}</Text>

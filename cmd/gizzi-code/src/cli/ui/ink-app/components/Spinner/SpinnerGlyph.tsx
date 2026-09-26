@@ -7,6 +7,9 @@ import { interpolateColor, parseRGB, toRGBColor } from './utils';
 // The glyph is the AllternitOrb (see allternitOrbFrames.ts): three braille
 // cells plus a trailing space, so the message after it never shifts.
 const GLYPH_WIDTH = 4;
+// The strokes are ink (the terminal's text color); the core carries the
+// spinner color — Allternit coral by default, a teammate's color when overridden.
+const INK: keyof Theme = 'text';
 const FRAME_MS = 120; // legacy clock for callers that only pass `frame`
 const REDUCED_MOTION_CYCLE_MS = 2000; // 2-second cycle: 1s visible, 1s dim
 const ERROR_RED = {
@@ -37,9 +40,9 @@ export function SpinnerGlyph({
   if (reducedMotion) {
     const isDim = Math.floor(clock / (REDUCED_MOTION_CYCLE_MS / 2)) % 2 === 1;
     return <Box flexWrap="wrap" height={1} width={GLYPH_WIDTH}>
-        <Text color={messageColor} dimColor={isDim}>{ORB_IDLE.left}</Text>
-        <Text color="gizzi" dimColor={isDim}>{ORB_IDLE.core}</Text>
-        <Text color={messageColor} dimColor={isDim}>{ORB_IDLE.right}</Text>
+        <Text color={INK} dimColor={isDim}>{ORB_IDLE.left}</Text>
+        <Text color={messageColor} dimColor={isDim}>{ORB_IDLE.core}</Text>
+        <Text color={INK} dimColor={isDim}>{ORB_IDLE.right}</Text>
       </Box>;
   }
 
@@ -52,8 +55,8 @@ export function SpinnerGlyph({
     return stalledIntensity > 0.5 ? 'error' : key;
   };
   return <Box flexWrap="wrap" height={1} width={GLYPH_WIDTH}>
-      <Text color={tint(messageColor)}>{orb.left}</Text>
-      <Text color={tint('gizzi')}>{orb.core}</Text>
-      <Text color={tint(messageColor)}>{orb.right}</Text>
+      <Text color={tint(INK)}>{orb.left}</Text>
+      <Text color={tint(messageColor)}>{orb.core}</Text>
+      <Text color={tint(INK)}>{orb.right}</Text>
     </Box>;
 }
