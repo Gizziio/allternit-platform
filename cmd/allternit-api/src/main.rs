@@ -199,6 +199,32 @@ async fn main() {
         }
     }
 
+    // Control-plane / data-plane split (P2.12): role + optional second
+    // admin-plane listener. Misconfiguration (unknown ALLTERNIT_ROLE,
+    // unparsable ALLTERNIT_ADMIN_LISTEN_ADDR) fails loudly at boot — see
+    // allternit_api::control_plane for the full env contract.
+    let admin_plane = match allternit_api::control_plane::AdminPlane::from_env() {
+        Ok(plane) => plane,
+        Err(e) => {
+            tracing::error!("refusing to start: {e}");
+            std::process::exit(1);
+        }
+    };
+    info!(
+        role = ?admin_plane.role,
+        admin_listen_addr = ?admin_plane.admin_listen_addr,
+        "Plane configuration resolved"
+    );
+    if admin_plane.admin_addr_defaulted {
+        warn!(
+            addr = %allternit_api::control_plane::DEFAULT_ADMIN_LISTEN_ADDR,
+            "ALLTERNIT_ROLE=control without ALLTERNIT_ADMIN_LISTEN_ADDR: defaulting admin listener (loopback only)"
+        );
+    }
+    if admin_plane.admin_addr_ignored {
+        warn!("ALLTERNIT_ADMIN_LISTEN_ADDR is set but ALLTERNIT_ROLE=data never serves the control plane — ignoring it");
+    }
+
     // Data directory for local state
     let data_dir = std::env::var("ALLTERNIT_DATA_DIR")
         .ok()
@@ -530,7 +556,9 @@ async fn main() {
     // user/org route credential against its provider on an interval and mark
     // 401/403-rejected keys `revoked`. Never runs on the request hot path.
     // ROUTE_CREDENTIAL_SWEEP_INTERVAL_SECS: default 6h, 0 disables.
-    {
+    // Owned by the control plane: a role=data process never starts it (run a
+    // role=control process against the same ALLTERNIT_DATA_DIR instead).
+    if admin_plane.role.owns_gateway_background_tasks() {
         let state = Arc::clone(&state);
         let mut shutdown_rx = shutdown_tx.subscribe();
         let period_secs: u64 = std::env::var("ROUTE_CREDENTIAL_SWEEP_INTERVAL_SECS")
@@ -710,7 +738,10 @@ async fn main() {
     }
 
     // Phase 5: start the in-process batch execution/polling worker.
-    allternit_api::llm_gateway::batches::spawn_batch_worker(Arc::clone(&state));
+    // Owned by the control plane, same as the credential sweep above.
+    if admin_plane.role.owns_gateway_background_tasks() {
+        allternit_api::llm_gateway::batches::spawn_batch_worker(Arc::clone(&state));
+    }
 
     // Deployment scheduler daemon: fires due /beta/deployments cron bindings.
     allternit_api::deployment_scheduler::spawn_deployment_scheduler(
@@ -854,8 +885,6 @@ async fn main() {
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
         .merge(allternit_api::upload_routes::upload_router())
-        .merge(allternit_api::llm_gateway::gateway_keys_router())
-        .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
         .merge(allternit_api::tag_routes::tag_router())
         .merge(inference_router_router())
         .merge(bot_event_router())
@@ -929,6 +958,13 @@ async fn main() {
         .merge(automation_router())
         .merge(brain_router())
         .merge(hud_router());
+
+    // Gateway control plane (virtual-key management + admin observability,
+    // `/api/v1/gateway/*`): merged for roles that serve the control plane,
+    // absent (404) on a role=data plane. Disjoint paths, so for the default
+    // role=all this is routing-identical to merging them in the chain above.
+    let v1_routes =
+        allternit_api::control_plane::with_gateway_control_routes(v1_routes, admin_plane.role);
 
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()
@@ -1166,29 +1202,63 @@ async fn main() {
         _ => "default (dev 18013 — production owners must pin ALLTERNIT_API_PORT=8013)".to_string(),
     };
     let webhook_receiver_port = app_config.webhook_receiver_port();
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
-        .await
-        .unwrap();
-    info!("Server listening on {} ({})", listener.local_addr().unwrap(), port_source);
-    info!("Webhook receiver port configured to {}", webhook_receiver_port);
-    info!("API Documentation:");
-    info!("  - Health:         GET /health");
-    info!("  - Status:         GET /status");
-    info!("  - Chat:           POST /api/agent-chat");
-    info!("  - Agents:         GET|POST /api/v1/agents");
-    info!("  - Workspaces:     GET|POST /api/workspaces");
-    info!("  - Memory:         GET|POST /api/v1/memory");
-    info!("  - Files:          GET|POST /api/v1/files");
-    info!("  - Inbox:          GET|POST /api/v1/inbox");
-    info!("  - Visualization:  GET /viz/*");
-    info!("  - Sandbox:        POST /sandbox/*");
-    info!("  - VM Sessions:    POST|GET|DELETE /vm-session/*");
-    info!("  - Rails System:   GET|POST /rails/*");
-    info!("  - Event Stream:   WS /stream/ws/*");
-    #[cfg(unix)]
-    info!("  - Terminal:       POST /terminal/*");
-    info!("  - Webhooks:       POST /webhooks/clerk/*");
-    info!("  - LLM Gateway:    POST /v1/chat/completions, GET /v1/models (Bearer ak-...)");
+    // Data-plane listener: skipped entirely for ALLTERNIT_ROLE=control — a
+    // control-only process never binds the main port.
+    let listener = if admin_plane.role.serves_data_plane() {
+        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
+            .await
+            .unwrap();
+        info!("Server listening on {} ({})", listener.local_addr().unwrap(), port_source);
+        info!("Webhook receiver port configured to {}", webhook_receiver_port);
+        info!("API Documentation:");
+        info!("  - Health:         GET /health");
+        info!("  - Status:         GET /status");
+        info!("  - Chat:           POST /api/agent-chat");
+        info!("  - Agents:         GET|POST /api/v1/agents");
+        info!("  - Workspaces:     GET|POST /api/workspaces");
+        info!("  - Memory:         GET|POST /api/v1/memory");
+        info!("  - Files:          GET|POST /api/v1/files");
+        info!("  - Inbox:          GET|POST /api/v1/inbox");
+        info!("  - Visualization:  GET /viz/*");
+        info!("  - Sandbox:        POST /sandbox/*");
+        info!("  - VM Sessions:    POST|GET|DELETE /vm-session/*");
+        info!("  - Rails System:   GET|POST /rails/*");
+        info!("  - Event Stream:   WS /stream/ws/*");
+        #[cfg(unix)]
+        info!("  - Terminal:       POST /terminal/*");
+        info!("  - Webhooks:       POST /webhooks/clerk/*");
+        info!("  - LLM Gateway:    POST /v1/chat/completions, GET /v1/models (Bearer ak-...)");
+        Some(listener)
+    } else {
+        info!("ALLTERNIT_ROLE=control: data-plane listener disabled (no /v1 proxy, main port not bound)");
+        None
+    };
+
+    // Admin-plane listener (P2.12): the gateway control plane
+    // (/api/v1/gateway/* + /health) on its own socket. Served when
+    // ALLTERNIT_ADMIN_LISTEN_ADDR is set (for a control-serving role) or
+    // role=control (which defaults the addr). Runs as a background task; the
+    // broadcast shutdown drains it alongside the other loops.
+    if let Some(addr) = admin_plane.admin_listen_addr {
+        let admin_app = allternit_api::control_plane::gateway_admin_plane_app(state.clone());
+        let admin_listener = tokio::net::TcpListener::bind(addr)
+            .await
+            .unwrap_or_else(|e| panic!("failed to bind admin-plane listener at {addr}: {e}"));
+        info!(
+            "Admin-plane listener on {} (Clerk-protected /api/v1/gateway/* + /health)",
+            admin_listener.local_addr().unwrap()
+        );
+        let mut shutdown_rx = shutdown_tx.subscribe();
+        tokio::spawn(async move {
+            axum::serve(admin_listener, admin_app)
+                .with_graceful_shutdown(async move {
+                    let _ = shutdown_rx.recv().await;
+                })
+                .await
+                .expect("Admin-plane server failed");
+            info!("Admin-plane server stopped");
+        });
+    }
 
     // Re-index Open Design skills on SIGHUP in production without restarting.
     // (Unix-only; Windows has no SIGHUP.)
@@ -1247,12 +1317,23 @@ async fn main() {
         let _ = server_shutdown_tx.send(());
     });
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(async {
+    match listener {
+        Some(listener) => {
+            axum::serve(listener, app)
+                .with_graceful_shutdown(async {
+                    let _ = server_shutdown_rx.await;
+                })
+                .await
+                .expect("Server failed");
+        }
+        None => {
+            // Control-plane-only role: the admin-plane listener above is the
+            // process's whole HTTP surface (spawned as a task); the main
+            // future just waits out the shutdown drain.
+            drop(app);
             let _ = server_shutdown_rx.await;
-        })
-        .await
-        .expect("Server failed");
+        }
+    }
     info!("Server stopped");
 }
 
