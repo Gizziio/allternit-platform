@@ -323,6 +323,7 @@ export interface Message {
     | 'tool_summary'
     | 'thinking'
     | 'memory_saved'
+    | 'memory_updated'
     | 'stop_hook'
     | 'api_error'
     | 'informational'
@@ -536,6 +537,15 @@ export interface SystemAPIErrorMessage extends SystemMessage {
  */
 export interface SystemMemorySavedMessage extends SystemMessage {
   subtype: 'memory_saved'
+}
+
+/**
+ * SystemMemoryUpdatedMessage - `#` quick-add confirmation banner
+ * ("Memory updated in X · /memory to edit").
+ */
+export interface SystemMemoryUpdatedMessage extends SystemMessage {
+  subtype: 'memory_updated'
+  memoryPath: string
 }
 
 /**

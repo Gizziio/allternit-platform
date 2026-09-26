@@ -220,3 +220,142 @@ describe("InstructionPrompt.systemPaths GIZZI_CONFIG_DIR", () => {
     }
   })
 })
+
+describe("InstructionPrompt.systemPaths local instruction files", () => {
+  test("loads GIZZI.local.md alongside the root marker", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "GIZZI.md"), "# Root")
+        await Bun.write(path.join(dir, "GIZZI.local.md"), "# Local")
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(tmp.path, "GIZZI.md"))).toBe(true)
+        expect(paths.has(path.join(tmp.path, "GIZZI.local.md"))).toBe(true)
+      },
+    })
+  })
+
+  test("GIZZI.local.md wins over CLAUDE.local.md at the same level", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "GIZZI.local.md"), "# GIZZI local")
+        await Bun.write(path.join(dir, "CLAUDE.local.md"), "# CLAUDE local")
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(tmp.path, "GIZZI.local.md"))).toBe(true)
+        expect(paths.has(path.join(tmp.path, "CLAUDE.local.md"))).toBe(false)
+      },
+    })
+  })
+
+  test("CLAUDE.local.md is honored when GIZZI.local.md is absent", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "CLAUDE.local.md"), "# CLAUDE local")
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(tmp.path, "CLAUDE.local.md"))).toBe(true)
+      },
+    })
+  })
+
+  test("local files load from parent directories up to the worktree root", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "GIZZI.local.md"), "# Root local")
+        await Bun.write(path.join(dir, "sub", "file.ts"), "const x = 1")
+      },
+    })
+    await Instance.provide({
+      directory: path.join(tmp.path, "sub"),
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(tmp.path, "GIZZI.local.md"))).toBe(true)
+      },
+    })
+  })
+})
+
+describe("InstructionPrompt.systemPaths user-global GIZZI.md", () => {
+  let originalConfigDir: string | undefined
+
+  beforeEach(() => {
+    originalConfigDir = process.env["GIZZI_CONFIG_DIR"]
+  })
+
+  afterEach(() => {
+    if (originalConfigDir === undefined) {
+      delete process.env["GIZZI_CONFIG_DIR"]
+    } else {
+      process.env["GIZZI_CONFIG_DIR"] = originalConfigDir
+    }
+  })
+
+  test("loads GIZZI.md from GIZZI_CONFIG_DIR (TUI user-memory parity)", async () => {
+    await using profileTmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "GIZZI.md"), "# User memory")
+      },
+    })
+    await using projectTmp = await tmpdir()
+
+    process.env["GIZZI_CONFIG_DIR"] = profileTmp.path
+    await Instance.provide({
+      directory: projectTmp.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(profileTmp.path, "GIZZI.md"))).toBe(true)
+      },
+    })
+  })
+
+  test("GIZZI.md wins over CLAUDE.md in the same config dir", async () => {
+    await using profileTmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "GIZZI.md"), "# GIZZI wins")
+        await Bun.write(path.join(dir, "CLAUDE.md"), "# CLAUDE loses")
+      },
+    })
+    await using projectTmp = await tmpdir()
+
+    process.env["GIZZI_CONFIG_DIR"] = profileTmp.path
+    await Instance.provide({
+      directory: projectTmp.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(profileTmp.path, "GIZZI.md"))).toBe(true)
+        expect(paths.has(path.join(profileTmp.path, "CLAUDE.md"))).toBe(false)
+      },
+    })
+  })
+
+  test("falls back to CLAUDE.md when no GIZZI.md exists", async () => {
+    await using profileTmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "CLAUDE.md"), "# Legacy user memory")
+      },
+    })
+    await using projectTmp = await tmpdir()
+
+    process.env["GIZZI_CONFIG_DIR"] = profileTmp.path
+    await Instance.provide({
+      directory: projectTmp.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(profileTmp.path, "CLAUDE.md"))).toBe(true)
+      },
+    })
+  })
+})

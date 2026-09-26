@@ -39,14 +39,25 @@ const OPEN_FOLDER_PREFIX = '__open_folder__';
 type Props = {
   onSelect: (path: string) => void;
   onCancel: () => void;
+  /**
+   * 'quick-add' hides the auto-memory/auto-dream toggles and open-folder rows
+   * so the selector is just the writable memory files (used by the `#`
+   * quick-add flow). Default keeps the /memory editor behavior intact.
+   */
+  variant?: "quick-add";
 };
 export function MemoryFileSelector({
     onSelect,
-    onCancel
+    onCancel,
+    variant
 }: Props) {
   const existingMemoryFiles = use(getMemoryFiles());
-  const userMemoryPath = join(getGizziConfigHomeDir(), "CLAUDE.md");
-  const projectMemoryPath = join(getOriginalCwd(), "CLAUDE.md");
+  // GIZZI-first: the "new file" candidates always use the canonical GIZZI.md
+  // names (matching pickMemoryFile semantics — a new write target is GIZZI.md).
+  // Existing CLAUDE.md files still appear via getMemoryFiles() above, so
+  // editing/writing the legacy file remains possible; it is never orphaned.
+  const userMemoryPath = join(getGizziConfigHomeDir(), "GIZZI.md");
+  const projectMemoryPath = join(getOriginalCwd(), "GIZZI.md");
   const hasUserMemory = existingMemoryFiles.some(f => f.path === userMemoryPath);
   const hasProjectMemory = existingMemoryFiles.some(f_0 => f_0.path === projectMemoryPath);
   const allMemoryFiles = [...existingMemoryFiles.filter(_temp).map(_temp2), ...(hasUserMemory ? [] : [{
@@ -84,10 +95,10 @@ export function MemoryFileSelector({
     let description;
     const isGit = projectIsInGitRepo(getOriginalCwd());
     if (file.type === "User" && !file.isNested) {
-      description = "Saved in ~/.claude/CLAUDE.md";
+      description = `Saved in ${displayPath}`;
     } else {
       if (file.type === "Project" && !file.isNested && file.path === projectMemoryPath) {
-        description = `${isGit ? "Checked in at" : "Saved in"} ./CLAUDE.md`;
+        description = `${isGit ? "Checked in at" : "Saved in"} ${displayPath}`;
       } else {
         if (file.parent) {
           description = "@-imported";
@@ -136,7 +147,9 @@ export function MemoryFileSelector({
       }
     }
   }
-  memoryOptions.push(...folderOptions);
+  if (variant !== "quick-add") {
+    memoryOptions.push(...folderOptions);
+  }
   const t1 = lastSelectedPath && memoryOptions.some(_temp4) ? lastSelectedPath : memoryOptions[0]?.value || "";
 
   const initialPath = t1;
@@ -253,7 +266,7 @@ export function MemoryFileSelector({
 
   const t22 = <Select defaultFocusValue={initialPath} options={memoryOptions} isDisabled={toggleFocused} onChange={t20} onCancel={onCancel} onUpFromFirstItem={t21} />;
 
-  const t23 = <Box flexDirection="column" width="100%">{t19}{t22}</Box>;
+  const t23 = <Box flexDirection="column" width="100%">{variant === "quick-add" ? null : t19}{t22}</Box>;
 
   return t23;
 }

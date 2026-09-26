@@ -15,7 +15,8 @@ const teamMemSaved = feature('TEAMMEM') ? require('./teamMemSaved.js') as typeof
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { TURN_COMPLETION_VERBS } from '../../constants/turnCompletionVerbs';
 import { useTerminalSize } from '../../hooks/useTerminalSize';
-import type { SystemMessage, SystemStopHookSummaryMessage, SystemBridgeStatusMessage, SystemTurnDurationMessage, SystemThinkingMessage, SystemMemorySavedMessage, SystemRunTelemetryMessage, SystemAPIErrorMessage as SystemAPIErrorMessageType } from '../../types/message';
+import type { SystemMessage, SystemStopHookSummaryMessage, SystemBridgeStatusMessage, SystemTurnDurationMessage, SystemThinkingMessage, SystemMemorySavedMessage, SystemMemoryUpdatedMessage, SystemRunTelemetryMessage, SystemAPIErrorMessage as SystemAPIErrorMessageType } from '../../types/message';
+import { MemoryUpdateNotification } from '../memory/MemoryUpdateNotification';
 import { SystemAPIErrorMessage } from './SystemAPIErrorMessage';
 import { formatDuration, formatNumber, formatSecondsShort } from '../../utils/format';
 import { getGlobalConfig } from '../../utils/config';
@@ -58,6 +59,16 @@ export function SystemTextMessage({
     const t1 = <MemorySavedMessage message={message as SystemMemorySavedMessage} addMargin={addMargin} />;
 
     return t1;
+  }
+  if (message.subtype === "memory_updated") {
+    const t1 = addMargin ? 1 : 0;
+    const t2 = <Box minWidth={2}><Text dimColor={true}>{BLACK_CIRCLE}</Text></Box>;
+
+    const t3 = <MemoryUpdateNotification memoryPath={(message as SystemMemoryUpdatedMessage).memoryPath} />;
+
+    const t4 = <Box flexDirection="row" marginTop={t1} backgroundColor={bg} width="100%">{t2}{t3}</Box>;
+
+    return t4;
   }
   if (message.subtype === "away_summary") {
     const t1 = addMargin ? 1 : 0;

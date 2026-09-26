@@ -3,19 +3,21 @@ import { dirname } from 'path'
 import type { LocalCommandCall } from '../../types/command.js'
 import { getMemoryPath } from '../../utils/config.js'
 import { getErrnoCode } from '../../utils/errors.js'
-
-const HEADING = '## Remembered'
+import {
+  buildRememberedContent,
+  parseRememberArgs,
+} from './rememberTarget.js'
 
 export const call: LocalCommandCall = async args => {
-  const note = String(args ?? '').trim()
-  if (!note) {
+  const parsed = parseRememberArgs(String(args ?? ''))
+  if ('error' in parsed) {
     return {
       type: 'text',
-      value: 'Usage: /remember <note>\nExample: /remember the staging deploy uses the eu-west cluster',
+      value: parsed.error,
     }
   }
 
-  const memoryPath = getMemoryPath('User')
+  const memoryPath = getMemoryPath(parsed.target)
   await mkdir(dirname(memoryPath), { recursive: true })
 
   let existing = ''
@@ -26,18 +28,7 @@ export const call: LocalCommandCall = async args => {
   }
 
   const stamp = new Date().toISOString().slice(0, 10)
-  const line = `- ${stamp}: ${note}`
-
-  let next: string
-  if (existing.includes(HEADING)) {
-    next = existing.replace(HEADING, `${HEADING}\n${line}`)
-    if (next === existing) {
-      next = `${existing.trimEnd()}\n${line}\n`
-    }
-  } else {
-    const prefix = existing.trimEnd()
-    next = `${prefix}${prefix ? '\n\n' : ''}${HEADING}\n${line}\n`
-  }
+  const { next, line } = buildRememberedContent(existing, parsed.note, stamp)
 
   await writeFile(memoryPath, next, 'utf8')
   return {
