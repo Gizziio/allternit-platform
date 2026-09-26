@@ -251,12 +251,12 @@ describe("runToolEvent", () => {
     expect(await Bun.file(path.join(tmp.path, "hook-log.jsonl")).exists()).toBe(true)
   })
 
-  test("non-command hook types are skipped (deferred to the TUI)", async () => {
+  test("non-command/http hook types are skipped (prompt/agent are TUI-only)", async () => {
     await using tmp = await tmpdir()
     await writeProjectSettings(tmp.path, {
       hooks: {
         PreToolUse: [
-          { hooks: [{ type: "prompt", prompt: "verify $ARGUMENTS" }, { type: "http", url: "http://127.0.0.1:1/hook" }] },
+          { hooks: [{ type: "prompt", prompt: "verify $ARGUMENTS" }, { type: "agent", prompt: "verify $ARGUMENTS" }] },
         ],
       },
     })
@@ -293,6 +293,347 @@ describe("runToolEvent", () => {
     const fail = JSON.parse((await Bun.file(path.join(tmp.path, "fail.jsonl")).text()).trim())
     expect(fail.hook_event_name).toBe("PostToolUseFailure")
     expect(fail.error).toBe("boom")
+  })
+})
+
+describe("if conditions", () => {
+  test("Bash(git *) runs for git commands and skips others", async () => {
+    await using tmp = await tmpdir()
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          { hooks: [{ type: "command", command: "cat >> hook-log.jsonl", if: "Bash(git *)" }] },
+        ],
+      },
+    })
+    await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path, { toolInput: { command: "ls" } }))
+    expect(await Bun.file(path.join(tmp.path, "hook-log.jsonl")).exists()).toBe(false)
+    await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path, { toolInput: { command: "git status" } }))
+    expect(await Bun.file(path.join(tmp.path, "hook-log.jsonl")).exists()).toBe(true)
+  })
+
+  test("tool-wide conditions and wrong-tool conditions", async () => {
+    await using tmp = await tmpdir()
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          { hooks: [{ type: "command", command: "cat >> bash.jsonl", if: "Bash" }] },
+          { hooks: [{ type: "command", command: "cat >> write.jsonl", if: "Write(*)" }] },
+        ],
+      },
+    })
+    await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path, { toolInput: { command: "ls" } }))
+    expect(await Bun.file(path.join(tmp.path, "bash.jsonl")).exists()).toBe(true)
+    expect(await Bun.file(path.join(tmp.path, "write.jsonl")).exists()).toBe(false)
+  })
+
+  test("matchesIfCondition is case-insensitive on the tool name and treats trailing junk as tool-name", () => {
+    const input = hookInput("/tmp", { toolInput: { command: "git status" } })
+    expect(SettingsHooksBridge.matchesIfCondition("bash(git *)", input)).toBe(true)
+    expect(SettingsHooksBridge.matchesIfCondition("Bash(git *)garbage", input)).toBe(false)
+  })
+})
+
+describe("async and once flags", () => {
+  test("async hooks never gate, even on exit 2, but still run", async () => {
+    await using tmp = await tmpdir()
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          { hooks: [{ type: "command", command: `echo denied >&2; exit 2`, async: true }] },
+          { hooks: [{ type: "command", command: "echo ran >> async.log", async: true }] },
+        ],
+      },
+    })
+    const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+    expect(result.decision).toBe("allow")
+    // Fire-and-forget: the hook process still runs to completion.
+    const deadline = Date.now() + 5000
+    while (Date.now() < deadline) {
+      if (await Bun.file(path.join(tmp.path, "async.log")).exists()) break
+      await Bun.sleep(25)
+    }
+    expect(await Bun.file(path.join(tmp.path, "async.log")).exists()).toBe(true)
+  })
+
+  test("once hooks fire at most once per session", async () => {
+    await using tmp = await tmpdir()
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [{ hooks: [{ type: "command", command: "echo x >> once.log", once: true }] }],
+      },
+    })
+    await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+    await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+    // A different session id is a different session.
+    await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path, { sessionId: "ses_other" }))
+    const deadline = Date.now() + 5000
+    let lines: string[] = []
+    while (Date.now() < deadline) {
+      const text = await Bun.file(path.join(tmp.path, "once.log")).text().catch(() => "")
+      lines = text.trim().split("\n").filter(Boolean)
+      if (lines.length >= 2) break
+      await Bun.sleep(25)
+    }
+    expect(lines).toHaveLength(2)
+  })
+})
+
+describe("updatedInput", () => {
+  test("PreToolUse exit-0 JSON updatedInput is carried on the decision", async () => {
+    await using tmp = await tmpdir()
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"command":"echo rewritten"}}}'`,
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+    expect(result.decision).toBe("allow")
+    expect(result.updatedInput).toEqual({ command: "echo rewritten" })
+  })
+
+  test("non-object updatedInput is ignored; deny drops updatedInput", async () => {
+    await using tmp = await tmpdir()
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":"nope"}}'`,
+              },
+            ],
+          },
+          {
+            hooks: [
+              {
+                type: "command",
+                command: `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"stop","updatedInput":{"command":"x"}}}'`,
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+    expect(result.decision).toBe("deny")
+    expect(result.reason).toBe("stop")
+    expect(result.updatedInput).toBeUndefined()
+  })
+
+  test("hookSpecificOutput addressed at a different event is ignored", async () => {
+    await using tmp = await tmpdir()
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: `echo '{"hookSpecificOutput":{"hookEventName":"PostToolUse","permissionDecision":"deny","updatedInput":{"command":"x"}}}'`,
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+    expect(result.decision).toBe("allow")
+    expect(result.updatedInput).toBeUndefined()
+  })
+})
+
+describe("permissionDecision ask", () => {
+  test("ask aggregates with deny > ask > allow precedence", async () => {
+    await using tmp = await tmpdir()
+    const askEcho = `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask"}}'`
+    const allowEcho = `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}'`
+    const denyEcho = `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny"}}'`
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [{ hooks: [{ type: "command", command: allowEcho }, { type: "command", command: askEcho }] }],
+      },
+    })
+    const askResult = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+    expect(askResult.decision).toBe("ask")
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [{ hooks: [{ type: "command", command: askEcho }, { type: "command", command: denyEcho }] }],
+      },
+    })
+    const denyResult = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+    expect(denyResult.decision).toBe("deny")
+  })
+
+  test("ask on PostToolUse degrades to allow", async () => {
+    await using tmp = await tmpdir()
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PostToolUse: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: `echo '{"hookSpecificOutput":{"hookEventName":"PostToolUse","permissionDecision":"ask"}}'`,
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const result = await SettingsHooksBridge.runToolEvent("PostToolUse", hookInput(tmp.path))
+    expect(result.decision).toBe("allow")
+  })
+})
+
+describe("http hooks", () => {
+  async function withServer(
+    handler: (req: Request, body: string) => Response | Promise<Response>,
+    fn: (url: string, requests: string[]) => Promise<void>,
+  ) {
+    const requests: string[] = []
+    const server = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      async fetch(req) {
+        const body = await req.text()
+        requests.push(body)
+        return handler(req, body)
+      },
+    })
+    try {
+      await fn(`http://127.0.0.1:${server.port}/hook`, requests)
+    } finally {
+      server.stop(true)
+    }
+  }
+
+  test("POSTs the event JSON and gates on a decision:block body", async () => {
+    await using tmp = await tmpdir()
+    await withServer(() => Response.json({ decision: "block", reason: "http nope" }), async (url, requests) => {
+      await writeProjectSettings(tmp.path, {
+        hooks: { PreToolUse: [{ hooks: [{ type: "http", url }] }] },
+      })
+      const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+      expect(result.decision).toBe("deny")
+      expect(result.reason).toBe("http nope")
+      expect(requests).toHaveLength(1)
+      const payload = JSON.parse(requests[0]!)
+      expect(payload.hook_event_name).toBe("PreToolUse")
+      expect(payload.tool_name).toBe("bash")
+      expect(payload.tool_input).toEqual({ command: "ls" })
+    })
+  })
+
+  test("permissionDecision deny/ask and updatedInput work over http", async () => {
+    await using tmp = await tmpdir()
+    await withServer(
+      () =>
+        Response.json({
+          hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            permissionDecision: "ask",
+            updatedInput: { command: "echo via-http" },
+          },
+        }),
+      async (url) => {
+        await writeProjectSettings(tmp.path, {
+          hooks: { PreToolUse: [{ hooks: [{ type: "http", url }] }] },
+        })
+        const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+        expect(result.decision).toBe("ask")
+        expect(result.updatedInput).toEqual({ command: "echo via-http" })
+      },
+    )
+  })
+
+  test("non-2xx and non-JSON bodies fail open", async () => {
+    await using tmp = await tmpdir()
+    await withServer(() => new Response("broken", { status: 500 }), async (url, requests) => {
+      await writeProjectSettings(tmp.path, {
+        hooks: { PreToolUse: [{ hooks: [{ type: "http", url }] }] },
+      })
+      const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+      expect(result.decision).toBe("allow")
+      expect(requests).toHaveLength(1)
+    })
+  })
+
+  test("allowedHttpHookUrls blocks non-matching URLs (fail open, no request made)", async () => {
+    await using tmp = await tmpdir()
+    await withServer(() => Response.json({}), async (url, requests) => {
+      await writeProjectSettings(tmp.path, {
+        allowedHttpHookUrls: ["https://hooks.example.com/*"],
+        hooks: { PreToolUse: [{ hooks: [{ type: "http", url }] }] },
+      })
+      const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+      expect(result.decision).toBe("allow")
+      expect(requests).toHaveLength(0)
+    })
+  })
+
+  test("header env interpolation is restricted to allowedEnvVars and CRLF-stripped", async () => {
+    await using tmp = await tmpdir()
+    process.env.P7_HOOK_TOKEN = "secret-token"
+    process.env.P7_HOOK_EVIL = "evil\r\nX-Injected: 1"
+    try {
+      await withServer(
+        (req) =>
+          Response.json({
+            decision: "block",
+            reason: JSON.stringify({
+              auth: req.headers.get("authorization"),
+              other: req.headers.get("x-other"),
+              evil: req.headers.get("x-evil"),
+              injected: req.headers.get("x-injected"),
+            }),
+          }),
+        async (url) => {
+          await writeProjectSettings(tmp.path, {
+            hooks: {
+              PreToolUse: [
+                {
+                  hooks: [
+                    {
+                      type: "http",
+                      url,
+                      headers: {
+                        Authorization: "Bearer $P7_HOOK_TOKEN",
+                        "X-Other": "$P7_UNLISTED",
+                        "X-Evil": "${P7_HOOK_EVIL}",
+                      },
+                      allowedEnvVars: ["P7_HOOK_TOKEN", "P7_HOOK_EVIL"],
+                    },
+                  ],
+                },
+              ],
+            },
+          })
+          const result = await SettingsHooksBridge.runToolEvent("PreToolUse", hookInput(tmp.path))
+          expect(result.decision).toBe("deny")
+          const seen = JSON.parse(result.reason!)
+          expect(seen.auth).toBe("Bearer secret-token")
+          // Not in allowedEnvVars -> empty string
+          expect(seen.other).toBe("")
+          // CRLF stripped, no header injection
+          expect(seen.evil).toBe("evilX-Injected: 1")
+          expect(seen.injected).toBeNull()
+        },
+      )
+    } finally {
+      delete process.env.P7_HOOK_TOKEN
+      delete process.env.P7_HOOK_EVIL
+    }
   })
 })
 
@@ -393,6 +734,133 @@ describe("ToolDispatcher gating", () => {
         const fail = JSON.parse((await Bun.file(path.join(tmp.path, "fail.jsonl")).text()).trim())
         expect(fail.hook_event_name).toBe("PostToolUseFailure")
         expect(fail.error).toContain("tool exploded")
+      },
+    })
+  })
+
+  test("updatedInput from a settings hook replaces the tool args before execution", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{"command":"echo rewritten","extra":"added"}}}'`,
+              },
+            ],
+          },
+        ],
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        let receivedArgs: any
+        const result: any = await ToolDispatcher.executeInitialized(
+          "bash",
+          { command: "ls" },
+          fakeCtx(),
+          async (args) => {
+            receivedArgs = args
+            return { title: "ok", output: "ran", metadata: {} }
+          },
+        )
+        expect(result.output).toBe("ran")
+        // Replace semantics (ink-app: processedInput = result.updatedInput)
+        expect(receivedArgs).toEqual({ command: "echo rewritten", extra: "added" })
+      },
+    })
+  })
+
+  test("permissionDecision ask routes through ctx.ask; approval executes with the rewritten input", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","updatedInput":{"command":"echo asked"}}}'`,
+              },
+            ],
+          },
+        ],
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const asks: any[] = []
+        const ctx: any = {
+          ...fakeCtx(),
+          ask: async (req: any) => {
+            asks.push(req)
+          },
+        }
+        let receivedArgs: any
+        const result: any = await ToolDispatcher.executeInitialized(
+          "bash",
+          { command: "rm -rf /" },
+          ctx,
+          async (args) => {
+            receivedArgs = args
+            return { title: "ok", output: "ran", metadata: {} }
+          },
+        )
+        expect(result.output).toBe("ran")
+        expect(asks).toHaveLength(1)
+        expect(asks[0].permission).toBe("bash")
+        // Patterns derived from the rewritten args
+        expect(asks[0].patterns).toContain("echo asked")
+        expect(receivedArgs).toEqual({ command: "echo asked" })
+      },
+    })
+  })
+
+  test("permissionDecision ask denied at the prompt yields a structured denial, never silent allow", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeProjectSettings(tmp.path, {
+      hooks: {
+        PreToolUse: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask"}}'`,
+              },
+            ],
+          },
+        ],
+        PostToolUseFailure: [{ hooks: [{ type: "command", command: "cat >> fail.jsonl" }] }],
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const ctx: any = {
+          ...fakeCtx(),
+          ask: async () => {
+            throw new Error("user rejected")
+          },
+        }
+        let executed = false
+        const result: any = await ToolDispatcher.executeInitialized(
+          "bash",
+          { command: "ls" },
+          ctx,
+          async () => {
+            executed = true
+            return { title: "ok", output: "ran", metadata: {} }
+          },
+        )
+        expect(executed).toBe(false)
+        expect(result.metadata?.denied).toBe(true)
+        expect(result.output).toContain("user rejected")
+        const fail = JSON.parse((await Bun.file(path.join(tmp.path, "fail.jsonl")).text()).trim())
+        expect(fail.hook_event_name).toBe("PostToolUseFailure")
       },
     })
   })
