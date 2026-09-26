@@ -247,7 +247,7 @@ function SpinnerWithVerbInner({
 
   // When viewing an idle teammate, show static idle display instead of animated spinner
   if (foregroundedTeammate?.isIdle) {
-    const idleText = allIdle ? `${ORB_MARK_TEXT} Worked for ${formatDuration(Date.now() - foregroundedTeammate.startTime)}` : `${ORB_MARK_TEXT} Idle`;
+    const idleText = allIdle ? `${ORB_MARK_TEXT} ${foregroundedTeammate.identity.agentName} worked for ${formatDuration(Date.now() - foregroundedTeammate.startTime)}` : `${ORB_MARK_TEXT} Idle`;
     return <Box flexDirection="column" width="100%" alignItems="flex-start">
         <Box flexDirection="row" flexWrap="wrap" marginTop={1} width="100%">
           <Text dimColor>{idleText}</Text>
