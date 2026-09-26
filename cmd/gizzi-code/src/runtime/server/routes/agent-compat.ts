@@ -58,6 +58,7 @@ import { SessionSummary } from "@/runtime/session/summary"
 import { Provider } from "@/runtime/providers/provider"
 import { Bus } from "@/shared/bus"
 import { Log } from "@/shared/util/log"
+import { toolFramesForPart } from "./tool-frames"
 
 const log = Log.create({ service: "agent-compat" })
 
@@ -634,6 +635,9 @@ export const AgentCompatRoutes = () =>
         // partID → type tracking: message.part.updated carries the part type
         // ("reasoning") while deltas don't (v1_routes.rs:793-796).
         const reasoningParts = new Set<string>()
+        // callID → last tool frame sent ("start" | "end"), so each call
+        // yields exactly one tool_use start and one result/error.
+        const toolFramesSent = new Map<string, "start" | "end">()
         let wasBusy = false
         const unsub = Bus.subscribeAll((event: any) => {
           const type = event?.type
@@ -642,6 +646,9 @@ export const AgentCompatRoutes = () =>
             const part = props.part
             if (part?.sessionID !== sessionID) return
             if (part?.type === "reasoning" && typeof part?.id === "string") reasoningParts.add(part.id)
+            if (part?.type === "tool") {
+              for (const frame of toolFramesForPart(part, msgID, toolFramesSent)) push(frame)
+            }
             return
           }
           if (type === "message.updated") {

@@ -751,6 +751,70 @@ async fn settle_chat_run(record: &Option<ChatRunRecord>, success: bool, error: O
     .await;
 }
 
+/// Which frames of a tool call have already been forwarded to the client.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ToolFrameState {
+    Started,
+    Ended,
+}
+
+/// SSE frames for a gizzi `tool` part: an Anthropic-style
+/// `content_block_start` (tool_use) when the call starts, then `tool_result`
+/// or `tool_error` when it settles — the wire the workspace client parses.
+/// Provider-agnostic: SDK-executed and CLI-observed tools are both `tool`
+/// parts. `sent` de-duplicates repeated part updates.
+fn tool_frames_for_part(
+    part: &serde_json::Value,
+    msg_id: &str,
+    sent: &mut HashMap<String, ToolFrameState>,
+) -> Vec<serde_json::Value> {
+    let Some(call_id) = part.get("callID").and_then(|v| v.as_str()).filter(|s| !s.is_empty()) else {
+        return Vec::new();
+    };
+    if sent.get(call_id) == Some(&ToolFrameState::Ended) {
+        return Vec::new();
+    }
+    let status = part.pointer("/state/status").and_then(|v| v.as_str()).unwrap_or("");
+    let tool_name = part.get("tool").and_then(|v| v.as_str()).unwrap_or("tool");
+    let settled = status == "completed" || status == "error";
+    let mut frames = Vec::new();
+    if !sent.contains_key(call_id) && (settled || status == "pending" || status == "running") {
+        frames.push(json!({
+            "type": "content_block_start",
+            "messageId": msg_id,
+            "content_block": {
+                "type": "tool_use",
+                "id": call_id,
+                "name": tool_name,
+                "input": part.pointer("/state/input").cloned().unwrap_or_else(|| json!({})),
+            },
+        }));
+        sent.insert(call_id.to_string(), ToolFrameState::Started);
+    }
+    if settled {
+        frames.push(if status == "completed" {
+            json!({
+                "type": "tool_result",
+                "messageId": msg_id,
+                "toolCallId": call_id,
+                "toolName": tool_name,
+                "result": part.pointer("/state/output").cloned().unwrap_or_else(|| json!("")),
+            })
+        } else {
+            json!({
+                "type": "tool_error",
+                "messageId": msg_id,
+                "toolCallId": call_id,
+                "toolName": tool_name,
+                "error": part.pointer("/state/error").and_then(|v| v.as_str()).unwrap_or("Tool execution failed"),
+            })
+        });
+        sent.insert(call_id.to_string(), ToolFrameState::Ended);
+    }
+    frames
+}
+
+
 /// Bridge /api/agent-chat → gizzi session/event architecture.
 ///
 /// 1. Parse chatId and message from the request body.
@@ -1251,6 +1315,9 @@ async fn agent_chat_bridge(
         // so reasoning streams can be forwarded as thinking deltas instead
         // of being flattened into the visible reply text.
         let mut reasoning_parts = std::collections::HashSet::<String>::new();
+        // callID → whether its tool_use start / final frame went out, so each
+        // tool call reaches the client as exactly one start and one end.
+        let mut tool_frames_sent: HashMap<String, ToolFrameState> = HashMap::new();
         // Newest assistant usage seen on the bus (message.updated carries the
         // full message info incl. tokens) — attached to the finish frame.
         let mut last_usage: Option<serde_json::Value> = None;
@@ -1331,6 +1398,13 @@ async fn agent_chat_bridge(
                                 .is_some_and(|t| !t.is_empty())
                             {
                                 saw_text = true;
+                            }
+                        }
+                        if part_type == "tool"
+                            && part.get("sessionID").and_then(|v| v.as_str()) == Some(session_id.as_str())
+                        {
+                            for frame in tool_frames_for_part(part, &msg_id, &mut tool_frames_sent) {
+                                yield Ok(Event::default().data(frame.to_string()));
                             }
                         }
                         if part_type == "tool" {
@@ -1613,6 +1687,39 @@ async fn body_to_bytes(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tool_frames_one_start_one_end_per_call() {
+        let mut sent = HashMap::new();
+        let running = json!({"type": "tool", "tool": "web_search", "callID": "c1",
+            "state": {"status": "running", "input": {"query": "x"}}});
+        let done = json!({"type": "tool", "tool": "web_search", "callID": "c1",
+            "state": {"status": "completed", "input": {"query": "x"}, "output": "3 results"}});
+
+        let start = tool_frames_for_part(&running, "m1", &mut sent);
+        assert_eq!(start.len(), 1);
+        assert_eq!(start[0]["type"], "content_block_start");
+        assert_eq!(start[0]["content_block"]["type"], "tool_use");
+        assert_eq!(start[0]["content_block"]["id"], "c1");
+        assert!(tool_frames_for_part(&running, "m1", &mut sent).is_empty());
+
+        let end = tool_frames_for_part(&done, "m1", &mut sent);
+        assert_eq!(end.len(), 1);
+        assert_eq!(end[0]["type"], "tool_result");
+        assert_eq!(end[0]["result"], "3 results");
+        assert!(tool_frames_for_part(&done, "m1", &mut sent).is_empty());
+    }
+
+    #[test]
+    fn tool_frames_settled_first_sight_gets_start_and_error() {
+        let mut sent = HashMap::new();
+        let failed = json!({"type": "tool", "tool": "bash", "callID": "c2",
+            "state": {"status": "error", "input": {}, "error": "exit 1"}});
+        let frames = tool_frames_for_part(&failed, "m1", &mut sent);
+        let types: Vec<_> = frames.iter().map(|f| f["type"].as_str().unwrap()).collect();
+        assert_eq!(types, ["content_block_start", "tool_error"]);
+        assert_eq!(frames[1]["error"], "exit 1");
+    }
 
     #[test]
     fn compose_empty_returns_none() {
