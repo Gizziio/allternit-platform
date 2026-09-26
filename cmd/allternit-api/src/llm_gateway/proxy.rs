@@ -2331,8 +2331,16 @@ pub async fn chat_completions(
             }
             // Cooldown-aware selection: skips cooling-down candidates and
             // fail-opens to the soonest-expiring one rather than erroring.
-            let Some(next_model) =
-                super::failover::select_fallback_healthy(attempt, &primary, &fallback_refs, &policy)
+            // The chain is pre-sorted by cost/health/kind signals (P2.11);
+            // health remains a hard filter inside failover.
+            let Some(next_model) = super::provider_routing::select_fallback_sorted(
+                attempt,
+                &primary,
+                &fallback_refs,
+                &policy,
+                &super::llm_pricing::pricing_snapshot(),
+                super::failover::cooldowns(),
+            )
             else {
                 break;
             };

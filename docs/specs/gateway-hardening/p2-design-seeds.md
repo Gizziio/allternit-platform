@@ -1,9 +1,15 @@
 # P2 design seeds — gateway gap analysis items 10–12
 
-> Session gwp1 (2026-09-25). These three P2 items are deliberately **not built** — each is
-> conditional on a scaling trigger that has not fired. This document records the design seams
-> so the future session that does build them starts from decisions, not discovery.
-> Source: `Allternit Brain/Products/GatewayGapAnalysis.md` P2 list.
+> Session gwp1 (2026-09-25) wrote these as design seeds. **Owner decision same day: build all
+> three, triggers waived.** Shipped in session/gwp2 — this file is now the historical record of
+> the design intent; the implementation notes below point at where each landed.
+>
+> - P2.10 → `provider_routing.rs` import/diff/apply + `admin_routes.rs`
+>   `POST /gateway/provider-routing/import` (dry-run default, `?apply=1`, transactional).
+> - P2.11 → `sort_candidates` + `select_fallback_sorted` in `provider_routing.rs`, wired into the
+>   proxy retry loop (proxy.rs) with health as hard filter.
+> - P2.12 → `control_plane.rs`: `ALLTERNIT_ROLE=data|control|all` + `ALLTERNIT_ADMIN_LISTEN_ADDR`;
+>   split-process pairing over shared SQLite documented in the module header.
 
 ## P2.10 — Declarative config round-trip (policy-as-code) + deeper scopes
 
