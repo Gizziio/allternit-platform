@@ -12,6 +12,7 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
+    "@allternit/subscription-adapter-sdk": "workspace:*",
     "@allternit/subscription-fabric-contracts": "workspace:*",
     "better-sqlite3": "13.0.3",
     "express": "^4.18.2",
@@ -22,6 +23,7 @@
     "@types/express": "^4.17.21",
     "@types/node": "^20.0.0",
     "@types/supertest": "^6.0.2",
+    "playwright": "^1.58.2",
     "supertest": "^7.0.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0",

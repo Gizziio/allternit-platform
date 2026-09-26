@@ -14,6 +14,7 @@ import type { CallerOutbox } from "../events/outbox.js";
 import type { SseHub } from "../events/sse.js";
 import type { Notifier } from "../events/notify.js";
 import type { CapabilityRouter } from "@allternit/subscription-fabric-contracts";
+import type { Scheduler } from "../queue/scheduler.js";
 import { tasksRouter } from "./routes_tasks.js";
 import { eventsRouter } from "./routes_events.js";
 import { artifactsRouter } from "./routes_artifacts.js";
@@ -29,6 +30,7 @@ export interface GatewayDeps {
   hub: SseHub;
   notifier: Notifier;
   router?: CapabilityRouter;
+  scheduler?: Scheduler; // P3 — POST /v1/tasks enqueues; workers drain per key
   allowedOrigins?: string[]; // default: empty — every Origin is rejected
   version?: string;
 }

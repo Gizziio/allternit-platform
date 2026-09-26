@@ -17,6 +17,9 @@ export interface Config {
   tcp: TcpConfig;
   policyPath: string;
   policy: Record<string, string>;
+  // §A8 — per-capability stall watchdog timeouts (seconds); defaults 90, with
+  // research.deep at 1200. Policy keys: stall_timeout_s, stall_timeout_s.<cap>.
+  stallTimeouts: { defaultS: number; byCapability: Record<string, number> };
   // Base URL of the local allternit-api (CommRails peer messages, D12).
   apiBase: string;
 }
@@ -53,6 +56,29 @@ export function parsePolicyFile(text: string): Record<string, string> {
   return out;
 }
 
+// §A8 watchdog timeouts from policy: stall_timeout_s (default) and
+// stall_timeout_s.<capability> (per-capability override).
+export function stallTimeoutsFromPolicy(
+  policy: Record<string, string>
+): Config["stallTimeouts"] {
+  const byCapability: Record<string, number> = {};
+  let defaultS = 90;
+  for (const [key, value] of Object.entries(policy)) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    if (key === "stall_timeout_s") defaultS = n;
+    else if (key.startsWith("stall_timeout_s.")) byCapability[key.slice("stall_timeout_s.".length)] = n;
+  }
+  return { defaultS, byCapability };
+}
+
+export function stallTimeoutFor(config: Config, capability: string): number {
+  return (
+    config.stallTimeouts.byCapability[capability] ??
+    (capability === "research.deep" ? 1200 : config.stallTimeouts.defaultS)
+  );
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const stateDir = expandHome(
     env[`${ENV_PREFIX}STATE_DIR`] ?? "~/.allternit/subscriptions/"
@@ -73,6 +99,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     },
     policyPath,
     policy,
+    stallTimeouts: stallTimeoutsFromPolicy(policy),
     apiBase: env[`${ENV_PREFIX}API_BASE`] ?? "http://127.0.0.1:18013",
   };
 }
