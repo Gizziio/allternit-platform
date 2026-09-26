@@ -1,8 +1,8 @@
 import { Ripgrep } from "@/shared/file/ripgrep"
-import path from "path"
 
 import { Instance } from "@/runtime/context/project/instance"
 import { Filesystem } from "@/shared/util/filesystem"
+import { getAutoMemPathFor } from "@/memdir/paths"
 
 import PROMPT_DEFAULT from "@/runtime/session/prompt/default.txt"
 import PROMPT_DEFAULT_WITHOUT_TODO from "@/runtime/session/prompt/qwen.txt"
@@ -46,15 +46,19 @@ export namespace SystemPrompt {
   }
 
   async function memoryPrompt(): Promise<string> {
-    const memoryDir = path.join(Instance.directory, ".gizzi", "L1-COGNITIVE", "memory")
+    // The memdir auto-memory directory — the same store the TUI memory UX
+    // (`#` quick-add, /remember, extract-memories) reads and writes, resolved
+    // through the shared memdir layer (src/memdir/paths).
+    const memoryDir = getAutoMemPathFor(Instance.directory)
     const exists = await Filesystem.exists(memoryDir)
     return [
       `# auto memory`,
       ``,
       `You have a persistent, file-based memory system. Memory files persist across conversations and are automatically`,
-      `loaded into future sessions. Both the workspace memory (\`${memoryDir}/\`) and the global per-project store are loaded.`,
+      `loaded into future sessions. Your memory directory is \`${memoryDir}\` — the same auto-memory store the`,
+      `interactive TUI uses, so memories are shared between headless and interactive sessions.`,
       ``,
-      exists ? `The workspace memory directory exists.` : `The workspace memory directory does not exist yet — it will be created automatically when you save a memory.`,
+      exists ? `The memory directory exists.` : `The memory directory does not exist yet — it will be created automatically when you save a memory.`,
       ``,
       `## How to save memories`,
       ``,

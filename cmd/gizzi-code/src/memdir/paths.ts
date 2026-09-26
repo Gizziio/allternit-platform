@@ -246,6 +246,32 @@ export const getAutoMemPath = memoize(
 )
 
 /**
+ * Per-directory variant of getAutoMemPath(): same resolution order
+ * (cowork env override → settings.json override →
+ * <base>/projects/<sanitized-git-root>/memory/), but anchored at an explicit
+ * project directory instead of the process-wide getProjectRoot().
+ *
+ * Used by the runtime (headless/server) memory tools, where Instance.directory
+ * can differ from the process cwd, so both the TUI pipeline and the runtime
+ * pipeline land in the same auto-memory directory for the same project.
+ * Memoized per directory on the same grounds as getAutoMemPath().
+ */
+export const getAutoMemPathFor = memoize(
+  (directory: string): string => {
+    const override = getAutoMemPathOverride() ?? getAutoMemPathSetting()
+    if (override) {
+      return override
+    }
+    const base = findCanonicalGitRoot(directory) ?? directory
+    const projectsDir = join(getMemoryBaseDir(), 'projects')
+    return (
+      join(projectsDir, sanitizePath(base), AUTO_MEM_DIRNAME) + sep
+    ).normalize('NFC')
+  },
+  (directory: string) => directory,
+)
+
+/**
  * Returns the daily log file path for the given date (defaults to today).
  * Shape: <autoMemPath>/logs/YYYY/MM/YYYY-MM-DD.md
  *

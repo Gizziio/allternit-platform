@@ -9,6 +9,7 @@ import { Log } from "@/shared/util/log"
 import { Glob } from "@/shared/util/glob"
 import type { MessageV2 } from "@/runtime/session/message-v2"
 import { parseFrontmatter } from "@/runtime/memory/memory-service"
+import { getAutoMemPathFor } from "@/memdir/paths"
 import { ANTI_PATTERNS_FILENAME, LOCAL_INSTRUCTION_FILENAMES, pickWinner, ROOT_INSTRUCTION_FILENAMES } from "@/shared/utils/agentFileResolver"
 
 const log = Log.create({ service: "instruction" })
@@ -34,9 +35,16 @@ function globalProjectMemoryDir(): string {
   return path.join(Global.Path.config, "projects", projectHash(Instance.directory), "memory")
 }
 
-/** Workspace memory directories to scan for .md files */
+/**
+ * Memory directories to scan for .md files, in precedence order (dedupe by
+ * basename keeps the first hit). The memdir auto-memory directory — the same
+ * store the TUI memory UX uses — is canonical and first; the L1-COGNITIVE dirs
+ * and the pre-convergence global store are read-only legacy fallbacks (their
+ * contents are also copied into the memdir by MemoryService's one-time import).
+ */
 function workspaceMemoryDirs(): string[] {
   return [
+    getAutoMemPathFor(Instance.directory),
     path.join(Instance.directory, ".gizzi", "L1-COGNITIVE", "memory"),
     path.join(Instance.directory, ".openclaw", "L1-COGNITIVE", "memory"),
     globalProjectMemoryDir(),
@@ -46,11 +54,13 @@ function workspaceMemoryDirs(): string[] {
 /** Workspace memory files to auto-load into context */
 function workspaceMemoryFiles(): string[] {
   const files: string[] = []
-  // .gizzi workspace memory
+  // memdir auto-memory (canonical — shared with the TUI memory UX)
+  files.push(path.join(getAutoMemPathFor(Instance.directory), "MEMORY.md"))
+  // .gizzi workspace memory (legacy fallback)
   files.push(path.join(Instance.directory, ".gizzi", "L1-COGNITIVE", "memory", "MEMORY.md"))
-  // .openclaw workspace memory (legacy)
+  // .openclaw workspace memory (legacy fallback)
   files.push(path.join(Instance.directory, ".openclaw", "L1-COGNITIVE", "memory", "MEMORY.md"))
-  // Global per-project memory
+  // Pre-convergence global per-project memory (legacy fallback)
   files.push(path.join(globalProjectMemoryDir(), "MEMORY.md"))
   return files
 }
