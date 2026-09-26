@@ -106,6 +106,10 @@ export function tasksRouter(deps: GatewayDeps): Router {
       },
       callers: [caller.caller_id],
     });
+    // P3 — enqueue for the worker layer. With zero registered adapters the
+    // task stays queued and the static router still returns no-route (full
+    // route→router→worker activation lands in Phase 2).
+    deps.scheduler?.enqueue(task);
     res.status(201).json(task);
   });
 
@@ -128,6 +132,7 @@ export function tasksRouter(deps: GatewayDeps): Router {
       res.status(409).json({ error: "not_cancellable", status: task.status });
       return;
     }
+    deps.scheduler?.remove(task.task_id);
     const completedAt = new Date().toISOString();
     updateTaskStatus(deps.db, task.task_id, "cancelled", { completedAt });
     deps.log.append({

@@ -2513,6 +2513,9 @@ importers:
 
   services/subscription-gateway:
     dependencies:
+      '@allternit/subscription-adapter-sdk':
+        specifier: workspace:*
+        version: link:../../platform/packages/subscription-adapter-sdk
       '@allternit/subscription-fabric-contracts':
         specifier: workspace:*
         version: link:../../platform/packages/subscription-fabric-contracts
@@ -2538,6 +2541,9 @@ importers:
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
+      playwright:
+        specifier: ^1.58.2
+        version: 1.58.2
       supertest:
         specifier: ^7.0.0
         version: 7.3.0

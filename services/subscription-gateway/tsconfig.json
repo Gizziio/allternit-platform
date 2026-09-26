@@ -14,6 +14,7 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test"],
   "references": [
-    { "path": "../../platform/packages/subscription-fabric-contracts" }
+    { "path": "../../platform/packages/subscription-fabric-contracts" },
+    { "path": "../../platform/packages/subscription-adapter-sdk" }
   ]
 }

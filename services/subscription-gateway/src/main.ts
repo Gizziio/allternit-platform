@@ -18,6 +18,7 @@ import {
   type KeychainBackend,
 } from "./security/keychain.js";
 import { closeServer, createServer, listenTcp, listenUds } from "./http/server.js";
+import { createScheduler } from "./queue/scheduler.js";
 import { StaticRouter } from "./router/resolve.js";
 
 export interface BootDeps {
@@ -82,6 +83,7 @@ export async function boot(deps: BootDeps = {}): Promise<RunningGateway> {
     hub,
     notifier,
     router: new StaticRouter(),
+    scheduler: createScheduler(),
     version: packageVersion(),
   });
 

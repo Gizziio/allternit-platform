@@ -1,23 +1,30 @@
-# Steering checkpoint — session/gizzi-tui-parity
+# Checkpoint — session/subsfab-p3
 
 ## Goal
-gizzi-code TUI parity + polish program (approved plan 2026-09-26). 8 phases, each its own PR landed per repo lifecycle. Tracked as dag:dag_625298 / wih node n_2847.
+Execute docs/specs/subscription-fabric/p3/P3_PHASE_1_TASK.md: subscription-gateway worker layer + artifact store (fake-adapter tested). Deliverables: artifacts/store.ts, queue/scheduler.ts, worker/{supervisor,worker,reconcile,detach,progress}.ts, http enqueue wiring, vitest suite, P3_PHASE_1_NOTES.md sentinel.
 
 ## Just did
-- Parity audit complete (3 explore agents + Codex startup video review). Key finding: TUI permission bypass broken because thread.ts only sets env vars the ink-app never reads; initialPermissionModeFromCLI/initializeToolPermissionContext are dead code; AppStateStore hardcodes mode:'default'.
-- Worktree allternit-session-gizzi-tui-parity created off origin/main @ 6ad3574d4. Disk gate passed (104G workspace, 495G free).
-- P0 LANDED (PR #743, merge 35f9a767): TUI permission bypass fixed — new tuiPermissionStartup.ts (yolo→bypassPermissions mapping, root guard), tui() seeds mode via initialPermissionModeFromCLI+initializeToolPermissionContext, thread.ts gains --permission-mode. 80/80 permission tests, typecheck clean, release-preflight 52/0, ledger committed (830bcd344).
-- P1 IMPLEMENTED: WelcomeBox.tsx rewritten as animated startup screen (sentinel beacon pulse + blink, GIZZI block wordmark with coral shimmer sweep, tips line) with welcomeArt.ts data module; static under prefersReducedMotion. Verified live via pty TUI capture (blink frames + wordmark rendering confirmed). Tests 4/4.
+All deliverables implemented and verified: artifact store (content-addressed, quarantine xattr, sha256 + magic-byte MIME verify, relative local_path), pure priority scheduler, worker executor (durable two-write markSubmitted, full AdapterEvent consumption incl. quota/model/needs_user/detach, submission_ambiguous on sent_unconfirmed errors), supervisor (reconcile-before-resume gate, stall watchdog 90s/1200s config-overridable), reconcile sweep (§A2 outcomes), detach watch scheduler (backoff cap 15min, read-only watch ctx), progress bridge, http enqueue wiring. Gates: build PASS, 108/108 tests PASS (77 P1 green), no provider literals. NOTES sentinel written at docs/specs/subscription-fabric/p3/P3_PHASE_1_NOTES.md.
 
 ## Next
-- P0 LANDED: PR #743 merged (35f9a767), main synced, ledger attestation committed (830bcd344). git-discipline-check FAILs only on other sessions' dirty files (surfaces/computer-use, office-addin, 2 foreign ledger summaries) — left untouched deliberately.
-- P1 LANDED (PR #744, merge 2b16cfa2c): animated WelcomeBox + welcomeArt.ts; pty-capture verified; ledger committed.
-- P2 LANDED (PR #745, merge 68dd173a4): dim-tail streaming reveal, cli-highlight warm-up, ToolUseCard glyphs.
-- P3 LANDED (PR #746, merge 9502d8d4): organized /model picker.
-- P4 IMPLEMENTED (coder subagent, reviewed): per-turn telemetry line (new SystemRunTelemetryMessage emitted in onQuery finally; segments from cost-tracker diffs, turn wall time, turn tool count, context block-bar, tightest quota chip patched in once; never-fabricate assembly) + /usage Plan quota section (per-window bars, resets-in, honest unreported states) + reasoning-token line. Pure logic in utils/telemetry/{runTelemetryModel,providerQuota,turnSignals}.ts. 20 new tests; components+commands 45/45 green (3 pre-existing /status env failures unrelated, reproduced on pristine tree); typecheck clean; preflight 52/0; pty smoke of /usage honest path passed. Per-turn line not exercised live (no quota spend).
-
-## Next
-- Land P4 (commit → PR → merge → ledger), then P5: artifacts — fix /artifact Gemini leftover path (commands/artifact/artifact.tsx:19-25 → gizzi-owned dir), markdown viewer, FilePathLink open, inline created-file cards.
+Session lifecycle: commit + push session/subsfab-p3, PR, merge (--merge), sync shared checkout, ledger attestation, worktree cleanup, git-discipline-check.
 
 ## Open questions
-- CommRails plan refine rejected prompt deltas in strict mode (needs mutations JSON) — phases tracked in session todo list instead; DAG root node covers the program.
+None.
+
+---
+
+# Checkpoint — session/gizzi-tui-parity (parallel session, keep both)
+
+## Goal
+gizzi-code TUI parity program (8 phases, owner-approved plan; dag:dag_625298 / wih_8397). P0–P3 landed (PRs #743–#746); P4 (telemetry surfaces) implemented, merging.
+
+## Just did
+- P0–P3 landed: permission bypass fix, animated startup screen, streaming/tool polish, organized /model picker (ledger summaries 0434/0442/0447/0518).
+- P4 IMPLEMENTED (coder subagent, reviewed): per-turn SystemRunTelemetryMessage (cost-tracker diffs, wall time, tool count, context block-bar, tightest quota chip; never-fabricate assembly in utils/telemetry/) + /usage Plan quota section. 20 new tests; 45/45 components+commands; typecheck clean; preflight 52/0; /usage honest path pty-verified. Per-turn line not exercised live (no quota spend).
+
+## Next
+- Land P4 (PR #748 — resolving this checkpoint conflict), then P5: artifacts — fix /artifact Gemini leftover path (commands/artifact/artifact.tsx:19-25), markdown viewer, FilePathLink open, inline created-file cards.
+
+## Open questions
+- .steering/checkpoint.md is shared across parallel sessions and conflicts on every merge — resolution convention used here: keep both sessions' sections, active session on top.
