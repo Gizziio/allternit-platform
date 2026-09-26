@@ -21,14 +21,15 @@ import type {
   TaskError,
 } from "@allternit/subscription-fabric-contracts";
 import { createArtifactStore } from "../artifacts/store.js";
+import { recordAdapterSuccess, recordAdapterUiFailure } from "../breakers.js";
 import type { EventLog } from "../events/log.js";
+import { applySignalToPool, recordLocalUse, recordPoolSuccess } from "../pools.js";
+import { requeueAfterFailure, type DispatchDeps } from "../router/dispatch.js";
 import type { Db } from "../store/db.js";
 import {
-  getQuotaPool,
   getTask,
   insertAttempt,
   listArtifactsForTask,
-  recordQuotaSignal,
   updateAttempt,
   updateTaskStatus,
 } from "../store/queries.js";
@@ -58,6 +59,10 @@ export interface WorkerDeps {
   supervisor?: WorkerSupervisor;
   // Supervisor heartbeat hook — every adapter event resets the stall watchdog.
   onEvent?: (taskId: string, event: AdapterEvent) => void;
+  // P4 — when wired, a terminally failed attempt goes through
+  // router.onAttemptFailed: re-routable failures re-queue the task onto the
+  // next candidate's lane; "stop"/no-route leaves it failed (dispatch.ts).
+  dispatch?: DispatchDeps;
 }
 
 export interface RunRequest {
@@ -198,11 +203,47 @@ export async function runAttempt(deps: WorkerDeps, req: RunRequest): Promise<Run
   });
 
   const TERMINAL = ["completed", "partial", "failed", "cancelled", "needs_user"];
+  // P4/§A4 — adapter failure classes feed the quota pools and the ui_drift
+  // circuit breaker here at the worker boundary; the router itself stays pure.
+  const feedFailure = (error: TaskError): void => {
+    const now = new Date();
+    if (error.class === "quota_exhausted" || error.class === "rate_limited") {
+      applySignalToPool(
+        db,
+        poolKey,
+        poolId,
+        {
+          kind: "hard_error",
+          raw_excerpt: error.detail.slice(0, 500),
+          observed_at: now.toISOString(),
+          task_id: req.taskId,
+        },
+        now
+      );
+    } else if (error.class === "model_downgraded") {
+      applySignalToPool(
+        db,
+        poolKey,
+        poolId,
+        {
+          kind: "model_downgraded",
+          raw_excerpt: error.detail.slice(0, 500),
+          observed_at: now.toISOString(),
+          task_id: req.taskId,
+        },
+        now
+      );
+    }
+    if (error.class === "provider_ui_changed") {
+      recordAdapterUiFailure(db, manifest.adapter_id, manifest.adapter_version, now);
+    }
+  };
   const failTerminal = (error: TaskError): RunOutcome => {
     const current = getTask(db, req.taskId);
     if (current && TERMINAL.includes(current.status)) {
       return { kind: "terminal", status: current.status as "failed" };
     }
+    feedFailure(error);
     updateAttempt(db, req.taskId, attempt.attempt_no, {
       ended_at: new Date().toISOString(),
       outcome: "failed",
@@ -233,16 +274,7 @@ export async function runAttempt(deps: WorkerDeps, req: RunRequest): Promise<Run
       }
       case "quota.signal": {
         const key = `${manifest.provider}:${req.accountId}:${event.pool_id}`;
-        const existing = getQuotaPool(db, key);
-        const mapped =
-          event.signal.kind === "hard_error"
-            ? "exhausted"
-            : event.signal.kind === "limit_banner" ||
-                event.signal.kind === "slow_mode" ||
-                event.signal.kind === "model_downgraded"
-              ? "degraded"
-              : (existing?.state ?? "unknown");
-        recordQuotaSignal(db, key, event.pool_id, event.signal, mapped);
+        applySignalToPool(db, key, event.pool_id, event.signal, new Date());
         return null;
       }
       case "model.observed": {
@@ -252,7 +284,7 @@ export async function runAttempt(deps: WorkerDeps, req: RunRequest): Promise<Run
           (requestedModelClass === "reasoning" || requestedModelClass === "deep") &&
           event.model !== requestedModelClass
         ) {
-          recordQuotaSignal(
+          applySignalToPool(
             db,
             poolKey,
             poolId,
@@ -262,7 +294,7 @@ export async function runAttempt(deps: WorkerDeps, req: RunRequest): Promise<Run
               observed_at: new Date().toISOString(),
               task_id: req.taskId,
             },
-            "degraded"
+            new Date()
           );
         }
         return null;
@@ -288,6 +320,13 @@ export async function runAttempt(deps: WorkerDeps, req: RunRequest): Promise<Run
           ended_at: new Date().toISOString(),
           outcome: event.outcome,
         });
+        // §A4 — a completed real task is the one trustworthy recovery signal:
+        // pool → available + cooldown rung reset, local-use counted against
+        // the soft budget, and the ui_drift consecutive counter reset.
+        const now = new Date();
+        recordPoolSuccess(db, poolKey, now);
+        recordLocalUse(db, poolKey, now);
+        recordAdapterSuccess(db, manifest.adapter_id, manifest.adapter_version, now);
         const status = event.outcome === "success" ? "completed" : "partial";
         setStatus(status, {
           completedAt: new Date().toISOString(),
@@ -343,6 +382,16 @@ export async function runAttempt(deps: WorkerDeps, req: RunRequest): Promise<Run
     });
   };
 
+  // P4 — a terminally failed attempt is the §A2 hop: the router re-checks
+  // policy on a fresh snapshot and either re-queues the task onto the next
+  // candidate's lane or stops (task stays failed).
+  const maybeRequeue = (outcome: RunOutcome): RunOutcome => {
+    if (outcome.kind === "terminal" && outcome.status === "failed" && deps.dispatch) {
+      requeueAfterFailure(deps.dispatch, req.taskId);
+    }
+    return outcome;
+  };
+
   try {
     const outcome = await consume(req.adapter.execute(task, ctx));
     const final =
@@ -359,22 +408,24 @@ export async function runAttempt(deps: WorkerDeps, req: RunRequest): Promise<Run
       });
     // The watchdog stays armed across detach (D11: watch polls heartbeat it).
     if (final.kind === "terminal") deps.supervisor?.releaseAttempt(req.taskId);
-    return final;
+    return maybeRequeue(final);
   } catch (err) {
     deps.supervisor?.releaseAttempt(req.taskId);
     const detail = err instanceof Error ? err.message : String(err);
     if (ctx.attempt.submission_state === "sent_unconfirmed") {
-      return failTerminal(submissionAmbiguousError(detail));
+      return maybeRequeue(failTerminal(submissionAmbiguousError(detail)));
     }
-    return failTerminal({
-      class: "provider_error",
-      scope: "task",
-      retryable: true,
-      fallback_eligible: true,
-      cooldown_s: null,
-      user_action: null,
-      detail,
-      evidence_ref: null,
-    });
+    return maybeRequeue(
+      failTerminal({
+        class: "provider_error",
+        scope: "task",
+        retryable: true,
+        fallback_eligible: true,
+        cooldown_s: null,
+        user_action: null,
+        detail,
+        evidence_ref: null,
+      })
+    );
   }
 }
