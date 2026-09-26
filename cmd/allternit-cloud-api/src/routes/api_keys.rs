@@ -4,6 +4,9 @@
 //! - `GET /api/v1/api-keys` — list active keys for the authenticated user.
 //! - `POST /api/v1/api-keys` — create a new scoped key.
 //! - `DELETE /api/v1/api-keys/:id` — revoke a key.
+//!
+//! Keys are tied to the user's subscription tier, with monthly quota tracking
+//! and enforcement at inference time.
 
 use axum::{
     extract::{Path, State},
@@ -29,6 +32,12 @@ pub struct ApiKeyResponse {
     pub name: String,
     pub prefix: String,
     pub scopes: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subscription_tier: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monthly_quota_usd: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage_this_period_usd: Option<f64>,
     pub created_at: String,
     pub last_used_at: Option<String>,
     pub revoked_at: Option<String>,
@@ -69,12 +78,40 @@ async fn list_api_keys(
 /// Token minting stays Clerk-session-gated on purpose: an `allternit_*` API
 /// token must not be able to mint further tokens (no privilege escalation),
 /// and the organization binding comes from the Clerk claims.
+///
+/// Keys are automatically scoped to the user's subscription tier with
+/// appropriate monthly quota limits.
 async fn create_api_key(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
     Json(body): Json<CreateApiKeyRequest>,
 ) -> Result<Json<CreateApiKeyResponse>, ApiError> {
     let user = clerk::user_from_headers(&headers).await?;
+
+    // Fetch active subscription to determine tier and quota
+    let subscription_row: Option<(String, String)> = sqlx::query_as(
+        r#"
+        SELECT plan_id, plan_tier
+        FROM billing_subscriptions
+        WHERE user_id = $1 AND status IN ('active', 'trialing')
+        ORDER BY updated_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(&user.id)
+    .fetch_optional(&state.db)
+    .await?;
+
+    let (subscription_tier, monthly_quota_usd) = match subscription_row {
+        Some((plan_id, plan_tier)) => {
+            let quota = services::api_keys::get_quota_for_plan(&plan_id);
+            (Some(plan_tier), Some(quota))
+        }
+        None => {
+            // Free tier: $5/month quota
+            (Some("free".to_string()), Some(services::api_keys::QUOTA_FREE))
+        }
+    };
 
     let created = services::api_keys::create_api_key(
         &state.db,
@@ -83,6 +120,8 @@ async fn create_api_key(
             organization_id: user.organization_id,
             name: body.name,
             scopes: body.scopes,
+            subscription_tier,
+            monthly_quota_usd,
         },
     )
     .await?;
@@ -99,6 +138,8 @@ async fn create_api_key(
                 "name": created.key.name,
                 "prefix": created.key.prefix,
                 "scopes": created.key.scopes,
+                "subscription_tier": created.key.subscription_tier,
+                "monthly_quota_usd": created.key.monthly_quota_usd,
             })),
             success: true,
         },
@@ -139,6 +180,9 @@ fn into_response(key: services::api_keys::ApiKey) -> ApiKeyResponse {
         name: key.name,
         prefix: key.prefix,
         scopes: key.scopes,
+        subscription_tier: key.subscription_tier,
+        monthly_quota_usd: key.monthly_quota_usd,
+        usage_this_period_usd: key.usage_this_period_usd,
         created_at: key.created_at.to_rfc3339(),
         last_used_at: key.last_used_at.map(|t| t.to_rfc3339()),
         revoked_at: key.revoked_at.map(|t| t.to_rfc3339()),

@@ -329,6 +329,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
             state.clone(),
             auth::middleware::auth_middleware,
         ))
+        .layer(axum_middleware::from_fn_with_state(
+            state.clone(),
+            crate::middleware::quota::quota_middleware,
+        ))
         .with_state(state.clone());
 
     // Create public routes (no auth required)
@@ -465,6 +469,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .layer(axum_middleware::from_fn_with_state(
             state.clone(),
             auth::middleware::auth_middleware,
+        ))
+        .layer(axum_middleware::from_fn_with_state(
+            state.clone(),
+            crate::middleware::quota::quota_middleware,
         ))
         .with_state(state.clone());
 

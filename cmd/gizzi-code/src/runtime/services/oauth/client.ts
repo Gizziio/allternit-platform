@@ -29,6 +29,7 @@ import type {
   OAuthTokenExchangeResponse,
   OAuthTokens,
   RateLimitTier,
+  SubscriptionQuota,
   SubscriptionType,
   UserRolesResponse,
 } from './types.js'
@@ -348,6 +349,7 @@ export async function fetchProfileInfo(accessToken: string): Promise<{
   billingType: BillingType | null
   accountCreatedAt?: string
   subscriptionCreatedAt?: string
+  allternitSubscription?: SubscriptionQuota
   rawProfile?: OAuthProfileResponse
 }> {
   const profile = await getOauthProfileFromOauthToken(accessToken)
@@ -382,6 +384,7 @@ export async function fetchProfileInfo(accessToken: string): Promise<{
     billingType: BillingType | null
     accountCreatedAt?: string
     subscriptionCreatedAt?: string
+    allternitSubscription?: SubscriptionQuota
   } = {
     subscriptionType,
     rateLimitTier: (profile as any)?.organization?.rate_limit_tier ?? null,
@@ -400,6 +403,17 @@ export async function fetchProfileInfo(accessToken: string): Promise<{
 
   if (profile?.organization?.subscription_created_at) {
     result.subscriptionCreatedAt = profile.organization.subscription_created_at
+  }
+
+  // Extract Allternit Cloud subscription quota if present
+  if (profile?.allternit_subscription) {
+    result.allternitSubscription = {
+      planId: profile.allternit_subscription.plan_id,
+      planTier: profile.allternit_subscription.plan_tier,
+      monthlyQuotaUsd: profile.allternit_subscription.monthly_quota_usd,
+      usageThisPeriodUsd: profile.allternit_subscription.usage_this_period_usd,
+      status: profile.allternit_subscription.status,
+    }
   }
 
   logEvent('tengu_oauth_profile_fetch_success', {})

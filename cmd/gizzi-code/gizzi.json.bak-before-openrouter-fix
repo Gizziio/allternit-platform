@@ -1,4 +1,4 @@
 {
   "$schema": "https://docs.gizziio.com/config.json",
-  "model": "openrouter/~deepseek/deepseek-flash-latest"
+  "model": "moonshotai/kimi-k2-thinking"
 }

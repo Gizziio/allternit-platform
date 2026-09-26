@@ -16,4 +16,14 @@ export type BillingType =
   | 'google_play_subscription'
   | string
 
+// Mirror of SubscriptionQuota in src/runtime/services/oauth/types.ts — the
+// plan + remaining compute payload from GET /api/v1/me/usage.
+export interface SubscriptionQuota {
+  planId: string
+  planTier: string
+  monthlyQuotaUsd: number
+  usageThisPeriodUsd: number
+  status: string
+}
+
 export default types_ts

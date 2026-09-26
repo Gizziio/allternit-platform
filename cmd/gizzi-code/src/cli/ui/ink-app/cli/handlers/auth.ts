@@ -263,6 +263,30 @@ export async function authStatus(opts: {
     authMethod = 'claude.ai'
   }
 
+  // Fetch Allternit Cloud subscription quota if available
+  let allternitSubscription: {
+    planId: string
+    planTier: string
+    monthlyQuotaUsd: number
+    usageThisPeriodUsd: number
+    status: string
+  } | null = null
+  if (loggedIn && !using3P) {
+    try {
+      const { getClaudeAIOAuthTokensAsync } = await import('../../utils/auth')
+      const tokens = await getClaudeAIOAuthTokensAsync()
+      if (tokens?.accessToken) {
+        const { fetchAllternitSubscriptionQuota } = await import(
+          '../../services/oauth/allternitQuota'
+        )
+        allternitSubscription =
+          await fetchAllternitSubscriptionQuota(tokens.accessToken)
+      }
+    } catch {
+      // Quota fetch is best-effort; auth status must not fail because of it.
+    }
+  }
+
   if (opts.text) {
     const properties = [
       ...buildAccountProperties(),
@@ -288,6 +312,14 @@ export async function authStatus(opts: {
     }
     if (!hasAuthProperty && hasApiKeyEnvVar) {
       process.stdout.write('API key: ANTHROPIC_API_KEY\n')
+    }
+    if (allternitSubscription) {
+      process.stdout.write(
+        `Subscription: ${allternitSubscription.planId} (${allternitSubscription.planTier})\n`,
+      )
+      process.stdout.write(
+        `Quota: $${allternitSubscription.usageThisPeriodUsd.toFixed(2)} / $${allternitSubscription.monthlyQuotaUsd.toFixed(2)} this period\n`,
+      )
     }
     if (!loggedIn) {
       process.stdout.write(
@@ -315,6 +347,13 @@ export async function authStatus(opts: {
       output.orgId = oauthAccount?.organizationUuid ?? null
       output.orgName = oauthAccount?.organizationName ?? null
       output.subscriptionType = subscriptionType ?? null
+    }
+    if (allternitSubscription) {
+      output.subscriptionPlan = allternitSubscription.planId
+      output.subscriptionTier = allternitSubscription.planTier
+      output.subscriptionStatus = allternitSubscription.status
+      output.quotaUsedUsd = allternitSubscription.usageThisPeriodUsd
+      output.quotaLimitUsd = allternitSubscription.monthlyQuotaUsd
     }
 
     process.stdout.write(jsonStringify(output, null, 2) + '\n')

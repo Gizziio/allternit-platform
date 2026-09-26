@@ -3,6 +3,9 @@
 //! API keys are long-lived credentials that authenticate programmatic access to
 //! the Allternit Cloud API. The full token is returned exactly once when the key
 //! is created; afterwards only a one-way hash is stored.
+//!
+//! Keys are tied to the user's subscription tier, with monthly quota tracking
+//! and enforcement at inference time.
 
 use chrono::{DateTime, Utc};
 use rand::RngCore;
@@ -15,6 +18,22 @@ use crate::error::ApiError;
 const TOKEN_PREFIX: &str = "alt_";
 const TOKEN_ENTROPY_BYTES: usize = 32;
 
+/// Subscription tiers with associated quotas.
+pub const QUOTA_FREE: f64 = 5.0;
+pub const QUOTA_PLUS: f64 = 22.0;
+pub const QUOTA_SUPER: f64 = 110.0;
+pub const QUOTA_ULTRA: f64 = 220.0;
+
+/// Get quota for a subscription plan ID.
+pub fn get_quota_for_plan(plan_id: &str) -> f64 {
+    match plan_id {
+        "plus" => QUOTA_PLUS,
+        "super" => QUOTA_SUPER,
+        "ultra" => QUOTA_ULTRA,
+        _ => QUOTA_FREE,
+    }
+}
+
 /// A key as returned to the owner (no hash exposed).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiKey {
@@ -24,6 +43,12 @@ pub struct ApiKey {
     pub name: String,
     pub prefix: String,
     pub scopes: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subscription_tier: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monthly_quota_usd: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage_this_period_usd: Option<f64>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub revoked_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -45,6 +70,9 @@ struct ApiKeyRow {
     name: String,
     prefix: String,
     scopes: Vec<String>,
+    subscription_tier: Option<String>,
+    monthly_quota_usd: Option<f64>,
+    usage_this_period_usd: Option<f64>,
     last_used_at: Option<DateTime<Utc>>,
     revoked_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
@@ -56,6 +84,10 @@ pub struct CreateApiKeyInput {
     pub organization_id: Option<String>,
     pub name: String,
     pub scopes: Vec<String>,
+    /// Subscription tier at key creation time
+    pub subscription_tier: Option<String>,
+    /// Monthly quota in USD for this key
+    pub monthly_quota_usd: Option<f64>,
 }
 
 pub(crate) fn hash_token(token: &str) -> String {
@@ -94,7 +126,9 @@ fn normalize_scopes(scopes: Vec<String>) -> Vec<String> {
 pub async fn list_api_keys(db: &PgPool, user_id: &str) -> Result<Vec<ApiKey>, ApiError> {
     let rows = sqlx::query_as::<_, ApiKeyRow>(
         r#"
-        SELECT id, user_id, organization_id, name, prefix, scopes, last_used_at, revoked_at, created_at
+        SELECT id, user_id, organization_id, name, prefix, scopes,
+               subscription_tier, monthly_quota_usd, usage_this_period_usd,
+               last_used_at, revoked_at, created_at
         FROM api_keys
         WHERE user_id = $1 AND revoked_at IS NULL
         ORDER BY created_at DESC
@@ -124,9 +158,12 @@ pub async fn create_api_key(
 
     let row = sqlx::query_as::<_, ApiKeyRow>(
         r#"
-        INSERT INTO api_keys (id, user_id, organization_id, name, token_hash, prefix, scopes)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id, user_id, organization_id, name, prefix, scopes, last_used_at, revoked_at, created_at
+        INSERT INTO api_keys (id, user_id, organization_id, name, token_hash, prefix, scopes,
+                             subscription_tier, monthly_quota_usd, usage_this_period_usd)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+        RETURNING id, user_id, organization_id, name, prefix, scopes,
+                  subscription_tier, monthly_quota_usd, usage_this_period_usd,
+                  last_used_at, revoked_at, created_at
         "#,
     )
     .bind(&id)
@@ -136,6 +173,8 @@ pub async fn create_api_key(
     .bind(&token_hash)
     .bind(&prefix)
     .bind(&scopes)
+    .bind(&input.subscription_tier)
+    .bind(&input.monthly_quota_usd)
     .fetch_one(db)
     .await?;
 
@@ -178,7 +217,9 @@ pub async fn authenticate_api_key(
         UPDATE api_keys
         SET last_used_at = NOW(), updated_at = NOW()
         WHERE token_hash = $1 AND revoked_at IS NULL
-        RETURNING id, user_id, organization_id, name, prefix, scopes, last_used_at, revoked_at, created_at
+        RETURNING id, user_id, organization_id, name, prefix, scopes,
+                  subscription_tier, monthly_quota_usd, usage_this_period_usd,
+                  last_used_at, revoked_at, created_at
         "#,
     )
     .bind(&token_hash)
@@ -186,6 +227,47 @@ pub async fn authenticate_api_key(
     .await?;
 
     Ok(row.map(into_api_key))
+}
+
+/// Record usage against an API key's quota.
+pub async fn record_usage(
+    db: &PgPool,
+    key_id: &str,
+    amount_usd: f64,
+) -> Result<(), ApiError> {
+    sqlx::query(
+        r#"
+        UPDATE api_keys
+        SET usage_this_period_usd = usage_this_period_usd + $2,
+            updated_at = NOW()
+        WHERE id = $1
+        "#,
+    )
+    .bind(key_id)
+    .bind(amount_usd)
+    .execute(db)
+    .await?;
+
+    Ok(())
+}
+
+/// Check if an API key has exceeded its quota.
+pub async fn check_quota_exceeded(db: &PgPool, key_id: &str) -> Result<bool, ApiError> {
+    let row: Option<(Option<f64>, Option<f64>)> = sqlx::query_as(
+        r#"
+        SELECT monthly_quota_usd, usage_this_period_usd
+        FROM api_keys
+        WHERE id = $1
+        "#,
+    )
+    .bind(key_id)
+    .fetch_optional(db)
+    .await?;
+
+    match row {
+        Some((Some(quota), Some(usage))) => Ok(usage >= quota),
+        _ => Ok(false), // No quota set = unlimited
+    }
 }
 
 fn into_api_key(row: ApiKeyRow) -> ApiKey {
@@ -196,6 +278,9 @@ fn into_api_key(row: ApiKeyRow) -> ApiKey {
         name: row.name,
         prefix: row.prefix,
         scopes: row.scopes,
+        subscription_tier: row.subscription_tier,
+        monthly_quota_usd: row.monthly_quota_usd,
+        usage_this_period_usd: row.usage_this_period_usd,
         last_used_at: row.last_used_at,
         revoked_at: row.revoked_at,
         created_at: row.created_at,
@@ -235,5 +320,14 @@ mod tests {
             normalize_scopes(vec!["".to_string(), "  ".to_string()]),
             vec!["compute"]
         );
+    }
+
+    #[test]
+    fn quota_for_plan_returns_expected_values() {
+        assert_eq!(get_quota_for_plan("free"), QUOTA_FREE);
+        assert_eq!(get_quota_for_plan("plus"), QUOTA_PLUS);
+        assert_eq!(get_quota_for_plan("super"), QUOTA_SUPER);
+        assert_eq!(get_quota_for_plan("ultra"), QUOTA_ULTRA);
+        assert_eq!(get_quota_for_plan("unknown"), QUOTA_FREE);
     }
 }

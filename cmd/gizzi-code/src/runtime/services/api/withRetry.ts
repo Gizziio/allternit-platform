@@ -320,6 +320,12 @@ export async function* withRetry<T>(
         throw new CannotRetryError(error, retryContext)
       }
 
+      // Quota exceeded (402) is terminal — fail fast with the upgrade prompt
+      // instead of retrying or falling into the backoff loop.
+      if (error instanceof APIError && isQuotaExceededError(error)) {
+        throw new CannotRetryError(error, retryContext)
+      }
+
       if (error instanceof APIError) {
         const overflowData = parseMaxTokensContextOverflowError(error)
         if (overflowData) {
@@ -542,8 +548,28 @@ function isOAuthTokenRevokedError(error: unknown): boolean {
   )
 }
 
+/**
+ * Allternit Cloud returns 402 Payment Required when the caller's monthly
+ * subscription quota is spent. This is terminal for the billing period —
+ * the user must upgrade or wait for the reset.
+ */
+function isQuotaExceededError(error: APIError): boolean {
+  return (
+    error.status === 402 &&
+    (error.message?.includes('quota') ??
+      error.message?.includes('upgrade') ??
+      false)
+  )
+}
+
 function shouldRetry(error: APIError): boolean {
   if (isMockRateLimitError(error)) {
+    return false
+  }
+
+  // Quota exceeded is terminal — no retry will fix a spent monthly limit.
+  // Surface the upgrade prompt instead of hammering the endpoint.
+  if (isQuotaExceededError(error)) {
     return false
   }
 

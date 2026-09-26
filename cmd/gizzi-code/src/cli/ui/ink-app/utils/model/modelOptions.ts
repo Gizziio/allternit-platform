@@ -47,12 +47,12 @@ export type ModelOption = {
 }
 
 /**
- * Build /model picker entries from gizzi.json's local "provider" section
+ * Build /model picker entries from gizzi.json's "provider" section
  * (e.g. ~/.config/gizzi-code/gizzi.json) — same file and read pattern as
  * getRuntimeConfigModel() in model.ts, kept synchronous since this runs in
- * a render path. Covers every model on every locally-configured provider
- * (local-mlx, muse-glimmer, maple-preview, or any future local/custom
- * provider a user adds), not just the currently-active one.
+ * a render path. Covers local servers (auth_type none) and configured
+ * api_key/bearer cloud providers (e.g. Allternit Cloud), not just the
+ * currently-active one.
  */
 function getLocalModelOptions(): ModelOption[] {
   try {
@@ -63,14 +63,20 @@ function getLocalModelOptions(): ModelOption[] {
     const parsed = JSON.parse(raw)
     const options: ModelOption[] = []
     for (const [providerID, provider] of Object.entries<any>(parsed.provider ?? {})) {
-      if (provider?.auth_type !== 'none') continue // local/custom servers only, not api-key providers
+      // Include local servers AND configured API/cloud providers (e.g. Allternit
+      // Cloud). Skipping api_key left /model empty whenever Discovery.prefetch
+      // had not finished yet.
+      const authType = provider?.auth_type ?? 'none'
+      if (authType !== 'none' && authType !== 'api_key' && authType !== 'bearer') continue
+      const isLocal = authType === 'none'
+      const tag = isLocal ? 'local' : (providerID === 'allternit' ? 'Cloud' : 'API')
       for (const [modelKey, model] of Object.entries<any>(provider.models ?? {})) {
         const value = `${providerID}/${model?.id ?? modelKey}`
         options.push({
           value,
-          label: model?.name ?? modelKey,
-          description: `${provider.name ?? providerID} · local`,
-          descriptionForModel: `${model?.name ?? modelKey} — locally hosted via ${provider.name ?? providerID}`,
+          label: isLocal ? (model?.name ?? modelKey) : `${tag} · ${model?.name ?? modelKey}`,
+          description: `${provider.name ?? providerID} · ${isLocal ? 'local' : tag}`,
+          descriptionForModel: `${model?.name ?? modelKey} — ${isLocal ? 'locally hosted via' : 'via'} ${provider.name ?? providerID}`,
         })
       }
     }

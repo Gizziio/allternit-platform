@@ -94,6 +94,15 @@ export interface UserRolesResponse {
 // Rate limiting
 export type RateLimitTier = 'free' | 'pro' | 'enterprise'
 
+// Subscription quota info from the cloud API
+export interface SubscriptionQuota {
+  planId: string
+  planTier: string
+  monthlyQuotaUsd: number
+  usageThisPeriodUsd: number
+  status: string
+}
+
 // Profile response
 export interface OAuthProfileResponse {
   id: string
@@ -115,5 +124,13 @@ export interface OAuthProfileResponse {
     has_extra_usage_enabled?: boolean
     billing_type?: BillingType
     subscription_created_at?: string
+  }
+  // Allternit Cloud subscription quota (snake_case, from /api/v1/me/usage)
+  allternit_subscription?: {
+    plan_id: string
+    plan_tier: string
+    monthly_quota_usd: number
+    usage_this_period_usd: number
+    status: string
   }
 }
