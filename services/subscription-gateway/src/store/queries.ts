@@ -4,8 +4,13 @@ import { randomUUID } from "node:crypto";
 import type {
   Account,
   Artifact,
+  QuotaPool,
+  QuotaSignal,
+  SubmissionState,
   Task,
   TaskAttempt,
+  TaskError,
+  TaskResult,
   TaskStatus,
 } from "@allternit/subscription-fabric-contracts";
 import type { Db } from "./db.js";
@@ -195,19 +200,28 @@ export function updateTaskStatus(
   db: Db,
   taskId: string,
   status: TaskStatus,
-  options: { statusDetail?: string | null; completedAt?: string | null } = {}
+  options: {
+    statusDetail?: string | null;
+    completedAt?: string | null;
+    result?: TaskResult | null;
+    error?: TaskError | null;
+  } = {}
 ): void {
   db.prepare(
     `UPDATE tasks
      SET status = ?,
          status_detail = COALESCE(?, status_detail),
          completed_at = COALESCE(?, completed_at),
+         result = COALESCE(?, result),
+         error = COALESCE(?, error),
          updated_at = ?
      WHERE task_id = ?`
   ).run(
     status,
     options.statusDetail ?? null,
     options.completedAt ?? null,
+    options.result !== undefined ? JSON.stringify(options.result) : null,
+    options.error !== undefined ? JSON.stringify(options.error) : null,
     new Date().toISOString(),
     taskId
   );
@@ -519,4 +533,238 @@ export function getArtifact(db: Db, artifactId: string): Artifact | null {
     .prepare("SELECT * FROM artifacts WHERE artifact_id = ?")
     .get(artifactId) as ArtifactRow | undefined;
   return row ? artifactFromRow(row) : null;
+}
+
+export function insertArtifact(db: Db, artifact: Artifact): void {
+  db.prepare(
+    `INSERT INTO artifacts (
+      artifact_id, type, mime_type, format, title, task_id, attempt_no,
+      capability, provider, account_id, adapter_id, adapter_version,
+      provider_artifact_id, provider_url, provider_url_expires_at,
+      thread_id, project_id, bot_id, retrieval_state, local_path, sha256,
+      size_bytes, local_preview_path, version, parent_artifact_id,
+      editable_via, export_formats, trust, sensitivity, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    artifact.artifact_id,
+    artifact.type,
+    artifact.mime_type,
+    artifact.format,
+    artifact.title,
+    artifact.source.task_id,
+    artifact.source.attempt_no,
+    artifact.source.capability,
+    artifact.source.provider,
+    artifact.source.account_id,
+    artifact.source.adapter_id,
+    artifact.source.adapter_version,
+    artifact.source.provider_artifact_id,
+    artifact.source.provider_url,
+    artifact.source.provider_url_expires_at,
+    artifact.context.thread_id,
+    artifact.context.project_id,
+    artifact.context.bot_id,
+    artifact.storage.retrieval_state,
+    artifact.storage.local_path,
+    artifact.storage.sha256,
+    artifact.storage.size_bytes,
+    artifact.storage.local_preview_path,
+    artifact.lineage.version,
+    artifact.lineage.parent_artifact_id,
+    JSON.stringify(artifact.capabilities.editable_via),
+    JSON.stringify(artifact.capabilities.export_formats),
+    artifact.trust,
+    artifact.sensitivity,
+    artifact.created_at
+  );
+}
+
+// §A6.6 — the byte store only ever moves retrieval_state between
+// downloading/local/failed and fills in the verified storage fields.
+export function updateArtifactStorage(
+  db: Db,
+  artifactId: string,
+  patch: {
+    retrieval_state?: Artifact["storage"]["retrieval_state"];
+    local_path?: string | null;
+    sha256?: string | null;
+    size_bytes?: number | null;
+    mime_type?: string | null;
+    format?: string | null;
+  }
+): void {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  for (const [key, value] of Object.entries(patch)) {
+    sets.push(`${key} = ?`);
+    values.push(value);
+  }
+  if (sets.length === 0) return;
+  db.prepare(`UPDATE artifacts SET ${sets.join(", ")} WHERE artifact_id = ?`).run(
+    ...values,
+    artifactId
+  );
+}
+
+export function listArtifactsForTask(db: Db, taskId: string): Artifact[] {
+  const rows = db
+    .prepare("SELECT * FROM artifacts WHERE task_id = ? ORDER BY created_at ASC")
+    .all(taskId) as ArtifactRow[];
+  return rows.map(artifactFromRow);
+}
+
+// ---------------------------------------------------------------------------
+// attempt mutation + recovery sweep (§A1 two-write, §A2 reconcile)
+// ---------------------------------------------------------------------------
+
+export function updateAttempt(
+  db: Db,
+  taskId: string,
+  attemptNo: number,
+  patch: {
+    submission_state?: SubmissionState;
+    provider_thread_id?: string | null;
+    observed_model?: string | null;
+    ended_at?: string | null;
+    outcome?: TaskAttempt["outcome"];
+    error?: TaskError | null;
+  }
+): void {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  for (const [key, value] of Object.entries(patch)) {
+    sets.push(`${key} = ?`);
+    values.push(
+      key === "error" && value !== null && value !== undefined
+        ? JSON.stringify(value)
+        : value
+    );
+  }
+  if (sets.length === 0) return;
+  db.prepare(
+    `UPDATE task_attempts SET ${sets.join(", ")}
+     WHERE task_id = ? AND attempt_no = ?`
+  ).run(...values, taskId, attemptNo);
+}
+
+// §A8 — every attempt stuck in sent_unconfirmed goes through reconcile()
+// before the queue resumes after a (re)start.
+export function listAttemptsBySubmissionState(
+  db: Db,
+  state: SubmissionState
+): Array<{ task_id: string; attempt: TaskAttempt }> {
+  const rows = db
+    .prepare("SELECT * FROM task_attempts WHERE submission_state = ? ORDER BY started_at ASC")
+    .all(state) as AttemptRow[];
+  return rows.map((row) => ({ task_id: row.task_id, attempt: attemptFromRow(row) }));
+}
+
+// ---------------------------------------------------------------------------
+// quota_pools (§S3) — worker writes signals; the P4 router reads state
+// ---------------------------------------------------------------------------
+
+interface QuotaPoolRow {
+  pool_key: string;
+  pool_id: string;
+  state: string;
+  remaining: number | null;
+  remaining_confidence: string;
+  window: string;
+  reset_at: string | null;
+  reset_at_source: string | null;
+  local_used_in_window: number;
+  local_budget: number | null;
+  cooldown_until: string | null;
+  last_signal: string | null;
+  updated_at: string;
+}
+
+function quotaPoolFromRow(row: QuotaPoolRow): QuotaPool {
+  return {
+    pool_key: row.pool_key,
+    pool_id: row.pool_id,
+    state: row.state as QuotaPool["state"],
+    remaining: row.remaining,
+    remaining_confidence: row.remaining_confidence as QuotaPool["remaining_confidence"],
+    window: JSON.parse(row.window),
+    reset_at: row.reset_at,
+    reset_at_source: row.reset_at_source as QuotaPool["reset_at_source"],
+    local_used_in_window: row.local_used_in_window,
+    local_budget: row.local_budget,
+    cooldown_until: row.cooldown_until,
+    last_signal: row.last_signal ? JSON.parse(row.last_signal) : null,
+    updated_at: row.updated_at,
+  };
+}
+
+export function upsertQuotaPool(db: Db, pool: QuotaPool): void {
+  db.prepare(
+    `INSERT INTO quota_pools (
+      pool_key, pool_id, state, remaining, remaining_confidence, window,
+      reset_at, reset_at_source, local_used_in_window, local_budget,
+      cooldown_until, last_signal, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT (pool_key) DO UPDATE SET
+      state = excluded.state,
+      remaining = excluded.remaining,
+      remaining_confidence = excluded.remaining_confidence,
+      window = excluded.window,
+      reset_at = excluded.reset_at,
+      reset_at_source = excluded.reset_at_source,
+      local_used_in_window = excluded.local_used_in_window,
+      local_budget = excluded.local_budget,
+      cooldown_until = excluded.cooldown_until,
+      last_signal = excluded.last_signal,
+      updated_at = excluded.updated_at`
+  ).run(
+    pool.pool_key,
+    pool.pool_id,
+    pool.state,
+    pool.remaining,
+    pool.remaining_confidence,
+    JSON.stringify(pool.window),
+    pool.reset_at,
+    pool.reset_at_source,
+    pool.local_used_in_window,
+    pool.local_budget,
+    pool.cooldown_until,
+    pool.last_signal ? JSON.stringify(pool.last_signal) : null,
+    pool.updated_at
+  );
+}
+
+export function getQuotaPool(db: Db, poolKey: string): QuotaPool | null {
+  const row = db
+    .prepare("SELECT * FROM quota_pools WHERE pool_key = ?")
+    .get(poolKey) as QuotaPoolRow | undefined;
+  return row ? quotaPoolFromRow(row) : null;
+}
+
+// §A4 minimal worker-side write: record the signal and move state; the full
+// cooldown ladder + circuit breaker are the P4 router's job.
+export function recordQuotaSignal(
+  db: Db,
+  poolKey: string,
+  poolId: string,
+  signal: QuotaSignal,
+  state: QuotaPool["state"]
+): void {
+  const existing = getQuotaPool(db, poolKey);
+  const now = new Date().toISOString();
+  const pool: QuotaPool = existing ?? {
+    pool_key: poolKey,
+    pool_id: poolId,
+    state: "unknown",
+    remaining: null,
+    remaining_confidence: "none",
+    window: { kind: "unknown", seconds: null },
+    reset_at: null,
+    reset_at_source: null,
+    local_used_in_window: 0,
+    local_budget: null,
+    cooldown_until: null,
+    last_signal: null,
+    updated_at: now,
+  };
+  upsertQuotaPool(db, { ...pool, state, last_signal: signal, updated_at: now });
 }
