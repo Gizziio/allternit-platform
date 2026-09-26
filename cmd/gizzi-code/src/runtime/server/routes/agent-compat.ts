@@ -58,7 +58,7 @@ import { SessionSummary } from "@/runtime/session/summary"
 import { Provider } from "@/runtime/providers/provider"
 import { Bus } from "@/shared/bus"
 import { Log } from "@/shared/util/log"
-import { toolFramesForPart } from "./tool-frames"
+import { toolFramesForPart, usageFromMessageInfo } from "./tool-frames"
 
 const log = Log.create({ service: "agent-compat" })
 
@@ -606,7 +606,7 @@ export const AgentCompatRoutes = () =>
         // Latest assistant usage seen on the bus (message.updated carries the
         // full message info incl. tokens) — attached to the finish frame so
         // clients can render an exact tok/s instead of a chars/4 estimate.
-        let lastUsage: { inputTokens: number; outputTokens: number } | undefined
+        let lastUsage: Record<string, number> | undefined
         const finish = (status: "complete" | "error", error?: { error: string; errorDetails?: any }) => ({
           type: "finish",
           messageId: msgID,
@@ -675,13 +675,7 @@ export const AgentCompatRoutes = () =>
             // assistant usage so the finish frame can report real tokens.
             const info = props.info
             if (info?.sessionID !== sessionID || info?.role !== "assistant") return
-            const tokens = info?.tokens
-            if (typeof tokens?.input === "number" || typeof tokens?.output === "number") {
-              lastUsage = {
-                inputTokens: typeof tokens.input === "number" ? tokens.input : 0,
-                outputTokens: typeof tokens.output === "number" ? tokens.output : 0,
-              }
-            }
+            lastUsage = usageFromMessageInfo(info) ?? lastUsage
             return
           }
           const evtSession = typeof props.sessionID === "string" ? props.sessionID : ""

@@ -762,6 +762,35 @@ fn delta_frame(msg_id: &str, part_id: &str, text: &str, reasoning: bool) -> serd
     json!({ "type": "content_block_delta", "messageId": msg_id, "partId": part_id, "delta": delta })
 }
 
+/// Run usage for the finish frame from gizzi's assistant message info:
+/// input/output always when present, plus cached/reasoning tokens and cost
+/// only when the provider reported them (absent ≠ zero for the client).
+fn usage_from_message_info(info: &serde_json::Value) -> Option<serde_json::Value> {
+    let tokens = &info["tokens"];
+    let input = tokens.get("input").and_then(|v| v.as_u64());
+    let output = tokens.get("output").and_then(|v| v.as_u64());
+    if input.is_none() && output.is_none() {
+        return None;
+    }
+    let mut usage = json!({
+        "inputTokens": input.unwrap_or(0),
+        "outputTokens": output.unwrap_or(0),
+    });
+    if let Some(read) = tokens.pointer("/cache/read").and_then(|v| v.as_u64()).filter(|n| *n > 0) {
+        usage["cacheReadTokens"] = json!(read);
+    }
+    if let Some(write) = tokens.pointer("/cache/write").and_then(|v| v.as_u64()).filter(|n| *n > 0) {
+        usage["cacheWriteTokens"] = json!(write);
+    }
+    if let Some(reasoning) = tokens.get("reasoning").and_then(|v| v.as_u64()).filter(|n| *n > 0) {
+        usage["reasoningTokens"] = json!(reasoning);
+    }
+    if let Some(cost) = info.get("cost").and_then(|v| v.as_f64()).filter(|c| *c > 0.0) {
+        usage["cost"] = json!(cost);
+    }
+    Some(usage)
+}
+
 /// What woke the agent-chat bridge: a chunk from gizzi's event stream, or the
 /// concurrently running prompt request finishing.
 enum BridgeNext<C, P> {
@@ -1413,14 +1442,8 @@ async fn agent_chat_bridge(
                         let role = info.get("role").and_then(|v| v.as_str()).unwrap_or("");
                         let info_session = info.get("sessionID").and_then(|v| v.as_str()).unwrap_or("");
                         if role == "assistant" && info_session == session_id {
-                            let tokens = &info["tokens"];
-                            let input = tokens.get("input").and_then(|v| v.as_u64());
-                            let output = tokens.get("output").and_then(|v| v.as_u64());
-                            if input.is_some() || output.is_some() {
-                                last_usage = Some(json!({
-                                    "inputTokens": input.unwrap_or(0),
-                                    "outputTokens": output.unwrap_or(0),
-                                }));
+                            if let Some(usage) = usage_from_message_info(info) {
+                                last_usage = Some(usage);
                             }
                             if turn_error.is_none() {
                                 if let Some(err) = info.get("error") {
@@ -1754,6 +1777,21 @@ async fn body_to_bytes(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn usage_reports_only_what_the_provider_gave() {
+        let full = json!({"tokens": {"input": 1200, "output": 80, "reasoning": 40, "cache": {"read": 900, "write": 0}}, "cost": 0.0042});
+        let u = usage_from_message_info(&full).unwrap();
+        assert_eq!(u["inputTokens"], 1200);
+        assert_eq!(u["cacheReadTokens"], 900);
+        assert_eq!(u["reasoningTokens"], 40);
+        assert_eq!(u["cost"], 0.0042);
+        assert!(u.get("cacheWriteTokens").is_none());
+        let bare = json!({"tokens": {"input": 0, "output": 0}, "cost": 0});
+        let u = usage_from_message_info(&bare).unwrap();
+        assert!(u.get("cost").is_none());
+        assert!(usage_from_message_info(&json!({})).is_none());
+    }
 
     #[test]
     fn tool_frames_one_start_one_end_per_call() {

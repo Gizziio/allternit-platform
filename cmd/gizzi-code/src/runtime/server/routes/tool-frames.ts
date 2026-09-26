@@ -36,3 +36,27 @@ export function toolFramesForPart(
   }
   return frames
 }
+
+/**
+ * Run usage for the finish frame from gizzi's assistant message info.
+ * Input/output whenever present; cached/reasoning tokens and cost only when
+ * the provider reported them, so clients can tell "not reported" from zero.
+ */
+export function usageFromMessageInfo(info: any): Record<string, number> | undefined {
+  const tokens = info?.tokens
+  if (typeof tokens?.input !== "number" && typeof tokens?.output !== "number") return undefined
+  const usage: Record<string, number> = {
+    inputTokens: typeof tokens.input === "number" ? tokens.input : 0,
+    outputTokens: typeof tokens.output === "number" ? tokens.output : 0,
+  }
+  const positive = (n: unknown) => (typeof n === "number" && n > 0 ? n : undefined)
+  const cacheRead = positive(tokens?.cache?.read)
+  const cacheWrite = positive(tokens?.cache?.write)
+  const reasoning = positive(tokens?.reasoning)
+  const cost = positive(info?.cost)
+  if (cacheRead) usage.cacheReadTokens = cacheRead
+  if (cacheWrite) usage.cacheWriteTokens = cacheWrite
+  if (reasoning) usage.reasoningTokens = reasoning
+  if (cost) usage.cost = cost
+  return usage
+}

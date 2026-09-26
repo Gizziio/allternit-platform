@@ -116,3 +116,14 @@ describe("toolFramesForPart (agent-chat bridge)", () => {
     expect(frames[1]).toMatchObject({ toolCallId: "c2", error: "exit 1" })
   })
 })
+
+describe("usageFromMessageInfo", () => {
+  test("reports only what the provider gave", async () => {
+    const { usageFromMessageInfo } = await import("@/runtime/server/routes/tool-frames")
+    expect(usageFromMessageInfo({ tokens: { input: 1200, output: 80, reasoning: 40, cache: { read: 900, write: 0 } }, cost: 0.0042 })).toEqual({
+      inputTokens: 1200, outputTokens: 80, cacheReadTokens: 900, reasoningTokens: 40, cost: 0.0042,
+    })
+    expect(usageFromMessageInfo({ tokens: { input: 0, output: 0 }, cost: 0 })).toEqual({ inputTokens: 0, outputTokens: 0 })
+    expect(usageFromMessageInfo({})).toBeUndefined()
+  })
+})
