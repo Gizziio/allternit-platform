@@ -635,6 +635,19 @@ export const AgentCompatRoutes = () =>
         // partID → type tracking: message.part.updated carries the part type
         // ("reasoning") while deltas don't (v1_routes.rs:793-796).
         const reasoningParts = new Set<string>()
+        // Parts whose type a message.part.updated has declared. Deltas for an
+        // undeclared part wait (in order) for the declaration so an early
+        // reasoning delta never leaks into the reply as text.
+        const knownParts = new Set<string>()
+        let pendingDeltas: Array<{ partID: string; delta: string }> = []
+        const deltaFrame = (partID: string, delta: string) => ({
+          type: "content_block_delta",
+          messageId: msgID,
+          partId: partID,
+          delta: reasoningParts.has(partID)
+            ? { type: "thinking_delta", thinking: delta }
+            : { type: "text_delta", text: delta },
+        })
         // callID → last tool frame sent ("start" | "end"), so each call
         // yields exactly one tool_use start and one result/error.
         const toolFramesSent = new Map<string, "start" | "end">()
@@ -646,6 +659,12 @@ export const AgentCompatRoutes = () =>
             const part = props.part
             if (part?.sessionID !== sessionID) return
             if (part?.type === "reasoning" && typeof part?.id === "string") reasoningParts.add(part.id)
+            if (typeof part?.id === "string" && !knownParts.has(part.id)) {
+              knownParts.add(part.id)
+              const ready = pendingDeltas.filter((d) => d.partID === part.id)
+              pendingDeltas = pendingDeltas.filter((d) => d.partID !== part.id)
+              for (const d of ready) push(deltaFrame(d.partID, d.delta))
+            }
             if (part?.type === "tool") {
               for (const frame of toolFramesForPart(part, msgID, toolFramesSent)) push(frame)
             }
@@ -670,14 +689,9 @@ export const AgentCompatRoutes = () =>
           if (type === "message.part.delta") {
             const partID = typeof props.partID === "string" ? props.partID : "text-1"
             const delta = typeof props.delta === "string" ? props.delta : ""
-            push({
-              type: "content_block_delta",
-              messageId: msgID,
-              partId: partID,
-              delta: reasoningParts.has(partID)
-                ? { type: "thinking_delta", thinking: delta }
-                : { type: "text_delta", text: delta },
-            })
+            if (!delta) return
+            if (!knownParts.has(partID)) pendingDeltas.push({ partID, delta })
+            else push(deltaFrame(partID, delta))
             return
           }
           if (type === "session.status") {
@@ -716,6 +730,11 @@ export const AgentCompatRoutes = () =>
           for (;;) {
             while (queue.length > 0) {
               const frame = queue.shift()
+              if (frame?.type === "finish" && pendingDeltas.length > 0) {
+                // Deltas whose part was never declared can only be reply text.
+                for (const d of pendingDeltas) await write(deltaFrame(d.partID, d.delta))
+                pendingDeltas = []
+              }
               await write(frame)
               if (frame?.type === "finish") return
             }

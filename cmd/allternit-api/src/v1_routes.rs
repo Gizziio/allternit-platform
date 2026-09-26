@@ -751,6 +751,24 @@ async fn settle_chat_run(record: &Option<ChatRunRecord>, success: bool, error: O
     .await;
 }
 
+/// A `content_block_delta` frame: reasoning as a thinking delta (the client's
+/// thought stream), anything else as reply text.
+fn delta_frame(msg_id: &str, part_id: &str, text: &str, reasoning: bool) -> serde_json::Value {
+    let delta = if reasoning {
+        json!({ "type": "thinking_delta", "thinking": text })
+    } else {
+        json!({ "type": "text_delta", "text": text })
+    };
+    json!({ "type": "content_block_delta", "messageId": msg_id, "partId": part_id, "delta": delta })
+}
+
+/// What woke the agent-chat bridge: a chunk from gizzi's event stream, or the
+/// concurrently running prompt request finishing.
+enum BridgeNext<C, P> {
+    Event(Option<C>),
+    Prompt(P),
+}
+
 /// Which frames of a tool call have already been forwarded to the client.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum ToolFrameState {
@@ -1257,40 +1275,24 @@ async fn agent_chat_bridge(
         if let Some(run_id) = run_id_for_messages.as_deref() {
             message_req = message_req.header("x-allternit-run-id", run_id);
         }
-        let _message_resp = match message_req
-            .send()
-            .await
-        {
-            Ok(r) if r.status().is_success() => r,
-            Ok(r) => {
-                let status = r.status();
-                let body = r.text().await.unwrap_or_default();
-                warn!(status = %status, body = %body, "Gizzi message endpoint failed");
-                // Pass the runtime's structured error through so clients can
-                // render targeted UI (e.g. a model picker on
-                // ProviderModelNotFoundError) instead of parsing a string.
-                let details = serde_json::from_str::<serde_json::Value>(&body).ok();
-                settle_chat_run(&chat_run, false, Some(&format!("gizzi message failed ({}): {}", status, body))).await;
-                yield Ok(Event::default().data(json!({
-                    "type": "finish",
-                    "messageId": msg_id,
-                    "status": "error",
-                    "metadata": { "status": "error", "error": format!("gizzi message failed ({}): {}", status, body), "errorDetails": details },
-                }).to_string()));
-                return;
+        // gizzi's message endpoint only returns once the whole turn has run.
+        // Awaiting it before reading the event stream made every provider's
+        // thinking, tool calls and text arrive in one burst at the end, so
+        // it runs concurrently: events are relayed live below while the
+        // prompt is in flight, and a failed prompt still ends the stream
+        // with the runtime's error.
+        let mut message_task = tokio::spawn(async move {
+            match message_req.send().await {
+                Ok(r) if r.status().is_success() => Ok(()),
+                Ok(r) => {
+                    let status = r.status();
+                    let body = r.text().await.unwrap_or_default();
+                    Err((Some(status), body))
+                }
+                Err(e) => Err((None, e.to_string())),
             }
-            Err(e) => {
-                warn!("Failed to send message to gizzi session: {}", e);
-                settle_chat_run(&chat_run, false, Some(&format!("gizzi unavailable: {}", e))).await;
-                yield Ok(Event::default().data(json!({
-                    "type": "finish",
-                    "messageId": msg_id,
-                    "status": "error",
-                    "metadata": { "status": "error", "error": format!("gizzi unavailable: {}", e) },
-                }).to_string()));
-                return;
-            }
-        };
+        });
+        let mut message_done = false;
 
         // If the message endpoint returned a body with an agent response, ignore
         // it; we rely on the event stream for streaming replies.
@@ -1315,6 +1317,12 @@ async fn agent_chat_bridge(
         // so reasoning streams can be forwarded as thinking deltas instead
         // of being flattened into the visible reply text.
         let mut reasoning_parts = std::collections::HashSet::<String>::new();
+        // Parts whose type has been declared by a `message.part.updated`.
+        // Deltas for an undeclared part are held here (in order) until its
+        // declaration arrives, so an early reasoning delta can never leak
+        // into the reply as text.
+        let mut known_parts = std::collections::HashSet::<String>::new();
+        let mut pending_deltas: Vec<(String, String)> = Vec::new();
         // callID → whether its tool_use start / final frame went out, so each
         // tool call reaches the client as exactly one start and one end.
         let mut tool_frames_sent: HashMap<String, ToolFrameState> = HashMap::new();
@@ -1322,7 +1330,49 @@ async fn agent_chat_bridge(
         // full message info incl. tokens) — attached to the finish frame.
         let mut last_usage: Option<serde_json::Value> = None;
 
-        'event_loop: while let Some(chunk_result) = byte_stream.next().await {
+        'event_loop: loop {
+            // Events first (biased): the prompt task finishing must not
+            // pre-empt frames already waiting on the event stream.
+            let next = tokio::select! {
+                biased;
+                chunk = byte_stream.next() => BridgeNext::Event(chunk),
+                joined = &mut message_task, if !message_done => BridgeNext::Prompt(joined),
+            };
+            let chunk_result = match next {
+                BridgeNext::Event(Some(chunk)) => chunk,
+                BridgeNext::Event(None) => break 'event_loop,
+                BridgeNext::Prompt(joined) => {
+                    message_done = true;
+                    let failure = match joined {
+                        Ok(Ok(())) => None,
+                        Ok(Err(failure)) => Some(failure),
+                        Err(e) => Some((None, format!("prompt task failed: {}", e))),
+                    };
+                    let Some((status, body)) = failure else { continue 'event_loop };
+                    let error = match status {
+                        Some(status) => {
+                            warn!(status = %status, body = %body, "Gizzi message endpoint failed");
+                            format!("gizzi message failed ({}): {}", status, body)
+                        }
+                        None => {
+                            warn!("Failed to send message to gizzi session: {}", body);
+                            format!("gizzi unavailable: {}", body)
+                        }
+                    };
+                    // Pass the runtime's structured error through so clients
+                    // can render targeted UI (e.g. a model picker on
+                    // ProviderModelNotFoundError) instead of parsing a string.
+                    let details = serde_json::from_str::<serde_json::Value>(&body).ok();
+                    settle_chat_run(&chat_run, false, Some(&error)).await;
+                    yield Ok(Event::default().data(json!({
+                        "type": "finish",
+                        "messageId": msg_id,
+                        "status": "error",
+                        "metadata": { "status": "error", "error": error, "errorDetails": details },
+                    }).to_string()));
+                    return;
+                }
+            };
             let chunk = match chunk_result {
                 Ok(b) => b,
                 Err(e) => { warn!("Gizzi stream read error: {}", e); break; }
@@ -1388,6 +1438,22 @@ async fn agent_chat_bridge(
                         let part_id = part.get("id").and_then(|v| v.as_str()).unwrap_or("");
                         if part_type == "reasoning" && !part_id.is_empty() {
                             reasoning_parts.insert(part_id.to_string());
+                        }
+                        if !part_id.is_empty() && known_parts.insert(part_id.to_string()) {
+                            let is_reasoning = part_type == "reasoning";
+                            let (ready, held): (Vec<_>, Vec<_>) =
+                                pending_deltas.drain(..).partition(|(id, _)| id == part_id);
+                            pending_deltas = held;
+                            for (_, delta_text) in ready {
+                                if !is_reasoning {
+                                    saw_text = true;
+                                    reply_text.push_str(&delta_text);
+                                    if reply_text.len() > 2000 {
+                                        reply_text.truncate(2000);
+                                    }
+                                }
+                                yield Ok(Event::default().data(delta_frame(&msg_id, part_id, &delta_text, is_reasoning).to_string()));
+                            }
                         }
                         // A:// §7: gizzi tool executions become lightweight
                         // DAG jobs on the session run (see cowork::dag).
@@ -1474,27 +1540,21 @@ async fn agent_chat_bridge(
                         let delta_text = props.get("delta").and_then(|v| v.as_str()).unwrap_or("");
                         let part_id = props.get("partID").and_then(|v| v.as_str()).unwrap_or("text-1");
 
-                        if reasoning_parts.contains(part_id) {
+                        if delta_text.is_empty() {
+                        } else if !known_parts.contains(part_id) {
+                            // Type not declared yet — hold until it is.
+                            pending_deltas.push((part_id.to_string(), delta_text.to_string()));
+                        } else if reasoning_parts.contains(part_id) {
                             // Reasoning part → thinking delta (the frontend's
                             // thought stream), not visible reply text.
-                            yield Ok(Event::default().data(json!({
-                                "type": "content_block_delta",
-                                "messageId": msg_id,
-                                "partId": part_id,
-                                "delta": { "type": "thinking_delta", "thinking": delta_text },
-                            }).to_string()));
-                        } else if !delta_text.is_empty() {
+                            yield Ok(Event::default().data(delta_frame(&msg_id, part_id, delta_text, true).to_string()));
+                        } else {
                             saw_text = true;
                             reply_text.push_str(&delta_text);
                             if reply_text.len() > 2000 {
                                 reply_text.truncate(2000);
                             }
-                            yield Ok(Event::default().data(json!({
-                                "type": "content_block_delta",
-                                "messageId": msg_id,
-                                "partId": part_id,
-                                "delta": { "type": "text_delta", "text": delta_text },
-                            }).to_string()));
+                            yield Ok(Event::default().data(delta_frame(&msg_id, part_id, delta_text, false).to_string()));
                         }
                     }
                     "session.status" => {
@@ -1601,6 +1661,13 @@ async fn agent_chat_bridge(
                     _ => {}
                 }
             }
+        }
+
+        // Deltas whose part was never declared can only be reply text.
+        for (part_id, delta_text) in pending_deltas.drain(..) {
+            saw_text = true;
+            reply_text.push_str(&delta_text);
+            yield Ok(Event::default().data(delta_frame(&msg_id, &part_id, &delta_text, false).to_string()));
         }
 
         // Turn end: typed Result on the session run + the A-T2 memory grant.
