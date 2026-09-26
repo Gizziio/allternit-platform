@@ -770,3 +770,42 @@ export function updateTaskRoutingDecision(
     `UPDATE tasks SET routing = ?, route_decision = ?, updated_at = ? WHERE task_id = ?`
   ).run(JSON.stringify(routing), JSON.stringify(decision), new Date().toISOString(), taskId);
 }
+
+// ---------------------------------------------------------------------------
+// P4 Phase 2 — route_rejections: every rejected pair of every decision,
+// appended at the same call sites where decisions are persisted.
+// ---------------------------------------------------------------------------
+
+export interface RouteRejectionRow {
+  task_id: string;
+  decision_id: string;
+  adapter_id: string;
+  account_id: string | null;
+  reason: string;
+  created_at: string;
+}
+
+export function recordRouteRejections(
+  db: Db,
+  taskId: string,
+  decision: RouteDecision,
+  now: Date = new Date()
+): void {
+  const stmt = db.prepare(
+    `INSERT INTO route_rejections (task_id, decision_id, adapter_id, account_id, reason, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  );
+  const createdAt = now.toISOString();
+  for (const r of decision.rejected) {
+    stmt.run(taskId, decision.decision_id, r.adapter_id, r.account_id ?? null, r.reason, createdAt);
+  }
+}
+
+export function listRouteRejections(db: Db, limit: number): RouteRejectionRow[] {
+  return db
+    .prepare(
+      `SELECT task_id, decision_id, adapter_id, account_id, reason, created_at
+       FROM route_rejections ORDER BY id DESC LIMIT ?`
+    )
+    .all(limit) as RouteRejectionRow[];
+}

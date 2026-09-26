@@ -38,6 +38,7 @@ const EXPECTED_TABLES = [
   "tokens",
   "quota_pool_meta",
   "adapter_breakers",
+  "route_rejections",
   "migrations",
 ];
 
@@ -108,7 +109,7 @@ describe("migrations", () => {
     const versions = db
       .prepare("SELECT version FROM migrations ORDER BY version")
       .all() as { version: number }[];
-    expect(versions).toEqual([{ version: 1 }, { version: 2 }]);
+    expect(versions).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }]);
     // a task inserted before re-running migrations survives
     insertTask(db, sampleTask());
     runMigrations(db, MIGRATIONS_DIR);

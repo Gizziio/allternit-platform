@@ -17,6 +17,7 @@ import {
   getTask,
   getTaskByIdempotency,
   insertTask,
+  recordRouteRejections,
   updateTaskStatus,
 } from "../store/queries.js";
 import { callerOf, requireScope, type GatewayDeps } from "./server.js";
@@ -107,6 +108,9 @@ export function tasksRouter(deps: GatewayDeps): Router {
       ).task;
     }
     insertTask(deps.db, routedTask);
+    if (routedTask.route_decision) {
+      recordRouteRejections(deps.db, routedTask.task_id, routedTask.route_decision);
+    }
     deps.log.append({
       task_id: routedTask.task_id,
       kind: "task.created",

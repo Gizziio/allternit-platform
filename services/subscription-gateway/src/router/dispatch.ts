@@ -8,7 +8,7 @@ import type { CapabilityRouter, RouteDecision, Task } from "@allternit/subscript
 import type { AdapterRegistry } from "../adapters/registry.js";
 import type { Scheduler } from "../queue/scheduler.js";
 import type { Db } from "../store/db.js";
-import { getTask, updateTaskRoutingDecision, updateTaskStatus } from "../store/queries.js";
+import { getTask, recordRouteRejections, updateTaskRoutingDecision, updateTaskStatus } from "../store/queries.js";
 import { buildSnapshot } from "./snapshot.js";
 
 export interface DispatchDeps {
@@ -55,8 +55,8 @@ export function resolveForNewTask(
 
 // §A2 hop re-check at the worker boundary: the attempt's failure class decides
 // stop vs re-route. A fresh decision is persisted and the task moves to the
-// new primary's lane; with no eligible route it stays queued (unrouted) with
-// the rejected[] list recording why. Returns null when the task vanished.
+// new primary's lane; with no eligible route it stays failed with the
+// rejected[] list recording why. Returns null when the task vanished.
 export function requeueAfterFailure(deps: DispatchDeps, taskId: string): RouteDecision | "stop" | null {
   const task = getTask(deps.db, taskId);
   if (!task) return null;
@@ -75,9 +75,11 @@ export function requeueAfterFailure(deps: DispatchDeps, taskId: string): RouteDe
     // No eligible route: the task stays failed (§A2 primary null → needs_user
     // or failed) with rejected[] recording why — nothing to re-enqueue.
     updateTaskRoutingDecision(deps.db, taskId, routing, outcome);
+    recordRouteRejections(deps.db, taskId, outcome);
     return outcome;
   }
   updateTaskRoutingDecision(deps.db, taskId, routing, outcome);
+  recordRouteRejections(deps.db, taskId, outcome);
   // The worker marked the task failed; a fresh primary puts it back in line.
   updateTaskStatus(deps.db, taskId, "queued");
   deps.scheduler.remove(taskId);
