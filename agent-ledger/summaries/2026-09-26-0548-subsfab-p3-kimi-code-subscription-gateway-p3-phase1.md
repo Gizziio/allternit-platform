@@ -36,3 +36,9 @@ Executed `docs/specs/subscription-fabric/p3/P3_PHASE_1_TASK.md` exactly: Phase 1
 - Desktop binary rebuild skipped: this session touched only `services/subscription-gateway` + its spec docs — nothing the desktop bundles.
 - Phase 2 remaining: real adapter registration, dispatcher draining supervisor-gated lanes, SdkAdapterRuntime attach/probe, real watch-page reconcile ctx, main.ts config→supervisor wiring. `artifacts/preview.ts` still unbuilt (not in this phase's deliverables).
 - Reconcile ctx in Phase 1 tests is a dummy ExecutionContext (fake adapter ignores it); missing makeCtx/adapter/reconcile is treated as ambiguous per spec.
+
+## Final-state evidence (post-cleanup)
+
+- Worktree `allternit-session-subsfab-p3` removed (node_modules/dist cleaned first); `session/subsfab-p3` deleted local + remote; `git worktree list` / `git branch` / `ls-remote` confirm zero subsfab-p3 residue.
+- Shared checkout on `main`, `main == origin/main`; PR #747 merge `4eb92f26d` and this attestation are ancestors of HEAD.
+- `scripts/git-discipline-check.sh` output at session end: **FAIL — working tree is not clean**, exclusively on `surfaces/allternit-desktop/**` and `surfaces/allternit-extensions/allternit-office-addin/**` modifications belonging to the concurrently active session/gizzi-tui-parity (its live worktree holds that in-flight work). Per the worktree-ownership commandment these were left untouched. No subsfab-p3 files, branches, or worktrees remain.
