@@ -32,18 +32,23 @@ export function ToolUseCard({
 
   let stateLabel: string
   let stateColor: string
+  let stateGlyph: string
   if (isError) {
     stateLabel = 'error'
     stateColor = 'red'
+    stateGlyph = '●'
   } else if (isResolved) {
     stateLabel = 'done'
     stateColor = 'green'
+    stateGlyph = '●'
   } else if (isQueued) {
     stateLabel = 'queued'
     stateColor = 'yellow'
+    stateGlyph = '◌'
   } else {
     stateLabel = 'running'
     stateColor = 'gizzi'
+    stateGlyph = '●'
   }
 
   return (
@@ -59,7 +64,9 @@ export function ToolUseCard({
         <Text bold={true} wrap="truncate">
           {toolName}
         </Text>
-        <Text color={stateColor}>{stateLabel}</Text>
+        <Text color={stateColor} bold={!isResolved && !isError} dimColor={isQueued}>
+          {stateGlyph} {stateLabel}
+        </Text>
       </Box>
       {backgroundTask && (
         <Text dimColor wrap="truncate">
