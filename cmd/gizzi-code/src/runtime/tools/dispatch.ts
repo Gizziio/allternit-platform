@@ -91,9 +91,11 @@ export namespace ToolDispatcher {
       args = hookRes.modifiedPayload.args ?? hookRes.modifiedPayload;
     }
 
-    // 1b. Settings.json hooks (PreToolUse) — Claude-Code-style command hooks
-    // from settings files, bridged onto the runtime path. A deny gates the
-    // tool call with the same structured denial as the gizzi-config hooks.
+    // 1b. Settings.json hooks (PreToolUse) — Claude-Code-style command/http
+    // hooks from settings files, bridged onto the runtime path. A deny gates
+    // the tool call with the same structured denial as the gizzi-config
+    // hooks; updatedInput replaces the args (ink-app replace semantics);
+    // "ask" routes through the normal PermissionNext prompt via ctx.ask.
     const settingsPre = await SettingsHooksBridge.runToolEvent("PreToolUse", {
       sessionId,
       cwd: hookCwd(),
@@ -121,6 +123,46 @@ export namespace ToolDispatcher {
         error: settingsPre.reason ?? "denied by settings hook",
       });
       return denied
+    }
+
+    if (settingsPre.updatedInput) {
+      log.info("Settings hook rewrote tool input", { toolId: toolID, keys: Object.keys(settingsPre.updatedInput) });
+      args = settingsPre.updatedInput;
+    }
+
+    if (settingsPre.decision === "ask") {
+      // Force the normal downstream permission prompt: same ctx.ask flow the
+      // tool itself would trigger. A rejection lands as the same structured
+      // denial as a hook deny — never silently allowed.
+      try {
+        await ctx.ask({
+          permission: toolID,
+          patterns: SettingsHooksBridge.deriveAskPatterns(args),
+          metadata: { settingsHookAsk: true, reason: settingsPre.reason },
+        } as any);
+      } catch (askError) {
+        const reason = askError instanceof Error ? askError.message : String(askError);
+        log.warn("Tool usage denied at settings-hook-forced permission prompt", { toolId: toolID, reason });
+        const denied = {
+          title: "Access Denied",
+          output: `Tool usage was denied at the permission prompt: ${reason || "No reason provided."}`,
+          metadata: { denied: true }
+        } as T;
+        await HookDispatcher.emit({
+          name: "PostToolUseFailure",
+          timestamp: Date.now(),
+          sessionId,
+          payload: { tool: toolID, args, reason, blocked: true },
+        })
+        await SettingsHooksBridge.runToolEvent("PostToolUseFailure", {
+          sessionId,
+          cwd: hookCwd(),
+          toolName: toolID,
+          toolInput: args,
+          error: reason,
+        });
+        return denied
+      }
     }
 
     try {
