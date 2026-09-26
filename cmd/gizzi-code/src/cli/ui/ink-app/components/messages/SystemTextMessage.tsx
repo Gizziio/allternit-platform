@@ -275,7 +275,7 @@ function TurnDurationMessage({
   const t5 = addMargin ? 1 : 0;
   const t6 = <OrbMark />;
 
-  const t7 = showTurnDuration && `${verb} for ${duration}`;
+  const t7 = showTurnDuration && `Gizzi ${verb.toLowerCase()} for ${duration}`;
   const t8 = backgroundTaskSummary && ` \u00B7 ${backgroundTaskSummary} still running`;
   const t9 = <Text dimColor={true}>{t7}{budgetSuffix}{t8}</Text>;
 
@@ -284,7 +284,7 @@ function TurnDurationMessage({
   return t10;
 }
 function _temp4() {
-  return sample(TURN_COMPLETION_VERBS) ?? "Worked";
+  return sample(TURN_COMPLETION_VERBS) ?? "Forged";
 }
 function MemorySavedMessage({
     message,
