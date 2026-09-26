@@ -37,6 +37,8 @@ export type AgentEvent =
    * text so every provider surfaces thinking the same way — never as reply text.
    */
   | { type: "reasoning_delta"; delta: string }
+  /** The agent's own context report (ACP usage_update): tokens in context / window size. */
+  | { type: "context"; used: number; size: number }
   | { type: "tool_call"; id: string; name: string; arguments: unknown }
   | { type: "tool_result"; id: string; content: string; isError?: boolean }
   | { type: "error"; error: unknown }

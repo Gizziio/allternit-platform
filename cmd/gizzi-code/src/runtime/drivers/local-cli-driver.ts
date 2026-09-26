@@ -876,6 +876,7 @@ export class LocalCliDriver implements RuntimeDriver {
             const used = typeof update.used === "number" ? update.used : 0
             const size = typeof update.size === "number" ? update.size : 0
             contextUsage = { used: Math.max(0, used), size: Math.max(0, size) }
+            if (size > 0) pushEvent({ type: "context", used: Math.max(0, used), size })
             break
           }
           default:

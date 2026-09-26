@@ -607,11 +607,28 @@ export const AgentCompatRoutes = () =>
         // full message info incl. tokens) — attached to the finish frame so
         // clients can render an exact tok/s instead of a chars/4 estimate.
         let lastUsage: Record<string, number> | undefined
+        // Latest context report + whether token counts were estimated.
+        let lastContext: { used: number; window?: number; basis: string } | undefined
+        let usageEstimated = false
         const finish = (status: "complete" | "error", error?: { error: string; errorDetails?: any }) => ({
           type: "finish",
           messageId: msgID,
           status,
-          ...(status === "complete" && lastUsage ? { usage: lastUsage } : {}),
+          ...(status === "complete" && (lastUsage || lastContext || usageEstimated)
+            ? {
+                usage: {
+                  ...(lastUsage ?? {}),
+                  ...(lastContext
+                    ? {
+                        contextUsed: lastContext.used,
+                        ...(lastContext.window ? { contextWindow: lastContext.window } : {}),
+                        contextBasis: lastContext.basis,
+                      }
+                    : {}),
+                  ...(usageEstimated ? { estimated: true } : {}),
+                },
+              }
+            : {}),
           metadata: { status, ...error },
         })
 
@@ -692,6 +709,18 @@ export const AgentCompatRoutes = () =>
             const statusType = props.status?.type
             if (statusType === "busy") wasBusy = true
             else if (statusType === "idle" && wasBusy) push(finish("complete"))
+            return
+          }
+          if (type === "session.context.updated") {
+            if (props.usageEstimated === true) usageEstimated = true
+            if (typeof props.used === "number") {
+              lastContext = {
+                used: props.used,
+                window: typeof props.window === "number" ? props.window : undefined,
+                basis: props.basis === "provider" ? "provider" : "estimated",
+              }
+              push({ type: "context_usage", messageId: msgID, context: lastContext })
+            }
             return
           }
           if (type === "session.compacted") {

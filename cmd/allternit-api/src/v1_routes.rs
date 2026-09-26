@@ -1358,6 +1358,10 @@ async fn agent_chat_bridge(
         // Newest assistant usage seen on the bus (message.updated carries the
         // full message info incl. tokens) — attached to the finish frame.
         let mut last_usage: Option<serde_json::Value> = None;
+        // Latest context report (session.context.updated) and whether the
+        // turn's token counts were estimated — folded into the finish usage.
+        let mut last_context: Option<serde_json::Value> = None;
+        let mut usage_estimated = false;
 
         'event_loop: loop {
             // Events first (biased): the prompt task finishing must not
@@ -1603,6 +1607,24 @@ async fn agent_chat_bridge(
                         }).to_string()));
                         break 'event_loop;
                     }
+                    "session.context.updated" => {
+                        if props.get("usageEstimated").and_then(|v| v.as_bool()) == Some(true) {
+                            usage_estimated = true;
+                        }
+                        if let Some(used) = props.get("used").and_then(|v| v.as_u64()) {
+                            let context = json!({
+                                "used": used,
+                                "window": props.get("window").cloned().unwrap_or(serde_json::Value::Null),
+                                "basis": props.get("basis").and_then(|v| v.as_str()).unwrap_or("estimated"),
+                            });
+                            yield Ok(Event::default().data(json!({
+                                "type": "context_usage",
+                                "messageId": msg_id,
+                                "context": context.clone(),
+                            }).to_string()));
+                            last_context = Some(context);
+                        }
+                    }
                     "session.compacted" => {
                         // Context compaction ran on this session mid-turn —
                         // forward it so the chat can render a divider instead
@@ -1684,6 +1706,23 @@ async fn agent_chat_bridge(
                     _ => {}
                 }
             }
+        }
+
+        // Finish usage carries the context report and the estimated flag so a
+        // provider that reports nothing still yields honest telemetry.
+        if last_context.is_some() || usage_estimated {
+            let mut usage = last_usage.take().unwrap_or_else(|| json!({}));
+            if let Some(context) = &last_context {
+                usage["contextUsed"] = context["used"].clone();
+                if !context["window"].is_null() {
+                    usage["contextWindow"] = context["window"].clone();
+                }
+                usage["contextBasis"] = context["basis"].clone();
+            }
+            if usage_estimated {
+                usage["estimated"] = json!(true);
+            }
+            last_usage = Some(usage);
         }
 
         // Deltas whose part was never declared can only be reply text.

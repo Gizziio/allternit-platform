@@ -39,6 +39,7 @@ pub fn provider_router() -> Router<Arc<AppState>> {
         .route("/providers", get(list_providers))
         .route("/providers/:id", get(get_provider))
         .route("/providers/:id/auth/status", get(get_provider_auth_status))
+        .route("/providers/:id/quota", get(get_provider_quota))
         .route("/providers/:id/models", get(discover_provider_models))
         .route("/providers/:id/connect", post(connect_provider))
         .route(
@@ -1342,6 +1343,35 @@ async fn list_provider_auth_status(
     let providers: Vec<ProviderAuthStatusRow> = all.iter().map(auth_status_live_from_row).collect();
 
     Json(json!({ "providers": providers })).into_response()
+}
+
+/// GET /providers/:id/quota — plan usage windows (5-hour, weekly, …) for a
+/// subscription provider, relayed from the gizzi runtime, which reads them
+/// with the provider CLI's own sign-in. Always 200 with a `status` so the
+/// client can show "signed out" / "unsupported" instead of an error.
+async fn get_provider_quota(
+    Path(id): Path<String>,
+    Extension(_user): Extension<AuthUser>,
+    headers: HeaderMap,
+) -> Response {
+    let url = format!(
+        "{}/provider/{}/quota",
+        crate::agent_session_routes::gizzi_base(),
+        urlencoding::encode(&id)
+    );
+    match crate::agent_session_routes::gizzi_client(&headers)
+        .get(url)
+        .timeout(std::time::Duration::from_secs(12))
+        .send()
+        .await
+    {
+        Ok(res) if res.status().is_success() => match res.json::<serde_json::Value>().await {
+            Ok(body) => Json(body).into_response(),
+            Err(e) => Json(json!({"status": "error", "message": format!("bad quota response: {e}")})).into_response(),
+        },
+        Ok(res) => Json(json!({"status": "error", "message": format!("runtime returned {}", res.status())})).into_response(),
+        Err(e) => Json(json!({"status": "error", "message": format!("runtime unreachable: {e}")})).into_response(),
+    }
 }
 
 async fn get_provider_auth_status(

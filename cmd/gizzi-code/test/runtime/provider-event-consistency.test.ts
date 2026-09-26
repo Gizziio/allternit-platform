@@ -127,3 +127,44 @@ describe("usageFromMessageInfo", () => {
     expect(usageFromMessageInfo({})).toBeUndefined()
   })
 })
+
+describe("SubprocessLanguageModel usage", () => {
+  test("forwards the agent's context report and estimates usage it did not report, flagged", async () => {
+    const parts = await streamParts([
+      { type: "context", used: 8200, size: 262144 },
+      { type: "text_delta", delta: "A reasonably long answer that has some tokens in it." },
+      { type: "finish", finishReason: "stop", usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } },
+    ])
+    const raw = parts.find((p) => p.type === "raw")
+    expect(raw.raw).toEqual({ __gizzi: "observed_context", used: 8200, size: 262144 })
+    const finish = parts.find((p) => p.type === "finish")
+    expect(finish.usage.inputTokens).toBe(8200)
+    expect(finish.usage.outputTokens).toBeGreaterThan(0)
+    expect(finish.providerMetadata).toEqual({ gizzi: { usageEstimated: true } })
+  })
+
+  test("reported usage passes through untouched and unflagged", async () => {
+    const parts = await streamParts([
+      { type: "text_delta", delta: "hi" },
+      { type: "finish", finishReason: "stop", usage: { inputTokens: 120, outputTokens: 4, totalTokens: 124 } },
+    ])
+    const finish = parts.find((p) => p.type === "finish")
+    expect(finish.usage).toEqual({ inputTokens: 120, outputTokens: 4, totalTokens: 124 })
+    expect(finish.providerMetadata).toBeUndefined()
+  })
+})
+
+describe("ProviderQuotas", () => {
+  test("parses Kimi usage windows", async () => {
+    const { parseKimiUsages } = await import("@/runtime/providers/quota")
+    expect(parseKimiUsages({ usages: { limit_5h: { used_ratio: "0.34", reset_time: "2026-09-26T08:34:14Z" }, limit_7d: { used_ratio: 0.1 }, limit_month_code: {} } })).toEqual([
+      { id: "5h", label: "5-hour", usedRatio: 0.34, resetAt: "2026-09-26T08:34:14Z" },
+      { id: "7d", label: "Weekly", usedRatio: 0.1 },
+    ])
+  })
+
+  test("unsupported providers say so", async () => {
+    const { ProviderQuotas } = await import("@/runtime/providers/quota")
+    expect(await ProviderQuotas.get("openai")).toEqual({ status: "unsupported" })
+  })
+})

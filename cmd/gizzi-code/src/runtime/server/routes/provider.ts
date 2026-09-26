@@ -10,6 +10,7 @@ import { errors } from "@/runtime/server/error"
 import { lazy } from "@/shared/util/lazy"
 import { Auth } from "@/runtime/integrations/auth"
 import { MediaRegistry } from "@/runtime/providers/media"
+import { ProviderQuotas } from "@/runtime/providers/quota"
 
 export const ProviderRoutes = lazy(() =>
   new Hono()
@@ -253,6 +254,22 @@ export const ProviderRoutes = lazy(() =>
           }
           return c.json({ error: "provider_error", message }, 502)
         }
+      },
+    )
+    .get(
+      "/:providerID/quota",
+      describeRoute({
+        summary: "Provider plan quota",
+        description: "Rolling usage windows (e.g. 5-hour, weekly) for a subscription provider, from the provider's own sign-in.",
+        operationId: "provider.quota",
+        responses: {
+          200: { description: "Quota result", content: { "application/json": { schema: resolver(z.any()) } } },
+        },
+      }),
+      validator("param", z.any()),
+      async (c) => {
+        const { providerID } = c.req.valid("param") as any
+        return c.json(await ProviderQuotas.get(providerID))
       },
     )
     .post(
