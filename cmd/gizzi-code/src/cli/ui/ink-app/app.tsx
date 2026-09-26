@@ -14,7 +14,15 @@ import { getDefaultAppState } from './state/AppStateStore'
 import { createStatsStore } from './context/stats'
 import { getAllBaseTools } from './tools'
 import { getCommands } from './commands'
-import { createUserMessage } from './utils/messages'
+import { createSystemMessage, createUserMessage } from './utils/messages'
+import {
+  initialPermissionModeFromCLI,
+  initializeToolPermissionContext,
+} from './utils/permissions/permissionSetup'
+import {
+  bypassRefusedAsRootMessage,
+  tuiPermissionModeEnv,
+} from './utils/permissions/tuiPermissionStartup'
 import { setCwdState, setOriginalCwd, setSessionTrustAccepted, switchSession } from './bootstrap/state'
 import { asSessionId } from './types/ids'
 import { Log } from '../../../shared/util/log'
@@ -40,6 +48,32 @@ export async function tui(options?: any): Promise<void> {
   enableConfigs()
   enableSharedConfigs()
 
+  // Resolve the startup permission mode. thread.ts translates
+  // --yolo / --dangerously-skip-permissions into env vars; without this
+  // wiring the TUI always seeded mode 'default' and kept prompting.
+  const { permissionModeCli, dangerouslySkipPermissions } =
+    tuiPermissionModeEnv(process.env)
+  if (dangerouslySkipPermissions || permissionModeCli === 'bypassPermissions') {
+    const refusal = bypassRefusedAsRootMessage(process.env)
+    if (refusal) {
+      console.error(refusal)
+      process.exit(1)
+    }
+  }
+  const { mode: initialPermissionMode, notification: permissionModeNotification } =
+    initialPermissionModeFromCLI({ permissionModeCli, dangerouslySkipPermissions })
+  const permissionInit = await initializeToolPermissionContext({
+    allowedToolsCli: [],
+    disallowedToolsCli: [],
+    permissionMode: initialPermissionMode,
+    allowDangerouslySkipPermissions: dangerouslySkipPermissions,
+    addDirs: [],
+  })
+  Log.Default.info('tui: permission mode resolved', {
+    mode: initialPermissionMode,
+    bypassAvailable: permissionInit.toolPermissionContext.isBypassPermissionsModeAvailable,
+  })
+
   // Register as a Rails peer so other local agents can discover and message
   // this session. Fire-and-forget: failures are logged but never block TUI.
   // The actual inbox listener is mounted inside the React tree by
@@ -58,16 +92,33 @@ export async function tui(options?: any): Promise<void> {
   const initialTools = getAllBaseTools().filter((t: any) => t.isEnabled ? t.isEnabled() : true)
   const initialCommands = await getCommands(currentCwd)
 
-  const initialMessages = options?.args?.prompt
-    ? [createUserMessage({ content: options.args.prompt })]
-    : []
+  const startupNotices = [
+    ...(permissionModeNotification ? [permissionModeNotification] : []),
+    ...permissionInit.warnings,
+  ]
+  const initialMessages = [
+    ...startupNotices.map(text => createSystemMessage(text, 'warning')),
+    ...(options?.args?.prompt
+      ? [createUserMessage({ content: options.args.prompt })]
+      : []),
+  ]
+
+  const defaultState = getDefaultAppState()
+  // Teammates spawned with plan_mode_required keep their forced plan mode.
+  const forcedPlanMode = defaultState.toolPermissionContext.mode === 'plan'
+  const initialState = {
+    ...defaultState,
+    toolPermissionContext: forcedPlanMode
+      ? { ...permissionInit.toolPermissionContext, mode: 'plan' }
+      : permissionInit.toolPermissionContext,
+  }
 
   Log.Default.info("tui: rendering ink App & REPL via createRoot")
   try {
     const root = await createRoot({ exitOnCtrlC: false })
     root.render(
       <App
-        initialState={getDefaultAppState()}
+        initialState={initialState}
         stats={createStatsStore()}
         getFpsMetrics={() => undefined}
       >
