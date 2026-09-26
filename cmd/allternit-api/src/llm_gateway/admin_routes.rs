@@ -47,6 +47,10 @@ pub fn gateway_admin_router() -> Router<Arc<AppState>> {
             get(export_provider_routing_hermes),
         )
         .route(
+            "/gateway/provider-routing/import",
+            post(import_provider_routing),
+        )
+        .route(
             "/gateway/provider-routing/resolve",
             post(resolve_provider_routing),
         )
@@ -1126,6 +1130,99 @@ async fn export_provider_routing_hermes(
     }
 }
 
+// ─── POST /gateway/provider-routing/import (P2.10) ──────────────────────────
+//
+// Policy-as-code import: accepts the same Hermes `provider_routing` YAML the
+// export route produces (raw `text/yaml` body, or JSON
+// `{"yaml": "...", "apply": true}`). **Dry-run is the default posture**: the
+/// policy is validated and a structured diff (per flat key + per model
+/// override: added/changed/removed with old→new values) is returned without
+/// persisting anything. Only an explicit `?apply=1` (or `"apply": true` in a
+/// JSON body) writes, and the write is a single transaction
+/// (`provider_routing::apply_import`). Unknown provider/model references are
+/// surfaced as diff warnings, never hard errors — see `PolicyDiff::warnings`.
+
+#[derive(Debug, Deserialize)]
+struct ImportRoutingQuery {
+    dry_run: Option<String>,
+    apply: Option<String>,
+}
+
+fn truthy(value: Option<&str>) -> bool {
+    matches!(value, Some("1") | Some("true"))
+}
+
+async fn import_provider_routing(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Query(query): Query<ImportRoutingQuery>,
+    body: String,
+) -> Response {
+    // A JSON body may carry {"yaml": "...", "apply": bool}; anything else is
+    // treated as the raw YAML document the export route emits.
+    let mut body_apply = false;
+    let yaml = match serde_json::from_str::<Value>(&body) {
+        Ok(Value::Object(map)) if map.get("yaml").is_some_and(Value::is_string) => {
+            body_apply = map.get("apply").and_then(Value::as_bool).unwrap_or(false);
+            map["yaml"].as_str().unwrap_or_default().to_string()
+        }
+        _ => body,
+    };
+
+    let apply = truthy(query.apply.as_deref()) || body_apply;
+    let dry_run = truthy(query.dry_run.as_deref());
+    if apply && dry_run {
+        return bad_request("`dry_run=1` and `apply=1` are mutually exclusive.").into_response();
+    }
+
+    let policy = match super::provider_routing::from_hermes_yaml(&yaml) {
+        Ok(policy) => policy,
+        Err(message) => return bad_request(message).into_response(),
+    };
+
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+        let tenant = scope.config_tenant(&user);
+        drop(conn);
+
+        // Diff against the tenant's *effective* policy (tenant row, else the
+        // platform-global row) — the same policy the export route emits, so
+        // export → import → dry-run diff is a true round-trip no-op.
+        let (current, _source) = super::provider_routing::load_policy_with_source(
+            &db,
+            tenant.as_deref().unwrap_or(""),
+        )
+        .map_err(internal_error)?;
+        let catalog = super::provider_routing::catalog_from_pricing(
+            &super::llm_pricing::pricing_snapshot(),
+        );
+        let diff = super::provider_routing::diff_policies(
+            &current.unwrap_or_default(),
+            &policy,
+            Some(&catalog),
+        );
+
+        if apply {
+            super::provider_routing::apply_import(&db, tenant.as_deref(), &policy)
+                .map_err(internal_error)?;
+        }
+
+        Ok::<_, ApiError>(json!({
+            "tenant_id": tenant,
+            "applied": apply,
+            "dry_run": !apply,
+            "noop": diff.is_noop(),
+            "diff": diff,
+            "policy": serde_json::to_value(&policy).map_err(internal_error)?,
+        }))
+    })
+    .await;
+
+    respond(result)
+}
+
 /// Answer "which provider serves this model under current policy": the
 /// resolved wire `provider` object, the `models` key that matched, and which
 /// policy row (tenant/global/none) supplied it.
@@ -2104,5 +2201,198 @@ mod tests {
             .unwrap();
         let body: Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(body["logs"].as_array().unwrap().len(), 3);
+    }
+
+    // ── POST /gateway/provider-routing/import (P2.10) ───────────────────────
+
+    async fn import_test_state() -> (Arc<AppState>, AuthUser) {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let user = AuthUser {
+            user_id: "user_1".to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        };
+        (state, user)
+    }
+
+    fn import_query(dry_run: Option<&str>, apply: Option<&str>) -> ImportRoutingQuery {
+        ImportRoutingQuery {
+            dry_run: dry_run.map(str::to_string),
+            apply: apply.map(str::to_string),
+        }
+    }
+
+    async fn import_body(response: Response) -> Value {
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        serde_json::from_slice(&body).unwrap()
+    }
+
+    const IMPORT_YAML: &str = "provider_routing:\n  sort: price\n  ignore:\n    - together\n  models:\n    anthropic/claude-fable-5.1:\n      only:\n        - anthropic\n";
+
+    #[tokio::test]
+    async fn import_dry_run_is_default_and_persists_nothing() {
+        let (state, user) = import_test_state().await;
+        let response = import_provider_routing(
+            State(state.clone()),
+            Extension(user),
+            Query(import_query(None, None)),
+            IMPORT_YAML.to_string(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = import_body(response).await;
+        assert_eq!(body["applied"], false);
+        assert_eq!(body["dry_run"], true);
+        assert_eq!(body["noop"], false);
+
+        // Structured diff: flat keys added with old=null → new values.
+        let flat = body["diff"]["flat"].as_array().unwrap();
+        let sort = flat.iter().find(|c| c["key"] == "sort").unwrap();
+        assert_eq!(sort["op"], "added");
+        assert!(sort["old"].is_null());
+        assert_eq!(sort["new"], "price");
+        // Per-model override reported as added.
+        assert_eq!(
+            body["diff"]["models"]["anthropic/claude-fable-5.1"]["op"],
+            "added"
+        );
+
+        // Dry-run persisted nothing.
+        let (policy, source) = super::super::provider_routing::load_policy_with_source(
+            &state.db,
+            "",
+        )
+        .unwrap();
+        assert!(policy.is_none());
+        assert_eq!(source.as_str(), "none");
+    }
+
+    #[tokio::test]
+    async fn import_apply_then_export_equals_input() {
+        let (state, user) = import_test_state().await;
+        let response = import_provider_routing(
+            State(state.clone()),
+            Extension(user.clone()),
+            Query(import_query(None, Some("1"))),
+            IMPORT_YAML.to_string(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = import_body(response).await;
+        assert_eq!(body["applied"], true);
+
+        // Export and compare semantically (YAML key order may differ).
+        let response = export_provider_routing_hermes(State(state), Extension(user)).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let exported = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let exported: Value = serde_yaml::from_slice(&exported).unwrap();
+        let input: Value = serde_yaml::from_str(IMPORT_YAML).unwrap();
+        assert_eq!(exported, input);
+    }
+
+    #[tokio::test]
+    async fn import_of_own_export_dry_run_is_empty_diff() {
+        let (state, user) = import_test_state().await;
+        // Establish a policy via apply, export it, then dry-run the export
+        // back in: the round-trip diff must be empty.
+        let response = import_provider_routing(
+            State(state.clone()),
+            Extension(user.clone()),
+            Query(import_query(None, Some("1"))),
+            IMPORT_YAML.to_string(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let response = export_provider_routing_hermes(State(state.clone()), Extension(user.clone()))
+            .await;
+        let exported = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let exported_yaml = String::from_utf8(exported.to_vec()).unwrap();
+
+        let response = import_provider_routing(
+            State(state),
+            Extension(user),
+            Query(import_query(Some("1"), None)),
+            exported_yaml,
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = import_body(response).await;
+        assert_eq!(body["applied"], false);
+        assert_eq!(body["noop"], true, "expected empty diff, got {body}");
+        assert_eq!(body["diff"]["flat"].as_array().unwrap().len(), 0);
+        assert_eq!(
+            body["diff"]["models"].as_object().unwrap().len(),
+            0
+        );
+    }
+
+    #[tokio::test]
+    async fn import_rejects_malformed_yaml_and_policy() {
+        let (state, user) = import_test_state().await;
+        for bad in [
+            "provider_routing: [not, a, map".to_string(),
+            "provider_routing:\n  sort: cheapest\n".to_string(),
+            "provider_routing:\n  only: ['Not A Slug']\n".to_string(),
+        ] {
+            let response = import_provider_routing(
+                State(state.clone()),
+                Extension(user.clone()),
+                Query(import_query(None, Some("1"))),
+                bad,
+            )
+            .await;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            let body = import_body(response).await;
+            assert_eq!(body["error"], "invalid_request");
+        }
+        // Nothing was written by the rejected applies.
+        let (policy, _) =
+            super::super::provider_routing::load_policy_with_source(&state.db, "").unwrap();
+        assert!(policy.is_none());
+    }
+
+    #[tokio::test]
+    async fn import_rejects_conflicting_flags() {
+        let (state, user) = import_test_state().await;
+        let response = import_provider_routing(
+            State(state),
+            Extension(user),
+            Query(import_query(Some("1"), Some("1"))),
+            IMPORT_YAML.to_string(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn import_json_body_apply_flag_applies() {
+        let (state, user) = import_test_state().await;
+        let body = json!({"yaml": IMPORT_YAML, "apply": true}).to_string();
+        let response = import_provider_routing(
+            State(state.clone()),
+            Extension(user),
+            Query(import_query(None, None)),
+            body,
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = import_body(response).await;
+        assert_eq!(body["applied"], true);
+        let (policy, _) =
+            super::super::provider_routing::load_policy_with_source(&state.db, "").unwrap();
+        assert!(policy.is_some());
     }
 }
