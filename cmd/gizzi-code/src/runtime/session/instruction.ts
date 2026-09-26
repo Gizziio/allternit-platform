@@ -9,7 +9,7 @@ import { Log } from "@/shared/util/log"
 import { Glob } from "@/shared/util/glob"
 import type { MessageV2 } from "@/runtime/session/message-v2"
 import { parseFrontmatter } from "@/runtime/memory/memory-service"
-import { ANTI_PATTERNS_FILENAME, pickWinner, ROOT_INSTRUCTION_FILENAMES } from "@/shared/utils/agentFileResolver"
+import { ANTI_PATTERNS_FILENAME, LOCAL_INSTRUCTION_FILENAMES, pickWinner, ROOT_INSTRUCTION_FILENAMES } from "@/shared/utils/agentFileResolver"
 
 const log = Log.create({ service: "instruction" })
 
@@ -118,12 +118,18 @@ async function loadMemoryFile(filepath: string): Promise<string> {
 
 function globalFiles() {
   const files = []
-  if (Flag.GIZZI_CONFIG_DIR) {
-    files.push(path.join(Flag.GIZZI_CONFIG_DIR, "AGENTS.md"))
-  }
+  // User-global memory, matching the TUI's getMemoryPath('User') precedence
+  // (GIZZI.md > CLAUDE.md within the same config home; GIZZI_CONFIG_DIR ??
+  // ~/.gizzi). The headless pipeline's AGENTS.md convention is preserved as a
+  // fallback after the GIZZI/CLAUDE names in each directory.
+  const userConfigDir = Flag.GIZZI_CONFIG_DIR ?? path.join(Global.Path.home, ".gizzi")
+  files.push(path.join(userConfigDir, "GIZZI.md"))
+  files.push(path.join(userConfigDir, "CLAUDE.md"))
+  files.push(path.join(userConfigDir, "AGENTS.md"))
+  files.push(path.join(Global.Path.config, "GIZZI.md"))
   files.push(path.join(Global.Path.config, "AGENTS.md"))
   if (!Flag.GIZZI_DISABLE_LEGACY_PROMPT) {
-    files.push(path.join(os.homedir(), ".claude", "CLAUDE.md"))
+    files.push(path.join(Global.Path.home, ".claude", "CLAUDE.md"))
   }
   return files
 }
@@ -187,6 +193,16 @@ export namespace InstructionPrompt {
         }
         const winner = pickWinner(existing, FILES)
         if (winner) paths.add(path.resolve(path.join(current, winner)))
+
+        // Local (gitignored, personal) instructions: GIZZI.local.md >
+        // CLAUDE.local.md at the same directory level, loaded alongside the
+        // root marker like the TUI does.
+        const existingLocal = new Set<string>()
+        for (const file of LOCAL_INSTRUCTION_FILENAMES) {
+          if (await Filesystem.exists(path.join(current, file))) existingLocal.add(file)
+        }
+        const localWinner = pickWinner(existingLocal, LOCAL_INSTRUCTION_FILENAMES)
+        if (localWinner) paths.add(path.resolve(path.join(current, localWinner)))
 
         // ANTI_PATTERNS.md is a companion to the root marker, not a
         // precedence alternative — load it alongside, same directory level.

@@ -84,6 +84,7 @@ import type {
   SystemInformationalMessage,
   SystemLocalCommandMessage,
   SystemMemorySavedMessage,
+  SystemMemoryUpdatedMessage,
   SystemMessage,
   SystemMessageLevel,
   SystemMicrocompactBoundaryMessage,
@@ -4348,6 +4349,19 @@ export function createMemorySavedMessage(
     type: 'system',
     subtype: 'memory_saved',
     writtenPaths,
+    timestamp: new Date().toISOString(),
+    uuid: randomUUID(),
+    isMeta: false,
+  }
+}
+
+export function createMemoryUpdatedMessage(
+  memoryPath: string,
+): SystemMemoryUpdatedMessage {
+  return {
+    type: 'system',
+    subtype: 'memory_updated',
+    memoryPath,
     timestamp: new Date().toISOString(),
     uuid: randomUUID(),
     isMeta: false,

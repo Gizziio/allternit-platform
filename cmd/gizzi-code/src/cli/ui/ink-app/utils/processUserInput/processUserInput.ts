@@ -453,6 +453,26 @@ async function processUserInputBase(
     // pre-#19134. A mobile user typing "/shrug" shouldn't see "Unknown skill".
   }
 
+  // `#` memory quick-add (Claude Code parity): interactive prompt-mode input
+  // starting with `#` opens the memory-save selector (bullet append + banner);
+  // a bare `#` routes to the /memory editor flow. Skipped for bridge messages
+  // (plain text there) and non-interactive sessions (no selector UI).
+  if (
+    inputString !== null &&
+    mode === 'prompt' &&
+    !effectiveSkipSlash &&
+    !context.options.isNonInteractiveSession &&
+    inputString.startsWith('#')
+  ) {
+    const { processMemoryQuickAdd } = await import(
+      './processMemoryQuickAdd.js'
+    )
+    return addImageMetadataMessage(
+      await processMemoryQuickAdd(inputString, context, setToolJSX, uuid),
+      imageMetadataTexts,
+    )
+  }
+
   // Ultraplan keyword — route through /ultraplan. Detect on the
   // pre-expansion input so pasted content containing the word cannot
   // trigger a CCR session; replace with "plan" in the expanded input so
