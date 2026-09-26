@@ -28,6 +28,11 @@ This document defines the official port assignments for all Allternit services.
 | ~~8012~~ | ~~A2A Gateway~~ | Retired — package deleted | — | ❌ No |
 | 8013 | Main Gateway | `4-services/gateway/src/` | HTTP | ✅ Yes |
 
+### Local Daemons
+| Port | Service | Path | Protocol | Production Required |
+|------|---------|------|----------|---------------------|
+| 7788 | Subscription Gateway (optional TCP; UDS `~/.allternit/subscriptions/gateway.sock` is the default transport, TCP is loopback-only and always token-authed) | `services/subscription-gateway/` | HTTP | ❌ Local Only |
+
 ### Infrastructure Services (3200-3299)
 | Port | Service | Path | Protocol | Production Required |
 |------|---------|------|----------|---------------------|

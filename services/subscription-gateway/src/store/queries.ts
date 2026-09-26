@@ -1,0 +1,522 @@
+// §1 store — typed row mappers + prepared-statement helpers. Every function
+// takes the Database handle (dependency-injected, testable).
+import { randomUUID } from "node:crypto";
+import type {
+  Account,
+  Artifact,
+  Task,
+  TaskAttempt,
+  TaskStatus,
+} from "@allternit/subscription-fabric-contracts";
+import type { Db } from "./db.js";
+
+// ---------------------------------------------------------------------------
+// tasks
+// ---------------------------------------------------------------------------
+
+interface TaskRow {
+  task_id: string;
+  idempotency_key: string | null;
+  capability: string;
+  capability_version: number;
+  requester: string;
+  thread_id: string | null;
+  project_id: string | null;
+  parent_task_id: string | null;
+  prompt: string;
+  inputs: string;
+  options: string;
+  routing: string;
+  constraints: string;
+  approval_id: string | null;
+  priority: string;
+  status: string;
+  status_detail: string | null;
+  route_decision: string | null;
+  result: string | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+function taskFromRow(db: Db, row: TaskRow): Task {
+  return {
+    task_id: row.task_id,
+    idempotency_key: row.idempotency_key,
+    capability: row.capability as Task["capability"],
+    capability_version: row.capability_version,
+    requester: JSON.parse(row.requester),
+    thread_id: row.thread_id,
+    project_id: row.project_id,
+    parent_task_id: row.parent_task_id,
+    prompt: row.prompt,
+    inputs: JSON.parse(row.inputs),
+    options: JSON.parse(row.options),
+    routing: JSON.parse(row.routing),
+    constraints: JSON.parse(row.constraints),
+    approval_id: row.approval_id,
+    priority: row.priority as Task["priority"],
+    status: row.status as TaskStatus,
+    status_detail: row.status_detail,
+    route_decision: row.route_decision ? JSON.parse(row.route_decision) : null,
+    attempts: listAttempts(db, row.task_id),
+    result: row.result ? JSON.parse(row.result) : null,
+    error: row.error ? JSON.parse(row.error) : null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    completed_at: row.completed_at,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// task_attempts — attempts live in their own table; getTask reassembles the
+// contract object.
+// ---------------------------------------------------------------------------
+
+interface AttemptRow {
+  task_id: string;
+  attempt_no: number;
+  adapter_id: string;
+  adapter_version: string;
+  account_id: string;
+  pool_key: string;
+  submission_state: string;
+  prompt_fingerprint: string;
+  provider_thread_id: string | null;
+  requested_model_class: string | null;
+  observed_model: string | null;
+  started_at: string;
+  ended_at: string | null;
+  outcome: string;
+  error: string | null;
+}
+
+function attemptFromRow(row: AttemptRow): TaskAttempt {
+  return {
+    attempt_no: row.attempt_no,
+    adapter_id: row.adapter_id,
+    adapter_version: row.adapter_version,
+    account_id: row.account_id,
+    pool_key: row.pool_key,
+    submission_state: row.submission_state as TaskAttempt["submission_state"],
+    prompt_fingerprint: row.prompt_fingerprint,
+    provider_thread_id: row.provider_thread_id,
+    requested_model_class: row.requested_model_class,
+    observed_model: row.observed_model,
+    started_at: row.started_at,
+    ended_at: row.ended_at,
+    outcome: row.outcome as TaskAttempt["outcome"],
+    error: row.error ? JSON.parse(row.error) : null,
+  };
+}
+
+export function insertAttempt(db: Db, taskId: string, attempt: TaskAttempt): void {
+  db.prepare(
+    `INSERT INTO task_attempts (
+      task_id, attempt_no, adapter_id, adapter_version, account_id, pool_key,
+      submission_state, prompt_fingerprint, provider_thread_id,
+      requested_model_class, observed_model, started_at, ended_at, outcome,
+      error
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    taskId,
+    attempt.attempt_no,
+    attempt.adapter_id,
+    attempt.adapter_version,
+    attempt.account_id,
+    attempt.pool_key,
+    attempt.submission_state,
+    attempt.prompt_fingerprint,
+    attempt.provider_thread_id,
+    attempt.requested_model_class,
+    attempt.observed_model,
+    attempt.started_at,
+    attempt.ended_at,
+    attempt.outcome,
+    attempt.error ? JSON.stringify(attempt.error) : null
+  );
+}
+
+export function listAttempts(db: Db, taskId: string): TaskAttempt[] {
+  const rows = db
+    .prepare(
+      "SELECT * FROM task_attempts WHERE task_id = ? ORDER BY attempt_no ASC"
+    )
+    .all(taskId) as AttemptRow[];
+  return rows.map(attemptFromRow);
+}
+
+export function insertTask(db: Db, task: Task): void {
+  db.prepare(
+    `INSERT INTO tasks (
+      task_id, idempotency_key, requester_id, capability, capability_version,
+      requester, thread_id, project_id, parent_task_id, prompt, inputs,
+      options, routing, constraints, approval_id, priority, status,
+      status_detail, route_decision, result, error, created_at, updated_at,
+      completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    task.task_id,
+    task.idempotency_key,
+    task.requester.id,
+    task.capability,
+    task.capability_version,
+    JSON.stringify(task.requester),
+    task.thread_id,
+    task.project_id,
+    task.parent_task_id,
+    task.prompt,
+    JSON.stringify(task.inputs),
+    JSON.stringify(task.options),
+    JSON.stringify(task.routing),
+    JSON.stringify(task.constraints),
+    task.approval_id,
+    task.priority,
+    task.status,
+    task.status_detail,
+    task.route_decision ? JSON.stringify(task.route_decision) : null,
+    task.result ? JSON.stringify(task.result) : null,
+    task.error ? JSON.stringify(task.error) : null,
+    task.created_at,
+    task.updated_at,
+    task.completed_at
+  );
+}
+
+export function getTask(db: Db, taskId: string): Task | null {
+  const row = db
+    .prepare("SELECT * FROM tasks WHERE task_id = ?")
+    .get(taskId) as TaskRow | undefined;
+  return row ? taskFromRow(db, row) : null;
+}
+
+export function updateTaskStatus(
+  db: Db,
+  taskId: string,
+  status: TaskStatus,
+  options: { statusDetail?: string | null; completedAt?: string | null } = {}
+): void {
+  db.prepare(
+    `UPDATE tasks
+     SET status = ?,
+         status_detail = COALESCE(?, status_detail),
+         completed_at = COALESCE(?, completed_at),
+         updated_at = ?
+     WHERE task_id = ?`
+  ).run(
+    status,
+    options.statusDetail ?? null,
+    options.completedAt ?? null,
+    new Date().toISOString(),
+    taskId
+  );
+}
+
+// ---------------------------------------------------------------------------
+// events (append-only ledger; seq is monotonic per task)
+// ---------------------------------------------------------------------------
+
+export interface StoredEvent {
+  event_id: string;
+  task_id: string;
+  caller_id: string;
+  seq: number;
+  kind: string;
+  payload: unknown;
+  created_at: string;
+}
+
+interface EventRow {
+  event_id: string;
+  task_id: string;
+  caller_id: string;
+  seq: number;
+  kind: string;
+  payload: string;
+  created_at: string;
+}
+
+function eventFromRow(row: EventRow): StoredEvent {
+  return { ...row, payload: JSON.parse(row.payload) };
+}
+
+export function appendEvent(
+  db: Db,
+  event: { taskId: string; callerId: string; kind: string; payload: unknown }
+): StoredEvent {
+  const insert = db.transaction((): StoredEvent => {
+    const { next } = db
+      .prepare("SELECT COALESCE(MAX(seq), 0) + 1 AS next FROM events WHERE task_id = ?")
+      .get(event.taskId) as { next: number };
+    const row: EventRow = {
+      event_id: randomUUID(),
+      task_id: event.taskId,
+      caller_id: event.callerId,
+      seq: next,
+      kind: event.kind,
+      payload: JSON.stringify(event.payload),
+      created_at: new Date().toISOString(),
+    };
+    db.prepare(
+      `INSERT INTO events (event_id, task_id, caller_id, seq, kind, payload, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      row.event_id,
+      row.task_id,
+      row.caller_id,
+      row.seq,
+      row.kind,
+      row.payload,
+      row.created_at
+    );
+    return eventFromRow(row);
+  });
+  return insert();
+}
+
+export function listEvents(db: Db, taskId: string): StoredEvent[] {
+  const rows = db
+    .prepare("SELECT * FROM events WHERE task_id = ? ORDER BY seq ASC")
+    .all(taskId) as EventRow[];
+  return rows.map(eventFromRow);
+}
+
+// ---------------------------------------------------------------------------
+// caller_outbox (D12) — at-least-once, idempotent on event_id
+// ---------------------------------------------------------------------------
+
+export function outboxEnqueue(db: Db, eventId: string, callerIds: string[]): void {
+  const stmt = db.prepare(
+    "INSERT OR IGNORE INTO caller_outbox (event_id, caller_id) VALUES (?, ?)"
+  );
+  for (const callerId of callerIds) stmt.run(eventId, callerId);
+}
+
+export function outboxMarkDelivered(db: Db, eventId: string, callerId: string): void {
+  db.prepare(
+    `UPDATE caller_outbox SET delivered_at = ?
+     WHERE event_id = ? AND caller_id = ? AND delivered_at IS NULL`
+  ).run(new Date().toISOString(), eventId, callerId);
+}
+
+export function outboxAck(db: Db, eventId: string, callerId: string): void {
+  db.prepare(
+    `UPDATE caller_outbox
+     SET delivered_at = COALESCE(delivered_at, ?), acked_at = ?
+     WHERE event_id = ? AND caller_id = ? AND acked_at IS NULL`
+  ).run(new Date().toISOString(), new Date().toISOString(), eventId, callerId);
+}
+
+// Reconnect replay: everything never delivered, in ledger insertion order.
+export function outboxFetchUndelivered(
+  db: Db,
+  callerId: string,
+  limit = 1000
+): StoredEvent[] {
+  const rows = db
+    .prepare(
+      `SELECT e.* FROM caller_outbox o
+       JOIN events e ON e.event_id = o.event_id
+       WHERE o.caller_id = ? AND o.delivered_at IS NULL
+       ORDER BY e.rowid ASC
+       LIMIT ?`
+    )
+    .all(callerId, limit) as EventRow[];
+  return rows.map(eventFromRow);
+}
+
+// ---------------------------------------------------------------------------
+// tokens (§A6.2) — lookup only; hashing lives in security/tokens.ts
+// ---------------------------------------------------------------------------
+
+export interface TokenRow {
+  token_id: string;
+  caller_id: string;
+  name: string;
+  token_hash: string;
+  scopes: string[];
+  created_at: string;
+  revoked_at: string | null;
+}
+
+interface TokenDbRow extends Omit<TokenRow, "scopes"> {
+  scopes: string;
+}
+
+export function findTokenByHash(db: Db, tokenHash: string): TokenRow | null {
+  const row = db
+    .prepare("SELECT * FROM tokens WHERE token_hash = ?")
+    .get(tokenHash) as TokenDbRow | undefined;
+  return row ? { ...row, scopes: JSON.parse(row.scopes) } : null;
+}
+
+// ---------------------------------------------------------------------------
+// accounts
+// ---------------------------------------------------------------------------
+
+interface AccountRow {
+  account_id: string;
+  provider: string;
+  label: string;
+  plan: string | null;
+  plan_observed_at: string | null;
+  profile_ref: string;
+  session_health: string;
+  enabled: number;
+}
+
+function accountFromRow(row: AccountRow): Account {
+  return {
+    account_id: row.account_id,
+    provider: row.provider as Account["provider"],
+    label: row.label,
+    plan: row.plan,
+    plan_observed_at: row.plan_observed_at,
+    profile_ref: row.profile_ref,
+    session_health: row.session_health as Account["session_health"],
+    enabled: row.enabled === 1,
+  };
+}
+
+export function upsertAccount(db: Db, account: Account): void {
+  db.prepare(
+    `INSERT INTO accounts (
+      account_id, provider, label, plan, plan_observed_at, profile_ref,
+      session_health, enabled
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT (account_id) DO UPDATE SET
+      provider = excluded.provider,
+      label = excluded.label,
+      plan = excluded.plan,
+      plan_observed_at = excluded.plan_observed_at,
+      profile_ref = excluded.profile_ref,
+      session_health = excluded.session_health,
+      enabled = excluded.enabled`
+  ).run(
+    account.account_id,
+    account.provider,
+    account.label,
+    account.plan,
+    account.plan_observed_at,
+    account.profile_ref,
+    account.session_health,
+    account.enabled ? 1 : 0
+  );
+}
+
+export function getAccount(db: Db, accountId: string): Account | null {
+  const row = db
+    .prepare("SELECT * FROM accounts WHERE account_id = ?")
+    .get(accountId) as AccountRow | undefined;
+  return row ? accountFromRow(row) : null;
+}
+
+export function listAccounts(db: Db): Account[] {
+  const rows = db
+    .prepare("SELECT * FROM accounts ORDER BY account_id ASC")
+    .all() as AccountRow[];
+  return rows.map(accountFromRow);
+}
+
+export function getTaskByIdempotency(
+  db: Db,
+  requesterId: string,
+  idempotencyKey: string
+): Task | null {
+  const row = db
+    .prepare(
+      "SELECT * FROM tasks WHERE requester_id = ? AND idempotency_key = ?"
+    )
+    .get(requesterId, idempotencyKey) as TaskRow | undefined;
+  return row ? taskFromRow(db, row) : null;
+}
+
+// ---------------------------------------------------------------------------
+// artifacts — metadata row lookup (byte store lands in P3)
+// ---------------------------------------------------------------------------
+
+interface ArtifactRow {
+  artifact_id: string;
+  type: string;
+  mime_type: string | null;
+  format: string | null;
+  title: string | null;
+  task_id: string;
+  attempt_no: number;
+  capability: string;
+  provider: string;
+  account_id: string;
+  adapter_id: string;
+  adapter_version: string;
+  provider_artifact_id: string | null;
+  provider_url: string | null;
+  provider_url_expires_at: string | null;
+  thread_id: string | null;
+  project_id: string | null;
+  bot_id: string | null;
+  retrieval_state: string;
+  local_path: string | null;
+  sha256: string | null;
+  size_bytes: number | null;
+  local_preview_path: string | null;
+  version: number;
+  parent_artifact_id: string | null;
+  editable_via: string;
+  export_formats: string;
+  trust: string;
+  sensitivity: string;
+  created_at: string;
+}
+
+function artifactFromRow(row: ArtifactRow): Artifact {
+  return {
+    artifact_id: row.artifact_id,
+    type: row.type as Artifact["type"],
+    mime_type: row.mime_type,
+    format: row.format,
+    title: row.title,
+    source: {
+      task_id: row.task_id,
+      attempt_no: row.attempt_no,
+      capability: row.capability as Artifact["source"]["capability"],
+      provider: row.provider as Artifact["source"]["provider"],
+      account_id: row.account_id,
+      adapter_id: row.adapter_id,
+      adapter_version: row.adapter_version,
+      provider_artifact_id: row.provider_artifact_id,
+      provider_url: row.provider_url,
+      provider_url_expires_at: row.provider_url_expires_at,
+    },
+    context: {
+      thread_id: row.thread_id,
+      project_id: row.project_id,
+      bot_id: row.bot_id,
+    },
+    storage: {
+      retrieval_state: row.retrieval_state as Artifact["storage"]["retrieval_state"],
+      local_path: row.local_path,
+      sha256: row.sha256,
+      size_bytes: row.size_bytes,
+      local_preview_path: row.local_preview_path,
+    },
+    lineage: {
+      version: row.version,
+      parent_artifact_id: row.parent_artifact_id,
+    },
+    capabilities: {
+      editable_via: JSON.parse(row.editable_via),
+      export_formats: JSON.parse(row.export_formats),
+    },
+    trust: row.trust as Artifact["trust"],
+    sensitivity: row.sensitivity as Artifact["sensitivity"],
+    created_at: row.created_at,
+  };
+}
+
+export function getArtifact(db: Db, artifactId: string): Artifact | null {
+  const row = db
+    .prepare("SELECT * FROM artifacts WHERE artifact_id = ?")
+    .get(artifactId) as ArtifactRow | undefined;
+  return row ? artifactFromRow(row) : null;
+}

@@ -45,6 +45,7 @@ pkill -f allternit
 | Port | Service | External | Required |
 |------|---------|----------|----------|
 | **8013** | Gateway | ✅ Yes | ✅ Production |
+| **7788** | Subscription Gateway (optional TCP; UDS default) | ❌ No | ⚠️ Optional |
 | **3000** | API | ❌ No | ✅ Production |
 | **3004** | Kernel | ❌ No | ✅ Production |
 | **3200** | Memory | ❌ No | ✅ Production |
