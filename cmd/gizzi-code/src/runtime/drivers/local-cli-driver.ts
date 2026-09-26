@@ -502,6 +502,15 @@ export class LocalCliDriver implements RuntimeDriver {
                   yield deltaEv
                   await this.logEvent(handle.taskId, deltaEv)
                 }
+              } else if (part.type === "thinking" && typeof part.thinking === "string") {
+                const prev = blockLengths[idx] ?? 0
+                const delta = part.thinking.slice(prev)
+                if (delta) {
+                  blockLengths[idx] = part.thinking.length
+                  const reasoningEv = { type: "reasoning_delta", delta } as AgentEvent
+                  yield reasoningEv
+                  await this.logEvent(handle.taskId, reasoningEv)
+                }
               } else if (part.type === "tool_use") {
                 const toolCallEv = {
                   type: "tool_call",
@@ -823,10 +832,14 @@ export class LocalCliDriver implements RuntimeDriver {
         if (!update || !update.sessionUpdate) return
 
         switch (update.sessionUpdate) {
-          case "agent_message_chunk":
-          case "agent_thought_chunk": {
+          case "agent_message_chunk": {
             const text = extractTextContent(update.content)
             if (text) pushEvent({ type: "text_delta", delta: text })
+            break
+          }
+          case "agent_thought_chunk": {
+            const text = extractTextContent(update.content)
+            if (text) pushEvent({ type: "reasoning_delta", delta: text })
             break
           }
           case "tool_call": {
@@ -1191,6 +1204,8 @@ export class LocalCliDriver implements RuntimeDriver {
             }
 
             if (method === "item/completed") {
+              const reasoning = codexReasoningText(params)
+              if (reasoning) pushEvent({ type: "reasoning_delta", delta: reasoning })
               const agentMessage = params.agentMessage as Record<string, unknown> | undefined
               if (agentMessage) {
                 const text = extractCodexText(agentMessage)
@@ -1966,6 +1981,25 @@ interface JsonRpcMessage {
   params?: Record<string, unknown>
   result?: unknown
   error?: unknown
+}
+
+/**
+ * Reasoning carried by a Codex `item/completed` notification — either a
+ * dedicated `reasoning` field or an `item` of type "reasoning" (summary
+ * paragraphs preferred over raw content, matching what Codex shows itself).
+ */
+export function codexReasoningText(params: Record<string, unknown>): string {
+  const item = params.item as Record<string, unknown> | undefined
+  const source =
+    (params.reasoning as Record<string, unknown> | undefined) ??
+    (item?.type === "reasoning" ? item : undefined)
+  if (!source) return ""
+  const summary = source.summary
+  if (Array.isArray(summary)) {
+    const text = summary.map((s) => (typeof s === "string" ? s : extractTextContent(s))).filter(Boolean).join("\n\n")
+    if (text) return text
+  }
+  return extractCodexText(source)
 }
 
 function extractCodexText(params: Record<string, unknown>): string {

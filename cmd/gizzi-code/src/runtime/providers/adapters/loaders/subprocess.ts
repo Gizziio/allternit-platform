@@ -15,7 +15,6 @@ import { resolveTaskSessionID } from "@/runtime/session/stream-context"
 import { Log } from "@/shared/util/log"
 
 const log = Log.create({ service: "subprocess-lm" })
-const TEXT_ID = "text-1"
 
 export class SubprocessLanguageModel implements LanguageModelV2 {
   readonly specificationVersion = "v2" as const
@@ -74,15 +73,30 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
       start: async (controller) => {
         controller.enqueue({ type: "stream-start", warnings: [] })
 
-        let textStarted = false
         let finished = false
+        // One open block at a time. Text and reasoning each get a fresh id
+        // whenever the stream switches kind or a tool call intervenes, so the
+        // session stores prose → thinking → tool → prose as separate ordered
+        // parts instead of one glued text part.
+        let open: { kind: "text" | "reasoning"; id: string } | null = null
+        let blockSeq = 0
+        const closeOpen = () => {
+          if (!open) return
+          controller.enqueue({ type: open.kind === "text" ? "text-end" : "reasoning-end", id: open.id } as LanguageModelV2StreamPart)
+          open = null
+        }
+        const ensureOpen = (kind: "text" | "reasoning") => {
+          if (open?.kind === kind) return open.id
+          closeOpen()
+          open = { kind, id: `${kind}-${++blockSeq}` }
+          controller.enqueue({ type: kind === "text" ? "text-start" : "reasoning-start", id: open.id } as LanguageModelV2StreamPart)
+          return open.id
+        }
 
         const finish = (reason: string, usage?: { inputTokens: number; outputTokens: number; totalTokens: number }) => {
           if (finished) return
           finished = true
-          if (textStarted) {
-            controller.enqueue({ type: "text-end", id: TEXT_ID })
-          }
+          closeOpen()
           controller.enqueue({
             type: "finish",
             finishReason: reason as any,
@@ -95,11 +109,14 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
 
           for await (const event of driver.stream(task)) {
             if (event.type === "text_delta") {
-              if (!textStarted) {
-                controller.enqueue({ type: "text-start", id: TEXT_ID })
-                textStarted = true
-              }
-              controller.enqueue({ type: "text-delta", id: TEXT_ID, delta: event.delta })
+              const id = ensureOpen("text")
+              controller.enqueue({ type: "text-delta", id, delta: event.delta })
+              continue
+            }
+
+            if (event.type === "reasoning_delta") {
+              const id = ensureOpen("reasoning")
+              controller.enqueue({ type: "reasoning-delta", id, delta: event.delta } as LanguageModelV2StreamPart)
               continue
             }
 
@@ -121,6 +138,7 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
             // sanctioned sideband, enabled via includeRawChunks) so the
             // session processor can publish tool parts on the event stream.
             if (event.type === "tool_call") {
+              closeOpen()
               controller.enqueue({
                 type: "raw",
                 raw: {

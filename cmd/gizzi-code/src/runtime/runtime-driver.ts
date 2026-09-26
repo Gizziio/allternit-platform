@@ -31,6 +31,12 @@ export interface TaskHandle {
 export type AgentEvent =
   | { type: "status"; status: "queued" | "running" | "completed" | "failed" | "cancelled" }
   | { type: "text_delta"; delta: string }
+  /**
+   * The CLI's own reasoning/thinking stream (ACP agent_thought_chunk, Claude
+   * stream-json thinking blocks, Codex reasoning items). Kept separate from
+   * text so every provider surfaces thinking the same way — never as reply text.
+   */
+  | { type: "reasoning_delta"; delta: string }
   | { type: "tool_call"; id: string; name: string; arguments: unknown }
   | { type: "tool_result"; id: string; content: string; isError?: boolean }
   | { type: "error"; error: unknown }
