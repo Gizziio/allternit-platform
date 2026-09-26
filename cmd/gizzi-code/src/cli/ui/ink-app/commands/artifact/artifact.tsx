@@ -1,147 +1,167 @@
 // @ts-nocheck
-import * as React from 'react'
-import * as fs from 'node:fs'
 import * as path from 'node:path'
-import * as os from 'node:os'
-import { getSessionId } from '../../bootstrap/state.js'
+import * as React from 'react'
+import {
+  describeEntryMeta,
+  estimateRenderedLines,
+  formatDate,
+  listArtifacts,
+  readArtifactMarkdown,
+  resolveArtifactsRoot,
+  type ArtifactListEntry,
+} from '@/runtime/artifacts/browse'
+import { getOriginalCwd } from '../../bootstrap/state.js'
 import { Select } from '../../components/CustomSelect/index.js'
 import { Pane } from '../../components/design-system/Pane.js'
+import { FilePathLink } from '../../components/FilePathLink.js'
+import { Markdown } from '../../components/Markdown.js'
+import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Box, Text } from '../../ink.js'
-import { useKeybinding } from '../../keybindings/useKeybinding.js'
+import {
+  useKeybinding,
+  useKeybindings,
+} from '../../keybindings/useKeybinding.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
+import { openFileInExternalEditor } from '../../utils/editor.js'
 
 interface ArtifactViewerProps {
   onDone: LocalJSXCommandOnDone
 }
 
-export function ArtifactViewer({ onDone }: ArtifactViewerProps) {
-  const sessionId = getSessionId()
-  const artifactDir = path.join(
-    os.homedir(),
-    '.gemini',
-    'antigravity-cli',
-    'brain',
-    sessionId,
-  )
+const VIEW_HEIGHT = 15
 
-  const [files, setFiles] = React.useState<string[]>([])
-  const [selectedFile, setSelectedFile] = React.useState<string | null>(null)
-  const [fileContent, setFileContent] = React.useState<string | null>(null)
+export function ArtifactViewer({ onDone }: ArtifactViewerProps) {
+  const cwd = getOriginalCwd()
+  const { root, source } = resolveArtifactsRoot(cwd)
+  const displayRoot = path.join(source === 'gizzi' ? '.gizzi' : '.claude', 'artifacts')
+
+  const [entries, setEntries] = React.useState<ArtifactListEntry[]>([])
+  const [selected, setSelected] = React.useState<ArtifactListEntry | null>(null)
+  const [content, setContent] = React.useState<string | null>(null)
   const [scrollOffset, setScrollOffset] = React.useState(0)
+  const [status, setStatus] = React.useState<string | null>(null)
+  const { columns } = useTerminalSize()
 
   React.useEffect(() => {
-    try {
-      if (fs.existsSync(artifactDir)) {
-        const list = fs
-          .readdirSync(artifactDir)
-          .filter(f => f.endsWith('.md'))
-        setFiles(list)
-      }
-    } catch {
-      // Ignore error
-    }
-  }, [artifactDir])
+    setEntries(listArtifacts(root))
+  }, [root])
 
-  // Handle keys when viewing a specific file
-  useKeybinding(
-    'select:previous',
-    () => {
-      if (selectedFile) {
-        setScrollOffset(prev => Math.max(0, prev - 1))
-      }
-    },
-    { context: 'Chat', isActive: !!selectedFile },
-  )
+  const estLines = content ? estimateRenderedLines(content, columns - 8) : 0
+  const maxOffset = Math.max(0, estLines - VIEW_HEIGHT)
 
-  useKeybinding(
-    'select:next',
-    () => {
-      if (selectedFile) {
-        setScrollOffset(prev => prev + 1)
-      }
-    },
-    { context: 'Chat', isActive: !!selectedFile },
-  )
-
-  useKeybinding(
-    'confirm:no',
-    () => {
-      if (selectedFile) {
-        // Go back to file list
-        setSelectedFile(null)
-        setFileContent(null)
+  // Viewer keys — only active while a file is open, so the Select in the
+  // list view keeps its own up/down/enter/escape handling.
+  useKeybindings(
+    {
+      'select:previous': () => setScrollOffset(prev => Math.max(0, prev - 1)),
+      'select:next': () => setScrollOffset(prev => Math.min(maxOffset, prev + 1)),
+      'artifacts:openInEditor': () => {
+        if (!selected) return
+        const target = selected.kind === 'canvas' ? selected.configPath : selected.filePath
+        setStatus(
+          openFileInExternalEditor(target)
+            ? `opening ${target}`
+            : `no $VISUAL/$EDITOR set — click the path above instead`,
+        )
+      },
+      'artifacts:back': () => {
+        setSelected(null)
+        setContent(null)
         setScrollOffset(0)
-      } else {
-        onDone()
-      }
+        setStatus(null)
+      },
     },
-    { context: 'Confirmation' },
+    { context: 'Artifacts', isActive: !!selected },
   )
 
-  const handleSelect = (fileName: string) => {
+  // Esc closes the command when there is nothing to select.
+  useKeybinding('artifacts:back', onDone, {
+    context: 'Artifacts',
+    isActive: !selected && entries.length === 0,
+  })
+
+  const handleSelect = (value: string) => {
+    const entry = entries.find(e =>
+      e.kind === 'canvas' ? e.slug === value : e.name === value,
+    )
+    if (!entry) return
     try {
-      const fullPath = path.join(artifactDir, fileName)
-      const content = fs.readFileSync(fullPath, 'utf8')
-      setSelectedFile(fileName)
-      setFileContent(content)
+      setContent(readArtifactMarkdown(entry))
+      setSelected(entry)
+      setScrollOffset(0)
+      setStatus(null)
     } catch {
-      // Ignore error
+      setStatus(`could not read ${value}`)
     }
   }
 
-  if (files.length === 0) {
+  if (entries.length === 0) {
     return (
       <Pane>
-        <Text color="warning">No artifacts generated in this session.</Text>
-        <Text dimColor>(press esc to close)</Text>
+        <Box flexDirection="column" gap={1}>
+          <Text color="warning">No artifacts yet.</Text>
+          <Text dimColor>
+            {`Artifacts live in ${displayRoot}/ — publish one with \`gizzi html-artifact publish --input <file.json>\`, or drop a markdown file in that directory.`}
+          </Text>
+          <Text dimColor>(press esc to close)</Text>
+        </Box>
       </Pane>
     )
   }
 
-  if (selectedFile && fileContent) {
-    const lines = fileContent.split('\n')
-    const maxVisibleLines = 15
-    const visibleLines = lines.slice(scrollOffset, scrollOffset + maxVisibleLines)
-
+  if (selected && content != null) {
+    const title = selected.kind === 'canvas' ? selected.title : selected.name
+    const targetPath = selected.kind === 'canvas' ? selected.configPath : selected.filePath
     return (
       <Pane>
         <Box flexDirection="column" marginBottom={1}>
           <Text bold color="cyan">
-            Viewing: {selectedFile}
+            Viewing: {title}
           </Text>
           <Text dimColor>
-            (Use Up/Down to scroll, Esc to go back to list)
+            <FilePathLink filePath={targetPath}>{targetPath}</FilePathLink>
           </Text>
+          <Text dimColor>(↑/↓ scroll · e open in editor · esc back)</Text>
         </Box>
         <Box
           flexDirection="column"
           borderStyle="single"
           borderColor="gray"
-          padding={1}
-          minHeight={15}
+          paddingX={1}
+          height={VIEW_HEIGHT}
+          overflowY="hidden"
         >
-          {visibleLines.map((line, idx) => (
-            <Text key={idx}>{line || ' '}</Text>
-          ))}
+          <Box flexDirection="column" marginTop={-scrollOffset} flexShrink={0}>
+            <Markdown>{content}</Markdown>
+          </Box>
         </Box>
-        <Box marginTop={1}>
+        <Box marginTop={1} flexDirection="column">
           <Text dimColor>
-            Line {scrollOffset + 1} to {Math.min(lines.length, scrollOffset + maxVisibleLines)} of {lines.length}
+            line {Math.min(scrollOffset + 1, estLines)}–
+            {Math.min(scrollOffset + VIEW_HEIGHT, estLines)} of ~{estLines}
           </Text>
+          {status && <Text dimColor>{status}</Text>}
         </Box>
       </Pane>
     )
   }
 
-  const options = files.map(f => ({
-    label: f,
-    value: f,
+  const options = entries.map(e => ({
+    label: e.kind === 'canvas' ? `${e.title}` : e.name,
+    value: e.kind === 'canvas' ? e.slug : e.name,
+    description:
+      e.kind === 'canvas'
+        ? `${e.slug} · ${describeEntryMeta(e)}`
+        : describeEntryMeta(e),
   }))
 
   return (
     <Pane>
-      <Box marginBottom={1}>
-        <Text bold>Generated Artifacts</Text>
+      <Box marginBottom={1} flexDirection="column">
+        <Text bold>
+          Artifacts ({entries.length}) — {displayRoot}/
+        </Text>
+        <Text dimColor>updated {formatDate(entries[0]?.mtimeMs ?? 0)}</Text>
       </Box>
       <Select
         options={options}
@@ -149,8 +169,9 @@ export function ArtifactViewer({ onDone }: ArtifactViewerProps) {
         onCancel={onDone}
         visibleOptionCount={8}
       />
-      <Box marginTop={1}>
-        <Text dimColor>(Press esc to close)</Text>
+      <Box marginTop={1} flexDirection="column">
+        <Text dimColor>(enter to view · esc to close)</Text>
+        {status && <Text dimColor>{status}</Text>}
       </Box>
     </Pane>
   )

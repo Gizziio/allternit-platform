@@ -21,10 +21,11 @@ gizzi-code TUI parity program (8 phases, owner-approved plan; dag:dag_625298 / w
 
 ## Just did
 - P0–P3 landed: permission bypass fix, animated startup screen, streaming/tool polish, organized /model picker (ledger summaries 0434/0442/0447/0518).
-- P4 IMPLEMENTED (coder subagent, reviewed): per-turn SystemRunTelemetryMessage (cost-tracker diffs, wall time, tool count, context block-bar, tightest quota chip; never-fabricate assembly in utils/telemetry/) + /usage Plan quota section. 20 new tests; 45/45 components+commands; typecheck clean; preflight 52/0; /usage honest path pty-verified. Per-turn line not exercised live (no quota spend).
+- P4 LANDED (PR #748, merge 4847f900): per-turn telemetry line + /usage Plan quota.
+- P5 IMPLEMENTED (coder subagent, reviewed): /artifact rebuilt — honest finding: only local artifact writer is `gizzi html-artifact publish` (<cwd>/.gizzi/artifacts/<slug>/config.json); Gemini leftover path removed; new runtime/artifacts/browse.ts (pure: gizzi-first/claude-fallback root, canvas configs + loose .md listing, artifactInputToMarkdown inverse renderer); viewer renders via Markdown with scroll/Esc/e-open + FilePathLink; new Artifacts keybinding context; FileWriteTool created-file paths now clickable. 14 browse + 62 keybind/workspace + 9 slash-menu tests green; typecheck clean; preflight 52/0; pty smoke of list+viewer passed.
 
 ## Next
-- Land P4 (PR #748 — resolving this checkpoint conflict), then P5: artifacts — fix /artifact Gemini leftover path (commands/artifact/artifact.tsx:19-25), markdown viewer, FilePathLink open, inline created-file cards.
+- Land P5 (commit → PR → merge → ledger), then P6: memory parity mini-audit (current memory UX vs Claude /memory + # quick-add + CLAUDE.md hierarchy and Kimi) then implement deltas.
 
 ## Open questions
 - .steering/checkpoint.md is shared across parallel sessions and conflicts on every merge — resolution convention used here: keep both sessions' sections, active session on top.

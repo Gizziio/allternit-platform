@@ -392,4 +392,18 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
       i: 'plugin:install',
     },
   },
+  // /artifact browser — the viewer registers these only while an artifact
+  // is open (the list view's Select keeps its own keys); artifacts:back
+  // also closes the command from the empty state.
+  {
+    context: 'Artifacts',
+    bindings: {
+      up: 'select:previous',
+      down: 'select:next',
+      k: 'select:previous',
+      j: 'select:next',
+      e: 'artifacts:openInEditor',
+      escape: 'artifacts:back',
+    },
+  },
 ]

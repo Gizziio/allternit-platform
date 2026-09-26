@@ -4,7 +4,8 @@ const artifact = {
   type: 'local-jsx',
   name: 'artifact',
   aliases: ['artifacts'],
-  description: 'List and read generated workspace markdown artifacts',
+  description:
+    'Browse generated artifacts (.gizzi/artifacts) with a rendered markdown viewer',
   load: () => import('./artifact.js'),
 } satisfies Command
 

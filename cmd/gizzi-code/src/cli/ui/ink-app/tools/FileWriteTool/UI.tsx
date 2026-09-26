@@ -51,7 +51,7 @@ function FileWriteToolCreatedMessage(t0) {
 
   const t2 = verbose ? filePath : relative(getCwd(), filePath);
 
-  const t3 = <Text bold={true}>{t2}</Text>;
+  const t3 = <Text bold={true}><FilePathLink filePath={filePath}>{t2}</FilePathLink></Text>;
 
   const t4 = <Text>Wrote {t1} lines to{" "}{t3}</Text>;
 
@@ -280,7 +280,7 @@ export function renderToolResultMessage({
           const numLines = countLines(content);
           return <Text>
             Wrote <Text bold>{numLines}</Text> lines to{' '}
-            <Text bold>{relative(getCwd(), filePath)}</Text>
+            <Text bold><FilePathLink filePath={filePath}>{relative(getCwd(), filePath)}</FilePathLink></Text>
           </Text>;
         }
         return <FileWriteToolCreatedMessage filePath={filePath} content={content} verbose={verbose} />;
