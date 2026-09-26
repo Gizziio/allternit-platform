@@ -10,6 +10,7 @@ import type { Theme } from '../../utils/theme';
 import { Byline } from '../design-system/Byline';
 import { GlimmerMessage } from './GlimmerMessage';
 import { SpinnerGlyph } from './SpinnerGlyph';
+import { type AllternitOrbState, orbStateForMode } from './allternitOrbFrames';
 import type { SpinnerMode } from './types';
 import { useStalledAnimation } from './useStalledAnimation';
 import { interpolateColor, toRGBColor } from './utils';
@@ -35,6 +36,8 @@ const THINKING_GLOW_PERIOD_S = 2;
 export type SpinnerAnimationRowProps = {
   // Animation inputs
   mode: SpinnerMode;
+  /** Overrides the mode-derived orb choreography (e.g. 'searching' from the active tool). */
+  orbState?: AllternitOrbState;
   reducedMotion: boolean;
   hasActiveTools: boolean;
   responseLengthRef: React.RefObject<number>;
@@ -79,6 +82,7 @@ export type SpinnerAnimationRowProps = {
  */
 export function SpinnerAnimationRow({
   mode,
+  orbState,
   reducedMotion,
   hasActiveTools,
   responseLengthRef,
@@ -223,7 +227,7 @@ export function SpinnerAnimationRow({
           <Text dimColor>)</Text>
         </> : null;
   return <Box ref={viewportRef} flexDirection="row" flexWrap="wrap" marginTop={1} width="100%">
-      <SpinnerGlyph frame={frame} messageColor={messageColor} stalledIntensity={overrideColor ? 0 : stalledIntensity} reducedMotion={reducedMotion} time={time} />
+      <SpinnerGlyph frame={frame} messageColor={messageColor} stalledIntensity={overrideColor ? 0 : stalledIntensity} reducedMotion={reducedMotion} time={time} orbState={orbState ?? orbStateForMode(mode)} />
       <GlimmerMessage message={message} mode={mode} messageColor={messageColor} glimmerIndex={glimmerIndex} flashOpacity={flashOpacity} shimmerColor={shimmerColor} stalledIntensity={overrideColor ? 0 : stalledIntensity} />
       {status}
     </Box>;
