@@ -1,15 +1,20 @@
 /**
  * MemoryService — Structured memory CRUD for the Gizzi platform
  *
- * Mirrors gizzi-code's memory system:
+ * Converged on the memdir auto-memory store (the same directory the TUI's
+ * memory UX uses, resolved via getAutoMemPathFor in src/memdir/paths):
  * - Frontmatter format: name / description / type
- * - MEMORY.md always-loaded index (< 200 lines)
+ * - MEMORY.md always-loaded index (< 200 lines), updated line-preservingly
  * - Topic .md files discovered and injected into context
  * - Relevance scoring filters which topic files are loaded per session
+ *
+ * Pre-convergence stores (.gizzi/L1-COGNITIVE/memory, .openclaw L1, the old
+ * Global.Path.config per-project store) are read-only fallbacks and are
+ * copied (never moved) into the memdir by a one-time best-effort import.
  */
 
 import path from "path"
-import { unlink } from "fs/promises"
+import { copyFile, unlink } from "fs/promises"
 import z from "zod/v4"
 import { Filesystem } from "@/shared/util/filesystem"
 import { Instance } from "@/runtime/context/project/instance"
@@ -18,6 +23,7 @@ import { Glob } from "@/shared/util/glob"
 import { Log } from "@/shared/util/log"
 import { Bus } from "@/shared/bus"
 import { BusEvent } from "@/shared/bus/bus-event"
+import { getAutoMemPathFor } from "@/memdir/paths"
 
 const log = Log.create({ service: "memory-service" })
 
@@ -97,22 +103,37 @@ function projectHash(directory: string): string {
   return directory.replace(/^\//, "").replace(/\//g, "-")
 }
 
-function globalProjectMemoryDir(): string {
+/** Pre-convergence global per-project store (old memory_write target) */
+function legacyGlobalMemoryDir(): string {
   return path.join(Global.Path.config, "projects", projectHash(Instance.directory), "memory")
 }
 
-/** Primary write target — global per-project store (persists across workspace cleans) */
+/**
+ * Primary (and only) write target — the memdir auto-memory directory, resolved
+ * through the same layer the TUI uses (`getAutoMemPathFor` in src/memdir/paths),
+ * so memory_write / memory_recall and the TUI memory UX share one store.
+ */
 function primaryMemoryDir(): string {
-  return globalProjectMemoryDir()
+  return getAutoMemPathFor(Instance.directory)
 }
 
-/** All memory directories to scan */
-function allMemoryDirs(): string[] {
+/**
+ * Pre-convergence stores, kept as READ-ONLY fallbacks (and one-time import
+ * sources) so memories saved before the memdir convergence stay visible.
+ * New writes never go here; a best-effort import copies their contents into
+ * the memdir (see ensureLegacyImport).
+ */
+function legacyMemoryDirs(): string[] {
   return [
     path.join(Instance.directory, ".gizzi", "L1-COGNITIVE", "memory"),
     path.join(Instance.directory, ".openclaw", "L1-COGNITIVE", "memory"),
-    globalProjectMemoryDir(),
+    legacyGlobalMemoryDir(),
   ]
+}
+
+/** Memory directories to scan, in precedence order (memdir first — it wins dedupe) */
+function allMemoryDirs(): string[] {
+  return [primaryMemoryDir(), ...legacyMemoryDirs()]
 }
 
 function memoryIndexPath(dir: string): string {
@@ -138,33 +159,142 @@ async function readIndex(dir: string): Promise<MemoryIndexEntry[]> {
   return entries
 }
 
-async function writeIndex(dir: string, entries: MemoryIndexEntry[]): Promise<void> {
-  await Filesystem.mkdir(dir)
-  const header = "# Memory Index\n\n"
-  const lines = entries.map((e) => `- [${e.filename.replace(/\.md$/, "")}](${e.filename}) — ${e.description} (${e.type})`)
-  const content = header + lines.join("\n") + "\n"
-  await Filesystem.write(memoryIndexPath(dir), content)
+const INDEX_HEADER = "# Memory Index"
+
+function formatIndexLine(entry: MemoryIndexEntry): string {
+  return `- [${entry.filename.replace(/\.md$/, "")}](${entry.filename}) — ${entry.description} (${entry.type})`
 }
 
+/** True when a raw MEMORY.md line links to the given topic file */
+function indexLineTargets(line: string, filename: string): boolean {
+  return line.includes(`](${filename})`)
+}
+
+/**
+ * Line-preserving index update. The memdir MEMORY.md is shared with the TUI's
+ * auto-memory UX (extract-memories, `#` quick-add, hand edits), whose lines
+ * don't all match the strict readIndex() shape — regenerating the file from
+ * parsed entries alone would silently drop them. Instead, drop only the lines
+ * linking this filename, then append the fresh line.
+ */
 async function upsertIndex(dir: string, entry: MemoryIndexEntry): Promise<void> {
-  const entries = await readIndex(dir)
-  const idx = entries.findIndex((e) => e.filename === entry.filename)
-  if (idx >= 0) entries[idx] = entry
-  else entries.push(entry)
-  await writeIndex(dir, entries)
+  await Filesystem.mkdir(dir)
+  const existing = await Filesystem.readText(memoryIndexPath(dir)).catch(() => "")
+  const lines = existing.split("\n").filter((l) => !indexLineTargets(l, entry.filename))
+  while (lines.length > 0 && lines[lines.length - 1]!.trim() === "") lines.pop()
+  if (lines.length === 0) lines.push(INDEX_HEADER, "")
+  lines.push(formatIndexLine(entry))
+  await Filesystem.write(memoryIndexPath(dir), lines.join("\n") + "\n")
 }
 
 async function removeFromIndex(dir: string, filename: string): Promise<void> {
-  const entries = await readIndex(dir)
-  const filtered = entries.filter((e) => e.filename !== filename)
-  await writeIndex(dir, filtered)
+  const existing = await Filesystem.readText(memoryIndexPath(dir)).catch(() => "")
+  if (!existing) return
+  const lines = existing.split("\n").filter((l) => !indexLineTargets(l, filename))
+  await Filesystem.write(memoryIndexPath(dir), lines.join("\n"))
+}
+
+// ── Legacy import ─────────────────────────────────────────────────────────────
+
+const IMPORT_MARKER = ".memdir-import-v1.json"
+const importInflight = new Map<string, Promise<void>>()
+
+/**
+ * One-time best-effort import of pre-convergence memories (L1-COGNITIVE dirs,
+ * old global per-project store) into the memdir. Copies — never deletes — so
+ * the old stores stay intact; a marker file in the memdir makes it run once
+ * per project. Legacy dirs also remain in the read path as fallbacks.
+ */
+async function ensureLegacyImport(dir: string): Promise<void> {
+  let pending = importInflight.get(dir)
+  if (!pending) {
+    pending = runLegacyImport(dir).catch((error) => {
+      log.warn("legacy memory import failed (best-effort, continuing)", {
+        dir,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
+    importInflight.set(dir, pending)
+  }
+  return pending
+}
+
+async function runLegacyImport(dir: string): Promise<void> {
+  if (await Filesystem.exists(path.join(dir, IMPORT_MARKER))) return
+  await Filesystem.mkdir(dir)
+
+  const report: { source: string; copied: string[]; skipped: string[] }[] = []
+  for (const source of legacyMemoryDirs()) {
+    if (path.resolve(source) === path.resolve(dir)) continue
+    if (!(await Filesystem.exists(source))) continue
+    const files = await Glob.scan("*.md", { cwd: source, absolute: true, include: "file" }).catch(() => [])
+    const copied: string[] = []
+    const skipped: string[] = []
+    for (const filepath of files) {
+      const filename = path.basename(filepath)
+      if (filename === "MEMORY.md") {
+        if (path.resolve(source) === path.resolve(legacyGlobalMemoryDir())) {
+          // Old global store used this same index format — merge its entries
+          // for topic files that were copied/are already present.
+          const merged = await mergeIndexEntries(dir, source)
+          ;(merged ? copied : skipped).push(filename)
+        } else {
+          // L1-COGNITIVE MEMORY.md is a session-log index with different
+          // semantics — leave it in place (still visible via the legacy read
+          // fallback) rather than folding it into the memdir index.
+          skipped.push(filename)
+        }
+        continue
+      }
+      const dest = path.join(dir, filename)
+      if (await Filesystem.exists(dest)) {
+        skipped.push(filename)
+        continue
+      }
+      try {
+        await copyFile(filepath, dest)
+        copied.push(filename)
+      } catch {
+        skipped.push(filename)
+      }
+    }
+    if (copied.length > 0 || skipped.length > 0) report.push({ source, copied, skipped })
+  }
+
+  await Filesystem.write(
+    path.join(dir, IMPORT_MARKER),
+    JSON.stringify({ importedAt: new Date().toISOString(), sources: report }, null, 2),
+  )
+  const totalCopied = report.reduce((n, r) => n + r.copied.length, 0)
+  if (totalCopied > 0) {
+    log.info("imported pre-convergence memories into memdir", { dir, sources: report })
+  } else {
+    log.info("legacy memory import: nothing to import", { dir })
+  }
+}
+
+/** Merge index entries from a same-format source MEMORY.md into the memdir's */
+async function mergeIndexEntries(dir: string, source: string): Promise<boolean> {
+  const entries = await readIndex(source)
+  if (entries.length === 0) return false
+  const existing = await readIndex(dir)
+  const have = new Set(existing.map((e) => e.filename))
+  let merged = false
+  for (const entry of entries) {
+    if (have.has(entry.filename)) continue
+    if (!(await Filesystem.exists(path.join(dir, entry.filename)))) continue
+    await upsertIndex(dir, entry)
+    merged = true
+  }
+  return merged
 }
 
 // ── MemoryService ─────────────────────────────────────────────────────────────
 
 export namespace MemoryService {
-  /** List all memory entries across all dirs (deduplicated by filename) */
+  /** List all memory entries across all dirs (deduplicated by filename, memdir wins) */
   export async function list(): Promise<MemoryEntry[]> {
+    await ensureLegacyImport(primaryMemoryDir())
     const seen = new Set<string>()
     const results: MemoryEntry[] = []
 
@@ -183,8 +313,9 @@ export namespace MemoryService {
     return results
   }
 
-  /** Read a memory entry by filename (searches all dirs) */
+  /** Read a memory entry by filename (searches memdir first, then legacy dirs) */
   export async function get(filename: string): Promise<MemoryEntry | null> {
+    await ensureLegacyImport(primaryMemoryDir())
     for (const dir of allMemoryDirs()) {
       const filepath = path.join(dir, filename)
       if (await Filesystem.exists(filepath)) {
@@ -194,10 +325,11 @@ export namespace MemoryService {
     return null
   }
 
-  /** Save a memory entry to the primary dir and update index */
+  /** Save a memory entry to the memdir and update its index */
   export async function save(fm: MemoryFrontmatter, body: string): Promise<MemoryEntry> {
-    const filename = fm.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "") + ".md"
     const dir = primaryMemoryDir()
+    await ensureLegacyImport(dir)
+    const filename = fm.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "") + ".md"
     await Filesystem.mkdir(dir)
     const filepath = path.join(dir, filename)
 
