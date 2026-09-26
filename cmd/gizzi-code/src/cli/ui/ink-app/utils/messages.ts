@@ -89,6 +89,7 @@ import type {
   SystemMessageLevel,
   SystemMicrocompactBoundaryMessage,
   SystemPermissionRetryMessage,
+  SystemRunTelemetryMessage,
   SystemScheduledTaskFireMessage,
   SystemStopHookSummaryMessage,
   SystemTurnDurationMessage,
@@ -110,6 +111,10 @@ import { formatNumber, formatTokens } from './format.js'
 import { getPewterLedgerVariant } from './planModeV2.js'
 import { jsonStringify } from './slowOperations.js'
 import { createUserMessage } from './createUserMessage.js'
+import {
+  buildRunTelemetryLine,
+  type RunTelemetryInput,
+} from './telemetry/runTelemetryModel.js'
 
 // Hook attachments that have a hookName field (excludes HookPermissionDecisionAttachment)
 type HookAttachmentWithName = Exclude<
@@ -4395,6 +4400,42 @@ export function createTurnDurationMessage(
     budgetLimit: budget?.limit,
     budgetNudges: budget?.nudges,
     messageCount,
+    timestamp: new Date().toISOString(),
+    uuid: randomUUID(),
+    isMeta: false,
+  }
+}
+
+export function createRunTelemetryMessage(
+  input: RunTelemetryInput,
+): SystemRunTelemetryMessage | null {
+  const line = buildRunTelemetryLine({
+    model: input.model,
+    durationMs: input.durationMs,
+    inputTokens: input.inputTokens,
+    outputTokens: input.outputTokens,
+    usageEstimated: input.usageEstimated,
+    toolCount: input.toolCount,
+    costUSD: input.costUSD,
+    contextRatio: input.contextRatio,
+    contextEstimated: input.contextEstimated,
+    quotaChip: input.quotaChip,
+  })
+  if (!line) return null
+  return {
+    type: 'system',
+    subtype: 'run_telemetry',
+    content: line,
+    modelDisplay: input.model,
+    durationMs: input.durationMs,
+    inputTokens: input.inputTokens,
+    outputTokens: input.outputTokens,
+    usageEstimated: input.usageEstimated,
+    toolCount: input.toolCount,
+    costUSD: input.costUSD,
+    contextRatio: input.contextRatio,
+    contextEstimated: input.contextEstimated,
+    quotaChip: input.quotaChip,
     timestamp: new Date().toISOString(),
     uuid: randomUUID(),
     isMeta: false,

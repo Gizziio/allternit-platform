@@ -11,3 +11,20 @@ Session lifecycle: commit + push session/subsfab-p3, PR, merge (--merge), sync s
 
 ## Open questions
 None.
+
+---
+
+# Checkpoint — session/gizzi-tui-parity (parallel session, keep both)
+
+## Goal
+gizzi-code TUI parity program (8 phases, owner-approved plan; dag:dag_625298 / wih_8397). P0–P3 landed (PRs #743–#746); P4 (telemetry surfaces) implemented, merging.
+
+## Just did
+- P0–P3 landed: permission bypass fix, animated startup screen, streaming/tool polish, organized /model picker (ledger summaries 0434/0442/0447/0518).
+- P4 IMPLEMENTED (coder subagent, reviewed): per-turn SystemRunTelemetryMessage (cost-tracker diffs, wall time, tool count, context block-bar, tightest quota chip; never-fabricate assembly in utils/telemetry/) + /usage Plan quota section. 20 new tests; 45/45 components+commands; typecheck clean; preflight 52/0; /usage honest path pty-verified. Per-turn line not exercised live (no quota spend).
+
+## Next
+- Land P4 (PR #748 — resolving this checkpoint conflict), then P5: artifacts — fix /artifact Gemini leftover path (commands/artifact/artifact.tsx:19-25), markdown viewer, FilePathLink open, inline created-file cards.
+
+## Open questions
+- .steering/checkpoint.md is shared across parallel sessions and conflicts on every merge — resolution convention used here: keep both sessions' sections, active session on top.

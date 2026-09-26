@@ -334,6 +334,7 @@ export interface Message {
     | 'api_metrics'
     | 'stop_hook_summary'
     | 'turn_duration'
+    | 'run_telemetry'
     | 'microcompact_boundary'
     | 'agents_killed'
     | 'away_summary'
@@ -575,6 +576,26 @@ export interface SystemTurnDurationMessage extends SystemMessage {
   budgetLimit?: number
   budgetNudges?: number
   messageCount?: number
+}
+
+/**
+ * SystemRunTelemetryMessage - Per-turn telemetry line (model, wall time,
+ * tokens, cost, context bar, plan-quota chip). Every field optional —
+ * absent data means the segment was omitted, never zero-filled.
+ */
+export interface SystemRunTelemetryMessage extends SystemMessage {
+  subtype: 'run_telemetry'
+  content: string
+  modelDisplay?: string
+  durationMs?: number
+  inputTokens?: number
+  outputTokens?: number
+  usageEstimated?: boolean
+  toolCount?: number
+  costUSD?: number
+  contextRatio?: number
+  contextEstimated?: boolean
+  quotaChip?: string
 }
 
 /**
