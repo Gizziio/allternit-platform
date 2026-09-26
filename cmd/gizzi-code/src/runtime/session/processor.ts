@@ -415,6 +415,7 @@ export namespace SessionProcessor {
                     metadata: value.providerMetadata,
                   })
                   if ((value.providerMetadata as any)?.gizzi?.usageEstimated) {
+                    input.assistantMessage.tokensEstimated = true
                     Bus.publish(SessionContext.Event.Updated, {
                       sessionID: input.sessionID,
                       messageID: input.assistantMessage.id,

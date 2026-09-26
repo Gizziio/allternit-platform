@@ -392,6 +392,8 @@ export namespace MessageV2 {
         write: z.number(),
       }),
     }),
+    /** Token counts were estimated because the provider reported none. */
+    tokensEstimated: z.boolean().optional(),
     structured: z.any().optional(),
     variant: z.string().optional(),
     finish: z.string().optional(),
