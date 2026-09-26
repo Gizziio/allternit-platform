@@ -11,7 +11,8 @@ import {
 } from './../services/analytics/index.ts'
 import { getProjectRoot } from '../bootstrap/state.js'
 import { logForDebugging } from './debug.js'
-import { getGizziConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { isEnvTruthy } from './envUtils.js'
+import { getUserMarkdownDirs } from './markdownUserDirs.js'
 import { isFsInaccessible } from './errors.js'
 import { normalizePathForComparison } from './file.js'
 import type { FrontmatterData } from './frontmatterParser.js'
@@ -309,7 +310,9 @@ export const loadMarkdownFilesForSubdir = memoize(
     cwd: string,
   ): Promise<MarkdownFile[]> {
     const searchStartTime = Date.now()
-    const userDir = join(getGizziConfigHomeDir(), subdir)
+    // Gizzi-first user scope: ~/.gizzi/<subdir> canonical, ~/.claude/<subdir>
+    // legacy fallback merged after it (see markdownUserDirs.ts).
+    const userDirs = getUserMarkdownDirs(subdir)
     const managedDir = join(getManagedFilePath(), '.claude', subdir)
     const projectDirs = getProjectDirsUpToHome(subdir, cwd)
 
@@ -355,13 +358,17 @@ export const loadMarkdownFilesForSubdir = memoize(
       // Conditionally load user files
       isSettingSourceEnabled('userSettings') &&
       !(subdir === 'agents' && isRestrictedToPluginOnly('agents'))
-        ? loadMarkdownFiles(userDir).then(_ =>
-            _.map(file => ({
-              ...file,
-              baseDir: userDir,
-              source: 'userSettings' as const,
-            })),
-          )
+        ? Promise.all(
+            userDirs.map(userDir =>
+              loadMarkdownFiles(userDir).then(_ =>
+                _.map(file => ({
+                  ...file,
+                  baseDir: userDir,
+                  source: 'userSettings' as const,
+                })),
+              ),
+            ),
+          ).then(nested => nested.flat())
         : Promise.resolve([]),
       // Conditionally load project files from all directories up to home
       isSettingSourceEnabled('projectSettings') &&

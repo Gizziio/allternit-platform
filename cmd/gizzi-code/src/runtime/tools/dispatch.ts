@@ -1,10 +1,22 @@
 import { Tool } from "./builtins/tool";
 import { HookDispatcher } from "@/runtime/hooks/dispatcher";
+import { SettingsHooksBridge } from "@/runtime/hooks/settings-bridge";
+import { Instance } from "@/runtime/context/project/instance";
 import { Log } from "@/shared/util/log";
 import { checkToolHardBan, formatHardBanDenial } from "@/shared/utils/agentHardBans";
 
 export namespace ToolDispatcher {
   const log = Log.create({ service: "tool.dispatcher" });
+
+  // Instance.directory throws outside an Instance.provide context (bare
+  // dispatcher-level tests, some ACP/bot paths) — fall back to process.cwd().
+  function hookCwd(): string {
+    try {
+      return Instance.directory;
+    } catch {
+      return process.cwd();
+    }
+  }
 
   export async function execute(
     tool: Tool.Info,
@@ -41,6 +53,13 @@ export namespace ToolDispatcher {
         sessionId,
         payload: { tool: toolID, args, reason: banViolation.reason, blocked: true },
       })
+      await SettingsHooksBridge.runToolEvent("PostToolUseFailure", {
+        sessionId,
+        cwd: hookCwd(),
+        toolName: toolID,
+        toolInput: args,
+        error: banViolation.reason,
+      });
       return denied
     }
 
@@ -72,6 +91,38 @@ export namespace ToolDispatcher {
       args = hookRes.modifiedPayload.args ?? hookRes.modifiedPayload;
     }
 
+    // 1b. Settings.json hooks (PreToolUse) — Claude-Code-style command hooks
+    // from settings files, bridged onto the runtime path. A deny gates the
+    // tool call with the same structured denial as the gizzi-config hooks.
+    const settingsPre = await SettingsHooksBridge.runToolEvent("PreToolUse", {
+      sessionId,
+      cwd: hookCwd(),
+      toolName: toolID,
+      toolInput: args,
+    });
+    if (settingsPre.decision === "deny") {
+      log.warn("Tool usage denied by settings hook", { toolId: toolID, reason: settingsPre.reason });
+      const denied = {
+        title: "Access Denied",
+        output: `Tool usage was denied by a settings hook: ${settingsPre.reason || "No reason provided."}`,
+        metadata: { denied: true }
+      } as T;
+      await HookDispatcher.emit({
+        name: "PostToolUseFailure",
+        timestamp: Date.now(),
+        sessionId,
+        payload: { tool: toolID, args, reason: settingsPre.reason, blocked: true },
+      })
+      await SettingsHooksBridge.runToolEvent("PostToolUseFailure", {
+        sessionId,
+        cwd: hookCwd(),
+        toolName: toolID,
+        toolInput: args,
+        error: settingsPre.reason ?? "denied by settings hook",
+      });
+      return denied
+    }
+
     try {
       const result = await execute(args, ctx);
 
@@ -81,6 +132,13 @@ export namespace ToolDispatcher {
         timestamp: Date.now(),
         sessionId,
         payload: { tool: toolID, args, result }
+      });
+      await SettingsHooksBridge.runToolEvent("PostToolUse", {
+        sessionId,
+        cwd: hookCwd(),
+        toolName: toolID,
+        toolInput: args,
+        toolResponse: result,
       });
 
       return result;
@@ -93,6 +151,13 @@ export namespace ToolDispatcher {
         timestamp: Date.now(),
         sessionId,
         payload: { tool: toolID, args, error }
+      });
+      await SettingsHooksBridge.runToolEvent("PostToolUseFailure", {
+        sessionId,
+        cwd: hookCwd(),
+        toolName: toolID,
+        toolInput: args,
+        error: error instanceof Error ? error.message : String(error),
       });
 
       throw error;
