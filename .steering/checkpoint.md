@@ -11,10 +11,11 @@ gizzi-code TUI parity + polish program (approved plan 2026-09-26). 8 phases, eac
 
 ## Next
 - P0 LANDED: PR #743 merged (35f9a767), main synced, ledger attestation committed (830bcd344). git-discipline-check FAILs only on other sessions' dirty files (surfaces/computer-use, office-addin, 2 foreign ledger summaries) — left untouched deliberately.
-- P1 IMPLEMENTED: animated WelcomeBox (beacon pulse, eye blink, GIZZI block wordmark with coral shimmer sweep, tips line) + welcomeArt.ts data module; verified live via pty capture (blink frames + wordmark visible in real TUI run). Tests 4/4. Typecheck running.
+- P1 LANDED (PR #744, merge 2b16cfa2c): animated WelcomeBox + welcomeArt.ts; pty-capture verified; ledger committed.
+- P2 IMPLEMENTED: (a) progressive reveal — the in-progress streaming line now renders dimmed (streamingTail prop through REPL→Messages) instead of being hidden, stable part unchanged; (b) cli-highlight warm-up at tui() startup so first code block doesn't flash plain→colored; (c) ToolUseCard state label polish (●/◌ glyph + bold running, dim queued). Tests 24/24 green (components + tui); typecheck running.
 
 ## Next
-- Land P1 (typecheck → commit → PR → merge → ledger), then P2: streaming text progressive reveal + code highlight flash fix + ToolUseCard polish.
+- Land P2 (typecheck → commit → PR → merge → ledger), then P3: model selector organizer port (rewrite components/ModelPicker.tsx — grouped providers, type-to-filter, favorites, context window, quota from ProviderQuotas; reference allternit-ai ModelPickerPopover on branch session/composer-parity; Delegate to coder subagent with brief).
 
 ## Open questions
 - CommRails plan refine rejected prompt deltas in strict mode (needs mutations JSON) — phases tracked in session todo list instead; DAG root node covers the program.

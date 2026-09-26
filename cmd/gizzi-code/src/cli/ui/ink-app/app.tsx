@@ -15,6 +15,7 @@ import { createStatsStore } from './context/stats'
 import { getAllBaseTools } from './tools'
 import { getCommands } from './commands'
 import { createSystemMessage, createUserMessage } from './utils/messages'
+import { getCliHighlightPromise } from './utils/cliHighlight'
 import {
   initialPermissionModeFromCLI,
   initializeToolPermissionContext,
@@ -89,6 +90,10 @@ export async function tui(options?: any): Promise<void> {
   }
 
   Log.Default.info("tui: getting tools and commands")
+  // Warm the syntax highlighter now so the first streamed code block renders
+  // colored instead of flashing plain → highlighted when the lazy import
+  // resolves mid-stream.
+  void getCliHighlightPromise()
   const initialTools = getAllBaseTools().filter((t: any) => t.isEnabled ? t.isEnabled() : true)
   const initialCommands = await getCommands(currentCwd)
 

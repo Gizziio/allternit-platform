@@ -235,6 +235,9 @@ type Props = {
   streamingThinking?: StreamingThinking | null;
   /** Streaming text preview (rendered as last item so transition to final message is positionally seamless) */
   streamingText?: string | null;
+  /** In-progress trailing line of the stream, rendered dimmed so it reads as
+   *  forming text that inks in once completed (progressive reveal). */
+  streamingTail?: string | null;
   /** When true, only show Brief tool output (hide everything else) */
   isBriefOnly?: boolean;
   /** Fullscreen-mode "─── N new ───" divider. Renders before the first
@@ -361,6 +364,7 @@ const MessagesImpl = ({
   hidePastThinking = false,
   streamingThinking,
   streamingText,
+  streamingTail,
   isBriefOnly = false,
   unseenDivider,
   scrollRef,
@@ -712,13 +716,14 @@ const MessagesImpl = ({
           <VirtualMessageList messages={renderableMessages} scrollRef={scrollRef} columns={columns} itemKey={messageKey} renderItem={renderMessageRow} onItemClick={onItemClick} isItemClickable={isItemClickable} isItemExpanded={isItemExpanded} trackStickyPrompt={trackStickyPrompt} selectedIndex={selectedIdx >= 0 ? selectedIdx : undefined} cursorNavRef={cursorNavRef} setCursor={setCursor} jumpRef={jumpRef} onSearchMatchesChange={onSearchMatchesChange} scanElement={scanElement} setPositions={setPositions} extractSearchText={extractSearchText} />
         </InVirtualListContext.Provider> : renderableMessages.flatMap(renderMessageRow)}
 
-      {streamingText && !isBriefOnly && <Box alignItems="flex-start" flexDirection="row" marginTop={1} width="100%">
+      {(streamingText || streamingTail) && !isBriefOnly && <Box alignItems="flex-start" flexDirection="row" marginTop={1} width="100%">
           <Box flexDirection="row">
             <Box minWidth={2}>
               <Text color="text">{BLACK_CIRCLE}</Text>
             </Box>
             <Box flexDirection="column">
-              <StreamingMarkdown>{streamingText}</StreamingMarkdown>
+              {streamingText && <StreamingMarkdown>{streamingText}</StreamingMarkdown>}
+              {streamingTail && <Text dimColor={true}>{streamingTail}</Text>}
             </Box>
           </Box>
         </Box>}
