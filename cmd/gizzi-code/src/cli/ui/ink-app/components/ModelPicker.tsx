@@ -1,18 +1,20 @@
 import capitalize from 'lodash-es/capitalize';
+import figures from 'figures';
 import * as React from 'react';
-import { useCallback, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRegisterOverlay } from '../context/overlayContext.js';
 import { useExitOnCtrlCDWithKeybindings } from './../hooks/useExitOnCtrlCDWithKeybindings.ts';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';
 import { FAST_MODE_MODEL_DISPLAY, isFastModeAvailable, isFastModeCooldown, isFastModeEnabled } from './../utils/fastMode.ts';
-import { Box, Text } from '../ink';
+import { Box, Text, useInput } from '../ink';
 import { useKeybindings } from '../keybindings/useKeybinding';
 import { useAppState, useSetAppState } from '../state/AppState';
 import { convertEffortValueToLevel, type EffortLevel, getDefaultEffortForModel, modelSupportsEffort, modelSupportsMaxEffort, resolvePickerEffortPersistence, toPersistableEffort } from '../utils/effort';
 import { getDefaultMainLoopModel, type ModelSetting, modelDisplayString, parseUserSpecifiedModel } from '../utils/model/model';
 import { getModelOptions } from '../utils/model/modelOptions';
+import { buildPickerRows, quotaSummary, selectableValues, toggleFavorite, visibleWindow, type PickerProviderMeta, type PickerQuotaResult, type PickerRow } from '../utils/model/modelPickerModel';
 import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings';
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint';
-import { Select } from './CustomSelect/index';
 import { Byline } from './design-system/Byline';
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint';
 import { Pane } from './design-system/Pane';
@@ -35,6 +37,33 @@ export type Props = {
   skipSettingsWrite?: boolean;
 };
 const NO_PREFERENCE = '__NO_PREFERENCE__';
+/** Rows (headers + options) rendered at once; the window follows focus. */
+const ROW_WINDOW = 12;
+/**
+ * Provider metadata for every discovered `${providerId}/${modelId}` option
+ * value, used to group the picker into sections and show per-row context
+ * windows. Same require-in-render pattern as modelOptions.ts — Discovery is
+ * a runtime module that must not break the picker if unavailable.
+ */
+function getDiscoveryMeta(): Map<string, PickerProviderMeta> {
+  const map = new Map<string, PickerProviderMeta>();
+  try {
+    const { Discovery } = require('../../../../runtime/providers/discovery/index.js') as typeof import('../../../../runtime/providers/discovery/index.js');
+    Discovery.prefetch();
+    for (const dp of Discovery.last()) {
+      for (const m of dp.models) {
+        map.set(`${dp.id}/${m.id}`, {
+          providerId: dp.id,
+          providerName: dp.name,
+          source: dp.source,
+          context: m.context,
+          output: m.output,
+        });
+      }
+    }
+  } catch {}
+  return map;
+}
 export function ModelPicker({
     initial,
     sessionModel,
@@ -49,171 +78,220 @@ export function ModelPicker({
   const exitState = useExitOnCtrlCDWithKeybindings();
   const initialValue = initial === null ? NO_PREFERENCE : initial;
   const [focusedValue, setFocusedValue] = useState(initialValue);
-  const isFastMode = useAppState(_temp);
+  const [filter, setFilter] = useState('');
+  const [favorites, setFavorites] = useState<string[]>(() => getSettingsForSource("userSettings")?.modelFavorites ?? []);
+  const [quotas, setQuotas] = useState<Record<string, PickerQuotaResult>>({});
+  const isFastMode = useAppState(s => isFastModeEnabled() ? s.fastMode : false);
   const [hasToggledEffort, setHasToggledEffort] = useState(false);
-  const effortValue = useAppState(_temp2);
-  const t1 = effortValue !== undefined ? convertEffortValueToLevel(effortValue) : undefined;
-
-  const [effort, setEffort] = useState(t1);
-  const t2 = isFastMode ?? false;
-  const t3 = getModelOptions(t2);
-
-  const modelOptions = t3;
-  let t4;
-  bb0: {
+  const effortValue = useAppState(s => s.effortValue);
+  const [effort, setEffort] = useState(effortValue !== undefined ? convertEffortValueToLevel(effortValue) : undefined);
+  const metaMap = useMemo(() => getDiscoveryMeta(), []);
+  const modelOptions = useMemo(() => getModelOptions(isFastMode ?? false), [isFastMode]);
+  const optionsWithInitial = useMemo(() => {
     if (initial !== null && !modelOptions.some(opt => opt.value === initial)) {
-      const t5 = modelDisplayString(initial);
-
-      const t6 = {
-          value: initial,
-          label: t5,
-          description: "Current model"
-        };
-
-      const t7 = [...modelOptions, t6];
-
-      t4 = t7;
-      break bb0;
+      return [...modelOptions, {
+        value: initial,
+        label: modelDisplayString(initial),
+        description: "Current model"
+      }];
     }
-    t4 = modelOptions;
-  }
-  const optionsWithInitial = t4;
-  const t5 = optionsWithInitial.map(_temp3);
+    return modelOptions;
+  }, [modelOptions, initial]);
+  const selectOptions = useMemo(() => optionsWithInitial.map(opt => ({
+    ...opt,
+    value: opt.value === null ? NO_PREFERENCE : opt.value
+  })), [optionsWithInitial]);
+  const {
+    rows,
+    matched,
+    total
+  } = useMemo(() => buildPickerRows(selectOptions, {
+    metaFor: value => metaMap.get(value),
+    favorites,
+    query: filter
+  }), [selectOptions, metaMap, favorites, filter]);
+  const values = useMemo(() => selectableValues(rows), [rows]);
+  // Focus can point at a row the filter hid — fall back to the first match.
+  const effectiveFocused = values.includes(focusedValue) ? focusedValue : values[0];
+  const focusedRow = rows.find((r): r is Extract<PickerRow, {
+    kind: "option";
+  }> => r.kind === "option" && r.value === effectiveFocused);
+  const focusIndex = rows.findIndex(r => r.kind === "option" && r.value === effectiveFocused);
+  const windowRows = visibleWindow(rows, focusIndex === -1 ? 0 : focusIndex, ROW_WINDOW);
 
-  const selectOptions = t5;
-  const t6 = selectOptions.some(_ => _.value === initialValue) ? initialValue : selectOptions[0]?.value ?? undefined;
-
-  const initialFocusValue = t6;
-  const visibleCount = Math.min(10, selectOptions.length);
-  const hiddenCount = Math.max(0, selectOptions.length - visibleCount);
-  const t7 = selectOptions.find(opt_1 => opt_1.value === focusedValue)?.label;
-
-  const focusedModelName = t7;
-  const focusedModel = resolveOptionModel(focusedValue);
+  // Lazily pull plan quotas for providers in the list that report them.
+  // Never blocks rendering; providers without a quota source show nothing.
+  useEffect(() => {
+    let cancelled = false;
+    try {
+      const {
+        ProviderQuotas
+      } = require('../../../../runtime/providers/quota/index.js') as typeof import('../../../../runtime/providers/quota/index.js');
+      const supported = new Set(ProviderQuotas.supported());
+      const ids = new Set<string>();
+      for (const meta of metaMap.values()) {
+        if (supported.has(meta.providerId)) ids.add(meta.providerId);
+      }
+      for (const id of ids) {
+        void ProviderQuotas.get(id).then(result => {
+          if (!cancelled) setQuotas(prev => ({
+            ...prev,
+            [id]: result
+          }));
+        }).catch(() => {});
+      }
+    } catch {}
+    return () => {
+      cancelled = true;
+    };
+  }, [metaMap]);
+  const focusedModelName = focusedRow?.label;
+  const focusedModel = resolveOptionModel(effectiveFocused);
   const focusedSupportsEffort = focusedModel ? modelSupportsEffort(focusedModel) : false;
-  const t8 = focusedModel ? modelSupportsMaxEffort(focusedModel) : false;
-
-  const focusedSupportsMax = t8;
-  const t9 = getDefaultEffortLevelForOption(focusedValue);
-
-  const focusedDefaultEffort = t9;
+  const focusedSupportsMax = focusedModel ? modelSupportsMaxEffort(focusedModel) : false;
+  const focusedDefaultEffort = getDefaultEffortLevelForOption(effectiveFocused);
   const displayEffort = effort === "max" && !focusedSupportsMax ? "high" : effort;
-  const t10 = value => {
-      setFocusedValue(value);
-      if (!hasToggledEffort && effortValue === undefined) {
-        setEffort(getDefaultEffortLevelForOption(value));
+  const handleFocus = (value: string) => {
+    setFocusedValue(value);
+    if (!hasToggledEffort && effortValue === undefined) {
+      setEffort(getDefaultEffortLevelForOption(value));
+    }
+  };
+  const moveFocus = (direction: 1 | -1) => {
+    if (values.length === 0) return;
+    const idx = effectiveFocused !== undefined ? values.indexOf(effectiveFocused) : -1;
+    const next = values[(idx + direction + values.length) % values.length]!;
+    handleFocus(next);
+  };
+  const handleCycleEffort = (direction: 'left' | 'right') => {
+    if (!focusedSupportsEffort) {
+      return;
+    }
+    setEffort(prev => cycleEffortLevel(prev ?? focusedDefaultEffort, direction, focusedSupportsMax));
+    setHasToggledEffort(true);
+  };
+  useKeybindings({
+    "modelPicker:decreaseEffort": () => handleCycleEffort("left"),
+    "modelPicker:increaseEffort": () => handleCycleEffort("right")
+  }, {
+    context: "ModelPicker"
+  });
+  const handleSelect = (value_0: string) => {
+    logEvent("tengu_model_command_menu_effort", {
+      effort: effort as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    });
+    if (!skipSettingsWrite) {
+      const effortLevel = resolvePickerEffortPersistence(effort, getDefaultEffortLevelForOption(value_0), getSettingsForSource("userSettings")?.effortLevel, hasToggledEffort);
+      const persistable = toPersistableEffort(effortLevel);
+      if (persistable !== undefined) {
+        updateSettingsForSource("userSettings", {
+          effortLevel: persistable
+        });
       }
-    };
-
-  const handleFocus = t10;
-  const t11 = direction => {
-      if (!focusedSupportsEffort) {
-        return;
+      setAppState(prev_0 => ({
+        ...prev_0,
+        effortValue: effortLevel
+      }));
+    }
+    const selectedModel = resolveOptionModel(value_0);
+    const selectedEffort = hasToggledEffort && selectedModel && modelSupportsEffort(selectedModel) ? effort : undefined;
+    if (value_0 === NO_PREFERENCE) {
+      onSelect(null, selectedEffort);
+      return;
+    }
+    onSelect(value_0, selectedEffort);
+  };
+  const handleToggleFavorite = () => {
+    if (effectiveFocused === undefined) return;
+    const next = toggleFavorite(favorites, effectiveFocused);
+    setFavorites(next);
+    updateSettingsForSource("userSettings", {
+      modelFavorites: next
+    });
+  };
+  const cancel = onCancel ?? (() => {});
+  // Register as an overlay so Escape reaches this picker instead of the
+  // global cancel handler (same pattern as CustomSelect).
+  useRegisterOverlay('model-picker', true);
+  useInput((input, key) => {
+    if (key.upArrow) {
+      moveFocus(-1);
+      return;
+    }
+    if (key.downArrow) {
+      moveFocus(1);
+      return;
+    }
+    if (key.return) {
+      if (effectiveFocused !== undefined) handleSelect(effectiveFocused);
+      return;
+    }
+    if (key.escape) {
+      if (filter) {
+        setFilter('');
+      } else {
+        cancel();
       }
-      setEffort(prev => cycleEffortLevel(prev ?? focusedDefaultEffort, direction, focusedSupportsMax));
-      setHasToggledEffort(true);
-    };
-
-  const handleCycleEffort = t11;
-  const t12 = {
-      "modelPicker:decreaseEffort": () => handleCycleEffort("left"),
-      "modelPicker:increaseEffort": () => handleCycleEffort("right")
-    };
-
-  const t13 = {
-      context: "ModelPicker"
-    };
-
-  useKeybindings(t12, t13);
-  const t14 = function handleSelect(value_0) {
-      logEvent("tengu_model_command_menu_effort", {
-        effort: effort as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-      });
-      if (!skipSettingsWrite) {
-        const effortLevel = resolvePickerEffortPersistence(effort, getDefaultEffortLevelForOption(value_0), getSettingsForSource("userSettings")?.effortLevel, hasToggledEffort);
-        const persistable = toPersistableEffort(effortLevel);
-        if (persistable !== undefined) {
-          updateSettingsForSource("userSettings", {
-            effortLevel: persistable
-          });
-        }
-        setAppState(prev_0 => ({
-          ...prev_0,
-          effortValue: effortLevel
-        }));
+      return;
+    }
+    if (key.tab) {
+      handleToggleFavorite();
+      return;
+    }
+    // ← → belong to the effort keybindings above.
+    if (key.leftArrow || key.rightArrow) return;
+    if (key.backspace || key.delete) {
+      setFilter(prev => prev.slice(0, -1));
+      return;
+    }
+    if (key.ctrl || key.meta) return;
+    if (input) {
+      setFilter(prev => prev + input);
+    }
+  });
+  const focusedQuota = focusedRow?.providerId ? quotaSummary(quotas[focusedRow.providerId]) : null;
+  const showCount = filter !== '' || total > ROW_WINDOW;
+  const listContent = <Box flexDirection="column" marginBottom={1}>
+      {filter !== '' && <Text>Filter: <Text bold={true}>{filter}</Text>{matched === 0 ? '' : ` (${matched} of ${total})`}</Text>}
+      {matched === 0 && <Text dimColor={true}>No models match {JSON.stringify(filter)} — Backspace to edit, Esc to clear.</Text>}
+      {windowRows.map(row => {
+      if (row.kind === "header") {
+        const headerQuota = row.providerId ? quotaSummary(quotas[row.providerId]) : null;
+        return <Box key={row.key}><Text dimColor={true} bold={true}>{row.title}{headerQuota ? ` · ${headerQuota}` : ''}</Text></Box>;
       }
-      const selectedModel = resolveOptionModel(value_0);
-      const selectedEffort = hasToggledEffort && selectedModel && modelSupportsEffort(selectedModel) ? effort : undefined;
-      if (value_0 === NO_PREFERENCE) {
-        onSelect(null, selectedEffort);
-        return;
-      }
-      onSelect(value_0, selectedEffort);
-    };
-
-  const handleSelect = t14;
-  const t15 = <Text color="remember" bold={true}>Select model</Text>;
-
-  const t16 = headerText ?? "Switch models. Applies to this session and future Gizzi Code sessions. For other/previous model names, specify with --model.";
-  const t17 = <Text dimColor={true}>{t16}</Text>;
-
-  const t18 = sessionModel && <Text dimColor={true}>Currently using {modelDisplayString(sessionModel)} for this session (set by plan mode). Selecting a model will undo this.</Text>;
-
-  const t19 = <Box marginBottom={1} flexDirection="column">{t15}{t17}{t18}</Box>;
-
-  const t20 = onCancel ?? _temp4;
-  const t21 = <Box flexDirection="column"><Select defaultValue={initialValue} defaultFocusValue={initialFocusValue} options={selectOptions} onChange={handleSelect} onFocus={handleFocus} onCancel={t20} visibleOptionCount={visibleCount} /></Box>;
-
-  const t22 = hiddenCount > 0 && <Box paddingLeft={3}><Text dimColor={true}>and {hiddenCount} more…</Text></Box>;
-
-  const t23 = <Box flexDirection="column" marginBottom={1}>{t21}{t22}</Box>;
-
-  const t24 = <Box marginBottom={1} flexDirection="column">{focusedSupportsEffort ? <Text dimColor={true}><EffortLevelIndicator effort={displayEffort} />{" "}{capitalize(displayEffort)} effort{displayEffort === focusedDefaultEffort ? " (default)" : ""}{" "}<Text color="subtle">← → to adjust</Text></Text> : <Text color="subtle"><EffortLevelIndicator effort={undefined} /> Effort not supported{focusedModelName ? ` for ${focusedModelName}` : ""}</Text>}</Box>;
-
-  const t25 = isFastModeEnabled() ? showFastModeNotice ? <Box marginBottom={1}><Text dimColor={true}>Fast mode is <Text bold={true}>ON</Text> and available with{" "}{FAST_MODE_MODEL_DISPLAY} only (/fast). Switching to other models turn off fast mode.</Text></Box> : isFastModeAvailable() && !isFastModeCooldown() ? <Box marginBottom={1}><Text dimColor={true}>Use <Text bold={true}>/fast</Text> to turn on Fast mode ({FAST_MODE_MODEL_DISPLAY} only).</Text></Box> : null : null;
-
-  const t26 = <Box flexDirection="column">{t19}{t23}{t24}{t25}</Box>;
-
-  const t27 = isStandaloneCommand && <Text dimColor={true} italic={true}>{exitState.pending ? <>Press {exitState.keyName} again to exit</> : <Byline><KeyboardShortcutHint shortcut="Enter" action="confirm" /><ConfigurableShortcutHint action="select:cancel" context="Select" fallback="Esc" description="exit" /></Byline>}</Text>;
-
-  const t28 = <Box flexDirection="column">{t26}{t27}</Box>;
-
-  const content = t28;
+      const isFocused = row.value === effectiveFocused;
+      const isCurrent = row.value === initialValue;
+      const meta = [row.contextLabel, ...row.badges].filter(Boolean).join(' · ');
+      return <Box key={row.key} flexDirection="row">
+              <Text color={isFocused ? "suggestion" : undefined}>{isFocused ? figures.pointer : ' '}{' '}{row.favorite ? '★ ' : ''}{row.label}{isCurrent ? ` ${figures.tick}` : ''}</Text>
+              <Box flexGrow={1} />
+              {meta !== '' && <Text dimColor={true}>{meta}</Text>}
+            </Box>;
+    })}
+      {showCount && matched > 0 && <Text dimColor={true}>{matched} of {total} models{rows.length > ROW_WINDOW ? ' · ↑/↓ to scroll' : ''}</Text>}
+    </Box>;
+  const focusedDetail = focusedRow && (focusedRow.description || focusedQuota) ? <Box marginBottom={1}><Text dimColor={true}>{focusedRow.description}{focusedRow.description && focusedQuota ? ' · ' : ''}{focusedQuota ?? ''}</Text></Box> : null;
+  const effortRow = <Box marginBottom={1} flexDirection="column">{focusedSupportsEffort ? <Text dimColor={true}><EffortLevelIndicator effort={displayEffort} />{" "}{capitalize(displayEffort)} effort{displayEffort === focusedDefaultEffort ? " (default)" : ""}{" "}<Text color="subtle">← → to adjust</Text></Text> : <Text color="subtle"><EffortLevelIndicator effort={undefined} /> Effort not supported{focusedModelName ? ` for ${focusedModelName}` : ""}</Text>}</Box>;
+  const header = <Box marginBottom={1} flexDirection="column"><Text color="remember" bold={true}>Select model</Text><Text dimColor={true}>{headerText ?? "Switch models. Applies to this session and future Gizzi Code sessions. For other/previous model names, specify with --model."}</Text>{sessionModel && <Text dimColor={true}>Currently using {modelDisplayString(sessionModel)} for this session (set by plan mode). Selecting a model will undo this.</Text>}<Text dimColor={true}>↑/↓ navigate · Enter select · Tab ★ favorite · type to filter · Esc {filter ? 'clear filter' : 'cancel'}</Text></Box>;
+  const fastModeNotice = isFastModeEnabled() ? showFastModeNotice ? <Box marginBottom={1}><Text dimColor={true}>Fast mode is <Text bold={true}>ON</Text> and available with{" "}{FAST_MODE_MODEL_DISPLAY} only (/fast). Switching to other models turn off fast mode.</Text></Box> : isFastModeAvailable() && !isFastModeCooldown() ? <Box marginBottom={1}><Text dimColor={true}>Use <Text bold={true}>/fast</Text> to turn on Fast mode ({FAST_MODE_MODEL_DISPLAY} only).</Text></Box> : null : null;
+  const standaloneHints = isStandaloneCommand && <Text dimColor={true} italic={true}>{exitState.pending ? <>Press {exitState.keyName} again to exit</> : <Byline><KeyboardShortcutHint shortcut="Enter" action="confirm" /><ConfigurableShortcutHint action="select:cancel" context="Select" fallback="Esc" description="exit" /></Byline>}</Text>;
+  const content = <Box flexDirection="column">{header}{listContent}{focusedDetail}{effortRow}{fastModeNotice}{standaloneHints}</Box>;
   if (!isStandaloneCommand) {
     return content;
   }
-  const t29 = <Pane color="permission">{content}</Pane>;
-
-  return t29;
-}
-function _temp4() {}
-function _temp3(opt_0) {
-  return {
-    ...opt_0,
-    value: opt_0.value === null ? NO_PREFERENCE : opt_0.value
-  };
-}
-function _temp2(s_0) {
-  return s_0.effortValue;
-}
-function _temp(s) {
-  return isFastModeEnabled() ? s.fastMode : false;
+  return <Pane color="permission">{content}</Pane>;
 }
 function resolveOptionModel(value?: string): string | undefined {
   if (!value) return undefined;
   return value === NO_PREFERENCE ? getDefaultMainLoopModel() : parseUserSpecifiedModel(value);
 }
-function EffortLevelIndicator(t0) {
+function EffortLevelIndicator(t0: {
+  effort: EffortLevel | undefined;
+}) {
   const {
     effort
   } = t0;
-  const t1 = effort ? "gizzi" : "subtle";
-  const t2 = effort ?? "low";
-  const t3 = effortLevelToSymbol(t2);
-
-  const t4 = <Text color={t1}>{t3}</Text>;
-
-  return t4;
+  return <Text color={effort ? "gizzi" : "subtle"}>{effortLevelToSymbol(effort ?? "low")}</Text>;
 }
 function cycleEffortLevel(current: EffortLevel, direction: 'left' | 'right', includeMax: boolean): EffortLevel {
   const levels: EffortLevel[] = includeMax ? ['low', 'medium', 'high', 'max'] : ['low', 'medium', 'high'];

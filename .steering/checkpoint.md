@@ -12,10 +12,11 @@ gizzi-code TUI parity + polish program (approved plan 2026-09-26). 8 phases, eac
 ## Next
 - P0 LANDED: PR #743 merged (35f9a767), main synced, ledger attestation committed (830bcd344). git-discipline-check FAILs only on other sessions' dirty files (surfaces/computer-use, office-addin, 2 foreign ledger summaries) — left untouched deliberately.
 - P1 LANDED (PR #744, merge 2b16cfa2c): animated WelcomeBox + welcomeArt.ts; pty-capture verified; ledger committed.
-- P2 IMPLEMENTED: (a) progressive reveal — the in-progress streaming line now renders dimmed (streamingTail prop through REPL→Messages) instead of being hidden, stable part unchanged; (b) cli-highlight warm-up at tui() startup so first code block doesn't flash plain→colored; (c) ToolUseCard state label polish (●/◌ glyph + bold running, dim queued). Tests 24/24 green (components + tui); typecheck running.
+- P2 LANDED (PR #745, merge 68dd173a4): dim-tail streaming reveal, cli-highlight warm-up, ToolUseCard glyphs.
+- P3 IMPLEMENTED (coder subagent, reviewed): ModelPicker rewritten as organized selector — modelPickerModel.ts pure logic (inferVendor port, formatContext, buildPickerRows grouped sections Cloud-vendor → CLI → local → Other, favorites within section, quotaSummary, scroll windowing); picker owns rendering/navigation (useInput + overlay Esc), type-to-filter, Tab=★ favorite persisted via modelFavorites setting (both settings types files kept in sync), per-row context window + capability badges, lazy ProviderQuotas footer, effort row/fast-mode/MLX/skipSettingsWrite preserved. 17 picker tests, typecheck clean, preflight 52/0, pty smoke of /model passed (filter + favorite + set verified live).
 
 ## Next
-- Land P2 (typecheck → commit → PR → merge → ledger), then P3: model selector organizer port (rewrite components/ModelPicker.tsx — grouped providers, type-to-filter, favorites, context window, quota from ProviderQuotas; reference allternit-ai ModelPickerPopover on branch session/composer-parity; Delegate to coder subagent with brief).
+- Land P3 (commit → PR → merge → ledger), then P4: per-run telemetry line + quota in /usage (runtime publishes session.context.updated + ProviderQuotas; reference allternit-ai RunTelemetry.tsx on main).
 
 ## Open questions
 - CommRails plan refine rejected prompt deltas in strict mode (needs mutations JSON) — phases tracked in session todo list instead; DAG root node covers the program.
