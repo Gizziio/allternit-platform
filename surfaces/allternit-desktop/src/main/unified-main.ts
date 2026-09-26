@@ -3056,7 +3056,7 @@ handleGuarded('shell:hud:annotation:save', async (_event, base64Png: string) => 
   }
 });
 
-function openFabricSessionWindow(): void {
+function openFabricSessionWindow(runtimeId?: string): void {
   if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
     remoteControlWindow.show();
     remoteControlWindow.focus();
@@ -3090,17 +3090,20 @@ function openFabricSessionWindow(): void {
   remoteControlWindow.once('ready-to-show', () => remoteControlWindow?.show());
   remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
   const dashboardUrl = process.env.ALLTERNIT_FABRIC_SESSION_URL
-    ? new URL('/', process.env.ALLTERNIT_FABRIC_SESSION_URL).toString()
-    : new URL('/fabric-session.html', activePlatformUrl).toString();
-  void remoteControlWindow.loadURL(dashboardUrl);
+    ? new URL('/', process.env.ALLTERNIT_FABRIC_SESSION_URL)
+    : new URL('/fabric-session.html', activePlatformUrl);
+  if (runtimeId) {
+    dashboardUrl.searchParams.set('runtime', runtimeId);
+  }
+  void remoteControlWindow.loadURL(dashboardUrl.toString());
 }
 
-ipcMain.handle('shell:open-remote-control', () => {
-  openFabricSessionWindow();
+ipcMain.handle('shell:open-remote-control', (_event, runtimeId?: string) => {
+  openFabricSessionWindow(typeof runtimeId === 'string' ? runtimeId : undefined);
 });
 
-ipcMain.handle('shell:open-fabric-session', () => {
-  openFabricSessionWindow();
+ipcMain.handle('shell:open-fabric-session', (_event, runtimeId?: string) => {
+  openFabricSessionWindow(typeof runtimeId === 'string' ? runtimeId : undefined);
 });
 
 /**
