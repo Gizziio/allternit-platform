@@ -252,6 +252,7 @@ export const adapterEvents: AdapterEvent[] = [
     },
   } as AdapterEvent,
   { t: "progress", label: "researching", fraction: 0.5 },
+  { t: "progress.heartbeat", elapsed_s: 30, last_change_at: "2026-01-01T00:00:30Z" },
   {
     t: "artifact.partial",
     ref: {

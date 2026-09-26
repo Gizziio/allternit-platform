@@ -114,7 +114,7 @@ describe("schema-version guard — pinned union members", () => {
     ]);
   });
 
-  it("AdapterEvent tags — exactly 11 variants (§A1)", () => {
+  it("AdapterEvent tags — exactly 12 variants (§A1 + D11 heartbeat)", () => {
     const tags = adapterEventSchema.options.map(
       (option) => (option.shape as { t: { value: string } }).t.value
     );
@@ -122,6 +122,7 @@ describe("schema-version guard — pinned union members", () => {
       "submitted",
       "reply",
       "progress",
+      "progress.heartbeat",
       "artifact.partial",
       "artifact.ready",
       "model.observed",

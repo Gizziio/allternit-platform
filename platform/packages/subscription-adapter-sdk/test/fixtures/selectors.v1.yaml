@@ -1,0 +1,49 @@
+composer:
+  critical: true
+  strategies:
+    - { role: textbox, name: /^message fixture-web$/i }
+    - { testid: fw-composer }
+    - { css: "div#fw-composer" }
+composer_textarea:
+  critical: true
+  strategies:
+    - { testid: fw-composer-textarea }
+    - { css: "textarea#fw-composer-textarea" }
+send_button:
+  critical: true
+  strategies:
+    - { testid: fw-send-primary }
+    - { role: button, name: /^send$/i }
+    - { css: "button#fw-send" }
+stop_button:
+  critical: false
+  strategies:
+    - { role: button, name: /^stop$/i }
+    - { testid: fw-stop }
+streaming:
+  critical: false
+  strategies:
+    - { testid: fw-streaming }
+    - { css: ".fw-streaming" }
+response:
+  critical: true
+  strategies:
+    - { testid: fw-response }
+    - { css: ".fw-response" }
+logged_in_probe:
+  critical: true
+  strategies:
+    - { testid: fw-user-menu }
+    - { css: ".fw-user-menu" }
+progress:steps:
+  critical: false
+  strategies:
+    - { css: "[data-testid='fw-step']" }
+progress:counter:
+  critical: false
+  strategies:
+    - { testid: fw-counter }
+progress:partial_artifacts:
+  critical: false
+  strategies:
+    - { css: "img.fw-slide-thumb" }

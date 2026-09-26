@@ -2036,6 +2036,37 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
+  platform/packages/subscription-adapter-sdk:
+    dependencies:
+      '@allternit/browser-tools':
+        specifier: workspace:*
+        version: link:../browser-tools
+      '@allternit/subscription-fabric-contracts':
+        specifier: workspace:*
+        version: link:../subscription-fabric-contracts
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.2.0
+      playwright:
+        specifier: ^1.58.2
+        version: 1.58.2
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
+    devDependencies:
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.40
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.0.0
+        version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.40)(happy-dom@20.8.9)(jsdom@30.0.1(@noble/hashes@2.2.0)(canvas@3.2.1))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
+
   platform/packages/subscription-fabric-contracts:
     dependencies:
       '@allternit/replies-contract':
@@ -25381,7 +25412,7 @@ snapshots:
       '@types/react-router-config': 5.0.11
       combine-promises: 1.2.0
       fs-extra: 11.4.0
-      js-yaml: 4.1.1
+      js-yaml: 4.2.0
       lodash: 4.18.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -26404,7 +26435,7 @@ snapshots:
       globals: 14.0.0
       ignore: 5.3.2
       import-fresh: 3.3.1
-      js-yaml: 4.1.1
+      js-yaml: 4.2.0
       minimatch: 3.1.5
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
