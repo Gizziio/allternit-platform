@@ -96,6 +96,10 @@ export const TuiThreadCommand = cmd({
         type: "boolean",
         describe: "skip permission prompts",
       })
+      .option("permission-mode", {
+        type: "string",
+        describe: "permission mode for the session (default, acceptEdits, plan, bypassPermissions)",
+      })
       .option("dangerously-skip-sandbox", {
         type: "boolean",
         describe: "run commands unsandboxed",
@@ -131,6 +135,10 @@ export const TuiThreadCommand = cmd({
     if (args.yolo || args["dangerously-skip-permissions"]) {
       process.env.GIZZI_PERMISSION_MODE = "yolo"
       process.env.GIZZI_DANGEROUSLY_SKIP_PERMISSIONS = "1"
+    } else if (args["permission-mode"]) {
+      // Resolved into the ink-app permission context by tui() in app.tsx
+      // (yolo → bypassPermissions mapping lives in tuiPermissionStartup.ts).
+      process.env.GIZZI_PERMISSION_MODE = args["permission-mode"]
     }
     if (args["dangerously-skip-sandbox"]) {
       process.env.GIZZI_SANDBOX_DISABLE = "1"
