@@ -12,7 +12,7 @@ import { useAppState, useSetAppState } from '../state/AppState';
 import { convertEffortValueToLevel, type EffortLevel, getDefaultEffortForModel, modelSupportsEffort, modelSupportsMaxEffort, resolvePickerEffortPersistence, toPersistableEffort } from '../utils/effort';
 import { getDefaultMainLoopModel, type ModelSetting, modelDisplayString, parseUserSpecifiedModel } from '../utils/model/model';
 import { getModelOptions } from '../utils/model/modelOptions';
-import { buildPickerRows, quotaSummary, selectableValues, toggleFavorite, visibleWindow, type PickerProviderMeta, type PickerQuotaResult, type PickerRow } from '../utils/model/modelPickerModel';
+import { buildPickerRows, quotaMarker, selectableValues, toggleFavorite, visibleWindow, type PickerProviderMeta, type PickerQuotaResult, type PickerRow } from '../utils/model/modelPickerModel';
 import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings';
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint';
 import { Byline } from './design-system/Byline';
@@ -119,8 +119,22 @@ export function ModelPicker({
   const focusIndex = rows.findIndex(r => r.kind === "option" && r.value === effectiveFocused);
   const windowRows = visibleWindow(rows, focusIndex === -1 ? 0 : focusIndex, ROW_WINDOW);
 
+  // Providers in the list that have a real quota fetcher; everything else
+  // renders the explicit "quota n/a" marker instead of an empty slot.
+  const quotaFetchers = useMemo(() => {
+    const set = new Set<string>();
+    try {
+      const {
+        ProviderQuotas
+      } = require('../../../../runtime/providers/quota/index.js') as typeof import('../../../../runtime/providers/quota/index.js');
+      for (const id of ProviderQuotas.supported()) set.add(id);
+    } catch {}
+    return set;
+  }, []);
+
   // Lazily pull plan quotas for providers in the list that report them.
-  // Never blocks rendering; providers without a quota source show nothing.
+  // Never blocks rendering; providers without a quota source show the
+  // "quota n/a" marker, never a fabricated number.
   useEffect(() => {
     let cancelled = false;
     try {
@@ -249,14 +263,14 @@ export function ModelPicker({
       setFilter(prev => prev + input);
     }
   });
-  const focusedQuota = focusedRow?.providerId ? quotaSummary(quotas[focusedRow.providerId]) : null;
+  const focusedQuota = focusedRow?.providerId ? quotaMarker(quotas[focusedRow.providerId], quotaFetchers.has(focusedRow.providerId)) : null;
   const showCount = filter !== '' || total > ROW_WINDOW;
   const listContent = <Box flexDirection="column" marginBottom={1}>
       {filter !== '' && <Text>Filter: <Text bold={true}>{filter}</Text>{matched === 0 ? '' : ` (${matched} of ${total})`}</Text>}
       {matched === 0 && <Text dimColor={true}>No models match {JSON.stringify(filter)} — Backspace to edit, Esc to clear.</Text>}
       {windowRows.map(row => {
       if (row.kind === "header") {
-        const headerQuota = row.providerId ? quotaSummary(quotas[row.providerId]) : null;
+        const headerQuota = row.providerId ? quotaMarker(quotas[row.providerId], quotaFetchers.has(row.providerId)) : null;
         return <Box key={row.key}><Text dimColor={true} bold={true}>{row.title}{headerQuota ? ` · ${headerQuota}` : ''}</Text></Box>;
       }
       const isFocused = row.value === effectiveFocused;

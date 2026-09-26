@@ -118,6 +118,12 @@ export function quotaChipFromResult(
 }
 
 /**
+ * Explicit marker for providers with no quota API at all — shown instead of
+ * an empty slot so a missing number is never mistaken for "everything fine".
+ */
+export const QUOTA_NA_CHIP = 'quota n/a'
+
+/**
  * Assemble the one-line per-turn summary:
  *   model · 12.3s · ~1.2k in / ~345 out est. · 3 tools · $0.0123 ·
  *   ctx ██████░░░░ 58% · week 20% left

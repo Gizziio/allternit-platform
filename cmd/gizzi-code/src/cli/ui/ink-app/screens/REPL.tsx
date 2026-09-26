@@ -132,8 +132,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from './../services/analytics/gro
 import { textForResubmit, handleMessageFromStream, type StreamingToolUse, type StreamingThinking, isCompactBoundaryMessage, getMessagesAfterCompactBoundary, getContentText, createUserMessage, createAssistantMessage, createTurnDurationMessage, createAgentsKilledMessage, createApiMetricsMessage, createSystemMessage, createCommandInputMessage, createRunTelemetryMessage, formatCommandInputTags } from '../utils/messages';
 import { getContextWindowForModel } from '../utils/context';
 import { renderModelName } from '../utils/model/model';
-import { quotaChipFromResult } from '../utils/telemetry/runTelemetryModel';
-import { fetchProviderQuota, resolveQuotaProviderId } from '../utils/telemetry/providerQuota';
+import { quotaChipForProvider, resolveQuotaProviderId } from '../utils/telemetry/providerQuota';
 import { contextRatioFromMessages, turnUsageEstimated } from '../utils/telemetry/turnSignals';
 import { generateSessionTitle } from '../utils/sessionTitle';
 import { BASH_INPUT_TAG, COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG, LOCAL_COMMAND_STDOUT_TAG } from '../constants/xml';
@@ -3401,11 +3400,12 @@ export function REPL({
             // Plan-quota chip: lazy and non-blocking. When the provider
             // reports plan windows (ProviderQuotas caches 60s), patch the
             // line in place exactly once — no animation, no refetch loop.
+            // Providers with no quota API get the explicit "quota n/a"
+            // marker instead of a silently empty slot.
             const quotaProviderId = resolveQuotaProviderId(mainLoopModelParam);
             if (quotaProviderId) {
               const telemetryUuid = telemetryMessage.uuid;
-              void fetchProviderQuota(quotaProviderId).then(result => {
-                const chip = quotaChipFromResult(result);
+              void quotaChipForProvider(quotaProviderId).then(chip => {
                 if (!chip) return;
                 setMessages(prev => prev.map(m => m.uuid === telemetryUuid && m.type === 'system' && m.subtype === 'run_telemetry' ? {
                   ...m,
