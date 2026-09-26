@@ -24,4 +24,23 @@ describe("/usage slash command", () => {
     expect(value).toContain("Session totals")
     expect(value).toContain("Tokens:")
   })
+
+  test("plan quota section is honest when the provider reports nothing", async () => {
+    const result = await call("", {
+      getAppState: () => ({
+        messages: [],
+        toolPermissionContext: { mode: "ask" },
+      }),
+      options: {
+        mainLoopModel: "claude-sonnet-4-6-20251001",
+        mcpClients: [],
+      },
+    } as any)
+
+    const value = (result as any).value as string
+    expect(value).toContain("Plan quota")
+    // claude-* has no quota fetcher — the section must say so, not guess.
+    expect(value).toContain("Not reported for this provider.")
+    expect(value).not.toContain("% used")
+  })
 })

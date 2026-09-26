@@ -15,14 +15,15 @@ const teamMemSaved = feature('TEAMMEM') ? require('./teamMemSaved.js') as typeof
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { TURN_COMPLETION_VERBS } from '../../constants/turnCompletionVerbs';
 import { useTerminalSize } from '../../hooks/useTerminalSize';
-import type { SystemMessage, SystemStopHookSummaryMessage, SystemBridgeStatusMessage, SystemTurnDurationMessage, SystemThinkingMessage, SystemMemorySavedMessage, SystemAPIErrorMessage as SystemAPIErrorMessageType } from '../../types/message';
+import type { SystemMessage, SystemStopHookSummaryMessage, SystemBridgeStatusMessage, SystemTurnDurationMessage, SystemThinkingMessage, SystemMemorySavedMessage, SystemRunTelemetryMessage, SystemAPIErrorMessage as SystemAPIErrorMessageType } from '../../types/message';
 import { SystemAPIErrorMessage } from './SystemAPIErrorMessage';
 import { formatDuration, formatNumber, formatSecondsShort } from '../../utils/format';
 import { getGlobalConfig } from '../../utils/config';
+import { buildRunTelemetryLine } from '../../utils/telemetry/runTelemetryModel';
 import Link from '../../ink/components/Link';
 import ThemedText from '../design-system/ThemedText';
 import { CtrlOToExpand } from '../CtrlOToExpand';
-import { useAppStateStore } from '../../state/AppState';
+import { useAppState, useAppStateStore } from '../../state/AppState';
 import { isBackgroundTask, type TaskState } from '../../tasks/types';
 import { getPillLabel } from '../../tasks/pillLabel';
 import { useSelectedMessageBg } from '../messageActions';
@@ -45,6 +46,11 @@ export function SystemTextMessage({
   const bg = useSelectedMessageBg();
   if (message.subtype === "turn_duration") {
     const t1 = <TurnDurationMessage message={message as SystemTurnDurationMessage} addMargin={addMargin} />;
+
+    return t1;
+  }
+  if (message.subtype === "run_telemetry") {
+    const t1 = <RunTelemetryMessage message={message as SystemRunTelemetryMessage} addMargin={addMargin} />;
 
     return t1;
   }
@@ -285,6 +291,42 @@ function TurnDurationMessage({
 }
 function _temp4() {
   return sample(TURN_COMPLETION_VERBS) ?? "Forged";
+}
+function RunTelemetryMessage({
+    message,
+    addMargin
+}: {
+  message: SystemRunTelemetryMessage;
+  addMargin: boolean;
+}) {
+  const bg = useSelectedMessageBg();
+  const isBriefOnly = useAppState(s => s.isBriefOnly);
+  if (isBriefOnly) {
+    return null;
+  }
+  const line = buildRunTelemetryLine({
+    model: message.modelDisplay,
+    durationMs: message.durationMs,
+    inputTokens: message.inputTokens,
+    outputTokens: message.outputTokens,
+    usageEstimated: message.usageEstimated,
+    toolCount: message.toolCount,
+    costUSD: message.costUSD,
+    contextRatio: message.contextRatio,
+    contextEstimated: message.contextEstimated,
+    quotaChip: message.quotaChip
+  });
+  if (!line) {
+    return null;
+  }
+  const t1 = addMargin ? 1 : 0;
+  const t2 = <Box minWidth={2} />;
+
+  const t3 = <Text dimColor={true}>{line}</Text>;
+
+  const t4 = <Box flexDirection="row" marginTop={t1} backgroundColor={bg} width="100%">{t2}{t3}</Box>;
+
+  return t4;
 }
 function MemorySavedMessage({
     message,

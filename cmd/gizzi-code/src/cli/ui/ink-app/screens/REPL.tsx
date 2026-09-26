@@ -2,7 +2,7 @@
 // TODO(types): compiler-artifact decompile kept nocheck — latent ant-drift type issues (TS2367 external-vs-ant comparisons / TS2614 progress-type import drift / TS2339 untyped props), not a conversion regression.
 import { feature } from 'bun:bundle';
 import { spawnSync } from 'child_process';
-import { snapshotOutputTokensForTurn, getCurrentTurnTokenBudget, getTurnOutputTokens, getBudgetContinuationCount, getTotalInputTokens } from '../bootstrap/state';
+import { snapshotOutputTokensForTurn, getCurrentTurnTokenBudget, getTurnOutputTokens, getBudgetContinuationCount, getTotalInputTokens, getTotalOutputTokens, getTotalCostUSD } from '../bootstrap/state';
 import { parseTokenBudget } from '../utils/tokenBudget';
 import { count } from '../utils/array';
 import { dirname, join } from 'path';
@@ -129,7 +129,12 @@ import { getGlobalConfig, saveGlobalConfig, getGlobalConfigWriteCount } from '..
 import { hasConsoleBillingAccess } from '../utils/billing';
 import { logEvent, type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from './../services/analytics/index.ts';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from './../services/analytics/growthbook.ts';
-import { textForResubmit, handleMessageFromStream, type StreamingToolUse, type StreamingThinking, isCompactBoundaryMessage, getMessagesAfterCompactBoundary, getContentText, createUserMessage, createAssistantMessage, createTurnDurationMessage, createAgentsKilledMessage, createApiMetricsMessage, createSystemMessage, createCommandInputMessage, formatCommandInputTags } from '../utils/messages';
+import { textForResubmit, handleMessageFromStream, type StreamingToolUse, type StreamingThinking, isCompactBoundaryMessage, getMessagesAfterCompactBoundary, getContentText, createUserMessage, createAssistantMessage, createTurnDurationMessage, createAgentsKilledMessage, createApiMetricsMessage, createSystemMessage, createCommandInputMessage, createRunTelemetryMessage, formatCommandInputTags } from '../utils/messages';
+import { getContextWindowForModel } from '../utils/context';
+import { renderModelName } from '../utils/model/model';
+import { quotaChipFromResult } from '../utils/telemetry/runTelemetryModel';
+import { fetchProviderQuota, resolveQuotaProviderId } from '../utils/telemetry/providerQuota';
+import { contextRatioFromMessages, turnUsageEstimated } from '../utils/telemetry/turnSignals';
 import { generateSessionTitle } from '../utils/sessionTitle';
 import { BASH_INPUT_TAG, COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG, LOCAL_COMMAND_STDOUT_TAG } from '../constants/xml';
 import { escapeXml } from '../utils/xml';
@@ -1566,6 +1571,16 @@ export function REPL({
     // denominator correctly includes subagent processing time.
     endResponseLength: number;
   }>>([]);
+  // Per-turn baseline of the ink-app cost tracker + message count, snapshotted
+  // at turn start in onQuery. The turn-end telemetry line diffs against this
+  // so tokens/cost are per-turn, and the est.-flag scan only looks at
+  // messages appended during the turn.
+  const turnTelemetryBaselineRef = React.useRef<{
+    inputTokens: number;
+    outputTokens: number;
+    costUSD: number;
+    messageCount: number;
+  } | null>(null);
   const setResponseLength = useCallback((f: (prev: number) => number) => {
     const prev = responseLengthRef.current;
     responseLengthRef.current = f(prev);
@@ -3266,6 +3281,12 @@ export function REPL({
         snapshotOutputTokensForTurn(parsedBudget ?? getCurrentTurnTokenBudget());
       }
       apiMetricsRef.current = [];
+      turnTelemetryBaselineRef.current = {
+        inputTokens: getTotalInputTokens(),
+        outputTokens: getTotalOutputTokens(),
+        costUSD: getTotalCostUSD(),
+        messageCount: messagesRef.current.length
+      };
       setStreamingToolUses([]);
       setStreamingText(null);
 
@@ -3355,6 +3376,43 @@ export function REPL({
             }
           } else {
             setMessages(prev => [...prev, createTurnDurationMessage(turnDurationMs, budgetInfo, count(prev, isLoggableMessage))]);
+          }
+        }
+        // Per-turn telemetry line (TUI parity with the desktop RunTelemetry):
+        // one dim, static line under each completed turn. Tokens/cost are
+        // diffs of the ink-app cost tracker across the turn; context comes
+        // from the last usage-bearing message; tool count from the bootstrap
+        // turn counter. Segments with no data are omitted, never zero-filled.
+        // Skipped on abort and in loop mode, same as the duration line.
+        if (shouldQuery && !abortController.signal.aborted && !proactiveActive && !store.getState().isBriefOnly) {
+          const telemetryBaseline = turnTelemetryBaselineRef.current;
+          const telemetryMessage = createRunTelemetryMessage({
+            model: renderModelName(mainLoopModelParam),
+            durationMs: turnDurationMs > 0 ? turnDurationMs : undefined,
+            inputTokens: telemetryBaseline ? Math.max(0, getTotalInputTokens() - telemetryBaseline.inputTokens) : undefined,
+            outputTokens: telemetryBaseline ? Math.max(0, getTotalOutputTokens() - telemetryBaseline.outputTokens) : undefined,
+            usageEstimated: turnUsageEstimated(messagesRef.current, telemetryBaseline?.messageCount ?? 0),
+            toolCount: getTurnToolCount() > 0 ? getTurnToolCount() : undefined,
+            costUSD: telemetryBaseline ? Math.max(0, getTotalCostUSD() - telemetryBaseline.costUSD) : undefined,
+            contextRatio: contextRatioFromMessages(messagesRef.current, getContextWindowForModel(mainLoopModelParam, undefined)) ?? undefined
+          });
+          if (telemetryMessage) {
+            setMessages(prev => [...prev, telemetryMessage]);
+            // Plan-quota chip: lazy and non-blocking. When the provider
+            // reports plan windows (ProviderQuotas caches 60s), patch the
+            // line in place exactly once — no animation, no refetch loop.
+            const quotaProviderId = resolveQuotaProviderId(mainLoopModelParam);
+            if (quotaProviderId) {
+              const telemetryUuid = telemetryMessage.uuid;
+              void fetchProviderQuota(quotaProviderId).then(result => {
+                const chip = quotaChipFromResult(result);
+                if (!chip) return;
+                setMessages(prev => prev.map(m => m.uuid === telemetryUuid && m.type === 'system' && m.subtype === 'run_telemetry' ? {
+                  ...m,
+                  quotaChip: chip
+                } : m));
+              }).catch(() => {});
+            }
           }
         }
         // Clear the controller so CancelRequestHandler's canCancelRunningTask
