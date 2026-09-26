@@ -67,6 +67,7 @@ import { SkillImprovementSurvey } from '../components/SkillImprovementSurvey';
 import { useSkillImprovementSurvey } from '../hooks/useSkillImprovementSurvey';
 import { useMoreRight } from '../moreright/useMoreRight';
 import { SpinnerWithVerb, BriefIdleStatus, type SpinnerMode } from '../components/Spinner';
+import { orbStateForTool } from '../components/Spinner/allternitOrbFrames';
 import { getSystemPrompt } from '../constants/prompts';
 import { buildEffectiveSystemPrompt } from '../utils/systemPrompt';
 import { getSystemContext, getUserContext } from '../context';
@@ -1784,6 +1785,14 @@ export function REPL({
     if (lastAssistant?.type !== 'assistant') return false;
     const inProgressToolUses = lastAssistant.message.content.filter(b => b.type === 'tool_use' && inProgressToolUseIDs.has(b.id));
     return inProgressToolUses.length > 0 && inProgressToolUses.every(b => b.type === 'tool_use' && b.name === SLEEP_TOOL_NAME);
+  }, [messages, inProgressToolUseIDs]);
+  // Orb choreography for the running tool (search tools get the radar sweep).
+  const activeToolOrbState = useMemo(() => {
+    if (inProgressToolUseIDs.size === 0) return undefined;
+    const lastAssistant = messages.findLast(m => m.type === 'assistant');
+    if (lastAssistant?.type !== 'assistant') return undefined;
+    const running = lastAssistant.message.content.find(b => b.type === 'tool_use' && inProgressToolUseIDs.has(b.id));
+    return running?.type === 'tool_use' ? orbStateForTool(running.name) : undefined;
   }, [messages, inProgressToolUseIDs]);
   const {
     onBeforeQuery: mrOnBeforeQuery,
@@ -4983,7 +4992,7 @@ export function REPL({
               {"external" === 'ant' && <TungstenLiveMonitor />}
               {feature('WEB_BROWSER_TOOL') ? WebBrowserPanelModule && <WebBrowserPanelModule.WebBrowserPanel /> : null}
               <Box flexGrow={1} />
-              {showSpinner && <SpinnerWithVerb mode={streamMode} spinnerTip={spinnerTip} responseLengthRef={responseLengthRef} apiMetricsRef={apiMetricsRef} overrideMessage={spinnerMessage} spinnerSuffix={stopHookSpinnerSuffix} verbose={verbose} loadingStartTimeRef={loadingStartTimeRef} totalPausedMsRef={totalPausedMsRef} pauseStartTimeRef={pauseStartTimeRef} overrideColor={spinnerColor} overrideShimmerColor={spinnerShimmerColor} hasActiveTools={inProgressToolUseIDs.size > 0} leaderIsIdle={!isLoading} />}
+              {showSpinner && <SpinnerWithVerb mode={streamMode} spinnerTip={spinnerTip} responseLengthRef={responseLengthRef} apiMetricsRef={apiMetricsRef} overrideMessage={spinnerMessage} spinnerSuffix={stopHookSpinnerSuffix} verbose={verbose} loadingStartTimeRef={loadingStartTimeRef} totalPausedMsRef={totalPausedMsRef} pauseStartTimeRef={pauseStartTimeRef} overrideColor={spinnerColor} overrideShimmerColor={spinnerShimmerColor} hasActiveTools={inProgressToolUseIDs.size > 0} orbState={activeToolOrbState} leaderIsIdle={!isLoading} />}
               {!showSpinner && !isLoading && !userInputOnProcessing && !hasRunningTeammates && isBriefOnly && !viewedAgentTask && <BriefIdleStatus />}
               {isFullscreenEnvEnabled() && <PromptInputQueuedCommands />}
             </>} bottom={<Box flexDirection={feature('BUDDY') && companionNarrow ? 'column' : 'row'} width="100%" alignItems={feature('BUDDY') && companionNarrow ? undefined : 'flex-end'}>

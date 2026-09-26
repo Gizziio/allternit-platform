@@ -3,7 +3,8 @@ import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { useState } from 'react';
 import sample from 'lodash-es/sample';
-import { BLACK_CIRCLE, REFERENCE_MARK, TEARDROP_ASTERISK } from '../../constants/figures';
+import { BLACK_CIRCLE, REFERENCE_MARK } from '../../constants/figures';
+import { OrbMark, ORB_MARK_TEXT } from '../Spinner/OrbMark';
 import figures from 'figures';
 import { basename } from 'path';
 import { MessageResponse } from '../MessageResponse';
@@ -81,7 +82,7 @@ export function SystemTextMessage({
   }
   if (message.subtype === "scheduled_task_fire") {
     const t1 = addMargin ? 1 : 0;
-    const t2 = <Text dimColor={true}>{TEARDROP_ASTERISK} {message.content}</Text>;
+    const t2 = <Text dimColor={true}>{ORB_MARK_TEXT} {message.content}</Text>;
 
     const t3 = <Box marginTop={t1} backgroundColor={bg} width="100%">{t2}</Box>;
 
@@ -89,7 +90,7 @@ export function SystemTextMessage({
   }
   if (message.subtype === "permission_retry") {
     const t1 = addMargin ? 1 : 0;
-    const t2 = <Text dimColor={true}>{TEARDROP_ASTERISK} </Text>;
+    const t2 = <Text dimColor={true}>{ORB_MARK_TEXT} </Text>;
     const t3 = <Text>Allowed </Text>;
 
     const t4 = message.commands.join(", ");
@@ -272,9 +273,9 @@ function TurnDurationMessage({
     return null;
   }
   const t5 = addMargin ? 1 : 0;
-  const t6 = <Box minWidth={2}><Text dimColor={true}>{TEARDROP_ASTERISK}</Text></Box>;
+  const t6 = <OrbMark />;
 
-  const t7 = showTurnDuration && `${verb} for ${duration}`;
+  const t7 = showTurnDuration && `Gizzi ${verb.toLowerCase()} for ${duration}`;
   const t8 = backgroundTaskSummary && ` \u00B7 ${backgroundTaskSummary} still running`;
   const t9 = <Text dimColor={true}>{t7}{budgetSuffix}{t8}</Text>;
 
@@ -283,7 +284,7 @@ function TurnDurationMessage({
   return t10;
 }
 function _temp4() {
-  return sample(TURN_COMPLETION_VERBS) ?? "Worked";
+  return sample(TURN_COMPLETION_VERBS) ?? "Forged";
 }
 function MemorySavedMessage({
     message,
@@ -351,7 +352,7 @@ function ThinkingMessage({
 }) {
   const bg = useSelectedMessageBg();
   const t1 = addMargin ? 1 : 0;
-  const t2 = <Box minWidth={2}><Text dimColor={true}>{TEARDROP_ASTERISK}</Text></Box>;
+  const t2 = <OrbMark />;
 
   const t3 = <Text dimColor={true}>{message.content}</Text>;
 
