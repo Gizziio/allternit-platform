@@ -13,9 +13,9 @@ import { RuntimeService } from "@/runtime/runtime-service"
 import { RuntimeDriverFactory } from "@/runtime/runtime-driver-factory"
 import { resolveTaskSessionID } from "@/runtime/session/stream-context"
 import { Log } from "@/shared/util/log"
+import { Token } from "@/shared/util/token"
 
 const log = Log.create({ service: "subprocess-lm" })
-const TEXT_ID = "text-1"
 
 export class SubprocessLanguageModel implements LanguageModelV2 {
   readonly specificationVersion = "v2" as const
@@ -74,32 +74,76 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
       start: async (controller) => {
         controller.enqueue({ type: "stream-start", warnings: [] })
 
-        let textStarted = false
         let finished = false
+        // What this turn streamed and the agent's last context report, for
+        // estimating usage when the agent reports none.
+        let emitted = ""
+        let lastContext: { used: number; size: number } | undefined
+        // One open block at a time. Text and reasoning each get a fresh id
+        // whenever the stream switches kind or a tool call intervenes, so the
+        // session stores prose → thinking → tool → prose as separate ordered
+        // parts instead of one glued text part.
+        let open: { kind: "text" | "reasoning"; id: string } | null = null
+        let blockSeq = 0
+        const closeOpen = () => {
+          if (!open) return
+          controller.enqueue({ type: open.kind === "text" ? "text-end" : "reasoning-end", id: open.id } as LanguageModelV2StreamPart)
+          open = null
+        }
+        const ensureOpen = (kind: "text" | "reasoning") => {
+          if (open?.kind === kind) return open.id
+          closeOpen()
+          open = { kind, id: `${kind}-${++blockSeq}` }
+          controller.enqueue({ type: kind === "text" ? "text-start" : "reasoning-start", id: open.id } as LanguageModelV2StreamPart)
+          return open.id
+        }
 
         const finish = (reason: string, usage?: { inputTokens: number; outputTokens: number; totalTokens: number }) => {
           if (finished) return
           finished = true
-          if (textStarted) {
-            controller.enqueue({ type: "text-end", id: TEXT_ID })
-          }
+          closeOpen()
+          const reported = usage && usage.inputTokens + usage.outputTokens > 0 ? usage : undefined
+          // No usage from the agent: estimate it (and say so) rather than
+          // recording a zero that would break context upkeep and telemetry.
+          const estimated = reported
+            ? undefined
+            : (() => {
+                const inputTokens = lastContext?.used || Token.estimate(message)
+                const outputTokens = Token.estimate(emitted)
+                return { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens }
+              })()
           controller.enqueue({
             type: "finish",
             finishReason: reason as any,
-            usage: usage ?? { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-          })
+            usage: reported ?? estimated!,
+            ...(estimated ? { providerMetadata: { gizzi: { usageEstimated: true } } } : {}),
+          } as LanguageModelV2StreamPart)
         }
 
         try {
           await RuntimeService.markBusy(runtime.id, true)
 
           for await (const event of driver.stream(task)) {
+            if (event.type === "context") {
+              lastContext = { used: event.used, size: event.size }
+              controller.enqueue({
+                type: "raw",
+                raw: { __gizzi: "observed_context", used: event.used, size: event.size },
+              } as unknown as LanguageModelV2StreamPart)
+              continue
+            }
+
             if (event.type === "text_delta") {
-              if (!textStarted) {
-                controller.enqueue({ type: "text-start", id: TEXT_ID })
-                textStarted = true
-              }
-              controller.enqueue({ type: "text-delta", id: TEXT_ID, delta: event.delta })
+              emitted += event.delta
+              const id = ensureOpen("text")
+              controller.enqueue({ type: "text-delta", id, delta: event.delta })
+              continue
+            }
+
+            if (event.type === "reasoning_delta") {
+              emitted += event.delta
+              const id = ensureOpen("reasoning")
+              controller.enqueue({ type: "reasoning-delta", id, delta: event.delta } as LanguageModelV2StreamPart)
               continue
             }
 
@@ -121,6 +165,7 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
             // sanctioned sideband, enabled via includeRawChunks) so the
             // session processor can publish tool parts on the event stream.
             if (event.type === "tool_call") {
+              closeOpen()
               controller.enqueue({
                 type: "raw",
                 raw: {

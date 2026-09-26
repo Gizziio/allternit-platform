@@ -20,6 +20,7 @@ import { describeProviderError } from "@/shared/util/provider-error"
 import { SessionTrace } from "@/runtime/session/trace"
 import { ContextProjector } from "@/runtime/session/context-projector"
 import { consumeRetryHint } from "@/runtime/providers/retry-hint"
+import { SessionContext } from "./context-event"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -413,6 +414,15 @@ export namespace SessionProcessor {
                     usage: value.usage,
                     metadata: value.providerMetadata,
                   })
+                  if ((value.providerMetadata as any)?.gizzi?.usageEstimated) {
+                    input.assistantMessage.tokensEstimated = true
+                    Bus.publish(SessionContext.Event.Updated, {
+                      sessionID: input.sessionID,
+                      messageID: input.assistantMessage.id,
+                      basis: "estimated",
+                      usageEstimated: true,
+                    })
+                  }
                   input.assistantMessage.finish = value.finishReason
                   input.assistantMessage.cost += usage.cost
                   input.assistantMessage.tokens = usage.tokens
@@ -655,6 +665,16 @@ export namespace SessionProcessor {
                   const raw = (value as { raw?: unknown }).raw
                   if (!raw || typeof raw !== "object") break
                   const observed = raw as Record<string, unknown>
+                  if (observed.__gizzi === "observed_context") {
+                    Bus.publish(SessionContext.Event.Updated, {
+                      sessionID: input.sessionID,
+                      messageID: input.assistantMessage.id,
+                      used: Number(observed.used) || 0,
+                      window: Number(observed.size) || undefined,
+                      basis: "provider",
+                    })
+                    break
+                  }
                   if (observed.__gizzi === "observed_tool_call") {
                     const id = String(observed.id ?? "")
                     if (!id || toolcalls[id]) break

@@ -27,6 +27,8 @@ import { SessionTrace } from "@/runtime/session/trace"
 import { ContextProjector } from "@/runtime/session/context-projector"
 import { ContextAccounting } from "@/runtime/session/context-accounting"
 import { RuntimeTelemetry } from "@/runtime/telemetry"
+import { Bus } from "@/shared/bus"
+import { SessionContext } from "./context-event"
 
 export namespace LLM {
   const log = Log.create({ service: "llm" })
@@ -241,6 +243,12 @@ export namespace LLM {
       tools,
       contextWindow: input.model.limit.context,
       reservedOutputTokens: maxOutputTokens ?? Math.min(32_000, input.model.limit.output),
+    })
+    Bus.publish(SessionContext.Event.Updated, {
+      sessionID: input.sessionID,
+      used: context.inputTokens,
+      window: context.contextWindow || undefined,
+      basis: context.basis,
     })
     SessionTrace.append({
       sessionID: input.sessionID,

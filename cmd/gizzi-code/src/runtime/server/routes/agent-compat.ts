@@ -58,6 +58,7 @@ import { SessionSummary } from "@/runtime/session/summary"
 import { Provider } from "@/runtime/providers/provider"
 import { Bus } from "@/shared/bus"
 import { Log } from "@/shared/util/log"
+import { toolFramesForPart, usageFromMessageInfo } from "./tool-frames"
 
 const log = Log.create({ service: "agent-compat" })
 
@@ -605,12 +606,29 @@ export const AgentCompatRoutes = () =>
         // Latest assistant usage seen on the bus (message.updated carries the
         // full message info incl. tokens) — attached to the finish frame so
         // clients can render an exact tok/s instead of a chars/4 estimate.
-        let lastUsage: { inputTokens: number; outputTokens: number } | undefined
+        let lastUsage: Record<string, number> | undefined
+        // Latest context report + whether token counts were estimated.
+        let lastContext: { used: number; window?: number; basis: string } | undefined
+        let usageEstimated = false
         const finish = (status: "complete" | "error", error?: { error: string; errorDetails?: any }) => ({
           type: "finish",
           messageId: msgID,
           status,
-          ...(status === "complete" && lastUsage ? { usage: lastUsage } : {}),
+          ...(status === "complete" && (lastUsage || lastContext || usageEstimated)
+            ? {
+                usage: {
+                  ...(lastUsage ?? {}),
+                  ...(lastContext
+                    ? {
+                        contextUsed: lastContext.used,
+                        ...(lastContext.window ? { contextWindow: lastContext.window } : {}),
+                        contextBasis: lastContext.basis,
+                      }
+                    : {}),
+                  ...(usageEstimated ? { estimated: true } : {}),
+                },
+              }
+            : {}),
           metadata: { status, ...error },
         })
 
@@ -634,6 +652,22 @@ export const AgentCompatRoutes = () =>
         // partID → type tracking: message.part.updated carries the part type
         // ("reasoning") while deltas don't (v1_routes.rs:793-796).
         const reasoningParts = new Set<string>()
+        // Parts whose type a message.part.updated has declared. Deltas for an
+        // undeclared part wait (in order) for the declaration so an early
+        // reasoning delta never leaks into the reply as text.
+        const knownParts = new Set<string>()
+        let pendingDeltas: Array<{ partID: string; delta: string }> = []
+        const deltaFrame = (partID: string, delta: string) => ({
+          type: "content_block_delta",
+          messageId: msgID,
+          partId: partID,
+          delta: reasoningParts.has(partID)
+            ? { type: "thinking_delta", thinking: delta }
+            : { type: "text_delta", text: delta },
+        })
+        // callID → last tool frame sent ("start" | "end"), so each call
+        // yields exactly one tool_use start and one result/error.
+        const toolFramesSent = new Map<string, "start" | "end">()
         let wasBusy = false
         const unsub = Bus.subscribeAll((event: any) => {
           const type = event?.type
@@ -642,6 +676,15 @@ export const AgentCompatRoutes = () =>
             const part = props.part
             if (part?.sessionID !== sessionID) return
             if (part?.type === "reasoning" && typeof part?.id === "string") reasoningParts.add(part.id)
+            if (typeof part?.id === "string" && !knownParts.has(part.id)) {
+              knownParts.add(part.id)
+              const ready = pendingDeltas.filter((d) => d.partID === part.id)
+              pendingDeltas = pendingDeltas.filter((d) => d.partID !== part.id)
+              for (const d of ready) push(deltaFrame(d.partID, d.delta))
+            }
+            if (part?.type === "tool") {
+              for (const frame of toolFramesForPart(part, msgID, toolFramesSent)) push(frame)
+            }
             return
           }
           if (type === "message.updated") {
@@ -649,13 +692,7 @@ export const AgentCompatRoutes = () =>
             // assistant usage so the finish frame can report real tokens.
             const info = props.info
             if (info?.sessionID !== sessionID || info?.role !== "assistant") return
-            const tokens = info?.tokens
-            if (typeof tokens?.input === "number" || typeof tokens?.output === "number") {
-              lastUsage = {
-                inputTokens: typeof tokens.input === "number" ? tokens.input : 0,
-                outputTokens: typeof tokens.output === "number" ? tokens.output : 0,
-              }
-            }
+            lastUsage = usageFromMessageInfo(info) ?? lastUsage
             return
           }
           const evtSession = typeof props.sessionID === "string" ? props.sessionID : ""
@@ -663,20 +700,27 @@ export const AgentCompatRoutes = () =>
           if (type === "message.part.delta") {
             const partID = typeof props.partID === "string" ? props.partID : "text-1"
             const delta = typeof props.delta === "string" ? props.delta : ""
-            push({
-              type: "content_block_delta",
-              messageId: msgID,
-              partId: partID,
-              delta: reasoningParts.has(partID)
-                ? { type: "thinking_delta", thinking: delta }
-                : { type: "text_delta", text: delta },
-            })
+            if (!delta) return
+            if (!knownParts.has(partID)) pendingDeltas.push({ partID, delta })
+            else push(deltaFrame(partID, delta))
             return
           }
           if (type === "session.status") {
             const statusType = props.status?.type
             if (statusType === "busy") wasBusy = true
             else if (statusType === "idle" && wasBusy) push(finish("complete"))
+            return
+          }
+          if (type === "session.context.updated") {
+            if (props.usageEstimated === true) usageEstimated = true
+            if (typeof props.used === "number") {
+              lastContext = {
+                used: props.used,
+                window: typeof props.window === "number" ? props.window : undefined,
+                basis: props.basis === "provider" ? "provider" : "estimated",
+              }
+              push({ type: "context_usage", messageId: msgID, context: lastContext })
+            }
             return
           }
           if (type === "session.compacted") {
@@ -709,6 +753,11 @@ export const AgentCompatRoutes = () =>
           for (;;) {
             while (queue.length > 0) {
               const frame = queue.shift()
+              if (frame?.type === "finish" && pendingDeltas.length > 0) {
+                // Deltas whose part was never declared can only be reply text.
+                for (const d of pendingDeltas) await write(deltaFrame(d.partID, d.delta))
+                pendingDeltas = []
+              }
               await write(frame)
               if (frame?.type === "finish") return
             }

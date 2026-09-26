@@ -236,6 +236,17 @@ struct GizziMessageInfo {
     model: Option<serde_json::Value>,
     #[serde(default)]
     error: Option<GizziMessageError>,
+    // Assistant run accounting (absent on user messages).
+    #[serde(default, rename = "providerID")]
+    provider_id: Option<String>,
+    #[serde(default, rename = "modelID")]
+    model_id: Option<String>,
+    #[serde(default)]
+    tokens: Option<serde_json::Value>,
+    #[serde(default)]
+    cost: Option<f64>,
+    #[serde(default, rename = "tokensEstimated")]
+    tokens_estimated: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -431,9 +442,63 @@ fn transform_message(message: GizziMessage) -> serde_json::Value {
         "metadata": {
             "agent": message.info.agent,
             "model": message.info.model,
+            "telemetry": run_telemetry(&message),
             "parts": message.parts,
             "error": message.info.error.as_ref().and_then(|e| e.data.clone()),
         }
+    })
+}
+
+/// Run telemetry for a stored assistant message, in the shape the workspace
+/// renders beside the resting orb (see RunTelemetry in allternit-ai): model,
+/// wall time, reported (or flagged-estimated) usage, cost, tool calls.
+fn run_telemetry(message: &GizziMessage) -> serde_json::Value {
+    let info = &message.info;
+    if info.role != "assistant" {
+        return serde_json::Value::Null;
+    }
+    let Some(started) = info.time.as_ref().and_then(|t| t.created) else {
+        return serde_json::Value::Null;
+    };
+    let ended = info.time.as_ref().and_then(|t| t.completed).unwrap_or(started);
+    let tokens = info.tokens.clone().unwrap_or_else(|| json!({}));
+    let num = |v: &serde_json::Value| v.as_u64().filter(|n| *n > 0);
+    let mut usage = json!({
+        "inputTokens": tokens.get("input").and_then(|v| v.as_u64()).unwrap_or(0),
+        "outputTokens": tokens.get("output").and_then(|v| v.as_u64()).unwrap_or(0),
+    });
+    if let Some(n) = tokens.pointer("/cache/read").and_then(num) {
+        usage["cacheReadTokens"] = json!(n);
+    }
+    if let Some(n) = tokens.pointer("/cache/write").and_then(num) {
+        usage["cacheWriteTokens"] = json!(n);
+    }
+    if let Some(n) = tokens.get("reasoning").and_then(num) {
+        usage["reasoningTokens"] = json!(n);
+    }
+    if let Some(cost) = info.cost.filter(|c| *c > 0.0) {
+        usage["cost"] = json!(cost);
+    }
+    if info.tokens_estimated == Some(true) {
+        usage["estimated"] = json!(true);
+    }
+    let tools: Vec<_> = message.parts.iter().filter(|p| p.part_type == "tool").collect();
+    let failures = tools
+        .iter()
+        .filter(|p| p.state.as_ref().and_then(|s| s.get("status")).and_then(|v| v.as_str()) == Some("error"))
+        .count();
+    let model_id = match (&info.provider_id, &info.model_id) {
+        (Some(p), Some(m)) => Some(format!("{p}/{m}")),
+        (None, Some(m)) => Some(m.clone()),
+        _ => None,
+    };
+    json!({
+        "modelId": model_id,
+        "startedAt": started,
+        "endedAt": ended,
+        "usage": usage,
+        "toolCalls": tools.len(),
+        "toolFailures": failures,
     })
 }
 
@@ -1763,5 +1828,44 @@ mod tests {
         );
 
         handle.abort();
+    }
+}
+
+#[cfg(test)]
+mod run_telemetry_tests {
+    use super::*;
+
+    fn message(v: serde_json::Value) -> GizziMessage {
+        serde_json::from_value(v).expect("message")
+    }
+
+    #[test]
+    fn assistant_messages_carry_run_telemetry() {
+        let m = message(json!({
+            "info": {"id": "msg_1", "sessionID": "ses_1", "role": "assistant",
+                     "time": {"created": 1000, "completed": 49000},
+                     "providerID": "kimi-cli", "modelID": "kimi-k3",
+                     "tokens": {"input": 8200, "output": 60, "reasoning": 0, "cache": {"read": 0, "write": 0}},
+                     "cost": 0, "tokensEstimated": true},
+            "parts": [
+                {"type": "tool", "tool": "WebSearch", "state": {"status": "completed"}},
+                {"type": "tool", "tool": "WebFetch", "state": {"status": "error"}},
+                {"type": "text", "text": "answer"}
+            ]
+        }));
+        let t = run_telemetry(&m);
+        assert_eq!(t["modelId"], "kimi-cli/kimi-k3");
+        assert_eq!(t["endedAt"].as_i64().unwrap() - t["startedAt"].as_i64().unwrap(), 48000);
+        assert_eq!(t["usage"]["inputTokens"], 8200);
+        assert_eq!(t["usage"]["estimated"], true);
+        assert!(t["usage"].get("cost").is_none());
+        assert_eq!(t["toolCalls"], 2);
+        assert_eq!(t["toolFailures"], 1);
+    }
+
+    #[test]
+    fn user_messages_have_no_run_telemetry() {
+        let m = message(json!({"info": {"id": "u", "sessionID": "s", "role": "user", "time": {"created": 1}}, "parts": []}));
+        assert!(run_telemetry(&m).is_null());
     }
 }
