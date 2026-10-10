@@ -14,6 +14,8 @@ export namespace Tool {
     agent?: Agent.Info
     /** The model the tool set is being built for (adapters pick their wire shape from it). */
     model?: { providerID: string; modelID: string; npm?: string }
+    /** The session the tool set is being built for, when there is one. */
+    sessionID?: string
   }
 
   export type Context<M extends Metadata = Metadata> = {

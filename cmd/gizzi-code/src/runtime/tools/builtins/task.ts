@@ -1,4 +1,5 @@
 import { Tool } from "@/runtime/tools/builtins/tool"
+import * as BotTurn from "@/runtime/bots/bot-turn"
 import { RESULT_INSTRUCTION, subagentResult } from "./subagent-result"
 import DESCRIPTION from "@/runtime/tools/builtins/task.txt"
 import z from "zod/v4"
@@ -175,6 +176,8 @@ export const TaskTool = Tool.define<typeof parameters, TaskMetadata>("task", asy
           agent: agent.name,
           tools,
           parts: await SessionPrompt.resolvePromptParts(prompt),
+          // A bot's subagent stays isolated from the user's personal setup.
+          ...(BotTurn.get(ctx.sessionID) ? { bot: BotTurn.get(ctx.sessionID) } : {}),
         })
 
       const runTask = async () => {

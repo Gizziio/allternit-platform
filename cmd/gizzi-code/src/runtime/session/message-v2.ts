@@ -16,6 +16,7 @@ import { iife } from "@/shared/util/iife"
 import { type SystemError } from "bun"
 import type { Provider } from "@/runtime/providers/provider"
 import { Log } from "@/shared/util/log"
+import { BotTurnInfo } from "@/runtime/bots/bot-turn"
 
 const log = Log.create({ service: "message-v2" })
 
@@ -327,6 +328,10 @@ export namespace MessageV2 {
     // sees it; it is never written to the session's permission ruleset.
     metadata: z.record(z.string(), z.any()).optional(),
     variant: z.string().optional(),
+    // Set when the turn runs as one of the user's platform bots (sent by
+    // allternit-api). Bot turns use the bot's identity and never load the
+    // user's personal instruction files or skills (runtime/bots/bot-turn.ts).
+    bot: BotTurnInfo.optional(),
   })
   export type User = z.infer<typeof User>
 

@@ -1,4 +1,15 @@
 import type { AgentTask } from "@/runtime/runtime-driver"
+import { claudeBotFlags } from "@/runtime/bots/bot-turn"
+
+/**
+ * Claude Code permission + isolation flags for a session turn. Normal
+ * sessions keep the long-standing `bypassPermissions`; a bot turn gets
+ * settings isolation and its own tool policy (see claudeBotFlags).
+ */
+export function claudePermissionFlags(ctx: { bot?: AgentTask["bot"]; mcp?: AgentTask["mcp"] }): string[] {
+  if (ctx.bot) return claudeBotFlags(ctx.bot, ctx.mcp?.name)
+  return ["--permission-mode", "bypassPermissions"]
+}
 
 /**
  * Claude Code flags that bring the gizzi session along: its instructions
@@ -9,11 +20,14 @@ export function claudeSessionFlags(ctx: {
   systemPrompt?: string
   mcp?: AgentTask["mcp"]
   vendorSessionId?: string
+  bot?: AgentTask["bot"]
 }): string[] {
   const flags: string[] = []
   // Continue the vendor's own conversation from the previous turn.
   if (ctx.vendorSessionId) flags.push("--resume", ctx.vendorSessionId)
-  if (ctx.systemPrompt?.trim()) flags.push("--append-system-prompt", ctx.systemPrompt)
+  // A bot turn replaces Claude Code's own "coding CLI" prompt with the bot's
+  // (persona first); other sessions append to it.
+  if (ctx.systemPrompt?.trim()) flags.push(ctx.bot ? "--system-prompt" : "--append-system-prompt", ctx.systemPrompt)
   if (ctx.mcp) {
     flags.push(
       "--mcp-config",

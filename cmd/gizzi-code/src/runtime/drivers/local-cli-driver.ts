@@ -23,7 +23,8 @@ import type {
   RuntimeDriver,
   TaskHandle,
 } from "@/runtime/runtime-driver"
-import { acpCanLoadSession, acpMcpServers, claudeSessionFlags, codexThreadRequest, opencodeResumeFlags, qwenResumeFlags, vendorSessionIdFromEvent, codexMcpConfig, withInstructions } from "@/runtime/drivers/cli-session-flags"
+import { claudeToolDecision, deniedMessage } from "@/runtime/bots/bot-turn"
+import { acpCanLoadSession, acpMcpServers, claudePermissionFlags, claudeSessionFlags, codexThreadRequest, opencodeResumeFlags, qwenResumeFlags, vendorSessionIdFromEvent, codexMcpConfig, withInstructions } from "@/runtime/drivers/cli-session-flags"
 import { attachmentsToAcpContent } from "./attachments"
 import { RuntimeService, RuntimeNotFoundError, type RegisteredRuntime } from "@/runtime/runtime-service"
 import { ExecutionLogService } from "@/runtime/execution-log"
@@ -162,6 +163,7 @@ export class LocalCliDriver implements RuntimeDriver {
       systemPrompt: task?.systemPrompt,
       mcp: task?.mcp,
       vendorSessionId: task?.vendorSessionId,
+      bot: task?.bot,
     })
 
     const env = adapter.env ? { ...adapter.env, ...task?.env } : task?.env
@@ -175,6 +177,9 @@ export class LocalCliDriver implements RuntimeDriver {
           endsWithResult: adapter.endsWithResult ?? false,
           cwd: task?.cwd,
           env: env,
+          bot: task?.bot,
+          sessionID: task?.sessionID,
+          bridgeName: task?.mcp?.name,
         })) {
           if (event.type === "error" || (event.type === "finish" && event.finishReason === "error")) failed = true
           yield event
@@ -451,6 +456,10 @@ export class LocalCliDriver implements RuntimeDriver {
       endsWithResult: boolean
       cwd?: string
       env?: Record<string, string>
+      /** A bot turn: tool permission requests follow the bot's policy. */
+      bot?: AgentTask["bot"]
+      sessionID?: string
+      bridgeName?: string
     },
   ): AsyncIterable<AgentEvent> {
     let lastVendorId: string | undefined
@@ -596,6 +605,17 @@ export class LocalCliDriver implements RuntimeDriver {
           if (evt.type === "control_request") {
             const requestId = String(evt.request_id ?? "")
             const input = evt.request?.input as Record<string, unknown> | undefined
+            if (requestId && options.bot && evt.request?.subtype === "can_use_tool") {
+              // A restricted bot's CLI asks before any tool outside its
+              // allowlist (--permission-prompt-tool stdio): refuse it, or
+              // route it to the app's approval flow.
+              const toolName = String(evt.request?.tool_name ?? "")
+              const verdict = await botToolVerdict(options.bot, toolName, input, options.sessionID, options.bridgeName)
+              log.info("bot tool decision", { taskId: handle.taskId, bot: options.bot.id, tool: toolName, allow: verdict.allow })
+              if (verdict.allow) writeControlResponse(stdin, requestId, input)
+              else writeControlDeny(stdin, requestId, "message" in verdict ? verdict.message : `${toolName} was refused.`)
+              continue
+            }
             if (requestId) {
               writeControlResponse(stdin, requestId, input)
             }
@@ -1610,7 +1630,14 @@ interface CliAdapter {
   buildArgv(
     baseCmd: string[],
     message: string,
-    ctx: { cwd?: string; taskId: string; systemPrompt?: string; mcp?: AgentTask["mcp"]; vendorSessionId?: string },
+    ctx: {
+      cwd?: string
+      taskId: string
+      systemPrompt?: string
+      mcp?: AgentTask["mcp"]
+      vendorSessionId?: string
+      bot?: AgentTask["bot"]
+    },
   ): string[]
 }
 
@@ -1645,7 +1672,9 @@ const CLI_ADAPTERS: Record<string, CliAdapter> = {
         "--verbose",
         // Text streams as it's written, not one block at a time.
         "--include-partial-messages",
-        "--permission-mode", "bypassPermissions",
+        // Bots: settings isolation + their own tool allowlist / approval
+        // gates instead of bypassPermissions (runtime/bots/bot-turn.ts).
+        ...claudePermissionFlags(ctx),
         "--disallowedTools", "AskUserQuestion",
         ...claudeSessionFlags(ctx),
         ...modelFlag(PROVIDER_ENV_KEYS["claude-cli"]?.model ? process.env[PROVIDER_ENV_KEYS["claude-cli"]!.model!] : undefined),
@@ -1877,6 +1906,16 @@ function resolveAdapter(name: string): CliAdapter {
   )
 }
 
+/** The argv a CLI adapter would spawn for a task (tests and diagnostics). */
+export function cliAdapterArgv(
+  name: string,
+  baseCmd: string[],
+  message: string,
+  ctx: Parameters<CliAdapter["buildArgv"]>[2],
+): string[] {
+  return resolveAdapter(name).buildArgv(baseCmd, message, ctx)
+}
+
 export interface CliAdapterInfo {
   supported: boolean
   mode?: AdapterMode
@@ -2106,6 +2145,67 @@ function writeControlResponse(
   writeToStdin(stdin, JSON.stringify(response) + "\n")
 }
 
+function writeControlDeny(
+  stdin: Bun.FileSink | WritableStream<Uint8Array>,
+  requestId: string,
+  message: string,
+): void {
+  const response = {
+    type: "control_response",
+    response: {
+      subtype: "success",
+      request_id: requestId,
+      response: { behavior: "deny", message },
+    },
+  }
+  writeToStdin(stdin, JSON.stringify(response) + "\n")
+}
+
+/**
+ * A restricted bot's Claude CLI asked to use a tool it was not pre-approved
+ * for. Allowlisted → allow; ask-each-time (or any tool on a bot with
+ * approval gates) → the app's approval flow (PermissionNext.ask publishes
+ * permission.asked; the turn waits for the person's reply in the app);
+ * otherwise refuse with a reason the model relays to the user. Without a
+ * session there is no one to ask, so "ask" is refused too.
+ */
+async function botToolVerdict(
+  bot: NonNullable<AgentTask["bot"]>,
+  toolName: string,
+  input: Record<string, unknown> | undefined,
+  sessionID: string | undefined,
+  bridgeName: string | undefined,
+): Promise<{ allow: true } | { allow: false; message: string }> {
+  const decision = claudeToolDecision(bot, toolName, bridgeName)
+  if (decision === "allow") return { allow: true }
+  if (decision === "deny") return { allow: false, message: deniedMessage(bot, toolName) }
+  if (!sessionID) return { allow: false, message: `${toolName} needs the user's approval, and no one can approve it here.` }
+  const pattern =
+    typeof input?.command === "string"
+      ? input.command
+      : typeof input?.file_path === "string"
+        ? input.file_path
+        : typeof input?.url === "string"
+          ? input.url
+          : "*"
+  try {
+    await PermissionNext.ask({
+      permission: toolName,
+      patterns: [pattern],
+      sessionID,
+      metadata: { tool: toolName, bot: bot.id, input },
+      always: [],
+      ruleset: [{ permission: toolName, pattern: "*", action: "ask" }],
+    })
+    return { allow: true }
+  } catch (err) {
+    return {
+      allow: false,
+      message: `The user did not approve ${toolName}${err instanceof Error && err.message ? ` (${err.message})` : ""}.`,
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Production process hygiene (matches Multica's Go helpers)
 // ---------------------------------------------------------------------------
@@ -2187,7 +2287,7 @@ interface StreamJsonEvent {
   usage?: { input_tokens?: number; output_tokens?: number }
   is_error?: boolean
   request_id?: string
-  request?: { input?: Record<string, unknown> | string }
+  request?: { subtype?: string; tool_name?: string; input?: Record<string, unknown> | string }
 }
 
 interface OpenclawEvent {

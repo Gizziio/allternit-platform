@@ -20,6 +20,8 @@ import type { Agent } from "@/runtime/loop/agent"
 import type { MessageV2 } from "@/runtime/session/message-v2"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { SystemPrompt } from "@/runtime/session/system"
+import { headerParts } from "@/runtime/session/system-header"
+import * as BotTurn from "@/runtime/bots/bot-turn"
 import { Flag } from "@/runtime/context/flag/flag"
 import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { runWithStreamContext } from "@/runtime/session/stream-context"
@@ -84,20 +86,26 @@ export namespace LLM {
     ])
     const isCodex = provider.id === "openai" && auth?.type === "oauth"
 
+    // A bot turn runs as the bot: its persona leads and the coding-agent
+    // identity header is replaced (runtime/bots/bot-turn.ts).
+    const bot = input.user.bot ?? BotTurn.get(input.sessionID)
+    if (bot) BotTurn.mark(input.sessionID, bot)
     const system = []
     system.push(
-      [
+      headerParts({
+        bot,
         // use agent prompt otherwise provider prompt
+        agentPrompt: input.agent.prompt,
         // For Codex sessions, skip SystemPrompt.provider() since it's sent via options.instructions
-        ...(input.agent.prompt ? [input.agent.prompt] : isCodex ? [] : SystemPrompt.provider(input.model, input.mode)),
+        codex: isCodex,
+        provider: () => SystemPrompt.provider(input.model, input.mode),
+        botGuidance: () => SystemPrompt.bot(input.mode),
         // any custom prompt passed into this call — already includes the last
         // user message's system override/append (see prompt.ts's loop(),
         // which folds lastUser.system into this array exactly once; do not
         // re-add input.user.system here or it gets applied twice).
-        ...input.system,
-      ]
-        .filter((x) => x)
-        .join("\n"),
+        system: input.system,
+      }).join("\n"),
     )
 
     const header = system[0]
@@ -129,7 +137,7 @@ export namespace LLM {
       mergeDeep(variant),
     )
     if (isCodex) {
-      options.instructions = SystemPrompt.instructions()
+      options.instructions = bot ? SystemPrompt.bot(input.mode).join("\n") : SystemPrompt.instructions()
     }
     // Forward service tier from API bridges (e.g. OpenAI `service_tier`) into
     // provider-specific options so the AI SDK can set the request body field.

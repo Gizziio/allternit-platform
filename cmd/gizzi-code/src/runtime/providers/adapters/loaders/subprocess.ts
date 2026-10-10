@@ -19,6 +19,7 @@ import { extractSystemText } from "@/runtime/providers/adapters/loaders/system-t
 import { Server } from "@/runtime/server/server"
 import { VendorSession } from "@/runtime/session/vendor-session"
 import { Instance } from "@/runtime/context/project/instance"
+import * as BotTurn from "@/runtime/bots/bot-turn"
 
 const log = Log.create({ service: "subprocess-lm" })
 
@@ -86,6 +87,9 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
       cwd: currentWorkdir(),
       // gizzi's session tools (pane document, pane browser, media) over MCP.
       mcp: sessionID ? bridgeConfig(sessionID) : undefined,
+      // A bot turn: the CLI runs isolated from the user's own settings, with
+      // the bot's tool allowlist (runtime/bots/bot-turn.ts).
+      bot: BotTurn.get(sessionID),
     })
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({

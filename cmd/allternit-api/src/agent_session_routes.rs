@@ -1186,6 +1186,7 @@ async fn list_messages(headers: HeaderMap, Path(session_id): Path<String>) -> im
 }
 
 async fn send_message(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(session_id): Path<String>,
     Json(body): Json<SendMessageBody>,
@@ -1208,7 +1209,11 @@ async fn send_message(
     }
     let client = gizzi_client(&headers);
     let path = format!("/v1/session/{}/message", urlencoding::encode(&session_id));
-    let payload = send_message_payload(&body);
+    let mut payload = send_message_payload(&body);
+    // A bot's session: the turn runs as the bot (see `bot_turn_marker`).
+    if let Some(bot) = session_bot_marker(&state.db, &session_id) {
+        payload["bot"] = bot;
+    }
 
     match gizzi_json::<GizziMessage>(&client, reqwest::Method::POST, &path, Some(payload)).await {
         Ok(message) => Json(transform_message(message)).into_response(),
@@ -2388,6 +2393,73 @@ pub(crate) fn bot_job_payload(db: &DbHandle, user_id: &str, target: &str, descri
     Some((bot_id, out))
 }
 
+/// The `bot` marker on a gizzi message for a bot's turn (gizzi-code
+/// `runtime/bots/bot-turn.ts`). gizzi then runs the turn as the bot: its
+/// persona leads the system prompt in place of gizzi's "coding agent"
+/// header; the user's personal instruction files (~/.claude/CLAUDE.md,
+/// ~/.gizzi, CLAUDE.md/AGENTS.md walked up from the folder) and personal
+/// skills are not loaded; a Claude CLI brain runs with settings isolation and
+/// the bot's tool allowlist / approval gates instead of bypassPermissions.
+///
+/// A bot is an agent row flagged `is_bot` (or `config.isBot`), or any agent
+/// on a session tagged `isBot`. Agent Hub agents and plain sessions get
+/// `None` and keep today's behavior.
+pub(crate) fn bot_turn_marker(db: &DbHandle, agent_id: &str, session_id: Option<&str>) -> Option<serde_json::Value> {
+    let conn = db.connect().ok()?;
+    let (name, is_bot, config, allowed, perms): (String, i64, Option<String>, Option<String>, Option<String>) = conn
+        .query_row(
+            "SELECT name, is_bot, config, allowed_tools, tool_permissions FROM agents WHERE id = ?1",
+            params![agent_id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        )
+        .ok()?;
+    let parse = |raw: Option<String>| raw.and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()).unwrap_or(serde_json::Value::Null);
+    let config = parse(config);
+    let session_is_bot = session_id
+        .and_then(|id| db.get_session_metadata(id).ok().flatten())
+        .map_or(false, |bag| bag.get("isBot").and_then(serde_json::Value::as_bool).unwrap_or(false));
+    if is_bot == 0 && config.get("isBot").and_then(serde_json::Value::as_bool) != Some(true) && !session_is_bot {
+        return None;
+    }
+    let allowed_tools: Vec<String> = parse(allowed)
+        .as_array()
+        .map(|list| list.iter().filter_map(|v| v.as_str()).map(str::to_string).filter(|t| !t.trim().is_empty()).collect())
+        .unwrap_or_default();
+    let mut ask_tools: Vec<String> = parse(perms)
+        .as_object()
+        .map(|map| {
+            map.iter()
+                .filter(|(_, v)| matches!(v.as_str(), Some("always_ask") | Some("ask")))
+                .map(|(k, _)| k.clone())
+                .collect()
+        })
+        .unwrap_or_default();
+    ask_tools.sort();
+    // Template approval gates (`config.approvals`, e.g. "Send email: always").
+    let gated = config.get("approvals").and_then(serde_json::Value::as_array).map_or(false, |a| !a.is_empty());
+    Some(json!({
+        "id": agent_id,
+        "name": name,
+        "allowedTools": allowed_tools,
+        "askTools": ask_tools,
+        "gated": gated,
+    }))
+}
+
+/// The bot marker for a session the app tagged as a bot's (`isBot` with its
+/// `agentId` / `botCanonicalFor` / `botThreadOf`), or `None`.
+pub(crate) fn session_bot_marker(db: &DbHandle, session_id: &str) -> Option<serde_json::Value> {
+    let bag = db.get_session_metadata(session_id).ok().flatten()?;
+    if bag.get("isBot").and_then(serde_json::Value::as_bool) != Some(true) {
+        return None;
+    }
+    let agent_id = ["agentId", "botCanonicalFor", "botThreadOf"]
+        .iter()
+        .find_map(|key| bag.get(*key).and_then(serde_json::Value::as_str).filter(|v| !v.is_empty()))?
+        .to_string();
+    bot_turn_marker(db, &agent_id, Some(session_id))
+}
+
 /// Budget for saved bot memory in a server-started turn's instructions.
 const BOT_MEMORY_CHARS: usize = 6000;
 
@@ -2552,6 +2624,9 @@ pub(crate) async fn native_turn_request(db: &DbHandle, session_id: &str, bot_id:
     // instructions and saved memory ride on every server-started turn.
     if let Some(system) = bot_turn_system(db, session_id, bot_id) {
         payload["system"] = json!(format!("+{system}"));
+    }
+    if let Some(bot) = bot_turn_marker(db, bot_id, Some(session_id)) {
+        payload["bot"] = bot;
     }
     Ok((client, path, payload))
 }
@@ -2959,6 +3034,46 @@ mod tests {
         .unwrap();
         let updated = transform_bus_event(&Client::new(), &db, cleared).await.expect("updated event");
         assert!(updated["metadata"]["limit"].is_null());
+    }
+
+    #[test]
+    fn bot_turns_carry_the_bot_marker_and_other_agents_do_not() {
+        let temp = std::env::temp_dir().join(format!("bot-marker-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp).unwrap();
+        let db = crate::db::DbHandle::new(temp.join("test.db")).expect("test db");
+        let conn = db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO agents (id, user_id, name, model, provider, is_bot, config, allowed_tools, tool_permissions)
+             VALUES ('b1', 'u1', 'Chief', 'sonnet', 'claude-cli', 1,
+                     '{\"isBot\":true,\"approvals\":[{\"action\":\"Send email\",\"rule\":\"always\"}]}',
+                     '[\"web_search\",\"code_execution\"]', '{\"code_execution\":\"always_ask\",\"web_search\":\"auto\"}')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO agents (id, user_id, name, model, provider) VALUES ('hub', 'u1', 'Hub agent', 'sonnet', 'claude-cli')",
+            [],
+        )
+        .unwrap();
+
+        let marker = bot_turn_marker(&db, "b1", None).expect("a bot gets a marker");
+        assert_eq!(marker["id"], "b1");
+        assert_eq!(marker["name"], "Chief");
+        assert_eq!(marker["allowedTools"], json!(["web_search", "code_execution"]));
+        assert_eq!(marker["askTools"], json!(["code_execution"]));
+        assert_eq!(marker["gated"], true);
+
+        // An Agent Hub agent (not a bot) keeps today's behavior...
+        assert!(bot_turn_marker(&db, "hub", None).is_none());
+        // ...unless the app tagged its session as a bot's.
+        db.set_session_metadata("s-bot", &json!({"isBot": true, "agentId": "hub"})).unwrap();
+        assert_eq!(bot_turn_marker(&db, "hub", Some("s-bot")).unwrap()["gated"], false);
+        assert_eq!(session_bot_marker(&db, "s-bot").unwrap()["id"], "hub");
+        db.set_session_metadata("s-main", &json!({"isBot": true, "botCanonicalFor": "b1"})).unwrap();
+        assert_eq!(session_bot_marker(&db, "s-main").unwrap()["id"], "b1");
+        db.set_session_metadata("s-code", &json!({"sessionMode": "code"})).unwrap();
+        assert!(session_bot_marker(&db, "s-code").is_none());
+        assert!(session_bot_marker(&db, "missing").is_none());
     }
 
     #[test]
