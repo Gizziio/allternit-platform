@@ -27,6 +27,53 @@ fn cron_daemon_base() -> String {
         .to_string()
 }
 
+/// A routine-route error: a bare status, or a status with a JSON body
+/// `{ "error": <code>, "message": <text> }` the UI can show as-is.
+#[derive(Debug)]
+pub struct RoutineApiError(StatusCode, Option<serde_json::Value>);
+
+impl RoutineApiError {
+    fn new(status: StatusCode, code: &str, message: &str) -> Self {
+        Self(status, Some(json!({ "error": code, "message": message })))
+    }
+}
+
+impl From<StatusCode> for RoutineApiError {
+    fn from(status: StatusCode) -> Self {
+        Self(status, None)
+    }
+}
+
+impl axum::response::IntoResponse for RoutineApiError {
+    fn into_response(self) -> axum::response::Response {
+        match self.1 {
+            Some(body) => (self.0, Json(body)).into_response(),
+            None => self.0.into_response(),
+        }
+    }
+}
+
+pub const AGENT_REQUIRED_MESSAGE: &str =
+    "Pick a bot for this routine. A routine runs as a turn in a bot's chat, so it needs one.";
+
+/// `agent_id` must name an existing agent. Empty strings count as missing.
+fn check_agent(conn: &rusqlite::Connection, agent_id: Option<&str>) -> Result<Option<String>, RoutineApiError> {
+    let Some(id) = agent_id.map(str::trim).filter(|s| !s.is_empty()) else {
+        return Ok(None);
+    };
+    let exists: bool = conn
+        .query_row("SELECT 1 FROM agents WHERE id = ?1", [id], |_| Ok(true))
+        .unwrap_or(false);
+    if !exists {
+        return Err(RoutineApiError::new(
+            StatusCode::BAD_REQUEST,
+            "agent_not_found",
+            "That bot no longer exists. Pick another bot for this routine.",
+        ));
+    }
+    Ok(Some(id.to_string()))
+}
+
 fn normalize_execution_domain(domain: Option<String>) -> String {
     match domain.as_deref() {
         Some("cloud") | Some("hybrid") => "cloud".to_string(),
@@ -223,6 +270,9 @@ pub struct CreateRoutineRequest {
 pub struct UpdateRoutineRequest {
     #[serde(default)]
     pub name: Option<String>,
+    /// Assign the routine to a bot/agent (e.g. a "Needs a bot" routine).
+    #[serde(default)]
+    pub agent_id: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
@@ -998,10 +1048,21 @@ async fn create_routine(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(req): Json<CreateRoutineRequest>,
-) -> Result<Json<Routine>, StatusCode> {
+) -> Result<Json<Routine>, RoutineApiError> {
     let user = get_user(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
+
+    let execution_domain = normalize_execution_domain(req.execution_domain.clone());
+    // Local routines run as a bot's turn (routine_local_scheduler); without a
+    // bot every run used to fail silently. Refuse them up front.
+    let agent_id = {
+        let conn = state.db.connect().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        check_agent(&conn, req.agent_id.as_deref())?
+    };
+    if agent_id.is_none() && !uses_cloud_scheduler(&execution_domain) {
+        return Err(RoutineApiError::new(StatusCode::BAD_REQUEST, "agent_required", AGENT_REQUIRED_MESSAGE));
+    }
 
     let config = req.config.unwrap_or_else(|| json!({}));
     let job_type = config
@@ -1010,13 +1071,11 @@ async fn create_routine(
         .unwrap_or("agent")
         .to_string();
 
-    let execution_domain = normalize_execution_domain(req.execution_domain.clone());
-
     let routine = Routine {
         id: id.clone(),
         user_id: user.user_id.clone(),
         workspace_id: req.workspace_id.clone(),
-        agent_id: req.agent_id.clone(),
+        agent_id,
         goal_id: req.goal_id.clone(),
         gizzi_job_id: None,
         name: req.name.clone(),
@@ -1132,12 +1191,14 @@ async fn update_routine(
     headers: HeaderMap,
     Path(id): Path<String>,
     Json(req): Json<UpdateRoutineRequest>,
-) -> Result<Json<Routine>, StatusCode> {
+) -> Result<Json<Routine>, RoutineApiError> {
     let user = get_user(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
     let conn = state.db.connect().map_err(|e| {
         warn!("db error: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
+    // An empty agent_id is "no change", not "unassign": routines always keep a bot.
+    let new_agent_id = check_agent(&conn, req.agent_id.as_deref())?;
 
     let existing = conn
         .query_row(
@@ -1187,14 +1248,15 @@ async fn update_routine(
             timeout_seconds = COALESCE(?12, timeout_seconds),
             max_retries = COALESCE(?13, max_retries),
             updated_at = ?14,
-            -- Any schedule/status/domain change resets the local scheduler
-            -- cursor so it recomputes from the new definition; a new
-            -- schedule also re-arms a one-shot that already ran.
-            next_run_at = CASE WHEN ?3 IS NOT NULL OR ?4 IS NOT NULL OR ?5 IS NOT NULL OR ?7 IS NOT NULL
+            agent_id = COALESCE(?17, agent_id),
+            -- Any schedule/status/domain/agent change resets the local
+            -- scheduler cursor so it recomputes from the new definition; a
+            -- new schedule also re-arms a one-shot that already ran.
+            next_run_at = CASE WHEN ?3 IS NOT NULL OR ?4 IS NOT NULL OR ?5 IS NOT NULL OR ?7 IS NOT NULL OR ?17 IS NOT NULL
                                THEN NULL ELSE next_run_at END,
             last_run_at = CASE WHEN ?4 IS NOT NULL OR ?5 IS NOT NULL THEN NULL ELSE last_run_at END
          WHERE id = ?15 AND user_id = ?16",
-        (
+        params![
             req.name.as_ref(),
             req.description.as_ref(),
             req.status.as_ref(),
@@ -1213,12 +1275,29 @@ async fn update_routine(
             &now,
             &id,
             &user.user_id,
-        ),
+            new_agent_id.as_ref(),
+        ],
     )
     .map_err(|e| {
         warn!("update routine failed: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
+    // Server-owned run bookkeeping: a new bot clears the "Needs a bot" flag,
+    // and assigning or resuming starts the failure streak over (so a
+    // resumed routine gets a fresh set of tries before auto-pausing again).
+    if new_agent_id.is_some() || req.status.as_deref() == Some("active") {
+        conn.execute(
+            "UPDATE routines SET metadata = json_remove(
+                 CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END,
+                 '$.needsAgent', '$.consecutiveFailures', '$.autoPaused')
+             WHERE id = ?1 AND user_id = ?2",
+            (&id, &user.user_id),
+        )
+        .map_err(|e| {
+            warn!("reset routine run state failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    }
 
     let updated_routine = get_routine(State(state.clone()), headers.clone(), Path(id.clone()))
         .await?
@@ -1288,7 +1367,7 @@ async fn update_routine(
         }
     }
 
-    get_routine(State(state), headers, Path(id)).await
+    Ok(get_routine(State(state), headers, Path(id)).await?)
 }
 
 async fn delete_routine(
@@ -1334,7 +1413,7 @@ async fn run_routine(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(id): Path<String>,
-) -> Result<Json<serde_json::Value>, StatusCode> {
+) -> Result<Json<serde_json::Value>, RoutineApiError> {
     let user = get_user(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
     let conn = state.db.connect().map_err(|e| {
         warn!("db error: {}", e);
@@ -1355,7 +1434,12 @@ async fn run_routine(
         let routine = crate::routine_local_scheduler::get_routine(&state.db, &id)
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
             .ok_or(StatusCode::NOT_FOUND)?;
-        let guard = crate::routine_local_scheduler::FlightGuard::acquire(&id).ok_or(StatusCode::CONFLICT)?;
+        if routine.agent_id.as_deref().map_or(true, |a| a.trim().is_empty()) {
+            return Err(RoutineApiError::new(StatusCode::CONFLICT, "agent_required", AGENT_REQUIRED_MESSAGE));
+        }
+        let guard = crate::routine_local_scheduler::FlightGuard::acquire(&id).ok_or_else(|| {
+            RoutineApiError::new(StatusCode::CONFLICT, "already_running", "This routine is already running.")
+        })?;
         let user_id = user.user_id.clone();
         let state = state.clone();
         tokio::spawn(async move {
@@ -2241,4 +2325,125 @@ mod tests {
         assert_eq!(loops[0].id, "l-local");
         cleanup(&path);
     }
+
+    // ── Routines always have a bot ─────────────────────────────────────────
+
+    async fn routine_state(tag: &str) -> Arc<AppState> {
+        let dir = std::env::temp_dir().join(format!("allternit-routine-bot-{tag}-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let state = crate::test_helpers::app_state(&dir).await;
+        state
+            .db
+            .connect()
+            .unwrap()
+            .execute(
+                "INSERT INTO agents (id, user_id, name, model, provider, is_bot, config)
+                 VALUES ('bot-main', 'user-a', 'main', 'm', 'p', 1, '{}')",
+                [],
+            )
+            .unwrap();
+        state
+    }
+
+    fn user_headers() -> HeaderMap {
+        let mut h = HeaderMap::new();
+        h.insert("x-allternit-user-id", "user-a".parse().unwrap());
+        h
+    }
+
+    fn create_req(agent: Option<&str>) -> CreateRoutineRequest {
+        serde_json::from_value(json!({
+            "name": "Morning briefing",
+            "schedule_type": "cron",
+            "schedule_expression": "0 8 * * *",
+            "execution_domain": "local",
+            "agent_id": agent,
+            "config": { "prompt": "Brief me" },
+        }))
+        .unwrap()
+    }
+
+    fn error_code(err: RoutineApiError) -> (StatusCode, String) {
+        (err.0, err.1.and_then(|b| b["error"].as_str().map(str::to_string)).unwrap_or_default())
+    }
+
+    #[tokio::test]
+    async fn create_refuses_a_local_routine_without_a_bot() {
+        let state = routine_state("create").await;
+        let err = create_routine(State(state.clone()), user_headers(), Json(create_req(None))).await.unwrap_err();
+        assert_eq!(error_code(err), (StatusCode::BAD_REQUEST, "agent_required".to_string()));
+        let err = create_routine(State(state.clone()), user_headers(), Json(create_req(Some("  "))))
+            .await
+            .unwrap_err();
+        assert_eq!(error_code(err), (StatusCode::BAD_REQUEST, "agent_required".to_string()));
+        let err = create_routine(State(state.clone()), user_headers(), Json(create_req(Some("gone"))))
+            .await
+            .unwrap_err();
+        assert_eq!(error_code(err), (StatusCode::BAD_REQUEST, "agent_not_found".to_string()));
+        let ok = create_routine(State(state.clone()), user_headers(), Json(create_req(Some("bot-main"))))
+            .await
+            .unwrap();
+        assert_eq!(ok.0.agent_id.as_deref(), Some("bot-main"));
+    }
+
+    #[tokio::test]
+    async fn assigning_a_bot_fixes_an_orphaned_routine() {
+        let state = routine_state("assign").await;
+        {
+            let conn = state.db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO routines (id, user_id, name, status, schedule_type, schedule_expression, execution_domain, config, metadata, next_run_at)
+                 VALUES ('orphan', 'user-a', 'Morning briefing', 'active', 'cron', '0 8 * * *', 'local', '{}',
+                         '{\"needsAgent\":true,\"consecutiveFailures\":22,\"keep\":1}', '2000-01-01T00:00:00+00:00')",
+                [],
+            )
+            .unwrap();
+        }
+        // Run now on an orphan answers with a clear error instead of a silent failed run.
+        let err = run_routine(State(state.clone()), user_headers(), Path("orphan".to_string())).await.unwrap_err();
+        assert_eq!(error_code(err), (StatusCode::CONFLICT, "agent_required".to_string()));
+
+        let bad: UpdateRoutineRequest = serde_json::from_value(json!({ "agent_id": "gone" })).unwrap();
+        let err = update_routine(State(state.clone()), user_headers(), Path("orphan".to_string()), Json(bad))
+            .await
+            .unwrap_err();
+        assert_eq!(error_code(err), (StatusCode::BAD_REQUEST, "agent_not_found".to_string()));
+
+        let req: UpdateRoutineRequest = serde_json::from_value(json!({ "agent_id": "bot-main" })).unwrap();
+        let updated = update_routine(State(state.clone()), user_headers(), Path("orphan".to_string()), Json(req))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(updated.agent_id.as_deref(), Some("bot-main"));
+        assert_eq!(updated.next_run_at, None, "cursor resets so the scheduler re-arms it");
+        let meta = updated.metadata.unwrap();
+        assert!(meta.get("needsAgent").is_none());
+        assert!(meta.get("consecutiveFailures").is_none());
+        assert_eq!(meta["keep"], 1);
+    }
+
+    #[tokio::test]
+    async fn resuming_clears_an_auto_pause() {
+        let state = routine_state("resume").await;
+        state
+            .db
+            .connect()
+            .unwrap()
+            .execute(
+                "INSERT INTO routines (id, user_id, agent_id, name, status, schedule_type, schedule_expression, execution_domain, config, metadata)
+                 VALUES ('paused', 'user-a', 'bot-main', 'x', 'paused', 'interval', '1h', 'local', '{}',
+                         '{\"consecutiveFailures\":3,\"autoPaused\":{\"reason\":\"r\"}}')",
+                [],
+            )
+            .unwrap();
+        let req: UpdateRoutineRequest = serde_json::from_value(json!({ "status": "active" })).unwrap();
+        let updated = update_routine(State(state.clone()), user_headers(), Path("paused".to_string()), Json(req))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(updated.status, "active");
+        let meta = updated.metadata.unwrap();
+        assert!(meta.get("autoPaused").is_none() && meta.get("consecutiveFailures").is_none());
+    }
 }
+

@@ -1,0 +1,52 @@
+---
+title: Bot routines
+description: Schedule work for a bot, see every run, and find out when a routine fails.
+---
+
+A **routine** is work a bot does on a schedule: a morning briefing, a weekly report, a disk check. Each run is a turn in the bot's chat, so the output lands where you already read that bot. Routines run on the Allternit API on your computer, so they keep running with every window closed while the desktop app is running.
+
+## Every routine has a bot
+
+A routine runs as one of your bots, so every create form asks which bot runs it. The bot whose screen you are on is selected by default, otherwise your main bot (the one with the crown at the top of the Bots rail). You can pick any other bot from the list.
+
+If you have no bots yet, the forms tell you to create one first. The API refuses a local routine with no bot (`agent_required`); see [Automation API](/api/automation#routines-and-bots).
+
+## The Routines tab
+
+Open a bot and choose **Routines**. Each routine shows:
+
+- **Schedule in plain words**, for example "Every day at 8:00 AM", "Weekdays at 9:00 AM" or "Every 6 hours".
+- **Next run**, or **Paused** if it is not scheduled.
+- **Last run result**: when it last ran, and whether it worked.
+- **Run now** starts a run at once. The result appears in the bot's chat and in the history a few seconds later.
+- **Pause / Resume** switches the schedule off and on.
+- **Run history**: select a routine to see its last 10 runs. Each run shows its time, whether you started it, and any error. **Open thread** opens the chat that run wrote to.
+
+The composer below the list creates new routines for this bot. The Automation Tasks list under it has the advanced options (cron expressions, goals).
+
+The tab is the same on Desktop, on ai.allternit.com (including the phone layout) and in the m.allternit.com app.
+
+## When a routine fails
+
+You are told in three places:
+
+1. **A notice at the top of the bot's Routines tab** that names the routine and the error.
+2. **The bot's status line in the rail** and the **Inbox → Needs attention** list show the problem, with the attention badge, until the routine works again.
+3. **A notification** pops up once for each new failure, with **Open routines** to go straight to the tab. It does not come back after you reload.
+
+### Automatic pause after 3 failures
+
+After **3 failed runs in a row**, the routine pauses itself so it stops failing on every run. The notice says it was paused and shows the last error. Fix the cause (for example a missing key or an exhausted quota), then choose **Resume**. Resuming gives the routine another 3 tries. A run that works resets the count.
+
+## Routines that need a bot
+
+Routines made before bots were required may have no bot. They never run. They are listed under **Needs a bot** on the Routines tab, and your main bot shows "routines need a bot" in the rail and Inbox.
+
+For each one, choose **Assign to *main bot*** or pick another bot from **Another bot…**. The routine starts on its normal schedule from then on.
+
+## Related pages
+
+- [Bots](/surfaces/bots)
+- [Bot threads](/guides/bot-threads)
+- [Bot and team templates](/guides/bot-templates)
+- [Automation API](/api/automation)
