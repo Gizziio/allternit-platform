@@ -711,10 +711,14 @@ jobs:
         working-directory: surfaces/allternit-desktop
 
       - name: Package with electron-builder
-        # --dir: unpacked build only (no AppImage/deb), --publish never:
-        # publishing happens ONLY in the release job.
-        run: npx electron-builder --linux --dir --publish never
+        # The unpacked build plus the .deb that cloud computer images install
+        # (build-cloud-computer-image.sh DESKTOP_DEB). --publish never:
+        # publishing happens ONLY in the release job, and Linux isn't
+        # published there; the .deb is a build artifact for the image bake.
+        run: npx electron-builder --linux deb --x64 --publish never
         working-directory: surfaces/allternit-desktop
+        env:
+          ALLTERNIT_BUILD_SUFFIX: ""
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
@@ -723,6 +727,14 @@ jobs:
           path: |
             surfaces/allternit-desktop/release/linux-unpacked
           retention-days: 14
+
+      - name: Upload Linux .deb (cloud computer image input)
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: allternit-desktop-linux-deb
+          path: surfaces/allternit-desktop/release/*.deb
+          if-no-files-found: error
+          retention-days: 30
 
   # Publish GitHub Release
   release:
