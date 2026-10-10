@@ -11,7 +11,7 @@ Browse templates from the Bots launch surface. Open a recipe to inspect its role
 
 The team flow matches each role to an existing bot where possible and creates missing bots. It creates the project, lays out task threads and their dependencies, and starts the root threads through Al. Downstream work follows the [coordinator's dependency rules](/guides/project-coordination).
 
-A bot template creates one bot and can start its first task. If that task cannot start, inspect the bot's home and connected runtime before retrying.
+A bot template creates one bot and opens its main chat with the bot's greeting (the template's `welcome`). Nothing is sent for you: the template's first task is the first suggestion chip under the greeting, followed by its starter prompts, so the bot only starts work when you tap or type. See [Bots greet you first](/surfaces/bots#bots-greet-you-first). If the chat cannot open, the bot is still created; open its bot screen and check the connected runtime before retrying.
 
 ## Routines
 

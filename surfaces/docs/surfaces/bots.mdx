@@ -29,7 +29,7 @@ Only one bot is the main bot at a time. Making a bot the main bot removes the fl
 Every account has a main bot. It is your first stop: it answers directly, or hands a job to the bot that owns it and tells you who has it. It sees the status of your bots' threads (titles and progress), not their conversations, and never sends, posts, pays, signs or deploys without your approval.
 
 - **The first bot you create becomes your main bot** when you don't have one yet. Built-in bots that come with the app (such as Gizzi) don't count.
-- **No main bot yet:** the main bot tile opens **Set up your main bot**. It explains what the main bot does, then **Set up A://** creates A:// from the main bot template (the same for every account) and runs its first introduction in its main chat. If you already have an A:// bot, it is reused instead of creating a second one. You can also pick one of your existing bots instead.
+- **No main bot yet:** the main bot tile opens **Set up your main bot**. It explains what the main bot does, then **Set up A://** creates A:// from the main bot template (the same for every account) and opens its main chat with A:// greeting you first (see [Bots greet you first](#bots-greet-you-first)). If you already have an A:// bot, it is reused instead of creating a second one. You can also pick one of your existing bots instead.
 - The setup opens by itself once per app session when you enter Bot Mode without a main bot. **Not now** closes it; the tile keeps offering it.
 - The A:// main bot template is not listed in the template gallery or in Create bot.
 
@@ -39,7 +39,7 @@ The bot screen opens with a large header: the bot's photo, name, description, wh
 
 The **Chat + threads** tab is the default:
 
-- **Main chat.** Every bot keeps one always-on main chat. It knows the status of the bot's threads but not their full context, so long-running preferences and decisions stay clean. A bot with no main chat yet shows **Start main chat**; nothing is sent until you write.
+- **Main chat.** Every bot keeps one always-on main chat. It knows the status of the bot's threads but not their full context, so long-running preferences and decisions stay clean. A bot with no main chat yet shows **Start main chat**; nothing is sent from you until you write.
 - **Threads.** The bot's threads, grouped as Needs you, Working, Queued and Idle, with a project filter and search. **+ New thread** starts a task thread; **Incognito** starts a private thread. Threads idle for 7 days fold into **Stale** (threads waiting on you never go stale). Click a thread to open it.
 
 On desktop the main chat and threads sit side by side; on a phone they stack. The other tabs are Routines, Memory, Computer, Performance and Settings.
@@ -47,6 +47,17 @@ On desktop the main chat and threads sit side by side; on a phone they stack. Th
 **Settings → Phone and reach** holds the bot's phone number (texting and voice calls on or off, change number), its phone, its email and channels with connect buttons, and who it can text, call or email without asking you. The rest of the bot's configuration follows below it.
 
 The standalone Bot Hub was removed from the workspace. Its old `agent-hub` navigation entry aliases the Bots launch surface. Use Bots, bot home, or Project home rather than looking for the former hub tabs.
+
+## Bots greet you first
+
+A bot's main chat opens with a message from the bot, not from you: a short hello, what it does, and a question (for A://: "Hi, I'm A://, your main bot… What should I take off your plate today?"). Its suggestions sit under the greeting as chips; tap one to send it. For a bot made from a template, the first chip is the template's first task and the rest are its starter prompts. The chips go away once you've sent something.
+
+- **Nothing is sent as you.** Setting up a bot from a template no longer sends its first task for you or starts a model turn. The composer is ready at once.
+- **The greeting is static text** from the bot's profile (**Settings → Personality → Welcome message**, with **Starter prompts** for the chips). It shows immediately, without waiting for a model.
+- **It stays.** A new main chat stores the greeting as the bot's first message (no model turn), so it survives reloads, shows on your other devices and is part of the bot's context. Bots made before this, and chats on a runtime that doesn't store it yet, show the same greeting at the top of the main chat from the profile.
+- Only the main chat greets. Task threads, incognito threads and later context windows open without it. The same greeting shows in Allternit Desktop, at `ai.allternit.com` (including the phone layout) and in the `m.allternit.com` PWA.
+
+For developers: the greeting is `botGreetingFor()` in `src/lib/bots/bot-greeting.ts` (allternit-ai), rendered by `BotGreeting` in the bot chat view. `openBotCanonicalChat()` stores it when it creates a main chat by posting `role: "assistant"`, `noReply: true` and `metadata.source: "bot-greeting"` to [`POST /api/v1/agent-sessions/:id/messages`](/api/agent-sessions#send-a-message); the chat view hides that stored copy and draws the greeting from the profile, so it never shows twice. Template welcomes live in each template's `welcome` field (`{name}` becomes the bot's name).
 
 ## Bot, thread, and subagent
 
