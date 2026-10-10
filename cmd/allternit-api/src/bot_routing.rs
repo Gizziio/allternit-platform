@@ -599,7 +599,9 @@ mod tests {
     async fn roster_is_the_same_users_other_bots_with_their_jobs() {
         let db = setup().await;
         let bots = roster(&db, "user-a", "main");
-        assert_eq!(bots.iter().map(|b| b.id.as_str()).collect::<Vec<_>>(), vec!["scout", "ledger"]);
+        let mut ids = bots.iter().map(|b| b.id.as_str()).collect::<Vec<_>>();
+        ids.sort();
+        assert_eq!(ids, vec!["ledger", "scout"], "other user's bots, plain agents and the caller are left out");
         let text = roster_text(&bots);
         assert!(text.contains("- Scout (@scout-v1): Finds leads Researches companies"), "{text}");
         assert!(text.contains("- Ledger, Bookkeeper"), "{text}");
