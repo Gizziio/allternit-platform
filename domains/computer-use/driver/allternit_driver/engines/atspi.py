@@ -74,6 +74,16 @@ def _role(name: str) -> str:
     return "AX" + "".join(part.capitalize() for part in name.replace("-", " ").split())
 
 
+
+def _acc_name(accessible: Any) -> str:
+    """An accessible's name. pyatspi (on GObject-introspected Atspi) exposes
+    ``.name`` / ``get_name()``; there is no ``getName()``."""
+    name = getattr(accessible, "name", None)
+    if name is None:
+        getter = getattr(accessible, "get_name", None) or getattr(accessible, "getName", None)
+        name = getter() if getter else ""
+    return name or ""
+
 class ATSPIEngine:
     """The Linux native engine. One instance per sidecar; all pyatspi calls
     run on the calling thread (AT-SPI serializes per app on the bus)."""
@@ -157,7 +167,7 @@ class ATSPIEngine:
     # ---- apps and windows ----------------------------------------------------
 
     def _pid_of(self, app: Any) -> int | None:
-        get_pid = getattr(app, "getProcessId", None)
+        get_pid = getattr(app, "get_process_id", None) or getattr(app, "getProcessId", None)
         if get_pid is not None:
             try:
                 return int(get_pid())
@@ -165,7 +175,7 @@ class ATSPIEngine:
                 pass
         # Older pyatspi: match the app name against /proc/*/comm.
         try:
-            name = (app.getName() or "").strip().lower()
+            name = (_acc_name(app) or "").strip().lower()
         except Exception:
             return None
         if not name:
@@ -250,7 +260,7 @@ class ATSPIEngine:
             app_pid = self._pid_of(app)
             name = ""
             try:
-                name = app.getName() or ""
+                name = _acc_name(app) or ""
             except Exception:
                 pass
             for i, win in enumerate(self._top_windows(app)):
@@ -262,7 +272,7 @@ class ATSPIEngine:
                     pass
                 title = ""
                 try:
-                    title = win.getName() or ""
+                    title = _acc_name(win) or ""
                 except Exception:
                     pass
                 out.append({
@@ -296,7 +306,7 @@ class ATSPIEngine:
             key = path
             try:
                 role_name = acc.getRoleName() or ""
-                name = acc.getName() or ""
+                name = _acc_name(acc) or ""
             except Exception:
                 return
             role = _role(role_name)
@@ -345,9 +355,9 @@ class ATSPIEngine:
         title = ""
         app_name = ""
         try:
-            title = window.getName() or ""
+            title = _acc_name(window) or ""
             apps = self._apps(pid)
-            app_name = apps[0].getName() if apps else ""
+            app_name = _acc_name(apps[0]) if apps else ""
         except Exception:
             pass
         nodes = self._walk(window, max_elements)
@@ -504,7 +514,7 @@ class ATSPIEngine:
             while stack and found is None:
                 acc = stack.pop()
                 try:
-                    name = (acc.getName() or "").strip()
+                    name = (_acc_name(acc) or "").strip()
                     role = acc.getRoleName().lower()
                 except Exception:
                     continue

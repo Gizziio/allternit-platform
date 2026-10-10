@@ -169,6 +169,9 @@ printf 'DBUS_SESSION_BUS_ADDRESS=%s\n' "${DBUS_SESSION_BUS_ADDRESS}" \
   > /run/allternit/session-bus.env
 chmod 0644 /run/allternit/session-bus.env
 export GTK_MODULES=atk-bridge
+# Chromium and Electron apps (Chrome, the Allternit app) only publish an
+# AT-SPI tree when accessibility is requested; the driver needs it.
+export ACCESSIBILITY_ENABLED=1
 
 # Start the XFCE session (on this bus, so its apps expose AT-SPI trees).
 xfce4-session >/var/log/allternit-desktop/xfce.log 2>&1 &
