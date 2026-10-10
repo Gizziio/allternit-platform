@@ -276,7 +276,7 @@ Returns the session's messages in gateway-normalized form.
 POST /api/v1/agent-sessions/:id/messages
 ```
 
-Sends a message to the session. Only `role: "user"` messages are forwarded to the runtime; other roles are accepted locally and echoed back immediately.
+Sends a message to the session. `role: "user"` messages are forwarded to the runtime. `role: "assistant"` with `noReply: true` stores a static assistant message without a model turn (a bot's greeting in its new main chat); it is labelled with `metadata.source` and stored once per session and source, however many clients post it. Other roles are accepted locally and echoed back immediately.
 
 #### Request body
 
@@ -285,7 +285,7 @@ Sends a message to the session. Only `role: "user"` messages are forwarded to th
 | `text` | string | Yes | Message text. |
 | `role` | string | No | Defaults to `user`. |
 | `thinking` | string | No | Explicit reasoning text. |
-| `metadata` | object | No | May include `model` with `providerID`/`modelID` to override the brain. |
+| `metadata` | object | No | May include `model` with `providerID`/`modelID` to override the brain. For a stored assistant message, `source` labels it (for example `bot-greeting`). |
 | `noReply` | boolean | No | Record the message without starting a model turn. |
 | `source` | string | No | Where the text was typed (for example `aci`); stored on the text part's metadata. |
 
