@@ -39,7 +39,7 @@ Authorization: Bearer allternit_runtime_…
 }
 ```
 
-Only live numbers (not released) assigned to that runtime are listed. A user token is refused: it has no single runtime to answer for. `webhookPublicKey` is the carrier's public webhook verifying key, which the runtime needs to re-check texts the cloud relays.
+Only live numbers (not released) assigned to that runtime are listed. A user token is refused: it has no single runtime to answer for. `webhookPublicKey` is the carrier's public webhook verifying key. It is kept on the runtime's `sms` connection, but inbound texts are not re-checked with it: see [Inbound texts](#inbound-texts).
 
 The runtime (allternit-api) pulls:
 
@@ -70,6 +70,18 @@ The runtime's calls to the cloud's phone routes accept the device credential as 
 | `POST /api/v1/phone/numbers/:id/consent` | Record a contact's consent. |
 
 With a device credential the number must be **assigned to that runtime** (and belong to its owner). Anything else answers `404 number_not_found`. A revoked or unknown credential answers `401`. A runtime sends with its own credential when no user token is sealed for the number, which is the case for every synced number. A user token sealed by the older "attach number" flow is kept and still preferred.
+
+## Inbound texts
+
+The carrier's webhook goes to cloud-api, never to a runtime. cloud-api checks the carrier's signature, dedupes, handles STOP/HELP/START and first-text consent (sending the opt-in confirmation), then queues its own envelope for the runtime:
+
+```json
+{ "provider": "sms", "messageId": "…", "numberId": "…", "botId": "…",
+  "from": "+15551112222", "to": "+16512686010", "text": "hello",
+  "receivedAt": "…", "media": [{ "url": "…", "contentType": "image/jpeg", "stored": true }] }
+```
+
+It is relayed to `POST /webhooks/channels/sms`, signed with the device token (`x-allternit-runtime-sig`, owner in `x-allternit-owner`). The runtime picks the `sms` connection whose `numberId` matches and the owner paired with it, then hands the text to the number's bot on the caller's phone thread (the same thread as a call from that number). MMS media arrive as links. An unsigned request, or one signed for another owner, answers `401`. A signed envelope for a number not connected on this runtime answers `200 {"ok":true,"ignored":true}` so the queue stops retrying it.
 
 ## Delivery: failures are not "delivered"
 
