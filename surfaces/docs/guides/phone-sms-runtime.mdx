@@ -40,6 +40,22 @@ Replies are plain text. A reply over 1,600 characters is split at a paragraph, l
 
 Returns `{ "number": { "numberId", "e164", "botId", "accountId", "state": "CONNECTED" } }`. The token and key are stored sealed. Returns 503 when the runtime has no encryption key, 400 for a bad number or a bot you don't own. `DELETE /gateway/phone-numbers/:numberId` disconnects it.
 
+## Move a number to another bot
+
+The cloud decides which bot answers a number. `PATCH /api/v1/phone/numbers/:id` on cloud-api (signed in as the number's owner, or the runtime's own device credential for a number assigned to it):
+
+```json
+{ "botId": "bot_...", "runtimeId": "optional: another of your computers", "botName": "optional: for open invites" }
+```
+
+Returns `200 { "number": { "id", "runtimeId", "botId", "e164", "carrier", "type", "smsState", "voiceState", "portState", "createdAt" }, "previousBotId": "bot_..." }`. Errors: 400 `bad_request` (empty `botId`), 404 `number_not_found` (not yours, released, or a platform number), 404 `runtime_not_found` (`runtimeId` isn't one of your computers), 403 `runtime_cannot_move_number` (a runtime credential tried to hand the number to another runtime).
+
+It updates `phone_numbers.bot_id` (and `runtime_id` plus the number's relay route when `runtimeId` changes) and moves invites still open on the number (`pending`, `verified`, `joining`) to the new bot. Consent records, opt-outs, registration and the carrier side are per number and don't change. Per-bot voice settings (`voice_bot_config`) stay with each bot. The cloud then sends `phone.numbers.changed` to the number's runtime (and to the old runtime when it moved), which pulls its numbers at once.
+
+On the runtime, the pull (`phone_sync.rs`) rewrites `channel_phone_numbers.bot_id`, makes the new bot the number's only member in `channel_account_bots`, and moves `identityChannels.phone` from the old bot's config to the new bot's (a new bot already showing a different number keeps it). Existing threads keep their bot.
+
+`POST /api/v1/phone/numbers/sync` (runtime, signed in) pulls now and answers `{ "synced": [ids], "removed": [ids], "skipped": [{ "numberId", "reason" }] }`, or 409 `{ "error": "not_paired" | "sync_failed", "message" }`. The app calls it right after the `PATCH`, best effort, so the move applies even if the push hasn't arrived.
+
 ## Texting and calling out (runtime)
 
 Code: `cmd/allternit-api/src/phone_outbound.rs`. The runtime asks the cloud, which holds the carrier keys and the consent gate; it never talks to the carrier or LiveKit itself.

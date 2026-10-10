@@ -1049,6 +1049,7 @@ async fn main() {
         .merge(allternit_api::channel_gateway::channel_gateway_router())
         .merge(allternit_api::channel_phone::phone_router())
         .merge(allternit_api::phone_outbound::phone_outbound_router())
+        .merge(allternit_api::phone_sync::phone_sync_user_router())
         .merge(allternit_api::channel_start::channel_start_router())
         .merge(allternit_api::people::people_router())
         .merge(allternit_api::channel_slack_app::slack_app_connect_router())

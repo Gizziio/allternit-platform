@@ -12,6 +12,7 @@
 //! - `POST   /api/v1/phone/numbers/port` {e164, runtimeId, botId}          port-in
 //! - `GET    /api/v1/phone/numbers`
 //! - `DELETE /api/v1/phone/numbers/:id`
+//! - `PATCH  /api/v1/phone/numbers/:id` {botId, runtimeId?, botName?}   move to another bot → `{number, previousBotId}`
 //! - `POST|GET /api/v1/phone/numbers/:id/registration`                     10DLC / toll-free verification
 //! - `GET    /api/v1/phone/numbers/:id/port`                               port-in status
 //! - `POST   /api/v1/phone/numbers/:id/consent` {e164, source, evidence}   explicit consent record
@@ -20,7 +21,8 @@
 //! - `POST   /api/v1/channels/sms/send` {numberId, to, text}               SMS out
 //! - `POST   /api/v1/phone/webhooks/:carrier`                              carrier status events (signed)
 //!
-//! The runtime-facing routes (`calls/outbound`, `channels/sms/send`, `numbers/:id/consent`) also accept the
+//! The runtime-facing routes (`calls/outbound`, `channels/sms/send`, `numbers/:id/consent`, `PATCH numbers/:id`
+//! without a runtime change) also accept the
 //! runtime's own device credential, limited to numbers assigned to that runtime (see [`Caller`] and
 //! [`super::phone_sync`], which also serves `GET /api/v1/runtime-devices/me/phone-numbers`).
 //!
@@ -70,7 +72,7 @@ pub fn routes() -> Router<Arc<ApiState>> {
         .route("/api/v1/phone/numbers/search", get(search_numbers))
         .route("/api/v1/phone/numbers", get(list_numbers).post(buy_number_route))
         .route("/api/v1/phone/numbers/port", post(port_create_route))
-        .route("/api/v1/phone/numbers/:id", delete(release_number_route))
+        .route("/api/v1/phone/numbers/:id", delete(release_number_route).patch(reassign_number_route))
         .route("/api/v1/phone/numbers/:id/registration", get(registration_get_route).post(registration_post_route))
         .route("/api/v1/phone/numbers/:id/registration/otp", post(registration_otp_route))
         .route("/api/v1/phone/numbers/:id/port", get(port_status_route))
@@ -519,6 +521,85 @@ async fn release_number_route(State(state): State<Arc<ApiState>>, headers: Heade
         release_number(&state.db, carrier.as_ref(), &user, &id).await?;
         super::phone_sync::notify_changed(&state, &user, &runtime_id);
         Ok::<_, PhoneError>(StatusCode::NO_CONTENT.into_response())
+    };
+    run.await.unwrap_or_else(IntoResponse::into_response)
+}
+
+// ---------------------------------------------------------------------------
+// Move a number to another bot (and optionally another runtime)
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReassignBody {
+    pub bot_id: String,
+    #[serde(default)]
+    pub runtime_id: Option<String>,
+    /// The new bot's display name, for invites still waiting on this number.
+    #[serde(default)]
+    pub bot_name: Option<String>,
+}
+
+/// Point number `id` at another bot (and, when `runtimeId` is given, another of the
+/// caller's runtimes). Carrier, registration, consent and the number's history stay as
+/// they are; invites still open on the number follow it to the new bot. Answers the
+/// updated row and the previous `(bot, runtime)`.
+pub(crate) async fn reassign_number(db: &PgPool, caller: &Caller, id: &str, body: &ReassignBody) -> PResult<(NumberRow, String, String)> {
+    let bot_id = body.bot_id.trim();
+    if bot_id.is_empty() {
+        return Err(PhoneError::BadRequest("botId is required".into()));
+    }
+    if bot_id.chars().count() > 200 {
+        return Err(PhoneError::BadRequest("botId is too long".into()));
+    }
+    let row = caller.own(db, id).await?;
+    let runtime_id = match body.runtime_id.as_deref().map(str::trim).filter(|r| !r.is_empty()) {
+        Some(rt) if rt != row.runtime_id => {
+            if caller.runtime_id.is_some() {
+                return Err(PhoneError::Forbidden("runtime_cannot_move_number"));
+            }
+            owns_runtime(db, &caller.user, rt).await?;
+            rt.to_string()
+        }
+        _ => row.runtime_id.clone(),
+    };
+    let mut tx = db.begin().await?;
+    let updated = sqlx::query("UPDATE phone_numbers SET bot_id = $2, runtime_id = $3 WHERE id = $1 AND user_id = $4 AND released_at IS NULL AND project_id IS NULL")
+        .bind(id)
+        .bind(bot_id)
+        .bind(&runtime_id)
+        .bind(&caller.user)
+        .execute(&mut *tx)
+        .await?;
+    if updated.rows_affected() == 0 {
+        return Err(PhoneError::NotFound("number_not_found"));
+    }
+    if runtime_id != row.runtime_id {
+        if let Some(route) = &row.inbound_route_id {
+            sqlx::query("UPDATE channel_inbound_routes SET runtime_id = $2 WHERE id = $1").bind(route).bind(&runtime_id).execute(&mut *tx).await?;
+        }
+    }
+    let bot_name = body.bot_name.as_deref().map(str::trim).filter(|v| !v.is_empty());
+    sqlx::query("UPDATE phone_invites SET bot_id = $2, bot_name = COALESCE($3, bot_name) WHERE number_id = $1 AND status IN ('pending', 'verified', 'joining')")
+        .bind(id)
+        .bind(bot_id)
+        .bind(bot_name)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    let fresh = sqlx::query_as::<_, NumberRow>(&format!("SELECT {NUMBER_COLS} FROM phone_numbers WHERE id = $1")).bind(id).fetch_one(db).await?;
+    Ok((fresh, row.bot_id, row.runtime_id))
+}
+
+async fn reassign_number_route(State(state): State<Arc<ApiState>>, headers: HeaderMap, Path(id): Path<String>, Json(body): Json<ReassignBody>) -> Response {
+    let run = async {
+        let who = caller(&state.db, &headers).await?;
+        let (row, previous_bot, previous_runtime) = reassign_number(&state.db, &who, &id, &body).await?;
+        super::phone_sync::notify_changed(&state, &who.user, &row.runtime_id);
+        if previous_runtime != row.runtime_id {
+            super::phone_sync::notify_changed(&state, &who.user, &previous_runtime);
+        }
+        Ok::<_, PhoneError>(Json(json!({ "number": row.to_json(), "previousBotId": previous_bot })).into_response())
     };
     run.await.unwrap_or_else(IntoResponse::into_response)
 }
@@ -2433,5 +2514,58 @@ mod tests {
         assert!(matches!(transfer_consent_ref(&db, "someone_else", &n.id, "bot1", other, TransferInitiator::Owner).await, Err(PhoneError::NotFound(_))));
         // Non-E.164 targets are refused.
         assert!(matches!(clean_transfer_targets(&[target("sip:x@y", "")]), Err(PhoneError::BadRequest(_))));
+    }
+
+    #[tokio::test]
+    async fn moving_a_number_to_another_bot_is_owner_only_and_carries_open_invites() {
+        let db = pool().await;
+        sqlx::raw_sql(&include_str!("../../migrations_pg/035_phone_invites.sql").replace("public.", "")).execute(&db).await.unwrap();
+        seed_runtime_device(&db, "rt2", USER).await;
+        seed_runtime_device(&db, "rt_other", "someone_else").await;
+        let c = FakeCarrier::default();
+        let n = buy(&db, &c, &e164(9101)).await.unwrap();
+        for (inv, status) in [("inv_open", "pending"), ("inv_done", "joined")] {
+            sqlx::query("INSERT INTO phone_invites (id, code_hash, user_id, bot_id, bot_name, number_id, label, status, expires_at) VALUES ($1, $1, $2, 'bot1', 'Test', $3, 'Mia', $4, now() + interval '1 day')")
+                .bind(inv)
+                .bind(USER)
+                .bind(&n.id)
+                .bind(status)
+                .execute(&db)
+                .await
+                .unwrap();
+        }
+        let owner = Caller { user: USER.into(), runtime_id: None };
+        let body = |bot: &str, rt: Option<&str>| ReassignBody { bot_id: bot.into(), runtime_id: rt.map(Into::into), bot_name: Some("A://".into()) };
+
+        // Someone else can't see it, a blank bot is refused, and nothing changed.
+        let stranger = Caller { user: "someone_else".into(), runtime_id: None };
+        assert!(matches!(reassign_number(&db, &stranger, &n.id, &body("bot2", None)).await, Err(PhoneError::NotFound("number_not_found"))));
+        assert!(matches!(reassign_number(&db, &owner, &n.id, &body("  ", None)).await, Err(PhoneError::BadRequest(_))));
+        assert!(matches!(reassign_number(&db, &owner, &n.id, &body("bot2", Some("rt_other"))).await, Err(PhoneError::NotFound("runtime_not_found"))));
+        assert_eq!(number_for_user(&db, USER, &n.id).await.unwrap().bot_id, "bot1");
+
+        // The owner moves it: the row, and only the invites still open, follow the new bot.
+        let (row, prev_bot, prev_rt) = reassign_number(&db, &owner, &n.id, &body(" bot2 ", None)).await.unwrap();
+        assert_eq!((row.bot_id.as_str(), row.runtime_id.as_str(), prev_bot.as_str(), prev_rt.as_str()), ("bot2", "rt1", "bot1", "rt1"));
+        assert_eq!((row.e164.as_str(), row.carrier_number_id.as_deref()), (n.e164.as_str(), n.carrier_number_id.as_deref()), "carrier side untouched");
+        let invites: Vec<(String, String, String)> = sqlx::query_as("SELECT id, bot_id, bot_name FROM phone_invites ORDER BY id").fetch_all(&db).await.unwrap();
+        assert_eq!(invites, vec![("inv_done".into(), "bot1".into(), "Test".into()), ("inv_open".into(), "bot2".into(), "A://".into())]);
+
+        // A runtime may move its own number between bots, but not hand it to another runtime.
+        let runtime = Caller { user: USER.into(), runtime_id: Some("rt1".into()) };
+        assert!(matches!(reassign_number(&db, &runtime, &n.id, &body("bot3", Some("rt2"))).await, Err(PhoneError::Forbidden(_))));
+        assert_eq!(reassign_number(&db, &runtime, &n.id, &body("bot3", None)).await.unwrap().0.bot_id, "bot3");
+
+        // The owner moves it to another of their computers; its text relay address follows.
+        let (row, _, prev_rt) = reassign_number(&db, &owner, &n.id, &body("bot1", Some("rt2"))).await.unwrap();
+        assert_eq!((row.runtime_id.as_str(), prev_rt.as_str()), ("rt2", "rt1"));
+        let route_rt: String = sqlx::query_scalar("SELECT runtime_id FROM channel_inbound_routes WHERE id = $1").bind(n.inbound_route_id.as_deref().unwrap()).fetch_one(&db).await.unwrap();
+        assert_eq!(route_rt, "rt2");
+        // rt1 no longer owns it.
+        assert!(matches!(reassign_number(&db, &runtime, &n.id, &body("bot2", None)).await, Err(PhoneError::NotFound(_))));
+
+        // A released number can't be moved.
+        sqlx::query("UPDATE phone_numbers SET released_at = now() WHERE id = $1").bind(&n.id).execute(&db).await.unwrap();
+        assert!(matches!(reassign_number(&db, &owner, &n.id, &body("bot2", None)).await, Err(PhoneError::NotFound(_))));
     }
 }

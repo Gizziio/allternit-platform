@@ -12,6 +12,10 @@
 //!   pushes `phone.numbers.changed` (below), so a missed push heals itself.
 //! * Push: `POST /webhooks/phone/numbers-changed` (signed by the cloud like every relayed
 //!   request, [`crate::relay_auth::RelayedAuth`]) → 202 `{ ok: true }` and a pull now.
+//! * Moved: when the cloud reports a number on another bot (`PATCH /api/v1/phone/numbers/:id`),
+//!   the number's connection follows (one number answers as one bot) and so does the number each
+//!   bot shows in its profile (`identityChannels.phone`). Past threads stay with the old bot.
+//! * Now: `POST /api/v1/phone/numbers/sync` (signed-in user) pulls at once; the UI calls it after a move.
 //! * Released: a number this sync created or updated that the cloud stops listing is removed
 //!   here along with its `sms` connection. Numbers the sync never touched are left alone.
 //! * Texts: a synced number's `sms` connection holds only `{ numberId, publicKey }`. Replies
@@ -156,6 +160,60 @@ fn ensure_connection(conn: &rusqlite::Connection, owner: &str, n: &RemoteNumber,
     Ok(account)
 }
 
+/// Digits only, so "+1 (651) 268-6010" and "+16512686010" compare equal.
+fn digits(s: &str) -> String {
+    s.chars().filter(char::is_ascii_digit).collect()
+}
+
+/// The bot's stored config (`agents.config`), or an empty object.
+fn agent_config(conn: &rusqlite::Connection, owner: &str, bot: &str) -> Option<serde_json::Map<String, Value>> {
+    let raw: Option<String> = conn.query_row("SELECT config FROM agents WHERE id = ?1 AND user_id = ?2", params![bot, owner], |r| r.get(0)).optional().ok()?;
+    Some(raw.and_then(|c| serde_json::from_str::<Value>(&c).ok()).and_then(|v| v.as_object().cloned()).unwrap_or_default())
+}
+
+/// The number moved from bot `from` to bot `to` (`PATCH /api/v1/phone/numbers/:id` on the cloud):
+/// the number each bot shows (`identityChannels.phone` in its config, mirrored in
+/// `agent_identity_channels`) moves with it, keeping its texting/voice switches. A `to` bot
+/// that already shows a different number keeps showing that one.
+fn move_identity_phone(conn: &rusqlite::Connection, owner: &str, from: &str, to: &str, e164: &str) {
+    let want = digits(e164);
+    let mut moved = json!({ "number": e164, "provider": "telnyx", "voiceEnabled": true, "smsEnabled": true });
+    if let Some(mut cfg) = agent_config(conn, owner, from) {
+        let shown = cfg.get("identityChannels").and_then(|c| c.get("phone")).filter(|p| p.get("number").and_then(Value::as_str).is_some_and(|n| digits(n) == want)).cloned();
+        if let Some(phone) = shown {
+            for k in ["provider", "voiceEnabled", "smsEnabled"] {
+                if let Some(v) = phone.get(k) {
+                    moved[k] = v.clone();
+                }
+            }
+            if let Some(Value::Object(ic)) = cfg.get_mut("identityChannels") {
+                ic.remove("phone");
+            }
+            let _ = conn.execute("UPDATE agents SET config = ?1 WHERE id = ?2 AND user_id = ?3", params![Value::Object(cfg).to_string(), from, owner]);
+        }
+    }
+    let _ = conn.execute("UPDATE agent_identity_channels SET phone_number = NULL, updated_at = CURRENT_TIMESTAMP WHERE agent_id = ?1 AND phone_number = ?2", params![from, e164]);
+    let Some(mut cfg) = agent_config(conn, owner, to) else { return };
+    let ic = cfg.entry("identityChannels").or_insert_with(|| json!({}));
+    if !ic.is_object() {
+        *ic = json!({});
+    }
+    let current = ic.get("phone").and_then(|p| p.get("number")).and_then(Value::as_str).map(digits).filter(|d| !d.is_empty());
+    if current.as_deref().is_some_and(|d| d != want) {
+        return;
+    }
+    ic["phone"] = moved.clone();
+    let _ = conn.execute("UPDATE agents SET config = ?1 WHERE id = ?2 AND user_id = ?3", params![Value::Object(cfg).to_string(), to, owner]);
+    let flag = |k: &str| moved[k].as_bool().unwrap_or(true) as i64;
+    let _ = conn.execute(
+        "INSERT INTO agent_identity_channels (id, agent_id, user_id, phone_number, phone_provider, phone_voice_enabled, phone_sms_enabled, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, CURRENT_TIMESTAMP)
+         ON CONFLICT(agent_id) DO UPDATE SET phone_number = excluded.phone_number, phone_provider = excluded.phone_provider,
+             phone_voice_enabled = excluded.phone_voice_enabled, phone_sms_enabled = excluded.phone_sms_enabled, updated_at = CURRENT_TIMESTAMP",
+        params![uuid::Uuid::new_v4().to_string(), to, owner, e164, moved["provider"].as_str().unwrap_or("telnyx"), flag("voiceEnabled"), flag("smsEnabled")],
+    );
+}
+
 /// Make this runtime's numbers match the cloud's list for `owner`.
 pub fn apply(db: &DbHandle, owner: &str, remote: &[RemoteNumber], cloud_url: &str) -> Result<Report, String> {
     let conn = db.connect().map_err(|e| e.to_string())?;
@@ -173,10 +231,17 @@ pub fn apply(db: &DbHandle, owner: &str, remote: &[RemoteNumber], cloud_url: &st
         for s in &stale {
             remove_number(&conn, owner, s);
         }
+        let previous_bot: Option<String> = conn
+            .query_row("SELECT bot_id FROM channel_phone_numbers WHERE number_id = ?1 AND owner = ?2", params![n.id, owner], |r| r.get(0))
+            .optional()
+            .map_err(|e| e.to_string())?;
         let applied = upsert_number(db, &n.id, owner, &n.bot_id, &n.e164, None).and_then(|_| ensure_connection(&conn, owner, n, cloud_url));
         match applied {
             Ok(account) => {
                 conn.execute("UPDATE channel_phone_numbers SET account_id = ?2, synced_at = ?3 WHERE number_id = ?1 AND owner = ?4", params![n.id, account, chrono::Utc::now().to_rfc3339(), owner]).map_err(|e| e.to_string())?;
+                if let Some(old) = previous_bot.filter(|b| *b != n.bot_id) {
+                    move_identity_phone(&conn, owner, &old, &n.bot_id, &n.e164);
+                }
                 report.synced.push(n.id.clone());
             }
             Err(why) => report.skipped.push((n.id.clone(), why)),
@@ -235,6 +300,33 @@ pub fn spawn(state: Arc<AppState>) {
             };
         }
     });
+}
+
+/// `POST /api/v1/phone/numbers/sync` (signed-in user): pull this runtime's numbers now and
+/// answer what changed — `{ synced, removed, skipped: [{ numberId, reason }] }`. The UI calls
+/// it right after moving a number (`PATCH` on the cloud), so the move applies here even if the
+/// cloud's push hasn't arrived. 409 `{ error: "not_paired" | … , message }` when it can't pull.
+pub fn phone_sync_user_router() -> Router<Arc<AppState>> {
+    Router::new().route("/phone/numbers/sync", post(sync_now_h))
+}
+
+async fn sync_now_h(axum::extract::State(state): axum::extract::State<Arc<AppState>>, axum::Extension(_user): axum::Extension<crate::auth::AuthUser>) -> axum::response::Response {
+    sync_now_with(&state.db, crate::relay_auth::process_secret().as_ref(), &HttpSource).await
+}
+
+async fn sync_now_with(db: &DbHandle, secret: &dyn RelaySecret, source: &dyn NumberSource) -> axum::response::Response {
+    match sync_once(db, secret, source).await {
+        Ok(r) => Json(json!({
+            "synced": r.synced,
+            "removed": r.removed,
+            "skipped": r.skipped.iter().map(|(id, why)| json!({ "numberId": id, "reason": why })).collect::<Vec<_>>(),
+        }))
+        .into_response(),
+        Err(e) => {
+            let code = if secret.device_token().is_none() { "not_paired" } else { "sync_failed" };
+            (StatusCode::CONFLICT, Json(json!({ "error": code, "message": e }))).into_response()
+        }
+    }
 }
 
 pub fn phone_sync_router() -> Router<Arc<AppState>> {
@@ -415,5 +507,51 @@ mod tests {
         assert_eq!(status(crate::relay_auth::relayed_post(NUMBERS_CHANGED_PATH, body, None)).await, StatusCode::UNAUTHORIZED);
         assert_eq!(status(crate::relay_auth::relayed_post(NUMBERS_CHANGED_PATH, body, Some(("wrong", "user-a")))).await, StatusCode::UNAUTHORIZED);
         assert_eq!(status(crate::relay_auth::relayed_post(NUMBERS_CHANGED_PATH, body, Some(("allternit_runtime_tok", "user-a")))).await, StatusCode::ACCEPTED);
+    }
+
+    #[tokio::test]
+    async fn moving_a_number_moves_what_each_bot_shows() {
+        let st = setup("move").await;
+        let conn = st.db.connect().unwrap();
+        conn.execute("INSERT INTO agents (id, user_id, name, model, provider, is_bot, config) VALUES ('bot-3','user-a','b','m','p',1,?1)", params![json!({ "identityChannels": { "phone": { "number": "+14155550199", "provider": "telnyx", "voiceEnabled": true, "smsEnabled": true } } }).to_string()]).unwrap();
+        let shown = |bot: &str| -> Value {
+            let raw: String = st.db.connect().unwrap().query_row("SELECT config FROM agents WHERE id = ?1", params![bot], |r| r.get(0)).unwrap();
+            serde_json::from_str::<Value>(&raw).unwrap()["identityChannels"]["phone"].clone()
+        };
+        sync_once(&st.db, &secret(), &fake(200, listing(json!([num("n1", "+16512686010", "bot-1")])))).await.unwrap();
+        // bot-1 shows the number (formatted the way the old config modal saved it), texting off.
+        conn.execute("UPDATE agents SET config = ?1 WHERE id = 'bot-1'", params![json!({ "name": "test", "identityChannels": { "email": { "address": "t@x.y" }, "phone": { "number": "+1 (651) 268-6010", "provider": "telnyx", "voiceEnabled": true, "smsEnabled": false } } }).to_string()]).unwrap();
+
+        // The cloud now says bot-2: the connection, the row and the shown number follow.
+        sync_once(&st.db, &secret(), &fake(200, listing(json!([num("n1", "+16512686010", "bot-2")])))).await.unwrap();
+        assert_eq!(rows(&st)[0].1, "bot-2");
+        let members: Vec<String> = conn.prepare("SELECT bot_id FROM channel_account_bots").unwrap().query_map([], |r| r.get(0)).unwrap().filter_map(Result::ok).collect();
+        assert_eq!(members, vec!["bot-2"]);
+        assert!(shown("bot-1").is_null(), "the old bot no longer shows it");
+        let raw: String = conn.query_row("SELECT config FROM agents WHERE id = 'bot-1'", [], |r| r.get(0)).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&raw).unwrap()["identityChannels"]["email"]["address"], "t@x.y", "the rest of its config stays");
+        assert_eq!(shown("bot-2"), json!({ "number": "+16512686010", "provider": "telnyx", "voiceEnabled": true, "smsEnabled": false }));
+        let mirrored: (String, i64) = conn.query_row("SELECT phone_number, phone_sms_enabled FROM agent_identity_channels WHERE agent_id = 'bot-2'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        assert_eq!(mirrored, ("+16512686010".to_string(), 0));
+
+        // A bot already showing another number keeps it; the number still answers as that bot.
+        sync_once(&st.db, &secret(), &fake(200, listing(json!([num("n1", "+16512686010", "bot-3")])))).await.unwrap();
+        assert_eq!(rows(&st)[0].1, "bot-3");
+        assert_eq!(shown("bot-3")["number"], "+14155550199");
+        assert!(shown("bot-2").is_null());
+    }
+
+    #[tokio::test]
+    async fn sync_now_answers_what_changed_or_why_it_couldnt() {
+        let st = setup("now").await;
+        let res = sync_now_with(&st.db, &secret(), &fake(200, listing(json!([num("n1", "+16512686010", "bot-1"), num("n2", "+16512686011", "ghost")])))).await;
+        assert_eq!(res.status(), StatusCode::OK);
+        let body: Value = serde_json::from_slice(&axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(body["synced"], json!(["n1"]));
+        assert_eq!(body["skipped"][0]["numberId"], "n2");
+        let res = sync_now_with(&st.db, &crate::relay_auth::UnconfiguredRelaySecret, &fake(200, listing(json!([])))).await;
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+        let body: Value = serde_json::from_slice(&axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(body["error"], "not_paired");
     }
 }
