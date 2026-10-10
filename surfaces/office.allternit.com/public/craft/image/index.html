@@ -6,8 +6,8 @@
   <title>Allternit Image Editor</title>
   
 <script type="module">
-import init, * as bindings from './photocraft-web-cd74892366559981.js';
-const wasm = await init({ module_or_path: './photocraft-web-cd74892366559981_bg.wasm' });
+import init, * as bindings from './photocraft-web-7757320e4f5ebbfb.js';
+const wasm = await init({ module_or_path: './photocraft-web-7757320e4f5ebbfb_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -28,7 +28,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
     #photocraft_stalled { color: #8c8c8c; visibility: hidden; animation: photocraft-stalled 0s 20s forwards; }
     @keyframes photocraft-stalled { to { visibility: visible; } }
   </style>
-<link rel="modulepreload" href="./photocraft-web-cd74892366559981.js" crossorigin="anonymous" integrity="sha384-bEr7e7cC8RySLIFYiwFOEH3T58lkRHAUMH21NQ5mVSH2Vuyu7BRRmbpVzt7OT9cm"><link rel="preload" href="./photocraft-web-cd74892366559981_bg.wasm" crossorigin="anonymous" integrity="sha384-Z91IE7o790L6jZexBu42GXibXzA+8O31+x0DtHE63JLBkd7YYQItp+YG2rgnS17C" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="./photocraft-web-7757320e4f5ebbfb.js" crossorigin="anonymous" integrity="sha384-bEr7e7cC8RySLIFYiwFOEH3T58lkRHAUMH21NQ5mVSH2Vuyu7BRRmbpVzt7OT9cm"><link rel="preload" href="./photocraft-web-7757320e4f5ebbfb_bg.wasm" crossorigin="anonymous" integrity="sha384-LZf58u3urA5hfeeUmD/iFbfaXVJ0WvCKb9vKSwNlBOfX8Myh3BuLZ7IqVHFccrgz" as="fetch" type="application/wasm"></head>
 <body>
   <canvas id="photocraft_canvas"></canvas>
   <div id="photocraft_loading">
