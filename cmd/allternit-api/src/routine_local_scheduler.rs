@@ -24,6 +24,14 @@
 //!   is a silent `skipped` run with no model turn.
 //! * **Record.** Every run is a `routine_runs` row (the Automation Tasks run
 //!   history) and, for bots, a `routine.*` event on the bot ledger.
+//! * **Needs a bot.** A local routine with no `agent_id` is never claimed
+//!   (it used to fail every run with "local routines need an agent"). The
+//!   tick flags it `metadata.needsAgent = true` so the UI can list it under
+//!   "Needs a bot"; assigning an agent (PUT `agent_id`) clears the flag.
+//! * **Auto-pause.** `metadata.consecutiveFailures` counts failed runs in a
+//!   row (reset by any good run). At [`AUTO_PAUSE_AFTER`] the routine is set
+//!   to `paused`, `metadata.autoPaused` records why, and the bot ledger gets a
+//!   `routine.paused` event, so a broken routine stops and the user is told.
 
 use chrono::{DateTime, Offset, Utc};
 use rusqlite::{params, OptionalExtension};
@@ -40,6 +48,12 @@ use crate::AppState;
 const PREVIOUS_OUTPUT_CAP: usize = 2 * 1024;
 const MONITOR_OUTPUT_CAP: usize = 4 * 1024;
 const RUN_OUTPUT_CAP: usize = 8 * 1024;
+/// Failed runs in a row before a routine pauses itself.
+pub const AUTO_PAUSE_AFTER: i64 = 3;
+/// SQL predicate: the routine has an agent to run it.
+const HAS_AGENT: &str = "agent_id IS NOT NULL AND TRIM(agent_id) != ''";
+/// SQL expression: the row's metadata as a JSON object (NULL/garbage → {}).
+const META: &str = "CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END";
 
 // ─── Schedule ───────────────────────────────────────────────────────────────
 
@@ -113,12 +127,14 @@ pub fn get_routine(db: &DbHandle, id: &str) -> rusqlite::Result<Option<LocalRout
 /// Give every active local routine without a cursor its first run time.
 fn backfill(db: &DbHandle, now: DateTime<Utc>) -> rusqlite::Result<()> {
     let conn = db.connect()?;
+    flag_agentless(&conn)?;
     let pending: Vec<(String, String, String, Option<String>)> = {
-        let mut stmt = conn.prepare(
+        let mut stmt = conn.prepare(&format!(
             "SELECT id, schedule_type, schedule_expression, last_run_at FROM routines
              WHERE execution_domain = 'local' AND status = 'active' AND next_run_at IS NULL
-               AND schedule_type IN ('interval', 'cron', 'once')",
-        )?;
+               AND {HAS_AGENT}
+               AND schedule_type IN ('interval', 'cron', 'once')"
+        ))?;
         let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?;
         rows.filter_map(Result::ok).collect()
     };
@@ -137,13 +153,27 @@ fn backfill(db: &DbHandle, now: DateTime<Utc>) -> rusqlite::Result<()> {
     Ok(())
 }
 
+/// Mark local routines that have no agent as `metadata.needsAgent` (they are
+/// never run until one is assigned) and drop their cursor so they don't sit
+/// "due" in the UI.
+pub fn flag_agentless(conn: &rusqlite::Connection) -> rusqlite::Result<usize> {
+    conn.execute(
+        &format!(
+            "UPDATE routines SET metadata = json_set({META}, '$.needsAgent', json('true')), next_run_at = NULL
+             WHERE execution_domain = 'local' AND NOT ({HAS_AGENT})
+               AND (json_extract({META}, '$.needsAgent') IS NOT 1 OR next_run_at IS NOT NULL)"
+        ),
+        [],
+    )
+}
+
 /// Claim due routines by advancing their cursor first (compare-and-set).
 fn claim_due(db: &DbHandle, now: DateTime<Utc>) -> rusqlite::Result<Vec<LocalRoutine>> {
     let conn = db.connect()?;
     let due: Vec<LocalRoutine> = {
         let mut stmt = conn.prepare(&format!(
             "SELECT {COLS} FROM routines
-             WHERE execution_domain = 'local' AND status = 'active'
+             WHERE execution_domain = 'local' AND status = 'active' AND {HAS_AGENT}
                AND next_run_at IS NOT NULL AND next_run_at <= ?1
              ORDER BY next_run_at"
         ))?;
@@ -369,6 +399,52 @@ pub struct RunOutcome {
     pub output: Option<String>,
     pub error: Option<String>,
     pub session_id: Option<String>,
+    /// This failure was the [`AUTO_PAUSE_AFTER`]th in a row and paused the routine.
+    pub auto_paused: bool,
+}
+
+/// User-facing reason stored in `metadata.autoPaused.reason`.
+pub fn auto_pause_reason() -> String {
+    format!("Paused after {AUTO_PAUSE_AFTER} failed runs in a row. Fix the cause, then resume it.")
+}
+
+/// Update the failure streak after a run; pauses the routine at
+/// [`AUTO_PAUSE_AFTER`]. Returns true when this run paused it.
+fn record_streak(conn: &rusqlite::Connection, id: &str, status: &str, error: Option<&str>, at: &str) -> bool {
+    if status != "failed" {
+        let _ = conn.execute(
+            &format!(
+                "UPDATE routines SET metadata = json_remove({META}, '$.consecutiveFailures', '$.lastRunError')
+                 WHERE id = ?1"
+            ),
+            params![id],
+        );
+        return false;
+    }
+    let _ = conn.execute(
+        &format!(
+            "UPDATE routines SET metadata = json_set({META},
+                 '$.consecutiveFailures', COALESCE(json_extract({META}, '$.consecutiveFailures'), 0) + 1,
+                 '$.lastRunError', ?2)
+             WHERE id = ?1"
+        ),
+        params![id, error],
+    );
+    // Only an active routine pauses itself (a manual run of a paused one
+    // just records the failure).
+    let paused = conn
+        .execute(
+            &format!(
+                "UPDATE routines SET status = 'paused', next_run_at = NULL,
+                     metadata = json_set({META}, '$.autoPaused',
+                         json_object('at', ?2, 'reason', ?3, 'lastError', ?4))
+                 WHERE id = ?1 AND status = 'active'
+                   AND COALESCE(json_extract({META}, '$.consecutiveFailures'), 0) >= ?5"
+            ),
+            params![id, at, auto_pause_reason(), error, AUTO_PAUSE_AFTER],
+        )
+        .unwrap_or(0);
+    paused == 1
 }
 
 /// Run one routine end to end and record it. Never panics on a bad run —
@@ -380,7 +456,7 @@ pub async fn execute<D: RoutineDriver>(db: &DbHandle, driver: &D, r: &LocalRouti
     let bot = r.agent_id.as_deref().and_then(|id| bot_info(db, id));
 
     let result: Result<(String, &'static str), String> = async {
-        let agent_id = r.agent_id.as_deref().ok_or("local routines need an agent to run them")?;
+        let agent_id = r.agent_id.as_deref().ok_or("this routine has no bot; assign it to a bot to run it")?;
         let bot = bot.as_ref().ok_or("the routine's agent no longer exists")?;
         let text = if let Some(command) = r.config.pointer("/monitor/command").and_then(Value::as_str) {
             let out = truncate(&driver.run_monitor(&r.user_id, command).await?, MONITOR_OUTPUT_CAP);
@@ -408,9 +484,22 @@ pub async fn execute<D: RoutineDriver>(db: &DbHandle, driver: &D, r: &LocalRouti
     .await;
 
     let outcome = match result {
-        Ok((out, status)) => RunOutcome { status, output: Some(truncate(&out, RUN_OUTPUT_CAP)), error: None, session_id: session_used },
-        Err(e) => RunOutcome { status: "failed", output: None, error: Some(truncate(&e, RUN_OUTPUT_CAP)), session_id: session_used },
+        Ok((out, status)) => RunOutcome {
+            status,
+            output: Some(truncate(&out, RUN_OUTPUT_CAP)),
+            error: None,
+            session_id: session_used,
+            auto_paused: false,
+        },
+        Err(e) => RunOutcome {
+            status: "failed",
+            output: None,
+            error: Some(truncate(&e, RUN_OUTPUT_CAP)),
+            session_id: session_used,
+            auto_paused: false,
+        },
     };
+    let mut outcome = outcome;
     let finished = Utc::now();
 
     if let Ok(conn) = db.connect() {
@@ -440,6 +529,8 @@ pub async fn execute<D: RoutineDriver>(db: &DbHandle, driver: &D, r: &LocalRouti
              WHERE id = ?1",
             params![r.id, started.to_rfc3339(), monitor_hash, outcome.status],
         );
+        outcome.auto_paused =
+            record_streak(&conn, &r.id, outcome.status, outcome.error.as_deref(), &finished.to_rfc3339());
     }
 
     if let (Some(agent_id), Some(bot)) = (r.agent_id.as_deref(), bot.as_ref()) {
@@ -470,7 +561,34 @@ pub async fn execute<D: RoutineDriver>(db: &DbHandle, driver: &D, r: &LocalRouti
             if let Err(e) = append_event(db, agent_id, &event, &finished.to_rfc3339()) {
                 warn!(routine = %r.id, error = %e, "failed to ledger routine run");
             }
+            if outcome.auto_paused {
+                let paused = AppendEventBody {
+                    event_type: "routine.paused".to_string(),
+                    actor: ActorBody { r#type: "routine".to_string(), id: r.id.clone() },
+                    payload: json!({
+                        "routineId": r.id,
+                        "title": r.name,
+                        "auto": true,
+                        "consecutiveFailures": AUTO_PAUSE_AFTER,
+                        "reason": auto_pause_reason(),
+                        "error": outcome.error,
+                    }),
+                    occurred_at: None,
+                    session_id: outcome.session_id.clone(),
+                    goal_id: None,
+                    wih_id: None,
+                    task_id: None,
+                    run_id: None,
+                    idempotency_key: Some(format!("{}:paused:{}", r.id, started.timestamp_millis())),
+                };
+                if let Err(e) = append_event(db, agent_id, &paused, &finished.to_rfc3339()) {
+                    warn!(routine = %r.id, error = %e, "failed to ledger routine auto-pause");
+                }
+            }
         }
+    }
+    if outcome.auto_paused {
+        warn!(routine = %r.id, "routine paused after {AUTO_PAUSE_AFTER} failed runs in a row");
     }
     outcome
 }
@@ -523,7 +641,7 @@ pub async fn run_startup<D: RoutineDriver>(db: &DbHandle, driver: &D) -> usize {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(&format!(
             "SELECT {COLS} FROM routines WHERE execution_domain = 'local' AND status = 'active'
-               AND json_extract(config, '$.trigger') = 'startup'"
+               AND {HAS_AGENT} AND json_extract(config, '$.trigger') = 'startup'"
         ))?;
         let rows = stmt.query_map([], map_row)?;
         Ok(rows.filter_map(Result::ok).collect())
@@ -728,11 +846,79 @@ mod tests {
         assert_eq!(runs(&state, "r3"), vec!["succeeded", "skipped"]);
         assert_eq!(d.turns.lock().unwrap().len(), 1);
         assert!(d.turns.lock().unwrap()[0].1.ends_with("91% used"));
-        let conn = state.db.connect().unwrap();
-        let err: String = conn
-            .query_row("SELECT error FROM routine_runs WHERE routine_id = 'r4' LIMIT 1", [], |r| r.get(0))
+        // An agentless routine is never run (no failed run every tick); it is
+        // flagged for the "Needs a bot" list and its cursor cleared.
+        assert!(runs(&state, "r4").is_empty());
+        assert_eq!(meta(&state, "r4", "$.needsAgent"), Some(1));
+        let next: Option<String> = state
+            .db
+            .connect()
+            .unwrap()
+            .query_row("SELECT next_run_at FROM routines WHERE id = 'r4'", [], |r| r.get(0))
             .unwrap();
-        assert!(err.contains("need an agent"));
+        assert_eq!(next, None);
+    }
+
+    fn meta(state: &AppState, id: &str, path: &str) -> Option<i64> {
+        state
+            .db
+            .connect()
+            .unwrap()
+            .query_row(&format!("SELECT json_extract(metadata, '{path}') FROM routines WHERE id = ?1"), params![id], |r| {
+                r.get(0)
+            })
+            .unwrap()
+    }
+
+    fn status(state: &AppState, id: &str) -> String {
+        state
+            .db
+            .connect()
+            .unwrap()
+            .query_row("SELECT status FROM routines WHERE id = ?1", params![id], |r| r.get(0))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn three_failures_in_a_row_pause_the_routine_and_say_so() {
+        let state = setup("autopause").await;
+        insert(&state, "r6", "interval", "1h", json!({}), Some("bot-1"));
+        let failing = Fake { fail: true, ..Default::default() };
+        let now = Utc::now();
+        for i in 1..=2 {
+            force_due(&state, "r6");
+            run_due(&state.db, &failing, now).await;
+            assert_eq!(meta(&state, "r6", "$.consecutiveFailures"), Some(i));
+            assert_eq!(status(&state, "r6"), "active");
+        }
+        // A good run resets the streak.
+        force_due(&state, "r6");
+        run_due(&state.db, &Fake::default(), now).await;
+        assert_eq!(meta(&state, "r6", "$.consecutiveFailures"), None);
+
+        for _ in 0..3 {
+            force_due(&state, "r6");
+            run_due(&state.db, &failing, now).await;
+        }
+        assert_eq!(status(&state, "r6"), "paused");
+        let conn = state.db.connect().unwrap();
+        let (reason, last_error): (String, String) = conn
+            .query_row(
+                "SELECT json_extract(metadata, '$.autoPaused.reason'), json_extract(metadata, '$.autoPaused.lastError')
+                 FROM routines WHERE id = 'r6'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert!(reason.contains("3 failed runs"));
+        assert_eq!(last_error, "provider_rate_limit");
+        let ev = events(&state);
+        assert_eq!(ev.last().map(String::as_str), Some("routine.paused"));
+        assert_eq!(ev.iter().filter(|e| *e == "routine.failed").count(), 5);
+
+        // Paused: the tick no longer runs it.
+        force_due(&state, "r6");
+        assert_eq!(run_due(&state.db, &failing, now).await, 0);
     }
 
     #[tokio::test]

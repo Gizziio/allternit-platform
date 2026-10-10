@@ -87,7 +87,9 @@ A bot's computer opens in the ACI pane. [Artifact editor modes](/guides/artifact
 
 ## Routines and subscriptions
 
-Bot routines are managed through Automation Tasks. Template routines start paused unless explicitly enabled during setup. Inspect schedules and access before enabling them.
+Every routine runs as a bot. The bot's **Routines** tab lists its routines with the schedule in plain words, the next run, the last result, the last 10 runs (each with a link to the thread it wrote to), **Run now** and **Pause / Resume**. A failing routine shows a notice on the tab, on the bot's rail status line and in Inbox → Needs attention, and sends a notification. After 3 failed runs in a row it pauses itself. Routines with no bot appear under **Needs a bot** with an assign action. See [Bot routines](/guides/bot-routines).
+
+Template routines start paused unless explicitly enabled during setup. Inspect schedules and access before enabling them.
 
 [Connected consumer subscriptions](/guides/subscriptions) have a separate Sessions-computer flow and require human initiation. Connecting a subscription does not make it an unattended model lane for scheduled bots.
 

@@ -50,7 +50,7 @@ All automation routes require a valid bearer token. See [Authentication](/api/au
 | `id` | string | Routine UUID. |
 | `user_id` | string | Owner. |
 | `goal_id` | string | Optional parent goal. |
-| `agent_id` | string | Optional agent to run. |
+| `agent_id` | string | Bot/agent that runs it. Required for `local` routines. |
 | `gizzi_job_id` | string | Daemon job id when cloud scheduled. |
 | `name` | string | Routine name. |
 | `description` | string | Optional description. |
@@ -63,6 +63,19 @@ All automation routes require a valid bearer token. See [Authentication](/api/au
 | `max_runs` | integer | Optional maximum run count. |
 | `timeout_seconds` | integer | Optional per-run timeout. |
 | `max_retries` | integer | Optional retry count. |
+| `metadata` | object | Free-form, plus run bookkeeping the local scheduler maintains (below). |
+| `next_run_at` | string | Local scheduler cursor; `null` when paused, manual, or needing a bot. |
+| `last_run_at` | string | Start of the last run. |
+
+The local scheduler keeps these keys in `metadata`:
+
+| Key | Meaning |
+|-----|---------|
+| `lastRunStatus` | `succeeded`, `skipped` (monitor output unchanged) or `failed`. |
+| `lastRunError` | Last failure message; removed by a good run. |
+| `consecutiveFailures` | Failed runs in a row; removed by a good run. |
+| `autoPaused` | `{ at, reason, lastError }` when the routine paused itself after 3 failures in a row. |
+| `needsAgent` | `true` for a local routine with no `agent_id`. It is never run until one is assigned. |
 
 ### Loop
 
@@ -190,7 +203,7 @@ POST /api/v1/automation/routines
 | `schedule_type` | string | Yes | `cron`, `interval`, `manual`, or `once`. |
 | `schedule_expression` | string | Yes | Cron expression or interval shorthand (`5m`, `1h`, etc.). |
 | `workspace_id` | string | No | Workspace id. |
-| `agent_id` | string | No | Agent to run. |
+| `agent_id` | string | Local: yes | Bot/agent that runs it. Required when `execution_domain` is `local` (the default); must name an existing agent. |
 | `goal_id` | string | No | Parent goal. |
 | `description` | string | No | Description. |
 | `timezone` | string | No | Timezone. |
@@ -237,13 +250,35 @@ curl -X POST https://api.allternit.com/api/v1/automation/routines \
 }
 ```
 
+## Routines and bots
+
+A local routine runs as a turn in its bot's chat, so it must have a bot.
+
+- `POST /routines` without `agent_id` for a local routine returns `400` with `{"error": "agent_required", "message": "..."}`. An `agent_id` that names no agent returns `400` `agent_not_found`.
+- Local routines that have no bot (created before this rule) are never run. The scheduler sets `metadata.needsAgent = true` and clears `next_run_at`; the Bots UI lists them under **Needs a bot**.
+
+### Assign a routine to a bot
+
+```http
+PUT /api/v1/automation/routines/:id
+Content-Type: application/json
+
+{ "agent_id": "<bot id>" }
+```
+
+Sets the routine's bot, removes `needsAgent`, `consecutiveFailures` and `autoPaused`, and resets `next_run_at` so the scheduler arms the next run from the schedule. Other fields are unchanged. An empty `agent_id` means no change; a routine cannot be unassigned.
+
+### Pause, resume and automatic pause
+
+`PUT` with `{"status": "paused"}` pauses a routine; `{"status": "active"}` resumes it and clears `consecutiveFailures` and `autoPaused`, so it gets 3 more tries. After 3 failed runs in a row the scheduler sets `status` to `paused`, records `metadata.autoPaused`, and appends a `routine.paused` event to the bot's activity ledger (next to the `routine.failed` event for each failed run).
+
 ## Trigger a routine
 
 ```http
 POST /api/v1/automation/routines/:id/run
 ```
 
-Triggers a cloud-scheduled routine immediately through the Gizzi cron daemon. Local-domain routines return `501 Not Implemented`.
+Local routines run at once on this API and answer `{"status": "running", "routineId": "...", "domain": "local"}`; the result lands in the run history and the bot's chat. A local routine with no bot returns `409` `agent_required`; one that is already running returns `409` `already_running`. Cloud routines run through the Gizzi cron daemon.
 
 ## List routine runs
 
@@ -251,7 +286,7 @@ Triggers a cloud-scheduled routine immediately through the Gizzi cron daemon. Lo
 GET /api/v1/automation/routines/:id/runs
 ```
 
-Returns stored runs for the routine and attempts to sync the latest history from the Gizzi cron daemon.
+Returns stored runs for the routine, newest first, and for cloud routines attempts to sync the latest history from the Gizzi cron daemon. Local runs carry the thread they wrote to in `metadata.sessionId`.
 
 ### Example response
 
@@ -309,13 +344,15 @@ Returns all routines and loops whose `execution_domain` is `local`.
 | `200 OK` | Success. |
 | `201 Created` | Resource created. |
 | `204 No Content` | Resource deleted. |
+| `400 Bad Request` | `agent_required` (local routine without a bot) or `agent_not_found`. |
 | `401 Unauthorized` | Missing or invalid bearer token. |
+| `409 Conflict` | Run now on a routine with no bot (`agent_required`) or one already running (`already_running`). |
 | `404 Not Found` | Goal, routine, or loop not found. |
-| `501 Not Implemented` | Attempted to run a local-domain schedule through the cloud daemon. |
 | `500 Internal Server Error` | Database or daemon error. |
 
 ## Related pages
 
 - [Agents API](/api/agents)
 - [Sessions API](/api/sessions)
+- [Bot routines](/guides/bot-routines)
 - [Authentication](/api/authentication)

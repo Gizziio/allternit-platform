@@ -66,6 +66,7 @@
             "pages": [
               "guides/platform-workflows",
               "guides/bot-threads",
+              "guides/bot-routines",
               "guides/phone-sms-runtime",
               "guides/project-coordination",
               "guides/project-appearance",
