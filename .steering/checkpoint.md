@@ -1,7 +1,7 @@
 # Steering checkpoint
 
 **Session:** `session/craft-video-host-20261010` · ai worktree `allternit-ai-wt-craft-video-host` (+ platform worktree `allternit-wt-craft-video-host`) · plan dag_76461 (node add/claim/close broken in gizzi 2.1.9 — plan id recorded only)
-**Date:** 2026-10-10 · **State: ai PR PUSHED (commit on session/craft-video-host-20261010); platform commit pending the send-fix bundle rebuild (queued on another session's cargo lock)**
+**Date:** 2026-10-10 · **State: BOTH PRs OPEN + MERGEABLE, awaiting Eoj (human gate — do not merge)** — ai #508, platform #1490, both on `session/craft-video-host-20261010`.
 
 ## Goal
 Craft editors Phase 3 remainder: video kind host wiring. DONE on the ai side: opening a `video`-kind artifact launches FilmCraft over craft:1; `.fcproj` source round-trips through artifact runtime storage; host-requested exports → MP4 → R2 → new version body; footage = media-plane refs in meta.media; media_generate videos + library uploads become video-kind; phone/PWA v1 = view + Edit entry (trim not claimed). DO NOT MERGE (Eoj merges). cloud-api untouched (gate admits video since #1477, re-verified).
@@ -11,9 +11,9 @@ Craft editors Phase 3 remainder: video kind host wiring. DONE on the ai side: op
 - **Live smoke (Playwright, installed Chrome, no deploys)** caught FIVE independent full-blockers — nothing had ever booted the embed end-to-end: (1) office /craft/* CSP (applying since #1475) blocked inline boot scripts + wasm fetch + opaque-origin module loads → fixed in _headers; (2) bridge.ts wire format mismatch (craft:-prefixed vs the crate's bare kebab-case + numeric ids) → bridge corrected, PROTOCOL.md corrected; (3) opaque-origin postMessage (host→app must target '*', app→host arrives as 'null'); (4) craft-host wasm transport dropped every [json,bytes] message AND send() passed the message array as the transfer list (DataCloneError swallowed) → fixed in the crate (Allternit-authored); (5) FilmCraft embed mode stalled save-requests when idle (egui stops repaints) → 250ms repaint cadence.
 - **Platform**: docs + map done (artifact-modes shipped paragraph; artifacts-v2 contract bullet; features.json Phase-3 decision + corrected mirror claim; five PRE-EXISTING --validate red entries fixed; check_links 0 problems; --validate exit 0 with the ai worktree). FilmCraft bundle rebuilt twice (open-bytes fix, then cadence fix) and published to surfaces/office.allternit.com/public/craft/video/ (craft:1 ×7, wasm 23.1 MB, 0 ≥25 MiB). Smoke verified through the save watcher firing: `craft:1: save-request for /projects/Smoke.fcproj (1503 bytes)` — but the send() transfer-list bug blocked its delivery; the send-fix rebuild is QUEUED behind another session's cargo test lock on the shared target.
 
-## Next
-1. Send-fix rebuild completes → publish → re-run the full smoke (expect the save-request to ARRIVE) → commit + push the platform PR.
-2. Eoj: merge BOTH PRs together (ai bridge speaks the corrected wire + expects the corrected headers). Office deploy applies CSP + new bundle; ai deploys the host wiring; the in-product save test can finally run.
+## Next (for Eoj)
+1. Merge BOTH PRs together (ai #508 + platform #1490): the ai bridge speaks the corrected wire + expects the corrected headers + fixed bundle. Office deploy applies CSP + bundle; ai deploys the host wiring; then the in-product save test (paint/trim → save → reload → craft/source.fcproj + fresh version) can finally run.
+2. After merging: m.allternit.com PWA manual deploy when Eoj wants phone users to have it (SW bump NOT needed — guard passes; the PWA picks up app-code changes on its next build+deploy).
 3. Follow-up flagged in both PR bodies: rebuild the image/pdf bundles (same craft-host crate, no code change) before announcing pdf/image editing.
 
 ## Open questions
