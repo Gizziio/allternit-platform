@@ -232,9 +232,12 @@ incus file push /tmp/allternit-factory-pane.service "${BUILD_CONTAINER}/etc/syst
 DRIVER_SRC_DIR="${DRIVER_SRC_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../domains/computer-use/driver" && pwd)}"
 if [ -d "${DRIVER_SRC_DIR}/allternit_driver" ]; then
     log "installing the Allternit Driver from ${DRIVER_SRC_DIR}"
-    incus file push --quiet -r "${DRIVER_SRC_DIR}/allternit_driver" "${BUILD_CONTAINER}/tmp/allternit-driver-pkg"
-    incus file push --quiet -r "${DRIVER_SRC_DIR}/packaging/guest/linux" "${BUILD_CONTAINER}/tmp/allternit-driver-packaging"
-    incus exec "${BUILD_CONTAINER}" -- bash /tmp/allternit-driver-packaging/install-driver.sh /tmp/allternit-driver-pkg
+    # `incus file push -r SRC DEST` copies SRC *into* an existing DEST
+    # directory (a missing DEST is "Error: Not Found"), so create both first.
+    incus exec "${BUILD_CONTAINER}" -- mkdir -p /tmp/allternit-driver-pkg /tmp/allternit-driver-packaging
+    incus file push --quiet -r "${DRIVER_SRC_DIR}/allternit_driver" "${BUILD_CONTAINER}/tmp/allternit-driver-pkg/"
+    incus file push --quiet -r "${DRIVER_SRC_DIR}/packaging/guest/linux" "${BUILD_CONTAINER}/tmp/allternit-driver-packaging/"
+    incus exec "${BUILD_CONTAINER}" -- bash /tmp/allternit-driver-packaging/linux/install-driver.sh /tmp/allternit-driver-pkg
     incus exec "${BUILD_CONTAINER}" -- rm -rf /tmp/allternit-driver-pkg /tmp/allternit-driver-packaging
 else
     echo "ERROR: DRIVER_SRC_DIR ${DRIVER_SRC_DIR} has no allternit_driver package" >&2

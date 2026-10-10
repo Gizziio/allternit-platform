@@ -145,7 +145,14 @@ async function stagePython(key) {
     const untar = spawnSync('tar', ['-xzf', archive, '-C', tmp], { encoding: 'utf8' });
     if (untar.status !== 0) throw new Error(untar.stderr || `could not extract ${asset}`);
     fs.mkdirSync(path.dirname(dir), { recursive: true });
-    fs.renameSync(path.join(tmp, 'python'), dir);
+    try {
+      fs.renameSync(path.join(tmp, 'python'), dir);
+    } catch (err) {
+      // The temp dir and the repo can sit on different volumes (Windows
+      // runners: C:\ temp, D:\ workspace): a rename can't cross them.
+      if (err.code !== 'EXDEV') throw err;
+      fs.cpSync(path.join(tmp, 'python'), dir, { recursive: true, verbatimSymlinks: true });
+    }
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
