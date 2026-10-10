@@ -29,4 +29,20 @@ describe("vendor message append", () => {
       },
     })
   })
+  test("a bot greeting is stored once, labelled as the greeting", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const s = await Session.create({ title: "bot chat" })
+        const meta = { source: "bot-greeting", vendor: "allternit", adapter: "bot-greeting", remote_event_id: `bot-greeting:${s.id}` }
+        await VendorMessage.append({ sessionID: s.id, text: "Hi, I'm A://.", metadata: meta })
+        await VendorMessage.append({ sessionID: s.id, text: "Hi, I'm A://.", metadata: meta })
+        const msgs = await Session.messages({ sessionID: s.id })
+        expect(msgs.length).toBe(1)
+        expect(msgs[0].info.role).toBe("assistant")
+        expect((msgs[0].parts[0] as any).metadata.source).toBe("bot-greeting")
+      },
+    })
+  })
 })

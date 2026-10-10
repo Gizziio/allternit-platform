@@ -1191,6 +1191,24 @@ async fn send_message(
     Json(body): Json<SendMessageBody>,
 ) -> impl IntoResponse {
     let role = body.role.clone().unwrap_or_else(|| "user".to_string());
+    // A static assistant message recorded without a turn (a bot's greeting
+    // in its new main chat): stored in gizzi as an assistant message, so it
+    // survives reloads, shows on other devices and is in the model's context.
+    if let Some(payload) = assistant_note_payload(&session_id, &role, &body) {
+        let client = gizzi_client(&headers);
+        let path = format!("/v1/session/{}/vendor-message", urlencoding::encode(&session_id));
+        return match gizzi_json::<serde_json::Value>(&client, reqwest::Method::POST, &path, Some(payload)).await {
+            Ok(stored) => Json(json!({
+                "id": stored.get("id").cloned().unwrap_or(serde_json::Value::Null),
+                "role": "assistant",
+                "content": body.text,
+                "timestamp": chrono::Utc::now().to_rfc3339(),
+                "metadata": body.metadata,
+            }))
+            .into_response(),
+            Err(response) => response,
+        };
+    }
     if role != "user" {
         return Json(json!({
             "id": format!("local-{}", uuid::Uuid::new_v4()),
@@ -1346,6 +1364,33 @@ async fn reply_pane_render(
         Ok(value) => Json(value).into_response(),
         Err(response) => response,
     }
+}
+
+/// The gizzi `/v1/session/:id/vendor-message` body for an assistant message
+/// recorded without a turn (`role: "assistant"` + `noReply`). `None` for
+/// everything else. Deduped per session and `metadata.source` (one greeting
+/// per chat, however many devices post it).
+fn assistant_note_payload(session_id: &str, role: &str, body: &SendMessageBody) -> Option<serde_json::Value> {
+    if role != "assistant" || body.no_reply != Some(true) || body.text.trim().is_empty() {
+        return None;
+    }
+    let source = body
+        .metadata
+        .as_ref()
+        .and_then(|m| m.get("source"))
+        .and_then(|s| s.as_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or("assistant-note")
+        .to_string();
+    Some(json!({
+        "text": body.text,
+        "metadata": {
+            "source": source,
+            "vendor": "allternit",
+            "adapter": source,
+            "remote_event_id": format!("{source}:{session_id}"),
+        },
+    }))
 }
 
 /// The gizzi `/v1/session/:id/message` body for a user message.
@@ -2185,7 +2230,31 @@ mod permission_reply_tests {
 
 #[cfg(test)]
 mod send_message_payload_tests {
-    use super::{send_message_payload, SendMessageBody};
+    use super::{assistant_note_payload, send_message_payload, SendMessageBody};
+
+    #[test]
+    fn assistant_no_reply_is_stored_as_a_deduped_assistant_message() {
+        let b = body(serde_json::json!({
+            "text": "Hi, I'm A://.",
+            "role": "assistant",
+            "noReply": true,
+            "metadata": { "source": "bot-greeting" },
+        }));
+        let payload = assistant_note_payload("ses_1", "assistant", &b).expect("stored");
+        assert_eq!(payload["text"], "Hi, I'm A://.");
+        assert_eq!(payload["metadata"]["source"], "bot-greeting");
+        assert_eq!(payload["metadata"]["remote_event_id"], "bot-greeting:ses_1");
+    }
+
+    #[test]
+    fn other_roles_and_turns_are_not_assistant_notes() {
+        let turn = body(serde_json::json!({ "text": "hi", "role": "assistant" }));
+        assert!(assistant_note_payload("s", "assistant", &turn).is_none());
+        let user = body(serde_json::json!({ "text": "hi", "noReply": true }));
+        assert!(assistant_note_payload("s", "user", &user).is_none());
+        let empty = body(serde_json::json!({ "text": " ", "role": "assistant", "noReply": true }));
+        assert!(assistant_note_payload("s", "assistant", &empty).is_none());
+    }
 
     fn body(json: serde_json::Value) -> SendMessageBody {
         serde_json::from_value(json).unwrap()
