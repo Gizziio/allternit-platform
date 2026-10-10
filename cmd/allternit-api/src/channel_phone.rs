@@ -2,9 +2,10 @@
 //! (provider `sms`) and the one thread a caller's calls and texts share.
 //!
 //! * Inbound: the cloud verifies the carrier, dedupes and handles STOP/HELP
-//!   (so an opted-out sender never gets here), then relays the carrier's request
-//!   to `/webhooks/channels/sms`. [`SmsTransport::verify`] re-checks Telnyx's
-//!   Ed25519 signature with the public key in the connection's secret.
+//!   (so an opted-out sender never gets here), then relays its own envelope
+//!   `{provider: "sms", messageId, numberId, from, to, text, media?}` to
+//!   [`SMS_EVENTS_PATH`], signed with the device token ([`sms_relay_router`]).
+//!   (Telnyx's own webhooks only ever reach cloud-api.)
 //! * Outbound: the Allternit-owned carrier key never reaches the runtime, so a
 //!   reply is `POST <cloud>/api/v1/channels/sms/send {numberId, to, text}` →
 //!   `{messageId, status}`, bearer-authenticated as the user, or as the runtime itself
@@ -135,6 +136,70 @@ pub struct ConnectBody {
 
 pub fn phone_router() -> axum::Router<Arc<crate::AppState>> {
     axum::Router::new().route("/gateway/phone-numbers/:number_id", axum::routing::put(connect_h).delete(disconnect_h))
+}
+
+/// Where cloud-api relays a verified inbound text (`routes::channel_inbound::target_path("sms")`).
+pub const SMS_EVENTS_PATH: &str = "/webhooks/channels/sms";
+
+/// Inbound texts from cloud-api's relay, signed with the device token
+/// ([`crate::relay_auth::RelayedAuth`] names the owner). Telnyx's webhooks
+/// point at cloud-api, never at a runtime, so nothing else reaches this path.
+pub fn sms_relay_router() -> axum::Router<Arc<crate::AppState>> {
+    sms_relay_router_with(crate::relay_auth::process_secret())
+}
+
+pub fn sms_relay_router_with(secret: Arc<dyn crate::relay_auth::RelaySecret>) -> axum::Router<Arc<crate::AppState>> {
+    axum::Router::new().route(SMS_EVENTS_PATH, axum::routing::post(sms_relay_h)).layer(crate::relay_auth::secret_layer(secret))
+}
+
+async fn sms_relay_h(axum::extract::State(state): axum::extract::State<Arc<crate::AppState>>, auth: crate::relay_auth::RelayedAuth) -> axum::response::Response {
+    use axum::{http::StatusCode, response::IntoResponse, Json};
+    let Ok(envelope) = serde_json::from_slice::<Value>(&auth.body) else {
+        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "invalid_json" }))).into_response();
+    };
+    let number_id = envelope["numberId"].as_str().unwrap_or_default();
+    let acct = crate::channel_transports::accounts(&state.db, "sms", None).into_iter().find(|a| a.owner == auth.owner && !number_id.is_empty() && pick(&a.secret, "numberId") == number_id);
+    let Some(acct) = acct else {
+        // Not connected here (released, or moved to another bot): acked so the queue doesn't retry forever.
+        return Json(json!({ "ok": true, "ignored": true })).into_response();
+    };
+    let Some(tx) = crate::channel_transports::build_transport("sms", &acct.secret, Arc::new(crate::channel_transports::ReqwestSend)) else {
+        return (StatusCode::SERVICE_UNAVAILABLE, Json(json!({ "error": "sms_not_configured" }))).into_response();
+    };
+    let events = sms_envelope_events(&envelope);
+    if events.is_empty() {
+        return Json(json!({ "ok": true, "ignored": true })).into_response();
+    }
+    // Ack fast: a bot turn can outlive the relay's wait. The queue retries.
+    tokio::spawn(async move { crate::channel_transports::dispatch_events(&state, &acct, tx, events).await });
+    Json(json!({ "ok": true })).into_response()
+}
+
+/// cloud-api's SMS envelope → one inbound message, shaped like [`sms_normalize`].
+/// MMS media arrive as links (stored copies when the cloud could keep them).
+pub fn sms_envelope_events(env: &Value) -> Vec<Inbound> {
+    let s = |k: &str| env[k].as_str().map(str::trim).filter(|v| !v.is_empty()).map(str::to_string);
+    if env["provider"].as_str() != Some("sms") {
+        return vec![];
+    }
+    let (Some(from), Some(to), Some(id)) = (s("from"), s("to"), s("messageId")) else { return vec![] };
+    let links: Vec<String> = env["media"].as_array().into_iter().flatten().filter_map(|m| m["url"].as_str().map(str::to_string)).collect();
+    let text = [s("text").unwrap_or_default(), links.join("\n")].into_iter().filter(|t| !t.is_empty()).collect::<Vec<_>>().join("\n");
+    vec![Inbound {
+        kind: InboundKind::Message,
+        workspace: None,
+        channel: to.clone(),
+        conversation: phone_key(&to, &from),
+        thread: Some(from.clone()),
+        remote_id: id.clone(),
+        message_id: id,
+        text: Some(text).filter(|t| !t.is_empty()),
+        user: Some(from),
+        reaction: None,
+        added: None,
+        cursor: None,
+        own: false,
+    }]
 }
 
 fn fail(status: axum::http::StatusCode, msg: impl Into<String>) -> axum::response::Response {
@@ -390,6 +455,47 @@ mod tests {
     use super::*;
     use crate::channel_transports::{HttpResp, Account};
     use std::sync::Mutex;
+
+    fn sms_envelope(extra: Value) -> Value {
+        let mut e = json!({ "provider": "sms", "messageId": "tm-1", "numberId": "num-1", "botId": "bot-1", "from": "+15551112222", "to": "+14155559999", "text": "hello", "receivedAt": "2026-10-10T13:41:18Z" });
+        for (k, v) in extra.as_object().unwrap() {
+            e[k] = v.clone();
+        }
+        e
+    }
+
+    #[test]
+    fn cloud_envelope_becomes_one_message() {
+        let ev = sms_envelope_events(&sms_envelope(json!({})));
+        assert_eq!(ev.len(), 1);
+        assert_eq!((ev[0].channel.as_str(), ev[0].thread.as_deref(), ev[0].message_id.as_str(), ev[0].text.as_deref()), ("+14155559999", Some("+15551112222"), "tm-1", Some("hello")));
+        assert_eq!(ev[0].conversation, phone_key("+14155559999", "+15551112222"), "same thread as a call from this caller");
+        let mms = sms_envelope_events(&sms_envelope(json!({ "text": "", "media": [{ "url": "https://f.test/a.jpg", "stored": true }] })));
+        assert_eq!(mms[0].text.as_deref(), Some("https://f.test/a.jpg"));
+        assert!(sms_envelope_events(&sms_envelope(json!({ "provider": "email" }))).is_empty());
+        assert!(sms_envelope_events(&sms_envelope(json!({ "from": null }))).is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_sms_route_only_accepts_signed_cloud_envelopes() {
+        use axum::http::StatusCode;
+        use tower::ServiceExt;
+        let dir = std::env::temp_dir().join(format!("allternit-sms-sig-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let st = crate::test_helpers::app_state(&dir).await;
+        let secret = Arc::new(crate::relay_auth::StaticRelaySecret { token: "tok".into(), owner: "user-a".into() });
+        let app = sms_relay_router_with(secret).with_state(st);
+        let body = sms_envelope(json!({})).to_string();
+        let status = |req: axum::http::Request<axum::body::Body>| {
+            let app = app.clone();
+            async move { app.oneshot(req).await.unwrap().status() }
+        };
+        assert_eq!(status(crate::relay_auth::relayed_post(SMS_EVENTS_PATH, body.as_bytes(), None)).await, StatusCode::UNAUTHORIZED);
+        assert_eq!(status(crate::relay_auth::relayed_post(SMS_EVENTS_PATH, body.as_bytes(), Some(("tok", "user-b")))).await, StatusCode::UNAUTHORIZED);
+        // Signed, but no number connected here: acknowledged so the queue stops retrying.
+        assert_eq!(status(crate::relay_auth::relayed_post(SMS_EVENTS_PATH, body.as_bytes(), Some(("tok", "user-a")))).await, StatusCode::OK);
+        assert_eq!(status(crate::relay_auth::relayed_post(SMS_EVENTS_PATH, b"not json", Some(("tok", "user-a")))).await, StatusCode::BAD_REQUEST);
+    }
 
     struct Rt;
     impl ThreadRuntime for Rt {

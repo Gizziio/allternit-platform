@@ -84,8 +84,8 @@ pub fn target_path(provider: &str) -> Option<&'static str> {
 /// Headers a platform signs or the runtime needs to verify it. Everything else
 /// a public caller sends is dropped. One list for both storing a queued event
 /// and relaying it, so a header the runtime verifies can't be kept on the way
-/// in and dropped on the way out (that dropped Telnyx's signature and 401'd
-/// every relayed text).
+/// in and dropped on the way out. (SMS is a cloud envelope signed with the
+/// device token, so its Telnyx headers are never stored or relayed.)
 const CHANNEL_HEADERS: &[&str] = &[
     "content-type",
     "x-telegram-bot-api-secret-token",
@@ -735,8 +735,7 @@ mod tests {
 
     #[test]
     fn relay_passes_every_stored_signature_header() {
-        // The runtime re-verifies Telnyx's signature; dropping it 401'd every text.
-        for name in ["telnyx-signature-ed25519", "telnyx-timestamp", "x-email-platform-signature", "x-slack-signature"] {
+        for name in ["x-email-platform-signature", "x-slack-signature", "x-hub-signature-256", "x-telegram-bot-api-secret-token"] {
             assert!(channel_header_names().contains(&name), "{name} must reach the runtime");
         }
     }

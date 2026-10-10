@@ -1311,6 +1311,9 @@ async fn main() {
         // Discord shared-app envelopes: cloud-api checks Discord's signature,
         // then signs the relay with the device token (RelayedAuth verifies).
         .merge(allternit_api::channel_discord_app::discord_app_router())
+        // Inbound texts: cloud-api checks the carrier's signature, STOP/HELP and
+        // consent, then relays its envelope signed with the device token.
+        .merge(allternit_api::channel_phone::sms_relay_router())
         // MCP Events from a user's connected apps: cloud-api verified the Standard Webhooks
         // signature, queued the event and relays it here signed with the device token.
         .merge(allternit_api::mcp_events_client::delivery_router(allternit_api::relay_auth::process_secret()))
