@@ -503,6 +503,26 @@ export const AgentCompatRoutes = () =>
       const sessionID = c.req.param("sessionID")
       const body = await c.req.json().catch(() => ({}))
       const role = typeof body.role === "string" && body.role !== "" ? body.role : "user"
+      // A static assistant message recorded without a turn (a bot's greeting
+      // in its new main chat): stored like a vendor reply, deduped per
+      // session + source so several devices posting it store it once.
+      if (role === "assistant" && body.noReply === true && typeof body.text === "string" && body.text.trim() !== "") {
+        if (!(await findSession(sessionID))) return c.json({ error: "Session not found" }, 404)
+        const source =
+          typeof body.metadata?.source === "string" && body.metadata.source !== "" ? body.metadata.source : "assistant-note"
+        const stored = await VendorMessage.append({
+          sessionID,
+          text: body.text,
+          metadata: { source, vendor: "allternit", adapter: source, remote_event_id: `${source}:${sessionID}` },
+        })
+        return c.json({
+          id: stored.id,
+          role: "assistant",
+          content: body.text,
+          timestamp: new Date().toISOString(),
+          metadata: body.metadata ?? null,
+        })
+      }
       if (role !== "user") {
         return c.json({
           id: `local-${crypto.randomUUID()}`,
