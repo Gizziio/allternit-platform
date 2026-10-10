@@ -51,6 +51,7 @@ apt-get update -qq
 apt-get install -y -qq --no-install-recommends \
     python3 \
     python3-pyatspi \
+    python3-jeepney \
     at-spi2-core \
     libatk-adaptor \
     libatk-bridge2.0-0 \
@@ -104,5 +105,9 @@ else
     systemctl daemon-reload
     systemctl enable allternit-driver.service
 fi
+
+# Apps started outside the desktop launcher (an agent's shell, ssh) also
+# request accessibility, so Chromium/Electron windows publish AT-SPI trees.
+grep -q '^ACCESSIBILITY_ENABLED=' /etc/environment 2>/dev/null || echo 'ACCESSIBILITY_ENABLED=1' >> /etc/environment
 
 echo "[install-driver] done"

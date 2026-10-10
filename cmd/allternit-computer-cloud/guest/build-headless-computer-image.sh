@@ -187,6 +187,7 @@ Environment=DISPLAY=:0
 Environment=HOME=/root
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/allternit/bus
 Environment=GTK_MODULES=atk-bridge
+Environment=ACCESSIBILITY_ENABLED=1
 ExecStart=/usr/bin/allternit --no-sandbox --disable-gpu
 Restart=always
 RestartSec=5

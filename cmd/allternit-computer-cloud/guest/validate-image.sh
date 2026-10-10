@@ -87,7 +87,11 @@ echo "[validate-image] checking read_ui on a real window"
 # driver is one. xdotool keeps this honest about the screen actually working.
 incus exec "${TEST_CONTAINER}" -- sh -c '
     export DISPLAY=:0
-    google-chrome --new-window --force-renderer-accessibility --no-first-run --no-default-browser-check about:blank >/tmp/allternit-validate-chrome.log 2>&1 &
+    # Launch it the way the desktop session does: on the session bus the
+    # driver reads, with accessibility requested, and (as root) unsandboxed.
+    . /run/allternit/session-bus.env 2>/dev/null && export DBUS_SESSION_BUS_ADDRESS
+    export ACCESSIBILITY_ENABLED=1 GTK_MODULES=atk-bridge
+    google-chrome --no-sandbox --new-window --force-renderer-accessibility --no-first-run --no-default-browser-check about:blank >/tmp/allternit-validate-chrome.log 2>&1 &
     for i in $(seq 1 30); do
         if xdotool search --name "Chrome" 2>/dev/null | head -1 | grep -q .; then
             break
