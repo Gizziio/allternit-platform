@@ -70,6 +70,26 @@ The home screen shows the bot's own email address when the bot has the Email cha
 
 Developers: your computer keeps the read marks. `GET /api/v1/bot-phone/seen` returns `{"seen": {"<conversationId>": <epoch ms>}}` for the signed-in owner, and `PUT /api/v1/bot-phone/seen {"seen": {…}}` records marks (a mark only moves forward; up to 500 per call, the newest 5,000 are kept). Each device also keeps a local copy, so a computer that is briefly unreachable doesn't bring badges back.
 
+## Move a number to another bot
+
+A number answers as one bot at a time, and you can change which one. This works the same on Desktop, ai.allternit.com and the m.allternit.com phone app.
+
+1. Open the bot that has the number, then **Settings** → **Phone and reach**.
+2. On the **Phone number** card, choose **Move to another bot…** and pick the bot that should answer.
+3. Read the confirmation, then choose **Move number**: "Texts and calls to *number* will go to *new bot* from now on. Past conversations stay with *old bot*."
+
+From the other side: on a bot with no number, the **Phone number** card lists the numbers your other bots have. Choose **Use *number* here** and confirm.
+
+What moves and what stays:
+
+- **Moves:** new texts and calls, the number shown on each bot's profile (with its texting and voice switches), and invites you sent that nobody has accepted yet.
+- **Stays:** past conversations and call history stay with the old bot. The number itself, its carrier registration, its contacts and opt-outs (STOP) don't change, so nobody has to opt in again.
+- The bot's own voice and greeting come from the bot that answers, so callers hear the new bot from the next call.
+
+The computer that runs the number applies the move within seconds. If that computer is asleep or offline, it applies it when it next starts. If the move fails, the card says why (for example, the number was released) and nothing changes.
+
+Developers: see [Phone numbers and SMS (runtime)](/guides/phone-sms-runtime#move-a-number-to-another-bot).
+
 ## What the bot can do on its own
 
 Each channel app has a chip under its header (for example **Ask first**) that sets how far the bot goes on its own there, and **Settings** lists every place. See [What your bot can do on its own](/guides/bot-autonomy).

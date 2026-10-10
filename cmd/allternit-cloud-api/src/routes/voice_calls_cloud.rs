@@ -147,6 +147,10 @@ fn authorize_worker(headers: &HeaderMap) -> Result<(), ApiError> {
 pub struct NumberOwner {
     pub user_id: String,
     pub runtime_id: String,
+    /// The bot the number answers as now. An inbound call uses it over the SIP dispatch
+    /// rule's `botId`, which is fixed when the rule is made and goes stale when the number
+    /// moves to another bot (`PATCH /api/v1/phone/numbers/:id`).
+    pub bot_id: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -162,12 +166,12 @@ pub struct PgPhoneNumberDirectory {
 impl PhoneNumberDirectory for PgPhoneNumberDirectory {
     async fn owner_for(&self, number_id: &str) -> Result<Option<NumberOwner>, ApiError> {
         // Assumed pg 024 shape: phone_numbers(id, user_id, runtime_id, …).
-        let row: Option<(String, String)> =
-            sqlx::query_as("SELECT user_id, runtime_id FROM phone_numbers WHERE id = $1")
+        let row: Option<(String, String, String)> =
+            sqlx::query_as("SELECT user_id, runtime_id, bot_id FROM phone_numbers WHERE id = $1")
                 .bind(number_id)
                 .fetch_optional(&self.db)
                 .await?;
-        Ok(row.map(|(user_id, runtime_id)| NumberOwner { user_id, runtime_id }))
+        Ok(row.map(|(user_id, runtime_id, bot_id)| NumberOwner { user_id, runtime_id, bot_id: Some(bot_id).filter(|b| !b.is_empty()) }))
     }
 }
 
@@ -507,6 +511,11 @@ async fn start_call_inner(
     if body.owner_id.as_deref().is_some_and(|claimed| claimed != owner.user_id) {
         return Err(ApiError::Forbidden("ownerId does not match the number's owner".to_string()));
     }
+    // Inbound: the number's bot now, not the dispatch rule's (stale after a move).
+    let bot_id = match (body.direction.as_str(), owner.bot_id.as_deref()) {
+        ("inbound", Some(current)) => current.to_string(),
+        _ => body.bot_id.clone(),
+    };
     let call_id = uuid::Uuid::new_v4().to_string();
     sqlx::query(
         "INSERT INTO voice_calls (call_id, user_id, runtime_id, number_id, bot_id, room, direction, from_e164, to_e164, sip_call_id, consent_ref)
@@ -516,7 +525,7 @@ async fn start_call_inner(
     .bind(&owner.user_id)
     .bind(&owner.runtime_id)
     .bind(&body.number_id)
-    .bind(&body.bot_id)
+    .bind(&bot_id)
     .bind(&body.room)
     .bind(&body.direction)
     .bind(&body.from)
@@ -552,7 +561,7 @@ async fn start_call_inner(
             tracing::warn!(call_id = %spawned_call, "voice call delivery pass failed: {error}");
         }
     });
-    let bot = match tokio::time::timeout(BOT_CONFIG_BUDGET, load_bot_config(&state.db, &body.bot_id)).await {
+    let bot = match tokio::time::timeout(BOT_CONFIG_BUDGET, load_bot_config(&state.db, &bot_id)).await {
         Ok(bot) => bot?,
         Err(_) => default_bot(),
     };
@@ -1574,13 +1583,43 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn an_inbound_call_answers_as_the_numbers_current_bot_not_the_dispatch_rules() {
+        let state = voice_test_state().await;
+        save_bot_config(&state, "bot-1", "off").await;
+        sqlx::query("INSERT INTO voice_bot_config (bot_id, user_id, name, persona, voice_id, greeting, recording) VALUES ('bot-2', 'user-1', 'A://', 'Main persona', 'voice-y', 'Hello from main', 'off')")
+            .execute(&state.db)
+            .await
+            .unwrap();
+        let directory = FakeDirectory::default();
+        // The number was moved to bot-2; the SIP dispatch rule still says bot-1.
+        directory.owners.lock().unwrap().insert(
+            "number-9".to_string(),
+            NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string(), bot_id: Some("bot-2".to_string()) },
+        );
+        let response = start_call_inner(&state, &directory, start_body("number-9", "bot-1")).await.unwrap();
+        let answer: Value = serde_json::from_slice(&axum::body::to_bytes(response.into_body(), 1 << 20).await.unwrap()).unwrap();
+        assert_eq!(answer["bot"]["greeting"], "Hello from main");
+        let stored: String = sqlx::query_scalar("SELECT bot_id FROM voice_calls WHERE call_id = $1").bind(answer["callId"].as_str().unwrap()).fetch_one(&state.db).await.unwrap();
+        assert_eq!(stored, "bot-2");
+
+        // An outbound call keeps the bot that placed it.
+        let mut out = start_body("number-9", "bot-1");
+        out.direction = "outbound".to_string();
+        out.room = "call-room-2".to_string();
+        out.consent_ref = Some("cc_1".to_string());
+        let response = start_call_inner(&state, &directory, out).await.unwrap();
+        let answer: Value = serde_json::from_slice(&axum::body::to_bytes(response.into_body(), 1 << 20).await.unwrap()).unwrap();
+        assert_eq!(answer["bot"]["greeting"], "Hi there");
+    }
+
+    #[tokio::test]
     async fn immediate_answer_from_cache_while_runtime_asleep_then_in_order_delivery() {
         let state = voice_test_state().await;
         save_bot_config(&state, "bot-1", "consented").await;
         let directory = FakeDirectory::default();
         directory.owners.lock().unwrap().insert(
             "number-9".to_string(),
-            NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string() },
+            NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string(), bot_id: None },
         );
         let relay = FakeRelay::asleep_then_awake();
 
@@ -1718,7 +1757,7 @@ mod tests {
             let directory = FakeDirectory::default();
             directory.owners.lock().unwrap().insert(
                 "number-9".to_string(),
-                NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string() },
+                NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string(), bot_id: None },
             );
             let response = start_call_inner(&state, &directory, start_body("number-9", "bot-1")).await.unwrap();
             let answer: Value = serde_json::from_slice(&axum::body::to_bytes(response.into_body(), 1 << 20).await.unwrap()).unwrap();
@@ -1794,7 +1833,7 @@ mod tests {
         let directory = FakeDirectory::default();
         directory.owners.lock().unwrap().insert(
             "number-9".to_string(),
-            NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string() },
+            NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string(), bot_id: None },
         );
         let response =
             start_call_inner(&state, &directory, start_body("number-9", "bot-x")).await.unwrap();
@@ -2063,7 +2102,7 @@ mod tests {
         let directory = FakeDirectory::default();
         directory.owners.lock().unwrap().insert(
             "number-9".to_string(),
-            NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string() },
+            NumberOwner { user_id: "user-1".to_string(), runtime_id: "rt-1".to_string(), bot_id: None },
         );
         let mut body = start_body("number-9", "bot-1");
         body.owner_id = Some("someone-else".to_string());
