@@ -85,16 +85,40 @@
       "path": "allternit/domains/computer-use/driver"
     },
     {
+      "id": "allternit/domains/computer-use/driver/packaging",
+      "label": "Allternit Driver packaging (installers, per-OS bundles)",
+      "kind": "module",
+      "path": "allternit/domains/computer-use/driver/packaging"
+    },
+    {
       "id": "allternit/domains/computer-use/suite",
       "label": "Computer-use task suite (40 tasks, code checkers, runner, Python)",
       "kind": "module",
       "path": "allternit/domains/computer-use/suite"
     },
     {
+      "id": "allternit/domains/computer-use/core/sandbox",
+      "label": "Computer-use sandbox (container/VM isolation, Python)",
+      "kind": "module",
+      "path": "allternit/domains/computer-use/core/sandbox"
+    },
+    {
+      "id": "allternit/infrastructure/tart-host",
+      "label": "Tart host (macOS VM host infrastructure)",
+      "kind": "module",
+      "path": "allternit/infrastructure/tart-host"
+    },
+    {
       "id": "allternit/domains/decision-runtime",
       "label": "Decision Runtime local scorer sidecar (MLX / llama.cpp, Python)",
       "kind": "module",
       "path": "allternit/domains/decision-runtime"
+    },
+    {
+      "id": "allternit/cmd/allternit-computer-cloud/guest",
+      "label": "cloud computer guest (in-VM agent)",
+      "kind": "module",
+      "path": "allternit/cmd/allternit-computer-cloud/guest"
     }
   ],
   "edges": [
@@ -102,19 +126,27 @@
       "source": "allternit/cmd/allternit-api/src/mcp_*",
       "target": "allternit/cmd/allternit-api/src/runtime_events.rs",
       "kind": "canonical agent_runs results and idempotent bot ledger outcome notices; forward references and status only",
-      "evidence": ["allternit/cmd/allternit-api/src/mcp_event_automations.rs", "allternit/cmd/allternit-api/src/runtime_events.rs"]
+      "evidence": [
+        "allternit/cmd/allternit-api/src/mcp_event_automations.rs",
+        "allternit/cmd/allternit-api/src/runtime_events.rs"
+      ]
     },
     {
       "source": "allternit-ai/src/components/mcp",
       "target": "allternit/cmd/allternit-api/src/mcp_*",
       "kind": "authenticated HTTP: connector event rules, approvals, run history and payload inspection",
-      "evidence": ["allternit-ai/src/lib/ai/mcp/connector-events-api.ts", "allternit/cmd/allternit-api/src/mcp_event_automations.rs"]
+      "evidence": [
+        "allternit-ai/src/lib/ai/mcp/connector-events-api.ts",
+        "allternit/cmd/allternit-api/src/mcp_event_automations.rs"
+      ]
     },
     {
       "source": "allternit/cmd/allternit-api/src/mcp_*",
       "target": "allternit/cmd/allternit-api/src/agent_session_routes.rs",
       "kind": "durable event job dispatch: create bot thread, enforce session permissions, run and cancel bot turn",
-      "evidence": ["allternit/cmd/allternit-api/src/mcp_event_automations.rs"]
+      "evidence": [
+        "allternit/cmd/allternit-api/src/mcp_event_automations.rs"
+      ]
     },
     {
       "source": "surface:desktop",

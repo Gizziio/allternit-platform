@@ -226,7 +226,11 @@ fn post(msg: &AppToHost, bytes: Option<&[u8]>) {
         let arr = js_sys::Array::new();
         arr.push(&JsValue::from_str(&body));
         arr.push(&buf);
-        let _ = parent.post_message_with_transfer(arr.as_ref(), &origin, arr.as_ref());
+        // Transfer list: the ArrayBuffer only (a string inside the transfer
+        // list throws DataCloneError and drops the whole post).
+        let transfer = js_sys::Array::new();
+        transfer.push(&buf);
+        let _ = parent.post_message_with_transfer(arr.as_ref(), &origin, transfer.as_ref());
     } else {
         let _ = parent.post_message(&JsValue::from_str(&body), &origin);
     }

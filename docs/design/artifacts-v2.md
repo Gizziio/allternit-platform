@@ -29,7 +29,7 @@ Every record has a `kind` and a `runtime_version`:
 | `image` | `text/uri-list` (URL to the file store) | Image viewer | 1 |
 | `code` | `text/plain` + `language` in `meta` | Code viewer | 1 |
 | `pdf` | `application/pdf` | PDF craft editor | craft editors Phase 1 (live) |
-| `video` | `application/vnd.allternit.video+json` (FilmCraft project) | FilmCraft editor | craft editors Phase 3 |
+| `video` | `application/vnd.allternit.video+json` (FilmCraft project) | FilmCraft editor | craft editors Phase 3 (live) |
 
 Unknown kinds render as `page` if HTML, otherwise as code. The kind list lives in one shared file per side: `cmd/allternit-cloud-api/src/artifacts/kinds.rs` and `allternit-ai/src/lib/artifacts/kinds.ts`.
 
@@ -195,6 +195,7 @@ interface Sharing { visibility:'private'|'people'|'org'|'link'; shares:{principa
 - Transcript: artifacts appear as compact cards (title, kind, updated) that open the window; inline OpenUI cards stay inline with **Open as artifact**.
 - **Artifacts tab** (replaces `views/library`): every artifact from `GET /api/v2/artifacts`, "Filter by" (kind, mine/shared), origin labels (Cowork, Code, Bot, Legacy), start-from-template gallery.
 - **Output picker** in the composer: Artifact (auto), Docs, Slides, Sheets, Design, Dashboards, Motion (filtered by plan + org settings); slash commands `/docs /slides /sheets /design /dashboard /motion` preselect it. The choice is sent with the turn as `output: {kind}`.
+- **Craft editors** (`src/components/craft/`): PdfCraft/PhotoCraft/FilmCraft run sandboxed in cross-origin iframes from `office.allternit.com/craft/<app>/` and speak the craft:1 postMessage protocol (`bridge.ts`); the host owns persistence (`image-io.ts`, `video-io.ts`). Image kind: the layered source (`.pcraft`/PSD) lives in artifact runtime storage (`craft/source.pcraft` / `craft/source.psd`, personal scope, 5 MB/value cap); the user's save also requests a flattened PNG export whose URL becomes the new version body. Video kind: the body is the FilmCraft project JSON (`.fcproj` envelope); the project source lives at `craft/source.fcproj`; the footage is a media-plane ref in `meta.media` (never bytes in the text budget); the user's save requests an MP4 export (`file.exportMedia`) whose uploaded URL becomes the new version body, and the editor re-imports the footage bytes on open so a stored project's clip references resolve.
 
 ## 5. Model contract (gizzi-code + app manual)
 
